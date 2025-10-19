@@ -1,5 +1,10 @@
 # Core Orchestration Capabilities Requirements
 
+> **Document Type**: Requirements & Capabilities Document  
+> **Status**: Describes target capabilities and requirements  
+> **Implementation Status**: See [COMPONENT_STATUS_INDEX.md](../../COMPONENT_STATUS_INDEX.md) for actual completion  
+> **Current Reality**: 68% complete - Some capabilities described here are not yet implemented
+
 **Version**: 2.0.0
 **Date**: October 10, 2025
 **Based on**: POC 0.2.0 Implementation & Benchmark Results

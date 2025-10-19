@@ -5,10 +5,9 @@ use crate::types::*;
 use anyhow::Result;
 use std::collections::HashMap;
 use uuid::Uuid;
-use sqlx::{PgPool, Row};
+use sqlx::PgPool;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use quick_xml;
 use roxmltree::Document;
 
 /// Multimodal indexer with per-modality search capabilities
@@ -518,29 +517,32 @@ impl MultimodalIndexer {
             })
             .collect();
 
-        // Execute database transaction for atomic operations
-        db_client.execute_transaction(|_conn| {
+        // 1. Execute batch INSERT for all embedding vectors
+        let inserted_count = db_client.batch_insert_embeddings(embedding_records).await?;
+
+        tracing::debug!(
+            "Successfully inserted {} embedding vectors for block {}",
+            inserted_count,
+            block_id
+        );
+
+        // 2. Update HNSW indices for affected models
+        let model_names: Vec<String> = embeddings.keys().cloned().collect();
+        db_client.update_hnsw_indices(model_names).await?;
+
+        // 3. Execute transaction for statistics and validation
+        let embeddings_len = embeddings.len();
+        let embeddings_clone = embeddings.clone();
+        let modality_clone = modality.to_string();
+        db_client.execute_transaction(move |conn| {
             Box::pin(async move {
-                // 1. Execute batch INSERT for all embedding vectors
-                let inserted_count = db_client.batch_insert_embeddings(embedding_records).await?;
-                
-                tracing::debug!(
-                    "Successfully inserted {} embedding vectors for block {}",
-                    inserted_count,
-                    block_id
-                );
+                // Update index statistics and metadata
+                Self::update_index_statistics(conn, block_id, &modality_clone, &embeddings_clone).await?;
 
-                // 2. Update HNSW indices for affected models
-                let model_names: Vec<String> = embeddings.keys().cloned().collect();
-                db_client.update_hnsw_indices(model_names).await?;
+                // Validate data integrity
+                Self::validate_embedding_integrity(conn, block_id, embeddings_len).await?;
 
-                // 3. Update index statistics and metadata
-                Self::update_index_statistics(conn, block_id, modality, embeddings).await?;
-
-                // 4. Validate data integrity
-                Self::validate_embedding_integrity(conn, block_id, embeddings.len()).await?;
-
-                Ok(inserted_count)
+                Ok(())
             })
         }).await?;
 
@@ -556,7 +558,7 @@ impl MultimodalIndexer {
 
     /// Update index statistics and metadata for stored embeddings
     async fn update_index_statistics(
-        conn: &sqlx::PgConnection,
+        conn: &mut sqlx::PgConnection,
         block_id: Uuid,
         modality: &str,
         embeddings: &HashMap<String, EmbeddingVector>,
@@ -603,7 +605,7 @@ impl MultimodalIndexer {
 
     /// Validate embedding data integrity after insertion
     async fn validate_embedding_integrity(
-        conn: &sqlx::PgConnection,
+        conn: &mut sqlx::PgConnection,
         block_id: Uuid,
         expected_count: usize,
     ) -> Result<()> {
@@ -653,6 +655,7 @@ impl MultimodalIndexer {
         db_client: &DatabaseClient,
         model_names: Vec<String>,
     ) -> Result<()> {
+        let model_count = model_names.len();
         for model_name in model_names {
             // Trigger HNSW index optimization for the model
             let optimization_query = sqlx::query(
@@ -684,8 +687,212 @@ impl MultimodalIndexer {
             metrics_query.execute(db_client.pool()).await?;
         }
 
-        tracing::debug!("HNSW indices optimization scheduled for {} models", model_names.len());
+        tracing::debug!("HNSW indices optimization scheduled for {} models", model_count);
         Ok(())
+    }
+
+    /// Extract node ID from SVG element
+    fn extract_node_id(&self, node: &roxmltree::Node, block_id: Uuid) -> Uuid {
+        // Try to get ID from element attributes, fallback to generated ID
+        if let Some(id_attr) = node.attribute("id") {
+            if let Ok(parsed_uuid) = uuid::Uuid::parse_str(id_attr) {
+                return parsed_uuid;
+            }
+        }
+
+        // Generate deterministic UUID based on block_id and node info
+        let seed = format!("{}_{}_{}", block_id, node.tag_name().name(), node.range().start);
+        use std::collections::hash_map::DefaultHasher;
+        use std::hash::{Hash, Hasher};
+        let mut hasher = DefaultHasher::new();
+        seed.hash(&mut hasher);
+        let hash = hasher.finish();
+        uuid::Uuid::from_u128(hash as u128)
+    }
+
+    /// Extract position from SVG element
+    fn extract_svg_position(&self, node: &roxmltree::Node) -> Position {
+        let x = node.attribute("cx").or_else(|| node.attribute("x"))
+            .and_then(|s| s.parse().ok())
+            .unwrap_or(0.0);
+
+        let y = node.attribute("cy").or_else(|| node.attribute("y"))
+            .and_then(|s| s.parse().ok())
+            .unwrap_or(0.0);
+
+        Position { x, y }
+    }
+
+    /// Extract properties from SVG element
+    fn extract_svg_properties(&self, node: &roxmltree::Node) -> HashMap<String, String> {
+        let mut properties = HashMap::new();
+
+        // Extract all attributes as properties
+        for attr in node.attributes() {
+            properties.insert(attr.name().to_string(), attr.value().to_string());
+        }
+
+        properties
+    }
+
+    /// Extract label from SVG element
+    fn extract_svg_label(&self, node: &roxmltree::Node) -> String {
+        // Try to get text content or title attribute
+        if let Some(title) = node.attribute("title") {
+            return title.to_string();
+        }
+
+        // Look for text child elements
+        for child in node.children() {
+            if child.tag_name().name() == "text" {
+                if let Some(text) = child.text() {
+                    return text.to_string();
+                }
+            }
+        }
+
+        // Fallback to element type
+        node.tag_name().name().to_string()
+    }
+
+    /// Extract edge from SVG element
+    fn extract_svg_edge(&self, node: &roxmltree::Node, nodes: &[GraphNode]) -> Option<GraphEdge> {
+        // Extract line/path as edge
+        let edge_type = node.tag_name().name().to_string();
+
+        // For lines, use x1,y1 and x2,y2
+        let x1 = node.attribute("x1").and_then(|s| s.parse().ok())?;
+        let y1 = node.attribute("y1").and_then(|s| s.parse().ok())?;
+        let x2 = node.attribute("x2").and_then(|s| s.parse().ok())?;
+        let y2 = node.attribute("y2").and_then(|s| s.parse().ok())?;
+
+        // Find nearest nodes to start and end points
+        let source_node = self.find_nearest_node(Position { x: x1, y: y1 }, nodes)?;
+        let target_node = self.find_nearest_node(Position { x: x2, y: y2 }, nodes)?;
+
+        Some(GraphEdge {
+            id: uuid::Uuid::new_v4(),
+            source: source_node.id,
+            target: target_node.id,
+            edge_type,
+            properties: HashMap::new(),
+            label: String::new(),
+        })
+    }
+
+    /// Find nearest node to a position
+    fn find_nearest_node<'a>(&self, position: Position, nodes: &'a [GraphNode]) -> Option<&'a GraphNode> {
+        let mut nearest = None;
+        let mut min_distance = f64::INFINITY;
+
+        for node in nodes {
+            let dx = node.position.x - position.x;
+            let dy = node.position.y - position.y;
+            let distance = (dx * dx + dy * dy).sqrt();
+
+            if distance < min_distance {
+                min_distance = distance;
+                nearest = Some(node);
+            }
+        }
+
+        // Only return if within reasonable distance (e.g., 50 units)
+        if min_distance < 50.0 {
+            nearest
+        } else {
+            None
+        }
+    }
+
+    /// Extract node ID from GraphML element
+    fn extract_graphml_node_id(&self, node: &roxmltree::Node, block_id: Uuid) -> Uuid {
+        // Similar to SVG version
+        if let Some(id_attr) = node.attribute("id") {
+            if let Ok(parsed_uuid) = uuid::Uuid::parse_str(id_attr) {
+                return parsed_uuid;
+            }
+        }
+
+        let seed = format!("graphml_{}_{}_{}", block_id, node.tag_name().name(), node.range().start);
+        use std::collections::hash_map::DefaultHasher;
+        use std::hash::{Hash, Hasher};
+        let mut hasher = DefaultHasher::new();
+        seed.hash(&mut hasher);
+        let hash = hasher.finish();
+        uuid::Uuid::from_u128(hash as u128)
+    }
+
+    /// Extract properties from GraphML element
+    fn extract_graphml_properties(&self, node: &roxmltree::Node) -> HashMap<String, String> {
+        let mut properties = HashMap::new();
+
+        for attr in node.attributes() {
+            properties.insert(attr.name().to_string(), attr.value().to_string());
+        }
+
+        // Also extract data elements
+        for child in node.children() {
+            if child.tag_name().name() == "data" {
+                if let Some(key) = child.attribute("key") {
+                    if let Some(value) = child.text() {
+                        properties.insert(key.to_string(), value.to_string());
+                    }
+                }
+            }
+        }
+
+        properties
+    }
+
+    /// Extract label from GraphML element
+    fn extract_graphml_label(&self, node: &roxmltree::Node) -> String {
+        // Look for label in data elements or attributes
+        if let Some(label_attr) = node.attribute("label") {
+            return label_attr.to_string();
+        }
+
+        for child in node.children() {
+            if child.tag_name().name() == "data" && child.attribute("key") == Some("label") {
+                if let Some(text) = child.text() {
+                    return text.to_string();
+                }
+            }
+        }
+
+        node.tag_name().name().to_string()
+    }
+
+    /// Extract edge from GraphML element
+    fn extract_graphml_edge(&self, edge_elem: &roxmltree::Node, nodes: &[GraphNode]) -> Option<GraphEdge> {
+        let source_id = edge_elem.attribute("source")?;
+        let target_id = edge_elem.attribute("target")?;
+
+        let source_uuid = uuid::Uuid::parse_str(source_id).ok()?;
+        let target_uuid = uuid::Uuid::parse_str(target_id).ok()?;
+
+        // Verify nodes exist
+        let source_exists = nodes.iter().any(|n| n.id == source_uuid);
+        let target_exists = nodes.iter().any(|n| n.id == target_uuid);
+
+        if !source_exists || !target_exists {
+            return None;
+        }
+
+        let mut properties = HashMap::new();
+        for attr in edge_elem.attributes() {
+            properties.insert(attr.name().to_string(), attr.value().to_string());
+        }
+
+        let label = self.extract_graphml_label(edge_elem);
+
+        Some(GraphEdge {
+            id: uuid::Uuid::new_v4(),
+            source: source_uuid,
+            target: target_uuid,
+            edge_type: "graphml_edge".to_string(),
+            properties,
+            label,
+        })
     }
 
     /// Index text modality with BM25 and dense embeddings
@@ -779,18 +986,18 @@ impl MultimodalIndexer {
         let graph_content = self.retrieve_graph_content(block_id).await?;
         let parsed_graph = self.parse_graph_content(&graph_content, block_id).await?;
         
-        // Initialize graph adjacency entry with parsed data
+        // Store graph metadata and properties first (before moving any data)
+        self.store_graph_metadata(block_id, &parsed_graph).await?;
+
+        // Generate graph embeddings for similarity search
+        let graph_embeddings = self.generate_graph_embeddings(&parsed_graph).await?;
+
+        // Initialize graph adjacency entry with parsed data (after other uses)
         self.graph_indexer
             .graph_adjacency
             .entry(block_id)
             .or_insert_with(Vec::new)
             .extend(parsed_graph.adjacent_nodes);
-
-        // Store graph metadata and properties
-        self.store_graph_metadata(block_id, &parsed_graph).await?;
-        
-        // Generate graph embeddings for similarity search
-        let graph_embeddings = self.generate_graph_embeddings(&parsed_graph).await?;
         
         // Store graph embeddings in database if client available
         if let Some(db_client) = &self.db_client {
@@ -928,8 +1135,8 @@ impl MultimodalIndexer {
         }
 
         Ok(ParsedGraph {
-            nodes,
-            edges,
+            nodes: nodes.clone(),
+            edges: edges.clone(),
             adjacent_nodes: self.build_adjacency_list(&nodes, &edges),
             graph_metadata: self.extract_svg_metadata(&doc),
         })
@@ -971,8 +1178,8 @@ impl MultimodalIndexer {
         }
 
         Ok(ParsedGraph {
-            nodes,
-            edges,
+            nodes: nodes.clone(),
+            edges: edges.clone(),
             adjacent_nodes: self.build_adjacency_list(&nodes, &edges),
             graph_metadata: self.extract_graphml_metadata(&doc),
         })
@@ -1005,8 +1212,8 @@ impl MultimodalIndexer {
         }
 
         Ok(ParsedGraph {
-            nodes,
-            edges,
+            nodes: nodes.clone(),
+            edges: edges.clone(),
             adjacent_nodes: self.build_adjacency_list(&nodes, &edges),
             graph_metadata: self.extract_dot_metadata(&content.data),
         })
@@ -1038,8 +1245,8 @@ impl MultimodalIndexer {
         }
 
         Ok(ParsedGraph {
-            nodes,
-            edges,
+            nodes: nodes.clone(),
+            edges: edges.clone(),
             adjacent_nodes: self.build_adjacency_list(&nodes, &edges),
             graph_metadata: self.extract_mermaid_metadata(&content.data),
         })
@@ -1106,24 +1313,60 @@ impl MultimodalIndexer {
     }
 
     /// Extract SVG metadata
-    fn extract_svg_metadata(&self, _content: &str) -> GraphMetadata {
-        // Placeholder metadata
+    fn extract_svg_metadata(&self, doc: &roxmltree::Document) -> GraphMetadata {
+        // Extract basic metadata from SVG document
+        let mut node_count = 0;
+        let mut edge_count = 0;
+        let mut properties = HashMap::new();
+
+        // Count nodes and edges
+        for node in doc.descendants() {
+            match node.tag_name().name() {
+                "circle" | "ellipse" | "rect" | "rectangle" => node_count += 1,
+                "line" | "path" => edge_count += 1,
+                _ => {}
+            }
+        }
+
+        // Extract viewBox or other properties
+        if let Some(root) = doc.root_element().attribute("viewBox") {
+            properties.insert("viewBox".to_string(), root.to_string());
+        }
+
         GraphMetadata {
-            graph_type: "flowchart".to_string(),
-            node_count: 0,
-            edge_count: 0,
-            properties: HashMap::new(),
+            graph_type: "svg".to_string(),
+            node_count: node_count as u32,
+            edge_count: edge_count as u32,
+            properties,
         }
     }
 
     /// Extract GraphML metadata
-    fn extract_graphml_metadata(&self, _content: &str) -> GraphMetadata {
-        // Placeholder metadata
+    fn extract_graphml_metadata(&self, doc: &roxmltree::Document) -> GraphMetadata {
+        // Extract basic metadata from GraphML document
+        let mut node_count = 0;
+        let mut edge_count = 0;
+        let mut properties = HashMap::new();
+
+        // Count nodes and edges
+        for node in doc.descendants() {
+            match node.tag_name().name() {
+                "node" => node_count += 1,
+                "edge" => edge_count += 1,
+                _ => {}
+            }
+        }
+
+        // Extract graph properties
+        if let Some(root) = doc.root_element().attribute("edgedefault") {
+            properties.insert("edgedefault".to_string(), root.to_string());
+        }
+
         GraphMetadata {
-            graph_type: "flowchart".to_string(),
-            node_count: 0,
-            edge_count: 0,
-            properties: HashMap::new(),
+            graph_type: "graphml".to_string(),
+            node_count: node_count as u32,
+            edge_count: edge_count as u32,
+            properties,
         }
     }
 

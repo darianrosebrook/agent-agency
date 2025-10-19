@@ -101,7 +101,7 @@ impl DataDetectionBridge {
     
     /// Calculate confidence score for email detection
     fn calculate_email_confidence(&self, email: &str) -> f32 {
-        let mut confidence = 0.8;
+        let mut confidence: f32 = 0.8;
         
         // Boost confidence for common TLDs
         if email.ends_with(".com") || email.ends_with(".org") || email.ends_with(".net") {
@@ -123,7 +123,7 @@ impl DataDetectionBridge {
     
     /// Calculate confidence score for URL detection
     fn calculate_url_confidence(&self, url: &str) -> f32 {
-        let mut confidence = 0.9;
+        let mut confidence: f32 = 0.9;
         
         // Boost confidence for HTTPS
         if url.starts_with("https://") {
@@ -145,7 +145,7 @@ impl DataDetectionBridge {
     
     /// Calculate confidence score for phone number detection
     fn calculate_phone_confidence(&self, phone: &str) -> f32 {
-        let mut confidence = 0.7;
+        let mut confidence: f32 = 0.7;
         
         // Boost confidence for formatted numbers
         if phone.contains('(') && phone.contains(')') {
@@ -168,7 +168,7 @@ impl DataDetectionBridge {
     
     /// Calculate confidence score for date detection
     fn calculate_date_confidence(&self, date: &str) -> f32 {
-        let mut confidence = 0.6;
+        let mut confidence: f32 = 0.6;
         
         // Boost confidence for full year format
         if date.contains("2024") || date.contains("2023") || date.contains("2025") {
@@ -190,7 +190,7 @@ impl DataDetectionBridge {
     
     /// Calculate confidence score for address detection
     fn calculate_address_confidence(&self, address: &str) -> f32 {
-        let mut confidence = 0.5;
+        let mut confidence: f32 = 0.5;
         
         // Boost confidence for numbers at the beginning
         if address.chars().next().map_or(false, |c| c.is_ascii_digit()) {
@@ -293,7 +293,7 @@ impl NERBridge {
                 
                 if confidence > 0.3 {
                     results.push(NERResult {
-                        entity_type: "PERSON".to_string(),
+                entity_type: "PERSON".to_string(),
                         text: name,
                         range: (mat.start(), mat.end()),
                         confidence,
@@ -332,7 +332,7 @@ impl NERBridge {
                 
                 if confidence > 0.4 {
                     results.push(NERResult {
-                        entity_type: "ORG".to_string(),
+                entity_type: "ORG".to_string(),
                         text: org,
                         range: (mat.start(), mat.end()),
                         confidence,
@@ -370,7 +370,7 @@ impl NERBridge {
                 
                 if confidence > 0.4 {
                     results.push(NERResult {
-                        entity_type: "GPE".to_string(),
+                entity_type: "GPE".to_string(),
                         text: location,
                         range: (mat.start(), mat.end()),
                         confidence,
@@ -398,7 +398,7 @@ impl NERBridge {
     
     /// Calculate confidence for person entities
     fn calculate_person_confidence(&self, name: &str) -> f32 {
-        let mut confidence = 0.5;
+        let mut confidence: f32 = 0.5;
         
         // Boost confidence for common names
         let name_lower = name.to_lowercase();
@@ -421,7 +421,7 @@ impl NERBridge {
     
     /// Calculate confidence for organization entities
     fn calculate_organization_confidence(&self, org: &str) -> f32 {
-        let mut confidence = 0.6;
+        let mut confidence: f32 = 0.6;
         
         // Boost confidence for organization suffixes
         if org.contains("Inc") || org.contains("Corp") || org.contains("LLC") {
@@ -444,7 +444,7 @@ impl NERBridge {
     
     /// Calculate confidence for location entities
     fn calculate_location_confidence(&self, location: &str) -> f32 {
-        let mut confidence = 0.5;
+        let mut confidence: f32 = 0.5;
         
         // Boost confidence for state abbreviations
         if location.contains(", ") && location.len() > 3 {
@@ -762,7 +762,7 @@ impl TopicExtractionBridge {
                     topic: topic.clone(),
                     keywords: matched_keywords,
                     confidence,
-                    occurrence_count: matches,
+                    occurrence_count: matches as u32,
                 });
             }
         }
@@ -789,7 +789,7 @@ impl TopicExtractionBridge {
                 topic: keyphrase.clone(),
                 keywords: vec![keyphrase],
                 confidence,
-                occurrence_count: count,
+                occurrence_count: count as u32,
             });
         }
         
@@ -825,7 +825,7 @@ impl TopicExtractionBridge {
                 topic,
                 keywords,
                 confidence,
-                occurrence_count: total_occurrences,
+                occurrence_count: total_occurrences as u32,
             });
         }
         
@@ -902,7 +902,7 @@ impl TopicExtractionBridge {
     
     /// Calculate confidence for keyphrase extraction
     fn calculate_keyphrase_confidence(&self, keyphrase: &str, count: usize) -> f32 {
-        let mut confidence = 0.5;
+        let mut confidence: f32 = 0.5;
         
         // Boost confidence for longer keyphrases
         let word_count = keyphrase.split_whitespace().count();
@@ -924,7 +924,7 @@ impl TopicExtractionBridge {
     
     /// Calculate confidence for frequency-based topics
     fn calculate_frequency_confidence(&self, total_occurrences: usize, keyword_count: usize) -> f32 {
-        let mut confidence = 0.4;
+        let mut confidence: f32 = 0.4;
         
         // Boost confidence for more occurrences
         if total_occurrences >= 10 {

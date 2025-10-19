@@ -1,5 +1,10 @@
 # Agent Agency V2: Agentic RL & Extended Thinking
 
+> **Document Type**: Roadmap & Planning Document  
+> **Status**: Describes planned enhancements and aspirational capabilities  
+> **Implementation Status**: See [COMPONENT_STATUS_INDEX.md](../../COMPONENT_STATUS_INDEX.md) for actual completion  
+> **Current Reality**: 68% complete - Some enhancements described here are not yet implemented
+
 ## Risk Tier 2 Enhancement Plan
 
 **Version**: 2.0.0

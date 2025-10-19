@@ -1,5 +1,10 @@
 # Arbiter-Orchestrator Edge Case Testing Suite
 
+> **Document Type**: Testing & Validation Document  
+> **Status**: Describes target testing scenarios and aspirational capabilities  
+> **Implementation Status**: See [COMPONENT_STATUS_INDEX.md](../../COMPONENT_STATUS_INDEX.md) for actual completion  
+> **Current Reality**: 68% complete - Some testing capabilities described here are not yet implemented
+
 ## Overview
 
 This comprehensive test suite identifies edge cases and challenging scenarios to validate the arbiter-orchestrator system's capabilities. These tests range from simple unit-level validations to complex end-to-end workflows that stress-test the system's planning, delegation, self-prompting, evaluation, and CAWS compliance mechanisms.

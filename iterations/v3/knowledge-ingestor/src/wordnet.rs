@@ -7,6 +7,7 @@
 
 use crate::types::*;
 use crate::{IngestionConfig, IngestionStats, KnowledgeIngestor};
+use agent_agency_database::models::*;
 use anyhow::{Context, Result};
 use std::collections::HashMap;
 use std::fs::File;
@@ -231,6 +232,10 @@ fn parse_synset(line: &str, config: &IngestionConfig) -> Result<Option<ParsedEnt
         entity_type: Some("synset".to_string()),
         properties,
         confidence: 1.0,
+        usage_count: 0,
+        usage_decay: Some(1.0),
+        last_accessed: None,
+        created_at: None,
         dump_version: Some("wordnet-3.1".to_string()),
         toolchain: Some(format!("knowledge-ingestor-v{}", env!("CARGO_PKG_VERSION"))),
         license: Some("WordNet-3.1".to_string()),

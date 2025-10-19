@@ -662,20 +662,20 @@ impl ToolDiscovery {
         ).await;
 
         let connection_time = start_time.elapsed().as_millis() as u64;
-        metrics.insert("connection_time_ms".to_string(), connection_time);
+        metrics.insert("connection_time_ms".to_string(), connection_time.to_string());
 
         match connection_result {
             Ok(Ok((mut ws_stream, _))) => {
                 // 2. WebSocket health validation: Validate WebSocket endpoint health
                 let handshake_valid = self.validate_websocket_handshake(&mut ws_stream).await;
-                metrics.insert("handshake_valid".to_string(), if handshake_valid { 1 } else { 0 });
+                metrics.insert("handshake_valid".to_string(), if handshake_valid { "1" } else { "0" }.to_string());
 
                 if handshake_valid {
                     // 3. WebSocket monitoring: Monitor WebSocket performance and reliability
                     let ping_result = self.perform_websocket_ping(&mut ws_stream).await;
                     let ping_time = start_time.elapsed().as_millis() as u64 - connection_time;
-                    metrics.insert("ping_time_ms".to_string(), ping_time);
-                    metrics.insert("ping_successful".to_string(), if ping_result { 1 } else { 0 });
+                    metrics.insert("ping_time_ms".to_string(), ping_time.to_string());
+                    metrics.insert("ping_successful".to_string(), if ping_result { "1" } else { "0" }.to_string());
 
                     // 4. WebSocket integration: Integrate WebSocket health checking with tool discovery
                     let is_healthy = ping_result && connection_time < 5000; // 5 second timeout

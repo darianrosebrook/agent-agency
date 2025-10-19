@@ -21,7 +21,7 @@ describe("AdvancedTaskRouter", () => {
   let mockAgents: Agent[];
 
   const routingConfig: RoutingConfig = {
-    enabled: true,
+    enabled: false, // Disable routing to prevent intervals in tests
     priorityQueuing: true,
     predictiveRouting: true,
     loadBalancing: true,
@@ -82,6 +82,7 @@ describe("AdvancedTaskRouter", () => {
   });
 
   afterEach(() => {
+    router.stopQueueProcessor();
     jest.clearAllMocks();
   });
 

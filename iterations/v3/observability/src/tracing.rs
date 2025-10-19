@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
+use serde_json;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TraceContext {
@@ -466,6 +467,15 @@ impl TraceCollector {
 
             completed_traces.push(trace_info);
 
+            // Build and store trace hierarchy for analysis
+            if let Some(hierarchy) = self.build_trace_hierarchy(&trace_id).await {
+                let mut trace_hierarchies = self.trace_hierarchies.write().await;
+                trace_hierarchies.insert(trace_id.clone(), hierarchy);
+
+                // Clean up old hierarchies (keep last 500)
+                self.cleanup_old_hierarchies(500).await;
+            }
+
             // Clean up old traces (keep last 1000)
             while completed_traces.len() > 1000 {
                 completed_traces.remove(0);
@@ -588,11 +598,126 @@ impl TraceCollector {
         })
     }
 
-    /// Check if a span belongs to a specific trace
+    /// Check if a span belongs to a specific trace using proper hierarchy tracking
     fn span_belongs_to_trace(&self, span_id: &str, trace_id: &str) -> bool {
-        // For now, we use a simple heuristic: span belongs to trace if
-        // the trace_id is a prefix of the span_id or vice versa
-        span_id.starts_with(trace_id) || trace_id.starts_with(span_id)
+        // First check if we have a direct trace ID mapping
+        if let Some(extracted_trace_id) = self.extract_trace_id(span_id) {
+            return extracted_trace_id == trace_id;
+        }
+
+        // Fall back to hierarchy-based checking: walk up the span hierarchy
+        // to find a span that belongs to the target trace
+        let span_relationships = self.span_relationships.try_read().unwrap_or_default();
+        let mut current_span_id = span_id.to_string();
+        let mut visited = std::collections::HashSet::new();
+
+        // Walk up the hierarchy chain
+        while !visited.contains(&current_span_id) && visited.len() < 50 {
+            visited.insert(current_span_id.clone());
+
+            if let Some(span_info) = span_relationships.get(&current_span_id) {
+                // Check if this span's service/operation indicates it belongs to the trace
+                if self.span_matches_trace_context(span_info, trace_id) {
+                    return true;
+                }
+
+                // Move up to parent
+                if let Some(parent_id) = &span_info.parent_span_id {
+                    current_span_id = parent_id.clone();
+                } else {
+                    break;
+                }
+            } else {
+                break;
+            }
+        }
+
+        // Check if any child spans belong to the trace (walk down)
+        self.check_child_spans_for_trace(span_id, trace_id, &span_relationships)
+    }
+
+    /// Extract trace ID from span ID using configured patterns
+    fn extract_trace_id(&self, span_id: &str) -> Option<String> {
+        // Check if span_id contains trace information (e.g., "trace-{trace_id}-span-{span_id}")
+        if span_id.contains("trace-") && span_id.contains("-span-") {
+            let parts: Vec<&str> = span_id.split("-span-").collect();
+            if parts.len() >= 2 {
+                let trace_part = parts[0];
+                if let Some(trace_id_start) = trace_part.find("trace-") {
+                    let trace_id = &trace_part[trace_id_start + 6..]; // Skip "trace-"
+                    return Some(trace_id.to_string());
+                }
+            }
+        }
+
+        // Check active spans for trace context
+        let active_spans = self.active_spans.read().await;
+        if let Some(span_info) = active_spans.get(span_id) {
+            // Look for trace_id in span attributes
+            if let Some(trace_id_value) = span_info.attributes.get("trace_id") {
+                if let Some(trace_id_str) = trace_id_value.as_str() {
+                    return Some(trace_id_str.to_string());
+                }
+            }
+        }
+
+        None
+    }
+
+    /// Check if span context matches trace requirements
+    fn span_matches_trace_context(&self, span_info: &SpanHierarchyInfo, trace_id: &str) -> bool {
+        // Check if span operation or service indicates trace membership
+        // This is a heuristic that can be improved with more sophisticated logic
+        let trace_indicators = [
+            "consensus", "council", "debate", "evaluation",
+            "judge", "arbitration", "verification"
+        ];
+
+        let operation_matches = trace_indicators.iter()
+            .any(|&indicator| span_info.operation.contains(indicator));
+        let service_matches = trace_indicators.iter()
+            .any(|&indicator| span_info.service_name.contains(indicator));
+
+        operation_matches || service_matches
+    }
+
+    /// Check if any child spans belong to the target trace
+    fn check_child_spans_for_trace(
+        &self,
+        span_id: &str,
+        trace_id: &str,
+        span_relationships: &HashMap<String, SpanHierarchyInfo>
+    ) -> bool {
+        let mut to_check = vec![span_id.to_string()];
+        let mut visited = std::collections::HashSet::new();
+
+        while let Some(current_id) = to_check.pop() {
+            if visited.contains(&current_id) {
+                continue;
+            }
+            visited.insert(current_id.clone());
+
+            if let Some(span_info) = span_relationships.get(&current_id) {
+                // Check if this span matches the trace
+                if self.span_matches_trace_context(span_info, trace_id) {
+                    return true;
+                }
+
+                // Add children to check list
+                for child_id in &span_info.children {
+                    if !visited.contains(child_id) {
+                        to_check.push(child_id.clone());
+                    }
+                }
+            }
+
+            // Prevent excessive recursion
+            if visited.len() > 100 {
+                break;
+            }
+        }
+
+        false
     }
 
     /// Generate analytics for a trace hierarchy
@@ -700,6 +825,184 @@ impl TraceCollector {
     pub async fn get_all_trace_hierarchies(&self) -> HashMap<String, TraceHierarchy> {
         let trace_hierarchies = self.trace_hierarchies.read().await;
         trace_hierarchies.clone()
+    }
+
+    /// Get parent span ID for a given span
+    pub async fn get_parent_span(&self, span_id: &str) -> Option<String> {
+        let span_relationships = self.span_relationships.read().await;
+        span_relationships
+            .get(span_id)
+            .and_then(|info| info.parent_span_id.clone())
+    }
+
+    /// Get child span IDs for a given span
+    pub async fn get_child_spans(&self, span_id: &str) -> Vec<String> {
+        let span_relationships = self.span_relationships.read().await;
+        span_relationships
+            .get(span_id)
+            .map(|info| info.children.clone())
+            .unwrap_or_default()
+    }
+
+    /// Get the full ancestry chain for a span (from root to current span)
+    pub async fn get_span_ancestry(&self, span_id: &str) -> Vec<String> {
+        let mut ancestry = Vec::new();
+        let mut current_id = Some(span_id.to_string());
+        let span_relationships = self.span_relationships.read().await;
+
+        while let Some(span_id) = current_id {
+            ancestry.push(span_id.clone());
+
+            current_id = span_relationships
+                .get(&span_id)
+                .and_then(|info| info.parent_span_id.clone());
+
+            // Prevent infinite loops
+            if ancestry.len() > 50 {
+                break;
+            }
+        }
+
+        ancestry.reverse(); // Return from root to leaf
+        ancestry
+    }
+
+    /// Get all spans at a specific depth in a trace hierarchy
+    pub async fn get_spans_at_depth(&self, trace_id: &str, depth: u32) -> Vec<String> {
+        if let Some(hierarchy) = self.get_trace_hierarchy(trace_id).await {
+            hierarchy.spans
+                .iter()
+                .filter_map(|(span_id, info)| {
+                    if info.depth == depth {
+                        Some(span_id.clone())
+                    } else {
+                        None
+                    }
+                })
+                .collect()
+        } else {
+            Vec::new()
+        }
+    }
+
+    /// Get spans by service name across all traces
+    pub async fn get_spans_by_service(&self, service_name: &str) -> Vec<(String, String)> {
+        let span_relationships = self.span_relationships.read().await;
+        span_relationships
+            .iter()
+            .filter_map(|(span_id, info)| {
+                if info.service_name == service_name {
+                    Some((span_id.clone(), info.operation.clone()))
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
+
+    /// Validate trace hierarchy integrity
+    pub async fn validate_hierarchy_integrity(&self, trace_id: &str) -> Result<(), String> {
+        if let Some(hierarchy) = self.get_trace_hierarchy(trace_id).await {
+            let span_relationships = self.span_relationships.read().await;
+
+            // Check that all spans in hierarchy exist in relationships
+            for span_id in hierarchy.spans.keys() {
+                if !span_relationships.contains_key(span_id) {
+                    return Err(format!("Span {} in hierarchy but not in relationships", span_id));
+                }
+            }
+
+            // Check parent-child relationships
+            for (span_id, span_info) in &hierarchy.spans {
+                // Check that parent exists if specified
+                if let Some(parent_id) = &span_info.parent_span_id {
+                    if !hierarchy.spans.contains_key(parent_id) {
+                        return Err(format!("Parent span {} not in hierarchy for span {}", parent_id, span_id));
+                    }
+                }
+
+                // Check that children reference this span as parent
+                for child_id in &span_info.children {
+                    if let Some(child_info) = hierarchy.spans.get(child_id) {
+                        if child_info.parent_span_id.as_ref() != Some(span_id) {
+                            return Err(format!("Child span {} does not reference {} as parent", child_id, span_id));
+                        }
+                    } else {
+                        return Err(format!("Child span {} not in hierarchy", child_id));
+                    }
+                }
+            }
+
+            // Check depth consistency
+            for (span_id, span_info) in &hierarchy.spans {
+                let calculated_depth = self.calculate_span_depth(span_id, &hierarchy.spans);
+                if calculated_depth != span_info.depth {
+                    return Err(format!("Depth mismatch for span {}: stored={}, calculated={}",
+                        span_id, span_info.depth, calculated_depth));
+                }
+            }
+
+            Ok(())
+        } else {
+            Err(format!("Trace hierarchy not found for {}", trace_id))
+        }
+    }
+
+    /// Calculate the depth of a span in the hierarchy
+    fn calculate_span_depth(&self, span_id: &str, spans: &HashMap<String, SpanHierarchyInfo>) -> u32 {
+        let mut depth = 0;
+        let mut current_id = span_id.to_string();
+
+        while let Some(span_info) = spans.get(&current_id) {
+            if let Some(parent_id) = &span_info.parent_span_id {
+                depth += 1;
+                current_id = parent_id.clone();
+
+                // Prevent infinite loops
+                if depth > 50 {
+                    break;
+                }
+            } else {
+                break;
+            }
+        }
+
+        depth
+    }
+
+    /// Get hierarchy statistics for monitoring
+    pub async fn get_hierarchy_stats(&self) -> HashMap<String, serde_json::Value> {
+        let trace_hierarchies = self.trace_hierarchies.read().await;
+        let span_relationships = self.span_relationships.read().await;
+
+        let mut stats = HashMap::new();
+
+        stats.insert("total_traces".to_string(), serde_json::json!(trace_hierarchies.len()));
+        stats.insert("total_spans".to_string(), serde_json::json!(span_relationships.len()));
+
+        let total_depth: u32 = trace_hierarchies.values().map(|h| h.max_depth).sum();
+        let avg_depth = if !trace_hierarchies.is_empty() {
+            total_depth as f64 / trace_hierarchies.len() as f64
+        } else {
+            0.0
+        };
+        stats.insert("average_hierarchy_depth".to_string(), serde_json::json!(avg_depth));
+
+        let max_depth = trace_hierarchies.values()
+            .map(|h| h.max_depth)
+            .max()
+            .unwrap_or(0);
+        stats.insert("max_hierarchy_depth".to_string(), serde_json::json!(max_depth));
+
+        let total_spans: u32 = trace_hierarchies.values().map(|h| h.total_spans).sum();
+        let avg_spans_per_trace = if !trace_hierarchies.is_empty() {
+            total_spans as f64 / trace_hierarchies.len() as f64
+        } else {
+            0.0
+        };
+        stats.insert("average_spans_per_trace".to_string(), serde_json::json!(avg_spans_per_trace));
+
+        stats
     }
 
     /// Clean up old trace hierarchies (keep last N)

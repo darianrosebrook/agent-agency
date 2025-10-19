@@ -7,6 +7,7 @@
 
 use crate::types::*;
 use crate::{IngestionStats, KnowledgeIngestor};
+use agent_agency_database::models::*;
 use anyhow::Result;
 use tracing::{debug, info};
 use unicode_normalization::UnicodeNormalization;

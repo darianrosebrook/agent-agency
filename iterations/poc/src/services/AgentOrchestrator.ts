@@ -111,7 +111,7 @@ export class AgentOrchestrator {
       this.logger.info("Initializing advanced task router...");
 
       const routingConfig: RoutingConfig = {
-        enabled: true,
+        enabled: this.config.advancedRoutingEnabled,
         priorityQueuing: true,
         predictiveRouting: true,
         loadBalancing: true,
@@ -828,5 +828,15 @@ export class AgentOrchestrator {
    */
   private generateId(): string {
     return `id_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+  }
+
+  /**
+   * Cleanup resources and stop background processes
+   */
+  cleanup(): void {
+    if (this.taskRouter) {
+      this.taskRouter.stopQueueProcessor();
+    }
+    this.logger.info("Agent Orchestrator cleanup completed");
   }
 }

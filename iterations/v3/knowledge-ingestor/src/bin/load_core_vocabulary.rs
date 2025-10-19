@@ -77,8 +77,20 @@ async fn main() -> Result<()> {
     
     // Initialize database client
     info!("Connecting to database...");
+    let db_config = database::DatabaseConfig {
+        host: "localhost".to_string(),
+        port: 5432,
+        database: "agent_agency".to_string(),
+        username: "postgres".to_string(),
+        password: "password".to_string(),
+        pool_min: 1,
+        pool_max: 10,
+        connection_timeout_seconds: 30,
+        idle_timeout_seconds: 300,
+        max_lifetime_seconds: 3600,
+    };
     let db_client = Arc::new(
-        database::DatabaseClient::new(&args.database_url).await?
+        database::DatabaseClient::new(db_config).await?
     );
     
     // Initialize embedding service
@@ -88,7 +100,7 @@ async fn main() -> Result<()> {
         model_name: args.model_id.clone(),
         ..Default::default()
     };
-    let embedding_service = Arc::new(
+    let embedding_service: Arc<dyn embedding_service::EmbeddingService> = Arc::from(
         embedding_service::EmbeddingServiceFactory::create_ollama_service(embedding_config)?
     );
     

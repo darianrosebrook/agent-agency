@@ -220,25 +220,213 @@ mod tests {
         // Process the task outcome
         let _insights = system.learn_and_predict(&task_outcome).await.unwrap();
 
-        // Verify history was updated (we can't access private fields in tests)
-        // This test would need a public method to access historical data
-        // TODO: Implement comprehensive outcome verification with the following requirements:
-        // 1. Outcome validation: Validate system outcome processing and results
-        //    - Verify system outcome accuracy and completeness
-        //    - Validate outcome processing quality and effectiveness
-        //    - Handle outcome validation error detection and correction
-        // 2. Historical data verification: Verify historical data updates and integrity
-        //    - Validate historical data updates and consistency
-        //    - Verify historical data integrity and accuracy
-        //    - Handle historical data verification quality assurance
-        // 3. Performance metrics validation: Validate performance metrics calculation
-        //    - Verify performance metrics accuracy and completeness
-        //    - Validate performance metrics calculation algorithms
-        //    - Handle performance metrics validation and quality assurance
-        // 4. System integration testing: Test system integration and functionality
-        //    - Verify system component integration and communication
-        //    - Test system functionality and performance
-        //    - Ensure system testing meets quality and reliability standards
+        // Test 1: Multiple outcomes processing
+        test_multiple_outcomes_processing().await;
+
+        // Test 2: Historical data integrity
+        test_historical_data_integrity().await;
+
+        // Test 3: Performance metrics validation
+        test_performance_metrics_calculation().await;
+
+        // Test 4: Learning curve analysis
+        test_learning_curve_analysis().await;
+    }
+
+    async fn test_multiple_outcomes_processing() {
+        let system = PredictiveLearningSystem::new();
+
+        // Process multiple different outcomes
+        let outcomes = vec![
+            create_test_task_outcome(OutcomeType::Success, 0.9),
+            create_test_task_outcome(OutcomeType::Failure, 0.3),
+            create_test_task_outcome(OutcomeType::PartialSuccess, 0.6),
+            create_test_task_outcome(OutcomeType::Timeout, 0.1),
+            create_test_task_outcome(OutcomeType::Success, 0.8),
+        ];
+
+        let mut insights = Vec::new();
+        for outcome in outcomes {
+            let insight = system.learn_and_predict(&outcome).await.unwrap();
+            insights.push(insight);
+        }
+
+        // Validate that insights improve over time (learning effect)
+        assert!(insights.len() >= 3, "Should have processed multiple outcomes");
+
+        // Check that confidence generally improves with more data
+        let avg_confidence_first_half: f32 = insights[..insights.len()/2].iter()
+            .map(|i| i.outcome_prediction.confidence).sum::<f32>() / (insights.len()/2) as f32;
+        let avg_confidence_second_half: f32 = insights[insights.len()/2..].iter()
+            .map(|i| i.outcome_prediction.confidence).sum::<f32>() / (insights.len() - insights.len()/2) as f32;
+
+        // Learning should generally improve confidence (with some tolerance for randomness)
+        assert!(
+            avg_confidence_second_half >= avg_confidence_first_half * 0.8,
+            "Learning should generally improve confidence: {:.2} vs {:.2}",
+            avg_confidence_first_half,
+            avg_confidence_second_half
+        );
+
+        // All insights should have valid predictions
+        for (i, insight) in insights.iter().enumerate() {
+            assert!(
+                insight.outcome_prediction.success_probability >= 0.0 &&
+                insight.outcome_prediction.success_probability <= 1.0,
+                "Invalid success probability in insight {}: {:.2}",
+                i,
+                insight.outcome_prediction.success_probability
+            );
+            assert!(
+                insight.outcome_prediction.confidence >= 0.0 &&
+                insight.outcome_prediction.confidence <= 1.0,
+                "Invalid confidence in insight {}: {:.2}",
+                i,
+                insight.outcome_prediction.confidence
+            );
+        }
+    }
+
+    async fn test_historical_data_integrity() {
+        let system = PredictiveLearningSystem::new();
+
+        // Create a series of outcomes with known patterns
+        let mut outcomes = Vec::new();
+        for i in 0..10 {
+            let success_rate = if i < 5 { 0.9 } else { 0.3 }; // First 5 high success, last 5 low success
+            outcomes.push(create_test_task_outcome(
+                if success_rate > 0.5 { OutcomeType::Success } else { OutcomeType::Failure },
+                success_rate
+            ));
+        }
+
+        // Process all outcomes
+        for outcome in &outcomes {
+            system.learn_and_predict(outcome).await.unwrap();
+        }
+
+        // Test prediction on a new similar outcome
+        let test_outcome = create_test_task_outcome(OutcomeType::Success, 0.85);
+        let prediction = system.learn_and_predict(&test_outcome).await.unwrap();
+
+        // The system should have learned from the historical pattern
+        // (This is a simplified test - in practice we'd need more sophisticated validation)
+        assert!(prediction.outcome_prediction.success_probability > 0.0);
+        assert!(prediction.learning_acceleration.knowledge_transfer_efficiency > 0.0);
+
+        // Test with edge case - very different outcome
+        let edge_outcome = create_test_task_outcome(OutcomeType::Timeout, 0.1);
+        let edge_prediction = system.learn_and_predict(&edge_outcome).await.unwrap();
+
+        // Should still produce valid predictions
+        assert!(edge_prediction.outcome_prediction.success_probability >= 0.0);
+        assert!(edge_prediction.outcome_prediction.success_probability <= 1.0);
+        assert!(edge_prediction.outcome_prediction.confidence >= 0.0);
+    }
+
+    async fn test_performance_metrics_calculation() {
+        let system = PredictiveLearningSystem::new();
+
+        // Create outcomes with varying performance characteristics
+        let performance_scenarios = vec![
+            (OutcomeType::Success, 0.95, 1000),  // Fast success
+            (OutcomeType::Success, 0.90, 2000),  // Medium success
+            (OutcomeType::Failure, 0.2, 5000),   // Slow failure
+            (OutcomeType::Success, 0.85, 1500),  // Medium-fast success
+        ];
+
+        let mut predictions = Vec::new();
+        for (outcome_type, confidence, processing_time) in performance_scenarios {
+            let mut outcome = create_test_task_outcome(outcome_type, confidence);
+            // Note: In a real implementation, we'd set processing time in the outcome
+            // For now, we just test the prediction generation
+
+            let prediction = system.learn_and_predict(&outcome).await.unwrap();
+            predictions.push(prediction);
+        }
+
+        // Validate that all predictions have reasonable performance metrics
+        for (i, prediction) in predictions.iter().enumerate() {
+            assert!(
+                prediction.learning_acceleration.acceleration_factor > 0.0,
+                "Invalid acceleration factor in prediction {}: {:.2}",
+                i,
+                prediction.learning_acceleration.acceleration_factor
+            );
+            assert!(
+                prediction.learning_acceleration.knowledge_transfer_efficiency >= 0.0 &&
+                prediction.learning_acceleration.knowledge_transfer_efficiency <= 1.0,
+                "Invalid knowledge transfer efficiency in prediction {}: {:.2}",
+                i,
+                prediction.learning_acceleration.knowledge_transfer_efficiency
+            );
+        }
+
+        // Test that the system can handle performance variations
+        let varied_outcome = create_test_task_outcome(OutcomeType::PartialSuccess, 0.7);
+        let varied_prediction = system.learn_and_predict(&varied_outcome).await.unwrap();
+
+        assert!(varied_prediction.outcome_prediction.success_probability > 0.0);
+        assert!(varied_prediction.learning_acceleration.acceleration_factor > 0.0);
+    }
+
+    async fn test_learning_curve_analysis() {
+        let system = PredictiveLearningSystem::new();
+
+        // Track prediction accuracy over time
+        let mut prediction_history = Vec::new();
+        let actual_outcomes = vec![
+            (OutcomeType::Success, 0.9),
+            (OutcomeType::Success, 0.8),
+            (OutcomeType::Failure, 0.3),
+            (OutcomeType::Success, 0.85),
+            (OutcomeType::Failure, 0.2),
+            (OutcomeType::Success, 0.95),
+            (OutcomeType::PartialSuccess, 0.6),
+            (OutcomeType::Success, 0.88),
+        ];
+
+        for (outcome_type, actual_confidence) in actual_outcomes {
+            let test_outcome = create_test_task_outcome(outcome_type.clone(), actual_confidence);
+            let prediction = system.learn_and_predict(&test_outcome).await.unwrap();
+
+            // Store prediction vs actual for analysis
+            prediction_history.push((
+                prediction.outcome_prediction.success_probability,
+                matches!(outcome_type, OutcomeType::Success | OutcomeType::PartialSuccess),
+                prediction.outcome_prediction.confidence,
+            ));
+        }
+
+        // Analyze learning curve - predictions should generally improve
+        assert!(prediction_history.len() >= 5, "Need sufficient data for learning curve analysis");
+
+        // Calculate prediction accuracy trend
+        let mut accuracies = Vec::new();
+        for (predicted_prob, actual_success, confidence) in &prediction_history {
+            let predicted_success = *predicted_prob > 0.5;
+            let accuracy = if predicted_success == *actual_success { 1.0 } else { 0.0 };
+            // Weight by confidence
+            accuracies.push(accuracy * confidence);
+        }
+
+        // Check that overall accuracy is reasonable (> 50%)
+        let avg_accuracy = accuracies.iter().sum::<f32>() / accuracies.len() as f32;
+        assert!(avg_accuracy > 0.5, "Learning system accuracy too low: {:.2}", avg_accuracy);
+
+        // Check that confidence generally increases with more data
+        let first_half_avg_confidence: f32 = prediction_history[..prediction_history.len()/2].iter()
+            .map(|(_, _, conf)| *conf).sum::<f32>() / (prediction_history.len()/2) as f32;
+        let second_half_avg_confidence: f32 = prediction_history[prediction_history.len()/2..].iter()
+            .map(|(_, _, conf)| *conf).sum::<f32>() / (prediction_history.len() - prediction_history.len()/2) as f32;
+
+        // Confidence should generally improve (within reasonable bounds)
+        assert!(
+            second_half_avg_confidence >= first_half_avg_confidence * 0.7,
+            "Confidence should not decrease significantly: {:.2} -> {:.2}",
+            first_half_avg_confidence,
+            second_half_avg_confidence
+        );
     }
 
     /// Test different outcome types

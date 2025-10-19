@@ -299,7 +299,7 @@ impl QuantizationLab {
     /// Recommend best quantization for target constraints
     pub async fn recommend_quantization(
         &self,
-        baseline_metrics: QuantizationMetrics,
+        _baseline_metrics: QuantizationMetrics,
         max_accuracy_loss_percent: f32,
         min_speedup: f32,
     ) -> Result<QuantizationStrategy> {

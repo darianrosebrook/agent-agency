@@ -684,7 +684,7 @@ impl KnowledgeSeeker {
         total_score += recency_score * 0.2;
 
         // Ensure score is between 0.0 and 1.0
-        Ok(total_score.min(1.0f32).max(0.0f32))
+        Ok(total_score.min(1.0f64).max(0.0f64))
     }
 
     /// Calculate topic alignment between content and query
@@ -825,7 +825,7 @@ impl KnowledgeSeeker {
         total_score += metadata_quality * 0.1;
 
         // Ensure score is between 0.0 and 1.0
-        Ok(total_score.min(1.0f32).max(0.0f32))
+        Ok(total_score.min(1.0f64).max(0.0f64))
     }
 
     /// Calculate source reliability score
@@ -1114,7 +1114,7 @@ impl KnowledgeSeeker {
             _ => {}
         }
 
-        confidence.min(1.0f32).max(0.0f32)
+        confidence.min(1.0f64).max(0.0f64)
     }
 
     /// V2 Integration: Perform keyword-based search for hybrid results
@@ -1347,7 +1347,7 @@ impl KnowledgeSeeker {
                 let coverage = matched_terms as f32 / query_tokens.len() as f32;
                 boost += config.coverage_boost * coverage;
                 let capped_boost = boost.min(config.max_total_boost);
-                result.relevance_score = (result.relevance_score + capped_boost).min(1.0f32);
+                result.relevance_score = (result.relevance_score + capped_boost).min(1.0f64);
                 adjustments_applied += 1;
             }
 
@@ -1595,10 +1595,10 @@ impl KnowledgeSeeker {
             // In real implementation, this would be: self.db_pool.clone()
             // For now, we'll create a mock config
             MultimodalRetrieverConfig {
-                max_results: 10,
-                similarity_threshold: 0.7,
-                fusion_method: "late_fusion_rrf".to_string(),
-                reranking_enabled: true,
+                k_per_modality: 10,
+                fusion_method: FusionMethod::RRF,
+                project_scope: None,
+                enable_deduplication: true,
             },
         );
 
@@ -1650,10 +1650,10 @@ impl KnowledgeSeeker {
 
         // Create multimodal retriever
         let retriever = MultimodalRetriever::new(MultimodalRetrieverConfig {
-            max_results: 100,
-            similarity_threshold: 0.4, // Lower threshold for decisions
-            fusion_method: "late_fusion_rrf".to_string(),
-            reranking_enabled: true,
+            k_per_modality: 100,
+            fusion_method: FusionMethod::RRF,
+            project_scope: None,
+            enable_deduplication: true,
         });
 
         let mut context_provider = MultimodalContextProvider::new(retriever);
@@ -1699,10 +1699,10 @@ impl KnowledgeSeeker {
 
         // Create multimodal retriever
         let retriever = MultimodalRetriever::new(MultimodalRetrieverConfig {
-            max_results: 20,
-            similarity_threshold: 0.6,
-            fusion_method: "late_fusion_rrf".to_string(),
-            reranking_enabled: true,
+            k_per_modality: 20,
+            fusion_method: FusionMethod::RRF,
+            project_scope: None,
+            enable_deduplication: true,
         });
 
         let mut context_provider = MultimodalContextProvider::new(retriever);
@@ -2136,7 +2136,7 @@ impl InvertedIndex {
         score += keyword_score * 0.4;
 
         // 2. Content length factor (20% weight) - longer content often more relevant
-        let length_score = (content.len() as f32 / 1000.0).min(1.0f32);
+        let length_score = (content.len() as f32 / 1000.0).min(1.0f64);
         score += length_score * 0.2;
 
         // 3. Query type alignment (20% weight)
@@ -2225,7 +2225,7 @@ impl InvertedIndex {
         score += context_score * 0.2;
 
         // Ensure score is between 0.0 and 1.0
-        score.min(1.0f32).max(0.0f32)
+        score.min(1.0f64).max(0.0f64)
     }
 
     /// Calculate confidence score for web content based on source and content quality
@@ -2280,7 +2280,7 @@ impl InvertedIndex {
             quality_score += 0.2; // Professional/academic language
         }
 
-        score += (quality_score.min(1.0f32) * 0.3) as f32;
+        score += (quality_score.min(1.0f64) * 0.3) as f32;
 
         // 3. Content completeness (20% weight)
         let completeness_score = if content.len() > 1000 {
@@ -2307,7 +2307,7 @@ impl InvertedIndex {
         score += recency_score * 0.1;
 
         // Ensure score is between 0.0 and 1.0
-        score.min(1.0f32).max(0.0f32)
+        score.min(1.0f64).max(0.0f64)
     }
 }
 

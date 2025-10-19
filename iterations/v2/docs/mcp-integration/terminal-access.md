@@ -1,5 +1,10 @@
 # Terminal Access for Task Runner Agents
 
+> **Document Type**: Component Documentation  
+> **Status**: Describes component capabilities and implementation  
+> **Implementation Status**: See [COMPONENT_STATUS_INDEX.md](../../COMPONENT_STATUS_INDEX.md) for actual completion  
+> **Current Reality**: 68% complete - This component may not reflect overall system status
+
 **Component**: INFRA-005 - MCP Terminal Access Layer  
 **Status**: Production Ready  
 **Risk Tier**: 1 (Critical - Command Execution)

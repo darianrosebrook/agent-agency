@@ -294,14 +294,14 @@ impl AsrEnricher {
                 
                 // Combine with text length factor
                 let length_factor = if turn.text.len() < 10 {
-                    0.9
+                    0.9_f32
                 } else if turn.text.len() < 50 {
-                    1.0
+                    1.0_f32
                 } else {
-                    1.1
-                }.min(1.0_f64);
-                
-                turn.confidence = (avg_word_confidence * length_factor).min(1.0_f64);
+                    1.1_f32
+                }.min(1.0_f32);
+
+                turn.confidence = (avg_word_confidence * length_factor).min(1.0_f32);
             }
         }
         
@@ -446,7 +446,7 @@ impl AsrEnricher {
                 },
             ],
             speakers: vec![],
-            language: language.map(|l| l.to_string()),
+            language: _language.map(|l| l.to_string()),
             confidence: 0.90,
             processing_time_ms: 0,
         })

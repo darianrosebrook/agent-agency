@@ -137,7 +137,7 @@ cat .caws/working-spec.yaml | grep -A 20 "acceptance:"
 3. **Data plan**: Fixtures, factories, seed strategy
 4. **Observability**: Logs/metrics/traces for production verification
 
-**Output**: `feature.plan.md` committed to repo
+**Output**: `docs/feature.plan.md` committed to repo
 
 ### Phase 2: Implement (Test-Driven)
 

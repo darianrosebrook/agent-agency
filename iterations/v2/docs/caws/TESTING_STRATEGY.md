@@ -1,5 +1,10 @@
 # CAWS Testing Strategy & Compliance Roadmap
 
+> **Document Type**: Planning & Strategy Document  
+> **Status**: Describes target testing strategy and aspirational capabilities  
+> **Implementation Status**: See [COMPONENT_STATUS_INDEX.md](../../COMPONENT_STATUS_INDEX.md) for actual completion  
+> **Current Reality**: 68% complete - Some testing capabilities described here are not yet implemented
+
 ## Executive Summary
 
 This document outlines the comprehensive testing strategy for achieving CAWS (Coding Agent Workflow System) compliance. Current testing infrastructure provides a solid foundation with systematic improvements targeting 70%+ mutation scores across critical components.
@@ -10,12 +15,12 @@ This document outlines the comprehensive testing strategy for achieving CAWS (Co
 
 | Component Category      | Target | Current | Status         |
 | ----------------------- | ------ | ------- | -------------- |
-| **Claim Processing**    | 95%    | 95%     | ✅ Complete    |
-| **Core Functionality**  | 90%    | 90%     | ✅ Complete    |
-| **Integration Testing** | 80%    | 80%     | ✅ Complete    |
-| **E2E Workflows**       | 85%    | 85%     | ✅ Complete    |
-| **Learning Systems**    | 70%    | 70%     | ✅ Complete    |
-| **Arbitration Systems** | 85%    | ~80%    | 🔄 In Progress |
+| **Claim Processing**    | 95%    | 70%     | 🟡 In Progress |
+| **Core Functionality**  | 90%    | 75%     | 🟡 In Progress |
+| **Integration Testing** | 80%    | 65%     | 🟡 In Progress |
+| **E2E Workflows**       | 85%    | 60%     | 🟡 In Progress |
+| **Learning Systems**    | 70%    | 50%     | 🟡 In Progress |
+| **Arbitration Systems** | 85%    | 40%     | 🔄 In Progress |
 
 ### Test Pyramid Distribution
 

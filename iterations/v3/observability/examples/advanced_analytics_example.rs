@@ -12,9 +12,245 @@ use agent_agency_observability::{
 };
 use anyhow::Result;
 use chrono::{DateTime, Duration, Utc};
-use std::sync::Arc;
+use std::collections::{HashMap, VecDeque};
+use std::sync::{Arc, Mutex, OnceLock};
 use tokio::time::{sleep, Duration as TokioDuration};
 use tracing::{error, info, warn};
+
+const SYSTEM_HEALTH_DEFAULT_WINDOW_HOURS: i64 = 24;
+const SYSTEM_HEALTH_MAX_SNAPSHOTS: usize = 24 * 14;
+const SYSTEM_HEALTH_HEALTH_DELTA: f64 = 0.01;
+const SYSTEM_HEALTH_RESOURCE_DELTA: f64 = 0.01;
+const SYSTEM_HEALTH_ERROR_DELTA: f64 = 0.0025;
+const SYSTEM_HEALTH_UTIL_DELTA: f64 = 0.5;
+
+static SYSTEM_HEALTH_ROLLUPS: OnceLock<Mutex<HashMap<usize, SystemHealthRollup>>> =
+    OnceLock::new();
+static SYSTEM_HEALTH_METRICS: OnceLock<Mutex<HashMap<usize, HashMap<String, f64>>>> =
+    OnceLock::new();
+
+#[derive(Clone, Debug)]
+struct SystemHealthRollup {
+    last_timestamp: DateTime<Utc>,
+    avg_overall_health: f64,
+    avg_resource_utilization: f64,
+    avg_error_rate: f64,
+    avg_cpu_utilization: f64,
+    avg_memory_utilization: f64,
+    cpu_peak: f64,
+    memory_peak: f64,
+    error_rate_peak: f64,
+    health_floor: f64,
+    sample_count: usize,
+}
+
+struct SystemHealthIntegration {
+    engine_key: usize,
+    window: Duration,
+    max_snapshots: usize,
+    snapshots: VecDeque<SystemHealthSnapshot>,
+    cached_rollup: Option<SystemHealthRollup>,
+}
+
+impl SystemHealthIntegration {
+    fn new(engine: &AnalyticsEngine, window: Duration, max_snapshots: usize) -> Self {
+        Self {
+            engine_key: engine as *const AnalyticsEngine as usize,
+            window,
+            max_snapshots: max_snapshots.max(1),
+            snapshots: VecDeque::with_capacity(max_snapshots.min(1024)),
+            cached_rollup: None,
+        }
+    }
+
+    fn integrate_snapshot(&mut self, snapshot: &SystemHealthSnapshot) {
+        let timestamp = snapshot.timestamp;
+        self.snapshots.push_back(snapshot.clone());
+
+        while self.snapshots.len() > self.max_snapshots {
+            self.snapshots.pop_front();
+        }
+
+        while let Some(front) = self.snapshots.front() {
+            if timestamp.signed_duration_since(front.timestamp) > self.window {
+                self.snapshots.pop_front();
+            } else {
+                break;
+            }
+        }
+
+        if let Some(rollup) = self.compute_rollup() {
+            if self.should_publish(&rollup) {
+                self.publish_rollup(rollup);
+            }
+        }
+    }
+
+    fn compute_rollup(&self) -> Option<SystemHealthRollup> {
+        if self.snapshots.is_empty() {
+            return None;
+        }
+
+        let mut total_overall_health = 0.0;
+        let mut total_resource_utilization = 0.0;
+        let mut total_error_rate = 0.0;
+        let mut total_cpu = 0.0;
+        let mut total_memory = 0.0;
+        let mut cpu_peak = 0.0;
+        let mut memory_peak = 0.0;
+        let mut error_rate_peak = 0.0;
+        let mut health_floor = f64::INFINITY;
+
+        for snapshot in &self.snapshots {
+            total_overall_health += snapshot.overall_health;
+            total_resource_utilization += snapshot.resource_utilization;
+            total_error_rate += snapshot.error_rate;
+            total_cpu += snapshot.cpu_utilization;
+            total_memory += snapshot.memory_utilization;
+            cpu_peak = cpu_peak.max(snapshot.cpu_utilization);
+            memory_peak = memory_peak.max(snapshot.memory_utilization);
+            error_rate_peak = error_rate_peak.max(snapshot.error_rate);
+            health_floor = health_floor.min(snapshot.overall_health);
+        }
+
+        let count = self.snapshots.len() as f64;
+        let last_timestamp = self.snapshots.back().map(|s| s.timestamp)?;
+
+        Some(SystemHealthRollup {
+            last_timestamp,
+            avg_overall_health: total_overall_health / count,
+            avg_resource_utilization: total_resource_utilization / count,
+            avg_error_rate: total_error_rate / count,
+            avg_cpu_utilization: total_cpu / count,
+            avg_memory_utilization: total_memory / count,
+            cpu_peak,
+            memory_peak,
+            error_rate_peak,
+            health_floor,
+            sample_count: self.snapshots.len(),
+        })
+    }
+
+    fn should_publish(&self, rollup: &SystemHealthRollup) -> bool {
+        match &self.cached_rollup {
+            Some(previous) => has_significant_change(previous, rollup),
+            None => true,
+        }
+    }
+
+    fn publish_rollup(&mut self, rollup: SystemHealthRollup) {
+        if let Ok(mut cache) = SYSTEM_HEALTH_ROLLUPS
+            .get_or_init(|| Mutex::new(HashMap::new()))
+            .lock()
+        {
+            cache.insert(self.engine_key, rollup.clone());
+        }
+
+        if let Ok(mut metrics_cache) = SYSTEM_HEALTH_METRICS
+            .get_or_init(|| Mutex::new(HashMap::new()))
+            .lock()
+        {
+            let metrics_entry = metrics_cache
+                .entry(self.engine_key)
+                .or_insert_with(HashMap::new);
+            metrics_entry.insert(
+                "system.health.avg_overall_health".to_string(),
+                rollup.avg_overall_health,
+            );
+            metrics_entry.insert(
+                "system.health.avg_resource_utilization".to_string(),
+                rollup.avg_resource_utilization,
+            );
+            metrics_entry.insert(
+                "system.health.avg_error_rate".to_string(),
+                rollup.avg_error_rate,
+            );
+            metrics_entry.insert(
+                "system.health.avg_cpu_utilization".to_string(),
+                rollup.avg_cpu_utilization,
+            );
+            metrics_entry.insert(
+                "system.health.avg_memory_utilization".to_string(),
+                rollup.avg_memory_utilization,
+            );
+            metrics_entry.insert("system.health.cpu_peak".to_string(), rollup.cpu_peak);
+            metrics_entry.insert(
+                "system.health.memory_peak".to_string(),
+                rollup.memory_peak,
+            );
+            metrics_entry.insert(
+                "system.health.error_rate_peak".to_string(),
+                rollup.error_rate_peak,
+            );
+            metrics_entry.insert(
+                "system.health.health_floor".to_string(),
+                rollup.health_floor,
+            );
+        }
+
+        self.cached_rollup = Some(rollup);
+    }
+
+    fn latest_rollup(&self) -> Option<SystemHealthRollup> {
+        self.cached_rollup.clone()
+    }
+
+    fn latest_metrics_map(&self) -> Option<HashMap<String, f64>> {
+        self.cached_rollup.as_ref().map(|rollup| {
+            let mut metrics = HashMap::with_capacity(9);
+            metrics.insert(
+                "system.health.avg_overall_health".to_string(),
+                rollup.avg_overall_health,
+            );
+            metrics.insert(
+                "system.health.avg_resource_utilization".to_string(),
+                rollup.avg_resource_utilization,
+            );
+            metrics.insert(
+                "system.health.avg_error_rate".to_string(),
+                rollup.avg_error_rate,
+            );
+            metrics.insert(
+                "system.health.avg_cpu_utilization".to_string(),
+                rollup.avg_cpu_utilization,
+            );
+            metrics.insert(
+                "system.health.avg_memory_utilization".to_string(),
+                rollup.avg_memory_utilization,
+            );
+            metrics.insert("system.health.cpu_peak".to_string(), rollup.cpu_peak);
+            metrics.insert(
+                "system.health.memory_peak".to_string(),
+                rollup.memory_peak,
+            );
+            metrics.insert(
+                "system.health.error_rate_peak".to_string(),
+                rollup.error_rate_peak,
+            );
+            metrics.insert(
+                "system.health.health_floor".to_string(),
+                rollup.health_floor,
+            );
+            metrics
+        })
+    }
+}
+
+fn has_significant_change(previous: &SystemHealthRollup, current: &SystemHealthRollup) -> bool {
+    (previous.avg_overall_health - current.avg_overall_health).abs() > SYSTEM_HEALTH_HEALTH_DELTA
+        || (previous.avg_resource_utilization - current.avg_resource_utilization).abs()
+            > SYSTEM_HEALTH_RESOURCE_DELTA
+        || (previous.avg_error_rate - current.avg_error_rate).abs() > SYSTEM_HEALTH_ERROR_DELTA
+        || (previous.avg_cpu_utilization - current.avg_cpu_utilization).abs()
+            > SYSTEM_HEALTH_UTIL_DELTA
+        || (previous.avg_memory_utilization - current.avg_memory_utilization).abs()
+            > SYSTEM_HEALTH_UTIL_DELTA
+        || (previous.cpu_peak - current.cpu_peak).abs() > SYSTEM_HEALTH_UTIL_DELTA
+        || (previous.memory_peak - current.memory_peak).abs() > SYSTEM_HEALTH_UTIL_DELTA
+        || (previous.error_rate_peak - current.error_rate_peak).abs() > SYSTEM_HEALTH_ERROR_DELTA
+        || (previous.health_floor - current.health_floor).abs() > SYSTEM_HEALTH_HEALTH_DELTA
+        || previous.sample_count != current.sample_count
+}
 
 /// Advanced analytics demonstration
 #[tokio::main]
@@ -88,6 +324,12 @@ async fn simulate_historical_data(analytics_engine: &AnalyticsEngine) -> Result<
         "generalist-worker-1",
     ];
 
+    let mut system_health_integration = SystemHealthIntegration::new(
+        analytics_engine,
+        Duration::hours(SYSTEM_HEALTH_DEFAULT_WINDOW_HOURS),
+        SYSTEM_HEALTH_MAX_SNAPSHOTS,
+    );
+
     // Simulate 7 days of historical data
     for day in 0..7 {
         let base_time = Utc::now() - Duration::days(7 - day);
@@ -159,45 +401,79 @@ async fn simulate_historical_data(analytics_engine: &AnalyticsEngine) -> Result<
                 .await?;
 
             // Simulate system health
-            let system_health = if hour < 6 || hour > 22 {
-                "Healthy"
+            let overall_health = if hour < 6 || hour > 22 {
+                0.95 // Healthy
             } else if hour < 9 || hour > 18 {
-                "Degraded"
+                0.75 // Degraded
             } else {
-                "Healthy"
+                0.90 // Normal operation
             };
 
+            let resource_utilization = 0.65 + (hour as f64 * 0.02) + (day as f64 * 0.01);
+            let error_rate = 0.02 + (hour as f64 * 0.001) + (day as f64 * 0.0005);
             let cpu_utilization = 60.0 + (hour as f64 * 2.0) + (day as f64 * 1.0);
             let memory_utilization = 70.0 + (hour as f64 * 1.0) + (day as f64 * 0.5);
 
             let health_snapshot = SystemHealthSnapshot {
                 timestamp,
-                overall_health: system_health.to_string(),
-                active_agents: 5,
-                total_tasks: 100 + (hour * 5) + (day * 10),
-                system_availability: 0.99 - (hour as f64 * 0.0001) - (day as f64 * 0.0002),
+                overall_health,
+                resource_utilization: resource_utilization.min(1.0),
+                error_rate: error_rate.min(0.1),
                 cpu_utilization: cpu_utilization.min(95.0),
                 memory_utilization: memory_utilization.min(90.0),
             };
 
-            // Note: SystemHealthSnapshot would need to be added to the analytics engine
-            // TODO: Implement SystemHealthSnapshot integration with the following requirements:
-            // 1. Analytics engine integration: Integrate SystemHealthSnapshot with analytics engine
-            //    - Add SystemHealthSnapshot support to analytics engine data structures
-            //    - Handle analytics engine integration optimization and performance
-            //    - Implement analytics engine integration validation and quality assurance
-            // 2. Health snapshot processing: Process SystemHealthSnapshot data for analytics
-            //    - Process health snapshot data for analytics and insights generation
-            //    - Handle health snapshot processing optimization and performance
-            //    - Implement health snapshot processing validation and quality assurance
-            // 3. Analytics integration: Integrate health snapshots with analytics processing
-            //    - Connect health snapshots to analytics processing and visualization
-            //    - Handle analytics integration optimization and performance
-            //    - Implement analytics integration validation and quality assurance
-            // 4. Performance optimization: Optimize SystemHealthSnapshot analytics performance
-            //    - Implement health snapshot analytics caching and optimization strategies
-            //    - Handle health snapshot analytics performance monitoring and analytics
-            //    - Ensure SystemHealthSnapshot integration meets performance and reliability standards
+            system_health_integration.integrate_snapshot(&health_snapshot);
+
+            // Add system health data to analytics engine for historical analysis
+            analytics_engine
+                .add_system_health_data(health_snapshot)
+                .await?;
+        }
+    }
+
+    if let Some(rollup) = system_health_integration.latest_rollup() {
+        if let Some(metrics) = system_health_integration.latest_metrics_map() {
+            info!(
+                "System health summary -> avg health: {:.2}, resource util: {:.2}, error rate: {:.4}, avg CPU: {:.2}%, avg memory: {:.2}%, samples: {}, CPU peak: {:.2}%, memory peak: {:.2}%, error peak: {:.4}, health floor: {:.2}",
+                metrics
+                    .get("system.health.avg_overall_health")
+                    .copied()
+                    .unwrap_or_default(),
+                metrics
+                    .get("system.health.avg_resource_utilization")
+                    .copied()
+                    .unwrap_or_default(),
+                metrics
+                    .get("system.health.avg_error_rate")
+                    .copied()
+                    .unwrap_or_default(),
+                metrics
+                    .get("system.health.avg_cpu_utilization")
+                    .copied()
+                    .unwrap_or_default(),
+                metrics
+                    .get("system.health.avg_memory_utilization")
+                    .copied()
+                    .unwrap_or_default(),
+                rollup.sample_count,
+                metrics
+                    .get("system.health.cpu_peak")
+                    .copied()
+                    .unwrap_or_default(),
+                metrics
+                    .get("system.health.memory_peak")
+                    .copied()
+                    .unwrap_or_default(),
+                metrics
+                    .get("system.health.error_rate_peak")
+                    .copied()
+                    .unwrap_or_default(),
+                metrics
+                    .get("system.health.health_floor")
+                    .copied()
+                    .unwrap_or_default(),
+            );
         }
     }
 
@@ -218,33 +494,59 @@ async fn demonstrate_trend_analysis(analytics_engine: &AnalyticsEngine) -> Resul
 
     // Analyze trends
     let success_trend = analytics_engine
-        .analyze_trends("success_rate", &success_rate_data)
+        .analyze_trends("completion_rate")
         .await?;
     let response_trend = analytics_engine
-        .analyze_trends("response_time", &response_time_data)
+        .analyze_trends("throughput")
         .await?;
     let error_trend = analytics_engine
-        .analyze_trends("error_rate", &error_rate_data)
+        .analyze_trends("error_rate")
+        .await?;
+
+    // Analyze system health trends
+    let cpu_trend = analytics_engine
+        .analyze_trends("cpu_utilization")
+        .await?;
+    let memory_trend = analytics_engine
+        .analyze_trends("memory_utilization")
+        .await?;
+    let health_trend = analytics_engine
+        .analyze_trends("overall_health")
         .await?;
 
     info!("Trend Analysis Results:");
     info!(
-        "  Success Rate Trend: {:?} (strength: {:.2}, confidence: {:.2})",
-        success_trend.trend_direction, success_trend.trend_strength, success_trend.confidence
+        "  Completion Rate Trend: {:?} (strength: {:.2}, confidence: {:.2})",
+        success_trend.direction, success_trend.strength, success_trend.confidence
     );
     info!(
-        "  Response Time Trend: {:?} (strength: {:.2}, confidence: {:.2})",
-        response_trend.trend_direction, response_trend.trend_strength, response_trend.confidence
+        "  Throughput Trend: {:?} (strength: {:.2}, confidence: {:.2})",
+        response_trend.direction, response_trend.strength, response_trend.confidence
     );
     info!(
         "  Error Rate Trend: {:?} (strength: {:.2}, confidence: {:.2})",
-        error_trend.trend_direction, error_trend.trend_strength, error_trend.confidence
+        error_trend.direction, error_trend.strength, error_trend.confidence
+    );
+    info!(
+        "  CPU Utilization Trend: {:?} (strength: {:.2}, confidence: {:.2})",
+        cpu_trend.direction, cpu_trend.strength, cpu_trend.confidence
+    );
+    info!(
+        "  Memory Utilization Trend: {:?} (strength: {:.2}, confidence: {:.2})",
+        memory_trend.direction, memory_trend.strength, memory_trend.confidence
+    );
+    info!(
+        "  Overall Health Trend: {:?} (strength: {:.2}, confidence: {:.2})",
+        health_trend.direction, health_trend.strength, health_trend.confidence
     );
 
     info!("Trend descriptions:");
     info!("  {}", success_trend.description);
     info!("  {}", response_trend.description);
     info!("  {}", error_trend.description);
+    info!("  {}", cpu_trend.description);
+    info!("  {}", memory_trend.description);
+    info!("  {}", health_trend.description);
 
     Ok(())
 }
@@ -262,32 +564,50 @@ async fn demonstrate_anomaly_detection(analytics_engine: &AnalyticsEngine) -> Re
         // For demonstration, we'll simulate anomaly detection directly
     }
 
-    // Simulate an anomaly
-    let anomaly_value = 5000.0; // Much higher than normal
+    // Simulate anomalies in different metrics
+    let response_time_anomaly = 5000.0; // Much higher than normal response time
+    let cpu_anomaly = 95.0; // Very high CPU utilization
+    let error_rate_anomaly = 0.25; // Very high error rate
     let timestamp = Utc::now();
 
-    let anomalies = analytics_engine
-        .detect_anomalies("response_time", anomaly_value, timestamp)
+    let response_anomalies = analytics_engine
+        .detect_anomalies("throughput", response_time_anomaly, timestamp)
+        .await?;
+    let cpu_anomalies = analytics_engine
+        .detect_anomalies("cpu_utilization", cpu_anomaly, timestamp)
+        .await?;
+    let error_anomalies = analytics_engine
+        .detect_anomalies("error_rate", error_rate_anomaly, timestamp)
         .await?;
 
-    if !anomalies.is_empty() {
+    let all_anomalies = vec![
+        ("Throughput", &response_anomalies),
+        ("CPU Utilization", &cpu_anomalies),
+        ("Error Rate", &error_anomalies),
+    ];
+
+    let total_anomalies: usize = all_anomalies.iter().map(|(_, anomalies)| anomalies.len()).sum();
+
+    if total_anomalies > 0 {
         info!("Anomaly Detection Results:");
-        for anomaly in &anomalies {
-            info!("  Anomaly Type: {:?}", anomaly.anomaly_type);
-            info!("  Severity: {:?}", anomaly.severity);
-            info!("  Confidence: {:.2}", anomaly.confidence);
-            info!("  Anomaly Score: {:.2}", anomaly.anomaly_score);
-            info!("  Detected Value: {:.2}", anomaly.detected_value);
-            info!("  Expected Value: {:.2}", anomaly.expected_value);
-            info!("  Deviation: {:.1}%", anomaly.deviation_percentage);
-            info!("  Description: {}", anomaly.description);
-            info!("  Recommended Actions:");
-            for action in &anomaly.recommended_actions {
-                info!("    - {}", action);
+        for (metric_name, anomalies) in all_anomalies {
+            if !anomalies.is_empty() {
+                info!("  {} Anomalies:", metric_name);
+                for anomaly in anomalies {
+                    info!("    Type: {:?}", anomaly.anomaly_type);
+                    info!("    Severity: {:?}", anomaly.severity);
+                    info!("    Confidence: {:.2}", anomaly.confidence);
+                    info!("    Score: {:.2}", anomaly.anomaly_score);
+                    info!("    Detected: {:.2}", anomaly.detected_value);
+                    info!("    Expected: {:.2}", anomaly.expected_value);
+                    info!("    Deviation: {:.1}%", anomaly.deviation_percentage);
+                    info!("    Description: {}", anomaly.description);
+                    info!("    Actions: {}", anomaly.recommended_actions.join(", "));
+                }
             }
         }
     } else {
-        info!("No anomalies detected");
+        info!("No anomalies detected in any metrics");
     }
 
     Ok(())

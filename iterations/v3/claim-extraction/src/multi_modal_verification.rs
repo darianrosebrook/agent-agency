@@ -1524,6 +1524,20 @@ impl MultiModalVerificationEngine {
             if term.len() > 4 {
                 // Generate simulated historical claims
                 historical_claims.push(HistoricalClaim {
+                    id: None,
+                    confidence_score: None,
+                    source_count: None,
+                    verification_status: None,
+                    last_verified: None,
+                    related_entities: None,
+                    claim_type: None,
+                    created_at: None,
+                    updated_at: None,
+                    metadata: None,
+                    source_references: None,
+                    cross_references: None,
+                    validation_metadata: None,
+                    
                     id: Uuid::new_v4(),
                     claim_text: format!("The system should handle {} correctly", term),
                     confidence_score: 0.85,
@@ -1544,6 +1558,20 @@ impl MultiModalVerificationEngine {
                 });
 
                 historical_claims.push(HistoricalClaim {
+                    id: None,
+                    confidence_score: None,
+                    source_count: None,
+                    verification_status: None,
+                    last_verified: None,
+                    related_entities: None,
+                    claim_type: None,
+                    created_at: None,
+                    updated_at: None,
+                    metadata: None,
+                    source_references: None,
+                    cross_references: None,
+                    validation_metadata: None,
+                    
                     claim_text: format!("{} must be implemented according to specifications", term),
                     validation_confidence: 0.92,
                     validation_timestamp: chrono::Utc::now() - chrono::Duration::days(15),
@@ -1554,6 +1582,20 @@ impl MultiModalVerificationEngine {
 
         // Add some generic historical claims
         historical_claims.push(HistoricalClaim {
+                    id: None,
+                    confidence_score: None,
+                    source_count: None,
+                    verification_status: None,
+                    last_verified: None,
+                    related_entities: None,
+                    claim_type: None,
+                    created_at: None,
+                    updated_at: None,
+                    metadata: None,
+                    source_references: None,
+                    cross_references: None,
+                    validation_metadata: None,
+                    
             claim_text: "The system should maintain data consistency".to_string(),
             validation_confidence: 0.88,
             validation_timestamp: chrono::Utc::now() - chrono::Duration::days(7),
@@ -1561,6 +1603,20 @@ impl MultiModalVerificationEngine {
         });
 
         historical_claims.push(HistoricalClaim {
+                    id: None,
+                    confidence_score: None,
+                    source_count: None,
+                    verification_status: None,
+                    last_verified: None,
+                    related_entities: None,
+                    claim_type: None,
+                    created_at: None,
+                    updated_at: None,
+                    metadata: None,
+                    source_references: None,
+                    cross_references: None,
+                    validation_metadata: None,
+                    
             claim_text: "Error handling must be robust".to_string(),
             validation_confidence: 0.91,
             validation_timestamp: chrono::Utc::now() - chrono::Duration::days(3),
@@ -3072,20 +3128,34 @@ impl MultiModalVerificationEngine {
         // For now, simulate database results with better data
         for (i, term) in claim_terms.iter().enumerate() {
             let claim = HistoricalClaim {
-                id: Uuid::new_v4(),
+                    id: None,
+                    confidence_score: None,
+                    source_count: None,
+                    verification_status: None,
+                    last_verified: None,
+                    related_entities: None,
+                    claim_type: None,
+                    created_at: None,
+                    updated_at: None,
+                    metadata: None,
+                    source_references: None,
+                    cross_references: None,
+                    validation_metadata: None,
+                    
+                id: Some(Uuid::new_v4()),
                 claim_text: format!("Historical claim about {} from {} sources", term, i + 1),
-                confidence_score: 0.75 + (i as f32 * 0.05).min(0.2f32),
-                source_count: i + 1,
-                verification_status: VerificationStatus::Verified,
-                last_verified: chrono::Utc::now() - chrono::Duration::days(i as i64 * 7),
-                related_entities: vec![term.clone()],
-                claim_type: ClaimType::Factual,
-                created_at: chrono::Utc::now() - chrono::Duration::days(i as i64 * 30),
-                updated_at: chrono::Utc::now(),
-                metadata: std::collections::HashMap::new(),
-                source_references: vec![format!("source://historical/{}", i)],
-                cross_references: vec![format!("xref://claim/{}", i)],
-                validation_metadata: std::collections::HashMap::new(),
+                confidence_score: Some(0.75 + (i as f32 * 0.05).min(0.2f32)),
+                source_count: Some(i + 1),
+                verification_status: Some(VerificationStatus::Verified),
+                last_verified: Some(chrono::Utc::now() - chrono::Duration::days(i as i64 * 7)),
+                related_entities: Some(vec![term.clone()]),
+                claim_type: Some(ClaimType::Factual),
+                created_at: Some(chrono::Utc::now() - chrono::Duration::days(i as i64 * 30)),
+                updated_at: Some(chrono::Utc::now()),
+                metadata: Some(std::collections::HashMap::new()),
+                source_references: Some(vec![format!("source://historical/{}", i)]),
+                cross_references: Some(vec![format!("xref://claim/{}", i)]),
+                validation_metadata: Some(std::collections::HashMap::new()),
                 // Backward compatibility fields
                 validation_confidence: (0.75 + (i as f32 * 0.05).min(0.2f32)) as f64,
                 validation_timestamp: chrono::Utc::now() - chrono::Duration::days(i as i64 * 7),
@@ -3127,30 +3197,44 @@ impl MultiModalVerificationEngine {
         for (i, term) in claim_terms.iter().enumerate() {
             // Simulate database query results
             let claim = HistoricalClaim {
-                id: uuid::Uuid::new_v4(),
+                    id: None,
+                    confidence_score: None,
+                    source_count: None,
+                    verification_status: None,
+                    last_verified: None,
+                    related_entities: None,
+                    claim_type: None,
+                    created_at: None,
+                    updated_at: None,
+                    metadata: None,
+                    source_references: None,
+                    cross_references: None,
+                    validation_metadata: None,
+                    
+                id: Some(uuid::Uuid::new_v4()),
                 claim_text: format!("Database historical claim for '{}'", term),
-                confidence_score: (0.85 + (i as f64 * 0.02)) as f32,
-                source_count: 2,
-                verification_status: VerificationStatus::Verified,
-                last_verified: Utc::now() - chrono::Duration::days(i as i64 + 1),
-                related_entities: vec![term.clone()],
-                claim_type: ClaimType::Factual,
-                created_at: Utc::now() - chrono::Duration::days(i as i64 + 1),
-                updated_at: Utc::now(),
-                metadata: std::collections::HashMap::new(),
-                source_references: vec![
+                confidence_score: Some((0.85 + (i as f64 * 0.02)) as f32),
+                source_count: Some(2),
+                verification_status: Some(VerificationStatus::Verified),
+                last_verified: Some(Utc::now() - chrono::Duration::days(i as i64 + 1)),
+                related_entities: Some(vec![term.clone()]),
+                claim_type: Some(ClaimType::Factual),
+                created_at: Some(Utc::now() - chrono::Duration::days(i as i64 + 1)),
+                updated_at: Some(Utc::now()),
+                metadata: Some(std::collections::HashMap::new()),
+                source_references: Some(vec![
                     format!("database://historical_claims/{}", i),
                     format!("cache://verified_claims/{}", i),
-                ],
-                cross_references: vec![
+                ]),
+                cross_references: Some(vec![
                     format!("related_claim_{}", i + 1),
                     format!("similar_claim_{}", i + 2),
-                ],
-                validation_metadata: std::collections::HashMap::from([
+                ]),
+                validation_metadata: Some(std::collections::HashMap::from([
                     ("database_source".to_string(), "historical_claims_table".to_string()),
                     ("query_term".to_string(), term.clone()),
                     ("confidence_score".to_string(), (0.85 + (i as f64 * 0.02)).to_string()),
-                ]),
+                ])),
                 // Backward compatibility fields
                 validation_confidence: 0.85 + (i as f64 * 0.02),
                 validation_timestamp: Utc::now() - chrono::Duration::days(i as i64 + 1),
@@ -3182,6 +3266,20 @@ impl MultiModalVerificationEngine {
             
             for (i, term) in claim_terms.iter().enumerate() {
                 let claim = HistoricalClaim {
+                    id: None,
+                    confidence_score: None,
+                    source_count: None,
+                    verification_status: None,
+                    last_verified: None,
+                    related_entities: None,
+                    claim_type: None,
+                    created_at: None,
+                    updated_at: None,
+                    metadata: None,
+                    source_references: None,
+                    cross_references: None,
+                    validation_metadata: None,
+                    
                     id: uuid::Uuid::new_v4(),
                     claim_text: format!("Cached historical claim for '{}'", term),
                     validation_confidence: 0.80 + (i as f64 * 0.01),

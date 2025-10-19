@@ -1,5 +1,10 @@
 # Iteration Methodology Guide
 
+> **Document Type**: Methodology & Process Document  
+> **Status**: Describes development methodology and process guidelines  
+> **Implementation Status**: See [COMPONENT_STATUS_INDEX.md](../../COMPONENT_STATUS_INDEX.md) for actual completion  
+> **Current Reality**: 68% complete - Some processes described here may not be fully implemented
+
 ## Overview
 
 This guide provides practical instructions for implementing the **iteration loop** - the systematic approach to task completion and quality assurance in Agent Agency development.

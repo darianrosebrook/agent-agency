@@ -1,5 +1,7 @@
 # Component Status Template
 
+> **Reality Check**: This template emphasizes honest status reporting. Only claim "Production-Ready" if ALL criteria are met. See [COMPONENT_STATUS_INDEX.md](../../COMPONENT_STATUS_INDEX.md) for current project status.
+
 **Component**: [COMPONENT_NAME]  
 **ID**: [ARBITER/MEMORY/RL/INFRA-XXX]  
 **Last Updated**: [DATE]  

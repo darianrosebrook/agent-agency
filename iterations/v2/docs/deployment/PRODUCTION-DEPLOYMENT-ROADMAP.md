@@ -1,3 +1,17 @@
+> ⚠️ **REALITY CHECK**: This deployment guide was created based on earlier optimistic assessments. 
+> 
+> **Current Reality** (October 2025):
+> - **4 of 25 components** are production-ready (16%)
+> - **12 of 25 components** are functional but need hardening (48%)
+> - **Critical component missing**: Arbiter Reasoning Engine (ARBITER-016) not started
+> - **Realistic timeline to production**: 10-14 weeks, not 8-13 days
+> 
+> **For Accurate Status**: See [COMPONENT_STATUS_INDEX.md](../../COMPONENT_STATUS_INDEX.md)
+> 
+> This document is preserved for reference but timelines and readiness claims are outdated.
+
+---
+
 # Production Deployment Roadmap
 
 **Created**: October 12, 2025  

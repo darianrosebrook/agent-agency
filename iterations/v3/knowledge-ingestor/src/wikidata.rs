@@ -7,6 +7,7 @@
 
 use crate::types::*;
 use crate::{IngestionConfig, IngestionStats, KnowledgeIngestor};
+use agent_agency_database::models::*;
 use agent_agency_database as database;
 use anyhow::{Context, Result};
 use flate2::read::GzDecoder;
@@ -192,6 +193,10 @@ fn parse_lexeme(json: &Value, config: &IngestionConfig) -> Result<Option<ParsedE
         entity_type: Some("lexeme".to_string()),
         properties,
         confidence: 1.0,
+        usage_count: 0,
+        usage_decay: Some(1.0),
+        last_accessed: None,
+        created_at: None,
         dump_version: Some("wikidata-2025-09-24".to_string()),
         toolchain: Some(format!("knowledge-ingestor-v{}", env!("CARGO_PKG_VERSION"))),
         license: Some("CC0".to_string()),

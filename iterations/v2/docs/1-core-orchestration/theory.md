@@ -1,3 +1,10 @@
+> **Document Type**: Architecture & Planning Document  
+> **Status**: Describes target architecture and aspirational capabilities  
+> **Implementation Status**: See [COMPONENT_STATUS_INDEX.md](../../COMPONENT_STATUS_INDEX.md) for actual completion  
+> **Current Reality**: 68% complete - Some capabilities described here are not yet implemented
+
+---
+
 # Arbiter Stack Requirements for LLM Orchestration
 
 > **Implementation Status**: ✅ ARBITER-001 complete, ⚠️ 12 specs ready for implementation

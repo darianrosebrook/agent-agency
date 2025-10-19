@@ -83,6 +83,7 @@ export class AdvancedTaskRouter extends EventEmitter {
   private agentPerformance = new Map<string, AgentPerformanceMetrics[]>();
   private routingHistory: RoutingDecision[] = [];
   private agentLoad = new Map<string, number>(); // current concurrent tasks per agent
+  private queueProcessorInterval?: NodeJS.Timeout;
 
   constructor(config: RoutingConfig, memoryManager?: MultiTenantMemoryManager) {
     super();
@@ -684,7 +685,18 @@ export class AdvancedTaskRouter extends EventEmitter {
     };
 
     // Process queues every 5 seconds
-    setInterval(processQueues, 5000);
+    this.queueProcessorInterval = setInterval(processQueues, 5000);
+  }
+
+  /**
+   * Stop the queue processor and cleanup resources
+   */
+  stopQueueProcessor(): void {
+    if (this.queueProcessorInterval) {
+      clearInterval(this.queueProcessorInterval);
+      this.queueProcessorInterval = undefined;
+      this.logger.debug("Queue processor stopped");
+    }
   }
 
   /**

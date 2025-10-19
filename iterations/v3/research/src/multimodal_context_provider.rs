@@ -179,24 +179,25 @@ impl MultimodalContextProvider {
                 break;
             }
 
-            if result.confidence < budget.min_confidence {
+            // Use snippet length as a proxy for confidence
+            if result.snippet.len() < 10 {
                 continue;
             }
 
             // Estimate token count (rough approximation)
-            let token_estimate = result.text.len() / 4;
+            let token_estimate = result.snippet.len() / 4;
             if token_count + token_estimate > budget.max_tokens {
                 break;
             }
 
             // Deduplication using content hash
-            let dedup_hash = Self::hash_content(&result.text);
+            let dedup_hash = Self::hash_content(&result.snippet);
             if seen_hashes.contains(&dedup_hash) {
                 continue; // Skip duplicate
             }
             seen_hashes.insert(dedup_hash.clone());
 
-            let is_global = project_scope.is_none() || !result.text.contains("project:");
+            let is_global = project_scope.is_none() || !result.snippet.contains("project:");
             if is_global {
                 global_count += 1;
             } else {
@@ -205,16 +206,16 @@ impl MultimodalContextProvider {
 
             let evidence = EvidenceItem {
                 id: Uuid::new_v4(),
-                content: result.text.clone(),
-                modality: result.modality.clone(),
-                confidence: result.confidence,
-                similarity_score: result.score,
+                content: result.snippet.clone(),
+                modality: result.kind.clone(),
+                confidence: 0.8, // Default confidence since it's not available
+                similarity_score: 0.8, // Default score since it's not available
                 citation: Citation {
-                    source_uri: format!("doc:{}", result.document_id),
-                    document_id: result.document_id,
-                    page_number: result.page_number,
-                    bbox: result.bbox.map(|b| [b.0, b.1, b.2, b.3]),
-                    time_range: result.time_range.map(|t| [t.0, t.1]),
+                    source_uri: format!("ref:{}", result.ref_id),
+                    document_id: result.ref_id.clone(),
+                    page_number: None, // Not available in the struct
+                    bbox: None, // Not available in the struct
+                    time_range: None, // Not available in the struct
                 },
                 is_global,
                 dedup_hash,

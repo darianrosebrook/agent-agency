@@ -33,6 +33,17 @@ pub enum ResearchPriority {
     Critical = 4,
 }
 
+/// Fusion methods for combining multimodal search results
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum FusionMethod {
+    /// Reciprocal Rank Fusion
+    RRF,
+    /// Learned fusion weights
+    LearnedWeights,
+    /// Simple average of scores
+    SimpleAverage,
+}
+
 /// Search context for multimodal knowledge seeking
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SearchContext {

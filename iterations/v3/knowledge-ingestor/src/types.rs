@@ -4,52 +4,8 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+
 use uuid::Uuid;
-
-/// Knowledge source type
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum KnowledgeSource {
-    Wikidata,
-    WordNet,
-}
-
-impl KnowledgeSource {
-    /// Convert to string representation
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            KnowledgeSource::Wikidata => "wikidata",
-            KnowledgeSource::WordNet => "wordnet",
-        }
-    }
-}
-
-/// External knowledge entity for database storage
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ExternalKnowledgeEntity {
-    pub id: Option<Uuid>,
-    pub source: KnowledgeSource,
-    pub entity_key: String,
-    pub canonical_name: String,
-    pub lang: Option<String>,
-    pub entity_type: Option<String>,
-    pub properties: serde_json::Value,
-    pub confidence: f64,
-    pub dump_version: Option<String>,
-    pub toolchain: Option<String>,
-    pub license: Option<String>,
-}
-
-/// Knowledge relationship between entities
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct KnowledgeRelationship {
-    pub id: Option<Uuid>,
-    pub source_entity_id: Uuid,
-    pub target_entity_id: Uuid,
-    pub relationship_type: String,
-    pub confidence: f64,
-    pub metadata: Option<serde_json::Value>,
-}
 
 /// Wikidata lexeme structure
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -86,7 +42,7 @@ pub struct WordNetSynset {
 /// Parsed entity ready for ingestion
 #[derive(Debug, Clone)]
 pub struct ParsedEntity {
-    pub entity: ExternalKnowledgeEntity,
+    pub entity: crate::ExternalKnowledgeEntity,
     pub embedding_text: String,
 }
 
@@ -102,6 +58,7 @@ pub struct CrossReferenceMatch {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use agent_agency_database::models::KnowledgeSource;
 
     #[test]
     fn test_knowledge_source_as_str() {

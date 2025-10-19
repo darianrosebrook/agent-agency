@@ -38,7 +38,14 @@ describe("AgentOrchestrator", () => {
   let orchestrator: AgentOrchestrator;
 
   beforeEach(() => {
-    orchestrator = new AgentOrchestrator();
+    orchestrator = new AgentOrchestrator({
+      advancedRoutingEnabled: false, // Disable routing to prevent intervals
+      cawsEnforcementEnabled: false,
+    });
+  });
+
+  afterEach(() => {
+    orchestrator.cleanup();
   });
 
   describe("initialization", () => {

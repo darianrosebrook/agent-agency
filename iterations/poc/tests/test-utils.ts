@@ -7,29 +7,7 @@
 
 import { jest } from "@jest/globals";
 
-// Setup global mocks before any imports
-const mockSetInterval = jest.fn(() => 123);
-const mockSetTimeout = jest.fn(() => 456);
-const mockClearInterval = jest.fn();
-const mockClearTimeout = jest.fn();
-
-// Apply global mocks
-Object.defineProperty(global, "setInterval", {
-  value: mockSetInterval,
-  writable: true,
-});
-Object.defineProperty(global, "setTimeout", {
-  value: mockSetTimeout,
-  writable: true,
-});
-Object.defineProperty(global, "clearInterval", {
-  value: mockClearInterval,
-  writable: true,
-});
-Object.defineProperty(global, "clearTimeout", {
-  value: mockClearTimeout,
-  writable: true,
-});
+// Timer mocks removed - services should properly cleanup intervals
 
 // Mock modules that cause timeouts
 jest.mock("../src/data/connection/PostgreSQLConnection", () => ({

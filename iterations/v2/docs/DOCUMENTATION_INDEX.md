@@ -1,6 +1,6 @@
 # Documentation Index
 
-**Last Updated**: October 13, 2025  
+**Last Updated**: October 19, 2025  
 **Agent Agency V2 Documentation Organization**
 
 ---
@@ -192,14 +192,22 @@ Component and feature status tracking
 - INFRA-001 through INFRA-002
 - Feature-specific status updates
 
+### ⚠️ Archived/Outdated Documents
+
+The following status documents contain outdated claims and should not be used:
+- `status/PRODUCTION_READY_STATUS_JANUARY_2025.md` - Claims production readiness (archived)
+- `status/CURRENT_STATUS_DECEMBER_2024.md` - Claims 100% operational (archived)
+
+**Always refer to**: [COMPONENT_STATUS_INDEX.md](../COMPONENT_STATUS_INDEX.md) for accurate status
+
 ---
 
 ## Key Metrics (Current Status)
 
 ### Project Completion
 
-- **Overall**: ~78% complete (+10% this session)
-- **ARBITER-016**: 95% complete (Week 3-4 done, Week 5 in progress)
+- **Overall**: ~68% complete (4 production-ready, 12 functional, 5 alpha)
+- **ARBITER-016**: Not started (critical component missing)
 - **Test Pass Rate**: 100% (173/173 tests) ✅
 - **Code Coverage**: 92.82% (exceeds 90% target) ✅
 

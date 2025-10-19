@@ -199,6 +199,7 @@ pub enum OptimizationType {
     LoadBalancing,
     CapacityScaling,
     ConfigurationOptimization,
+    SystemOptimization,
 }
 
 /// Priority levels
@@ -344,6 +345,31 @@ impl AnalyticsEngine {
                 .iter()
                 .map(|snapshot| snapshot.customer_satisfaction)
                 .collect::<Vec<f64>>(),
+            "cpu_utilization" => data
+                .system_health_history
+                .iter()
+                .map(|snapshot| snapshot.cpu_utilization)
+                .collect::<Vec<f64>>(),
+            "memory_utilization" => data
+                .system_health_history
+                .iter()
+                .map(|snapshot| snapshot.memory_utilization)
+                .collect::<Vec<f64>>(),
+            "overall_health" => data
+                .system_health_history
+                .iter()
+                .map(|snapshot| snapshot.overall_health)
+                .collect::<Vec<f64>>(),
+            "resource_utilization" => data
+                .system_health_history
+                .iter()
+                .map(|snapshot| snapshot.resource_utilization)
+                .collect::<Vec<f64>>(),
+            "error_rate" => data
+                .system_health_history
+                .iter()
+                .map(|snapshot| snapshot.error_rate)
+                .collect::<Vec<f64>>(),
             _ => {
                 return Ok(TrendAnalysis {
                     direction: TrendDirection::Stable,
@@ -418,6 +444,31 @@ impl AnalyticsEngine {
                 .business_metrics_history
                 .iter()
                 .map(|snapshot| snapshot.customer_satisfaction)
+                .collect::<Vec<f64>>(),
+            "cpu_utilization" => data
+                .system_health_history
+                .iter()
+                .map(|snapshot| snapshot.cpu_utilization)
+                .collect::<Vec<f64>>(),
+            "memory_utilization" => data
+                .system_health_history
+                .iter()
+                .map(|snapshot| snapshot.memory_utilization)
+                .collect::<Vec<f64>>(),
+            "overall_health" => data
+                .system_health_history
+                .iter()
+                .map(|snapshot| snapshot.overall_health)
+                .collect::<Vec<f64>>(),
+            "resource_utilization" => data
+                .system_health_history
+                .iter()
+                .map(|snapshot| snapshot.resource_utilization)
+                .collect::<Vec<f64>>(),
+            "error_rate" => data
+                .system_health_history
+                .iter()
+                .map(|snapshot| snapshot.error_rate)
                 .collect::<Vec<f64>>(),
             _ => return Ok(Vec::new()),
         };
@@ -647,6 +698,79 @@ impl AnalyticsEngine {
             });
         }
 
+        // Analyze system health trends
+        let cpu_trend = self.analyze_trends("cpu_utilization").await?;
+        if cpu_trend.direction == TrendDirection::Increasing {
+            recommendations.push(OptimizationRecommendation {
+                optimization_type: OptimizationType::ResourceAllocation,
+                priority: PriorityLevel::High,
+                effort: EffortLevel::Medium,
+                expected_improvement: 20.0,
+                description: "CPU utilization is increasing, optimize resource usage"
+                    .to_string(),
+                implementation_steps: vec![
+                    "Analyze CPU-intensive operations".to_string(),
+                    "Implement CPU optimization strategies".to_string(),
+                    "Consider horizontal scaling".to_string(),
+                ],
+                estimated_impact: "15-25% CPU utilization reduction".to_string(),
+            });
+        }
+
+        let memory_trend = self.analyze_trends("memory_utilization").await?;
+        if memory_trend.direction == TrendDirection::Increasing {
+            recommendations.push(OptimizationRecommendation {
+                optimization_type: OptimizationType::ResourceAllocation,
+                priority: PriorityLevel::High,
+                effort: EffortLevel::Medium,
+                expected_improvement: 18.0,
+                description: "Memory utilization is increasing, optimize memory usage"
+                    .to_string(),
+                implementation_steps: vec![
+                    "Analyze memory usage patterns".to_string(),
+                    "Implement memory optimization techniques".to_string(),
+                    "Consider memory-efficient algorithms".to_string(),
+                ],
+                estimated_impact: "15-20% memory utilization reduction".to_string(),
+            });
+        }
+
+        let error_trend = self.analyze_trends("error_rate").await?;
+        if error_trend.direction == TrendDirection::Increasing {
+            recommendations.push(OptimizationRecommendation {
+                optimization_type: OptimizationType::ConfigurationOptimization,
+                priority: PriorityLevel::Critical,
+                effort: EffortLevel::High,
+                expected_improvement: 30.0,
+                description: "Error rate is increasing, investigate and fix root causes"
+                    .to_string(),
+                implementation_steps: vec![
+                    "Analyze error patterns and root causes".to_string(),
+                    "Implement error handling improvements".to_string(),
+                    "Add comprehensive error monitoring".to_string(),
+                ],
+                estimated_impact: "25-40% error rate reduction".to_string(),
+            });
+        }
+
+        let health_trend = self.analyze_trends("overall_health").await?;
+        if health_trend.direction == TrendDirection::Decreasing {
+            recommendations.push(OptimizationRecommendation {
+                optimization_type: OptimizationType::SystemOptimization,
+                priority: PriorityLevel::Critical,
+                effort: EffortLevel::High,
+                expected_improvement: 35.0,
+                description: "Overall system health is declining, comprehensive system optimization needed"
+                    .to_string(),
+                implementation_steps: vec![
+                    "Conduct comprehensive system health assessment".to_string(),
+                    "Implement system-wide optimization strategies".to_string(),
+                    "Enhance monitoring and alerting capabilities".to_string(),
+                ],
+                estimated_impact: "30-50% system health improvement".to_string(),
+            });
+        }
+
         Ok(recommendations)
     }
 
@@ -699,6 +823,62 @@ impl AnalyticsEngine {
     /// Get trend cache for dashboard access
     pub async fn get_trend_cache(&self) -> std::collections::HashMap<String, TrendAnalysis> {
         self.trend_cache.read().await.clone()
+    }
+
+    /// Add agent performance data to historical storage
+    pub async fn add_agent_performance_data(
+        &self,
+        agent_id: String,
+        snapshot: AgentPerformanceSnapshot,
+    ) -> Result<()> {
+        let mut data = self.historical_data.write().await;
+        data.agent_performance_history.push_back(snapshot);
+
+        // Maintain data retention limits
+        while data.agent_performance_history.len() > (self.config.data_retention_days * 24) as usize {
+            data.agent_performance_history.pop_front();
+        }
+
+        Ok(())
+    }
+
+    /// Add coordination metrics data to historical storage
+    pub async fn add_coordination_data(&self, snapshot: CoordinationMetricsSnapshot) -> Result<()> {
+        let mut data = self.historical_data.write().await;
+        data.coordination_metrics_history.push_back(snapshot);
+
+        // Maintain data retention limits
+        while data.coordination_metrics_history.len() > (self.config.data_retention_days * 24) as usize {
+            data.coordination_metrics_history.pop_front();
+        }
+
+        Ok(())
+    }
+
+    /// Add business metrics data to historical storage
+    pub async fn add_business_data(&self, snapshot: BusinessMetricsSnapshot) -> Result<()> {
+        let mut data = self.historical_data.write().await;
+        data.business_metrics_history.push_back(snapshot);
+
+        // Maintain data retention limits
+        while data.business_metrics_history.len() > (self.config.data_retention_days * 24) as usize {
+            data.business_metrics_history.pop_front();
+        }
+
+        Ok(())
+    }
+
+    /// Add system health data to historical storage
+    pub async fn add_system_health_data(&self, snapshot: SystemHealthSnapshot) -> Result<()> {
+        let mut data = self.historical_data.write().await;
+        data.system_health_history.push_back(snapshot);
+
+        // Maintain data retention limits
+        while data.system_health_history.len() > (self.config.data_retention_days * 24) as usize {
+            data.system_health_history.pop_front();
+        }
+
+        Ok(())
     }
 }
 

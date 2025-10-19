@@ -7,6 +7,7 @@ use crate::models::*;
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
 use serde_json::Value as JsonValue;
+use sqlx::Row;
 use uuid::Uuid;
 
 impl DatabaseClient {
@@ -27,7 +28,7 @@ impl DatabaseClient {
             .bind(source)
             .bind(k as i32)
             .bind(min_conf as f64)
-            .fetch_all(&self.pool)
+            .fetch_all(self.pool())
             .await
             .context("Failed to execute semantic search")?;
         
@@ -76,7 +77,7 @@ impl DatabaseClient {
         let row = sqlx::query(query)
             .bind(source)
             .bind(key)
-            .fetch_optional(&self.pool)
+            .fetch_optional(self.pool())
             .await
             .context("Failed to get entity")?;
         
@@ -119,7 +120,7 @@ impl DatabaseClient {
             .bind(entity_id)
             .bind(types.as_ref().map(|v| v.as_slice()))
             .bind(max_depth as i32)
-            .fetch_all(&self.pool)
+            .fetch_all(self.pool())
             .await
             .context("Failed to get related entities")?;
         
@@ -148,7 +149,7 @@ impl DatabaseClient {
         
         let row = sqlx::query(query)
             .bind(id)
-            .fetch_optional(&self.pool)
+            .fetch_optional(self.pool())
             .await?;
         
         match row {
@@ -183,7 +184,7 @@ impl DatabaseClient {
         
         sqlx::query(query)
             .bind(entity_id)
-            .execute(&self.pool)
+            .execute(self.pool())
             .await
             .context("Failed to record usage")?;
         
@@ -196,7 +197,7 @@ impl DatabaseClient {
         entity: ExternalKnowledgeEntity,
         vectors: Vec<(String, Vec<f32>)>,
     ) -> Result<Uuid> {
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.pool().begin().await?;
         
         // Insert or update entity
         let query = "
@@ -268,7 +269,7 @@ impl DatabaseClient {
         let row = sqlx::query(query)
             .bind(entity_id)
             .bind(model_id)
-            .fetch_one(&self.pool)
+            .fetch_one(self.pool())
             .await
             .context("Failed to get entity vector")?;
         
@@ -295,7 +296,7 @@ impl DatabaseClient {
         let rows = sqlx::query(query)
             .bind(source)
             .bind(limit.unwrap_or(10000) as i64)
-            .fetch_all(&self.pool)
+            .fetch_all(self.pool())
             .await
             .context("Failed to get entities by source")?;
         
@@ -345,7 +346,7 @@ impl DatabaseClient {
             .bind(&relationship.relationship_type)
             .bind(relationship.confidence)
             .bind(&relationship.metadata)
-            .fetch_one(&self.pool)
+            .fetch_one(self.pool())
             .await
             .context("Failed to create relationship")?;
         
@@ -358,7 +359,7 @@ impl DatabaseClient {
         let query = "SELECT * FROM kb_get_stats()";
         
         let rows = sqlx::query(query)
-            .fetch_all(&self.pool)
+            .fetch_all(self.pool())
             .await
             .context("Failed to get stats")?;
         

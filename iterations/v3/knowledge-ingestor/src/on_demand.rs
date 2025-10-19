@@ -7,6 +7,7 @@
 
 use crate::types::*;
 use crate::KnowledgeIngestor;
+use agent_agency_database::models::*;
 use anyhow::Result;
 use governor::{Quota, RateLimiter};
 use lru::LruCache;
@@ -20,7 +21,7 @@ use tracing::{debug, warn};
 pub struct OnDemandIngestor {
     ingestor: Arc<KnowledgeIngestor>,
     cache: Arc<RwLock<LruCache<String, CacheEntry>>>,
-    rate_limiter: Arc<RateLimiter<governor::state::direct::NotKeyed, governor::clock::DefaultClock>>,
+    rate_limiter: Arc<RateLimiter<governor::state::direct::NotKeyed, governor::state::InMemoryState, governor::clock::DefaultClock>>,
 }
 
 /// Cache entry for on-demand ingestion
@@ -46,8 +47,10 @@ impl OnDemandIngestor {
         )));
         
         // Rate limiter: 10 requests per second
-        let rate_limiter = Arc::new(RateLimiter::direct(
+        let clock = governor::clock::DefaultClock::default();
+        let rate_limiter = Arc::new(RateLimiter::direct_with_clock(
             Quota::per_second(nonzero!(10u32)),
+            &clock,
         ));
         
         Self {

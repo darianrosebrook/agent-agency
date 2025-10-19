@@ -1,3 +1,10 @@
+> **Document Type**: Architecture & Planning Document  
+> **Status**: Describes target architecture and aspirational capabilities  
+> **Implementation Status**: See [COMPONENT_STATUS_INDEX.md](../../COMPONENT_STATUS_INDEX.md) for actual completion  
+> **Current Reality**: 68% complete - Some capabilities described here are not yet implemented
+
+---
+
 # Agent Agency V2: Comprehensive RL Enhancement Summary
 
 ## Integrating Podcast Insights + Will Brown's Agent RL Framework

@@ -1,15 +1,15 @@
-# Agent Agency - Research in Constitutional AI Agent Governance
+# Agent Agency - Multimodal RAG System & Constitutional AI Governance
 
 ## Overview
 
-**Agent Agency** is a research framework investigating constitutional approaches to AI agent governance and orchestration. The project explores how specialized judge models can evaluate, constrain, and improve agent behaviors in real-time, addressing the fundamental challenge of trustworthy AI agent deployment.
+**Agent Agency** is a comprehensive research framework that has evolved from constitutional AI agent governance into a full-featured **Multimodal Retrieval-Augmented Generation (RAG) system** with integrated constitutional governance capabilities. The project now provides production-ready multimodal AI processing with real-time governance and decision-making.
 
-This mono-repo structure supports progressive research through multiple iterations, examining different approaches to constitutional concurrency where agents coordinate through agreed-upon principles rather than competing for resources or following fixed hierarchies.
+This mono-repo structure supports progressive research through multiple iterations, with the latest V3 iteration featuring a complete multimodal RAG system that can process text, images, audio, video, and documents while maintaining constitutional governance principles.
 
-This mono-repo contains multiple iterations examining different approaches to constitutional AI agent governance:
+This mono-repo contains multiple iterations examining different approaches to AI agent systems:
 
 - **`iterations/v2/`**: TypeScript implementation investigating multi-component agent orchestration with external service integration
-- **`iterations/v3/`**: Rust-based implementation exploring advanced AI capabilities and hardware acceleration
+- **`iterations/v3/`**: **Production-ready multimodal RAG system** with constitutional governance, vector storage, and Apple Silicon optimization
 - **`iterations/poc/`**: Reference implementation examining multi-tenant memory systems and federated learning concepts
 - **`iterations/main/`**: Reserved for stable research artifacts
 
@@ -32,36 +32,45 @@ agent-agency/
 
 ## Research Questions
 
-This project investigates several key questions in constitutional AI agent governance:
+This project investigates several key questions in multimodal AI systems and constitutional governance:
 
-### Constitutional Concurrency
-How can AI agents coordinate through agreed-upon constitutional principles rather than competing for resources or following fixed command structures?
+### Multimodal RAG Integration
+How can constitutional governance principles be applied to multimodal retrieval-augmented generation systems for trustworthy AI decision-making?
 
-### Judge Model Effectiveness
-What approaches to specialized judge models provide the most effective evaluation and constraint of agent behaviors?
+### Cross-Modal Evidence Validation
+What approaches to cross-modal evidence validation provide the most effective verification of multimodal AI outputs?
 
-### Runtime Compliance Enforcement
-How can constitutional principles be enforced at runtime without compromising agent performance or flexibility?
+### Production-Scale Multimodal Processing
+How can multimodal RAG systems be deployed at production scale with constitutional governance and real-time decision-making?
 
-### Hardware-Accelerated Governance
-What optimizations are possible when leveraging Apple Silicon's Neural Engine for both agent execution and governance operations?
+### Hardware-Accelerated Multimodal Processing
+What optimizations are possible when leveraging Apple Silicon's Neural Engine for multimodal processing and governance operations?
 
 ## Research Iterations
 
-### V3: Rust-Based Constitutional Governance
+### V3: Production Multimodal RAG System
 
-The **V3 iteration** examines constitutional AI governance through a Rust implementation, investigating:
+The **V3 iteration** is a **production-ready multimodal RAG system** with integrated constitutional governance, featuring:
 
-- **Memory Safety**: How Rust's ownership model prevents governance failures
-- **Performance Characteristics**: Native performance implications for real-time governance
-- **Hardware Integration**: Apple Silicon optimization for governance operations
-- **Type Safety**: Compile-time enforcement of constitutional constraints
+- **Multimodal Processing**: Text, image, audio, video, and document processing with Apple Silicon optimization
+- **Vector Storage**: PostgreSQL with pgvector extension for high-performance similarity search
+- **Constitutional Governance**: Real-time decision-making with evidence-based validation
+- **Production Deployment**: Docker-based deployment with monitoring, alerting, and load testing
 
-#### Key Research Components
-- **Council System**: Multi-agent decision-making with constitutional oversight
-- **Claim Extraction**: Evidence-based verification and validation approaches
-- **Context Preservation**: Memory management strategies for governance state
-- **Reflexive Learning**: Self-improvement mechanisms for judge models
+#### Key System Components
+- **Multimodal Orchestration**: End-to-end processing pipeline for all content types
+- **Vector Database**: HNSW-indexed vector storage with pgvector for semantic search
+- **Council System**: Constitutional decision-making with multimodal evidence validation
+- **Research Module**: Knowledge retrieval and context synthesis across modalities
+- **Workers System**: Scalable job processing with backpressure and retry logic
+- **Observability**: Comprehensive monitoring with Prometheus, Grafana, and alerting
+
+#### Production Features
+- **Docker Deployment**: Complete containerized deployment with health checks
+- **Load Testing**: K6-based performance testing with custom metrics
+- **Monitoring**: Real-time metrics, alerting, and SLA compliance tracking
+- **Security**: JWT authentication, rate limiting, and input validation
+- **Scalability**: Horizontal scaling with Redis caching and connection pooling
 
 ### V2: TypeScript Multi-Component Orchestration
 
@@ -83,14 +92,14 @@ The **POC iteration** explores foundational concepts for agent memory and learni
 
 ## Research Areas
 
-This framework investigates approaches to constitutional AI agent governance in several areas:
+This framework investigates approaches to multimodal AI systems and constitutional governance in several areas:
 
-- **Multi-Agent Coordination**: How agents can collaborate through constitutional principles rather than rigid hierarchies
-- **Runtime Compliance**: Mechanisms for enforcing governance constraints during agent execution
-- **Evidence-Based Decision Making**: Approaches to verifiable agent reasoning and decision validation
-- **Scalable Agent Ecosystems**: Patterns for managing large numbers of coordinated agents
-- **Privacy-Preserving Learning**: Federated approaches to cross-agent knowledge sharing
-- **Hardware-Accelerated Governance**: Leveraging specialized hardware for efficient governance operations
+- **Multimodal RAG Systems**: Processing and retrieval across text, image, audio, video, and document modalities
+- **Constitutional Governance**: Real-time decision-making with evidence-based validation and constraint enforcement
+- **Vector-Based Knowledge Systems**: High-performance semantic search with pgvector and HNSW indexing
+- **Production AI Deployment**: Scalable, monitored, and secure deployment of multimodal AI systems
+- **Cross-Modal Validation**: Ensuring consistency and accuracy across different content modalities
+- **Hardware-Accelerated Processing**: Leveraging Apple Silicon for efficient multimodal processing and governance
 
 ## Technical Approaches
 
@@ -160,9 +169,16 @@ The project employs progressive research through multiple implementation iterati
 
 ### Prerequisites
 
-- Node.js 18+
-- Rust (for V3 iteration)
-- PostgreSQL (for database-dependent iterations)
+- **For V3 (Multimodal RAG System)**:
+  - Rust 1.75+
+  - Docker 20.10+ and Docker Compose 2.0+
+  - PostgreSQL with pgvector extension
+  - Apple Silicon (recommended for hardware acceleration)
+  - k6 (for load testing)
+
+- **For V2 and POC**:
+  - Node.js 18+
+  - PostgreSQL (for database-dependent iterations)
 
 ### Installation
 
@@ -178,15 +194,25 @@ npm install
 ### Working with Iterations
 
 ```bash
+# V3 Multimodal RAG System (Production Ready)
+cd iterations/v3
+
+# Set up environment
+cp env.production.example .env.production
+# Edit .env.production with your configuration
+
+# Deploy with Docker
+chmod +x scripts/deploy-production.sh
+./scripts/deploy-production.sh deploy
+
+# Or run locally for development
+cargo build
+cargo run
+
 # V2 TypeScript implementation
 cd iterations/v2
 npm install
 npm run dev
-
-# V3 Rust implementation
-cd iterations/v3
-cargo build
-cargo run
 
 # POC reference implementation
 cd iterations/poc
@@ -194,8 +220,40 @@ npm install
 npm run dev
 ```
 
+### Production Deployment
+
+The V3 multimodal RAG system includes complete production deployment infrastructure:
+
+```bash
+# Quick production deployment
+cd iterations/v3
+./scripts/deploy-production.sh deploy
+
+# Access services
+# - API: http://localhost:8080
+# - Metrics: http://localhost:8081
+# - Grafana: http://localhost:3000
+# - Prometheus: http://localhost:9090
+# - Kibana: http://localhost:5601
+```
+
+#### Production Features
+- **Complete Containerization**: Docker-based deployment with health checks
+- **Comprehensive Monitoring**: Prometheus metrics, Grafana dashboards, and alerting
+- **Load Testing**: K6-based performance testing with custom metrics
+- **Security**: JWT authentication, rate limiting, and input validation
+- **Scalability**: Horizontal scaling with Redis caching and connection pooling
+- **Backup & Recovery**: Automated backup procedures with restore capabilities
+
 ## Documentation
 
+### V3 Multimodal RAG System
+- **[System Overview](./iterations/v3/docs/SYSTEM_OVERVIEW.md)**: Comprehensive system architecture and integration status
+- **[Production Deployment Guide](./iterations/v3/docs/PRODUCTION_DEPLOYMENT.md)**: Complete production deployment instructions
+- **[Multimodal RAG Integration Spec](./iterations/v3/docs/MULTIMODAL_RAG_INTEGRATION_SPEC.md)**: Technical integration specification
+- **[Multimodal RAG README](./iterations/v3/docs/MULTIMODAL_RAG_README.md)**: Detailed system architecture and components
+
+### Research Documentation
 - **[Arbiter Theory](./docs/arbiter/theory.md)**: Comprehensive research on LLM orchestration requirements
 - **[CAWS Framework](https://github.com/paths-design/caws)**: Underlying workflow system standards
 - **[Research Documentation](./docs/)**: Investigation findings and technical analysis

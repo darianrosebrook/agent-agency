@@ -11,7 +11,7 @@ use uuid::Uuid;
 
 use crate::{
     git_integration::{GitIntegration, GitTrailerManager},
-    signer::{SignerFactory, SignerTrait},
+    signer::{SignerFactory, SignerTrait, SigningAlgorithm},
     types::{
         BudgetAdherence, CawsComplianceProvenance, ExportFormat, ExportMetadata, FilterOperator,
         FilterType, IntegrityCheckResult, IntegrityIssue, IntegrityIssueType, IntegritySeverity,

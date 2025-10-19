@@ -14,6 +14,34 @@ use tokio::runtime::{Builder as RuntimeBuilder, Handle};
 use tokio::sync::RwLock;
 use tracing::{debug, warn};
 use std::time::{Duration, Instant};
+use uuid::Uuid;
+use embedding_service::{EmbeddingService, ContentType, EmbeddingRequest};
+
+/// Knowledge base search result
+#[derive(Debug, Clone)]
+struct KnowledgeBaseResult {
+    id: Uuid,
+    canonical_name: String,
+    source: KnowledgeSource,
+    properties: HashMap<String, String>,
+}
+
+/// Knowledge source types
+#[derive(Debug, Clone)]
+enum KnowledgeSource {
+    Wikidata,
+    WordNet,
+    Custom,
+}
+
+/// Related entity information
+#[derive(Debug, Clone)]
+struct RelatedEntity {
+    id: Uuid,
+    canonical_name: String,
+    relationship_type: String,
+    confidence: f64,
+}
 
 /// Stage 1: Contextual disambiguation of sentences
 #[derive(Debug)]
@@ -454,6 +482,7 @@ impl AmbiguityDetector {
 struct ContextResolver {
     domain_context: HashMap<String, String>,
     named_entity_recognizer: NamedEntityRecognizer,
+    embedding_service: Option<Arc<dyn EmbeddingService>>,
 }
 
 impl ContextResolver {
@@ -462,11 +491,19 @@ impl ContextResolver {
         domain_context.insert("system".to_string(), "the Agent Agency system".to_string());
         domain_context.insert("component".to_string(), "the current component".to_string());
         domain_context.insert("function".to_string(), "the specified function".to_string());
-
+        
         Self {
             domain_context,
             named_entity_recognizer: NamedEntityRecognizer::new(),
+            embedding_service: None, // Will be set when embedding service is available
         }
+    }
+    
+    /// Create a new ContextResolver with embedding service
+    fn new_with_embedding_service(embedding_service: Arc<dyn EmbeddingService>) -> Self {
+        let mut resolver = Self::new();
+        resolver.embedding_service = Some(embedding_service);
+        resolver
     }
 
     /// Find referent for a pronoun using context map (V2 port)
@@ -1345,7 +1382,7 @@ impl ContextResolver {
     /// Query knowledge base semantic search for similar entities
     async fn query_knowledge_base_semantic_search(
         &self,
-        embedding: &[f32],
+        _embedding: &[f32],
         entity: &str,
     ) -> Result<Vec<KnowledgeBaseResult>> {
         debug!("Querying knowledge base semantic search for entity: {}", entity);

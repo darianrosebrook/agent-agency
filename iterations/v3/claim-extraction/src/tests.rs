@@ -21,28 +21,25 @@ mod disambiguation_tests {
         let disambiguation = DisambiguationStage::new();
 
         // Test case with ambiguous pronouns
-        let ambiguous_input = ClaimExtractionInput {
-            id: Uuid::new_v4(),
-            text: "The system should handle user requests. It must be secure and reliable."
-                .to_string(),
-            context: HashMap::from([
-                ("domain".to_string(), "authentication".to_string()),
-                (
-                    "previous_context".to_string(),
-                    "We need to secure the application".to_string(),
-                ),
-            ]),
+        let sentence = "The system should handle user requests. It must be secure and reliable.";
+        let context = ProcessingContext {
+            task_id: Uuid::new_v4(),
+            working_spec_id: "test_spec".to_string(),
+            source_file: None,
+            line_number: None,
+            surrounding_context: "We need to secure the application".to_string(),
+            domain_hints: vec!["authentication".to_string()],
             metadata: HashMap::new(),
+            input_text: sentence.to_string(),
         };
 
-        let result = disambiguation.process(&ambiguous_input).await?;
+        let result = disambiguation.process(sentence, &context).await?;
 
         // Validate pronoun resolution
         assert!(
-            !result.resolved_claims.is_empty(),
+            result.ambiguities_resolved > 0,
             "Should resolve ambiguous pronouns"
         );
-        assert!(result.confidence > 0.0, "Should have positive confidence");
 
         // Check that pronouns are resolved
         let resolved_text = result.disambiguated_sentence;

@@ -1,5 +1,10 @@
 # Feature Plan – V2 Mock Replacement Roadmap
 
+> **Document Type**: Feature Planning Document  
+> **Status**: Describes planned feature implementation and aspirational capabilities  
+> **Implementation Status**: See [COMPONENT_STATUS_INDEX.md](../../COMPONENT_STATUS_INDEX.md) for actual completion  
+> **Current Reality**: 68% complete - Some features described here are not yet implemented
+
 ## 1. Context & Goals
 - **Working Spec**: `PROJ-785` (Tier 2, mode `feature`)
 - **Objective**: Replace mocked infrastructure in V2 iteration with production-ready integrations while preserving existing prompting/orchestration guarantees.

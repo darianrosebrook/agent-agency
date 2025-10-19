@@ -634,14 +634,12 @@ impl InferenceEngine for CoreMLBackend {
 
                 let compile_time_ms = compile_start.elapsed().as_millis() as u64;
 
-                if let Err(ref e) = compile_result {
+                let compiled_dir = compile_result.map_err(|e| {
                     self.record_compile(compile_time_ms, false);
                     self.telemetry.record_failure(FailureMode::CompileError);
                     tracing::error!("Core ML compilation failed: {}", e);
-                    return anyhow::bail!("Compilation failed: {}", e);
-                }
-
-                let compiled_dir = compile_result?;
+                    anyhow::anyhow!("Compilation failed: {}", e)
+                })?;
                 self.record_compile(compile_time_ms, true);
 
                 // Load compiled model
@@ -649,13 +647,11 @@ impl InferenceEngine for CoreMLBackend {
                     CoreMLModel::load(&compiled_dir, opts.compute_units.to_coreml_code())
                 });
 
-                if let Err(ref e) = load_result {
+                let model = load_result.map_err(|e| {
                     self.telemetry.record_failure(FailureMode::LoadError);
                     tracing::error!("Core ML model loading failed: {}", e);
-                    return anyhow::bail!("Model loading failed: {}", e);
-                }
-
-                let model = load_result?;
+                    anyhow::anyhow!("Model loading failed: {}", e)
+                })?;
 
                 // Query schema
                 let schema_json = with_autorelease_pool(|| model.schema())?;
@@ -697,14 +693,12 @@ impl InferenceEngine for CoreMLBackend {
 
                 let load_time_ms = load_start.elapsed().as_millis() as u64;
 
-                if let Err(ref e) = load_result {
+                let model = load_result.map_err(|e| {
                     self.record_compile(load_time_ms, false);
                     self.telemetry.record_failure(FailureMode::LoadError);
                     tracing::error!("Core ML precompiled model loading failed: {}", e);
-                    return anyhow::bail!("Precompiled model loading failed: {}", e);
-                }
-
-                let model = load_result?;
+                    anyhow::anyhow!("Precompiled model loading failed: {}", e)
+                })?;
                 self.record_compile(load_time_ms, true);
 
                 let io_schema = IoSchema {

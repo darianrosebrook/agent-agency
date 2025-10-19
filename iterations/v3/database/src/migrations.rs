@@ -645,6 +645,8 @@ impl MigrationManager {
             })
             .collect();
         
+        let discovered_count = discovered_migrations.len();
+
         // Filter to get only pending migrations
         let pending: Vec<String> = discovered_migrations
             .into_iter()
@@ -658,10 +660,10 @@ impl MigrationManager {
                 !applied_ids.contains(&numeric_id)
             })
             .collect();
-        
+
         debug!(
             "Discovered {} migrations in {}, {} pending",
-            discovered_migrations.len(),
+            discovered_count,
             self.migration_dir.display(),
             pending.len()
         );

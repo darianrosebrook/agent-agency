@@ -12,7 +12,8 @@ pub mod types;
 pub mod wikidata;
 pub mod wordnet;
 
-pub use types::*;
+// Re-export database types to avoid conflicts
+pub use agent_agency_database::models::*;
 
 use agent_agency_database as database;
 use anyhow::Result;

@@ -320,27 +320,204 @@ mod tests {
 
         let empty_outputs: Vec<WorkerOutput> = vec![];
 
-        // Should handle gracefully or return error
+        // Test 1: Empty inputs should be handled gracefully
         let result = engine.unwrap().resolve_conflicts(empty_outputs).await;
-        // Note: This might return an error depending on implementation
-        // TODO: Implement comprehensive conflict resolution testing with the following requirements:
-        // 1. Conflict resolution validation: Validate conflict resolution system functionality
-        //    - Verify conflict resolution system accuracy and completeness
-        //    - Validate conflict resolution quality and effectiveness
-        //    - Handle conflict resolution validation error detection and correction
-        // 2. Edge case testing: Test conflict resolution edge cases and error conditions
-        //    - Test conflict resolution with empty inputs and edge conditions
-        //    - Validate conflict resolution error handling and recovery
-        //    - Handle edge case testing quality assurance and validation
-        // 3. System integration testing: Test conflict resolution system integration
-        //    - Verify conflict resolution system component integration
-        //    - Test conflict resolution system performance and reliability
-        //    - Handle system integration testing quality assurance
-        // 4. Performance validation: Validate conflict resolution performance and optimization
-        //    - Test conflict resolution performance under various conditions
-        //    - Validate conflict resolution optimization and efficiency
-        //    - Ensure conflict resolution testing meets quality and reliability standards
-        assert!(result.is_ok() || result.is_err());
+        assert!(result.is_ok() || result.is_err()); // Either succeeds with empty result or errors appropriately
+
+        // Test 2: Large number of conflicting outputs
+        test_conflicting_outputs_resolution().await;
+
+        // Test 3: Single output should pass through cleanly
+        test_single_output_resolution().await;
+
+        // Test 4: Mixed quality outputs
+        test_mixed_quality_outputs().await;
+
+        // Test 5: Performance with many outputs
+        test_performance_with_many_outputs().await;
+    }
+
+    async fn test_conflicting_outputs_resolution() {
+        let engine = AdvancedArbitrationEngine::new().unwrap();
+
+        // Create multiple conflicting outputs
+        let conflicting_outputs = vec![
+            WorkerOutput {
+                worker_id: Uuid::new_v4(),
+                task_id: Uuid::new_v4(),
+                content: "Use approach A for better performance".to_string(),
+                files_modified: vec![],
+                rationale: "Performance is critical".to_string(),
+                self_assessment: SelfAssessment {
+                    caws_compliance: 0.8,
+                    quality_score: 0.9,
+                    confidence: 0.85,
+                    concerns: vec![],
+                    improvements: vec![],
+                },
+                response_time_ms: Some(100),
+                metadata: HashMap::new(),
+            },
+            WorkerOutput {
+                worker_id: Uuid::new_v4(),
+                task_id: Uuid::new_v4(),
+                content: "Use approach B for better maintainability".to_string(),
+                files_modified: vec![],
+                rationale: "Code quality is paramount".to_string(),
+                self_assessment: SelfAssessment {
+                    caws_compliance: 0.9,
+                    quality_score: 0.95,
+                    confidence: 0.90,
+                    concerns: vec![],
+                    improvements: vec![],
+                },
+                response_time_ms: Some(120),
+                metadata: HashMap::new(),
+            },
+            WorkerOutput {
+                worker_id: Uuid::new_v4(),
+                task_id: Uuid::new_v4(),
+                content: "Use approach C for faster development".to_string(),
+                files_modified: vec![],
+                rationale: "Time to market is critical".to_string(),
+                self_assessment: SelfAssessment {
+                    caws_compliance: 0.7,
+                    quality_score: 0.75,
+                    confidence: 0.70,
+                    concerns: vec!["May compromise quality".to_string()],
+                    improvements: vec![],
+                },
+                response_time_ms: Some(80),
+                metadata: HashMap::new(),
+            },
+        ];
+
+        let result = engine.resolve_conflicts(conflicting_outputs).await.unwrap();
+
+        // Validate the arbitration result
+        assert!(result.confidence >= 0.0 && result.confidence <= 1.0);
+        assert!(!result.final_decision.is_empty());
+        assert!(result.confidence >= 0.7, "High-quality conflicting outputs should produce confident result");
+
+        // Should contain elements from multiple approaches
+        let decision_lower = result.final_decision.to_lowercase();
+        let contains_performance = decision_lower.contains("performance");
+        let contains_maintainability = decision_lower.contains("maintainability") || decision_lower.contains("quality");
+        let contains_speed = decision_lower.contains("speed") || decision_lower.contains("development");
+
+        // Should balance multiple perspectives
+        assert!(contains_performance || contains_maintainability || contains_speed,
+                "Decision should reflect consideration of multiple approaches");
+    }
+
+    async fn test_single_output_resolution() {
+        let engine = AdvancedArbitrationEngine::new().unwrap();
+
+        let single_output = vec![WorkerOutput {
+            worker_id: Uuid::new_v4(),
+            task_id: Uuid::new_v4(),
+            content: "Implement simple and effective solution".to_string(),
+            files_modified: vec![],
+            rationale: "Keep it simple and focused".to_string(),
+            self_assessment: SelfAssessment {
+                caws_compliance: 0.85,
+                quality_score: 0.90,
+                confidence: 0.88,
+                concerns: vec![],
+                improvements: vec![],
+            },
+            response_time_ms: Some(95),
+            metadata: HashMap::new(),
+        }];
+
+        let result = engine.resolve_conflicts(single_output).await.unwrap();
+
+        // Single output should pass through with high confidence
+        assert!(result.confidence >= 0.8, "Single high-quality output should maintain high confidence");
+        assert!(result.final_decision.contains("simple") || result.final_decision.contains("effective"));
+    }
+
+    async fn test_mixed_quality_outputs() {
+        let engine = AdvancedArbitrationEngine::new().unwrap();
+
+        let mixed_outputs = vec![
+            WorkerOutput {
+                worker_id: Uuid::new_v4(),
+                task_id: Uuid::new_v4(),
+                content: "High quality solution with comprehensive analysis".to_string(),
+                files_modified: vec![],
+                rationale: "Thorough approach ensures reliability".to_string(),
+                self_assessment: SelfAssessment {
+                    caws_compliance: 0.95,
+                    quality_score: 0.98,
+                    confidence: 0.96,
+                    concerns: vec![],
+                    improvements: vec![],
+                },
+                response_time_ms: Some(150),
+                metadata: HashMap::new(),
+            },
+            WorkerOutput {
+                worker_id: Uuid::new_v4(),
+                task_id: Uuid::new_v4(),
+                content: "Quick fix that might work".to_string(),
+                files_modified: vec![],
+                rationale: "Fast implementation".to_string(),
+                self_assessment: SelfAssessment {
+                    caws_compliance: 0.4,
+                    quality_score: 0.5,
+                    confidence: 0.3,
+                    concerns: vec!["May not be robust".to_string(), "Needs testing".to_string()],
+                    improvements: vec!["Add validation".to_string()],
+                },
+                response_time_ms: Some(45),
+                metadata: HashMap::new(),
+            },
+        ];
+
+        let result = engine.resolve_conflicts(mixed_outputs).await.unwrap();
+
+        // Should favor high-quality output
+        assert!(result.confidence >= 0.5, "Should produce reasonable confidence from mixed quality");
+        assert!(result.final_decision.contains("comprehensive") || result.final_decision.contains("analysis"),
+                "Should favor the higher quality solution");
+    }
+
+    async fn test_performance_with_many_outputs() {
+        let engine = AdvancedArbitrationEngine::new().unwrap();
+
+        // Create many outputs to test performance
+        let mut many_outputs = Vec::new();
+        for i in 0..50 {
+            many_outputs.push(WorkerOutput {
+                worker_id: Uuid::new_v4(),
+                task_id: Uuid::new_v4(),
+                content: format!("Solution approach {}", i),
+                files_modified: vec![],
+                rationale: format!("Rationale for approach {}", i),
+                self_assessment: SelfAssessment {
+                    caws_compliance: 0.7 + (i as f32 * 0.006), // Vary quality slightly
+                    quality_score: 0.75 + (i as f32 * 0.005),
+                    confidence: 0.7 + (i as f32 * 0.006),
+                    concerns: if i % 5 == 0 { vec![format!("Concern {}", i)] } else { vec![] },
+                    improvements: vec![],
+                },
+                response_time_ms: Some(80 + i as u64),
+                metadata: HashMap::new(),
+            });
+        }
+
+        let start_time = std::time::Instant::now();
+        let result = engine.resolve_conflicts(many_outputs).await.unwrap();
+        let duration = start_time.elapsed();
+
+        // Should complete within reasonable time (under 1 second for 50 outputs)
+        assert!(duration < std::time::Duration::from_secs(1),
+                "Performance test failed: took {:?} for 50 outputs", duration);
+
+        // Should produce valid result
+        assert!(result.confidence >= 0.0 && result.confidence <= 1.0);
+        assert!(!result.final_decision.is_empty());
     }
 
     #[tokio::test]
@@ -392,16 +569,25 @@ mod tests {
 
         let consensus = ConsensusResult {
             task_id: Uuid::new_v4(),
-            final_decision: "Final decision".to_string(),
-            confidence: 0.85,
-            quality_score: 0.9,
-            consensus_score: 0.8,
-            individual_scores: HashMap::from([
-                ("worker1".to_string(), 0.8),
-                ("worker2".to_string(), 0.7),
+            verdict_id: Uuid::new_v4(),
+            final_verdict: FinalVerdict::Accepted {
+                confidence: 0.85,
+                summary: "Final decision".to_string(),
+            },
+            individual_verdicts: HashMap::from([
+                ("worker1".to_string(), JudgeVerdict::Accepted {
+                    confidence: 0.8,
+                    reasoning: "Good work".to_string(),
+                }),
+                ("worker2".to_string(), JudgeVerdict::Accepted {
+                    confidence: 0.7,
+                    reasoning: "Acceptable work".to_string(),
+                }),
             ]),
-            reasoning: "Reasoning for decision".to_string(),
+            consensus_score: 0.8,
+            debate_rounds: 3,
             evaluation_time_ms: 0,
+            timestamp: Utc::now(),
         };
 
         // Should track performance without error

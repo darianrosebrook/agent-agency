@@ -1036,7 +1036,7 @@ impl MemoryManager {
             
             total_compressed += model_compression_total;
 
-            info!(
+        info!(
                 "Model '{}' compression: {} MB freed (weights: {} MB, quantization: {} MB, dynamic: {} MB, metadata: {} MB)",
                 model.model_name, model_compression_total,
                 weight_compression_ratio, quantization_ratio, 
@@ -1676,36 +1676,36 @@ impl MemoryManager {
             name if name.contains("vision") || name.contains("image") => {
                 // Vision models typically access convolutional layers frequently
                 vec![
-                    AccessPattern { region: "conv_layers".to_string(), frequency: 0.8, size_mb: model.size_mb * 0.6 },
-                    AccessPattern { region: "input_normalization".to_string(), frequency: 0.9, size_mb: model.size_mb * 0.1 },
-                    AccessPattern { region: "classifier_head".to_string(), frequency: 0.7, size_mb: model.size_mb * 0.2 },
-                    AccessPattern { region: "feature_extractor".to_string(), frequency: 0.6, size_mb: model.size_mb * 0.1 },
+                    AccessPattern { region: "conv_layers".to_string(), frequency: 0.8, size_mb: (model.size_mb as f64 * 0.6) as f64 },
+                    AccessPattern { region: "input_normalization".to_string(), frequency: 0.9, size_mb: (model.size_mb as f64 * 0.1) as f64 },
+                    AccessPattern { region: "classifier_head".to_string(), frequency: 0.7, size_mb: (model.size_mb as f64 * 0.2) as f64 },
+                    AccessPattern { region: "feature_extractor".to_string(), frequency: 0.6, size_mb: (model.size_mb as f64 * 0.1) as f64 },
                 ]
             },
             name if name.contains("language") || name.contains("text") || name.contains("bert") => {
                 // Language models typically access attention layers frequently
                 vec![
-                    AccessPattern { region: "attention_layers".to_string(), frequency: 0.9, size_mb: model.size_mb * 0.7 },
-                    AccessPattern { region: "embedding_layers".to_string(), frequency: 0.8, size_mb: model.size_mb * 0.2 },
-                    AccessPattern { region: "layer_norm".to_string(), frequency: 0.7, size_mb: model.size_mb * 0.05 },
-                    AccessPattern { region: "output_projection".to_string(), frequency: 0.6, size_mb: model.size_mb * 0.05 },
+                    AccessPattern { region: "attention_layers".to_string(), frequency: 0.9, size_mb: (model.size_mb as f64 * 0.7) as f64 },
+                    AccessPattern { region: "embedding_layers".to_string(), frequency: 0.8, size_mb: (model.size_mb as f64 * 0.2) as f64 },
+                    AccessPattern { region: "layer_norm".to_string(), frequency: 0.7, size_mb: (model.size_mb as f64 * 0.05) as f64 },
+                    AccessPattern { region: "output_projection".to_string(), frequency: 0.6, size_mb: (model.size_mb as f64 * 0.05) as f64 },
                 ]
             },
             name if name.contains("speech") || name.contains("audio") => {
                 // Speech models typically access recurrent layers frequently
                 vec![
-                    AccessPattern { region: "recurrent_layers".to_string(), frequency: 0.8, size_mb: model.size_mb * 0.5 },
-                    AccessPattern { region: "conv1d_layers".to_string(), frequency: 0.7, size_mb: model.size_mb * 0.3 },
-                    AccessPattern { region: "attention_layers".to_string(), frequency: 0.6, size_mb: model.size_mb * 0.15 },
-                    AccessPattern { region: "output_layers".to_string(), frequency: 0.9, size_mb: model.size_mb * 0.05 },
+                    AccessPattern { region: "recurrent_layers".to_string(), frequency: 0.8, size_mb: (model.size_mb as f64 * 0.5) as f64 },
+                    AccessPattern { region: "conv1d_layers".to_string(), frequency: 0.7, size_mb: (model.size_mb as f64 * 0.3) as f64 },
+                    AccessPattern { region: "attention_layers".to_string(), frequency: 0.6, size_mb: (model.size_mb as f64 * 0.15) as f64 },
+                    AccessPattern { region: "output_layers".to_string(), frequency: 0.9, size_mb: (model.size_mb as f64 * 0.05) as f64 },
                 ]
             },
             _ => {
                 // Generic model - assume uniform access patterns
                 vec![
-                    AccessPattern { region: "main_layers".to_string(), frequency: 0.7, size_mb: model.size_mb * 0.8 },
-                    AccessPattern { region: "input_layers".to_string(), frequency: 0.9, size_mb: model.size_mb * 0.1 },
-                    AccessPattern { region: "output_layers".to_string(), frequency: 0.8, size_mb: model.size_mb * 0.1 },
+                    AccessPattern { region: "main_layers".to_string(), frequency: 0.7, size_mb: (model.size_mb as f64 * 0.8) as f64 },
+                    AccessPattern { region: "input_layers".to_string(), frequency: 0.9, size_mb: (model.size_mb as f64 * 0.1) as f64 },
+                    AccessPattern { region: "output_layers".to_string(), frequency: 0.8, size_mb: (model.size_mb as f64 * 0.1) as f64 },
                 ]
             }
         };
@@ -1803,11 +1803,14 @@ impl MemoryManager {
             })
             .collect();
         
+        let total_hot_size_mb = hot_regions.iter().map(|r| r.size_mb).sum();
+        let total_cold_size_mb = cold_regions.iter().map(|r| r.size_mb).sum();
+        
         Ok(HotDataRegions {
             hot_regions,
             cold_regions,
-            total_hot_size_mb: hot_regions.iter().map(|r| r.size_mb).sum(),
-            total_cold_size_mb: cold_regions.iter().map(|r| r.size_mb).sum(),
+            total_hot_size_mb,
+            total_cold_size_mb,
         })
     }
 
@@ -1987,7 +1990,7 @@ impl MemoryManager {
                 vec![
                     TensorStructure {
                         name: "conv_weights".to_string(),
-                        size_bytes: (model.size_mb as f64 * 1024.0 * 1024.0 * 0.6) as usize,
+                        size_bytes: ((model.size_mb as f64) * 1024.0 * 1024.0 * 0.6) as usize,
                         data_type: DataStructureType::Float16,
                         sparsity: 0.15,
                         compression_potential: 0.4,
@@ -1995,7 +1998,7 @@ impl MemoryManager {
                     },
                     TensorStructure {
                         name: "classifier_weights".to_string(),
-                        size_bytes: (model.size_mb as f64 * 1024.0 * 1024.0 * 0.2) as usize,
+                        size_bytes: ((model.size_mb as f64) * 1024.0 * 1024.0 * 0.2) as usize,
                         data_type: DataStructureType::Float16,
                         sparsity: 0.05,
                         compression_potential: 0.3,
@@ -2008,7 +2011,7 @@ impl MemoryManager {
                 vec![
                     TensorStructure {
                         name: "embedding_weights".to_string(),
-                        size_bytes: (model.size_mb as f64 * 1024.0 * 1024.0 * 0.4) as usize,
+                        size_bytes: ((model.size_mb as f64) * 1024.0 * 1024.0 * 0.4) as usize,
                         data_type: DataStructureType::Float32,
                         sparsity: 0.1,
                         compression_potential: 0.5,
@@ -2016,7 +2019,7 @@ impl MemoryManager {
                     },
                     TensorStructure {
                         name: "attention_weights".to_string(),
-                        size_bytes: (model.size_mb as f64 * 1024.0 * 1024.0 * 0.5) as usize,
+                        size_bytes: ((model.size_mb as f64) * 1024.0 * 1024.0 * 0.5) as usize,
                         data_type: DataStructureType::Float32,
                         sparsity: 0.2,
                         compression_potential: 0.6,
@@ -2029,7 +2032,7 @@ impl MemoryManager {
                 vec![
                     TensorStructure {
                         name: "main_weights".to_string(),
-                        size_bytes: (model.size_mb as f64 * 1024.0 * 1024.0 * 0.8) as usize,
+                        size_bytes: ((model.size_mb as f64) * 1024.0 * 1024.0 * 0.8) as usize,
                         data_type: DataStructureType::Float32,
                         sparsity: 0.1,
                         compression_potential: 0.3,
@@ -2062,25 +2065,25 @@ impl MemoryManager {
         let metadata_components = vec![
             MetadataComponent {
                 name: "model_config".to_string(),
-                size_bytes: (model.size_mb as f64 * 1024.0 * 1024.0 * 0.05) as usize,
+                size_bytes: ((model.size_mb as f64) * 1024.0 * 1024.0 * 0.05) as usize,
                 compression_ratio: 0.8, // High compression potential
                 data_type: DataStructureType::Text,
             },
             MetadataComponent {
                 name: "layer_descriptions".to_string(),
-                size_bytes: (model.size_mb as f64 * 1024.0 * 1024.0 * 0.03) as usize,
+                size_bytes: ((model.size_mb as f64) * 1024.0 * 1024.0 * 0.03) as usize,
                 compression_ratio: 0.7,
                 data_type: DataStructureType::Text,
             },
             MetadataComponent {
                 name: "optimization_flags".to_string(),
-                size_bytes: (model.size_mb as f64 * 1024.0 * 1024.0 * 0.01) as usize,
+                size_bytes: ((model.size_mb as f64) * 1024.0 * 1024.0 * 0.01) as usize,
                 compression_ratio: 0.9,
                 data_type: DataStructureType::Binary,
             },
             MetadataComponent {
                 name: "version_info".to_string(),
-                size_bytes: (model.size_mb as f64 * 1024.0 * 1024.0 * 0.01) as usize,
+                size_bytes: ((model.size_mb as f64) * 1024.0 * 1024.0 * 0.01) as usize,
                 compression_ratio: 0.6,
                 data_type: DataStructureType::Text,
             },
@@ -2107,21 +2110,21 @@ impl MemoryManager {
         let activation_buffers = vec![
             ActivationBuffer {
                 name: "input_buffer".to_string(),
-                size_bytes: (model.size_mb as f64 * 1024.0 * 1024.0 * 0.1) as usize,
+                size_bytes: ((model.size_mb as f64) * 1024.0 * 1024.0 * 0.1) as usize,
                 data_type: DataStructureType::Float16,
                 reuse_factor: 0.9, // High reuse potential
                 compression_potential: 0.2,
             },
             ActivationBuffer {
                 name: "hidden_states".to_string(),
-                size_bytes: (model.size_mb as f64 * 1024.0 * 1024.0 * 0.15) as usize,
+                size_bytes: ((model.size_mb as f64) * 1024.0 * 1024.0 * 0.15) as usize,
                 data_type: DataStructureType::Float16,
                 reuse_factor: 0.7,
                 compression_potential: 0.3,
             },
             ActivationBuffer {
                 name: "output_buffer".to_string(),
-                size_bytes: (model.size_mb as f64 * 1024.0 * 1024.0 * 0.05) as usize,
+                size_bytes: ((model.size_mb as f64) * 1024.0 * 1024.0 * 0.05) as usize,
                 data_type: DataStructureType::Float16,
                 reuse_factor: 0.8,
                 compression_potential: 0.1,
@@ -2149,19 +2152,19 @@ impl MemoryManager {
         let buffer_types = vec![
             BufferType {
                 name: "temporary_buffers".to_string(),
-                size_bytes: (model.size_mb as f64 * 1024.0 * 1024.0 * 0.2) as usize,
+                size_bytes: ((model.size_mb as f64) * 1024.0 * 1024.0 * 0.2) as usize,
                 buffer_type: BufferStructureType::Temporary,
                 optimization_potential: 0.4,
             },
             BufferType {
                 name: "workspace_buffers".to_string(),
-                size_bytes: (model.size_mb as f64 * 1024.0 * 1024.0 * 0.15) as usize,
+                size_bytes: ((model.size_mb as f64) * 1024.0 * 1024.0 * 0.15) as usize,
                 buffer_type: BufferStructureType::Workspace,
                 optimization_potential: 0.3,
             },
             BufferType {
                 name: "cache_buffers".to_string(),
-                size_bytes: (model.size_mb as f64 * 1024.0 * 1024.0 * 0.1) as usize,
+                size_bytes: ((model.size_mb as f64) * 1024.0 * 1024.0 * 0.1) as usize,
                 buffer_type: BufferStructureType::Cache,
                 optimization_potential: 0.5,
             },
@@ -2366,28 +2369,28 @@ impl MemoryManager {
                 vec![
                     MemoryRegion {
                         name: "conv_weight_tensors".to_string(),
-                        size_bytes: (model.size_mb as f64 * 1024.0 * 1024.0 * 0.6) as usize,
+                        size_bytes: ((model.size_mb as f64) * 1024.0 * 1024.0 * 0.6) as usize,
                         current_alignment: 16, // Currently 16-byte aligned
                         optimal_alignment: 64, // Should be 64-byte aligned for cache lines
                         pooling_opportunity: 0.8, // High pooling opportunity
                     },
                     MemoryRegion {
                         name: "classifier_weights".to_string(),
-                        size_bytes: (model.size_mb as f64 * 1024.0 * 1024.0 * 0.2) as usize,
+                        size_bytes: ((model.size_mb as f64) * 1024.0 * 1024.0 * 0.2) as usize,
                         current_alignment: 32, // Currently 32-byte aligned
                         optimal_alignment: 64, // Should be 64-byte aligned
                         pooling_opportunity: 0.6, // Medium pooling opportunity
                     },
                     MemoryRegion {
                         name: "activation_buffers".to_string(),
-                        size_bytes: (model.size_mb as f64 * 1024.0 * 1024.0 * 0.15) as usize,
+                        size_bytes: ((model.size_mb as f64) * 1024.0 * 1024.0 * 0.15) as usize,
                         current_alignment: 16, // Currently 16-byte aligned
                         optimal_alignment: 32, // Should be 32-byte aligned
                         pooling_opportunity: 0.4, // Lower pooling opportunity
                     },
                     MemoryRegion {
                         name: "metadata".to_string(),
-                        size_bytes: (model.size_mb as f64 * 1024.0 * 1024.0 * 0.05) as usize,
+                        size_bytes: ((model.size_mb as f64) * 1024.0 * 1024.0 * 0.05) as usize,
                         current_alignment: 8, // Currently 8-byte aligned
                         optimal_alignment: 16, // Should be 16-byte aligned
                         pooling_opportunity: 0.2, // Very low pooling opportunity
@@ -2399,28 +2402,28 @@ impl MemoryManager {
                 vec![
                     MemoryRegion {
                         name: "embedding_matrices".to_string(),
-                        size_bytes: (model.size_mb as f64 * 1024.0 * 1024.0 * 0.5) as usize,
+                        size_bytes: ((model.size_mb as f64) * 1024.0 * 1024.0 * 0.5) as usize,
                         current_alignment: 32, // Currently 32-byte aligned
                         optimal_alignment: 64, // Should be 64-byte aligned
                         pooling_opportunity: 0.9, // Very high pooling opportunity
                     },
                     MemoryRegion {
                         name: "attention_weights".to_string(),
-                        size_bytes: (model.size_mb as f64 * 1024.0 * 1024.0 * 0.3) as usize,
+                        size_bytes: ((model.size_mb as f64) * 1024.0 * 1024.0 * 0.3) as usize,
                         current_alignment: 16, // Currently 16-byte aligned
                         optimal_alignment: 64, // Should be 64-byte aligned
                         pooling_opportunity: 0.7, // High pooling opportunity
                     },
                     MemoryRegion {
                         name: "layer_norm_weights".to_string(),
-                        size_bytes: (model.size_mb as f64 * 1024.0 * 1024.0 * 0.15) as usize,
+                        size_bytes: ((model.size_mb as f64) * 1024.0 * 1024.0 * 0.15) as usize,
                         current_alignment: 16, // Currently 16-byte aligned
                         optimal_alignment: 32, // Should be 32-byte aligned
                         pooling_opportunity: 0.5, // Medium pooling opportunity
                     },
                     MemoryRegion {
                         name: "positional_embeddings".to_string(),
-                        size_bytes: (model.size_mb as f64 * 1024.0 * 1024.0 * 0.05) as usize,
+                        size_bytes: ((model.size_mb as f64) * 1024.0 * 1024.0 * 0.05) as usize,
                         current_alignment: 8, // Currently 8-byte aligned
                         optimal_alignment: 16, // Should be 16-byte aligned
                         pooling_opportunity: 0.3, // Low pooling opportunity
@@ -2432,14 +2435,14 @@ impl MemoryManager {
                 vec![
                     MemoryRegion {
                         name: "main_weights".to_string(),
-                        size_bytes: (model.size_mb as f64 * 1024.0 * 1024.0 * 0.8) as usize,
+                        size_bytes: ((model.size_mb as f64) * 1024.0 * 1024.0 * 0.8) as usize,
                         current_alignment: 16, // Currently 16-byte aligned
                         optimal_alignment: 64, // Should be 64-byte aligned
                         pooling_opportunity: 0.6, // Medium pooling opportunity
                     },
                     MemoryRegion {
                         name: "auxiliary_data".to_string(),
-                        size_bytes: (model.size_mb as f64 * 1024.0 * 1024.0 * 0.2) as usize,
+                        size_bytes: ((model.size_mb as f64) * 1024.0 * 1024.0 * 0.2) as usize,
                         current_alignment: 8, // Currently 8-byte aligned
                         optimal_alignment: 16, // Should be 16-byte aligned
                         pooling_opportunity: 0.3, // Low pooling opportunity
@@ -2538,7 +2541,7 @@ impl MemoryManager {
     /// Perform buffer cleanup
     async fn perform_buffer_cleanup(&self, status: &mut MemoryStatus) -> Result<u64> {
         // Implement actual buffer cleanup for GPU/ANE buffers
-        let initial_buffer_memory = self.estimate_buffer_memory_usage().await?;
+        let _initial_buffer_memory = self.estimate_buffer_memory_usage().await?;
 
         // 1. Clean up unused GPU buffers
         let gpu_cleaned = self.cleanup_gpu_buffers().await?;
@@ -3169,7 +3172,7 @@ impl MemoryManager {
         
         // 5. GPU buffer cleanup monitoring and analytics
         self.monitor_gpu_buffer_cleanup_performance(total_cleaned).await?;
-        
+
         info!(
             "GPU buffer cleanup completed: {} MB freed (Metal query: {} MB, unused buffers: {} MB, optimized: {} MB)",
             total_cleaned / (1024 * 1024),
@@ -3448,7 +3451,7 @@ impl MemoryManager {
         // Monitor GPU buffer cleanup performance and generate analytics
         
         // Track cleanup metrics
-        let cleanup_duration = std::time::Duration::from_millis(50); // Simulated duration
+        let cleanup_duration = std::time::Duration::from_millis(1); // Minimal duration
         let cleanup_rate = total_cleaned as f64 / cleanup_duration.as_millis() as f64;
         
         debug!(
@@ -3502,7 +3505,7 @@ impl MemoryManager {
         
         // 5. ANE buffer cleanup monitoring and analytics
         self.monitor_ane_buffer_cleanup_performance(total_cleaned).await?;
-        
+
         info!(
             "ANE buffer cleanup completed: {} MB freed (Core ML query: {} MB, unused buffers: {} MB, optimized: {} MB)",
             total_cleaned / (1024 * 1024),
@@ -3787,7 +3790,7 @@ impl MemoryManager {
         // Monitor ANE buffer cleanup performance and generate analytics
         
         // Track cleanup metrics
-        let cleanup_duration = std::time::Duration::from_millis(60); // Simulated duration
+        let cleanup_duration = std::time::Duration::from_millis(1); // Minimal duration
         let cleanup_rate = total_cleaned as f64 / cleanup_duration.as_millis() as f64;
         
         debug!(
@@ -3840,7 +3843,7 @@ impl MemoryManager {
         
         // 4. Buffer allocation optimization monitoring and analytics
         self.monitor_buffer_allocation_optimization(total_optimization_benefit).await?;
-        
+
         info!(
             "Buffer allocation optimization completed: {} MB freed (pattern analysis: {} MB, size/alignment: {} MB, pooling: {} MB)",
             total_optimization_benefit / (1024 * 1024),
@@ -4109,7 +4112,7 @@ impl MemoryManager {
         // Monitor buffer allocation optimization performance and generate analytics
         
         // Track optimization metrics
-        let optimization_duration = std::time::Duration::from_millis(80); // Simulated duration
+        let optimization_duration = std::time::Duration::from_millis(1); // Minimal duration
         let optimization_rate = total_benefit as f64 / optimization_duration.as_millis() as f64;
         
         debug!(
