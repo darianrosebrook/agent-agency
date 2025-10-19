@@ -7,7 +7,7 @@
 //! - DetectLensSmudgeRequest: Image quality assessment
 
 use crate::circuit_breaker::{CircuitBreaker, CircuitBreakerConfig};
-use crate::types::{OcrResult, OcrBlock, BoundingBox, Table, TableCell, EnricherConfig};
+use crate::types::{OcrResult, OcrBlock, BoundingBox, Table, TableCell, TextRegion, EnricherConfig};
 use anyhow::{anyhow, Result};
 use std::time::Instant;
 use uuid::Uuid;

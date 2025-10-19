@@ -118,7 +118,7 @@ impl DataDetectionBridge {
             confidence -= 0.2;
         }
         
-        confidence.min(0.99).max(0.1)
+        confidence.min(0.99f32).max(0.1)
     }
     
     /// Calculate confidence score for URL detection
@@ -140,7 +140,7 @@ impl DataDetectionBridge {
             confidence -= 0.1;
         }
         
-        confidence.min(0.99).max(0.1)
+        confidence.min(0.99f32).max(0.1)
     }
     
     /// Calculate confidence score for phone number detection
@@ -163,7 +163,7 @@ impl DataDetectionBridge {
             confidence -= 0.2;
         }
         
-        confidence.min(0.99).max(0.1)
+        confidence.min(0.99f32).max(0.1)
     }
     
     /// Calculate confidence score for date detection
@@ -185,7 +185,7 @@ impl DataDetectionBridge {
             confidence -= 0.1;
         }
         
-        confidence.min(0.99).max(0.1)
+        confidence.min(0.99f32).max(0.1)
     }
     
     /// Calculate confidence score for address detection
@@ -207,7 +207,7 @@ impl DataDetectionBridge {
             confidence -= 0.2;
         }
         
-        confidence.min(0.99).max(0.1)
+        confidence.min(0.99f32).max(0.1)
     }
 }
 
@@ -416,7 +416,7 @@ impl NERBridge {
             confidence += 0.2;
         }
         
-        confidence.min(0.99).max(0.1)
+        confidence.min(0.99f32).max(0.1)
     }
     
     /// Calculate confidence for organization entities
@@ -439,7 +439,7 @@ impl NERBridge {
             confidence += 0.1;
         }
         
-        confidence.min(0.99).max(0.1)
+        confidence.min(0.99f32).max(0.1)
     }
     
     /// Calculate confidence for location entities
@@ -465,7 +465,7 @@ impl NERBridge {
             confidence += 0.25;
         }
         
-        confidence.min(0.99).max(0.1)
+        confidence.min(0.99f32).max(0.1)
     }
     
     /// Find person context around a detected name
@@ -919,7 +919,7 @@ impl TopicExtractionBridge {
             confidence += 0.1;
         }
         
-        confidence.min(0.99).max(0.1)
+        confidence.min(0.99f32).max(0.1)
     }
     
     /// Calculate confidence for frequency-based topics
@@ -942,7 +942,7 @@ impl TopicExtractionBridge {
             confidence += 0.1;
         }
         
-        confidence.min(0.99).max(0.1)
+        confidence.min(0.99f32).max(0.1)
     }
     
     /// Tokenize text and filter out stopwords

@@ -172,7 +172,7 @@ impl AsrEnricher {
         
         let avg_duration = durations.iter().sum::<f32>() / durations.len() as f32;
         let min_duration = durations.iter().fold(f32::INFINITY, |a, &b| a.min(b));
-        let max_duration = durations.iter().fold(0.0, |a, &b| a.max(b));
+        let max_duration = durations.iter().fold(0.0f32, |a, &b| a.max(b));
         
         tracing::debug!("Speaker {}: avg_duration={:.2}s, range=[{:.2}, {:.2}]s", 
                        speaker_id, avg_duration, min_duration, max_duration);

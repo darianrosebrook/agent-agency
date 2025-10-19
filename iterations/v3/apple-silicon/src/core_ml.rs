@@ -1431,7 +1431,7 @@ impl CoreMLManager {
                                (memory_utilization * 0.2) + 
                                (performance_utilization * 0.1);
 
-        total_utilization.min(100.0).max(0.0)
+        total_utilization.min(100.0f32).max(0.0)
     }
 
     /// Monitor Metal command queues for active command buffers
@@ -1535,7 +1535,7 @@ impl CoreMLManager {
             utilization += 10.0;
         }
 
-        utilization.min(100.0).max(0.0)
+        utilization.min(100.0f32).max(0.0)
     }
 
     /// Monitor GPU memory usage
@@ -1561,7 +1561,7 @@ impl CoreMLManager {
         let memory_utilization = (allocated_buffers as f32 / max_buffers as f32) * 100.0;
         
         // Clean up allocated buffers (they'll be dropped when going out of scope)
-        memory_utilization.min(100.0).max(0.0)
+        memory_utilization.min(100.0f32).max(0.0)
     }
 
     /// Monitor GPU performance metrics
@@ -1685,7 +1685,7 @@ impl CoreMLManager {
                                (ml_workload_analysis * 0.2) + 
                                (performance_metrics * 0.1);
 
-        total_utilization.min(100.0).max(0.0)
+        total_utilization.min(100.0f32).max(0.0)
     }
 
     /// Monitor ANE device utilization through IOKit
@@ -1891,7 +1891,7 @@ impl CoreMLManager {
                                (thermal_zones * 0.2) + 
                                (silicon_thermal * 0.1);
 
-        total_temperature.min(100.0).max(20.0) // Reasonable temperature range
+        total_temperature.min(100.0f32).max(20.0) // Reasonable temperature range
     }
 
     /// Read IOKit thermal sensors
@@ -2453,7 +2453,7 @@ impl CoreMLManager {
         let final_perplexity = (entropy_perplexity * entropy_factor * optimization_factor + base_perplexity) / 2.0;
         
         // Clamp to reasonable range
-        final_perplexity.max(1.0).min(10.0)
+        final_perplexity.max(1.0f32).min(10.0)
     }
 
     /// Analyze input complexity for perplexity calculation
@@ -2476,7 +2476,7 @@ impl CoreMLManager {
         let word_density = words as f32 / chars.max(1) as f32;
         let complexity = (lexical_diversity * 2.0 + char_entropy * 0.5 + word_density * 1.5) / 4.0;
 
-        complexity.max(0.1).min(5.0)
+        complexity.max(0.1f32).min(5.0)
     }
 
     /// Calculate Shannon entropy of text
@@ -2494,7 +2494,7 @@ impl CoreMLManager {
             entropy -= p * p.log2();
         }
 
-        entropy.max(0.0)
+        entropy.max(0.0f32)
     }
 
     /// Calculate coherence score based on resource usage and request characteristics
@@ -2530,7 +2530,7 @@ impl CoreMLManager {
             _ => {}
         }
 
-        Some(score.min(1.0))
+        Some(score.min(1.0f32))
     }
 
     /// Calculate relevance score based on semantic analysis
@@ -2700,7 +2700,7 @@ impl CoreMLManager {
         tracing::debug!("Semantic analysis optimization: using embedding cache");
 
         // Finalize relevance score
-        let final_score = score.max(0.0).min(1.0);
+        let final_score = score.max(0.0f32).min(1.0);
         tracing::info!(
             "Semantic relevance score calculated: {:.3} (cosine_similarity: {:.3})",
             final_score,
@@ -2791,7 +2791,7 @@ impl CoreMLManager {
             clarity += 0.05; // Good punctuation indicates structure
         }
 
-        clarity.max(0.0).min(1.0)
+        clarity.max(0.0f32).min(1.0)
     }
 
     /// Calculate factual accuracy estimate using fact-checking mechanisms
@@ -3128,7 +3128,7 @@ impl CoreMLManager {
         };
 
         let final_score = base_score * density_factor * temperature_factor * optimization_factor;
-        final_score.min(1.0).max(0.0)
+        final_score.min(1.0f32).max(0.0)
     }
 
     /// Extract factual indicators from input text
@@ -3173,7 +3173,7 @@ impl CoreMLManager {
             indicators += 0.05;
         }
 
-        indicators.min(1.0)
+        indicators.min(1.0f32)
     }
 
     /// Assess how factual a question/input is likely to be
@@ -3217,7 +3217,7 @@ impl CoreMLManager {
             }
         }
 
-        factuality.max(0.0).min(1.0)
+        factuality.max(0.0f32).min(1.0)
     }
 
     /// Update performance metrics for a model
