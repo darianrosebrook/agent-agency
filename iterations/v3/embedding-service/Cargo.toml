@@ -25,5 +25,9 @@ dashmap = "5.0"
 lru = "0.12"
 chrono = { version = "0.4", features = ["serde"] }
 
+# Database dependencies
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "chrono", "uuid"] }
+sqlx-cli = "0.7"
+
 [dev-dependencies]
 tokio-test = "0.4"

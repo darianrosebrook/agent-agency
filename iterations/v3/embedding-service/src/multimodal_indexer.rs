@@ -5,6 +5,9 @@ use crate::types::*;
 use anyhow::Result;
 use std::collections::HashMap;
 use uuid::Uuid;
+use sqlx::{PgPool, Row};
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 
 /// Multimodal indexer with per-modality search capabilities
 pub struct MultimodalIndexer {
@@ -38,10 +41,277 @@ pub struct GraphIndexer {
     node_properties: HashMap<Uuid, NodeProperty>,
 }
 
-/// Database client interface for persistence
+/// Database client interface for persistence with connection pool
 pub struct DatabaseClient {
-    // TODO: Inject actual database connection pool
-    _phantom: std::marker::PhantomData<()>,
+    /// PostgreSQL connection pool for database operations
+    pool: PgPool,
+    /// Database connection configuration
+    config: DatabaseConfig,
+    /// Connection health status
+    health_status: ConnectionHealthStatus,
+}
+
+/// Database configuration for connection management
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DatabaseConfig {
+    /// Maximum number of connections in the pool
+    pub max_connections: u32,
+    /// Minimum number of connections in the pool
+    pub min_connections: u32,
+    /// Connection timeout in seconds
+    pub connection_timeout: u64,
+    /// Idle timeout in seconds
+    pub idle_timeout: u64,
+    /// Database URL for connection
+    pub database_url: String,
+    /// Enable connection health checks
+    pub health_check_enabled: bool,
+}
+
+/// Connection health status monitoring
+#[derive(Debug, Clone)]
+pub struct ConnectionHealthStatus {
+    /// Current number of active connections
+    pub active_connections: u32,
+    /// Current number of idle connections
+    pub idle_connections: u32,
+    /// Last health check timestamp
+    pub last_health_check: DateTime<Utc>,
+    /// Connection pool health score (0.0-1.0)
+    pub health_score: f64,
+    /// Connection errors count
+    pub error_count: u64,
+    /// Average connection response time in milliseconds
+    pub avg_response_time_ms: f64,
+}
+
+impl DatabaseClient {
+    /// Create a new database client with connection pool
+    pub async fn new(config: DatabaseConfig) -> Result<Self> {
+        // Create PostgreSQL connection pool with configuration
+        let pool = PgPool::builder()
+            .max_connections(config.max_connections)
+            .min_connections(config.min_connections)
+            .acquire_timeout(std::time::Duration::from_secs(config.connection_timeout))
+            .idle_timeout(std::time::Duration::from_secs(config.idle_timeout))
+            .build(&config.database_url)
+            .await?;
+
+        // Initialize health status
+        let health_status = ConnectionHealthStatus {
+            active_connections: 0,
+            idle_connections: 0,
+            last_health_check: Utc::now(),
+            health_score: 1.0,
+            error_count: 0,
+            avg_response_time_ms: 0.0,
+        };
+
+        // Run initial health check
+        let mut client = Self {
+            pool,
+            config,
+            health_status,
+        };
+        
+        client.update_health_status().await?;
+        
+        Ok(client)
+    }
+
+    /// Get the connection pool for database operations
+    pub fn pool(&self) -> &PgPool {
+        &self.pool
+    }
+
+    /// Get current health status
+    pub fn health_status(&self) -> &ConnectionHealthStatus {
+        &self.health_status
+    }
+
+    /// Update connection health status
+    pub async fn update_health_status(&mut self) -> Result<()> {
+        let start_time = std::time::Instant::now();
+        
+        // Test database connection with a simple query
+        let result = sqlx::query("SELECT 1 as test")
+            .fetch_one(&self.pool)
+            .await;
+            
+        let response_time = start_time.elapsed().as_millis() as f64;
+        
+        match result {
+            Ok(_) => {
+                // Connection is healthy
+                self.health_status.active_connections = self.pool.size();
+                self.health_status.idle_connections = self.pool.num_idle();
+                self.health_status.health_score = 1.0;
+                self.health_status.avg_response_time_ms = response_time;
+            }
+            Err(_) => {
+                // Connection has issues
+                self.health_status.health_score = 0.0;
+                self.health_status.error_count += 1;
+            }
+        }
+        
+        self.health_status.last_health_check = Utc::now();
+        
+        Ok(())
+    }
+
+    /// Execute database transaction with automatic rollback on error
+    pub async fn execute_transaction<F, R>(&self, operation: F) -> Result<R>
+    where
+        F: FnOnce(&sqlx::PgConnection) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<R>> + Send + '_>>,
+    {
+        let mut transaction = self.pool.begin().await?;
+        
+        let result = operation(&mut *transaction).await;
+        
+        match result {
+            Ok(value) => {
+                transaction.commit().await?;
+                Ok(value)
+            }
+            Err(e) => {
+                transaction.rollback().await?;
+                Err(e)
+            }
+        }
+    }
+
+    /// Batch insert embeddings with optimized performance
+    pub async fn batch_insert_embeddings(&self, embeddings: Vec<EmbeddingRecord>) -> Result<u64> {
+        if embeddings.is_empty() {
+            return Ok(0);
+        }
+
+        // Use batch insert for better performance
+        let mut query_builder = sqlx::QueryBuilder::new(
+            "INSERT INTO block_vectors (block_id, model_name, vector, modality, indexed_at) "
+        );
+        
+        query_builder.push_values(embeddings.iter(), |mut b, embedding| {
+            b.push_bind(embedding.block_id)
+                .push_bind(&embedding.model_name)
+                .push_bind(&embedding.vector)
+                .push_bind(&embedding.modality)
+                .push_bind(embedding.indexed_at);
+        });
+
+        let result = query_builder.build().execute(&self.pool).await?;
+        Ok(result.rows_affected())
+    }
+
+    /// Update HNSW indices for affected models
+    pub async fn update_hnsw_indices(&self, model_names: Vec<String>) -> Result<()> {
+        for model_name in model_names {
+            // Update HNSW metadata for the model
+            let update_query = sqlx::query(
+                "UPDATE hnsw_metadata SET last_updated = $1, vector_count = (
+                    SELECT COUNT(*) FROM block_vectors WHERE model_name = $2
+                ) WHERE model_name = $2"
+            )
+            .bind(Utc::now())
+            .bind(&model_name);
+
+            update_query.execute(&self.pool).await?;
+        }
+
+        Ok(())
+    }
+
+    /// Get embeddings by block ID and model
+    pub async fn get_embeddings_by_block(&self, block_id: Uuid, model_name: Option<&str>) -> Result<Vec<EmbeddingRecord>> {
+        let query = match model_name {
+            Some(model) => {
+                sqlx::query_as::<_, EmbeddingRecord>(
+                    "SELECT block_id, model_name, vector, modality, indexed_at 
+                     FROM block_vectors 
+                     WHERE block_id = $1 AND model_name = $2"
+                )
+                .bind(block_id)
+                .bind(model)
+            }
+            None => {
+                sqlx::query_as::<_, EmbeddingRecord>(
+                    "SELECT block_id, model_name, vector, modality, indexed_at 
+                     FROM block_vectors 
+                     WHERE block_id = $1"
+                )
+                .bind(block_id)
+            }
+        };
+
+        let embeddings = query.fetch_all(&self.pool).await?;
+        Ok(embeddings)
+    }
+
+    /// Delete embeddings by block ID
+    pub async fn delete_embeddings_by_block(&self, block_id: Uuid) -> Result<u64> {
+        let result = sqlx::query("DELETE FROM block_vectors WHERE block_id = $1")
+            .bind(block_id)
+            .execute(&self.pool)
+            .await?;
+
+        Ok(result.rows_affected())
+    }
+
+    /// Get database statistics
+    pub async fn get_database_stats(&self) -> Result<DatabaseStats> {
+        let total_vectors = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM block_vectors")
+            .fetch_one(&self.pool)
+            .await?;
+
+        let models_count = sqlx::query_scalar::<_, i64>(
+            "SELECT COUNT(DISTINCT model_name) FROM block_vectors"
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        let modalities_count = sqlx::query_scalar::<_, i64>(
+            "SELECT COUNT(DISTINCT modality) FROM block_vectors"
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(DatabaseStats {
+            total_vectors: total_vectors as u64,
+            models_count: models_count as u64,
+            modalities_count: modalities_count as u64,
+            pool_size: self.pool.size(),
+            idle_connections: self.pool.num_idle(),
+            health_score: self.health_status.health_score,
+        })
+    }
+
+    /// Close the database connection pool
+    pub async fn close(self) -> Result<()> {
+        self.pool.close().await;
+        Ok(())
+    }
+}
+
+/// Embedding record for database storage
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct EmbeddingRecord {
+    pub block_id: Uuid,
+    pub model_name: String,
+    pub vector: Vec<f32>,
+    pub modality: String,
+    pub indexed_at: DateTime<Utc>,
+}
+
+/// Database statistics
+#[derive(Debug, Clone)]
+pub struct DatabaseStats {
+    pub total_vectors: u64,
+    pub models_count: u64,
+    pub modalities_count: u64,
+    pub pool_size: u32,
+    pub idle_connections: u32,
+    pub health_score: f64,
 }
 
 #[derive(Debug, Clone)]
@@ -146,9 +416,9 @@ impl MultimodalIndexer {
         })
     }
 
-    /// Store per-model vectors in database
+    /// Store per-model vectors in database with comprehensive persistence and indexing
     async fn store_per_model_vectors_db(
-        _db_client: &DatabaseClient,
+        db_client: &DatabaseClient,
         block_id: Uuid,
         modality: &str,
         embeddings: &HashMap<String, EmbeddingVector>,
@@ -165,10 +435,185 @@ impl MultimodalIndexer {
             modality
         );
 
-        // TODO: Execute database INSERT for each embedding vector
-        // INSERT INTO block_vectors (block_id, model_name, vector, modality, indexed_at)
-        // UPDATE HNSW indices for affected models
+        // Convert embeddings to database records
+        let embedding_records: Vec<EmbeddingRecord> = embeddings
+            .iter()
+            .map(|(model_name, vector)| EmbeddingRecord {
+                block_id,
+                model_name: model_name.clone(),
+                vector: vector.vector.clone(),
+                modality: modality.to_string(),
+                indexed_at: Utc::now(),
+            })
+            .collect();
 
+        // Execute database transaction for atomic operations
+        db_client.execute_transaction(|conn| {
+            Box::pin(async move {
+                // 1. Execute batch INSERT for all embedding vectors
+                let inserted_count = db_client.batch_insert_embeddings(embedding_records).await?;
+                
+                tracing::debug!(
+                    "Successfully inserted {} embedding vectors for block {}",
+                    inserted_count,
+                    block_id
+                );
+
+                // 2. Update HNSW indices for affected models
+                let model_names: Vec<String> = embeddings.keys().cloned().collect();
+                db_client.update_hnsw_indices(model_names).await?;
+
+                // 3. Update index statistics and metadata
+                Self::update_index_statistics(conn, block_id, modality, embeddings).await?;
+
+                // 4. Validate data integrity
+                Self::validate_embedding_integrity(conn, block_id, embeddings.len()).await?;
+
+                Ok(inserted_count)
+            })
+        }).await?;
+
+        tracing::info!(
+            "Successfully stored {} embedding vectors for block {} in modality {}",
+            embeddings.len(),
+            block_id,
+            modality
+        );
+
+        Ok(())
+    }
+
+    /// Update index statistics and metadata for stored embeddings
+    async fn update_index_statistics(
+        conn: &sqlx::PgConnection,
+        block_id: Uuid,
+        modality: &str,
+        embeddings: &HashMap<String, EmbeddingVector>,
+    ) -> Result<()> {
+        // Update index metadata with current statistics
+        for (model_name, vector) in embeddings {
+            // Update model-specific statistics
+            let stats_query = sqlx::query(
+                "INSERT INTO index_statistics (model_name, modality, vector_dimension, total_vectors, last_updated)
+                 VALUES ($1, $2, $3, 1, $4)
+                 ON CONFLICT (model_name, modality)
+                 DO UPDATE SET
+                     vector_dimension = EXCLUDED.vector_dimension,
+                     total_vectors = index_statistics.total_vectors + 1,
+                     last_updated = EXCLUDED.last_updated"
+            )
+            .bind(model_name)
+            .bind(modality)
+            .bind(vector.vector.len() as i32)
+            .bind(Utc::now());
+
+            stats_query.execute(conn).await?;
+
+            // Update block-level metadata
+            let block_metadata_query = sqlx::query(
+                "INSERT INTO block_metadata (block_id, model_name, modality, vector_dimension, indexed_at)
+                 VALUES ($1, $2, $3, $4, $5)
+                 ON CONFLICT (block_id, model_name, modality)
+                 DO UPDATE SET
+                     vector_dimension = EXCLUDED.vector_dimension,
+                     indexed_at = EXCLUDED.indexed_at"
+            )
+            .bind(block_id)
+            .bind(model_name)
+            .bind(modality)
+            .bind(vector.vector.len() as i32)
+            .bind(Utc::now());
+
+            block_metadata_query.execute(conn).await?;
+        }
+
+        Ok(())
+    }
+
+    /// Validate embedding data integrity after insertion
+    async fn validate_embedding_integrity(
+        conn: &sqlx::PgConnection,
+        block_id: Uuid,
+        expected_count: usize,
+    ) -> Result<()> {
+        // Verify that all embeddings were inserted correctly
+        let actual_count = sqlx::query_scalar::<_, i64>(
+            "SELECT COUNT(*) FROM block_vectors WHERE block_id = $1"
+        )
+        .bind(block_id)
+        .fetch_one(conn)
+        .await?;
+
+        if actual_count as usize != expected_count {
+            return Err(anyhow::anyhow!(
+                "Embedding integrity check failed: expected {} vectors, found {}",
+                expected_count,
+                actual_count
+            ));
+        }
+
+        // Verify vector dimensions are consistent
+        let dimension_query = sqlx::query_scalar::<_, i64>(
+            "SELECT COUNT(DISTINCT array_length(vector, 1)) FROM block_vectors WHERE block_id = $1"
+        )
+        .bind(block_id)
+        .fetch_one(conn)
+        .await?;
+
+        if dimension_query > 1 {
+            tracing::warn!(
+                "Inconsistent vector dimensions found for block {}: {} different dimensions",
+                block_id,
+                dimension_query
+            );
+        }
+
+        tracing::debug!(
+            "Embedding integrity validation passed for block {}: {} vectors",
+            block_id,
+            actual_count
+        );
+
+        Ok(())
+    }
+
+    /// Optimize HNSW indices after batch insertion
+    async fn optimize_hnsw_indices_after_insertion(
+        db_client: &DatabaseClient,
+        model_names: Vec<String>,
+    ) -> Result<()> {
+        for model_name in model_names {
+            // Trigger HNSW index optimization for the model
+            let optimization_query = sqlx::query(
+                "UPDATE hnsw_metadata 
+                 SET optimization_required = true, 
+                     last_optimization = $1,
+                     vector_count = (SELECT COUNT(*) FROM block_vectors WHERE model_name = $2)
+                 WHERE model_name = $2"
+            )
+            .bind(Utc::now())
+            .bind(&model_name);
+
+            optimization_query.execute(db_client.pool()).await?;
+
+            // Update index performance metrics
+            let metrics_query = sqlx::query(
+                "INSERT INTO index_performance_metrics (model_name, metric_type, metric_value, recorded_at)
+                 VALUES ($1, 'vector_count', (
+                     SELECT COUNT(*) FROM block_vectors WHERE model_name = $1
+                 ), $2)
+                 ON CONFLICT (model_name, metric_type)
+                 DO UPDATE SET
+                     metric_value = EXCLUDED.metric_value,
+                     recorded_at = EXCLUDED.recorded_at"
+            )
+            .bind(&model_name)
+            .bind(Utc::now());
+
+            metrics_query.execute(db_client.pool()).await?;
+        }
+
+        tracing::debug!("HNSW indices optimization scheduled for {} models", model_names.len());
         Ok(())
     }
 
