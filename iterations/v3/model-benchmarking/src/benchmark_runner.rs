@@ -875,15 +875,8 @@ impl BenchmarkRunner {
         // Execute model with timestamp tracking and performance optimization
         let start_time = std::time::Instant::now();
         
-        // Simulate model execution based on task type
-        let output = match micro_task.task_type {
-            MicroTaskType::CodeGeneration => "Generated code output".to_string(),
-            MicroTaskType::CodeReview => "Code review feedback".to_string(),
-            MicroTaskType::Testing => "Test results and coverage".to_string(),
-            MicroTaskType::Documentation => "Generated documentation".to_string(),
-            MicroTaskType::Research => "Research findings and analysis".to_string(),
-            MicroTaskType::Analysis => "Analysis results and insights".to_string(),
-        };
+        // Execute actual model based on capabilities and task type
+        let output = self.execute_actual_model(model, micro_task).await?;
         
         let execution_time = start_time.elapsed();
         
@@ -1566,15 +1559,8 @@ impl Default for BenchmarkMetrics {
         // Execute model with timestamp tracking and performance optimization
         let start_time = std::time::Instant::now();
         
-        // Simulate model execution based on task type
-        let output = match micro_task.task_type {
-            MicroTaskType::CodeGeneration => "Generated code output".to_string(),
-            MicroTaskType::CodeReview => "Code review feedback".to_string(),
-            MicroTaskType::Testing => "Test results and coverage".to_string(),
-            MicroTaskType::Documentation => "Generated documentation".to_string(),
-            MicroTaskType::Research => "Research findings and analysis".to_string(),
-            MicroTaskType::Analysis => "Analysis results and insights".to_string(),
-        };
+        // Execute actual model based on capabilities and task type
+        let output = self.execute_actual_model(model, micro_task).await?;
         
         let execution_time = start_time.elapsed();
         
