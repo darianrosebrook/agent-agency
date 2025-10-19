@@ -24,6 +24,7 @@ dashmap = "5.5"
 crossbeam = "0.8"
 parking_lot = "0.12"
 futures = "0.3"
+reqwest = { version = "0.11", features = ["json"] }
 
 # Database integration
 sqlx = { workspace = true, features = ["postgres", "chrono", "uuid"] }

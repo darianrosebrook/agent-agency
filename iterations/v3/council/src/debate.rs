@@ -571,7 +571,7 @@ impl DebateProtocol {
             tracing::debug!("Analyzing research needs for judge: {}", judge_id);
 
             // Extract evidence-based findings from the argument
-            for evidence in &argument.supporting_evidence {
+            for evidence in &argument.evidence_cited {
                 // Determine source type from evidence
                 let source_type = match &evidence.source.source_type {
                     SourceType::Academic => SourceType::Academic,
@@ -658,7 +658,7 @@ impl DebateProtocol {
             // Enhance argument with relevant research findings
             for finding in &research_coordination.findings {
                 // Check if finding is relevant to this argument's evidence
-                let is_relevant = argument.supporting_evidence.iter().any(|e| {
+                let is_relevant = argument.evidence_cited.iter().any(|e| {
                     finding.sources.contains(&e.source.location)
                         || finding.topic.contains(&e.source.authority)
                 });

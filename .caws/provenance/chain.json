@@ -11694,5 +11694,41 @@
     },
     "previous_hash": "9a474e7838c3eb7dae42db0dd71d8d4bfd5457c67a7d0673a76953aa8a7d22bd",
     "hash": "ea64e314f8d4c8f7a59c22a643e2e656aa3cb2ae4b58b6ad3443528b795c9b1a"
+  },
+  {
+    "id": "prov-1760859575825",
+    "timestamp": "2025-10-19T07:39:35.825Z",
+    "commit": {
+      "hash": "7cbb9091be650d0d2b1b89fc8286e507faf6fc87",
+      "message": "chore: update CAWS provenance tracking for extended session",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "PROJ-785",
+      "title": "agent-agency",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": [
+        "WV-0001"
+      ]
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-19T07:39:35.826Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "ea64e314f8d4c8f7a59c22a643e2e656aa3cb2ae4b58b6ad3443528b795c9b1a",
+    "hash": "925dbf093d002eee9db6e0d0146ac7faa15752a68676fb4d7d69e22367e99c79"
   }
 ]

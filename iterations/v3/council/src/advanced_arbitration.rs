@@ -7,7 +7,7 @@
 use crate::models::TaskSpec;
 use crate::todo_analyzer::{CouncilTodoAnalyzer, TodoAnalysisConfig, TodoAnalysisResult};
 use crate::types::*;
-use agent_agency_database::{DatabaseClient, models::CreatePerformanceMetric};
+use agent_agency_database::{DatabaseClient, models::CreatePerformanceMetric, client::DatabaseOperations};
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -148,6 +148,7 @@ pub struct DebateRound {
     pub rebuttals: Vec<Rebuttal>,
     pub argument_scores: HashMap<String, f32>,
     pub consensus_reached: bool,
+    pub quality_scores: HashMap<String, f32>,  // Add this field
 }
 
 /// Consistency analyzer for confidence scoring
@@ -1784,11 +1785,13 @@ impl PleadingWorkflow {
         }
         
         Ok(DebateRound {
-            round_number: round_num as u32,
-            arguments,
-            counter_arguments,
-            quality_scores,
-        })
+        round_number: round_num as usize,  // Changed to usize
+        arguments: arguments.into_iter().map(|(k, v)| v).collect(),  // Convert HashMap to Vec
+        rebuttals: Vec::new(),  // No rebuttals in this context
+        argument_scores: HashMap::new(),  // Empty for now
+        consensus_reached: false,
+        quality_scores,  // Use provided quality_scores
+    })
     }
     
     /// Detect consensus in a debate round
@@ -3530,6 +3533,25 @@ impl ConflictResolver {
         use rand::Rng;
         let mut rng = rand::thread_rng();
         rng.gen::<f32>() < 0.25
+    }
+
+    /// Search for historical conflicts
+    pub async fn search_historical_conflicts(
+        &self,
+        _db_client: &Arc<agent_agency_database::DatabaseClient>,
+        _conflict: &str,
+    ) -> Result<Vec<HistoricalConflict>> {
+        // TODO: Implement proper search
+        Ok(Vec::new())
+    }
+
+    /// Analyze historical resolution outcomes
+    pub fn analyze_historical_resolution_outcomes(
+        &self,
+        _historical_conflicts: &[HistoricalConflict],
+    ) -> f32 {
+        // TODO: Implement proper analysis
+        0.8  // Return default success rate
     }
 }
 
@@ -6908,8 +6930,8 @@ impl ArbitrationFeedback {
             // Insert outcome_analysis metrics into performance_metrics table
             let mut metadata = serde_json::Map::new();
             metadata.insert("decision_strategy".to_string(), serde_json::Value::String(outcome_analysis.decision_strategy.clone()));
-            metadata.insert("confidence_score".to_string(), serde_json::Value::Number(serde_json::Number::from_f64(outcome_analysis.confidence_score as f64).unwrap_or(serde_json::Number::from(0))));
-            metadata.insert("evaluation_time_ms".to_string(), serde_json::Value::Number(serde_json::Number::from(outcome_analysis.evaluation_time_ms)));
+            metadata.insert("confidence_score".to_string(), serde_json::Value::Number(serde_json::Number::from_f64(outcome_analysis.decision_confidence as f64).unwrap_or(serde_json::Number::from(0))));
+            metadata.insert("evaluation_time_ms".to_string(), serde_json::Value::Number(serde_json::Number::from(outcome_analysis.resolution_time_ms)));
             metadata.insert("timestamp".to_string(), serde_json::Value::String(Utc::now().to_rfc3339()));
 
             // Insert success rate metric
@@ -6947,7 +6969,7 @@ impl ArbitrationFeedback {
                 entity_type: "council_arbitration".to_string(),
                 entity_id: Uuid::new_v4(),
                 metric_name: "consensus_score".to_string(),
-                metric_value: outcome_analysis.consensus_score as f64,
+                metric_value: outcome_analysis.consensus_quality as f64,
                 metric_unit: Some("score".to_string()),
                 metadata: serde_json::Value::Object(metadata),
                 metric_type: Some("consensus".to_string()),
@@ -6975,7 +6997,7 @@ impl ArbitrationFeedback {
 
             info!(
                 "Recorded performance metrics - success_rate: {:.2}, quality_score: {:.2}, consensus_score: {:.2}",
-                outcome_analysis.success_rate, outcome_analysis.quality_score, outcome_analysis.consensus_score
+                outcome_analysis.success_rate, outcome_analysis.quality_score, outcome_analysis.consensus_quality
             );
         }
 

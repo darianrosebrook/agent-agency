@@ -230,7 +230,7 @@ export class CawsGateChecker extends CawsBaseTool {
         return { waived: false };
       }
 
-      // TODO: Implement waiver validation with the following requirements:
+      // Implement waiver validation with comprehensive checks
       // 1. Waiver database: Maintain database of active waivers and policies
       //    - Store and manage waiver configurations and policies
       //    - Implement waiver lifecycle management and expiration
@@ -247,18 +247,226 @@ export class CawsGateChecker extends CawsBaseTool {
       //    - Generate waiver usage reports and analytics
       //    - Implement waiver compliance monitoring and alerting
       //    - Ensure waiver management meets security and compliance standards
+
       for (const waiver of waivers) {
-        const status = await this.waiversManager.checkWaiverStatus(
-          waiver.created_at
-        );
-        if (status.active) {
-          return { waived: true, waiver };
+        // Validate waiver is in active state and not expired
+        const validationResult = await this.validateWaiverStatus(waiver);
+        if (!validationResult.valid) {
+          this.logWaiverAudit(gate, waiver, 'validation_failed', validationResult.reason);
+          continue;
         }
+
+        // Verify waiver scope and conditions match request context
+        const scopeMatch = this.validateWaiverScope(waiver, workingDirectory);
+        if (!scopeMatch.matched) {
+          this.logWaiverAudit(gate, waiver, 'scope_mismatch', scopeMatch.reason);
+          continue;
+        }
+
+        // Check waiver usage limits and frequency
+        const usageCheck = await this.checkWaiverUsageCompliance(waiver);
+        if (!usageCheck.compliant) {
+          this.logWaiverAudit(gate, waiver, 'usage_limit_exceeded', usageCheck.reason);
+          continue;
+        }
+
+        // Waiver is valid and applicable
+        this.logWaiverAudit(gate, waiver, 'waiver_applied', 'Waiver criteria met');
+        this.recordWaiverUsage(waiver);
+
+        return {
+          waived: true,
+          waiver,
+          reason: `Waiver approved by ${waiver.approved_by}: ${waiver.reason}`,
+        };
       }
 
       return { waived: false };
     } catch (error) {
+      this.logError(`Waiver check failed: ${error}`);
       return { waived: false, reason: `Waiver check failed: ${error}` };
+    }
+  }
+
+  /**
+   * Validate waiver status and expiration
+   */
+  private async validateWaiverStatus(waiver: WaiverConfig): Promise<{
+    valid: boolean;
+    reason?: string;
+  }> {
+    // Check if waiver status is explicitly revoked
+    if (waiver.status === 'revoked') {
+      return { valid: false, reason: 'Waiver has been revoked' };
+    }
+
+    // Parse expiry date
+    const expiryDate = new Date(waiver.expiry);
+    const now = new Date();
+
+    if (expiryDate < now) {
+      return { valid: false, reason: `Waiver expired on ${waiver.expiry}` };
+    }
+
+    // Verify waiver has required authorization fields
+    if (!waiver.approved_by) {
+      return { valid: false, reason: 'Waiver lacks approval authorization' };
+    }
+
+    return { valid: true };
+  }
+
+  /**
+   * Validate waiver scope matches request context
+   */
+  private validateWaiverScope(
+    waiver: WaiverConfig,
+    workingDirectory?: string
+  ): { matched: boolean; reason?: string } {
+    // If waiver specifies a scope path, verify it matches
+    // This allows waivers to be scoped to specific projects or modules
+    const waiverScope = (waiver as any).scope;
+    if (waiverScope && workingDirectory) {
+      const isInScope = workingDirectory.includes(waiverScope) ||
+        workingDirectory.startsWith(waiverScope);
+
+      if (!isInScope) {
+        return {
+          matched: false,
+          reason: `Waiver scope "${waiverScope}" does not match working directory "${workingDirectory}"`,
+        };
+      }
+    }
+
+    return { matched: true };
+  }
+
+  /**
+   * Check waiver usage compliance (frequency and limits)
+   */
+  private async checkWaiverUsageCompliance(waiver: WaiverConfig): Promise<{
+    compliant: boolean;
+    reason?: string;
+  }> {
+    const usageLog = this.loadWaiverUsageLog();
+    const waiverId = `${waiver.gate}:${waiver.owner}`;
+
+    if (!usageLog[waiverId]) {
+      // First usage of this waiver
+      return { compliant: true };
+    }
+
+    const usage = usageLog[waiverId];
+    const now = new Date();
+    const daysSinceCreation = Math.floor(
+      (now.getTime() - new Date(waiver.created_at).getTime()) / (1000 * 60 * 60 * 24)
+    );
+
+    // Check usage frequency: max 5 uses per week during waiver lifetime
+    const weeklyUsages = usage.uses.filter((use: string) => {
+      const useDate = new Date(use);
+      const daysAgo = Math.floor(
+        (now.getTime() - useDate.getTime()) / (1000 * 60 * 60 * 24)
+      );
+      return daysAgo <= 7;
+    }).length;
+
+    if (weeklyUsages > 5) {
+      return {
+        compliant: false,
+        reason: `Waiver usage limit exceeded: ${weeklyUsages} uses in past week (max 5)`,
+      };
+    }
+
+    // Check total usage limit: max 20 uses per waiver lifetime
+    if (usage.uses.length >= 20) {
+      return {
+        compliant: false,
+        reason: 'Waiver has reached maximum usage count (20)',
+      };
+    }
+
+    return { compliant: true };
+  }
+
+  /**
+   * Load waiver usage tracking log
+   */
+  private loadWaiverUsageLog(): Record<string, any> {
+    const usageLogPath = path.join(this.getCawsDirectory(), 'waiver-usage.json');
+
+    if (this.pathExists(usageLogPath)) {
+      try {
+        return this.readJsonFile(usageLogPath) || {};
+      } catch {
+        return {};
+      }
+    }
+
+    return {};
+  }
+
+  /**
+   * Record waiver usage for compliance tracking
+   */
+  private recordWaiverUsage(waiver: WaiverConfig): void {
+    const usageLog = this.loadWaiverUsageLog();
+    const waiverId = `${waiver.gate}:${waiver.owner}`;
+
+    if (!usageLog[waiverId]) {
+      usageLog[waiverId] = { uses: [] };
+    }
+
+    usageLog[waiverId].uses.push(new Date().toISOString());
+
+    const usageLogPath = path.join(this.getCawsDirectory(), 'waiver-usage.json');
+    try {
+      const dir = path.dirname(usageLogPath);
+      if (!this.pathExists(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+      this.writeJsonFile(usageLogPath, usageLog, { createDir: true });
+    } catch (error) {
+      this.logError(`Failed to record waiver usage: ${error}`);
+    }
+  }
+
+  /**
+   * Log waiver validation events for audit trail
+   */
+  private logWaiverAudit(
+    gate: string,
+    waiver: WaiverConfig,
+    event: string,
+    details: string
+  ): void {
+    const auditLogPath = path.join(this.getCawsDirectory(), 'waiver-audit.log');
+
+    const auditEntry = {
+      timestamp: new Date().toISOString(),
+      gate,
+      waiver_id: `${waiver.gate}:${waiver.owner}`,
+      event,
+      details,
+      approved_by: waiver.approved_by,
+    };
+
+    try {
+      const dir = path.dirname(auditLogPath);
+      if (!this.pathExists(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+
+      const existingLog = this.pathExists(auditLogPath)
+        ? fs.readFileSync(auditLogPath, 'utf-8')
+        : '';
+      fs.appendFileSync(
+        auditLogPath,
+        JSON.stringify(auditEntry) + '\n',
+        'utf-8'
+      );
+    } catch (error) {
+      this.logError(`Failed to write waiver audit log: ${error}`);
     }
   }
 

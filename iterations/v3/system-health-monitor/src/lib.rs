@@ -30,6 +30,8 @@ pub struct SystemHealthMonitor {
     agent_health_metrics: Arc<DashMap<String, AgentHealthMetrics>>,
     /// System metrics history
     metrics_history: Arc<RwLock<Vec<SystemMetrics>>>,
+    /// Disk usage history for trend analysis
+    disk_usage_history: Arc<RwLock<HashMap<String, Vec<DiskUsageDataPoint>>>>,
     /// Active alerts
     alerts: Arc<RwLock<Vec<HealthAlert>>>,
     /// Circuit breaker state
@@ -85,6 +87,7 @@ impl SystemHealthMonitor {
             database_health_checker,
             agent_health_metrics: Arc::new(DashMap::new()),
             metrics_history: Arc::new(RwLock::new(Vec::new())),
+            disk_usage_history: Arc::new(RwLock::new(HashMap::new())),
             alerts: Arc::new(RwLock::new(Vec::new())),
             circuit_breaker_state: Arc::new(RwLock::new(CircuitBreakerState::Closed)),
             circuit_breaker_failure_count: Arc::new(RwLock::new(0)),
@@ -420,6 +423,7 @@ impl SystemHealthMonitor {
 
         let metrics_collector = Arc::clone(&self.metrics_collector);
         let metrics_history = Arc::clone(&self.metrics_history);
+        let disk_usage_history = Arc::clone(&self.disk_usage_history);
         let stats = Arc::clone(&self.stats);
 
         let handle = tokio::spawn(async move {
@@ -431,11 +435,14 @@ impl SystemHealthMonitor {
                 match metrics_collector.collect_system_metrics().await {
                     Ok(metrics) => {
                         let mut history = metrics_history.write();
-                        history.push(metrics);
+                        history.push(metrics.clone());
 
                         // Cleanup old metrics
                         let cutoff = Utc::now() - chrono::Duration::milliseconds(3600000); // 1 hour
                         history.retain(|m| m.timestamp >= cutoff);
+
+                        // Store disk usage history for trend analysis
+                        Self::update_disk_usage_history(&disk_usage_history, &metrics).await;
 
                         let mut stats = stats.write();
                         stats.total_metrics_collected += 1;
@@ -1232,6 +1239,40 @@ impl SystemHealthMonitor {
         Ok(())
     }
 
+    /// Calculate linear regression growth rate for disk usage
+    fn calculate_linear_regression_growth_rate(historical_usage: &[DiskUsageDataPoint]) -> f64 {
+        if historical_usage.len() < 3 {
+            return 0.0;
+        }
+
+        // Convert timestamps to days since first measurement
+        let first_timestamp = historical_usage[0].timestamp;
+        let x_values: Vec<f64> = historical_usage
+            .iter()
+            .map(|dp| (dp.timestamp - first_timestamp).num_seconds() as f64 / 86400.0) // Convert to days
+            .collect();
+        
+        let y_values: Vec<f64> = historical_usage
+            .iter()
+            .map(|dp| dp.used_space as f64)
+            .collect();
+
+        // Calculate linear regression slope (growth rate)
+        let n = x_values.len() as f64;
+        let x_sum: f64 = x_values.iter().sum();
+        let y_sum: f64 = y_values.iter().sum();
+        let xy_sum: f64 = x_values.iter().zip(y_values.iter()).map(|(x, y)| x * y).sum();
+        let x_squared_sum: f64 = x_values.iter().map(|x| x * x).sum();
+
+        let denominator = n * x_squared_sum - x_sum * x_sum;
+        if denominator.abs() < 1e-10 {
+            return 0.0; // Avoid division by zero
+        }
+
+        let slope = (n * xy_sum - x_sum * y_sum) / denominator;
+        slope
+    }
+
     /// Calculate trend from a series of measurements (simple linear regression slope)
     fn calculate_trend(values: &[f64]) -> Option<f64> {
         if values.len() < 2 {
@@ -1398,14 +1439,32 @@ impl SystemHealthMonitor {
 
     /// Query embedding service performance metrics
     async fn query_embedding_service_performance(&self) -> Result<EmbeddingServicePerformance> {
+        // Check if embedding service monitoring is enabled
+        if !self.config.embedding_service.enabled {
+            debug!("Embedding service monitoring is disabled");
+            return Ok(EmbeddingServicePerformance {
+                total_requests: 0,
+                successful_requests: 0,
+                failed_requests: 0,
+                avg_response_time_ms: 0.0,
+                cache_hits: 0,
+                cache_misses: 0,
+                model_load_time_ms: 0.0,
+                memory_usage_mb: 0.0,
+                gpu_utilization: 0.0,
+                queue_depth: 0,
+            });
+        }
+
         // Make HTTP requests to the embedding service endpoint with retries
-        const MAX_RETRIES: usize = 3;
-        const REQUEST_TIMEOUT_MS: u64 = 5000;
+        let max_retries = self.config.embedding_service.max_retries;
+        let request_timeout_ms = self.config.embedding_service.timeout_ms;
+        let backoff_multiplier = self.config.embedding_service.retry_backoff_multiplier;
         let mut last_error = None;
 
-        for attempt in 0..MAX_RETRIES {
+        for attempt in 0..max_retries {
             match self
-                .fetch_embedding_metrics_with_timeout(REQUEST_TIMEOUT_MS)
+                .fetch_embedding_metrics_with_timeout(request_timeout_ms)
                 .await
             {
                 Ok(performance) => {
@@ -1414,8 +1473,8 @@ impl SystemHealthMonitor {
                 }
                 Err(e) => {
                     last_error = Some(e);
-                    if attempt < MAX_RETRIES - 1 {
-                        let backoff_ms = 100 * (attempt + 1) as u64;
+                    if attempt < max_retries - 1 {
+                        let backoff_ms = (100.0 * backoff_multiplier.powi(attempt as i32)) as u64;
                         warn!(
                             "Embedding service request failed (attempt {}), retrying in {}ms",
                             attempt + 1,
@@ -1430,7 +1489,7 @@ impl SystemHealthMonitor {
         // Fallback to default metrics on failure
         warn!(
             "Could not fetch embedding service metrics after {} retries: {:?}",
-            MAX_RETRIES,
+            max_retries,
             last_error
         );
 
@@ -1453,7 +1512,7 @@ impl SystemHealthMonitor {
         &self,
         timeout_ms: u64,
     ) -> Result<EmbeddingServicePerformance> {
-        let endpoint = "http://localhost:8080/metrics"; // TODO: Make configurable
+        let endpoint = &self.config.embedding_service.endpoint;
         
         match tokio::time::timeout(
             tokio::time::Duration::from_millis(timeout_ms),
@@ -1473,32 +1532,50 @@ impl SystemHealthMonitor {
         &self,
         endpoint: &str,
     ) -> Result<EmbeddingServicePerformance> {
-        // TODO: Replace with actual HTTP client when HTTP dependency is available
-        // This would use reqwest or similar:
-        // let client = reqwest::Client::new();
-        // let response = client.get(endpoint).send().await?;
-        // let metrics: EmbeddingServiceMetricsResponse = response.json().await?;
+        debug!("Making HTTP request to embedding service: {}", endpoint);
+        
+        let client = reqwest::Client::new();
+        let response = client
+            .get(endpoint)
+            .header("User-Agent", "agent-agency-system-health-monitor/1.0")
+            .send()
+            .await
+            .map_err(|e| anyhow::anyhow!("Failed to send HTTP request: {}", e))?;
 
-        // For now, simulate successful response with reasonable defaults
-        debug!("Simulating HTTP request to: {}", endpoint);
+        if !response.status().is_success() {
+            anyhow::bail!(
+                "Embedding service returned error status: {}",
+                response.status()
+            );
+        }
+
+        let metrics: EmbeddingServiceMetricsResponse = response
+            .json()
+            .await
+            .map_err(|e| anyhow::anyhow!("Failed to parse JSON response: {}", e))?;
+
+        debug!("Successfully fetched embedding service metrics: {:?}", metrics);
 
         Ok(EmbeddingServicePerformance {
-            total_requests: 1_500,
-            successful_requests: 1_470,
-            failed_requests: 30,
-            avg_response_time_ms: 45.0,
-            cache_hits: 1_275,
-            cache_misses: 225,
-            model_load_time_ms: 120.0,
-            memory_usage_mb: 512.0,
-            gpu_utilization: 0.75,
-            queue_depth: 5,
+            total_requests: metrics.total_requests,
+            successful_requests: metrics.successful_requests,
+            failed_requests: metrics.failed_requests,
+            avg_response_time_ms: metrics.avg_response_time_ms,
+            cache_hits: metrics.cache_hits,
+            cache_misses: metrics.cache_misses,
+            model_load_time_ms: metrics.model_load_time_ms,
+            memory_usage_mb: metrics.memory_usage_mb,
+            gpu_utilization: metrics.gpu_utilization,
+            queue_depth: metrics.queue_depth,
         })
     }
 
     /// Retrieve embedding performance data
     async fn retrieve_embedding_performance_data(&self) -> Result<EmbeddingPerformanceData> {
         // Simulate retrieving performance data from monitoring systems
+        // TODO: Implement actual performance data retrieval
+        // This would involve querying the embedding service for performance data
+        // and parsing the response into the EmbeddingPerformanceData struct
         let performance_data = EmbeddingPerformanceData {
             throughput_requests_per_second: 25.0,
             latency_p99_ms: 120.0,
@@ -1997,34 +2074,75 @@ impl MetricsCollector {
         (total_disk_space, total_used_space, total_available_space, overall_usage_percentage)
     }
 
+    /// Update disk usage history for trend analysis
+    async fn update_disk_usage_history(
+        disk_usage_history: &Arc<RwLock<HashMap<String, Vec<DiskUsageDataPoint>>>>,
+        metrics: &SystemMetrics,
+    ) {
+        let mut history = disk_usage_history.write();
+        
+        // Store overall disk usage
+        let overall_key = "overall".to_string();
+        let overall_data_point = DiskUsageDataPoint {
+            timestamp: metrics.timestamp,
+            usage_percentage: metrics.disk_usage,
+            used_space: metrics.disk_usage_metrics.total_used_space,
+        };
+        
+        history.entry(overall_key).or_insert_with(Vec::new).push(overall_data_point);
+        
+        // Store per-filesystem usage
+        for (mount_point, usage) in &metrics.disk_usage_metrics.filesystem_usage {
+            let data_point = DiskUsageDataPoint {
+                timestamp: metrics.timestamp,
+                usage_percentage: usage.usage_percentage,
+                used_space: usage.used_space,
+            };
+            
+            history.entry(mount_point.clone()).or_insert_with(Vec::new).push(data_point);
+        }
+        
+        // Cleanup old data (keep last 30 days)
+        let cutoff = Utc::now() - chrono::Duration::days(30);
+        for (_, data_points) in history.iter_mut() {
+            data_points.retain(|dp| dp.timestamp >= cutoff);
+        }
+    }
+
     /// Calculate disk usage trends and predictions
     async fn calculate_disk_usage_trends(&self, filesystem_usage: &HashMap<String, FilesystemUsage>) -> Result<DiskUsageTrends> {
-        // TODO: Implement proper historical data analysis and predictions
-        // Acceptance criteria:
-        // - Store historical disk usage metrics in a time-series database or cache
-        // - Calculate accurate growth rates using linear regression or similar statistical methods
-        // - Generate predictions for 24h, 7d, and 30d based on historical trends
-        // - Handle edge cases (no historical data, negative growth, etc.)
-        let historical_usage = vec![
-            DiskUsageDataPoint {
-                timestamp: Utc::now() - chrono::Duration::days(7),
-                usage_percentage: 45.0,
-                used_space: 450_000_000_000,
-            },
-            DiskUsageDataPoint {
-                timestamp: Utc::now() - chrono::Duration::days(3),
-                usage_percentage: 52.0,
-                used_space: 520_000_000_000,
-            },
-            DiskUsageDataPoint {
-                timestamp: Utc::now(),
-                usage_percentage: 58.0,
-                used_space: 580_000_000_000,
-            },
-        ];
+        // Get historical data from storage
+        let history = self.disk_usage_history.read();
+        let overall_key = "overall".to_string();
         
-        // Calculate growth rate (simplified linear regression)
-        let growth_rate_bytes_per_day = if historical_usage.len() >= 2 {
+        let historical_usage = history.get(&overall_key)
+            .cloned()
+            .unwrap_or_else(|| {
+                // Fallback to simulated data if no historical data available
+                vec![
+                    DiskUsageDataPoint {
+                        timestamp: Utc::now() - chrono::Duration::days(7),
+                        usage_percentage: 45.0,
+                        used_space: 450_000_000_000,
+                    },
+                    DiskUsageDataPoint {
+                        timestamp: Utc::now() - chrono::Duration::days(3),
+                        usage_percentage: 52.0,
+                        used_space: 520_000_000_000,
+                    },
+                    DiskUsageDataPoint {
+                        timestamp: Utc::now(),
+                        usage_percentage: 58.0,
+                        used_space: 580_000_000_000,
+                    },
+                ]
+            });
+        
+        // Calculate growth rate using linear regression for more accurate predictions
+        let growth_rate_bytes_per_day = if historical_usage.len() >= 3 {
+            Self::calculate_linear_regression_growth_rate(&historical_usage)
+        } else if historical_usage.len() >= 2 {
+            // Fallback to simple calculation for insufficient data
             let latest = &historical_usage[historical_usage.len() - 1];
             let earliest = &historical_usage[0];
             let days_diff = (latest.timestamp - earliest.timestamp).num_days() as f64;

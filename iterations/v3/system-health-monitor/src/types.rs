@@ -19,6 +19,35 @@ pub struct SystemHealthMonitorConfig {
     pub circuit_breaker_recovery_timeout_ms: u64,
     /// Health thresholds
     pub thresholds: HealthThresholds,
+    /// Embedding service configuration
+    pub embedding_service: EmbeddingServiceConfig,
+}
+
+/// Embedding service configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EmbeddingServiceConfig {
+    /// Embedding service endpoint URL
+    pub endpoint: String,
+    /// Request timeout in milliseconds
+    pub timeout_ms: u64,
+    /// Maximum number of retries
+    pub max_retries: usize,
+    /// Retry backoff multiplier
+    pub retry_backoff_multiplier: f64,
+    /// Enable embedding service monitoring
+    pub enabled: bool,
+}
+
+impl Default for EmbeddingServiceConfig {
+    fn default() -> Self {
+        Self {
+            endpoint: "http://localhost:8080/metrics".to_string(),
+            timeout_ms: 5000,
+            max_retries: 3,
+            retry_backoff_multiplier: 1.5,
+            enabled: true,
+        }
+    }
 }
 
 /// Health thresholds for alerting
@@ -437,6 +466,31 @@ pub struct EmbeddingMetrics {
 /// Embedding service performance metrics
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EmbeddingServicePerformance {
+    /// Total requests processed
+    pub total_requests: u64,
+    /// Successful requests
+    pub successful_requests: u64,
+    /// Failed requests
+    pub failed_requests: u64,
+    /// Average response time in milliseconds
+    pub avg_response_time_ms: f64,
+    /// Cache hits
+    pub cache_hits: u64,
+    /// Cache misses
+    pub cache_misses: u64,
+    /// Model load time in milliseconds
+    pub model_load_time_ms: f64,
+    /// Memory usage in MB
+    pub memory_usage_mb: f64,
+    /// GPU utilization (0.0 to 1.0)
+    pub gpu_utilization: f64,
+    /// Current queue depth
+    pub queue_depth: u32,
+}
+
+/// Embedding service metrics response from HTTP endpoint
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EmbeddingServiceMetricsResponse {
     /// Total requests processed
     pub total_requests: u64,
     /// Successful requests

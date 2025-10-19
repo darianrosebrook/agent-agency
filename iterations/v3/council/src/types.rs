@@ -317,6 +317,16 @@ pub enum ArgumentPosition {
     Neutral, // Neutral or seeking clarification
 }
 
+impl std::fmt::Display for ArgumentPosition {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ArgumentPosition::Support => write!(f, "Support"),
+            ArgumentPosition::Oppose => write!(f, "Oppose"),
+            ArgumentPosition::Neutral => write!(f, "Neutral"),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EvidenceRequest {
     pub requesting_judge: JudgeId,

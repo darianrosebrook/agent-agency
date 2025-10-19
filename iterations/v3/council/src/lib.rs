@@ -6,6 +6,8 @@
 
 pub mod advanced_arbitration;
 // pub mod claim_extraction;  // Temporarily commented to resolve circular dependency
+pub mod claim_extraction;
+pub mod claim_extraction_multimodal;
 pub mod coordinator;
 pub mod debate;
 pub mod evidence_enrichment;
@@ -162,3 +164,13 @@ impl Default for CouncilConfig {
         }
     }
 }
+
+pub use claim_extraction::ClaimExtractor;
+pub use claim_extraction_multimodal::{
+    MultimodalEvidenceEnricher,
+    MultimodalEvidence,
+    ModalityEvidence,
+    ModalityCitation,
+    ClaimWithMultimodalEvidence,
+    CrossModalValidation,
+};

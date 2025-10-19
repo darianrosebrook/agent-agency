@@ -11,6 +11,7 @@ pub mod embeddings;
 pub mod information_processor;
 pub mod knowledge_seeker;
 pub mod multimodal_retriever;
+pub mod multimodal_context_provider;
 pub mod types;
 pub mod vector_search;
 pub mod web_scraper;
@@ -27,6 +28,13 @@ pub use information_processor::{
 pub use knowledge_seeker::KnowledgeSeeker;
 pub use multimodal_retriever::{
     MultimodalQuery, MultimodalRetriever, MultimodalRetrieverConfig,
+};
+pub use multimodal_context_provider::{
+    MultimodalContextProvider, 
+    MultimodalContext, 
+    EvidenceItem, 
+    Citation,
+    ContextBudget,
 };
 pub use types::*;
 pub use vector_search::VectorSearchEngine;

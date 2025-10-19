@@ -12,6 +12,7 @@ pub mod vision_enricher;
 pub mod asr_enricher;
 pub mod entity_enricher;
 pub mod visual_caption_enricher;
+pub mod python_bridge;
 
 pub use circuit_breaker::{CircuitBreaker, CircuitBreakerConfig, CircuitState};
 pub use types::*;

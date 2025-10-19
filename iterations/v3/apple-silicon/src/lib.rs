@@ -17,6 +17,7 @@ pub mod memory;
 pub mod metal_gpu;
 pub mod model_router;
 pub mod quantization;
+pub mod quantization_lab;
 pub mod routing;
 #[cfg(target_os = "macos")]
 pub mod telemetry;
@@ -53,6 +54,9 @@ pub use model_router::{
     ModelRouter, ModelVariant, RoutingMode, RoutingPolicy, DeviceId, VariantPerformance, RoutingStats,
 };
 pub use quantization::QuantizationManager;
+pub use quantization_lab::{
+    QuantizationLab, QuantizationType, QuantizationStrategy, QuantizationMetrics, QuantizationResult,
+};
 pub use routing::InferenceRouter;
 pub use thermal::ThermalManager;
 pub use types::*;
@@ -164,3 +168,13 @@ impl Default for AppleSiliconConfig {
         }
     }
 }
+
+// @darianrosebrook
+// Apple Silicon optimizations for V3 system
+// Includes native macOS framework bridges for Vision, Speech, and Core ML
+
+pub mod vision_bridge;
+pub mod speech_bridge;
+
+pub use vision_bridge::{VisionBridge, VisionAnalysisResult, VisionBlock, VisionTable, BoundingBox};
+pub use speech_bridge::{SpeechBridge, SpeechTranscriptionResult, SpeechSegment, WordTiming, Speaker};
