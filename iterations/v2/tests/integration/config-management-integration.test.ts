@@ -107,55 +107,47 @@ describe("Configuration Management Integration", () => {
     });
 
     it("should validate required configuration fields", async () => {
-      // TODO: Implement loadConfiguration method in ConfigManager
-      // - [ ] Add loadConfiguration method that validates and merges config
-      // - [ ] Implement proper validation for required fields
-      // - [ ] Add support for throwing ValidationError on invalid config
-      // - [ ] Integrate with Zod schemas for type-safe validation
+      // loadConfiguration method is now implemented with validation
+      const invalidConfig = {
+        orchestrator: { maxConcurrentTasks: -1 }, // Invalid negative value
+      };
 
-      // For now, this functionality is not implemented
-      expect(true).toBe(true); // Placeholder test
+      await expect(
+        configManager.loadConfiguration(invalidConfig)
+      ).rejects.toThrow("Configuration validation failed");
     });
 
     it("should merge configuration with defaults", async () => {
-      // TODO: Implement configuration merging with defaults
-      // - [ ] Add default configuration values
-      // - [ ] Implement deep merge functionality
-      // - [ ] Support partial configuration updates
-      // - [ ] Maintain backward compatibility
-
-      // For now, test basic updateConfiguration functionality
+      // Configuration merging with defaults is now implemented
       const partialConfig = {
         server: {
           port: 8080,
         },
       };
 
-      configManager.updateConfiguration(partialConfig);
+      await configManager.loadConfiguration(partialConfig);
 
       const config = configManager.getConfiguration();
       expect(config.server.port).toBe(8080);
-      // Note: Default merging not yet implemented
+      // Default values should still be present
+      expect(config.orchestrator.maxConcurrentTasks).toBe(10); // Default value
     });
 
     it("should handle environment variable substitution", async () => {
-      // TODO: Implement environment variable substitution
-      // - [ ] Add environment variable parsing in configuration
-      // - [ ] Support ${VAR_NAME} syntax for substitution
-      // - [ ] Handle missing environment variables gracefully
-      // - [ ] Support default values with ${VAR_NAME:default} syntax
+      // Environment variable substitution is now implemented
+      process.env.TEST_PORT = "9090";
+      process.env.TEST_DB_NAME = "env_test_db";
 
-      // For now, test basic configuration update
       const configWithEnv = {
         server: {
-          port: "9090",
+          port: "${TEST_PORT}",
         },
         database: {
-          database: "env_test_db",
+          database: "${TEST_DB_NAME}",
         },
       };
 
-      configManager.updateConfiguration(configWithEnv);
+      await configManager.loadConfiguration(configWithEnv);
 
       const config = configManager.getConfiguration();
       expect(config.server.port).toBe("9090");
@@ -167,16 +159,13 @@ describe("Configuration Management Integration", () => {
     });
 
     it("should validate configuration schema", async () => {
-      // TODO: Implement schema validation with ValidationError
-      // - [ ] Add Zod schema validation to loadConfiguration
-      // - [ ] Implement proper error throwing for invalid schemas
-      // - [ ] Support detailed validation error messages
-      // - [ ] Add type-safe configuration validation
+      // Schema validation is now implemented
+      const validConfig = createBaseConfig();
+      await configManager.loadConfiguration(validConfig);
 
-      // For now, test basic validation
       const result = configManager.validate();
-      expect(result).toHaveProperty("valid");
-      expect(result).toHaveProperty("errors");
+      expect(result.valid).toBe(true);
+      expect(result.errors).toHaveLength(0);
     });
   });
 
@@ -207,23 +196,16 @@ describe("Configuration Management Integration", () => {
     });
 
     it("should validate updates before applying", async () => {
-      // TODO: Implement validation before applying updates
-      // - [ ] Add validation logic to updateConfiguration method
-      // - [ ] Throw ValidationError for invalid updates
-      // - [ ] Support rollback on validation failure
-      // - [ ] Add detailed validation error messages
-
-      // For now, updateConfiguration doesn't validate
+      // Validation before updates is now implemented
       const invalidUpdate = {
-        server: {
-          port: -1, // Invalid port
+        orchestrator: {
+          maxConcurrentTasks: -1, // Invalid negative value
         },
       };
 
-      configManager.updateConfiguration(invalidUpdate);
-
-      // Note: No validation is currently performed
-      expect(true).toBe(true);
+      await expect(
+        configManager.updateConfiguration(invalidUpdate)
+      ).rejects.toThrow("Configuration update validation failed");
     });
 
     it("should support partial updates", async () => {
@@ -238,39 +220,41 @@ describe("Configuration Management Integration", () => {
     });
 
     it("should emit change events for updates", async () => {
-      // TODO: Implement event emission for configuration changes
-      // - [ ] Add EventEmitter support to ConfigManager
-      // - [ ] Implement 'on' method for event subscription
-      // - [ ] Emit 'configChanged' events on updates
-      // - [ ] Include change details in event payload
+      // Event emission is now implemented
+      let eventEmitted = false;
+      let eventData: any = null;
 
-      // For now, just test that updateConfiguration works
-      configManager.updateConfiguration({
+      configManager.on("configChanged", (data) => {
+        eventEmitted = true;
+        eventData = data;
+      });
+
+      await configManager.updateConfiguration({
         server: { port: 9090 },
       });
+
+      expect(eventEmitted).toBe(true);
+      expect(eventData.type).toBe("update");
+      expect(eventData.changes.server.port).toBe(9090);
 
       const config = configManager.getConfiguration();
       expect(config.server.port).toBe(9090);
     });
 
     it("should rollback failed updates", async () => {
-      // TODO: Implement rollback functionality for failed updates
-      // - [ ] Add transaction-like behavior to updateConfiguration
-      // - [ ] Implement rollback on validation failures
-      // - [ ] Support atomic configuration updates
-      // - [ ] Add rollback logging and error reporting
-
-      // For now, updateConfiguration doesn't rollback
+      // Rollback functionality is now implemented
       const originalPort = configManager.getConfiguration().server.port;
 
-      // Apply update (no validation currently)
-      configManager.updateConfiguration({
-        server: { port: 9999 },
-      });
+      // Try to apply invalid update
+      await expect(
+        configManager.updateConfiguration({
+          orchestrator: { maxConcurrentTasks: -1 }, // Invalid
+        })
+      ).rejects.toThrow("Configuration update validation failed");
 
-      // Configuration should be changed (no rollback)
+      // Configuration should be unchanged (rollback worked)
       const config = configManager.getConfiguration();
-      expect(config.server.port).toBe(9999);
+      expect(config.server.port).toBe(originalPort);
     });
   });
 
