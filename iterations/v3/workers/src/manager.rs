@@ -595,8 +595,14 @@ impl WorkerPoolManager {
                             };
 
                             // Create basic health metrics
+                            // TODO: Replace simulated health metrics with actual measurements
+                            // Acceptance criteria:
+                            // - response_time_ms should be measured from actual health check request
+                            // - cpu_usage_percent should be queried from worker or system metrics
+                            // - memory_usage_percent should be queried from worker or system metrics
+                            // - active_tasks and queue_depth should be retrieved from worker state
                             let health_metrics = WorkerHealthMetrics {
-                                response_time_ms: 150, // Simulated response time
+                                response_time_ms: 150, // TODO: Measure actual response time
                                 cpu_usage_percent: 45.0,
                                 memory_usage_percent: 60.0,
                                 active_tasks: 2,

@@ -17,7 +17,7 @@ pub mod web_scraper;
 
 pub use confidence_manager::{ConfidenceManager, ConfidenceManagerConfig, IConfidenceManager};
 pub use content_processor::ContentProcessor;
-pub use context_builder::ContextBuilder;
+pub use context_builder::{ContextBuilder, CrossReferenceDetector};
 // pub use enhanced_knowledge_seeker::{
 //     EnhancedKnowledgeSeeker, EnhancedKnowledgeSeekerConfig, IEnhancedKnowledgeSeeker,
 // }; // Temporarily commented due to compilation issues

@@ -182,3 +182,5 @@ mod tests {
         assert_eq!(cb.state(), CircuitState::Closed);
     }
 }
+
+

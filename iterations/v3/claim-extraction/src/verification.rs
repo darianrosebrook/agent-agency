@@ -219,7 +219,7 @@ impl EvidenceCollector {
                     authority: "Multi-Modal Verification Engine".to_string(),
                     freshness: Utc::now(),
                 },
-                confidence: avg_confidence.min(0.95),
+                confidence: avg_confidence as f64,
                 timestamp: Utc::now(),
             });
         }
@@ -236,11 +236,11 @@ impl EvidenceCollector {
         let text_lower = claim_text.to_lowercase();
         let uncertainty_count = uncertainty_markers
             .iter()
-            .filter(|marker| text_lower.contains(marker))
+            .filter(|marker| text_lower.contains(*marker))
             .count();
         let contradiction_count = contradiction_markers
             .iter()
-            .filter(|marker| text_lower.contains(marker))
+            .filter(|marker| text_lower.contains(*marker))
             .count();
 
         // Confidence decreases with uncertainty/contradiction markers
@@ -257,21 +257,29 @@ impl EvidenceCollector {
         // Analyze claim structure and logical consistency
         
         // Check claim length (too short may indicate low confidence)
-        let length_factor = if claim_text.len() < 20 {
-            0.5
-        } else if claim_text.len() > 500 {
-            0.8
+        let is_short = claim_text.len() < 20;
+        let is_long = claim_text.len() > 1000;
+        
+        let length_penalty = if is_short { 0.3_f32 } else if is_long { 0.1_f32 } else { 0.0_f32 };
+        
+        // Check for causal relationships
+        let has_causal = claim_text.contains("because") || claim_text.contains("caused") 
+            || claim_text.contains("leads to") || claim_text.contains("results in");
+        
+        let causal_bonus = if has_causal { 0.15_f32 } else { 0.0_f32 };
+        
+        // Check sentence structure
+        let sentences = claim_text.split('.').count();
+        let avg_sentence_length = claim_text.len() / sentences.max(1);
+        
+        let structure_bonus = if avg_sentence_length > 30 && avg_sentence_length < 200 {
+            0.2_f32
         } else {
-            0.85
+            -0.1_f32
         };
-
-        // Check for quantitative claims (usually more verifiable)
-        let has_numbers = claim_text.chars().any(|c| c.is_numeric());
-        let quantitative_factor = if has_numbers { 0.9 } else { 0.7 };
-
-        // Combine factors for overall confidence
-        let consistency_confidence = (length_factor + quantitative_factor) / 2.0;
-        Ok(consistency_confidence)
+        
+        let confidence = (0.7_f32 - length_penalty + causal_bonus + structure_bonus).max(0.2_f32).min(0.95_f32);
+        Ok(confidence)
     }
 
     /// Collect evidence from various sources

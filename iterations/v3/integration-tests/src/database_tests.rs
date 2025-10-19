@@ -119,8 +119,11 @@ impl DatabaseIntegrationTests {
         let connection_result = client.health_check().await;
         if connection_result.is_err() {
             info!("⚠️ Database not available for testing, using mock fallback");
-            // In a real environment, this would fail the test
-            // For integration testing, we allow graceful degradation
+            // TODO: Implement proper database availability check
+            // Acceptance criteria:
+            // - Fail test if database is required for this test suite
+            // - Allow graceful degradation only for optional integration tests
+            // - Log warning with specific database connection details
             return Ok(());
         }
 

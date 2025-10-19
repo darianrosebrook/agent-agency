@@ -1146,8 +1146,15 @@ impl ContextPreservationEngine {
     
     /// Start background monitoring task
     async fn start_monitoring_task(&self, monitoring_system: &ContextMonitoringSystem) -> Result<()> {
-        // In a real implementation, this would start a background task
-        // For now, we'll just log the monitoring setup
+        // TODO: Implement background monitoring task
+        // Acceptance criteria:
+        // 1. Start a tokio task that runs independently
+        // 2. Collect metrics at specified monitoring_interval
+        // 3. Update ContextMonitoringSystem with latest metrics
+        // 4. Handle graceful shutdown when monitoring is disabled
+        // 5. Implement error recovery and retry logic
+        // 6. Add metrics for task health and uptime
+        // 7. Write unit tests for background task lifecycle
         debug!(
             "Started monitoring task for tenant {} session {}",
             monitoring_system.tenant_id, monitoring_system.session_id
@@ -1328,8 +1335,16 @@ pub struct PerformanceInsight {
 impl ContextPreservationEngine {
     /// Query performance metrics from storage systems
     async fn query_performance_metrics_from_storage(&self, session_id: Uuid) -> Result<PerformanceMetricsRaw> {
-        // Simulate querying performance metrics from storage
-        // In a real implementation, this would connect to performance metrics databases
+        // TODO: Implement performance metrics storage query
+        // Acceptance criteria:
+        // 1. Connect to performance metrics database using configured connection pool
+        // 2. Query metrics for the given session_id from metrics storage tables
+        // 3. Handle missing or incomplete metrics gracefully with sensible defaults
+        // 4. Implement caching for recent metric queries to reduce database load
+        // 5. Add proper error handling and logging for failed queries
+        // 6. Support both real-time and historical metric retrieval
+        // 7. Validate returned metrics fall within expected ranges
+        // 8. Add unit and integration tests for storage query functionality
         Ok(PerformanceMetricsRaw {
             session_id,
             context_access_count: 1250,
@@ -1467,8 +1482,12 @@ impl ContextPreservationEngine {
 
     /// Calculate performance trend
     async fn calculate_performance_trend(&self, _raw_metrics: &PerformanceMetricsRaw) -> Result<String> {
-        // Simulate trend calculation
-        // In a real implementation, this would analyze historical data
+        // TODO: Implement proper trend calculation
+        // Acceptance criteria:
+        // 1. Analyze historical performance data points
+        // 2. Calculate trend direction (improving/degrading/stable)
+        // 3. Return trend with confidence score
+        // 4. Handle edge cases (insufficient data, first run)
         Ok("improving".to_string())
     }
 

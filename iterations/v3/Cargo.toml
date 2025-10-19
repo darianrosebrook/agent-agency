@@ -24,7 +24,8 @@ members = [
     "integration-tests",
     "agent-agency-contracts",
     "ingestors",
-    "enrichers"
+    "enrichers",
+    "indexers"
 ]
 
 [workspace.package]

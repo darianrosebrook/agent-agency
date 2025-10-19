@@ -1078,22 +1078,28 @@ impl MultiTenantManager {
 
     /// Update context count cache for performance optimization
     async fn update_context_count_cache(&self, tenant_id: &str, count: u32) -> Result<()> {
-        // In a real implementation, this would update an actual cache
+        // TODO: Implement actual cache update for context count
+        // Acceptance criteria:
+        // - Store the context count in a cache backend (e.g., Redis, in-memory cache)
+        // - Set an appropriate TTL (time-to-live) for the cached value
+        // - Handle cache write errors gracefully
+        // - Ensure tenant_id is used as the cache key
         debug!(
             "Updated context count cache for tenant {}: {} contexts",
             tenant_id, count
         );
-        
-        // Simulate cache update
-        // In a real implementation, this would store the count in a cache with TTL
         
         Ok(())
     }
 
     /// Get cached context count (fallback when database is unavailable)
     async fn get_cached_context_count(&self, tenant_id: &str) -> Result<u32> {
-        // Simulate cached context count retrieval
-        // In a real implementation, this would query an actual cache
+        // TODO: Implement cached context count retrieval
+        // Acceptance criteria:
+        // - Query the cache backend (e.g., Redis, in-memory cache) using tenant_id as key
+        // - Return the cached context count if available
+        // - Handle cache misses gracefully (return default or error)
+        // - Ensure cache consistency with actual context counts
         let cached_count = match tenant_id {
             "tenant_1" => 37,
             "tenant_2" => 26,

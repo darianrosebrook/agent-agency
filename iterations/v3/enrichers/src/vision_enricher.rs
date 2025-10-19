@@ -141,3 +141,5 @@ mod tests {
         assert!(!enricher.circuit_breaker.is_available());
     }
 }
+
+

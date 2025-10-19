@@ -1143,14 +1143,16 @@ impl AnalyticsDashboard {
         
         // Simulate performance insights generation
         insights.push(AnalyticsInsight {
-            id: uuid::Uuid::new_v4().to_string(),
-            insight_type: "performance".to_string(),
+            insight_id: uuid::Uuid::new_v4().to_string(),
+            insight_type: InsightType::PerformanceBottleneck,
             title: "High CPU Usage Detected".to_string(),
             description: "CPU usage has exceeded 80% for the last 15 minutes".to_string(),
-            severity: "warning".to_string(),
+            severity: InsightSeverity::Warning,
             confidence: 0.85,
             timestamp: chrono::Utc::now(),
-            metadata: std::collections::HashMap::new(),
+            related_metrics: vec!["cpu_usage".to_string(), "system_load".to_string()],
+            recommendations: vec!["Consider scaling up resources".to_string(), "Review CPU intensive tasks".to_string()],
+            visual_data: None,
         });
         
         Ok(insights)

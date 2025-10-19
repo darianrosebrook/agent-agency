@@ -15,6 +15,7 @@ pub mod core_ml_bridge;
 pub mod inference;
 pub mod memory;
 pub mod metal_gpu;
+pub mod model_router;
 pub mod quantization;
 pub mod routing;
 #[cfg(target_os = "macos")]
@@ -23,6 +24,7 @@ pub mod thermal;
 pub mod types;
 pub mod buffer_pool;
 pub mod model_pool;
+pub mod router_integration;
 
 pub use adaptive_resource_manager::{
     AllocationPlan, AllocationPlanner, AllocationRequest, DeviceKind, DeviceSensors, ModelRegistry,
@@ -47,10 +49,18 @@ pub use inference::{
 };
 pub use memory::MemoryManager;
 pub use metal_gpu::MetalGPUManager;
+pub use model_router::{
+    ModelRouter, ModelVariant, RoutingMode, RoutingPolicy, DeviceId, VariantPerformance, RoutingStats,
+};
 pub use quantization::QuantizationManager;
 pub use routing::InferenceRouter;
 pub use thermal::ThermalManager;
 pub use types::*;
+pub use buffer_pool::{BufferPool, BufferPoolConfig, BufferPoolStats};
+pub use model_pool::{ModelPool, ModelPoolConfig, ModelPoolStats};
+pub use router_integration::{
+    IntegratedInferenceEngine, RoutedInferenceRequest, RoutedInferenceOutcome, RouteIntegrationStats,
+};
 
 /// Convenience function to plan an allocation using a provided planner.
 pub fn adaptive_plan_for<P: AllocationPlanner>(

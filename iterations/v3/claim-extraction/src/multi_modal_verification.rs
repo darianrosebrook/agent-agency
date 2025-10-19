@@ -2437,8 +2437,19 @@ impl MultiModalVerificationEngine {
         // Word length and character similarity
         let keyword_chars: std::collections::HashSet<char> = keyword.chars().collect();
 
-        // This is a simplified semantic similarity - in a real implementation,
-        // you would use word embeddings or a proper NLP library
+        // TODO: Implement proper semantic similarity using WordNet
+        // Requirements:
+        // 1. Add WordNet dependency (e.g., 'wordnet' ingested in our database along with wikidata)
+        // 2. Implement semantic similarity based on WordNet synsets and hypernym/hyponym relationships
+        // 3. Support multiple similarity metrics:
+        //    - Path similarity (shortest path between synsets)
+        //    - Wu-Palmer similarity (depth-based similarity)
+        //    - Leacock-Chodorow similarity (log-scaled path similarity)
+        // 4. Handle word sense disambiguation to select appropriate synsets
+        // 5. Fallback to current character-based similarity for words not in WordNet
+        // 6. Cache WordNet lookups for performance
+        // 7. Add configuration for similarity thresholds
+        // 8. Add tests for semantic similarity accuracy
         let similar_words = [
             "process",
             "handle",
