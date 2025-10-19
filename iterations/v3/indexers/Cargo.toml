@@ -24,7 +24,7 @@ parking_lot = "0.12"
 lru = "0.12"
 
 # Search and indexing
-tantivy = "0.24"  # BM25 full-text search
+# tantivy = "0.24"  # BM25 full-text search - temporarily disabled due to compilation issues
 # Note: HNSW implementation will use a simplified approach for now
 
 [features]

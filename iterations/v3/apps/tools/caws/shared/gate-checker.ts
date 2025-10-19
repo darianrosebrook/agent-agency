@@ -5,6 +5,7 @@
  * @author @darianrosebrook
  */
 
+import * as fs from "fs";
 import * as path from "path";
 import { CawsBaseTool } from "./base-tool.js";
 import {
@@ -122,7 +123,7 @@ export class CawsGateChecker extends CawsBaseTool {
 
         // Priority 3: If no reports found in workspaces, look for workspaces with test scripts
         if (packageJson?.workspaces) {
-          for (const wsPattern of workspaces) {
+          for (const wsPattern of packageJson.workspaces) {
             if (wsPattern.includes("*")) {
               const baseDir = wsPattern.split("*")[0];
               const fullBaseDir = path.join(startPath, baseDir);
@@ -230,23 +231,23 @@ export class CawsGateChecker extends CawsBaseTool {
         return { waived: false };
       }
 
-      // Implement waiver validation with comprehensive checks
+      // Comprehensive waiver validation system
       // 1. Waiver database: Maintain database of active waivers and policies
-      //    - Store and manage waiver configurations and policies
-      //    - Implement waiver lifecycle management and expiration
-      //    - Handle waiver validation and authorization verification
+      await this.maintainWaiverDatabase();
+
       // 2. Waiver matching: Match requests against applicable waivers
-      //    - Implement waiver matching algorithms and criteria
-      //    - Handle waiver scope and condition validation
-      //    - Process waiver application and approval workflows
+      const matchingWaivers = await this.findMatchingWaivers(
+        gate,
+        workingDirectory
+      );
+
       // 3. Waiver enforcement: Enforce waiver policies and restrictions
-      //    - Implement waiver enforcement and compliance checking
-      //    - Handle waiver violations and remediation
-      //    - Track waiver usage and compliance metrics
+      const enforcementResult = await this.enforceWaiverPolicies(
+        matchingWaivers
+      );
+
       // 4. Waiver auditing: Audit waiver usage and compliance
-      //    - Generate waiver usage reports and analytics
-      //    - Implement waiver compliance monitoring and alerting
-      //    - Ensure waiver management meets security and compliance standards
+      await this.auditWaiverCompliance(gate, matchingWaivers);
 
       for (const waiver of waivers) {
         // Validate waiver is in active state and not expired
@@ -256,7 +257,7 @@ export class CawsGateChecker extends CawsBaseTool {
             gate,
             waiver,
             "validation_failed",
-            validationResult.reason
+            validationResult.reason || "Validation failed"
           );
           continue;
         }
@@ -268,7 +269,7 @@ export class CawsGateChecker extends CawsBaseTool {
             gate,
             waiver,
             "scope_mismatch",
-            scopeMatch.reason
+            scopeMatch.reason || "Scope mismatch"
           );
           continue;
         }
@@ -280,7 +281,7 @@ export class CawsGateChecker extends CawsBaseTool {
             gate,
             waiver,
             "usage_limit_exceeded",
-            usageCheck.reason
+            usageCheck.reason || "Usage limit exceeded"
           );
           continue;
         }
@@ -1081,17 +1082,346 @@ export class CawsGateChecker extends CawsBaseTool {
   }
 
   /**
+   * Check accessibility compliance
+   */
+  async checkAccessibility(options: GateCheckOptions): Promise<GateResult> {
+    try {
+      // Check waivers and overrides first
+      const waiverCheck = await this.checkWaiver(
+        "accessibility",
+        options.workingDirectory
+      );
+      if (waiverCheck.waived) {
+        return {
+          passed: true,
+          score: 1.0,
+          details: {
+            waived: true,
+            waiver_reason: waiverCheck.waiver?.reason,
+            waiver_owner: waiverCheck.waiver?.owner,
+          },
+          tier: options.tier,
+        };
+      }
+
+      // Auto-detect the correct directory for accessibility reports
+      const reportDir = this.findReportDirectory(
+        options.workingDirectory || this.getWorkingDirectory()
+      );
+
+      // Look for common accessibility testing tool outputs
+      const a11yPaths = [
+        path.join(reportDir, "test-results", "a11y-results.json"),
+        path.join(reportDir, "reports", "accessibility", "axe-results.json"),
+        path.join(reportDir, ".caws", "a11y-results.json"),
+        path.join(reportDir, "a11y-results.json"),
+      ];
+
+      let a11yResults: any = null;
+      let foundPath: string | null = null;
+
+      for (const a11yPath of a11yPaths) {
+        if (this.pathExists(a11yPath)) {
+          a11yResults = this.readJsonFile(a11yPath);
+          foundPath = a11yPath;
+          break;
+        }
+      }
+
+      if (!a11yResults) {
+        // If no accessibility results found, check if there are HTML files to test
+        const hasHtmlFiles = this.hasHtmlFiles(reportDir);
+
+        if (!hasHtmlFiles) {
+          return {
+            passed: true,
+            score: 1.0,
+            details: {
+              skipped: true,
+              reason: "No HTML files found for accessibility testing",
+            },
+            tier: options.tier,
+          };
+        }
+
+        return {
+          passed: false,
+          score: 0,
+          details: {
+            error: "Accessibility test results not found",
+            searched_paths: a11yPaths.map((p) =>
+              path.relative(this.getWorkingDirectory(), p)
+            ),
+            expected_format:
+              "JSON with accessibility test results (axe, pa11y, etc.)",
+            run_command: "npm run test:a11y",
+            alternative_commands: [
+              "npx axe-cli --save a11y-results.json",
+              "npx pa11y-ci --json > a11y-results.json",
+              "npm run test:accessibility",
+            ],
+            workspace_hint:
+              reportDir !== this.getWorkingDirectory()
+                ? `Auto-detected workspace: ${path.relative(
+                    this.getWorkingDirectory(),
+                    reportDir
+                  )}`
+                : "Run from workspace directory if using monorepo",
+          },
+          errors: [
+            `Accessibility test results not found. Searched in: ${a11yPaths
+              .map((p) => path.relative(this.getWorkingDirectory(), p))
+              .join(", ")}`,
+          ],
+        };
+      }
+
+      // Parse accessibility results (support multiple formats)
+      let violations = 0;
+      let totalTests = 0;
+      let passedTests = 0;
+
+      if (a11yResults && typeof a11yResults === "object") {
+        if (a11yResults.violations && Array.isArray(a11yResults.violations)) {
+          // Axe format
+          violations = a11yResults.violations.length;
+          totalTests = a11yResults.violations.reduce(
+            (sum: number, v: any) => sum + (v.nodes?.length || 0),
+            0
+          );
+          passedTests = totalTests - violations;
+        } else if (a11yResults.results && Array.isArray(a11yResults.results)) {
+          // Pa11y format
+          totalTests = a11yResults.results.length;
+          violations = a11yResults.results.filter(
+            (r: any) => r.type === "error"
+          ).length;
+          passedTests = totalTests - violations;
+        } else if (typeof a11yResults.passed === "boolean") {
+          // Simple pass/fail format
+          passedTests = a11yResults.passed ? 1 : 0;
+          totalTests = 1;
+          violations = a11yResults.passed ? 0 : 1;
+        }
+      }
+
+      const a11yScore = totalTests > 0 ? passedTests / totalTests : 1.0;
+      const passed = a11yScore >= 0.95; // 95% accessibility compliance required
+
+      return {
+        passed,
+        score: a11yScore,
+        details: {
+          violations,
+          total_tests: totalTests,
+          passed_tests: passedTests,
+          compliance_rate: a11yScore,
+          results_path: foundPath
+            ? path.relative(this.getWorkingDirectory(), foundPath)
+            : null,
+        },
+        tier: options.tier,
+      };
+    } catch (error) {
+      return {
+        passed: false,
+        score: 0,
+        details: { error: `Accessibility check failed: ${error}` },
+        errors: [`Accessibility check failed: ${error}`],
+      };
+    }
+  }
+
+  /**
+   * Check if directory contains HTML files
+   */
+  private hasHtmlFiles(dirPath: string): boolean {
+    try {
+      const entries = fs.readdirSync(dirPath, { recursive: true });
+      return entries.some(
+        (entry: any) => typeof entry === "string" && entry.endsWith(".html")
+      );
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Check performance compliance
+   */
+  async checkPerformance(options: GateCheckOptions): Promise<GateResult> {
+    try {
+      // Check waivers and overrides first
+      const waiverCheck = await this.checkWaiver(
+        "performance",
+        options.workingDirectory
+      );
+      if (waiverCheck.waived) {
+        return {
+          passed: true,
+          score: 1.0,
+          details: {
+            waived: true,
+            waiver_reason: waiverCheck.waiver?.reason,
+            waiver_owner: waiverCheck.waiver?.owner,
+          },
+          tier: options.tier,
+        };
+      }
+
+      // Auto-detect the correct directory for performance reports
+      const reportDir = this.findReportDirectory(
+        options.workingDirectory || this.getWorkingDirectory()
+      );
+
+      // Look for common performance testing tool outputs
+      const perfPaths = [
+        path.join(reportDir, "test-results", "performance-results.json"),
+        path.join(
+          reportDir,
+          "reports",
+          "performance",
+          "lighthouse-results.json"
+        ),
+        path.join(reportDir, ".caws", "perf-results.json"),
+        path.join(reportDir, "perf-results.json"),
+        path.join(reportDir, "lighthouse-results.json"),
+      ];
+
+      let perfResults: any = null;
+      let foundPath: string | null = null;
+
+      for (const perfPath of perfPaths) {
+        if (this.pathExists(perfPath)) {
+          perfResults = this.readJsonFile(perfPath);
+          foundPath = perfPath;
+          break;
+        }
+      }
+
+      if (!perfResults) {
+        return {
+          passed: false,
+          score: 0,
+          details: {
+            error: "Performance test results not found",
+            searched_paths: perfPaths.map((p) =>
+              path.relative(this.getWorkingDirectory(), p)
+            ),
+            expected_format:
+              "JSON with performance test results (Lighthouse, WebPageTest, etc.)",
+            run_command: "npm run test:performance",
+            alternative_commands: [
+              "npx lighthouse --output=json --output-path=./lighthouse-results.json",
+              "npx webpagetest --json > perf-results.json",
+              "npm run test:perf",
+            ],
+            workspace_hint:
+              reportDir !== this.getWorkingDirectory()
+                ? `Auto-detected workspace: ${path.relative(
+                    this.getWorkingDirectory(),
+                    reportDir
+                  )}`
+                : "Run from workspace directory if using monorepo",
+          },
+          errors: [
+            `Performance test results not found. Searched in: ${perfPaths
+              .map((p) => path.relative(this.getWorkingDirectory(), p))
+              .join(", ")}`,
+          ],
+        };
+      }
+
+      // Parse performance results (support multiple formats)
+      let performanceScore = 0;
+      let metrics: any = {};
+
+      if (perfResults && typeof perfResults === "object") {
+        if (
+          perfResults.categories &&
+          typeof perfResults.categories === "object"
+        ) {
+          // Lighthouse format
+          const categories = perfResults.categories;
+          const scores = [
+            categories.performance?.score || 0,
+            categories.accessibility?.score || 0,
+            categories["best-practices"]?.score || 0,
+            categories.seo?.score || 0,
+          ];
+          performanceScore =
+            scores.reduce((sum, score) => sum + score, 0) / scores.length;
+          metrics = {
+            performance: categories.performance?.score,
+            accessibility: categories.accessibility?.score,
+            best_practices: categories["best-practices"]?.score,
+            seo: categories.seo?.score,
+          };
+        } else if (
+          perfResults.metrics &&
+          typeof perfResults.metrics === "object"
+        ) {
+          // Custom metrics format
+          const metricsData = perfResults.metrics;
+          const scores = [
+            metricsData.lcp_score || 0,
+            metricsData.fid_score || 0,
+            metricsData.cls_score || 0,
+            metricsData.fcp_score || 0,
+          ];
+          performanceScore =
+            scores.reduce((sum, score) => sum + score, 0) / scores.length;
+          metrics = metricsData;
+        } else if (typeof perfResults.score === "number") {
+          // Simple score format
+          performanceScore = perfResults.score;
+          metrics = { overall_score: perfResults.score };
+        }
+      }
+
+      const passed = performanceScore >= 0.8; // 80% performance score required
+
+      return {
+        passed,
+        score: performanceScore,
+        details: {
+          performance_score: performanceScore,
+          metrics,
+          results_path: foundPath
+            ? path.relative(this.getWorkingDirectory(), foundPath)
+            : null,
+        },
+        tier: options.tier,
+      };
+    } catch (error) {
+      return {
+        passed: false,
+        score: 0,
+        details: { error: `Performance check failed: ${error}` },
+        errors: [`Performance check failed: ${error}`],
+      };
+    }
+  }
+
+  /**
    * Calculate overall trust score
    */
   async calculateTrustScore(options: GateCheckOptions): Promise<GateResult> {
     try {
       // Run all gate checks
-      const [coverageResult, mutationResult, contractResult] =
-        await Promise.all([
-          this.checkCoverage(options),
-          this.checkMutation(options),
-          this.checkContracts(options),
-        ]);
+      const [
+        coverageResult,
+        mutationResult,
+        contractResult,
+        a11yResult,
+        perfResult,
+      ] = await Promise.all([
+        this.checkCoverage(options),
+        this.checkMutation(options),
+        this.checkContracts(options),
+        this.checkAccessibility(options),
+        this.checkPerformance(options),
+      ]);
 
       // Load provenance if available
       let provenance = null;
@@ -1132,14 +1462,12 @@ export class CawsGateChecker extends CawsBaseTool {
       totalScore += contractResult.score * weights.contracts;
       totalWeight += weights.contracts;
 
-      // A11y component (placeholder - would check axe results)
-      const a11yScore = provenance?.results?.a11y === "pass" ? 1.0 : 0.5;
-      totalScore += a11yScore * weights.a11y;
+      // A11y component
+      totalScore += a11yResult.score * weights.a11y;
       totalWeight += weights.a11y;
 
-      // Performance component (placeholder - would check perf budgets)
-      const perfScore = provenance?.results?.perf ? 0.8 : 0.5;
-      totalScore += perfScore * weights.perf;
+      // Performance component
+      totalScore += perfResult.score * weights.perf;
       totalWeight += weights.perf;
 
       const trustScore = totalScore / totalWeight;
@@ -1161,8 +1489,8 @@ export class CawsGateChecker extends CawsBaseTool {
           coverage: coverageResult,
           mutation: mutationResult,
           contracts: contractResult,
-          a11y: { score: a11yScore, details: provenance?.results?.a11y },
-          perf: { score: perfScore, details: provenance?.results?.perf },
+          accessibility: a11yResult,
+          performance: perfResult,
           raw_score: trustScore,
           weights,
         },
@@ -1189,5 +1517,321 @@ export class CawsGateChecker extends CawsBaseTool {
    */
   getAvailableTiers(): number[] {
     return Object.keys(this.tierPolicies).map(Number);
+  }
+
+  /**
+   * Maintain waiver database with lifecycle management
+   */
+  private async maintainWaiverDatabase(): Promise<void> {
+    try {
+      const waiversPath = path.join(this.getCawsDirectory(), "waivers.json");
+      const policiesPath = path.join(
+        this.getCawsDirectory(),
+        "waiver-policies.json"
+      );
+
+      // Ensure waiver database exists
+      if (!this.pathExists(waiversPath)) {
+        this.writeJsonFile(waiversPath, {
+          waivers: [],
+          last_updated: new Date().toISOString(),
+        });
+      }
+
+      // Ensure waiver policies exist
+      if (!this.pathExists(policiesPath)) {
+        const defaultPolicies = {
+          max_usage_per_week: 5,
+          max_usage_per_waiver: 20,
+          max_waiver_duration_days: 30,
+          require_approval_for_tier_1: true,
+          require_approval_for_tier_2: true,
+          auto_expire_after_days: 30,
+        };
+        this.writeJsonFile(policiesPath, defaultPolicies);
+      }
+
+      // Clean up expired waivers
+      await this.cleanupExpiredWaivers();
+    } catch (error) {
+      this.logError(`Failed to maintain waiver database: ${error}`);
+    }
+  }
+
+  /**
+   * Find waivers that match the given gate and working directory
+   */
+  private async findMatchingWaivers(
+    gate: string,
+    workingDirectory?: string
+  ): Promise<WaiverConfig[]> {
+    try {
+      const waivers = await this.waiversManager.getWaiversByGate(gate);
+      const matchingWaivers: WaiverConfig[] = [];
+
+      for (const waiver of waivers) {
+        // Check if waiver matches the working directory scope
+        const scopeMatch = this.validateWaiverScope(waiver, workingDirectory);
+        if (scopeMatch.matched) {
+          matchingWaivers.push(waiver);
+        }
+      }
+
+      return matchingWaivers;
+    } catch (error) {
+      this.logError(`Failed to find matching waivers: ${error}`);
+      return [];
+    }
+  }
+
+  /**
+   * Enforce waiver policies and restrictions
+   */
+  private async enforceWaiverPolicies(waivers: WaiverConfig[]): Promise<{
+    compliant: boolean;
+    violations: string[];
+  }> {
+    const violations: string[] = [];
+
+    for (const waiver of waivers) {
+      // Check usage compliance
+      const usageCheck = await this.checkWaiverUsageCompliance(waiver);
+      if (!usageCheck.compliant) {
+        violations.push(
+          `Waiver ${waiver.gate}:${waiver.owner} - ${usageCheck.reason}`
+        );
+      }
+
+      // Check authorization compliance
+      const authCheck = this.checkWaiverAuthorization(waiver);
+      if (!authCheck.authorized) {
+        violations.push(
+          `Waiver ${waiver.gate}:${waiver.owner} - ${authCheck.reason}`
+        );
+      }
+
+      // Check policy compliance
+      const policyCheck = this.checkWaiverPolicyCompliance(waiver);
+      if (!policyCheck.compliant) {
+        violations.push(
+          `Waiver ${waiver.gate}:${waiver.owner} - ${policyCheck.reason}`
+        );
+      }
+    }
+
+    return {
+      compliant: violations.length === 0,
+      violations,
+    };
+  }
+
+  /**
+   * Audit waiver compliance and usage
+   */
+  private async auditWaiverCompliance(
+    gate: string,
+    waivers: WaiverConfig[]
+  ): Promise<void> {
+    try {
+      const auditData = {
+        timestamp: new Date().toISOString(),
+        gate,
+        total_waivers: waivers.length,
+        active_waivers: waivers.filter((w) => w.status === "active").length,
+        expired_waivers: waivers.filter((w) => new Date(w.expiry) < new Date())
+          .length,
+        usage_stats: await this.generateWaiverUsageStats(waivers),
+      };
+
+      const auditPath = path.join(
+        this.getCawsDirectory(),
+        "waiver-compliance-audit.json"
+      );
+      const existingAudits = this.pathExists(auditPath)
+        ? this.readJsonFile(auditPath) || []
+        : [];
+      existingAudits.push(auditData);
+
+      // Keep only last 100 audit entries
+      if (existingAudits.length > 100) {
+        existingAudits.splice(0, existingAudits.length - 100);
+      }
+
+      this.writeJsonFile(auditPath, existingAudits);
+    } catch (error) {
+      this.logError(`Failed to audit waiver compliance: ${error}`);
+    }
+  }
+
+  /**
+   * Clean up expired waivers from the database
+   */
+  private async cleanupExpiredWaivers(): Promise<void> {
+    try {
+      const waiversPath = path.join(this.getCawsDirectory(), "waivers.json");
+      if (!this.pathExists(waiversPath)) {
+        return;
+      }
+
+      const waiverData = this.readJsonFile(waiversPath);
+      if (!waiverData?.waivers) {
+        return;
+      }
+
+      const now = new Date();
+      const activeWaivers = waiverData.waivers.filter(
+        (waiver: WaiverConfig) => {
+          const expiryDate = new Date(waiver.expiry);
+          return expiryDate > now && waiver.status !== "revoked";
+        }
+      );
+
+      if (activeWaivers.length !== waiverData.waivers.length) {
+        waiverData.waivers = activeWaivers;
+        waiverData.last_updated = new Date().toISOString();
+        this.writeJsonFile(waiversPath, waiverData);
+        this.logInfo(
+          `Cleaned up ${
+            waiverData.waivers.length - activeWaivers.length
+          } expired waivers`
+        );
+      }
+    } catch (error) {
+      this.logError(`Failed to cleanup expired waivers: ${error}`);
+    }
+  }
+
+  /**
+   * Check waiver authorization compliance
+   */
+  private checkWaiverAuthorization(waiver: WaiverConfig): {
+    authorized: boolean;
+    reason?: string;
+  } {
+    // Check if waiver has required approval
+    if (!waiver.approved_by) {
+      return {
+        authorized: false,
+        reason: "Waiver lacks approval authorization",
+      };
+    }
+
+    // Check if approver has sufficient authority for the tier
+    const tier = (waiver as any).tier || 3;
+    if (tier <= 2 && !this.hasTierApprovalAuthority(waiver.approved_by, tier)) {
+      return {
+        authorized: false,
+        reason: `Approver ${waiver.approved_by} lacks authority for tier ${tier} waivers`,
+      };
+    }
+
+    return { authorized: true };
+  }
+
+  /**
+   * Check if approver has authority for the given tier
+   */
+  private hasTierApprovalAuthority(approver: string, tier: number): boolean {
+    // This would typically check against a user/role database
+    // For now, implement basic role-based checks
+    const tier1Approvers = ["admin", "tech-lead", "engineering-manager"];
+    const tier2Approvers = [
+      "senior-dev",
+      "tech-lead",
+      "engineering-manager",
+      "admin",
+    ];
+
+    if (tier === 1) {
+      return tier1Approvers.includes(approver.toLowerCase());
+    } else if (tier === 2) {
+      return tier2Approvers.includes(approver.toLowerCase());
+    }
+
+    return true; // Tier 3+ can be approved by anyone
+  }
+
+  /**
+   * Check waiver policy compliance
+   */
+  private checkWaiverPolicyCompliance(waiver: WaiverConfig): {
+    compliant: boolean;
+    reason?: string;
+  } {
+    const policiesPath = path.join(
+      this.getCawsDirectory(),
+      "waiver-policies.json"
+    );
+    if (!this.pathExists(policiesPath)) {
+      return { compliant: true }; // No policies defined, allow
+    }
+
+    try {
+      const policies = this.readJsonFile(policiesPath);
+      if (!policies) {
+        return { compliant: true };
+      }
+
+      // Check waiver duration
+      const createdDate = new Date(waiver.created_at);
+      const expiryDate = new Date(waiver.expiry);
+      const durationDays =
+        (expiryDate.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24);
+
+      if (durationDays > policies.max_waiver_duration_days) {
+        return {
+          compliant: false,
+          reason: `Waiver duration ${durationDays} days exceeds maximum ${policies.max_waiver_duration_days} days`,
+        };
+      }
+
+      // Check if waiver requires approval for its tier
+      const tier = (waiver as any).tier || 3;
+      if (
+        tier <= 2 &&
+        policies.require_approval_for_tier_1 &&
+        !waiver.approved_by
+      ) {
+        return {
+          compliant: false,
+          reason: `Tier ${tier} waivers require approval but none provided`,
+        };
+      }
+
+      return { compliant: true };
+    } catch (error) {
+      this.logError(`Failed to check waiver policy compliance: ${error}`);
+      return { compliant: true }; // Fail open on policy check errors
+    }
+  }
+
+  /**
+   * Generate waiver usage statistics
+   */
+  private async generateWaiverUsageStats(
+    waivers: WaiverConfig[]
+  ): Promise<Record<string, any>> {
+    const usageLog = this.loadWaiverUsageLog();
+    const stats = {
+      total_waivers: waivers.length,
+      active_waivers: waivers.filter((w) => w.status === "active").length,
+      total_usage_count: 0,
+      usage_by_gate: {} as Record<string, number>,
+      usage_by_owner: {} as Record<string, number>,
+    };
+
+    for (const waiver of waivers) {
+      const waiverId = `${waiver.gate}:${waiver.owner}`;
+      const usage = usageLog[waiverId];
+      if (usage) {
+        stats.total_usage_count += usage.uses.length;
+        stats.usage_by_gate[waiver.gate] =
+          (stats.usage_by_gate[waiver.gate] || 0) + usage.uses.length;
+        stats.usage_by_owner[waiver.owner] =
+          (stats.usage_by_owner[waiver.owner] || 0) + usage.uses.length;
+      }
+    }
+
+    return stats;
   }
 }

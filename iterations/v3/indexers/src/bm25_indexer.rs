@@ -1,27 +1,30 @@
 //! @darianrosebrook
 //! BM25 full-text search indexer
 
-use crate::types::{SearchQuery, SearchResult, Bm25Stats};
+use crate::types::{Bm25Stats, SearchQuery, SearchResult};
 use anyhow::{Context, Result};
-use std::path::Path;
+use parking_lot::{Mutex, RwLock};
+use std::collections::HashMap;
+use std::fs;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use uuid::Uuid;
 use tracing::debug;
-use tantivy::{
-    collector::TopDocs,
-    query::QueryParser,
-    schema::{Schema, Field, STORED, TEXT, STRING},
-    Index, IndexReader,
-};
+use uuid::Uuid;
 
+/// In-memory BM25 index backed by thread-safe data structures.
 pub struct Bm25Indexer {
-    index: Arc<Index>,
-    reader: IndexReader,
-    schema: Schema,
-    block_id_field: Field,
-    text_field: Field,
-    modality_field: Field,
-    stats: Arc<parking_lot::Mutex<Bm25Stats>>,
+    index_root: PathBuf,
+    documents: Arc<RwLock<HashMap<Uuid, DocumentRecord>>>,
+    inverted_index: Arc<RwLock<HashMap<String, HashMap<Uuid, u32>>>>,
+    stats: Arc<Mutex<Bm25Stats>>,
+}
+
+#[derive(Clone)]
+struct DocumentRecord {
+    text: String,
+    modality: String,
+    term_freqs: HashMap<String, u32>,
+    length: usize,
 }
 
 impl Bm25Indexer {
@@ -29,58 +32,22 @@ impl Bm25Indexer {
     pub fn new(index_path: &Path) -> Result<Self> {
         debug!("Initializing BM25 indexer at {:?}", index_path);
 
-        // Create or open index
-        let index = Index::open_in_dir(index_path)
-            .or_else(|_| {
-                debug!("Creating new BM25 index at {:?}", index_path);
-                
-                // Create schema
-                let mut schema_builder = Schema::builder();
-                let block_id_field = schema_builder.add_text_field("block_id", TEXT | STORED);
-                let text_field = schema_builder.add_text_field("text", TEXT);
-                let modality_field = schema_builder.add_text_field("modality", STRING | STORED);
-                let schema = schema_builder.build();
-                
-                // Create index
-                Index::create_in_dir(index_path, schema)
-            })
-            .context("Failed to create or open BM25 index")?;
-
-        let schema = index.schema();
-        let block_id_field = schema.get_field("block_id")
-            .context("block_id field not found in schema")?;
-        let text_field = schema.get_field("text")
-            .context("text field not found in schema")?;
-        let modality_field = schema.get_field("modality")
-            .context("modality field not found in schema")?;
-
-        // Create reader
-        let reader = index
-            .reader_builder()
-            // .reload_policy(ReloadPolicy::OnCommit)  // TODO: Use correct ReloadPolicy variant
-            .try_into()
-            .context("Failed to create index reader")?;
-
-        debug!("BM25 indexer initialized successfully");
+        if !index_path.exists() {
+            fs::create_dir_all(index_path)
+                .with_context(|| format!("Failed to create index directory at {:?}", index_path))?;
+            debug!("Created BM25 index directory at {:?}", index_path);
+        }
 
         Ok(Self {
-            index: Arc::new(index),
-            reader,
-            schema,
-            block_id_field,
-            text_field,
-            modality_field,
-            stats: Arc::new(parking_lot::Mutex::new(Bm25Stats::default())),
+            index_root: index_path.to_path_buf(),
+            documents: Arc::new(RwLock::new(HashMap::new())),
+            inverted_index: Arc::new(RwLock::new(HashMap::new())),
+            stats: Arc::new(Mutex::new(Bm25Stats::default())),
         })
     }
 
     /// Index a block of text
-    pub async fn index_block(
-        &self,
-        block_id: Uuid,
-        text: &str,
-        modality: &str,
-    ) -> Result<()> {
+    pub async fn index_block(&self, block_id: Uuid, text: &str, modality: &str) -> Result<()> {
         debug!(
             "Indexing block {} with {} chars in {}",
             block_id,
@@ -88,18 +55,46 @@ impl Bm25Indexer {
             modality
         );
 
-        // TODO: PLACEHOLDER - Fix tantivy Document API usage
-        // The Document type is a trait, not a struct, so Document::new() is not valid
-        // Proper implementation would use tantivy's document! macro or implement the trait
-        
-        // Update stats at least
-        let mut stats = self.stats.lock();
-        stats.total_documents += 1;
-        stats.total_terms += text.split_whitespace().count() as u64;
-        stats.avg_doc_length =
-            stats.total_terms as f32 / stats.total_documents.max(1) as f32;
+        let tokens = Self::tokenize(text);
+        let term_freqs = Self::term_frequencies(&tokens);
+        let doc_length = tokens.len();
 
-        debug!("Indexed block {} (stats updated)", block_id);
+        let mut inverted_index = self.inverted_index.write();
+        let mut documents = self.documents.write();
+        let mut stats = self.stats.lock();
+
+        if let Some(existing) = documents.remove(&block_id) {
+            Self::remove_document(block_id, &existing, &mut inverted_index, &mut stats);
+        }
+
+        let record = DocumentRecord {
+            text: text.to_string(),
+            modality: modality.to_string(),
+            term_freqs: term_freqs.clone(),
+            length: doc_length,
+        };
+
+        for (term, freq) in &record.term_freqs {
+            inverted_index
+                .entry(term.clone())
+                .or_insert_with(HashMap::new)
+                .insert(block_id, *freq);
+        }
+
+        documents.insert(block_id, record);
+
+        stats.total_documents += 1;
+        stats.total_terms += doc_length as u64;
+        stats.avg_doc_length = if stats.total_documents > 0 {
+            stats.total_terms as f32 / stats.total_documents as f32
+        } else {
+            0.0
+        };
+
+        debug!(
+            "Indexed block {} (docs={}, avg_len={:.2})",
+            block_id, stats.total_documents, stats.avg_doc_length
+        );
         Ok(())
     }
 
@@ -107,11 +102,85 @@ impl Bm25Indexer {
     pub async fn search(&self, query: &SearchQuery) -> Result<Vec<SearchResult>> {
         debug!("BM25 search: query='{}' k={}", query.text, query.k);
 
-        // TODO: PLACEHOLDER - BM25 search implementation
-        // The tantivy API requires proper type annotations and Document trait implementation
-        // For now, return empty results
-        
-        let results: Vec<SearchResult> = Vec::new();
+        let tokens = Self::tokenize(&query.text);
+        if tokens.is_empty() {
+            debug!("BM25 search: no tokens derived from query");
+            return Ok(Vec::new());
+        }
+
+        let documents = self.documents.read();
+        if documents.is_empty() {
+            debug!("BM25 search: no documents indexed");
+            return Ok(Vec::new());
+        }
+
+        let inverted_index = self.inverted_index.read();
+        let stats_snapshot = self.stats.lock().clone();
+
+        let total_docs = stats_snapshot.total_documents as f32;
+        if total_docs <= 0.0 {
+            return Ok(Vec::new());
+        }
+
+        let avg_doc_length = if stats_snapshot.avg_doc_length > 0.0 {
+            stats_snapshot.avg_doc_length
+        } else {
+            1.0
+        };
+
+        let mut query_terms: HashMap<String, u32> = HashMap::new();
+        for token in tokens {
+            *query_terms.entry(token).or_insert(0) += 1;
+        }
+
+        let mut scores: HashMap<Uuid, f32> = HashMap::new();
+
+        for term in query_terms.keys() {
+            if let Some(postings) = inverted_index.get(term) {
+                let doc_freq = postings.len() as f32;
+                if doc_freq == 0.0 {
+                    continue;
+                }
+
+                let idf = ((total_docs - doc_freq + 0.5) / (doc_freq + 0.5) + 1.0).ln();
+
+                for (doc_id, &term_freq) in postings {
+                    if let Some(doc) = documents.get(doc_id) {
+                        let denom = term_freq as f32
+                            + stats_snapshot.k1
+                                * (1.0 - stats_snapshot.b
+                                    + stats_snapshot.b * (doc.length as f32 / avg_doc_length));
+
+                        let score = idf
+                            * ((term_freq as f32 * (stats_snapshot.k1 + 1.0)) / denom);
+
+                        *scores.entry(*doc_id).or_insert(0.0) += score;
+                    }
+                }
+            }
+        }
+
+        let mut scored_docs: Vec<(Uuid, f32)> = scores.into_iter().collect();
+        scored_docs.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+
+        let limit = if query.k == 0 {
+            0
+        } else {
+            query.k.min(scored_docs.len())
+        };
+
+        let results: Vec<SearchResult> = scored_docs
+            .into_iter()
+            .take(limit)
+            .filter_map(|(doc_id, score)| {
+                documents.get(&doc_id).map(|doc| SearchResult {
+                    block_id: doc_id,
+                    score,
+                    text_snippet: Self::build_snippet(&doc.text, &query.text, 240),
+                    modality: doc.modality.clone(),
+                })
+            })
+            .collect();
 
         debug!("BM25 search returned {} results", results.len());
         Ok(results)
@@ -125,26 +194,152 @@ impl Bm25Indexer {
     /// Commit all pending changes
     pub async fn commit(&self) -> Result<()> {
         debug!("Committing BM25 index");
-        
-        // TODO: PLACEHOLDER - BM25 commit implementation
-        // Tantivy API requires proper type annotations for IndexWriter<_>
-        // This is deferred until tantivy integration is properly implemented
-        
-        debug!("BM25 index commit (placeholder)");
+        debug!("BM25 index commit (no-op for in-memory index)");
         Ok(())
+    }
+
+    fn tokenize(text: &str) -> Vec<String> {
+        text.split(|c: char| !c.is_alphanumeric())
+            .filter_map(|token| {
+                let normalized = token.trim().to_lowercase();
+                if normalized.is_empty() {
+                    None
+                } else {
+                    Some(normalized)
+                }
+            })
+            .collect()
+    }
+
+    fn term_frequencies(tokens: &[String]) -> HashMap<String, u32> {
+        let mut freqs = HashMap::new();
+        for token in tokens {
+            *freqs.entry(token.clone()).or_insert(0) += 1;
+        }
+        freqs
+    }
+
+    fn remove_document(
+        block_id: Uuid,
+        record: &DocumentRecord,
+        inverted_index: &mut HashMap<String, HashMap<Uuid, u32>>,
+        stats: &mut Bm25Stats,
+    ) {
+        for term in record.term_freqs.keys() {
+            if let Some(postings) = inverted_index.get_mut(term) {
+                postings.remove(&block_id);
+                if postings.is_empty() {
+                    inverted_index.remove(term);
+                }
+            }
+        }
+
+        if stats.total_documents > 0 {
+            stats.total_documents -= 1;
+        }
+
+        stats.total_terms = stats.total_terms.saturating_sub(record.length as u64);
+
+        stats.avg_doc_length = if stats.total_documents > 0 {
+            stats.total_terms as f32 / stats.total_documents as f32
+        } else {
+            0.0
+        };
+    }
+
+    fn build_snippet(text: &str, query: &str, max_len: usize) -> String {
+        if text.len() <= max_len {
+            return text.to_string();
+        }
+
+        let lower_text = text.to_lowercase();
+        let lower_query = query.to_lowercase();
+
+        if let Some(pos) = lower_text.find(&lower_query) {
+            let start = pos.saturating_sub(max_len / 4);
+            let end = (pos + lower_query.len() + max_len / 2).min(text.len());
+            let snippet = text[start..end].trim();
+            return format!(
+                "{}{}",
+                snippet,
+                if end < text.len() { "…" } else { "" }
+            );
+        }
+
+        let snippet = &text[..max_len];
+        format!("{}…", snippet.trim_end())
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::fs;
 
     #[tokio::test]
     async fn test_bm25_indexer_creation() {
-        // Note: Would require a temporary directory in real tests
-        // This just verifies the types compile correctly
         assert_eq!(Bm25Stats::default().k1, 1.5);
         assert_eq!(Bm25Stats::default().b, 0.75);
+    }
+
+    #[tokio::test]
+    async fn test_bm25_index_and_search() {
+        let temp_dir = std::env::temp_dir().join(format!("bm25-test-{}", Uuid::new_v4()));
+        fs::create_dir_all(&temp_dir).unwrap();
+
+        let indexer = Bm25Indexer::new(&temp_dir).expect("indexer init");
+        let block_id = Uuid::new_v4();
+
+        indexer
+            .index_block(
+                block_id,
+                "Rust enables fearless concurrency and memory safety.",
+                "text",
+            )
+            .await
+            .expect("index block");
+
+        let query = SearchQuery {
+            text: "memory safety".to_string(),
+            project_scope: None,
+            k: 5,
+            max_tokens: 100,
+        };
+
+        let results = indexer.search(&query).await.expect("search");
+        assert!(!results.is_empty());
+        assert_eq!(results[0].block_id, block_id);
+        assert!(results[0].score > 0.0);
+    }
+
+    #[tokio::test]
+    async fn test_bm25_reindex_updates_stats() {
+        let temp_dir = std::env::temp_dir().join(format!("bm25-reindex-{}", Uuid::new_v4()));
+        fs::create_dir_all(&temp_dir).unwrap();
+
+        let indexer = Bm25Indexer::new(&temp_dir).expect("indexer init");
+        let block_id = Uuid::new_v4();
+
+        indexer
+            .index_block(block_id, "First version of the document.", "text")
+            .await
+            .expect("index block");
+
+        let initial_stats = indexer.stats();
+        assert_eq!(initial_stats.total_documents, 1);
+
+        indexer
+            .index_block(
+                block_id,
+                "Updated document content with more terms.",
+                "text",
+            )
+            .await
+            .expect("reindex block");
+
+        let updated_stats = indexer.stats();
+        assert_eq!(updated_stats.total_documents, 1);
+        assert!(updated_stats.total_terms >= initial_stats.total_terms);
     }
 
     #[tokio::test]
@@ -160,4 +355,3 @@ mod tests {
         assert_eq!(query.k, 10);
     }
 }
-
