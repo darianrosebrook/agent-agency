@@ -113,6 +113,23 @@ impl MultimodalRetriever {
         Ok(filtered_results)
     }
 
+    /// Execute multimodal search with simplified parameters
+    pub async fn search_multimodal(
+        &self,
+        query: &str,
+        max_results: usize,
+        project_scope: Option<&str>,
+    ) -> Result<Vec<embedding_service::MultimodalSearchResult>> {
+        let multimodal_query = MultimodalQuery {
+            text: Some(query.to_string()),
+            query_type: crate::QueryType::Knowledge,
+            project_scope: project_scope.map(|s| s.to_string()),
+            max_results,
+        };
+        
+        self.search(&multimodal_query).await
+    }
+
     /// Rerank results using cross-encoder or BLERT
     pub async fn rerank(
         &self,

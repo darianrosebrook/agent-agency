@@ -712,7 +712,8 @@ impl QuantizationManager {
 
         // 3. Operation history management: Manage quantization operation history
         tracing::debug!(
-            "Operation history size: {} configurations in active tracking"
+            "Operation history size: {} configurations in active tracking",
+            self.operation_history.len()
         );
 
         // 4. Quantization tracking optimization: Optimize quantization operation tracking performance

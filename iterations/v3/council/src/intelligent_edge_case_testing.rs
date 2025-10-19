@@ -970,6 +970,523 @@ pub struct TestRequirement {
     pub acceptance_criteria: Vec<AcceptanceCriterion>,
 }
 
+// Supporting enums and structures for comprehensive test specification
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum NonFunctionalType {
+    Performance,
+    Security,
+    Usability,
+    Reliability,
+    Scalability,
+    Maintainability,
+    Compatibility,
+    Portability,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ComplexityLevel {
+    Low,
+    Medium,
+    High,
+    Critical,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum MeasurementType {
+    Quantitative,
+    Qualitative,
+    Binary,
+    Range,
+    Threshold,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum DependencyType {
+    Direct,
+    Indirect,
+    Transitive,
+    Optional,
+    Required,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum TestType {
+    Unit,
+    Integration,
+    System,
+    Acceptance,
+    Performance,
+    Security,
+    Usability,
+    Regression,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum TestCategory {
+    Positive,
+    Negative,
+    Boundary,
+    EdgeCase,
+    Stress,
+    Load,
+    Volume,
+    Compatibility,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum RiskLevel {
+    Low,
+    Medium,
+    High,
+    Critical,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum AutomationStatus {
+    NotAutomated,
+    PartiallyAutomated,
+    FullyAutomated,
+    AutomationPlanned,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum StrategyType {
+    RiskBased,
+    PriorityBased,
+    CoverageBased,
+    TimeBased,
+    ResourceBased,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum AutomationLevel {
+    Manual,
+    SemiAutomated,
+    FullyAutomated,
+}
+
+// Supporting structures
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CriteriaValidationStatus {
+    pub validation_complete: bool,
+    pub validation_score: f64,
+    pub validation_issues: Vec<String>,
+    pub last_validated: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ValidationIssue {
+    pub issue_id: Uuid,
+    pub issue_type: String,
+    pub description: String,
+    pub severity: String,
+    pub affected_requirements: Vec<Uuid>,
+    pub resolution_status: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RequirementDependency {
+    pub dependency_id: Uuid,
+    pub source_requirement: Uuid,
+    pub target_requirement: Uuid,
+    pub dependency_type: String,
+    pub strength: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DependencyLevel {
+    pub level: u32,
+    pub requirements: Vec<Uuid>,
+    pub dependencies: Vec<RequirementDependency>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CircularDependency {
+    pub cycle_id: Uuid,
+    pub requirements_in_cycle: Vec<Uuid>,
+    pub cycle_length: u32,
+    pub resolution_strategy: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ScenarioCondition {
+    pub condition_id: Uuid,
+    pub condition_name: String,
+    pub condition_type: String,
+    pub condition_value: String,
+    pub operator: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExpectedOutcome {
+    pub outcome_id: Uuid,
+    pub outcome_description: String,
+    pub outcome_type: String,
+    pub success_criteria: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ValidationRule {
+    pub rule_id: Uuid,
+    pub rule_name: String,
+    pub rule_expression: String,
+    pub rule_type: String,
+    pub error_message: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VerificationRule {
+    pub rule_id: Uuid,
+    pub rule_name: String,
+    pub rule_description: String,
+    pub rule_type: String,
+    pub automation_script: String,
+    pub expected_result: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AutomationScript {
+    pub script_id: Uuid,
+    pub script_name: String,
+    pub script_type: String,
+    pub script_content: String,
+    pub execution_environment: String,
+    pub dependencies: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VerificationResult {
+    pub result_id: Uuid,
+    pub verification_rule: Uuid,
+    pub execution_time: DateTime<Utc>,
+    pub result_status: String,
+    pub result_details: String,
+    pub execution_log: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VersionRequirements {
+    pub minimum_version: String,
+    pub maximum_version: String,
+    pub preferred_version: String,
+    pub compatibility_constraints: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct IntegrationPoint {
+    pub point_id: Uuid,
+    pub point_name: String,
+    pub interface_type: String,
+    pub data_format: String,
+    pub protocol: String,
+    pub authentication_required: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VersionPolicy {
+    pub policy_id: Uuid,
+    pub policy_name: String,
+    pub policy_type: String,
+    pub policy_rules: Vec<String>,
+    pub enforcement_level: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CompatibilityMatrix {
+    pub matrix_id: Uuid,
+    pub component_versions: HashMap<String, Vec<String>>,
+    pub compatibility_rules: Vec<CompatibilityRule>,
+    pub last_updated: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CompatibilityRule {
+    pub rule_id: Uuid,
+    pub source_version: String,
+    pub target_version: String,
+    pub compatibility_status: String,
+    pub notes: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VersionHistoryEntry {
+    pub entry_id: Uuid,
+    pub component_name: String,
+    pub version: String,
+    pub change_type: String,
+    pub change_description: String,
+    pub timestamp: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpgradePath {
+    pub path_id: Uuid,
+    pub source_version: String,
+    pub target_version: String,
+    pub upgrade_steps: Vec<UpgradeStep>,
+    pub estimated_duration: u64,
+    pub risk_level: RiskLevel,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpgradeStep {
+    pub step_id: Uuid,
+    pub step_order: u32,
+    pub step_description: String,
+    pub step_type: String,
+    pub prerequisites: Vec<String>,
+    pub rollback_plan: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConflictDetectionRule {
+    pub rule_id: Uuid,
+    pub rule_name: String,
+    pub rule_description: String,
+    pub conflict_type: String,
+    pub detection_pattern: String,
+    pub severity: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ResolutionStrategy {
+    pub strategy_id: Uuid,
+    pub strategy_name: String,
+    pub strategy_type: String,
+    pub resolution_steps: Vec<String>,
+    pub success_criteria: Vec<String>,
+    pub estimated_effort: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ResolvedConflict {
+    pub conflict_id: Uuid,
+    pub conflict_type: String,
+    pub resolution_strategy: Uuid,
+    pub resolution_details: String,
+    pub resolved_at: DateTime<Utc>,
+    pub resolution_verification: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PreventionMeasure {
+    pub measure_id: Uuid,
+    pub measure_name: String,
+    pub measure_type: String,
+    pub implementation_details: String,
+    pub effectiveness_score: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WorkflowStep {
+    pub step_id: Uuid,
+    pub step_order: u32,
+    pub step_name: String,
+    pub step_description: String,
+    pub step_type: String,
+    pub automation_level: AutomationLevel,
+    pub estimated_duration: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TestData {
+    pub data_id: Uuid,
+    pub data_name: String,
+    pub data_type: String,
+    pub data_value: String,
+    pub data_source: String,
+    pub validation_rules: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TestStep {
+    pub step_id: Uuid,
+    pub step_order: u32,
+    pub step_description: String,
+    pub step_type: String,
+    pub expected_result: String,
+    pub automation_script: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExpectedResult {
+    pub result_id: Uuid,
+    pub result_description: String,
+    pub result_type: String,
+    pub validation_criteria: Vec<String>,
+    pub success_indicators: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PrioritizationCriteria {
+    pub criteria_id: Uuid,
+    pub criteria_name: String,
+    pub criteria_type: String,
+    pub weight: f64,
+    pub measurement_method: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MaintenanceRule {
+    pub rule_id: Uuid,
+    pub rule_name: String,
+    pub rule_type: String,
+    pub rule_conditions: Vec<String>,
+    pub rule_actions: Vec<String>,
+    pub priority: Priority,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EvolutionTrigger {
+    pub trigger_id: Uuid,
+    pub trigger_name: String,
+    pub trigger_type: String,
+    pub trigger_conditions: Vec<String>,
+    pub affected_test_cases: Vec<Uuid>,
+    pub evolution_actions: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MaintenanceHistoryEntry {
+    pub entry_id: Uuid,
+    pub test_case_id: Uuid,
+    pub maintenance_type: String,
+    pub maintenance_reason: String,
+    pub changes_made: Vec<String>,
+    pub maintained_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MaintenanceSchedule {
+    pub schedule_id: Uuid,
+    pub schedule_name: String,
+    pub schedule_type: String,
+    pub frequency: String,
+    pub next_maintenance: DateTime<Utc>,
+    pub maintenance_tasks: Vec<MaintenanceTask>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MaintenanceTask {
+    pub task_id: Uuid,
+    pub task_name: String,
+    pub task_description: String,
+    pub task_type: String,
+    pub estimated_duration: u64,
+    pub assigned_to: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExecutionMetrics {
+    pub total_executions: u64,
+    pub successful_executions: u64,
+    pub failed_executions: u64,
+    pub average_execution_time: f64,
+    pub execution_coverage: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ResultAnalysis {
+    pub analysis_id: Uuid,
+    pub analysis_type: String,
+    pub analysis_results: HashMap<String, String>,
+    pub analysis_timestamp: DateTime<Utc>,
+    pub confidence_score: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PerformanceAnalysis {
+    pub analysis_id: Uuid,
+    pub performance_metrics: HashMap<String, f64>,
+    pub performance_trends: Vec<PerformanceTrend>,
+    pub performance_bottlenecks: Vec<PerformanceBottleneck>,
+    pub optimization_recommendations: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PerformanceTrend {
+    pub trend_id: Uuid,
+    pub metric_name: String,
+    pub trend_direction: String,
+    pub trend_magnitude: f64,
+    pub trend_period: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PerformanceBottleneck {
+    pub bottleneck_id: Uuid,
+    pub bottleneck_type: String,
+    pub bottleneck_description: String,
+    pub impact_level: String,
+    pub resolution_suggestions: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CoverageAnalysis {
+    pub analysis_id: Uuid,
+    pub coverage_percentage: f64,
+    pub coverage_by_category: HashMap<String, f64>,
+    pub uncovered_areas: Vec<UncoveredArea>,
+    pub coverage_gaps: Vec<CoverageGap>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UncoveredArea {
+    pub area_id: Uuid,
+    pub area_name: String,
+    pub area_type: String,
+    pub coverage_percentage: f64,
+    pub priority: Priority,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CoverageGap {
+    pub gap_id: Uuid,
+    pub gap_description: String,
+    pub gap_type: String,
+    pub gap_size: f64,
+    pub gap_impact: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FailureAnalysis {
+    pub analysis_id: Uuid,
+    pub failure_patterns: Vec<FailurePattern>,
+    pub failure_categories: HashMap<String, u64>,
+    pub failure_trends: Vec<FailureTrend>,
+    pub root_cause_analysis: Vec<RootCauseAnalysis>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FailurePattern {
+    pub pattern_id: Uuid,
+    pub pattern_name: String,
+    pub pattern_description: String,
+    pub pattern_frequency: u64,
+    pub pattern_severity: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FailureTrend {
+    pub trend_id: Uuid,
+    pub failure_type: String,
+    pub trend_direction: String,
+    pub trend_period: String,
+    pub trend_magnitude: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RootCauseAnalysis {
+    pub analysis_id: Uuid,
+    pub failure_id: Uuid,
+    pub root_cause: String,
+    pub contributing_factors: Vec<String>,
+    pub resolution_actions: Vec<String>,
+    pub prevention_measures: Vec<String>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum RequirementType {
     Functional,

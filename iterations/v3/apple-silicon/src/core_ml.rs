@@ -9,6 +9,8 @@ use std::path::Path;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{info, warn, debug};
+use core_foundation::dictionary::CFDictionary;
+use regex::Regex;
 
 // Additional types for factual accuracy assessment
 #[derive(Debug, Clone)]
@@ -176,7 +178,7 @@ impl CoreMLModel {
             .context("Failed to parse input JSON")?;
 
         // Create Core ML input dictionary
-        let mut input_dict = CFDictionary::new();
+        let mut input_dict = CFDictionary::<String, String>::from_CFType_pairs(&[]);
 
         // Handle different input types
         if let Some(text_input) = input_data.get("text") {
@@ -329,7 +331,7 @@ impl CoreMLModel {
             let shape = [1, tokens.len() as i64];
             let ml_array: *mut std::ffi::c_void = msg_send![
                 class!(MLMultiArray), 
-                multiArrayWithShape: &shape as *const _,
+                multiArrayWithShape: &shape as *const _
                 dataType: 32i32 // MLMultiArrayDataTypeFloat32
             ];
 
@@ -370,7 +372,7 @@ impl CoreMLModel {
             let shape = [1, 3, 224, 224]; // Typical image input shape
             let ml_array: *mut std::ffi::c_void = msg_send![
                 class!(MLMultiArray), 
-                multiArrayWithShape: &shape as *const _,
+                multiArrayWithShape: &shape as *const _
                 dataType: 32i32 // MLMultiArrayDataTypeFloat32
             ];
 
@@ -402,7 +404,7 @@ impl CoreMLModel {
             let shape = [1, feature_values.len() as i64];
             let ml_array: *mut std::ffi::c_void = msg_send![
                 class!(MLMultiArray), 
-                multiArrayWithShape: &shape as *const _,
+                multiArrayWithShape: &shape as *const _
                 dataType: 32i32 // MLMultiArrayDataTypeFloat32
             ];
 

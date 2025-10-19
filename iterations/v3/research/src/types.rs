@@ -33,6 +33,12 @@ pub enum ResearchPriority {
     Critical = 4,
 }
 
+/// Search context for multimodal knowledge seeking
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SearchContext {
+    pub project_scope: Option<String>,
+}
+
 /// Configuration update for research agent
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConfigurationUpdate {
