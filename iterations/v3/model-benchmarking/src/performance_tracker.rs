@@ -207,24 +207,15 @@ impl PerformanceTracker {
             // Sort by timestamp (most recent first) and return copy
             let mut sorted_results = results.clone();
             sorted_results.sort_by(|a, b| {
-                // TODO: Implement proper timestamp-based sorting with the following requirements:
-                // 1. Timestamp integration: Add timestamp field to BenchmarkResult structure
-                //    - Add timestamp field to BenchmarkResult data structure
-                //    - Handle timestamp generation and management
-                //    - Implement timestamp validation and quality assurance
-                // 2. Sorting optimization: Implement efficient timestamp-based sorting
-                //    - Implement timestamp-based sorting algorithms
-                //    - Handle sorting performance optimization and caching
-                //    - Implement sorting validation and quality assurance
-                // 3. Historical data management: Manage historical benchmark data with timestamps
-                //    - Track benchmark execution timestamps and history
-                //    - Handle historical data storage and retrieval optimization
-                //    - Implement historical data validation and integrity
-                // 4. Performance analytics: Analyze benchmark performance trends over time
-                //    - Generate performance trend analysis based on timestamps
-                //    - Handle performance analytics and reporting
-                //    - Ensure timestamp-based sorting meets performance and accuracy standards
-                b.score.partial_cmp(&a.score).unwrap()
+                // Sort by timestamp (most recent first)
+                // Falls back to score comparison if timestamps are equal
+                match b.timestamp.cmp(&a.timestamp) {
+                    std::cmp::Ordering::Equal => {
+                        // If timestamps are same, sort by score descending
+                        b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal)
+                    }
+                    other => other,
+                }
             });
 
             Ok(sorted_results)

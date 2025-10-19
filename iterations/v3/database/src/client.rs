@@ -386,6 +386,11 @@ impl DatabaseClient {
             }
         }
 
+        // Create deadpool-to-sqlx bridge
+        let bridge = DeadpoolSqlxBridge::new(config.clone(), metrics.clone())
+            .await
+            .context("Failed to create deadpool-to-sqlx bridge")?;
+
         // Initialize connection semaphore for rate limiting
         let connection_semaphore = Arc::new(Semaphore::new(config.pool_max as usize));
 

@@ -12306,5 +12306,77 @@
     },
     "previous_hash": "20db0fd5f159e0162968719fedae397ca79111fdd2b40d9314ee1f1748087ce5",
     "hash": "1b770df217d9e9c16db85e7e1896c6adf21197548d347fb93b005b2d801e6f5a"
+  },
+  {
+    "id": "prov-1760863514946",
+    "timestamp": "2025-10-19T08:45:14.946Z",
+    "commit": {
+      "hash": "d9fbc107be79c0dde804d827020628380c8c9385",
+      "message": "Implement research module TODOs: late fusion search, reranking, and tests",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "PROJ-785",
+      "title": "agent-agency",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": [
+        "WV-0001"
+      ]
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-19T08:45:14.947Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "1b770df217d9e9c16db85e7e1896c6adf21197548d347fb93b005b2d801e6f5a",
+    "hash": "bba1ba64458524cf0a76be9fca0fe59c1628f58002e7a7b1ce8444d837565306"
+  },
+  {
+    "id": "prov-1760863549724",
+    "timestamp": "2025-10-19T08:45:49.724Z",
+    "commit": {
+      "hash": "1b65c6adc697ccdaedcec5b6a3ae21dc1b3587cd",
+      "message": "Add research module implementation documentation",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "PROJ-785",
+      "title": "agent-agency",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": [
+        "WV-0001"
+      ]
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-19T08:45:49.725Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "bba1ba64458524cf0a76be9fca0fe59c1628f58002e7a7b1ce8444d837565306",
+    "hash": "8842e277bc43a9c7b8f0bbd02c9bc462664ad8e95482f3d9c70fc1a91d0806e1"
   }
 ]

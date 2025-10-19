@@ -597,6 +597,22 @@ impl ProvenanceEmitter for NoopEmitter {
 impl ConsensusCoordinator {
     /// Create a new consensus coordinator
     pub fn new(config: CouncilConfig) -> Self {
+        let queue_config = QueueConfig {
+            max_depth: 100,
+            max_processing_time_ms: 30000,
+            optimization_threshold: 0.8,
+            bottleneck_threshold: 0.9,
+            load_balancing_enabled: true,
+            priority_handling_enabled: true,
+        };
+        
+        let queue_tracker = QueueTracker {
+            active_tasks: HashMap::new(),
+            processing_history: Vec::new(),
+            performance_metrics: QueuePerformanceMetrics::default(),
+            config: queue_config,
+        };
+        
         Self {
             config,
             emitter: std::sync::Arc::new(NoopEmitter),
@@ -605,6 +621,7 @@ impl ConsensusCoordinator {
             metrics: Arc::new(std::sync::RwLock::new(CoordinatorMetrics::default())),
             multimodal_evidence_enricher: MultimodalEvidenceEnricher::new(),
             knowledge_seeker: None, // Will be set via set_knowledge_seeker
+            queue_tracker: Arc::new(std::sync::RwLock::new(queue_tracker)),
         }
     }
 

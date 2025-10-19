@@ -4,6 +4,7 @@
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use tracing::debug;
 use uuid::Uuid;
 
 /// Multimodal retriever configuration
@@ -125,11 +126,11 @@ impl MultimodalRetriever {
         
         debug!("Reranking {} results with cross-encoder", results.len());
         
-        // Sort by relevance score (descending)
+        // Sort by fused score (descending)
         let mut sorted_results = results;
         sorted_results.sort_by(|a, b| {
-            b.relevance_score
-                .partial_cmp(&a.relevance_score)
+            b.feature.fused_score
+                .partial_cmp(&a.feature.fused_score)
                 .unwrap_or(std::cmp::Ordering::Equal)
         });
         
@@ -140,7 +141,7 @@ impl MultimodalRetriever {
             .map(|(idx, mut result)| {
                 // Boost high-ranked items slightly
                 let position_boost = 1.0 - (idx as f32 * 0.01).min(0.2);
-                result.relevance_score = (result.relevance_score * position_boost).min(1.0);
+                result.feature.fused_score = (result.feature.fused_score * position_boost).min(1.0);
                 result
             })
             .collect();
