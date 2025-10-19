@@ -44,6 +44,39 @@ pub enum SpanStatus {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TraceHierarchy {
+    pub trace_id: String,
+    pub root_span_id: String,
+    pub spans: HashMap<String, SpanHierarchyInfo>,
+    pub max_depth: u32,
+    pub total_spans: u32,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SpanHierarchyInfo {
+    pub span_id: String,
+    pub parent_span_id: Option<String>,
+    pub children: Vec<String>,
+    pub depth: u32,
+    pub service_name: String,
+    pub operation: String,
+    pub start_time: chrono::DateTime<chrono::Utc>,
+    pub end_time: Option<chrono::DateTime<chrono::Utc>>,
+    pub duration_ms: Option<u64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TraceAnalytics {
+    pub average_span_duration_ms: f64,
+    pub max_span_depth: u32,
+    pub total_spans: u32,
+    pub service_breakdown: HashMap<String, u32>,
+    pub error_rate: f64,
+    pub slowest_operations: Vec<(String, u64)>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TraceConfig {
     pub service_name: String,
     pub service_version: String,
@@ -73,6 +106,8 @@ pub struct TraceCollector {
     config: TraceConfig,
     active_spans: Arc<RwLock<HashMap<String, SpanInfo>>>,
     completed_traces: Arc<RwLock<Vec<TraceInfo>>>,
+    trace_hierarchies: Arc<RwLock<HashMap<String, TraceHierarchy>>>,
+    span_relationships: Arc<RwLock<HashMap<String, SpanHierarchyInfo>>>,
     tracer: Option<opentelemetry::trace::TracerProvider>,
 }
 
@@ -121,6 +156,8 @@ impl TraceCollector {
             config,
             active_spans: Arc::new(RwLock::new(HashMap::new())),
             completed_traces: Arc::new(RwLock::new(Vec::new())),
+            trace_hierarchies: Arc::new(RwLock::new(HashMap::new())),
+            span_relationships: Arc::new(RwLock::new(HashMap::new())),
             tracer,
         })
     }
@@ -147,6 +184,9 @@ impl TraceCollector {
 
         let mut active_spans = self.active_spans.write().await;
         active_spans.insert(span_id.clone(), span_info);
+
+        // Track span hierarchy relationships
+        self.track_span_start(&span_id, parent_trace_id, &self.config.service_name, operation).await;
 
         // Create OpenTelemetry span if enabled
         if let Some(tracer) = &self.tracer {
@@ -180,6 +220,9 @@ impl TraceCollector {
                 let start = span_info.start_time;
                 span_info.duration_ms = Some((end - start).num_milliseconds() as u64);
             }
+
+            // Track span completion in hierarchy
+            self.track_span_end(span_id).await;
 
             // Check if this is a root span (no parent trace ID different from span ID)
             let is_root = span_id == self.extract_trace_id(span_id).await.unwrap_or_default();
@@ -371,25 +414,252 @@ impl TraceCollector {
         Ok(())
     }
 
+    /// Track span relationship in hierarchy when span starts
+    async fn track_span_start(&self, span_id: &str, parent_span_id: Option<&str>, service_name: &str, operation: &str) {
+        let mut span_relationships = self.span_relationships.write().await;
+
+        let hierarchy_info = SpanHierarchyInfo {
+            span_id: span_id.to_string(),
+            parent_span_id: parent_span_id.map(|s| s.to_string()),
+            children: Vec::new(),
+            depth: 0, // Will be calculated
+            service_name: service_name.to_string(),
+            operation: operation.to_string(),
+            start_time: chrono::Utc::now(),
+            end_time: None,
+            duration_ms: None,
+        };
+
+        // Calculate depth by walking up parent chain
+        let mut depth = 0;
+        let mut current_parent = parent_span_id;
+        let mut visited = std::collections::HashSet::new();
+
+        while let Some(parent_id) = current_parent {
+            if visited.contains(parent_id) || depth > 50 {
+                break; // Prevent cycles and excessive depth
+            }
+            visited.insert(parent_id);
+
+            if let Some(parent_info) = span_relationships.get(parent_id) {
+                depth = parent_info.depth + 1;
+                current_parent = parent_info.parent_span_id.as_deref();
+            } else {
+                break;
+            }
+        }
+
+        // Update depth
+        let mut hierarchy_info = hierarchy_info;
+        hierarchy_info.depth = depth;
+
+        // Add to parent as child if parent exists
+        if let Some(parent_id) = parent_span_id {
+            if let Some(parent_info) = span_relationships.get_mut(parent_id) {
+                if !parent_info.children.contains(&span_id.to_string()) {
+                    parent_info.children.push(span_id.to_string());
+                }
+            }
+        }
+
+        span_relationships.insert(span_id.to_string(), hierarchy_info);
+    }
+
+    /// Track span completion and update hierarchy
+    async fn track_span_end(&self, span_id: &str) {
+        let mut span_relationships = self.span_relationships.write().await;
+
+        if let Some(span_info) = span_relationships.get_mut(span_id) {
+            let end_time = chrono::Utc::now();
+            span_info.end_time = Some(end_time);
+
+            if let Some(start_time) = Some(span_info.start_time) {
+                span_info.duration_ms = Some(
+                    (end_time - start_time).num_milliseconds() as u64
+                );
+            }
+        }
+    }
+
+    /// Build complete trace hierarchy from span relationships
+    async fn build_trace_hierarchy(&self, trace_id: &str) -> Option<TraceHierarchy> {
+        let span_relationships = self.span_relationships.read().await;
+
+        // Find all spans that belong to this trace
+        let trace_spans: HashMap<String, SpanHierarchyInfo> = span_relationships
+            .iter()
+            .filter_map(|(span_id, info)| {
+                // Check if this span belongs to the trace by walking up hierarchy
+                if self.span_belongs_to_trace(span_id, trace_id) {
+                    Some((span_id.clone(), info.clone()))
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        if trace_spans.is_empty() {
+            return None;
+        }
+
+        // Find root span (one with no parent or parent not in this trace)
+        let root_span_id = trace_spans
+            .iter()
+            .find_map(|(span_id, info)| {
+                if info.parent_span_id.is_none() ||
+                   !trace_spans.contains_key(info.parent_span_id.as_ref().unwrap()) {
+                    Some(span_id.clone())
+                } else {
+                    None
+                }
+            })?;
+
+        // Calculate max depth
+        let max_depth = trace_spans.values().map(|info| info.depth).max().unwrap_or(0);
+
+        Some(TraceHierarchy {
+            trace_id: trace_id.to_string(),
+            root_span_id,
+            spans: trace_spans,
+            max_depth,
+            total_spans: trace_spans.len() as u32,
+            created_at: chrono::Utc::now(),
+        })
+    }
+
+    /// Check if a span belongs to a specific trace
+    fn span_belongs_to_trace(&self, span_id: &str, trace_id: &str) -> bool {
+        // For now, we use a simple heuristic: span belongs to trace if
+        // the trace_id is a prefix of the span_id or vice versa
+        span_id.starts_with(trace_id) || trace_id.starts_with(span_id)
+    }
+
+    /// Generate analytics for a trace hierarchy
+    async fn generate_trace_analytics(&self, hierarchy: &TraceHierarchy) -> TraceAnalytics {
+        let mut total_duration = 0u64;
+        let mut completed_spans = 0;
+        let mut service_breakdown = HashMap::new();
+        let mut error_count = 0;
+        let mut operation_durations = Vec::new();
+
+        for span_info in hierarchy.spans.values() {
+            if let Some(duration) = span_info.duration_ms {
+                total_duration += duration;
+                completed_spans += 1;
+                operation_durations.push((span_info.operation.clone(), duration));
+            }
+
+            *service_breakdown.entry(span_info.service_name.clone()).or_insert(0) += 1;
+
+            // Check for errors (simplified - would need actual span status)
+            if span_info.operation.contains("error") || span_info.operation.contains("fail") {
+                error_count += 1;
+            }
+        }
+
+        let average_duration = if completed_spans > 0 {
+            total_duration as f64 / completed_spans as f64
+        } else {
+            0.0
+        };
+
+        let error_rate = if hierarchy.total_spans > 0 {
+            error_count as f64 / hierarchy.total_spans as f64
+        } else {
+            0.0
+        };
+
+        // Sort by duration descending and take top 5
+        operation_durations.sort_by(|a, b| b.1.cmp(&a.1));
+        let slowest_operations = operation_durations.into_iter().take(5).collect();
+
+        TraceAnalytics {
+            average_span_duration_ms: average_duration,
+            max_span_depth: hierarchy.max_depth,
+            total_spans: hierarchy.total_spans,
+            service_breakdown,
+            error_rate,
+            slowest_operations,
+        }
+    }
+
+    /// Extract trace ID from span hierarchy with comprehensive tracking
     async fn extract_trace_id(&self, span_id: &str) -> Option<String> {
-        // TODO: Implement trace hierarchy tracking with the following requirements:
-        // 1. Trace hierarchy management: Track and manage trace hierarchy relationships
-        //    - Track trace hierarchy and parent-child span relationships
-        //    - Handle trace hierarchy validation and integrity
-        //    - Implement trace hierarchy optimization and performance
-        // 2. Span relationship tracking: Track span relationships and dependencies
-        //    - Track span parent-child relationships and dependencies
-        //    - Handle span relationship validation and quality assurance
-        //    - Implement span relationship optimization and caching
-        // 3. Trace ID extraction: Implement proper trace ID extraction algorithms
-        //    - Extract trace IDs from span hierarchies and relationships
-        //    - Handle trace ID extraction optimization and performance
-        //    - Implement trace ID extraction validation and quality assurance
-        // 4. Trace analytics: Analyze trace hierarchies and relationships
-        //    - Generate trace hierarchy analytics and insights
-        //    - Handle trace analytics optimization and reporting
-        //    - Ensure trace hierarchy tracking meets performance and accuracy standards
-        Some(span_id.to_string())
+        let span_relationships = self.span_relationships.read().await;
+
+        // Find the span in our relationship tracking
+        if let Some(span_info) = span_relationships.get(span_id) {
+            // Walk up the hierarchy to find the root span
+            let mut current_span_id = span_id;
+            let mut visited = std::collections::HashSet::new();
+
+            // Prevent infinite loops in case of cycles
+            while visited.len() < 100 && !visited.contains(current_span_id) {
+                visited.insert(current_span_id);
+
+                if let Some(current_info) = span_relationships.get(current_span_id) {
+                    if current_info.parent_span_id.is_none() {
+                        // This is a root span, use its span_id as trace_id
+                        return Some(current_span_id.to_string());
+                    }
+                    current_span_id = current_info.parent_span_id.as_ref().unwrap();
+                } else {
+                    break;
+                }
+            }
+
+            // Fallback: if we can't find a root, use the original span_id
+            Some(span_id.to_string())
+        } else {
+            // Span not found in relationships, check active spans
+            let active_spans = self.active_spans.read().await;
+            if active_spans.contains_key(span_id) {
+                Some(span_id.to_string())
+            } else {
+                None
+            }
+        }
+    }
+
+    /// Get trace hierarchy for a given trace ID
+    pub async fn get_trace_hierarchy(&self, trace_id: &str) -> Option<TraceHierarchy> {
+        self.build_trace_hierarchy(trace_id).await
+    }
+
+    /// Get analytics for a trace hierarchy
+    pub async fn get_trace_analytics(&self, trace_id: &str) -> Option<TraceAnalytics> {
+        if let Some(hierarchy) = self.build_trace_hierarchy(trace_id).await {
+            Some(self.generate_trace_analytics(&hierarchy).await)
+        } else {
+            None
+        }
+    }
+
+    /// Get all trace hierarchies (for debugging/admin)
+    pub async fn get_all_trace_hierarchies(&self) -> HashMap<String, TraceHierarchy> {
+        let trace_hierarchies = self.trace_hierarchies.read().await;
+        trace_hierarchies.clone()
+    }
+
+    /// Clean up old trace hierarchies (keep last N)
+    pub async fn cleanup_old_hierarchies(&self, keep_last: usize) {
+        let mut trace_hierarchies = self.trace_hierarchies.write().await;
+        let mut hierarchies: Vec<_> = trace_hierarchies.iter().collect();
+
+        // Sort by creation time (newest first)
+        hierarchies.sort_by(|a, b| b.1.created_at.cmp(&a.1.created_at));
+
+        // Remove old hierarchies beyond the keep limit
+        if hierarchies.len() > keep_last {
+            let to_remove: Vec<String> = hierarchies[keep_last..]
+                .iter()
+                .map(|(trace_id, _)| (*trace_id).clone())
+                .collect();
+
+            for trace_id in to_remove {
+                trace_hierarchies.remove(&trace_id);
+            }
+        }
     }
 }
 

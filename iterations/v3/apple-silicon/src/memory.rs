@@ -15,6 +15,7 @@ use tracing::{debug, info, warn};
 struct ModelUsageStats {
     model_name: String,
     access_count: u64,
+    inference_count: u64,
     last_accessed: std::time::Instant,
     created_at: std::time::Instant,
     size_mb: u64,
@@ -37,6 +38,391 @@ struct CleanupAnalytics {
     duration_ms: u64,
     efficiency_rating: &'static str,
     recommendations: Vec<String>,
+}
+
+/// Parsed model structures from binary analysis
+#[derive(Debug, Clone)]
+struct ParsedModelStructures {
+    layers: Vec<ParsedLayer>,
+    tensors: Vec<ParsedTensor>,
+    operations: Vec<ParsedOperation>,
+    total_size_bytes: usize,
+    format: ModelFormat,
+}
+
+/// Parsed layer information
+#[derive(Debug, Clone)]
+struct ParsedLayer {
+    name: String,
+    layer_type: LayerType,
+    size_bytes: usize,
+    precision: Precision,
+    compression_ratio: f64,
+}
+
+/// Parsed tensor information
+#[derive(Debug, Clone)]
+struct ParsedTensor {
+    name: String,
+    shape: Vec<usize>,
+    data_type: DataType,
+    size_bytes: usize,
+    sparsity: f64,
+}
+
+/// Parsed operation information
+#[derive(Debug, Clone)]
+struct ParsedOperation {
+    name: String,
+    operation_type: OperationType,
+    input_count: usize,
+    output_count: usize,
+    compute_intensity: ComputeIntensity,
+}
+
+/// Model format enumeration
+#[derive(Debug, Clone)]
+enum ModelFormat {
+    CoreML,
+    ONNX,
+    TensorFlow,
+    Generic,
+}
+
+/// Layer type enumeration
+#[derive(Debug, Clone)]
+enum LayerType {
+    Input,
+    Output,
+    Convolutional,
+    Dense,
+    RNN,
+    Transformer,
+    Generic,
+    Metadata,
+}
+
+/// Data type enumeration
+#[derive(Debug, Clone)]
+enum DataType {
+    Float32,
+    Float16,
+    UInt8,
+}
+
+/// Operation type enumeration
+#[derive(Debug, Clone)]
+enum OperationType {
+    Convolution,
+    Linear,
+    Activation,
+    Attention,
+    Normalization,
+    RNN,
+    Generic,
+}
+
+/// Compute intensity enumeration
+#[derive(Debug, Clone)]
+enum ComputeIntensity {
+    Low,
+    Medium,
+    High,
+}
+
+/// Compression opportunities analysis
+#[derive(Debug, Clone)]
+struct CompressionOpportunities {
+    weight_compression: u64,
+    precision_reduction: u64,
+    sparsity_exploitation: u64,
+    metadata_compression: u64,
+    structure_optimization: u64,
+}
+
+/// Compression result
+#[derive(Debug, Clone)]
+struct CompressionResult {
+    savings_mb: u64,
+    compression_ratio: f64,
+    quality_score: f64,
+    processing_time_ms: u64,
+}
+
+/// Data access patterns
+#[derive(Debug, Clone)]
+struct DataAccessPatterns {
+    access_frequency: Vec<AccessPattern>,
+    temporal_locality: f64,
+    spatial_locality: f64,
+    total_access_count: u64,
+    cache_miss_rate: f64,
+}
+
+/// Access pattern for data regions
+#[derive(Debug, Clone)]
+struct AccessPattern {
+    region: String,
+    frequency: f64,
+    size_mb: f64,
+}
+
+/// Hot data regions for cache optimization
+#[derive(Debug, Clone)]
+struct HotDataRegions {
+    hot_regions: Vec<HotRegion>,
+    cold_regions: Vec<ColdRegion>,
+    total_hot_size_mb: f64,
+    total_cold_size_mb: f64,
+}
+
+/// Hot region information
+#[derive(Debug, Clone)]
+struct HotRegion {
+    name: String,
+    frequency: f64,
+    size_mb: f64,
+    cache_priority: CachePriority,
+    memory_alignment: MemoryAlignment,
+}
+
+/// Cold region information
+#[derive(Debug, Clone)]
+struct ColdRegion {
+    name: String,
+    frequency: f64,
+    size_mb: f64,
+    compression_opportunity: f64,
+}
+
+/// Cache priority enumeration
+#[derive(Debug, Clone)]
+enum CachePriority {
+    Critical,
+    High,
+    Medium,
+    Low,
+}
+
+/// Memory alignment enumeration
+#[derive(Debug, Clone)]
+enum MemoryAlignment {
+    CacheLine16,
+    CacheLine32,
+    CacheLine64,
+}
+
+/// Cache reorganization result
+#[derive(Debug, Clone)]
+struct CacheReorganizationResult {
+    memory_savings_mb: u64,
+    cache_hit_rate_improvement: f64,
+    memory_access_reduction: f64,
+    reorganization_quality: f64,
+    processing_time_ms: u64,
+}
+
+/// Cache improvements
+#[derive(Debug, Clone)]
+struct CacheImprovements {
+    hit_rate_improvement: f64,
+    access_reduction: f64,
+}
+
+/// Cache performance result
+#[derive(Debug, Clone)]
+struct CachePerformanceResult {
+    cache_hit_improvement: f64,
+    memory_access_improvement: f64,
+    validation_passed: bool,
+}
+
+/// Data structure analysis
+#[derive(Debug, Clone)]
+struct DataStructureAnalysis {
+    weight_structures: WeightStructureAnalysis,
+    metadata_structures: MetadataStructureAnalysis,
+    activation_structures: ActivationStructureAnalysis,
+    buffer_structures: BufferStructureAnalysis,
+    total_size_bytes: usize,
+    analysis_quality: f64,
+}
+
+/// Weight structure analysis
+#[derive(Debug, Clone)]
+struct WeightStructureAnalysis {
+    tensors: Vec<TensorStructure>,
+    total_size_bytes: usize,
+    compression_potential: f64,
+    precision_optimization: f64,
+}
+
+/// Tensor structure
+#[derive(Debug, Clone)]
+struct TensorStructure {
+    name: String,
+    size_bytes: usize,
+    data_type: DataStructureType,
+    sparsity: f64,
+    compression_potential: f64,
+    access_pattern: AccessPatternType,
+}
+
+/// Data structure type enumeration
+#[derive(Debug, Clone)]
+enum DataStructureType {
+    Float32,
+    Float16,
+    UInt8,
+    Text,
+    Binary,
+}
+
+/// Access pattern type enumeration
+#[derive(Debug, Clone)]
+enum AccessPatternType {
+    Sequential,
+    Random,
+}
+
+/// Metadata structure analysis
+#[derive(Debug, Clone)]
+struct MetadataStructureAnalysis {
+    components: Vec<MetadataComponent>,
+    total_size_bytes: usize,
+    average_compression_ratio: f64,
+}
+
+/// Metadata component
+#[derive(Debug, Clone)]
+struct MetadataComponent {
+    name: String,
+    size_bytes: usize,
+    compression_ratio: f64,
+    data_type: DataStructureType,
+}
+
+/// Activation structure analysis
+#[derive(Debug, Clone)]
+struct ActivationStructureAnalysis {
+    buffers: Vec<ActivationBuffer>,
+    total_size_bytes: usize,
+    average_reuse_factor: f64,
+}
+
+/// Activation buffer
+#[derive(Debug, Clone)]
+struct ActivationBuffer {
+    name: String,
+    size_bytes: usize,
+    data_type: DataStructureType,
+    reuse_factor: f64,
+    compression_potential: f64,
+}
+
+/// Buffer structure analysis
+#[derive(Debug, Clone)]
+struct BufferStructureAnalysis {
+    buffer_types: Vec<BufferType>,
+    total_size_bytes: usize,
+    average_optimization_potential: f64,
+}
+
+/// Buffer type
+#[derive(Debug, Clone)]
+struct BufferType {
+    name: String,
+    size_bytes: usize,
+    buffer_type: BufferStructureType,
+    optimization_potential: f64,
+}
+
+/// Buffer structure type enumeration
+#[derive(Debug, Clone)]
+enum BufferStructureType {
+    Temporary,
+    Workspace,
+    Cache,
+}
+
+/// Structure compression results
+#[derive(Debug, Clone)]
+struct StructureCompressionResults {
+    weight_compression: CompressionResult,
+    metadata_compression: CompressionResult,
+    activation_compression: CompressionResult,
+    buffer_compression: CompressionResult,
+    total_savings_mb: u64,
+    compression_quality: f64,
+}
+
+/// Data layout optimization
+#[derive(Debug, Clone)]
+struct DataLayoutOptimization {
+    total_savings_mb: u64,
+    layout_improvement: f64,
+    packing_efficiency: f64,
+    memory_fragmentation_reduction: f64,
+    optimization_quality: f64,
+}
+
+/// Structure compression validation
+#[derive(Debug, Clone)]
+struct StructureCompressionValidation {
+    compression_effectiveness: f64,
+    layout_validation_passed: bool,
+    packing_validation_passed: bool,
+    fragmentation_validation_passed: bool,
+    overall_validation_passed: bool,
+}
+
+/// Memory alignment analysis
+#[derive(Debug, Clone)]
+struct MemoryAlignmentAnalysis {
+    memory_regions: Vec<MemoryRegion>,
+    total_size_bytes: usize,
+    alignment_efficiency: f64,
+    pooling_potential: f64,
+    cache_line_size: usize,
+    analysis_quality: f64,
+}
+
+/// Memory region
+#[derive(Debug, Clone)]
+struct MemoryRegion {
+    name: String,
+    size_bytes: usize,
+    current_alignment: usize,
+    optimal_alignment: usize,
+    pooling_opportunity: f64,
+}
+
+/// Cache line alignment optimization
+#[derive(Debug, Clone)]
+struct CacheLineAlignmentOptimization {
+    memory_savings_mb: u64,
+    cache_hit_improvement: f64,
+    alignment_efficiency: f64,
+    processing_time_ms: u64,
+}
+
+/// Memory pooling optimization
+#[derive(Debug, Clone)]
+struct MemoryPoolingOptimization {
+    total_savings_mb: u64,
+    pooling_efficiency: f64,
+    fragmentation_reduction: f64,
+    allocation_speed_improvement: f64,
+    pool_utilization: f64,
+    processing_time_ms: u64,
+}
+
+/// Alignment pooling validation
+#[derive(Debug, Clone)]
+struct AlignmentPoolingValidation {
+    alignment_efficiency: f64,
+    pooling_efficiency: f64,
+    validation_passed: bool,
 }
 
 /// Memory manager for monitoring and controlling memory usage

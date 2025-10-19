@@ -109,13 +109,13 @@ impl CoreMLModel {
 
         // Attempt to load the Core ML model using Objective-C runtime APIs
         unsafe {
-            let url: *mut std::ffi::c_void = msg_send![class!(NSURL), fileURLWithPath: CFString::new(model_path.to_string_lossy().as_ref()).as_concrete_TypeRef()];
+            let url: *mut objc::runtime::Object = msg_send![class!(NSURL), fileURLWithPath: CFString::new(model_path.to_string_lossy().as_ref()).as_concrete_TypeRef()];
             if url.is_null() {
                 anyhow::bail!("Failed to create NSURL for model path");
             }
 
-            let error: *mut *mut std::ffi::c_void = std::ptr::null_mut();
-            let model: *mut std::ffi::c_void =
+            let error: *mut *mut objc::runtime::Object = std::ptr::null_mut();
+            let model: *mut objc::runtime::Object =
                 msg_send![class!(MLModel), modelWithContentsOfURL:url error:error];
 
             if model.is_null() {
@@ -163,8 +163,8 @@ impl CoreMLModel {
         let input_data: serde_json::Value = serde_json::from_str(inputs)
             .context("Failed to parse input JSON")?;
 
-        // Create Core ML input dictionary
-        let mut input_dict = CFDictionary::<String, String>::from_CFType_pairs(&[]);
+        // Collect input key-value pairs
+        let mut input_pairs = Vec::new();
 
         // Handle different input types
         if let Some(text_input) = input_data.get("text") {
@@ -172,7 +172,7 @@ impl CoreMLModel {
                 // Convert text to MLMultiArray for text models
                 let ml_array = self.create_text_input_array(text)?;
                 let key = CFString::new("input_text");
-                input_dict.set(key.as_concrete_TypeRef(), ml_array);
+                input_pairs.push((key, ml_array));
             }
         }
 
@@ -181,7 +181,7 @@ impl CoreMLModel {
                 // Load and convert image to MLMultiArray
                 let ml_array = self.create_image_input_array(image_path).await?;
                 let key = CFString::new("input_image");
-                input_dict.set(key.as_concrete_TypeRef(), ml_array);
+                input_pairs.push((key, ml_array));
             }
         }
 
@@ -190,9 +190,12 @@ impl CoreMLModel {
                 // Convert feature array to MLMultiArray
                 let ml_array = self.create_feature_input_array(feature_array)?;
                 let key = CFString::new("input_features");
-                input_dict.set(key.as_concrete_TypeRef(), ml_array);
+                input_pairs.push((key, ml_array));
             }
         }
+
+        // Create Core ML input dictionary
+        let input_dict = CFDictionary::<CFString, *mut objc::runtime::Object>::from_CFType_pairs(&input_pairs);
 
         Ok(input_dict)
     }
@@ -207,7 +210,7 @@ impl CoreMLModel {
 
         // Create prediction request
         unsafe {
-            let request: *mut std::ffi::c_void = msg_send![class!(MLPredictionRequest), new];
+            let request: *mut objc::runtime::Object = msg_send![class!(MLPredictionRequest), new];
             if request.is_null() {
                 anyhow::bail!("Failed to create MLPredictionRequest");
             }
@@ -227,21 +230,21 @@ impl CoreMLModel {
     }
 
     /// Execute prediction synchronously (called from async context)
-    fn execute_prediction_sync(&self, model: *mut std::ffi::c_void, request: *mut std::ffi::c_void) -> Result<CFDictionary> {
+    fn execute_prediction_sync(&self, model: *mut objc::runtime::Object, request: *mut objc::runtime::Object) -> Result<CFDictionary> {
         use objc::{msg_send, sel, sel_impl};
         use core_foundation::base::TCFType;
         use core_foundation::dictionary::CFDictionary;
 
         unsafe {
-            let mut error: *mut *mut std::ffi::c_void = std::ptr::null_mut();
-            let prediction: *mut std::ffi::c_void = msg_send![model, predictionFromRequest: request error: &mut error];
+            let mut error: *mut *mut objc::runtime::Object = std::ptr::null_mut();
+            let prediction: *mut objc::runtime::Object = msg_send![model, predictionFromRequest: request error: &mut error];
 
             if prediction.is_null() {
                 anyhow::bail!("Core ML prediction failed");
             }
 
             // Extract output features
-            let output_features: *mut std::ffi::c_void = msg_send![prediction, outputFeatures];
+            let output_features: *mut objc::runtime::Object = msg_send![prediction, outputFeatures];
             if output_features.is_null() {
                 anyhow::bail!("Failed to get output features");
             }
@@ -287,13 +290,13 @@ impl CoreMLModel {
         use core_foundation::string::CFString;
 
         unsafe {
-            let url: *mut std::ffi::c_void = msg_send![class!(NSURL), fileURLWithPath: CFString::new(&self.model_path).as_concrete_TypeRef()];
+            let url: *mut objc::runtime::Object = msg_send![class!(NSURL), fileURLWithPath: CFString::new(&self.model_path).as_concrete_TypeRef()];
             if url.is_null() {
                 anyhow::bail!("Failed to create NSURL for model path");
             }
 
-            let mut error: *mut *mut std::ffi::c_void = std::ptr::null_mut();
-            let model: *mut std::ffi::c_void = msg_send![class!(MLModel), modelWithContentsOfURL:url error:&mut error];
+            let mut error: *mut *mut objc::runtime::Object = std::ptr::null_mut();
+            let model: *mut objc::runtime::Object = msg_send![class!(MLModel), modelWithContentsOfURL:url error:&mut error];
 
             if model.is_null() {
                 anyhow::bail!("Failed to load Core ML model from path: {}", self.model_path);
@@ -315,8 +318,8 @@ impl CoreMLModel {
         
         unsafe {
             let shape = [1, tokens.len() as i64];
-            let ml_array: *mut std::ffi::c_void = msg_send![
-                class!(MLMultiArray), 
+            let ml_array: *mut objc::runtime::Object = msg_send![
+                class!(MLMultiArray),
                 multiArrayWithShape: &shape as *const _
                 dataType: 32i32 // MLMultiArrayDataTypeFloat32
             ];
@@ -344,20 +347,20 @@ impl CoreMLModel {
         // Load image and convert to MLMultiArray
         // This is a simplified implementation - in practice, you'd use Core Image or similar
         unsafe {
-            let url: *mut std::ffi::c_void = msg_send![class!(NSURL), fileURLWithPath: CFString::new(image_path).as_concrete_TypeRef()];
+            let url: *mut objc::runtime::Object = msg_send![class!(NSURL), fileURLWithPath: CFString::new(image_path).as_concrete_TypeRef()];
             if url.is_null() {
                 anyhow::bail!("Failed to create NSURL for image path");
             }
 
-            let image: *mut std::ffi::c_void = msg_send![class!(NSImage), imageWithContentsOfURL:url];
+            let image: *mut objc::runtime::Object = msg_send![class!(NSImage), imageWithContentsOfURL:url];
             if image.is_null() {
                 anyhow::bail!("Failed to load image from path: {}", image_path);
             }
 
             // Convert image to MLMultiArray (simplified - would need proper image processing)
             let shape = [1, 3, 224, 224]; // Typical image input shape
-            let ml_array: *mut std::ffi::c_void = msg_send![
-                class!(MLMultiArray), 
+            let ml_array: *mut objc::runtime::Object = msg_send![
+                class!(MLMultiArray),
                 multiArrayWithShape: &shape as *const _
                 dataType: 32i32 // MLMultiArrayDataTypeFloat32
             ];
@@ -388,8 +391,8 @@ impl CoreMLModel {
 
         unsafe {
             let shape = [1, feature_values.len() as i64];
-            let ml_array: *mut std::ffi::c_void = msg_send![
-                class!(MLMultiArray), 
+            let ml_array: *mut objc::runtime::Object = msg_send![
+                class!(MLMultiArray),
                 multiArrayWithShape: &shape as *const _
                 dataType: 32i32 // MLMultiArrayDataTypeFloat32
             ];
@@ -2100,10 +2103,10 @@ impl CoreMLManager {
         resource_usage: &ResourceUsage,
     ) -> QualityMetrics {
         // Basic quality assessment based on multiple factors
-        let perplexity = self.calculate_perplexity(request);
-        let coherence_score = self.calculate_coherence(request, resource_usage);
-        let relevance_score = self.calculate_relevance(request);
-        let factual_accuracy = self.calculate_factual_accuracy(request);
+        let perplexity = self.calculate_perplexity(request).await;
+        let coherence_score = self.calculate_coherence(request, resource_usage).await;
+        let relevance_score = self.calculate_relevance(request).await;
+        let factual_accuracy = self.calculate_factual_accuracy(request).await;
 
         // Calculate overall quality as weighted average
         let weights = [0.3, 0.25, 0.25, 0.2]; // Weights for perplexity, coherence, relevance, accuracy

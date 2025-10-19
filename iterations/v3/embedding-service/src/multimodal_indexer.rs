@@ -578,7 +578,7 @@ impl MultimodalIndexer {
             .bind(vector.len() as i32)
             .bind(Utc::now());
 
-            stats_query.execute(conn).await?;
+            stats_query.execute(&mut *conn).await?;
 
             // Update block-level metadata
             let block_metadata_query = sqlx::query(
@@ -595,7 +595,7 @@ impl MultimodalIndexer {
             .bind(vector.len() as i32)
             .bind(Utc::now());
 
-            block_metadata_query.execute(conn).await?;
+            block_metadata_query.execute(&mut *conn).await?;
         }
 
         Ok(())
