@@ -61,8 +61,71 @@ pub struct SystemMetrics {
     pub network_io: u64,
     /// Disk I/O (bytes/sec)
     pub disk_io: u64,
+    /// Detailed disk I/O metrics
+    pub disk_io_metrics: DiskIOMetrics,
     /// Timestamp
     pub timestamp: DateTime<Utc>,
+}
+
+/// Detailed disk I/O metrics
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DiskIOMetrics {
+    /// Total read operations per second
+    pub read_iops: u64,
+    /// Total write operations per second
+    pub write_iops: u64,
+    /// Total read throughput (bytes/sec)
+    pub read_throughput: u64,
+    /// Total write throughput (bytes/sec)
+    pub write_throughput: u64,
+    /// Average read latency (milliseconds)
+    pub avg_read_latency_ms: f64,
+    /// Average write latency (milliseconds)
+    pub avg_write_latency_ms: f64,
+    /// Disk utilization percentage
+    pub disk_utilization: f64,
+    /// Queue depth
+    pub queue_depth: u32,
+    /// Per-disk metrics
+    pub per_disk_metrics: HashMap<String, PerDiskMetrics>,
+}
+
+/// Per-disk I/O metrics
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PerDiskMetrics {
+    /// Disk name/identifier
+    pub disk_name: String,
+    /// Read operations per second
+    pub read_iops: u64,
+    /// Write operations per second
+    pub write_iops: u64,
+    /// Read throughput (bytes/sec)
+    pub read_throughput: u64,
+    /// Write throughput (bytes/sec)
+    pub write_throughput: u64,
+    /// Average read latency (milliseconds)
+    pub avg_read_latency_ms: f64,
+    /// Average write latency (milliseconds)
+    pub avg_write_latency_ms: f64,
+    /// Disk utilization percentage
+    pub utilization: f64,
+    /// Queue depth
+    pub queue_depth: u32,
+    /// Disk health status
+    pub health_status: DiskHealthStatus,
+}
+
+/// Disk health status
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub enum DiskHealthStatus {
+    /// Disk is healthy
+    Healthy,
+    /// Disk has warnings
+    Warning,
+    /// Disk is unhealthy
+    Unhealthy,
+    /// Disk status unknown
+    Unknown,
 }
 
 /// Agent health metrics

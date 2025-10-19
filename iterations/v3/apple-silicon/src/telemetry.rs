@@ -12,6 +12,7 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
+use std::collections::VecDeque;
 
 /// Failure mode taxonomy for telemetry
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -44,6 +45,19 @@ impl std::fmt::Display for FailureMode {
             FailureMode::Unknown => write!(f, "unknown"),
         }
     }
+}
+
+/// Percentile statistics for monitoring
+#[derive(Debug, Clone)]
+pub struct PercentileStats {
+    pub compile_p50: u64,
+    pub compile_p95: u64,
+    pub compile_p99: u64,
+    pub infer_p50: u64,
+    pub infer_p95: u64,
+    pub infer_p99: u64,
+    pub compile_sample_count: usize,
+    pub infer_sample_count: usize,
 }
 
 /// Performance metrics for Core ML operations
@@ -80,6 +94,13 @@ pub struct CoreMLMetrics {
 
     /// SLA threshold (milliseconds)
     pub sla_ms: u64,
+
+    /// Duration samples for percentile calculation
+    pub compile_durations: VecDeque<u64>,
+    pub infer_durations: VecDeque<u64>,
+    
+    /// Maximum number of samples to keep for percentile calculation
+    pub max_samples: usize,
 }
 
 impl Default for CoreMLMetrics {
@@ -109,6 +130,10 @@ impl Default for CoreMLMetrics {
             failure_modes: HashMap::new(),
 
             sla_ms: 20, // 20ms target for FastViT
+            
+            compile_durations: VecDeque::new(),
+            infer_durations: VecDeque::new(),
+            max_samples: 1000, // Keep last 1000 samples for percentile calculation
         }
     }
 }
@@ -126,30 +151,16 @@ impl CoreMLMetrics {
                 .and_modify(|c| *c += 1)
                 .or_insert(1);
         }
-        // TODO: Implement proper p99 percentile calculation with the following requirements:
-        // 1. Percentile calculation: Implement accurate p99 percentile calculation for compile times
-        //    - Maintain a rolling window of recent compile durations for percentile calculation
-        //    - Implement efficient percentile calculation algorithms (e.g., t-digest or histogram-based)
-        //    - Handle percentile calculation performance optimization and memory management
-        //    - Implement percentile calculation validation and quality assurance
-        // 2. Data structure optimization: Optimize data structures for percentile tracking
-        //    - Use efficient data structures for storing duration samples (circular buffer, sliding window)
-        //    - Implement memory-efficient storage for large numbers of samples
-        //    - Handle data structure performance monitoring and analytics
-        //    - Implement data structure optimization validation and quality assurance
-        // 3. Statistical accuracy: Ensure statistical accuracy of percentile calculations
-        //    - Validate percentile calculation accuracy against known distributions
-        //    - Handle edge cases in percentile calculation (small sample sizes, outliers)
-        //    - Implement statistical validation and quality assurance
-        //    - Handle statistical accuracy performance monitoring and analytics
-        // 4. Performance monitoring: Implement comprehensive performance monitoring for percentile tracking
-        //    - Monitor percentile calculation performance and resource usage
-        //    - Implement percentile tracking performance metrics and analytics
-        //    - Handle percentile tracking optimization validation and quality assurance
-        //    - Ensure percentile tracking meets performance and reliability standards
-        if duration_ms > self.compile_p99_ms {
-            self.compile_p99_ms = duration_ms;
+        // Add duration to rolling window for percentile calculation
+        self.compile_durations.push_back(duration_ms);
+        
+        // Maintain rolling window size
+        while self.compile_durations.len() > self.max_samples {
+            self.compile_durations.pop_front();
         }
+        
+        // Calculate p99 percentile from recent samples
+        self.compile_p99_ms = self.calculate_percentile(&self.compile_durations, 99);
     }
 
     /// Record an inference operation
@@ -172,10 +183,16 @@ impl CoreMLMetrics {
             _ => self.cpu_fallback_count += 1,
         }
 
-        // Update p99
-        if duration_ms > self.infer_p99_ms {
-            self.infer_p99_ms = duration_ms;
+        // Add duration to rolling window for percentile calculation
+        self.infer_durations.push_back(duration_ms);
+        
+        // Maintain rolling window size
+        while self.infer_durations.len() > self.max_samples {
+            self.infer_durations.pop_front();
         }
+        
+        // Calculate p99 percentile from recent samples
+        self.infer_p99_ms = self.calculate_percentile(&self.infer_durations, 99);
 
         // Check SLA violation
         if duration_ms > self.sla_ms {
@@ -195,6 +212,54 @@ impl CoreMLMetrics {
         self.memory_current_mb = current_mb;
         if current_mb > self.memory_peak_mb {
             self.memory_peak_mb = current_mb;
+        }
+    }
+
+
+    /// Calculate percentile from duration samples
+    fn calculate_percentile(&self, durations: &VecDeque<u64>, percentile: u8) -> u64 {
+        if durations.is_empty() {
+            return 0;
+        }
+        
+        // Handle edge cases for small sample sizes
+        if durations.len() == 1 {
+            return *durations.front().unwrap();
+        }
+        
+        // Convert to sorted vector for percentile calculation
+        let mut sorted_durations: Vec<u64> = durations.iter().cloned().collect();
+        sorted_durations.sort_unstable();
+        
+        // Calculate percentile using linear interpolation
+        let index = (percentile as f64 / 100.0) * (sorted_durations.len() - 1) as f64;
+        let lower_index = index.floor() as usize;
+        let upper_index = index.ceil() as usize;
+        
+        if lower_index == upper_index {
+            // Exact index
+            sorted_durations[lower_index]
+        } else {
+            // Linear interpolation between two values
+            let lower_value = sorted_durations[lower_index] as f64;
+            let upper_value = sorted_durations[upper_index] as f64;
+            let weight = index - lower_index as f64;
+            
+            ((lower_value * (1.0 - weight)) + (upper_value * weight)) as u64
+        }
+    }
+
+    /// Get percentile statistics for monitoring
+    pub fn get_percentile_stats(&self) -> PercentileStats {
+        PercentileStats {
+            compile_p50: self.calculate_percentile(&self.compile_durations, 50),
+            compile_p95: self.calculate_percentile(&self.compile_durations, 95),
+            compile_p99: self.compile_p99_ms,
+            infer_p50: self.calculate_percentile(&self.infer_durations, 50),
+            infer_p95: self.calculate_percentile(&self.infer_durations, 95),
+            infer_p99: self.infer_p99_ms,
+            compile_sample_count: self.compile_durations.len(),
+            infer_sample_count: self.infer_durations.len(),
         }
     }
 
@@ -362,7 +427,9 @@ mod tests {
 
         assert_eq!(metrics.compile_count, 2);
         assert_eq!(metrics.compile_success, 1);
-        assert_eq!(metrics.compile_p99_ms, 150);
+        // P99 with 2 values: 0.99 * (2-1) = 0.99
+        // Linear interpolation: 100 * (1-0.99) + 150 * 0.99 = 1 + 148.5 = 149.5 ≈ 149
+        assert_eq!(metrics.compile_p99_ms, 149);
     }
 
     #[test]
