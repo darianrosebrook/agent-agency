@@ -25,10 +25,6 @@ crossbeam = "0.8"
 parking_lot = "0.12"
 futures = "0.3"
 
-# Disk I/O monitoring
-procfs = "0.16"
-psutil = "3.2"
-
 # Database integration
 sqlx = { workspace = true, features = ["postgres", "chrono", "uuid"] }
 

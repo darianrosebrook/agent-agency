@@ -681,68 +681,72 @@ impl WorkerPoolManager {
         endpoint: &str,
     ) -> Result<Vec<WorkerRegistration>> {
         // Query the discovery endpoint for available workers
-        // TODO: Implement discovery service HTTP request with the following requirements:
-        // 1. HTTP request implementation: Send HTTP request to discovery service
-        //    - Send HTTP request to discovery service for worker discovery
-        //    - Handle HTTP request implementation optimization and performance
-        //    - Implement HTTP request implementation validation and quality assurance
-        //    - Support HTTP request implementation customization and configuration
-        // 2. Discovery service integration: Integrate with discovery service APIs
-        //    - Integrate with discovery service APIs for worker management
-        //    - Handle discovery service integration optimization and performance
-        //    - Implement discovery service integration validation and quality assurance
-        //    - Support discovery service integration customization and configuration
-        // 3. Worker discovery management: Manage worker discovery and registration
-        //    - Manage worker discovery and registration for system management
-        //    - Handle worker discovery management optimization and performance
-        //    - Implement worker discovery management validation and quality assurance
-        //    - Support worker discovery management customization and configuration
-        // 4. Discovery service optimization: Optimize discovery service HTTP request performance
-        //    - Implement discovery service HTTP request optimization strategies
-        //    - Handle discovery service monitoring and analytics
-        //    - Implement discovery service validation and quality assurance
-        //    - Ensure discovery service HTTP request meets performance and reliability standards
-        // 2. Parse response in various formats (JSON, YAML, etc.)
-        // 3. Handle different service discovery protocols
-
+        // Implement discovery service HTTP request with comprehensive error handling and format support
         let discovery_url = format!("{}/workers", endpoint.trim_end_matches('/'));
-
-        match self
-            .http_client
+        
+        // 1. HTTP request implementation: Send HTTP request to discovery service
+        let client = reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(30))
+            .build()
+            .map_err(|e| anyhow::anyhow!("Failed to create HTTP client: {}", e))?;
+        
+        let response = client
             .get(&discovery_url)
-            .timeout(Duration::from_secs(10))
+            .header("Accept", "application/json, application/yaml, text/yaml")
+            .header("User-Agent", "agent-agency-worker-manager/1.0")
             .send()
             .await
-        {
-            Ok(response) if response.status().is_success() => {
-                // Parse the response as JSON array of workers
-                match response.json::<Vec<serde_json::Value>>().await {
-                    Ok(workers_data) => {
-                        let mut discovered_workers = Vec::new();
-
-                        for worker_data in workers_data {
-                            if let Ok(registration) = self.parse_worker_registration(worker_data) {
-                                discovered_workers.push(registration);
-                            }
-                        }
-
-                        Ok(discovered_workers)
-                    }
-                    Err(e) => {
-                        warn!("Failed to parse discovery response as JSON: {}", e);
-                        Ok(Vec::new())
-                    }
-                }
-            }
-            Ok(response) => {
-                warn!("Discovery endpoint returned status: {}", response.status());
-                Ok(Vec::new())
-            }
-            Err(e) => {
-                warn!("Failed to query discovery endpoint {}: {}", endpoint, e);
-                Ok(Vec::new())
-            }
+            .map_err(|e| anyhow::anyhow!("Failed to send discovery request to {}: {}", discovery_url, e))?;
+        
+        if !response.status().is_success() {
+            return Err(anyhow::anyhow!(
+                "Discovery service returned error status {}: {}",
+                response.status(),
+                response.text().await.unwrap_or_default()
+            ));
         }
+        
+        // 2. Parse response in various formats (JSON, YAML, etc.)
+        let content_type = response
+            .headers()
+            .get("content-type")
+            .and_then(|h| h.to_str().ok())
+            .unwrap_or("application/json");
+        
+        let response_text = response
+            .text()
+            .await
+            .map_err(|e| anyhow::anyhow!("Failed to read discovery response: {}", e))?;
+        
+        // 3. Handle different service discovery protocols and formats
+        let workers = if content_type.contains("yaml") || content_type.contains("yml") {
+            // Parse YAML format
+            serde_yaml::from_str::<Vec<WorkerRegistration>>(&response_text)
+                .map_err(|e| anyhow::anyhow!("Failed to parse YAML discovery response: {}", e))?
+        } else {
+            // Default to JSON format
+            serde_json::from_str::<Vec<WorkerRegistration>>(&response_text)
+                .map_err(|e| anyhow::anyhow!("Failed to parse JSON discovery response: {}", e))?
+        };
+        
+        // 4. Discovery service optimization: Validate and filter workers
+        let validated_workers = workers
+            .into_iter()
+            .filter(|worker| {
+                // Basic validation
+                !worker.worker_id.is_empty() && 
+                !worker.endpoint.is_empty() &&
+                worker.capabilities.max_concurrent_tasks > 0
+            })
+            .collect::<Vec<_>>();
+        
+        tracing::info!(
+            "Discovered {} workers from discovery service at {}",
+            validated_workers.len(),
+            discovery_url
+        );
+        
+        Ok(validated_workers)
     }
 
     /// Parse worker registration data from discovery response

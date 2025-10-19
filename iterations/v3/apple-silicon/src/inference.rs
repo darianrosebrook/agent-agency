@@ -9,7 +9,7 @@
 /// - Cache keys include OS build + Core ML version for reproducibility
 
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 /// Supported compute units for model execution
@@ -160,6 +160,171 @@ pub struct PrepareOptions {
     pub quantization: String, // "fp32", "fp16", "int8", "palettized", etc.
     pub cache_dir: PathBuf,
     pub timeout_ms: u64,
+}
+
+/// Binary tensor descriptor for efficient serialization
+#[derive(Debug, Clone)]
+pub struct TensorDescriptor {
+    pub name: String,
+    pub dtype: DType,
+    pub shape: Vec<usize>,
+    pub data_offset: usize,  // Offset in binary blob
+    pub data_size: usize,    // Size in bytes
+}
+
+/// Tensor batch with metadata + binary data
+pub struct TensorBatch {
+    pub descriptors: Vec<TensorDescriptor>,
+    pub data: Vec<u8>,  // Contiguous binary data
+    pub temp_files: Vec<PathBuf>, // Track temp files for cleanup
+}
+
+impl TensorBatch {
+    /// Serialize TensorMap to binary format
+    pub fn from_tensor_map(map: &TensorMap, schema: &IoSchema) -> Result<Self> {
+        let mut descriptors = Vec::new();
+        let mut data = Vec::new();
+        
+        for input_spec in &schema.inputs {
+            if let Some(tensor_data) = map.get(&input_spec.name) {
+                let offset = data.len();
+                let size = tensor_data.len();
+                
+                descriptors.push(TensorDescriptor {
+                    name: input_spec.name.clone(),
+                    dtype: input_spec.dtype,
+                    shape: input_spec.shape.clone(),
+                    data_offset: offset,
+                    data_size: size,
+                });
+                
+                data.extend_from_slice(tensor_data);
+            } else {
+                anyhow::bail!("Missing input tensor: {}", input_spec.name);
+            }
+        }
+        
+        Ok(TensorBatch {
+            descriptors,
+            data,
+            temp_files: Vec::new(),
+        })
+    }
+
+    /// Deserialize binary format to TensorMap
+    pub fn to_tensor_map(&self) -> Result<TensorMap> {
+        let mut map = HashMap::new();
+        
+        for desc in &self.descriptors {
+            if desc.data_offset + desc.data_size > self.data.len() {
+                anyhow::bail!("Invalid tensor descriptor: offset {} + size {} > data len {}", 
+                    desc.data_offset, desc.data_size, self.data.len());
+            }
+            
+            let tensor_data = self.data[desc.data_offset..desc.data_offset + desc.data_size].to_vec();
+            map.insert(desc.name.clone(), tensor_data);
+        }
+        
+        Ok(map)
+    }
+
+    /// Write binary data to temp file and return JSON with file reference
+    pub fn to_json_with_data_path(&mut self, temp_dir: &Path) -> Result<String> {
+        use std::fs;
+        use std::io::Write;
+        
+        // Create temp file for binary data
+        let temp_file = temp_dir.join(format!("tensor_batch_{}.bin", uuid::Uuid::new_v4()));
+        let mut file = fs::File::create(&temp_file)?;
+        file.write_all(&self.data)?;
+        
+        self.temp_files.push(temp_file.clone());
+        
+        // Create JSON with tensor descriptors and file path
+        let json_data = serde_json::json!({
+            "data_path": temp_file.to_string_lossy(),
+            "descriptors": self.descriptors.iter().map(|desc| {
+                serde_json::json!({
+                    "name": desc.name,
+                    "dtype": format!("{:?}", desc.dtype).to_lowercase(),
+                    "shape": desc.shape,
+                    "data_offset": desc.data_offset,
+                    "data_size": desc.data_size
+                })
+            }).collect::<Vec<_>>()
+        });
+        
+        Ok(json_data.to_string())
+    }
+
+    /// Create TensorBatch from JSON with data file path
+    pub fn from_json_with_data_path(json_str: &str) -> Result<Self> {
+        use std::fs;
+        
+        let json_data: serde_json::Value = serde_json::from_str(json_str)?;
+        let data_path = json_data["data_path"].as_str()
+            .ok_or_else(|| anyhow::anyhow!("Missing data_path in JSON"))?;
+        
+        // Read binary data from file
+        let data = fs::read(data_path)?;
+        
+        // Parse descriptors
+        let descriptors_value = json_data["descriptors"].as_array()
+            .ok_or_else(|| anyhow::anyhow!("Missing descriptors array"))?;
+        
+        let mut descriptors = Vec::new();
+        for desc_value in descriptors_value {
+            let name = desc_value["name"].as_str()
+                .ok_or_else(|| anyhow::anyhow!("Missing name in descriptor"))?;
+            let dtype_str = desc_value["dtype"].as_str()
+                .ok_or_else(|| anyhow::anyhow!("Missing dtype in descriptor"))?;
+            let shape = desc_value["shape"].as_array()
+                .ok_or_else(|| anyhow::anyhow!("Missing shape in descriptor"))?
+                .iter()
+                .map(|v| v.as_u64().unwrap_or(0) as usize)
+                .collect::<Vec<_>>();
+            let data_offset = desc_value["data_offset"].as_u64()
+                .ok_or_else(|| anyhow::anyhow!("Missing data_offset in descriptor"))? as usize;
+            let data_size = desc_value["data_size"].as_u64()
+                .ok_or_else(|| anyhow::anyhow!("Missing data_size in descriptor"))? as usize;
+            
+            let dtype = match dtype_str {
+                "f32" => DType::F32,
+                "f16" => DType::F16,
+                "i32" => DType::I32,
+                "i8" => DType::I8,
+                "u8" => DType::U8,
+                _ => anyhow::bail!("Unknown dtype: {}", dtype_str),
+            };
+            
+            descriptors.push(TensorDescriptor {
+                name: name.to_string(),
+                dtype,
+                shape,
+                data_offset,
+                data_size,
+            });
+        }
+        
+        Ok(TensorBatch {
+            descriptors,
+            data,
+            temp_files: vec![PathBuf::from(data_path)],
+        })
+    }
+
+    /// Clean up temporary files
+    pub fn cleanup_temp_files(&self) -> Result<()> {
+        use std::fs;
+        
+        for temp_file in &self.temp_files {
+            if temp_file.exists() {
+                fs::remove_file(temp_file)?;
+            }
+        }
+        
+        Ok(())
+    }
 }
 
 /// Trait for a prepared model ready for inference

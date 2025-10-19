@@ -100,9 +100,24 @@ const DEFAULT_SECURITY_CONFIG: SecurityConfig = {
   rateLimitWindowMs: 60000, // 1 minute
   rateLimitMaxRequests: 100,
 
-  // JWT Configuration
-  jwtSecret:
-    process.env.JWT_SECRET || "default-jwt-secret-change-in-production",
+  // JWT Configuration - PRODUCTION SECURITY: Must provide JWT_SECRET in production
+  jwtSecret: (() => {
+    const secret = process.env.JWT_SECRET;
+    if (process.env.NODE_ENV === "production" && !secret) {
+      throw new Error(
+        "CRITICAL SECURITY: JWT_SECRET environment variable is required in production. " +
+          "Set a strong 32+ character secret before deployment."
+      );
+    }
+    if (!secret || secret === "default-jwt-secret-change-in-production") {
+      if (process.env.NODE_ENV === "production") {
+        throw new Error("Invalid JWT_SECRET: default value not allowed in production");
+      }
+      // Development: use a reasonable default for development only
+      return "dev-secret-only-for-development-change-in-production";
+    }
+    return secret;
+  })(),
   jwtIssuer: "agent-agency",
   jwtAudience: ["agent-registry", "arbiter-orchestrator"],
   jwtExpirationTime: "24h",
@@ -160,8 +175,18 @@ export class AgentRegistrySecurity {
 
       // Check if JWT validation is enabled
       if (!this.config.enableJwtValidation) {
-        // Fallback to mock authentication for development
-        console.warn("JWT validation disabled, using mock authentication");
+        // PRODUCTION SECURITY: No fallback to mock authentication
+        if (process.env.NODE_ENV === "production") {
+          throw new Error(
+            "CRITICAL SECURITY: JWT validation required in production. " +
+              "Configuration enableJwtValidation must be true."
+          );
+        }
+        // Development only: allow mock for testing
+        console.warn(
+          "⚠️ JWT validation disabled (development only). " +
+            "This is not allowed in production."
+        );
         return this.createMockSecurityContext(token);
       }
 

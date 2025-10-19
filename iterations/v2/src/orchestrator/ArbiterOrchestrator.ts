@@ -1225,9 +1225,18 @@ export class ArbiterOrchestrator {
         return await this.components.agentRegistry.getAgent(agentId);
       }
 
-      // Fallback to mock implementation if registry doesn't have getAgent method
+      // PRODUCTION SECURITY: No fallback to mock implementation
+      if (process.env.NODE_ENV === "production") {
+        throw new Error(
+          `CRITICAL: Agent registry getAgent method is required but not available. ` +
+            `Cannot proceed without proper agent registry in production.`
+        );
+      }
+
+      // Development only: log warning but continue
       console.warn(
-        `Agent registry doesn't support getAgent method, using fallback`
+        `⚠️ Agent registry doesn't support getAgent method (development only). ` +
+          `This is not allowed in production.`
       );
       return null;
     } catch (error) {

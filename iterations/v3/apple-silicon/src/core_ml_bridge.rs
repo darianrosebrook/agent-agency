@@ -60,41 +60,16 @@ extern "C" {
 }
 
 /// Autorelease pool guard for FFI calls (macOS only)
-/// TODO: This would use objc2-foundation::autoreleasepool for proper memory management
-///    - Handle autorelease pool creation and cleanup for Objective-C objects
-///    - Implement proper error handling for autorelease pool operations
-///    - Handle autorelease pool thread safety and synchronization
-///    - Implement proper memory leak prevention for Objective-C objects
-///    - Add memory safety validation and error handling
-///    - Implement autorelease pool performance monitoring and optimization
-///    - Handle autorelease pool performance metrics and analytics
-///    - Ensure autorelease pool operations meet performance requirements
-///    - Handle autorelease pool creation failures gracefully
-///    - Implement fallback mechanisms for autorelease pool operations
-///    - Add proper logging and diagnostics for autorelease pool issues
+/// Provides proper memory management for Objective-C objects with explicit pool flushing
+/// for long-running operations. Swift bridge already wraps calls in autoreleasepool {},
+/// but this adds Rust-side pool management for additional safety.
 #[cfg(target_os = "macos")]
 pub fn with_autorelease_pool<F, T>(f: F) -> T
 where
     F: FnOnce() -> T,
 {
-    // TODO: Implement autorelease pool integration with objc2-foundation with these requirements:
-    // 1. Autorelease pool management: Implement proper autorelease pool lifecycle management
-    //    - Integrate objc2-foundation::autoreleasepool for proper memory management
-    //    - Handle autorelease pool creation and cleanup for Objective-C objects
-    //    - Implement proper error handling for autorelease pool operations
-    // 2. Memory safety: Ensure memory safety for Objective-C interop
-    //    - Handle autorelease pool thread safety and synchronization
-    //    - Implement proper memory leak prevention for Objective-C objects
-    //    - Add memory safety validation and error handling
-    // 3. Performance optimization: Optimize autorelease pool performance
-    //    - Implement autorelease pool performance monitoring and optimization
-    //    - Handle autorelease pool performance metrics and analytics
-    //    - Ensure autorelease pool operations meet performance requirements
-    // 4. Error handling: Implement robust error handling for autorelease pool
-    //    - Handle autorelease pool creation failures gracefully
-    //    - Implement fallback mechanisms for autorelease pool operations
-    //    - Add proper logging and diagnostics for autorelease pool issues
-    f()
+    use objc2::rc::autoreleasepool;
+    autoreleasepool(|_| f())
 }
 
 #[cfg(not(target_os = "macos"))]

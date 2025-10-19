@@ -190,22 +190,63 @@ public func coreml_predict(
                 throw NSError(domain: "CoreMLBridge", code: 2, userInfo: [NSLocalizedDescriptionKey: "Invalid model type"])
             }
 
-            // Parse inputs JSON (minimal implementation)
+            // Parse inputs JSON with binary data references
             let inputsJsonStr = String(cString: inputsDescJson)
             guard let inputsData = inputsJsonStr.data(using: .utf8),
-                  let _inputsDict = try JSONSerialization.jsonObject(with: inputsData) as? [String: Any]
+                  let inputsDict = try JSONSerialization.jsonObject(with: inputsData) as? [String: Any]
             else {
                 throw NSError(domain: "CoreMLBridge", code: 4, userInfo: [NSLocalizedDescriptionKey: "Invalid inputs JSON"])
             }
 
-            // Create feature provider from inputs (mock: empty dict)
-            let provider = try MLDictionaryFeatureProvider(dictionary: [:])
+            // Build MLFeatureProvider from binary tensor data
+            var features: [String: MLFeatureValue] = [:]
+            if let descriptors = inputsDict["descriptors"] as? [[String: Any]],
+               let dataPath = inputsDict["data_path"] as? String {
+                
+                // Load binary data from temp file
+                let dataURL = URL(fileURLWithPath: dataPath)
+                let tensorData = try Data(contentsOf: dataURL)
+                
+                // Create MLMultiArray from binary data for each descriptor
+                for descriptor in descriptors {
+                    guard let name = descriptor["name"] as? String,
+                          let shape = descriptor["shape"] as? [Int],
+                          let dtype = descriptor["dtype"] as? String,
+                          let offset = descriptor["data_offset"] as? Int,
+                          let size = descriptor["data_size"] as? Int
+                    else {
+                        throw NSError(domain: "CoreMLBridge", code: 6,
+                                     userInfo: [NSLocalizedDescriptionKey: "Invalid tensor descriptor"])
+                    }
+                    
+                    // Create MLMultiArray from binary data
+                    let multiArray = try createMLMultiArray(data: tensorData, shape: shape, dtype: dtype, offset: offset, size: size)
+                    features[name] = MLFeatureValue(multiArray: multiArray)
+                }
+            }
+
+            let provider = try MLDictionaryFeatureProvider(dictionary: features)
 
             // Run prediction
-            let _prediction = try mlModel.prediction(from: provider)
+            let prediction = try mlModel.prediction(from: provider)
 
-            // Build output JSON (mock: empty)
+            // Serialize outputs to binary format
             var outputs: [String: Any] = [:]
+            for (name, feature) in prediction.featureValueDictionary {
+                if let multiArray = feature.multiArrayValue {
+                    // Write binary data to temp file
+                    let tempPath = FileManager.default.temporaryDirectory
+                        .appendingPathComponent("\(UUID().uuidString).bin")
+                    let data = multiArrayToData(multiArray)
+                    try data.write(to: tempPath)
+
+                    outputs[name] = [
+                        "data_path": tempPath.path,
+                        "shape": Array(multiArray.shape.map { $0.intValue }),
+                        "dtype": dtypeFromMLMultiArray(multiArray)
+                    ]
+                }
+            }
             let jsonData = try JSONSerialization.data(withJSONObject: outputs)
             guard let jsonString = String(data: jsonData, encoding: .utf8) else {
                 throw NSError(domain: "CoreMLBridge", code: 5, userInfo: [NSLocalizedDescriptionKey: "Failed to encode output JSON"])
@@ -229,4 +270,55 @@ public func coreml_predict(
 public func coreml_free_cstr(s: UnsafeMutablePointer<CChar>?) {
     guard let ptr = s else { return }
     free(ptr)
+}
+
+// MARK: - Helper Functions
+
+/// Create MLMultiArray from binary data
+private func createMLMultiArray(data: Data, shape: [Int], dtype: String, offset: Int, size: Int) throws -> MLMultiArray {
+    let mlShape = shape.map { NSNumber(value: $0) }
+    let dataType: MLMultiArrayDataType = dtype == "f32" ? .float32 : 
+                                         dtype == "f16" ? .float16 : .int32
+    let multiArray = try MLMultiArray(shape: mlShape, dataType: dataType)
+    
+    // Copy data into multiArray starting from offset
+    let dataSlice = data.subdata(in: offset..<(offset + size))
+    let pointer = multiArray.dataPointer.bindMemory(to: UInt8.self, capacity: size)
+    dataSlice.withUnsafeBytes { bytes in
+        pointer.initialize(from: bytes.bindMemory(to: UInt8.self).baseAddress!, count: size)
+    }
+    
+    return multiArray
+}
+
+/// Convert MLMultiArray to binary Data
+private func multiArrayToData(_ multiArray: MLMultiArray) -> Data {
+    let count = multiArray.count
+    let dataType = multiArray.dataType
+    
+    switch dataType {
+    case .float32:
+        let pointer = multiArray.dataPointer.bindMemory(to: Float32.self, capacity: count)
+        return Data(bytes: pointer, count: count * MemoryLayout<Float32>.size)
+    case .float16:
+        let pointer = multiArray.dataPointer.bindMemory(to: Float16.self, capacity: count)
+        return Data(bytes: pointer, count: count * MemoryLayout<Float16>.size)
+    case .int32:
+        let pointer = multiArray.dataPointer.bindMemory(to: Int32.self, capacity: count)
+        return Data(bytes: pointer, count: count * MemoryLayout<Int32>.size)
+    default:
+        // Fallback to raw bytes
+        let pointer = multiArray.dataPointer.bindMemory(to: UInt8.self, capacity: count)
+        return Data(bytes: pointer, count: count)
+    }
+}
+
+/// Get dtype string from MLMultiArray
+private func dtypeFromMLMultiArray(_ multiArray: MLMultiArray) -> String {
+    switch multiArray.dataType {
+    case .float32: return "f32"
+    case .float16: return "f16"
+    case .int32: return "i32"
+    default: return "f32"
+    }
 }

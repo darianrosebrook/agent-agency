@@ -8,7 +8,7 @@
 use crate::core_ml_bridge::{with_autorelease_pool, CoreMLModel};
 use crate::inference::{
     CapabilityReport, ComputeUnits, DType, InferenceEngine, IoSchema, ModelArtifact,
-    PreparedModel, PrepareOptions, TensorMap, TensorSpec,
+    PreparedModel, PrepareOptions, TensorMap, TensorSpec, TensorBatch,
 };
 use crate::telemetry::{TelemetryCollector, FailureMode};
 use anyhow::Result;
@@ -632,6 +632,10 @@ impl InferenceEngine for CoreMLBackend {
             anyhow::bail!(reason);
         }
 
+        // For long-running inference loops, autorelease pool flushing is handled
+        // by the per-call autoreleasepool in Swift, with additional Rust-side
+        // pool management for extra safety
+
         // Cast to concrete type
         let prepared = mdl as *const dyn PreparedModel as *const PreparedCoreMLModel;
         let prepared = unsafe { &*prepared };
@@ -642,8 +646,10 @@ impl InferenceEngine for CoreMLBackend {
             anyhow::bail!("No input tensors provided");
         }
 
-        // Build inputs JSON (mock)
-        let inputs_json = "{}";
+        // Serialize inputs to binary format with temp file
+        let temp_dir = std::env::temp_dir();
+        let batch = TensorBatch::from_tensor_map(inputs, &prepared.io_schema)?;
+        let inputs_json = batch.to_json_with_data_path(&temp_dir)?;
 
         // Run prediction with timeout and track latency
         let infer_start = Instant::now();
@@ -690,8 +696,12 @@ impl InferenceEngine for CoreMLBackend {
 
         let outputs_json = predict_result?;
 
-        // Parse CoreML prediction outputs from JSON format
-        let outputs = self.parse_coreml_outputs(&outputs_json, &mdl.io_schema())?;
+        // Deserialize binary outputs
+        let output_batch = TensorBatch::from_json_with_data_path(&outputs_json)?;
+        let outputs = output_batch.to_tensor_map()?;
+
+        // Clean up temp files
+        output_batch.cleanup_temp_files()?;
 
         Ok(outputs)
     }

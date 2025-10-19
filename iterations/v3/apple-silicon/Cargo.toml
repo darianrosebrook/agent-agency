@@ -26,6 +26,7 @@ once_cell = "1.19"
 # metal-performance-shaders = "0.1"  # This crate doesn't exist, will use Metal directly
 
 # Core ML integration
+objc2 = "0.5"
 objc2-core-ml = "0.3"
 objc2-foundation = "0.3"
 
@@ -33,12 +34,18 @@ objc2-foundation = "0.3"
 candle-core = "0.9.1"
 candle-nn = "0.9.1"
 candle-transformers = "0.9.1"
+safetensors = "0.4"
+ort = { version = "2.0.0-rc.10", optional = true }  # ONNX Runtime - optional
 
 # System monitoring
 sysinfo = "0.30"
 
 # Directory utilities
 dirs = "5.0"
-
 [dev-dependencies]
 tokio-test = "0.4"
+
+[features]
+default = ["cpu"]
+cpu = []
+coreml = []

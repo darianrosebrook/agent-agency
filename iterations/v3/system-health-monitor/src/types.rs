@@ -63,6 +63,8 @@ pub struct SystemMetrics {
     pub disk_io: u64,
     /// Detailed disk I/O metrics
     pub disk_io_metrics: DiskIOMetrics,
+    /// Comprehensive disk usage metrics
+    pub disk_usage_metrics: DiskUsageMetrics,
     /// Timestamp
     pub timestamp: DateTime<Utc>,
 }
@@ -126,6 +128,162 @@ pub enum DiskHealthStatus {
     Unhealthy,
     /// Disk status unknown
     Unknown,
+}
+
+/// Comprehensive disk usage metrics
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DiskUsageMetrics {
+    /// Per-filesystem disk usage
+    pub filesystem_usage: HashMap<String, FilesystemUsage>,
+    /// Total disk space across all filesystems
+    pub total_disk_space: u64,
+    /// Total used disk space across all filesystems
+    pub total_used_space: u64,
+    /// Total available disk space across all filesystems
+    pub total_available_space: u64,
+    /// Overall disk usage percentage
+    pub overall_usage_percentage: f64,
+    /// Disk usage trends and predictions
+    pub usage_trends: DiskUsageTrends,
+    /// Filesystem health status
+    pub filesystem_health: HashMap<String, FilesystemHealth>,
+    /// Inode usage statistics
+    pub inode_usage: HashMap<String, InodeUsage>,
+}
+
+/// Per-filesystem usage information
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FilesystemUsage {
+    /// Filesystem mount point
+    pub mount_point: String,
+    /// Filesystem type (ext4, NTFS, APFS, etc.)
+    pub filesystem_type: String,
+    /// Total disk space in bytes
+    pub total_space: u64,
+    /// Used disk space in bytes
+    pub used_space: u64,
+    /// Available disk space in bytes
+    pub available_space: u64,
+    /// Usage percentage (0.0 to 100.0)
+    pub usage_percentage: f64,
+    /// Disk device name
+    pub device_name: String,
+    /// Mount options
+    pub mount_options: String,
+}
+
+/// Disk usage trends and predictions
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DiskUsageTrends {
+    /// Historical usage data points
+    pub historical_usage: Vec<DiskUsageDataPoint>,
+    /// Predicted usage in 24 hours
+    pub predicted_usage_24h: f64,
+    /// Predicted usage in 7 days
+    pub predicted_usage_7d: f64,
+    /// Predicted usage in 30 days
+    pub predicted_usage_30d: f64,
+    /// Days until 90% capacity
+    pub days_until_90_percent: Option<u32>,
+    /// Days until 95% capacity
+    pub days_until_95_percent: Option<u32>,
+    /// Growth rate (bytes per day)
+    pub growth_rate_bytes_per_day: f64,
+}
+
+/// Historical disk usage data point
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DiskUsageDataPoint {
+    /// Timestamp
+    pub timestamp: DateTime<Utc>,
+    /// Usage percentage at this time
+    pub usage_percentage: f64,
+    /// Used space in bytes
+    pub used_space: u64,
+}
+
+/// Filesystem health information
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FilesystemHealth {
+    /// Filesystem mount point
+    pub mount_point: String,
+    /// Health status
+    pub health_status: FilesystemHealthStatus,
+    /// Error count
+    pub error_count: u32,
+    /// Last filesystem check timestamp
+    pub last_check: Option<DateTime<Utc>>,
+    /// Fragmentation level (0.0 to 1.0)
+    pub fragmentation_level: f64,
+    /// Mount status
+    pub mount_status: MountStatus,
+    /// Filesystem errors
+    pub filesystem_errors: Vec<FilesystemError>,
+}
+
+/// Filesystem health status
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum FilesystemHealthStatus {
+    /// Filesystem is healthy
+    Healthy,
+    /// Filesystem has warnings
+    Warning,
+    /// Filesystem has errors
+    Error,
+    /// Filesystem status unknown
+    Unknown,
+}
+
+/// Mount status
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum MountStatus {
+    /// Filesystem is mounted
+    Mounted,
+    /// Filesystem is unmounted
+    Unmounted,
+    /// Mount status unknown
+    Unknown,
+}
+
+/// Filesystem error information
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FilesystemError {
+    /// Error type
+    pub error_type: String,
+    /// Error message
+    pub error_message: String,
+    /// Error timestamp
+    pub timestamp: DateTime<Utc>,
+    /// Error severity
+    pub severity: ErrorSeverity,
+}
+
+/// Error severity levels
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ErrorSeverity {
+    /// Low severity
+    Low,
+    /// Medium severity
+    Medium,
+    /// High severity
+    High,
+    /// Critical severity
+    Critical,
+}
+
+/// Inode usage statistics
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InodeUsage {
+    /// Filesystem mount point
+    pub mount_point: String,
+    /// Total inodes
+    pub total_inodes: u64,
+    /// Used inodes
+    pub used_inodes: u64,
+    /// Available inodes
+    pub available_inodes: u64,
+    /// Inode usage percentage (0.0 to 100.0)
+    pub inode_usage_percentage: f64,
 }
 
 /// Agent health metrics
@@ -274,6 +432,54 @@ pub struct EmbeddingMetrics {
     pub cache_hit_rate: f64,
     /// Model health status
     pub model_health_status: String,
+}
+
+/// Embedding service performance metrics
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EmbeddingServicePerformance {
+    /// Total requests processed
+    pub total_requests: u64,
+    /// Successful requests
+    pub successful_requests: u64,
+    /// Failed requests
+    pub failed_requests: u64,
+    /// Average response time in milliseconds
+    pub avg_response_time_ms: f64,
+    /// Cache hits
+    pub cache_hits: u64,
+    /// Cache misses
+    pub cache_misses: u64,
+    /// Model load time in milliseconds
+    pub model_load_time_ms: f64,
+    /// Memory usage in MB
+    pub memory_usage_mb: f64,
+    /// GPU utilization (0.0 to 1.0)
+    pub gpu_utilization: f64,
+    /// Current queue depth
+    pub queue_depth: u32,
+}
+
+/// Embedding performance data
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EmbeddingPerformanceData {
+    /// Throughput in requests per second
+    pub throughput_requests_per_second: f64,
+    /// 99th percentile latency in milliseconds
+    pub latency_p99_ms: f64,
+    /// 95th percentile latency in milliseconds
+    pub latency_p95_ms: f64,
+    /// 50th percentile latency in milliseconds
+    pub latency_p50_ms: f64,
+    /// Error rate (0.0 to 1.0)
+    pub error_rate: f64,
+    /// Availability percentage
+    pub availability_percentage: f64,
+    /// Model accuracy score
+    pub model_accuracy: f64,
+    /// Embedding dimension
+    pub embedding_dimension: u32,
+    /// Batch size used
+    pub batch_size: u32,
 }
 
 /// Historical metrics summary

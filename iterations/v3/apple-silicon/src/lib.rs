@@ -35,8 +35,8 @@ pub use core_ml_bridge::CoreMLModel;
 pub use telemetry::{CoreMLMetrics, TelemetryCollector, FailureMode};
 pub use core_ml::CoreMLManager;
 pub use inference::{
-    CapabilityReport, ComputeUnits, DType, InferenceEngine, IoSchema, ModelArtifact, PreparedModel,
-    PrepareOptions, TensorMap,
+    CapabilityReport, ComputeUnits, DType, InferenceEngine, IoSchema, ModelArtifact, ModelFmt, PreparedModel,
+    PrepareOptions, TensorMap, TensorSpec,
 };
 pub use memory::MemoryManager;
 pub use metal_gpu::MetalGPUManager;
