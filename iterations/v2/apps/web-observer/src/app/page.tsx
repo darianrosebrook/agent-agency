@@ -106,6 +106,7 @@ export default function Dashboard() {
             className="space-y-6"
           >
             <ObservabilityDashboard apiClient={apiClient} />
+            <HealthCheckRunner apiClient={apiClient} />
             <DebugPanel apiClient={apiClient} />
             <DatabaseAuditPanel apiClient={apiClient} />
             <PerformanceMonitor apiClient={apiClient} />

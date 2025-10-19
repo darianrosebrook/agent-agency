@@ -174,7 +174,7 @@ export default function TaskTraceViewer({ apiClient }: TaskTraceViewerProps) {
     setLoading(true);
     try {
       // Find the task in recent tasks or fetch from API
-      const task = recentTasks.find(t => t.taskId === taskId);
+      const task = recentTasks.find((t) => t.taskId === taskId);
       if (task) {
         setTaskTrace(task);
       } else {
@@ -288,9 +288,7 @@ export default function TaskTraceViewer({ apiClient }: TaskTraceViewerProps) {
                   <div>
                     Created: {new Date(task.createdAt).toLocaleTimeString()}
                   </div>
-                  {task.agentName && (
-                    <div>Agent: {task.agentName}</div>
-                  )}
+                  {task.agentName && <div>Agent: {task.agentName}</div>}
                   {task.duration && (
                     <div>Duration: {formatDuration(task.duration)}</div>
                   )}
@@ -374,10 +372,7 @@ export default function TaskTraceViewer({ apiClient }: TaskTraceViewerProps) {
                 </h4>
                 <div className="space-y-4">
                   {taskTrace.steps.map((step, index) => (
-                    <div
-                      key={step.id}
-                      className="relative"
-                    >
+                    <div key={step.id} className="relative">
                       {/* Timeline line */}
                       {index < taskTrace.steps.length - 1 && (
                         <div className="absolute left-6 top-12 w-0.5 h-8 bg-gray-300"></div>
@@ -423,7 +418,8 @@ export default function TaskTraceViewer({ apiClient }: TaskTraceViewerProps) {
 
                           <div className="text-xs text-gray-600 space-y-1">
                             <div>
-                              Started: {new Date(step.startedAt).toLocaleString()}
+                              Started:{" "}
+                              {new Date(step.startedAt).toLocaleString()}
                             </div>
                             {step.completedAt && (
                               <div>
@@ -437,23 +433,25 @@ export default function TaskTraceViewer({ apiClient }: TaskTraceViewerProps) {
                           </div>
 
                           {/* Expandable metadata */}
-                          {step.metadata && Object.keys(step.metadata).length > 0 && (
-                            <div className="mt-2">
-                              <button
-                                onClick={() => toggleStepExpansion(step.id)}
-                                className="text-xs text-blue-600 hover:text-blue-800"
-                              >
-                                {expandedSteps.has(step.id) ? "Hide" : "Show"} Details
-                              </button>
-                              {expandedSteps.has(step.id) && (
-                                <div className="mt-2 p-2 bg-gray-50 rounded text-xs">
-                                  <pre className="whitespace-pre-wrap">
-                                    {JSON.stringify(step.metadata, null, 2)}
-                                  </pre>
-                                </div>
-                              )}
-                            </div>
-                          )}
+                          {step.metadata &&
+                            Object.keys(step.metadata).length > 0 && (
+                              <div className="mt-2">
+                                <button
+                                  onClick={() => toggleStepExpansion(step.id)}
+                                  className="text-xs text-blue-600 hover:text-blue-800"
+                                >
+                                  {expandedSteps.has(step.id) ? "Hide" : "Show"}{" "}
+                                  Details
+                                </button>
+                                {expandedSteps.has(step.id) && (
+                                  <div className="mt-2 p-2 bg-gray-50 rounded text-xs">
+                                    <pre className="whitespace-pre-wrap">
+                                      {JSON.stringify(step.metadata, null, 2)}
+                                    </pre>
+                                  </div>
+                                )}
+                              </div>
+                            )}
                         </div>
                       </div>
                     </div>
