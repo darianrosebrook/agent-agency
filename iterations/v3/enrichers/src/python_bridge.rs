@@ -199,6 +199,7 @@ except Exception as e:
             caption: blip_result.caption,
             confidence: blip_result.confidence,
             tags: blip_result.tags,
+            processing_time_ms: 0,
         })
     }
 
@@ -206,36 +207,55 @@ except Exception as e:
     fn convert_whisperx_to_asr_result(
         whisperx: WhisperXOutput,
     ) -> Result<crate::types::AsrResult> {
-        let mut speech_turns = Vec::new();
+        let mut segments = Vec::new();
+        let mut speaker_map: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
 
         for segment in whisperx.segments {
             let mut word_timings = Vec::new();
 
             for word in segment.words {
                 word_timings.push(crate::types::WordTiming {
-                    word: word.word,
-                    start: word.start,
-                    end: word.end,
+                    t0: word.start,
+                    t1: word.end,
+                    token: word.word,
                     confidence: word.score,
                 });
             }
 
-            speech_turns.push(crate::types::SpeechTurn {
+            segments.push(crate::types::SpeechSegment {
                 id: Uuid::new_v4(),
                 speaker_id: segment.speaker.clone(),
-                start_time: segment.start,
-                end_time: segment.end,
+                t0: segment.start,
+                t1: segment.end,
                 text: segment.text,
-                confidence: 0.9, // Average confidence
+                confidence: 0.9,
                 word_timings,
             });
+
+            // Track speakers for speaker list
+            if let Some(speaker) = segment.speaker.clone() {
+                let entry = speaker_map.entry(speaker).or_insert(0);
+                *entry += 1;
+            }
         }
 
+        // Convert speaker map to Speaker structs
+        let speakers: Vec<crate::types::Speaker> = speaker_map
+            .into_iter()
+            .map(|(id, turn_count)| crate::types::Speaker {
+                speaker_id: id,
+                name: None,
+                turn_count,
+                total_duration_ms: 0, // Computed during playback if needed
+            })
+            .collect();
+
         Ok(crate::types::AsrResult {
-            text: whisperx.text,
+            turns: segments,
+            speakers,
             language: Some(whisperx.language),
             confidence: 0.9,
-            speech_turns,
+            processing_time_ms: 0,
         })
     }
 

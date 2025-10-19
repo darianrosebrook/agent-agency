@@ -253,7 +253,7 @@ impl VectorSearchEngine {
 
             let response = self
                 .client
-                .scroll(&scroll_request)
+                .scroll(scroll_request)
                 .await
                 .context("Vector search scroll failed")?;
 
@@ -991,7 +991,7 @@ impl VectorSearchEngine {
     }
 
     async fn persist_embedding(&self, text: &str, embedding: &[f32]) -> Result<()> {
-        let _lock = self.persistent_cache_lock.clone().lock_owned().await;
+        let _guard = self.persistent_cache_lock.lock().await;
         let mut persistent_cache = self.read_persistent_cache().await?;
         persistent_cache.insert(
             text.to_string(),

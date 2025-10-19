@@ -2711,4 +2711,79 @@ mod tests {
         );
         Ok(())
     }
+
+    #[tokio::test]
+    async fn persist_performance_update_records_historical_metrics() -> Result<()> {
+        let mut coordinator = MultiTurnLearningCoordinator::new(LearningConfig::default());
+        let session = coordinator
+            .start_session(sample_task(TaskType::Testing))
+            .await?;
+
+        let performance_update = PerformanceUpdate {
+            average_completion_time: Duration::minutes(5),
+            average_quality_score: 0.82,
+            success_rate: 0.91,
+            efficiency_improvement: 0.14,
+        };
+
+        let pattern_updates = vec![PatternUpdate {
+            pattern_type: PatternType::SuccessPattern,
+            frequency_change: 0.15,
+            impact_change: 0.1,
+            mitigation_effectiveness: 0.92,
+        }];
+
+        coordinator
+            .persist_performance_update(&session, &performance_update, &pattern_updates)
+            .await
+            .expect("persistence should succeed");
+
+        let stored = coordinator
+            .historical_performance
+            .get(&session.task_type)
+            .expect("historical performance entry should exist after persistence");
+        assert!(
+            stored.average_quality_score > 0.0,
+            "quality metric should be recorded"
+        );
+        assert!(
+            stored.success_rate > 0.0,
+            "success rate should be persisted"
+        );
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn rollback_performance_update_clears_historical_entry() -> Result<()> {
+        let mut coordinator = MultiTurnLearningCoordinator::new(LearningConfig::default());
+        let session = coordinator
+            .start_session(sample_task(TaskType::Documentation))
+            .await?;
+
+        coordinator.historical_performance.insert(
+            session.task_type.clone(),
+            HistoricalPerformance {
+                task_type: session.task_type.clone(),
+                average_completion_time: Duration::minutes(7),
+                average_quality_score: 0.7,
+                success_rate: 0.65,
+                common_failure_patterns: Vec::new(),
+            },
+        );
+
+        coordinator
+            .rollback_performance_update(&session)
+            .await
+            .expect("rollback should not fail");
+
+        assert!(
+            !coordinator
+                .historical_performance
+                .contains_key(&session.task_type),
+            "rollback should remove persisted entry"
+        );
+
+        Ok(())
+    }
 }

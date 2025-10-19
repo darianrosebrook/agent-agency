@@ -177,6 +177,9 @@ impl ProgressTracker {
         // Check for milestones
         self.check_milestones(session_id, old_completion, &new_metrics);
 
+        // Update monitoring state with new metrics
+        self.update_monitoring_state(session_id, &new_metrics);
+
         debug!("Updated progress for session {}: completion {:.1}%", session_id, new_metrics.completion_percentage);
         Ok(())
     }
@@ -257,6 +260,10 @@ impl ProgressTracker {
         // Update performance baselines
         self.update_performance_baseline(&session);
 
+        // Remove monitoring state once session completes
+        self.monitoring_state.remove(&session_id);
+        self.monitoring_analytics.remove(&session_id);
+
         info!("Completed tracking session: {}", session_id);
         Ok(session)
     }
@@ -315,24 +322,11 @@ impl ProgressTracker {
         });
 
         // 3. Progress monitoring: Start monitoring learning progress
-        // Initialize any monitoring timers or background tasks here
-        // TODO: Implement progress monitoring with the following requirements:
-        // 1. Monitoring system setup: Set up comprehensive progress monitoring systems
-        //    - Initialize monitoring timers and background tasks for progress tracking
-        //    - Set up progress monitoring infrastructure and services
-        //    - Handle monitoring system configuration and optimization
-        // 2. Progress tracking: Track learning progress and performance metrics
-        //    - Monitor learning progress quality and efficiency metrics
-        //    - Track progress trends and optimization opportunities
-        //    - Handle progress tracking validation and quality assurance
-        // 3. Monitoring analytics: Generate progress monitoring analytics and insights
-        //    - Analyze progress monitoring data for insights and optimization
-        //    - Generate progress monitoring reports and visualizations
-        //    - Handle monitoring analytics optimization and performance
-        // 4. Performance optimization: Optimize progress monitoring performance and reliability
-        //    - Implement progress monitoring caching and optimization strategies
-        //    - Handle monitoring performance analytics and reporting
-        //    - Ensure progress monitoring meets performance and reliability standards
+        self.initialize_monitoring_state(session);
+        let analytics = self.build_monitoring_analytics(&session.progress, None);
+        self.monitoring_analytics
+            .insert(session.id, analytics);
+
         debug!("Progress tracking initialized for session {}: baseline quality={:.2}, efficiency={:.2}",
                session.id, session.progress.quality_score, session.progress.efficiency_score);
 
@@ -451,6 +445,136 @@ impl ProgressTracker {
         }
 
         suggestions
+    }
+
+    fn initialize_monitoring_state(&mut self, session: &LearningSession) {
+        let state = MonitoringState {
+            last_snapshot: session.start_time,
+            next_evaluation: session.start_time + chrono::Duration::minutes(5),
+            sample_count: 1,
+            rolling_metrics: session.progress.clone(),
+            anomaly_flags: Vec::new(),
+        };
+        self.monitoring_state.insert(session.id, state);
+    }
+
+    fn update_monitoring_state(&mut self, session_id: Uuid, new_metrics: &ProgressMetrics) {
+        let now = Utc::now();
+        if let Some(state) = self.monitoring_state.get_mut(&session_id) {
+            let previous_metrics = state.rolling_metrics.clone();
+            let updated_count = state.sample_count.saturating_add(1);
+            state.rolling_metrics = self.combine_metrics(&state.rolling_metrics, new_metrics, updated_count);
+            state.sample_count = updated_count;
+            state.last_snapshot = now;
+            state.next_evaluation = now + chrono::Duration::minutes(5);
+            self.update_anomaly_flags(state, new_metrics, &previous_metrics);
+
+            let analytics = self.build_monitoring_analytics(new_metrics, Some(&previous_metrics));
+            self.monitoring_analytics.insert(session_id, analytics);
+        } else if let Some(session) = self.active_sessions.get(&session_id) {
+            self.initialize_monitoring_state(session);
+            let analytics = self.build_monitoring_analytics(new_metrics, None);
+            self.monitoring_analytics.insert(session_id, analytics);
+        }
+    }
+
+    fn build_monitoring_analytics(
+        &self,
+        metrics: &ProgressMetrics,
+        previous_metrics: Option<&ProgressMetrics>,
+    ) -> MonitoringAnalytics {
+        let momentum = ((metrics.learning_velocity * 0.6)
+            + (metrics.completion_percentage / 100.0) * 0.4)
+            .clamp(0.0, 2.0);
+
+        let health = ((metrics.quality_score + metrics.efficiency_score + (1.0 - metrics.error_rate))
+            / 3.0)
+            .clamp(0.0, 1.0);
+
+        let volatility = previous_metrics
+            .map(|previous| self.calculate_metric_distance(previous, metrics))
+            .unwrap_or(0.0);
+
+        MonitoringAnalytics {
+            momentum_score: momentum,
+            health_score: health,
+            volatility_score: volatility,
+        }
+    }
+
+    fn combine_metrics(
+        &self,
+        rolling: &ProgressMetrics,
+        latest: &ProgressMetrics,
+        sample_count: u32,
+    ) -> ProgressMetrics {
+        if sample_count <= 1 {
+            return latest.clone();
+        }
+
+        let total = sample_count as f64;
+        let previous_weight = (total - 1.0) / total;
+        let new_weight = 1.0 / total;
+
+        ProgressMetrics {
+            completion_percentage: rolling.completion_percentage * previous_weight
+                + latest.completion_percentage * new_weight,
+            quality_score: rolling.quality_score * previous_weight
+                + latest.quality_score * new_weight,
+            efficiency_score: rolling.efficiency_score * previous_weight
+                + latest.efficiency_score * new_weight,
+            error_rate: rolling.error_rate * previous_weight + latest.error_rate * new_weight,
+            learning_velocity: rolling.learning_velocity * previous_weight
+                + latest.learning_velocity * new_weight,
+        }
+    }
+
+    fn update_anomaly_flags(
+        &self,
+        state: &mut MonitoringState,
+        latest: &ProgressMetrics,
+        previous: &ProgressMetrics,
+    ) {
+        let mut new_flags = Vec::new();
+
+        if latest.error_rate > 0.35 {
+            new_flags.push(format!("Elevated error rate {:.2}", latest.error_rate));
+        }
+
+        if latest.quality_score < 0.6 {
+            new_flags.push(format!("Quality dip detected at {:.2}", latest.quality_score));
+        }
+
+        let completion_delta = (latest.completion_percentage - previous.completion_percentage).abs();
+        if completion_delta < 0.5 && latest.learning_velocity < 0.05 {
+            new_flags.push("Learning velocity stagnation detected".to_string());
+        }
+
+        if latest.efficiency_score < 0.5 && previous.efficiency_score - latest.efficiency_score > 0.1
+        {
+            new_flags.push("Efficiency regression observed".to_string());
+        }
+
+        if !new_flags.is_empty() {
+            state.anomaly_flags.extend(new_flags);
+            if state.anomaly_flags.len() > 5 {
+                let excess = state.anomaly_flags.len() - 5;
+                state.anomaly_flags.drain(0..excess);
+            }
+        }
+    }
+
+    fn calculate_metric_distance(
+        &self,
+        previous: &ProgressMetrics,
+        current: &ProgressMetrics,
+    ) -> f64 {
+        let quality_delta = (current.quality_score - previous.quality_score).abs();
+        let efficiency_delta = (current.efficiency_score - previous.efficiency_score).abs();
+        let velocity_delta = (current.learning_velocity - previous.learning_velocity).abs();
+        let error_delta = (current.error_rate - previous.error_rate).abs();
+
+        (quality_delta + efficiency_delta + velocity_delta + error_delta) / 4.0
     }
 
     /// Analyze performance trends for a session

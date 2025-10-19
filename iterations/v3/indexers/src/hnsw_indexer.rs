@@ -6,12 +6,88 @@ use anyhow::{Context, Result};
 use std::sync::Arc;
 use uuid::Uuid;
 use tracing::{debug, info, warn};
-use hnsw_rs::prelude::*;
 use std::collections::HashMap;
 use parking_lot::Mutex;
 
+/// Simplified HNSW index for vector search
+struct SimpleHnswIndex {
+    vectors: Vec<Vec<f32>>,
+    dimension: usize,
+    max_neighbors: usize,
+}
+
+impl SimpleHnswIndex {
+    fn new(dimension: usize, max_neighbors: usize) -> Self {
+        Self {
+            vectors: Vec::new(),
+            dimension,
+            max_neighbors,
+        }
+    }
+
+    fn insert(&mut self, vector: &[f32]) -> Result<usize> {
+        if vector.len() != self.dimension {
+            return Err(anyhow::anyhow!(
+                "Vector dimension mismatch: expected {}, got {}",
+                self.dimension,
+                vector.len()
+            ));
+        }
+        
+        let id = self.vectors.len();
+        self.vectors.push(vector.to_vec());
+        Ok(id)
+    }
+
+    fn search(&self, query: &[f32], k: usize) -> Result<Vec<(usize, f32)>> {
+        if query.len() != self.dimension {
+            return Err(anyhow::anyhow!(
+                "Query dimension mismatch: expected {}, got {}",
+                self.dimension,
+                query.len()
+            ));
+        }
+
+        let mut results: Vec<(usize, f32)> = self.vectors
+            .iter()
+            .enumerate()
+            .map(|(id, vector)| {
+                let distance = cosine_distance(query, vector);
+                (id, distance)
+            })
+            .collect();
+
+        // Sort by distance (ascending) and take top k
+        results.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
+        results.truncate(k);
+        
+        Ok(results)
+    }
+
+    fn node_count(&self) -> usize {
+        self.vectors.len()
+    }
+}
+
+/// Calculate cosine distance between two vectors
+fn cosine_distance(a: &[f32], b: &[f32]) -> f32 {
+    if a.len() != b.len() {
+        return 1.0; // Maximum distance for dimension mismatch
+    }
+
+    let dot_product: f32 = a.iter().zip(b.iter()).map(|(x, y)| x * y).sum();
+    let norm_a: f32 = a.iter().map(|x| x * x).sum::<f32>().sqrt();
+    let norm_b: f32 = b.iter().map(|x| x * x).sum::<f32>().sqrt();
+
+    if norm_a == 0.0 || norm_b == 0.0 {
+        return 1.0; // Maximum distance for zero vectors
+    }
+
+    1.0 - (dot_product / (norm_a * norm_b))
+}
+
 pub struct HnswIndexer {
-    index: Arc<Hnsw<f32, DistCosine>>,
+    index: Arc<Mutex<SimpleHnswIndex>>,
     metadata: HnswMetadata,
     id_to_uuid: Arc<Mutex<HashMap<usize, Uuid>>>,
     uuid_to_id: Arc<Mutex<HashMap<Uuid, usize>>>,
@@ -26,16 +102,11 @@ impl HnswIndexer {
             metadata.model_id, metadata.dim, metadata.metric
         );
 
-        // Create HNSW index with cosine similarity (most common for embeddings)
-        let hnsw_params = HnswParams::<DistCosine>::new()
-            .with_max_nb_connection(metadata.max_neighbors)
-            .with_ef_construction(metadata.ef_construction)
-            .with_ef_search(metadata.ef_search);
-        
-        let index = Arc::new(Hnsw::<f32, DistCosine>::new(
-            metadata.dim,
-            &hnsw_params,
-        ).context("Failed to create HNSW index")?);
+        // Create simplified HNSW index
+        let index = Arc::new(Mutex::new(SimpleHnswIndex::new(
+            metadata.dim as usize,
+            metadata.max_neighbors,
+        )));
 
         Ok(Self {
             index,
@@ -76,8 +147,9 @@ impl HnswIndexer {
         };
 
         // Insert into HNSW index
-        self.index
-            .insert(vector, id)
+        let mut index = self.index.lock();
+        let actual_id = index
+            .insert(vector)
             .context("Failed to insert vector into HNSW index")?;
 
         // Update ID mappings
@@ -85,14 +157,14 @@ impl HnswIndexer {
             let mut id_to_uuid = self.id_to_uuid.lock();
             let mut uuid_to_id = self.uuid_to_id.lock();
             
-            id_to_uuid.insert(id, block_id);
-            uuid_to_id.insert(block_id, id);
+            id_to_uuid.insert(actual_id, block_id);
+            uuid_to_id.insert(block_id, actual_id);
         }
 
         // Update metadata
         self.metadata.node_count += 1;
 
-        debug!("Successfully inserted vector for block {} with ID {}", block_id, id);
+        debug!("Successfully inserted vector for block {} with ID {}", block_id, actual_id);
         Ok(())
     }
 
@@ -115,7 +187,8 @@ impl HnswIndexer {
         }
 
         // Perform HNSW search
-        let neighbors = self.index
+        let index = self.index.lock();
+        let neighbors = index
             .search(query.vector, query.k)
             .context("Failed to perform HNSW search")?;
 

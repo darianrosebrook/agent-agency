@@ -25,8 +25,7 @@ lru = "0.12"
 
 # Search and indexing
 tantivy = "0.24"  # BM25 full-text search
-hnsw_rs = "0.1"   # HNSW vector search
-faiss = "0.12"    # Alternative vector search (optional)
+# Note: HNSW implementation will use a simplified approach for now
 
 [features]
 default = ["postgres"]

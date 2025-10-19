@@ -75,10 +75,60 @@ mod tests {
             //    - Implement test case prioritization and risk-based testing strategies
             //    - Handle test case maintenance and evolution with requirement changes
             //    - Support automated test case execution and result analysis
-            requirements: vec![],        // TODO: Populate with comprehensive requirements
-            acceptance_criteria: vec![], // TODO: Define detailed acceptance criteria
-            dependencies: vec![],        // TODO: Track component dependencies
-            test_cases: vec![],          // TODO: Generate comprehensive test cases
+            requirements: vec![
+                TestRequirement {
+                    requirement_id: Uuid::new_v4(),
+                    requirement_name: "Input validation".to_string(),
+                    requirement_type: "functional".to_string(),
+                    priority: Priority::High,
+                },
+                TestRequirement {
+                    requirement_id: Uuid::new_v4(),
+                    requirement_name: "Error handling".to_string(),
+                    requirement_type: "functional".to_string(),
+                    priority: Priority::High,
+                },
+                TestRequirement {
+                    requirement_id: Uuid::new_v4(),
+                    requirement_name: "Performance under load".to_string(),
+                    requirement_type: "non_functional".to_string(),
+                    priority: Priority::Medium,
+                },
+            ],
+            acceptance_criteria: vec![
+                "All inputs must be validated".to_string(),
+                "Error cases must be handled gracefully".to_string(),
+                "Response time must be < 100ms".to_string(),
+                "System must handle 1000 concurrent requests".to_string(),
+            ],
+            dependencies: vec![
+                "database_service".to_string(),
+                "cache_layer".to_string(),
+                "authentication_service".to_string(),
+            ],
+            test_cases: vec![
+                TestCase {
+                    test_id: Uuid::new_v4(),
+                    test_name: "Valid input test".to_string(),
+                    test_type: "positive".to_string(),
+                    expected_result: "Pass".to_string(),
+                    priority: Priority::High,
+                },
+                TestCase {
+                    test_id: Uuid::new_v4(),
+                    test_name: "Null input test".to_string(),
+                    test_type: "negative".to_string(),
+                    expected_result: "Graceful error".to_string(),
+                    priority: Priority::High,
+                },
+                TestCase {
+                    test_id: Uuid::new_v4(),
+                    test_name: "Load test".to_string(),
+                    test_type: "performance".to_string(),
+                    expected_result: "Passes at 1000 req/s".to_string(),
+                    priority: Priority::Medium,
+                },
+            ]
         }
     }
 
@@ -411,10 +461,60 @@ mod tests {
             //    - Implement test case prioritization and risk-based testing strategies
             //    - Handle test case maintenance and evolution with requirement changes
             //    - Support automated test case execution and result analysis
-            requirements: vec![],        // TODO: Populate with comprehensive requirements
-            acceptance_criteria: vec![], // TODO: Define detailed acceptance criteria
-            dependencies: vec![],        // TODO: Track component dependencies
-            test_cases: vec![],          // TODO: Generate comprehensive test cases
+            requirements: vec![
+                TestRequirement {
+                    requirement_id: Uuid::new_v4(),
+                    requirement_name: "Input validation".to_string(),
+                    requirement_type: "functional".to_string(),
+                    priority: Priority::High,
+                },
+                TestRequirement {
+                    requirement_id: Uuid::new_v4(),
+                    requirement_name: "Error handling".to_string(),
+                    requirement_type: "functional".to_string(),
+                    priority: Priority::High,
+                },
+                TestRequirement {
+                    requirement_id: Uuid::new_v4(),
+                    requirement_name: "Performance under load".to_string(),
+                    requirement_type: "non_functional".to_string(),
+                    priority: Priority::Medium,
+                },
+            ],
+            acceptance_criteria: vec![
+                "All inputs must be validated".to_string(),
+                "Error cases must be handled gracefully".to_string(),
+                "Response time must be < 100ms".to_string(),
+                "System must handle 1000 concurrent requests".to_string(),
+            ],
+            dependencies: vec![
+                "database_service".to_string(),
+                "cache_layer".to_string(),
+                "authentication_service".to_string(),
+            ],
+            test_cases: vec![
+                TestCase {
+                    test_id: Uuid::new_v4(),
+                    test_name: "Valid input test".to_string(),
+                    test_type: "positive".to_string(),
+                    expected_result: "Pass".to_string(),
+                    priority: Priority::High,
+                },
+                TestCase {
+                    test_id: Uuid::new_v4(),
+                    test_name: "Null input test".to_string(),
+                    test_type: "negative".to_string(),
+                    expected_result: "Graceful error".to_string(),
+                    priority: Priority::High,
+                },
+                TestCase {
+                    test_id: Uuid::new_v4(),
+                    test_name: "Load test".to_string(),
+                    test_type: "performance".to_string(),
+                    expected_result: "Passes at 1000 req/s".to_string(),
+                    priority: Priority::Medium,
+                },
+            ]
         };
 
         let insights = testing_system

@@ -18,6 +18,7 @@ pub mod metal_gpu;
 pub mod model_router;
 pub mod quantization;
 pub mod quantization_lab;
+pub mod operator_fusion;
 pub mod routing;
 #[cfg(target_os = "macos")]
 pub mod telemetry;
@@ -56,6 +57,9 @@ pub use model_router::{
 pub use quantization::QuantizationManager;
 pub use quantization_lab::{
     QuantizationLab, QuantizationType, QuantizationStrategy, QuantizationMetrics, QuantizationResult,
+};
+pub use operator_fusion::{
+    OperatorFusionEngine, Operator, OperatorType, FusionPattern, FusionResult, FusionDecision,
 };
 pub use routing::InferenceRouter;
 pub use thermal::ThermalManager;
