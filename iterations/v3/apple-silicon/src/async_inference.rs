@@ -18,8 +18,160 @@ use tokio::sync::Mutex;
 use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
-// Use placeholder types for now - will integrate with actual types later
-pub type TensorMap = HashMap<String, Vec<f32>>;
+/// Production-ready tensor data structure for async inference
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Tensor {
+    /// Raw tensor data
+    pub data: Vec<f32>,
+    /// Tensor shape (dimensions)
+    pub shape: Vec<usize>,
+    /// Data type (f32, f16, i32, etc.)
+    pub dtype: TensorDataType,
+    /// Device placement (CPU, GPU, ANE, etc.)
+    pub device: TensorDevice,
+    /// Memory layout (row-major, column-major)
+    pub layout: TensorLayout,
+    /// Optional metadata for tracking and optimization
+    pub metadata: Option<TensorMetadata>,
+}
+
+impl Tensor {
+    /// Create a new tensor with specified shape and data type
+    pub fn new(shape: Vec<usize>, dtype: TensorDataType, device: TensorDevice) -> Self {
+        let total_elements = shape.iter().product();
+        let data = match dtype {
+            TensorDataType::F32 => vec![0.0; total_elements],
+            TensorDataType::F16 => vec![f16::from_f32(0.0); total_elements],
+            TensorDataType::I32 => vec![0i32 as f32; total_elements], // Convert for unified storage
+            TensorDataType::I64 => vec![0i64 as f32; total_elements],
+            TensorDataType::Q8 => vec![0i8 as f32; total_elements], // Quantized as f32 for processing
+        };
+
+        Self {
+            data,
+            shape,
+            dtype,
+            device,
+            layout: TensorLayout::RowMajor,
+            metadata: None,
+        }
+    }
+
+    /// Create tensor from existing data
+    pub fn from_data(data: Vec<f32>, shape: Vec<usize>, dtype: TensorDataType, device: TensorDevice) -> Result<Self> {
+        let expected_elements = shape.iter().product::<usize>();
+        if data.len() != expected_elements {
+            bail!("Data length {} does not match shape {:?}", data.len(), shape);
+        }
+
+        Ok(Self {
+            data,
+            shape,
+            dtype,
+            device,
+            layout: TensorLayout::RowMajor,
+            metadata: None,
+        })
+    }
+
+    /// Get tensor element count
+    pub fn element_count(&self) -> usize {
+        self.data.len()
+    }
+
+    /// Get tensor size in bytes
+    pub fn byte_size(&self) -> usize {
+        match self.dtype {
+            TensorDataType::F32 => self.data.len() * 4,
+            TensorDataType::F16 => self.data.len() * 2,
+            TensorDataType::I32 => self.data.len() * 4,
+            TensorDataType::I64 => self.data.len() * 8,
+            TensorDataType::Q8 => self.data.len(), // Quantized to 1 byte per element
+        }
+    }
+
+    /// Reshape tensor (if element count matches)
+    pub fn reshape(&mut self, new_shape: Vec<usize>) -> Result<()> {
+        let new_elements = new_shape.iter().product::<usize>();
+        if new_elements != self.element_count() {
+            bail!("Cannot reshape: element count mismatch {} vs {}", new_elements, self.element_count());
+        }
+        self.shape = new_shape;
+        Ok(())
+    }
+
+    /// Get a slice of the tensor data
+    pub fn get_slice(&self, start: usize, end: usize) -> Result<&[f32]> {
+        if start > end || end > self.data.len() {
+            bail!("Invalid slice indices: {}..{} for length {}", start, end, self.data.len());
+        }
+        Ok(&self.data[start..end])
+    }
+
+    /// Set tensor data from slice
+    pub fn set_data(&mut self, data: &[f32]) -> Result<()> {
+        if data.len() != self.element_count() {
+            bail!("Data length {} does not match tensor size {}", data.len(), self.element_count());
+        }
+        self.data.copy_from_slice(data);
+        Ok(())
+    }
+}
+
+/// Tensor data types
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum TensorDataType {
+    /// 32-bit floating point
+    F32,
+    /// 16-bit floating point
+    F16,
+    /// 32-bit signed integer
+    I32,
+    /// 64-bit signed integer
+    I64,
+    /// 8-bit quantized
+    Q8,
+}
+
+/// Tensor device placement
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum TensorDevice {
+    /// CPU memory
+    Cpu,
+    /// GPU memory (Metal, CUDA, etc.)
+    Gpu,
+    /// Apple Neural Engine
+    Ane,
+    /// Unified memory (Apple Silicon)
+    Unified,
+}
+
+/// Tensor memory layout
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum TensorLayout {
+    /// Row-major (C-style) layout
+    RowMajor,
+    /// Column-major (Fortran-style) layout
+    ColumnMajor,
+}
+
+/// Tensor metadata for optimization and tracking
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TensorMetadata {
+    /// Creation timestamp
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    /// Last access timestamp
+    pub last_accessed: chrono::DateTime<chrono::Utc>,
+    /// Memory allocation strategy
+    pub allocation_strategy: String,
+    /// Compression information
+    pub compression: Option<String>,
+    /// Source information
+    pub source: Option<String>,
+}
+
+/// Tensor map for async inference - now using proper tensor structures
+pub type TensorMap = HashMap<String, Tensor>;
 
 /// Priority levels for inference requests
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -249,9 +401,23 @@ pub struct QueueStats {
 struct InnerAsyncEngine {
     /// Tokio runtime for async execution
     runtime: Arc<tokio::runtime::Runtime>,
-    /// Model pool for acquiring model instances (Arc wrapper for now)
+    /// TODO: Implement actual model pool for acquiring model instances
+    /// - [ ] Create model pool with pre-loaded models
+    /// - [ ] Implement model lifecycle management (load/unload/warmup)
+    /// - [ ] Add model health monitoring and automatic recovery
+    /// - [ ] Support model versioning and rollback capabilities
+    /// - [ ] Implement model sharing across requests
+    /// - [ ] Add model performance tracking per instance
+    /// - [ ] Support different model loading strategies (eager/lazy)
     model_pool: Arc<()>,
-    /// Telemetry collector for metrics (Arc wrapper for now)
+    /// TODO: Implement actual telemetry collector for metrics
+    /// - [ ] Collect inference latency and throughput metrics
+    /// - [ ] Track model performance (tokens/sec, memory usage)
+    /// - [ ] Monitor queue depths and wait times
+    /// - [ ] Implement distributed tracing for requests
+    /// - [ ] Add custom metric collection for business KPIs
+    /// - [ ] Support metric export to monitoring systems
+    /// - [ ] Implement metric aggregation and alerting
     telemetry: Arc<()>,
     /// Priority queue for managing requests
     priority_queue: Arc<Mutex<PriorityQueue>>,

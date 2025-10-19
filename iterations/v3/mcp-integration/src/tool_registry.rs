@@ -608,12 +608,24 @@ impl ToolRegistry {
         {
             let mut history = self.execution_history.write().await;
             history.push(ToolExecutionResult {
-                tool_id: tool.id,
                 request_id: request.id,
-                success: result.success,
-                execution_time_ms: total_time.as_millis() as u64,
-                error_message: if result.success { None } else { Some(result.stderr.clone()) },
-                timestamp: chrono::Utc::now(),
+                tool_id: tool.id,
+                status: if result.success { ExecutionStatus::Completed } else { ExecutionStatus::Failed },
+                output: if result.success { Some(serde_json::json!({"stdout": result.stdout, "stderr": result.stderr})) } else { None },
+                error: if result.success { None } else { Some(result.stderr.clone()) },
+                logs: vec![],
+                performance_metrics: PerformanceMetrics {
+                    execution_time_ms: total_time.as_millis() as u64,
+                    memory_usage_mb: 0,
+                    cpu_usage_percent: 0.0,
+                    disk_io_bytes: 0,
+                    network_io_bytes: 0,
+                    queue_time_ms: 0,
+                },
+                caws_compliance_result: None,
+                started_at: chrono::Utc::now() - total_time,
+                completed_at: Some(chrono::Utc::now()),
+                duration_ms: Some(total_time.as_millis() as u64),
             });
         }
 

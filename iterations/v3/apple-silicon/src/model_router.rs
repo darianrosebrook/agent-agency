@@ -211,7 +211,14 @@ impl ModelRouter {
         }
     }
 
-    /// Select a device (round-robin for now)
+    /// TODO: Replace round-robin device selection with intelligent device routing
+    /// - [ ] Implement load-based device selection algorithm
+    /// - [ ] Add device performance monitoring and scoring
+    /// - [ ] Support device specialization (ANE vs CPU vs GPU)
+    /// - [ ] Implement device health checking and failover
+    /// - [ ] Add request queuing and prioritization per device
+    /// - [ ] Support device-specific model compatibility checking
+    /// - [ ] Implement adaptive routing based on performance metrics
     async fn select_device(&self) -> Result<DeviceId> {
         if self.devices.is_empty() {
             bail!("No devices available");

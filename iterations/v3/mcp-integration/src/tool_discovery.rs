@@ -870,9 +870,18 @@ impl ToolDiscovery {
         }
 
         // Check if it's actually a socket file
-        if !path.is_socket() {
-            tracing::debug!("Path is not a socket: {}", socket_path);
-            return Ok(false);
+        match std::fs::metadata(path) {
+            Ok(metadata) => {
+                use std::os::unix::fs::FileTypeExt;
+                if !metadata.file_type().is_socket() {
+                    tracing::debug!("Path is not a socket: {}", socket_path);
+                    return Ok(false);
+                }
+            }
+            Err(_) => {
+                tracing::debug!("Cannot access socket path: {}", socket_path);
+                return Ok(false);
+            }
         }
 
         // Try to connect to the socket

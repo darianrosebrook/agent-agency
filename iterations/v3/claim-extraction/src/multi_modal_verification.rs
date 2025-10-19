@@ -1089,8 +1089,14 @@ impl MultiModalVerificationEngine {
         for requirement in requirements {
             match requirement.as_str() {
                 req if req.starts_with("pronoun_resolution:") => {
-                    // Check if pronouns are resolved in the claim text
-                    // This is a simplified check - in reality would need NLP
+                    // TODO: Implement proper pronoun resolution analysis using NLP
+                    // - [ ] Use actual NLP libraries for pronoun detection and resolution
+                    // - [ ] Implement coreference resolution algorithms
+                    // - [ ] Support different languages and pronoun types
+                    // - [ ] Handle contextual pronoun resolution based on surrounding text
+                    // - [ ] Add pronoun ambiguity detection and resolution
+                    // - [ ] Support pronoun replacement with actual referents
+                    // - [ ] Validate pronoun resolution accuracy with test cases
                     if claim.claim_text.len() > 20 {
                         available += 1; // Assume longer claims provide context
                     }
@@ -2312,7 +2318,14 @@ impl MultiModalVerificationEngine {
         // 3. Contextual synonyms based on domain
         synonyms.extend(self.get_contextual_synonyms(&keyword_lower));
 
-        // 4. Semantic similarity (simplified)
+        // TODO: Implement proper semantic similarity analysis for synonym expansion
+        // - [ ] Use word embeddings (Word2Vec, GloVe, FastText) for semantic similarity
+        // - [ ] Implement cosine similarity or other distance metrics
+        // - [ ] Support different embedding models and dimensions
+        // - [ ] Add similarity threshold configuration
+        // - [ ] Handle multi-word phrases and compound terms
+        // - [ ] Support domain-specific embedding models
+        // - [ ] Add caching for frequently used semantic lookups
         synonyms.extend(self.get_semantic_synonyms(&keyword_lower));
 
         // Remove duplicates and filter out the original keyword
@@ -3125,7 +3138,14 @@ impl MultiModalVerificationEngine {
         // This would use the embedding service to create query vector
         // and search against stored claim embeddings
         
-        // For now, simulate database results with better data
+        // TODO: Replace simulated database results with actual multimodal verification
+        // - [ ] Implement real database queries for historical claims
+        // - [ ] Add multimodal evidence correlation and verification
+        // - [ ] Support cross-modal claim validation (text + image + audio)
+        // - [ ] Implement confidence scoring based on evidence strength
+        // - [ ] Add temporal verification for claim evolution tracking
+        // - [ ] Support claim source credibility assessment
+        // - [ ] Implement claim similarity and deduplication logic
         for (i, term) in claim_terms.iter().enumerate() {
             let claim = HistoricalClaim {
                     id: None,
@@ -3180,9 +3200,15 @@ impl MultiModalVerificationEngine {
     ) -> Result<Vec<HistoricalClaim>> {
         debug!("Querying database for historical claims with {} terms", claim_terms.len());
         
-        // Simulate database connection and query
-        // In a real implementation, this would use the actual database client
-        
+        // TODO: Implement actual database queries for historical claims
+        // - [ ] Use proper database client for query execution
+        // - [ ] Implement connection pooling for performance
+        // - [ ] Add query optimization and indexing strategies
+        // - [ ] Support different query patterns (exact match, fuzzy, semantic)
+        // - [ ] Handle database connection failures and retries
+        // - [ ] Add query result caching for repeated searches
+        // - [ ] Implement proper error handling and logging
+
         // Simulate database query processing time
         tokio::time::sleep(Duration::from_millis(100)).await;
         

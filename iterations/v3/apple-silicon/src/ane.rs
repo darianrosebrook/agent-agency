@@ -1230,13 +1230,19 @@ impl ANEManager {
         // 3. Calculate inference time
         let inference_time_ms = start_time.elapsed().as_millis() as u64;
 
-        // 4. Create result with correct structure
+        // 4. Calculate real performance metrics
+        let (tokens_generated, tokens_per_second) = self.calculate_ane_performance_metrics(
+            &raw_output,
+            inference_time_ms
+        ).await?;
+
+        // 5. Create result with correct structure
         let result = crate::types::InferenceResult {
             request_id: request.id,
             output: raw_output,
             inference_time_ms,
-            tokens_generated: 100, // Mock value for now
-            tokens_per_second: 1000.0 / (inference_time_ms as f32 / 1000.0), // Mock calculation
+            tokens_generated,
+            tokens_per_second,
             optimization_target_used: crate::types::OptimizationTarget::ANE,
             resource_usage: crate::types::ResourceUsage {
                 cpu_percent: 5.0,
@@ -2004,6 +2010,78 @@ impl ANEManager {
 
         debug!("ANE command queue created: {}", command_queue.queue_id);
         Ok(command_queue)
+    }
+
+    /// Calculate real ANE performance metrics from inference output
+    async fn calculate_ane_performance_metrics(
+        &self,
+        output: &str,
+        inference_time_ms: u64,
+    ) -> Result<(u32, f32)> {
+        // Count actual tokens in the output
+        let tokens_generated = self.count_tokens_in_output(output);
+
+        // Calculate tokens per second based on actual inference time
+        let tokens_per_second = if inference_time_ms > 0 {
+            tokens_generated as f32 / (inference_time_ms as f32 / 1000.0)
+        } else {
+            0.0
+        };
+
+        // Record performance metrics for monitoring
+        self.metrics_collector.update_gauge(
+            "ane_inference_time_ms",
+            inference_time_ms as f64,
+            &[("model", "ane_model")],
+        ).await;
+
+        self.metrics_collector.record_histogram(
+            "ane_tokens_generated",
+            tokens_generated as f64,
+            &[("model", "ane_model")],
+        ).await;
+
+        self.metrics_collector.record_histogram(
+            "ane_tokens_per_second",
+            tokens_per_second as f64,
+            &[("model", "ane_model")],
+        ).await;
+
+        debug!(
+            "ANE performance metrics - tokens: {}, time: {}ms, rate: {:.2} tokens/sec",
+            tokens_generated, inference_time_ms, tokens_per_second
+        );
+
+        Ok((tokens_generated, tokens_per_second))
+    }
+
+    /// Count actual tokens in inference output
+    fn count_tokens_in_output(&self, output: &str) -> u32 {
+        // Use a more sophisticated token counting algorithm
+        // This is a simplified version - in production, use a proper tokenizer
+
+        // Basic word-based tokenization (rough approximation)
+        let words: Vec<&str> = output
+            .split_whitespace()
+            .filter(|word| !word.trim().is_empty())
+            .collect();
+
+        // Estimate tokens as words + punctuation tokens
+        let base_tokens = words.len() as u32;
+
+        // Add tokens for punctuation and special characters
+        let punctuation_tokens = output
+            .chars()
+            .filter(|c| c.is_ascii_punctuation())
+            .count() as u32;
+
+        // Add tokens for numbers (treat as single tokens)
+        let number_tokens = output
+            .split_whitespace()
+            .filter(|word| word.parse::<f64>().is_ok())
+            .count() as u32;
+
+        base_tokens + punctuation_tokens + number_tokens
     }
 }
 

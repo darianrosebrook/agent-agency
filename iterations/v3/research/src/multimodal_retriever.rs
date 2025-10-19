@@ -4,9 +4,11 @@
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use tracing::debug;
+use tracing::{debug, warn};
 use uuid::Uuid;
 use std::sync::Arc;
+use agent_agency_database::DatabaseClient;
+use crate::types::FusionMethod;
 
 /// Text search API bridge
 #[derive(Debug)]
@@ -134,12 +136,6 @@ pub struct MultimodalRetrieverConfig {
     pub enable_deduplication: bool,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
-pub enum FusionMethod {
-    RRF, // Reciprocal Rank Fusion
-    LearnedWeights,
-    SimpleAverage,
-}
 
 impl Default for MultimodalRetrieverConfig {
     fn default() -> Self {
@@ -180,6 +176,19 @@ impl MultimodalRetriever {
         }
     }
 
+    /// Create a new multimodal retriever with database pool integration
+    pub async fn new_with_database_pool(
+        database_pool: Arc<DatabaseClient>,
+        config: Option<MultimodalRetrieverConfig>,
+    ) -> Result<Self> {
+        // Validate database connection
+        database_pool.health_check().await?;
+
+        Ok(Self {
+            config: config.unwrap_or_default(),
+        })
+    }
+
     /// Execute multimodal search with late fusion
     pub async fn search(
         &self,
@@ -218,7 +227,7 @@ impl MultimodalRetriever {
                             score_graph: None,
                             fused_score: result.score,
                             features_json: serde_json::json!({
-                                "modality": result.modality,
+                                "modality": result.modality.clone(),
                                 "metadata": result.metadata
                             }),
                         },
@@ -248,7 +257,7 @@ impl MultimodalRetriever {
                             score_graph: None,
                             fused_score: result.score,
                             features_json: serde_json::json!({
-                                "modality": result.modality,
+                                "modality": result.modality.clone(),
                                 "metadata": result.metadata,
                                 "image_path": result.image_path
                             }),
@@ -282,7 +291,7 @@ impl MultimodalRetriever {
                             score_graph: None,
                             fused_score: result.score,
                             features_json: serde_json::json!({
-                                "modality": result.modality,
+                                "modality": result.modality.clone(),
                                 "metadata": result.metadata
                             }),
                         },
@@ -303,7 +312,7 @@ impl MultimodalRetriever {
                             score_graph: None,
                             fused_score: result.score,
                             features_json: serde_json::json!({
-                                "modality": result.modality,
+                                "modality": result.modality.clone(),
                                 "metadata": result.metadata,
                                 "image_path": result.image_path
                             }),
@@ -313,7 +322,13 @@ impl MultimodalRetriever {
                 }
                 
                 // Apply result fusion
-                all_results = self.fuse_results(all_results, self.config.fusion_method);
+                all_results = self.fuse_results(all_results, self.config.fusion_method.clone());
+            }
+            QueryType::TimestampAnchored => {
+                // TODO: Implement timestamp-anchored search
+                // This would search for content around specific timestamps
+                warn!("Timestamp-anchored search not yet implemented");
+                all_results = Vec::new();
             }
         }
         
@@ -498,8 +513,8 @@ impl MultimodalRetriever {
         
         // Apply learned weights to scores
         for result in results {
-            let weight = weights.get(&result.modality).unwrap_or(&0.5);
-            let weighted_score = result.score * weight;
+            let weight = weights.get(&result.modality.clone()).unwrap_or(&0.5);
+            let weighted_score = result.feature.fused_score * weight;
             *score_map.entry(result.id).or_insert(0.0) += weighted_score;
             result_map.insert(result.id, result);
         }
@@ -533,7 +548,7 @@ impl MultimodalRetriever {
         // Calculate average scores for each result
         for result in results {
             let entry = score_map.entry(result.id).or_insert((0.0, 0));
-            entry.0 += result.score;
+            entry.0 += result.feature.fused_score;
             entry.1 += 1;
             result_map.insert(result.id, result);
         }

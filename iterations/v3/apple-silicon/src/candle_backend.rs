@@ -51,8 +51,14 @@ impl CandleBackend {
         // Read the safetensors file
         let model_data = Arc::new(fs::read(path)?);
 
-        // Parse safetensors metadata to extract I/O schema
-        // For now, create a default schema - in production this would parse the actual metadata
+        // TODO: Implement proper SafeTensors metadata parsing for I/O schema
+        // - [ ] Parse actual SafeTensors metadata from model file
+        // - [ ] Extract tensor names, shapes, and data types from metadata
+        // - [ ] Validate metadata format and version compatibility
+        // - [ ] Handle different SafeTensors format versions
+        // - [ ] Support dynamic shape inference from metadata
+        // - [ ] Add metadata caching for performance
+        // - [ ] Implement fallback for malformed metadata
         let io_schema = IoSchema {
             inputs: vec![TensorSpec {
                 name: "input".to_string(),
@@ -78,8 +84,14 @@ impl CandleBackend {
         // Read the ONNX file
         let model_data = Arc::new(fs::read(path)?);
 
-        // Parse ONNX metadata to extract I/O schema
-        // For now, create a default schema - in production this would parse the actual ONNX model
+        // TODO: Implement proper ONNX metadata parsing for I/O schema
+        // - [ ] Parse actual ONNX model metadata using onnx crate
+        // - [ ] Extract input/output tensor specifications from ONNX graph
+        // - [ ] Map ONNX data types to Candle DType equivalents
+        // - [ ] Handle dynamic shapes and batch dimensions
+        // - [ ] Support ONNX opset version compatibility
+        // - [ ] Validate model compatibility with target hardware
+        // - [ ] Add ONNX model optimization hints
         let io_schema = IoSchema {
             inputs: vec![TensorSpec {
                 name: "input".to_string(),
@@ -196,12 +208,14 @@ impl InferenceEngine for CandleBackend {
         let model = unsafe { &*model };
 
         // Run actual Candle inference
-        // Convert inputs to Candle tensors and execute model
-        // For now, return mock outputs - in production this would:
-        // 1. Convert TensorMap inputs to Candle tensors
-        // 2. Load the model from model_data
-        // 3. Run forward pass
-        // 4. Convert outputs back to TensorMap
+        // TODO: Replace mock outputs with actual Candle tensor conversion and model execution
+        // - [ ] Convert TensorMap inputs to Candle tensors with proper dtype handling
+        // - [ ] Load Candle model from SafeTensors/ONNX data with error handling
+        // - [ ] Execute forward pass with proper device placement (CPU/GPU/ANE)
+        // - [ ] Convert Candle output tensors back to TensorMap format
+        // - [ ] Add batch processing support for multiple inputs
+        // - [ ] Implement model warm-up and caching for performance
+        // - [ ] Add inference time profiling and optimization
 
         let mut outputs = HashMap::new();
 

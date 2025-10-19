@@ -9,6 +9,7 @@ use crate::{
     ConfigurationUpdate, ContentProcessor, ContextBuilder, MultimodalContext,
     MultimodalContextProvider, MultimodalRetriever, MultimodalRetrieverConfig, VectorSearchEngine, WebScraper,
 };
+use agent_agency_database::DatabaseClient;
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 use dashmap::DashMap;
@@ -27,6 +28,7 @@ pub struct KnowledgeSeeker {
     context_builder: Arc<ContextBuilder>,
     web_scraper: Arc<WebScraper>,
     content_processor: Arc<ContentProcessor>,
+    database_pool: Arc<DatabaseClient>,
 
     // Active research sessions
     active_sessions: Arc<DashMap<Uuid, ResearchSession>>,
@@ -54,9 +56,9 @@ pub enum ResearchEvent {
 }
 
 impl KnowledgeSeeker {
-    /// Create a new knowledge seeker
-    pub async fn new(config: ResearchAgentConfig) -> Result<Self> {
-        info!("Initializing knowledge seeker");
+    /// Create a new knowledge seeker with database pool integration
+    pub async fn new(config: ResearchAgentConfig, database_pool: Arc<DatabaseClient>) -> Result<Self> {
+        info!("Initializing knowledge seeker with database pool integration");
 
         let (event_sender, _event_receiver) = mpsc::unbounded_channel();
 
@@ -90,6 +92,7 @@ impl KnowledgeSeeker {
             context_builder,
             web_scraper,
             content_processor,
+            database_pool,
             active_sessions: Arc::new(DashMap::new()),
             metrics: Arc::new(RwLock::new(ResearchMetrics {
                 total_queries: 0,
@@ -1114,7 +1117,7 @@ impl KnowledgeSeeker {
             _ => {}
         }
 
-        confidence.min(1.0f64).max(0.0f64)
+        confidence.min(1.0f32).max(0.0f32)
     }
 
     /// V2 Integration: Perform keyword-based search for hybrid results
@@ -1347,7 +1350,7 @@ impl KnowledgeSeeker {
                 let coverage = matched_terms as f32 / query_tokens.len() as f32;
                 boost += config.coverage_boost * coverage;
                 let capped_boost = boost.min(config.max_total_boost);
-                result.relevance_score = (result.relevance_score + capped_boost).min(1.0f64);
+                result.relevance_score = (result.relevance_score + capped_boost).min(1.0f32);
                 adjustments_applied += 1;
             }
 
@@ -1589,18 +1592,16 @@ impl KnowledgeSeeker {
     ) -> Result<MultimodalContext> {
         info!("Seeking multimodal knowledge for query: {}", query);
 
-        // Create multimodal retriever (would need database pool in real implementation)
-        // For now, we'll use a mock implementation
-        let retriever = MultimodalRetriever::new(
-            // In real implementation, this would be: self.db_pool.clone()
-            // For now, we'll create a mock config
-            MultimodalRetrieverConfig {
+        // Create multimodal retriever with database pool integration for concurrent retrieval operations
+        let retriever = MultimodalRetriever::new_with_database_pool(
+            self.database_pool.clone(),
+            Some(MultimodalRetrieverConfig {
                 k_per_modality: 10,
-                fusion_method: FusionMethod::RRF,
+                fusion_method: crate::types::FusionMethod::RRF,
                 project_scope: None,
                 enable_deduplication: true,
-            },
-        );
+            }),
+        ).await?;
 
         // Search multimodal content
         let results = retriever
@@ -1648,13 +1649,16 @@ impl KnowledgeSeeker {
     ) -> Result<MultimodalContext> {
         info!("Getting decision context for: {}", decision_point);
 
-        // Create multimodal retriever
-        let retriever = MultimodalRetriever::new(MultimodalRetrieverConfig {
-            k_per_modality: 100,
-            fusion_method: FusionMethod::RRF,
-            project_scope: None,
-            enable_deduplication: true,
-        });
+        // Create multimodal retriever with database pool integration for decision context
+        let retriever = MultimodalRetriever::new_with_database_pool(
+            self.database_pool.clone(),
+            Some(MultimodalRetrieverConfig {
+                k_per_modality: 100,
+                fusion_method: crate::types::FusionMethod::RRF,
+                project_scope: None,
+                enable_deduplication: true,
+            }),
+        ).await?;
 
         let mut context_provider = MultimodalContextProvider::new(retriever);
 
@@ -1698,12 +1702,12 @@ impl KnowledgeSeeker {
         );
 
         // Create multimodal retriever
-        let retriever = MultimodalRetriever::new(MultimodalRetrieverConfig {
+        let retriever = MultimodalRetriever::new(Some(MultimodalRetrieverConfig {
             k_per_modality: 20,
-            fusion_method: FusionMethod::RRF,
+            fusion_method: crate::types::FusionMethod::RRF,
             project_scope: None,
             enable_deduplication: true,
-        });
+        }));
 
         let mut context_provider = MultimodalContextProvider::new(retriever);
 
@@ -2089,9 +2093,17 @@ impl InvertedIndex {
     }
 
     pub fn add_term(&mut self, term: &str, document_id: usize, document: &KnowledgeEntry) {
+        // TODO: Implement actual position tracking for term occurrences in documents
+        // - [ ] Track exact character/word positions where terms appear
+        // - [ ] Support phrase and proximity search with position data
+        // - [ ] Add position-based relevance scoring
+        // - [ ] Implement position compression for storage efficiency
+        // - [ ] Support multiple position formats (character, word, sentence)
+        // - [ ] Add position validation and bounds checking
+        // - [ ] Implement position-based query optimization
         let posting = Posting {
             document_id,
-            positions: vec![0], // Simplified - in real implementation, track actual positions
+            positions: vec![0],
             document: document.clone(),
         };
 
@@ -2136,7 +2148,7 @@ impl InvertedIndex {
         score += keyword_score * 0.4;
 
         // 2. Content length factor (20% weight) - longer content often more relevant
-        let length_score = (content.len() as f32 / 1000.0).min(1.0f64);
+        let length_score = (content.len() as f32 / 1000.0).min(1.0f32);
         score += length_score * 0.2;
 
         // 3. Query type alignment (20% weight)
@@ -2225,7 +2237,7 @@ impl InvertedIndex {
         score += context_score * 0.2;
 
         // Ensure score is between 0.0 and 1.0
-        score.min(1.0f64).max(0.0f64)
+        score.min(1.0f32).max(0.0f32)
     }
 
     /// Calculate confidence score for web content based on source and content quality
@@ -2307,7 +2319,7 @@ impl InvertedIndex {
         score += recency_score * 0.1;
 
         // Ensure score is between 0.0 and 1.0
-        score.min(1.0f64).max(0.0f64)
+        score.min(1.0f32).max(0.0f32)
     }
 }
 

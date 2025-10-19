@@ -1491,28 +1491,157 @@ impl ContextResolver {
                 // Extract senses, forms, translations
                 if let Some(senses) = result.properties.get("senses") {
                     debug!("Processing Wikidata senses: {}", senses);
-                    // In a real implementation, parse and extract senses
-                    linked_entities.push(format!("{}_sense", result.canonical_name));
+                    // Parse and extract Wikidata senses with proper JSON structure handling
+                    if let Ok(senses_data) = serde_json::from_str::<Vec<serde_json::Value>>(senses) {
+                        for sense in senses_data {
+                            if let Some(sense_id) = sense.get("sense_id").and_then(|v| v.as_str()) {
+                                linked_entities.push(format!("{}_sense_{}", result.canonical_name, sense_id));
+
+                                // Extract sense definitions and glosses
+                                if let Some(gloss) = sense.get("gloss").and_then(|v| v.as_str()) {
+                                    linked_entities.push(format!("{}_gloss_{}", result.canonical_name, sense_id));
+                                }
+
+                                // Extract sense examples if available
+                                if let Some(examples) = sense.get("examples").and_then(|v| v.as_array()) {
+                                    for (i, example) in examples.iter().enumerate() {
+                                        if let Some(example_text) = example.as_str() {
+                                            linked_entities.push(format!("{}_example_{}_{}", result.canonical_name, sense_id, i));
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        // Fallback for non-JSON data
+                        linked_entities.push(format!("{}_sense", result.canonical_name));
+                    }
                 }
                 
                 if let Some(forms) = result.properties.get("forms") {
                     debug!("Processing Wikidata forms: {}", forms);
-                    // In a real implementation, parse and extract forms
-                    linked_entities.push(format!("{}_form", result.canonical_name));
+                    // Parse and extract Wikidata grammatical forms with proper JSON structure handling
+                    if let Ok(forms_data) = serde_json::from_str::<Vec<serde_json::Value>>(forms) {
+                        for form in forms_data {
+                            if let Some(form_type) = form.get("form_type").and_then(|v| v.as_str()) {
+                                linked_entities.push(format!("{}_form_{}", result.canonical_name, form_type));
+
+                                // Extract form representations
+                                if let Some(representations) = form.get("representations").and_then(|v| v.as_array()) {
+                                    for (i, rep) in representations.iter().enumerate() {
+                                        if let Some(rep_text) = rep.get("text").and_then(|v| v.as_str()) {
+                                            linked_entities.push(format!("{}_rep_{}_{}", result.canonical_name, form_type, i));
+                                        }
+
+                                        // Extract language information if available
+                                        if let Some(language) = rep.get("language").and_then(|v| v.as_str()) {
+                                            linked_entities.push(format!("{}_lang_{}_{}", result.canonical_name, form_type, language));
+                                        }
+                                    }
+                                }
+
+                                // Extract grammatical features if available
+                                if let Some(features) = form.get("grammatical_features").and_then(|v| v.as_array()) {
+                                    for feature in features {
+                                        if let Some(feature_name) = feature.as_str() {
+                                            linked_entities.push(format!("{}_feature_{}_{}", result.canonical_name, form_type, feature_name));
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        // Fallback for non-JSON data
+                        linked_entities.push(format!("{}_form", result.canonical_name));
+                    }
                 }
             }
             KnowledgeSource::WordNet => {
                 // Extract synonyms, hypernyms, examples
                 if let Some(synonyms) = result.properties.get("synonyms") {
                     debug!("Processing WordNet synonyms: {}", synonyms);
-                    // In a real implementation, parse and extract synonyms
-                    linked_entities.push(format!("{}_synonym", result.canonical_name));
+                    // Parse and extract WordNet synonym sets with proper JSON structure handling
+                    if let Ok(synonyms_data) = serde_json::from_str::<Vec<serde_json::Value>>(synonyms) {
+                        for synset in synonyms_data {
+                            if let Some(synset_id) = synset.get("synset_id").and_then(|v| v.as_str()) {
+                                linked_entities.push(format!("{}_synset_{}", result.canonical_name, synset_id));
+
+                                // Extract synonym words
+                                if let Some(words) = synset.get("words").and_then(|v| v.as_array()) {
+                                    for word in words {
+                                        if let Some(word_text) = word.as_str() {
+                                            linked_entities.push(format!("{}_syn_{}", result.canonical_name, word_text.replace(' ', "_")));
+                                        }
+                                    }
+                                }
+
+                                // Extract part of speech if available
+                                if let Some(pos) = synset.get("pos").and_then(|v| v.as_str()) {
+                                    linked_entities.push(format!("{}_pos_{}", result.canonical_name, pos));
+                                }
+
+                                // Extract gloss/definition if available
+                                if let Some(gloss) = synset.get("gloss").and_then(|v| v.as_str()) {
+                                    linked_entities.push(format!("{}_def_{}", result.canonical_name, synset_id));
+                                }
+
+                                // Extract hypernyms/hyponyms if available
+                                if let Some(hypernyms) = synset.get("hypernyms").and_then(|v| v.as_array()) {
+                                    for hypernym in hypernyms {
+                                        if let Some(hypernym_id) = hypernym.as_str() {
+                                            linked_entities.push(format!("{}_hyper_{}", result.canonical_name, hypernym_id));
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        // Fallback for non-JSON data
+                        linked_entities.push(format!("{}_synonym", result.canonical_name));
+                    }
                 }
                 
                 if let Some(hypernyms) = result.properties.get("hypernyms") {
                     debug!("Processing WordNet hypernyms: {}", hypernyms);
-                    // In a real implementation, parse and extract hypernyms
-                    linked_entities.push(format!("{}_hypernym", result.canonical_name));
+                    // Parse and extract WordNet hypernym hierarchy with proper JSON structure handling
+                    if let Ok(hypernyms_data) = serde_json::from_str::<Vec<serde_json::Value>>(hypernyms) {
+                        for hypernym in hypernyms_data {
+                            if let Some(hypernym_id) = hypernym.get("hypernym_id").and_then(|v| v.as_str()) {
+                                linked_entities.push(format!("{}_hyper_{}", result.canonical_name, hypernym_id));
+
+                                // Extract hypernym words
+                                if let Some(words) = hypernym.get("words").and_then(|v| v.as_array()) {
+                                    for word in words {
+                                        if let Some(word_text) = word.as_str() {
+                                            linked_entities.push(format!("{}_hyper_word_{}", result.canonical_name, word_text.replace(' ', "_")));
+                                        }
+                                    }
+                                }
+
+                                // Extract hypernym level/depth if available
+                                if let Some(depth) = hypernym.get("depth").and_then(|v| v.as_u64()) {
+                                    linked_entities.push(format!("{}_depth_{}", result.canonical_name, depth));
+                                }
+
+                                // Extract gloss/definition if available
+                                if let Some(gloss) = hypernym.get("gloss").and_then(|v| v.as_str()) {
+                                    linked_entities.push(format!("{}_hyper_def_{}", result.canonical_name, hypernym_id));
+                                }
+
+                                // Extract hyponyms if available (reverse relationships)
+                                if let Some(hyponyms) = hypernym.get("hyponyms").and_then(|v| v.as_array()) {
+                                    for hyponym in hyponyms {
+                                        if let Some(hyponym_id) = hyponym.as_str() {
+                                            linked_entities.push(format!("{}_hypo_{}", result.canonical_name, hyponym_id));
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        // Fallback for non-JSON data
+                        linked_entities.push(format!("{}_hypernym", result.canonical_name));
+                    }
                 }
             }
             KnowledgeSource::Custom => {

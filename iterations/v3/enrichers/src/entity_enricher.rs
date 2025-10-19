@@ -503,7 +503,7 @@ impl NERBridge {
                     if let Some(start) = text.find(&full_name_str) {
                         return Some(NERResult {
                             entity_type: "PERSON".to_string(),
-                            text: full_name_str,
+                            text: full_name_str.clone(),
                             range: (start, start + full_name_str.len()),
                             confidence: 0.7,
                         });
@@ -534,7 +534,7 @@ impl NERBridge {
                     if let Some(start) = text.find(&org_str) {
                         return Some(NERResult {
                             entity_type: "ORG".to_string(),
-                            text: org_str,
+                            text: org_str.clone(),
                             range: (start, start + org_str.len()),
                             confidence: 0.6,
                         });
@@ -565,7 +565,7 @@ impl NERBridge {
                     if let Some(start) = text.find(&loc_str) {
                         return Some(NERResult {
                             entity_type: "GPE".to_string(),
-                            text: loc_str,
+                            text: loc_str.clone(),
                             range: (start, start + loc_str.len()),
                             confidence: 0.6,
                         });

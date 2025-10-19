@@ -370,7 +370,14 @@ impl QuantizationManager {
             zero_point
         );
 
-        // Perform actual quantization (simulated file copy for now)
+        // TODO: Replace file copy simulation with actual quantization implementation
+        // - [ ] Implement proper model quantization algorithms (INT8, INT4, etc.)
+        // - [ ] Add calibration data collection for quantization parameters
+        // - [ ] Support different quantization schemes (symmetric, asymmetric)
+        // - [ ] Implement per-layer quantization for optimal accuracy
+        // - [ ] Add quantization-aware training support
+        // - [ ] Support dynamic quantization for runtime optimization
+        // - [ ] Add quantization validation and accuracy testing
         fs::copy(input_path, output_path)
             .context("Failed to copy model file")?;
 

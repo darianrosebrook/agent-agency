@@ -28,7 +28,7 @@ regex = "1.10"  # Regex patterns for claim extraction
 rand = "0.8"  # Random jitter for retry logic
 
 # Cryptographic dependencies
-ring = "0.17"  # Cryptographic primitives
+ring = "0.17"  # Cryptographic primitives and Ed25519 signatures
 sha2 = "0.10"  # SHA-2 hashing
 hex = "0.4"  # Hex encoding/decoding
 base64 = "0.21"  # Base64 encoding/decoding

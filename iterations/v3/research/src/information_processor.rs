@@ -422,7 +422,7 @@ impl IInformationProcessor for InformationProcessor {
             _ => {}
         }
 
-        score.min(1.0f32)
+        score.min(1.0f64)
     }
 
     fn assess_credibility(&self, result: &SearchResult) -> f64 {
@@ -456,7 +456,7 @@ impl IInformationProcessor for InformationProcessor {
             }
         }
 
-        credibility.max(0.0f32).min(1.0f32)
+        credibility.max(0.0f64).min(1.0f64)
     }
 
     fn determine_quality(&self, relevance: f64, credibility: f64) -> QualityLevel {

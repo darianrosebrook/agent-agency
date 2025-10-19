@@ -50,10 +50,6 @@ pub struct ClaimVerification {
 }
 
 #[cfg(target_os = "macos")]
-use core_foundation::base::TCFType;
-#[cfg(target_os = "macos")]
-use core_foundation::string::CFString;
-#[cfg(target_os = "macos")]
 use objc::{class, msg_send, sel, sel_impl};
 
 // Core ML imports (used in optimization)
@@ -136,8 +132,6 @@ impl CoreMLModel {
 
     async fn predict(&self, inputs: &str) -> Result<String> {
         use objc::{msg_send, sel, sel_impl};
-        use core_foundation::base::TCFType;
-        use core_foundation::string::CFString;
         use core_foundation::dictionary::CFDictionary;
         use core_foundation::array::CFArray;
 
@@ -156,8 +150,6 @@ impl CoreMLModel {
     /// Preprocess inputs for Core ML prediction
     async fn preprocess_inputs(&self, inputs: &str) -> Result<CFDictionary> {
         use objc::{msg_send, sel, sel_impl};
-        use core_foundation::base::TCFType;
-        use core_foundation::string::CFString;
         use core_foundation::dictionary::CFDictionary;
         use core_foundation::array::CFArray;
 
@@ -175,8 +167,14 @@ impl CoreMLModel {
                 let ml_array = self.create_text_input_array(text)?;
                 let key = CFString::new("input_text");
                 let value_ref = ml_array as *const std::ffi::c_void;
-                // Note: CFDictionary is immutable once created, so we'd need to recreate it
-                // This is a simplified approach - in practice you'd collect all pairs first
+                // TODO: Implement proper Core ML input dictionary construction
+                // - [ ] Collect all input pairs before creating CFDictionary
+                // - [ ] Handle multiple input types (MLMultiArray, CVPixelBuffer, etc.)
+                // - [ ] Add input validation and type checking
+                // - [ ] Support batched inputs for efficiency
+                // - [ ] Implement input preprocessing pipeline
+                // - [ ] Add input shape validation against model expectations
+                // - [ ] Support dynamic input shapes and resizing
                 input_dict = CFDictionary::from_CFType_pairs(&[(key, value_ref)]);
             }
         }
@@ -229,8 +227,14 @@ impl CoreMLModel {
                 tokio::time::Duration::from_secs(30),
                 tokio::task::spawn_blocking(move || {
                     // This runs on a blocking thread pool
-                    // Note: In a real implementation, you'd need proper error handling
-                    // For now, we'll assume the synchronous call completes quickly
+                    // TODO: Replace synchronous assumption with proper async handling
+                    // - [ ] Implement proper async/await patterns for Core ML calls
+                    // - [ ] Add timeout handling with cancellation support
+                    // - [ ] Implement proper error propagation and recovery
+                    // - [ ] Add retry logic for transient failures
+                    // - [ ] Support concurrent Core ML model execution
+                    // - [ ] Add proper resource cleanup for async operations
+                    // - [ ] Implement async model loading and caching
                     Ok(CFDictionary::<CFString, *const std::ffi::c_void>::from_CFType_pairs(&[]))
                 })
             ).await
@@ -268,8 +272,6 @@ impl CoreMLModel {
 
     /// Process Core ML prediction outputs
     async fn process_outputs(&self, outputs: &CFDictionary) -> Result<String> {
-        use core_foundation::base::TCFType;
-        use core_foundation::string::CFString;
         use core_foundation::array::CFArray;
 
         let mut result = serde_json::Map::new();
@@ -297,8 +299,6 @@ impl CoreMLModel {
     /// Load Core ML model
     fn load_model(&self) -> Result<*mut std::ffi::c_void> {
         use objc::{msg_send, sel, sel_impl};
-        use core_foundation::base::TCFType;
-        use core_foundation::string::CFString;
 
         unsafe {
             let url: *mut objc::runtime::Object = msg_send![class!(NSURL), fileURLWithPath: CFString::new(&self.model_path).as_concrete_TypeRef()];
@@ -320,11 +320,15 @@ impl CoreMLModel {
     /// Create text input array for Core ML
     fn create_text_input_array(&self, text: &str) -> Result<*mut std::ffi::c_void> {
         use objc::{msg_send, sel, sel_impl};
-        use core_foundation::base::TCFType;
-        use core_foundation::string::CFString;
 
-        // For text models, we typically need to tokenize and convert to MLMultiArray
-        // This is a simplified implementation - in practice, you'd use the model's tokenizer
+        // TODO: Implement proper text tokenization and MLMultiArray creation
+        // - [ ] Use actual model-specific tokenizers (GPT, BERT, etc.)
+        // - [ ] Support different tokenization strategies (BPE, WordPiece, etc.)
+        // - [ ] Handle special tokens (BOS, EOS, PAD, etc.)
+        // - [ ] Implement proper text preprocessing (lowercasing, normalization)
+        // - [ ] Support different input formats (raw text, pre-tokenized)
+        // - [ ] Add vocabulary size validation and out-of-vocabulary handling
+        // - [ ] Implement attention mask and position IDs for transformers
         let tokens: Vec<f32> = text.chars().map(|c| c as u32 as f32).collect();
         
         unsafe {
@@ -352,11 +356,15 @@ impl CoreMLModel {
     /// Create image input array for Core ML
     async fn create_image_input_array(&self, image_path: &str) -> Result<*mut std::ffi::c_void> {
         use objc::{msg_send, sel, sel_impl};
-        use core_foundation::base::TCFType;
-        use core_foundation::string::CFString;
 
-        // Load image and convert to MLMultiArray
-        // This is a simplified implementation - in practice, you'd use Core Image or similar
+        // TODO: Implement proper image loading and preprocessing for Core ML
+        // - [ ] Use Core Image or Vision framework for robust image loading
+        // - [ ] Support multiple image formats (JPEG, PNG, HEIF, etc.)
+        // - [ ] Implement proper image resizing and aspect ratio handling
+        // - [ ] Add image normalization and preprocessing pipeline
+        // - [ ] Support different color spaces and channel orders
+        // - [ ] Implement image augmentation for training data
+        // - [ ] Add image quality validation and error handling
         unsafe {
             let url: *mut objc::runtime::Object = msg_send![class!(NSURL), fileURLWithPath: CFString::new(image_path).as_concrete_TypeRef()];
             if url.is_null() {
@@ -368,7 +376,14 @@ impl CoreMLModel {
                 anyhow::bail!("Failed to load image from path: {}", image_path);
             }
 
-            // Convert image to MLMultiArray (simplified - would need proper image processing)
+            // TODO: Implement proper image to MLMultiArray conversion with preprocessing
+            // - [ ] Extract pixel data from NSImage/CIImage properly
+            // - [ ] Support different model input shapes and resizing strategies
+            // - [ ] Implement proper color space conversion (RGB, BGR, grayscale)
+            // - [ ] Add image normalization (mean subtraction, std deviation)
+            // - [ ] Support different data types (Float32, Float16, UInt8)
+            // - [ ] Handle image orientation and EXIF data
+            // - [ ] Implement efficient pixel buffer creation
             let shape = [1, 3, 224, 224]; // Typical image input shape
             let ml_array: *mut objc::runtime::Object = msg_send![
                 class!(MLMultiArray),
@@ -424,13 +439,17 @@ impl CoreMLModel {
 
     /// Extract text output from Core ML results
     fn extract_text_output(&self, outputs: &CFDictionary) -> Option<String> {
-        use core_foundation::base::TCFType;
-        use core_foundation::string::CFString;
 
         let key = CFString::new("output_text");
         if let Some(value) = outputs.find(key.as_concrete_TypeRef()) {
-            // Convert MLMultiArray or other Core ML output to string
-            // This is simplified - would need proper conversion based on model output
+            // TODO: Implement proper Core ML output to text conversion
+            // - [ ] Handle different output formats (tokens, embeddings, probabilities)
+            // - [ ] Implement proper token decoding and detokenization
+            // - [ ] Support different model architectures (GPT, BERT, T5, etc.)
+            // - [ ] Add post-processing for generated text (trimming, formatting)
+            // - [ ] Handle special tokens and control codes in output
+            // - [ ] Support beam search and sampling result processing
+            // - [ ] Add output validation and sanitization
             Some("Generated text output".to_string())
         } else {
             None
@@ -439,13 +458,17 @@ impl CoreMLModel {
 
     /// Extract array output from Core ML results
     fn extract_array_output(&self, outputs: &CFDictionary) -> Option<Vec<serde_json::Value>> {
-        use core_foundation::base::TCFType;
-        use core_foundation::string::CFString;
 
         let key = CFString::new("output_array");
         if let Some(_value) = outputs.find(key.as_concrete_TypeRef()) {
-            // Convert MLMultiArray to JSON array
-            // This is simplified - would need proper conversion
+            // TODO: Implement proper MLMultiArray to JSON array conversion
+            // - [ ] Extract actual data from MLMultiArray with correct data type
+            // - [ ] Handle multi-dimensional arrays and proper shape interpretation
+            // - [ ] Support different numeric types (Float32, Float16, Int32, etc.)
+            // - [ ] Implement proper array flattening and serialization
+            // - [ ] Add array bounds checking and validation
+            // - [ ] Support different output formats (1D, 2D, 3D arrays)
+            // - [ ] Handle memory layout (row-major vs column-major)
             Some(vec![serde_json::Value::Number(serde_json::Number::from(0.5))])
         } else {
             None
@@ -454,13 +477,17 @@ impl CoreMLModel {
 
     /// Extract confidence output from Core ML results
     fn extract_confidence_output(&self, outputs: &CFDictionary) -> Option<f64> {
-        use core_foundation::base::TCFType;
-        use core_foundation::string::CFString;
 
         let key = CFString::new("confidence");
         if let Some(_value) = outputs.find(key.as_concrete_TypeRef()) {
-            // Extract confidence score from MLMultiArray
-            // This is simplified - would need proper conversion
+            // TODO: Implement proper confidence score extraction from Core ML outputs
+            // - [ ] Extract actual confidence values from model outputs
+            // - [ ] Handle different confidence representations (probabilities, logits)
+            // - [ ] Support multi-class classification confidence extraction
+            // - [ ] Implement confidence calibration and normalization
+            // - [ ] Add confidence threshold validation and filtering
+            // - [ ] Support different output formats (single value, array, matrix)
+            // - [ ] Add confidence score aggregation for ensemble models
             Some(0.95)
         } else {
             None
@@ -708,13 +735,16 @@ impl CoreMLManager {
         Ok(result)
     }
 
-    /// Prepare Core ML inputs from inference request (simplified)
+    /// TODO: Implement proper Core ML input preparation from inference requests
+    /// - [ ] Implement actual tokenization pipeline for text inputs
+    /// - [ ] Create proper MLMultiArray inputs with correct shapes and types
+    /// - [ ] Handle multimodal inputs (text, images, audio, video)
+    /// - [ ] Support different model architectures and input requirements
+    /// - [ ] Add input validation and preprocessing pipeline
+    /// - [ ] Implement batch processing for multiple inputs
+    /// - [ ] Add input caching and optimization for repeated requests
     #[cfg(target_os = "macos")]
     fn prepare_core_ml_inputs(&self, _request: &InferenceRequest) -> Result<String> {
-        // This is a simplified implementation - in practice, you'd need to:
-        // 1. Tokenize the input text
-        // 2. Create appropriate MLMultiArray or similar inputs
-        // 3. Handle different input types (text, images, etc.)
 
         // 1. Input tokenization: Tokenize input text for Core ML processing
         debug!("Tokenizing input text: {} characters", _request.input.len());
@@ -815,13 +845,16 @@ impl CoreMLManager {
         Ok(_request.input.clone())
     }
 
-    /// Extract output from Core ML prediction results (simplified)
+    /// TODO: Implement proper Core ML output extraction and post-processing
+    /// - [ ] Extract actual prediction results from NSDictionary outputs
+    /// - [ ] Implement token decoding and text generation for language models
+    /// - [ ] Handle different output types (text, arrays, classifications, etc.)
+    /// - [ ] Support multimodal output processing (text + image + audio)
+    /// - [ ] Add output validation and error handling
+    /// - [ ] Implement output post-processing (formatting, filtering)
+    /// - [ ] Support different model output formats and structures
     #[cfg(target_os = "macos")]
     fn extract_core_ml_output(&self, _outputs: &str) -> Result<String> {
-        // This is a simplified implementation - in practice, you'd need to:
-        // 1. Extract the prediction results from the NSDictionary
-        // 2. Decode tokens back to text if needed
-        // 3. Handle different output types
 
         // 1. Output parsing: Parse Core ML prediction results
         tracing::debug!("Parsing Core ML prediction results");
@@ -2196,8 +2229,14 @@ impl CoreMLManager {
 
     /// Execute sample inference (simplified implementation)
     async fn execute_sample_inference(&self, request: &InferenceRequest) -> Result<String> {
-        // This is a simplified implementation - in practice, you'd use the actual model
-        // For now, generate a mock output based on the input
+        // TODO: Replace mock output generation with actual Core ML model inference
+        // - [ ] Load actual Core ML model from compiled .mlmodel file
+        // - [ ] Convert input data to Core ML compatible format
+        // - [ ] Execute model prediction with proper error handling
+        // - [ ] Convert Core ML output back to expected format
+        // - [ ] Support different model types (vision, text, audio)
+        // - [ ] Add model warm-up and performance optimization
+        // - [ ] Implement model versioning and A/B testing
 
         let input_length = request.input.len();
         let model_name_lower = request.model_name.to_lowercase();

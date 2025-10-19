@@ -403,9 +403,16 @@ impl CoreMLBackend {
         if let Some(array) = tensor_value.as_array() {
             for value in array {
                 if let Some(f64_val) = value.as_f64() {
-                    // Convert f64 to f16 (simplified - in practice you'd use proper f16 conversion)
+                    // TODO: Implement proper f64 to f16 conversion with IEEE 754 compliance
+                    // - [ ] Use proper IEEE 754 half-precision conversion algorithm
+                    // - [ ] Handle special values (NaN, Infinity, subnormals)
+                    // - [ ] Implement proper rounding modes (nearest, toward zero, etc.)
+                    // - [ ] Add overflow and underflow detection and handling
+                    // - [ ] Support different endianness for serialization
+                    // - [ ] Add conversion validation and error checking
+                    // - [ ] Optimize for performance with lookup tables or hardware acceleration
                     let f32_val = f64_val as f32;
-                    let f16_val = (f32_val * 65536.0) as u16; // Simplified f16 conversion
+                    let f16_val = (f32_val * 65536.0) as u16;
                     let bytes = f16_val.to_le_bytes();
                     tensor_bytes.extend_from_slice(&bytes);
                 } else {
@@ -762,7 +769,14 @@ impl InferenceEngine for CoreMLBackend {
 
         match predict_result {
             Ok(ref outputs_json) => {
-                // Track successful inference with ANE dispatch (assumed for now)
+                // TODO: Replace assumed ANE dispatch with actual ANE detection and fallback logic
+                // - [ ] Detect actual ANE availability and capability at runtime
+                // - [ ] Implement ANE dispatch decision logic based on model/hardware compatibility
+                // - [ ] Add CPU fallback when ANE is unavailable or incompatible
+                // - [ ] Implement ANE performance monitoring and optimization
+                // - [ ] Add ANE error handling and recovery mechanisms
+                // - [ ] Support ANE-specific model compilation and optimization
+                // - [ ] Add ANE utilization metrics and reporting
                 self.record_inference(infer_time_ms, true, "ane");
                 tracing::debug!("Core ML inference completed in {}ms", infer_time_ms);
             }

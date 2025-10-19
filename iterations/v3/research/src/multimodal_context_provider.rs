@@ -173,6 +173,7 @@ impl MultimodalContextProvider {
         let mut global_count = 0;
         let mut project_count = 0;
 
+        let retrieval_result_len = retrieval_result.len();
         for result in retrieval_result {
             // Check budget constraints
             if evidence_items.len() >= budget.max_items {
@@ -207,12 +208,12 @@ impl MultimodalContextProvider {
             let evidence = EvidenceItem {
                 id: Uuid::new_v4(),
                 content: result.snippet.clone(),
-                modality: result.kind.clone(),
+                modality: format!("{:?}", result.kind),
                 confidence: 0.8, // Default confidence since it's not available
                 similarity_score: 0.8, // Default score since it's not available
                 citation: Citation {
                     source_uri: format!("ref:{}", result.ref_id),
-                    document_id: result.ref_id.clone(),
+                    document_id: Uuid::parse_str(&result.ref_id).unwrap_or_else(|_| Uuid::new_v4()),
                     page_number: None, // Not available in the struct
                     bbox: None, // Not available in the struct
                     time_range: None, // Not available in the struct
@@ -237,8 +238,8 @@ impl MultimodalContextProvider {
         };
 
         // Calculate deduplication score (items retained / items processed)
-        let dedup_score = if !retrieval_result.is_empty() {
-            evidence_items.len() as f32 / retrieval_result.len() as f32
+        let dedup_score = if retrieval_result_len > 0 {
+            evidence_items.len() as f32 / retrieval_result_len as f32
         } else {
             1.0
         };
