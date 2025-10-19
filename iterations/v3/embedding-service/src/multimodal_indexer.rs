@@ -3,7 +3,6 @@
 
 use crate::types::*;
 use anyhow::Result;
-use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
 
@@ -35,6 +34,7 @@ pub struct GraphIndexer {
     /// Diagram graph adjacency lists
     graph_adjacency: HashMap<Uuid, Vec<Uuid>>,
     /// Graph node metadata and properties
+    #[allow(dead_code)]
     node_properties: HashMap<Uuid, NodeProperty>,
 }
 
@@ -45,6 +45,7 @@ pub struct DatabaseClient {
 }
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 struct TextDocument {
     id: Uuid,
     text: String,
@@ -52,6 +53,7 @@ struct TextDocument {
 }
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 struct HnswMetadata {
     model_name: String,
     max_neighbors: usize,
@@ -61,6 +63,7 @@ struct HnswMetadata {
 }
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 struct NodeProperty {
     node_id: Uuid,
     label: String,
@@ -72,15 +75,6 @@ pub struct IndexedBlock {
     pub block_id: Uuid,
     pub model_vectors: HashMap<String, EmbeddingVector>,
     pub modality: String,
-}
-
-/// Result of multimodal search with feature traces
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MultimodalSearchResult {
-    pub block_id: Uuid,
-    pub relevance_score: f32,
-    pub modalities: Vec<String>,
-    pub feature_traces: HashMap<String, f32>,
 }
 
 impl MultimodalIndexer {
@@ -303,21 +297,23 @@ impl MultimodalIndexer {
         if let Some(query) = query_text {
             let text_results = self.search_text_index(query).await?;
             for (block_id, score) in text_results {
+                let ref_id = block_id.to_string();
                 all_results
                     .entry(block_id)
                     .or_insert_with(|| MultimodalSearchResult {
-                        block_id,
-                        relevance_score: 0.0,
-                        modalities: Vec::new(),
-                        feature_traces: HashMap::new(),
-                    })
-                    .relevance_score += score * 0.3; // Weight text as 30%
-
-                all_results
-                    .get_mut(&block_id)
-                    .unwrap()
-                    .modalities
-                    .push("text".to_string());
+                        ref_id: ref_id.clone(),
+                        kind: ContentType::Text,
+                        snippet: String::new(),
+                        citation: None,
+                        feature: SearchResultFeature {
+                            score_text: Some(score * 0.3),
+                            score_image: None,
+                            score_graph: None,
+                            fused_score: score * 0.3,
+                            features_json: serde_json::json!({}),
+                        },
+                        project_scope: project_scope.map(|s| s.to_string()),
+                    });
             }
         }
 
@@ -325,21 +321,26 @@ impl MultimodalIndexer {
         if let Some(clip_query) = query_embeddings.get("clip-vit-b32") {
             let visual_results = self.search_visual_index(clip_query).await?;
             for (block_id, score) in visual_results {
-                all_results
+                let ref_id = block_id.to_string();
+                let result = all_results
                     .entry(block_id)
                     .or_insert_with(|| MultimodalSearchResult {
-                        block_id,
-                        relevance_score: 0.0,
-                        modalities: Vec::new(),
-                        feature_traces: HashMap::new(),
-                    })
-                    .relevance_score += score * 0.4; // Weight visual as 40%
+                        ref_id: ref_id.clone(),
+                        kind: ContentType::VideoFrame,
+                        snippet: String::new(),
+                        citation: None,
+                        feature: SearchResultFeature {
+                            score_text: None,
+                            score_image: Some(score * 0.4),
+                            score_graph: None,
+                            fused_score: score * 0.4,
+                            features_json: serde_json::json!({}),
+                        },
+                        project_scope: project_scope.map(|s| s.to_string()),
+                    });
 
-                all_results
-                    .get_mut(&block_id)
-                    .unwrap()
-                    .modalities
-                    .push("visual".to_string());
+                // Update fused score
+                result.feature.fused_score += score * 0.4;
             }
         }
 
@@ -349,13 +350,13 @@ impl MultimodalIndexer {
             .collect();
 
         // Sort by relevance score descending
-        fused_results.sort_by(|a, b| b.relevance_score.partial_cmp(&a.relevance_score).unwrap());
+        fused_results.sort_by(|a, b| b.feature.fused_score.partial_cmp(&a.feature.fused_score).unwrap());
 
         // 4. Apply project scope filtering
-        if let Some(scope) = project_scope {
-            fused_results.retain(|result| {
+        if let Some(_scope) = project_scope {
+            fused_results.retain(|_result| {
                 // TODO: Check if result belongs to project scope
-                !scope.is_empty() || true
+                true
             });
         }
 
@@ -367,7 +368,8 @@ impl MultimodalIndexer {
 
     /// Search text index using BM25
     async fn search_text_index(&self, query: &str) -> Result<Vec<(Uuid, f32)>> {
-        let query_terms: Vec<&str> = query.to_lowercase().split_whitespace().collect();
+        let query_lower = query.to_lowercase();
+        let query_terms: Vec<&str> = query_lower.split_whitespace().collect();
         let mut result_scores: HashMap<Uuid, f32> = HashMap::new();
 
         // For each query term, find matching documents

@@ -23,7 +23,8 @@ members = [
     "database",
     "integration-tests",
     "agent-agency-contracts",
-    "ingestors"
+    "ingestors",
+    "enrichers"
 ]
 
 [workspace.package]

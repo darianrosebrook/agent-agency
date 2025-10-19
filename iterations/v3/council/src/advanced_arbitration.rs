@@ -119,6 +119,37 @@ pub struct QualityMetrics {
     pub innovation_scores: HashMap<String, f32>,
 }
 
+/// Argument in debate
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Argument {
+    pub id: String,
+    pub content: String,
+    pub source: String,
+    pub credibility: f32,
+    pub relevance: f32,
+}
+
+/// Rebuttal in debate
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Rebuttal {
+    pub id: String,
+    pub content: String,
+    pub target_argument_id: String,
+    pub source: String,
+    pub credibility: f32,
+    pub relevance: f32,
+}
+
+/// Debate round result
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DebateRound {
+    pub round_number: usize,
+    pub arguments: Vec<Argument>,
+    pub rebuttals: Vec<Rebuttal>,
+    pub argument_scores: HashMap<String, f32>,
+    pub consensus_reached: bool,
+}
+
 /// Consistency analyzer for confidence scoring
 #[derive(Debug)]
 pub struct ConsistencyAnalyzer {
@@ -1757,6 +1788,23 @@ impl PleadingWorkflow {
             counter_arguments,
             quality_scores,
         })
+    }
+    
+    /// Detect consensus in a debate round
+    fn detect_consensus_in_round(&self, round: &DebateRound) -> bool {
+        if round.quality_scores.is_empty() {
+            return false;
+        }
+        
+        // Calculate variance in quality scores
+        let scores: Vec<f32> = round.quality_scores.values().copied().collect();
+        let mean: f32 = scores.iter().sum::<f32>() / scores.len() as f32;
+        let variance: f32 = scores.iter()
+            .map(|s| (s - mean).powi(2))
+            .sum::<f32>() / scores.len() as f32;
+        
+        // Low variance indicates consensus
+        variance < 0.05
     }
     
     /// Synthesize final arguments from debate rounds

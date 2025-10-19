@@ -8,6 +8,7 @@ license.workspace = true
 [dependencies]
 # Workspace dependencies
 tokio.workspace = true
+tokio-util = "0.7"
 async-trait.workspace = true
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true

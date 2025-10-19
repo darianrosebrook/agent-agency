@@ -69,12 +69,13 @@ impl ModelPool {
             available.push_back(i);
         }
 
+        let max_instances = config.max_instances;
         Self {
             config,
             available: Arc::new(Mutex::new(available)),
             condvar: Arc::new(Condvar::new()),
             stats: Arc::new(Mutex::new(ModelPoolStats {
-                active_models: config.max_instances,
+                active_models: max_instances,
                 ..Default::default()
             })),
         }

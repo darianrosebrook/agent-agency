@@ -559,39 +559,85 @@ impl DebateProtocol {
     /// Coordinate multi-source research and synthesis
     async fn coordinate_multi_source_research(
         &self,
-        task_id: TaskId,
+        _task_id: TaskId,
         arguments: &std::collections::HashMap<JudgeId, DebateArgument>,
     ) -> Result<ResearchCoordination> {
         let mut research_sources = Vec::new();
         let mut synthesis_requirements = Vec::new();
+        let mut all_findings = Vec::new();
 
-        // Analyze arguments to identify research needs
+        // Analyze arguments to identify research needs and extract evidence
         for (judge_id, argument) in arguments {
-            // PLACEHOLDER: Research needs identification
-            research_sources.push(ResearchSource {
-                source_id: "placeholder-research".to_string(),
-                source_type: SourceType::Technical,
-                reliability_score: 0.8,
-                access_method: "placeholder-method".to_string(),
-            });
-            synthesis_requirements.push("placeholder-requirement".to_string());
+            tracing::debug!("Analyzing research needs for judge: {}", judge_id);
+
+            // Extract evidence-based findings from the argument
+            for evidence in &argument.supporting_evidence {
+                // Determine source type from evidence
+                let source_type = match &evidence.source.source_type {
+                    SourceType::Academic => SourceType::Academic,
+                    SourceType::Industry => SourceType::Industry,
+                    SourceType::Government => SourceType::Government,
+                    SourceType::Technical => SourceType::Technical,
+                    SourceType::Community => SourceType::Community,
+                };
+
+                // Calculate reliability based on confidence
+                let reliability_score = evidence.confidence;
+
+                // Check if source already exists
+                let source_exists = research_sources.iter().any(|s: &ResearchSource| {
+                    s.source_id == evidence.source.location && s.source_type == source_type
+                });
+
+                if !source_exists {
+                    research_sources.push(ResearchSource {
+                        source_id: evidence.source.location.clone(),
+                        source_type,
+                        reliability_score,
+                        access_method: format!("via_{}", evidence.source.authority),
+                    });
+                }
+
+                // Create findings from evidence
+                all_findings.push(ResearchFinding {
+                    topic: format!("Evidence from {}", evidence.source.authority),
+                    finding: evidence.content.clone(),
+                    relevance: evidence.confidence,
+                    sources: vec![evidence.source.location.clone()],
+                });
+            }
+
+            // Determine synthesis requirements from argument reasoning
+            let reasoning_summary = argument.reasoning.lines().count();
+            if reasoning_summary > 0 {
+                synthesis_requirements.push(format!(
+                    "Synthesize multi-modal evidence for position: {}",
+                    argument.position
+                ));
+            }
         }
 
-        // Coordinate research across multiple sources
-        let coordinated_research = vec![ResearchFinding {
-            topic: "Placeholder Research".to_string(),
-            finding: "Placeholder research finding".to_string(),
-            relevance: 0.8,
-            sources: vec!["placeholder-source".to_string()],
-        }];
-        
-        // Synthesize findings across sources
-        let synthesized_findings = coordinated_research;
+        // Calculate coordination quality based on source diversity and confidence
+        let coordination_quality = if research_sources.is_empty() {
+            0.0
+        } else {
+            let avg_reliability: f32 = research_sources.iter().map(|s| s.reliability_score).sum::<f32>()
+                / research_sources.len() as f32;
+            let source_diversity = (research_sources.len() as f32 / 5.0).min(1.0); // Max 5 source types
+            (avg_reliability + source_diversity) / 2.0
+        };
+
+        tracing::info!(
+            "Coordinated research: {} sources, {} findings, quality: {:.2}",
+            research_sources.len(),
+            all_findings.len(),
+            coordination_quality
+        );
 
         Ok(ResearchCoordination {
             sources: research_sources,
-            findings: synthesized_findings,
-            coordination_quality: 0.8, // PLACEHOLDER: Coordination quality assessment
+            findings: all_findings,
+            coordination_quality,
             timestamp: chrono::Utc::now(),
         })
     }
@@ -602,21 +648,47 @@ impl DebateProtocol {
         research_coordination: &ResearchCoordination,
         arguments: &std::collections::HashMap<JudgeId, DebateArgument>,
     ) -> Result<ResearchIntegration> {
-        let mut integrated_findings: Vec<ResearchFinding> = Vec::new();
+        let mut integrated_findings: Vec<ResearchFinding> = research_coordination.findings.clone();
         let mut argument_enhancements = HashMap::new();
 
         // Integrate research findings with each argument
         for (judge_id, argument) in arguments {
-            // PLACEHOLDER: Argument enhancement with research
-            argument_enhancements.insert(judge_id.clone(), argument.clone());
+            let mut enhanced_arg = argument.clone();
+
+            // Enhance argument with relevant research findings
+            for finding in &research_coordination.findings {
+                // Check if finding is relevant to this argument's evidence
+                let is_relevant = argument.supporting_evidence.iter().any(|e| {
+                    finding.sources.contains(&e.source.location)
+                        || finding.topic.contains(&e.source.authority)
+                });
+
+                if is_relevant {
+                    // Add finding insight to the argument
+                    enhanced_arg.reasoning = format!(
+                        "{}\n\nResearch insight: {} (relevance: {:.2})",
+                        enhanced_arg.reasoning, finding.finding, finding.relevance
+                    );
+                }
+            }
+
+            argument_enhancements.insert(judge_id.clone(), enhanced_arg);
         }
 
-        // Validate integration quality
-        let integration_quality = 0.8; // PLACEHOLDER: Integration quality assessment
+        // Calculate integration quality based on coverage
+        let total_arguments = arguments.len() as f32;
+        let enhanced_count = argument_enhancements.len() as f32;
+        let integration_quality = if total_arguments > 0.0 {
+            (enhanced_count / total_arguments) * research_coordination.coordination_quality
+        } else {
+            0.0
+        };
+
+        tracing::debug!("Integrated research: quality {:.2}", integration_quality);
 
         Ok(ResearchIntegration {
             enhanced_arguments: argument_enhancements,
-            integrated_findings: research_coordination.findings.clone(),
+            integrated_findings,
             integration_quality,
             validation_status: ValidationStatus::Pending,
         })
@@ -632,17 +704,42 @@ impl DebateProtocol {
 
         // Validate each research finding
         for finding in &research_integration.integrated_findings {
-            // PLACEHOLDER: Single finding validation
-            validated_findings.push(finding.clone());
-            validation_metrics.valid_count += 1;
+            // Check validity criteria:
+            // 1. Has non-empty topic
+            // 2. Has non-empty finding content
+            // 3. Has reasonable relevance score (0.0 to 1.0)
+            // 4. Has at least one source
+            let is_valid = !finding.topic.is_empty()
+                && !finding.finding.is_empty()
+                && finding.relevance >= 0.0
+                && finding.relevance <= 1.0
+                && !finding.sources.is_empty();
+
+            if is_valid {
+                validated_findings.push(finding.clone());
+                validation_metrics.valid_count += 1;
+            } else {
+                validation_metrics.invalid_count += 1;
+                validation_metrics
+                    .validation_errors
+                    .push(format!("Invalid finding: {}", finding.topic));
+            }
         }
 
         // Calculate overall validation confidence
-        let overall_confidence = if !research_integration.integrated_findings.is_empty() {
-            validation_metrics.valid_count as f32 / research_integration.integrated_findings.len() as f32
+        let total_findings = research_integration.integrated_findings.len();
+        let overall_confidence = if total_findings > 0 {
+            validation_metrics.valid_count as f32 / total_findings as f32
         } else {
             0.0
         };
+
+        tracing::info!(
+            "Validation complete: {}/{} findings valid, confidence: {:.2}",
+            validation_metrics.valid_count,
+            total_findings,
+            overall_confidence
+        );
 
         Ok(ResearchValidation {
             validated_findings,
@@ -662,25 +759,56 @@ impl DebateProtocol {
 
         // Analyze effectiveness of each validated finding
         for finding in &research_validation.validated_findings {
-            // PLACEHOLDER: Finding effectiveness analysis
+            // Calculate impact score based on finding characteristics
+            // - High relevance = high impact (50%)
+            // - Multiple sources = high impact (30%)
+            // - Topic specificity = high impact (20%)
+            let relevance_weight = finding.relevance * 0.5;
+            let source_weight = (finding.sources.len() as f32).min(3.0) / 3.0 * 0.3;
+            let specificity = if finding.topic.len() > 20 { 1.0 } else { 0.6 };
+            let specificity_weight = specificity * 0.2;
+
+            let impact_score = relevance_weight + source_weight + specificity_weight;
+
             effectiveness_metrics.total_relevance += finding.relevance;
-            effectiveness_metrics.total_impact += 0.8; // PLACEHOLDER: Impact score
+            effectiveness_metrics.total_impact += impact_score;
+
+            // Categorize effectiveness factors
+            let mut effectiveness_factors = vec![];
+            if finding.relevance > 0.7 {
+                effectiveness_factors.push("high_relevance".to_string());
+            }
+            if finding.sources.len() > 1 {
+                effectiveness_factors.push("multi_source".to_string());
+            }
+            if !finding.topic.is_empty() {
+                effectiveness_factors.push("well_defined".to_string());
+            }
+
             impact_analysis.push(FindingEffectiveness {
-                finding_id: format!("finding-{}", finding.topic),
+                finding_id: format!("finding-{}", finding.topic.replace(' ', "_")),
                 relevance_score: finding.relevance,
-                impact_score: 0.8, // PLACEHOLDER: Impact score
-                effectiveness_factors: vec!["placeholder-factor".to_string()],
+                impact_score,
+                effectiveness_factors,
             });
         }
 
-        // Calculate average effectiveness
+        // Calculate average effectiveness metrics
         if !research_validation.validated_findings.is_empty() {
-            effectiveness_metrics.average_relevance = effectiveness_metrics.total_relevance / research_validation.validated_findings.len() as f32;
-            effectiveness_metrics.average_impact = effectiveness_metrics.total_impact / research_validation.validated_findings.len() as f32;
+            let finding_count = research_validation.validated_findings.len() as f32;
+            effectiveness_metrics.average_relevance = effectiveness_metrics.total_relevance / finding_count;
+            effectiveness_metrics.average_impact = effectiveness_metrics.total_impact / finding_count;
         }
 
         // Generate overall confidence score
         let overall_confidence = (research_validation.overall_confidence + effectiveness_metrics.average_relevance) / 2.0;
+
+        tracing::info!(
+            "Effectiveness analysis: avg_relevance={:.2}, avg_impact={:.2}, overall_confidence={:.2}",
+            effectiveness_metrics.average_relevance,
+            effectiveness_metrics.average_impact,
+            overall_confidence
+        );
 
         Ok(ResearchAnalytics {
             validated_findings: research_validation.validated_findings.clone(),

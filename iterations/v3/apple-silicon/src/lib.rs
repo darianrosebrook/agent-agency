@@ -5,6 +5,7 @@
 
 pub mod adaptive_resource_manager;
 pub mod ane;
+pub mod async_inference;
 pub mod candle_backend;
 pub mod core_ml;
 #[cfg(target_os = "macos")]
@@ -28,6 +29,10 @@ pub use adaptive_resource_manager::{
     Precision, Tier, WorkloadHint,
 };
 pub use ane::ANEManager;
+pub use async_inference::{
+    AsyncConfig, AsyncInferenceEngine, InferenceRequest, InferenceResult, Priority, PriorityQueue,
+    QueueStats,
+};
 pub use candle_backend::CandleBackend;
 #[cfg(target_os = "macos")]
 pub use core_ml_backend::CoreMLBackend;

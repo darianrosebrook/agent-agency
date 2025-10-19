@@ -16,8 +16,10 @@ mod tests;
 
 pub use cache::*;
 pub use context::*;
-pub use multimodal_indexer::*;
 pub use provider::*;
 pub use service::*;
 pub use similarity::*;
 pub use types::*;
+
+// Explicitly re-export from multimodal_indexer to avoid conflicts
+pub use multimodal_indexer::MultimodalIndexer;
