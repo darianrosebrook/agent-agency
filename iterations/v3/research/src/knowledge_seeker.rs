@@ -6,8 +6,8 @@
 use crate::types::*;
 use crate::ContentProcessingConfig;
 use crate::{
-    ConfigurationUpdate, ContentProcessor, ContextBuilder, VectorSearchEngine,
-    WebScraper,
+    ConfigurationUpdate, ContentProcessor, ContextBuilder, VectorSearchEngine, WebScraper,
+    MultimodalContextProvider, MultimodalContext, MultimodalRetriever,
 };
 use anyhow::{Context, Result};
 use async_trait::async_trait;
@@ -1141,28 +1141,12 @@ impl KnowledgeSeeker {
         let mut index = InvertedIndex::new();
 
         // Get all documents from vector search
-        // TODO: Implement vector search engine document retrieval with the following requirements:
-        // 1. Vector search engine integration: Get all documents from the vector search engine
-        //    - Get all documents from the vector search engine for processing
-        //    - Handle vector search engine integration optimization and performance
-        //    - Implement vector search engine integration validation and quality assurance
-        //    - Support vector search engine integration customization and configuration
-        // 2. Document retrieval optimization: Optimize document retrieval performance
-        //    - Optimize document retrieval performance for vector search engine
-        //    - Handle document retrieval optimization and performance
-        //    - Implement document retrieval optimization validation and quality assurance
-        //    - Support document retrieval optimization customization and configuration
-        // 3. Document processing: Process retrieved documents for analysis
-        //    - Process retrieved documents for knowledge analysis and processing
-        //    - Handle document processing optimization and performance
-        //    - Implement document processing validation and quality assurance
-        //    - Support document processing customization and configuration
-        // 4. Vector search optimization: Optimize vector search engine document retrieval performance
-        //    - Implement vector search engine document retrieval optimization strategies
-        //    - Handle vector search engine monitoring and analytics
-        //    - Implement vector search engine validation and quality assurance
-        //    - Ensure vector search engine document retrieval meets performance and accuracy standards
-        let all_documents: Vec<KnowledgeEntry> = Vec::new(); // Placeholder
+        let retrieval_batch_size = self.config.vector_search.batch_size.max(1);
+        let all_documents = self
+            .vector_search
+            .fetch_all_entries(Some(retrieval_batch_size))
+            .await
+            .context("Failed to retrieve documents from vector search engine")?;
 
         for (doc_id, document) in all_documents.iter().enumerate() {
             // Tokenize document content
@@ -1468,14 +1452,12 @@ impl KnowledgeSeeker {
                                 title: scraping_result.title,
                                 content: processed_content.processed_content,
                                 summary: processed_content.summary,
-                                relevance_score: self.calculate_relevance_score(
-                                    &temp_entry,
-                                    &query,
-                                )? as f32,
-                                confidence_score: self.calculate_confidence_score(
-                                    &temp_entry,
-                                    &query,
-                                )? as f32,
+                                relevance_score: self
+                                    .calculate_relevance_score(&temp_entry, &query)?
+                                    as f32,
+                                confidence_score: self
+                                    .calculate_confidence_score(&temp_entry, &query)?
+                                    as f32,
                                 //    - Factor in corroboration from multiple sources
                                 // 2. Confidence factors: Consider multiple confidence factors
                                 //    - Source credibility and expertise
@@ -1536,6 +1518,158 @@ impl KnowledgeSeeker {
         }
 
         metrics.last_updated = chrono::Utc::now();
+    }
+
+    // ============================================================================
+    // MULTIMODAL RAG INTEGRATION METHODS
+    // ============================================================================
+
+    /// Seek multimodal knowledge using the multimodal RAG system
+    ///
+    /// # Arguments
+    /// * `query` - Search query text
+    /// * `context` - Search context with project scope
+    ///
+    /// # Returns
+    /// Multimodal context with evidence from multiple modalities
+    pub async fn seek_multimodal_knowledge(
+        &self,
+        query: &str,
+        context: &SearchContext,
+    ) -> Result<MultimodalContext> {
+        info!("Seeking multimodal knowledge for query: {}", query);
+
+        // Create multimodal retriever (would need database pool in real implementation)
+        // For now, we'll use a mock implementation
+        let retriever = MultimodalRetriever::new(
+            // In real implementation, this would be: self.db_pool.clone()
+            // For now, we'll create a mock config
+            MultimodalRetrieverConfig {
+                max_results: 10,
+                similarity_threshold: 0.7,
+                fusion_method: "late_fusion_rrf".to_string(),
+                reranking_enabled: true,
+            }
+        );
+
+        // Search multimodal content
+        let results = retriever
+            .search_multimodal(query, 10, context.project_scope)
+            .await
+            .context("Multimodal search failed")?;
+
+        // Create multimodal context provider
+        let mut context_provider = MultimodalContextProvider::new(retriever);
+
+        // Get context with budget
+        let budget = crate::ContextBudget {
+            max_tokens: 8000,
+            max_items: 50,
+            min_confidence: 0.5,
+            prefer_global: false,
+        };
+
+        let multimodal_context = context_provider
+            .provide_context(query, Some(budget), context.project_scope)
+            .await
+            .context("Failed to provide multimodal context")?;
+
+        info!(
+            "Retrieved multimodal context: {} evidence items, {:.2} budget utilization",
+            multimodal_context.evidence_items.len(),
+            multimodal_context.budget_utilization
+        );
+
+        Ok(multimodal_context)
+    }
+
+    /// Get multimodal context for decision-making
+    ///
+    /// # Arguments
+    /// * `decision_point` - Decision point description
+    /// * `project_scope` - Optional project scope
+    ///
+    /// # Returns
+    /// Multimodal context optimized for decision-making
+    pub async fn get_decision_context(
+        &self,
+        decision_point: &str,
+        project_scope: Option<&str>,
+    ) -> Result<MultimodalContext> {
+        info!("Getting decision context for: {}", decision_point);
+
+        // Create multimodal retriever
+        let retriever = MultimodalRetriever::new(
+            MultimodalRetrieverConfig {
+                max_results: 100,
+                similarity_threshold: 0.4, // Lower threshold for decisions
+                fusion_method: "late_fusion_rrf".to_string(),
+                reranking_enabled: true,
+            }
+        );
+
+        let mut context_provider = MultimodalContextProvider::new(retriever);
+
+        // Use decision-optimized budget
+        let budget = crate::ContextBudget {
+            max_tokens: 12000, // Larger budget for decisions
+            max_items: 100,
+            min_confidence: 0.4, // Lower threshold for decisions
+            prefer_global: false,
+        };
+
+        let context = context_provider
+            .get_decision_context(decision_point, project_scope)
+            .await
+            .context("Failed to get decision context")?;
+
+        info!(
+            "Retrieved decision context: {} evidence items",
+            context.evidence_items.len()
+        );
+
+        Ok(context)
+    }
+
+    /// Get evidence context for claim enrichment
+    ///
+    /// # Arguments
+    /// * `claim` - Claim statement
+    /// * `context_type` - Type of evidence needed ("citation", "support", "refutation")
+    ///
+    /// # Returns
+    /// Multimodal context for claim enrichment
+    pub async fn get_evidence_context(
+        &self,
+        claim: &str,
+        context_type: &str,
+    ) -> Result<MultimodalContext> {
+        info!("Getting evidence context for claim: {} (type: {})", claim, context_type);
+
+        // Create multimodal retriever
+        let retriever = MultimodalRetriever::new(
+            MultimodalRetrieverConfig {
+                max_results: 20,
+                similarity_threshold: 0.6,
+                fusion_method: "late_fusion_rrf".to_string(),
+                reranking_enabled: true,
+            }
+        );
+
+        let mut context_provider = MultimodalContextProvider::new(retriever);
+
+        // Get evidence context
+        let context = context_provider
+            .get_evidence_context(claim, context_type)
+            .await
+            .context("Failed to get evidence context")?;
+
+        info!(
+            "Retrieved evidence context: {} evidence items",
+            context.evidence_items.len()
+        );
+
+        Ok(context)
     }
 }
 
@@ -1703,7 +1837,7 @@ mod tests {
             },
         };
         let seeker = KnowledgeSeeker::new(config).await;
- 
+
         // TODO: Implement comprehensive knowledge seeker testing with the following requirements:
         // 1. Knowledge seeker validation: Validate knowledge seeker creation and functionality
         //    - Verify knowledge seeker creation success and configuration

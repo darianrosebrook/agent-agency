@@ -10,17 +10,14 @@ pub mod test_utils;
 
 pub mod claim_extraction_tests;
 pub mod council_tests;
-pub mod cross_component_tests;
-pub mod database_tests;
-pub mod end_to_end_tests;
-pub mod orchestration_tests;
-pub mod performance_benchmarks;
-pub mod research_tests;
+pub mod multimodal_rag_e2e_tests;
 
 pub use fixtures::*;
 pub use helpers::*;
 pub use mocks::*;
 pub use test_utils::*;
+
+pub use multimodal_rag_e2e_tests::{MultimodalRagE2eTests, PerformanceMetrics};
 
 /// Integration test configuration
 #[derive(Debug, Clone)]

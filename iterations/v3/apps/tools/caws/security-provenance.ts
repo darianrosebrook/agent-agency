@@ -40,16 +40,18 @@ interface PromptProvenance {
  */
 interface KeyManagerOptions {
   keyStorePath?: string;
-  algorithm?: 'rsa' | 'ecdsa' | 'ed25519';
+  algorithm?: "rsa" | "ecdsa" | "ed25519";
 }
 
 class KeyManager {
   private keyStorePath: string;
-  private algorithm: 'rsa' | 'ecdsa' | 'ed25519';
+  private algorithm: "rsa" | "ecdsa" | "ed25519";
 
   constructor(options: KeyManagerOptions = {}) {
-    this.keyStorePath = options.keyStorePath || path.join(process.env.HOME || '/tmp', '.caws', 'keys');
-    this.algorithm = options.algorithm || 'ecdsa';
+    this.keyStorePath =
+      options.keyStorePath ||
+      path.join(process.env.HOME || "/tmp", ".caws", "keys");
+    this.algorithm = options.algorithm || "ecdsa";
     this.ensureKeyStoreExists();
   }
 
@@ -67,7 +69,10 @@ class KeyManager {
    * Supports PEM-encoded RSA, ECDSA, and Ed25519 keys
    */
   async loadPrivateKey(keyPath?: string): Promise<crypto.KeyObject> {
-    const actualKeyPath = keyPath || process.env.CAWS_PRIVATE_KEY_PATH || path.join(this.keyStorePath, 'private.pem');
+    const actualKeyPath =
+      keyPath ||
+      process.env.CAWS_PRIVATE_KEY_PATH ||
+      path.join(this.keyStorePath, "private.pem");
 
     // Try to load from environment variable first
     const envKey = process.env.CAWS_PRIVATE_KEY;
@@ -77,14 +82,18 @@ class KeyManager {
 
     // Load from file
     if (!fs.existsSync(actualKeyPath)) {
-      throw new Error(`Private key not found at ${actualKeyPath}. Set CAWS_PRIVATE_KEY or CAWS_PRIVATE_KEY_PATH.`);
+      throw new Error(
+        `Private key not found at ${actualKeyPath}. Set CAWS_PRIVATE_KEY or CAWS_PRIVATE_KEY_PATH.`
+      );
     }
 
     try {
-      const keyContent = fs.readFileSync(actualKeyPath, 'utf-8');
+      const keyContent = fs.readFileSync(actualKeyPath, "utf-8");
       return crypto.createPrivateKey(keyContent);
     } catch (error) {
-      throw new Error(`Failed to load private key from ${actualKeyPath}: ${error}`);
+      throw new Error(
+        `Failed to load private key from ${actualKeyPath}: ${error}`
+      );
     }
   }
 
@@ -92,7 +101,10 @@ class KeyManager {
    * Load public key from certificate or separate file
    */
   async loadPublicKey(keyPath?: string): Promise<crypto.KeyObject> {
-    const actualKeyPath = keyPath || process.env.CAWS_PUBLIC_KEY_PATH || path.join(this.keyStorePath, 'public.pem');
+    const actualKeyPath =
+      keyPath ||
+      process.env.CAWS_PUBLIC_KEY_PATH ||
+      path.join(this.keyStorePath, "public.pem");
 
     // Try to load from environment variable first
     const envKey = process.env.CAWS_PUBLIC_KEY;
@@ -102,14 +114,18 @@ class KeyManager {
 
     // Load from file
     if (!fs.existsSync(actualKeyPath)) {
-      throw new Error(`Public key not found at ${actualKeyPath}. Set CAWS_PUBLIC_KEY or CAWS_PUBLIC_KEY_PATH.`);
+      throw new Error(
+        `Public key not found at ${actualKeyPath}. Set CAWS_PUBLIC_KEY or CAWS_PUBLIC_KEY_PATH.`
+      );
     }
 
     try {
-      const keyContent = fs.readFileSync(actualKeyPath, 'utf-8');
+      const keyContent = fs.readFileSync(actualKeyPath, "utf-8");
       return crypto.createPublicKey(keyContent);
     } catch (error) {
-      throw new Error(`Failed to load public key from ${actualKeyPath}: ${error}`);
+      throw new Error(
+        `Failed to load public key from ${actualKeyPath}: ${error}`
+      );
     }
   }
 
@@ -118,16 +134,23 @@ class KeyManager {
    */
   getPublicKeyFingerprint(keyPath?: string): string {
     try {
-      const actualKeyPath = keyPath || process.env.CAWS_PUBLIC_KEY_PATH || path.join(this.keyStorePath, 'public.pem');
-      
+      const actualKeyPath =
+        keyPath ||
+        process.env.CAWS_PUBLIC_KEY_PATH ||
+        path.join(this.keyStorePath, "public.pem");
+
       if (fs.existsSync(actualKeyPath)) {
-        const keyContent = fs.readFileSync(actualKeyPath, 'utf-8');
-        return crypto.createHash('sha256').update(keyContent).digest('hex').substring(0, 16);
+        const keyContent = fs.readFileSync(actualKeyPath, "utf-8");
+        return crypto
+          .createHash("sha256")
+          .update(keyContent)
+          .digest("hex")
+          .substring(0, 16);
       }
     } catch (error) {
       // Fallback to generic fingerprint
     }
-    return 'no-key';
+    return "no-key";
   }
 }
 
@@ -146,7 +169,7 @@ export class SecurityProvenanceManager extends CawsBaseTool {
   async signArtifact(
     artifactPath: string,
     privateKeyPath?: string,
-    algorithm: 'rsa' | 'ecdsa' | 'ed25519' = 'ecdsa'
+    algorithm: "rsa" | "ecdsa" | "ed25519" = "ecdsa"
   ): Promise<SecurityProvenance> {
     try {
       const content = fs.readFileSync(artifactPath, "utf-8");
@@ -156,35 +179,49 @@ export class SecurityProvenanceManager extends CawsBaseTool {
 
       // Validate private key type matches requested algorithm
       const keyType = privateKey.asymmetricKeyType;
-      if ((algorithm === 'rsa' && keyType !== 'rsa') ||
-          (algorithm === 'ecdsa' && keyType !== 'ec') ||
-          (algorithm === 'ed25519' && keyType !== 'ed25519')) {
-        console.warn(`Key type ${keyType} may not match requested algorithm ${algorithm}. Proceeding with available key.`);
+      if (
+        (algorithm === "rsa" && keyType !== "rsa") ||
+        (algorithm === "ecdsa" && keyType !== "ec") ||
+        (algorithm === "ed25519" && keyType !== "ed25519")
+      ) {
+        console.warn(
+          `Key type ${keyType} may not match requested algorithm ${algorithm}. Proceeding with available key.`
+        );
       }
 
       // Generate digital signature based on algorithm
-      const signature = this.generateDigitalSignature(content, privateKey, algorithm);
+      const signature = this.generateDigitalSignature(
+        content,
+        privateKey,
+        algorithm
+      );
 
       // Get public key fingerprint for verification chain
-      const publicKeyFingerprint = this.keyManager.getPublicKeyFingerprint(privateKeyPath);
+      const publicKeyFingerprint =
+        this.keyManager.getPublicKeyFingerprint(privateKeyPath);
 
       // Verify signature integrity
       try {
-        const publicKey = privateKey.derive ? privateKey : await this.derivePublicKey(privateKey);
+        const publicKey = privateKey.derive
+          ? privateKey
+          : await this.derivePublicKey(privateKey);
         this.verifySignatureIntegrity(content, signature, publicKey, algorithm);
       } catch (verifyError) {
-        console.warn(`Signature verification failed during generation: ${verifyError}`);
+        console.warn(
+          `Signature verification failed during generation: ${verifyError}`
+        );
       }
 
       return {
         signature,
         signedBy: process.env.CAWS_SIGNER || "caws-agent",
         signedAt: new Date().toISOString(),
-        algorithm: algorithm === 'rsa' 
-          ? "RSA-SHA256" 
-          : algorithm === 'ecdsa'
-          ? "ECDSA-SHA256"
-          : "EdDSA",
+        algorithm:
+          algorithm === "rsa"
+            ? "RSA-SHA256"
+            : algorithm === "ecdsa"
+            ? "ECDSA-SHA256"
+            : "EdDSA",
         publicKeyFingerprint,
       };
     } catch (error) {
@@ -198,19 +235,19 @@ export class SecurityProvenanceManager extends CawsBaseTool {
   private generateDigitalSignature(
     content: string,
     privateKey: crypto.KeyObject,
-    algorithm: 'rsa' | 'ecdsa' | 'ed25519'
+    algorithm: "rsa" | "ecdsa" | "ed25519"
   ): string {
     try {
       const sign = crypto.createSign(
-        algorithm === 'rsa' 
-          ? 'RSA-SHA256'
-          : algorithm === 'ecdsa'
-          ? 'SHA256'
-          : 'ed25519'
+        algorithm === "rsa"
+          ? "RSA-SHA256"
+          : algorithm === "ecdsa"
+          ? "SHA256"
+          : "ed25519"
       );
 
       sign.update(content);
-      const signature = sign.sign(privateKey, 'hex');
+      const signature = sign.sign(privateKey, "hex");
       return signature;
     } catch (error) {
       throw new Error(`Failed to generate ${algorithm} signature: ${error}`);
@@ -220,7 +257,9 @@ export class SecurityProvenanceManager extends CawsBaseTool {
   /**
    * Derive public key from private key for verification
    */
-  private async derivePublicKey(privateKey: crypto.KeyObject): Promise<crypto.KeyObject> {
+  private async derivePublicKey(
+    privateKey: crypto.KeyObject
+  ): Promise<crypto.KeyObject> {
     try {
       return crypto.createPublicKey(privateKey);
     } catch (error) {
@@ -235,19 +274,19 @@ export class SecurityProvenanceManager extends CawsBaseTool {
     content: string,
     signature: string,
     publicKey: crypto.KeyObject,
-    algorithm: 'rsa' | 'ecdsa' | 'ed25519'
+    algorithm: "rsa" | "ecdsa" | "ed25519"
   ): boolean {
     try {
       const verify = crypto.createVerify(
-        algorithm === 'rsa'
-          ? 'RSA-SHA256'
-          : algorithm === 'ecdsa'
-          ? 'SHA256'
-          : 'ed25519'
+        algorithm === "rsa"
+          ? "RSA-SHA256"
+          : algorithm === "ecdsa"
+          ? "SHA256"
+          : "ed25519"
       );
 
       verify.update(content);
-      return verify.verify(publicKey, signature, 'hex');
+      return verify.verify(publicKey, signature, "hex");
     } catch (error) {
       throw new Error(`Signature integrity verification failed: ${error}`);
     }
@@ -260,7 +299,7 @@ export class SecurityProvenanceManager extends CawsBaseTool {
     artifactPath: string,
     signature: string,
     publicKeyPath?: string,
-    algorithm: 'rsa' | 'ecdsa' | 'ed25519' = 'ecdsa'
+    algorithm: "rsa" | "ecdsa" | "ed25519" = "ecdsa"
   ): Promise<boolean> {
     try {
       const content = fs.readFileSync(artifactPath, "utf-8");
@@ -270,14 +309,21 @@ export class SecurityProvenanceManager extends CawsBaseTool {
 
       // Validate public key is in acceptable format
       if (!publicKey || publicKey.asymmetricKeyType === undefined) {
-        throw new Error('Invalid public key format');
+        throw new Error("Invalid public key format");
       }
 
       // Verify cryptographic signature using appropriate algorithm
-      const verified = this.verifySignatureIntegrity(content, signature, publicKey, algorithm);
+      const verified = this.verifySignatureIntegrity(
+        content,
+        signature,
+        publicKey,
+        algorithm
+      );
 
       if (!verified) {
-        console.error('Signature verification failed: Invalid signature for content');
+        console.error(
+          "Signature verification failed: Invalid signature for content"
+        );
         return false;
       }
 
@@ -299,7 +345,7 @@ export class SecurityProvenanceManager extends CawsBaseTool {
     if (publicKeyPath && fs.existsSync(publicKeyPath)) {
       const stats = fs.statSync(publicKeyPath);
       if (stats.mode & 0o077) {
-        console.warn('Public key file has overly permissive permissions');
+        console.warn("Public key file has overly permissive permissions");
       }
     }
 
@@ -555,11 +601,11 @@ export class SecurityProvenanceManager extends CawsBaseTool {
    * Load model checksum database from persistent storage
    */
   private loadModelChecksumDatabase(): Record<string, any> {
-    const dbPath = path.join(this.getCawsDirectory(), 'model-checksums.json');
+    const dbPath = path.join(this.getCawsDirectory(), "model-checksums.json");
 
     if (fs.existsSync(dbPath)) {
       try {
-        const content = fs.readFileSync(dbPath, 'utf-8');
+        const content = fs.readFileSync(dbPath, "utf-8");
         return JSON.parse(content);
       } catch (error) {
         console.warn(`Failed to load checksum database: ${error}`);
@@ -573,14 +619,14 @@ export class SecurityProvenanceManager extends CawsBaseTool {
    * Save model checksum database to persistent storage
    */
   private saveModelChecksumDatabase(db: Record<string, any>): void {
-    const dbPath = path.join(this.getCawsDirectory(), 'model-checksums.json');
+    const dbPath = path.join(this.getCawsDirectory(), "model-checksums.json");
 
     try {
       if (!fs.existsSync(this.getCawsDirectory())) {
         fs.mkdirSync(this.getCawsDirectory(), { recursive: true });
       }
 
-      fs.writeFileSync(dbPath, JSON.stringify(db, null, 2), 'utf-8');
+      fs.writeFileSync(dbPath, JSON.stringify(db, null, 2), "utf-8");
     } catch (error) {
       console.error(`Failed to save checksum database: ${error}`);
     }
@@ -597,19 +643,21 @@ export class SecurityProvenanceManager extends CawsBaseTool {
     try {
       const modelFilePath = await this.locateModelFile(modelId, version);
       if (!modelFilePath) {
-        console.error(`Cannot register ${modelId}:${version} - model file not found`);
+        console.error(
+          `Cannot register ${modelId}:${version} - model file not found`
+        );
         return false;
       }
 
       const modelKey = `${modelId}:${version}`;
-      const sha256 = this.calculateModelChecksum(modelFilePath, 'sha256');
-      const md5 = this.calculateModelChecksum(modelFilePath, 'md5');
+      const sha256 = this.calculateModelChecksum(modelFilePath, "sha256");
+      const md5 = this.calculateModelChecksum(modelFilePath, "md5");
 
       db[modelKey] = {
         sha256,
         md5,
         registered_at: new Date().toISOString(),
-        source: 'auto-registered',
+        source: "auto-registered",
         verified: false,
       };
 
@@ -638,7 +686,10 @@ export class SecurityProvenanceManager extends CawsBaseTool {
         return false;
       }
 
-      const currentChecksum = this.calculateModelChecksum(modelFilePath, 'sha256');
+      const currentChecksum = this.calculateModelChecksum(
+        modelFilePath,
+        "sha256"
+      );
       const storedChecksum = db[modelKey]?.sha256;
 
       if (currentChecksum === storedChecksum) {
@@ -660,11 +711,11 @@ export class SecurityProvenanceManager extends CawsBaseTool {
    */
   private calculateModelChecksum(
     filePath: string,
-    algorithm: 'sha256' | 'md5' = 'sha256'
+    algorithm: "sha256" | "md5" = "sha256"
   ): string {
     try {
       const content = fs.readFileSync(filePath);
-      return crypto.createHash(algorithm).update(content).digest('hex');
+      return crypto.createHash(algorithm).update(content).digest("hex");
     } catch (error) {
       throw new Error(`Failed to calculate ${algorithm} checksum: ${error}`);
     }
@@ -673,20 +724,29 @@ export class SecurityProvenanceManager extends CawsBaseTool {
   /**
    * Locate model file from common model repository locations
    */
-  private async locateModelFile(modelId: string, version: string): Promise<string | null> {
+  private async locateModelFile(
+    modelId: string,
+    version: string
+  ): Promise<string | null> {
     const possiblePaths = [
       // Current directory
       path.join(process.cwd(), `${modelId}.mlmodel`),
       path.join(process.cwd(), `${modelId}-${version}.mlmodel`),
 
       // HuggingFace cache
-      path.join(process.env.HOME || '/tmp', '.cache', 'huggingface', 'hub', modelId),
+      path.join(
+        process.env.HOME || "/tmp",
+        ".cache",
+        "huggingface",
+        "hub",
+        modelId
+      ),
 
       // Local model cache
-      path.join(this.getCawsDirectory(), 'models', `${modelId}-${version}`),
+      path.join(this.getCawsDirectory(), "models", `${modelId}-${version}`),
 
       // Tests directory
-      path.join(process.cwd(), 'tests', `${modelId}.mlmodel`),
+      path.join(process.cwd(), "tests", `${modelId}.mlmodel`),
     ];
 
     for (const possiblePath of possiblePaths) {

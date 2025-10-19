@@ -405,3 +405,100 @@ pub struct CreditExport {
     pub transaction_history: Vec<CreditTransaction>,
     pub export_timestamp: chrono::DateTime<chrono::Utc>,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::Utc;
+
+    fn sample_action(action_id: &str, score: f64) -> ActionContribution {
+        ActionContribution {
+            action_id: action_id.to_string(),
+            contribution_score: score,
+            temporal_weight: 1.0,
+            quality_multiplier: 1.0,
+            timestamp: Utc::now(),
+        }
+    }
+
+    fn make_record(
+        participant_id: Uuid,
+        session_id: Uuid,
+        action_sequence: Vec<ActionContribution>,
+        total_credit: f64,
+        distribution: HashMap<String, f64>,
+    ) -> CreditRecord {
+        CreditRecord {
+            participant_id,
+            session_id,
+            action_sequence,
+            total_credit,
+            credit_distribution: distribution,
+            timestamp: Utc::now(),
+            validated: false,
+        }
+    }
+
+    #[tokio::test]
+    async fn validate_credit_assignments_updates_validation_status() {
+        let assigner = CreditAssigner::new();
+        let session_id = Uuid::new_v4();
+        let participant_id = Uuid::new_v4();
+
+        let mut valid_distribution = HashMap::new();
+        valid_distribution.insert("analysis".to_string(), 6.0);
+        valid_distribution.insert("refinement".to_string(), 4.0);
+
+        let valid_record = make_record(
+            participant_id,
+            session_id,
+            vec![sample_action("analysis", 0.8)],
+            10.0,
+            valid_distribution,
+        );
+
+        let mut invalid_distribution = HashMap::new();
+        invalid_distribution.insert("analysis".to_string(), 3.0);
+
+        let invalid_record = make_record(
+            participant_id,
+            session_id,
+            Vec::new(),
+            5.0,
+            invalid_distribution,
+        );
+
+        {
+            let mut records = assigner.credit_records.write().await;
+            records.insert(session_id, vec![valid_record, invalid_record]);
+        }
+
+        let report = assigner
+            .validate_credit_assignments()
+            .await
+            .expect("validation should not fail");
+
+        assert_eq!(report.total_records, 2, "expected both records to be evaluated");
+        assert_eq!(
+            report.validated_records, 1,
+            "only the consistent record should count as validated"
+        );
+        assert!(
+            report.issues_found >= 1,
+            "validation should surface issues for inconsistent records"
+        );
+
+        let records = assigner.credit_records.read().await;
+        let stored = records
+            .get(&session_id)
+            .expect("session records should remain available");
+        assert!(
+            stored.first().expect("valid record missing").validated,
+            "valid record should be marked validated"
+        );
+        assert!(
+            !stored.get(1).expect("invalid record missing").validated,
+            "invalid record must stay unvalidated"
+        );
+    }
+}

@@ -17,6 +17,99 @@ use tokio::time::{Duration, Instant};
 use tracing::{debug, error, info, warn};
 use uuid::Uuid;
 
+/// Result of a worker health check
+#[derive(Debug, Clone)]
+pub struct HealthCheckResult {
+    pub is_healthy: bool,
+    pub response_time_ms: u64,
+    pub metrics: Option<WorkerHealthMetrics>,
+    pub error: Option<String>,
+}
+
+/// Perform comprehensive health check on a worker
+async fn perform_worker_health_check(worker: &Worker) -> HealthCheckResult {
+    let start_time = Instant::now();
+    
+    // Build health check URL
+    let health_url = format!("{}/health", worker.endpoint.trim_end_matches('/'));
+    
+    // Create HTTP client for this health check
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(5))
+        .build()
+        .unwrap_or_else(|_| reqwest::Client::new());
+    
+    // Perform HTTP health check
+    let health_response = client.get(&health_url).send().await;
+    
+    let response_time_ms = start_time.elapsed().as_millis() as u64;
+    
+    match health_response {
+        Ok(response) => {
+            let status = response.status();
+            let is_healthy = status.is_success();
+            
+            // Try to parse health metrics from response
+            let metrics = if is_healthy {
+                match response.json::<serde_json::Value>().await {
+                    Ok(json) => {
+                        // Extract metrics from health response
+                        Some(WorkerHealthMetrics {
+                            response_time_ms,
+                            cpu_usage_percent: json.get("cpu_usage")
+                                .and_then(|v| v.as_f64())
+                                .unwrap_or(0.0),
+                            memory_usage_percent: json.get("memory_usage")
+                                .and_then(|v| v.as_f64())
+                                .unwrap_or(0.0),
+                            active_tasks: json.get("active_tasks")
+                                .and_then(|v| v.as_u64())
+                                .unwrap_or(worker.active_tasks) as u32,
+                            queue_depth: json.get("queue_depth")
+                                .and_then(|v| v.as_u64())
+                                .unwrap_or(worker.queue_depth) as u32,
+                            last_seen: chrono::Utc::now(),
+                            consecutive_failures: 0,
+                        })
+                    }
+                    Err(_) => {
+                        // Fallback metrics if JSON parsing fails
+                        Some(WorkerHealthMetrics {
+                            response_time_ms,
+                            cpu_usage_percent: 0.0,
+                            memory_usage_percent: 0.0,
+                            active_tasks: worker.active_tasks,
+                            queue_depth: worker.queue_depth,
+                            last_seen: chrono::Utc::now(),
+                            consecutive_failures: 0,
+                        })
+                    }
+                }
+            } else {
+                None
+            };
+            
+            HealthCheckResult {
+                is_healthy,
+                response_time_ms,
+                metrics,
+                error: if is_healthy { None } else { 
+                    Some(format!("HTTP {}: {}", status.as_u16(), status.canonical_reason().unwrap_or("Unknown error")))
+                },
+            }
+        }
+        Err(e) => {
+            // Network or timeout error
+            HealthCheckResult {
+                is_healthy: false,
+                response_time_ms,
+                metrics: None,
+                error: Some(format!("Health check failed: {}", e)),
+            }
+        }
+    }
+}
+
 /// Main worker pool manager
 #[derive(Debug)]
 pub struct WorkerPoolManager {
@@ -525,62 +618,18 @@ impl WorkerPoolManager {
                     let worker_clone = worker.clone();
                     let health_check_future = async move {
                         // Create a temporary manager instance for health checking
-                        // TODO: Implement proper health check handling with the following requirements:
-                        // 1. Health check architecture: Handle health checks differently in real implementation
-                        //    - Handle health checks with proper architecture and design
-                        //    - Handle health check architecture optimization and performance
-                        //    - Implement health check architecture validation and quality assurance
-                        //    - Support health check architecture customization and configuration
-                        // 2. Health check management: Manage health check lifecycle and operations
-                        //    - Manage health check lifecycle and operational management
-                        //    - Handle health check management optimization and performance
-                        //    - Implement health check management validation and quality assurance
-                        //    - Support health check management customization and configuration
-                        // 3. Health check optimization: Optimize health check performance and reliability
-                        //    - Optimize health check performance and reliability for production
-                        //    - Handle health check optimization and performance
-                        //    - Implement health check optimization validation and quality assurance
-                        //    - Support health check optimization customization and configuration
-                        // 4. Health check system optimization: Optimize health check system performance
-                        //    - Implement health check system optimization strategies
-                        //    - Handle health check system monitoring and analytics
-                        //    - Implement health check system validation and quality assurance
-                        //    - Ensure health check system meets performance and reliability standards
-                        // TODO: Implement comprehensive worker health checking with the following requirements:
-                        // 1. Health check implementation: Implement actual worker health checking
-                        //    - Create comprehensive worker health check algorithms
-                        //    - Handle health check optimization and performance
-                        //    - Implement health check validation and quality assurance
-                        // 2. Worker monitoring: Monitor worker health and performance
-                        //    - Track worker health status and performance metrics
-                        //    - Handle worker monitoring optimization and alerting
-                        //    - Implement worker monitoring validation and quality assurance
-                        // 3. Health check integration: Integrate health checking with worker management
-                        //    - Connect health checking to worker management systems
-                        //    - Handle health check integration optimization and reliability
-                        //    - Implement health check integration validation and quality assurance
-                        // 4. Performance optimization: Optimize worker health checking performance
-                        //    - Implement health check caching and optimization strategies
-                        //    - Handle health check performance monitoring and analytics
-                        //    - Ensure worker health checking meets performance and reliability standards
+                        // Implement comprehensive worker health checking
+                        let health_check_result = perform_worker_health_check(&worker_clone).await;
 
-                        // Simulate HTTP health check (in practice, this would use reqwest)
-                        let health_url =
-                            format!("{}/health", worker_clone.endpoint.trim_end_matches('/'));
-
-                        // Simulate network request timing
-                        tokio::time::sleep(Duration::from_millis(50)).await;
-
-                        // Simulate health check result based on worker state
-                        let is_healthy = matches!(
-                            worker_clone.status,
-                            WorkerStatus::Available | WorkerStatus::Busy
-                        );
+                        let is_healthy = health_check_result.is_healthy;
+                        let response_time_ms = health_check_result.response_time_ms;
+                        let health_metrics = health_check_result.metrics;
 
                         if is_healthy {
-                            debug!("Worker {} health check passed", worker_id);
+                            debug!("Worker {} health check passed ({}ms)", worker_id, response_time_ms);
                         } else {
-                            warn!("Worker {} health check failed", worker_id);
+                            warn!("Worker {} health check failed ({}ms): {}", 
+                                worker_id, response_time_ms, health_check_result.error.unwrap_or_default());
                         }
 
                         // Update worker with health check results
@@ -594,22 +643,20 @@ impl WorkerPoolManager {
                                 WorkerHealthStatus::Unhealthy
                             };
 
-                            // Create basic health metrics
-                            // TODO: Replace simulated health metrics with actual measurements
-                            // Acceptance criteria:
-                            // - response_time_ms should be measured from actual health check request
-                            // - cpu_usage_percent should be queried from worker or system metrics
-                            // - memory_usage_percent should be queried from worker or system metrics
-                            // - active_tasks and queue_depth should be retrieved from worker state
-                            let health_metrics = WorkerHealthMetrics {
-                                response_time_ms: 150, // TODO: Measure actual response time
-                                cpu_usage_percent: 45.0,
-                                memory_usage_percent: 60.0,
-                                active_tasks: 2,
-                                queue_depth: 5,
+                            // Use actual health metrics from health check result
+                            let health_metrics = health_metrics.unwrap_or_else(|| WorkerHealthMetrics {
+                                response_time_ms,
+                                cpu_usage_percent: 0.0, // Fallback if not available
+                                memory_usage_percent: 0.0, // Fallback if not available
+                                active_tasks: worker_mut.active_tasks,
+                                queue_depth: worker_mut.queue_depth,
                                 last_seen: chrono::Utc::now(),
-                                consecutive_failures: if is_healthy { 0 } else { 1 },
-                            };
+                                consecutive_failures: if is_healthy { 0 } else { 
+                                    worker_mut.health_metrics.as_ref()
+                                        .map(|m| m.consecutive_failures + 1)
+                                        .unwrap_or(1)
+                                },
+                            });
 
                             worker_mut.health_metrics = Some(health_metrics);
                             worker_mut.last_health_check = Some(chrono::Utc::now());
@@ -619,7 +666,7 @@ impl WorkerPoolManager {
                         let _ = event_sender.send(WorkerPoolEvent::WorkerHealthChecked {
                             worker_id,
                             is_healthy,
-                            response_time_ms: 150,
+                            response_time_ms,
                             checked_at: chrono::Utc::now(),
                         });
                     };

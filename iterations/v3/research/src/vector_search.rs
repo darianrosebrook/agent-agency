@@ -5,14 +5,16 @@
 use crate::types::*;
 use anyhow::{Context, Result};
 use qdrant_client::qdrant::{
-    vectors_config::Config, CreateCollection, Distance, PointStruct, SearchPoints, VectorParams,
-    VectorsConfig, WithPayloadSelector,
+    vectors_config::Config, CreateCollection, Distance, PointStruct, ScrollPoints, SearchPoints,
+    VectorParams, VectorsConfig, WithPayloadSelector,
 };
 use qdrant_client::Qdrant;
 use serde_json::json;
 use std::collections::HashMap;
+use std::io::ErrorKind;
+use std::path::PathBuf;
 use std::sync::Arc;
-use tokio::sync::RwLock;
+use tokio::sync::{Mutex, RwLock};
 use tracing::{debug, info, warn};
 use uuid::Uuid;
 
@@ -26,6 +28,8 @@ pub struct VectorSearchEngine {
     cache: Arc<RwLock<HashMap<String, Vec<KnowledgeEntry>>>>,
     embedding_cache: Arc<RwLock<HashMap<String, Vec<f32>>>>,
     metrics: Arc<RwLock<VectorSearchMetrics>>,
+    persistent_cache_dir: PathBuf,
+    persistent_cache_lock: Arc<Mutex<()>>,
 }
 
 impl std::fmt::Debug for VectorSearchEngine {
@@ -35,6 +39,7 @@ impl std::fmt::Debug for VectorSearchEngine {
             .field("vector_size", &self.vector_size)
             .field("similarity_threshold", &self.similarity_threshold)
             .field("max_results", &self.max_results)
+            .field("persistent_cache_dir", &self.persistent_cache_dir)
             .field("metrics", &self.metrics)
             .finish()
     }
@@ -47,6 +52,17 @@ pub struct VectorSearchMetrics {
     average_search_time_ms: f64,
     average_results_count: f32,
     last_search_time: Option<chrono::DateTime<chrono::Utc>>,
+}
+
+const PERSISTENT_CACHE_ENV_KEY: &str = "AA_VECTOR_CACHE_DIR";
+const PERSISTENT_CACHE_LIMIT_ENV_KEY: &str = "AA_VECTOR_CACHE_LIMIT";
+const DEFAULT_PERSISTENT_CACHE_DIR: &str = "cache/vector_search";
+const DEFAULT_PERSISTENT_CACHE_LIMIT: usize = 10_000;
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+struct PersistentEmbeddingRecord {
+    embedding: Vec<f32>,
+    last_updated: i64,
 }
 
 impl VectorSearchEngine {
@@ -76,6 +92,8 @@ impl VectorSearchEngine {
             cache: Arc::new(RwLock::new(HashMap::new())),
             embedding_cache: Arc::new(RwLock::new(HashMap::new())),
             metrics: Arc::new(RwLock::new(VectorSearchMetrics::default())),
+            persistent_cache_dir: Self::resolve_persistent_cache_dir(),
+            persistent_cache_lock: Arc::new(Mutex::new(())),
         };
 
         // Initialize collection if it doesn't exist
@@ -83,6 +101,12 @@ impl VectorSearchEngine {
 
         info!("Vector search engine initialized successfully");
         Ok(engine)
+    }
+
+    fn resolve_persistent_cache_dir() -> PathBuf {
+        std::env::var(PERSISTENT_CACHE_ENV_KEY)
+            .map(PathBuf::from)
+            .unwrap_or_else(|_| PathBuf::from(DEFAULT_PERSISTENT_CACHE_DIR))
     }
 
     /// Ensure the collection exists and is properly configured
@@ -203,6 +227,75 @@ impl VectorSearchEngine {
         Ok(knowledge_entries)
     }
 
+    /// Fetch all knowledge entries from the vector database efficiently
+    pub async fn fetch_all_entries(&self, batch_size: Option<u32>) -> Result<Vec<KnowledgeEntry>> {
+        let mut all_entries = Vec::new();
+        let mut offset: Option<qdrant_client::qdrant::PointId> = None;
+        let batch = batch_size.unwrap_or(256).max(1);
+
+        loop {
+            let scroll_request = ScrollPoints {
+                collection_name: self.collection_name.clone(),
+                filter: None,
+                offset: offset.clone(),
+                limit: Some(batch),
+                with_payload: Some(WithPayloadSelector {
+                    selector_options: Some(
+                        qdrant_client::qdrant::with_payload_selector::SelectorOptions::Enable(true),
+                    ),
+                }),
+                with_vectors: None,
+                read_consistency: None,
+                shard_key_selector: None,
+                order_by: None,
+                timeout: None,
+            };
+
+            let response = self
+                .client
+                .scroll(&scroll_request)
+                .await
+                .context("Vector search scroll failed")?;
+
+            let qdrant_client::qdrant::ScrollResponse {
+                result,
+                next_page_offset,
+                ..
+            } = response;
+
+            if result.is_empty() {
+                if next_page_offset.is_none() {
+                    break;
+                }
+                offset = next_page_offset;
+                continue;
+            }
+
+            for retrieved_point in result {
+                let scored_point = qdrant_client::qdrant::ScoredPoint {
+                    id: retrieved_point.id,
+                    payload: retrieved_point.payload,
+                    score: 0.0,
+                    version: 0,
+                    vectors: retrieved_point.vectors,
+                    shard_key: retrieved_point.shard_key,
+                    order_value: retrieved_point.order_value,
+                };
+
+                if let Some(entry) = self.point_to_knowledge_entry(scored_point).await? {
+                    all_entries.push(entry);
+                }
+            }
+
+            offset = next_page_offset;
+            if offset.is_none() {
+                break;
+            }
+        }
+
+        Ok(all_entries)
+    }
+
     /// Add knowledge entry to vector database
     pub async fn add_knowledge_entry(&self, entry: &KnowledgeEntry) -> Result<()> {
         if let Some(embedding) = &entry.embedding {
@@ -292,7 +385,7 @@ impl VectorSearchEngine {
         let processed_text = self.preprocess_text(text);
 
         // 2. Check cache first
-        if let Some(cached_embedding) = self.get_cached_embedding(&processed_text).await {
+        if let Some(cached_embedding) = self.get_cached_embedding(&processed_text).await? {
             return Ok(cached_embedding);
         }
 
@@ -764,7 +857,7 @@ impl VectorSearchEngine {
     /// Cache embedding for performance optimization
     async fn cache_embedding(&self, text: &str, embedding: &[f32]) -> Result<Vec<f32>> {
         // Check if embedding is already cached
-        if let Some(cached) = self.get_cached_embedding(text).await {
+        if let Some(cached) = self.get_cached_embedding(text).await? {
             return Ok(cached);
         }
 
@@ -851,10 +944,29 @@ impl VectorSearchEngine {
     }
 
     /// Get cached embedding
-    async fn get_cached_embedding(&self, text: &str) -> Option<Vec<f32>> {
-        // Check local cache first
-        let cache = self.embedding_cache.read().await;
-        cache.get(text).cloned()
+    async fn get_cached_embedding(&self, text: &str) -> Result<Option<Vec<f32>>> {
+        {
+            let cache = self.embedding_cache.read().await;
+            if let Some(embedding) = cache.get(text) {
+                return Ok(Some(embedding.clone()));
+            }
+        }
+
+        match self.load_embedding_from_persistent_cache(text).await {
+            Ok(Some(embedding)) => {
+                let mut cache = self.embedding_cache.write().await;
+                cache.insert(text.to_string(), embedding.clone());
+                Ok(Some(embedding))
+            }
+            Ok(None) => Ok(None),
+            Err(err) => {
+                warn!(
+                    "Failed to load embedding from persistent cache for key '{}': {}",
+                    text, err
+                );
+                Ok(None)
+            }
+        }
     }
 
     /// Store embedding in cache
@@ -862,30 +974,99 @@ impl VectorSearchEngine {
         // Store in local cache
         let mut cache = self.embedding_cache.write().await;
         cache.insert(text.to_string(), embedding.to_vec());
+        drop(cache);
 
-        // TODO: Implement persistent cache storage with the following requirements:
-        // 1. Persistent cache integration: Store in a persistent cache store
-        //    - Store embeddings in a persistent cache store for optimization
-        //    - Handle persistent cache integration optimization and performance
-        //    - Implement persistent cache integration validation and quality assurance
-        //    - Support persistent cache integration customization and configuration
-        // 2. Cache storage optimization: Optimize cache storage performance
-        //    - Optimize cache storage performance for persistent storage
-        //    - Handle cache storage optimization and performance
-        //    - Implement cache storage optimization validation and quality assurance
-        //    - Support cache storage optimization customization and configuration
-        // 3. Cache persistence management: Manage cache persistence and lifecycle
-        //    - Manage cache persistence and lifecycle for long-term storage
-        //    - Handle cache persistence management optimization and performance
-        //    - Implement cache persistence management validation and quality assurance
-        //    - Support cache persistence management customization and configuration
-        // 4. Persistent cache optimization: Optimize persistent cache storage performance
-        //    - Implement persistent cache storage optimization strategies
-        //    - Handle persistent cache monitoring and analytics
-        //    - Implement persistent cache validation and quality assurance
-        //    - Ensure persistent cache storage meets performance and reliability standards
+        // Persist embedding to disk for durability
+        self.persist_embedding(text, embedding).await?;
+
         debug!("Cached embedding for text: {}", text);
         Ok(())
+    }
+
+    async fn load_embedding_from_persistent_cache(&self, text: &str) -> Result<Option<Vec<f32>>> {
+        let persistent_cache = self.read_persistent_cache().await?;
+        Ok(persistent_cache
+            .get(text)
+            .map(|record| record.embedding.clone()))
+    }
+
+    async fn persist_embedding(&self, text: &str, embedding: &[f32]) -> Result<()> {
+        let _lock = self.persistent_cache_lock.clone().lock_owned().await;
+        let mut persistent_cache = self.read_persistent_cache().await?;
+        persistent_cache.insert(
+            text.to_string(),
+            PersistentEmbeddingRecord {
+                embedding: embedding.to_vec(),
+                last_updated: chrono::Utc::now().timestamp(),
+            },
+        );
+
+        self.prune_persistent_cache(&mut persistent_cache);
+        self.write_persistent_cache(&persistent_cache).await
+    }
+
+    fn cache_file_path(&self) -> PathBuf {
+        let file_name = format!("{}_embeddings.json", self.collection_name);
+        self.persistent_cache_dir.join(file_name)
+    }
+
+    fn persistent_cache_limit(&self) -> usize {
+        std::env::var(PERSISTENT_CACHE_LIMIT_ENV_KEY)
+            .ok()
+            .and_then(|value| value.parse::<usize>().ok())
+            .filter(|limit| *limit > 0)
+            .unwrap_or(DEFAULT_PERSISTENT_CACHE_LIMIT)
+    }
+
+    async fn read_persistent_cache(&self) -> Result<HashMap<String, PersistentEmbeddingRecord>> {
+        let path = self.cache_file_path();
+        match tokio::fs::read(&path).await {
+            Ok(bytes) if !bytes.is_empty() => {
+                let cache =
+                    serde_json::from_slice::<HashMap<String, PersistentEmbeddingRecord>>(&bytes)
+                        .context("Failed to deserialize persistent embedding cache")?;
+                Ok(cache)
+            }
+            Ok(_) => Ok(HashMap::new()),
+            Err(err) if err.kind() == ErrorKind::NotFound => Ok(HashMap::new()),
+            Err(err) => Err(err.into()),
+        }
+    }
+
+    async fn write_persistent_cache(
+        &self,
+        cache: &HashMap<String, PersistentEmbeddingRecord>,
+    ) -> Result<()> {
+        let path = self.cache_file_path();
+        if let Some(parent) = path.parent() {
+            tokio::fs::create_dir_all(parent).await?;
+        }
+
+        let serialized =
+            serde_json::to_vec(cache).context("Failed to serialize persistent embedding cache")?;
+        let tmp_path = path.with_extension("tmp");
+
+        tokio::fs::write(&tmp_path, &serialized).await?;
+        tokio::fs::rename(&tmp_path, &path).await?;
+        Ok(())
+    }
+
+    fn prune_persistent_cache(&self, cache: &mut HashMap<String, PersistentEmbeddingRecord>) {
+        let limit = self.persistent_cache_limit();
+        if cache.len() <= limit {
+            return;
+        }
+
+        let mut entries: Vec<_> = cache
+            .iter()
+            .map(|(key, record)| (key.clone(), record.last_updated))
+            .collect();
+        entries.sort_by_key(|(_, timestamp)| *timestamp);
+
+        let remove_count = cache.len() - limit;
+        for (key, _) in entries.into_iter().take(remove_count) {
+            cache.remove(&key);
+        }
     }
 }
 
@@ -907,6 +1088,29 @@ impl VectorSearchEngine {
             cache: Arc::new(RwLock::new(HashMap::new())),
             embedding_cache: Arc::new(RwLock::new(HashMap::new())),
             metrics: Arc::new(RwLock::new(VectorSearchMetrics::default())),
+            persistent_cache_dir: Self::resolve_persistent_cache_dir(),
+            persistent_cache_lock: Arc::new(Mutex::new(())),
+        }
+    }
+
+    pub fn new_mock_with_cache_dir(cache_dir: impl Into<PathBuf>) -> Self {
+        use qdrant_client::config::QdrantConfig;
+
+        let mut config = QdrantConfig::from_url("http://localhost:6333");
+        config.check_compatibility = false;
+        let client = Qdrant::new(config).expect("failed to build mock Qdrant client");
+
+        Self {
+            client: Arc::new(client),
+            collection_name: "mock".to_string(),
+            vector_size: 16,
+            similarity_threshold: 0.5,
+            max_results: 8,
+            cache: Arc::new(RwLock::new(HashMap::new())),
+            embedding_cache: Arc::new(RwLock::new(HashMap::new())),
+            metrics: Arc::new(RwLock::new(VectorSearchMetrics::default())),
+            persistent_cache_dir: cache_dir.into(),
+            persistent_cache_lock: Arc::new(Mutex::new(())),
         }
     }
 }
@@ -942,7 +1146,7 @@ mod tests {
         let engine =
             VectorSearchEngine::new("http://localhost:6333", "test_collection", 1536, 0.7, 10)
                 .await;
- 
+
         // TODO: Implement comprehensive vector search engine testing with the following requirements:
         // 1. Engine creation validation: Validate vector search engine creation and configuration
         //    - Verify vector search engine creation success and configuration
@@ -979,5 +1183,71 @@ mod tests {
         // Check that embedding is normalized (magnitude close to 1.0)
         let magnitude: f32 = embedding.iter().map(|x| x * x).sum::<f32>().sqrt();
         assert!((magnitude - 1.0).abs() < 0.1);
+    }
+
+    #[tokio::test]
+    async fn persistent_embedding_cache_roundtrip() -> anyhow::Result<()> {
+        let cache_dir =
+            std::env::temp_dir().join(format!("vector-cache-roundtrip-{}", Uuid::new_v4()));
+        tokio::fs::create_dir_all(&cache_dir).await?;
+
+        let engine = VectorSearchEngine::new_mock_with_cache_dir(cache_dir.clone());
+        let embedding: Vec<f32> = (0..engine.vector_size as usize)
+            .map(|idx| idx as f32 / 10.0)
+            .collect();
+        let key = "roundtrip-key";
+
+        engine.store_embedding_in_cache(key, &embedding).await?;
+        drop(engine);
+
+        let reload = VectorSearchEngine::new_mock_with_cache_dir(cache_dir.clone());
+        let cached = reload
+            .get_cached_embedding(key)
+            .await?
+            .expect("expected embedding persisted to disk");
+        assert_eq!(cached, embedding);
+
+        tokio::fs::remove_dir_all(&cache_dir).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn persistent_embedding_cache_prunes_entries() -> anyhow::Result<()> {
+        let cache_dir = std::env::temp_dir().join(format!("vector-cache-prune-{}", Uuid::new_v4()));
+        tokio::fs::create_dir_all(&cache_dir).await?;
+        struct EnvVarGuard(&'static str);
+        impl Drop for EnvVarGuard {
+            fn drop(&mut self) {
+                std::env::remove_var(self.0);
+            }
+        }
+        let _limit_guard = EnvVarGuard(super::PERSISTENT_CACHE_LIMIT_ENV_KEY);
+        std::env::set_var(super::PERSISTENT_CACHE_LIMIT_ENV_KEY, "5");
+
+        let engine = VectorSearchEngine::new_mock_with_cache_dir(cache_dir.clone());
+        let embedding_size = engine.vector_size as usize;
+
+        for idx in 0..8_u32 {
+            let key = format!("cache-key-{}", idx);
+            let embedding: Vec<f32> = (0..embedding_size)
+                .map(|offset| (idx as f32) + offset as f32 * 0.01)
+                .collect();
+            engine.store_embedding_in_cache(&key, &embedding).await?;
+        }
+
+        let persisted = engine.read_persistent_cache().await?;
+        assert!(
+            persisted.len() <= 5,
+            "expected cache to prune to limit, got {} entries",
+            persisted.len()
+        );
+        assert!(
+            !persisted.contains_key("cache-key-0"),
+            "oldest entry should be pruned from persistent cache"
+        );
+
+        drop(engine);
+        tokio::fs::remove_dir_all(&cache_dir).await?;
+        Ok(())
     }
 }

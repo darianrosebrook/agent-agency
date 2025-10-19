@@ -160,15 +160,19 @@ function checkPerformanceCompliance() {
 function getRealFlakeRate() {
   try {
     // Parse test execution history and results
-    const testHistoryPath = path.join(process.cwd(), '.test-history', 'runs.json');
-    
+    const testHistoryPath = path.join(
+      process.cwd(),
+      ".test-history",
+      "runs.json"
+    );
+
     if (!fs.existsSync(testHistoryPath)) {
       // Attempt to analyze recent test runs from CI logs
       return analyzeTestResultsFromLogs();
     }
 
-    const testHistory = JSON.parse(fs.readFileSync(testHistoryPath, 'utf8'));
-    
+    const testHistory = JSON.parse(fs.readFileSync(testHistoryPath, "utf8"));
+
     // Statistical analysis for flakiness detection
     const flakiestTests = {};
     const testRunData = {};
@@ -177,7 +181,7 @@ function getRealFlakeRate() {
     for (const run of testHistory.runs || []) {
       for (const test of run.tests || []) {
         const testId = `${test.file}::${test.name}`;
-        
+
         if (!testRunData[testId]) {
           testRunData[testId] = {
             passed: 0,
@@ -188,12 +192,12 @@ function getRealFlakeRate() {
 
         testRunData[testId].runs.push({
           timestamp: run.timestamp,
-          passed: test.status === 'passed',
+          passed: test.status === "passed",
           duration: test.duration,
           error: test.error,
         });
 
-        if (test.status === 'passed') {
+        if (test.status === "passed") {
           testRunData[testId].passed++;
         } else {
           testRunData[testId].failed++;
@@ -209,7 +213,7 @@ function getRealFlakeRate() {
     for (const testId in testRunData) {
       const data = testRunData[testId];
       const totalRuns = data.passed + data.failed;
-      
+
       if (totalRuns < 3) {
         // Need at least 3 runs for statistical significance
         continue;
@@ -232,7 +236,7 @@ function getRealFlakeRate() {
 
     // Calculate overall flake rate
     const flakeRate = totalTests > 0 ? totalFlakies / totalTests : 0;
-    
+
     // Log root cause analysis for top flaky tests
     analyzeFlakeCauses(flakiestTests);
 
@@ -259,7 +263,7 @@ function classifyFlakiPattern(runs) {
   if (failureHours.length > 0) {
     const uniqueHours = new Set(failureHours);
     if (uniqueHours.size === 1) {
-      return 'timing_dependent';
+      return "timing_dependent";
     }
   }
 
@@ -267,23 +271,25 @@ function classifyFlakiPattern(runs) {
   const durations = runs.map((r) => r.duration).filter((d) => d);
   if (durations.length > 1) {
     const mean = durations.reduce((a, b) => a + b, 0) / durations.length;
-    const variance = durations.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / durations.length;
+    const variance =
+      durations.reduce((a, b) => a + Math.pow(b - mean, 2), 0) /
+      durations.length;
     const stdDev = Math.sqrt(variance);
     const coefficientOfVariation = stdDev / mean;
 
     if (coefficientOfVariation > 0.5) {
-      return 'timing_sensitive';
+      return "timing_sensitive";
     }
   }
 
   // Check for resource contention: alternating pass/fail pattern
-  const passFailPattern = runs.map((r) => r.passed ? 'P' : 'F').join('');
+  const passFailPattern = runs.map((r) => (r.passed ? "P" : "F")).join("");
   if (/PFPFPF|FPFPFP/.test(passFailPattern)) {
-    return 'resource_contention';
+    return "resource_contention";
   }
 
   // Check for race conditions: random failures
-  return 'race_condition';
+  return "race_condition";
 }
 
 /**
@@ -323,8 +329,12 @@ function analyzeFlakeCauses(flakiestTests) {
   }
 
   if (Object.keys(flakiestTests).length > 0) {
-    console.info(`Flakiness Analysis: ${Object.keys(flakiestTests).length} flaky tests detected`);
-    
+    console.info(
+      `Flakiness Analysis: ${
+        Object.keys(flakiestTests).length
+      } flaky tests detected`
+    );
+
     if (causes.timing_dependent > 0) {
       console.info(`  - Timing-dependent: ${causes.timing_dependent} tests`);
     }
@@ -332,7 +342,9 @@ function analyzeFlakeCauses(flakiestTests) {
       console.info(`  - Timing-sensitive: ${causes.timing_sensitive} tests`);
     }
     if (causes.resource_contention > 0) {
-      console.info(`  - Resource contention: ${causes.resource_contention} tests`);
+      console.info(
+        `  - Resource contention: ${causes.resource_contention} tests`
+      );
     }
     if (causes.race_condition > 0) {
       console.info(`  - Race conditions: ${causes.race_condition} tests`);
@@ -348,20 +360,20 @@ function analyzeTestResultsFromLogs() {
   try {
     // Check for Jest coverage or test results
     const jestResultsPaths = [
-      path.join(process.cwd(), 'test-results', 'junit.xml'),
-      path.join(process.cwd(), '.test-results', 'results.json'),
-      path.join(process.cwd(), 'coverage', 'test-results.json'),
+      path.join(process.cwd(), "test-results", "junit.xml"),
+      path.join(process.cwd(), ".test-results", "results.json"),
+      path.join(process.cwd(), "coverage", "test-results.json"),
     ];
 
     for (const resultsPath of jestResultsPaths) {
       if (fs.existsSync(resultsPath)) {
         try {
-          if (resultsPath.endsWith('.xml')) {
+          if (resultsPath.endsWith(".xml")) {
             // Parse JUnit XML
-            const content = fs.readFileSync(resultsPath, 'utf8');
+            const content = fs.readFileSync(resultsPath, "utf8");
             const skippedMatch = content.match(/skipped="(\d+)"/);
             const testsMatch = content.match(/tests="(\d+)"/);
-            
+
             if (skippedMatch && testsMatch) {
               const skipped = parseInt(skippedMatch[1]);
               const total = parseInt(testsMatch[1]);
@@ -370,7 +382,7 @@ function analyzeTestResultsFromLogs() {
             }
           } else {
             // Parse JSON results
-            const results = JSON.parse(fs.readFileSync(resultsPath, 'utf8'));
+            const results = JSON.parse(fs.readFileSync(resultsPath, "utf8"));
             if (results.testResults) {
               let totalTests = 0;
               let failedTests = 0;

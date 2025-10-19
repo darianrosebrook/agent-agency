@@ -23,6 +23,11 @@ async-trait = "0.1"
 parking_lot = "0.12"
 lru = "0.12"
 
+# Search and indexing
+tantivy = "0.24"  # BM25 full-text search
+hnsw_rs = "0.1"   # HNSW vector search
+faiss = "0.12"    # Alternative vector search (optional)
+
 [features]
 default = ["postgres"]
 postgres = []

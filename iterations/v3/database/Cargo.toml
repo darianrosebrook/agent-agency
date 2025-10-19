@@ -26,6 +26,10 @@ tokio-postgres = "0.7"
 sha2 = "0.10"  # For checksum calculations
 regex = "1.10"  # For migration parsing
 
+# Multimodal RAG integration dependencies
+indexers = { path = "../indexers" }
+embedding-service = { path = "../embedding-service" }
+
 [dev-dependencies]
 tokio-test = "0.4"
 tempfile = "3.8"

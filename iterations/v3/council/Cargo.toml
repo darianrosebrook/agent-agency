@@ -32,6 +32,8 @@ ring = "0.17"  # Cryptographic primitives
 sha2 = "0.10"  # SHA-2 hashing
 hex = "0.4"  # Hex encoding/decoding
 base64 = "0.21"  # Base64 encoding/decoding
+md5 = "0.7"  # MD5 hashing for simple signatures
+fastrand = "2.0"  # Fast random number generation
 
 # Embedding service integration
 embedding-service = { path = "../embedding-service" }

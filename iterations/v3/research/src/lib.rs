@@ -10,8 +10,8 @@ pub mod embeddings;
 // pub mod enhanced_knowledge_seeker; // Temporarily disabled due to compilation issues
 pub mod information_processor;
 pub mod knowledge_seeker;
-pub mod multimodal_retriever;
 pub mod multimodal_context_provider;
+pub mod multimodal_retriever;
 pub mod types;
 pub mod vector_search;
 pub mod web_scraper;
@@ -26,16 +26,10 @@ pub use information_processor::{
     IInformationProcessor, InformationProcessor, InformationProcessorConfig,
 };
 pub use knowledge_seeker::KnowledgeSeeker;
-pub use multimodal_retriever::{
-    MultimodalQuery, MultimodalRetriever, MultimodalRetrieverConfig,
-};
 pub use multimodal_context_provider::{
-    MultimodalContextProvider, 
-    MultimodalContext, 
-    EvidenceItem, 
-    Citation,
-    ContextBudget,
+    Citation, ContextBudget, EvidenceItem, MultimodalContext, MultimodalContextProvider,
 };
+pub use multimodal_retriever::{MultimodalQuery, MultimodalRetriever, MultimodalRetrieverConfig};
 pub use types::*;
 pub use vector_search::VectorSearchEngine;
 pub use web_scraper::WebScraper;

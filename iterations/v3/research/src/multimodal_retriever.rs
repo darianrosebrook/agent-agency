@@ -17,7 +17,7 @@ pub struct MultimodalRetrieverConfig {
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum FusionMethod {
-    RRF,           // Reciprocal Rank Fusion
+    RRF, // Reciprocal Rank Fusion
     LearnedWeights,
     SimpleAverage,
 }
@@ -107,15 +107,18 @@ impl MultimodalRetriever {
 
         // RRF formula: score = sum(1.0 / (k + rank))
         for (idx, (id, _)) in text_results.iter().enumerate() {
-            *fused.entry(*id).or_insert(0.0) += 1.0 / (self.config.k_per_modality as f32 + idx as f32);
+            *fused.entry(*id).or_insert(0.0) +=
+                1.0 / (self.config.k_per_modality as f32 + idx as f32);
         }
 
         for (idx, (id, _)) in visual_results.iter().enumerate() {
-            *fused.entry(*id).or_insert(0.0) += 1.0 / (self.config.k_per_modality as f32 + idx as f32);
+            *fused.entry(*id).or_insert(0.0) +=
+                1.0 / (self.config.k_per_modality as f32 + idx as f32);
         }
 
         for (idx, (id, _)) in graph_results.iter().enumerate() {
-            *fused.entry(*id).or_insert(0.0) += 1.0 / (self.config.k_per_modality as f32 + idx as f32);
+            *fused.entry(*id).or_insert(0.0) +=
+                1.0 / (self.config.k_per_modality as f32 + idx as f32);
         }
 
         fused

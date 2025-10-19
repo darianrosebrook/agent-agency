@@ -1,5 +1,6 @@
 //! Learning algorithms for reflexive learning
 
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -210,6 +211,57 @@ pub struct LearningAlgorithms {
     regression_model: Arc<RwLock<LinearRegressionModel>>,
     clustering_model: Arc<RwLock<KMeansClustering>>,
     config: AlgorithmConfig,
+    ensemble_component_stats: Arc<RwLock<HashMap<String, EnsembleComponentStatistics>>>,
+    last_ensemble_analysis: Arc<RwLock<Option<EnsembleAnalytics>>>,
+}
+
+#[derive(Debug, Clone)]
+pub struct EnsembleComponentStatistics {
+    pub accuracy: f64,
+    pub precision: f64,
+    pub recall: f64,
+    pub confidence: f64,
+    pub samples: u32,
+}
+
+impl EnsembleComponentStatistics {
+    pub fn new(accuracy: f64, precision: f64, recall: f64, confidence: f64, samples: u32) -> Self {
+        Self {
+            accuracy,
+            precision,
+            recall,
+            confidence,
+            samples,
+        }
+    }
+
+    pub fn baseline() -> Self {
+        Self {
+            accuracy: 0.5,
+            precision: 0.5,
+            recall: 0.5,
+            confidence: 0.5,
+            samples: 0,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ComponentContribution {
+    pub name: String,
+    pub prediction: f64,
+    pub weight: f64,
+    pub confidence: f64,
+}
+
+#[derive(Debug, Clone)]
+pub struct EnsembleAnalytics {
+    pub timestamp: DateTime<Utc>,
+    pub weighted_prediction: f64,
+    pub variance: f64,
+    pub lower_bound: f64,
+    pub upper_bound: f64,
+    pub components: Vec<ComponentContribution>,
 }
 
 impl LearningAlgorithms {
@@ -219,6 +271,8 @@ impl LearningAlgorithms {
             regression_model: Arc::new(RwLock::new(LinearRegressionModel::new(10, 0.01))),
             clustering_model: Arc::new(RwLock::new(KMeansClustering::new(3, 100))),
             config: AlgorithmConfig::default(),
+            ensemble_component_stats: Arc::new(RwLock::new(HashMap::new())),
+            last_ensemble_analysis: Arc::new(RwLock::new(None)),
         }
     }
 
@@ -228,7 +282,24 @@ impl LearningAlgorithms {
             regression_model: Arc::new(RwLock::new(LinearRegressionModel::new(10, config.learning_rate))),
             clustering_model: Arc::new(RwLock::new(KMeansClustering::new(3, config.max_iterations))),
             config,
+            ensemble_component_stats: Arc::new(RwLock::new(HashMap::new())),
+            last_ensemble_analysis: Arc::new(RwLock::new(None)),
         }
+    }
+
+    /// Update stored performance statistics for an ensemble component
+    pub async fn update_component_statistics(
+        &self,
+        component: &str,
+        statistics: EnsembleComponentStatistics,
+    ) {
+        let mut stats = self.ensemble_component_stats.write().await;
+        stats.insert(component.to_string(), statistics);
+    }
+
+    /// Retrieve the most recent ensemble analytics snapshot
+    pub async fn get_last_ensemble_analysis(&self) -> Option<EnsembleAnalytics> {
+        self.last_ensemble_analysis.read().await.clone()
     }
 
     /// Execute Q-learning update
@@ -655,4 +726,36 @@ pub struct LearningSystemHealth {
     pub total_experiments: usize,
     pub average_performance: f64,
     pub last_updated: chrono::DateTime<chrono::Utc>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn ensemble_predict_records_component_analysis() {
+        let algorithms = LearningAlgorithms::new();
+        let features = vec![0.5, 1.0, 1.5, 2.0];
+
+        let prediction = algorithms
+            .ensemble_predict(&features)
+            .await
+            .expect("ensemble prediction should succeed");
+
+        let analysis = algorithms.get_last_ensemble_analysis().await;
+        assert!(
+            analysis.is_some(),
+            "ensemble prediction should capture analytics metadata"
+        );
+
+        let snapshot = analysis.expect("analysis snapshot to be available");
+        assert!(
+            !snapshot.components.is_empty(),
+            "component analytics should list contributing models"
+        );
+        assert!(
+            (snapshot.weighted_prediction - prediction).abs() < f64::EPSILON,
+            "analytics prediction should align with returned prediction"
+        );
+    }
 }

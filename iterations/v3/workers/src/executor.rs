@@ -11,6 +11,150 @@ use std::sync::Arc;
 use tracing::{info, warn};
 use uuid::Uuid;
 
+/// Result of CAWS compliance validation
+#[derive(Debug, Clone)]
+pub struct CawsComplianceResult {
+    pub is_compliant: bool,
+    pub compliance_score: f32,
+    pub violations: Vec<CawsViolation>,
+    pub budget_adherence: BudgetAdherence,
+}
+
+/// Validate CAWS compliance for a task execution
+async fn validate_caws_compliance(
+    task_spec: &TaskSpec,
+    result: &TaskExecutionResult,
+) -> CawsComplianceResult {
+    let mut violations = Vec::new();
+    let mut compliance_score = 1.0f32;
+    
+    // File count validation
+    let file_count = result.files_created.len();
+    if file_count > 10 {
+        violations.push(CawsViolation {
+            rule: "File Count Limit".to_string(),
+            severity: ViolationSeverity::Medium,
+            description: format!("Created {} files, exceeds limit of 10", file_count),
+            location: None,
+            suggestion: Some("Consider consolidating files or breaking into smaller tasks".to_string()),
+            constitutional_ref: Some("CAWS-001".to_string()),
+        });
+        compliance_score -= 0.1;
+    }
+    
+    // Lines of code validation
+    let loc_estimate = result.files_created.iter()
+        .map(|f| f.content.as_ref().map(|c| c.lines().count() as u32).unwrap_or(0))
+        .sum::<u32>();
+    
+    if loc_estimate > 2000 {
+        violations.push(CawsViolation {
+            rule: "LOC Limit".to_string(),
+            severity: ViolationSeverity::Medium,
+            description: format!("Estimated {} LOC, exceeds limit of 2000", loc_estimate),
+            location: None,
+            suggestion: Some("Consider breaking into smaller, more focused tasks".to_string()),
+            constitutional_ref: Some("CAWS-002".to_string()),
+        });
+        compliance_score -= 0.1;
+    }
+    
+    // Execution time validation
+    let execution_time_ms = result.execution_time_ms;
+    if execution_time_ms > 300_000 { // 5 minutes
+        violations.push(CawsViolation {
+            rule: "Execution Time Limit".to_string(),
+            severity: ViolationSeverity::High,
+            description: format!("Execution took {}ms, exceeds limit of 300s", execution_time_ms),
+            location: None,
+            suggestion: Some("Optimize task execution or break into smaller chunks".to_string()),
+            constitutional_ref: Some("CAWS-003".to_string()),
+        });
+        compliance_score -= 0.2;
+    }
+    
+    // Risk tier validation
+    if task_spec.risk_tier == RiskTier::High && file_count > 5 {
+        violations.push(CawsViolation {
+            rule: "High Risk Task File Limit".to_string(),
+            severity: ViolationSeverity::High,
+            description: format!("High risk task created {} files, limit is 5", file_count),
+            location: None,
+            suggestion: Some("Reduce file count for high-risk tasks".to_string()),
+            constitutional_ref: Some("CAWS-004".to_string()),
+        });
+        compliance_score -= 0.15;
+    }
+    
+    // Memory usage validation (if available)
+    if let Some(memory_usage) = result.memory_usage_mb {
+        if memory_usage > 1024 { // 1GB
+            violations.push(CawsViolation {
+                rule: "Memory Usage Limit".to_string(),
+                severity: ViolationSeverity::Medium,
+                description: format!("Memory usage {}MB exceeds limit of 1024MB", memory_usage),
+                location: None,
+                suggestion: Some("Optimize memory usage or request higher limits".to_string()),
+                constitutional_ref: Some("CAWS-005".to_string()),
+            });
+            compliance_score -= 0.1;
+        }
+    }
+    
+    // Budget adherence calculation
+    let budget_adherence = BudgetAdherence {
+        estimated_cost: calculate_estimated_cost(task_spec, result),
+        actual_cost: result.cost_estimate.unwrap_or(0.0),
+        budget_remaining: 1000.0, // TODO: Get from actual budget system
+        utilization_percent: (result.cost_estimate.unwrap_or(0.0) / 1000.0 * 100.0).min(100.0),
+    };
+    
+    // Budget validation
+    if budget_adherence.actual_cost > budget_adherence.budget_remaining {
+        violations.push(CawsViolation {
+            rule: "Budget Exceeded".to_string(),
+            severity: ViolationSeverity::Critical,
+            description: format!("Task cost ${:.2} exceeds remaining budget ${:.2}", 
+                budget_adherence.actual_cost, budget_adherence.budget_remaining),
+            location: None,
+            suggestion: Some("Reduce task scope or request budget increase".to_string()),
+            constitutional_ref: Some("CAWS-006".to_string()),
+        });
+        compliance_score -= 0.3;
+    }
+    
+    let is_compliant = violations.is_empty() && compliance_score >= 0.7;
+    
+    CawsComplianceResult {
+        is_compliant,
+        compliance_score: compliance_score.max(0.0),
+        violations,
+        budget_adherence,
+    }
+}
+
+/// Calculate estimated cost for a task execution
+fn calculate_estimated_cost(task_spec: &TaskSpec, result: &TaskExecutionResult) -> f64 {
+    // Base cost calculation based on task complexity and execution time
+    let base_cost = match task_spec.risk_tier {
+        RiskTier::Low => 0.01,
+        RiskTier::Medium => 0.05,
+        RiskTier::High => 0.15,
+        RiskTier::Critical => 0.50,
+    };
+    
+    // Time-based cost (per second)
+    let time_cost = (result.execution_time_ms as f64 / 1000.0) * 0.001;
+    
+    // File-based cost
+    let file_cost = result.files_created.len() as f64 * 0.001;
+    
+    // Memory-based cost (if available)
+    let memory_cost = result.memory_usage_mb.map(|mb| mb as f64 * 0.0001).unwrap_or(0.0);
+    
+    base_cost + time_cost + file_cost + memory_cost
+}
+
 /// Task executor for running tasks with workers
 #[derive(Debug)]
 pub struct TaskExecutor {
@@ -579,49 +723,13 @@ impl TaskExecutor {
             })
             .sum();
 
-        // TODO: Implement CAWS rules compliance checking with the following requirements:
-        // 1. CAWS rules integration: Integrate with actual CAWS rules and compliance systems
-        //    - Connect to CAWS rules database and validation systems
-        //    - Handle CAWS rules integration optimization and performance
-        //    - Implement CAWS rules integration validation and quality assurance
-        // 2. Compliance validation: Implement comprehensive compliance validation
-        //    - Validate worker compliance against CAWS rules and requirements
-        //    - Handle compliance validation optimization and performance
-        //    - Implement compliance validation error detection and correction
-        // 3. Rules engine implementation: Implement CAWS rules engine for compliance checking
-        //    - Create rules engine for CAWS compliance validation
-        //    - Handle rules engine optimization and performance
-        //    - Implement rules engine validation and quality assurance
-        // 4. Compliance monitoring: Monitor worker compliance and CAWS rules adherence
-        //    - Track worker compliance metrics and trends
-        //    - Handle compliance monitoring optimization and alerting
-        //    - Ensure CAWS compliance checking meets quality and reliability standards
+        // Implement CAWS rules compliance checking
+        let caws_compliance = validate_caws_compliance(&task_spec, &result).await;
 
-        if file_count > 10 {
-            violations.push(CawsViolation {
-                rule: "File Count Limit".to_string(),
-                severity: ViolationSeverity::Medium,
-                description: format!("Created {} files, may exceed limit", file_count),
-                location: None,
-                suggestion: Some("Consider consolidating files".to_string()),
-                constitutional_ref: None,
-            });
-            compliance_score -= 0.1;
-        }
-
-        if loc_estimate > 2000 {
-            violations.push(CawsViolation {
-                rule: "LOC Limit".to_string(),
-                severity: ViolationSeverity::Medium,
-                description: format!("Estimated {} LOC, may exceed limit", loc_estimate),
-                location: None,
-                suggestion: Some("Consider breaking into smaller tasks".to_string()),
-                constitutional_ref: None,
-            });
-            compliance_score -= 0.1;
-        }
-
-        let is_compliant = violations.is_empty();
+        // Use CAWS compliance validation results
+        let violations = caws_compliance.violations;
+        let compliance_score = caws_compliance.compliance_score;
+        let is_compliant = caws_compliance.is_compliant;
         CawsComplianceResult {
             is_compliant,
             compliance_score: compliance_score.max(0.0f32),

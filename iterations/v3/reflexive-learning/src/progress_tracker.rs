@@ -48,6 +48,34 @@ pub enum OptimizationType {
     BreakRecommendation,
 }
 
+#[derive(Debug, Clone)]
+struct MonitoringState {
+    last_snapshot: DateTime<Utc>,
+    next_evaluation: DateTime<Utc>,
+    sample_count: u32,
+    rolling_metrics: ProgressMetrics,
+    anomaly_flags: Vec<String>,
+}
+
+#[derive(Debug, Clone)]
+struct MonitoringAnalytics {
+    momentum_score: f64,
+    health_score: f64,
+    volatility_score: f64,
+}
+
+#[derive(Debug, Clone)]
+pub struct ProgressMonitoringSummary {
+    pub sample_count: u32,
+    pub last_snapshot: DateTime<Utc>,
+    pub next_evaluation: DateTime<Utc>,
+    pub rolling_metrics: ProgressMetrics,
+    pub momentum_score: f64,
+    pub health_score: f64,
+    pub volatility_score: f64,
+    pub anomalies: Vec<String>,
+}
+
 /// Comprehensive progress tracker for learning sessions
 pub struct ProgressTracker {
     /// Active learning sessions being tracked
@@ -62,6 +90,10 @@ pub struct ProgressTracker {
     performance_baselines: HashMap<TaskType, PerformanceBaseline>,
     /// Optimization suggestions cache
     optimization_cache: HashMap<Uuid, Vec<ProgressOptimization>>,
+    /// Monitoring state for each active session
+    monitoring_state: HashMap<Uuid, MonitoringState>,
+    /// Cached monitoring analytics for ongoing reporting
+    monitoring_analytics: HashMap<Uuid, MonitoringAnalytics>,
 }
 
 /// Progress snapshot for historical tracking
@@ -92,6 +124,8 @@ impl ProgressTracker {
             milestones: Vec::new(),
             performance_baselines: HashMap::new(),
             optimization_cache: HashMap::new(),
+            monitoring_state: HashMap::new(),
+            monitoring_analytics: HashMap::new(),
         }
     }
 
@@ -186,6 +220,23 @@ impl ProgressTracker {
         let suggestions = self.generate_optimization_suggestions(session_id);
         self.optimization_cache.insert(*session_id, suggestions.clone());
         suggestions
+    }
+
+    /// Retrieve monitoring summary for an active session, if available
+    pub fn get_monitoring_summary(&self, session_id: &Uuid) -> Option<ProgressMonitoringSummary> {
+        let state = self.monitoring_state.get(session_id)?;
+        let analytics = self.monitoring_analytics.get(session_id)?;
+
+        Some(ProgressMonitoringSummary {
+            sample_count: state.sample_count,
+            last_snapshot: state.last_snapshot,
+            next_evaluation: state.next_evaluation,
+            rolling_metrics: state.rolling_metrics.clone(),
+            momentum_score: analytics.momentum_score,
+            health_score: analytics.health_score,
+            volatility_score: analytics.volatility_score,
+            anomalies: state.anomaly_flags.clone(),
+        })
     }
 
     /// Complete a learning session
@@ -616,6 +667,112 @@ mod tests {
                 context_usage: HashMap::new(),
             },
         }
+    }
+
+    fn monitoring_ready_session(task_type: TaskType) -> LearningSession {
+        LearningSession {
+            id: Uuid::new_v4(),
+            task_id: Uuid::new_v4(),
+            task_type,
+            start_time: Utc::now(),
+            current_turn: 0,
+            progress: ProgressMetrics {
+                completion_percentage: 18.0,
+                quality_score: 0.72,
+                efficiency_score: 0.68,
+                error_rate: 0.04,
+                learning_velocity: 0.21,
+            },
+            learning_state: LearningState {
+                current_strategy: LearningStrategy::Adaptive,
+                adaptation_history: Vec::new(),
+                performance_trends: PerformanceTrends {
+                    short_term: TrendData {
+                        direction: TrendDirection::Improving,
+                        magnitude: 0.15,
+                        confidence: 0.75,
+                        data_points: 4,
+                    },
+                    medium_term: TrendData {
+                        direction: TrendDirection::Stable,
+                        magnitude: 0.05,
+                        confidence: 0.65,
+                        data_points: 5,
+                    },
+                    long_term: TrendData {
+                        direction: TrendDirection::Improving,
+                        magnitude: 0.09,
+                        confidence: 0.7,
+                        data_points: 6,
+                    },
+                },
+                resource_utilization: ResourceUtilization {
+                    cpu_usage: 0.42,
+                    memory_usage: 0.4,
+                    token_usage: 0.51,
+                    time_usage: 0.48,
+                    efficiency_ratio: 0.63,
+                },
+            },
+            context_preservation: ContextPreservationState {
+                preserved_contexts: Vec::new(),
+                context_freshness: HashMap::new(),
+                context_usage: HashMap::new(),
+            },
+        }
+    }
+
+    #[tokio::test]
+    async fn initialize_session_sets_up_monitoring_summary() {
+        let mut tracker = ProgressTracker::new();
+        let session = monitoring_ready_session(TaskType::Testing);
+
+        tracker
+            .initialize_session(&session)
+            .await
+            .expect("session initialization should succeed");
+
+        let summary = tracker.get_monitoring_summary(&session.id);
+        assert!(
+            summary.is_some(),
+            "monitoring summary should exist immediately after initialization"
+        );
+    }
+
+    #[tokio::test]
+    async fn progress_updates_are_reflected_in_monitoring_summary() {
+        let mut tracker = ProgressTracker::new();
+        let session = monitoring_ready_session(TaskType::Debugging);
+
+        tracker
+            .initialize_session(&session)
+            .await
+            .expect("session initialization should succeed");
+
+        tracker
+            .update_progress(
+                session.id,
+                ProgressMetrics {
+                    completion_percentage: 32.0,
+                    quality_score: 0.81,
+                    efficiency_score: 0.74,
+                    error_rate: 0.03,
+                    learning_velocity: 0.28,
+                },
+            )
+            .expect("progress update should succeed");
+
+        let summary = tracker
+            .get_monitoring_summary(&session.id)
+            .expect("monitoring summary should exist after progress update");
+        assert!(
+            summary.sample_count >= 2,
+            "monitoring summary should track at least two samples after an update"
+        );
+        assert!(
+            summary.next_evaluation >= summary.last_snapshot,
+            "next evaluation should be scheduled after the last snapshot"
+        );
     }
 
     fn updated_metrics(completion: f64, quality: f64) -> ProgressMetrics {

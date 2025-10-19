@@ -9,12 +9,14 @@ pub mod health;
 pub mod migrations;
 pub mod models;
 pub mod queries;
+pub mod vector_store;
 
 pub use backup::{BackupManager, BackupResult};
 pub use client::{DatabaseClient, DatabaseHealthStatus};
 pub use health::{DatabaseHealthChecker, HealthCheckResult};
 pub use migrations::{MigrationManager, MigrationResult};
 pub use models::*;
+pub use vector_store::{DatabaseVectorStore, VectorStoreStats};
 
 /// Database configuration
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]

@@ -233,7 +233,7 @@ except Exception as e:
 
         Ok(crate::types::AsrResult {
             text: whisperx.text,
-            language: whisperx.language,
+            language: Some(whisperx.language),
             confidence: 0.9,
             speech_turns,
         })

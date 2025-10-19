@@ -252,26 +252,46 @@ export class CawsGateChecker extends CawsBaseTool {
         // Validate waiver is in active state and not expired
         const validationResult = await this.validateWaiverStatus(waiver);
         if (!validationResult.valid) {
-          this.logWaiverAudit(gate, waiver, 'validation_failed', validationResult.reason);
+          this.logWaiverAudit(
+            gate,
+            waiver,
+            "validation_failed",
+            validationResult.reason
+          );
           continue;
         }
 
         // Verify waiver scope and conditions match request context
         const scopeMatch = this.validateWaiverScope(waiver, workingDirectory);
         if (!scopeMatch.matched) {
-          this.logWaiverAudit(gate, waiver, 'scope_mismatch', scopeMatch.reason);
+          this.logWaiverAudit(
+            gate,
+            waiver,
+            "scope_mismatch",
+            scopeMatch.reason
+          );
           continue;
         }
 
         // Check waiver usage limits and frequency
         const usageCheck = await this.checkWaiverUsageCompliance(waiver);
         if (!usageCheck.compliant) {
-          this.logWaiverAudit(gate, waiver, 'usage_limit_exceeded', usageCheck.reason);
+          this.logWaiverAudit(
+            gate,
+            waiver,
+            "usage_limit_exceeded",
+            usageCheck.reason
+          );
           continue;
         }
 
         // Waiver is valid and applicable
-        this.logWaiverAudit(gate, waiver, 'waiver_applied', 'Waiver criteria met');
+        this.logWaiverAudit(
+          gate,
+          waiver,
+          "waiver_applied",
+          "Waiver criteria met"
+        );
         this.recordWaiverUsage(waiver);
 
         return {
@@ -296,8 +316,8 @@ export class CawsGateChecker extends CawsBaseTool {
     reason?: string;
   }> {
     // Check if waiver status is explicitly revoked
-    if (waiver.status === 'revoked') {
-      return { valid: false, reason: 'Waiver has been revoked' };
+    if (waiver.status === "revoked") {
+      return { valid: false, reason: "Waiver has been revoked" };
     }
 
     // Parse expiry date
@@ -310,7 +330,7 @@ export class CawsGateChecker extends CawsBaseTool {
 
     // Verify waiver has required authorization fields
     if (!waiver.approved_by) {
-      return { valid: false, reason: 'Waiver lacks approval authorization' };
+      return { valid: false, reason: "Waiver lacks approval authorization" };
     }
 
     return { valid: true };
@@ -327,7 +347,8 @@ export class CawsGateChecker extends CawsBaseTool {
     // This allows waivers to be scoped to specific projects or modules
     const waiverScope = (waiver as any).scope;
     if (waiverScope && workingDirectory) {
-      const isInScope = workingDirectory.includes(waiverScope) ||
+      const isInScope =
+        workingDirectory.includes(waiverScope) ||
         workingDirectory.startsWith(waiverScope);
 
       if (!isInScope) {
@@ -359,7 +380,8 @@ export class CawsGateChecker extends CawsBaseTool {
     const usage = usageLog[waiverId];
     const now = new Date();
     const daysSinceCreation = Math.floor(
-      (now.getTime() - new Date(waiver.created_at).getTime()) / (1000 * 60 * 60 * 24)
+      (now.getTime() - new Date(waiver.created_at).getTime()) /
+        (1000 * 60 * 60 * 24)
     );
 
     // Check usage frequency: max 5 uses per week during waiver lifetime
@@ -382,7 +404,7 @@ export class CawsGateChecker extends CawsBaseTool {
     if (usage.uses.length >= 20) {
       return {
         compliant: false,
-        reason: 'Waiver has reached maximum usage count (20)',
+        reason: "Waiver has reached maximum usage count (20)",
       };
     }
 
@@ -393,7 +415,10 @@ export class CawsGateChecker extends CawsBaseTool {
    * Load waiver usage tracking log
    */
   private loadWaiverUsageLog(): Record<string, any> {
-    const usageLogPath = path.join(this.getCawsDirectory(), 'waiver-usage.json');
+    const usageLogPath = path.join(
+      this.getCawsDirectory(),
+      "waiver-usage.json"
+    );
 
     if (this.pathExists(usageLogPath)) {
       try {
@@ -419,7 +444,10 @@ export class CawsGateChecker extends CawsBaseTool {
 
     usageLog[waiverId].uses.push(new Date().toISOString());
 
-    const usageLogPath = path.join(this.getCawsDirectory(), 'waiver-usage.json');
+    const usageLogPath = path.join(
+      this.getCawsDirectory(),
+      "waiver-usage.json"
+    );
     try {
       const dir = path.dirname(usageLogPath);
       if (!this.pathExists(dir)) {
@@ -440,7 +468,7 @@ export class CawsGateChecker extends CawsBaseTool {
     event: string,
     details: string
   ): void {
-    const auditLogPath = path.join(this.getCawsDirectory(), 'waiver-audit.log');
+    const auditLogPath = path.join(this.getCawsDirectory(), "waiver-audit.log");
 
     const auditEntry = {
       timestamp: new Date().toISOString(),
@@ -458,12 +486,12 @@ export class CawsGateChecker extends CawsBaseTool {
       }
 
       const existingLog = this.pathExists(auditLogPath)
-        ? fs.readFileSync(auditLogPath, 'utf-8')
-        : '';
+        ? fs.readFileSync(auditLogPath, "utf-8")
+        : "";
       fs.appendFileSync(
         auditLogPath,
-        JSON.stringify(auditEntry) + '\n',
-        'utf-8'
+        JSON.stringify(auditEntry) + "\n",
+        "utf-8"
       );
     } catch (error) {
       this.logError(`Failed to write waiver audit log: ${error}`);

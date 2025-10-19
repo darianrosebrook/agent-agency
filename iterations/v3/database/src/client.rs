@@ -7,7 +7,7 @@
 //! - Comprehensive monitoring and metrics
 //! - Input sanitization and prepared statements
 
-use crate::{models::*, DatabaseConfig};
+use crate::{models::*, DatabaseConfig, DatabaseVectorStore, VectorStoreStats};
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 use chrono::{Duration, Utc};
@@ -211,8 +211,16 @@ impl DatabaseClient {
             .create_pool(Some(Runtime::Tokio1), tokio_postgres::NoTls)
             .context("Failed to create deadpool connection pool")?;
 
-        // Convert deadpool to sqlx pool for compatibility
-        // This is a simplified approach - in production you might want to use deadpool directly
+        // TODO: Implement proper deadpool-to-sqlx bridge
+        // Acceptance criteria:
+        // - [ ] Create wrapper implementing sqlx::Pool interface over deadpool::Pool
+        // - [ ] Support connection acquisition with timeout and retry logic
+        // - [ ] Implement health checks and connection validation
+        // - [ ] Add comprehensive error mapping from deadpool to sqlx errors
+        // - [ ] Add unit tests verifying pool behavior under concurrent load
+        // - [ ] Verify prepared statement caching works with deadpool backend
+        // - [ ] Performance parity testing vs direct sqlx implementation
+        // - [ ] Update metrics collection to track deadpool-specific events
         let sqlx_pool = PgPool::connect(&config.database_url())
             .await
             .context("Failed to create sqlx connection pool")?;
@@ -2855,6 +2863,85 @@ impl DatabaseClient {
             .map_err(|e| anyhow::anyhow!("Invalid individual_verdicts JSON: {}", e))?;
 
         Ok(())
+    }
+
+    // ============================================================================
+    // MULTIMODAL RAG VECTOR STORAGE METHODS
+    // ============================================================================
+
+    /// Create a vector store instance for multimodal RAG operations
+    ///
+    /// # Returns
+    /// DatabaseVectorStore instance for vector operations
+    pub fn create_vector_store(&self) -> DatabaseVectorStore {
+        DatabaseVectorStore::new(Arc::new(self.pool.clone()))
+    }
+
+    /// Store a block vector in the database
+    ///
+    /// # Arguments
+    /// * `record` - Block vector record to store
+    ///
+    /// # Returns
+    /// Result indicating success or failure
+    pub async fn store_vector(&self, record: indexers::database::BlockVectorRecord) -> Result<()> {
+        let vector_store = self.create_vector_store();
+        vector_store.store_vector(record).await
+    }
+
+    /// Search for similar vectors
+    ///
+    /// # Arguments
+    /// * `query_vector` - Query vector for similarity search
+    /// * `model_id` - Embedding model identifier
+    /// * `k` - Number of results to return
+    /// * `project_scope` - Optional project scope filter
+    ///
+    /// # Returns
+    /// Vector of (block_id, similarity_score) pairs
+    pub async fn search_similar_vectors(
+        &self,
+        query_vector: &[f32],
+        model_id: &str,
+        k: usize,
+        project_scope: Option<&str>,
+    ) -> Result<Vec<(Uuid, f32)>> {
+        let vector_store = self.create_vector_store();
+        vector_store.search_similar(query_vector, model_id, k, project_scope).await
+    }
+
+    /// Log search operation for audit trail
+    ///
+    /// # Arguments
+    /// * `query` - Search query text
+    /// * `results` - Search results
+    /// * `features` - Search features used
+    pub async fn log_vector_search(
+        &self,
+        query: &str,
+        results: &[Uuid],
+        features: &serde_json::Value,
+    ) -> Result<()> {
+        let vector_store = self.create_vector_store();
+        vector_store.log_search(query, results, features).await
+    }
+
+    /// Get vector store statistics
+    ///
+    /// # Returns
+    /// Statistics about the vector store
+    pub async fn get_vector_stats(&self) -> Result<VectorStoreStats> {
+        let vector_store = self.create_vector_store();
+        vector_store.get_stats().await
+    }
+
+    /// Verify pgvector extension is enabled
+    ///
+    /// # Returns
+    /// True if pgvector is enabled, false otherwise
+    pub async fn verify_pgvector_extension(&self) -> Result<bool> {
+        let vector_store = self.create_vector_store();
+        vector_store.verify_pgvector().await
     }
 }
 

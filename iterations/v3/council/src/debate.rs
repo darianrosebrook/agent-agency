@@ -582,28 +582,29 @@ impl DebateProtocol {
                 };
 
                 // Calculate reliability based on confidence
-                let reliability_score = evidence.confidence;
+                let reliability_score = evidence.relevance;
 
                 // Check if source already exists
+                let source_id = format!("{:?}", evidence.source);
                 let source_exists = research_sources.iter().any(|s: &ResearchSource| {
-                    s.source_id == evidence.source.location && s.source_type == source_type
+                    s.source_id == source_id && s.source_type == source_type
                 });
 
                 if !source_exists {
                     research_sources.push(ResearchSource {
-                        source_id: evidence.source.location.clone(),
+                        source_id: source_id.clone(),
                         source_type,
                         reliability_score,
-                        access_method: format!("via_{}", evidence.source.authority),
+                        access_method: format!("via_{:?}", evidence.source),
                     });
                 }
 
                 // Create findings from evidence
                 all_findings.push(ResearchFinding {
-                    topic: format!("Evidence from {}", evidence.source.authority),
+                    topic: format!("Evidence from {:?}", evidence.source),
                     finding: evidence.content.clone(),
-                    relevance: evidence.confidence,
-                    sources: vec![evidence.source.location.clone()],
+                    relevance: evidence.relevance,
+                    sources: vec![source_id],
                 });
             }
 
@@ -659,8 +660,9 @@ impl DebateProtocol {
             for finding in &research_coordination.findings {
                 // Check if finding is relevant to this argument's evidence
                 let is_relevant = argument.evidence_cited.iter().any(|e| {
-                    finding.sources.contains(&e.source.location)
-                        || finding.topic.contains(&e.source.authority)
+                    let source_str = format!("{:?}", e.source);
+                    finding.sources.contains(&source_str)
+                        || finding.topic.contains(&source_str)
                 });
 
                 if is_relevant {

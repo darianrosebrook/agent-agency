@@ -12,22 +12,22 @@ use uuid::Uuid;
 pub struct MultimodalContext {
     /// Query identifier for tracking
     pub query_id: String,
-    
+
     /// Retrieved evidence items with citations
     pub evidence_items: Vec<EvidenceItem>,
-    
+
     /// Deduplication metadata
     pub dedup_score: f32,
-    
+
     /// Context budget usage (0-1, where 1 = full budget used)
     pub budget_utilization: f32,
-    
+
     /// Global vs project-specific evidence ratio
     pub global_to_project_ratio: f32,
-    
+
     /// Processing metadata
     pub processing_time_ms: u64,
-    
+
     /// Retrieval metadata for audit trail
     pub retrieval_metadata: RetrievalMetadata,
 }
@@ -37,25 +37,25 @@ pub struct MultimodalContext {
 pub struct EvidenceItem {
     /// Evidence identifier
     pub id: Uuid,
-    
+
     /// Evidence text or description
     pub content: String,
-    
+
     /// Modality source (text, image, video, diagram, speech)
     pub modality: String,
-    
+
     /// Confidence score (0-1)
     pub confidence: f32,
-    
+
     /// Semantic similarity score
     pub similarity_score: f32,
-    
+
     /// Citation information
     pub citation: Citation,
-    
+
     /// Whether this is global or project-specific
     pub is_global: bool,
-    
+
     /// Deduplication hash for redundancy detection
     pub dedup_hash: String,
 }
@@ -65,16 +65,16 @@ pub struct EvidenceItem {
 pub struct Citation {
     /// Document URI or file path
     pub source_uri: String,
-    
+
     /// Document identifier
     pub document_id: Uuid,
-    
+
     /// Page/slide number (if applicable)
     pub page_number: Option<u32>,
-    
+
     /// Bounding box for visual content [x, y, width, height]
     pub bbox: Option<[f32; 4]>,
-    
+
     /// Time range for video/audio [start_ms, end_ms]
     pub time_range: Option<[u64; 2]>,
 }
@@ -84,13 +84,13 @@ pub struct Citation {
 pub struct RetrievalMetadata {
     /// Number of indices queried
     pub indices_queried: usize,
-    
+
     /// Fusion method used (late_fusion, early_fusion, etc.)
     pub fusion_method: String,
-    
+
     /// Reranking applied (true/false)
     pub reranking_applied: bool,
-    
+
     /// Query expansion terms used
     pub query_expansions: Vec<String>,
 }
@@ -100,13 +100,13 @@ pub struct RetrievalMetadata {
 pub struct ContextBudget {
     /// Maximum tokens to use for evidence
     pub max_tokens: usize,
-    
+
     /// Maximum items to retrieve
     pub max_items: usize,
-    
+
     /// Minimum confidence threshold
     pub min_confidence: f32,
-    
+
     /// Prefer global (non-project) evidence
     pub prefer_global: bool,
 }
@@ -114,7 +114,7 @@ pub struct ContextBudget {
 impl Default for ContextBudget {
     fn default() -> Self {
         Self {
-            max_tokens: 8000,      // 8K tokens
+            max_tokens: 8000, // 8K tokens
             max_items: 50,
             min_confidence: 0.5,
             prefer_global: false,
@@ -160,7 +160,8 @@ impl MultimodalContextProvider {
         let start_time = std::time::Instant::now();
 
         // Retrieve multimodal evidence
-        let retrieval_result = self.retriever
+        let retrieval_result = self
+            .retriever
             .search_multimodal(query, 10, project_scope)
             .await
             .map_err(|e| anyhow!("Multimodal search failed: {}", e))?;
@@ -295,7 +296,8 @@ impl MultimodalContextProvider {
             prefer_global: false,
         };
 
-        self.provide_context(&query, Some(budget), project_scope).await
+        self.provide_context(&query, Some(budget), project_scope)
+            .await
     }
 
     /// Hash content for deduplication
