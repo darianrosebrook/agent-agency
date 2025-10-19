@@ -125,13 +125,13 @@ impl SlidesIngestor {
         
         // Look for presentation.xml in the archive
         for i in 0..archive.len() {
-            let file = archive.by_index(i).context("Failed to read archive entry")?;
+            let mut file = archive.by_index(i).context("Failed to read archive entry")?;
             let name = file.name();
             
             if name == "index.apxl" || name.ends_with(".apxl") {
                 // This is the main presentation file
                 let mut content = String::new();
-                archive.by_index(i)?.read_to_string(&mut content)
+                file.read_to_string(&mut content)
                     .context("Failed to read presentation content")?;
                 
                 let slides = self.parse_keynote_xml(&content)?;
@@ -237,7 +237,7 @@ impl SlidesIngestor {
     }
 
     /// Extract text objects from PDF content stream
-    fn extract_text_objects(&self, _contents: &pdf::object::Contents) -> Result<Vec<(String, BoundingBox)>> {
+    fn extract_text_objects(&self, _contents: &dyn std::any::Any) -> Result<Vec<(String, BoundingBox)>> {
         let mut text_objects = Vec::new();
         
         // This is a simplified implementation

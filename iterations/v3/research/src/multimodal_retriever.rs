@@ -204,16 +204,25 @@ impl MultimodalRetriever {
                     .search_text(query.text.as_deref().unwrap_or(""), self.config.k_per_modality)
                     .await
                     .context("Text search failed")?;
-                
+
                 // Convert text results to multimodal results
                 for result in text_results {
                     all_results.push(embedding_service::MultimodalSearchResult {
-                        id: result.id,
-                        content: result.text,
-                        modality: result.modality,
-                        score: result.score,
+                        ref_id: result.id.to_string(),
+                        kind: embedding_service::ContentType::Text,
+                        snippet: result.text.clone(),
+                        citation: Some(format!("text:{}", result.id)),
+                        feature: embedding_service::SearchResultFeature {
+                            score_text: Some(result.score),
+                            score_image: None,
+                            score_graph: None,
+                            fused_score: result.score,
+                            features_json: serde_json::json!({
+                                "modality": result.modality,
+                                "metadata": result.metadata
+                            }),
+                        },
                         project_scope: result.project_scope,
-                        metadata: result.metadata,
                     });
                 }
             }
@@ -225,16 +234,26 @@ impl MultimodalRetriever {
                     .search_visual(query.text.as_deref().unwrap_or(""), self.config.k_per_modality)
                     .await
                     .context("Visual search failed")?;
-                
+
                 // Convert visual results to multimodal results
                 for result in visual_results {
                     all_results.push(embedding_service::MultimodalSearchResult {
-                        id: result.id,
-                        content: result.caption,
-                        modality: result.modality,
-                        score: result.score,
+                        ref_id: result.id.to_string(),
+                        kind: embedding_service::ContentType::VisualCaption,
+                        snippet: result.caption.clone(),
+                        citation: Some(format!("image:{}", result.image_path)),
+                        feature: embedding_service::SearchResultFeature {
+                            score_text: None,
+                            score_image: Some(result.score),
+                            score_graph: None,
+                            fused_score: result.score,
+                            features_json: serde_json::json!({
+                                "modality": result.modality,
+                                "metadata": result.metadata,
+                                "image_path": result.image_path
+                            }),
+                        },
                         project_scope: result.project_scope,
-                        metadata: result.metadata,
                     });
                 }
             }
@@ -253,24 +272,43 @@ impl MultimodalRetriever {
                 // Convert text results to multimodal results
                 for result in text_results {
                     all_results.push(embedding_service::MultimodalSearchResult {
-                        id: result.id,
-                        content: result.text,
-                        modality: result.modality,
-                        score: result.score,
+                        ref_id: result.id.to_string(),
+                        kind: embedding_service::ContentType::Text,
+                        snippet: result.text.clone(),
+                        citation: Some(format!("text:{}", result.id)),
+                        feature: embedding_service::SearchResultFeature {
+                            score_text: Some(result.score),
+                            score_image: None,
+                            score_graph: None,
+                            fused_score: result.score,
+                            features_json: serde_json::json!({
+                                "modality": result.modality,
+                                "metadata": result.metadata
+                            }),
+                        },
                         project_scope: result.project_scope,
-                        metadata: result.metadata,
                     });
                 }
                 
                 // Convert visual results to multimodal results
                 for result in visual_results {
                     all_results.push(embedding_service::MultimodalSearchResult {
-                        id: result.id,
-                        content: result.caption,
-                        modality: result.modality,
-                        score: result.score,
+                        ref_id: result.id.to_string(),
+                        kind: embedding_service::ContentType::VisualCaption,
+                        snippet: result.caption.clone(),
+                        citation: Some(format!("image:{}", result.image_path)),
+                        feature: embedding_service::SearchResultFeature {
+                            score_text: None,
+                            score_image: Some(result.score),
+                            score_graph: None,
+                            fused_score: result.score,
+                            features_json: serde_json::json!({
+                                "modality": result.modality,
+                                "metadata": result.metadata,
+                                "image_path": result.image_path
+                            }),
+                        },
                         project_scope: result.project_scope,
-                        metadata: result.metadata,
                     });
                 }
                 

@@ -7,7 +7,6 @@ use crate::types::*;
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use tracing::debug;
 use uuid::Uuid;
 use reqwest::Client;
@@ -688,6 +687,109 @@ impl EvidenceCollector {
             EvidenceType::PerformanceMetrics => 0.8,
             EvidenceType::SecurityScan => 0.9,
             EvidenceType::ConstitutionalReference => 0.95,
+        }
+    }
+
+    /// Collect evidence from external APIs
+    async fn collect_external_api_evidence(
+        &self,
+        claim: &AtomicClaim,
+        context: &ProcessingContext,
+    ) -> Result<Vec<Evidence>> {
+        let mut evidence = Vec::new();
+        let client = Client::new();
+
+        // Get API endpoints from context
+        let api_endpoints = context
+            .metadata
+            .get("external_api_endpoints")
+            .and_then(|v| v.as_array())
+            .unwrap_or(&vec![]);
+
+        for endpoint in api_endpoints {
+            if let Some(endpoint_str) = endpoint.as_str() {
+                match self.call_external_api(&client, endpoint_str, claim, context).await {
+                    Ok(api_response) => {
+                        if api_response.success {
+                            evidence.push(Evidence {
+                                id: Uuid::new_v4(),
+                                claim_id: claim.id,
+                                evidence_type: EvidenceType::ExternalSource,
+                                content: format!(
+                                    "External API evidence from {}: {}",
+                                    endpoint_str,
+                                    serde_json::to_string(&api_response.data).unwrap_or_default()
+                                ),
+                                source: EvidenceSource {
+                                    source_type: SourceType::External,
+                                    location: endpoint_str.to_string(),
+                                    authority: "External API Service".to_string(),
+                                    freshness: Utc::now(),
+                                },
+                                confidence: api_response.confidence,
+                                timestamp: Utc::now(),
+                            });
+                        } else {
+                            debug!(
+                                "External API call failed for endpoint {}: {:?}",
+                                endpoint_str, api_response.error
+                            );
+                        }
+                    }
+                    Err(e) => {
+                        debug!("External API call error for endpoint {}: {}", endpoint_str, e);
+                    }
+                }
+            }
+        }
+
+        Ok(evidence)
+    }
+
+    /// Call external API with timeout and error handling
+    async fn call_external_api(
+        &self,
+        client: &Client,
+        endpoint: &str,
+        claim: &AtomicClaim,
+        context: &ProcessingContext,
+    ) -> Result<ExternalApiResponse> {
+        // Prepare request payload
+        let payload = serde_json::json!({
+            "claim": claim.claim_text,
+            "claim_id": claim.id,
+            "context": context.metadata,
+            "timestamp": Utc::now()
+        });
+
+        // Make API call with timeout
+        let response = timeout(
+            Duration::from_secs(30),
+            client
+                .post(endpoint)
+                .json(&payload)
+                .send()
+        ).await
+        .context("External API call timeout")?
+        .context("External API call failed")?;
+
+        if response.status().is_success() {
+            let data: serde_json::Value = response.json().await
+                .context("Failed to parse API response")?;
+            
+            Ok(ExternalApiResponse {
+                success: true,
+                data: Some(data),
+                error: None,
+                confidence: 0.7, // Default confidence for external APIs
+            })
+        } else {
+            Ok(ExternalApiResponse {
+                success: false,
+                data: None,
+                error: Some(format!("API returned status: {}", response.status())),
+                confidence: 0.0,
+            })
         }
     }
 }

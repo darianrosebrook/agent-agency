@@ -216,7 +216,7 @@ impl DiagramsIngestor {
     }
 
     /// Generate a normalized entity name
-    fn generate_entity_name(&self, entity_type: &str, attributes: &HashMap<String, String>) -> String {
+    fn generate_entity_name(&self, entity_type: &str, attributes: &HashMap<String, serde_json::Value>) -> String {
         // Try to get an ID or class attribute
         if let Some(id) = attributes.get("id") {
             format!("{}:{}", entity_type, id)
@@ -344,8 +344,8 @@ impl DiagramsIngestor {
         let target_id = node.attribute("target").unwrap_or("").to_string();
         
         // Find the corresponding entity IDs
-        let src_entity = entities.iter().find(|e| e.attributes.get("id") == Some(&source_id));
-        let dst_entity = entities.iter().find(|e| e.attributes.get("id") == Some(&target_id));
+        let src_entity = entities.iter().find(|e| e.attributes.get("id") == Some(&serde_json::Value::String(source_id.clone())));
+        let dst_entity = entities.iter().find(|e| e.attributes.get("id") == Some(&serde_json::Value::String(target_id.clone())));
         
         let src_id = src_entity.map(|e| e.id).unwrap_or_else(Uuid::new_v4);
         let dst_id = dst_entity.map(|e| e.id).unwrap_or_else(Uuid::new_v4);

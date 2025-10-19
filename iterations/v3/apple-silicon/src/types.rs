@@ -486,6 +486,77 @@ impl Default for CPUConfig {
     }
 }
 
+/// Data type for tensors
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum DataType {
+    Float32,
+    Float16,
+    Float64,
+    Int32,
+    Int64,
+    Int8,
+    UInt8,
+}
+
+/// Parsed tensor information
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ParsedTensor {
+    pub name: String,
+    pub shape: Vec<usize>,
+    pub data_type: DataType,
+    pub size_bytes: usize,
+    pub sparsity: f32,
+}
+
+/// Operation type enum
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum OperationType {
+    Convolution,
+    MatMul,
+    Activation,
+    Pooling,
+    Normalization,
+    Other,
+}
+
+/// Compute intensity level
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ComputeIntensity {
+    Low,
+    Medium,
+    High,
+}
+
+/// Parsed operation information
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ParsedOperation {
+    pub name: String,
+    pub operation_type: OperationType,
+    pub input_count: usize,
+    pub output_count: usize,
+    pub compute_intensity: ComputeIntensity,
+}
+
+/// Cache priority level
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum CachePriority {
+    Critical,
+    High,
+    Medium,
+    Low,
+}
+
+/// Memory alignment requirement
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum MemoryAlignment {
+    CacheLine64,  // 64-byte cache line
+    CacheLine32,  // 32-byte cache line
+    CacheLine16,  // 16-byte cache line
+    Page,         // Page aligned (4KB)
+    SIMD,         // SIMD aligned (16 bytes)
+    DMA,          // DMA aligned (depends on device)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

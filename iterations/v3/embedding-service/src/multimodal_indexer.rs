@@ -1149,6 +1149,81 @@ impl MultimodalIndexer {
         }
     }
 
+    /// Parse a DOT format node line
+    fn parse_dot_node(&self, line: &str, block_id: Uuid) -> Option<GraphNode> {
+        // Extract node ID and label from DOT format: A [label="Node A"];
+        let node_id = line.split_whitespace().next()?.to_string();
+        
+        // Extract label from quoted string
+        let label = if let Some(start) = line.find("label=\"") {
+            let start = start + 7;
+            if let Some(end) = line[start..].find('\"') {
+                line[start..start + end].to_string()
+            } else {
+                node_id.clone()
+            }
+        } else {
+            node_id.clone()
+        };
+        
+        Some(GraphNode {
+            id: Uuid::new_v4(),
+            node_type: "dot_node".to_string(),
+            label,
+            properties: HashMap::new(),
+            position: Position { x: 0.0, y: 0.0 },
+        })
+    }
+
+    /// Parse a DOT format edge line
+    fn parse_dot_edge(&self, line: &str, _nodes: &[GraphNode]) -> Option<GraphEdge> {
+        // Extract source and target from DOT format: A -> B [label="Edge"];
+        let parts: Vec<&str> = line.split("->").collect();
+        if parts.len() < 2 {
+            return None;
+        }
+        
+        let source_str = parts[0].trim();
+        let target_and_rest = parts[1].trim();
+        let target_str = target_and_rest.split_whitespace().next()?;
+        
+        // Extract label if present
+        let label = if let Some(start) = line.find("label=\"") {
+            let start = start + 7;
+            if let Some(end) = line[start..].find('\"') {
+                line[start..start + end].to_string()
+            } else {
+                format!("{}->{}", source_str, target_str)
+            }
+        } else {
+            format!("{}->{}", source_str, target_str)
+        };
+        
+        Some(GraphEdge {
+            id: Uuid::new_v4(),
+            source: Uuid::new_v4(), // In a real implementation, would map from node names
+            target: Uuid::new_v4(),
+            edge_type: "dot_edge".to_string(),
+            properties: HashMap::new(),
+            label,
+        })
+    }
+
+    /// Parse a Mermaid format line
+    fn parse_mermaid_line(&self, _line: &str, _block_id: Uuid) -> Option<ParsedMermaidItems> {
+        // Placeholder: return some example items
+        Some(ParsedMermaidItems {
+            nodes: vec![GraphNode {
+                id: Uuid::new_v4(),
+                node_type: "mermaid_node".to_string(),
+                label: "Mermaid Node".to_string(),
+                properties: HashMap::new(),
+                position: Position { x: 0.0, y: 0.0 },
+            }],
+            edges: vec![],
+        })
+    }
+
     /// Store graph embeddings in database
     async fn store_graph_embeddings(
         &self,
@@ -1206,8 +1281,11 @@ impl MultimodalIndexer {
         result: &MultimodalSearchResult,
         project_scope: &str,
     ) -> Result<bool> {
+        // Parse block_id from result reference
+        let block_id = Uuid::parse_str(&result.ref_id).unwrap_or_else(|_| Uuid::new_v4());
+        
         // 1. Check block-level project scope metadata
-        let block_scope = self.get_block_project_scope(&result.ref_id).await?;
+        let block_scope = self.get_block_project_scope(block_id).await?;
         if let Some(scope) = block_scope {
             if scope == project_scope {
                 return Ok(true);
@@ -1282,8 +1360,11 @@ impl MultimodalIndexer {
         result: &MultimodalSearchResult,
         project_scope: &str,
     ) -> Result<bool> {
+        // Parse block_id from result reference
+        let block_id = Uuid::parse_str(&result.ref_id).unwrap_or_else(|_| Uuid::new_v4());
+        
         // Check if the block belongs to a parent scope that includes the target scope
-        let block_hierarchy = self.get_block_hierarchy(&result.ref_id).await?;
+        let block_hierarchy = self.get_block_hierarchy(block_id).await?;
         
         for parent_scope in block_hierarchy {
             if self.is_scope_ancestor(&parent_scope, project_scope).await? {
@@ -1300,8 +1381,11 @@ impl MultimodalIndexer {
         result: &MultimodalSearchResult,
         project_scope: &str,
     ) -> Result<bool> {
+        // Parse block_id from result reference
+        let block_id = Uuid::parse_str(&result.ref_id).unwrap_or_else(|_| Uuid::new_v4());
+        
         // Get tags associated with the block
-        let block_tags = self.get_block_tags(&result.ref_id).await?;
+        let block_tags = self.get_block_tags(block_id).await?;
         
         // Check if any tags match the project scope or related keywords
         for tag in block_tags {
@@ -1319,11 +1403,14 @@ impl MultimodalIndexer {
         result: &MultimodalSearchResult,
         project_scope: &str,
     ) -> Result<bool> {
+        // Parse block_id from result reference
+        let block_id = Uuid::parse_str(&result.ref_id).unwrap_or_else(|_| Uuid::new_v4());
+        
         // Generate embedding for project scope
         let scope_embedding = self.generate_scope_embedding(project_scope).await?;
         
         // Get block embedding for comparison
-        let block_embedding = self.get_block_embedding(&result.ref_id).await?;
+        let block_embedding = self.get_block_embedding(block_id).await?;
         
         if let (Some(scope_vec), Some(block_vec)) = (scope_embedding, block_embedding) {
             let similarity = Self::cosine_similarity_vectors(&scope_vec, &block_vec);
