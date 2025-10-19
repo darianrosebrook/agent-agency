@@ -2073,12 +2073,12 @@ impl ANEManager {
         // - [ ] Implement proper ANE memory usage monitoring and profiling
         // - [ ] Add support for ANE memory fragmentation management
         // - [ ] Implement proper error handling for ANE memory allocation failures
-        /// - [ ] Add support for ANE memory access pattern optimization
-        /// - [ ] Implement proper cleanup of ANE memory resources
-        /// - [ ] Add support for ANE memory persistence and state management
-        /// - [ ] Implement proper ANE memory health monitoring and alerting
-        /// - [ ] Add support for ANE memory performance tuning and optimization
-        /// - [ ] Implement proper ANE memory debugging and diagnostics
+        // - [ ] Add support for ANE memory access pattern optimization
+        // - [ ] Implement proper cleanup of ANE memory resources
+        // - [ ] Add support for ANE memory persistence and state management
+        // - [ ] Implement proper ANE memory health monitoring and alerting
+        // - [ ] Add support for ANE memory performance tuning and optimization
+        // - [ ] Implement proper ANE memory debugging and diagnostics
         tokio::time::sleep(std::time::Duration::from_millis(5)).await;
 
         debug!("Memory management configuration completed");

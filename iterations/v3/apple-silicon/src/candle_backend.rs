@@ -389,18 +389,18 @@ impl InferenceEngine for CandleBackend {
         let data_str = String::from_utf8_lossy(data);
 
         // TODO: Replace simplified pattern matching with proper protobuf field extraction
-        /// Requirements for completion:
-        /// - [ ] Parse protobuf messages using proper field tags and wire types
-        /// - [ ] Extract tensor specifications from structured protobuf data
-        /// - [ ] Support nested message structures and repeated fields
-        /// - [ ] Implement proper type validation for protobuf fields
-        /// - [ ] Add support for protobuf extensions and custom fields
-        /// - [ ] Optimize field extraction for large protobuf messages
-        /// - [ ] Implement proper error handling for malformed protobuf data
-        /// - [ ] Add support for different protobuf wire formats and compression
-        /// - [ ] Implement proper memory management for large protobuf parsing
-        /// - [ ] Add support for protobuf schema validation
-        /// - [ ] Implement proper cleanup of protobuf parsing resources
+        // Requirements for completion:
+        // - [ ] Parse protobuf messages using proper field tags and wire types
+        // - [ ] Extract tensor specifications from structured protobuf data
+        // - [ ] Support nested message structures and repeated fields
+        // - [ ] Implement proper type validation for protobuf fields
+        // - [ ] Add support for protobuf extensions and custom fields
+        // - [ ] Optimize field extraction for large protobuf messages
+        // - [ ] Implement proper error handling for malformed protobuf data
+        // - [ ] Add support for different protobuf wire formats and compression
+        // - [ ] Implement proper memory management for large protobuf parsing
+        // - [ ] Add support for protobuf schema validation
+        // - [ ] Implement proper cleanup of protobuf parsing resources
         // Extract input tensors (simplified pattern matching)
         if let Some(input_section) = self.find_protobuf_section(&data_str, "input") {
             inputs = self.parse_tensor_specs_from_section(input_section, true)?;

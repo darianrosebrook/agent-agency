@@ -572,17 +572,17 @@ fn execute_prediction_sync(model: *mut objc::runtime::Object, request: *mut objc
             }
 
             // TODO: Replace simplified tokenization with proper tokenizer integration
-            /// Requirements for completion:
-            /// - [ ] Integrate with proper tokenizer (SentencePiece, BPE, WordPiece)
-            /// - [ ] Support different tokenization algorithms and vocabularies
-            /// - [ ] Implement proper token-to-ID mapping and reverse lookup
-            /// - [ ] Add support for special tokens (BOS, EOS, PAD, UNK)
-            /// - [ ] Implement proper error handling for tokenization failures
-            /// - [ ] Add support for different languages and character encodings
-            /// - [ ] Implement proper memory management for large vocabularies
-            /// - [ ] Add support for tokenization caching and performance optimization
-            /// - [ ] Implement proper validation of token sequences
-            /// - [ ] Add support for subword tokenization and handling
+            // Requirements for completion:
+            // - [ ] Integrate with proper tokenizer (SentencePiece, BPE, WordPiece)
+            // - [ ] Support different tokenization algorithms and vocabularies
+            // - [ ] Implement proper token-to-ID mapping and reverse lookup
+            // - [ ] Add support for special tokens (BOS, EOS, PAD, UNK)
+            // - [ ] Implement proper error handling for tokenization failures
+            // - [ ] Add support for different languages and character encodings
+            // - [ ] Implement proper memory management for large vocabularies
+            // - [ ] Add support for tokenization caching and performance optimization
+            // - [ ] Implement proper validation of token sequences
+            // - [ ] Add support for subword tokenization and handling
             // For simplicity, assume 1D array of token indices
             // In a real implementation, this would use a proper tokenizer
             let count: usize = msg_send![shape, count];
@@ -591,17 +591,17 @@ fn execute_prediction_sync(model: *mut objc::runtime::Object, request: *mut objc
             }
 
             // TODO: Replace placeholder detokenization with proper token-to-text conversion
-            /// Requirements for completion:
-            /// - [ ] Implement proper token-to-text detokenization using model vocabulary
-            /// - [ ] Add support for different tokenization schemes (BPE, WordPiece, SentencePiece)
-            /// - [ ] Implement proper handling of special tokens and control characters
-            /// - [ ] Add support for different languages and character encodings
-            /// - [ ] Implement proper error handling for invalid token sequences
-            /// - [ ] Add support for token sequence validation and normalization
-            /// - [ ] Implement proper memory management for large vocabularies
-            /// - [ ] Add support for detokenization caching and performance optimization
-            /// - [ ] Implement proper cleanup of detokenization resources
-            /// - [ ] Add support for detokenization result validation and quality assessment
+            // Requirements for completion:
+            // - [ ] Implement proper token-to-text detokenization using model vocabulary
+            // - [ ] Add support for different tokenization schemes (BPE, WordPiece, SentencePiece)
+            // - [ ] Implement proper handling of special tokens and control characters
+            // - [ ] Add support for different languages and character encodings
+            // - [ ] Implement proper error handling for invalid token sequences
+            // - [ ] Add support for token sequence validation and normalization
+            // - [ ] Implement proper memory management for large vocabularies
+            // - [ ] Add support for detokenization caching and performance optimization
+            // - [ ] Implement proper cleanup of detokenization resources
+            // - [ ] Add support for detokenization result validation and quality assessment
             // Extract first element as a simple token representation
             // This is a placeholder - real implementation would detokenize properly
             let first_token = *data_ptr;
@@ -710,17 +710,17 @@ fn execute_prediction_sync(model: *mut objc::runtime::Object, request: *mut objc
             }
 
             // TODO: Replace simplified confidence extraction with proper output format handling
-            /// Requirements for completion:
-            /// - [ ] Support different Core ML output formats (classification, regression, sequence)
-            /// - [ ] Implement proper probability distribution analysis and confidence scoring
-            /// - [ ] Add support for multi-class and multi-label classification outputs
-            /// - [ ] Implement proper error handling for malformed output data
-            /// - [ ] Add support for different data types (Float32, Float16, Int32)
-            /// - [ ] Implement proper validation of output tensor shapes and dimensions
-            /// - [ ] Add support for output post-processing and normalization
-            /// - [ ] Implement proper memory management for large output tensors
-            /// - [ ] Add support for output format detection and auto-configuration
-            /// - [ ] Implement proper cleanup of output processing resources
+            // Requirements for completion:
+            // - [ ] Support different Core ML output formats (classification, regression, sequence)
+            // - [ ] Implement proper probability distribution analysis and confidence scoring
+            // - [ ] Add support for multi-class and multi-label classification outputs
+            // - [ ] Implement proper error handling for malformed output data
+            // - [ ] Add support for different data types (Float32, Float16, Int32)
+            // - [ ] Implement proper validation of output tensor shapes and dimensions
+            // - [ ] Add support for output post-processing and normalization
+            // - [ ] Implement proper memory management for large output tensors
+            // - [ ] Add support for output format detection and auto-configuration
+            // - [ ] Implement proper cleanup of output processing resources
             // For classification, take the maximum probability as confidence
             // In a real implementation, this would depend on the specific output format
             let shape: *mut objc::runtime::Object = msg_send![ml_array, shape];
@@ -1645,18 +1645,18 @@ impl CoreMLManager {
         let memory_total_mb = (system.total_memory() / 1024 / 1024) as u64;
 
         // TODO: Implement actual GPU and ANE usage monitoring instead of simplified estimation
-        /// Requirements for completion:
-        /// - [ ] Integrate with Metal Performance Shaders for GPU metrics
-        /// - [ ] Use Core ML delegate APIs for ANE utilization tracking
-        /// - [ ] Implement IOKit calls for hardware performance counters
-        /// - [ ] Add support for AMD GPU monitoring on M1/M2 chips
-        /// - [ ] Implement real-time performance counter sampling
-        /// - [ ] Support per-process GPU/ANE usage attribution
-        /// - [ ] Add hardware-specific optimization recommendations
-        /// - [ ] Implement proper error handling for hardware monitoring failures
-        /// - [ ] Add support for thermal throttling detection
-        /// - [ ] Support power consumption monitoring
-        /// - [ ] Implement proper resource cleanup and monitoring lifecycle
+        // Requirements for completion:
+        // - [ ] Integrate with Metal Performance Shaders for GPU metrics
+        // - [ ] Use Core ML delegate APIs for ANE utilization tracking
+        // - [ ] Implement IOKit calls for hardware performance counters
+        // - [ ] Add support for AMD GPU monitoring on M1/M2 chips
+        // - [ ] Implement real-time performance counter sampling
+        // - [ ] Support per-process GPU/ANE usage attribution
+        // - [ ] Add hardware-specific optimization recommendations
+        // - [ ] Implement proper error handling for hardware monitoring failures
+        // - [ ] Add support for thermal throttling detection
+        // - [ ] Support power consumption monitoring
+        // - [ ] Implement proper resource cleanup and monitoring lifecycle
         // Estimate GPU and ANE usage (simplified - would need Metal/Core ML APIs for accurate measurement)
         let gpu_percent = self.estimate_gpu_usage(&system);
         let ane_percent = self.estimate_ane_usage(&system);
