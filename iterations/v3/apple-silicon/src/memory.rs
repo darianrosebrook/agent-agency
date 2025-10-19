@@ -3,6 +3,7 @@
 //! Manages memory usage and pressure monitoring for Apple Silicon.
 
 use crate::types::*;
+use crate::adaptive_resource_manager::Precision;
 use anyhow::Result;
 use std::collections::HashMap;
 use std::sync::Arc;
