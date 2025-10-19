@@ -259,7 +259,7 @@ impl DecompositionStage {
             / claims.len() as f64
             * 0.2;
 
-        (average_confidence + contextual_boost).min(1.0)
+        (average_confidence + contextual_boost).min(1.0f32)
     }
 }
 
@@ -1249,7 +1249,7 @@ impl DecompositionStage {
             confidence -= 0.2;
         }
 
-        confidence.max(0.0).min(1.0)
+        confidence.max(0.0f32).min(1.0f32)
     }
 
     /// Infer claim type from content

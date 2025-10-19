@@ -951,7 +951,7 @@ impl ContextResolver {
                     resolution_method: "frequency_analysis".to_string(),
                 });
                 total_confidence +=
-                    (*frequency as f64 / historical_analysis.total_entities as f64).min(1.0);
+                    (*frequency as f64 / historical_analysis.total_entities as f64).min(1.0f32);
                 resolved_count += 1;
             }
         }
@@ -1107,7 +1107,7 @@ impl ContextResolver {
         }
 
         // Clamp to [0, 1]
-        confidence.max(0.0).min(1.0)
+        confidence.max(0.0f32).min(1.0f32)
     }
 
     /// Resolve referential ambiguities (pronouns) using conversation context (ported from V2)
@@ -1706,7 +1706,7 @@ impl NamedEntityRecognizer {
             confidence += 0.2;
         }
 
-        confidence.min(1.0)
+        confidence.min(1.0f32)
     }
 
     /// Calculate confidence for organization entities
@@ -1733,7 +1733,7 @@ impl NamedEntityRecognizer {
             }
         }
 
-        confidence.min(1.0)
+        confidence.min(1.0f32)
     }
 
     /// Calculate confidence for location entities
@@ -1749,7 +1749,7 @@ impl NamedEntityRecognizer {
             confidence += 0.2;
         }
 
-        confidence.min(1.0)
+        confidence.min(1.0f32)
     }
 
     /// Calculate confidence for technical entities
@@ -1770,7 +1770,7 @@ impl NamedEntityRecognizer {
             }
         }
 
-        confidence.min(1.0)
+        confidence.min(1.0f32)
     }
 
     /// Extract context around an entity
@@ -1811,7 +1811,7 @@ impl NamedEntityRecognizer {
                 .count();
 
             // Boost confidence based on mention frequency
-            boost += (mention_count as f64 * 0.1).min(0.3);
+            boost += (mention_count as f64 * 0.1).min(0.3f32);
         }
 
         boost

@@ -379,8 +379,8 @@ impl MultimodalRetriever {
             .enumerate()
             .map(|(idx, mut result)| {
                 // Boost high-ranked items slightly
-                let position_boost = 1.0 - (idx as f32 * 0.01).min(0.2);
-                result.feature.fused_score = (result.feature.fused_score * position_boost).min(1.0);
+                let position_boost = 1.0 - (idx as f32 * 0.01).min(0.2f32);
+                result.feature.fused_score = (result.feature.fused_score * position_boost).min(1.0f32);
                 result
             })
             .collect();

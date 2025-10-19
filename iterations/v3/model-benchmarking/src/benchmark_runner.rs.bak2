@@ -987,30 +987,13 @@ impl BenchmarkRunner {
     ) -> Result<String> {
         #[cfg(feature = "coreml")]
         {
-            // Basic Core ML integration - would be expanded in production
-            tracing::debug!("Core ML execution requested for model: {}, task: {}", model.name, task_type);
-            
-            // For demonstration, return a simulated Core ML result
-            // In production, this would integrate with the actual Core ML backend
-            let response = match task_type {
-                "code_generation" => "// Core ML accelerated code generation
-fn coreml_generated() {
-    println!("Generated via ANE acceleration");
-}".to_string(),
-                "code_review" => "Core ML review: Architecture optimized for Apple Silicon ANE with 3.2x speedup potential.".to_string(),
-                "testing" => "Core ML testing: ANE-accelerated test execution completed with 95% coverage.".to_string(),
-                "documentation" => "Core ML documentation: Generated using neural processing on Apple Silicon.".to_string(),
-                "research" => "Core ML research: ANE-accelerated analysis reveals key insights with high confidence.".to_string(),
-                "analysis" => "Core ML analysis: Deep neural insights processed via Apple Neural Engine.".to_string(),
-                _ => "Core ML processing completed via ANE acceleration.".to_string(),
-            };
-            
-            Ok(response)
+            // This would integrate with coreml-bridge when available
+            return Err(anyhow::anyhow!("Core ML integration not yet implemented"));
         }
 
         #[cfg(not(feature = "coreml"))]
         {
-            return Err(anyhow::anyhow!("Core ML not available - compile with --features coreml"));
+            return Err(anyhow::anyhow!("Core ML not available"));
         }
     }
 
@@ -1688,30 +1671,13 @@ impl Default for BenchmarkMetrics {
     ) -> Result<String> {
         #[cfg(feature = "coreml")]
         {
-            // Basic Core ML integration - would be expanded in production
-            tracing::debug!("Core ML execution requested for model: {}, task: {}", model.name, task_type);
-            
-            // For demonstration, return a simulated Core ML result
-            // In production, this would integrate with the actual Core ML backend
-            let response = match task_type {
-                "code_generation" => "// Core ML accelerated code generation
-fn coreml_generated() {
-    println!("Generated via ANE acceleration");
-}".to_string(),
-                "code_review" => "Core ML review: Architecture optimized for Apple Silicon ANE with 3.2x speedup potential.".to_string(),
-                "testing" => "Core ML testing: ANE-accelerated test execution completed with 95% coverage.".to_string(),
-                "documentation" => "Core ML documentation: Generated using neural processing on Apple Silicon.".to_string(),
-                "research" => "Core ML research: ANE-accelerated analysis reveals key insights with high confidence.".to_string(),
-                "analysis" => "Core ML analysis: Deep neural insights processed via Apple Neural Engine.".to_string(),
-                _ => "Core ML processing completed via ANE acceleration.".to_string(),
-            };
-            
-            Ok(response)
+            // This would integrate with coreml-bridge when available
+            return Err(anyhow::anyhow!("Core ML integration not yet implemented"));
         }
 
         #[cfg(not(feature = "coreml"))]
         {
-            return Err(anyhow::anyhow!("Core ML not available - compile with --features coreml"));
+            return Err(anyhow::anyhow!("Core ML not available"));
         }
     }
 

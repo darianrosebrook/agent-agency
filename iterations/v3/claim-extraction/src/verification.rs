@@ -279,7 +279,7 @@ impl EvidenceCollector {
         let uncertainty_penalty = (uncertainty_count as f32) * 0.1;
         let contradiction_penalty = (contradiction_count as f32) * 0.15;
 
-        let confidence = (base_confidence - uncertainty_penalty - contradiction_penalty).max(0.2);
+        let confidence = (base_confidence - uncertainty_penalty - contradiction_penalty).max(0.2f32);
         Ok(confidence)
     }
 
@@ -608,7 +608,7 @@ impl EvidenceCollector {
         let adjusted_relevance = base_relevance * complexity_factor * domain_weight;
         
         // Ensure score is between 0.0 and 1.0
-        adjusted_relevance.min(1.0).max(0.0)
+        adjusted_relevance.min(1.0f32).max(0.0f32)
     }
 
     /// Analyze claim content structure (subject, predicate, object patterns)
@@ -654,8 +654,8 @@ impl EvidenceCollector {
         let sentence_count = text.split('.').count();
         
         // Simple complexity calculation based on length and structure
-        let length_factor = (word_count as f64 / 20.0).min(1.0);
-        let structure_factor = (sentence_count as f64 / 3.0).min(1.0);
+        let length_factor = (word_count as f64 / 20.0).min(1.0f32);
+        let structure_factor = (sentence_count as f64 / 3.0).min(1.0f32);
         
         (length_factor + structure_factor) / 2.0
     }
@@ -1219,7 +1219,7 @@ impl VerificationStage {
             / evidence.len() as f64
             * 0.2;
 
-        (average_confidence + quality_boost).min(1.0)
+        (average_confidence + quality_boost).min(1.0f32)
     }
 }
 

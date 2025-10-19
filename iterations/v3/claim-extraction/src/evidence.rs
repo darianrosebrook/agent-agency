@@ -382,16 +382,16 @@ impl EvidenceCollector {
     /// Assess code complexity based on metrics
     fn assess_code_complexity(&self, metrics: &CodeMetrics) -> f64 {
         // Simple complexity scoring based on lines of code and function count
-        let _loc_score = (metrics.lines_of_code as f64 / 1000.0).min(1.0);
-        let _func_score = (metrics.function_count as f64 / 20.0).min(1.0);
+        let _loc_score = (metrics.lines_of_code as f64 / 1000.0).min(1.0f32);
+        let _func_score = (metrics.function_count as f64 / 20.0).min(1.0f32);
 
         // Higher scores indicate better code quality (lower complexity per function)
         if metrics.function_count == 0 {
             0.5 // Neutral score for files without functions
         } else {
             let avg_loc_per_func = metrics.lines_of_code as f64 / metrics.function_count as f64;
-            let complexity_penalty = (avg_loc_per_func / 50.0).min(1.0); // Penalty for very long functions
-            (1.0 - complexity_penalty).max(0.1)
+            let complexity_penalty = (avg_loc_per_func / 50.0).min(1.0f32); // Penalty for very long functions
+            (1.0 - complexity_penalty).max(0.1f32)
         }
     }
 
@@ -765,7 +765,7 @@ impl EvidenceCollector {
 
         // Normalize to 0.1-1.0 range
         let normalized_score = relevance_score / claim_words.len() as f64;
-        (normalized_score * 0.9 + 0.1).min(1.0) // Minimum relevance of 0.1
+        (normalized_score * 0.9 + 0.1).min(1.0f32) // Minimum relevance of 0.1
     }
 
     /// Collect evidence from documentation
@@ -1101,7 +1101,7 @@ impl EvidenceCollector {
         }
 
         let base_score = matches as f64 / claim_words.len() as f64;
-        base_score.min(1.0)
+        base_score.min(1.0f32)
     }
 
     /// Extract relevant excerpts from text
@@ -2008,7 +2008,7 @@ impl EvidenceCollector {
             score += 0.05;
         }
 
-        score.min(1.0)
+        score.min(1.0f32)
     }
 }
 

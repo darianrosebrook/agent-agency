@@ -4,7 +4,7 @@
 //! and validation with multi-modal analysis including cross-reference validation.
 
 use crate::types::*;
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
 use chrono::Utc;
 use std::collections::HashSet;
 use std::ffi::OsStr;
@@ -14,6 +14,7 @@ use std::path::{Path, PathBuf};
 use tokio::task;
 use tracing::{debug, info, warn};
 use walkdir::WalkDir;
+use std::time::{Duration, Instant};
 
 /// Multi-Modal Verification Engine for claim validation
 #[derive(Debug)]
@@ -312,8 +313,8 @@ impl MultiModalVerificationEngine {
         // Calculate consistency score based on matches and relevance
         let consistency_score = if total_matches > 0 {
             // Weight relevant matches more heavily
-            let base_score = (total_matches as f64).min(10.0) / 10.0; // Cap at 10 matches
-            let relevance_boost = (relevant_matches as f64 / total_matches as f64).min(1.0);
+            let base_score = (total_matches as f64).min(10.0f32) / 10.0; // Cap at 10 matches
+            let relevance_boost = (relevant_matches as f64 / total_matches as f64).min(1.0f32);
 
             (base_score * 0.7) + (relevance_boost * 0.3)
         } else {
@@ -367,9 +368,9 @@ impl MultiModalVerificationEngine {
         // Calculate comment consistency score
         let comment_score = if total_comment_matches > 0 {
             // Comments are highly credible sources
-            let base_score = (total_comment_matches as f64).min(5.0) / 5.0; // Cap at 5 matches
+            let base_score = (total_comment_matches as f64).min(5.0f32) / 5.0; // Cap at 5 matches
             let relevance_boost =
-                (relevant_comment_matches as f64 / total_comment_matches as f64).min(1.0);
+                (relevant_comment_matches as f64 / total_comment_matches as f64).min(1.0f32);
 
             (base_score * 0.6) + (relevance_boost * 0.4) + 0.3 // Base credibility boost for comments
         } else {
@@ -528,7 +529,7 @@ impl MultiModalVerificationEngine {
             consistency += 0.2;
         }
 
-        consistency.min(1.0)
+        consistency.min(1.0f32)
     }
 
     /// Detect potential programming errors in patterns
@@ -548,7 +549,7 @@ impl MultiModalVerificationEngine {
             }
         }
 
-        error_score.min(1.0)
+        error_score.min(1.0f32)
     }
 
     /// Extract searchable keywords from claim text
@@ -1236,7 +1237,7 @@ impl MultiModalVerificationEngine {
             coverage_score = total_confidence / test_count as f64;
             // Boost score for claims with multiple test validations
             if test_count > 1 {
-                coverage_score = (coverage_score * 1.2).min(1.0);
+                coverage_score = (coverage_score * 1.2).min(1.0f32);
             }
         }
 
@@ -1317,7 +1318,7 @@ impl MultiModalVerificationEngine {
             relevance *= 1.1;
         }
 
-        Ok(relevance.min(1.0))
+        Ok(relevance.min(1.0f32))
     }
 
     /// Analyze specification coverage for a claim
@@ -1359,7 +1360,7 @@ impl MultiModalVerificationEngine {
             spec_score = total_confidence / spec_count as f64;
             // Boost score for claims with multiple specification validations
             if spec_count > 1 {
-                spec_score = (spec_score * 1.15).min(1.0);
+                spec_score = (spec_score * 1.15).min(1.0f32);
             }
         } else {
             // Base score for claims that might be covered by general specifications
@@ -1459,7 +1460,7 @@ impl MultiModalVerificationEngine {
             relevance *= 1.1;
         }
 
-        Ok(relevance.min(1.0))
+        Ok(relevance.min(1.0f32))
     }
 
     /// Analyze historical validation for a claim
@@ -1495,7 +1496,7 @@ impl MultiModalVerificationEngine {
             historical_score = total_confidence / validation_count as f64;
             // Boost score for claims with multiple historical validations
             if validation_count > 2 {
-                historical_score = (historical_score * 1.1).min(1.0);
+                historical_score = (historical_score * 1.1).min(1.0f32);
             }
         } else {
             // Base score for claims without historical precedent
@@ -1603,7 +1604,7 @@ impl MultiModalVerificationEngine {
             similarity *= 1.2;
         }
 
-        Ok(similarity.min(1.0))
+        Ok(similarity.min(1.0f32))
     }
 
     /// Analyze authority credibility for a claim
@@ -1733,7 +1734,7 @@ impl MultiModalVerificationEngine {
             credibility += 0.1;
         }
 
-        Ok(credibility.min(1.0))
+        Ok(credibility.min(1.0f32))
     }
 
     /// Assess author expertise
@@ -1756,7 +1757,7 @@ impl MultiModalVerificationEngine {
             expertise += 0.1;
         }
 
-        Ok(expertise.min(1.0))
+        Ok(expertise.min(1.0f32))
     }
 
     /// Assess publication recency
@@ -1772,7 +1773,7 @@ impl MultiModalVerificationEngine {
             }
         }
 
-        Ok(recency.min(1.0))
+        Ok(recency.min(1.0f32))
     }
 
     /// Assess conflicts of interest
@@ -1787,7 +1788,7 @@ impl MultiModalVerificationEngine {
             }
         }
 
-        Ok(conflict_score.max(0.0))
+        Ok(conflict_score.max(0.0f32))
     }
 
     /// Discover documentation files in the filesystem using pattern matching
@@ -2139,7 +2140,7 @@ impl MultiModalVerificationEngine {
         }
 
         // Limit confidence to 1.0
-        confidence.min(1.0) as f64
+        confidence.min(1.0f32) as f64
     }
 
     /// Extract context around a match position
@@ -2657,7 +2658,7 @@ impl MultiModalVerificationEngine {
             score -= 0.1;
         }
 
-        score.min(1.0).max(0.0)
+        score.min(1.0f32).max(0.0f32)
     }
 
     /// Discover test files based on keywords and context
@@ -3030,7 +3031,7 @@ enum ValidationOutcome {
             let claim = HistoricalClaim {
                 id: Uuid::new_v4(),
                 claim_text: format!("Historical claim about {} from {} sources", term, i + 1),
-                confidence_score: 0.75 + (i as f32 * 0.05).min(0.2),
+                confidence_score: 0.75 + (i as f32 * 0.05).min(0.2f32),
                 source_count: i + 1,
                 verification_status: VerificationStatus::Verified,
                 last_verified: chrono::Utc::now() - chrono::Duration::days(i as i64 * 7),

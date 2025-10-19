@@ -225,7 +225,7 @@ impl MultimodalContextProvider {
         }
 
         // Calculate budget utilization
-        let budget_utilization = (token_count as f32 / budget.max_tokens as f32).min(1.0);
+        let budget_utilization = (token_count as f32 / budget.max_tokens as f32).min(1.0f32);
 
         // Calculate global to project ratio
         let total = global_count + project_count;
