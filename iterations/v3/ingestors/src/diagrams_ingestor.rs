@@ -152,7 +152,7 @@ impl DiagramsIngestor {
         
         // Extract attributes
         for attr in node.attributes() {
-            attributes.insert(attr.name().to_string(), attr.value().into());
+            attributes.insert(attr.name().to_string(), serde_json::Value::String(attr.value().to_string()));
         }
         
         // Determine entity type based on tag name

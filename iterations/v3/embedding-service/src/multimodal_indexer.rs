@@ -829,7 +829,7 @@ impl MultimodalIndexer {
             node_type: "node".to_string(),
             label: "Node A".to_string(),
             properties: HashMap::new(),
-            position: None,
+            position: Position { x: 0.0, y: 0.0 },
         });
 
         nodes.push(GraphNode {
@@ -837,7 +837,7 @@ impl MultimodalIndexer {
             node_type: "node".to_string(),
             label: "Node B".to_string(),
             properties: HashMap::new(),
-            position: None,
+            position: Position { x: 100.0, y: 0.0 },
         });
 
         nodes.push(GraphNode {
@@ -845,21 +845,25 @@ impl MultimodalIndexer {
             node_type: "node".to_string(),
             label: "Node C".to_string(),
             properties: HashMap::new(),
-            position: None,
+            position: Position { x: 50.0, y: 100.0 },
         });
 
         edges.push(GraphEdge {
+            id: Uuid::new_v4(),
             source: node1_id,
             target: node2_id,
             edge_type: "directed".to_string(),
             properties: HashMap::new(),
+            label: "edge_1".to_string(),
         });
 
         edges.push(GraphEdge {
+            id: Uuid::new_v4(),
             source: node2_id,
             target: node3_id,
             edge_type: "directed".to_string(),
             properties: HashMap::new(),
+            label: "edge_2".to_string(),
         });
 
         Ok(ParsedGraph {
@@ -867,7 +871,7 @@ impl MultimodalIndexer {
             edges,
             adjacent_nodes: vec![node1_id, node2_id, node3_id],
             graph_metadata: GraphMetadata {
-                format: content.format.clone(),
+                graph_type: "flowchart".to_string(),
                 node_count: 3,
                 edge_count: 2,
                 properties: HashMap::new(),
@@ -1105,7 +1109,7 @@ impl MultimodalIndexer {
     fn extract_svg_metadata(&self, _content: &str) -> GraphMetadata {
         // Placeholder metadata
         GraphMetadata {
-            format: GraphContentType::SVG,
+            graph_type: "flowchart".to_string(),
             node_count: 0,
             edge_count: 0,
             properties: HashMap::new(),
@@ -1116,7 +1120,7 @@ impl MultimodalIndexer {
     fn extract_graphml_metadata(&self, _content: &str) -> GraphMetadata {
         // Placeholder metadata
         GraphMetadata {
-            format: GraphContentType::GraphML,
+            graph_type: "flowchart".to_string(),
             node_count: 0,
             edge_count: 0,
             properties: HashMap::new(),
@@ -1127,7 +1131,7 @@ impl MultimodalIndexer {
     fn extract_dot_metadata(&self, _content: &str) -> GraphMetadata {
         // Placeholder metadata
         GraphMetadata {
-            format: GraphContentType::DOT,
+            graph_type: "flowchart".to_string(),
             node_count: 0,
             edge_count: 0,
             properties: HashMap::new(),
@@ -1138,7 +1142,7 @@ impl MultimodalIndexer {
     fn extract_mermaid_metadata(&self, _content: &str) -> GraphMetadata {
         // Placeholder metadata
         GraphMetadata {
-            format: GraphContentType::Mermaid,
+            graph_type: "flowchart".to_string(),
             node_count: 0,
             edge_count: 0,
             properties: HashMap::new(),

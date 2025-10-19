@@ -306,7 +306,7 @@ impl MultimodalRetriever {
     ) -> Result<Vec<embedding_service::MultimodalSearchResult>> {
         let multimodal_query = MultimodalQuery {
             text: Some(query.to_string()),
-            query_type: QueryType::Knowledge,
+            query_type: QueryType::Hybrid,
             project_scope: project_scope.map(|s| s.to_string()),
             max_results,
         };

@@ -266,7 +266,7 @@ impl SceneDetector {
         // Convert to grayscale and compute average
         let gray = resized.to_luma8();
         let pixels: Vec<u8> = gray.pixels().map(|p| p[0]).collect();
-        let average = pixels.iter().sum::<u64>() / pixels.len() as u64;
+        let average = pixels.iter().map(|&p| p as u64).sum::<u64>() / pixels.len() as u64;
         
         // Create hash based on pixels above/below average
         let mut hash = 0u64;
