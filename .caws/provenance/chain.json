@@ -13242,5 +13242,41 @@
     },
     "previous_hash": "d45a75c46c8e73451d377123c551b6e162b87b399dd14862db1a5840d6a9de17",
     "hash": "a9aef6f61d5613326a67d38dd700541e22b59466c7e433895d27fefa4460cfb7"
+  },
+  {
+    "id": "prov-1760906464115",
+    "timestamp": "2025-10-19T20:41:04.115Z",
+    "commit": {
+      "hash": "fd6766f4f4fcd51ef0824fe84cc2c17e44564f49",
+      "message": "feat: Major compilation fixes campaign - 68% error reduction",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "PROJ-785",
+      "title": "agent-agency",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": [
+        "WV-0001"
+      ]
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-19T20:41:04.122Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "a9aef6f61d5613326a67d38dd700541e22b59466c7e433895d27fefa4460cfb7",
+    "hash": "95d74f9cbd0a1682122d21c24601953e0e1b84f21a13c9a8b4b0c33ff16a5462"
   }
 ]

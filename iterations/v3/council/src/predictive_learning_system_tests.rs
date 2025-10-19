@@ -309,8 +309,14 @@ mod tests {
         let test_outcome = create_test_task_outcome(OutcomeType::Success, 0.85);
         let prediction = system.learn_and_predict(&test_outcome).await.unwrap();
 
-        // The system should have learned from the historical pattern
-        // (This is a simplified test - in practice we'd need more sophisticated validation)
+        // TODO: Implement comprehensive predictive learning validation
+        // - [ ] Add statistical significance testing for learning outcomes
+        // - [ ] Implement cross-validation with different data splits
+        // - [ ] Add prediction accuracy metrics and confidence intervals
+        // - [ ] Implement A/B testing framework for learning algorithm comparison
+        // - [ ] Add regression testing to prevent learning degradation
+        // - [ ] Implement learning curve analysis and plateau detection
+        // - [ ] Support multi-objective optimization evaluation
         assert!(prediction.outcome_prediction.success_probability > 0.0);
         assert!(prediction.learning_acceleration.knowledge_transfer_efficiency > 0.0);
 
@@ -338,8 +344,14 @@ mod tests {
         let mut predictions = Vec::new();
         for (outcome_type, confidence, processing_time) in performance_scenarios {
             let mut outcome = create_test_task_outcome(outcome_type, confidence);
-            // Note: In a real implementation, we'd set processing time in the outcome
-            // For now, we just test the prediction generation
+            // TODO: Implement comprehensive processing time integration in test outcomes
+            // - [ ] Add processing time measurement and inclusion in task outcomes
+            // - [ ] Implement processing time prediction and validation
+            // - [ ] Support processing time distribution analysis and percentiles
+            // - [ ] Add processing time-based performance benchmarking
+            // - [ ] Implement processing time trend analysis and alerting
+            // - [ ] Support processing time correlation with task complexity
+            // - [ ] Add processing time optimization recommendations
 
             let prediction = system.learn_and_predict(&outcome).await.unwrap();
             predictions.push(prediction);

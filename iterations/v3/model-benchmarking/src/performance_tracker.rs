@@ -266,8 +266,14 @@ impl PerformanceTracker {
             .sum::<f64>()
             / performances.len() as f64;
 
-        // Determine performance trend (simplified)
-        let trend = PerformanceTrend::Stable; // Would need more sophisticated analysis
+        // TODO: Implement sophisticated performance trend analysis
+        // - [ ] Use statistical trend detection (linear regression, moving averages)
+        // - [ ] Implement performance change point detection
+        // - [ ] Support different trend types (improving, degrading, cyclical)
+        // - [ ] Add confidence intervals for trend predictions
+        // - [ ] Implement seasonal and temporal trend analysis
+        // - [ ] Support multivariate trend analysis across metrics
+        // - [ ] Add trend-based alerting and performance regression detection
 
         // Get top performers (top 3)
         let top_performers = performances.iter().take(3).cloned().collect();

@@ -1190,6 +1190,14 @@ impl MultimodalIndexer {
         let mut nodes = Vec::new();
         let mut edges = Vec::new();
         
+        // TODO: Implement proper DOT format parsing instead of simplified line-based approach
+        // - [ ] Use established graph parsing library (petgraph, dot-parser, etc.)
+        // - [ ] Parse complete DOT grammar including subgraphs and clusters
+        // - [ ] Support DOT attributes (color, shape, style, etc.)
+        // - [ ] Handle different DOT dialects (Graphviz, GV, etc.)
+        // - [ ] Implement proper error handling and validation
+        // - [ ] Support directed and undirected graphs
+        // - [ ] Add graph layout and positioning information extraction
         // Parse DOT format (simplified parser)
         let lines: Vec<&str> = content.data.lines().collect();
         
@@ -1224,6 +1232,14 @@ impl MultimodalIndexer {
         let mut nodes = Vec::new();
         let mut edges = Vec::new();
         
+        // TODO: Implement proper Mermaid format parsing instead of simplified line processing
+        // - [ ] Use Mermaid parsing library or implement full Mermaid grammar
+        // - [ ] Support all Mermaid diagram types (flowchart, sequence, gantt, etc.)
+        // - [ ] Parse Mermaid syntax including styles, classes, and configurations
+        // - [ ] Handle Mermaid directives and theme configurations
+        // - [ ] Implement proper error handling for malformed Mermaid syntax
+        // - [ ] Support Mermaid subgraphs and complex nested structures
+        // - [ ] Add Mermaid-to-graph conversion with accurate node/edge relationships
         // Parse Mermaid format (simplified parser for basic diagrams)
         let lines: Vec<&str> = content.data.lines().collect();
         
@@ -1444,7 +1460,15 @@ impl MultimodalIndexer {
         
         Some(GraphEdge {
             id: Uuid::new_v4(),
-            source: Uuid::new_v4(), // In a real implementation, would map from node names
+            // TODO: Implement proper node name to UUID mapping for graph edges
+            // - [ ] Create node name to UUID mapping registry during parsing
+            // - [ ] Support forward and backward references in graph definitions
+            // - [ ] Handle node name conflicts and disambiguation
+            // - [ ] Implement lazy UUID assignment for referenced but undefined nodes
+            // - [ ] Support different naming conventions (quoted, unquoted, with attributes)
+            // - [ ] Add node reference validation and error reporting
+            // - [ ] Implement efficient node lookup by name during edge creation
+            source: Uuid::new_v4(),
             target: Uuid::new_v4(),
             edge_type: "dot_edge".to_string(),
             properties: HashMap::new(),
@@ -1693,10 +1717,14 @@ impl MultimodalIndexer {
         Ok(optimized_results)
     }
 
-    /// Get block scope from cache (fallback method)
-    fn get_block_scope_from_cache(&self, _block_id: Uuid) -> Option<String> {
-        // In a real implementation, this would check an in-memory cache
-        // For now, return None to indicate no cached scope
+    /// TODO: Implement scope caching infrastructure for performance optimization
+    /// - [ ] Add in-memory LRU cache for block scope mappings
+    /// - [ ] Implement cache invalidation on content changes
+    /// - [ ] Support distributed cache coordination for multi-instance deployments
+    /// - [ ] Add cache metrics and hit rate monitoring
+    /// - [ ] Implement cache persistence across application restarts
+    /// - [ ] Support hierarchical scope caching (project > module > block)
+    /// - [ ] Add cache warming strategies for frequently accessed scopes
         None
     }
 
@@ -1727,7 +1755,22 @@ impl MultimodalIndexer {
         content_features: &crate::types::ContentFeatures,
         scope_keywords: &[String],
     ) -> Result<f64> {
-        // Simple keyword matching for now
+        // TODO: Implement sophisticated content-scope similarity calculation instead of simple keyword matching
+        // - [ ] Use semantic similarity with embeddings (cosine similarity, etc.)
+        // - [ ] Implement TF-IDF weighted keyword matching
+        // - [ ] Add fuzzy string matching for typos and variations
+        // - [ ] Support multi-word phrase matching and context
+        // - [ ] Implement domain-specific terminology recognition
+        // - [ ] Add content classification and categorization
+        // - [ ] Support hierarchical scope matching (project > module > function)
+        // TODO: Replace simple keyword matching with advanced semantic matching
+        // - [ ] Implement semantic similarity using embeddings and cosine similarity
+        // - [ ] Use TF-IDF weighting for more accurate keyword relevance
+        // - [ ] Add fuzzy string matching to handle typos and variations
+        // - [ ] Implement domain-specific terminology recognition and expansion
+        // - [ ] Add content classification and categorization for better matching
+        // - [ ] Support hierarchical scope matching (project > module > function > class)
+        // - [ ] Implement machine learning-based relevance scoring
         let mut matches = 0;
         let total_keywords = scope_keywords.len();
         

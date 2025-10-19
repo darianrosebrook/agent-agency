@@ -812,8 +812,14 @@ impl AnalyticsDashboard {
 
     /// Retrieve insights from Redis cache
     async fn retrieve_from_redis_cache(&self, cache_key: &str) -> Result<Option<CachedInsights>> {
-        // In production, this would connect to Redis
-        // For now, we'll simulate Redis behavior with in-memory storage
+        // TODO: Implement production Redis cache integration
+        // - [ ] Configure Redis connection pooling and clustering support
+        // - [ ] Implement Redis connection health monitoring and failover
+        // - [ ] Add Redis cache key expiration and TTL management
+        // - [ ] Support Redis pub/sub for cache invalidation
+        // - [ ] Implement Redis serialization/deserialization for insights
+        // - [ ] Add Redis cache metrics and performance monitoring
+        // - [ ] Support Redis namespace isolation for multi-tenant deployments
 
         // Check if we have a Redis connection available
         if let Some(redis_client) = self.get_redis_client().await? {
@@ -839,10 +845,15 @@ impl AnalyticsDashboard {
         }
     }
 
-    /// Get Redis client (placeholder for production implementation)
+    /// TODO: Implement production Redis client configuration and connection management
+    /// - [ ] Configure Redis connection parameters from environment/config
+    /// - [ ] Implement connection pooling with configurable pool size
+    /// - [ ] Add Redis authentication and TLS support
+    /// - [ ] Implement Redis cluster and sentinel support
+    /// - [ ] Add Redis client health monitoring and circuit breaker
+    /// - [ ] Support Redis command pipelining for performance
+    /// - [ ] Implement Redis client metrics and telemetry collection
     async fn get_redis_client(&self) -> Result<Option<Box<dyn RedisClient + Send + Sync>>> {
-        // In production, this would return a configured Redis client
-        // For now, return None to indicate Redis is not available
         Ok(None)
     }
 
@@ -1023,7 +1034,14 @@ impl AnalyticsDashboard {
     ) -> Result<()> {
         let mut cache = self.insights_cache.write().await;
 
-        // Store the first insight in memory cache (simplified for demo)
+        // TODO: Implement comprehensive memory cache with LRU eviction and metrics
+        // - [ ] Implement LRU cache eviction policy with configurable size limits
+        // - [ ] Add cache hit/miss ratio metrics and monitoring
+        // - [ ] Support cache entry expiration and TTL management
+        // - [ ] Implement cache warming strategies for frequently accessed data
+        // - [ ] Add cache consistency validation and integrity checks
+        // - [ ] Support cache serialization for persistence across restarts
+        // - [ ] Implement cache partitioning for multi-tenant isolation
         if let Some(first_insight) = cached_insights.insights.first() {
             cache.insert(cache_key.to_string(), first_insight.clone());
             tracing::debug!("Stored insight in memory cache for key: {}", cache_key);
@@ -1219,7 +1237,14 @@ impl AnalyticsDashboard {
         cache_key: &str,
         insights_count: usize,
     ) -> Result<()> {
-        // In a real implementation, this would update in-memory metrics
+        // TODO: Implement comprehensive in-memory metrics collection and aggregation
+        // - [ ] Implement atomic counters for cache hit/miss statistics
+        // - [ ] Add time-series metrics for cache performance over time
+        // - [ ] Support configurable metrics retention and aggregation windows
+        // - [ ] Implement metrics export to external monitoring systems
+        // - [ ] Add cache efficiency calculations and optimization suggestions
+        // - [ ] Support metrics correlation with business KPIs
+        // - [ ] Implement metrics alerting and anomaly detection
         tracing::debug!(
             "Updated in-memory cache metrics for key {}: {} insights",
             cache_key,
@@ -1367,11 +1392,15 @@ impl AnalyticsDashboard {
         Ok(metrics)
     }
 
-    /// Collect metrics from Prometheus
+    /// TODO: Implement production Prometheus metrics collection and querying
+    /// - [ ] Configure Prometheus HTTP client with connection pooling
+    /// - [ ] Implement PromQL query construction for system metrics
+    /// - [ ] Add Prometheus query result parsing and validation
+    /// - [ ] Support Prometheus federation and remote read endpoints
+    /// - [ ] Implement query retry logic and circuit breaker
+    /// - [ ] Add Prometheus query metrics and performance monitoring
+    /// - [ ] Support Prometheus metric metadata and label filtering
     async fn collect_prometheus_metrics(&self) -> Result<SystemMetrics> {
-        // In production, this would query Prometheus API
-        // For now, simulate Prometheus data collection
-
         let prometheus_url = "http://localhost:9090/api/v1/query";
 
         // Simulate HTTP request to Prometheus
@@ -1394,11 +1423,15 @@ impl AnalyticsDashboard {
         })
     }
 
-    /// Collect metrics from StatsD
+    /// TODO: Implement production StatsD metrics collection and aggregation
+    /// - [ ] Configure StatsD UDP/TCP client for metric collection
+    /// - [ ] Implement StatsD protocol parsing for counters, gauges, timers
+    /// - [ ] Add StatsD sampling rate handling and extrapolation
+    /// - [ ] Support StatsD metric aggregation and percentile calculations
+    /// - [ ] Implement StatsD metric flushing and batch processing
+    /// - [ ] Add StatsD connection health monitoring and failover
+    /// - [ ] Support StatsD metric tagging and dimensional data
     async fn collect_statsd_metrics(&self) -> Result<SystemMetrics> {
-        // In production, this would query StatsD metrics
-        // For now, simulate StatsD data collection
-
         let statsd_host = "localhost:8125";
 
         tracing::debug!("Querying StatsD at {} for metrics", statsd_host);
@@ -1416,11 +1449,15 @@ impl AnalyticsDashboard {
         })
     }
 
-    /// Collect metrics from system APIs
+    /// TODO: Implement direct system API metrics collection for Linux
+    /// - [ ] Parse /proc/stat for CPU usage statistics and load averages
+    /// - [ ] Read /proc/meminfo for detailed memory information
+    /// - [ ] Monitor /proc/diskstats for disk I/O statistics
+    /// - [ ] Parse /proc/net/dev for network interface statistics
+    /// - [ ] Implement efficient file reading with buffering and caching
+    /// - [ ] Add cross-platform support (Windows Performance Counters, macOS sysctl)
+    /// - [ ] Support system API polling with configurable intervals
     async fn collect_system_api_metrics(&self) -> Result<SystemMetrics> {
-        // In production, this would use system APIs like /proc/stat, /proc/meminfo
-        // For now, simulate system API data collection
-
         tracing::debug!("Collecting metrics from system APIs");
 
         // Simulate system API calls
@@ -1444,10 +1481,15 @@ impl AnalyticsDashboard {
         })
     }
 
-    /// Get CPU usage from /proc/stat
+    /// TODO: Implement actual /proc/stat parsing for CPU usage calculation
+    /// - [ ] Parse /proc/stat CPU fields (user, nice, system, idle, etc.)
+    /// - [ ] Calculate CPU usage percentage using time deltas
+    /// - [ ] Support per-CPU core statistics and aggregation
+    /// - [ ] Implement CPU usage smoothing and outlier filtering
+    /// - [ ] Add CPU steal time and guest time tracking
+    /// - [ ] Support CPU frequency scaling information
+    /// - [ ] Implement efficient file reading with mmap for performance
     async fn get_cpu_usage_from_proc(&self) -> Result<f64> {
-        // In production, this would read /proc/stat
-        // For now, simulate reading system file
         tracing::debug!("Reading CPU usage from /proc/stat");
         Ok(0.66)
     }
@@ -1930,8 +1972,14 @@ impl AnalyticsDashboard {
         let model_path = format!("models/{}.onnx", model_name);
         tracing::debug!("Loading model {} from path: {}", model_name, model_path);
 
-        // In production, this would load an actual ONNX model
-        // For now, create a mock model
+        // TODO: Implement actual ONNX model loading and validation
+        // - [ ] Load and parse ONNX model files using onnxruntime crate
+        // - [ ] Validate ONNX model format and version compatibility
+        // - [ ] Extract model metadata (inputs, outputs, opset version)
+        // - [ ] Implement ONNX model optimization and quantization support
+        // - [ ] Add model size validation and memory usage estimation
+        // - [ ] Support ONNX model profiling and performance benchmarking
+        // - [ ] Implement model caching and warm-up strategies
         let model = MLModel {
             name: model_name.to_string(),
             version: "1.0".to_string(),
@@ -1948,10 +1996,15 @@ impl AnalyticsDashboard {
         Ok(model)
     }
 
-    /// Get cached model if available
+    /// TODO: Implement model caching with LRU eviction and persistence
+    /// - [ ] Implement LRU cache for loaded models with size limits
+    /// - [ ] Add model cache persistence across application restarts
+    /// - [ ] Support model versioning and cache invalidation
+    /// - [ ] Add cache hit/miss metrics and performance monitoring
+    /// - [ ] Implement model pre-loading and warming strategies
+    /// - [ ] Support distributed cache coordination for multi-instance deployments
+    /// - [ ] Add model cache health monitoring and corruption detection
     async fn get_cached_model(&self, _model_name: &str) -> Result<Option<MLModel>> {
-        // In production, this would check a model cache
-        // For now, return None to simulate cache miss
         Ok(None)
     }
 
@@ -2040,8 +2093,14 @@ impl AnalyticsDashboard {
             features.len()
         );
 
-        // In production, this would run actual ONNX inference
-        // For now, simulate model inference
+        // TODO: Implement actual ONNX model inference with onnxruntime
+        // - [ ] Integrate onnxruntime crate for ONNX model execution
+        // - [ ] Implement tensor input/output handling with proper data types
+        // - [ ] Add model session management and reuse for performance
+        // - [ ] Support batch inference for multiple inputs
+        // - [ ] Implement inference timeout and resource limits
+        // - [ ] Add inference result validation and error handling
+        // - [ ] Support different execution providers (CPU, CUDA, CoreML, etc.)
         let prediction_value = self.simulate_model_inference(features);
 
         Ok(ModelPrediction {

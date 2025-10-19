@@ -199,9 +199,14 @@ impl DiagramsIngestor {
         node: &roxmltree::Node,
         entities: &[DiagramEntity],
     ) -> Result<Option<DiagramEdge>> {
-        // For now, we'll create a simple edge
-        // In a real implementation, you would analyze the line coordinates
-        // and determine which entities it connects
+        // TODO: Implement proper edge analysis from line coordinates and entity connections
+        // - [ ] Analyze SVG line/path coordinates to determine connection points
+        // - [ ] Implement entity proximity detection for connection inference
+        // - [ ] Support different connector types (straight lines, curves, arrows)
+        // - [ ] Add edge directionality and cardinality detection
+        // - [ ] Implement edge labeling and metadata extraction
+        // - [ ] Support edge styling (colors, thickness, patterns)
+        // - [ ] Add edge validation and consistency checking
         
         if entities.len() >= 2 {
             Ok(Some(DiagramEdge {
@@ -294,7 +299,24 @@ impl DiagramsIngestor {
                 "circle" => self.render_circle(&node, img)?,
                 "line" => self.render_line(&node, img)?,
                 "text" => self.render_text(&node, img)?,
-                _ => {} // Skip other elements for now
+                _ => {
+                    // TODO: Implement comprehensive SVG element support instead of skipping
+                    // - [ ] Add support for circle, ellipse, polygon, and polyline elements
+                    // - [ ] Implement path element parsing and rendering
+                    // - [ ] Add support for gradient fills and strokes
+                    // - [ ] Implement clip-path and mask support
+                    // - [ ] Add transform matrix support for all elements
+                    // - [ ] Support SVG groups and nested transformations
+                    // - [ ] Add CSS styling and class-based rendering
+                    // TODO: Implement comprehensive SVG element processing beyond basic shapes
+                    // - [ ] Add support for circle, ellipse, polygon, and polyline elements
+                    // - [ ] Implement path element parsing and rendering
+                    // - [ ] Add support for gradient fills and strokes
+                    // - [ ] Implement clip-path and mask support
+                    // - [ ] Add transform matrix support for all elements
+                    // - [ ] Support SVG groups and nested transformations
+                    // - [ ] Add CSS styling and class-based rendering
+                }
             }
         }
         Ok(())
@@ -307,7 +329,22 @@ impl DiagramsIngestor {
         let width = node.attribute("width").and_then(|w| w.parse::<f32>().ok()).unwrap_or(100.0) as u32;
         let height = node.attribute("height").and_then(|h| h.parse::<f32>().ok()).unwrap_or(100.0) as u32;
         
-        // Parse fill color (simplified)
+        // TODO: Implement comprehensive SVG color parsing instead of simplified version
+        // - [ ] Support CSS color names, hex codes, and RGB/RGBA values
+        // - [ ] Implement HSL/HSLA color space support
+        // - [ ] Add support for color gradients and patterns
+        // - [ ] Support CSS custom properties and color functions
+        // - [ ] Implement color opacity and alpha channel handling
+        // - [ ] Add color interpolation for animations
+        // - [ ] Support ICC color profiles and color management
+        // TODO: Implement comprehensive SVG color parsing with CSS support
+        // - [ ] Support CSS color names, hex codes, and RGB/RGBA values
+        // - [ ] Implement HSL/HSLA color space support
+        // - [ ] Add support for currentColor and inherit keywords
+        // - [ ] Implement CSS color functions (rgb(), hsl(), etc.)
+        // - [ ] Add color interpolation for animations
+        // - [ ] Support ICC color profiles and color management
+        // - [ ] Implement color validation and fallback handling
         let color = self.parse_color(node.attribute("fill").unwrap_or("black"));
         
         // Draw rectangle
@@ -363,7 +400,14 @@ impl DiagramsIngestor {
         Ok(())
     }
     
-    /// Render SVG text element (simplified)
+    /// TODO: Implement proper SVG text rendering instead of simplified rectangle placeholder
+    /// - [ ] Integrate with font rendering libraries (freetype, rusttype, etc.)
+    /// - [ ] Support different font families, sizes, and weights
+    /// - [ ] Implement text alignment (left, center, right, justify)
+    /// - [ ] Add support for text decorations (underline, strikethrough)
+    /// - [ ] Support multi-line text and text wrapping
+    /// - [ ] Implement text path following and curved text
+    /// - [ ] Add Unicode and international text support
     fn render_text(&self, node: &roxmltree::Node, img: &mut image::ImageBuffer<image::Rgb<u8>, Vec<u8>>) -> Result<()> {
         let x = node.attribute("x").and_then(|x| x.parse::<f32>().ok()).unwrap_or(0.0) as u32;
         let y = node.attribute("y").and_then(|y| y.parse::<f32>().ok()).unwrap_or(0.0) as u32;
@@ -371,8 +415,22 @@ impl DiagramsIngestor {
         let color = self.parse_color(node.attribute("fill").unwrap_or("black"));
         let text = node.text().unwrap_or("Text");
         
-        // Simple text rendering - just draw a rectangle for now
-        // In a real implementation, you'd use a font rendering library
+        // TODO: Replace rectangle placeholder with actual font rendering
+        // - [ ] Load and render TrueType/OpenType fonts
+        // - [ ] Implement glyph rasterization and anti-aliasing
+        // - [ ] Support font kerning and ligature rendering
+        // - [ ] Add subpixel rendering for better text quality
+        // - [ ] Implement font caching for performance
+        // - [ ] Support emoji and symbol font rendering
+        // - [ ] Add text layout and line breaking algorithms
+        // TODO: Implement proper font rendering instead of rectangle placeholder
+        // - [ ] Integrate with font rendering libraries (freetype, rusttype, etc.)
+        // - [ ] Support different font families, sizes, and weights
+        // - [ ] Implement glyph rasterization and anti-aliasing
+        // - [ ] Add font kerning and ligature rendering
+        // - [ ] Support subpixel rendering for better text quality
+        // - [ ] Implement font caching for performance
+        // - [ ] Support emoji and symbol font rendering
         for py in y..(y + 20).min(img.height()) {
             for px in x..(x + text.len() as u32 * 8).min(img.width()) {
                 *img.get_pixel_mut(px, py) = color;
@@ -694,8 +752,14 @@ impl DiagramsIngestor {
     
     /// Render a GraphML edge to the image
     fn render_graphml_edge(&self, edge: &DiagramEdge, img: &mut image::ImageBuffer<image::Rgb<u8>, Vec<u8>>) -> Result<()> {
-        // For now, we'll use simple coordinates based on entity IDs
-        // In a real implementation, you'd look up the actual positions of src and dst entities
+        // TODO: Implement proper GraphML edge rendering with actual entity positions
+        // - [ ] Look up actual entity positions from parsed GraphML node coordinates
+        // - [ ] Support different edge styles (straight, curved, orthogonal)
+        // - [ ] Implement edge routing algorithms to avoid overlapping nodes
+        // - [ ] Add edge labels and metadata display
+        // - [ ] Support edge directionality with arrowheads
+        // - [ ] Implement edge bundling for complex graphs
+        // - [ ] Add edge styling (colors, thickness, dash patterns)
         
         // Use UUID bytes to generate deterministic positions
         let src_bytes = edge.src.as_bytes();

@@ -29,6 +29,20 @@ impl std::fmt::Display for SourceType {
     }
 }
 
+impl SourceType {
+    /// Convert string to SourceType
+    pub fn from_string(s: &str) -> Result<Self, String> {
+        match s {
+            "file" => Ok(SourceType::File),
+            "url" => Ok(SourceType::Url),
+            "content" => Ok(SourceType::Content),
+            "code" => Ok(SourceType::Code),
+            "document" => Ok(SourceType::Document),
+            _ => Err(format!("Unknown source type: {}", s)),
+        }
+    }
+}
+
 /// Integrity status of a source
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum IntegrityStatus {
@@ -49,6 +63,19 @@ impl std::fmt::Display for IntegrityStatus {
     }
 }
 
+impl IntegrityStatus {
+    /// Convert string to IntegrityStatus
+    pub fn from_string(s: &str) -> Result<Self, String> {
+        match s {
+            "verified" => Ok(IntegrityStatus::Verified),
+            "tampered" => Ok(IntegrityStatus::Tampered),
+            "unknown" => Ok(IntegrityStatus::Unknown),
+            "pending" => Ok(IntegrityStatus::Pending),
+            _ => Err(format!("Unknown integrity status: {}", s)),
+        }
+    }
+}
+
 /// Hash algorithms supported for integrity verification
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum HashAlgorithm {
@@ -63,6 +90,18 @@ impl std::fmt::Display for HashAlgorithm {
             HashAlgorithm::Sha256 => write!(f, "sha256"),
             HashAlgorithm::Sha512 => write!(f, "sha512"),
             HashAlgorithm::Blake3 => write!(f, "blake3"),
+        }
+    }
+}
+
+impl HashAlgorithm {
+    /// Convert string to HashAlgorithm
+    pub fn from_string(s: &str) -> Result<Self, String> {
+        match s {
+            "sha256" => Ok(HashAlgorithm::Sha256),
+            "sha512" => Ok(HashAlgorithm::Sha512),
+            "blake3" => Ok(HashAlgorithm::Blake3),
+            _ => Err(format!("Unknown hash algorithm: {}", s)),
         }
     }
 }
@@ -89,6 +128,20 @@ impl std::fmt::Display for VerificationType {
     }
 }
 
+impl VerificationType {
+    /// Convert string to VerificationType
+    pub fn from_string(s: &str) -> Result<Self, String> {
+        match s {
+            "initial" => Ok(VerificationType::Initial),
+            "periodic" => Ok(VerificationType::Periodic),
+            "on_access" => Ok(VerificationType::OnAccess),
+            "manual" => Ok(VerificationType::Manual),
+            "automated" => Ok(VerificationType::Automated),
+            _ => Err(format!("Unknown verification type: {}", s)),
+        }
+    }
+}
+
 /// Results of verification attempts
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum VerificationResult {
@@ -105,6 +158,19 @@ impl std::fmt::Display for VerificationResult {
             VerificationResult::Failed => write!(f, "failed"),
             VerificationResult::Warning => write!(f, "warning"),
             VerificationResult::Error => write!(f, "error"),
+        }
+    }
+}
+
+impl VerificationResult {
+    /// Convert string to VerificationResult
+    pub fn from_string(s: &str) -> Result<Self, String> {
+        match s {
+            "passed" => Ok(VerificationResult::Passed),
+            "failed" => Ok(VerificationResult::Failed),
+            "warning" => Ok(VerificationResult::Warning),
+            "error" => Ok(VerificationResult::Error),
+            _ => Err(format!("Unknown verification result: {}", s)),
         }
     }
 }

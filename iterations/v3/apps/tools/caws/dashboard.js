@@ -233,6 +233,14 @@ function analyzeTestExecutionHistory() {
       }
     }
 
+    // TODO: Implement proper test data collection instead of simulation
+    // - [ ] Integrate with actual test runners (Jest, Vitest, etc.) for real results
+    // - [ ] Add test result persistence and historical storage
+    // - [ ] Implement real-time test execution monitoring
+    // - [ ] Support multiple test frameworks and formats
+    // - [ ] Add test result validation and error handling
+    // - [ ] Implement test result aggregation across CI/CD pipelines
+    // - [ ] Support test result export/import for analysis
     // If no recent test results, simulate based on git history
     if (testRunsFound === 0) {
       const simulatedHistory = simulateTestHistoryFromGit();
@@ -456,8 +464,22 @@ function analyzeTestPatterns(testHistory) {
     // Group tests by name and analyze failure patterns
     const testResults = new Map();
 
-    // In a real implementation, this would analyze individual test results
-    // For now, simulate flaky test detection based on failure rates
+    // TODO: Implement proper flaky test detection instead of simulation
+    // - [ ] Analyze individual test execution results and failure patterns
+    // - [ ] Implement statistical analysis for flaky test identification
+    // - [ ] Track test results across multiple runs and environments
+    // - [ ] Support different flakiness types (timing, environment, race conditions)
+    // - [ ] Add confidence scoring for flaky test detection
+    // - [ ] Implement automated flaky test quarantine and retry logic
+    // - [ ] Support integration with CI/CD flaky test detection tools
+    // TODO: Implement real flaky test detection with individual test analysis
+    // - [ ] Analyze individual test execution results and failure patterns
+    // - [ ] Implement statistical methods for flaky test identification
+    // - [ ] Track test execution times and variability analysis
+    // - [ ] Support machine learning-based flaky test prediction
+    // - [ ] Integrate with CI/CD systems for comprehensive test history
+    // - [ ] Add test environment and infrastructure failure detection
+    // - [ ] Implement automated flaky test quarantine and retry strategies
 
     const failureRate = testHistory.failedTests / testHistory.totalTests;
 
@@ -570,6 +592,14 @@ function detectFlakyTests(testHistory) {
   const flakyTests = [];
 
   try {
+    // TODO: Implement comprehensive flaky test detection instead of simple failure rate analysis
+    // - [ ] Analyze individual test execution history and failure patterns
+    // - [ ] Implement statistical models for flaky test identification
+    // - [ ] Track test results across different environments and conditions
+    // - [ ] Support machine learning-based flaky test detection
+    // - [ ] Add temporal analysis for time-of-day or day-of-week patterns
+    // - [ ] Implement confidence intervals for flaky test classification
+    // - [ ] Support integration with external flaky test detection services
     // In a real implementation, this would analyze individual test results
     // For now, simulate detection based on overall failure patterns
 
@@ -842,6 +872,14 @@ function readHistoricalData() {
 }
 
 /**
+ * TODO: Implement real metrics collection and trend analysis instead of simulation
+ * - [ ] Integrate with actual CI/CD pipeline metrics collection
+ * - [ ] Implement metrics persistence and historical trend storage
+ * - [ ] Add real-time metrics streaming and dashboard updates
+ * - [ ] Support multiple data sources and metric aggregation
+ * - [ ] Implement trend analysis algorithms (moving averages, forecasting)
+ * - [ ] Add metrics validation and anomaly detection
+ * - [ ] Support metrics export and visualization integrations
  * Generate simulated trends when real data isn't available
  * @param {Object} dashboard - Dashboard data structure
  * @param {number} days - Number of days to generate
@@ -1062,7 +1100,22 @@ function gatherProjectMetrics(dashboard, projectDir) {
     dashboard.metrics.TEST_QUALITY.current = 60; // Default
   }
 
-  // Calculate flake rate (simplified)
+  // TODO: Implement proper flake rate calculation instead of default value
+  // - [ ] Calculate actual flake rate from test execution history
+  // - [ ] Implement statistical analysis of test failure patterns
+  // - [ ] Support different flake rate calculation methods (simple, weighted, ML-based)
+  // - [ ] Add temporal analysis for flake rate trends
+  // - [ ] Implement confidence intervals for flake rate estimates
+  // - [ ] Support flake rate alerting and thresholds
+  // - [ ] Add flake rate visualization and reporting
+  // TODO: Replace simplified flake rate calculation with proper statistical analysis
+  // - [ ] Calculate actual flake rate from historical test execution data
+  // - [ ] Implement statistical methods for flaky test identification (variance analysis, etc.)
+  // - [ ] Support different flake rate calculation approaches (simple percentage, time-weighted)
+  // - [ ] Add confidence intervals and statistical significance testing
+  // - [ ] Implement trend analysis for flake rate changes over time
+  // - [ ] Support different flake rate metrics per test, suite, or component
+  // - [ ] Add flake rate prediction and early warning systems
   dashboard.metrics.FLAKE_RATE.current = 2; // 2% default
 
   // Calculate compliance metrics

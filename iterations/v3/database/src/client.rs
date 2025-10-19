@@ -263,6 +263,14 @@ impl DatabaseMetrics {
             }
         }
         
+        // TODO: Implement proper statistical calculation instead of simplified running average
+        // - [ ] Use Welford's online algorithm for numerically stable variance calculation
+        // - [ ] Implement percentile calculations (P50, P95, P99) for latency distribution
+        // - [ ] Add histogram-based metrics for query performance distribution
+        // - [ ] Support exponential moving averages for trend analysis
+        // - [ ] Implement outlier detection and filtering for anomalous queries
+        // - [ ] Add statistical significance testing for performance changes
+        // - [ ] Support time-windowed statistics (last minute, hour, day)
         // Update average (simplified calculation)
         let total = self.total_queries.load(Ordering::Relaxed);
         if total > 0 {

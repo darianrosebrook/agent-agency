@@ -36,7 +36,7 @@ export class ObserverApiClient {
   private baseUrl: string;
   private authToken?: string;
 
-  constructor(baseUrl = "http://127.0.0.1:4388", authToken?: string) {
+  constructor(baseUrl = "http://127.0.0.1:4387", authToken?: string) {
     this.baseUrl = baseUrl.replace(/\/$/, "");
     this.authToken = authToken;
   }

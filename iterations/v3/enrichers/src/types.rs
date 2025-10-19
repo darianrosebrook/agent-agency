@@ -75,6 +75,7 @@ pub struct SpeechSegment {
     pub text: String,
     pub confidence: f32,
     pub word_timings: Vec<WordTiming>,
+    pub language: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

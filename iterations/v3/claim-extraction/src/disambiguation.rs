@@ -990,7 +990,15 @@ impl ContextResolver {
             *analysis.entity_frequency.entry(entity.clone()).or_insert(0) += 1;
         }
 
-        // Find entity relationships (simplified)
+        // TODO: Implement proper entity relationship analysis instead of simplified approach
+        // - [ ] Use knowledge graphs (Wikidata, DBPedia) for entity relationship data
+        // - [ ] Implement semantic similarity analysis for entity co-occurrence
+        // - [ ] Add temporal relationship tracking (before/after, cause/effect)
+        // - [ ] Support different relationship types (hierarchical, associative, causal)
+        // - [ ] Implement relationship confidence scoring and validation
+        // - [ ] Add cross-document entity relationship linking
+        // - [ ] Support domain-specific relationship ontologies
+        // See TODO above for proper entity relationship analysis implementation
         for (i, entity1) in entities.iter().enumerate() {
             for (j, entity2) in entities.iter().enumerate() {
                 if i != j && self.are_entities_related(entity1, entity2) {
@@ -1356,9 +1364,23 @@ impl ContextResolver {
     /// Generate embedding for entity using embedding service
     async fn generate_entity_embedding(&self, entity: &str) -> Option<Vec<f32>> {
         debug!("Generating embedding for entity: {}", entity);
-        
-        // Simulate embedding generation
-        // In a real implementation, this would use the actual embedding service
+
+        // TODO: Implement actual entity embedding generation instead of simulation
+        // - [ ] Integrate with embedding service for entity semantic representation
+        // - [ ] Use pre-trained language models (BERT, RoBERTa) for entity embeddings
+        // - [ ] Implement entity-specific embedding fine-tuning
+        // - [ ] Add support for multi-modal entity embeddings (text + context)
+        // - [ ] Implement embedding caching for performance optimization
+        // - [ ] Support different embedding dimensions and models
+        // - [ ] Add embedding quality validation and fallback strategies
+        // TODO: Implement actual embedding service integration for semantic similarity
+        // - [ ] Integrate with embedding service for vector generation
+        // - [ ] Support different embedding models (BERT, RoBERTa, Sentence Transformers)
+        // - [ ] Implement embedding caching and reuse for performance
+        // - [ ] Add embedding quality validation and confidence scoring
+        // - [ ] Support batch embedding generation for multiple entities
+        // - [ ] Implement embedding dimensionality handling and normalization
+        // - [ ] Add fallback strategies for embedding service failures
         
         // Simulate processing time
         tokio::time::sleep(Duration::from_millis(50)).await;
@@ -1387,8 +1409,14 @@ impl ContextResolver {
     ) -> Result<Vec<KnowledgeBaseResult>> {
         debug!("Querying knowledge base semantic search for entity: {}", entity);
         
-        // Simulate knowledge base query
-        // In a real implementation, this would use the actual database client
+        // TODO: Implement actual knowledge base semantic search integration
+        // - [ ] Integrate with vector database for semantic similarity search
+        // - [ ] Implement efficient nearest neighbor search algorithms
+        // - [ ] Support different distance metrics (cosine, euclidean, dot product)
+        // - [ ] Add query result ranking and relevance scoring
+        // - [ ] Implement query expansion and multi-vector search
+        // - [ ] Support knowledge base updates and incremental indexing
+        // - [ ] Add search result caching and performance optimization
         
         // Simulate processing time
         tokio::time::sleep(Duration::from_millis(100)).await;
@@ -1398,6 +1426,14 @@ impl ContextResolver {
             return Err(anyhow::anyhow!("Simulated knowledge base query failure"));
         }
         
+        // TODO: Implement actual knowledge base semantic search instead of simulation
+        // - [ ] Integrate with vector database for semantic similarity search
+        // - [ ] Implement embedding-based retrieval with cosine similarity
+        // - [ ] Add support for hybrid search (keyword + semantic)
+        // - [ ] Implement result ranking and relevance scoring
+        // - [ ] Support different similarity metrics and distance functions
+        // - [ ] Add query expansion and synonym handling
+        // - [ ] Implement result filtering and faceted search
         // Generate simulated search results
         let mut results = Vec::new();
         
@@ -1456,6 +1492,14 @@ impl ContextResolver {
             return Err(anyhow::anyhow!("Simulated related entity retrieval failure"));
         }
         
+        // TODO: Implement actual related entity retrieval instead of simulation
+        // - [ ] Query knowledge base for semantically related entities
+        // - [ ] Use graph algorithms to find connected entities
+        // - [ ] Implement relationship strength scoring and ranking
+        // - [ ] Support different relationship types (synonyms, hyponyms, related terms)
+        // - [ ] Add domain-specific entity relationship models
+        // - [ ] Implement entity similarity computation
+        // - [ ] Support multi-hop relationship discovery
         // Generate simulated related entities
         let mut related_entities = Vec::new();
         
@@ -1657,12 +1701,14 @@ impl ContextResolver {
         debug!("Extracted related concepts for: {}", result.canonical_name);
     }
 
-    /// Trigger on-demand ingestion for missing entities
-    async fn trigger_on_demand_ingestion(&self, entity: &str) -> Result<()> {
-        debug!("Triggering on-demand ingestion for entity: {}", entity);
-        
-        // Simulate on-demand ingestion
-        // In a real implementation, this would use the actual database client
+    /// TODO: Implement actual on-demand entity ingestion system
+    /// - [ ] Integrate with on-demand ingestion service for missing entities
+    /// - [ ] Implement ingestion job queuing and prioritization
+    /// - [ ] Add ingestion progress tracking and status monitoring
+    /// - [ ] Support different data sources (APIs, databases, web scraping)
+    /// - [ ] Implement ingestion failure handling and retry mechanisms
+    /// - [ ] Add entity validation and quality assurance checks
+    /// - [ ] Support batch ingestion for multiple entities
         
         // Simulate processing time
         tokio::time::sleep(Duration::from_millis(200)).await;

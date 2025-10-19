@@ -226,6 +226,26 @@ impl CoreMLModel {
     }
 }
 
+impl CoreMLModel {
+    /// Get model type string
+    pub fn model_type(&self) -> &str {
+        // Simplified - would need to query actual model type from Core ML
+        "neuralnetwork"
+    }
+
+    /// Check if model can use ANE
+    pub fn can_use_ane(&self) -> bool {
+        // Simplified check - in production would query model capabilities
+        matches!(self.model_type(), "neuralnetwork" | "mlprogram")
+    }
+
+    /// Get model size in bytes (approximate)
+    pub fn model_size(&self) -> u64 {
+        // Simplified - would need to query actual model size
+        1024 * 1024 // 1MB default estimate
+    }
+}
+
 impl Drop for CoreMLModel {
     fn drop(&mut self) {
         if !self.handle.is_null() {

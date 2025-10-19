@@ -245,8 +245,14 @@ impl MultimodalOrchestrator {
             
             let task = tokio::spawn(async move {
                 let _permit = semaphore.acquire().await.unwrap();
-                // orchestrator.orchestrate_document_processing(file_path).await
-                // For now, return a mock result
+                // TODO: Implement actual document processing orchestration
+                // - [ ] Integrate with document ingestion pipeline for file parsing
+                // - [ ] Implement block-level processing with multimodal enrichment
+                // - [ ] Add document structure analysis and content extraction
+                // - [ ] Support different document formats (PDF, DOCX, PPTX, images, etc.)
+                // - [ ] Implement processing progress tracking and resumability
+                // - [ ] Add error handling and recovery for failed processing
+                // - [ ] Support parallel processing of document sections
                 Ok(ProcessingResult {
                     document_id: Uuid::new_v4(),
                     status: ProcessingStatus::Completed,

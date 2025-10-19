@@ -8,7 +8,7 @@ CREATE TABLE source_integrity_records (
     source_type VARCHAR(50) NOT NULL CHECK (
         source_type IN ('file', 'url', 'content', 'code', 'document')
     ),
-    content_hash VARCHAR(64) NOT NULL, -- SHA-256 hash as hex string
+    content_hash VARCHAR(128) NOT NULL, -- Cryptographic hash as hex string (supports SHA-512)
     content_size BIGINT NOT NULL,
     hash_algorithm VARCHAR(20) NOT NULL DEFAULT 'sha256',
     integrity_status VARCHAR(20) NOT NULL CHECK (
@@ -36,8 +36,8 @@ CREATE TABLE source_integrity_verifications (
     verification_result VARCHAR(20) NOT NULL CHECK (
         verification_result IN ('passed', 'failed', 'warning', 'error')
     ),
-    calculated_hash VARCHAR(64) NOT NULL,
-    stored_hash VARCHAR(64) NOT NULL,
+    calculated_hash VARCHAR(128) NOT NULL,
+    stored_hash VARCHAR(128) NOT NULL,
     hash_match BOOLEAN NOT NULL,
     tampering_detected BOOLEAN NOT NULL DEFAULT false,
     verification_details JSONB NOT NULL DEFAULT '{}',
@@ -94,20 +94,38 @@ CREATE TRIGGER update_source_integrity_records_updated_at
     FOR EACH ROW 
     EXECUTE FUNCTION update_updated_at_column();
 
--- Function to calculate content hash
+-- Function to calculate content hash using PostgreSQL's cryptographic functions
 CREATE OR REPLACE FUNCTION calculate_content_hash(
     p_content TEXT,
     p_algorithm VARCHAR(20) DEFAULT 'sha256'
 )
-RETURNS VARCHAR(64) AS $$
+RETURNS VARCHAR(128) AS $$
+DECLARE
+    v_hash BYTEA;
+    v_hash_hex VARCHAR(128);
 BEGIN
-    -- For now, return a placeholder hash calculation
-    -- In production, this would use proper cryptographic functions
-    RETURN encode(digest(p_content, p_algorithm), 'hex');
+    -- Validate algorithm parameter
+    IF p_algorithm NOT IN ('md5', 'sha1', 'sha224', 'sha256', 'sha384', 'sha512') THEN
+        RAISE EXCEPTION 'Unsupported hash algorithm: %. Supported algorithms: md5, sha1, sha224, sha256, sha384, sha512', p_algorithm;
+    END IF;
+
+    -- Calculate hash using PostgreSQL's built-in digest function
+    v_hash := digest(p_content, p_algorithm);
+
+    -- Convert to hex string
+    v_hash_hex := encode(v_hash, 'hex');
+
+    RETURN v_hash_hex;
 EXCEPTION
     WHEN OTHERS THEN
-        -- Fallback to a simple hash if digest function fails
-        RETURN encode(digest(p_content, 'sha256'), 'hex');
+        -- Log the error and fallback to SHA-256
+        RAISE WARNING 'Hash calculation failed with algorithm %, falling back to SHA-256. Error: %', p_algorithm, SQLERRM;
+
+        -- Calculate hash with fallback algorithm
+        v_hash := digest(p_content, 'sha256');
+        v_hash_hex := encode(v_hash, 'hex');
+
+        RETURN v_hash_hex;
 END;
 $$ LANGUAGE plpgsql;
 

@@ -10,13 +10,19 @@ use jsonrpc_http_server::hyper::{Body, Response, StatusCode};
 use jsonrpc_http_server::{RequestMiddlewareAction, ServerBuilder};
 use jsonrpc_ws_server::ws;
 use jsonrpc_ws_server::ServerBuilder as WsServerBuilder;
+use security::input_validation::{validate_api_input, validate_json_input, ValidationType};
+use security::sanitization::sanitize_api_input;
+use security::circuit_breaker::{init_circuit_breaker_registry, get_circuit_breaker_registry, CircuitBreakerConfig};
+use security::audit::{init_audit_logger, get_audit_logger, SecurityEventSeverity};
+use security::rate_limiting::{RateLimitConfig, RateLimitMiddleware};
+use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use tokio::sync::{oneshot, RwLock};
 use tokio::task::JoinHandle;
 use tokio::time::timeout;
-use tracing::info;
+use tracing::{info, warn};
 
 /// Handle used to shutdown the HTTP server gracefully.
 #[derive(Debug)]
@@ -98,6 +104,163 @@ impl RateLimiter {
     }
 }
 
+/// Enhanced authentication rate limiter with IP-based tracking
+#[derive(Debug)]
+struct AuthRateLimiter {
+    /// Global auth attempts per minute
+    global_limit: u32,
+    /// Per-IP auth attempts per minute
+    per_ip_limit: u32,
+    /// Window duration in seconds
+    window_duration: u64,
+    /// IP-based attempt tracking: IP -> (window_start, count, blocked_until)
+    ip_attempts: Arc<Mutex<HashMap<String, (Instant, u32, Option<Instant>)>>>,
+    /// Global attempt tracking
+    global_attempts: Arc<Mutex<(Instant, u32)>>,
+}
+
+impl AuthRateLimiter {
+    fn new(global_limit: u32, per_ip_limit: u32, window_duration: u64) -> Self {
+        Self {
+            global_limit,
+            per_ip_limit,
+            window_duration,
+            ip_attempts: Arc::new(Mutex::new(HashMap::new())),
+            global_attempts: Arc::new(Mutex::new((Instant::now(), 0))),
+        }
+    }
+
+    /// Check if authentication attempt is allowed for the given IP
+    fn allow_auth_attempt(&self, ip: &str) -> AuthRateLimitResult {
+        let now = Instant::now();
+        let window_duration = Duration::from_secs(self.window_duration);
+
+        // Check global rate limit
+        {
+            let mut global = self.global_attempts.lock().unwrap();
+            if now.duration_since(global.0) >= window_duration {
+                global.0 = now;
+                global.1 = 0;
+            }
+
+            if global.1 >= self.global_limit {
+                tracing::warn!("Global authentication rate limit exceeded");
+                return AuthRateLimitResult::Blocked("Global rate limit exceeded".to_string());
+            }
+            global.1 += 1;
+        }
+
+        // Check per-IP rate limit
+        {
+            let mut ip_attempts = self.ip_attempts.lock().unwrap();
+            let entry = ip_attempts.entry(ip.to_string()).or_insert((now, 0, None));
+
+            // Check if IP is currently blocked
+            if let Some(blocked_until) = entry.2 {
+                if now < blocked_until {
+                    let remaining = blocked_until.duration_since(now).as_secs();
+                    return AuthRateLimitResult::Blocked(
+                        format!("IP temporarily blocked for {} more seconds", remaining)
+                    );
+                } else {
+                    // Block period expired, reset
+                    entry.2 = None;
+                    entry.0 = now;
+                    entry.1 = 0;
+                }
+            }
+
+            // Reset window if expired
+            if now.duration_since(entry.0) >= window_duration {
+                entry.0 = now;
+                entry.1 = 0;
+                entry.2 = None;
+            }
+
+            // Check rate limit
+            if entry.1 >= self.per_ip_limit {
+                // Implement progressive blocking: 5 minutes for first offense, 15 for second, etc.
+                let block_duration = Duration::from_secs(300 * (entry.1 / self.per_ip_limit));
+                entry.2 = Some(now + block_duration);
+
+                tracing::warn!(
+                    ip = %ip,
+                    attempts = %entry.1,
+                    block_duration_secs = %block_duration.as_secs(),
+                    "IP authentication rate limit exceeded, blocking temporarily"
+                );
+
+                return AuthRateLimitResult::Blocked(
+                    format!("Rate limit exceeded, blocked for {} seconds", block_duration.as_secs())
+                );
+            }
+
+            entry.1 += 1;
+
+            // Log suspicious activity if approaching limit
+            if entry.1 > self.per_ip_limit / 2 {
+                tracing::info!(
+                    ip = %ip,
+                    attempts = %entry.1,
+                    limit = %self.per_ip_limit,
+                    "High authentication attempt rate from IP"
+                );
+            }
+        }
+
+        AuthRateLimitResult::Allowed
+    }
+
+    /// Record a failed authentication attempt
+    fn record_failed_attempt(&self, ip: &str) {
+        let mut ip_attempts = self.ip_attempts.lock().unwrap();
+        let entry = ip_attempts.entry(ip.to_string()).or_insert((Instant::now(), 0, None));
+        entry.1 += 1; // Extra penalty for failed attempts
+
+        tracing::warn!(
+            ip = %ip,
+            failed_attempts = %entry.1,
+            "Failed authentication attempt recorded"
+        );
+    }
+
+    /// Get current stats for monitoring
+    fn get_stats(&self) -> AuthRateLimitStats {
+        let ip_attempts = self.ip_attempts.lock().unwrap();
+        let global = self.global_attempts.lock().unwrap();
+
+        let now = Instant::now();
+        let active_blocks = ip_attempts.values()
+            .filter(|(_, _, blocked_until)| {
+                blocked_until.map_or(false, |until| now < until)
+            })
+            .count();
+
+        AuthRateLimitStats {
+            global_attempts: global.1,
+            global_limit: self.global_limit,
+            unique_ips_tracked: ip_attempts.len(),
+            active_blocks,
+        }
+    }
+}
+
+/// Result of authentication rate limit check
+#[derive(Debug, Clone)]
+enum AuthRateLimitResult {
+    Allowed,
+    Blocked(String),
+}
+
+/// Statistics for authentication rate limiting
+#[derive(Debug, Clone)]
+pub struct AuthRateLimitStats {
+    pub global_attempts: u32,
+    pub global_limit: u32,
+    pub unique_ips_tracked: usize,
+    pub active_blocks: usize,
+}
+
 /// Main MCP server
 #[derive(Debug)]
 pub struct MCPServer {
@@ -110,6 +273,8 @@ pub struct MCPServer {
     http_handle: Arc<RwLock<Option<HttpServerHandle>>>,
     ws_handle: Arc<RwLock<Option<HttpServerHandle>>>,
     rate_limiter: Option<Arc<Mutex<RateLimiter>>>,
+    auth_rate_limiter: Option<Arc<AuthRateLimiter>>,
+    api_rate_limiter: Option<Arc<RateLimitMiddleware>>,
 }
 
 impl MCPServer {
@@ -119,6 +284,41 @@ impl MCPServer {
             .server
             .requests_per_minute
             .map(|limit| Arc::new(Mutex::new(RateLimiter::new(limit))));
+
+        // Create auth rate limiter with stricter limits for security
+        // Global limit: 100 auth attempts per minute
+        // Per-IP limit: 5 auth attempts per minute
+        // Window: 60 seconds
+        let auth_rate_limiter = Some(Arc::new(AuthRateLimiter::new(100, 5, 60)));
+
+        // Create API rate limiter with endpoint-specific limits
+        let api_rate_configs = vec![
+            RateLimitConfig {
+                endpoint: "/api/tools".to_string(),
+                requests_per_minute: 100,
+                burst_limit: 20,
+                window_seconds: 60,
+            },
+            RateLimitConfig {
+                endpoint: "/api/stats".to_string(),
+                requests_per_minute: 30,
+                burst_limit: 5,
+                window_seconds: 60,
+            },
+            RateLimitConfig {
+                endpoint: "/api/validate".to_string(),
+                requests_per_minute: 50,
+                burst_limit: 10,
+                window_seconds: 60,
+            },
+            RateLimitConfig {
+                endpoint: "/api/*".to_string(),
+                requests_per_minute: 200,
+                burst_limit: 50,
+                window_seconds: 60,
+            },
+        ];
+        let api_rate_limiter = Some(Arc::new(RateLimitMiddleware::new(None, api_rate_configs)));
 
         Self {
             config,
@@ -130,6 +330,8 @@ impl MCPServer {
             http_handle: Arc::new(RwLock::new(None)),
             ws_handle: Arc::new(RwLock::new(None)),
             rate_limiter,
+            auth_rate_limiter,
+            api_rate_limiter,
         }
     }
 
@@ -142,6 +344,33 @@ impl MCPServer {
             port = %self.config.server.port,
             "Starting MCP server"
         );
+
+        // Initialize circuit breaker registry
+        let registry = init_circuit_breaker_registry();
+
+        // Register circuit breakers for external services
+        registry.register("caws-integration", CircuitBreakerConfig {
+            service_name: "caws-integration".to_string(),
+            failure_threshold: 3,
+            success_threshold: 2,
+            timeout_duration: Duration::from_secs(30),
+            request_timeout: Duration::from_secs(10),
+            half_open_max_requests: 2,
+        });
+
+        registry.register("tool-discovery", CircuitBreakerConfig {
+            service_name: "tool-discovery".to_string(),
+            failure_threshold: 5,
+            success_threshold: 3,
+            timeout_duration: Duration::from_secs(60),
+            request_timeout: Duration::from_secs(5),
+            half_open_max_requests: 3,
+        });
+
+        // Initialize audit logger
+        init_audit_logger(true, "info".to_string(), false).map_err(|e| {
+            anyhow!("Failed to initialize audit logger: {}", e)
+        })?;
 
         // Update status
         {
@@ -206,16 +435,108 @@ impl MCPServer {
             );
             let builder = ServerBuilder::new(io).request_middleware(
                 move |request: jsonrpc_http_server::hyper::Request<Body>| {
-                    if let Some(ref expected) = auth_api_key {
+                    // Extract client IP for rate limiting
+                    let client_ip = request
+                        .headers()
+                        .get("x-forwarded-for")
+                        .and_then(|value| value.to_str().ok())
+                        .or_else(|| request
+                            .headers()
+                            .get("x-real-ip")
+                            .and_then(|value| value.to_str().ok()))
+                        .unwrap_or("unknown");
+
+                    // Check authentication rate limit before processing auth
+                    if let Some(ref auth_limiter) = auth_rate_limiter {
+                        match auth_limiter.allow_auth_attempt(client_ip) {
+                            AuthRateLimitResult::Blocked(reason) => {
+                                warn!(ip = %client_ip, reason = %reason, "Authentication rate limit exceeded");
+                                return RequestMiddlewareAction::from(rate_limited_http_response());
+                            }
+                            AuthRateLimitResult::Allowed => {
+                                // Continue with authentication check
+                            }
+                        }
+                    }
+
+                    // Check API key authentication
+                    let auth_failed = if let Some(ref expected) = auth_api_key {
                         let provided = request
                             .headers()
                             .get("x-api-key")
                             .and_then(|value| value.to_str().ok());
                         if provided != Some(expected.as_str()) {
-                            return RequestMiddlewareAction::from(unauthorized_http_response());
+                            // Record failed authentication attempt
+                            if let Some(ref auth_limiter) = auth_rate_limiter {
+                                auth_limiter.record_failed_attempt(client_ip);
+                            }
+
+                            // Log failed authentication
+                            let user_agent = request
+                                .headers()
+                                .get("user-agent")
+                                .and_then(|value| value.to_str().ok())
+                                .map(|s| s.to_string());
+
+                            if let Ok(logger) = get_audit_logger() {
+                                let mut metadata = HashMap::new();
+                                metadata.insert("provided_key".to_string(), serde_json::Value::String(provided.unwrap_or("none").to_string()));
+                                metadata.insert("endpoint".to_string(), serde_json::Value::String("http".to_string()));
+
+                                tokio::spawn(async move {
+                                    let _ = logger.log_authentication(
+                                        "api_client".to_string(),
+                                        false,
+                                        Some(client_ip.to_string()),
+                                        user_agent,
+                                        metadata,
+                                    ).await;
+                                });
+                            }
+
+                            true
+                        } else {
+                            // Log successful authentication
+                            if let Ok(logger) = get_audit_logger() {
+                                let user_agent = request
+                                    .headers()
+                                    .get("user-agent")
+                                    .and_then(|value| value.to_str().ok())
+                                    .map(|s| s.to_string());
+
+                                let mut metadata = HashMap::new();
+                                metadata.insert("endpoint".to_string(), serde_json::Value::String("http".to_string()));
+
+                                tokio::spawn(async move {
+                                    let _ = logger.log_authentication(
+                                        "api_client".to_string(),
+                                        true,
+                                        Some(client_ip.to_string()),
+                                        user_agent,
+                                        metadata,
+                                    ).await;
+                                });
+                            }
+
+                            false
+                        }
+                    } else {
+                        false
+                    };
+
+                    if auth_failed {
+                        return RequestMiddlewareAction::from(unauthorized_http_response());
+                    }
+
+                    // Check API-specific rate limiting
+                    if let Some(ref api_limiter) = api_rate_limiter {
+                        if !api_limiter.should_allow("/api/validate", client_ip) {
+                            warn!("API rate limit exceeded for {} on endpoint /api/validate", client_ip);
+                            return RequestMiddlewareAction::from(rate_limited_http_response());
                         }
                     }
 
+                    // Check general rate limiting
                     if let Some(ref limiter) = rate_limiter {
                         let mut guard = limiter.lock().unwrap();
                         if !guard.allow() {
@@ -277,19 +598,48 @@ impl MCPServer {
             let caws_validate = caws_validate.clone();
             async move {
                 let v: Value = params.parse().unwrap_or(Value::Null);
-                let tool: crate::types::MCPTool =
-                    serde_json::from_value(v).map_err(|e| JsonRpcError {
+
+                // Validate and sanitize input
+                if let Err(validation_error) = validate_api_input(&v, "tool") {
+                    return Err(JsonRpcError {
                         code: jsonrpc_core::ErrorCode::InvalidParams,
-                        message: "Invalid tool format".to_string(),
+                        message: format!("Input validation failed: {}", validation_error),
+                        data: Some(serde_json::Value::String(validation_error.to_string())),
+                    });
+                }
+
+                // Sanitize the input
+                let sanitized_value = sanitize_api_input(&v);
+
+                let tool: crate::types::MCPTool =
+                    serde_json::from_value(sanitized_value).map_err(|e| JsonRpcError {
+                        code: jsonrpc_core::ErrorCode::InvalidParams,
+                        message: "Invalid tool format after sanitization".to_string(),
                         data: Some(serde_json::Value::String(e.to_string())),
                     })?;
-                let res = caws_validate
-                    .validate_tool(&tool)
+                // Execute CAWS validation with circuit breaker protection
+                let registry = get_circuit_breaker_registry();
+                let res = registry
+                    .execute_with_circuit_breaker("caws-integration", || {
+                        caws_validate.validate_tool(&tool)
+                    })
                     .await
-                    .map_err(|e| JsonRpcError {
-                        code: jsonrpc_core::ErrorCode::InternalError,
-                        message: "Tool validation failed".to_string(),
-                        data: Some(serde_json::Value::String(e.to_string())),
+                    .map_err(|e| match e {
+                        security::CircuitBreakerError::CircuitOpen(_) => JsonRpcError {
+                            code: jsonrpc_core::ErrorCode::InternalError,
+                            message: "Service temporarily unavailable".to_string(),
+                            data: Some(serde_json::Value::String("Circuit breaker open".to_string())),
+                        },
+                        security::CircuitBreakerError::OperationFailed(orig_err) => JsonRpcError {
+                            code: jsonrpc_core::ErrorCode::InternalError,
+                            message: "Tool validation failed".to_string(),
+                            data: Some(serde_json::Value::String(orig_err.to_string())),
+                        },
+                        security::CircuitBreakerError::Timeout(duration) => JsonRpcError {
+                            code: jsonrpc_core::ErrorCode::InternalError,
+                            message: format!("Tool validation timed out after {:?}", duration),
+                            data: Some(serde_json::Value::String("Request timeout".to_string())),
+                        },
                     })?;
                 Ok(serde_json::to_value(&res).unwrap())
             }
@@ -345,15 +695,85 @@ impl MCPServer {
             );
 
             let middleware = move |req: &ws::Request| {
-                if let Some(ref expected) = auth_api_key {
+                // Extract client IP for rate limiting (WebSocket connections)
+                let client_ip = req
+                    .header("x-forwarded-for")
+                    .and_then(|value| std::str::from_utf8(value).ok())
+                    .or_else(|| req
+                        .header("x-real-ip")
+                        .and_then(|value| std::str::from_utf8(value).ok()))
+                    .unwrap_or("unknown");
+
+                // Check authentication rate limit before processing auth
+                if let Some(ref auth_limiter) = auth_rate_limiter {
+                    match auth_limiter.allow_auth_attempt(client_ip) {
+                        AuthRateLimitResult::Blocked(reason) => {
+                            warn!(ip = %client_ip, reason = %reason, "WebSocket authentication rate limit exceeded");
+                            return Some(rate_limited_ws_response());
+                        }
+                        AuthRateLimitResult::Allowed => {
+                            // Continue with authentication check
+                        }
+                    }
+                }
+
+                // Check API key authentication
+                let auth_failed = if let Some(ref expected) = auth_api_key {
                     let provided = req
                         .header("x-api-key")
                         .and_then(|value| std::str::from_utf8(value).ok());
                     if provided != Some(expected.as_str()) {
-                        return Some(unauthorized_ws_response());
+                        // Record failed authentication attempt
+                        if let Some(ref auth_limiter) = auth_rate_limiter {
+                            auth_limiter.record_failed_attempt(client_ip);
+                        }
+
+                        // Log failed WebSocket authentication
+                        if let Ok(logger) = get_audit_logger() {
+                            let mut metadata = HashMap::new();
+                            metadata.insert("provided_key".to_string(), serde_json::Value::String(provided.unwrap_or("none").to_string()));
+                            metadata.insert("endpoint".to_string(), serde_json::Value::String("websocket".to_string()));
+
+                            tokio::spawn(async move {
+                                let _ = logger.log_authentication(
+                                    "websocket_client".to_string(),
+                                    false,
+                                    Some(client_ip.to_string()),
+                                    None,
+                                    metadata,
+                                ).await;
+                            });
+                        }
+
+                        true
+                    } else {
+                        // Log successful WebSocket authentication
+                        if let Ok(logger) = get_audit_logger() {
+                            let mut metadata = HashMap::new();
+                            metadata.insert("endpoint".to_string(), serde_json::Value::String("websocket".to_string()));
+
+                            tokio::spawn(async move {
+                                let _ = logger.log_authentication(
+                                    "websocket_client".to_string(),
+                                    true,
+                                    Some(client_ip.to_string()),
+                                    None,
+                                    metadata,
+                                ).await;
+                            });
+                        }
+
+                        false
                     }
+                } else {
+                    false
+                };
+
+                if auth_failed {
+                    return Some(unauthorized_ws_response());
                 }
 
+                // Check general rate limiting
                 if let Some(ref limiter) = rate_limiter {
                     let mut guard = limiter.lock().unwrap();
                     if !guard.allow() {
@@ -438,6 +858,21 @@ impl MCPServer {
     pub async fn get_connections(&self) -> Vec<MCPConnection> {
         let connections = self.connections.read().await;
         connections.clone()
+    }
+
+    /// Get authentication rate limiting statistics
+    pub async fn get_auth_rate_limit_stats(&self) -> Option<AuthRateLimitStats> {
+        self.auth_rate_limiter.as_ref().map(|limiter| limiter.get_stats())
+    }
+
+    /// Get circuit breaker statistics
+    pub async fn get_circuit_breaker_stats(&self) -> HashMap<String, security::CircuitBreakerStats> {
+        get_circuit_breaker_registry().get_all_stats()
+    }
+
+    /// Get API rate limiting statistics
+    pub async fn get_api_rate_limit_stats(&self) -> Option<HashMap<String, (u32, u32)>> {
+        self.api_rate_limiter.as_ref().map(|limiter| limiter.get_stats())
     }
 
     /// Execute a tool

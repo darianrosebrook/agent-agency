@@ -435,9 +435,14 @@ impl MultimodalJobScheduler {
         Ok(())
     }
 
-    /// Process video job
-    async fn process_video_job(&self, job: &MultimodalJob) -> Result<JobPerformanceMetrics> {
-        // Simulate video processing
+    /// TODO: Implement actual video processing pipeline
+    /// - [ ] Integrate video codec support (H.264, H.265, VP9, AV1)
+    /// - [ ] Implement video frame extraction and sampling strategies
+    /// - [ ] Add video metadata extraction (duration, resolution, bitrate)
+    /// - [ ] Support video preprocessing (stabilization, quality enhancement)
+    /// - [ ] Implement video segmentation and scene detection
+    /// - [ ] Add video content analysis and feature extraction
+    /// - [ ] Support different video formats and container types
         tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
         
         Ok(JobPerformanceMetrics {
@@ -495,9 +500,14 @@ impl MultimodalJobScheduler {
         })
     }
 
-    /// Process cross-modal validation job
-    async fn process_cross_modal_job(&self, job: &MultimodalJob) -> Result<JobPerformanceMetrics> {
-        // Simulate cross-modal validation
+    /// TODO: Implement cross-modal validation and consistency checking
+    /// - [ ] Validate consistency between different modality representations
+    /// - [ ] Implement cross-modal alignment and synchronization
+    /// - [ ] Add multimodal fusion validation and quality assessment
+    /// - [ ] Support temporal alignment across modalities (audio/video sync)
+    /// - [ ] Implement cross-modal anomaly detection and correction
+    /// - [ ] Add confidence scoring for cross-modal relationships
+    /// - [ ] Support multimodal data integrity and corruption detection
         tokio::time::sleep(tokio::time::Duration::from_millis(300)).await;
         
         Ok(JobPerformanceMetrics {

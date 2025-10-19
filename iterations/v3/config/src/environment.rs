@@ -231,13 +231,14 @@ impl EnvironmentManager {
     }
 
     /// Get environment-specific database URL
-    pub fn get_database_url(&self) -> String {
+    pub fn get_database_url(&self) -> Result<String> {
         let config = self.get_current_config();
         config
             .get("database.url")
             .and_then(|v| v.as_str())
-            .unwrap_or("postgresql://localhost:5432/agent_agency")
-            .to_string()
+            .map(|s| s.to_string())
+            .or_else(|| std::env::var("DATABASE_URL").ok())
+            .ok_or_else(|| anyhow!("DATABASE_URL environment variable is required"))
     }
 
     /// Get environment-specific server port
@@ -250,13 +251,14 @@ impl EnvironmentManager {
     }
 
     /// Get environment-specific JWT secret
-    pub fn get_jwt_secret(&self) -> String {
+    pub fn get_jwt_secret(&self) -> Result<String> {
         let config = self.get_current_config();
         config
             .get("security.jwt_secret")
             .and_then(|v| v.as_str())
-            .unwrap_or("change-me-in-production")
-            .to_string()
+            .map(|s| s.to_string())
+            .or_else(|| std::env::var("JWT_SECRET").ok())
+            .ok_or_else(|| anyhow!("JWT_SECRET environment variable is required"))
     }
 
     /// Check if debug mode is enabled
@@ -365,11 +367,7 @@ pub mod presets {
     pub fn development_config() -> HashMap<String, serde_json::Value> {
         let mut config = HashMap::new();
 
-        // Database
-        config.insert(
-            "database.url".to_string(),
-            serde_json::Value::String("postgresql://localhost:5432/agent_agency_dev".to_string()),
-        );
+        // Database - URL must be provided via environment variables
         config.insert(
             "database.max_connections".to_string(),
             serde_json::Value::Number(5.into()),
@@ -395,11 +393,7 @@ pub mod presets {
             serde_json::Value::String("pretty".to_string()),
         );
 
-        // Security
-        config.insert(
-            "security.jwt_secret".to_string(),
-            serde_json::Value::String("dev-secret-key".to_string()),
-        );
+        // Security - secrets loaded from environment variables
         config.insert(
             "security.rate_limit_per_minute".to_string(),
             serde_json::Value::Number(1000.into()),
@@ -424,13 +418,7 @@ pub mod presets {
     pub fn staging_config() -> HashMap<String, serde_json::Value> {
         let mut config = HashMap::new();
 
-        // Database
-        config.insert(
-            "database.url".to_string(),
-            serde_json::Value::String(
-                "postgresql://staging-db:5432/agent_agency_staging".to_string(),
-            ),
-        );
+        // Database - URL must be provided via environment variables
         config.insert(
             "database.max_connections".to_string(),
             serde_json::Value::Number(20.into()),
@@ -456,11 +444,7 @@ pub mod presets {
             serde_json::Value::String("json".to_string()),
         );
 
-        // Security
-        config.insert(
-            "security.jwt_secret".to_string(),
-            serde_json::Value::String("staging-secret-key".to_string()),
-        );
+        // Security - secrets loaded from environment variables
         config.insert(
             "security.rate_limit_per_minute".to_string(),
             serde_json::Value::Number(500.into()),
@@ -485,11 +469,7 @@ pub mod presets {
     pub fn production_config() -> HashMap<String, serde_json::Value> {
         let mut config = HashMap::new();
 
-        // Database
-        config.insert(
-            "database.url".to_string(),
-            serde_json::Value::String("postgresql://prod-db:5432/agent_agency_prod".to_string()),
-        );
+        // Database - URL must be provided via environment variables
         config.insert(
             "database.max_connections".to_string(),
             serde_json::Value::Number(50.into()),
@@ -515,11 +495,7 @@ pub mod presets {
             serde_json::Value::String("json".to_string()),
         );
 
-        // Security
-        config.insert(
-            "security.jwt_secret".to_string(),
-            serde_json::Value::String("production-secret-key".to_string()),
-        );
+        // Security - secrets loaded from environment variables
         config.insert(
             "security.rate_limit_per_minute".to_string(),
             serde_json::Value::Number(100.into()),
@@ -544,11 +520,7 @@ pub mod presets {
     pub fn test_config() -> HashMap<String, serde_json::Value> {
         let mut config = HashMap::new();
 
-        // Database
-        config.insert(
-            "database.url".to_string(),
-            serde_json::Value::String("postgresql://localhost:5432/agent_agency_test".to_string()),
-        );
+        // Database - URL must be provided via environment variables
         config.insert(
             "database.max_connections".to_string(),
             serde_json::Value::Number(2.into()),
@@ -574,11 +546,7 @@ pub mod presets {
             serde_json::Value::String("json".to_string()),
         );
 
-        // Security
-        config.insert(
-            "security.jwt_secret".to_string(),
-            serde_json::Value::String("test-secret-key".to_string()),
-        );
+        // Security - secrets loaded from environment variables
         config.insert(
             "security.rate_limit_per_minute".to_string(),
             serde_json::Value::Number(10000.into()),
@@ -647,4 +615,150 @@ pub fn get_current_environment() -> Result<Environment> {
 pub fn get_current_config() -> Result<HashMap<String, serde_json::Value>> {
     let manager = get_environment_manager()?;
     Ok(manager.get_current_config())
+}
+
+/// Secure environment variable loader with masking
+pub mod secure_loader {
+    use super::*;
+    use tracing::info;
+
+    /// Sensitive environment variable names that should be masked in logs
+    const SENSITIVE_VARS: &[&str] = &[
+        "JWT_SECRET",
+        "ENCRYPTION_KEY",
+        "DATABASE_PASSWORD",
+        "API_KEY",
+        "SECRET_KEY",
+        "PRIVATE_KEY",
+        "DB_PASSWORD",
+        "REDIS_PASSWORD",
+        "AWS_SECRET_ACCESS_KEY",
+        "GOOGLE_PRIVATE_KEY",
+        "AZURE_CLIENT_SECRET",
+    ];
+
+    /// Load a required environment variable with validation
+    pub fn load_required_var(name: &str) -> Result<String> {
+        std::env::var(name).map_err(|_| {
+            anyhow!("Required environment variable '{}' is not set", name)
+        })
+    }
+
+    /// Load an optional environment variable
+    pub fn load_optional_var(name: &str) -> Option<String> {
+        std::env::var(name).ok()
+    }
+
+    /// Load a required environment variable with minimum length validation
+    pub fn load_required_var_with_min_length(name: &str, min_length: usize) -> Result<String> {
+        let value = load_required_var(name)?;
+        if value.len() < min_length {
+            return Err(anyhow!(
+                "Environment variable '{}' must be at least {} characters long",
+                name,
+                min_length
+            ));
+        }
+        Ok(value)
+    }
+
+    /// Load a required environment variable with security validation
+    pub fn load_secure_var(name: &str) -> Result<String> {
+        let value = load_required_var_with_min_length(name, 32)?;
+
+        // Check for special characters (basic security requirement)
+        if !value.chars().any(|c| !c.is_alphanumeric()) {
+            return Err(anyhow!(
+                "Environment variable '{}' must contain special characters for security",
+                name
+            ));
+        }
+
+        // Log with masking
+        let masked_value = mask_sensitive_value(&value);
+        info!("Loaded secure environment variable '{}': {}", name, masked_value);
+
+        Ok(value)
+    }
+
+    /// Mask sensitive values for logging
+    pub fn mask_sensitive_value(value: &str) -> String {
+        if value.len() <= 8 {
+            return "*".repeat(value.len());
+        }
+        format!("{}****{}", &value[..4], &value[value.len().saturating_sub(4)..])
+    }
+
+    /// Mask database URLs by hiding passwords
+    pub fn mask_database_url(url: &str) -> String {
+        // Handle common database URL formats: protocol://user:password@host:port/database
+        if let Some(at_pos) = url.find('@') {
+            if let Some(colon_pos) = url[..at_pos].rfind(':') {
+                // Found user:password pattern
+                let before_password = &url[..colon_pos + 1]; // include the colon
+                let after_password = &url[at_pos..]; // from @ onwards
+                return format!("{}****{}", before_password, after_password);
+            }
+        }
+        // If we can't parse it, mask the whole thing
+        mask_sensitive_value(url)
+    }
+
+    /// Load all sensitive environment variables
+    pub fn load_all_sensitive_vars() -> Result<HashMap<String, String>> {
+        let mut sensitive_vars = HashMap::new();
+
+        for &var_name in SENSITIVE_VARS {
+            if let Some(value) = load_optional_var(var_name) {
+                sensitive_vars.insert(var_name.to_string(), value);
+            }
+        }
+
+        if !sensitive_vars.is_empty() {
+            info!("Loaded {} sensitive environment variables", sensitive_vars.len());
+        }
+
+        Ok(sensitive_vars)
+    }
+
+    /// Validate all loaded sensitive variables
+    pub fn validate_sensitive_vars(vars: &HashMap<String, String>) -> Result<()> {
+        for (name, value) in vars {
+            if value.len() < 32 {
+                return Err(anyhow!(
+                    "Sensitive variable '{}' must be at least 32 characters long",
+                    name
+                ));
+            }
+
+            if !value.chars().any(|c| !c.is_alphanumeric()) {
+                return Err(anyhow!(
+                    "Sensitive variable '{}' must contain special characters",
+                    name
+                ));
+            }
+        }
+
+        info!("All sensitive environment variables validated successfully");
+        Ok(())
+    }
+
+    /// Get masked configuration for logging/debugging
+    pub fn get_masked_config(config: &HashMap<String, serde_json::Value>) -> HashMap<String, serde_json::Value> {
+        let mut masked_config = config.clone();
+
+        for (key, value) in &mut masked_config {
+            if let Some(string_value) = value.as_str() {
+                if SENSITIVE_VARS.iter().any(|&sensitive| key.contains(sensitive)) {
+                    // General sensitive data masking
+                    *value = serde_json::Value::String(mask_sensitive_value(string_value));
+                } else if key.contains("database") && key.contains("url") {
+                    // Special handling for database URLs
+                    *value = serde_json::Value::String(mask_database_url(string_value));
+                }
+            }
+        }
+
+        masked_config
+    }
 }

@@ -717,7 +717,22 @@ impl EvidenceCollector {
 
         let content = if test_times_path.exists() {
             if let Ok(_timing_data) = std::fs::read_to_string(test_times_path) {
-                // Parse timing data (simplified)
+                // TODO: Implement proper test timing data parsing instead of simplified placeholder
+                // - [ ] Parse JSON timing data with proper schema validation
+                // - [ ] Extract individual test execution times and metadata
+                // - [ ] Calculate statistical metrics (mean, median, percentiles)
+                // - [ ] Identify performance regressions and improvements
+                // - [ ] Support different test timing formats and sources
+                // - [ ] Implement timing data aggregation and reporting
+                // - [ ] Add historical timing trend analysis
+                // TODO: Implement comprehensive test timing data analysis and visualization
+                // - [ ] Parse JSON timing data with proper schema validation and error handling
+                // - [ ] Extract individual test execution times, setup times, and teardown times
+                // - [ ] Calculate statistical measures (mean, median, percentiles, standard deviation)
+                // - [ ] Implement timing data aggregation across test runs and suites
+                // - [ ] Add historical timing trend analysis and performance regression detection
+                // - [ ] Support timing data export and integration with CI/CD dashboards
+                // - [ ] Implement timing-based test prioritization and optimization recommendations
                 "Test performance data available - detailed timing analysis would be implemented here".to_string()
             } else {
                 "Test timing data exists but could not be read".to_string()
@@ -1233,6 +1248,14 @@ impl EvidenceCollector {
 
     /// Analyze compile-time performance
     async fn analyze_compile_performance(&self, claim: &AtomicClaim) -> Result<Evidence> {
+        // TODO: Implement actual compile performance measurement instead of simulation
+        // - [ ] Execute real cargo build --release with timing measurement
+        // - [ ] Parse build output for detailed timing information
+        // - [ ] Measure incremental vs clean build performance
+        // - [ ] Track compilation time per crate and dependency
+        // - [ ] Implement build caching and cache hit/miss analysis
+        // - [ ] Support different build profiles and optimization levels
+        // - [ ] Add compile-time regression detection and alerting
         // Run cargo build --release and measure time (simplified)
         let start_time = std::time::Instant::now();
 
@@ -1355,6 +1378,14 @@ impl EvidenceCollector {
                 }
             }
 
+            // TODO: Implement proper memory profiling and analysis instead of rough estimation
+            // - [ ] Use memory profiling tools (valgrind, heaptrack, dhat)
+            // - [ ] Integrate with Rust's memory profiling capabilities
+            // - [ ] Analyze memory allocation patterns and leaks
+            // - [ ] Measure peak memory usage during execution
+            // - [ ] Support different memory metrics (RSS, VSZ, heap size)
+            // - [ ] Implement memory usage regression detection
+            // - [ ] Add memory profiling for different code paths
             // Rough memory estimation (very simplified)
             let estimated_memory_kb = total_lines * 50; // Rough estimate: 50KB per 1000 lines
 
@@ -1549,7 +1580,22 @@ impl EvidenceCollector {
                     .filter(|line| line.starts_with("name = "))
                     .count();
 
-                // Check for known insecure dependencies (simplified)
+                // TODO: Implement proper dependency security analysis instead of simplified hardcoded list
+                // - [ ] Integrate with vulnerability databases (OSV, NVD, RustSec)
+                // - [ ] Parse Cargo.lock file properly to extract dependency versions
+                // - [ ] Check for CVEs and security advisories for each dependency
+                // - [ ] Implement severity scoring and risk assessment
+                // - [ ] Support transitive dependency analysis
+                // - [ ] Add dependency license compliance checking
+                // - [ ] Implement automated security update recommendations
+                // TODO: Replace hardcoded insecure dependencies with real vulnerability database integration
+                // - [ ] Integrate with RustSec advisory database for known vulnerabilities
+                // - [ ] Implement NVD CVE database integration for comprehensive coverage
+                // - [ ] Parse Cargo.lock to extract exact dependency versions and hashes
+                // - [ ] Support transitive dependency vulnerability scanning
+                // - [ ] Implement severity scoring (Critical, High, Medium, Low)
+                // - [ ] Add vulnerability timeline tracking and trending
+                // - [ ] Support automated security patch recommendations and updates
                 let insecure_deps = ["openssl", "libssl"]; // Example - would need a real database
                 let mut insecure_found = Vec::new();
 
@@ -1774,6 +1820,14 @@ impl EvidenceCollector {
                 let stdout = String::from_utf8_lossy(&output.stdout);
                 let stderr = String::from_utf8_lossy(&output.stderr);
 
+                // TODO: Implement proper gates output parsing instead of simple string matching
+                // - [ ] Parse structured JSON/XML output from gates tool
+                // - [ ] Extract detailed gate results with error messages and metadata
+                // - [ ] Support different output formats and gate types
+                // - [ ] Implement gate result validation and error handling
+                // - [ ] Add support for gate dependencies and execution order
+                // - [ ] Implement gate result caching and incremental analysis
+                // - [ ] Support custom gate definitions and configurations
                 // Parse gates output (simplified)
                 let passed_gates = stdout.lines().filter(|line| line.contains("PASS")).count();
                 let failed_gates = stdout.lines().filter(|line| line.contains("FAIL")).count();

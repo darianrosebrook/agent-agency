@@ -50,17 +50,26 @@ impl TaskExecutor {
 
         info!("Executing task {} with worker {}", task_id, worker_id);
 
-        // NOTE: Current implementation simulates worker execution
-        // Future enhancement: Full worker registry and distributed execution system
-        // - Worker discovery and capability matching
-        // - Load balancing and performance optimization
-        // - Distributed worker coordination and health monitoring
-        // - Secure worker authentication and authorization
+        // TODO: Implement full worker registry and distributed execution system
+        // - [ ] Implement worker discovery and capability matching algorithms
+        // - [ ] Add load balancing and performance optimization strategies
+        // - [ ] Support distributed worker coordination and health monitoring
+        // - [ ] Implement secure worker authentication and authorization
+        // - [ ] Add worker lifecycle management (registration, deregistration, updates)
+        // - [ ] Support worker versioning and compatibility checking
+        // - [ ] Implement worker performance profiling and resource allocation
 
         // Prepare execution input
         let execution_input = self.prepare_execution_input(&task_spec)?;
 
-        // Execute with worker (simulated) with circuit breaker and retry
+        // TODO: Implement actual worker execution with circuit breaker and retry logic
+        // - [ ] Integrate with real worker execution APIs and protocols
+        // - [ ] Implement proper circuit breaker pattern with state management
+        // - [ ] Add exponential backoff and jitter for retry strategies
+        // - [ ] Support different execution modes (sync, async, streaming)
+        // - [ ] Add execution timeout and cancellation handling
+        // - [ ] Implement execution result validation and error classification
+        // - [ ] Support worker-specific execution parameters and configurations
         let execution_result = if let Some(cb) = circuit_breaker {
             retry_with_backoff(
                 RetryConfig {
@@ -256,17 +265,47 @@ impl TaskExecutor {
         &self,
         _council_spec: &agent_agency_council::models::CawsSpec,
     ) -> CawsSpec {
+        // TODO: Implement proper CAWS spec conversion between council and worker formats
+        // - [ ] Map all council CawsSpec fields to worker CawsSpec equivalents
+        // - [ ] Handle field type conversions and validation
+        // - [ ] Support CAWS spec versioning and compatibility
+        // - [ ] Add field mapping configuration and customization
+        // - [ ] Implement conversion error handling and recovery
+        // - [ ] Support bidirectional conversion (council ↔ worker)
+        // - [ ] Add conversion performance optimization and caching
         CawsSpec {
-            // Simplified conversion - would map actual fields in real implementation
+            // Placeholder - actual field mapping needed
+            id: _council_spec.id.clone(),
+            name: _council_spec.name.clone(),
+            description: _council_spec.description.clone(),
+            priority: _council_spec.priority,
+            retry_count: 0,
+            max_retries: 3,
+            metadata: std::collections::HashMap::new(),
         }
     }
 
-    /// Execute task with worker (simulated)
+    /// TODO: Implement actual worker execution instead of simulation
+    /// - [ ] Integrate with worker HTTP API for task execution
+    /// - [ ] Implement proper worker discovery and load balancing
+    /// - [ ] Add worker health monitoring and automatic failover
+    /// - [ ] Support different worker types (CPU, GPU, specialized hardware)
+    /// - [ ] Implement worker authentication and secure communication
+    /// - [ ] Add execution timeout and resource limits
+    /// - [ ] Support streaming execution results and progress updates
     async fn execute_with_worker(
         &self,
         worker_id: Uuid,
         input: &ExecutionInput,
     ) -> Result<RawExecutionResult> {
+        // TODO: Implement actual HTTP call to worker instead of simulation
+        // - [ ] Set up HTTP client with proper error handling and retries
+        // - [ ] Implement request/response serialization (JSON/Protobuf)
+        // - [ ] Add request timeout and cancellation support
+        // - [ ] Support different worker API versions and compatibility
+        // - [ ] Implement result streaming for long-running tasks
+        // - [ ] Add worker response validation and error mapping
+        // - [ ] Support worker-specific configuration and parameters
         // Implement actual HTTP call to worker model with robust error handling
         info!("Executing task {} with worker {}", input.task_id, worker_id);
 
@@ -753,8 +792,14 @@ impl TaskExecutor {
         // 3. Endpoint validation: Verify endpoint is healthy before use
         // 4. Registry optimization: Return cached endpoint or discover via service mesh
         
-        // For now, return standard endpoint format based on worker_id
-        // In production, this would query a service registry (Consul, Eureka, Kubernetes DNS, etc.)
+        // TODO: Implement service registry integration for worker discovery
+        // - [ ] Integrate with service registries (Consul, Eureka, Kubernetes DNS, etcd)
+        // - [ ] Implement service discovery with health checking and load balancing
+        // - [ ] Add service registration and deregistration for worker lifecycle
+        // - [ ] Support service mesh integration (Istio, Linkerd, etc.)
+        // - [ ] Implement endpoint caching and connection pooling
+        // - [ ] Add service versioning and compatibility checking
+        // - [ ] Support multi-region and multi-zone service discovery
         Ok(format!("http://worker-{}.internal/execute", worker_id))
     }
 }

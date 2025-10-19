@@ -103,6 +103,14 @@ impl HnswIndexer {
             metadata.model_id, metadata.dim, metadata.metric
         );
 
+        // TODO: Implement proper HNSW (Hierarchical Navigable Small World) index instead of simplified version
+        // - [ ] Use established HNSW library (hnswlib, faiss, or ann-search) for production-grade implementation
+        // - [ ] Implement hierarchical graph construction with multiple layers
+        // - [ ] Add proper neighbor selection and pruning algorithms
+        // - [ ] Support different distance metrics (cosine, euclidean, manhattan, etc.)
+        // - [ ] Implement efficient index construction and incremental updates
+        // - [ ] Add memory-mapped index persistence and loading
+        // - [ ] Support parallel index construction and querying
         // Create simplified HNSW index
         let index = Arc::new(Mutex::new(SimpleHnswIndex::new(
             metadata.dim as usize,

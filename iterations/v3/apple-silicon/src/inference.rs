@@ -7,9 +7,13 @@
 /// - All tensors are row-major, dtype-explicit
 /// - No ObjC/Swift types cross this boundary
 /// - Cache keys include OS build + Core ML version for reproducibility
+use safetensors::Dtype;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
+
+// Re-export for trait users
+pub use crate::candle_backend::CandleModel;
 
 /// Supported compute units for model execution
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -400,6 +404,69 @@ pub trait InferenceEngine: Send + Sync {
 
     /// Query device capabilities
     fn capabilities(&self, mdl: &dyn PreparedModel) -> CapabilityReport;
+
+    /// Parse SafeTensors metadata
+    fn parse_safetensors_metadata(&self, model_data: &[u8]) -> anyhow::Result<IoSchema>;
+
+    /// Map SafeTensors dtype to internal dtype
+    fn map_safetensors_dtype(&self, dtype: safetensors::Dtype) -> anyhow::Result<DType>;
+
+    /// Check if tensor is likely an input tensor
+    fn is_likely_input_tensor(&self, name: &str, shape: &[usize]) -> bool;
+
+    /// Check if model supports batching
+    fn is_batch_capable(&self, shape: &[usize]) -> bool;
+
+    /// Validate metadata compatibility
+    fn validate_metadata_compatibility(&self, schema: &IoSchema) -> anyhow::Result<()>;
+
+    /// Parse ONNX metadata
+    fn parse_onnx_metadata(&self, model_data: &[u8]) -> anyhow::Result<IoSchema>;
+
+    /// Extract tensors from ONNX protobuf
+    fn extract_tensors_from_onnx_protobuf(&self, data: &[u8]) -> anyhow::Result<(Vec<TensorSpec>, Vec<TensorSpec>)>;
+
+    /// Find protobuf section in data
+    fn find_protobuf_section(&self, data: &str, keyword: &str) -> Option<String>;
+
+    /// Parse tensor specs from protobuf section
+    fn parse_tensor_specs_from_section(&self, section: String, is_input: bool) -> anyhow::Result<Vec<TensorSpec>>;
+
+    /// Parse shape from line
+    fn parse_shape_from_line(&self, line: &str) -> Vec<usize>;
+
+    /// Parse dtype from line
+    fn parse_dtype_from_line(&self, line: &str) -> anyhow::Result<DType>;
+
+    /// Check if ONNX tensor is batch capable
+    fn is_onnx_tensor_batch_capable(&self, shape: &[usize]) -> bool;
+
+    /// Validate ONNX compatibility
+    fn validate_onnx_compatibility(&self, schema: &IoSchema) -> anyhow::Result<()>;
+
+    /// Execute Candle inference
+    fn execute_candle_inference(&self, model: &CandleModel, inputs: &TensorMap) -> anyhow::Result<HashMap<String, Vec<u8>>>;
+
+    /// Convert bytes to Candle tensor
+    fn bytes_to_candle_tensor(&self, bytes: &[u8], spec: &TensorSpec) -> anyhow::Result<candle_core::Tensor>;
+
+    /// Convert Candle tensor to bytes
+    fn candle_tensor_to_bytes(&self, tensor: &candle_core::Tensor, spec: &TensorSpec) -> anyhow::Result<Vec<u8>>;
+
+    /// Convert dtype to Candle dtype
+    fn dtype_to_candle_dtype(&self, dtype: DType) -> anyhow::Result<candle_core::DType>;
+
+    /// Get dtype size in bytes
+    fn dtype_size_bytes(&self, dtype: DType) -> usize;
+
+    /// Load Candle model
+    fn load_candle_model(&self, model: &CandleModel, device: &candle_core::Device) -> anyhow::Result<Box<dyn PreparedModel>>;
+
+    /// Load SafeTensors model
+    fn load_safetensors_model(&self, path: &std::path::Path, device: &candle_core::Device) -> anyhow::Result<Box<dyn PreparedModel>>;
+
+    /// Load ONNX model
+    fn load_onnx_model(&self, path: &std::path::Path, device: &candle_core::Device) -> anyhow::Result<Box<dyn PreparedModel>>;
 }
 
 /// Device capability report (requested vs actual dispatch, ANE op coverage, etc.)

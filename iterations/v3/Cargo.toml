@@ -84,6 +84,9 @@ ndarray = "0.15"
 
 pkcs8 = "0.10"
 
+# Security utilities
+security = { path = "security" }
+
 [profile.release]
 opt-level = 3
 debug = 1                  # keep some symbols for backtraces

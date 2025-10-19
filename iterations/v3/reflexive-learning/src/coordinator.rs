@@ -1749,8 +1749,14 @@ impl MultiTurnLearningCoordinator {
         &mut self,
         session: &LearningSession,
         analysis: &PerformanceAnalysisResult,
-    ) -> Result<(PerformanceUpdate, Vec<PatternUpdate>), LearningSystemError> {
-        // Start transaction-like operation (simplified for this implementation)
+    /// TODO: Implement proper transaction-like operation for learning updates
+    /// - [ ] Use database transactions for atomic learning updates
+    /// - [ ] Implement rollback mechanisms for failed updates
+    /// - [ ] Add concurrent update conflict resolution
+    /// - [ ] Support distributed transactions for multi-node deployments
+    /// - [ ] Implement update journaling and audit trails
+    /// - [ ] Add transaction timeout and deadlock detection
+    /// - [ ] Support partial transaction commits and compensations
         let performance_update = PerformanceUpdate {
             average_completion_time: analysis.completion_time_trend.average_duration,
             average_quality_score: analysis.quality_trend.average,
@@ -1886,7 +1892,14 @@ impl MultiTurnLearningCoordinator {
         let average_seconds = total_seconds / durations.len() as i64;
         let average_duration = chrono::Duration::seconds(average_seconds);
 
-        // Calculate trend slope (simplified)
+        // TODO: Implement proper trend slope calculation with statistical analysis
+        // - [ ] Use linear regression for accurate trend calculation
+        // - [ ] Implement weighted least squares for time-series data
+        // - [ ] Add outlier detection and removal for trend analysis
+        // - [ ] Support different trend calculation methods (exponential smoothing, etc.)
+        // - [ ] Implement confidence intervals for trend estimates
+        // - [ ] Add seasonal decomposition for periodic trends
+        // - [ ] Support multivariate trend analysis with correlations
         let trend_slope = if durations.len() > 1 {
             let first_avg = durations.iter().take(durations.len() / 2).map(|d| d.num_seconds()).sum::<i64>() / (durations.len() / 2) as i64;
             let last_avg = durations.iter().rev().take(durations.len() / 2).map(|d| d.num_seconds()).sum::<i64>() / (durations.len() / 2) as i64;
@@ -2150,9 +2163,14 @@ impl MultiTurnLearningCoordinator {
         Ok(())
     }
 
-    /// Calculate success rate improvement
-    fn calculate_success_rate_improvement(&self, data: &HistoricalDataCollection) -> Result<f64, LearningSystemError> {
-        // Simplified calculation - in production would analyze actual success rates
+    /// TODO: Implement actual success rate improvement analysis
+    /// - [ ] Analyze historical success rates with proper statistical methods
+    /// - [ ] Implement success rate trend analysis and prediction
+    /// - [ ] Support different success rate metrics (task completion, quality thresholds)
+    /// - [ ] Add confidence intervals for success rate improvements
+    /// - [ ] Implement success rate anomaly detection and alerting
+    /// - [ ] Support multivariate success rate analysis (by task type, worker, etc.)
+    /// - [ ] Add success rate improvement attribution and root cause analysis
         Ok(data.aggregated_metrics.quality_scores.iter().sum::<f64>() / data.aggregated_metrics.quality_scores.len().max(1) as f64)
     }
 
@@ -2191,9 +2209,31 @@ impl MultiTurnLearningCoordinator {
         })
     }
 
-    /// Collect worker performance data (simplified)
+    /// TODO: Implement actual worker performance data collection instead of returning empty vector
+    /// - [ ] Integrate with worker monitoring systems for real-time metrics
+    /// - [ ] Query worker performance logs and historical data
+    /// - [ ] Implement performance metric aggregation and analysis
+    /// - [ ] Add worker efficiency scoring algorithms
+    /// - [ ] Support different performance dimensions (speed, accuracy, reliability)
+    /// - [ ] Implement performance trend analysis and forecasting
+    /// - [ ] Add performance anomaly detection and alerting
     async fn collect_worker_performance_data(&self, session: &LearningSession) -> Result<Vec<WorkerPerformanceData>, LearningSystemError> {
-        // In production, this would query worker performance logs
+        // TODO: Query actual worker performance data instead of returning empty vector
+        // - [ ] Connect to worker monitoring API or database
+        // - [ ] Retrieve performance metrics for the given learning session
+        // - [ ] Validate and sanitize performance data
+        // - [ ] Handle missing or incomplete performance records
+        // - [ ] Implement performance data caching for efficiency
+        // - [ ] Support different data sources and aggregation strategies
+        // - [ ] Add error handling for data retrieval failures
+        // TODO: Implement worker performance log querying and analysis
+        // - [ ] Query structured worker performance logs from database
+        // - [ ] Support different log aggregation time windows and granularities
+        // - [ ] Implement worker performance profiling and bottleneck analysis
+        // - [ ] Add worker performance comparison and benchmarking
+        // - [ ] Support real-time worker performance monitoring and alerting
+        // - [ ] Implement worker performance trend analysis and forecasting
+        // - [ ] Add worker performance data export and visualization support
         Ok(Vec::new())
     }
 }

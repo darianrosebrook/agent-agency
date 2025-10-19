@@ -94,15 +94,25 @@ impl ExecutionTelemetry {
         }
     }
 
-    async fn get_current_memory_usage(&self) -> Result<u64> {
-        // In a real implementation, this would query system memory usage
-        // For now, simulate realistic memory usage
+    /// TODO: Implement actual system memory usage monitoring
+    /// - [ ] Use system monitoring libraries to get real memory usage
+    /// - [ ] Support different memory metrics (RSS, VSZ, PSS, etc.)
+    /// - [ ] Add memory usage trend analysis and prediction
+    /// - [ ] Implement memory leak detection during benchmarks
+    /// - [ ] Support cross-platform memory monitoring (Linux, macOS, Windows)
+    /// - [ ] Add memory usage alerting and threshold monitoring
+    /// - [ ] Implement memory usage profiling and heap analysis
         Ok(256 + (self.execution_id.as_u128() % 512) as u64)
     }
 
-    async fn get_current_cpu_usage(&self) -> Result<f32> {
-        // In a real implementation, this would query CPU usage
-        // For now, simulate realistic CPU usage
+    /// TODO: Implement actual CPU usage monitoring and profiling
+    /// - [ ] Use system APIs to get real-time CPU usage per core
+    /// - [ ] Support different CPU metrics (user, system, idle, steal time)
+    /// - [ ] Add CPU usage trend analysis and load prediction
+    /// - [ ] Implement CPU profiling during benchmark execution
+    /// - [ ] Support cross-platform CPU monitoring (Linux, macOS, Windows)
+    /// - [ ] Add CPU usage alerting and performance regression detection
+    /// - [ ] Implement CPU cache miss and branch prediction analysis
         Ok(45.0 + (self.execution_id.as_u128() % 30) as f32)
     }
 
@@ -167,10 +177,14 @@ impl BenchmarkRunner {
         model: &ModelSpecification,
         micro_task: &MicroTask,
     ) {
-        // In a real implementation, this would:
-        // 1. Store telemetry in time-series database (e.g., InfluxDB)
-        // 2. Send metrics to monitoring system (e.g., Prometheus)
-        // 3. Update model performance dashboards
+        // TODO: Implement comprehensive telemetry storage and analytics
+        // - [ ] Integrate with time-series databases (InfluxDB, TimescaleDB, etc.)
+        // - [ ] Send metrics to monitoring systems (Prometheus, StatsD, etc.)
+        // - [ ] Update real-time performance dashboards and visualizations
+        // - [ ] Implement telemetry aggregation and statistical analysis
+        // - [ ] Add telemetry-based alerting and anomaly detection
+        // - [ ] Support telemetry export to external analytics platforms
+        // - [ ] Implement telemetry retention policies and data lifecycle management
         // 4. Trigger alerts on performance degradation
 
         debug!(
@@ -687,6 +701,14 @@ impl BenchmarkRunner {
             ModelType::Analysis => Duration::from_millis(35),
         };
 
+        // TODO: Implement actual model execution benchmarking instead of simulation
+        // - [ ] Integrate with inference backends (Candle, ONNX Runtime, Core ML, etc.)
+        // - [ ] Implement real model loading and execution for different architectures
+        // - [ ] Add proper timing measurement with high-resolution timers
+        // - [ ] Support different execution modes (single inference, batch, streaming)
+        // - [ ] Implement memory usage tracking during actual execution
+        // - [ ] Add performance profiling and bottleneck analysis
+        // - [ ] Support different hardware targets (CPU, GPU, ANE, etc.)
         // Add some randomness to simulate real-world variance
         let variance = Duration::from_millis(rand::random::<u64>() % 20);
         let total_time = processing_time + variance;
@@ -757,6 +779,14 @@ impl BenchmarkRunner {
         let avg_memory = memory_usage.iter().sum::<f64>() / memory_usage.len() as f64;
         let _memory_efficiency = (1000.0 / avg_memory).clamp(0.0, 1.0); // Normalize to 0-1
 
+        // TODO: Implement proper accuracy and quality measurement instead of simulation
+        // - [ ] Integrate evaluation datasets for different model types
+        // - [ ] Implement accuracy metrics (BLEU, ROUGE, F1, etc.) based on model outputs
+        // - [ ] Add quality assessment using human evaluation or automated metrics
+        // - [ ] Support task-specific evaluation (code generation, review, testing, etc.)
+        // - [ ] Implement statistical significance testing for accuracy differences
+        // - [ ] Add confidence intervals and error bounds for quality metrics
+        // - [ ] Support A/B testing frameworks for model comparison
         // For micro benchmarks, accuracy and quality are simulated
         let accuracy = 0.95 + (rand::random::<f64>() - 0.5) * 0.1; // 90-100%
         let quality = 0.90 + (rand::random::<f64>() - 0.5) * 0.2; // 80-100%

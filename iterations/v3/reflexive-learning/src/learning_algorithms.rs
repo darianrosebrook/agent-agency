@@ -626,9 +626,14 @@ impl LearningAlgorithms {
         Ok(())
     }
 
-    /// Deep reinforcement learning simulation (simplified)
-    pub async fn deep_rl_update(&mut self, state: &str, action: &str, reward: f64, next_state: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        // Simplified deep RL update (would use neural networks in practice)
+    /// TODO: Implement actual deep reinforcement learning with neural networks
+    /// - [ ] Integrate PyTorch/TensorFlow for neural network Q-function approximation
+    /// - [ ] Implement experience replay buffer with prioritized sampling
+    /// - [ ] Add target network for stable Q-learning updates
+    /// - [ ] Support different neural network architectures (DQN, DDPG, PPO)
+    /// - [ ] Implement exploration strategies (epsilon-greedy, softmax, etc.)
+    /// - [ ] Add gradient clipping and optimization techniques
+    /// - [ ] Support distributed RL training across multiple agents
         let current_q = self.get(state, action);
         let next_max_q = self.get_next_state_max_q(next_state);
 
@@ -724,7 +729,14 @@ impl LearningOrchestrator {
         // Execute the selected algorithm
         let result = match algorithm_type {
             LearningAlgorithmType::ReinforcementLearning | LearningAlgorithmType::DeepReinforcementLearning => {
-                // For RL tasks, simulate policy execution
+                // TODO: Implement proper RL policy execution and decision making
+                // - [ ] Execute learned policy for action selection in given state
+                // - [ ] Support different policy types (deterministic, stochastic, epsilon-greedy)
+                // - [ ] Implement policy evaluation and improvement algorithms
+                // - [ ] Add policy transfer learning and knowledge reuse
+                // - [ ] Support multi-agent RL coordination and communication
+                // - [ ] Implement policy safety constraints and guardrails
+                // - [ ] Add policy interpretability and explainability features
                 if let Some(targets) = targets {
                     algorithm.predict_regression(&data[0]).await.unwrap_or(0.0)
                 } else {

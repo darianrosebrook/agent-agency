@@ -194,11 +194,7 @@ impl ConfigLoader {
     fn get_default_config(&self) -> HashMap<String, serde_json::Value> {
         let mut defaults = HashMap::new();
 
-        // Database defaults
-        defaults.insert(
-            "database.url".to_string(),
-            serde_json::Value::String("postgresql://localhost:5432/agent_agency".to_string()),
-        );
+        // Database defaults - URL must be provided via environment variables
         defaults.insert(
             "database.max_connections".to_string(),
             serde_json::Value::Number(10.into()),
@@ -280,11 +276,7 @@ impl ConfigLoader {
             serde_json::Value::Number(1000.into()),
         );
 
-        // Security defaults
-        defaults.insert(
-            "security.jwt_secret".to_string(),
-            serde_json::Value::String("change-me-in-production".to_string()),
-        );
+        // Security defaults - secrets must be provided via environment variables
         defaults.insert(
             "security.jwt_expiry_secs".to_string(),
             serde_json::Value::Number(3600.into()),

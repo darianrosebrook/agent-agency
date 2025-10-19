@@ -351,6 +351,14 @@ impl MultiTenantManager {
         let current_usage = self.get_current_storage_usage(tenant_id).await?;
         let new_usage = current_usage + context_data.content.len() as u64;
 
+        // TODO: Implement proper storage limit checking instead of simplified calculation
+        // - [ ] Account for actual storage overhead and metadata size
+        // - [ ] Implement storage quota management with soft and hard limits
+        // - [ ] Add storage compression and deduplication awareness
+        // - [ ] Support different storage tiers with varying costs
+        // - [ ] Implement storage usage monitoring and alerting
+        // - [ ] Add storage quota allocation and billing integration
+        // - [ ] Support storage limit overrides and exceptions
         // Check against storage limits (simplified calculation)
         let max_storage =
             tenant_info.limits.max_contexts as u64 * tenant_info.limits.max_context_size;
@@ -1711,6 +1719,14 @@ impl MultiTenantManager {
         &self,
         tenant_id: &str,
     ) -> Result<u32> {
+        // TODO: Implement actual cache integration instead of simulation
+        // - [ ] Integrate with Redis, Memcached, or similar in-memory cache
+        // - [ ] Implement cache key management and namespacing
+        // - [ ] Add cache TTL and eviction policies
+        // - [ ] Support cache clustering and high availability
+        // - [ ] Implement cache warming and prefetching
+        // - [ ] Add cache performance monitoring and metrics
+        // - [ ] Support cache invalidation and consistency
         // In a real implementation, this would query an in-memory cache like Redis
         // For now, we'll simulate cache behavior with some sample data
         

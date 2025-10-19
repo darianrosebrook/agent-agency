@@ -77,6 +77,14 @@ impl ContextStore {
                 ));
             }
 
+            // TODO: Implement proper tenant context limits checking instead of simplified counting
+            // - [ ] Integrate with tenant management system for dynamic limits
+            // - [ ] Implement context size estimation with compression awareness
+            // - [ ] Add context aging and automatic cleanup policies
+            // - [ ] Support different context types with varying size limits
+            // - [ ] Implement context usage analytics and quota tracking
+            // - [ ] Add context compression and deduplication
+            // - [ ] Support context prioritization and eviction strategies
             // Check total contexts for this tenant (simplified check)
             let storage = self.context_storage.read().await;
             let tenant_context_count = storage
@@ -141,6 +149,14 @@ impl ContextStore {
         if let Some((context_data, metadata)) = storage.get(context_id) {
             // Check tenant access if multi-tenant is enabled
             if self.config.multi_tenant.enabled {
+                // TODO: Implement proper tenant access control instead of simplified relationship checking
+                // - [ ] Integrate with proper tenant management and authentication system
+                // - [ ] Implement role-based access control (RBAC) for context operations
+                // - [ ] Add context ownership and sharing permissions
+                // - [ ] Support hierarchical tenant relationships and inheritance
+                // - [ ] Implement access auditing and logging
+                // - [ ] Add context encryption for tenant isolation
+                // - [ ] Support cross-tenant context sharing with explicit permissions
                 // Simple tenant validation based on relationships (this is a simplified check)
                 let has_tenant_access = metadata
                     .relationships

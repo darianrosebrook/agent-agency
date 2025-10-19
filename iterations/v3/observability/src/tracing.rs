@@ -737,7 +737,14 @@ impl TraceCollector {
 
             *service_breakdown.entry(span_info.service_name.clone()).or_insert(0) += 1;
 
-            // Check for errors (simplified - would need actual span status)
+            // TODO: Implement proper span status checking and error detection
+            // - [ ] Parse actual span status codes and error information
+            // - [ ] Check span tags and attributes for error indicators
+            // - [ ] Implement error classification and severity assessment
+            // - [ ] Support different tracing formats (Jaeger, Zipkin, OpenTelemetry)
+            // - [ ] Add error correlation and root cause analysis
+            // - [ ] Implement error rate calculation and alerting
+            // - [ ] Support custom error detection rules and patterns
             if span_info.operation.contains("error") || span_info.operation.contains("fail") {
                 error_count += 1;
             }
@@ -1220,10 +1227,14 @@ impl TraceCollector {
         }
     }
 
-    /// Collect system-wide metrics
-    async fn collect_system_metrics(&self) -> SystemMetrics {
-        // In a real implementation, this would collect actual system metrics
-        // For now, simulate realistic values
+    /// TODO: Implement actual system metrics collection from OS APIs
+    /// - [ ] Integrate with system monitoring libraries (heim, sysinfo, etc.)
+    /// - [ ] Collect real CPU, memory, disk, and network usage metrics
+    /// - [ ] Support cross-platform metrics collection (Linux, macOS, Windows)
+    /// - [ ] Implement metrics aggregation and time-series storage
+    /// - [ ] Add metrics validation and outlier detection
+    /// - [ ] Support configurable metric polling intervals
+    /// - [ ] Implement metrics caching and efficient retrieval
 
         SystemMetrics {
             memory_usage_percent: 65.0 + (chrono::Utc::now().timestamp_millis() % 20) as f32,

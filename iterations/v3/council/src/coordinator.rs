@@ -178,7 +178,14 @@ async fn compile_debate_contributions(
 ) -> Result<CompiledContributions> {
     let mut contributions = Vec::new();
 
-    // Simulate collecting contributions from each participant in each round
+    // TODO: Implement actual debate contribution collection system
+    // - [ ] Integrate with real participant communication channels
+    // - [ ] Implement round-based debate orchestration
+    // - [ ] Add contribution validation and quality checks
+    // - [ ] Support different contribution types (text, structured data)
+    // - [ ] Implement contribution timeout and retry mechanisms
+    // - [ ] Add contribution history tracking and versioning
+    // - [ ] Support parallel contribution collection from multiple participants
     for round in 1..=rounds {
         for participant in participants {
             contributions.push(DebateContribution {
@@ -270,9 +277,14 @@ async fn analyze_contribution_patterns(
     })
 }
 
-/// Check for consensus among participants
-async fn check_for_consensus(participants: &[String], _rounds: i32) -> Result<Option<String>> {
-    // Simulate consensus check (in production, analyze actual debate content)
+/// TODO: Implement actual consensus analysis from debate content
+/// - [ ] Analyze participant arguments and positions from debate transcripts
+/// - [ ] Implement consensus detection algorithms (voting, agreement metrics)
+/// - [ ] Support different consensus thresholds and criteria
+/// - [ ] Add consensus confidence scoring and validation
+/// - [ ] Implement consensus evolution tracking over debate rounds
+/// - [ ] Support partial consensus and compromise detection
+/// - [ ] Add consensus quality assessment and reliability metrics
     if participants.len() == 1 {
         return Ok(Some(participants[0].clone()));
     }
@@ -281,9 +293,14 @@ async fn check_for_consensus(participants: &[String], _rounds: i32) -> Result<Op
     Ok(None)
 }
 
-/// Check for majority vote
-async fn check_majority_vote(participants: &[String], _rounds: i32) -> Result<Option<String>> {
-    // Simulate majority vote check
+/// TODO: Implement actual majority vote analysis and counting
+/// - [ ] Analyze participant votes from debate rounds and final decisions
+/// - [ ] Implement different voting systems (simple majority, supermajority, weighted)
+/// - [ ] Support vote validation and fraud detection
+/// - [ ] Add vote counting algorithms with tie-breaking rules
+/// - [ ] Implement vote secrecy and anonymity where required
+/// - [ ] Support different participant voting weights and authority levels
+/// - [ ] Add vote audit trails and verification mechanisms
     if participants.len() >= 3 {
         // Return first participant as "majority" for demo
         return Ok(Some(participants[0].clone()));
@@ -292,10 +309,14 @@ async fn check_majority_vote(participants: &[String], _rounds: i32) -> Result<Op
     Ok(None)
 }
 
-/// Check for expert override
-async fn check_expert_override(participants: &[String], _rounds: i32) -> Result<Option<String>> {
-    // Simulate expert override check
-    // In production, this would check for expert participants or external authority
+/// TODO: Implement expert override and authority escalation mechanisms
+/// - [ ] Define expert authority levels and qualification criteria
+/// - [ ] Implement expert participant identification and verification
+/// - [ ] Support external authority integration and decision delegation
+/// - [ ] Add override conditions and triggering criteria
+/// - [ ] Implement override audit trails and accountability
+/// - [ ] Support override expiration and review processes
+/// - [ ] Add override impact assessment and risk evaluation
     Ok(None)
 }
 
@@ -1066,7 +1087,14 @@ impl ConsensusCoordinator {
         &self,
         contributions: &HashMap<String, ParticipantContribution>,
     ) -> bool {
-        // Simple supermajority check - in real implementation, this would be more sophisticated
+        // TODO: Implement sophisticated supermajority calculation algorithm
+        // Acceptance criteria:
+        // - Weighted voting based on participant expertise levels
+        // - Historical performance data factored into decision weight
+        // - Dynamic threshold adjustment based on risk tier
+        // - Consensus quality metrics calculated and tracked
+        // - Edge cases handled (tied votes, single participant, etc.)
+        // - Algorithm configurable through CAWS rules
         contributions.len() >= 2 && contributions.values().all(|c| c.confidence > 0.7)
     }
 

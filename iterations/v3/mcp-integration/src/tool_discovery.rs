@@ -725,10 +725,14 @@ impl ToolDiscovery {
         Ok((ws_stream, response))
     }
 
-    /// Validate WebSocket handshake
-    async fn validate_websocket_handshake(&self, _ws_stream: &mut tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>) -> bool {
-        // For now, assume handshake is valid if connection was established
-        // In a real implementation, you would validate the response headers
+    /// TODO: Implement proper WebSocket handshake validation
+    /// - [ ] Validate WebSocket protocol version and extension negotiation
+    /// - [ ] Check response headers for proper Sec-WebSocket-Accept
+    /// - [ ] Verify subprotocol negotiation and custom headers
+    /// - [ ] Implement handshake timeout and retry logic
+    /// - [ ] Add TLS certificate validation for WSS connections
+    /// - [ ] Support custom handshake headers and authentication
+    /// - [ ] Implement handshake failure diagnostics and error reporting
         true
     }
 
@@ -1091,10 +1095,14 @@ impl ToolDiscovery {
         }
     }
 
-    /// Record health metrics for monitoring
-    async fn record_health_metrics(&self, endpoint: &str, endpoint_type: &EndpointType, is_healthy: bool, response_time_ms: u64) {
-        // In a real implementation, this would store metrics in a time-series database
-        // For now, we'll just log the metrics
+    /// TODO: Implement comprehensive health metrics collection and storage
+    /// - [ ] Store metrics in time-series database (InfluxDB, Prometheus TSDB, etc.)
+    /// - [ ] Implement metrics aggregation and downsampling for long-term storage
+    /// - [ ] Add metrics tagging and metadata for better querying
+    /// - [ ] Support different metric types (counters, gauges, histograms, summaries)
+    /// - [ ] Implement metrics retention policies and automatic cleanup
+    /// - [ ] Add metrics export to external monitoring systems
+    /// - [ ] Support real-time metrics streaming and alerting
         tracing::info!(
             "Health metrics - endpoint: {}, type: {:?}, healthy: {}, response_time: {}ms",
             endpoint,
@@ -1104,10 +1112,14 @@ impl ToolDiscovery {
         );
     }
 
-    /// Check WebSocket connection (placeholder for WebSocket health checking)
-    async fn check_websocket_connection(&self, endpoint: &str) -> bool {
-        // This is a simplified WebSocket health check
-        // In a real implementation, you would use a WebSocket client library
+    /// TODO: Implement comprehensive WebSocket health checking and monitoring
+    /// - [ ] Use WebSocket client library for actual connection testing
+    /// - [ ] Implement proper WebSocket handshake and protocol validation
+    /// - [ ] Add WebSocket ping/pong heartbeats for connection health
+    /// - [ ] Support WebSocket subprotocol negotiation and validation
+    /// - [ ] Implement connection pooling and reuse for efficiency
+    /// - [ ] Add WebSocket connection metrics and performance monitoring
+    /// - [ ] Support secure WebSocket connections (WSS) with TLS validation
         tracing::debug!("WebSocket health check not fully implemented for: {}", endpoint);
         
         // For now, just check if the endpoint looks like a valid WebSocket URL

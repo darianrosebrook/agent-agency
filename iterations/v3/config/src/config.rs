@@ -6,6 +6,8 @@ use std::path::PathBuf;
 use tracing::{info, warn};
 use validator::Validate;
 
+use super::environment::secure_loader;
+
 /// Main application configuration
 #[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct AppConfig {
@@ -55,8 +57,11 @@ pub struct ServerConfig {
 /// TLS configuration
 #[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct TlsConfig {
+    #[validate(custom(function = "tls_validation::validate_cert_file"))]
     pub cert_path: PathBuf,
+    #[validate(custom(function = "tls_validation::validate_key_file"))]
     pub key_path: PathBuf,
+    #[validate(custom(function = "tls_validation::validate_ca_file"))]
     pub ca_path: Option<PathBuf>,
 }
 
@@ -75,7 +80,9 @@ pub struct DatabaseConfig {
 /// Security configuration
 #[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct SecurityConfig {
+    #[validate(length(min = 32, message = "JWT secret must be at least 32 characters"))]
     pub jwt_secret: String,
+    #[validate(length(min = 32, message = "Encryption key must be at least 32 characters"))]
     pub encryption_key: String,
     pub session_timeout_minutes: u64,
     pub rate_limit_requests_per_minute: u32,
@@ -202,7 +209,8 @@ impl AppConfig {
                 tls: None,
             },
             database: DatabaseConfig {
-                url: "postgresql://localhost:5432/agent_agency".to_string(),
+                url: std::env::var("DATABASE_URL")
+                    .unwrap_or_else(|_| panic!("DATABASE_URL environment variable is required")),
                 max_connections: 20,
                 min_connections: 5,
                 connection_timeout_seconds: 30,
@@ -211,8 +219,10 @@ impl AppConfig {
                 ssl_mode: "prefer".to_string(),
             },
             security: SecurityConfig {
-                jwt_secret: "default-secret-change-in-production".to_string(),
-                encryption_key: "default-encryption-key-change-in-production".to_string(),
+                jwt_secret: secure_loader::load_secure_var("JWT_SECRET")
+                    .unwrap_or_else(|_| panic!("JWT_SECRET environment variable is required and must meet security requirements")),
+                encryption_key: secure_loader::load_secure_var("ENCRYPTION_KEY")
+                    .unwrap_or_else(|_| panic!("ENCRYPTION_KEY environment variable is required and must meet security requirements")),
                 session_timeout_minutes: 60,
                 rate_limit_requests_per_minute: 100,
                 cors_origins: vec!["http://localhost:3000".to_string()],
@@ -298,26 +308,77 @@ impl AppConfig {
     }
 
     /// Validate the configuration
-    pub fn validate(&self) -> Result<()> {
-        // Basic validation logic
+    pub fn validate_config(&self) -> Result<()> {
+        // Use the validator crate for automatic validation
+        if let Err(validation_errors) = self.validate() {
+            for (field, field_errors) in validation_errors.field_errors() {
+                for error in field_errors {
+                    return Err(anyhow::anyhow!(
+                        "Configuration validation failed for field '{}': {}",
+                        field,
+                        error.message.as_ref().unwrap_or(&"Validation error".into())
+                    ));
+                }
+            }
+        }
 
         // Additional custom validations
-        if self.security.jwt_secret == "default-secret-change-in-production"
-            && self.app.environment == "production"
-        {
-            return Err(anyhow::anyhow!("JWT secret must be changed in production"));
-        }
-
-        if self.security.encryption_key == "default-encryption-key-change-in-production"
-            && self.app.environment == "production"
-        {
-            return Err(anyhow::anyhow!(
-                "Encryption key must be changed in production"
-            ));
-        }
-
         if self.database.url.contains("localhost") && self.app.environment == "production" {
             warn!("Using localhost database in production environment");
+        }
+
+        // Production database URL validation
+        if self.app.environment == "production" {
+            if self.database.url.contains("localhost") || self.database.url.contains("127.0.0.1") {
+                return Err(anyhow::anyhow!("Production database URL cannot use localhost or 127.0.0.1"));
+            }
+            if !self.database.url.contains("sslmode=require") && !self.database.url.contains("ssl=true") {
+                warn!("Production database connection should use SSL/TLS");
+            }
+        }
+
+        // Security validations for production
+        if self.app.environment == "production" {
+            // Security secrets validation
+            if self.security.jwt_secret.len() < 32 {
+                return Err(anyhow::anyhow!("JWT secret must be at least 32 characters in production"));
+            }
+            if self.security.encryption_key.len() < 32 {
+                return Err(anyhow::anyhow!("Encryption key must be at least 32 characters in production"));
+            }
+            if !self.security.jwt_secret.chars().any(|c| !c.is_alphanumeric()) {
+                return Err(anyhow::anyhow!("JWT secret should contain special characters in production"));
+            }
+            if !self.security.encryption_key.chars().any(|c| !c.is_alphanumeric()) {
+                return Err(anyhow::anyhow!("Encryption key should contain special characters in production"));
+            }
+
+            // HTTPS/TLS enforcement
+            if self.server.tls.is_none() {
+                return Err(anyhow::anyhow!("TLS configuration is required in production (HTTPS must be enabled)"));
+            }
+
+            // Validate TLS configuration
+            if let Some(tls_config) = &self.server.tls {
+                if !tls_config.cert_path.exists() {
+                    return Err(anyhow::anyhow!("TLS certificate file does not exist: {:?}", tls_config.cert_path));
+                }
+                if !tls_config.key_path.exists() {
+                    return Err(anyhow::anyhow!("TLS private key file does not exist: {:?}", tls_config.key_path));
+                }
+                if let Some(ca_path) = &tls_config.ca_path {
+                    if !ca_path.exists() {
+                        return Err(anyhow::anyhow!("TLS CA certificate file does not exist: {:?}", ca_path));
+                    }
+                }
+            }
+
+            // Additional security checks for production
+            if self.server.port == 80 {
+                warn!("Using port 80 in production - consider using 443 for HTTPS");
+            } else if self.server.port != 443 && self.server.tls.is_some() {
+                warn!("TLS is configured but not using standard HTTPS port 443");
+            }
         }
 
         info!("Configuration validation passed");
@@ -384,10 +445,171 @@ impl AppConfig {
         let config: T = serde_json::from_value(config_value)?;
         Ok(config)
     }
+
+    /// Get a masked version of the configuration for logging/debugging
+    pub fn get_masked_config(&self) -> Result<AppConfig> {
+        let mut masked = self.clone();
+
+        // Mask JWT secret
+        masked.security.jwt_secret = secure_loader::mask_sensitive_value(&self.security.jwt_secret);
+
+        // Mask encryption key
+        masked.security.encryption_key = secure_loader::mask_sensitive_value(&self.security.encryption_key);
+
+        // Mask database URL password if present
+        masked.database.url = secure_loader::mask_database_url(&self.database.url);
+
+        Ok(masked)
+    }
 }
 
 impl Default for AppConfig {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+/// Custom validation functions for TLS configuration
+mod tls_validation {
+    use super::*;
+    use validator::ValidationError;
+
+    pub fn validate_cert_file(path: &PathBuf) -> Result<(), ValidationError> {
+        if path.to_string_lossy().is_empty() {
+            return Err(ValidationError::new("Certificate path cannot be empty"));
+        }
+
+        // Check for common certificate file extensions
+        let path_str = path.to_string_lossy().to_lowercase();
+        if !path_str.ends_with(".pem") && !path_str.ends_with(".crt") && !path_str.ends_with(".cer") {
+            return Err(ValidationError::new("Certificate file should have .pem, .crt, or .cer extension"));
+        }
+
+        Ok(())
+    }
+
+    pub fn validate_key_file(path: &PathBuf) -> Result<(), ValidationError> {
+        if path.to_string_lossy().is_empty() {
+            return Err(ValidationError::new("Private key path cannot be empty"));
+        }
+
+        // Check for common key file extensions
+        let path_str = path.to_string_lossy().to_lowercase();
+        if !path_str.ends_with(".pem") && !path_str.ends_with(".key") {
+            return Err(ValidationError::new("Private key file should have .pem or .key extension"));
+        }
+
+        Ok(())
+    }
+
+    pub fn validate_ca_file(path: &Option<PathBuf>) -> Result<(), ValidationError> {
+        if let Some(ref path) = path {
+            if path.to_string_lossy().is_empty() {
+                return Err(ValidationError::new("CA certificate path cannot be empty"));
+            }
+
+            // Check for common CA file extensions
+            let path_str = path.to_string_lossy().to_lowercase();
+            if !path_str.ends_with(".pem") && !path_str.ends_with(".crt") && !path_str.ends_with(".cer") {
+                return Err(ValidationError::new("CA certificate file should have .pem, .crt, or .cer extension"));
+            }
+        }
+
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_database_url_masking() {
+        // Test database URL with password
+        let url = "postgresql://user:secretpassword@host:5432/database";
+        let masked = secure_loader::mask_database_url(url);
+        assert_eq!(masked, "postgresql://user:****@host:5432/database");
+
+        // Test database URL without password
+        let url_no_pass = "postgresql://user@host:5432/database";
+        let masked_no_pass = secure_loader::mask_database_url(url_no_pass);
+        assert_eq!(masked_no_pass, url_no_pass);
+
+        // Test non-database URL
+        let regular_url = "https://example.com";
+        let masked_regular = secure_loader::mask_database_url(regular_url);
+        assert_eq!(masked_regular, secure_loader::mask_sensitive_value(regular_url));
+    }
+
+    #[test]
+    fn test_sensitive_value_masking() {
+        // Test long value
+        let long_value = "this_is_a_very_long_secret_key_that_should_be_masked";
+        let masked = secure_loader::mask_sensitive_value(long_value);
+        assert_eq!(masked, "this_****asked");
+
+        // Test short value
+        let short_value = "abc";
+        let masked_short = secure_loader::mask_sensitive_value(short_value);
+        assert_eq!(masked_short, "***");
+    }
+
+    #[test]
+    fn test_masked_config() {
+        let config = AppConfig::new();
+
+        // The config should fail validation because secrets aren't set, but masking should still work
+        let masked_result = config.get_masked_config();
+        assert!(masked_result.is_ok());
+
+        let masked = masked_result.unwrap();
+        assert_ne!(masked.security.jwt_secret, config.security.jwt_secret);
+        assert!(masked.security.jwt_secret.contains("****"));
+        assert_ne!(masked.security.encryption_key, config.security.encryption_key);
+        assert!(masked.security.encryption_key.contains("****"));
+    }
+
+    #[test]
+    fn test_tls_validation() {
+        // Test valid certificate paths
+        assert!(tls_validation::validate_cert_file(&PathBuf::from("cert.pem")).is_ok());
+        assert!(tls_validation::validate_cert_file(&PathBuf::from("cert.crt")).is_ok());
+        assert!(tls_validation::validate_cert_file(&PathBuf::from("cert.cer")).is_ok());
+
+        // Test invalid certificate extensions
+        assert!(tls_validation::validate_cert_file(&PathBuf::from("cert.txt")).is_err());
+
+        // Test empty path
+        assert!(tls_validation::validate_cert_file(&PathBuf::from("")).is_err());
+
+        // Test valid key paths
+        assert!(tls_validation::validate_key_file(&PathBuf::from("key.pem")).is_ok());
+        assert!(tls_validation::validate_key_file(&PathBuf::from("key.key")).is_ok());
+
+        // Test invalid key extensions
+        assert!(tls_validation::validate_key_file(&PathBuf::from("key.txt")).is_err());
+    }
+
+    #[test]
+    fn test_https_enforcement_in_production() {
+        let mut config = AppConfig::new();
+        config.app.environment = "production".to_string();
+
+        // Should fail validation without TLS in production
+        let result = config.validate_config();
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("TLS configuration is required"));
+
+        // Add TLS config (but with non-existent files)
+        config.server.tls = Some(TlsConfig {
+            cert_path: PathBuf::from("nonexistent.pem"),
+            key_path: PathBuf::from("nonexistent.key"),
+            ca_path: None,
+        });
+
+        // Should fail because files don't exist
+        let result = config.validate_config();
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("does not exist"));
     }
 }

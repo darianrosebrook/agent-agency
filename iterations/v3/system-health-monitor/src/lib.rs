@@ -252,7 +252,14 @@ impl SystemHealthMonitor {
         agent_metrics.success_rate =
             agent_metrics.success_rate * (1.0 - alpha) + (if success { 1.0 } else { 0.0 }) * alpha;
 
-        // Update response time P95 (simplified)
+        // TODO: Implement proper P95 response time calculation with percentile tracking
+        // - [ ] Use proper percentile calculation algorithm (TDigest, HDR Histogram)
+        // - [ ] Maintain sliding window of response times for accurate percentiles
+        // - [ ] Support configurable percentile targets (P50, P95, P99, etc.)
+        // - [ ] Add outlier detection and filtering for percentile calculation
+        // - [ ] Implement efficient percentile updates without storing all samples
+        // - [ ] Support percentile calculation across different time windows
+        // - [ ] Add percentile-based alerting and monitoring
         agent_metrics.response_time_p95 = (agent_metrics.response_time_p95 as f64 * (1.0 - alpha)
             + response_time_ms as f64 * alpha) as u64;
 
@@ -266,7 +273,14 @@ impl SystemHealthMonitor {
     /// Record agent error
     pub async fn record_agent_error(&self, agent_id: &str) -> Result<()> {
         if let Some(mut agent_metrics) = self.agent_health_metrics.get_mut(agent_id) {
-            // Update error rate (simplified)
+            // TODO: Implement proper error rate calculation with time windows
+            // - [ ] Use sliding time windows for error rate calculation
+            // - [ ] Support different error rate metrics (requests/minute, percentage)
+            // - [ ] Implement error rate smoothing and trend analysis
+            // - [ ] Add error categorization and severity weighting
+            // - [ ] Support error rate alerting thresholds
+            // - [ ] Track error patterns and correlation analysis
+            // - [ ] Add error rate prediction and forecasting
             agent_metrics.error_rate += 1.0;
             agent_metrics.last_activity = Utc::now();
 
@@ -350,7 +364,14 @@ impl SystemHealthMonitor {
             .map(|entry| entry.value().tasks_completed_hour as u64)
             .sum();
 
-        // Agent health summary (simplified)
+        // TODO: Implement comprehensive agent health summary with advanced metrics
+        // - [ ] Calculate health scores based on multiple factors (latency, errors, load)
+        // - [ ] Implement agent performance trend analysis
+        // - [ ] Add predictive health indicators and early warning systems
+        // - [ ] Support agent health benchmarking against baselines
+        // - [ ] Implement agent health correlation with system metrics
+        // - [ ] Add agent health visualization and reporting
+        // - [ ] Support agent health-based load balancing decisions
         let agent_health_summary = self
             .agent_health_metrics
             .iter()
@@ -659,7 +680,14 @@ impl SystemHealthMonitor {
                         read_throughput = parts[5].parse::<u64>().unwrap_or(0) * 512; // Convert sectors to bytes
                         write_throughput = parts[9].parse::<u64>().unwrap_or(0) * 512;
 
-                        // Calculate latencies (simplified)
+                        // TODO: Implement proper I/O latency calculation from diskstats
+                        // - [ ] Calculate average I/O latencies using proper formulas
+                        // - [ ] Handle edge cases (zero IOPS, division by zero)
+                        // - [ ] Implement weighted average for multiple samples
+                        // - [ ] Add latency percentile calculations (P50, P95, P99)
+                        // - [ ] Support different I/O operation types (read, write, flush)
+                        // - [ ] Add latency trend analysis and anomaly detection
+                        // - [ ] Implement latency-based performance optimization
                         let read_time = parts[6].parse::<u64>().unwrap_or(0);
                         let write_time = parts[10].parse::<u64>().unwrap_or(0);
                         avg_read_latency = if read_iops > 0 {
@@ -677,7 +705,14 @@ impl SystemHealthMonitor {
                         let io_time = parts[12].parse::<u64>().unwrap_or(0);
                         utilization = (io_time as f64 / 1000.0).min(100.0); // Convert to percentage
 
-                        // Queue depth (simplified)
+                        // TODO: Implement proper queue depth calculation and analysis
+                        // - [ ] Calculate average queue depth over time windows
+                        // - [ ] Implement queue depth trend analysis and prediction
+                        // - [ ] Add queue depth-based performance optimization
+                        // - [ ] Support different queue depth metrics (average, max, percentile)
+                        // - [ ] Implement queue depth alerting thresholds
+                        // - [ ] Add correlation analysis with I/O performance
+                        // - [ ] Support multi-queue device analysis
                         queue_depth = parts[11].parse().unwrap_or(0);
 
                         // Determine health status
@@ -721,8 +756,14 @@ impl SystemHealthMonitor {
         u32,
         crate::types::DiskHealthStatus,
     ) {
-        // Windows implementation would use WMI or Performance Counters
-        // For now, return simulated metrics
+        // TODO: Implement Windows disk I/O monitoring using WMI/Performance Counters
+        // - [ ] Use Windows Management Instrumentation (WMI) for disk metrics
+        // - [ ] Query Performance Counters for accurate I/O statistics
+        // - [ ] Support different Windows disk types (HDD, SSD, NVMe)
+        // - [ ] Implement Windows-specific I/O queue depth monitoring
+        // - [ ] Add Windows disk health monitoring (SMART attributes)
+        // - [ ] Support Windows storage pool and RAID monitoring
+        // - [ ] Implement Windows-specific error handling and recovery
         let read_iops = 100;
         let write_iops = 50;
         let read_throughput = 50_000_000; // 50 MB/s
@@ -762,8 +803,14 @@ impl SystemHealthMonitor {
         u32,
         crate::types::DiskHealthStatus,
     ) {
-        // macOS implementation would use IOKit or system calls
-        // For now, return simulated metrics
+        // TODO: Implement macOS disk I/O monitoring using IOKit/system calls
+        // - [ ] Use IOKit framework for low-level disk I/O statistics
+        // - [ ] Query macOS system calls for disk performance metrics
+        // - [ ] Support different macOS disk types (HDD, SSD, Fusion Drive)
+        // - [ ] Implement macOS-specific I/O queue depth monitoring
+        // - [ ] Add macOS disk health monitoring (SMART via IOKit)
+        // - [ ] Support macOS APFS and Core Storage monitoring
+        // - [ ] Implement macOS-specific error handling and recovery
         let read_iops = 80;
         let write_iops = 40;
         let read_throughput = 40_000_000; // 40 MB/s
@@ -1212,7 +1259,14 @@ impl SystemHealthMonitor {
                 .await?;
             }
 
-            // Check I/O performance (simplified)
+            // TODO: Implement comprehensive I/O performance monitoring and alerting
+            // - [ ] Implement adaptive I/O threshold calculation based on system capacity
+            // - [ ] Add I/O saturation detection and prediction
+            // - [ ] Support different I/O patterns (sequential, random, mixed)
+            // - [ ] Implement I/O queue depth monitoring and alerting
+            // - [ ] Add I/O latency-based performance degradation detection
+            // - [ ] Support per-device I/O performance monitoring
+            // - [ ] Implement I/O bottleneck identification and root cause analysis
             if metrics.network_io > 100_000_000 || metrics.disk_io > 50_000_000 {
                 // 100MB/s network or 50MB/s disk I/O threshold
                 Self::create_component_alert(
@@ -2096,7 +2150,14 @@ impl MetricsCollector {
                         read_throughput = parts[5].parse::<u64>().unwrap_or(0) * 512; // Convert sectors to bytes
                         write_throughput = parts[9].parse::<u64>().unwrap_or(0) * 512;
 
-                        // Calculate latencies (simplified)
+                        // TODO: Implement proper I/O latency calculation from diskstats
+                        // - [ ] Calculate average I/O latencies using proper formulas
+                        // - [ ] Handle edge cases (zero IOPS, division by zero)
+                        // - [ ] Implement weighted average for multiple samples
+                        // - [ ] Add latency percentile calculations (P50, P95, P99)
+                        // - [ ] Support different I/O operation types (read, write, flush)
+                        // - [ ] Add latency trend analysis and anomaly detection
+                        // - [ ] Implement latency-based performance optimization
                         let read_time = parts[6].parse::<u64>().unwrap_or(0);
                         let write_time = parts[10].parse::<u64>().unwrap_or(0);
                         avg_read_latency = if read_iops > 0 {
@@ -2114,7 +2175,14 @@ impl MetricsCollector {
                         let io_time = parts[12].parse::<u64>().unwrap_or(0);
                         utilization = (io_time as f64 / 1000.0).min(100.0); // Convert to percentage
 
-                        // Queue depth (simplified)
+                        // TODO: Implement proper queue depth calculation and analysis
+                        // - [ ] Calculate average queue depth over time windows
+                        // - [ ] Implement queue depth trend analysis and prediction
+                        // - [ ] Add queue depth-based performance optimization
+                        // - [ ] Support different queue depth metrics (average, max, percentile)
+                        // - [ ] Implement queue depth alerting thresholds
+                        // - [ ] Add correlation analysis with I/O performance
+                        // - [ ] Support multi-queue device analysis
                         queue_depth = parts[11].parse().unwrap_or(0);
 
                         // Determine health status
@@ -2158,8 +2226,14 @@ impl MetricsCollector {
         u32,
         crate::types::DiskHealthStatus,
     ) {
-        // Windows implementation would use WMI or Performance Counters
-        // For now, return simulated metrics
+        // TODO: Implement Windows disk I/O monitoring using WMI/Performance Counters
+        // - [ ] Use Windows Management Instrumentation (WMI) for disk metrics
+        // - [ ] Query Performance Counters for accurate I/O statistics
+        // - [ ] Support different Windows disk types (HDD, SSD, NVMe)
+        // - [ ] Implement Windows-specific I/O queue depth monitoring
+        // - [ ] Add Windows disk health monitoring (SMART attributes)
+        // - [ ] Support Windows storage pool and RAID monitoring
+        // - [ ] Implement Windows-specific error handling and recovery
         let read_iops = 100;
         let write_iops = 50;
         let read_throughput = 50_000_000; // 50 MB/s
@@ -2199,8 +2273,14 @@ impl MetricsCollector {
         u32,
         crate::types::DiskHealthStatus,
     ) {
-        // macOS implementation would use IOKit or system calls
-        // For now, return simulated metrics
+        // TODO: Implement macOS disk I/O monitoring using IOKit/system calls
+        // - [ ] Use IOKit framework for low-level disk I/O statistics
+        // - [ ] Query macOS system calls for disk performance metrics
+        // - [ ] Support different macOS disk types (HDD, SSD, Fusion Drive)
+        // - [ ] Implement macOS-specific I/O queue depth monitoring
+        // - [ ] Add macOS disk health monitoring (SMART via IOKit)
+        // - [ ] Support macOS APFS and Core Storage monitoring
+        // - [ ] Implement macOS-specific error handling and recovery
         let read_iops = 80;
         let write_iops = 40;
         let read_throughput = 40_000_000; // 40 MB/s
@@ -2430,6 +2510,14 @@ impl MetricsCollector {
         let overall_key = "overall".to_string();
 
         let historical_usage = history.get(&overall_key).cloned().unwrap_or_else(|| {
+            // TODO: Implement persistent historical data storage instead of simulation
+            // - [ ] Add database schema for storing historical disk usage metrics
+            // - [ ] Implement data retention policies and automatic cleanup
+            // - [ ] Add data migration scripts for existing deployments
+            // - [ ] Support configurable data collection intervals and retention periods
+            // - [ ] Implement data compression for long-term storage efficiency
+            // - [ ] Add data validation and integrity checks
+            // - [ ] Support exporting/importing historical data for backup/restore
             // Fallback to simulated data if no historical data available
             vec![
                 DiskUsageDataPoint {
@@ -2710,7 +2798,14 @@ impl MetricsCollector {
             line.contains(mount_point) || line.contains(&mount_point.replace("/", ""));
 
         if has_error && mentions_mount {
-            // Parse timestamp (simplified - assumes standard syslog format)
+            // TODO: Implement robust syslog timestamp parsing with multiple formats
+            // - [ ] Support multiple syslog timestamp formats (RFC 3164, RFC 5424)
+            // - [ ] Handle timezone parsing and conversion
+            // - [ ] Support different date formats and year assumptions
+            // - [ ] Add timestamp validation and error recovery
+            // - [ ] Implement timestamp caching for performance
+            // - [ ] Support relative timestamps and time ranges
+            // - [ ] Add timestamp normalization and standardization
             let timestamp = self.parse_log_timestamp(line).unwrap_or(Utc::now());
 
             // Only include errors within the time window
@@ -2748,10 +2843,15 @@ impl MetricsCollector {
         None
     }
 
-    /// Parse timestamp from log line
+    /// TODO: Implement production-ready syslog timestamp parsing
+    /// - [ ] Support multiple syslog formats (RFC 3164, RFC 5424, custom variants)
+    /// - [ ] Handle year rollover and year ambiguity in logs
+    /// - [ ] Support timezone-aware timestamp parsing and conversion
+    /// - [ ] Add robust error handling for malformed timestamps
+    /// - [ ] Implement timestamp validation and sanity checks
+    /// - [ ] Support microsecond/nanosecond precision timestamps
+    /// - [ ] Add caching for repeated timestamp pattern recognition
     fn parse_log_timestamp(&self, line: &str) -> Option<DateTime<Utc>> {
-        // Simplified timestamp parsing for syslog format
-        // This would need to be more robust for production use
         if line.len() > 15 {
             // Try to parse standard syslog timestamp format
             let timestamp_str = &line[0..15];
@@ -2840,11 +2940,16 @@ impl MetricsCollector {
         None
     }
 
-    /// Parse timestamp from macOS log line
+    /// TODO: Implement proper macOS log timestamp parsing
+    /// - [ ] Parse macOS unified logging timestamp format
+    /// - [ ] Support different macOS log formats (system.log, unified logging)
+    /// - [ ] Handle macOS timestamp precision (nanoseconds)
+    /// - [ ] Support timezone conversion for macOS logs
+    /// - [ ] Add macOS-specific timestamp validation
+    /// - [ ] Implement macOS log rotation timestamp handling
+    /// - [ ] Support macOS log compression timestamp extraction
     #[cfg(target_os = "macos")]
     fn parse_macos_log_timestamp(&self, line: &str) -> Option<DateTime<Utc>> {
-        // Parse macOS log timestamp format
-        // This is a simplified implementation
         Some(Utc::now())
     }
 
@@ -2855,8 +2960,14 @@ impl MetricsCollector {
         mount_point: &str,
         cutoff_time: DateTime<Utc>,
     ) -> Result<(u32, Vec<FilesystemError>)> {
-        // Windows implementation would use Windows Event Log APIs
-        // For now, return empty results
+        // TODO: Implement Windows filesystem error monitoring using Event Log APIs
+        // - [ ] Use Windows Event Log API to query system and application logs
+        // - [ ] Filter filesystem-related events (disk errors, I/O failures)
+        // - [ ] Parse Event Log XML/event data for detailed error information
+        // - [ ] Support different Windows Event Log channels (System, Application, Security)
+        // - [ ] Implement Event Log bookmarking for incremental monitoring
+        // - [ ] Add Windows error code translation and categorization
+        // - [ ] Support Windows Event Log remote monitoring
         Ok((0, vec![]))
     }
 
@@ -3188,6 +3299,14 @@ impl MetricsCollector {
                 Ok(data) => data,
                 Err(e) => {
                     warn!("Failed to collect inode usage for {}: {}", mount_point, e);
+                    // TODO: Implement proper inode usage collection instead of simulation
+                    // - [ ] Add platform-specific inode counting APIs (statvfs, GetDiskFreeSpace, etc.)
+                    // - [ ] Implement cross-platform inode usage detection
+                    // - [ ] Add inode monitoring configuration and thresholds
+                    // - [ ] Support different filesystem types and inode allocation strategies
+                    // - [ ] Implement inode usage trending and alerting
+                    // - [ ] Add inode exhaustion prediction and warnings
+                    // - [ ] Support inode usage metrics in health dashboards
                     // Fallback to simulated data
                     InodeUsage {
                         mount_point: mount_point.clone(),

@@ -11,6 +11,8 @@
 
 use anyhow::{bail, Result};
 use serde::{Deserialize, Serialize};
+use dashmap::DashMap;
+use half::f16;
 use std::collections::{HashMap, VecDeque};
 use std::sync::Arc;
 use std::time::Duration;
@@ -41,7 +43,7 @@ impl Tensor {
         let total_elements = shape.iter().product();
         let data = match dtype {
             TensorDataType::F32 => vec![0.0; total_elements],
-            TensorDataType::F16 => vec![f16::from_f32(0.0); total_elements],
+            TensorDataType::F16 => vec![f16::from_f32(0.0).to_f32(); total_elements],
             TensorDataType::I32 => vec![0i32 as f32; total_elements], // Convert for unified storage
             TensorDataType::I64 => vec![0i64 as f32; total_elements],
             TensorDataType::Q8 => vec![0i8 as f32; total_elements], // Quantized as f32 for processing
@@ -397,28 +399,285 @@ pub struct QueueStats {
     pub total: usize,
 }
 
+/// Production model pool for managing loaded models
+#[derive(Debug)]
+pub struct ModelPool {
+    /// Available models keyed by model ID
+    models: Arc<DashMap<String, ModelInstance>>,
+    /// Model loading strategies
+    strategies: Arc<DashMap<String, LoadingStrategy>>,
+    /// Performance metrics per model
+    metrics: Arc<DashMap<String, ModelMetrics>>,
+}
+
+impl ModelPool {
+    /// Create a new model pool
+    pub fn new() -> Self {
+        Self {
+            models: Arc::new(DashMap::new()),
+            strategies: Arc::new(DashMap::new()),
+            metrics: Arc::new(DashMap::new()),
+        }
+    }
+
+    /// Acquire a model instance for inference
+    pub async fn acquire_model(&self, model_id: &str) -> Result<ModelInstance> {
+        match self.models.get(model_id) {
+            Some(model) => {
+                // Update metrics
+                if let Some(mut metrics) = self.metrics.get_mut(model_id) {
+                    metrics.acquisitions += 1;
+                    metrics.last_accessed = chrono::Utc::now();
+                }
+                Ok(model.clone())
+            }
+            None => bail!("Model {} not found in pool", model_id),
+        }
+    }
+
+    /// Register a model with the pool
+    pub async fn register_model(&self, model: ModelInstance) -> Result<()> {
+        let model_id = model.id.clone();
+        self.models.insert(model_id.clone(), model);
+        self.metrics.insert(model_id, ModelMetrics::new());
+        Ok(())
+    }
+
+    /// Get model health status
+    pub async fn get_model_health(&self, model_id: &str) -> ModelHealth {
+        match self.metrics.get(model_id) {
+            Some(metrics) => {
+                let health_score = if metrics.error_count > 0 {
+                    (metrics.success_count as f32) / (metrics.success_count + metrics.error_count) as f32
+                } else {
+                    1.0
+                };
+
+                if health_score > 0.95 {
+                    ModelHealth::Healthy
+                } else if health_score > 0.8 {
+                    ModelHealth::Degraded
+                } else {
+                    ModelHealth::Unhealthy
+                }
+            }
+            None => ModelHealth::Unknown,
+        }
+    }
+}
+
+/// Model instance with lifecycle management
+#[derive(Debug, Clone)]
+pub struct ModelInstance {
+    /// Unique model identifier
+    pub id: String,
+    /// Model path or URL
+    pub path: String,
+    /// Model format (ONNX, CoreML, etc.)
+    pub format: ModelFormat,
+    /// Device placement
+    pub device: TensorDevice,
+    /// Memory footprint
+    pub memory_mb: usize,
+    /// Creation timestamp
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    /// Last used timestamp
+    pub last_used: chrono::DateTime<chrono::Utc>,
+}
+
+/// Model loading strategies
+#[derive(Debug, Clone, Copy)]
+pub enum LoadingStrategy {
+    /// Load model immediately on registration
+    Eager,
+    /// Load model on first use
+    Lazy,
+    /// Pre-warm model periodically
+    PreWarm,
+}
+
+/// Model performance metrics
+#[derive(Debug, Clone)]
+pub struct ModelMetrics {
+    /// Total acquisitions
+    pub acquisitions: u64,
+    /// Successful inferences
+    pub success_count: u64,
+    /// Failed inferences
+    pub error_count: u64,
+    /// Average inference time (ms)
+    pub avg_inference_time_ms: f64,
+    /// Last accessed timestamp
+    pub last_accessed: chrono::DateTime<chrono::Utc>,
+}
+
+impl ModelMetrics {
+    fn new() -> Self {
+        Self {
+            acquisitions: 0,
+            success_count: 0,
+            error_count: 0,
+            avg_inference_time_ms: 0.0,
+            last_accessed: chrono::Utc::now(),
+        }
+    }
+}
+
+/// Model health status
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ModelHealth {
+    Healthy,
+    Degraded,
+    Unhealthy,
+    Unknown,
+}
+
+/// Model format enumeration
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ModelFormat {
+    Onnx,
+    CoreML,
+    Candle,
+    Torch,
+}
+
+/// Production telemetry collector for comprehensive metrics
+#[derive(Debug)]
+pub struct TelemetryCollector {
+    /// Inference latency histogram
+    inference_latencies: Arc<DashMap<String, Vec<f64>>>,
+    /// Throughput counters
+    throughput_counters: Arc<DashMap<String, u64>>,
+    /// Queue depth metrics
+    queue_depths: Arc<DashMap<String, Vec<usize>>>,
+    /// Custom business metrics
+    business_metrics: Arc<DashMap<String, serde_json::Value>>,
+    /// Tracing spans
+    active_spans: Arc<DashMap<String, Span>>,
+}
+
+impl TelemetryCollector {
+    /// Create a new telemetry collector
+    pub fn new() -> Self {
+        Self {
+            inference_latencies: Arc::new(DashMap::new()),
+            throughput_counters: Arc::new(DashMap::new()),
+            queue_depths: Arc::new(DashMap::new()),
+            business_metrics: Arc::new(DashMap::new()),
+            active_spans: Arc::new(DashMap::new()),
+        }
+    }
+
+    /// Record inference latency
+    pub async fn record_inference_latency(&self, model_id: &str, latency_ms: f64) {
+        self.inference_latencies
+            .entry(model_id.to_string())
+            .or_insert_with(Vec::new)
+            .push(latency_ms);
+    }
+
+    /// Record throughput
+    pub async fn record_throughput(&self, model_id: &str, count: u64) {
+        *self.throughput_counters
+            .entry(model_id.to_string())
+            .or_insert(0) += count;
+    }
+
+    /// Record queue depth
+    pub async fn record_queue_depth(&self, queue_id: &str, depth: usize) {
+        self.queue_depths
+            .entry(queue_id.to_string())
+            .or_insert_with(Vec::new)
+            .push(depth);
+    }
+
+    /// Record custom business metric
+    pub async fn record_business_metric(&self, key: &str, value: serde_json::Value) {
+        self.business_metrics.insert(key.to_string(), value);
+    }
+
+    /// Start a tracing span
+    pub async fn start_span(&self, span_id: &str, operation: &str) -> Span {
+        let span = Span {
+            id: span_id.to_string(),
+            operation: operation.to_string(),
+            start_time: std::time::Instant::now(),
+            end_time: None,
+            attributes: HashMap::new(),
+        };
+        self.active_spans.insert(span_id.to_string(), span.clone());
+        span
+    }
+
+    /// End a tracing span
+    pub async fn end_span(&self, span_id: &str) {
+        if let Some(mut span) = self.active_spans.get_mut(span_id) {
+            span.end_time = Some(std::time::Instant::now());
+        }
+    }
+
+    /// Get aggregated metrics
+    pub async fn get_aggregated_metrics(&self) -> AggregatedMetrics {
+        let mut total_latencies = 0;
+        let mut total_latency_count = 0;
+        let mut total_throughput = 0;
+
+        for latencies in self.inference_latencies.iter() {
+            total_latencies += latencies.iter().sum::<f64>() as u64;
+            total_latency_count += latencies.len();
+        }
+
+        for throughput in self.throughput_counters.iter() {
+            total_throughput += *throughput;
+        }
+
+        AggregatedMetrics {
+            avg_inference_latency_ms: if total_latency_count > 0 {
+                total_latencies as f64 / total_latency_count as f64
+            } else {
+                0.0
+            },
+            total_throughput: total_throughput,
+            active_spans: self.active_spans.len(),
+        }
+    }
+}
+
+/// Tracing span for distributed tracing
+#[derive(Debug, Clone)]
+pub struct Span {
+    /// Unique span identifier
+    pub id: String,
+    /// Operation name
+    pub operation: String,
+    /// Start time
+    pub start_time: std::time::Instant,
+    /// End time (None if still active)
+    pub end_time: Option<std::time::Instant>,
+    /// Span attributes
+    pub attributes: HashMap<String, String>,
+}
+
+/// Aggregated telemetry metrics
+#[derive(Debug, Clone)]
+pub struct AggregatedMetrics {
+    /// Average inference latency in milliseconds
+    pub avg_inference_latency_ms: f64,
+    /// Total throughput count
+    pub total_throughput: u64,
+    /// Number of active tracing spans
+    pub active_spans: usize,
+}
+
 /// Inner state for async inference engine (shared via Arc)
 struct InnerAsyncEngine {
     /// Tokio runtime for async execution
     runtime: Arc<tokio::runtime::Runtime>,
     /// TODO: Implement actual model pool for acquiring model instances
-    /// - [ ] Create model pool with pre-loaded models
-    /// - [ ] Implement model lifecycle management (load/unload/warmup)
-    /// - [ ] Add model health monitoring and automatic recovery
-    /// - [ ] Support model versioning and rollback capabilities
-    /// - [ ] Implement model sharing across requests
-    /// - [ ] Add model performance tracking per instance
-    /// - [ ] Support different model loading strategies (eager/lazy)
-    model_pool: Arc<()>,
-    /// TODO: Implement actual telemetry collector for metrics
-    /// - [ ] Collect inference latency and throughput metrics
-    /// - [ ] Track model performance (tokens/sec, memory usage)
-    /// - [ ] Monitor queue depths and wait times
-    /// - [ ] Implement distributed tracing for requests
-    /// - [ ] Add custom metric collection for business KPIs
-    /// - [ ] Support metric export to monitoring systems
-    /// - [ ] Implement metric aggregation and alerting
-    telemetry: Arc<()>,
+    /// Production model pool for managing loaded models
+    model_pool: Arc<ModelPool>,
+    /// Production telemetry collector for comprehensive metrics
+    telemetry: Arc<TelemetryCollector>,
     /// Priority queue for managing requests
     priority_queue: Arc<Mutex<PriorityQueue>>,
     /// Configuration
@@ -433,7 +692,7 @@ pub struct AsyncInferenceEngine {
 
 impl AsyncInferenceEngine {
     /// Create a new async inference engine
-    pub fn new(model_pool: Arc<()>, telemetry: Arc<()>, config: AsyncConfig) -> Result<Self> {
+    pub fn new(model_pool: Arc<ModelPool>, telemetry: Arc<TelemetryCollector>, config: AsyncConfig) -> Result<Self> {
         let runtime = Arc::new(
             tokio::runtime::Builder::new_multi_thread()
                 .worker_threads(config.max_concurrent_requests)

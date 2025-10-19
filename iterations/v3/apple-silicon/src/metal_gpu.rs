@@ -613,7 +613,14 @@ impl MetalGPUManager {
             debug!("Stage {}: executing {}", idx + 1, stage);
         }
 
-        // Simulate GPU computation with timing
+        // TODO: Implement actual Metal GPU computation pipeline
+        // - [ ] Create Metal compute pipeline state with compiled shaders
+        // - [ ] Set up Metal command buffer and encoder for GPU execution
+        // - [ ] Implement memory management for GPU buffers and textures
+        // - [ ] Add kernel execution timing and performance profiling
+        // - [ ] Support different Metal shader languages and compilation
+        // - [ ] Implement GPU memory synchronization and data transfer
+        // - [ ] Add error handling for GPU execution failures
         let gpu_compute_time = 30.0; // milliseconds
         debug!(
             "GPU computation simulated: {:.1}ms for {} tokens",
@@ -756,7 +763,14 @@ impl MetalGPUManager {
         metrics.completed_operations = metrics.completed_operations.saturating_add(1);
         metrics.average_kernel_time_ms = (metrics.average_kernel_time_ms + inference_time_ms) / 2.0;
 
-        // Simulate GPU utilization and memory usage
+        // TODO: Implement actual Metal GPU performance monitoring and metrics collection
+        // - [ ] Integrate with Metal performance shaders and GPU counters
+        // - [ ] Implement GPU utilization tracking via Metal command buffer profiling
+        // - [ ] Add memory usage monitoring through Metal heap and buffer tracking
+        // - [ ] Support temperature and power consumption monitoring via system APIs
+        // - [ ] Implement real-time performance metrics collection and aggregation
+        // - [ ] Add GPU-specific performance bottleneck detection and analysis
+        // - [ ] Support GPU performance regression tracking and alerting
         metrics.utilization_percent = 75.0;
         metrics.memory_used_mb = 2048;
         metrics.temperature_celsius = 68.0;
@@ -868,7 +882,14 @@ impl MetalGPUManager {
             }
         }
 
-        // Simulate defragmentation
+        // TODO: Implement actual Metal GPU memory defragmentation
+        // - [ ] Analyze GPU memory allocation patterns and fragmentation
+        // - [ ] Implement memory block compaction and relocation strategies
+        // - [ ] Support Metal heap defragmentation with minimal performance impact
+        // - [ ] Add memory defragmentation scheduling based on fragmentation thresholds
+        // - [ ] Implement memory allocation coalescing and optimization
+        // - [ ] Support different defragmentation algorithms (copying, non-copying)
+        // - [ ] Add defragmentation progress tracking and performance monitoring
         let defrag_passes = 3;
         debug!("Running {} defragmentation passes", defrag_passes);
 

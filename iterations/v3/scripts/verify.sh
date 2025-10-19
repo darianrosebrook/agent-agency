@@ -40,13 +40,34 @@ if [ "$ENABLE_MUTATION" = "true" ]; then
   
   # Run mutation testing with timeout and baseline
   echo "[verify] Executing mutation testing with cargo-mutants..."
-  cargo mutants --workspace --timeout 300 --no-shuffle --baseline run
-  
-  # TODO: Parse mutation score from output and compare against threshold
-  # This would require parsing the cargo-mutants output to extract the mutation score
-  # and comparing it against MUTATION_MIN threshold
-  
-  echo "[verify] Mutation testing completed. Score threshold: ${MUTATION_MIN}"
+  MUTANTS_OUTPUT=$(cargo mutants --workspace --timeout 300 --no-shuffle --baseline run 2>&1)
+  MUTANTS_EXIT_CODE=$?
+
+  # Parse mutation score from output
+  MUTATION_SCORE=$(echo "$MUTANTS_OUTPUT" | grep -oE "score: [0-9]+\.[0-9]+" | grep -oE "[0-9]+\.[0-9]+" | tail -1)
+
+  if [ -z "$MUTATION_SCORE" ]; then
+    echo "[verify] ERROR: Could not parse mutation score from output"
+    echo "$MUTANTS_OUTPUT"
+    exit 1
+  fi
+
+  echo "[verify] Mutation testing completed. Score: ${MUTATION_SCORE}, Threshold: ${MUTATION_MIN}"
+
+  # Compare against threshold
+  MUTATION_SCORE_FLOAT=$(echo "$MUTATION_SCORE * 100" | bc -l 2>/dev/null || echo "0")
+  MUTATION_MIN_FLOAT=$(echo "$MUTATION_MIN * 100" | bc -l 2>/dev/null || echo "0")
+
+  if [ "$(echo "$MUTATION_SCORE_FLOAT < $MUTATION_MIN_FLOAT" | bc -l 2>/dev/null)" = "1" ]; then
+    echo "[verify] ERROR: Mutation score ${MUTATION_SCORE} below threshold ${MUTATION_MIN}"
+    exit 1
+  fi
+
+  if [ $MUTANTS_EXIT_CODE -ne 0 ]; then
+    echo "[verify] ERROR: cargo-mutants exited with code $MUTANTS_EXIT_CODE"
+    echo "$MUTANTS_OUTPUT"
+    exit 1
+  fi
 else
   echo "[verify] Mutation testing disabled (ENABLE_MUTATION=false)"
 fi

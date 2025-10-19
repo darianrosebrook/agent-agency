@@ -2,6 +2,7 @@
 //! Multimodal retriever with cross-modal search and fusion
 
 use anyhow::{Context, Result};
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tracing::{debug, warn};
@@ -11,10 +12,16 @@ use agent_agency_database::DatabaseClient;
 use crate::types::FusionMethod;
 
 /// Text search API bridge
+/// TODO: Implement actual BM25 and dense vector search integration
+/// - [ ] Integrate BM25 full-text search engine (tantivy, lucene, etc.)
+/// - [ ] Add dense vector embeddings support (FAISS, HNSW, etc.)
+/// - [ ] Implement hybrid search combining sparse and dense retrieval
+/// - [ ] Support different embedding models and dimensions
+/// - [ ] Add search result ranking and relevance scoring
+/// - [ ] Implement query expansion and synonym handling
+/// - [ ] Support real-time index updates and incremental indexing
 #[derive(Debug)]
 struct TextSearchBridge {
-    // In a real implementation, this would contain BM25 and dense vector search handles
-}
 
 impl TextSearchBridge {
     fn new() -> Result<Self> {
@@ -22,18 +29,35 @@ impl TextSearchBridge {
         Ok(Self {})
     }
 
-    async fn search_text(&self, query: &str, k: usize) -> Result<Vec<TextSearchResult>> {
-        // Simulate text search with BM25 and dense vectors
-        // In a real implementation, this would:
-        // 1. Use BM25 for keyword matching
-        // 2. Use dense vectors for semantic similarity
-        // 3. Combine and rank results
+    /// TODO: Implement actual BM25 and dense vector text search
+    /// - [ ] Execute BM25 scoring on inverted index for keyword matching
+    /// - [ ] Generate dense embeddings for query and documents
+    /// - [ ] Compute cosine similarity between query and document vectors
+    /// - [ ] Implement reciprocal rank fusion for combining BM25 and dense results
+    /// - [ ] Add query preprocessing (tokenization, stemming, stop word removal)
+    /// - [ ] Support multi-field search with different boost factors
+    /// - [ ] Implement search result diversification and deduplication
         
         tracing::debug!("Searching text index for: '{}' (k={})", query, k);
-        
-        // Simulate processing time
+
+        // TODO: Implement actual text index search instead of simulation
+        // - [ ] Integrate with vector database (Qdrant, Pinecone, Weaviate) for text embeddings
+        // - [ ] Implement BM25/TF-IDF scoring for keyword matching
+        // - [ ] Add support for semantic search with transformer embeddings
+        // - [ ] Implement hybrid search combining sparse and dense retrieval
+        // - [ ] Support multi-language text search and tokenization
+        // - [ ] Add relevance ranking and result filtering
+        // - [ ] Implement search result caching and performance optimization
+        // TODO: Implement actual text search with BM25 and dense vector integration
+        // - [ ] Integrate BM25 scoring algorithm for lexical matching
+        // - [ ] Implement dense vector retrieval using embeddings
+        // - [ ] Add hybrid scoring combining lexical and semantic similarity
+        // - [ ] Support query expansion and synonym handling
+        // - [ ] Implement relevance ranking with multiple signals
+        // - [ ] Add result filtering and post-processing
+        // - [ ] Support caching for frequent queries
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-        
+
         // Return simulated results
         Ok(vec![
             TextSearchResult {
@@ -56,11 +80,14 @@ impl TextSearchBridge {
     }
 }
 
-/// Visual search API bridge
-#[derive(Debug)]
-struct VisualSearchBridge {
-    // In a real implementation, this would contain CLIP embedding search handles
-}
+/// TODO: Implement actual CLIP-based visual search integration
+/// - [ ] Integrate CLIP model for image and text embedding generation
+/// - [ ] Implement visual index with efficient similarity search (FAISS, HNSW)
+/// - [ ] Support different CLIP variants and model sizes
+/// - [ ] Add image preprocessing pipeline (resize, normalize, augment)
+/// - [ ] Implement cross-modal retrieval (text-to-image, image-to-text)
+/// - [ ] Support different image formats and quality levels
+/// - [ ] Add visual search result ranking and confidence scoring
 
 impl VisualSearchBridge {
     fn new() -> Result<Self> {
@@ -68,18 +95,29 @@ impl VisualSearchBridge {
         Ok(Self {})
     }
 
-    async fn search_visual(&self, query: &str, k: usize) -> Result<Vec<VisualSearchResult>> {
-        // Simulate visual search with CLIP embeddings
-        // In a real implementation, this would:
-        // 1. Generate CLIP embeddings for the query
-        // 2. Search visual index using cosine similarity
+    /// TODO: Implement actual CLIP-based visual search execution
+    /// - [ ] Generate CLIP embeddings for text query using CLIP text encoder
+    /// - [ ] Normalize embeddings and perform cosine similarity search
+    /// - [ ] Retrieve top-k most similar images from visual index
+    /// - [ ] Implement efficient approximate nearest neighbor search
+    /// - [ ] Support different similarity metrics (cosine, euclidean, dot product)
+    /// - [ ] Add result confidence scoring and ranking
+    /// - [ ] Implement query expansion for visual search (text-to-image-to-text)
         // 3. Return ranked visual results
         
         tracing::debug!("Searching visual index for: '{}' (k={})", query, k);
         
         // Simulate processing time
         tokio::time::sleep(std::time::Duration::from_millis(75)).await;
-        
+
+        // TODO: Implement actual CLIP-based visual search instead of simulation
+        // - [ ] Load pre-trained CLIP model for visual-text alignment
+        // - [ ] Extract image features using CLIP vision encoder
+        // - [ ] Perform cross-modal retrieval with text-to-image matching
+        // - [ ] Implement efficient indexing for large image collections
+        // - [ ] Support different image formats and preprocessing
+        // - [ ] Add visual similarity search and clustering
+        // - [ ] Implement query expansion and multi-modal fusion
         // Return simulated results
         Ok(vec![
             VisualSearchResult {
@@ -159,6 +197,10 @@ pub struct MultimodalQuery {
     pub query_type: QueryType,
     pub project_scope: Option<String>,
     pub max_results: usize,
+    /// Anchor timestamp for timestamp-anchored searches
+    pub anchor_timestamp: Option<DateTime<Utc>>,
+    /// Time window in seconds around anchor timestamp
+    pub time_window_seconds: Option<u64>,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
@@ -325,10 +367,8 @@ impl MultimodalRetriever {
                 all_results = self.fuse_results(all_results, self.config.fusion_method.clone());
             }
             QueryType::TimestampAnchored => {
-                // TODO: Implement timestamp-anchored search
-                // This would search for content around specific timestamps
-                warn!("Timestamp-anchored search not yet implemented");
-                all_results = Vec::new();
+                // Implement timestamp-anchored search
+                all_results = self.search_timestamp_anchored(query).await?;
             }
         }
         
@@ -350,7 +390,14 @@ impl MultimodalRetriever {
         Ok(filtered_results)
     }
 
-    /// Execute multimodal search with simplified parameters
+    /// TODO: Implement comprehensive multimodal search with advanced fusion
+    /// - [ ] Support complex queries combining text, image, audio, video modalities
+    /// - [ ] Implement sophisticated result fusion algorithms (weighted, learned, neural)
+    /// - [ ] Add modality-specific preprocessing and feature extraction
+    /// - [ ] Support cross-modal relevance feedback and query refinement
+    /// - [ ] Implement modality confidence weighting and dynamic fusion
+    /// - [ ] Add multimodal result diversification and redundancy removal
+    /// - [ ] Support temporal and spatial constraints in multimodal queries
     pub async fn search_multimodal(
         &self,
         query: &str,
@@ -568,8 +615,86 @@ impl MultimodalRetriever {
                 .partial_cmp(&a.feature.fused_score)
                 .unwrap_or(std::cmp::Ordering::Equal)
         });
-        
+
         fused_results
+    }
+
+    /// Perform timestamp-anchored search around specified time window
+    async fn search_timestamp_anchored(&self, query: &MultimodalQuery) -> Result<Vec<embedding_service::MultimodalSearchResult>> {
+        let anchor_timestamp = query.anchor_timestamp
+            .ok_or_else(|| anyhow::anyhow!("Timestamp-anchored search requires anchor_timestamp"))?;
+
+        let time_window = query.time_window_seconds.unwrap_or(3600); // Default 1 hour window
+        let start_time = anchor_timestamp - chrono::Duration::seconds(time_window as i64 / 2);
+        let end_time = anchor_timestamp + chrono::Duration::seconds(time_window as i64 / 2);
+
+        debug!(
+            "Performing timestamp-anchored search around {} with window {}s",
+            anchor_timestamp, time_window
+        );
+
+        // Query database for content within the time window
+        let db_results = self.query_database_by_timestamp(start_time, end_time, query.max_results).await?;
+
+        // Convert database results to multimodal search results
+        let mut all_results = Vec::new();
+
+        for entry in db_results {
+            all_results.push(embedding_service::MultimodalSearchResult {
+                ref_id: entry.id.to_string(),
+                kind: self.map_content_type_to_multimodal(&entry.content_type),
+                snippet: entry.content.chars().take(200).collect(),
+                citation: entry.source_url.clone(),
+                feature: embedding_service::SearchResultFeature {
+                    score: 1.0, // Could be improved with relevance scoring
+                    metadata: serde_json::json!({
+                        "created_at": entry.created_at,
+                        "updated_at": entry.updated_at,
+                        "tags": entry.tags,
+                        "source": entry.source,
+                        "content_type": entry.content_type,
+                        "language": entry.language
+                    }),
+                },
+                project_scope: query.project_scope.clone(),
+            });
+        }
+
+        debug!("Found {} timestamp-anchored results", all_results.len());
+        Ok(all_results)
+    }
+
+    /// Query database for content within timestamp range
+    async fn query_database_by_timestamp(
+        &self,
+        start_time: DateTime<Utc>,
+        end_time: DateTime<Utc>,
+        max_results: usize,
+    ) -> Result<Vec<crate::types::KnowledgeEntry>> {
+        // TODO: Implement database integration for timestamp-based content queries
+        // - [ ] Integrate with database client for temporal queries
+        // - [ ] Implement efficient timestamp indexing and range queries
+        // - [ ] Support temporal filtering with different granularity (seconds, minutes, hours, days)
+        // - [ ] Add time zone handling and UTC normalization
+        // - [ ] Implement temporal aggregation and grouping capabilities
+        // - [ ] Support historical data retention policies and archival
+        // - [ ] Add temporal query performance optimization and caching
+        warn!("Database timestamp query not yet implemented - returning empty results");
+        Ok(Vec::new())
+    }
+
+    /// Map content type to multimodal content type
+    fn map_content_type_to_multimodal(&self, content_type: &crate::types::ContentType) -> embedding_service::ContentType {
+        match content_type {
+            crate::types::ContentType::Text => embedding_service::ContentType::Text,
+            crate::types::ContentType::Code => embedding_service::ContentType::Code,
+            crate::types::ContentType::Image => embedding_service::ContentType::VisualCaption,
+            crate::types::ContentType::Video => embedding_service::ContentType::VideoTranscript,
+            crate::types::ContentType::Audio => embedding_service::ContentType::AudioTranscript,
+            crate::types::ContentType::Document => embedding_service::ContentType::Document,
+            crate::types::ContentType::WebPage => embedding_service::ContentType::WebContent,
+            crate::types::ContentType::Unknown => embedding_service::ContentType::Text,
+        }
     }
 }
 

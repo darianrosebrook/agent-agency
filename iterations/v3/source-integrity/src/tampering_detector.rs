@@ -6,11 +6,13 @@ use anyhow::Result;
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
-use crate::types::{SourceType, TamperingIndicator};
+use crate::hasher::ContentHasher;
+use crate::types::{HashAlgorithm, SourceType, TamperingIndicator};
 
 /// Advanced tampering detector with multiple detection algorithms
 pub struct TamperingDetector {
     config: TamperingDetectionConfig,
+    hasher: ContentHasher,
 }
 
 /// Configuration for tampering detection
@@ -57,17 +59,51 @@ pub struct TamperingDetectionResult {
     pub detection_time_ms: u128,
 }
 
+/// Detected file types for analysis
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum FileType {
+    Executable,
+    Archive,
+    Text,
+    Binary,
+    Unknown,
+}
+
+impl std::fmt::Display for FileType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            FileType::Executable => write!(f, "executable"),
+            FileType::Archive => write!(f, "archive"),
+            FileType::Text => write!(f, "text"),
+            FileType::Binary => write!(f, "binary"),
+            FileType::Unknown => write!(f, "unknown"),
+        }
+    }
+}
+
 impl TamperingDetector {
     /// Create a new tampering detector with default configuration
     pub fn new() -> Self {
         Self {
             config: TamperingDetectionConfig::default(),
+            hasher: ContentHasher::new(HashAlgorithm::Sha256),
         }
     }
 
     /// Create a new tampering detector with custom configuration
     pub fn with_config(config: TamperingDetectionConfig) -> Self {
-        Self { config }
+        Self {
+            config,
+            hasher: ContentHasher::new(HashAlgorithm::Sha256),
+        }
+    }
+
+    /// Create a new tampering detector with custom configuration and hash algorithm
+    pub fn with_config_and_hasher(config: TamperingDetectionConfig, algorithm: HashAlgorithm) -> Self {
+        Self {
+            config,
+            hasher: ContentHasher::new(algorithm),
+        }
     }
 
     /// Perform comprehensive tampering detection analysis
@@ -161,9 +197,8 @@ impl TamperingDetector {
         content: &str,
         stored_hash: &str,
     ) -> Result<Option<DetectionAnalysis>> {
-        // This would typically use the ContentHasher
-        // For now, we'll simulate the analysis
-        let calculated_hash = self.simulate_hash_calculation(content);
+        // Use the real ContentHasher for hash calculation
+        let calculated_hash = self.hasher.calculate_hash(content)?;
         let hash_matches = calculated_hash == stored_hash;
 
         if !hash_matches {
@@ -172,6 +207,7 @@ impl TamperingDetector {
                 details: serde_json::json!({
                     "calculated_hash": calculated_hash,
                     "stored_hash": stored_hash,
+                    "algorithm": self.hasher.algorithm().to_string(),
                     "match": false
                 }),
             }))
@@ -406,10 +442,164 @@ impl TamperingDetector {
             .any(|markup| content.contains(markup))
     }
 
-    /// Simulate hash calculation (in production, this would use actual hashing)
-    fn simulate_hash_calculation(&self, content: &str) -> String {
-        // This is a placeholder - in production, use actual hashing
-        format!("{:x}", content.len() * 31)
+    /// Analyze file content for tampering indicators based on file type
+    async fn analyze_file_content(&self, content: &str) -> Result<Option<SourceSpecificAnalysis>> {
+        let mut indicators = Vec::new();
+        let mut confidence: f64 = 0.0;
+
+        // Determine file type from content analysis
+        let file_type = self.detect_file_type(content);
+
+        match file_type {
+            FileType::Executable => {
+                // Check for suspicious executable patterns
+                if self.detect_executable_tampering(content) {
+                    indicators.push(TamperingIndicator::ContentPattern);
+                    confidence += 0.8;
+                }
+            }
+            FileType::Archive => {
+                // Check for archive tampering
+                if self.detect_archive_tampering(content) {
+                    indicators.push(TamperingIndicator::ContentPattern);
+                    confidence += 0.7;
+                }
+            }
+            FileType::Text => {
+                // Basic text file analysis
+                if self.detect_text_file_tampering(content) {
+                    indicators.push(TamperingIndicator::ContentPattern);
+                    confidence += 0.4;
+                }
+            }
+            FileType::Binary => {
+                // Generic binary file analysis
+                if self.detect_binary_file_anomalies(content) {
+                    indicators.push(TamperingIndicator::ContentPattern);
+                    confidence += 0.5;
+                }
+            }
+            FileType::Unknown => {
+                // Unknown file types are suspicious
+                confidence += 0.2;
+            }
+        }
+
+        if confidence > 0.0 {
+            Ok(Some(SourceSpecificAnalysis {
+                indicators,
+                confidence: confidence.min(0.9),
+                details: serde_json::json!({
+                    "analysis_type": "file_analysis",
+                    "detected_file_type": file_type.to_string(),
+                    "tampering_indicators_detected": !indicators.is_empty()
+                }),
+            }))
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Detect file type from content analysis
+    fn detect_file_type(&self, content: &str) -> FileType {
+        // Check for magic bytes and file signatures
+        if content.starts_with("\x7fELF") {
+            FileType::Executable
+        } else if content.starts_with("PK\x03\x04") {
+            FileType::Archive
+        } else if content.chars().all(|c| c.is_ascii_graphic() || c.is_ascii_whitespace()) {
+            FileType::Text
+        } else {
+            FileType::Binary
+        }
+    }
+
+    /// Detect tampering in executable files
+    fn detect_executable_tampering(&self, content: &str) -> bool {
+        // Check for suspicious patterns in executable content
+        let suspicious_exec_patterns = [
+            "\x90\x90\x90\x90", // NOP sled
+            "\xeb\xfe",         // Infinite loop
+            "\xcd\x80",         // System call
+            "\x48\x31\xc0",     // XOR rax, rax (shellcode start)
+        ];
+
+        suspicious_exec_patterns
+            .iter()
+            .any(|pattern| content.contains(pattern))
+    }
+
+    /// Detect tampering in archive files
+    fn detect_archive_tampering(&self, content: &str) -> bool {
+        // Check for archive-specific tampering indicators
+        // This is a simplified check - real implementation would parse archive structure
+        let suspicious_archive_patterns = [
+            "..",              // Directory traversal
+            "\x00\x00\x00\x00", // Null padding anomalies
+        ];
+
+        suspicious_archive_patterns
+            .iter()
+            .any(|pattern| content.contains(pattern))
+    }
+
+    /// Detect tampering in text files
+    fn detect_text_file_tampering(&self, content: &str) -> bool {
+        // Check for text file tampering indicators
+        let suspicious_text_patterns = [
+            "\u{200B}",        // Zero-width space (used for obfuscation)
+            "\u{200C}",        // Zero-width non-joiner
+            "\u{200D}",        // Zero-width joiner
+            "\u{200E}",        // Left-to-right mark
+            "\u{200F}",        // Right-to-left mark
+        ];
+
+        suspicious_text_patterns
+            .iter()
+            .any(|pattern| content.contains(pattern))
+    }
+
+    /// Detect anomalies in binary files
+    fn detect_binary_file_anomalies(&self, content: &str) -> bool {
+        // Check for binary file anomalies
+        let bytes = content.as_bytes();
+
+        // Check for unusual entropy patterns
+        let entropy = self.calculate_entropy(bytes);
+        let unusual_entropy = entropy < 0.1 || entropy > 0.9; // Too low or too high entropy
+
+        // Check for suspicious byte sequences
+        let suspicious_sequences = [
+            &[0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00], // Long null sequences
+            &[0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF], // Long FF sequences
+        ];
+
+        let has_suspicious_sequences = suspicious_sequences
+            .iter()
+            .any(|seq| bytes.windows(seq.len()).any(|window| window == *seq));
+
+        unusual_entropy || has_suspicious_sequences
+    }
+
+    /// Calculate Shannon entropy of byte sequence
+    fn calculate_entropy(&self, bytes: &[u8]) -> f64 {
+        let mut counts = [0u32; 256];
+
+        for &byte in bytes {
+            counts[byte as usize] += 1;
+        }
+
+        let len = bytes.len() as f64;
+        let mut entropy = 0.0;
+
+        for &count in &counts {
+            if count > 0 {
+                let p = count as f64 / len;
+                entropy -= p * p.log2();
+            }
+        }
+
+        entropy
     }
 }
 
@@ -518,5 +708,26 @@ mod tests {
 
         // Should detect suspicious code patterns
         assert!(result.confidence_score > 0.0);
+    }
+
+    #[tokio::test]
+    async fn test_file_type_analysis() {
+        let detector = TamperingDetector::new();
+
+        // Test executable file detection
+        let exec_content = "\x7fELF\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x03\x00\x01\x00\x00\x00\x54\x80\x04\x08\x34\x00\x00\x00";
+        let result = detector
+            .detect_tampering(
+                exec_content,
+                "some_hash",
+                None,
+                &SourceType::File,
+                &HashMap::new(),
+            )
+            .await
+            .unwrap();
+
+        // Should detect file type and perform analysis
+        assert!(result.analysis_details.contains_key("source_analysis"));
     }
 }

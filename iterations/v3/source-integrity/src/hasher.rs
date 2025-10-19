@@ -3,6 +3,7 @@
 //! @author @darianrosebrook
 
 use anyhow::Result;
+use blake3;
 use hex;
 use sha2::{Digest, Sha256, Sha512};
 use std::time::Instant;
@@ -42,11 +43,9 @@ impl ContentHasher {
                 hex::encode(hasher.finalize())
             }
             HashAlgorithm::Blake3 => {
-                // For now, use SHA-256 as fallback for Blake3
-                // In production, this would use the blake3 crate
-                let mut hasher = Sha256::new();
-                hasher.update(content.as_bytes());
-                hex::encode(hasher.finalize())
+                // Use the official Blake3 implementation for optimal performance
+                let hash = blake3::hash(content.as_bytes());
+                hex::encode(hash.as_bytes())
             }
         };
 
@@ -168,6 +167,22 @@ mod tests {
         // SHA-256 of "test content" should be a 64-character hex string
         assert_eq!(hash.len(), 64);
         assert!(hash.chars().all(|c| c.is_ascii_hexdigit()));
+    }
+
+    #[test]
+    fn test_blake3_hash_calculation() {
+        let hasher = ContentHasher::new(HashAlgorithm::Blake3);
+        let content = "test content";
+        let hash = hasher.calculate_hash(content).unwrap();
+
+        // Blake3 hash should be a 64-character hex string
+        assert_eq!(hash.len(), 64);
+        assert!(hash.chars().all(|c| c.is_ascii_hexdigit()));
+
+        // Blake3 should produce different output than SHA-256 for same input
+        let sha256_hasher = ContentHasher::new(HashAlgorithm::Sha256);
+        let sha256_hash = sha256_hasher.calculate_hash(content).unwrap();
+        assert_ne!(hash, sha256_hash);
     }
 
     #[test]

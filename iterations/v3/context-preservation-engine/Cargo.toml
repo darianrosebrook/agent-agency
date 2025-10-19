@@ -44,6 +44,5 @@ sqlx = { workspace = true, features = ["postgres", "chrono", "uuid"] }
 
 # Integration with existing V3 components
 agent-agency-research = { path = "../research" }
-# agent-agency-council = { path = "../council" }  # TODO: Remove if not needed
 agent-agency-workers = { path = "../workers" }
 agent-agency-security-policy-enforcer = { path = "../security-policy-enforcer" }

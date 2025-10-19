@@ -617,7 +617,22 @@ impl LearningSignalAnalyzer {
             "decreasing"
         };
 
-        // Detect seasonal patterns (simplified)
+        // TODO: Implement proper seasonal pattern detection instead of simplified approach
+        // - [ ] Use Fourier analysis or seasonal decomposition for pattern detection
+        // - [ ] Implement autocorrelation analysis for periodic pattern identification
+        // - [ ] Support multiple seasonality (daily, weekly, monthly patterns)
+        // - [ ] Add statistical significance testing for detected patterns
+        // - [ ] Implement seasonal adjustment and detrending algorithms
+        // - [ ] Support irregular seasonality and holiday effects
+        // - [ ] Add confidence intervals for seasonal pattern predictions
+        // TODO: Implement proper seasonal pattern detection and analysis
+        // - [ ] Use Fourier analysis for periodic pattern identification
+        // - [ ] Implement autocorrelation analysis for seasonality detection
+        // - [ ] Support multiple seasonal periods (daily, weekly, monthly)
+        // - [ ] Add seasonal decomposition using STL or similar methods
+        // - [ ] Implement confidence scoring for seasonal pattern detection
+        // - [ ] Support irregular seasonality and holiday effect modeling
+        // - [ ] Add seasonal pattern prediction and forecasting
         let seasonal_patterns = self.detect_seasonal_patterns(&historical_data.entries);
 
         // Detect anomalies
@@ -721,10 +736,14 @@ impl LearningSignalAnalyzer {
         })
     }
 
-    /// Detect seasonal patterns in resource usage
-    fn detect_seasonal_patterns(&self, entries: &[HistoricalResourceEntry]) -> Vec<SeasonalPattern> {
-        // Simplified seasonal pattern detection
-        // In a real implementation, this would use statistical analysis
+    /// TODO: Implement statistical seasonal pattern detection using time series analysis
+    /// - [ ] Use spectral analysis (FFT) for frequency domain pattern detection
+    /// - [ ] Implement autocorrelation function (ACF) and partial autocorrelation (PACF)
+    /// - [ ] Support ARIMA/ARMA modeling for seasonal component extraction
+    /// - [ ] Add seasonal-trend decomposition using LOESS (STL method)
+    /// - [ ] Implement multiple seasonality detection (daily + weekly patterns)
+    /// - [ ] Support outlier-resistant seasonal pattern estimation
+    /// - [ ] Add statistical tests for seasonality significance
         let mut patterns = Vec::new();
 
         if entries.len() >= 7 {
@@ -1404,8 +1423,14 @@ impl LearningSignalStorage for InMemoryLearningSignalStorage {
     ) -> Result<HistoricalResourceData> {
         tracing::debug!("Querying database for historical resource data for task: {}", task_spec.id);
         
-        // Simulate database connection and query
-        // In a real implementation, this would use the actual database client
+        // TODO: Implement actual database integration for historical resource data
+        // - [ ] Use database client for querying historical resource usage
+        // - [ ] Implement connection pooling and query optimization
+        // - [ ] Add database indexing for efficient resource data retrieval
+        // - [ ] Support historical data aggregation and summarization
+        // - [ ] Implement data retention policies and archival strategies
+        // - [ ] Add database transaction handling for data consistency
+        // - [ ] Support distributed database queries for scalability
         
         // Simulate database query processing time
         tokio::time::sleep(Duration::from_millis(150)).await;

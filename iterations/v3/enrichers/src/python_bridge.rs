@@ -231,6 +231,7 @@ except Exception as e:
                 text: segment.text,
                 confidence: 0.9,
                 word_timings,
+                language: None,
             });
 
             // Track speakers for speaker list

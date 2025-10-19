@@ -221,10 +221,15 @@ impl AgentIntegratedHealthMonitor {
         current_metrics.cost_per_task =
             current_metrics.cost_per_task * (1.0 - cost_weight) + cost_per_task * cost_weight;
 
-        // Calculate throughput (tasks per hour) - simplified
+        // TODO: Implement comprehensive business metrics calculation
+        // - [ ] Calculate actual throughput using time-windowed task completion data
+        // - [ ] Implement proper system availability calculation with uptime tracking
+        // - [ ] Support different throughput metrics (tasks/sec, tasks/min, tasks/hour)
+        // - [ ] Add availability SLA tracking and breach detection
+        // - [ ] Implement business-hours vs 24/7 availability distinction
+        // - [ ] Support multi-dimensional availability metrics (by service, region, etc.)
+        // - [ ] Add availability trend analysis and prediction
         current_metrics.throughput_tasks_per_hour = current_metrics.task_completion_rate * 100.0;
-
-        // Calculate system availability (simplified - based on task completion rate)
         current_metrics.system_availability = current_metrics.task_completion_rate * 100.0;
 
         self.telemetry_collector

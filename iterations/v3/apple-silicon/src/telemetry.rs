@@ -76,6 +76,8 @@ pub struct CoreMLMetrics {
 
     /// Device metrics
     pub ane_usage_count: u64,
+    pub ane_total_ms: u64,
+    pub ane_model_size_bytes: u64,
     pub gpu_usage_count: u64,
     pub cpu_fallback_count: u64,
 
@@ -113,6 +115,8 @@ impl Default for CoreMLMetrics {
             infer_p99_ms: 0,
 
             ane_usage_count: 0,
+            ane_total_ms: 0,
+            ane_model_size_bytes: 0,
             gpu_usage_count: 0,
             cpu_fallback_count: 0,
 
@@ -207,6 +211,12 @@ impl CoreMLMetrics {
         if duration_ms > self.sla_ms {
             self.sla_violations += 1;
         }
+    }
+
+    /// Record ANE-specific usage metrics
+    pub fn record_ane_usage(&mut self, duration_ms: u64, model_size_bytes: u64) {
+        self.ane_total_ms += duration_ms;
+        self.ane_model_size_bytes = self.ane_model_size_bytes.max(model_size_bytes);
     }
 
     /// Record a failure
@@ -395,6 +405,13 @@ impl TelemetryCollector {
     pub fn record_inference(&self, duration_ms: u64, success: bool, compute_unit: &str) {
         if let Ok(mut m) = self.metrics.lock() {
             m.record_inference(duration_ms, success, compute_unit);
+        }
+    }
+
+    /// Record ANE usage for performance tracking
+    pub fn record_ane_usage(&self, duration_ms: u64, model_size_bytes: u64) {
+        if let Ok(mut m) = self.metrics.lock() {
+            m.record_ane_usage(duration_ms, model_size_bytes);
         }
     }
 

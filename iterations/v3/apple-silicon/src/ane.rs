@@ -210,7 +210,7 @@ impl ANEManager {
     }
 
     /// Check if ANE is available on this device
-    async fn is_ane_available(&self) -> bool {
+    pub async fn is_ane_available(&self) -> bool {
         #[cfg(target_os = "macos")]
         {
             // Check macOS version (ANE requires macOS 10.15+)
@@ -669,6 +669,14 @@ impl ANEManager {
         // Check available disk space for cache
         let available_space = fs::metadata(&cache_dir)
             .and_then(|metadata| {
+                // TODO: Implement proper filesystem space checking with statvfs
+                // - [ ] Use statvfs system call for accurate disk space information
+                // - [ ] Handle different filesystem types and mount points
+                // - [ ] Add support for quota-aware space checking
+                // - [ ] Implement cross-platform filesystem space detection
+                // - [ ] Add disk space monitoring and low-space warnings
+                // - [ ] Support different space allocation strategies (percentage-based, absolute)
+                // - [ ] Add filesystem space metrics and alerting
                 // This is a simplified check - in real implementation would use statvfs
                 Ok(metadata.len())
             })
@@ -1222,7 +1230,17 @@ impl ANEManager {
         // 1. Get compiled model
         let compiled_model = self.get_compiled_model(&request.model_name).await?;
 
-        // 2. Execute ANE computation (simplified for text generation)
+        // 2. Execute ANE computation
+        // TODO: Implement full ANE computation pipeline instead of simplified text generation
+        // - [ ] Integrate with actual ANE hardware APIs and drivers
+        // - [ ] Support different model architectures (transformers, CNNs, etc.)
+        // - [ ] Implement proper tensor data marshaling for ANE execution
+        // - [ ] Add ANE-specific optimizations (quantization, memory layout, etc.)
+        // - [ ] Support batched inference for multiple inputs
+        // - [ ] Implement ANE error handling and recovery mechanisms
+        // - [ ] Add ANE performance monitoring and profiling
+        // - [ ] Support model compilation and caching for ANE execution
+        // Execute ANE computation (simplified for text generation)
         let raw_output = self
             .execute_ane_computation(&compiled_model, &request.input)
             .await?;
@@ -1459,6 +1477,14 @@ impl ANEManager {
         model_metrics.average_latency_ms =
             model_metrics.average_latency_ms * (1.0 - alpha) + current_latency * alpha;
 
+        // TODO: Implement actual ANE memory usage monitoring instead of simulation
+        // - [ ] Integrate with ANE memory management APIs for real memory tracking
+        // - [ ] Monitor memory allocation and deallocation during inference
+        // - [ ] Track memory usage across different model components
+        // - [ ] Implement memory leak detection and reporting
+        // - [ ] Add memory usage profiling for optimization
+        // - [ ] Support memory usage alerting and thresholds
+        // - [ ] Implement cross-inference memory usage tracking
         // Update peak memory (simulated)
         model_metrics.peak_memory_usage_mb = model_metrics.peak_memory_usage_mb.max(512);
 
@@ -1790,7 +1816,14 @@ impl ANEManager {
         Ok(())
     }
 
-    /// Load framework symbols (simulated implementation)
+    /// TODO: Implement actual ANE framework symbol loading instead of simulation
+    /// - [ ] Use CFBundleGetFunctionPointerForName or equivalent for symbol loading
+    /// - [ ] Implement proper error handling for missing symbols
+    /// - [ ] Add symbol version checking and API compatibility
+    /// - [ ] Support lazy symbol loading for performance
+    /// - [ ] Implement symbol unloading and cleanup
+    /// - [ ] Add framework dependency management
+    /// - [ ] Support multiple framework versions and fallbacks
     fn load_framework_symbols(&self, _bundle: &CFBundle) -> Result<()> {
         // 1. Symbol loading: Load ANE-specific symbols from the framework
         let symbols = vec![
@@ -1960,6 +1993,14 @@ impl ANEManager {
             precision.to_string()
         );
 
+        // TODO: Implement actual ANE device configuration instead of simulation
+        // - [ ] Integrate with ANE device configuration APIs
+        // - [ ] Support different compute unit configurations
+        // - [ ] Implement precision mode selection (FP16, INT8, etc.)
+        // - [ ] Add device capability detection and validation
+        // - [ ] Support device-specific optimizations and tuning
+        // - [ ] Implement configuration persistence and reuse
+        // - [ ] Add configuration validation and error handling
         // In a real implementation, this would configure the actual ANE device
         // For now, we'll simulate the configuration
         tokio::time::sleep(std::time::Duration::from_millis(10)).await;
@@ -1990,6 +2031,14 @@ impl ANEManager {
             device.device_id
         );
 
+        // TODO: Implement actual ANE memory management configuration instead of simulation
+        // - [ ] Configure ANE memory pools and allocation strategies
+        // - [ ] Implement memory mapping for efficient data transfer
+        // - [ ] Add memory fragmentation monitoring and defragmentation
+        // - [ ] Support different memory allocation policies (static, dynamic)
+        // - [ ] Implement memory usage tracking and optimization
+        // - [ ] Add memory leak detection and reporting
+        // - [ ] Support memory bandwidth optimization for ANE
         // In a real implementation, this would configure memory pools and allocation strategies
         // For now, we'll simulate the configuration
         tokio::time::sleep(std::time::Duration::from_millis(5)).await;
@@ -2057,6 +2106,14 @@ impl ANEManager {
 
     /// Count actual tokens in inference output
     fn count_tokens_in_output(&self, output: &str) -> u32 {
+        // TODO: Implement proper tokenization instead of simplified word splitting
+        // - [ ] Integrate with model-specific tokenizers (BPE, WordPiece, etc.)
+        // - [ ] Support different tokenization schemes for various models
+        // - [ ] Implement accurate subword tokenization and byte-pair encoding
+        // - [ ] Add special token handling (BOS, EOS, PAD, UNK, MASK)
+        // - [ ] Support tokenization for different languages and scripts
+        // - [ ] Implement tokenization caching for performance
+        // - [ ] Add tokenization validation and error handling
         // Use a more sophisticated token counting algorithm
         // This is a simplified version - in production, use a proper tokenizer
 

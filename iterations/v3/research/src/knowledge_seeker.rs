@@ -2093,24 +2093,38 @@ impl InvertedIndex {
     }
 
     pub fn add_term(&mut self, term: &str, document_id: usize, document: &KnowledgeEntry) {
-        // TODO: Implement actual position tracking for term occurrences in documents
-        // - [ ] Track exact character/word positions where terms appear
-        // - [ ] Support phrase and proximity search with position data
-        // - [ ] Add position-based relevance scoring
-        // - [ ] Implement position compression for storage efficiency
-        // - [ ] Support multiple position formats (character, word, sentence)
-        // - [ ] Add position validation and bounds checking
-        // - [ ] Implement position-based query optimization
-        let posting = Posting {
-            document_id,
-            positions: vec![0],
-            document: document.clone(),
-        };
+        // Find all positions where the term appears in the document content
+        let positions = self.find_term_positions(term, &document.content);
 
-        self.index
-            .entry(term.to_string())
-            .or_insert_with(Vec::new)
-            .push(posting);
+        // Only add posting if term actually appears in the document
+        if !positions.is_empty() {
+            let posting = Posting {
+                document_id,
+                positions,
+                document: document.clone(),
+            };
+
+            self.index.entry(term.to_string()).or_insert_with(Vec::new).push(posting);
+        }
+    }
+
+    /// Find all positions where a term appears in the content
+    fn find_term_positions(&self, term: &str, content: &str) -> Vec<usize> {
+        let mut positions = Vec::new();
+        let content_lower = content.to_lowercase();
+        let term_lower = term.to_lowercase();
+
+        // Find all occurrences of the term
+        let mut start = 0;
+        while let Some(pos) = content_lower[start..].find(&term_lower) {
+            let absolute_pos = start + pos;
+            positions.push(absolute_pos);
+
+            // Move past this occurrence to find the next one
+            start = absolute_pos + term.len();
+        }
+
+        positions
     }
 
     pub fn get_postings(&self, term: &str) -> Option<&Vec<Posting>> {
