@@ -43,6 +43,68 @@ services:
     networks:
       - multimodal-rag-network
 
+  # PostgreSQL exporter for database metrics
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:latest
+    container_name: multimodal-rag-postgres-exporter
+    environment:
+      DATA_SOURCE_NAME: postgresql://multimodal_rag:${POSTGRES_PASSWORD}@postgres:5432/multimodal_rag?sslmode=disable
+    ports:
+      - "9187:9187"
+    depends_on:
+      - postgres
+    networks:
+      - multimodal-rag-network
+    restart: unless-stopped
+
+  # Redis exporter for cache metrics
+  redis-exporter:
+    image: oliver006/redis_exporter:latest
+    container_name: multimodal-rag-redis-exporter
+    environment:
+      REDIS_ADDR: redis:6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    ports:
+      - "9121:9121"
+    depends_on:
+      - redis
+    networks:
+      - multimodal-rag-network
+    restart: unless-stopped
+
+  # Node exporter for system metrics
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: multimodal-rag-node-exporter
+    ports:
+      - "9100:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    networks:
+      - multimodal-rag-network
+    restart: unless-stopped
+
+  # Nginx exporter for reverse proxy metrics
+  nginx-exporter:
+    image: nginx/nginx-prometheus-exporter:latest
+    container_name: multimodal-rag-nginx-exporter
+    ports:
+      - "9113:9113"
+    command:
+      - '-nginx.scrape-uri=http://nginx:80/stub_status'
+    depends_on:
+      - nginx
+    networks:
+      - multimodal-rag-network
+    restart: unless-stopped
+
   # Multimodal RAG Service
   multimodal-rag-service:
     build:
@@ -126,6 +188,21 @@ services:
       - multimodal-rag-network
     restart: unless-stopped
 
+  # Alertmanager for alert routing and notifications
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: multimodal-rag-alertmanager
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+    networks:
+      - multimodal-rag-network
+    restart: unless-stopped
+
   # Grafana for monitoring dashboards
   grafana:
     image: grafana/grafana:latest
@@ -141,6 +218,7 @@ services:
       - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources
     depends_on:
       - prometheus
+      - alertmanager
     networks:
       - multimodal-rag-network
     restart: unless-stopped

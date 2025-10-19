@@ -15,6 +15,7 @@ use security::sanitization::sanitize_api_input;
 use security::circuit_breaker::{init_circuit_breaker_registry, get_circuit_breaker_registry, CircuitBreakerConfig};
 use security::audit::{init_audit_logger, get_audit_logger, SecurityEventSeverity};
 use security::rate_limiting::{RateLimitConfig, RateLimitMiddleware};
+use observability::slo::{SLOTracker, create_default_slos};
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::{Arc, Mutex};
@@ -63,6 +64,37 @@ lazy_static! {
         "mcp_circuit_breaker_trips_total",
         "Total number of circuit breaker trips"
     ).expect("Can't create CIRCUIT_BREAKER_TRIPS metric");
+
+    // SLO-related metrics
+    static ref SLO_API_AVAILABILITY: Gauge = register_gauge!(
+        "multimodal_slo_api_availability",
+        "API availability SLO compliance percentage"
+    ).expect("Can't create SLO_API_AVAILABILITY metric");
+
+    static ref SLO_TASK_COMPLETION: Gauge = register_gauge!(
+        "multimodal_slo_task_completion",
+        "Task completion SLO compliance percentage"
+    ).expect("Can't create SLO_TASK_COMPLETION metric");
+
+    static ref SLO_COUNCIL_DECISION_TIME: Gauge = register_gauge!(
+        "multimodal_slo_council_decision_time",
+        "Council decision time SLO P95 in milliseconds"
+    ).expect("Can't create SLO_COUNCIL_DECISION_TIME metric");
+
+    static ref SLO_WORKER_EXECUTION_TIME: Gauge = register_gauge!(
+        "multimodal_slo_worker_execution_time",
+        "Worker execution time SLO P95 in milliseconds"
+    ).expect("Can't create SLO_WORKER_EXECUTION_TIME metric");
+
+    static ref SLO_STATUS: Gauge = register_gauge!(
+        "multimodal_slo_status",
+        "SLO status (0=Compliant, 1=AtRisk, 2=Violated)"
+    ).expect("Can't create SLO_STATUS metric");
+
+    static ref SLO_ALERTS_TOTAL: Counter = register_counter!(
+        "multimodal_slo_alerts_total",
+        "Total number of SLO alerts generated"
+    ).expect("Can't create SLO_ALERTS_TOTAL metric");
 }
 
 /// Handle used to shutdown the HTTP server gracefully.
@@ -303,7 +335,7 @@ pub struct AuthRateLimitStats {
 }
 
 /// Main MCP server
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct MCPServer {
     config: MCPConfig,
     tool_registry: Arc<ToolRegistry>,
@@ -316,6 +348,7 @@ pub struct MCPServer {
     rate_limiter: Option<Arc<Mutex<RateLimiter>>>,
     auth_rate_limiter: Option<Arc<AuthRateLimiter>>,
     api_rate_limiter: Option<Arc<RateLimitMiddleware>>,
+    slo_tracker: Arc<SLOTracker>,
 }
 
 impl MCPServer {
@@ -361,6 +394,19 @@ impl MCPServer {
         ];
         let api_rate_limiter = Some(Arc::new(RateLimitMiddleware::new(None, api_rate_configs)));
 
+        // Initialize SLO tracker with default SLOs
+        let slo_tracker = Arc::new({
+            let mut tracker = SLOTracker::new();
+            // Register default SLOs for the multimodal RAG system
+            let default_slos = create_default_slos();
+            for slo in default_slos {
+                if let Err(e) = tokio::runtime::Handle::current().block_on(tracker.register_slo(slo)) {
+                    warn!("Failed to register SLO: {}", e);
+                }
+            }
+            tracker
+        });
+
         Self {
             config,
             tool_registry: Arc::new(ToolRegistry::new()),
@@ -373,7 +419,47 @@ impl MCPServer {
             rate_limiter,
             auth_rate_limiter,
             api_rate_limiter,
+            slo_tracker,
         }
+    }
+
+    /// Update SLO metrics from tracker
+    async fn update_slo_metrics(&self) -> Result<()> {
+        let slo_statuses = self.slo_tracker.get_all_slo_statuses().await?;
+
+        for status in slo_statuses {
+            match status.slo_name.as_str() {
+                "api_availability" => {
+                    SLO_API_AVAILABILITY.set(status.compliance_percentage);
+                }
+                "task_completion" => {
+                    SLO_TASK_COMPLETION.set(status.compliance_percentage);
+                }
+                "council_decision_time" => {
+                    SLO_COUNCIL_DECISION_TIME.set(status.current_value);
+                }
+                "worker_execution_time" => {
+                    SLO_WORKER_EXECUTION_TIME.set(status.current_value);
+                }
+                _ => {}
+            }
+
+            // Set SLO status gauge
+            let status_value = match status.status {
+                observability::slo::SLOStatus::Compliant => 0.0,
+                observability::slo::SLOStatus::AtRisk => 1.0,
+                observability::slo::SLOStatus::Violated => 2.0,
+                observability::slo::SLOStatus::Unknown => -1.0,
+            };
+            SLO_STATUS.set(status_value);
+        }
+
+        // Update SLO alerts counter
+        let recent_alerts = self.slo_tracker.get_recent_alerts(100).await;
+        SLO_ALERTS_TOTAL.reset();
+        SLO_ALERTS_TOTAL.inc_by(recent_alerts.len() as f64);
+
+        Ok(())
     }
 
     /// Start the MCP server
@@ -412,6 +498,19 @@ impl MCPServer {
         init_audit_logger(true, "info".to_string(), false).map_err(|e| {
             anyhow!("Failed to initialize audit logger: {}", e)
         })?;
+
+        // Start SLO metrics update task
+        let slo_tracker_clone = Arc::clone(&self.slo_tracker);
+        let slo_server = Arc::new(self.clone());
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(Duration::from_secs(30)); // Update every 30 seconds
+            loop {
+                interval.tick().await;
+                if let Err(e) = slo_server.update_slo_metrics().await {
+                    warn!("Failed to update SLO metrics: {}", e);
+                }
+            }
+        });
 
         // Update status
         {
@@ -704,6 +803,19 @@ impl MCPServer {
                     })?;
                 Ok(serde_json::to_value(&res).unwrap())
             }
+        });
+
+        // SLO endpoints
+        io.add_sync_method("slo/status", |_| {
+            // Return current SLO status - this would need access to SLO tracker
+            // For now, return a placeholder
+            Ok(serde_json::to_value(observability::slo::create_default_slos()).unwrap())
+        });
+
+        io.add_sync_method("slo/alerts", |_| {
+            // Return recent SLO alerts - this would need access to SLO tracker
+            // For now, return empty array
+            Ok(serde_json::to_value(Vec::<observability::slo::SLOAlert>::new()).unwrap())
         });
 
         io

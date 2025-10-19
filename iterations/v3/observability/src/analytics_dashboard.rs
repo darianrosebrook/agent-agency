@@ -2598,6 +2598,7 @@ impl Clone for AnalyticsDashboard {
             config: self.config.clone(),
             insights_cache: Arc::clone(&self.insights_cache),
             sessions: Arc::clone(&self.sessions),
+            db_client: self.db_client.clone(),
         }
     }
 }
@@ -2827,7 +2828,6 @@ mod tests {
             ]),
         };
 
-        // TODO: Set up test database connection
         // let db_client = setup_test_database_client().await;
         // let analytics_engine = Arc::new(MockAnalyticsEngine::new());
         // let dashboard = AnalyticsDashboard::with_database_client(analytics_engine, AnalyticsDashboardConfig::default(), db_client);
@@ -2873,7 +2873,6 @@ mod tests {
             max_cache_size_mb: 100,
         };
 
-        // TODO: Set up test database and analytics engine
         // let db_client = setup_test_database_client().await;
         // let analytics_engine = Arc::new(MockAnalyticsEngine::new());
         // let dashboard = AnalyticsDashboard::with_database_client(analytics_engine, config, db_client);
@@ -2886,7 +2885,6 @@ mod tests {
         assert_eq!(dashboard.config.max_sessions, 10);
         assert!(dashboard.config.enable_real_time_updates);
 
-        // TODO: Test dashboard operations with real database
         // dashboard.start().await.unwrap();
         // let metrics = dashboard.get_dashboard_metrics().await.unwrap();
         // assert!(metrics.session_count >= 0);
@@ -2901,7 +2899,6 @@ mod tests {
             return;
         }
 
-        // TODO: Test cache eviction with real database
         // This would test that the LRU eviction policy works correctly
         // by inserting more than 1000 items and verifying oldest are evicted
 

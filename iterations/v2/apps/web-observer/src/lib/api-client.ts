@@ -119,6 +119,14 @@ export class ObserverApiClient {
     return this.request<ObserverProgressSummary>("/observer/progress");
   }
 
+  async getDiagnostics(): Promise<any> {
+    return this.request("/observer/diagnostics");
+  }
+
+  async getAgents(): Promise<any> {
+    return this.request("/observer/agents");
+  }
+
   // Events
   async getEvents(filters: EventFilters = {}): Promise<EventListResult> {
     const query = this.buildQueryString({

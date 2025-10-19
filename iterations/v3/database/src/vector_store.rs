@@ -256,8 +256,6 @@ mod tests {
     // - [ ] Implement test data generation and fixture management
     // - [ ] Support database state snapshots and restoration between tests
     // - [ ] Add database performance monitoring and slow query detection in tests
-        Err(anyhow::anyhow!("Test database not configured - run tests with TEST_DATABASE_URL"))
-    }
 
     #[tokio::test]
     async fn test_vector_store_stats_struct() {

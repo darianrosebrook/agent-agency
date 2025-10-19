@@ -1005,7 +1005,6 @@ impl DatabasePerformanceBenchmarks {
     /// Benchmark CAWS Checker database operations
     async fn benchmark_caws_checker_database_operations(&self) -> Result<TestResult> {
         self.executor.execute("caws_checker_db_operations", async {
-            // TODO: Set up test database connection
             // let db_client = setup_test_database_client().await;
             // let checker = CawsChecker::with_database_client(db_client);
 
@@ -1082,7 +1081,6 @@ impl DatabasePerformanceBenchmarks {
     /// Benchmark Source Integrity database operations
     async fn benchmark_source_integrity_database_operations(&self) -> Result<TestResult> {
         self.executor.execute("source_integrity_db_operations", async {
-            // TODO: Set up test database connection
             // let db_client = setup_test_database_client().await;
             // let storage = PostgresSourceIntegrityStorage::new(db_client);
 
@@ -1133,7 +1131,6 @@ impl DatabasePerformanceBenchmarks {
     /// Benchmark Council Learning database operations
     async fn benchmark_council_learning_database_operations(&self) -> Result<TestResult> {
         self.executor.execute("council_learning_db_operations", async {
-            // TODO: Set up test database connection
             // let db_client = setup_test_database_client().await;
             // let analyzer = LearningSignalAnalyzer::with_database_client(db_client);
 
@@ -1260,7 +1257,6 @@ impl DatabasePerformanceBenchmarks {
     /// Benchmark Observability Analytics database operations
     async fn benchmark_observability_database_operations(&self) -> Result<TestResult> {
         self.executor.execute("observability_db_operations", async {
-            // TODO: Set up test database connection
             // let db_client = setup_test_database_client().await;
             // let analytics_engine = Arc::new(MockAnalyticsEngine::new());
             // let dashboard = AnalyticsDashboard::with_database_client(analytics_engine, config, db_client);

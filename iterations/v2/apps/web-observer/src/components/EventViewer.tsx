@@ -12,6 +12,16 @@ interface EventViewerProps {
   apiClient: ObserverApiClient;
 }
 
+interface EventAnalysis {
+  totalEvents: number;
+  eventsBySeverity: Record<string, number>;
+  eventsByType: Record<string, number>;
+  eventsBySource: Record<string, number>;
+  recentSpike: boolean;
+  errorRate: number;
+  topErrors: Array<{ type: string; count: number; message: string }>;
+}
+
 export default function EventViewer({ apiClient }: EventViewerProps) {
   const [events, setEvents] = useState<ObserverEventPayload[]>([]);
   const [loading, setLoading] = useState(true);
@@ -22,6 +32,9 @@ export default function EventViewer({ apiClient }: EventViewerProps) {
   const [filters, setFilters] = useState<EventFilters>({
     limit: 50,
   });
+  const [searchTerm, setSearchTerm] = useState("");
+  const [showAnalysis, setShowAnalysis] = useState(false);
+  const [analysis, setAnalysis] = useState<EventAnalysis | null>(null);
 
   useEffect(() => {
     loadEvents();
@@ -38,6 +51,12 @@ export default function EventViewer({ apiClient }: EventViewerProps) {
       if (interval) clearInterval(interval);
     };
   }, [autoRefresh, filters]);
+
+  useEffect(() => {
+    if (events.length > 0) {
+      analyzeEvents();
+    }
+  }, [events]);
 
   const loadEvents = async (append = false) => {
     try {
@@ -78,6 +97,85 @@ export default function EventViewer({ apiClient }: EventViewerProps) {
     }));
   };
 
+  const analyzeEvents = () => {
+    const eventsBySeverity: Record<string, number> = {};
+    const eventsByType: Record<string, number> = {};
+    const eventsBySource: Record<string, number> = {};
+    const errorCounts: Record<string, { count: number; message: string }> = {};
+
+    events.forEach((event) => {
+      // Count by severity
+      eventsBySeverity[event.severity] =
+        (eventsBySeverity[event.severity] || 0) + 1;
+
+      // Count by type
+      eventsByType[event.type] = (eventsByType[event.type] || 0) + 1;
+
+      // Count by source
+      eventsBySource[event.source] = (eventsBySource[event.source] || 0) + 1;
+
+      // Track errors for top errors analysis
+      if (event.severity === "error") {
+        const errorKey = event.type;
+        if (!errorCounts[errorKey]) {
+          errorCounts[errorKey] = {
+            count: 0,
+            message: (event.metadata?.message as string) || event.type,
+          };
+        }
+        errorCounts[errorKey].count++;
+      }
+    });
+
+    const errorRate =
+      events.length > 0 ? (eventsBySeverity.error || 0) / events.length : 0;
+
+    // Check for recent spike (events in last minute)
+    const oneMinuteAgo = Date.now() - 60000;
+    const recentEvents = events.filter(
+      (e) => new Date(e.timestamp).getTime() > oneMinuteAgo
+    );
+    const recentSpike = recentEvents.length > events.length * 0.3; // 30% of events in last minute
+
+    const topErrors = Object.entries(errorCounts)
+      .sort(([, a], [, b]) => b.count - a.count)
+      .slice(0, 5)
+      .map(([type, data]) => ({
+        type,
+        count: data.count,
+        message: data.message,
+      }));
+
+    setAnalysis({
+      totalEvents: events.length,
+      eventsBySeverity,
+      eventsByType,
+      eventsBySource,
+      recentSpike,
+      errorRate,
+      topErrors,
+    });
+  };
+
+  const filteredEvents = events.filter((event) => {
+    const matchesSearch =
+      searchTerm === "" ||
+      event.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      event.source.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (event.metadata?.message as string)
+        ?.toLowerCase()
+        .includes(searchTerm.toLowerCase()) ||
+      event.taskId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      event.agentId?.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesSeverity =
+      !filters.severity || event.severity === filters.severity;
+    const matchesType = !filters.type || event.type === filters.type;
+    const matchesTaskId = !filters.taskId || event.taskId === filters.taskId;
+
+    return matchesSearch && matchesSeverity && matchesType && matchesTaskId;
+  });
+
   const getSeverityColor = (severity: string) => {
     switch (severity) {
       case "error":
@@ -107,8 +205,34 @@ export default function EventViewer({ apiClient }: EventViewerProps) {
       {/* Filters */}
       <div className="bg-white rounded-lg shadow p-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">Event Log</h2>
           <div className="flex items-center space-x-4">
+            <h2 className="text-lg font-semibold text-gray-900">Event Log</h2>
+            {analysis && (
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-500">
+                  {filteredEvents.length === events.length
+                    ? `${events.length} events`
+                    : `${filteredEvents.length} of ${events.length} events`}
+                </span>
+                {analysis.recentSpike && (
+                  <span className="px-2 py-1 bg-red-100 text-red-700 text-xs rounded">
+                    ⚡ Spike Detected
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+          <div className="flex items-center space-x-4">
+            <button
+              onClick={() => setShowAnalysis(!showAnalysis)}
+              className={`px-3 py-1 text-sm rounded-md transition-colors ${
+                showAnalysis
+                  ? "bg-blue-100 text-blue-700"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
+            >
+              📊 Analysis
+            </button>
             <label className="flex items-center space-x-2">
               <input
                 type="checkbox"
@@ -124,6 +248,34 @@ export default function EventViewer({ apiClient }: EventViewerProps) {
             >
               Refresh
             </button>
+          </div>
+        </div>
+
+        {/* Search Bar */}
+        <div className="mb-4">
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg
+                className="h-5 w-5 text-gray-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                />
+              </svg>
+            </div>
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search events by type, source, message, task ID, or agent ID..."
+              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm"
+            />
           </div>
         </div>
 
@@ -196,6 +348,125 @@ export default function EventViewer({ apiClient }: EventViewerProps) {
         </div>
       </div>
 
+      {/* Analysis Panel */}
+      {showAnalysis && analysis && (
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            📊 Event Analysis
+          </h3>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            {/* Severity Breakdown */}
+            <div>
+              <h4 className="text-sm font-medium text-gray-700 mb-3">
+                Events by Severity
+              </h4>
+              <div className="space-y-2">
+                {Object.entries(analysis.eventsBySeverity).map(
+                  ([severity, count]) => (
+                    <div
+                      key={severity}
+                      className="flex items-center justify-between"
+                    >
+                      <span
+                        className={`text-xs px-2 py-1 rounded ${getSeverityColor(
+                          severity
+                        )}`}
+                      >
+                        {severity.toUpperCase()}
+                      </span>
+                      <span className="text-sm font-medium">{count}</span>
+                    </div>
+                  )
+                )}
+              </div>
+            </div>
+
+            {/* Top Sources */}
+            <div>
+              <h4 className="text-sm font-medium text-gray-700 mb-3">
+                Top Sources
+              </h4>
+              <div className="space-y-2">
+                {Object.entries(analysis.eventsBySource)
+                  .sort(([, a], [, b]) => b - a)
+                  .slice(0, 5)
+                  .map(([source, count]) => (
+                    <div
+                      key={source}
+                      className="flex items-center justify-between"
+                    >
+                      <span className="text-xs text-gray-600 truncate flex-1">
+                        {source}
+                      </span>
+                      <span className="text-sm font-medium ml-2">{count}</span>
+                    </div>
+                  ))}
+              </div>
+            </div>
+
+            {/* Error Rate */}
+            <div>
+              <h4 className="text-sm font-medium text-gray-700 mb-3">
+                Error Rate
+              </h4>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">
+                    Overall Error Rate
+                  </span>
+                  <span
+                    className={`text-sm font-medium ${
+                      analysis.errorRate > 0.1
+                        ? "text-red-600"
+                        : analysis.errorRate > 0.05
+                        ? "text-yellow-600"
+                        : "text-green-600"
+                    }`}
+                  >
+                    {(analysis.errorRate * 100).toFixed(1)}%
+                  </span>
+                </div>
+                {analysis.recentSpike && (
+                  <div className="text-xs text-red-600 bg-red-50 p-2 rounded">
+                    ⚡ Event spike detected in last minute
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Top Errors */}
+          {analysis.topErrors.length > 0 && (
+            <div>
+              <h4 className="text-sm font-medium text-gray-700 mb-3">
+                Most Common Errors
+              </h4>
+              <div className="space-y-2">
+                {analysis.topErrors.map((error, i) => (
+                  <div
+                    key={i}
+                    className="flex items-start space-x-3 p-3 bg-red-50 rounded border border-red-200"
+                  >
+                    <span className="text-red-600 text-sm font-medium">
+                      {error.count}x
+                    </span>
+                    <div className="flex-1">
+                      <div className="text-sm font-medium text-red-800">
+                        {error.type}
+                      </div>
+                      <div className="text-xs text-red-600 mt-1">
+                        {truncateText(error.message, 100)}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Events List */}
       <div className="bg-white rounded-lg shadow">
         {error && (
@@ -243,7 +514,7 @@ export default function EventViewer({ apiClient }: EventViewerProps) {
           </div>
         ) : (
           <div className="divide-y divide-gray-200">
-            {events.map((event) => (
+            {filteredEvents.map((event) => (
               <div
                 key={event.id}
                 className="p-4 hover:bg-gray-50 transition-colors"

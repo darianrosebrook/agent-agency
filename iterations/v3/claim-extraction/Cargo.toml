@@ -29,3 +29,6 @@ fastrand = "2.0"  # Fast random number generation
 # Embedding service integration
 embedding-service = { path = "../embedding-service" }
 
+# Database integration
+agent-agency-database = { path = "../database" }
+

@@ -3,6 +3,7 @@
 //! Manages a pool of specialized AI workers for task execution, with intelligent
 //! routing, CAWS compliance checking, and performance tracking.
 
+pub mod autonomous_executor;
 pub mod caws_checker;
 pub mod executor;
 pub mod manager;
@@ -10,6 +11,7 @@ pub mod multimodal_scheduler;
 pub mod router;
 pub mod types;
 
+pub use autonomous_executor::{AutonomousExecutor, AutonomousExecutorConfig, ExecutionResult};
 pub use caws_checker::{CawsChecker, ChangeComplexity};
 pub use executor::TaskExecutor;
 pub use manager::WorkerPoolManager;

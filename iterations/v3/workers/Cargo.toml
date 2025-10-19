@@ -25,6 +25,7 @@ config.workspace = true
 agent-agency-council = { path = "../council" }
 agent-agency-resilience = { path = "../resilience" }
 agent-agency-contracts = { path = "../agent-agency-contracts" }
+agent-agency-database = { path = "../database" }
 # claim-extraction = { path = "../claim-extraction" }  # Temporarily commented to resolve circular dependency
 
 # Multimodal RAG integration dependencies

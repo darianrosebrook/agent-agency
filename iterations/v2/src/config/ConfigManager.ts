@@ -8,7 +8,67 @@
  */
 
 import { z } from "zod";
+import { EventEmitter } from "events";
 import { Logger } from "@/observability/Logger";
+
+/**
+ * Deep merge two objects
+ */
+function deepMerge(
+  target: Record<string, any>,
+  source: Record<string, any>
+): Record<string, any> {
+  const result = { ...target };
+
+  for (const key in source) {
+    if (source.hasOwnProperty(key)) {
+      const sourceValue = source[key];
+      const targetValue = result[key];
+
+      if (
+        sourceValue &&
+        typeof sourceValue === "object" &&
+        !Array.isArray(sourceValue) &&
+        targetValue &&
+        typeof targetValue === "object" &&
+        !Array.isArray(targetValue)
+      ) {
+        // Both are objects, merge recursively
+        result[key] = deepMerge(targetValue, sourceValue);
+      } else if (sourceValue !== undefined) {
+        // Source value takes precedence (including null/undefined replacement)
+        result[key] = sourceValue;
+      }
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Substitute environment variables in configuration values
+ */
+function substituteEnvVars(obj: any): any {
+  if (typeof obj === "string") {
+    // Handle ${VAR_NAME} and ${VAR_NAME:default} patterns
+    return obj.replace(/\$\{([^}]+)\}/g, (match, expr) => {
+      const [varName, defaultValue] = expr.split(":", 2);
+      const envValue = process.env[varName];
+      return envValue !== undefined ? envValue : (defaultValue || match);
+    });
+  } else if (Array.isArray(obj)) {
+    return obj.map(substituteEnvVars);
+  } else if (obj && typeof obj === "object") {
+    const result: any = {};
+    for (const key in obj) {
+      if (obj.hasOwnProperty(key)) {
+        result[key] = substituteEnvVars(obj[key]);
+      }
+    }
+    return result;
+  }
+  return obj;
+}
 
 // Base configuration schemas
 const orchestratorConfigSchema = z.object({
@@ -94,9 +154,11 @@ export class ConfigManager {
   private static instance: ConfigManager;
   private config: any;
   private logger: Logger;
+  private emitter: EventEmitter;
 
   private constructor() {
     this.logger = new Logger("ConfigManager");
+    this.emitter = new EventEmitter();
     this.loadConfig();
   }
 
@@ -194,13 +256,43 @@ export class ConfigManager {
   }
 
   /**
-   * Load configuration (alias for reload)
+   * Load configuration with deep merge and environment variable substitution
    */
   public async loadConfiguration(config?: any): Promise<void> {
     if (config) {
-      this.config = config;
+      // Get default configuration
+      const defaultConfig = this.getDefaultConfig();
+      // Deep merge provided config with defaults
+      const mergedConfig = deepMerge(defaultConfig, config);
+      // Substitute environment variables
+      const processedConfig = substituteEnvVars(mergedConfig);
+
+      // Validate configuration against schema
+      const validation = this.validateConfig(processedConfig);
+      if (!validation.valid) {
+        const errorMessage = validation.errors
+          .map(err => `${err.path.map(String).join(".")}: ${err.message}`)
+          .join("; ");
+        throw new Error(`Configuration validation failed: ${errorMessage}`);
+      }
+
+      this.config = processedConfig;
+
+      // Emit load event
+      this.emitter.emit("configLoaded", {
+        type: "load",
+        source: "provided",
+        timestamp: new Date(),
+      });
     } else {
       this.reload();
+
+      // Emit reload event
+      this.emitter.emit("configLoaded", {
+        type: "reload",
+        source: "environment",
+        timestamp: new Date(),
+      });
     }
     return Promise.resolve();
   }
@@ -289,17 +381,83 @@ export class ConfigManager {
   }
 
   /**
-   * Update configuration
+   * Subscribe to configuration change events
+   */
+  public on(event: string, listener: (...args: any[]) => void): void {
+    this.emitter.on(event, listener);
+  }
+
+  /**
+   * Unsubscribe from configuration change events
+   */
+  public off(event: string, listener: (...args: any[]) => void): void {
+    this.emitter.off(event, listener);
+  }
+
+  /**
+   * Update configuration with validation and rollback support
    */
   public updateConfiguration(updates: Record<string, any>): void {
-    for (const [path, value] of Object.entries(updates)) {
-      this.set(path, value);
+    // Create a deep copy of current config for rollback
+    const originalConfig = JSON.parse(JSON.stringify(this.config));
+
+    try {
+      // Apply updates temporarily
+      for (const [path, value] of Object.entries(updates)) {
+        this.set(path, value);
+      }
+
+      // Validate the updated configuration
+      const validation = this.validateConfig(this.config);
+      if (!validation.valid) {
+        // Rollback on validation failure
+        this.config = originalConfig;
+        const errorMessage = validation.errors
+          .map(err => `${err.path.map(String).join(".")}: ${err.message}`)
+          .join("; ");
+        throw new Error(`Configuration update validation failed: ${errorMessage}`);
+      }
+
+      // Updates are valid, emit change event
+      this.emitter.emit("configChanged", {
+        type: "update",
+        changes: updates,
+        timestamp: new Date(),
+      });
+
+      // Updates are valid, keep them
+    } catch (error) {
+      // Rollback on any error
+      this.config = originalConfig;
+      throw error;
     }
   }
 
-  private loadConfig(): void {
-    // Load from environment variables with defaults
-    this.config = {
+  /**
+   * Validate configuration against schema
+   */
+  private validateConfig(config: any): { valid: boolean; errors: Array<{ path: (string | number)[]; message: string }> } {
+    try {
+      fullConfigSchema.parse(config);
+      return { valid: true, errors: [] };
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const errors = error.errors.map(err => ({
+          path: err.path,
+          message: err.message
+        }));
+        return { valid: false, errors };
+      }
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      return { valid: false, errors: [{ path: [], message: errorMessage }] };
+    }
+  }
+
+  /**
+   * Get default configuration
+   */
+  private getDefaultConfig(): any {
+    return {
       orchestrator: {
         maxConcurrentTasks: parseInt(
           process.env.ORCHESTRATOR_MAX_CONCURRENT_TASKS || "10"
@@ -440,6 +598,11 @@ export class ConfigManager {
           process.env.CAWS_RUNTIME_WAIVER_MANAGEMENT_ENABLED !== "false",
       },
     };
+  }
+
+  private loadConfig(): void {
+    // Load from environment variables with defaults
+    this.config = this.getDefaultConfig();
 
     // Validate configuration
     const validation = this.validate();

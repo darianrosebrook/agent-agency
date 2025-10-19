@@ -1,11 +1,14 @@
 "use client";
 
+import AlertManager from "@/components/AlertManager";
 import ArbiterControls from "@/components/ArbiterControls";
 import DashboardHeader from "@/components/DashboardHeader";
 import DatabaseAuditPanel from "@/components/DatabaseAuditPanel";
 import DebugPanel from "@/components/DebugPanel";
 import EventViewer from "@/components/EventViewer";
 import MetricsOverview from "@/components/MetricsOverview";
+import ObservabilityDashboard from "@/components/ObservabilityDashboard";
+import PerformanceMonitor from "@/components/PerformanceMonitor";
 import SystemStatus from "@/components/SystemStatus";
 import TaskManager from "@/components/TaskManager";
 import { ObserverApiClient } from "@/lib/api-client";
@@ -100,8 +103,11 @@ export default function Dashboard() {
             aria-labelledby="overview-tab"
             className="space-y-6"
           >
+            <ObservabilityDashboard apiClient={apiClient} />
             <DebugPanel apiClient={apiClient} />
             <DatabaseAuditPanel apiClient={apiClient} />
+            <PerformanceMonitor apiClient={apiClient} />
+            <AlertManager apiClient={apiClient} />
             <SystemStatus status={status} />
             <MetricsOverview metrics={metrics} progress={progress} />
           </div>

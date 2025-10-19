@@ -13,6 +13,7 @@ pub mod debate;
 pub mod evidence_enrichment;
 pub mod intelligent_edge_case_testing;
 pub mod models;
+pub mod plan_review;
 pub mod predictive_learning_system;
 pub mod predictive_quality_assessor;
 pub mod resilience; // V2 Production Resilience
@@ -28,6 +29,7 @@ pub use debate::{ArgumentGenerator, DebateContext, DebateProtocol, MockArgumentG
 pub use intelligent_edge_case_testing::{
     IntelligentEdgeCaseTesting, IntelligentTestInsights, TestSpecification,
 };
+pub use plan_review::{PlanReviewService, PlanReviewConfig, PlanReviewVerdict, PlanReviewDecision};
 pub use predictive_learning_system::{LearningInsights, PredictiveLearningSystem, TaskOutcome};
 pub use predictive_quality_assessor::{PredictiveQualityAssessor, QualityPrediction};
 pub use todo_analyzer::{
@@ -37,6 +39,9 @@ pub use todo_analyzer::{
 
 #[cfg(test)]
 mod advanced_arbitration_tests;
+
+#[cfg(test)]
+mod plan_review_integration_test;
 
 #[cfg(test)]
 mod predictive_learning_system_tests;

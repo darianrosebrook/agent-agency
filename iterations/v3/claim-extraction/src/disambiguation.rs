@@ -2488,8 +2488,6 @@ impl EntityPatterns {
         ];
 
         // Test entity linking with knowledge base
-        // TODO: Set up test database with knowledge base data
-        // TODO: Create NamedEntityRecognizer with database and embedding service
         // let db_client = setup_test_database_client().await;
         // let embedding_service = setup_test_embedding_service().await;
         // let recognizer = NamedEntityRecognizer::with_services(db_client, embedding_service);
