@@ -129,9 +129,10 @@ describe("WorkspaceStateManager - Embedding Integration", () => {
   });
 
   describe("file change embedding updates", () => {
-    const mockFs = jest.mocked(await import("fs/promises"));
+    let mockFs: jest.Mocked<typeof import("fs/promises")>;
 
-    beforeEach(() => {
+    beforeEach(async () => {
+      mockFs = jest.mocked(await import("fs/promises"));
       mockFs.readFile.mockResolvedValue('console.log("test content");');
     });
 

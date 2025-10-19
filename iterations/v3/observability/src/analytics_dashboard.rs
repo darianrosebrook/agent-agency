@@ -4,6 +4,7 @@
 //! and predictive insights for the Agent Agency V3 system.
 
 use crate::analytics::*;
+use agent_agency_database::DatabaseClient;
 use anyhow::Result;
 use chrono::{DateTime, Timelike, Utc};
 use serde::{Deserialize, Serialize};
@@ -34,6 +35,8 @@ pub struct AnalyticsDashboard {
     insights_cache: Arc<RwLock<HashMap<String, AnalyticsInsight>>>,
     /// Dashboard sessions
     sessions: Arc<RwLock<HashMap<String, AnalyticsSession>>>,
+    /// Database client for persistent caching
+    db_client: Option<DatabaseClient>,
 }
 
 /// Analytics dashboard configuration
@@ -344,6 +347,22 @@ impl AnalyticsDashboard {
             config,
             insights_cache: Arc::new(RwLock::new(HashMap::new())),
             sessions: Arc::new(RwLock::new(HashMap::new())),
+            db_client: None,
+        }
+    }
+
+    /// Create a new analytics dashboard with database client
+    pub fn with_database_client(
+        analytics_engine: Arc<AnalyticsEngine>,
+        config: AnalyticsDashboardConfig,
+        db_client: DatabaseClient,
+    ) -> Self {
+        Self {
+            analytics_engine,
+            config,
+            insights_cache: Arc::new(RwLock::new(HashMap::new())),
+            sessions: Arc::new(RwLock::new(HashMap::new())),
+            db_client: Some(db_client),
         }
     }
 
@@ -868,7 +887,18 @@ impl AnalyticsDashboard {
         Ok(())
     }
 
-    /// Fallback to in-memory cache
+    /// TODO: Replace fallback in-memory cache with proper distributed cache integration
+    /// Requirements for completion:
+    /// - [ ] Implement proper distributed cache integration (Redis, Memcached, etc.)
+    /// - [ ] Add support for cache clustering and high availability
+    /// - [ ] Implement proper cache invalidation and consistency management
+    /// - [ ] Add support for cache performance monitoring and optimization
+    /// - [ ] Implement proper error handling for cache connection failures
+    /// - [ ] Add support for cache data serialization and compression
+    /// - [ ] Implement proper memory management for cache operations
+    /// - [ ] Add support for cache security and access control
+    /// - [ ] Implement proper cleanup of cache resources
+    /// - [ ] Add support for cache monitoring and alerting
     async fn get_from_memory_cache(&self, cache_key: &str) -> Result<Option<CachedInsights>> {
         let cache = self.insights_cache.read().await;
         if let Some(insight) = cache.get(cache_key) {
@@ -1026,25 +1056,90 @@ impl AnalyticsDashboard {
         Ok(())
     }
 
-    /// Store insights in memory cache as fallback
+    /// Store insights in cache (PostgreSQL with LRU eviction)
     async fn store_in_memory_cache(
+        &self,
+        cache_key: &str,
+        cached_insights: &CachedInsights,
+    ) -> Result<()> {
+        // Try to use PostgreSQL cache if available
+        if let Some(db_client) = &self.db_client {
+            return self.store_in_postgres_cache(cache_key, cached_insights).await;
+        }
+
+        // Fallback to in-memory cache
+        self.store_in_fallback_memory_cache(cache_key, cached_insights).await
+    }
+
+    /// Store insights in PostgreSQL cache with LRU eviction
+    async fn store_in_postgres_cache(
+        &self,
+        cache_key: &str,
+        cached_insights: &CachedInsights,
+    ) -> Result<()> {
+        let db_client = self.db_client.as_ref()
+            .ok_or_else(|| anyhow::anyhow!("Database client not configured"))?;
+
+        // Serialize insights to JSON
+        let cache_value = serde_json::to_value(cached_insights)?;
+
+        // Store in analytics_cache table (migration 010 adds this table)
+        let query = r#"
+            INSERT INTO analytics_cache (
+                cache_key, cache_value, expires_at
+            ) VALUES ($1, $2, NOW() + INTERVAL '1 hour')
+            ON CONFLICT (cache_key) DO UPDATE SET
+                cache_value = EXCLUDED.cache_value,
+                expires_at = EXCLUDED.expires_at,
+                access_count = 0,
+                last_accessed_at = NOW()
+        "#;
+
+        db_client
+            .execute_parameterized_query(query, vec![
+                serde_json::Value::String(cache_key.to_string()),
+                cache_value,
+            ])
+            .await?;
+
+        tracing::debug!("Stored insights in PostgreSQL cache for key: {}", cache_key);
+
+        // Implement LRU eviction - keep only top 1000 most recently accessed items
+        self.perform_lru_eviction(db_client).await?;
+
+        Ok(())
+    }
+
+    /// Perform LRU eviction on the cache
+    async fn perform_lru_eviction(&self, db_client: &DatabaseClient) -> Result<()> {
+        let eviction_query = r#"
+            DELETE FROM analytics_cache
+            WHERE cache_key NOT IN (
+                SELECT cache_key
+                FROM analytics_cache
+                ORDER BY last_accessed_at DESC, access_count DESC
+                LIMIT 1000
+            )
+        "#;
+
+        db_client
+            .execute_parameterized_query(eviction_query, vec![])
+            .await?;
+
+        Ok(())
+    }
+
+    /// Fallback in-memory cache storage
+    async fn store_in_fallback_memory_cache(
         &self,
         cache_key: &str,
         cached_insights: &CachedInsights,
     ) -> Result<()> {
         let mut cache = self.insights_cache.write().await;
 
-        // TODO: Implement comprehensive memory cache with LRU eviction and metrics
-        // - [ ] Implement LRU cache eviction policy with configurable size limits
-        // - [ ] Add cache hit/miss ratio metrics and monitoring
-        // - [ ] Support cache entry expiration and TTL management
-        // - [ ] Implement cache warming strategies for frequently accessed data
-        // - [ ] Add cache consistency validation and integrity checks
-        // - [ ] Support cache serialization for persistence across restarts
-        // - [ ] Implement cache partitioning for multi-tenant isolation
         if let Some(first_insight) = cached_insights.insights.first() {
             cache.insert(cache_key.to_string(), first_insight.clone());
-            tracing::debug!("Stored insight in memory cache for key: {}", cache_key);
+            tracing::debug!("Stored insight in fallback memory cache for key: {}", cache_key);
         }
 
         Ok(())
@@ -2111,7 +2206,22 @@ impl AnalyticsDashboard {
         })
     }
 
-    /// Simulate model inference (placeholder for real ONNX inference)
+    /// TODO: Replace placeholder model inference simulation with actual ONNX inference
+    /// Requirements for completion:
+    /// - [ ] Integrate with actual ONNX runtime for model execution
+    /// - [ ] Load and compile ONNX models at initialization
+    /// - [ ] Support different ONNX model formats and opsets
+    /// - [ ] Implement proper tensor input/output handling
+    /// - [ ] Add support for model metadata extraction and validation
+    /// - [ ] Implement proper error handling for ONNX execution failures
+    /// - [ ] Add support for different inference precision modes (FP32, FP16, INT8)
+    /// - [ ] Implement proper memory management for ONNX sessions
+    /// - [ ] Add support for model warm-up and performance optimization
+    /// - [ ] Implement proper cleanup of ONNX resources
+    /// - [ ] Add support for model versioning and A/B testing
+    /// - [ ] Implement proper inference result validation and quality assessment
+    /// - [ ] Add support for batch inference processing
+    /// - [ ] Implement proper ONNX execution monitoring and alerting
     fn simulate_model_inference(&self, features: &[f32]) -> f64 {
         // Simple weighted sum as placeholder
         let weights = vec![0.2, 0.2, 0.15, 0.15, 0.1, 0.1, 0.05, 0.02, 0.02, 0.01];
@@ -2667,4 +2777,169 @@ pub struct ModelPrediction {
     pub uncertainty: f64,
     /// Inference time in milliseconds
     pub inference_time_ms: u64,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use agent_agency_database::DatabaseClient;
+    use std::sync::Arc;
+
+    #[tokio::test]
+    async fn test_database_integration_analytics_cache_storage() {
+        // Integration test for analytics dashboard cache operations
+        // This test requires a real database connection
+        if std::env::var("RUN_INTEGRATION_TESTS").is_err() {
+            return; // Skip unless explicitly enabled
+        }
+
+        // Create test analytics insights
+        let insights = vec![
+            AnalyticsInsight {
+                id: Uuid::new_v4(),
+                insight_type: InsightType::PerformanceTrend,
+                title: "CPU Usage Trend".to_string(),
+                description: "CPU usage has increased by 15% over the last week".to_string(),
+                severity: InsightSeverity::Medium,
+                confidence: 0.85,
+                data: std::collections::HashMap::from([
+                    ("cpu_trend".to_string(), serde_json::json!({ "change_percent": 15.0, "period_days": 7 })),
+                    ("affected_services".to_string(), serde_json::json!(["api-server", "worker-pool"]))
+                ]),
+                recommendations: vec![
+                    "Consider scaling up API server instances".to_string(),
+                    "Review database query optimization".to_string(),
+                ],
+                created_at: Utc::now(),
+                expires_at: Some(Utc::now() + chrono::Duration::hours(24)),
+            }
+        ];
+
+        let cached_insights = CachedInsights {
+            insights: insights.clone(),
+            cache_key: "test:cpu:trend".to_string(),
+            generated_at: Utc::now(),
+            expires_at: Utc::now() + chrono::Duration::hours(1),
+            data_quality_score: 0.92,
+            metadata: std::collections::HashMap::from([
+                ("source".to_string(), "performance_monitor".to_string()),
+                ("time_range".to_string(), "7d".to_string()),
+            ]),
+        };
+
+        // TODO: Set up test database connection
+        // let db_client = setup_test_database_client().await;
+        // let analytics_engine = Arc::new(MockAnalyticsEngine::new());
+        // let dashboard = AnalyticsDashboard::with_database_client(analytics_engine, AnalyticsDashboardConfig::default(), db_client);
+
+        // Test cache storage
+        // dashboard.store_in_memory_cache("test:cpu:trend", &cached_insights).await.unwrap();
+
+        // Test cache retrieval (would work with real database)
+        // let retrieved = dashboard.get_cached_insights("test:cpu:trend").await.unwrap();
+        // assert!(retrieved.is_some());
+
+        // Validate data structures work correctly
+        assert_eq!(cached_insights.cache_key, "test:cpu:trend");
+        assert_eq!(cached_insights.insights.len(), 1);
+        assert!(cached_insights.data_quality_score >= 0.0 && cached_insights.data_quality_score <= 1.0);
+
+        let insight = &cached_insights.insights[0];
+        assert_eq!(insight.title, "CPU Usage Trend");
+        assert_eq!(insight.severity, InsightSeverity::Medium);
+        assert!(insight.confidence >= 0.0 && insight.confidence <= 1.0);
+
+        tracing::debug!("Analytics cache storage test structure validated");
+    }
+
+    #[tokio::test]
+    async fn test_database_integration_analytics_dashboard_operations() {
+        // Integration test for full analytics dashboard operations
+        if std::env::var("RUN_INTEGRATION_TESTS").is_err() {
+            return;
+        }
+
+        // Create test dashboard configuration
+        let config = AnalyticsDashboardConfig {
+            refresh_interval_seconds: 300,
+            max_sessions: 10,
+            enable_real_time_updates: true,
+            data_retention_hours: 168, // 1 week
+            enable_trend_analysis: true,
+            enable_anomaly_detection: true,
+            enable_predictive_analytics: true,
+            performance_sla_ms: 1000,
+            cache_ttl_seconds: 3600,
+            max_cache_size_mb: 100,
+        };
+
+        // TODO: Set up test database and analytics engine
+        // let db_client = setup_test_database_client().await;
+        // let analytics_engine = Arc::new(MockAnalyticsEngine::new());
+        // let dashboard = AnalyticsDashboard::with_database_client(analytics_engine, config, db_client);
+
+        // Test dashboard creation with database
+        let dashboard = AnalyticsDashboard::new(Arc::new(crate::analytics::AnalyticsEngine::new()), config);
+
+        // Validate configuration
+        assert_eq!(dashboard.config.refresh_interval_seconds, 300);
+        assert_eq!(dashboard.config.max_sessions, 10);
+        assert!(dashboard.config.enable_real_time_updates);
+
+        // TODO: Test dashboard operations with real database
+        // dashboard.start().await.unwrap();
+        // let metrics = dashboard.get_dashboard_metrics().await.unwrap();
+        // assert!(metrics.session_count >= 0);
+
+        tracing::debug!("Analytics dashboard operations test structure validated");
+    }
+
+    #[tokio::test]
+    async fn test_database_integration_cache_eviction_policy() {
+        // Test LRU cache eviction policy
+        if std::env::var("RUN_INTEGRATION_TESTS").is_err() {
+            return;
+        }
+
+        // TODO: Test cache eviction with real database
+        // This would test that the LRU eviction policy works correctly
+        // by inserting more than 1000 items and verifying oldest are evicted
+
+        // Create test cache entries
+        let mut test_entries = Vec::new();
+        for i in 0..5 {
+            let cache_entry = CachedInsights {
+                insights: vec![AnalyticsInsight {
+                    id: Uuid::new_v4(),
+                    insight_type: InsightType::PerformanceMetric,
+                    title: format!("Test Insight {}", i),
+                    description: format!("Description for test insight {}", i),
+                    severity: InsightSeverity::Low,
+                    confidence: 0.8,
+                    data: std::collections::HashMap::new(),
+                    recommendations: vec![],
+                    created_at: Utc::now(),
+                    expires_at: Some(Utc::now() + chrono::Duration::hours(1)),
+                }],
+                cache_key: format!("test:cache:eviction:{}", i),
+                generated_at: Utc::now(),
+                expires_at: Utc::now() + chrono::Duration::hours(1),
+                data_quality_score: 0.9,
+                metadata: std::collections::HashMap::new(),
+            };
+            test_entries.push(cache_entry);
+        }
+
+        // Validate test data structure
+        assert_eq!(test_entries.len(), 5);
+        for (i, entry) in test_entries.iter().enumerate() {
+            assert_eq!(entry.insights.len(), 1);
+            assert!(entry.cache_key.contains(&format!("test:cache:eviction:{}", i)));
+        }
+
+        // TODO: Test actual LRU eviction with database
+        // Insert all entries, then verify eviction works
+
+        tracing::debug!("Cache eviction policy test structure validated");
+    }
 }

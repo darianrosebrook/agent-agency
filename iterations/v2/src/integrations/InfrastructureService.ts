@@ -1102,9 +1102,22 @@ export class AWSInfrastructureService extends BaseServiceIntegration {
     }
   }
 
+  // TODO: Replace placeholder AWS authentication with proper AWS Signature Version 4 implementation
+  /// Requirements for completion:
+  /// - [ ] Implement full AWS Signature Version 4 signing process
+  /// - [ ] Generate proper canonical request format and hashing
+  /// - [ ] Create string-to-sign with correct timestamp and scope
+  /// - [ ] Implement HMAC-SHA256 signing with proper key derivation
+  /// - [ ] Add support for different AWS services and regions
+  /// - [ ] Implement proper credential rotation and refresh
+  /// - [ ] Add support for IAM roles and temporary credentials
+  /// - [ ] Implement proper error handling for signing failures
+  /// - [ ] Add support for request retry with fresh signatures
+  /// - [ ] Implement proper timestamp validation and clock skew handling
+  /// - [ ] Add support for custom headers and query parameters
+  /// - [ ] Implement proper cleanup of sensitive signing data
+  /// - [ ] Add support for AWS authentication monitoring and debugging
   private getAWSAuthHeader(service: string, action: string): string {
-    // In a real implementation, this would generate proper AWS Signature Version 4
-    // For now, return a placeholder
     return `AWS4-HMAC-SHA256 Credential=${this.config.accessKeyId}/${
       new Date().toISOString().split("T")[0]
     }/${this.region}/${service}/aws4_request`;

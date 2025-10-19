@@ -7,10 +7,10 @@
  * @author @darianrosebrook
  */
 
-import * as crypto from 'crypto';
-import * as fs from 'fs';
-import * as path from 'path';
-import { CawsBaseTool } from './shared/base-tool.js';
+import * as crypto from "crypto";
+import * as fs from "fs";
+import * as path from "path";
+import { CawsBaseTool } from "./shared/base-tool.js";
 
 interface SecurityProvenance {
   signature: string;
@@ -39,12 +39,15 @@ export class SecurityProvenanceManager extends CawsBaseTool {
   /**
    * Sign code or provenance manifest with cryptographic signature
    */
-  async signArtifact(artifactPath: string, privateKeyPath?: string): Promise<SecurityProvenance> {
+  async signArtifact(
+    artifactPath: string,
+    privateKeyPath?: string
+  ): Promise<SecurityProvenance> {
     try {
-      const content = fs.readFileSync(artifactPath, 'utf-8');
+      const content = fs.readFileSync(artifactPath, "utf-8");
 
       // Generate hash of content
-      const hash = crypto.createHash('sha256').update(content).digest('hex');
+      const hash = crypto.createHash("sha256").update(content).digest("hex");
 
       // In production, would use actual private key signing
       // For now, create a deterministic signature
@@ -54,9 +57,9 @@ export class SecurityProvenanceManager extends CawsBaseTool {
 
       return {
         signature,
-        signedBy: process.env.CAWS_SIGNER || 'caws-agent',
+        signedBy: process.env.CAWS_SIGNER || "caws-agent",
         signedAt: new Date().toISOString(),
-        algorithm: 'SHA256withRSA',
+        algorithm: "SHA256withRSA",
         publicKeyFingerprint,
       };
     } catch (error) {
@@ -73,7 +76,7 @@ export class SecurityProvenanceManager extends CawsBaseTool {
     publicKeyPath?: string
   ): Promise<boolean> {
     try {
-      const content = fs.readFileSync(artifactPath, 'utf-8');
+      const content = fs.readFileSync(artifactPath, "utf-8");
 
       // In production, would verify with actual public key
       // For now, recreate signature and compare
@@ -92,7 +95,7 @@ export class SecurityProvenanceManager extends CawsBaseTool {
   async trackModelProvenance(
     modelId: string,
     version: string,
-    provider: string = 'openai'
+    provider: string = "openai"
   ): Promise<ModelProvenance> {
     const checksumVerified = await this.verifyModelChecksum(modelId, version);
 
@@ -109,15 +112,19 @@ export class SecurityProvenanceManager extends CawsBaseTool {
    * Hash prompts for audit trail without storing sensitive content
    */
   async hashPrompts(prompts: string[]): Promise<PromptProvenance> {
-    const sanitizationApplied = prompts.some((p) => this.containsSensitiveData(p));
+    const sanitizationApplied = prompts.some((p) =>
+      this.containsSensitiveData(p)
+    );
 
     const promptHashes = prompts.map((prompt) => {
       // Sanitize before hashing
       const sanitized = this.sanitizePrompt(prompt);
-      return crypto.createHash('sha256').update(sanitized).digest('hex');
+      return crypto.createHash("sha256").update(sanitized).digest("hex");
     });
 
-    const injectionChecksPassed = prompts.every((p) => this.checkPromptInjection(p));
+    const injectionChecksPassed = prompts.every((p) =>
+      this.checkPromptInjection(p)
+    );
 
     return {
       promptHashes,
@@ -171,8 +178,8 @@ export class SecurityProvenanceManager extends CawsBaseTool {
     artifacts: string[];
   }): Promise<Record<string, any>> {
     return {
-      _type: 'https://in-toto.io/Statement/v0.1',
-      predicateType: 'https://slsa.dev/provenance/v0.2',
+      _type: "https://in-toto.io/Statement/v0.1",
+      predicateType: "https://slsa.dev/provenance/v0.2",
       subject: buildInfo.artifacts.map((artifact) => ({
         name: artifact,
         digest: {
@@ -183,7 +190,7 @@ export class SecurityProvenanceManager extends CawsBaseTool {
         builder: {
           id: buildInfo.builder,
         },
-        buildType: 'https://caws.dev/build/v1',
+        buildType: "https://caws.dev/build/v1",
         invocation: {
           configSource: {
             uri: `git+https://github.com/repo@${buildInfo.commit}`,
@@ -215,37 +222,56 @@ export class SecurityProvenanceManager extends CawsBaseTool {
   private generateSignature(content: string, keyPath?: string): string {
     // Simplified signature generation
     // In production, use actual RSA signing with private key
-    const hash = crypto.createHash('sha256').update(content);
+    const hash = crypto.createHash("sha256").update(content);
 
     if (keyPath && fs.existsSync(keyPath)) {
-      const keyContent = fs.readFileSync(keyPath, 'utf-8');
+      const keyContent = fs.readFileSync(keyPath, "utf-8");
       hash.update(keyContent);
     }
 
-    return hash.digest('hex');
+    return hash.digest("hex");
   }
 
   private getPublicKeyFingerprint(keyPath?: string): string {
     if (keyPath && fs.existsSync(keyPath)) {
-      const keyContent = fs.readFileSync(keyPath, 'utf-8');
-      return crypto.createHash('sha256').update(keyContent).digest('hex').substring(0, 16);
+      const keyContent = fs.readFileSync(keyPath, "utf-8");
+      return crypto
+        .createHash("sha256")
+        .update(keyContent)
+        .digest("hex")
+        .substring(0, 16);
     }
-    return 'no-key';
+    return "no-key";
   }
 
-  private async verifyModelChecksum(modelId: string, version: string): Promise<boolean> {
-    // In production, verify against known model checksums
-    // For now, return true as placeholder
-    return true;
-  }
+  // TODO: Replace placeholder model checksum verification with actual security validation
+  /// Requirements for completion:
+  /// - [ ] Integrate with model registry or checksum database
+  /// - [ ] Implement proper cryptographic hash verification (SHA256, SHA3, etc.)
+  /// - [ ] Add support for model integrity checking and tamper detection
+  /// - [ ] Implement proper model version tracking and validation
+  /// - [ ] Add support for model supply chain security verification
+  /// - [ ] Implement proper error handling for checksum verification failures
+  /// - [ ] Add support for model provenance tracking and audit trails
+  /// - [ ] Implement proper model security scanning and vulnerability assessment
+  /// - [ ] Add support for model license compliance verification
+  /// - [ ] Implement proper model access control and authorization
+  /// - [ ] Add support for model usage monitoring and reporting
+  /// - [ ] Implement proper model security incident response
+  /// - [ ] Add support for model security policy enforcement
+  /// - [ ] Implement proper model security monitoring and alerting
+  private async verifyModelChecksum(
+    modelId: string,
+    version: string
+  ): Promise<boolean> {}
 
   private getTrainingCutoff(modelId: string): string | undefined {
     // Known cutoff dates for common models
     const cutoffs: Record<string, string> = {
-      'gpt-4': '2023-04-01',
-      'gpt-4-turbo': '2023-12-01',
-      'claude-3': '2023-08-01',
-      'claude-sonnet-4': '2024-09-01',
+      "gpt-4": "2023-04-01",
+      "gpt-4-turbo": "2023-12-01",
+      "claude-3": "2023-08-01",
+      "claude-sonnet-4": "2024-09-01",
     };
 
     return cutoffs[modelId];
@@ -272,11 +298,11 @@ export class SecurityProvenanceManager extends CawsBaseTool {
     // Redact emails
     sanitized = sanitized.replace(
       /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g,
-      '[EMAIL_REDACTED]'
+      "[EMAIL_REDACTED]"
     );
 
     // Redact potential API keys
-    sanitized = sanitized.replace(/[a-zA-Z0-9]{32,}/g, '[KEY_REDACTED]');
+    sanitized = sanitized.replace(/[a-zA-Z0-9]{32,}/g, "[KEY_REDACTED]");
 
     return sanitized;
   }
@@ -302,9 +328,9 @@ export class SecurityProvenanceManager extends CawsBaseTool {
     const files = this.findFilesRecursive(projectDir);
 
     for (const file of files) {
-      if (file.includes('node_modules')) continue;
+      if (file.includes("node_modules")) continue;
 
-      const content = fs.readFileSync(file, 'utf-8');
+      const content = fs.readFileSync(file, "utf-8");
       if (this.containsSensitiveData(content)) {
         findings.push(`Potential secret in ${file}`);
       }
@@ -313,7 +339,9 @@ export class SecurityProvenanceManager extends CawsBaseTool {
     return { passed: findings.length === 0, findings };
   }
 
-  private async runSAST(projectDir: string): Promise<{ passed: boolean; vulnerabilities: number }> {
+  private async runSAST(
+    projectDir: string
+  ): Promise<{ passed: boolean; vulnerabilities: number }> {
     // Placeholder for SAST integration
     // In production, integrate with Snyk, SonarQube, etc.
     return { passed: true, vulnerabilities: 0 };
@@ -329,10 +357,10 @@ export class SecurityProvenanceManager extends CawsBaseTool {
 
   private hashFile(filePath: string): string {
     if (!fs.existsSync(filePath)) {
-      return '';
+      return "";
     }
     const content = fs.readFileSync(filePath);
-    return crypto.createHash('sha256').update(content).digest('hex');
+    return crypto.createHash("sha256").update(content).digest("hex");
   }
 
   private findFilesRecursive(dir: string, files: string[] = []): string[] {
@@ -341,7 +369,7 @@ export class SecurityProvenanceManager extends CawsBaseTool {
 
       for (const entry of entries) {
         const fullPath = path.join(dir, entry.name);
-        if (entry.isDirectory() && !entry.name.includes('node_modules')) {
+        if (entry.isDirectory() && !entry.name.includes("node_modules")) {
           this.findFilesRecursive(fullPath, files);
         } else if (entry.isFile()) {
           files.push(fullPath);
@@ -362,18 +390,18 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     const manager = new SecurityProvenanceManager();
 
     switch (command) {
-      case 'sign': {
+      case "sign": {
         const artifactPath = process.argv[3];
         const keyPath = process.argv[4];
 
         if (!artifactPath) {
-          console.error('Usage: security-provenance sign <artifact> [key]');
+          console.error("Usage: security-provenance sign <artifact> [key]");
           process.exit(1);
         }
 
         try {
           const signature = await manager.signArtifact(artifactPath, keyPath);
-          console.log('✅ Artifact signed successfully');
+          console.log("✅ Artifact signed successfully");
           console.log(JSON.stringify(signature, null, 2));
         } catch (error) {
           console.error(`❌ Signing failed: ${error}`);
@@ -382,22 +410,28 @@ if (import.meta.url === `file://${process.argv[1]}`) {
         break;
       }
 
-      case 'verify': {
+      case "verify": {
         const artifactPath = process.argv[3];
         const signature = process.argv[4];
         const keyPath = process.argv[5];
 
         if (!artifactPath || !signature) {
-          console.error('Usage: security-provenance verify <artifact> <signature> [key]');
+          console.error(
+            "Usage: security-provenance verify <artifact> <signature> [key]"
+          );
           process.exit(1);
         }
 
         try {
-          const valid = await manager.verifySignature(artifactPath, signature, keyPath);
+          const valid = await manager.verifySignature(
+            artifactPath,
+            signature,
+            keyPath
+          );
           if (valid) {
-            console.log('✅ Signature is valid');
+            console.log("✅ Signature is valid");
           } else {
-            console.log('❌ Signature is invalid');
+            console.log("❌ Signature is invalid");
             process.exit(1);
           }
         } catch (error) {
@@ -407,29 +441,39 @@ if (import.meta.url === `file://${process.argv[1]}`) {
         break;
       }
 
-      case 'scan': {
+      case "scan": {
         const projectDir = process.argv[3] || process.cwd();
 
         try {
           const results = await manager.runSecurityScans(projectDir);
 
-          console.log('\n🔒 Security Scan Results');
-          console.log('='.repeat(50));
-          console.log(`Secret Scan: ${results.secretScanPassed ? '✅ PASSED' : '❌ FAILED'}`);
-          console.log(`SAST Scan: ${results.sastPassed ? '✅ PASSED' : '❌ FAILED'}`);
+          console.log("\n🔒 Security Scan Results");
+          console.log("=".repeat(50));
           console.log(
-            `Dependency Scan: ${results.dependencyScanPassed ? '✅ PASSED' : '❌ FAILED'}`
+            `Secret Scan: ${
+              results.secretScanPassed ? "✅ PASSED" : "❌ FAILED"
+            }`
+          );
+          console.log(
+            `SAST Scan: ${results.sastPassed ? "✅ PASSED" : "❌ FAILED"}`
+          );
+          console.log(
+            `Dependency Scan: ${
+              results.dependencyScanPassed ? "✅ PASSED" : "❌ FAILED"
+            }`
           );
 
           if (results.details.secrets?.findings?.length > 0) {
-            console.log('\n🚨 Secret Findings:');
+            console.log("\n🚨 Secret Findings:");
             results.details.secrets.findings.forEach((finding: string) => {
               console.log(`  - ${finding}`);
             });
           }
 
           const allPassed =
-            results.secretScanPassed && results.sastPassed && results.dependencyScanPassed;
+            results.secretScanPassed &&
+            results.sastPassed &&
+            results.dependencyScanPassed;
           process.exit(allPassed ? 0 : 1);
         } catch (error) {
           console.error(`❌ Scan failed: ${error}`);
@@ -438,12 +482,12 @@ if (import.meta.url === `file://${process.argv[1]}`) {
         break;
       }
 
-      case 'slsa': {
+      case "slsa": {
         const commit = process.argv[3];
-        const builder = process.argv[4] || 'caws-builder';
+        const builder = process.argv[4] || "caws-builder";
 
         if (!commit) {
-          console.error('Usage: security-provenance slsa <commit> [builder]');
+          console.error("Usage: security-provenance slsa <commit> [builder]");
           process.exit(1);
         }
 
@@ -452,7 +496,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
             commit,
             builder,
             buildTime: new Date().toISOString(),
-            artifacts: ['.agent/provenance.json'],
+            artifacts: [".agent/provenance.json"],
           });
 
           console.log(JSON.stringify(attestation, null, 2));
@@ -464,19 +508,25 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       }
 
       default:
-        console.log('CAWS Security & Provenance Manager');
-        console.log('');
-        console.log('Usage:');
-        console.log('  security-provenance sign <artifact> [key]           - Sign artifact');
-        console.log('  security-provenance verify <artifact> <sig> [key]   - Verify signature');
-        console.log('  security-provenance scan [dir]                      - Run security scans');
+        console.log("CAWS Security & Provenance Manager");
+        console.log("");
+        console.log("Usage:");
         console.log(
-          '  security-provenance slsa <commit> [builder]         - Generate SLSA attestation'
+          "  security-provenance sign <artifact> [key]           - Sign artifact"
         );
-        console.log('');
-        console.log('Examples:');
-        console.log('  security-provenance sign .agent/provenance.json');
-        console.log('  security-provenance scan .');
+        console.log(
+          "  security-provenance verify <artifact> <sig> [key]   - Verify signature"
+        );
+        console.log(
+          "  security-provenance scan [dir]                      - Run security scans"
+        );
+        console.log(
+          "  security-provenance slsa <commit> [builder]         - Generate SLSA attestation"
+        );
+        console.log("");
+        console.log("Examples:");
+        console.log("  security-provenance sign .agent/provenance.json");
+        console.log("  security-provenance scan .");
         break;
     }
   })();

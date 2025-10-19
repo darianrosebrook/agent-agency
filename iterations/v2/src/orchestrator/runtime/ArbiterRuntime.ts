@@ -571,7 +571,13 @@ export class ArbiterRuntime {
         maxLoc: 500,
       },
       createdAt: options.task?.createdAt ?? createdAt,
-      metadata: options.task?.metadata ?? options.metadata ?? {},
+      metadata: {
+        ...(options.task?.metadata ?? options.metadata ?? {}),
+        // Preserve intake metadata if the task was already processed
+        ...(options.task?.metadata?.intake && {
+          intake: options.task.metadata.intake,
+        }),
+      },
       attempts: options.task?.attempts ?? 0,
       maxAttempts: options.task?.maxAttempts ?? 1,
       ...(hasScriptPayload && {
@@ -1266,13 +1272,15 @@ export class ArbiterRuntime {
 
     return {
       id: task.id,
-      type: "script",
+      type: "script", // Use script type for TaskOrchestrator compatibility
+      description: task.description, // Add description field
       priority,
       payload: {
         code: script,
         timeout: task.timeoutMs ?? 60_000,
       },
       metadata: {
+        ...task.metadata, // Preserve all metadata including intake
         description: task.description,
         plan: record.plan,
         specPath: record.metadata?.specPath,

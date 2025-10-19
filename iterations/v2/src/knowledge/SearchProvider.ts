@@ -20,9 +20,6 @@ import {
   SourceType,
 } from "../types/knowledge";
 
-// Re-export commonly used types
-export { VerificationPriority } from "../types/verification";
-
 // Use standard RequestInit from DOM lib
 type RequestInit = any; // Simplified for Node.js environment
 
@@ -589,8 +586,7 @@ export class MockSearchProvider extends BaseSearchProvider {
   }
 }
 
-// Import BingSearchProvider after BaseSearchProvider is defined (avoids circular dependency)
-import { BingSearchProvider } from "./providers/BingSearchProvider";
+// Note: Concrete providers are imported by consumers to avoid circular dependencies
 
 /**
  * Search Provider Factory
@@ -599,14 +595,25 @@ export class SearchProviderFactory {
   static createProvider(config: SearchProviderConfig): ISearchProvider {
     switch (config.name.toLowerCase()) {
       case "google":
+        // Dynamic import to avoid circular dependencies
+        const GoogleSearchProvider =
+          require("./providers/GoogleSearchProvider").GoogleSearchProvider;
         return new GoogleSearchProvider(config);
       case "bing":
+        const BingSearchProvider =
+          require("./providers/BingSearchProvider").BingSearchProvider;
         return new BingSearchProvider(config);
       case "duckduckgo":
+        const DuckDuckGoSearchProvider =
+          require("./providers/DuckDuckGoSearchProvider").DuckDuckGoSearchProvider;
         return new DuckDuckGoSearchProvider(config);
       case "arxiv":
+        const ArXivSearchProvider =
+          require("./providers/ArXivSearchProvider").ArXivSearchProvider;
         return new ArXivSearchProvider(config);
       case "mock":
+        const MockSearchProvider =
+          require("./providers/MockSearchProvider").MockSearchProvider;
         return new MockSearchProvider(config);
       default:
         throw new Error(`Unknown search provider: ${config.name}`);
@@ -614,6 +621,8 @@ export class SearchProviderFactory {
   }
 
   static createMockProvider(name: string = "mock"): ISearchProvider {
+    const MockSearchProvider =
+      require("./providers/MockSearchProvider").MockSearchProvider;
     return new MockSearchProvider({
       name,
       type: SearchProviderType.WEB_SEARCH,
@@ -630,3 +639,6 @@ export class SearchProviderFactory {
     });
   }
 }
+
+// Re-export commonly used types
+export { VerificationPriority } from "../types/verification";

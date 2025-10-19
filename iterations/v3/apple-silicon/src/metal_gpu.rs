@@ -621,6 +621,18 @@ impl MetalGPUManager {
         // - [ ] Support different Metal shader languages and compilation
         // - [ ] Implement GPU memory synchronization and data transfer
         // - [ ] Add error handling for GPU execution failures
+        // TODO: Replace simulated Metal GPU computation with actual Metal Performance Shaders
+        /// Requirements for completion:
+        /// - [ ] Implement actual Metal GPU kernel execution using Metal Performance Shaders
+        /// - [ ] Add proper GPU memory management and synchronization
+        /// - [ ] Implement real-time GPU performance monitoring and profiling
+        /// - [ ] Add support for different Metal shader languages and compilation
+        /// - [ ] Implement proper error handling for GPU execution failures
+        /// - [ ] Add support for GPU memory optimization and data transfer
+        /// - [ ] Implement proper resource cleanup and memory management
+        /// - [ ] Add support for GPU thermal monitoring and throttling detection
+        /// - [ ] Implement proper GPU utilization tracking and reporting
+        /// - [ ] Add support for GPU kernel optimization and performance tuning
         let gpu_compute_time = 30.0; // milliseconds
         debug!(
             "GPU computation simulated: {:.1}ms for {} tokens",

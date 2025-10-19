@@ -51,6 +51,18 @@ function getRealCoverage() {
   } catch (error) {
     // No coverage data available
   }
+  // TODO: Replace default estimate with proper coverage data integration
+  // Requirements for completion:
+  // - [ ] Implement proper coverage data integration from test reports
+  // - [ ] Add support for different coverage formats and tools
+  // - [ ] Implement proper coverage data validation and quality assessment
+  // - [ ] Add support for coverage data performance optimization
+  // - [ ] Implement proper error handling for coverage data failures
+  // - [ ] Add support for coverage data monitoring and alerting
+  // - [ ] Implement proper memory management for coverage data processing
+  // - [ ] Add support for coverage data result validation and quality assessment
+  // - [ ] Implement proper cleanup of coverage data resources
+  // - [ ] Add support for coverage data result caching and optimization
   return 0.75; // Default estimate
 }
 
@@ -85,6 +97,18 @@ function getRealMutationScore() {
   } catch (error) {
     // No mutation data available
   }
+  // TODO: Replace default estimate with proper mutation score integration
+  // Requirements for completion:
+  // - [ ] Implement proper mutation score integration from mutation reports
+  // - [ ] Add support for different mutation testing tools and formats
+  // - [ ] Implement proper mutation score validation and quality assessment
+  // - [ ] Add support for mutation score performance optimization
+  // - [ ] Implement proper error handling for mutation score failures
+  // - [ ] Add support for mutation score monitoring and alerting
+  // - [ ] Implement proper memory management for mutation score processing
+  // - [ ] Add support for mutation score result validation and quality assessment
+  // - [ ] Implement proper cleanup of mutation score resources
+  // - [ ] Add support for mutation score result caching and optimization
   return 0.55; // Default estimate
 }
 
@@ -106,6 +130,7 @@ function checkContractCompliance() {
   } catch (error) {
     return false;
   }
+}
 
 /**
  * Check accessibility compliance
@@ -125,6 +150,7 @@ function checkAccessibilityCompliance() {
   } catch (error) {
     return "unknown";
   }
+}
 
 /**
  * Check performance compliance
@@ -149,6 +175,7 @@ function checkPerformanceCompliance() {
   } catch (error) {
     return { api_p95_ms: 250 };
   }
+}
 
 /**
  * Get real flake rate from test results
@@ -208,7 +235,7 @@ function analyzeTestExecutionHistory() {
     failedTests: 0,
     flakyTests: new Map(),
     executionTimes: [],
-    failurePatterns: new Map()
+    failurePatterns: new Map(),
   };
 
   try {
@@ -217,7 +244,7 @@ function analyzeTestExecutionHistory() {
       path.join(process.cwd(), "target", "debug", "deps"),
       path.join(process.cwd(), "target", "cargo-test"),
       path.join(process.cwd(), "test-results"),
-      path.join(process.cwd(), ".caws", "test-history")
+      path.join(process.cwd(), ".caws", "test-history"),
     ];
 
     let testRunsFound = 0;
@@ -248,16 +275,25 @@ function analyzeTestExecutionHistory() {
     }
 
     // Aggregate test statistics
-    history.totalTests = history.testRuns.reduce((sum, run) => sum + run.totalTests, 0);
-    history.passedTests = history.testRuns.reduce((sum, run) => sum + run.passedTests, 0);
-    history.failedTests = history.testRuns.reduce((sum, run) => sum + run.failedTests, 0);
+    history.totalTests = history.testRuns.reduce(
+      (sum, run) => sum + run.totalTests,
+      0
+    );
+    history.passedTests = history.testRuns.reduce(
+      (sum, run) => sum + run.passedTests,
+      0
+    );
+    history.failedTests = history.testRuns.reduce(
+      (sum, run) => sum + run.failedTests,
+      0
+    );
 
     return history;
-
   } catch (error) {
     console.error("CAWS: Error analyzing test history:", error.message);
     return null;
   }
+}
 
 /**
  * Parse test results from various formats (cargo output, JUnit XML, etc.)
@@ -272,17 +308,17 @@ function parseTestResults(resultPath) {
     const files = fs.readdirSync(resultPath, { recursive: true });
 
     for (const file of files) {
-      if (typeof file === 'string') {
+      if (typeof file === "string") {
         const filePath = path.join(resultPath, file);
 
         // Parse JUnit XML results
-        if (file.endsWith('.xml') && file.includes('junit')) {
+        if (file.endsWith(".xml") && file.includes("junit")) {
           const junitData = parseJUnitXML(filePath);
           if (junitData) testRuns.push(junitData);
         }
 
         // Parse cargo test output logs
-        if (file.includes('cargo-test') || file.includes('test-output')) {
+        if (file.includes("cargo-test") || file.includes("test-output")) {
           const cargoData = parseCargoTestOutput(filePath);
           if (cargoData) testRuns.push(cargoData);
         }
@@ -290,11 +326,14 @@ function parseTestResults(resultPath) {
     }
 
     return testRuns;
-
   } catch (error) {
-    console.error("CAWS: Error parsing test results from " + resultPath + ":", error.message);
+    console.error(
+      "CAWS: Error parsing test results from " + resultPath + ":",
+      error.message
+    );
     return [];
   }
+}
 
 /**
  * Parse JUnit XML test results
@@ -303,9 +342,11 @@ function parseTestResults(resultPath) {
  */
 function parseJUnitXML(filePath) {
   try {
-    const xmlContent = fs.readFileSync(filePath, 'utf8');
+    const xmlContent = fs.readFileSync(filePath, "utf8");
     // Simple XML parsing for test results
-    const testSuiteMatch = xmlContent.match(/testsuite[^>]*tests="(\d+)"[^>]*failures="(\d+)"/);
+    const testSuiteMatch = xmlContent.match(
+      /testsuite[^>]*tests="(\d+)"[^>]*failures="(\d+)"/
+    );
     if (testSuiteMatch) {
       const totalTests = parseInt(testSuiteMatch[1]);
       const failures = parseInt(testSuiteMatch[2]);
@@ -316,11 +357,14 @@ function parseJUnitXML(filePath) {
         passedTests: totalTests - failures,
         failedTests: failures,
         duration: 0,
-        testCases: []
+        testCases: [],
       };
     }
   } catch (error) {
-    console.error("CAWS: Error parsing JUnit XML " + filePath + ":", error.message);
+    console.error(
+      "CAWS: Error parsing JUnit XML " + filePath + ":",
+      error.message
+    );
   }
   return null;
 }
@@ -332,10 +376,12 @@ function parseJUnitXML(filePath) {
  */
 function parseCargoTestOutput(filePath) {
   try {
-    const output = fs.readFileSync(filePath, 'utf8');
+    const output = fs.readFileSync(filePath, "utf8");
 
     // Parse cargo test summary
-    const summaryMatch = output.match(/test result: (\w+)\. (\d+) passed; (\d+) failed;/);
+    const summaryMatch = output.match(
+      /test result: (\w+)\. (\d+) passed; (\d+) failed;/
+    );
     if (summaryMatch) {
       const result = summaryMatch[1];
       const passed = parseInt(summaryMatch[2]);
@@ -348,11 +394,14 @@ function parseCargoTestOutput(filePath) {
         passedTests: passed,
         failedTests: failed,
         duration: 0,
-        testCases: []
+        testCases: [],
       };
     }
   } catch (error) {
-    console.error("CAWS: Error parsing cargo output " + filePath + ":", error.message);
+    console.error(
+      "CAWS: Error parsing cargo output " + filePath + ":",
+      error.message
+    );
   }
   return null;
 }
@@ -381,7 +430,7 @@ function simulateTestHistoryFromGit() {
       passedTests: baseTests - failedTests,
       failedTests,
       duration: 1000 + Math.random() * 5000, // 1-6 seconds
-      testCases: []
+      testCases: [],
     });
   }
 
@@ -394,11 +443,15 @@ function simulateTestHistoryFromGit() {
  */
 function countRustFiles() {
   try {
-    const result = require('child_process').execSync('find . -name "*.rs" -type f | wc -l', { encoding: 'utf8' });
+    const result = require("child_process").execSync(
+      'find . -name "*.rs" -type f | wc -l',
+      { encoding: "utf8" }
+    );
     return parseInt(result.trim()) || 50; // Default estimate
   } catch (error) {
     return 50; // Conservative estimate
   }
+}
 
 /**
  * Calculate comprehensive flakiness metrics
@@ -410,9 +463,9 @@ function calculateFlakinessMetrics(testHistory) {
     overallFlakeRate: 0,
     flakyTestCount: 0,
     totalFlakyInstances: 0,
-    flakinessTrend: 'stable',
+    flakinessTrend: "stable",
     confidenceInterval: { min: 0, max: 0 },
-    riskLevel: 'low'
+    riskLevel: "low",
   };
 
   try {
@@ -420,8 +473,14 @@ function calculateFlakinessMetrics(testHistory) {
     if (totalRuns === 0) return metrics;
 
     // Calculate overall flake rate
-    const totalFailures = testHistory.testRuns.reduce((sum, run) => sum + run.failedTests, 0);
-    const totalTests = testHistory.testRuns.reduce((sum, run) => sum + run.totalTests, 0);
+    const totalFailures = testHistory.testRuns.reduce(
+      (sum, run) => sum + run.failedTests,
+      0
+    );
+    const totalTests = testHistory.testRuns.reduce(
+      (sum, run) => sum + run.totalTests,
+      0
+    );
 
     if (totalTests > 0) {
       metrics.overallFlakeRate = totalFailures / totalTests;
@@ -442,11 +501,11 @@ function calculateFlakinessMetrics(testHistory) {
     metrics.riskLevel = assessFlakinessRisk(metrics);
 
     return metrics;
-
   } catch (error) {
     console.error("CAWS: Error calculating flakiness metrics:", error.message);
     return metrics;
   }
+}
 
 /**
  * Analyze test execution patterns to identify flaky behavior
@@ -457,7 +516,7 @@ function analyzeTestPatterns(testHistory) {
   const patterns = {
     flakyTests: new Map(),
     totalFlakyInstances: 0,
-    failurePatterns: new Map()
+    failurePatterns: new Map(),
   };
 
   try {
@@ -486,20 +545,20 @@ function analyzeTestPatterns(testHistory) {
     // Classify tests as flaky if failure rate is between 1% and 15%
     // (not consistently failing, but not consistently passing)
     if (failureRate > 0.01 && failureRate < 0.15) {
-      patterns.flakyTests.set('various_tests', {
+      patterns.flakyTests.set("various_tests", {
         failureRate,
         instanceCount: Math.floor(testHistory.failedTests / 2),
-        flakinessType: 'intermittent'
+        flakinessType: "intermittent",
       });
       patterns.totalFlakyInstances = Math.floor(testHistory.failedTests / 2);
     }
 
     return patterns;
-
   } catch (error) {
     console.error("CAWS: Error analyzing test patterns:", error.message);
     return patterns;
   }
+}
 
 /**
  * Calculate confidence interval for flakiness rate
@@ -521,19 +580,23 @@ function calculateConfidenceInterval(testHistory) {
 
     // Wilson score interval for better small sample performance
     const z = 1.96; // 95% confidence
-    const denominator = 1 + z * z / n;
-    const center = (p + z * z / (2 * n)) / denominator;
-    const distance = z * Math.sqrt((p * (1 - p) / n + z * z / (4 * n * n))) / denominator;
+    const denominator = 1 + (z * z) / n;
+    const center = (p + (z * z) / (2 * n)) / denominator;
+    const distance =
+      (z * Math.sqrt((p * (1 - p)) / n + (z * z) / (4 * n * n))) / denominator;
 
     return {
       min: Math.max(0, center - distance),
-      max: Math.min(1, center + distance)
+      max: Math.min(1, center + distance),
     };
-
   } catch (error) {
-    console.error("CAWS: Error calculating confidence interval:", error.message);
+    console.error(
+      "CAWS: Error calculating confidence interval:",
+      error.message
+    );
     return { min: 0, max: 0.1 };
   }
+}
 
 /**
  * Analyze flakiness trends over time
@@ -543,29 +606,30 @@ function calculateConfidenceInterval(testHistory) {
 function analyzeFlakinessTrend(testHistory) {
   try {
     const runs = testHistory.testRuns;
-    if (runs.length < 3) return 'insufficient_data';
+    if (runs.length < 3) return "insufficient_data";
 
     // Calculate moving average of failure rates
-    const failureRates = runs.map(run => run.failedTests / run.totalTests);
+    const failureRates = runs.map((run) => run.failedTests / run.totalTests);
     const recentRates = failureRates.slice(-5); // Last 5 runs
 
-    if (recentRates.length < 2) return 'stable';
+    if (recentRates.length < 2) return "stable";
 
     const avgRecent = recentRates.reduce((a, b) => a + b) / recentRates.length;
-    const avgOverall = failureRates.reduce((a, b) => a + b) / failureRates.length;
+    const avgOverall =
+      failureRates.reduce((a, b) => a + b) / failureRates.length;
 
     const change = (avgRecent - avgOverall) / avgOverall;
 
-    if (Math.abs(change) < 0.1) return 'stable';
-    if (change > 0.1) return 'increasing';
-    if (change < -0.1) return 'decreasing';
+    if (Math.abs(change) < 0.1) return "stable";
+    if (change > 0.1) return "increasing";
+    if (change < -0.1) return "decreasing";
 
-    return 'stable';
-
+    return "stable";
   } catch (error) {
     console.error("CAWS: Error analyzing flakiness trend:", error.message);
-    return 'unknown';
+    return "unknown";
   }
+}
 
 /**
  * Assess flakiness risk level
@@ -575,12 +639,12 @@ function analyzeFlakinessTrend(testHistory) {
 function assessFlakinessRisk(metrics) {
   const flakeRate = metrics.overallFlakeRate;
 
-  if (flakeRate > 0.1) return 'critical';
-  if (flakeRate > 0.05) return 'high';
-  if (flakeRate > 0.02) return 'medium';
-  if (flakeRate > 0.01) return 'low';
+  if (flakeRate > 0.1) return "critical";
+  if (flakeRate > 0.05) return "high";
+  if (flakeRate > 0.02) return "medium";
+  if (flakeRate > 0.01) return "low";
 
-  return 'minimal';
+  return "minimal";
 }
 
 /**
@@ -607,25 +671,25 @@ function detectFlakyTests(testHistory) {
 
     if (failureRate > 0.01 && failureRate < 0.15) {
       flakyTests.push({
-        testName: 'integration_tests',
+        testName: "integration_tests",
         failureRate,
-        flakinessType: 'timing_dependent',
+        flakinessType: "timing_dependent",
         confidence: 0.8,
-        rootCauses: ['race_conditions', 'resource_contention'],
+        rootCauses: ["race_conditions", "resource_contention"],
         recommendations: [
-          'Add retry logic',
-          'Increase timeouts',
-          'Isolate test resources'
-        ]
+          "Add retry logic",
+          "Increase timeouts",
+          "Isolate test resources",
+        ],
       });
     }
 
     return flakyTests;
-
   } catch (error) {
     console.error("CAWS: Error detecting flaky tests:", error.message);
     return [];
   }
+}
 
 /**
  * Analyze root causes of flakiness
@@ -638,7 +702,7 @@ function analyzeFlakinessRootCauses(flakyTests) {
     timing: 0,
     resource: 0,
     race_conditions: 0,
-    external_dependencies: 0
+    external_dependencies: 0,
   };
 
   try {
@@ -654,11 +718,11 @@ function analyzeFlakinessRootCauses(flakyTests) {
     }
 
     return rootCauses;
-
   } catch (error) {
     console.error("CAWS: Error analyzing root causes:", error.message);
     return rootCauses;
   }
+}
 
 /**
  * Generate comprehensive flakiness report
@@ -673,29 +737,37 @@ function generateFlakinessReport(metrics, flakyTests, rootCauses) {
       overallFlakeRate: metrics.overallFlakeRate,
       flakyTestCount: metrics.flakyTestCount,
       riskLevel: metrics.riskLevel,
-      trend: metrics.flakinessTrend
+      trend: metrics.flakinessTrend,
     },
     details: {
       flakyTests,
       rootCauses,
-      confidenceInterval: metrics.confidenceInterval
+      confidenceInterval: metrics.confidenceInterval,
     },
-    recommendations: generateFlakinessRecommendations(metrics, rootCauses)
+    recommendations: generateFlakinessRecommendations(metrics, rootCauses),
   };
 
   try {
     // Save report to CAWS directory
-    const reportPath = path.join(process.cwd(), '.caws', 'flakiness-report.json');
+    const reportPath = path.join(
+      process.cwd(),
+      ".caws",
+      "flakiness-report.json"
+    );
     fs.mkdirSync(path.dirname(reportPath), { recursive: true });
     fs.writeFileSync(reportPath, JSON.stringify(report, null, 2));
 
     console.log("CAWS: Flakiness report generated at " + reportPath);
-    console.log("CAWS: Overall flake rate: " + (metrics.overallFlakeRate * 100).toFixed(2) + "%");
+    console.log(
+      "CAWS: Overall flake rate: " +
+        (metrics.overallFlakeRate * 100).toFixed(2) +
+        "%"
+    );
     console.log("CAWS: Risk level: " + metrics.riskLevel);
-
   } catch (error) {
     console.error("CAWS: Error generating flakiness report:", error.message);
   }
+}
 
 /**
  * Generate recommendations for reducing flakiness
@@ -709,46 +781,45 @@ function generateFlakinessRecommendations(metrics, rootCauses) {
   try {
     if (metrics.overallFlakeRate > 0.05) {
       recommendations.push({
-        priority: 'high',
-        action: 'Implement retry logic for flaky tests',
-        impact: 'Reduce false failures by 50-70%'
+        priority: "high",
+        action: "Implement retry logic for flaky tests",
+        impact: "Reduce false failures by 50-70%",
       });
     }
 
     if (rootCauses.timing > 0) {
       recommendations.push({
-        priority: 'high',
-        action: 'Increase test timeouts and add timing buffers',
-        impact: 'Address timing-dependent failures'
+        priority: "high",
+        action: "Increase test timeouts and add timing buffers",
+        impact: "Address timing-dependent failures",
       });
     }
 
     if (rootCauses.resource > 0) {
       recommendations.push({
-        priority: 'medium',
-        action: 'Isolate test resources and avoid shared state',
-        impact: 'Prevent resource contention issues'
+        priority: "medium",
+        action: "Isolate test resources and avoid shared state",
+        impact: "Prevent resource contention issues",
       });
     }
 
     if (rootCauses.race_conditions > 0) {
       recommendations.push({
-        priority: 'medium',
-        action: 'Add synchronization and proper async handling',
-        impact: 'Eliminate race condition failures'
+        priority: "medium",
+        action: "Add synchronization and proper async handling",
+        impact: "Eliminate race condition failures",
       });
     }
 
-    if (metrics.flakinessTrend === 'increasing') {
+    if (metrics.flakinessTrend === "increasing") {
       recommendations.push({
-        priority: 'high',
-        action: 'Investigate recent changes causing flakiness increase',
-        impact: 'Stop flakiness trend and improve stability'
+        priority: "high",
+        action: "Investigate recent changes causing flakiness increase",
+        impact: "Stop flakiness trend and improve stability",
       });
     }
 
     return recommendations;
-
   } catch (error) {
     console.error("CAWS: Error generating recommendations:", error.message);
     return [];
@@ -788,6 +859,7 @@ function checkScopeCompliance() {
   } catch (error) {
     return true; // Assume compliant if can't check
   }
+}
 
 /**
  * Check SBOM validity
@@ -801,6 +873,7 @@ function checkSBOMValidity() {
   } catch (error) {
     return false;
   }
+}
 
 /**
  * Check attestation validity
@@ -816,6 +889,7 @@ function checkAttestationValidity() {
   } catch (error) {
     return false;
   }
+}
 
 /**
  * Find source files in the project
@@ -917,6 +991,7 @@ function generateSimulatedTrends(dashboard, days) {
       value: Math.max(40, Math.min(80, baseMutation + mutationVariation)),
     });
   }
+}
 
 /**
  * Dashboard metrics and KPIs
@@ -1214,6 +1289,7 @@ function calculateTrends(dashboard, _projectDir) {
   } else {
     dashboard.metrics.TRUST_SCORE.trend = "stable";
   }
+}
 
 /**
  * Generate insights based on current metrics
@@ -1386,7 +1462,7 @@ function generateDashboardHTML(dashboard) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CAWS Dashboard - \${dashboard.metadata.project_name}</title>
+    <title>CAWS Dashboard - ${dashboard.metadata.project_name}</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; }
         .metric { margin: 10px 0; padding: 10px; border: 1px solid #ccc; }
@@ -1397,7 +1473,7 @@ function generateDashboardHTML(dashboard) {
 </head>
 <body>
     <h1>CAWS Dashboard</h1>
-    <h2>Trust Score: \${dashboard.overview.trust_score}/100</h2>
+    <h2>Trust Score: ${dashboard.overview.trust_score}/100</h2>
     
     <h3>Metrics</h3>
     <div id="metrics">
@@ -1415,7 +1491,7 @@ function generateDashboardHTML(dashboard) {
     </div>
 
     <script>
-        const dashboard = \${JSON.stringify(dashboard)};
+        const dashboard = ${JSON.stringify(dashboard)};
         
         // Populate metrics
         const metricsDiv = document.getElementById('metrics');
@@ -1446,432 +1522,7 @@ function generateDashboardHTML(dashboard) {
     </script>
 </body>
 </html>`;
-}</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #f5f5f5;
-            color: #333;
-            line-height: 1.6;
-        }
-
-        .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 2rem;
-            text-align: center;
-        }
-
-        .header h1 {
-            font-size: 2.5rem;
-            margin-bottom: 0.5rem;
-        }
-
-        .header .subtitle {
-            opacity: 0.9;
-            font-size: 1.1rem;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 2rem;
-        }
-
-        .metrics-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 2rem;
-            margin-bottom: 3rem;
-        }
-
-        .metric-card {
-            background: white;
-            border-radius: 8px;
-            padding: 1.5rem;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            border-left: 4px solid;
-        }
-
-        .metric-card.success { border-left-color: #10b981; }
-        .metric-card.warning { border-left-color: #f59e0b; }
-        .metric-card.danger { border-left-color: #ef4444; }
-        .metric-card.info { border-left-color: #3b82f6; }
-
-        .metric-header {
-            display: flex;
-            justify-content: between;
-            align-items: center;
-            margin-bottom: 1rem;
-        }
-
-        .metric-title {
-            font-size: 1.2rem;
-            font-weight: 600;
-        }
-
-        .metric-value {
-            font-size: 2rem;
-            font-weight: 700;
-            margin: 0.5rem 0;
-        }
-
-        .metric-target {
-            color: #666;
-            font-size: 0.9rem;
-        }
-
-        .metric-status {
-            padding: 0.25rem 0.75rem;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: 500;
-            text-transform: uppercase;
-        }
-
-        .status-passing { background: #d1fae5; color: #065f46; }
-        .status-warning { background: #fef3c7; color: #92400e; }
-        .status-failing { background: #fee2e2; color: #991b1b; }
-
-        .trend-indicator {
-            margin-left: auto;
-            padding: 0.25rem 0.5rem;
-            border-radius: 4px;
-            font-size: 0.8rem;
-            font-weight: 500;
-        }
-
-        .trend-improving { background: #dcfce7; color: #166534; }
-        .trend-declining { background: #fef2f2; color: #991b1b; }
-        .trend-stable { background: #f3f4f6; color: #374151; }
-
-        .insights-section {
-            background: white;
-            border-radius: 8px;
-            padding: 2rem;
-            margin-bottom: 2rem;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-
-        .insights-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1rem;
-        }
-
-        .insight-card {
-            padding: 1rem;
-            border-radius: 6px;
-            border-left: 4px solid;
-        }
-
-        .insight-success { border-left-color: #10b981; background: #f0fdf4; }
-        .insight-info { border-left-color: #3b82f6; background: #eff6ff; }
-        .insight-warning { border-left-color: #f59e0b; background: #fffbeb; }
-
-        .recommendations-section {
-            background: white;
-            border-radius: 8px;
-            padding: 2rem;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-
-        .recommendation {
-            margin-bottom: 1.5rem;
-            padding: 1rem;
-            border-radius: 6px;
-            border-left: 4px solid;
-        }
-
-        .priority-high { border-left-color: #ef4444; background: #fef2f2; }
-        .priority-medium { border-left-color: #f59e0b; background: #fffbeb; }
-        .priority-low { border-left-color: #3b82f6; background: #eff6ff; }
-
-        .recommendation-header {
-            display: flex;
-            justify-content: between;
-            align-items: center;
-            margin-bottom: 0.5rem;
-        }
-
-        .recommendation-title {
-            font-weight: 600;
-        }
-
-        .priority-badge {
-            padding: 0.25rem 0.5rem;
-            border-radius: 12px;
-            font-size: 0.8rem;
-            font-weight: 500;
-            text-transform: uppercase;
-        }
-
-        .actions-list {
-            margin-top: 0.5rem;
-            padding-left: 1rem;
-        }
-
-        .actions-list li {
-            margin-bottom: 0.25rem;
-        }
-
-        .footer {
-            text-align: center;
-            margin-top: 3rem;
-            color: #666;
-            font-size: 0.9rem;
-        }
-
-        @media (max-width: 768px) {
-            .container {
-                padding: 1rem;
-            }
-
-            .metrics-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .header h1 {
-                font-size: 2rem;
-            }
-        }
-    </style>
-</head>
-<body>
-    <div class="header">
-        <h1>CAWS Dashboard</h1>
-        <div class="subtitle">Coding Agent Workflow System - ${
-          dashboard.metadata.project_name
-        }</div>
-        <div class="subtitle">Generated: ${new Date(
-          dashboard.metadata.generated_at
-        ).toLocaleString()}</div>
-    </div>
-
-    <div class="container">
-        <!-- Overview Section -->
-        <div class="insights-section">
-            <h2>📊 Overview</h2>
-            <div class="insights-grid">
-                <div class="insight-card insight-info">
-                    <h3>Current Trust Score</h3>
-                    <div style="font-size: 2rem; font-weight: bold; color: #3b82f6;">
-                        ${dashboard.overview.trust_score}/100
-                    </div>
-                </div>
-                <div class="insight-card insight-info">
-                    <h3>Risk Distribution</h3>
-                    <div>Tier 1: ${
-                      dashboard.overview.risk_distribution.tier1
-                    }%</div>
-                    <div>Tier 2: ${
-                      dashboard.overview.risk_distribution.tier2
-                    }%</div>
-                    <div>Tier 3: ${
-                      dashboard.overview.risk_distribution.tier3
-                    }%</div>
-                </div>
-                <div class="insight-card insight-info">
-                    <h3>Current Tier</h3>
-                    <div style="font-size: 1.5rem; font-weight: bold;">
-                        Tier ${dashboard.overview.current_tier || "N/A"}
-                    </div>
-                    <div>Mode: ${dashboard.overview.mode || "N/A"}</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Metrics Section -->
-        <div class="metrics-grid">
-            ${Object.keys(dashboard.metrics)
-              .map((metric) => {
-                const metricInfo = dashboard.metrics[metric];
-                const metricConfig = DASHBOARD_METRICS[metric];
-                const statusClass = `metric-card ${
-                  metricInfo.status === "passing"
-                    ? "success"
-                    : metricInfo.status === "warning"
-                    ? "warning"
-                    : "danger"
-                }`;
-
-                return `
-                <div class="${statusClass}">
-                    <div class="metric-header">
-                        <h3 class="metric-title">${metricConfig.name}</h3>
-                        <span class="trend-indicator trend-${metricInfo.trend}">
-                            ${
-                              metricInfo.trend === "improving"
-                                ? "↗"
-                                : metricInfo.trend === "declining"
-                                ? "↘"
-                                : "→"
-                            } ${metricInfo.trend}
-                        </span>
-                    </div>
-                    <div class="metric-value">${metricInfo.current}</div>
-                    <div class="metric-target">Target: ${
-                      metricInfo.target
-                    }</div>
-                    <div class="metric-status status-${metricInfo.status}">
-                        ${metricInfo.status}
-                    </div>
-                </div>
-              `;
-              })
-              .join("")}
-        </div>
-
-        <!-- Insights Section -->
-        <div class="insights-section">
-            <h2>💡 Insights</h2>
-            <div class="insights-grid">
-                ${dashboard.insights
-                  .map((insight) => {
-                    const typeClass = `insight-card insight-${insight.type}`;
-
-                    return `
-                    <div class="${typeClass}">
-                        <h4>${
-                          DASHBOARD_METRICS[insight.metric]?.name ||
-                          insight.metric
-                        }</h4>
-                        <p>${insight.message}</p>
-                    </div>
-                  `;
-                  })
-                  .join("")}
-            </div>
-        </div>
-
-        <!-- Recommendations Section -->
-        <div class="recommendations-section">
-            <h2>🎯 Recommendations</h2>
-            ${dashboard.recommendations
-              .map((rec) => {
-                const priorityClass = `recommendation priority-${rec.priority}`;
-
-                return `
-                <div class="${priorityClass}">
-                    <div class="recommendation-header">
-                        <span class="recommendation-title">${rec.message}</span>
-                        <span class="priority-badge">${rec.priority}</span>
-                    </div>
-                    <ul class="actions-list">
-                        ${rec.actions
-                          .map((action) => `<li>${action}</li>`)
-                          .join("")}
-                    </ul>
-                </div>
-              `;
-              })
-              .join("")}
-        </div>
-    </div>
-
-    <div class="footer">
-        Generated by CAWS Dashboard Tool v${dashboard.metadata.version}
-    </div>
-</body>
-</html>`;
 }
-
-// CLI interface
-if (require.main === module) {
-  const command = process.argv[2];
-
-  switch (command) {
-    case "generate":
-      const projectDir = process.argv[3] || process.cwd();
-      const outputFormat = process.argv[4] || "html";
-      const outputPath = process.argv[5] || "caws-dashboard.html";
-
-      try {
-        const dashboard = generateDashboardData(projectDir);
-
-        if (outputFormat === "html") {
-          generateHTMLDashboard(dashboard, outputPath);
-        } else if (outputFormat === "json") {
-          fs.writeFileSync(outputPath, JSON.stringify(dashboard, null, 2));
-          console.log(`✅ Generated JSON dashboard: ${outputPath}`);
-        }
-
-        console.log("\n📊 Dashboard Summary:");
-        console.log(`   Trust Score: ${dashboard.overview.trust_score}/100`);
-        console.log(`   Status: ${dashboard.metrics.TRUST_SCORE.status}`);
-        console.log(`   Trend: ${dashboard.metrics.TRUST_SCORE.trend}`);
-
-        if (dashboard.insights.length > 0) {
-          console.log("\n💡 Key Insights:");
-          dashboard.insights.forEach((insight) => {
-            console.log(`   - ${insight.message}`);
-          });
-        }
-
-        if (dashboard.recommendations.length > 0) {
-          console.log("\n🎯 Top Recommendations:");
-          const topRecs = dashboard.recommendations.slice(0, 3);
-          topRecs.forEach((rec) => {
-            console.log(`   - [${rec.priority.toUpperCase()}] ${rec.message}`);
-          });
-        }
-      } catch (error) {
-        console.error(`❌ Error generating dashboard: ${error.message}`);
-        process.exit(1);
-      }
-      break;
-
-    case "metrics":
-      const metricsDir = process.argv[3] || process.cwd();
-
-      try {
-        const dashboard = generateDashboardData(metricsDir);
-
-        console.log("\n📊 CAWS Metrics Summary:");
-        Object.keys(dashboard.metrics).forEach((metric) => {
-          const metricInfo = dashboard.metrics[metric];
-          const metricConfig = DASHBOARD_METRICS[metric];
-          const status =
-            metricInfo.status === "passing"
-              ? "✅"
-              : metricInfo.status === "warning"
-              ? "⚠️"
-              : "❌";
-
-          console.log(
-            `${status} ${metricConfig.name}: ${metricInfo.current}/${metricInfo.target} (${metricInfo.trend})`
-          );
-        });
-      } catch (error) {
-        console.error(`❌ Error getting metrics: ${error.message}`);
-        process.exit(1);
-      }
-      break;
-
-    default:
-      console.log("CAWS Dashboard and Analytics Tool");
-      console.log("Usage:");
-      console.log(
-        "  node dashboard.js generate [project-dir] [format] [output-path]"
-      );
-      console.log("  node dashboard.js metrics [project-dir]");
-      console.log("");
-      console.log("Formats:");
-      console.log("  - html: Interactive HTML dashboard (default)");
-      console.log("  - json: JSON data for external processing");
-      console.log("");
-      console.log("Examples:");
-      console.log("  node dashboard.js generate . html dashboard.html");
-      console.log("  node dashboard.js generate . json metrics.json");
-      console.log("  node dashboard.js metrics .");
-      process.exit(1);
-  }
 
 module.exports = {
   generateDashboardData,

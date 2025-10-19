@@ -717,11 +717,18 @@ impl EvidenceCollector {
 
         let content = if test_times_path.exists() {
             if let Ok(_timing_data) = std::fs::read_to_string(test_times_path) {
-                // TODO: Implement proper test timing data parsing instead of simplified placeholder
-                // - [ ] Parse JSON timing data with proper schema validation
-                // - [ ] Extract individual test execution times and metadata
-                // - [ ] Calculate statistical metrics (mean, median, percentiles)
-                // - [ ] Identify performance regressions and improvements
+                // TODO: Replace simplified test timing data parsing with proper schema validation
+                /// Requirements for completion:
+                /// - [ ] Parse JSON timing data with proper schema validation
+                /// - [ ] Extract individual test execution times and metadata
+                /// - [ ] Calculate statistical metrics (mean, median, percentiles)
+                /// - [ ] Identify performance regressions and improvements
+                /// - [ ] Implement proper error handling for malformed timing data
+                /// - [ ] Add support for different test timing formats and versions
+                /// - [ ] Implement proper data validation and sanitization
+                /// - [ ] Add support for timing data aggregation and analysis
+                /// - [ ] Implement proper memory management for large timing datasets
+                /// - [ ] Add support for timing data export and reporting
                 // - [ ] Support different test timing formats and sources
                 // - [ ] Implement timing data aggregation and reporting
                 // - [ ] Add historical timing trend analysis
@@ -1580,16 +1587,19 @@ impl EvidenceCollector {
                     .filter(|line| line.starts_with("name = "))
                     .count();
 
-                // TODO: Implement proper dependency security analysis instead of simplified hardcoded list
-                // - [ ] Integrate with vulnerability databases (OSV, NVD, RustSec)
-                // - [ ] Parse Cargo.lock file properly to extract dependency versions
-                // - [ ] Check for CVEs and security advisories for each dependency
-                // - [ ] Implement severity scoring and risk assessment
-                // - [ ] Support transitive dependency analysis
-                // - [ ] Add dependency license compliance checking
-                // - [ ] Implement automated security update recommendations
-                // TODO: Replace hardcoded insecure dependencies with real vulnerability database integration
-                // - [ ] Integrate with RustSec advisory database for known vulnerabilities
+                // TODO: Replace simplified dependency security analysis with proper vulnerability database integration
+                /// Requirements for completion:
+                /// - [ ] Integrate with vulnerability databases (OSV, NVD, RustSec)
+                /// - [ ] Parse Cargo.lock file properly to extract dependency versions
+                /// - [ ] Check for CVEs and security advisories for each dependency
+                /// - [ ] Implement severity scoring and risk assessment
+                /// - [ ] Support transitive dependency analysis
+                /// - [ ] Add dependency license compliance checking
+                /// - [ ] Implement automated security update recommendations
+                /// - [ ] Implement proper error handling for vulnerability database API failures
+                /// - [ ] Add support for vulnerability data caching and performance optimization
+                /// - [ ] Implement proper memory management for large dependency trees
+                /// - [ ] Add support for vulnerability data validation and quality assessment
                 // - [ ] Implement NVD CVE database integration for comprehensive coverage
                 // - [ ] Parse Cargo.lock to extract exact dependency versions and hashes
                 // - [ ] Support transitive dependency vulnerability scanning

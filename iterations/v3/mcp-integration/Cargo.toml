@@ -41,6 +41,10 @@ tempfile = "3.10"
 # HTTP client for health checks
 reqwest = { version = "0.12", features = ["json"] }
 
+# Metrics collection
+prometheus = "0.13"
+lazy_static = "1.4"
+
 [features]
 test-utils = []
 

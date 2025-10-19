@@ -297,7 +297,7 @@ risk_tiers:
       // In real usage, this would come through MCP protocol
       const assignArgs = {
         spec: testSpec,
-        availableAgents: ["cursor-composer-agent", "copilot-agent"],
+        availableAgents: ["cursor-composer", "github-copilot"],
         strategy: "capability" as const,
         priority: VerificationPriority.HIGH as const,
       };

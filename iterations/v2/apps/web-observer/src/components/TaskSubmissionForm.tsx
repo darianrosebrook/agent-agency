@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 
 interface TaskSubmissionFormProps {
   onSubmit: (description: string, specPath?: string) => Promise<void>;
@@ -67,7 +67,7 @@ export default function TaskSubmissionForm({
           placeholder="Path to .caws/working-spec.yaml file"
           className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
         />
-        <p className="mt-1 text-xs text-gray-500">
+        <p className="mt-1 text-xs text-gray-600">
           Leave empty for autonomous task execution, or specify a working spec
           file path
         </p>

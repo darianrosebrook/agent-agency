@@ -454,6 +454,18 @@ impl SlidesIngestor {
 
     /// Determine the role of a text block based on content and position
     fn determine_block_role(&self, text: &str, bbox: &BoundingBox) -> BlockRole {
+        // TODO: Replace simple heuristics with proper content analysis
+        /// Requirements for completion:
+        /// - [ ] Implement proper content analysis using NLP and ML models
+        /// - [ ] Add support for different content types and structures
+        /// - [ ] Implement proper role classification and confidence scoring
+        /// - [ ] Add support for context-aware role determination
+        /// - [ ] Implement proper error handling for content analysis failures
+        /// - [ ] Add support for content analysis performance optimization
+        /// - [ ] Implement proper memory management for content analysis models
+        /// - [ ] Add support for content analysis result validation
+        /// - [ ] Implement proper cleanup of content analysis resources
+        /// - [ ] Add support for content analysis monitoring and quality assessment
         // Simple heuristics for determining block roles
         if bbox.y < 0.2 && text.len() < 100 {
             BlockRole::Title

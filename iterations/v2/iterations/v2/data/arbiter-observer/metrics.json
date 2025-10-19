@@ -1,13 +1,13 @@
 {
-  "timestamp": "2025-10-18T05:49:11.282Z",
-  "reasoningDepthAvg": 6.620689655172414,
-  "reasoningDepthP95": 10,
+  "timestamp": "2025-10-19T22:27:20.640Z",
+  "reasoningDepthAvg": 7,
+  "reasoningDepthP95": 7,
   "debateBreadthAvg": 1,
-  "taskSuccessRate": 1,
+  "taskSuccessRate": 0,
   "toolBudgetUtilization": 0,
   "activeTasks": 0,
   "queuedTasks": 0,
-  "policyViolations": 6,
+  "policyViolations": 0,
   "observerDegraded": false,
   "queueDepth": 0
 }

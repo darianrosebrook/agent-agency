@@ -429,7 +429,14 @@ impl ConsensusCoordinator {
         // - [ ] Add database transaction management
         // - [ ] Support different database backends
         // - [ ] Implement data validation and sanitization
-        // For demonstration, simulate database connection and query
+        // TODO: Implement actual database integration for participant data management
+        // - [ ] Integrate with PostgreSQL/SQLite database for persistent storage
+        // - [ ] Implement connection pooling and transaction management
+        // - [ ] Add database schema definition and migration support
+        // - [ ] Support participant data indexing and query optimization
+        // - [ ] Implement data consistency checks and referential integrity
+        // - [ ] Add database backup and recovery capabilities
+        // - [ ] Support database replication and high availability
         info!("Querying participant data for '{}' from database: {}", participant, self.database_url);
 
         // Simulate database connection establishment
@@ -460,8 +467,14 @@ impl ConsensusCoordinator {
         // - [ ] Implement connection pooling with configurable limits
         // - [ ] Add database migration and schema validation
         // - [ ] Support multiple database instances and load balancing
-        // In a real implementation, this would establish a connection pool
-        // For now, simulate connection validation
+        // TODO: Implement proper database connection pool management
+        // - [ ] Set up proper database connection pool (sqlx, diesel, etc.)
+        // - [ ] Implement connection health checks and automatic reconnection
+        // - [ ] Add connection timeout and retry logic
+        // - [ ] Support SSL/TLS encrypted connections
+        // - [ ] Implement connection pooling with configurable limits
+        // - [ ] Add database migration and schema validation
+        // - [ ] Support multiple database instances and load balancing
         if self.database_url.is_empty() {
             return Err(anyhow::anyhow!("Database URL not configured"));
         }

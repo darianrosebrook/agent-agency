@@ -24,6 +24,47 @@ use tokio::task::JoinHandle;
 use tokio::time::timeout;
 use tracing::{info, warn};
 
+// Prometheus metrics
+use prometheus::{Encoder, TextEncoder, register_counter, register_histogram, register_gauge, Counter, Histogram, Gauge};
+use lazy_static::lazy_static;
+
+lazy_static! {
+    static ref HTTP_REQUESTS_TOTAL: Counter = register_counter!(
+        "mcp_http_requests_total",
+        "Total number of HTTP requests"
+    ).expect("Can't create HTTP_REQUESTS_TOTAL metric");
+
+    static ref HTTP_REQUEST_DURATION: Histogram = register_histogram!(
+        "mcp_http_request_duration_seconds",
+        "HTTP request duration in seconds"
+    ).expect("Can't create HTTP_REQUEST_DURATION metric");
+
+    static ref WEBSOCKET_CONNECTIONS_ACTIVE: Gauge = register_gauge!(
+        "mcp_websocket_connections_active",
+        "Number of active WebSocket connections"
+    ).expect("Can't create WEBSOCKET_CONNECTIONS_ACTIVE metric");
+
+    static ref WEBSOCKET_REQUESTS_TOTAL: Counter = register_counter!(
+        "mcp_websocket_requests_total",
+        "Total number of WebSocket requests"
+    ).expect("Can't create WEBSOCKET_REQUESTS_TOTAL metric");
+
+    static ref API_RATE_LIMIT_HITS: Counter = register_counter!(
+        "mcp_api_rate_limit_hits_total",
+        "Total number of rate limit hits"
+    ).expect("Can't create API_RATE_LIMIT_HITS metric");
+
+    static ref AUTH_FAILURES_TOTAL: Counter = register_counter!(
+        "mcp_auth_failures_total",
+        "Total number of authentication failures"
+    ).expect("Can't create AUTH_FAILURES_TOTAL metric");
+
+    static ref CIRCUIT_BREAKER_TRIPS: Counter = register_counter!(
+        "mcp_circuit_breaker_trips_total",
+        "Total number of circuit breaker trips"
+    ).expect("Can't create CIRCUIT_BREAKER_TRIPS metric");
+}
+
 /// Handle used to shutdown the HTTP server gracefully.
 #[derive(Debug)]
 pub struct HttpServerHandle {
@@ -435,6 +476,9 @@ impl MCPServer {
             );
             let builder = ServerBuilder::new(io).request_middleware(
                 move |request: jsonrpc_http_server::hyper::Request<Body>| {
+                    let start_time = Instant::now();
+                    let method = request.method().to_string();
+                    let uri = request.uri().path().to_string();
                     // Extract client IP for rate limiting
                     let client_ip = request
                         .headers()
@@ -451,6 +495,7 @@ impl MCPServer {
                         match auth_limiter.allow_auth_attempt(client_ip) {
                             AuthRateLimitResult::Blocked(reason) => {
                                 warn!(ip = %client_ip, reason = %reason, "Authentication rate limit exceeded");
+                                API_RATE_LIMIT_HITS.inc();
                                 return RequestMiddlewareAction::from(rate_limited_http_response());
                             }
                             AuthRateLimitResult::Allowed => {
@@ -470,6 +515,7 @@ impl MCPServer {
                             if let Some(ref auth_limiter) = auth_rate_limiter {
                                 auth_limiter.record_failed_attempt(client_ip);
                             }
+                            AUTH_FAILURES_TOTAL.inc();
 
                             // Log failed authentication
                             let user_agent = request
@@ -532,6 +578,7 @@ impl MCPServer {
                     if let Some(ref api_limiter) = api_rate_limiter {
                         if !api_limiter.should_allow("/api/validate", client_ip) {
                             warn!("API rate limit exceeded for {} on endpoint /api/validate", client_ip);
+                            API_RATE_LIMIT_HITS.inc();
                             return RequestMiddlewareAction::from(rate_limited_http_response());
                         }
                     }
@@ -540,6 +587,7 @@ impl MCPServer {
                     if let Some(ref limiter) = rate_limiter {
                         let mut guard = limiter.lock().unwrap();
                         if !guard.allow() {
+                            API_RATE_LIMIT_HITS.inc();
                             return RequestMiddlewareAction::from(rate_limited_http_response());
                         }
                     }
@@ -574,6 +622,16 @@ impl MCPServer {
         let mut io = IoHandler::default();
 
         io.add_sync_method("health", move |_| Ok(Value::String("ok".into())));
+
+        // Add metrics endpoint for Prometheus
+        io.add_sync_method("metrics", move |_| {
+            let encoder = TextEncoder::new();
+            let metric_families = prometheus::gather();
+            let mut buffer = Vec::new();
+            encoder.encode(&metric_families, &mut buffer).unwrap();
+            let metrics = String::from_utf8(buffer).unwrap();
+            Ok(Value::String(metrics))
+        });
 
         let registry_for_tools = registry.clone();
         io.add_method("tools", move |_| {
@@ -625,10 +683,13 @@ impl MCPServer {
                     })
                     .await
                     .map_err(|e| match e {
-                        security::CircuitBreakerError::CircuitOpen(_) => JsonRpcError {
-                            code: jsonrpc_core::ErrorCode::InternalError,
-                            message: "Service temporarily unavailable".to_string(),
-                            data: Some(serde_json::Value::String("Circuit breaker open".to_string())),
+                        security::CircuitBreakerError::CircuitOpen(_) => {
+                            CIRCUIT_BREAKER_TRIPS.inc();
+                            JsonRpcError {
+                                code: jsonrpc_core::ErrorCode::InternalError,
+                                message: "Service temporarily unavailable".to_string(),
+                                data: Some(serde_json::Value::String("Circuit breaker open".to_string())),
+                            }
                         },
                         security::CircuitBreakerError::OperationFailed(orig_err) => JsonRpcError {
                             code: jsonrpc_core::ErrorCode::InternalError,

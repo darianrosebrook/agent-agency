@@ -718,6 +718,18 @@ impl MemoryManager {
         status.used_memory_mb = sys.used_memory() / (1024 * 1024);
         status.available_memory_mb = sys.available_memory() / (1024 * 1024);
 
+        // TODO: Replace cache size estimation with actual cache monitoring
+        /// Requirements for completion:
+        /// - [ ] Implement actual cache size monitoring using system APIs
+        /// - [ ] Add support for different cache types (L1, L2, L3, page cache)
+        /// - [ ] Implement proper cache hit/miss ratio tracking
+        /// - [ ] Add support for cache performance analysis and optimization
+        /// - [ ] Implement proper error handling for cache monitoring failures
+        /// - [ ] Add support for cache usage patterns and trends analysis
+        /// - [ ] Implement proper memory management for cache monitoring data
+        /// - [ ] Add support for cache configuration and tuning recommendations
+        /// - [ ] Implement proper cleanup of cache monitoring resources
+        /// - [ ] Add support for cache monitoring alerts and thresholds
         // Estimate cache size (this is platform-specific)
         status.cache_size_mb = (status.used_memory_mb * 20) / 100; // Assume 20% of used memory is cache
 
@@ -1053,6 +1065,18 @@ impl MemoryManager {
         // LZ4 provides excellent compression speed with reasonable compression ratio
         // Perfect for ML model weights that need fast decompression
         
+        // TODO: Replace compression ratio estimation with actual compression analysis
+        /// Requirements for completion:
+        /// - [ ] Implement actual compression ratio analysis using real compression algorithms
+        /// - [ ] Add support for different compression algorithms (LZ4, Zstd, Brotli)
+        /// - [ ] Implement proper compression performance benchmarking
+        /// - [ ] Add support for model-specific compression optimization
+        /// - [ ] Implement proper error handling for compression failures
+        /// - [ ] Add support for compression quality vs speed trade-offs
+        /// - [ ] Implement proper memory management for compression processes
+        /// - [ ] Add support for compression result validation and quality assessment
+        /// - [ ] Implement proper cleanup of compression resources
+        /// - [ ] Add support for compression monitoring and performance tracking
         // Estimate compression ratio based on model size and type
         let compression_ratio = match model.size_mb {
             s if s < 50 => 0.15,  // Small models: 15% compression
@@ -1076,6 +1100,18 @@ impl MemoryManager {
 
     /// Apply quantization compression to reduce model precision and size
     async fn apply_quantization_compression(&self, model: &ModelUsageStats) -> Result<u64> {
+        // TODO: Replace simplified quantization estimation with actual quantization implementation
+        /// Requirements for completion:
+        /// - [ ] Implement actual model quantization (FP32 -> FP16 -> INT8)
+        /// - [ ] Add support for different quantization algorithms and strategies
+        /// - [ ] Implement proper accuracy validation and loss measurement
+        /// - [ ] Add support for quantization-aware training and fine-tuning
+        /// - [ ] Implement proper error handling for quantization failures
+        /// - [ ] Add support for different model architectures and quantization compatibility
+        /// - [ ] Implement proper memory management for quantization processes
+        /// - [ ] Add support for quantization optimization and performance tuning
+        /// - [ ] Implement proper cleanup of quantization resources
+        /// - [ ] Add support for quantization result validation and quality assessment
         // Quantization reduces precision from FP32 -> FP16 -> INT8 where appropriate
         // This can reduce model size by 50-75% with minimal accuracy loss
         
@@ -1135,6 +1171,18 @@ impl MemoryManager {
         // Model metadata compression targets structure definitions, layer configs, etc.
         // Typically 5-15% of model size, with 80-90% compression ratio
         
+        // TODO: Replace metadata size assumption with actual metadata analysis
+        /// Requirements for completion:
+        /// - [ ] Implement actual metadata size analysis using model introspection
+        /// - [ ] Add support for different metadata types and structures
+        /// - [ ] Implement proper metadata parsing and validation
+        /// - [ ] Add support for metadata compression optimization
+        /// - [ ] Implement proper error handling for metadata analysis failures
+        /// - [ ] Add support for metadata versioning and compatibility
+        /// - [ ] Implement proper memory management for metadata processing
+        /// - [ ] Add support for metadata quality assessment and validation
+        /// - [ ] Implement proper cleanup of metadata analysis resources
+        /// - [ ] Add support for metadata monitoring and performance tracking
         let metadata_size = (model.size_mb as f64 * 0.1) as u64; // Assume 10% is metadata
         let metadata_compression_ratio = 0.85; // 85% compression
         let compressed_metadata = (metadata_size as f64 * metadata_compression_ratio) as u64;
@@ -2676,7 +2724,18 @@ impl MemoryManager {
         Ok(texture_memory)
     }
 
-    /// Query system-level GPU usage as fallback
+    /// TODO: Replace fallback GPU usage estimation with proper system integration
+    /// Requirements for completion:
+    /// - [ ] Implement proper system GPU usage monitoring using native APIs
+    /// - [ ] Add support for different GPU vendors and architectures
+    /// - [ ] Implement proper GPU memory usage tracking and analysis
+    /// - [ ] Add support for GPU performance monitoring and profiling
+    /// - [ ] Implement proper error handling for GPU monitoring failures
+    /// - [ ] Add support for GPU thermal monitoring and throttling detection
+    /// - [ ] Implement proper memory management for GPU monitoring data
+    /// - [ ] Add support for GPU usage alerts and performance optimization
+    /// - [ ] Implement proper cleanup of GPU monitoring resources
+    /// - [ ] Add support for GPU monitoring data persistence and historical analysis
     async fn query_system_gpu_usage(&self) -> Result<u64> {
         // Fallback to system tools when Metal API is unavailable
         let output = std::process::Command::new("system_profiler")

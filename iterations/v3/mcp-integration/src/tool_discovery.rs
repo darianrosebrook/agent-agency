@@ -725,14 +725,16 @@ impl ToolDiscovery {
         Ok((ws_stream, response))
     }
 
-    /// TODO: Implement proper WebSocket handshake validation
-    /// - [ ] Validate WebSocket protocol version and extension negotiation
-    /// - [ ] Check response headers for proper Sec-WebSocket-Accept
-    /// - [ ] Verify subprotocol negotiation and custom headers
-    /// - [ ] Implement handshake timeout and retry logic
-    /// - [ ] Add TLS certificate validation for WSS connections
-    /// - [ ] Support custom handshake headers and authentication
-    /// - [ ] Implement handshake failure diagnostics and error reporting
+    /// Validate WebSocket handshake response
+    fn validate_websocket_handshake(&self, _response: &tokio_tungstenite::tungstenite::handshake::client::Response) -> bool {
+        // TODO: Implement proper WebSocket handshake validation
+        /// - [ ] Validate WebSocket protocol version and extension negotiation
+        /// - [ ] Check response headers for proper Sec-WebSocket-Accept
+        /// - [ ] Verify subprotocol negotiation and custom headers
+        /// - [ ] Implement handshake timeout and retry logic
+        /// - [ ] Add TLS certificate validation for WSS connections
+        /// - [ ] Support custom handshake headers and authentication
+        /// - [ ] Implement handshake failure diagnostics and error reporting
         true
     }
 
@@ -1095,14 +1097,16 @@ impl ToolDiscovery {
         }
     }
 
-    /// TODO: Implement comprehensive health metrics collection and storage
-    /// - [ ] Store metrics in time-series database (InfluxDB, Prometheus TSDB, etc.)
-    /// - [ ] Implement metrics aggregation and downsampling for long-term storage
-    /// - [ ] Add metrics tagging and metadata for better querying
-    /// - [ ] Support different metric types (counters, gauges, histograms, summaries)
-    /// - [ ] Implement metrics retention policies and automatic cleanup
-    /// - [ ] Add metrics export to external monitoring systems
-    /// - [ ] Support real-time metrics streaming and alerting
+    /// Record health check metrics
+    fn record_health_metrics(&self, endpoint: &str, endpoint_type: EndpointType, is_healthy: bool, response_time_ms: u64) {
+        // TODO: Implement comprehensive health metrics collection and storage
+        /// - [ ] Store metrics in time-series database (InfluxDB, Prometheus TSDB, etc.)
+        /// - [ ] Implement metrics aggregation and downsampling for long-term storage
+        /// - [ ] Add metrics tagging and metadata for better querying
+        /// - [ ] Support different metric types (counters, gauges, histograms, summaries)
+        /// - [ ] Implement metrics retention policies and automatic cleanup
+        /// - [ ] Add metrics export to external monitoring systems
+        /// - [ ] Support real-time metrics streaming and alerting
         tracing::info!(
             "Health metrics - endpoint: {}, type: {:?}, healthy: {}, response_time: {}ms",
             endpoint,
@@ -1112,16 +1116,18 @@ impl ToolDiscovery {
         );
     }
 
-    /// TODO: Implement comprehensive WebSocket health checking and monitoring
-    /// - [ ] Use WebSocket client library for actual connection testing
-    /// - [ ] Implement proper WebSocket handshake and protocol validation
-    /// - [ ] Add WebSocket ping/pong heartbeats for connection health
-    /// - [ ] Support WebSocket subprotocol negotiation and validation
-    /// - [ ] Implement connection pooling and reuse for efficiency
-    /// - [ ] Add WebSocket connection metrics and performance monitoring
-    /// - [ ] Support secure WebSocket connections (WSS) with TLS validation
+    /// Perform comprehensive WebSocket health check
+    async fn perform_websocket_health_check(&self, endpoint: &str) -> bool {
+        // TODO: Implement comprehensive WebSocket health checking and monitoring
+        /// - [ ] Use WebSocket client library for actual connection testing
+        /// - [ ] Implement proper WebSocket handshake and protocol validation
+        /// - [ ] Add WebSocket ping/pong heartbeats for connection health
+        /// - [ ] Support WebSocket subprotocol negotiation and validation
+        /// - [ ] Implement connection pooling and reuse for efficiency
+        /// - [ ] Add WebSocket connection metrics and performance monitoring
+        /// - [ ] Support secure WebSocket connections (WSS) with TLS validation
         tracing::debug!("WebSocket health check not fully implemented for: {}", endpoint);
-        
+
         // For now, just check if the endpoint looks like a valid WebSocket URL
         endpoint.starts_with("ws://") || endpoint.starts_with("wss://")
     }

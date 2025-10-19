@@ -428,7 +428,14 @@ impl ModelBenchmarkingSystem {
         task_context: &TaskContext,
     ) -> Result<ResourceRequirements, BenchmarkingError> {
         // Calculate based on model size and task complexity
-        let base_cpu = (model.parameters.size / 1_000_000) as u32; // Simplified calculation
+        // TODO: Implement sophisticated resource requirement calculation based on model architecture
+        // - [ ] Analyze model architecture (transformer layers, attention heads, embedding dimensions)
+        // - [ ] Implement empirical resource usage modeling based on benchmark data
+        // - [ ] Support different hardware configurations (CPU, GPU, TPU, specialized accelerators)
+        // - [ ] Add memory bandwidth and cache hierarchy considerations
+        // - [ ] Implement task-specific resource scaling factors
+        // - [ ] Support dynamic resource allocation based on runtime profiling
+        // - [ ] Add resource prediction validation against actual measurements
         let base_memory = model.parameters.size / 1024; // Convert to MB
 
         let complexity_multiplier = match task_context.complexity {
@@ -584,7 +591,14 @@ impl ModelBenchmarkingSystem {
         model_performance: &[ModelPerformance],
         task_context: &TaskContext,
     ) -> Result<Vec<ModelCapabilityAnalysis>, BenchmarkingError> {
-        // Simulate model capability analysis
+        // TODO: Implement comprehensive model capability analysis and task matching
+        // - [ ] Analyze model architecture compatibility with task requirements
+        // - [ ] Implement capability scoring based on historical performance data
+        // - [ ] Support different task types (classification, generation, embedding, etc.)
+        // - [ ] Add model capability validation through small-scale testing
+        // - [ ] Implement capability degradation detection and model retirement
+        // - [ ] Support multi-task capability analysis and trade-off evaluation
+        // - [ ] Add capability prediction for unseen task-model combinations
         tracing::debug!("Analyzing model capabilities for task: {:?}", task_context.task_type);
         let mut analyses = Vec::new();
         

@@ -752,14 +752,24 @@ impl AsyncInferenceEngine {
         result
     }
 
-    /// Internal inference execution
+    /// TODO: Replace placeholder async inference implementation with actual Core ML integration
+    /// Requirements for completion:
+    /// - [ ] Integrate with actual Core ML framework for model execution
+    /// - [ ] Implement proper model pool management and caching
+    /// - [ ] Add support for different Core ML model types (neuralnetwork, mlprogram)
+    /// - [ ] Implement proper tensor input/output handling and conversion
+    /// - [ ] Add support for batch inference processing
+    /// - [ ] Implement proper error handling for Core ML execution failures
+    /// - [ ] Add support for model warm-up and performance optimization
+    /// - [ ] Implement proper memory management for Core ML operations
+    /// - [ ] Add support for different precision modes (FP32, FP16, INT8)
+    /// - [ ] Implement proper cleanup of Core ML resources
+    /// - [ ] Add support for inference result validation and quality assessment
+    /// - [ ] Implement proper inference monitoring and alerting
+    /// - [ ] Add support for concurrent inference requests with proper synchronization
+    /// - [ ] Implement proper inference result caching and deduplication
     async fn infer_internal(&self, request: InferenceRequest) -> Result<InferenceResult> {
         let start = std::time::Instant::now();
-
-        // Acquire model from pool (placeholder - will integrate later)
-        let _model_id = "model-0";
-
-        // Perform inference (placeholder - would call actual Core ML)
         tokio::time::sleep(Duration::from_millis(100)).await;
 
         let latency_ms = start.elapsed().as_millis() as u64;

@@ -1,0 +1,432 @@
+//! Database storage implementation for source integrity records
+//!
+//! @author @darianrosebrook
+
+use anyhow::Result;
+use async_trait::async_trait;
+use chrono::{DateTime, Utc};
+use std::collections::HashMap;
+use uuid::Uuid;
+
+use agent_agency_database::DatabaseClient;
+use crate::types::*;
+
+/// Storage trait for source integrity records
+#[async_trait]
+pub trait SourceIntegrityStorage: Send + Sync {
+    /// Store a new source integrity record
+    async fn store_record(&self, record: &CreateSourceIntegrityRecord) -> Result<Uuid>;
+
+    /// Get a source integrity record by ID
+    async fn get_record(&self, id: &Uuid) -> Result<Option<SourceIntegrityRecord>>;
+
+    /// Get a source integrity record by source ID and type
+    async fn get_record_by_source(
+        &self,
+        source_id: &str,
+        source_type: &SourceType,
+    ) -> Result<Option<SourceIntegrityRecord>>;
+
+    /// Update an existing source integrity record
+    async fn update_record(&self, record: &SourceIntegrityRecord) -> Result<()>;
+
+    /// Store a verification attempt
+    async fn store_verification(
+        &self,
+        verification: &CreateSourceIntegrityVerification,
+    ) -> Result<Uuid>;
+
+    /// Store an alert
+    async fn store_alert(&self, alert: &CreateSourceIntegrityAlert) -> Result<Uuid>;
+
+    /// Get verification history for a source
+    async fn get_verification_history(
+        &self,
+        source_integrity_id: &Uuid,
+        limit: Option<i32>,
+    ) -> Result<Vec<SourceIntegrityVerification>>;
+
+    /// Get alerts for a source
+    async fn get_alerts(
+        &self,
+        source_integrity_id: &Uuid,
+        limit: Option<i32>,
+    ) -> Result<Vec<SourceIntegrityAlert>>;
+
+    /// Get source integrity statistics
+    async fn get_statistics(
+        &self,
+        time_range_start: Option<DateTime<Utc>>,
+        time_range_end: Option<DateTime<Utc>>,
+    ) -> Result<SourceIntegrityStats>;
+
+    /// Delete a source integrity record
+    async fn delete_record(&self, id: &Uuid) -> Result<()>;
+}
+
+/// PostgreSQL implementation of source integrity storage
+pub struct PostgresSourceIntegrityStorage {
+    db_client: DatabaseClient,
+}
+
+impl PostgresSourceIntegrityStorage {
+    /// Create a new PostgreSQL storage instance
+    pub fn new(db_client: DatabaseClient) -> Self {
+        Self { db_client }
+    }
+}
+
+#[async_trait]
+impl SourceIntegrityStorage for PostgresSourceIntegrityStorage {
+    async fn store_record(&self, record: &CreateSourceIntegrityRecord) -> Result<Uuid> {
+        let id = Uuid::new_v4();
+
+        sqlx::query!(
+            r#"
+            INSERT INTO source_integrity_records (
+                id, source_id, source_type, content_hash, content_size,
+                hash_algorithm, integrity_status, tampering_indicators,
+                verification_metadata, first_seen_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
+            "#,
+            id,
+            record.source_id,
+            record.source_type.to_string(),
+            record.content_hash,
+            record.content_size as i64,
+            record.hash_algorithm.to_string(),
+            record.integrity_status.to_string(),
+            serde_json::to_value(&record.tampering_indicators)?,
+            serde_json::to_value(&record.verification_metadata)?
+        )
+        .execute(&self.pool)
+        .await?;
+
+        tracing::debug!(
+            "Stored source integrity record: {} ({})",
+            record.source_id,
+            record.source_type
+        );
+
+        Ok(id)
+    }
+
+    async fn get_record(&self, id: &Uuid) -> Result<Option<SourceIntegrityRecord>> {
+        let record = sqlx::query!(
+            r#"
+            SELECT
+                id, source_id, source_type, content_hash, content_size,
+                hash_algorithm, integrity_status, tampering_indicators,
+                verification_metadata, first_seen_at, last_verified_at,
+                verification_count, created_at, updated_at
+            FROM source_integrity_records
+            WHERE id = $1
+            "#,
+            id
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        match record {
+            Some(row) => {
+                let record = SourceIntegrityRecord {
+                    id: row.id,
+                    source_id: row.source_id,
+                    source_type: SourceType::from_string(&row.source_type).map_err(|e| anyhow::anyhow!(e))?,
+                    content_hash: row.content_hash,
+                    content_size: row.content_size as usize,
+                    hash_algorithm: HashAlgorithm::from_string(&row.hash_algorithm).map_err(|e| anyhow::anyhow!(e))?,
+                    integrity_status: IntegrityStatus::from_string(&row.integrity_status).map_err(|e| anyhow::anyhow!(e))?,
+                    tampering_indicators: serde_json::from_value(row.tampering_indicators)?,
+                    verification_metadata: serde_json::from_value(row.verification_metadata)?,
+                    first_seen_at: row.first_seen_at,
+                    last_verified_at: row.last_verified_at,
+                    verification_count: row.verification_count as u32,
+                    created_at: row.created_at,
+                    updated_at: row.updated_at,
+                };
+                Ok(Some(record))
+            }
+            None => Ok(None),
+        }
+    }
+
+    async fn get_record_by_source(
+        &self,
+        source_id: &str,
+        source_type: &SourceType,
+    ) -> Result<Option<SourceIntegrityRecord>> {
+        let record = sqlx::query!(
+            r#"
+            SELECT
+                id, source_id, source_type, content_hash, content_size,
+                hash_algorithm, integrity_status, tampering_indicators,
+                verification_metadata, first_seen_at, last_verified_at,
+                verification_count, created_at, updated_at
+            FROM source_integrity_records
+            WHERE source_id = $1 AND source_type = $2
+            "#,
+            source_id,
+            source_type.to_string()
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        match record {
+            Some(row) => {
+                let record = SourceIntegrityRecord {
+                    id: row.id,
+                    source_id: row.source_id,
+                    source_type: SourceType::from_string(&row.source_type).map_err(|e| anyhow::anyhow!(e))?,
+                    content_hash: row.content_hash,
+                    content_size: row.content_size as usize,
+                    hash_algorithm: HashAlgorithm::from_string(&row.hash_algorithm).map_err(|e| anyhow::anyhow!(e))?,
+                    integrity_status: IntegrityStatus::from_string(&row.integrity_status).map_err(|e| anyhow::anyhow!(e))?,
+                    tampering_indicators: serde_json::from_value(row.tampering_indicators)?,
+                    verification_metadata: serde_json::from_value(row.verification_metadata)?,
+                    first_seen_at: row.first_seen_at,
+                    last_verified_at: row.last_verified_at,
+                    verification_count: row.verification_count as u32,
+                    created_at: row.created_at,
+                    updated_at: row.updated_at,
+                };
+                Ok(Some(record))
+            }
+            None => Ok(None),
+        }
+    }
+
+    async fn update_record(&self, record: &SourceIntegrityRecord) -> Result<()> {
+        sqlx::query!(
+            r#"
+            UPDATE source_integrity_records SET
+                source_id = $2,
+                source_type = $3,
+                content_hash = $4,
+                content_size = $5,
+                hash_algorithm = $6,
+                integrity_status = $7,
+                tampering_indicators = $8,
+                verification_metadata = $9,
+                last_verified_at = $10,
+                verification_count = $11,
+                updated_at = NOW()
+            WHERE id = $1
+            "#,
+            record.id,
+            record.source_id,
+            record.source_type.to_string(),
+            record.content_hash,
+            record.content_size as i64,
+            record.hash_algorithm.to_string(),
+            record.integrity_status.to_string(),
+            serde_json::to_value(&record.tampering_indicators)?,
+            serde_json::to_value(&record.verification_metadata)?,
+            record.last_verified_at,
+            record.verification_count as i32
+        )
+        .execute(&self.pool)
+        .await?;
+
+        tracing::debug!("Updated source integrity record: {}", record.id);
+        Ok(())
+    }
+
+    async fn store_verification(
+        &self,
+        verification: &CreateSourceIntegrityVerification,
+    ) -> Result<Uuid> {
+        let id = Uuid::new_v4();
+
+        sqlx::query!(
+            r#"
+            INSERT INTO source_integrity_verifications (
+                id, source_integrity_id, verification_type, verification_result,
+                calculated_hash, stored_hash, hash_match, tampering_detected,
+                verification_details, verified_by, verification_duration_ms
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+            "#,
+            id,
+            verification.source_integrity_id,
+            verification.verification_type.to_string(),
+            verification.verification_result.to_string(),
+            verification.calculated_hash,
+            verification.stored_hash,
+            verification.hash_match,
+            verification.tampering_detected,
+            serde_json::to_value(&verification.verification_details)?,
+            verification.verified_by,
+            verification.verification_duration_ms.map(|d| d as i32)
+        )
+        .execute(&self.pool)
+        .await?;
+
+        tracing::debug!(
+            "Stored verification for source {}: {}",
+            verification.source_integrity_id,
+            verification.verification_result
+        );
+
+        Ok(id)
+    }
+
+    async fn store_alert(&self, alert: &CreateSourceIntegrityAlert) -> Result<Uuid> {
+        let id = Uuid::new_v4();
+
+        sqlx::query!(
+            r#"
+            INSERT INTO source_integrity_alerts (
+                id, source_integrity_id, alert_type, severity, alert_message,
+                alert_data, acknowledged, acknowledged_by, acknowledged_at,
+                resolved, resolved_by, resolved_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+            "#,
+            id,
+            alert.source_integrity_id,
+            alert.alert_type.to_string(),
+            alert.severity.to_string(),
+            alert.alert_message,
+            serde_json::to_value(&alert.alert_data)?,
+            alert.acknowledged,
+            alert.acknowledged_by,
+            alert.acknowledged_at,
+            alert.resolved,
+            alert.resolved_by,
+            alert.resolved_at
+        )
+        .execute(&self.pool)
+        .await?;
+
+        tracing::warn!(
+            "Stored integrity alert for source {}: {} ({})",
+            alert.source_integrity_id,
+            alert.alert_type,
+            alert.severity
+        );
+
+        Ok(id)
+    }
+
+    async fn get_verification_history(
+        &self,
+        source_integrity_id: &Uuid,
+        limit: Option<i32>,
+    ) -> Result<Vec<SourceIntegrityVerification>> {
+        let limit_value = limit.unwrap_or(50);
+        let rows = sqlx::query!(
+            r#"
+            SELECT
+                id, source_integrity_id, verification_type, verification_result,
+                calculated_hash, stored_hash, hash_match, tampering_detected,
+                verification_details, verified_by, verification_duration_ms, created_at
+            FROM source_integrity_verifications
+            WHERE source_integrity_id = $1
+            ORDER BY created_at DESC
+            LIMIT $2
+            "#,
+            source_integrity_id,
+            limit_value
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        let mut verifications = Vec::new();
+        for row in rows {
+            let verification = SourceIntegrityVerification {
+                id: row.id,
+                source_integrity_id: row.source_integrity_id,
+                verification_type: VerificationType::from_string(&row.verification_type).map_err(|e| anyhow::anyhow!(e))?,
+                verification_result: VerificationResult::from_string(&row.verification_result).map_err(|e| anyhow::anyhow!(e))?,
+                calculated_hash: row.calculated_hash,
+                stored_hash: row.stored_hash,
+                hash_match: row.hash_match,
+                tampering_detected: row.tampering_detected,
+                verification_details: serde_json::from_value(row.verification_details)?,
+                verified_by: row.verified_by,
+                verification_duration_ms: row.verification_duration_ms.map(|d| d as u64),
+                created_at: row.created_at,
+            };
+            verifications.push(verification);
+        }
+
+        Ok(verifications)
+    }
+
+    async fn get_alerts(
+        &self,
+        source_integrity_id: &Uuid,
+        limit: Option<i32>,
+    ) -> Result<Vec<SourceIntegrityAlert>> {
+        // Mock implementation
+        Ok(Vec::new())
+    }
+
+    async fn get_statistics(
+        &self,
+        time_range_start: Option<DateTime<Utc>>,
+        time_range_end: Option<DateTime<Utc>>,
+    ) -> Result<SourceIntegrityStats> {
+        // TODO: Replace mock implementation with proper storage integration
+        /// Requirements for completion:
+        /// - [ ] Implement proper storage integration using database or file system
+        /// - [ ] Add support for different storage backends and configurations
+        /// - [ ] Implement proper data persistence and retrieval operations
+        /// - [ ] Add support for data validation and integrity checking
+        /// - [ ] Implement proper error handling for storage operation failures
+        /// - [ ] Add support for storage performance optimization and caching
+        /// - [ ] Implement proper memory management for storage operations
+        /// - [ ] Add support for storage monitoring and alerting
+        /// - [ ] Implement proper cleanup of storage resources
+        /// - [ ] Add support for storage result validation and quality assessment
+        // Mock implementation
+        Ok(SourceIntegrityStats {
+            total_sources: 0,
+            verified_sources: 0,
+            tampered_sources: 0,
+            unknown_sources: 0,
+            pending_sources: 0,
+            total_verifications: 0,
+            avg_verification_count: 0.0,
+            last_verification: None,
+            verification_success_rate: 0.0,
+            avg_verification_duration_ms: 0.0,
+        })
+    }
+
+    async fn delete_record(&self, id: &Uuid) -> Result<()> {
+        // Mock implementation
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashMap;
+
+    // TODO: Implement proper database integration testing
+    // - [ ] Set up test database with proper schema and fixtures
+    // - [ ] Implement test database initialization and cleanup
+    // - [ ] Add integration tests for hash storage and retrieval
+    // - [ ] Test concurrent access and transaction isolation
+    // - [ ] Implement test data generation and validation
+    // - [ ] Add performance testing for database operations
+    // - [ ] Support multiple database backends in testing
+
+    #[test]
+    fn test_create_source_integrity_record() {
+        let record = CreateSourceIntegrityRecord {
+            source_id: "test_source".to_string(),
+            source_type: SourceType::Content,
+            content_hash: "test_hash".to_string(),
+            content_size: 100,
+            hash_algorithm: HashAlgorithm::Sha256,
+            integrity_status: IntegrityStatus::Verified,
+            tampering_indicators: Vec::new(),
+            verification_metadata: HashMap::new(),
+        };
+
+        assert_eq!(record.source_id, "test_source");
+        assert_eq!(record.content_size, 100);
+    }
+}

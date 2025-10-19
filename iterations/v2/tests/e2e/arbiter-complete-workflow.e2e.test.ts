@@ -373,28 +373,28 @@ risk_tiers:
       const taskBreakdown = [
         {
           id: "cart-core",
-          agent: "cursor-composer-agent",
+          agent: "cursor-composer",
           description: "Implement shopping cart core functionality",
           priority: VerificationPriority.HIGH,
           estimatedComplexity: "medium",
         },
         {
           id: "payment-integration",
-          agent: "copilot-agent",
+          agent: "github-copilot",
           description: "Integrate payment processing APIs",
           priority: VerificationPriority.CRITICAL,
           estimatedComplexity: "high",
         },
         {
           id: "inventory-sync",
-          agent: "github-copilot-agent",
+          agent: "github-copilot-chat",
           description: "Implement inventory synchronization",
           priority: VerificationPriority.HIGH,
           estimatedComplexity: "medium",
         },
         {
           id: "user-session",
-          agent: "cursor-chat-agent",
+          agent: "cursor-chat",
           description: "Handle user session persistence",
           priority: VerificationPriority.MEDIUM,
           estimatedComplexity: "low",

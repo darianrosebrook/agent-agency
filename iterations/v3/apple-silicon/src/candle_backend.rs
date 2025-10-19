@@ -389,12 +389,18 @@ impl InferenceEngine for CandleBackend {
         let data_str = String::from_utf8_lossy(data);
 
         // TODO: Replace simplified pattern matching with proper protobuf field extraction
-        // - [ ] Parse protobuf messages using proper field tags and wire types
-        // - [ ] Extract tensor specifications from structured protobuf data
-        // - [ ] Support nested message structures and repeated fields
-        // - [ ] Implement proper type validation for protobuf fields
-        // - [ ] Add support for protobuf extensions and custom fields
-        // - [ ] Optimize field extraction for large protobuf messages
+        /// Requirements for completion:
+        /// - [ ] Parse protobuf messages using proper field tags and wire types
+        /// - [ ] Extract tensor specifications from structured protobuf data
+        /// - [ ] Support nested message structures and repeated fields
+        /// - [ ] Implement proper type validation for protobuf fields
+        /// - [ ] Add support for protobuf extensions and custom fields
+        /// - [ ] Optimize field extraction for large protobuf messages
+        /// - [ ] Implement proper error handling for malformed protobuf data
+        /// - [ ] Add support for different protobuf wire formats and compression
+        /// - [ ] Implement proper memory management for large protobuf parsing
+        /// - [ ] Add support for protobuf schema validation
+        /// - [ ] Implement proper cleanup of protobuf parsing resources
         // Extract input tensors (simplified pattern matching)
         if let Some(input_section) = self.find_protobuf_section(&data_str, "input") {
             inputs = self.parse_tensor_specs_from_section(input_section, true)?;
@@ -777,14 +783,42 @@ impl InferenceEngine for CandleBackend {
         }
     }
 
-    /// Load SafeTensors model (placeholder implementation)
+    /// TODO: Replace placeholder SafeTensors model loading with actual implementation
+    /// Requirements for completion:
+    /// - [ ] Integrate with candle-transformers or similar SafeTensors library
+    /// - [ ] Implement proper SafeTensors file parsing and validation
+    /// - [ ] Support different model architectures (BERT, GPT, etc.)
+    /// - [ ] Add support for model configuration loading and parsing
+    /// - [ ] Implement proper tensor loading and device placement
+    /// - [ ] Add support for model metadata extraction and validation
+    /// - [ ] Implement proper error handling for SafeTensors loading failures
+    /// - [ ] Add support for different quantization formats (FP32, FP16, INT8)
+    /// - [ ] Implement proper memory management for model loading
+    /// - [ ] Add support for model warm-up and optimization
+    /// - [ ] Implement proper cleanup of SafeTensors resources
+    /// - [ ] Add support for model versioning and compatibility checking
+    /// - [ ] Implement proper SafeTensors loading monitoring and alerting
     fn load_safetensors_model(&self, _path: &std::path::Path, _device: &candle_core::Device) -> Result<Box<dyn crate::inference::PreparedModel>> {
         // Placeholder - would load actual SafeTensors model
         // In production: use candle-transformers or similar
         bail!("SafeTensors model loading not implemented yet")
     }
 
-    /// Load ONNX model (placeholder implementation)
+    /// TODO: Replace placeholder ONNX model loading with actual implementation
+    /// Requirements for completion:
+    /// - [ ] Integrate with candle-onnx or similar ONNX library
+    /// - [ ] Implement proper ONNX file parsing and validation
+    /// - [ ] Support different ONNX opsets and model versions
+    /// - [ ] Add support for ONNX graph analysis and optimization
+    /// - [ ] Implement proper tensor input/output mapping
+    /// - [ ] Add support for ONNX model metadata extraction and validation
+    /// - [ ] Implement proper error handling for ONNX loading failures
+    /// - [ ] Add support for different execution providers (CPU, GPU, etc.)
+    /// - [ ] Implement proper memory management for ONNX models
+    /// - [ ] Add support for ONNX model optimization and quantization
+    /// - [ ] Implement proper cleanup of ONNX resources
+    /// - [ ] Add support for ONNX model profiling and performance analysis
+    /// - [ ] Implement proper ONNX loading monitoring and alerting
     fn load_onnx_model(&self, _path: &std::path::Path, _device: &candle_core::Device) -> Result<Box<dyn crate::inference::PreparedModel>> {
         // Placeholder - would load actual ONNX model
         // In production: use candle-onnx or similar

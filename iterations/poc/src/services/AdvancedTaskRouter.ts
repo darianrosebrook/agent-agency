@@ -602,9 +602,23 @@ export class AdvancedTaskRouter extends EventEmitter {
   /**
    * Get available agents for task type
    */
+  // TODO: Replace mock agent retrieval with actual agent registry integration
+  /// Requirements for completion:
+  /// - [ ] Integrate with actual agent registry service or database
+  /// - [ ] Implement proper agent capability matching and filtering
+  /// - [ ] Add support for agent availability and load balancing
+  /// - [ ] Implement proper agent status checking and health monitoring
+  /// - [ ] Add support for agent skill level assessment and matching
+  /// - [ ] Implement proper agent selection algorithms (round-robin, least-loaded, etc.)
+  /// - [ ] Add support for agent geographic/location-based routing
+  /// - [ ] Implement proper error handling for agent registry failures
+  /// - [ ] Add support for agent failover and redundancy
+  /// - [ ] Implement proper agent performance tracking and metrics
+  /// - [ ] Add support for agent capacity planning and scaling
+  /// - [ ] Implement proper agent authentication and authorization
+  /// - [ ] Add support for agent dynamic registration and discovery
+  /// - [ ] Implement proper agent monitoring and alerting
   private getAvailableAgents(taskType: string): Agent[] {
-    // This would be implemented to query the agent registry
-    // For now, return mock agents
     return [
       {
         id: "agent-1",

@@ -525,12 +525,12 @@ impl SourceIntegrityStorage for PostgresSourceIntegrityStorage {
 mod tests {
     use super::*;
 
-    // Database integration testing implemented with comprehensive test coverage
-    // ✅ Set up test database with proper schema and fixtures
-    // ✅ Implement test database initialization and cleanup
-    // ✅ Add integration tests for hash storage and retrieval
-    // ✅ Test concurrent access and transaction isolation
-    // ✅ Implement test data generation and validation
+    // TODO: Implement proper database integration testing
+    // - [ ] Set up test database with proper schema and fixtures
+    // - [ ] Implement test database initialization and cleanup
+    // - [ ] Add integration tests for hash storage and retrieval
+    // - [ ] Test concurrent access and transaction isolation
+    // - [ ] Implement test data generation and validation
     // - [ ] Add performance testing for database operations
     // - [ ] Support multiple database backends in testing
 
@@ -549,126 +549,5 @@ mod tests {
 
         assert_eq!(record.source_id, "test_source");
         assert_eq!(record.content_size, 100);
-    }
-
-    #[tokio::test]
-    async fn test_database_integration_source_integrity_storage() {
-        // Integration test for source integrity storage operations
-        // This test requires a real database connection
-        if std::env::var("RUN_INTEGRATION_TESTS").is_err() {
-            return; // Skip unless explicitly enabled
-        }
-
-        // let db_client = setup_test_database_client().await;
-        // let storage = PostgresSourceIntegrityStorage::new(db_client);
-
-        // Test record storage and retrieval
-        let record = CreateSourceIntegrityRecord {
-            source_id: format!("test-source-{}", uuid::Uuid::new_v4()),
-            source_type: SourceType::File,
-            content_hash: "abcd1234hash".to_string(),
-            content_size: 1024,
-            hash_algorithm: HashAlgorithm::Sha256,
-            integrity_status: IntegrityStatus::Verified,
-            tampering_indicators: vec![TamperingIndicator::HashMismatch],
-            verification_metadata: HashMap::from([
-                ("test_key".to_string(), serde_json::Value::String("test_value".to_string()))
-            ]),
-        };
-
-        // Test storage
-        // let stored_id = storage.store_record(&record).await.unwrap();
-
-        // Test retrieval
-        // let retrieved = storage.get_record(&stored_id).await.unwrap();
-        // assert!(retrieved.is_some());
-        // let retrieved_record = retrieved.unwrap();
-        // assert_eq!(retrieved_record.source_id, record.source_id);
-
-        // Test retrieval by source
-        // let by_source = storage.get_record_by_source(&record.source_id, &record.source_type).await.unwrap();
-        // assert!(by_source.is_some());
-
-        // Test verification storage
-        let verification = CreateSourceIntegrityVerification {
-            source_integrity_id: uuid::Uuid::new_v4(),
-            verification_type: VerificationType::Initial,
-            verification_result: VerificationResult::Passed,
-            calculated_hash: "abcd1234hash".to_string(),
-            stored_hash: "abcd1234hash".to_string(),
-            hash_match: true,
-            tampering_detected: false,
-            verification_details: HashMap::new(),
-            verified_by: Some("test-user".to_string()),
-            verification_duration_ms: Some(150),
-        };
-
-        // let verification_id = storage.store_verification(&verification).await.unwrap();
-
-        // Test alert storage
-        let alert = CreateSourceIntegrityAlert {
-            source_integrity_id: uuid::Uuid::new_v4(),
-            alert_type: AlertType::TamperingDetected,
-            severity: AlertSeverity::High,
-            alert_message: "Test tampering detected".to_string(),
-            alert_data: HashMap::from([
-                ("test_key".to_string(), "test_value".to_string())
-            ]),
-        };
-
-        // let alert_id = storage.store_alert(&alert).await.unwrap();
-
-        // Test statistics
-        // let stats = storage.get_statistics(None, None).await.unwrap();
-        // assert!(stats.total_sources >= 0);
-
-        // Test verification history
-        // let history = storage.get_verification_history(&verification.source_integrity_id, Some(10)).await.unwrap();
-        // assert!(!history.is_empty());
-
-        // Test alert retrieval
-        // let alerts = storage.get_alerts(&alert.source_integrity_id, Some(10)).await.unwrap();
-        // assert!(!alerts.is_empty());
-
-        // For now, just validate the data structures work
-        assert_eq!(record.source_id.starts_with("test-source-"), true);
-        assert_eq!(record.content_size, 1024);
-        assert_eq!(verification.verification_result, VerificationResult::Passed);
-        assert_eq!(alert.severity, AlertSeverity::High);
-    }
-
-    #[tokio::test]
-    async fn test_database_integration_concurrent_access() {
-        // Test concurrent access to storage operations
-        if std::env::var("RUN_INTEGRATION_TESTS").is_err() {
-            return;
-        }
-
-        // TODO: Test concurrent read/write operations
-        // TODO: Test transaction isolation
-        // TODO: Test connection pool behavior under load
-
-        // For now, just validate basic concurrency setup
-        use std::sync::Arc;
-        use tokio::sync::Mutex;
-
-        let counter = Arc::new(Mutex::new(0));
-        let mut handles = vec![];
-
-        for _ in 0..10 {
-            let counter_clone = Arc::clone(&counter);
-            let handle = tokio::spawn(async move {
-                let mut num = counter_clone.lock().await;
-                *num += 1;
-            });
-            handles.push(handle);
-        }
-
-        for handle in handles {
-            handle.await.unwrap();
-        }
-
-        let final_count = *counter.lock().await;
-        assert_eq!(final_count, 10);
     }
 }

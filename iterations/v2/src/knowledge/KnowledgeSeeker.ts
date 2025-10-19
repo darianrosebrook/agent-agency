@@ -403,7 +403,14 @@ export class KnowledgeSeeker implements IKnowledgeSeeker {
 
     // Add mock provider for testing if no providers configured
     if (this.providers.size === 0 && this.config.providers.length === 0) {
-      const mockProvider = SearchProviderFactory.createMockProvider();
+      // For now, create a basic mock provider inline to avoid async issues
+      // TODO: Replace with proper mock provider factory
+      const mockProvider = {
+        name: "mock",
+        search: async () => [],
+        getHealth: () => ({ available: true, responseTimeMs: 0, errorRate: 0 }),
+        shutdown: async () => {},
+      } as any;
       this.providers.set(mockProvider.name, mockProvider);
     }
   }

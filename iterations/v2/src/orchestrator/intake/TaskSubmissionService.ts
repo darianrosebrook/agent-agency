@@ -55,8 +55,34 @@ export async function processTaskSubmission(
 ): Promise<TaskSubmissionResult> {
   const { intakeProcessor, auditLogger, runtime, generateTaskId } = deps;
 
+  // Construct a proper task object from the raw task payload
+  const taskObject = {
+    id: generateTaskId(),
+    type: rawTask?.type || "general",
+    description: rawTask?.description || "",
+    // Add default values for required fields
+    requiredCapabilities: {},
+    priority: 5,
+    timeoutMs: 60000,
+    budget: {
+      maxFiles: 10,
+      maxLoc: 500,
+    },
+    createdAt: new Date(),
+    metadata: rawTask?.metadata || {},
+    attempts: 0,
+    maxAttempts: 3,
+    // Include specPath in metadata if provided
+    ...(rawTask?.specPath && {
+      metadata: {
+        ...(rawTask?.metadata || {}),
+        specPath: rawTask.specPath,
+      },
+    }),
+  };
+
   const intakeResult = await intakeProcessor.process({
-    payload: JSON.stringify(rawTask),
+    payload: JSON.stringify(taskObject),
     metadata: {
       contentType: "application/json",
       surface:
@@ -96,13 +122,11 @@ export async function processTaskSubmission(
     ...intakeResult.sanitizedTask!,
   };
 
-  const originalTaskId = sanitizedTask.id;
-  const submissionId = generateTaskId();
-  sanitizedTask.id = submissionId;
+  // Use the task ID we already generated
+  const submissionId = sanitizedTask.id;
 
   sanitizedTask.metadata = {
     ...sanitizedTask.metadata,
-    originalTaskId,
     intake: {
       chunkCount: intakeResult.metadata.chunkCount,
       chunkSizeBytes: intakeResult.metadata.chunkSizeBytes,

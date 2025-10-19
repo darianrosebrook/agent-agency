@@ -222,7 +222,18 @@ impl VisionEnricher {
         Ok(temp_file.path().to_path_buf())
     }
 
-    /// Create VNRecognizeTextRequest with proper configuration
+    /// TODO: Replace simulated Vision Framework request creation with actual Swift/Objective-C bridge
+    /// Requirements for completion:
+    /// - [ ] Implement Swift/Objective-C bridge for VNRecognizeTextRequest creation
+    /// - [ ] Support proper Vision Framework configuration and options
+    /// - [ ] Implement proper error handling for Vision Framework failures
+    /// - [ ] Add support for different recognition levels (accurate, fast)
+    /// - [ ] Support custom word lists and language correction
+    /// - [ ] Implement proper memory management for Vision Framework objects
+    /// - [ ] Add support for multiple recognition languages
+    /// - [ ] Implement proper cleanup of Vision Framework resources
+    /// - [ ] Add support for minimum text height configuration
+    /// - [ ] Support automatic language detection configuration
     async fn create_text_recognition_request(&self) -> Result<VNRecognizeTextRequest> {
         // In a real implementation, this would call Swift/Objective-C bridge
         // For now, simulate the request creation
@@ -237,7 +248,18 @@ impl VisionEnricher {
         })
     }
 
-    /// Create VNImageRequestHandler for processing image data
+    /// TODO: Replace simulated Vision Framework handler creation with actual Swift/Objective-C bridge
+    /// Requirements for completion:
+    /// - [ ] Implement Swift/Objective-C bridge for VNImageRequestHandler creation
+    /// - [ ] Support proper image orientation handling and configuration
+    /// - [ ] Implement proper error handling for image loading failures
+    /// - [ ] Add support for different image formats and color spaces
+    /// - [ ] Implement proper memory management for image data
+    /// - [ ] Add support for image preprocessing and optimization
+    /// - [ ] Implement proper cleanup of image resources
+    /// - [ ] Add support for image metadata extraction
+    /// - [ ] Support proper image validation and format checking
+    /// - [ ] Implement proper error reporting for invalid image data
     async fn create_vision_request_handler(&self, image_path: &std::path::Path) -> Result<VNImageRequestHandler> {
         // In a real implementation, this would call Swift/Objective-C bridge
         // For now, simulate the handler creation
@@ -248,7 +270,19 @@ impl VisionEnricher {
         })
     }
 
-    /// Execute text recognition using Vision Framework
+    /// TODO: Replace simulated text recognition with actual Vision Framework execution
+    /// Requirements for completion:
+    /// - [ ] Implement Swift/Objective-C bridge for Vision Framework execution
+    /// - [ ] Support proper text recognition request processing
+    /// - [ ] Implement proper error handling for recognition failures
+    /// - [ ] Add support for confidence scoring and result validation
+    /// - [ ] Implement proper bounding box calculation and positioning
+    /// - [ ] Add support for multiple text regions and hierarchical results
+    /// - [ ] Implement proper memory management for recognition results
+    /// - [ ] Add support for different text recognition algorithms
+    /// - [ ] Implement proper cleanup of recognition resources
+    /// - [ ] Add support for result post-processing and filtering
+    /// - [ ] Support proper error reporting for recognition failures
     async fn execute_text_recognition(
         &self,
         handler: &VNImageRequestHandler,

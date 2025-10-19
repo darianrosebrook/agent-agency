@@ -1601,7 +1601,12 @@ impl MultimodalIndexer {
         }
 
         // Fallback to in-memory lookup if database not available
-        Ok(self.get_block_scope_from_cache(block_id))
+        // TODO: Implement block scope caching infrastructure
+        // - [ ] Add in-memory LRU cache for block scope mappings
+        // - [ ] Implement cache invalidation on content changes
+        // - [ ] Support distributed cache coordination for multi-instance deployments
+        // - [ ] Add cache metrics and hit rate monitoring
+        Ok(None)
     }
 
     /// Check content-based scope matching
@@ -1715,17 +1720,6 @@ impl MultimodalIndexer {
         }
 
         Ok(optimized_results)
-    }
-
-    /// TODO: Implement scope caching infrastructure for performance optimization
-    /// - [ ] Add in-memory LRU cache for block scope mappings
-    /// - [ ] Implement cache invalidation on content changes
-    /// - [ ] Support distributed cache coordination for multi-instance deployments
-    /// - [ ] Add cache metrics and hit rate monitoring
-    /// - [ ] Implement cache persistence across application restarts
-    /// - [ ] Support hierarchical scope caching (project > module > block)
-    /// - [ ] Add cache warming strategies for frequently accessed scopes
-        None
     }
 
     /// Extract content features from search result

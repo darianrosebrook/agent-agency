@@ -10,73 +10,259 @@ use uuid::Uuid;
 use std::sync::Arc;
 use agent_agency_database::DatabaseClient;
 use crate::types::FusionMethod;
+use embedding_service::EmbeddingService;
 
-/// Text search API bridge
-/// TODO: Implement actual BM25 and dense vector search integration
-/// - [ ] Integrate BM25 full-text search engine (tantivy, lucene, etc.)
-/// - [ ] Add dense vector embeddings support (FAISS, HNSW, etc.)
-/// - [ ] Implement hybrid search combining sparse and dense retrieval
-/// - [ ] Support different embedding models and dimensions
-/// - [ ] Add search result ranking and relevance scoring
-/// - [ ] Implement query expansion and synonym handling
-/// - [ ] Support real-time index updates and incremental indexing
+/// BM25 index for keyword-based text search
+#[derive(Debug)]
+struct Bm25Index {
+    documents: HashMap<String, String>, // doc_id -> content
+    term_frequencies: HashMap<String, HashMap<String, usize>>, // term -> (doc_id -> frequency)
+    document_lengths: HashMap<String, usize>, // doc_id -> length
+    average_document_length: f32,
+    total_documents: usize,
+}
+
+/// Vector index for dense embedding search
+#[derive(Debug)]
+struct VectorIndex {
+    vectors: HashMap<String, Vec<f32>>, // doc_id -> embedding vector
+    dimension: usize,
+}
+
+/// Text search API bridge with BM25 and dense vector search
 #[derive(Debug)]
 struct TextSearchBridge {
+    bm25_index: Bm25Index,
+    vector_index: VectorIndex,
+    embedding_service: Arc<EmbeddingService>,
+}
 
 impl TextSearchBridge {
-    fn new() -> Result<Self> {
-        tracing::debug!("Initializing text search bridge");
-        Ok(Self {})
+    async fn new(embedding_service: Arc<EmbeddingService>) -> Result<Self> {
+        tracing::debug!("Initializing text search bridge with BM25 and vector search");
+
+        let bm25_index = Bm25Index {
+            documents: HashMap::new(),
+            term_frequencies: HashMap::new(),
+            document_lengths: HashMap::new(),
+            average_document_length: 0.0,
+            total_documents: 0,
+        };
+
+        let vector_index = VectorIndex {
+            vectors: HashMap::new(),
+            dimension: 384, // Default embedding dimension
+        };
+
+        Ok(Self {
+            bm25_index,
+            vector_index,
+            embedding_service,
+        })
     }
 
-    /// TODO: Implement actual BM25 and dense vector text search
-    /// - [ ] Execute BM25 scoring on inverted index for keyword matching
-    /// - [ ] Generate dense embeddings for query and documents
-    /// - [ ] Compute cosine similarity between query and document vectors
-    /// - [ ] Implement reciprocal rank fusion for combining BM25 and dense results
-    /// - [ ] Add query preprocessing (tokenization, stemming, stop word removal)
-    /// - [ ] Support multi-field search with different boost factors
-    /// - [ ] Implement search result diversification and deduplication
-        
-        tracing::debug!("Searching text index for: '{}' (k={})", query, k);
+    /// Add a document to both BM25 and vector indexes
+    pub async fn add_document(&mut self, doc_id: String, content: String) -> Result<()> {
+        // Add to BM25 index
+        self.add_to_bm25_index(doc_id.clone(), content.clone()).await?;
 
-        // TODO: Implement actual text index search instead of simulation
-        // - [ ] Integrate with vector database (Qdrant, Pinecone, Weaviate) for text embeddings
-        // - [ ] Implement BM25/TF-IDF scoring for keyword matching
-        // - [ ] Add support for semantic search with transformer embeddings
-        // - [ ] Implement hybrid search combining sparse and dense retrieval
-        // - [ ] Support multi-language text search and tokenization
-        // - [ ] Add relevance ranking and result filtering
-        // - [ ] Implement search result caching and performance optimization
-        // TODO: Implement actual text search with BM25 and dense vector integration
-        // - [ ] Integrate BM25 scoring algorithm for lexical matching
-        // - [ ] Implement dense vector retrieval using embeddings
-        // - [ ] Add hybrid scoring combining lexical and semantic similarity
-        // - [ ] Support query expansion and synonym handling
-        // - [ ] Implement relevance ranking with multiple signals
-        // - [ ] Add result filtering and post-processing
-        // - [ ] Support caching for frequent queries
-        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        // Generate embedding and add to vector index
+        let embedding = self.embedding_service.generate_embedding(&content).await?;
+        self.vector_index.vectors.insert(doc_id, embedding);
 
-        // Return simulated results
-        Ok(vec![
-            TextSearchResult {
-                id: Uuid::new_v4(),
-                text: format!("Document containing '{}' with relevant content", query),
-                score: 0.95,
-                modality: "text".to_string(),
-                project_scope: Some("default".to_string()),
+        Ok(())
+    }
+
+    /// Add document to BM25 index
+    async fn add_to_bm25_index(&mut self, doc_id: String, content: String) -> Result<()> {
+        let terms = self.tokenize_query(&content);
+        let doc_length = terms.len();
+
+        // Store document
+        self.bm25_index.documents.insert(doc_id.clone(), content);
+        self.bm25_index.document_lengths.insert(doc_id.clone(), doc_length);
+        self.bm25_index.total_documents += 1;
+
+        // Update term frequencies
+        let mut term_counts = HashMap::new();
+        for term in terms {
+            *term_counts.entry(term).or_insert(0) += 1;
+        }
+
+        for (term, count) in term_counts {
+            self.bm25_index.term_frequencies
+                .entry(term)
+                .or_insert_with(HashMap::new)
+                .insert(doc_id.clone(), count);
+        }
+
+        // Update average document length
+        let total_length: usize = self.bm25_index.document_lengths.values().sum();
+        self.bm25_index.average_document_length = total_length as f32 / self.bm25_index.total_documents as f32;
+
+        Ok(())
+    }
+
+    /// Execute BM25 and dense vector text search with hybrid ranking
+    async fn search_text(&self, query: &str, limit: usize) -> Result<Vec<embedding_service::MultimodalSearchResult>> {
+        tracing::debug!("Searching text with BM25 and dense vector search: {}", query);
+
+        // Execute BM25 keyword search
+        let bm25_results = self.bm25_search(query, limit).await?;
+
+        // Execute dense vector search
+        let vector_results = self.vector_search(query, limit).await?;
+
+        // Combine results using reciprocal rank fusion
+        let fused_results = self.fuse_search_results(bm25_results, vector_results, limit).await?;
+
+        Ok(fused_results)
+    }
+
+    /// Execute BM25 keyword search
+    async fn bm25_search(&self, query: &str, limit: usize) -> Result<Vec<(String, f32)>> {
+        if query.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let terms = self.tokenize_query(query);
+        let mut scores = HashMap::new();
+
+        for term in &terms {
+            if let Some(doc_freqs) = self.bm25_index.term_frequencies.get(term) {
+                let idf = self.calculate_idf(doc_freqs.len(), self.bm25_index.total_documents);
+
+                for (doc_id, term_freq) in doc_freqs {
+                    if let Some(doc_length) = self.bm25_index.document_lengths.get(doc_id) {
+                        let bm25_score = self.calculate_bm25_score(
+                            *term_freq as f32,
+                            *doc_length as f32,
+                            idf,
+                            self.bm25_index.average_document_length,
+                            self.bm25_index.total_documents,
+                        );
+
+                        *scores.entry(doc_id.clone()).or_insert(0.0) += bm25_score;
+                    }
+                }
+            }
+        }
+
+        // Sort by score and return top results
+        let mut results: Vec<(String, f32)> = scores.into_iter().collect();
+        results.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+        results.truncate(limit);
+
+        Ok(results)
+    }
+
+    /// Execute dense vector search using embeddings
+    async fn vector_search(&self, query: &str, limit: usize) -> Result<Vec<(String, f32)>> {
+        if query.is_empty() || self.vector_index.vectors.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        // Generate embedding for query
+        let query_embedding = self.embedding_service.generate_embedding(query).await?;
+
+        let mut similarities = Vec::new();
+
+        for (doc_id, doc_embedding) in &self.vector_index.vectors {
+            let similarity = self.cosine_similarity(&query_embedding, doc_embedding);
+            similarities.push((doc_id.clone(), similarity));
+        }
+
+        // Sort by similarity and return top results
+        similarities.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+        similarities.truncate(limit);
+
+        Ok(similarities)
+    }
+
+    /// Fuse BM25 and vector search results using reciprocal rank fusion
+    async fn fuse_search_results(
+        &self,
+        bm25_results: Vec<(String, f32)>,
+        vector_results: Vec<(String, f32)>,
+        limit: usize,
+    ) -> Result<Vec<embedding_service::MultimodalSearchResult>> {
+        let mut fused_scores = HashMap::new();
+
+        // Calculate RRF scores for BM25 results
+        for (i, (doc_id, _)) in bm25_results.iter().enumerate() {
+            let rank = i + 1;
+            *fused_scores.entry(doc_id.clone()).or_insert(0.0) += 1.0 / (60.0 + rank as f32);
+        }
+
+        // Calculate RRF scores for vector results
+        for (i, (doc_id, _)) in vector_results.iter().enumerate() {
+            let rank = i + 1;
+            *fused_scores.entry(doc_id.clone()).or_insert(0.0) += 1.0 / (60.0 + rank as f32);
+        }
+
+        // Convert to final results
+        let mut results: Vec<(String, f32)> = fused_scores.into_iter().collect();
+        results.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+        results.truncate(limit);
+
+        let final_results = results
+            .into_iter()
+            .map(|(doc_id, score)| embedding_service::MultimodalSearchResult {
+                content_id: doc_id,
+                content_type: "text".to_string(),
+                score,
                 metadata: HashMap::new(),
-            },
-            TextSearchResult {
-                id: Uuid::new_v4(),
-                text: format!("Another document with '{}' information", query),
-                score: 0.87,
-                modality: "text".to_string(),
-                project_scope: Some("default".to_string()),
-                metadata: HashMap::new(),
-            },
-        ])
+            })
+            .collect();
+
+        Ok(final_results)
+    }
+
+    /// Tokenize query into terms for BM25 search
+    fn tokenize_query(&self, query: &str) -> Vec<String> {
+        query
+            .to_lowercase()
+            .split_whitespace()
+            .map(|s| s.trim_matches(|c: char| !c.is_alphanumeric()))
+            .filter(|s| !s.is_empty())
+            .map(|s| s.to_string())
+            .collect()
+    }
+
+    /// Calculate IDF (Inverse Document Frequency)
+    fn calculate_idf(&self, document_frequency: usize, total_documents: usize) -> f32 {
+        let df = document_frequency as f32;
+        let n = total_documents as f32;
+        ((n - df + 0.5) / (df + 0.5)).ln() + 1.0
+    }
+
+    /// Calculate BM25 score for a term-document pair
+    fn calculate_bm25_score(&self, term_freq: f32, doc_length: f32, idf: f32, avg_doc_length: f32, total_docs: usize) -> f32 {
+        let k1 = 1.5; // BM25 parameter
+        let b = 0.75; // BM25 parameter
+
+        let numerator = term_freq * (k1 + 1.0);
+        let denominator = term_freq + k1 * (1.0 - b + b * (doc_length / avg_doc_length));
+
+        idf * (numerator / denominator)
+    }
+
+    /// Calculate cosine similarity between two vectors
+    fn cosine_similarity(&self, a: &[f32], b: &[f32]) -> f32 {
+        let dot_product: f32 = a.iter().zip(b.iter()).map(|(x, y)| x * y).sum();
+        let norm_a: f32 = a.iter().map(|x| x * x).sum::<f32>().sqrt();
+        let norm_b: f32 = b.iter().map(|x| x * x).sum::<f32>().sqrt();
+
+        if norm_a == 0.0 || norm_b == 0.0 {
+            0.0
+        } else {
+            dot_product / (norm_a * norm_b)
+        }
+    }
+
+    /// Legacy method for backward compatibility - use search_text instead
+    pub async fn search(&self, query: &str, k: usize) -> Result<Vec<embedding_service::MultimodalSearchResult>> {
+        self.search_text(query, k).await
     }
 }
 
@@ -584,7 +770,18 @@ impl MultimodalRetriever {
         fused_results
     }
 
-    /// Simple average fusion for combining results
+    /// TODO: Replace simple average fusion with sophisticated result fusion algorithms
+    /// Requirements for completion:
+    /// - [ ] Implement sophisticated result fusion algorithms (weighted average, RRF, etc.)
+    /// - [ ] Add support for different fusion strategies and configurations
+    /// - [ ] Implement proper result ranking and relevance scoring
+    /// - [ ] Add support for result diversity and coverage optimization
+    /// - [ ] Implement proper error handling for fusion algorithm failures
+    /// - [ ] Add support for fusion algorithm performance optimization
+    /// - [ ] Implement proper memory management for fusion operations
+    /// - [ ] Add support for fusion result validation and quality assessment
+    /// - [ ] Implement proper cleanup of fusion resources
+    /// - [ ] Add support for fusion monitoring and alerting
     fn simple_average_fusion(
         &self,
         results: Vec<embedding_service::MultimodalSearchResult>,

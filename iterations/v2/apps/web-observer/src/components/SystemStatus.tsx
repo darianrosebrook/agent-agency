@@ -54,12 +54,12 @@ export default function SystemStatus({ status }: SystemStatusProps) {
         System Status
       </h2>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="space-y-2">
           <div className="flex items-center space-x-2">
             <span className="text-sm font-medium text-gray-600">Status</span>
             <span
-              className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
+              className={`px-2 py-1 rounded-full text-sm font-medium ${getStatusColor(
                 status.status
               )}`}
             >
@@ -106,7 +106,7 @@ export default function SystemStatus({ status }: SystemStatusProps) {
 
         <div className="space-y-2">
           <h3 className="text-sm font-medium text-gray-600">Storage</h3>
-          <p className="text-sm text-gray-900">
+          <p className="text-sm text-gray-900 break-all">
             Active File: {status.activeFile || "N/A"}
           </p>
           <p className="text-sm text-gray-900">

@@ -1,42 +1,23 @@
-id: TEST-001
-title: Test Working Specification
+id: "CAWS-FIXTURE-001"
+title: "CAWS Integration Test Fixture"
 risk_tier: 2
-mode: feature
+mode: "feature"
 blast_radius:
-  modules:
-    - src/test-module
+  modules: ["test"]
   data_migration: false
-operational_rollback_slo: 5m
+operational_rollback_slo: "5m"
 scope:
-  in:
-    - src/test-module/
-    - tests/test-module/
-  out:
-    - node_modules/
-    - dist/
+  in: ["src/"]
+  out: ["node_modules/"]
 invariants:
-  - System maintains data consistency
-  - No breaking changes to public API
+  - "Test fixture specification"
 acceptance:
-  - id: A1
-    given: User has valid credentials
-    when: User submits login form
-    then: User is authenticated and redirected
-  - id: A2
-    given: User has invalid credentials
-    when: User submits login form
-    then: Error message is displayed
+  - id: "A1"
+    given: "Test environment"
+    when: "Fixture is loaded"
+    then: "Validation succeeds"
 non_functional:
-  a11y:
-    - keyboard-navigation
-    - screen-reader-labels
   perf:
-    api_p95_ms: 250
-    lcp_ms: 2500
-  security:
-    - input-validation
-    - csrf-protection
-contracts:
-  - type: openapi
-    path: docs/api/test.yaml
-
+    api_p95_ms: 100
+  security: ["test-validation"]
+contracts: []

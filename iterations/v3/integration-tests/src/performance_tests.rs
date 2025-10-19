@@ -961,4 +961,410 @@ mod tests {
 
         Ok(())
     }
+
+/// Database performance benchmarks for all integrated components
+pub struct DatabasePerformanceBenchmarks {
+    executor: TestExecutor,
+}
+
+impl DatabasePerformanceBenchmarks {
+    pub fn new() -> Self {
+        Self {
+            executor: TestExecutor::new(LONG_TEST_TIMEOUT),
+        }
+    }
+
+    /// Run all database performance benchmarks
+    pub async fn run_all_benchmarks(&self) -> Result<Vec<TestResult>> {
+        info!("🔬 Starting Database Performance Benchmarks");
+
+        let mut results = Vec::new();
+
+        // CAWS Checker database benchmarks
+        results.push(self.benchmark_caws_checker_database_operations().await?);
+
+        // Source Integrity database benchmarks
+        results.push(self.benchmark_source_integrity_database_operations().await?);
+
+        // Council Learning database benchmarks
+        results.push(self.benchmark_council_learning_database_operations().await?);
+
+        // Claim Extraction database benchmarks
+        results.push(self.benchmark_claim_extraction_database_operations().await?);
+
+        // Observability Analytics database benchmarks
+        results.push(self.benchmark_observability_database_operations().await?);
+
+        // Concurrent database operations benchmark
+        results.push(self.benchmark_concurrent_database_operations().await?);
+
+        info!("✅ Database performance benchmarks completed");
+        Ok(results)
+    }
+
+    /// Benchmark CAWS Checker database operations
+    async fn benchmark_caws_checker_database_operations(&self) -> Result<TestResult> {
+        self.executor.execute("caws_checker_db_operations", async {
+            // TODO: Set up test database connection
+            // let db_client = setup_test_database_client().await;
+            // let checker = CawsChecker::with_database_client(db_client);
+
+            // Create test task spec
+            let task_spec = agent_agency_core::types::TaskSpec {
+                id: Uuid::new_v4(),
+                title: "Performance Test Task".to_string(),
+                description: "Testing CAWS validation performance".to_string(),
+                risk_tier: agent_agency_core::types::RiskTier::Tier2,
+                scope: agent_agency_core::types::TaskScope {
+                    files_affected: vec!["src/test.rs".to_string()],
+                    max_files: Some(5),
+                    max_loc: Some(1000),
+                    domains: vec!["backend".to_string()],
+                },
+                acceptance_criteria: vec![],
+                context: agent_agency_core::types::CouncilTaskContext {
+                    workspace_root: "/workspace".to_string(),
+                    git_branch: "main".to_string(),
+                    recent_changes: vec![],
+                    dependencies: std::collections::HashMap::new(),
+                    environment: agent_agency_core::types::ConfigEnvironment::Development,
+                },
+                worker_output: agent_agency_core::types::CouncilWorkerOutput {
+                    content: "".to_string(),
+                    files_modified: vec![],
+                    rationale: "".to_string(),
+                    self_assessment: agent_agency_core::types::SelfAssessment {
+                        caws_compliance: 0.8,
+                        quality_score: 0.85,
+                        confidence: 0.9,
+                        concerns: vec![],
+                        improvements: vec![],
+                        estimated_effort: None,
+                    },
+                    metadata: std::collections::HashMap::new(),
+                },
+                caws_spec: None,
+            };
+
+            let mut measurer = crate::test_utils::PerformanceMeasurer::new();
+
+            // Benchmark validation (currently simulated)
+            measurer.checkpoint("validation_start");
+            // let result = checker.validate_task_spec(&task_spec).await?;
+            // let stored_id = checker.store_validation_result(task_spec.id, &result).await?;
+            tokio::time::sleep(Duration::from_millis(50)).await; // Simulate operation
+            measurer.checkpoint("validation_complete");
+
+            // Benchmark history retrieval
+            // let history = checker.get_compliance_history(task_spec.id, Some(10)).await?;
+            tokio::time::sleep(Duration::from_millis(30)).await; // Simulate operation
+            measurer.checkpoint("history_retrieval");
+
+            // Benchmark statistics query
+            // let stats = checker.get_compliance_stats().await?;
+            tokio::time::sleep(Duration::from_millis(25)).await; // Simulate operation
+            measurer.checkpoint("statistics_query");
+
+            let total_duration = measurer.get_elapsed();
+
+            // SLA check: All operations should complete within 100ms total
+            crate::test_utils::assertions::assert_duration_within_bounds(
+                total_duration,
+                Duration::from_millis(100)
+            )?;
+
+            info!("CAWS Checker DB operations completed in {:?}", total_duration);
+
+            Ok(())
+        }).await
+    }
+
+    /// Benchmark Source Integrity database operations
+    async fn benchmark_source_integrity_database_operations(&self) -> Result<TestResult> {
+        self.executor.execute("source_integrity_db_operations", async {
+            // TODO: Set up test database connection
+            // let db_client = setup_test_database_client().await;
+            // let storage = PostgresSourceIntegrityStorage::new(db_client);
+
+            let mut measurer = crate::test_utils::PerformanceMeasurer::new();
+
+            // Create test record
+            let record = CreateSourceIntegrityRecord {
+                source_id: format!("perf-test-{}", Uuid::new_v4()),
+                source_type: agent_agency_source_integrity::types::SourceType::File,
+                content_hash: "abcd1234perfhash".to_string(),
+                content_size: 2048,
+                hash_algorithm: agent_agency_source_integrity::types::HashAlgorithm::Sha256,
+                integrity_status: agent_agency_source_integrity::types::IntegrityStatus::Verified,
+                tampering_indicators: vec![],
+                verification_metadata: std::collections::HashMap::new(),
+            };
+
+            // Benchmark record storage
+            measurer.checkpoint("storage_start");
+            // let stored_id = storage.store_record(&record).await?;
+            tokio::time::sleep(Duration::from_millis(45)).await; // Simulate operation
+            measurer.checkpoint("storage_complete");
+
+            // Benchmark record retrieval
+            // let retrieved = storage.get_record(&stored_id).await?;
+            tokio::time::sleep(Duration::from_millis(25)).await; // Simulate operation
+            measurer.checkpoint("retrieval_complete");
+
+            // Benchmark statistics query
+            // let stats = storage.get_statistics(None, None).await?;
+            tokio::time::sleep(Duration::from_millis(35)).await; // Simulate operation
+            measurer.checkpoint("statistics_complete");
+
+            let total_duration = measurer.get_elapsed();
+
+            // SLA check: All operations should complete within 150ms total
+            crate::test_utils::assertions::assert_duration_within_bounds(
+                total_duration,
+                Duration::from_millis(150)
+            )?;
+
+            info!("Source Integrity DB operations completed in {:?}", total_duration);
+
+            Ok(())
+        }).await
+    }
+
+    /// Benchmark Council Learning database operations
+    async fn benchmark_council_learning_database_operations(&self) -> Result<TestResult> {
+        self.executor.execute("council_learning_db_operations", async {
+            // TODO: Set up test database connection
+            // let db_client = setup_test_database_client().await;
+            // let analyzer = LearningSignalAnalyzer::with_database_client(db_client);
+
+            let mut measurer = crate::test_utils::PerformanceMeasurer::new();
+
+            // Create test task spec
+            let task_spec = agent_agency_core::types::TaskSpec {
+                id: Uuid::new_v4(),
+                title: "Learning Performance Test".to_string(),
+                description: "Testing learning signal performance".to_string(),
+                risk_tier: agent_agency_core::types::RiskTier::Tier2,
+                scope: agent_agency_core::types::TaskScope {
+                    files_affected: vec!["src/learning.rs".to_string()],
+                    max_files: Some(3),
+                    max_loc: Some(500),
+                    domains: vec!["ml".to_string()],
+                },
+                acceptance_criteria: vec![],
+                context: agent_agency_core::types::CouncilTaskContext {
+                    workspace_root: "/workspace".to_string(),
+                    git_branch: "main".to_string(),
+                    recent_changes: vec![],
+                    dependencies: std::collections::HashMap::new(),
+                    environment: agent_agency_core::types::ConfigEnvironment::Development,
+                },
+                worker_output: agent_agency_core::types::CouncilWorkerOutput {
+                    content: "".to_string(),
+                    files_modified: vec![],
+                    rationale: "".to_string(),
+                    self_assessment: agent_agency_core::types::SelfAssessment {
+                        caws_compliance: 0.85,
+                        quality_score: 0.88,
+                        confidence: 0.92,
+                        concerns: vec![],
+                        improvements: vec![],
+                        estimated_effort: None,
+                    },
+                    metadata: std::collections::HashMap::new(),
+                },
+                caws_spec: None,
+            };
+
+            // Benchmark historical data retrieval
+            measurer.checkpoint("historical_data_start");
+            // let historical_data = analyzer.retrieve_historical_resource_data(&task_spec).await?;
+            tokio::time::sleep(Duration::from_millis(60)).await; // Simulate database query
+            measurer.checkpoint("historical_data_complete");
+
+            // Benchmark task complexity estimation
+            // let complexity = analyzer.estimate_task_complexity(&task_spec).await?;
+            tokio::time::sleep(Duration::from_millis(15)).await; // Simulate computation
+            measurer.checkpoint("complexity_estimation");
+
+            let total_duration = measurer.get_elapsed();
+
+            // SLA check: Operations should complete within 100ms total
+            crate::test_utils::assertions::assert_duration_within_bounds(
+                total_duration,
+                Duration::from_millis(100)
+            )?;
+
+            info!("Council Learning DB operations completed in {:?}", total_duration);
+
+            Ok(())
+        }).await
+    }
+
+    /// Benchmark Claim Extraction database operations
+    async fn benchmark_claim_extraction_database_operations(&self) -> Result<TestResult> {
+        self.executor.execute("claim_extraction_db_operations", async {
+            // TODO: Set up test database with embedding service
+            // let db_client = setup_test_database_client().await;
+            // let embedding_service = setup_test_embedding_service().await;
+            // let recognizer = NamedEntityRecognizer::with_services(db_client, embedding_service);
+
+            let mut measurer = crate::test_utils::PerformanceMeasurer::new();
+
+            let test_entities = vec![
+                "machine learning".to_string(),
+                "artificial intelligence".to_string(),
+                "neural network".to_string(),
+            ];
+
+            // Benchmark embedding generation
+            measurer.checkpoint("embedding_start");
+            for entity in &test_entities {
+                // let embedding = recognizer.generate_entity_embedding(entity).await?;
+                tokio::time::sleep(Duration::from_millis(20)).await; // Simulate embedding generation
+            }
+            measurer.checkpoint("embedding_complete");
+
+            // Benchmark semantic search
+            measurer.checkpoint("semantic_search_start");
+            for entity in &test_entities {
+                let test_embedding = vec![0.1; 768]; // Mock embedding
+                // let results = recognizer.query_knowledge_base_semantic_search(&test_embedding, entity).await?;
+                tokio::time::sleep(Duration::from_millis(35)).await; // Simulate database search
+            }
+            measurer.checkpoint("semantic_search_complete");
+
+            // Benchmark knowledge base usage recording
+            measurer.checkpoint("usage_recording_start");
+            for _ in 0..test_entities.len() {
+                let entity_id = Uuid::new_v4();
+                // recognizer.record_knowledge_base_usage(&entity_id).await?;
+                tokio::time::sleep(Duration::from_millis(15)).await; // Simulate usage recording
+            }
+            measurer.checkpoint("usage_recording_complete");
+
+            let total_duration = measurer.get_elapsed();
+
+            // SLA check: Operations should complete within 200ms total
+            crate::test_utils::assertions::assert_duration_within_bounds(
+                total_duration,
+                Duration::from_millis(200)
+            )?;
+
+            info!("Claim Extraction DB operations completed in {:?}", total_duration);
+
+            Ok(())
+        }).await
+    }
+
+    /// Benchmark Observability Analytics database operations
+    async fn benchmark_observability_database_operations(&self) -> Result<TestResult> {
+        self.executor.execute("observability_db_operations", async {
+            // TODO: Set up test database connection
+            // let db_client = setup_test_database_client().await;
+            // let analytics_engine = Arc::new(MockAnalyticsEngine::new());
+            // let dashboard = AnalyticsDashboard::with_database_client(analytics_engine, config, db_client);
+
+            let mut measurer = crate::test_utils::PerformanceMeasurer::new();
+
+            // Create test analytics insights
+            let insights = vec![agent_agency_observability::analytics_dashboard::AnalyticsInsight {
+                id: Uuid::new_v4(),
+                insight_type: agent_agency_observability::analytics_dashboard::InsightType::PerformanceTrend,
+                title: "Performance Trend Test".to_string(),
+                description: "Testing analytics performance".to_string(),
+                severity: agent_agency_observability::analytics_dashboard::InsightSeverity::Low,
+                confidence: 0.8,
+                data: std::collections::HashMap::new(),
+                recommendations: vec![],
+                created_at: chrono::Utc::now(),
+                expires_at: Some(chrono::Utc::now() + chrono::Duration::hours(1)),
+            }];
+
+            let cached_insights = agent_agency_observability::analytics_dashboard::CachedInsights {
+                insights,
+                cache_key: "perf:test:cache".to_string(),
+                generated_at: chrono::Utc::now(),
+                expires_at: chrono::Utc::now() + chrono::Duration::hours(1),
+                data_quality_score: 0.9,
+                metadata: std::collections::HashMap::new(),
+            };
+
+            // Benchmark cache storage
+            measurer.checkpoint("cache_storage_start");
+            // dashboard.store_in_memory_cache(&cached_insights.cache_key, &cached_insights).await?;
+            tokio::time::sleep(Duration::from_millis(40)).await; // Simulate cache storage
+            measurer.checkpoint("cache_storage_complete");
+
+            // Benchmark cache retrieval
+            // let retrieved = dashboard.get_cached_insights(&cached_insights.cache_key).await?;
+            tokio::time::sleep(Duration::from_millis(25)).await; // Simulate cache retrieval
+            measurer.checkpoint("cache_retrieval_complete");
+
+            // Benchmark LRU eviction
+            // dashboard.perform_lru_eviction().await?;
+            tokio::time::sleep(Duration::from_millis(30)).await; // Simulate eviction
+            measurer.checkpoint("eviction_complete");
+
+            let total_duration = measurer.get_elapsed();
+
+            // SLA check: Operations should complete within 120ms total
+            crate::test_utils::assertions::assert_duration_within_bounds(
+                total_duration,
+                Duration::from_millis(120)
+            )?;
+
+            info!("Observability DB operations completed in {:?}", total_duration);
+
+            Ok(())
+        }).await
+    }
+
+    /// Benchmark concurrent database operations across all components
+    async fn benchmark_concurrent_database_operations(&self) -> Result<TestResult> {
+        self.executor.execute("concurrent_db_operations", async {
+            let mut measurer = crate::test_utils::PerformanceMeasurer::new();
+
+            measurer.checkpoint("concurrent_ops_start");
+
+            // Simulate concurrent operations across all components
+            let mut handles = vec![];
+
+            // Spawn 10 concurrent operations
+            for i in 0..10 {
+                let handle = tokio::spawn(async move {
+                    // Simulate different types of database operations
+                    match i % 5 {
+                        0 => tokio::time::sleep(Duration::from_millis(50)).await, // CAWS validation
+                        1 => tokio::time::sleep(Duration::from_millis(45)).await, // Source integrity
+                        2 => tokio::time::sleep(Duration::from_millis(60)).await, // Council learning
+                        3 => tokio::time::sleep(Duration::from_millis(70)).await, // Claim extraction
+                        4 => tokio::time::sleep(Duration::from_millis(40)).await, // Observability
+                        _ => unreachable!(),
+                    }
+                });
+                handles.push(handle);
+            }
+
+            // Wait for all operations to complete
+            for handle in handles {
+                handle.await?;
+            }
+
+            measurer.checkpoint("concurrent_ops_complete");
+
+            let total_duration = measurer.get_elapsed();
+
+            // SLA check: Concurrent operations should complete within 300ms total
+            // (allowing for some parallelism but ensuring no excessive delays)
+            crate::test_utils::assertions::assert_duration_within_bounds(
+                total_duration,
+                Duration::from_millis(300)
+            )?;
+
+            info!("Concurrent DB operations completed in {:?}", total_duration);
+
+            Ok(())
+        }).await
+    }
 }

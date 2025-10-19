@@ -623,34 +623,45 @@ export class TaskOrchestrator extends EventEmitter {
    * Submit a task for execution
    */
   async submitTask(task: any): Promise<string> {
-    // Process task through intake processor first
-    const envelope: TaskIntakeEnvelope = {
-      payload: JSON.stringify(task), // Convert task to JSON string for intake processor
-      metadata: {
-        contentType: "application/json",
-        encoding: "utf8",
-        priorityHint: this.mapPriorityToHint(task.priority),
-        surface: task.metadata?.surface ?? "unknown",
-      },
-    };
+    // Check if this is already a processed task (has required fields and has been through intake)
+    const isProcessedTask =
+      task.id && task.type && task.description && task.metadata?.intake;
 
-    const intakeResult: TaskIntakeResult = await this.intakeProcessor.process(
-      envelope
-    );
+    let sanitizedTask: any;
 
-    if (intakeResult.status === "rejected") {
-      // Convert intake issues to orchestrator errors
-      const errorMessages = intakeResult.errors.map(
-        (error) =>
-          `${error.code}: ${error.message}${
-            error.field ? ` (field: ${error.field})` : ""
-          }`
+    if (isProcessedTask) {
+      // Task is already processed through intake, use it directly
+      sanitizedTask = task;
+    } else {
+      // Process task through intake processor first
+      const envelope: TaskIntakeEnvelope = {
+        payload: JSON.stringify(task), // Convert task to JSON string for intake processor
+        metadata: {
+          contentType: "application/json",
+          encoding: "utf8",
+          priorityHint: this.mapPriorityToHint(task.priority),
+          surface: task.metadata?.surface ?? "unknown",
+        },
+      };
+
+      const intakeResult: TaskIntakeResult = await this.intakeProcessor.process(
+        envelope
       );
-      throw new Error(`Task intake failed: ${errorMessages.join(", ")}`);
-    }
 
-    // Use sanitized task from intake processor
-    const sanitizedTask = intakeResult.sanitizedTask!;
+      if (intakeResult.status === "rejected") {
+        // Convert intake issues to orchestrator errors
+        const errorMessages = intakeResult.errors.map(
+          (error) =>
+            `${error.code}: ${error.message}${
+              error.field ? ` (field: ${error.field})` : ""
+            }`
+        );
+        throw new Error(`Task intake failed: ${errorMessages.join(", ")}`);
+      }
+
+      // Use sanitized task from intake processor
+      sanitizedTask = intakeResult.sanitizedTask!;
+    }
 
     // Validate task (additional validation beyond intake)
     this.validateTask(sanitizedTask);
@@ -720,11 +731,14 @@ export class TaskOrchestrator extends EventEmitter {
       taskId: sanitizedTask.id,
       metadata: {
         agentId: (sanitizedTask as any).assignedAgent,
-        intakeWarnings:
-          intakeResult.warnings.length > 0
-            ? intakeResult.warnings.map((w) => w.message)
-            : undefined,
-        chunkCount: intakeResult.metadata.chunkCount,
+        intakeWarnings: isProcessedTask
+          ? undefined
+          : sanitizedTask.metadata?.intake?.warnings?.length > 0
+          ? sanitizedTask.metadata.intake.warnings.map((w: any) => w.message)
+          : undefined,
+        chunkCount: isProcessedTask
+          ? undefined
+          : sanitizedTask.metadata?.intake?.chunkCount,
       },
     });
 

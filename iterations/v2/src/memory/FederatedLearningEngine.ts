@@ -984,6 +984,21 @@ export class FederatedLearningEngine {
   }
 
   private async getSourceTenants(topicKey: string): Promise<string[]> {
+    // TODO: Replace placeholder tenant retrieval with actual cache-based tenant tracking
+    /// Requirements for completion:
+    /// - [ ] Implement proper distributed cache integration (Redis, Memcached, etc.)
+    /// - [ ] Add support for tenant contribution tracking and persistence
+    /// - [ ] Implement proper tenant discovery and registration mechanisms
+    /// - [ ] Add support for tenant availability and health monitoring
+    /// - [ ] Implement proper tenant load balancing and distribution
+    /// - [ ] Add support for tenant failover and redundancy
+    /// - [ ] Implement proper error handling for cache connection failures
+    /// - [ ] Add support for tenant data consistency and synchronization
+    /// - [ ] Implement proper tenant performance tracking and metrics
+    /// - [ ] Add support for tenant capacity planning and scaling
+    /// - [ ] Implement proper tenant authentication and authorization
+    /// - [ ] Add support for tenant dynamic registration and discovery
+    /// - [ ] Implement proper tenant monitoring and alerting
     if (!this.cacheClient) {
       this.logger.warn(
         "No cache client available, returning placeholder tenants"

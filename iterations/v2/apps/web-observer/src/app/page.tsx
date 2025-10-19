@@ -2,6 +2,8 @@
 
 import ArbiterControls from "@/components/ArbiterControls";
 import DashboardHeader from "@/components/DashboardHeader";
+import DatabaseAuditPanel from "@/components/DatabaseAuditPanel";
+import DebugPanel from "@/components/DebugPanel";
 import EventViewer from "@/components/EventViewer";
 import MetricsOverview from "@/components/MetricsOverview";
 import SystemStatus from "@/components/SystemStatus";
@@ -87,23 +89,44 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 overflow-x-hidden">
       <DashboardHeader activeTab={activeTab} onTabChange={setActiveTab} />
 
-      <main className="container mx-auto px-4 py-6">
+      <main className="container mx-auto px-4 py-6 max-w-full">
         {activeTab === "overview" && (
-          <div className="space-y-6">
+          <div
+            id="overview-panel"
+            role="tabpanel"
+            aria-labelledby="overview-tab"
+            className="space-y-6"
+          >
+            <DebugPanel apiClient={apiClient} />
+            <DatabaseAuditPanel apiClient={apiClient} />
             <SystemStatus status={status} />
             <MetricsOverview metrics={metrics} progress={progress} />
           </div>
         )}
 
-        {activeTab === "tasks" && <TaskManager apiClient={apiClient} />}
+        {activeTab === "tasks" && (
+          <div id="tasks-panel" role="tabpanel" aria-labelledby="tasks-tab">
+            <TaskManager apiClient={apiClient} />
+          </div>
+        )}
 
-        {activeTab === "events" && <EventViewer apiClient={apiClient} />}
+        {activeTab === "events" && (
+          <div id="events-panel" role="tabpanel" aria-labelledby="events-tab">
+            <EventViewer apiClient={apiClient} />
+          </div>
+        )}
 
         {activeTab === "controls" && (
-          <ArbiterControls apiClient={apiClient} status={status} />
+          <div
+            id="controls-panel"
+            role="tabpanel"
+            aria-labelledby="controls-tab"
+          >
+            <ArbiterControls apiClient={apiClient} status={status} />
+          </div>
         )}
       </main>
     </div>

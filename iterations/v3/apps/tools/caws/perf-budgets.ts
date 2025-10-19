@@ -282,7 +282,14 @@ class PerformanceBudgetValidator {
       { endpoint: '/ingest', p95_ms: 450 },
     ];
 
-    // Add some variance to simulate real measurements
+    // TODO: Implement actual performance measurement collection and analysis
+    // - [ ] Integrate with real performance monitoring systems
+    // - [ ] Collect actual performance metrics from production systems
+    // - [ ] Implement statistical analysis for performance variance
+    // - [ ] Support different performance measurement tools and frameworks
+    // - [ ] Add performance trend analysis and anomaly detection
+    // - [ ] Implement performance budget enforcement and alerting
+    // - [ ] Support automated performance regression testing
     return measurements.map((measurement) => ({
       ...measurement,
       p95_ms: measurement.p95_ms + (Math.random() * 50 - 25), // ±25ms variance

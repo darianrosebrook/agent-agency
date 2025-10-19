@@ -82,7 +82,18 @@ impl PredictionResult {
         Self { data }
     }
 
-    /// Convert back to CFDictionary (placeholder implementation)
+    /// TODO: Replace placeholder CFDictionary conversion with proper implementation
+    /// Requirements for completion:
+    /// - [ ] Implement proper CFDictionary serialization and deserialization
+    /// - [ ] Add support for proper reference counting and memory management
+    /// - [ ] Implement proper error handling for CFDictionary operations
+    /// - [ ] Add support for different CFDictionary data types and structures
+    /// - [ ] Implement proper validation of CFDictionary contents
+    /// - [ ] Add support for CFDictionary versioning and compatibility
+    /// - [ ] Implement proper cleanup of CFDictionary resources
+    /// - [ ] Add support for CFDictionary thread safety and synchronization
+    /// - [ ] Implement proper logging and monitoring of CFDictionary operations
+    /// - [ ] Add support for CFDictionary performance optimization
     pub fn to_cf_dictionary(self) -> CFDictionary<CFString, *const std::ffi::c_void> {
         // Reconstruct the CFDictionary from the stored pointer
         // This is unsafe and assumes the CFDictionary still exists
@@ -560,6 +571,18 @@ fn execute_prediction_sync(model: *mut objc::runtime::Object, request: *mut objc
                 return None;
             }
 
+            // TODO: Replace simplified tokenization with proper tokenizer integration
+            /// Requirements for completion:
+            /// - [ ] Integrate with proper tokenizer (SentencePiece, BPE, WordPiece)
+            /// - [ ] Support different tokenization algorithms and vocabularies
+            /// - [ ] Implement proper token-to-ID mapping and reverse lookup
+            /// - [ ] Add support for special tokens (BOS, EOS, PAD, UNK)
+            /// - [ ] Implement proper error handling for tokenization failures
+            /// - [ ] Add support for different languages and character encodings
+            /// - [ ] Implement proper memory management for large vocabularies
+            /// - [ ] Add support for tokenization caching and performance optimization
+            /// - [ ] Implement proper validation of token sequences
+            /// - [ ] Add support for subword tokenization and handling
             // For simplicity, assume 1D array of token indices
             // In a real implementation, this would use a proper tokenizer
             let count: usize = msg_send![shape, count];
@@ -567,6 +590,18 @@ fn execute_prediction_sync(model: *mut objc::runtime::Object, request: *mut objc
                 return None;
             }
 
+            // TODO: Replace placeholder detokenization with proper token-to-text conversion
+            /// Requirements for completion:
+            /// - [ ] Implement proper token-to-text detokenization using model vocabulary
+            /// - [ ] Add support for different tokenization schemes (BPE, WordPiece, SentencePiece)
+            /// - [ ] Implement proper handling of special tokens and control characters
+            /// - [ ] Add support for different languages and character encodings
+            /// - [ ] Implement proper error handling for invalid token sequences
+            /// - [ ] Add support for token sequence validation and normalization
+            /// - [ ] Implement proper memory management for large vocabularies
+            /// - [ ] Add support for detokenization caching and performance optimization
+            /// - [ ] Implement proper cleanup of detokenization resources
+            /// - [ ] Add support for detokenization result validation and quality assessment
             // Extract first element as a simple token representation
             // This is a placeholder - real implementation would detokenize properly
             let first_token = *data_ptr;
@@ -674,6 +709,18 @@ fn execute_prediction_sync(model: *mut objc::runtime::Object, request: *mut objc
                 return None;
             }
 
+            // TODO: Replace simplified confidence extraction with proper output format handling
+            /// Requirements for completion:
+            /// - [ ] Support different Core ML output formats (classification, regression, sequence)
+            /// - [ ] Implement proper probability distribution analysis and confidence scoring
+            /// - [ ] Add support for multi-class and multi-label classification outputs
+            /// - [ ] Implement proper error handling for malformed output data
+            /// - [ ] Add support for different data types (Float32, Float16, Int32)
+            /// - [ ] Implement proper validation of output tensor shapes and dimensions
+            /// - [ ] Add support for output post-processing and normalization
+            /// - [ ] Implement proper memory management for large output tensors
+            /// - [ ] Add support for output format detection and auto-configuration
+            /// - [ ] Implement proper cleanup of output processing resources
             // For classification, take the maximum probability as confidence
             // In a real implementation, this would depend on the specific output format
             let shape: *mut objc::runtime::Object = msg_send![ml_array, shape];
@@ -1553,7 +1600,18 @@ impl CoreMLManager {
             .to_string()
     }
 
-    /// Simulate inference time based on request characteristics
+    /// TODO: Replace simulated inference time with actual Core ML inference measurement
+    /// Requirements for completion:
+    /// - [ ] Integrate with Core ML MLModel APIs for actual inference execution
+    /// - [ ] Measure real inference latency using Core ML performance APIs
+    /// - [ ] Support different model types (neuralnetwork, mlprogram, coreml)
+    /// - [ ] Implement proper error handling for inference failures
+    /// - [ ] Add support for batch inference timing
+    /// - [ ] Measure memory usage during inference
+    /// - [ ] Support different precision modes (FP16, FP32, INT8)
+    /// - [ ] Add inference result validation and accuracy metrics
+    /// - [ ] Implement proper cleanup of Core ML resources
+    /// - [ ] Support concurrent inference requests with proper synchronization
     async fn simulate_inference_time(&self, request: &InferenceRequest) -> u64 {
         let base_time = match request.optimization_target {
             OptimizationTarget::ANE => 50,
@@ -1587,13 +1645,18 @@ impl CoreMLManager {
         let memory_total_mb = (system.total_memory() / 1024 / 1024) as u64;
 
         // TODO: Implement actual GPU and ANE usage monitoring instead of simplified estimation
-        // - [ ] Integrate with Metal Performance Shaders for GPU metrics
-        // - [ ] Use Core ML delegate APIs for ANE utilization tracking
-        // - [ ] Implement IOKit calls for hardware performance counters
-        // - [ ] Add support for AMD GPU monitoring on M1/M2 chips
-        // - [ ] Implement real-time performance counter sampling
-        // - [ ] Support per-process GPU/ANE usage attribution
-        // - [ ] Add hardware-specific optimization recommendations
+        /// Requirements for completion:
+        /// - [ ] Integrate with Metal Performance Shaders for GPU metrics
+        /// - [ ] Use Core ML delegate APIs for ANE utilization tracking
+        /// - [ ] Implement IOKit calls for hardware performance counters
+        /// - [ ] Add support for AMD GPU monitoring on M1/M2 chips
+        /// - [ ] Implement real-time performance counter sampling
+        /// - [ ] Support per-process GPU/ANE usage attribution
+        /// - [ ] Add hardware-specific optimization recommendations
+        /// - [ ] Implement proper error handling for hardware monitoring failures
+        /// - [ ] Add support for thermal throttling detection
+        /// - [ ] Support power consumption monitoring
+        /// - [ ] Implement proper resource cleanup and monitoring lifecycle
         // Estimate GPU and ANE usage (simplified - would need Metal/Core ML APIs for accurate measurement)
         let gpu_percent = self.estimate_gpu_usage(&system);
         let ane_percent = self.estimate_ane_usage(&system);
@@ -1625,6 +1688,7 @@ impl CoreMLManager {
     }
 
     /// TODO: Implement actual GPU usage monitoring instead of simplified estimation
+    /// Requirements for completion:
     /// - [ ] Use Metal Performance Shaders instrumentation APIs
     /// - [ ] Monitor command buffer execution and queue utilization
     /// - [ ] Track GPU memory bandwidth and compute utilization
@@ -1632,6 +1696,10 @@ impl CoreMLManager {
     /// - [ ] Implement real-time GPU performance counter sampling
     /// - [ ] Add GPU kernel execution time profiling
     /// - [ ] Support GPU utilization alerts and thresholds
+    /// - [ ] Implement proper error handling for Metal API failures
+    /// - [ ] Add support for GPU memory pressure monitoring
+    /// - [ ] Support GPU thermal monitoring and throttling detection
+    /// - [ ] Implement proper resource cleanup and monitoring lifecycle
     fn estimate_gpu_usage(&self, _system: &System) -> f32 {
         #[cfg(target_os = "macos")]
         {
@@ -2458,9 +2526,17 @@ impl CoreMLManager {
     /// Execute sample inference (simplified implementation)
     async fn execute_sample_inference(&self, request: &InferenceRequest) -> Result<String> {
         // TODO: Replace mock output generation with actual Core ML model inference
-        // - [ ] Load actual Core ML model from compiled .mlmodel file
-        // - [ ] Convert input data to Core ML compatible format
-        // - [ ] Execute model prediction with proper error handling
+        /// Requirements for completion:
+        /// - [ ] Load actual Core ML model from compiled .mlmodel file
+        /// - [ ] Convert input data to Core ML compatible format
+        /// - [ ] Execute model prediction with proper error handling
+        /// - [ ] Implement proper model input validation and preprocessing
+        /// - [ ] Add support for different model types and architectures
+        /// - [ ] Implement proper output post-processing and formatting
+        /// - [ ] Add support for batch inference and concurrent requests
+        /// - [ ] Implement proper memory management for model execution
+        /// - [ ] Add support for model performance monitoring and profiling
+        /// - [ ] Implement proper cleanup of model resources and memory
         // - [ ] Convert Core ML output back to expected format
         // - [ ] Support different model types (vision, text, audio)
         // - [ ] Add model warm-up and performance optimization

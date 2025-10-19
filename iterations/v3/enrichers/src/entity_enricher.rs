@@ -1508,9 +1508,22 @@ impl EntityEnricher {
         Ok(entities)
     }
 
-    /// Detect email addresses in text
+    /// TODO: Replace simple email pattern detection with proper email validation
+    /// Requirements for completion:
+    /// - [ ] Implement proper email address validation using regex or email parsing library
+    /// - [ ] Support international email addresses (UTF-8, IDNA)
+    /// - [ ] Handle different email formats and edge cases (subdomains, plus addressing)
+    /// - [ ] Implement proper email syntax validation (RFC 5322 compliance)
+    /// - [ ] Add support for email domain validation and MX record checking
+    /// - [ ] Implement proper error handling for malformed email addresses
+    /// - [ ] Add support for email address normalization and canonicalization
+    /// - [ ] Implement proper confidence scoring based on validation strength
+    /// - [ ] Add support for email address deduplication and merging
+    /// - [ ] Implement proper memory management for email validation
+    /// - [ ] Add support for email validation performance optimization
+    /// - [ ] Implement proper cleanup of email validation resources
+    /// - [ ] Add support for email validation result monitoring and alerting
     fn detect_email_patterns(&self, text: &str, entities: &mut Vec<ExtractedEntity>) {
-        // Simple email pattern detection (placeholder)
         for (i, word) in text.split_whitespace().enumerate() {
             if word.contains('@') && word.contains('.') {
                 entities.push(ExtractedEntity {
@@ -1527,9 +1540,22 @@ impl EntityEnricher {
         }
     }
 
-    /// Detect URLs in text
+    /// TODO: Replace simple URL pattern detection with proper URL validation
+    /// Requirements for completion:
+    /// - [ ] Implement proper URL parsing and validation using URL parsing library
+    /// - [ ] Support different URL schemes (http, https, ftp, file, etc.)
+    /// - [ ] Handle international URLs (UTF-8, IRI encoding)
+    /// - [ ] Implement proper URL syntax validation (RFC 3986 compliance)
+    /// - [ ] Add support for URL normalization and canonicalization
+    /// - [ ] Implement proper error handling for malformed URLs
+    /// - [ ] Add support for URL reachability checking and validation
+    /// - [ ] Implement proper confidence scoring based on URL structure
+    /// - [ ] Add support for URL deduplication and merging
+    /// - [ ] Implement proper memory management for URL validation
+    /// - [ ] Add support for URL validation performance optimization
+    /// - [ ] Implement proper cleanup of URL validation resources
+    /// - [ ] Add support for URL validation result monitoring and alerting
     fn detect_url_patterns(&self, text: &str, entities: &mut Vec<ExtractedEntity>) {
-        // Simple URL pattern detection (placeholder)
         for word in text.split_whitespace() {
             if word.starts_with("http://") || word.starts_with("https://") {
                 entities.push(ExtractedEntity {
@@ -1565,7 +1591,21 @@ impl EntityEnricher {
         Ok(topics)
     }
 
-    /// Extract simple keywords (placeholder)
+    /// TODO: Replace simple keyword extraction with proper NLP-based keyword extraction
+    /// Requirements for completion:
+    /// - [ ] Integrate with NLP library for proper keyword extraction (TF-IDF, TextRank, etc.)
+    /// - [ ] Implement proper text preprocessing (tokenization, lemmatization, stemming)
+    /// - [ ] Add support for multi-word keyword extraction (phrases, named entities)
+    /// - [ ] Implement proper stopword removal using comprehensive stopword lists
+    /// - [ ] Add support for different languages and character encodings
+    /// - [ ] Implement proper keyword scoring and ranking algorithms
+    /// - [ ] Add support for keyword frequency analysis and normalization
+    /// - [ ] Implement proper error handling for text processing failures
+    /// - [ ] Add support for keyword extraction performance optimization
+    /// - [ ] Implement proper memory management for text processing
+    /// - [ ] Add support for keyword extraction result validation and quality assessment
+    /// - [ ] Implement proper cleanup of text processing resources
+    /// - [ ] Add support for keyword extraction monitoring and alerting
     fn extract_simple_keywords(&self, text: &str) -> HashMap<String, usize> {
         let mut keywords = HashMap::new();
 

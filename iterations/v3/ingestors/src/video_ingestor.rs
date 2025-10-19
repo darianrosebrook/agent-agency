@@ -368,7 +368,18 @@ impl VideoIngestor {
         total_quality / frames.len() as f32
     }
 
-    /// Generate a placeholder frame for testing
+    /// TODO: Replace placeholder frame generation with actual video frame extraction
+    /// Requirements for completion:
+    /// - [ ] Implement actual video frame extraction using AVFoundation/FFmpeg
+    /// - [ ] Add support for different video formats and codecs
+    /// - [ ] Implement proper frame quality assessment and validation
+    /// - [ ] Add support for frame preprocessing and optimization
+    /// - [ ] Implement proper error handling for video processing failures
+    /// - [ ] Add support for frame metadata extraction and analysis
+    /// - [ ] Implement proper memory management for video processing
+    /// - [ ] Add support for video processing performance optimization
+    /// - [ ] Implement proper cleanup of video processing resources
+    /// - [ ] Add support for video processing monitoring and quality assessment
     fn generate_placeholder_frame(&self, frame_index: usize) -> Vec<u8> {
         // Create a simple RGB image as placeholder
         let width = 640;

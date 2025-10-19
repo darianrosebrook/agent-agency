@@ -200,7 +200,22 @@ export class MathVerifier {
             `Left side: ${leftExpr.toString()}, Right side: ${rightExpr.toString()}`
           );
 
-          // For now, return a placeholder solution
+          // TODO: Replace placeholder symbolic equation solving with actual math verification
+          /// Requirements for completion:
+          /// - [ ] Integrate with symbolic math library (mathjs, sympy, or similar)
+          /// - [ ] Implement proper equation parsing and AST construction
+          /// - [ ] Add support for algebraic manipulation and simplification
+          /// - [ ] Implement proper symbolic solving algorithms
+          /// - [ ] Add support for different equation types (linear, quadratic, polynomial)
+          /// - [ ] Implement proper numerical verification of solutions
+          /// - [ ] Add support for inequality solving and constraint satisfaction
+          /// - [ ] Implement proper error handling for unsolvable equations
+          /// - [ ] Add support for multi-variable equation systems
+          /// - [ ] Implement proper solution validation and verification
+          /// - [ ] Add support for mathematical proof generation
+          /// - [ ] Implement proper memory management for symbolic computation
+          /// - [ ] Add support for mathematical notation and formatting
+          /// - [ ] Implement proper math verification monitoring and alerting
           solutions = [0]; // This would need proper symbolic solving
         }
       } catch (solveError) {
