@@ -6,11 +6,13 @@ import DashboardHeader from "@/components/DashboardHeader";
 import DatabaseAuditPanel from "@/components/DatabaseAuditPanel";
 import DebugPanel from "@/components/DebugPanel";
 import EventViewer from "@/components/EventViewer";
+import HealthCheckRunner from "@/components/HealthCheckRunner";
 import MetricsOverview from "@/components/MetricsOverview";
 import ObservabilityDashboard from "@/components/ObservabilityDashboard";
 import PerformanceMonitor from "@/components/PerformanceMonitor";
 import SystemStatus from "@/components/SystemStatus";
 import TaskManager from "@/components/TaskManager";
+import TaskTraceViewer from "@/components/TaskTraceViewer";
 import { ObserverApiClient } from "@/lib/api-client";
 import type {
   ObserverMetricsSnapshot,
@@ -115,7 +117,10 @@ export default function Dashboard() {
 
         {activeTab === "tasks" && (
           <div id="tasks-panel" role="tabpanel" aria-labelledby="tasks-tab">
-            <TaskManager apiClient={apiClient} />
+            <div className="space-y-6">
+              <TaskTraceViewer apiClient={apiClient} />
+              <TaskManager apiClient={apiClient} />
+            </div>
           </div>
         )}
 

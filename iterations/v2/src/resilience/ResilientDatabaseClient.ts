@@ -224,11 +224,15 @@ export class ResilientDatabaseClient {
     );
 
     // Transform to RegistryStats interface
+    const averageUtilization = stats.totalAgents > 0
+      ? stats.activeAgents / stats.totalAgents
+      : 0;
+
     return {
       totalAgents: stats.totalAgents,
       activeAgents: stats.activeAgents,
       idleAgents: stats.totalAgents - stats.activeAgents,
-      averageUtilization: 0, // TODO: Calculate from agent load data
+      averageUtilization,
       averageSuccessRate: stats.averagePerformance,
       lastUpdated: new Date().toISOString(),
     };

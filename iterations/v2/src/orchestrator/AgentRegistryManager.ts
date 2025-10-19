@@ -440,15 +440,35 @@ export class AgentRegistryManager {
         break;
     }
 
-    // Store updated profile
+    // Store updated profile in memory
     this.agents.set(agentId, updatedProfile);
 
-    // TODO: Implement status persistence to database
-    // Status is currently managed in memory only
-    this.logger.debug("Agent status updated in memory", {
-      agentId,
-      status,
-    });
+    // Persist status to database if available
+    if (this.dbClient && this.config.enablePersistence) {
+      try {
+        await this.dbClient.updateAgent(agentId, {
+          lastActiveAt: updatedProfile.lastActiveAt,
+          currentLoad: updatedProfile.currentLoad,
+        });
+        this.logger.debug("Agent status persisted to database", {
+          agentId,
+          status,
+        });
+      } catch (error) {
+        this.logger.error("Failed to persist agent status to database", {
+          agentId,
+          status,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        // Continue with in-memory update even if database persistence fails
+      }
+    } else {
+      this.logger.debug("Agent status updated in memory only", {
+        agentId,
+        status,
+        persistenceEnabled: this.config.enablePersistence,
+      });
+    }
 
     // Audit log successful status update
     if (this.config.enableSecurity && this.securityManager && securityContext) {
