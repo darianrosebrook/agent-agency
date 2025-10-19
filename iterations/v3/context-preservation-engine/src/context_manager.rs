@@ -1,6 +1,12 @@
 use crate::types::*;
 use anyhow::Result;
-use tracing::debug;
+use tracing::{debug, error, info, warn};
+use std::collections::HashMap;
+use std::sync::Arc;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use parking_lot::RwLock;
+use chrono::Utc;
+use uuid::Uuid;
 
 /// Internal structure for transformed data
 #[derive(Debug)]
@@ -10,18 +16,104 @@ struct TransformedData {
     compression: Option<CompressionInfo>,
 }
 
+/// Key cache entry
+#[derive(Debug, Clone)]
+struct KeyCacheEntry {
+    key: Vec<u8>,
+    key_info: KeyInfo,
+    created_at: SystemTime,
+}
+
 /// Context manager for processing and managing context data
 #[derive(Debug)]
 pub struct ContextManager {
     /// Manager configuration
     config: ContextPreservationConfig,
+    /// Key management system
+    key_manager: Arc<RwLock<KeyManager>>,
+    /// Key cache for performance optimization
+    key_cache: Arc<RwLock<HashMap<String, KeyCacheEntry>>>,
+    /// Audit log for encryption operations
+    audit_log: Arc<RwLock<Vec<EncryptionAuditLog>>>,
+}
+
+/// Key management system
+#[derive(Debug)]
+struct KeyManager {
+    /// Active keys by tenant
+    tenant_keys: HashMap<String, HashMap<String, KeyInfo>>,
+    /// Master key for key derivation
+    master_key: Option<Vec<u8>>,
+    /// Key rotation scheduler
+    rotation_scheduler: HashMap<String, SystemTime>,
 }
 
 impl ContextManager {
     /// Create a new context manager
     pub fn new(config: ContextPreservationConfig) -> Result<Self> {
-        debug!("Initializing context manager");
-        Ok(Self { config })
+        debug!("Initializing context manager with encryption support");
+        
+        let key_manager = Arc::new(RwLock::new(KeyManager {
+            tenant_keys: HashMap::new(),
+            master_key: None,
+            rotation_scheduler: HashMap::new(),
+        }));
+        
+        let key_cache = Arc::new(RwLock::new(HashMap::new()));
+        let audit_log = Arc::new(RwLock::new(Vec::new()));
+        
+        let mut manager = Self {
+            config,
+            key_manager,
+            key_cache,
+            audit_log,
+        };
+        
+        // Initialize encryption system if enabled
+        if manager.config.encryption.enabled {
+            manager.initialize_encryption_system()?;
+        }
+        
+        Ok(manager)
+    }
+    
+    /// Initialize the encryption system
+    fn initialize_encryption_system(&mut self) -> Result<()> {
+        info!("Initializing encryption system");
+        
+        // Generate or load master key
+        let master_key = self.generate_or_load_master_key()?;
+        
+        // Initialize key manager with master key
+        {
+            let mut key_manager = self.key_manager.write();
+            key_manager.master_key = Some(master_key);
+        }
+        
+        // Log encryption system initialization
+        self.log_encryption_operation(
+            EncryptionOperation::KeyGeneration,
+            "system".to_string(),
+            None,
+            "system".to_string(),
+            OperationResult::Success,
+            None,
+            HashMap::new(),
+        );
+        
+        info!("Encryption system initialized successfully");
+        Ok(())
+    }
+    
+    /// Generate or load master key
+    fn generate_or_load_master_key(&self) -> Result<Vec<u8>> {
+        // In production, this would load from secure key store
+        // For now, generate a new key
+        let mut master_key = vec![0u8; 32]; // 256-bit key
+        rand::RngCore::fill(&mut rand::thread_rng(), &mut master_key);
+        
+        debug!("Generated new master key for encryption system");
+        Ok(master_key)
     }
 
     /// Process context data with comprehensive validation, compression, and security
@@ -188,25 +280,86 @@ impl ContextManager {
 
     /// Encrypt context data if encryption is enabled
     async fn encrypt_context_data(&self, context_data: &ContextData) -> Result<ContextData> {
-        // TODO: Implement context data encryption with the following requirements:
-        // 1. Key management system: Implement secure key management
-        //    - Generate and manage encryption keys securely
-        //    - Handle key rotation and lifecycle management
-        //    - Implement key storage and access controls
-        // 2. Encryption algorithms: Implement data encryption algorithms
-        //    - Apply AES-256 or similar encryption to context data
-        //    - Handle encryption key derivation and management
-        //    - Implement encryption performance optimization
-        // 3. Decryption system: Implement secure data decryption
-        //    - Decrypt context data using appropriate keys
-        //    - Handle decryption error recovery and validation
-        //    - Implement decryption performance optimization
-        // 4. Security compliance: Ensure encryption meets security standards
-        //    - Implement encryption audit trails and compliance
-        //    - Handle encryption key security and access controls
-        //    - Ensure encryption meets regulatory and security requirements
-        debug!("Context data encryption not yet implemented - proceeding without encryption");
-        Ok(context_data.clone())
+        if !self.config.encryption.enabled {
+            debug!("Encryption disabled - proceeding without encryption");
+            return Ok(context_data.clone());
+        }
+
+        debug!("Encrypting context data with algorithm: {:?}", self.config.encryption.algorithm);
+        
+        let operation_id = Uuid::new_v4();
+        let start_time = SystemTime::now();
+        
+        // Get or generate encryption key for tenant
+        let (key_id, encryption_key) = self.get_or_generate_encryption_key("default".to_string()).await?;
+        
+        // Generate random IV and salt
+        let iv = self.generate_random_bytes(12); // 96-bit IV for GCM
+        let salt = self.generate_random_bytes(32); // 256-bit salt
+        
+        // Derive encryption key from master key
+        let derived_key = self.derive_encryption_key(&encryption_key, &salt)?;
+        
+        // Encrypt the content
+        let encrypted_content = self.encrypt_content(&context_data.content, &derived_key, &iv)?;
+        
+        // Create encryption metadata
+        let encryption_info = EncryptionInfo {
+            algorithm: self.config.encryption.algorithm.clone(),
+            key_id: key_id.clone(),
+            iv: iv.clone(),
+            auth_tag: None, // Will be set by encryption algorithm
+            salt: salt.clone(),
+            encrypted_at: Utc::now(),
+            key_version: 1, // TODO: Get actual key version
+        };
+        
+        // Update encryption info with auth tag if applicable
+        let encryption_info = match self.config.encryption.algorithm {
+            EncryptionAlgorithm::Aes256Gcm => {
+                // Extract auth tag from encrypted content
+                let (ciphertext, auth_tag) = self.extract_auth_tag(&encrypted_content)?;
+                EncryptionInfo {
+                    auth_tag: Some(auth_tag),
+                    ..encryption_info
+                }
+            }
+            _ => encryption_info,
+        };
+        
+        // Create encrypted context data
+        let encrypted_data = ContextData {
+            content: base64::encode(&encrypted_content),
+            format: context_data.format.clone(),
+            encoding: format!("{}-encrypted", context_data.encoding),
+            compression: context_data.compression.clone(),
+            encryption: Some(encryption_info),
+            checksum: context_data.checksum.clone(),
+        };
+        
+        // Log encryption operation
+        let duration = start_time.elapsed().unwrap_or_default();
+        self.log_encryption_operation(
+            EncryptionOperation::DataEncryption,
+            key_id,
+            None,
+            "default".to_string(),
+            OperationResult::Success,
+            None,
+            HashMap::from([
+                ("operation_id".to_string(), operation_id.to_string()),
+                ("duration_ms".to_string(), duration.as_millis().to_string()),
+                ("content_size".to_string(), context_data.content.len().to_string()),
+            ]),
+        );
+        
+        debug!(
+            "Context data encrypted successfully: {} -> {} bytes",
+            context_data.content.len(),
+            encrypted_data.content.len()
+        );
+        
+        Ok(encrypted_data)
     }
 
     /// Calculate checksum for data integrity

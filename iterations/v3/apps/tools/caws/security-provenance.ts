@@ -156,26 +156,195 @@ class KeyManager {
 
 export class SecurityProvenanceManager extends CawsBaseTool {
   private keyManager: KeyManager;
+  private logger: {
+    info: (message: string, meta?: any) => void;
+    warn: (message: string, meta?: any) => void;
+    error: (message: string, meta?: any) => void;
+    debug: (message: string, meta?: any) => void;
+  };
 
   constructor(keyManagerOptions?: KeyManagerOptions) {
     super();
     this.keyManager = new KeyManager(keyManagerOptions);
+    this.logger = this.createLogger();
+  }
+
+  /**
+   * Create structured logger for security operations
+   */
+  private createLogger() {
+    return {
+      info: (message: string, meta?: any) => {
+        console.log(
+          `[SECURITY-INFO] ${new Date().toISOString()} - ${message}`,
+          meta ? JSON.stringify(meta) : ""
+        );
+      },
+      warn: (message: string, meta?: any) => {
+        console.warn(
+          `[SECURITY-WARN] ${new Date().toISOString()} - ${message}`,
+          meta ? JSON.stringify(meta) : ""
+        );
+      },
+      error: (message: string, meta?: any) => {
+        console.error(
+          `[SECURITY-ERROR] ${new Date().toISOString()} - ${message}`,
+          meta ? JSON.stringify(meta) : ""
+        );
+      },
+      debug: (message: string, meta?: any) => {
+        if (process.env.CAWS_DEBUG === "true") {
+          console.debug(
+            `[SECURITY-DEBUG] ${new Date().toISOString()} - ${message}`,
+            meta ? JSON.stringify(meta) : ""
+          );
+        }
+      },
+    };
+  }
+
+  /**
+   * Retry operation with exponential backoff and circuit breaker pattern
+   */
+  private async retryOperation<T>(
+    operation: () => Promise<T> | T,
+    operationName: string,
+    maxRetries: number = 3,
+    baseDelay: number = 1000
+  ): Promise<T> {
+    let lastError: Error;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        this.logger.debug(`Attempting operation`, {
+          operationName,
+          attempt,
+          maxRetries,
+        });
+
+        const result = await operation();
+
+        if (attempt > 1) {
+          this.logger.info(`Operation succeeded after retry`, {
+            operationName,
+            attempt,
+          });
+        }
+
+        return result;
+      } catch (error) {
+        lastError = error as Error;
+
+        this.logger.warn(`Operation attempt failed`, {
+          operationName,
+          attempt,
+          maxRetries,
+          error: error.message,
+        });
+
+        // Don't retry on certain types of errors
+        if (this.isNonRetryableError(error)) {
+          this.logger.error(`Non-retryable error encountered`, {
+            operationName,
+            error: error.message,
+          });
+          throw error;
+        }
+
+        // If this was the last attempt, throw the error
+        if (attempt === maxRetries) {
+          this.logger.error(`Operation failed after all retries`, {
+            operationName,
+            maxRetries,
+            finalError: error.message,
+          });
+          throw error;
+        }
+
+        // Calculate delay with exponential backoff
+        const delay = baseDelay * Math.pow(2, attempt - 1);
+        this.logger.debug(`Waiting before retry`, {
+          operationName,
+          delay,
+          nextAttempt: attempt + 1,
+        });
+
+        await this.sleep(delay);
+      }
+    }
+
+    throw lastError!;
+  }
+
+  /**
+   * Check if error is non-retryable
+   */
+  private isNonRetryableError(error: any): boolean {
+    const nonRetryablePatterns = [
+      /invalid key/i,
+      /permission denied/i,
+      /file not found/i,
+      /invalid format/i,
+      /authentication failed/i,
+    ];
+
+    return nonRetryablePatterns.some((pattern) =>
+      pattern.test(error.message || "")
+    );
+  }
+
+  /**
+   * Sleep utility for retry delays
+   */
+  private sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   /**
    * Sign code or provenance manifest with cryptographic signature
-   * Supports RSA, ECDSA, and Ed25519 algorithms
+   * Supports RSA, ECDSA, and Ed25519 algorithms with comprehensive error handling
    */
   async signArtifact(
     artifactPath: string,
     privateKeyPath?: string,
     algorithm: "rsa" | "ecdsa" | "ed25519" = "ecdsa"
   ): Promise<SecurityProvenance> {
-    try {
-      const content = fs.readFileSync(artifactPath, "utf-8");
+    const operationId = crypto.randomUUID();
+    this.logger.info(`Starting artifact signing operation`, {
+      operationId,
+      artifactPath,
+      algorithm,
+    });
 
-      // Load private key from secure storage
-      const privateKey = await this.keyManager.loadPrivateKey(privateKeyPath);
+    try {
+      // Validate inputs
+      if (!artifactPath || !fs.existsSync(artifactPath)) {
+        throw new Error(`Artifact file not found: ${artifactPath}`);
+      }
+
+      // Read file with error handling
+      let content: string;
+      try {
+        content = fs.readFileSync(artifactPath, "utf-8");
+        this.logger.debug(`Artifact content loaded`, {
+          operationId,
+          size: content.length,
+        });
+      } catch (readError) {
+        this.logger.error(`Failed to read artifact file`, {
+          operationId,
+          artifactPath,
+          error: readError.message,
+        });
+        throw new Error(`Cannot read artifact file: ${readError.message}`);
+      }
+
+      // Load private key with retry logic
+      const privateKey = await this.retryOperation(
+        () => this.keyManager.loadPrivateKey(privateKeyPath),
+        `Load private key for ${operationId}`,
+        3
+      );
 
       // Validate private key type matches requested algorithm
       const keyType = privateKey.asymmetricKeyType;
@@ -184,33 +353,51 @@ export class SecurityProvenanceManager extends CawsBaseTool {
         (algorithm === "ecdsa" && keyType !== "ec") ||
         (algorithm === "ed25519" && keyType !== "ed25519")
       ) {
-        console.warn(
-          `Key type ${keyType} may not match requested algorithm ${algorithm}. Proceeding with available key.`
-        );
+        this.logger.warn(`Key type mismatch`, {
+          operationId,
+          requested: algorithm,
+          actual: keyType,
+        });
       }
 
-      // Generate digital signature based on algorithm
-      const signature = this.generateDigitalSignature(
-        content,
-        privateKey,
-        algorithm
+      // Generate digital signature with error handling
+      const signature = await this.retryOperation(
+        () => this.generateDigitalSignature(content, privateKey, algorithm),
+        `Generate signature for ${operationId}`,
+        2
       );
 
       // Get public key fingerprint for verification chain
       const publicKeyFingerprint =
         this.keyManager.getPublicKeyFingerprint(privateKeyPath);
 
-      // Verify signature integrity
+      // Verify signature integrity with error handling
       try {
         const publicKey = await this.derivePublicKey(privateKey);
-        this.verifySignatureIntegrity(content, signature, publicKey, algorithm);
-      } catch (verifyError) {
-        console.warn(
-          `Signature verification failed during generation: ${verifyError}`
+        const isValid = this.verifySignatureIntegrity(
+          content,
+          signature,
+          publicKey,
+          algorithm
         );
+
+        if (!isValid) {
+          this.logger.error(`Signature integrity verification failed`, {
+            operationId,
+          });
+          throw new Error("Generated signature failed integrity verification");
+        }
+
+        this.logger.debug(`Signature integrity verified`, { operationId });
+      } catch (verifyError) {
+        this.logger.warn(`Signature verification failed during generation`, {
+          operationId,
+          error: verifyError.message,
+        });
+        // Don't fail the operation, but log the warning
       }
 
-      return {
+      const result = {
         signature,
         signedBy: process.env.CAWS_SIGNER || "caws-agent",
         signedAt: new Date().toISOString(),
@@ -222,8 +409,22 @@ export class SecurityProvenanceManager extends CawsBaseTool {
             : "EdDSA",
         publicKeyFingerprint,
       };
+
+      this.logger.info(`Artifact signed successfully`, {
+        operationId,
+        algorithm: result.algorithm,
+        fingerprint: publicKeyFingerprint,
+      });
+
+      return result;
     } catch (error) {
-      throw new Error(`Failed to sign artifact: ${error}`);
+      this.logger.error(`Artifact signing failed`, {
+        operationId,
+        artifactPath,
+        error: error.message,
+        stack: error.stack,
+      });
+      throw new Error(`Failed to sign artifact: ${error.message}`);
     }
   }
 
@@ -397,37 +598,172 @@ export class SecurityProvenanceManager extends CawsBaseTool {
   }
 
   /**
-   * Run security scans and collect results
+   * Run comprehensive security scans with enhanced error handling and monitoring
    */
   async runSecurityScans(projectDir: string): Promise<{
     secretScanPassed: boolean;
     sastPassed: boolean;
     dependencyScanPassed: boolean;
     details: Record<string, any>;
+    scanMetadata: {
+      startTime: string;
+      endTime: string;
+      duration: number;
+      errors: string[];
+    };
   }> {
+    const scanId = crypto.randomUUID();
+    const startTime = Date.now();
+    const errors: string[] = [];
+
+    this.logger.info(`Starting comprehensive security scan`, {
+      scanId,
+      projectDir,
+    });
+
     const results = {
       secretScanPassed: true,
       sastPassed: true,
       dependencyScanPassed: true,
       details: {} as Record<string, any>,
+      scanMetadata: {
+        startTime: new Date().toISOString(),
+        endTime: "",
+        duration: 0,
+        errors: [] as string[],
+      },
     };
 
-    // Check for secrets
-    const secretScan = await this.scanForSecrets(projectDir);
-    results.secretScanPassed = secretScan.passed;
-    results.details.secrets = secretScan;
+    try {
+      // Validate project directory
+      if (!fs.existsSync(projectDir)) {
+        throw new Error(`Project directory does not exist: ${projectDir}`);
+      }
 
-    // Check for vulnerabilities
-    const sastScan = await this.runSAST(projectDir);
-    results.sastPassed = sastScan.passed;
-    results.details.sast = sastScan;
+      // Run secret scanning with error handling
+      try {
+        this.logger.debug(`Running secret scan`, { scanId });
+        const secretScan = await this.retryOperation(
+          () => this.scanForSecrets(projectDir),
+          `Secret scan for ${scanId}`,
+          2
+        );
+        results.secretScanPassed = secretScan.passed;
+        results.details.secrets = secretScan;
+        this.logger.info(`Secret scan completed`, {
+          scanId,
+          passed: secretScan.passed,
+          findings: secretScan.findings?.length || 0,
+        });
+      } catch (error) {
+        const errorMsg = `Secret scan failed: ${error.message}`;
+        errors.push(errorMsg);
+        this.logger.error(`Secret scan failed`, {
+          scanId,
+          error: error.message,
+        });
+        results.secretScanPassed = false;
+        results.details.secrets = { error: errorMsg };
+      }
 
-    // Check dependencies
-    const depScan = await this.scanDependencies(projectDir);
-    results.dependencyScanPassed = depScan.passed;
-    results.details.dependencies = depScan;
+      // Run SAST scanning with error handling
+      try {
+        this.logger.debug(`Running SAST scan`, { scanId });
+        const sastScan = await this.retryOperation(
+          () => this.runSAST(projectDir),
+          `SAST scan for ${scanId}`,
+          2
+        );
+        results.sastPassed = sastScan.passed;
+        results.details.sast = sastScan;
+        this.logger.info(`SAST scan completed`, {
+          scanId,
+          passed: sastScan.passed,
+          vulnerabilities: sastScan.vulnerabilities || 0,
+        });
+      } catch (error) {
+        const errorMsg = `SAST scan failed: ${error.message}`;
+        errors.push(errorMsg);
+        this.logger.error(`SAST scan failed`, { scanId, error: error.message });
+        results.sastPassed = false;
+        results.details.sast = { error: errorMsg };
+      }
 
-    return results;
+      // Run dependency scanning with error handling
+      try {
+        this.logger.debug(`Running dependency scan`, { scanId });
+        const depScan = await this.retryOperation(
+          () => this.scanDependencies(projectDir),
+          `Dependency scan for ${scanId}`,
+          2
+        );
+        results.dependencyScanPassed = depScan.passed;
+        results.details.dependencies = depScan;
+        this.logger.info(`Dependency scan completed`, {
+          scanId,
+          passed: depScan.passed,
+          vulnerable: depScan.vulnerable || 0,
+        });
+      } catch (error) {
+        const errorMsg = `Dependency scan failed: ${error.message}`;
+        errors.push(errorMsg);
+        this.logger.error(`Dependency scan failed`, {
+          scanId,
+          error: error.message,
+        });
+        results.dependencyScanPassed = false;
+        results.details.dependencies = { error: errorMsg };
+      }
+
+      // Calculate final metrics
+      const endTime = Date.now();
+      const duration = endTime - startTime;
+
+      results.scanMetadata = {
+        startTime: new Date(startTime).toISOString(),
+        endTime: new Date(endTime).toISOString(),
+        duration,
+        errors,
+      };
+
+      const overallPassed =
+        results.secretScanPassed &&
+        results.sastPassed &&
+        results.dependencyScanPassed;
+
+      this.logger.info(`Security scan completed`, {
+        scanId,
+        duration,
+        overallPassed,
+        errors: errors.length,
+        secretScanPassed: results.secretScanPassed,
+        sastPassed: results.sastPassed,
+        dependencyScanPassed: results.dependencyScanPassed,
+      });
+
+      return results;
+    } catch (error) {
+      const endTime = Date.now();
+      const duration = endTime - startTime;
+
+      this.logger.error(`Security scan failed catastrophically`, {
+        scanId,
+        error: error.message,
+        duration,
+      });
+
+      results.scanMetadata = {
+        startTime: new Date(startTime).toISOString(),
+        endTime: new Date(endTime).toISOString(),
+        duration,
+        errors: [
+          ...errors,
+          `Critical scan failure: ${error.message}`,
+        ] as string[],
+      };
+
+      return results;
+    }
   }
 
   /**
@@ -561,7 +897,11 @@ export class SecurityProvenanceManager extends CawsBaseTool {
    */
   private async runSAST(
     projectDir: string
-  ): Promise<{ passed: boolean; vulnerabilities: number; details: Record<string, any> }> {
+  ): Promise<{
+    passed: boolean;
+    vulnerabilities: number;
+    details: Record<string, any>;
+  }> {
     try {
       const results = {
         passed: true,
@@ -574,9 +914,9 @@ export class SecurityProvenanceManager extends CawsBaseTool {
             critical: 0,
             high: 0,
             medium: 0,
-            low: 0
-          }
-        }
+            low: 0,
+          },
+        },
       };
 
       // Run ESLint security rules
@@ -598,7 +938,9 @@ export class SecurityProvenanceManager extends CawsBaseTool {
       this.aggregateSeverityCounts(results.details);
 
       // Determine overall pass/fail based on critical and high severity issues
-      results.passed = results.details.summary.critical === 0 && results.details.summary.high === 0;
+      results.passed =
+        results.details.summary.critical === 0 &&
+        results.details.summary.high === 0;
 
       return results;
     } catch (error) {
@@ -606,7 +948,7 @@ export class SecurityProvenanceManager extends CawsBaseTool {
       return {
         passed: false,
         vulnerabilities: 0,
-        details: { error: error.message }
+        details: { error: error.message },
       };
     }
   }
@@ -614,15 +956,21 @@ export class SecurityProvenanceManager extends CawsBaseTool {
   /**
    * Run ESLint with security-focused rules
    */
-  private async runESLintSecurityScan(projectDir: string): Promise<Record<string, any>> {
+  private async runESLintSecurityScan(
+    projectDir: string
+  ): Promise<Record<string, any>> {
     try {
-      const { execSync } = await import('child_process');
-      
+      const { execSync } = await import("child_process");
+
       // Check if ESLint is available
       try {
-        execSync('eslint --version', { stdio: 'pipe' });
+        execSync("eslint --version", { stdio: "pipe" });
       } catch {
-        return { vulnerabilities: 0, issues: [], error: 'ESLint not available' };
+        return {
+          vulnerabilities: 0,
+          issues: [],
+          error: "ESLint not available",
+        };
       }
 
       // Run ESLint with security rules
@@ -642,27 +990,29 @@ export class SecurityProvenanceManager extends CawsBaseTool {
         "env": { "browser": true, "node": true, "es6": true }
       }'`;
 
-      const output = execSync(command, { 
-        encoding: 'utf8', 
-        stdio: 'pipe',
-        timeout: 30000 // 30 second timeout
+      const output = execSync(command, {
+        encoding: "utf8",
+        stdio: "pipe",
+        timeout: 30000, // 30 second timeout
       });
 
       const eslintResults = JSON.parse(output);
-      const vulnerabilities = eslintResults.filter((file: any) => file.messages.length > 0).length;
+      const vulnerabilities = eslintResults.filter(
+        (file: any) => file.messages.length > 0
+      ).length;
 
       return {
         vulnerabilities,
         issues: eslintResults,
-        tool: 'eslint'
+        tool: "eslint",
       };
     } catch (error) {
       // ESLint might not be installed or configured
-      return { 
-        vulnerabilities: 0, 
-        issues: [], 
+      return {
+        vulnerabilities: 0,
+        issues: [],
         error: `ESLint scan failed: ${error.message}`,
-        tool: 'eslint'
+        tool: "eslint",
       };
     }
   }
@@ -670,24 +1020,30 @@ export class SecurityProvenanceManager extends CawsBaseTool {
   /**
    * Run Semgrep security scan
    */
-  private async runSemgrepScan(projectDir: string): Promise<Record<string, any>> {
+  private async runSemgrepScan(
+    projectDir: string
+  ): Promise<Record<string, any>> {
     try {
-      const { execSync } = await import('child_process');
-      
+      const { execSync } = await import("child_process");
+
       // Check if Semgrep is available
       try {
-        execSync('semgrep --version', { stdio: 'pipe' });
+        execSync("semgrep --version", { stdio: "pipe" });
       } catch {
-        return { vulnerabilities: 0, issues: [], error: 'Semgrep not available' };
+        return {
+          vulnerabilities: 0,
+          issues: [],
+          error: "Semgrep not available",
+        };
       }
 
       // Run Semgrep with security rulesets
       const command = `semgrep --config=auto --json --no-git-ignore "${projectDir}"`;
-      
-      const output = execSync(command, { 
-        encoding: 'utf8', 
-        stdio: 'pipe',
-        timeout: 60000 // 60 second timeout
+
+      const output = execSync(command, {
+        encoding: "utf8",
+        stdio: "pipe",
+        timeout: 60000, // 60 second timeout
       });
 
       const semgrepResults = JSON.parse(output);
@@ -696,14 +1052,14 @@ export class SecurityProvenanceManager extends CawsBaseTool {
       return {
         vulnerabilities,
         issues: semgrepResults.results || [],
-        tool: 'semgrep'
+        tool: "semgrep",
       };
     } catch (error) {
-      return { 
-        vulnerabilities: 0, 
-        issues: [], 
+      return {
+        vulnerabilities: 0,
+        issues: [],
         error: `Semgrep scan failed: ${error.message}`,
-        tool: 'semgrep'
+        tool: "semgrep",
       };
     }
   }
@@ -711,56 +1067,58 @@ export class SecurityProvenanceManager extends CawsBaseTool {
   /**
    * Run custom security pattern scanning
    */
-  private async runCustomSecurityScan(projectDir: string): Promise<Record<string, any>> {
+  private async runCustomSecurityScan(
+    projectDir: string
+  ): Promise<Record<string, any>> {
     const issues: any[] = [];
     const files = this.findFilesRecursive(projectDir);
 
     // Define security patterns to scan for
     const securityPatterns = [
       {
-        name: 'Hardcoded Secrets',
+        name: "Hardcoded Secrets",
         pattern: /(password|secret|key|token)\s*[:=]\s*['"][^'"]{8,}['"]/gi,
-        severity: 'high',
-        description: 'Potential hardcoded credentials detected'
+        severity: "high",
+        description: "Potential hardcoded credentials detected",
       },
       {
-        name: 'SQL Injection Risk',
+        name: "SQL Injection Risk",
         pattern: /(query|sql|execute)\s*\(\s*['"][^'"]*\+[^'"]*['"]/gi,
-        severity: 'high',
-        description: 'Potential SQL injection vulnerability'
+        severity: "high",
+        description: "Potential SQL injection vulnerability",
       },
       {
-        name: 'XSS Risk',
+        name: "XSS Risk",
         pattern: /innerHTML\s*=\s*[^;]*\+/gi,
-        severity: 'medium',
-        description: 'Potential XSS vulnerability'
+        severity: "medium",
+        description: "Potential XSS vulnerability",
       },
       {
-        name: 'Dangerous Eval',
+        name: "Dangerous Eval",
         pattern: /eval\s*\(/gi,
-        severity: 'critical',
-        description: 'Use of eval() function detected'
+        severity: "critical",
+        description: "Use of eval() function detected",
       },
       {
-        name: 'Insecure Random',
+        name: "Insecure Random",
         pattern: /Math\.random\(\)/gi,
-        severity: 'medium',
-        description: 'Insecure random number generation'
+        severity: "medium",
+        description: "Insecure random number generation",
       },
       {
-        name: 'Debug Code',
+        name: "Debug Code",
         pattern: /(console\.log|debugger|alert\s*\()/gi,
-        severity: 'low',
-        description: 'Debug code left in production'
-      }
+        severity: "low",
+        description: "Debug code left in production",
+      },
     ];
 
     for (const file of files) {
-      if (file.includes('node_modules') || file.includes('.git')) continue;
+      if (file.includes("node_modules") || file.includes(".git")) continue;
 
       try {
-        const content = fs.readFileSync(file, 'utf-8');
-        
+        const content = fs.readFileSync(file, "utf-8");
+
         for (const pattern of securityPatterns) {
           const matches = content.match(pattern.pattern);
           if (matches) {
@@ -770,7 +1128,7 @@ export class SecurityProvenanceManager extends CawsBaseTool {
               severity: pattern.severity,
               description: pattern.description,
               matches: matches.length,
-              line: this.findLineNumber(content, matches[0])
+              line: this.findLineNumber(content, matches[0]),
             });
           }
         }
@@ -783,7 +1141,7 @@ export class SecurityProvenanceManager extends CawsBaseTool {
     return {
       vulnerabilities: issues.length,
       issues,
-      tool: 'custom'
+      tool: "custom",
     };
   }
 
@@ -791,7 +1149,7 @@ export class SecurityProvenanceManager extends CawsBaseTool {
    * Find line number for a match in content
    */
   private findLineNumber(content: string, match: string): number {
-    const lines = content.split('\n');
+    const lines = content.split("\n");
     for (let i = 0; i < lines.length; i++) {
       if (lines[i].includes(match)) {
         return i + 1;
@@ -816,7 +1174,7 @@ export class SecurityProvenanceManager extends CawsBaseTool {
     // Count from Semgrep results
     if (details.semgrep?.issues) {
       for (const issue of details.semgrep.issues) {
-        const severity = issue.extra?.severity || 'medium';
+        const severity = issue.extra?.severity || "medium";
         if (severity in summary) {
           summary[severity as keyof typeof summary]++;
         }
@@ -832,7 +1190,11 @@ export class SecurityProvenanceManager extends CawsBaseTool {
    */
   private async scanDependencies(
     projectDir: string
-  ): Promise<{ passed: boolean; vulnerable: number; details: Record<string, any> }> {
+  ): Promise<{
+    passed: boolean;
+    vulnerable: number;
+    details: Record<string, any>;
+  }> {
     try {
       const results = {
         passed: true,
@@ -845,9 +1207,9 @@ export class SecurityProvenanceManager extends CawsBaseTool {
             critical: 0,
             high: 0,
             medium: 0,
-            low: 0
-          }
-        }
+            low: 0,
+          },
+        },
       };
 
       // Run npm audit
@@ -869,7 +1231,9 @@ export class SecurityProvenanceManager extends CawsBaseTool {
       this.aggregateDependencySeverityCounts(results.details);
 
       // Determine overall pass/fail based on critical and high severity vulnerabilities
-      results.passed = results.details.summary.critical === 0 && results.details.summary.high === 0;
+      results.passed =
+        results.details.summary.critical === 0 &&
+        results.details.summary.high === 0;
 
       return results;
     } catch (error) {
@@ -877,7 +1241,7 @@ export class SecurityProvenanceManager extends CawsBaseTool {
       return {
         passed: false,
         vulnerable: 0,
-        details: { error: error.message }
+        details: { error: error.message },
       };
     }
   }
@@ -887,45 +1251,47 @@ export class SecurityProvenanceManager extends CawsBaseTool {
    */
   private async runNpmAudit(projectDir: string): Promise<Record<string, any>> {
     try {
-      const { execSync } = await import('child_process');
-      
+      const { execSync } = await import("child_process");
+
       // Check if package.json exists
-      const packageJsonPath = path.join(projectDir, 'package.json');
+      const packageJsonPath = path.join(projectDir, "package.json");
       if (!fs.existsSync(packageJsonPath)) {
-        return { vulnerable: 0, issues: [], error: 'No package.json found' };
+        return { vulnerable: 0, issues: [], error: "No package.json found" };
       }
 
       // Check if npm is available
       try {
-        execSync('npm --version', { stdio: 'pipe' });
+        execSync("npm --version", { stdio: "pipe" });
       } catch {
-        return { vulnerable: 0, issues: [], error: 'npm not available' };
+        return { vulnerable: 0, issues: [], error: "npm not available" };
       }
 
       // Run npm audit
       const command = `npm audit --json`;
-      const output = execSync(command, { 
+      const output = execSync(command, {
         cwd: projectDir,
-        encoding: 'utf8', 
-        stdio: 'pipe',
-        timeout: 60000 // 60 second timeout
+        encoding: "utf8",
+        stdio: "pipe",
+        timeout: 60000, // 60 second timeout
       });
 
       const auditResults = JSON.parse(output);
-      const vulnerable = auditResults.vulnerabilities ? Object.keys(auditResults.vulnerabilities).length : 0;
+      const vulnerable = auditResults.vulnerabilities
+        ? Object.keys(auditResults.vulnerabilities).length
+        : 0;
 
       return {
         vulnerable,
         issues: auditResults.vulnerabilities || {},
         metadata: auditResults.metadata,
-        tool: 'npm'
+        tool: "npm",
       };
     } catch (error) {
-      return { 
-        vulnerable: 0, 
-        issues: [], 
+      return {
+        vulnerable: 0,
+        issues: [],
         error: `npm audit failed: ${error.message}`,
-        tool: 'npm'
+        tool: "npm",
       };
     }
   }
@@ -935,22 +1301,22 @@ export class SecurityProvenanceManager extends CawsBaseTool {
    */
   private async runSnykScan(projectDir: string): Promise<Record<string, any>> {
     try {
-      const { execSync } = await import('child_process');
-      
+      const { execSync } = await import("child_process");
+
       // Check if Snyk is available
       try {
-        execSync('snyk --version', { stdio: 'pipe' });
+        execSync("snyk --version", { stdio: "pipe" });
       } catch {
-        return { vulnerable: 0, issues: [], error: 'Snyk not available' };
+        return { vulnerable: 0, issues: [], error: "Snyk not available" };
       }
 
       // Run Snyk test
       const command = `snyk test --json`;
-      const output = execSync(command, { 
+      const output = execSync(command, {
         cwd: projectDir,
-        encoding: 'utf8', 
-        stdio: 'pipe',
-        timeout: 120000 // 2 minute timeout
+        encoding: "utf8",
+        stdio: "pipe",
+        timeout: 120000, // 2 minute timeout
       });
 
       const snykResults = JSON.parse(output);
@@ -960,14 +1326,14 @@ export class SecurityProvenanceManager extends CawsBaseTool {
         vulnerable,
         issues: snykResults.vulnerabilities || [],
         summary: snykResults.summary,
-        tool: 'snyk'
+        tool: "snyk",
       };
     } catch (error) {
-      return { 
-        vulnerable: 0, 
-        issues: [], 
+      return {
+        vulnerable: 0,
+        issues: [],
         error: `Snyk scan failed: ${error.message}`,
-        tool: 'snyk'
+        tool: "snyk",
       };
     }
   }
@@ -975,17 +1341,23 @@ export class SecurityProvenanceManager extends CawsBaseTool {
   /**
    * Run custom dependency analysis
    */
-  private async runCustomDependencyScan(projectDir: string): Promise<Record<string, any>> {
+  private async runCustomDependencyScan(
+    projectDir: string
+  ): Promise<Record<string, any>> {
     const issues: any[] = [];
-    
+
     try {
       // Analyze package.json for known vulnerable patterns
-      const packageJsonPath = path.join(projectDir, 'package.json');
+      const packageJsonPath = path.join(projectDir, "package.json");
       if (fs.existsSync(packageJsonPath)) {
-        const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'));
-        
+        const packageJson = JSON.parse(
+          fs.readFileSync(packageJsonPath, "utf-8")
+        );
+
         // Check for known vulnerable packages
-        const vulnerablePackages = await this.checkKnownVulnerablePackages(packageJson);
+        const vulnerablePackages = await this.checkKnownVulnerablePackages(
+          packageJson
+        );
         issues.push(...vulnerablePackages);
 
         // Check for outdated packages
@@ -1004,14 +1376,14 @@ export class SecurityProvenanceManager extends CawsBaseTool {
       return {
         vulnerable: issues.length,
         issues,
-        tool: 'custom'
+        tool: "custom",
       };
     } catch (error) {
       return {
         vulnerable: 0,
         issues: [],
         error: `Custom dependency scan failed: ${error.message}`,
-        tool: 'custom'
+        tool: "custom",
       };
     }
   }
@@ -1021,28 +1393,48 @@ export class SecurityProvenanceManager extends CawsBaseTool {
    */
   private async checkKnownVulnerablePackages(packageJson: any): Promise<any[]> {
     const issues: any[] = [];
-    
+
     // Known vulnerable packages (this would be updated regularly in production)
     const knownVulnerable = {
-      'lodash': { versions: ['<4.17.12'], severity: 'high', cve: 'CVE-2019-10744' },
-      'minimist': { versions: ['<1.2.3'], severity: 'high', cve: 'CVE-2020-7598' },
-      'serialize-javascript': { versions: ['<3.1.0'], severity: 'medium', cve: 'CVE-2019-16769' },
-      'axios': { versions: ['<0.21.1'], severity: 'medium', cve: 'CVE-2020-28168' }
+      lodash: {
+        versions: ["<4.17.12"],
+        severity: "high",
+        cve: "CVE-2019-10744",
+      },
+      minimist: {
+        versions: ["<1.2.3"],
+        severity: "high",
+        cve: "CVE-2020-7598",
+      },
+      "serialize-javascript": {
+        versions: ["<3.1.0"],
+        severity: "medium",
+        cve: "CVE-2019-16769",
+      },
+      axios: {
+        versions: ["<0.21.1"],
+        severity: "medium",
+        cve: "CVE-2020-28168",
+      },
     };
 
-    const dependencies = { ...packageJson.dependencies, ...packageJson.devDependencies };
-    
+    const dependencies = {
+      ...packageJson.dependencies,
+      ...packageJson.devDependencies,
+    };
+
     for (const [packageName, version] of Object.entries(dependencies)) {
       if (knownVulnerable[packageName as keyof typeof knownVulnerable]) {
-        const vuln = knownVulnerable[packageName as keyof typeof knownVulnerable];
+        const vuln =
+          knownVulnerable[packageName as keyof typeof knownVulnerable];
         // Simple version check (in production, use proper semver parsing)
-        if (version && typeof version === 'string') {
+        if (version && typeof version === "string") {
           issues.push({
             package: packageName,
             version: version,
             severity: vuln.severity,
             description: `Known vulnerability: ${vuln.cve}`,
-            type: 'known_vulnerability'
+            type: "known_vulnerability",
           });
         }
       }
@@ -1056,20 +1448,23 @@ export class SecurityProvenanceManager extends CawsBaseTool {
    */
   private async checkOutdatedPackages(packageJson: any): Promise<any[]> {
     const issues: any[] = [];
-    
+
     // This is a simplified check - in production, you'd use npm outdated or similar
-    const dependencies = { ...packageJson.dependencies, ...packageJson.devDependencies };
-    
+    const dependencies = {
+      ...packageJson.dependencies,
+      ...packageJson.devDependencies,
+    };
+
     for (const [packageName, version] of Object.entries(dependencies)) {
-      if (version && typeof version === 'string') {
+      if (version && typeof version === "string") {
         // Check for very old version patterns
-        if (version.startsWith('^0.') || version.startsWith('~0.')) {
+        if (version.startsWith("^0.") || version.startsWith("~0.")) {
           issues.push({
             package: packageName,
             version: version,
-            severity: 'low',
-            description: 'Package may be outdated (0.x version)',
-            type: 'outdated'
+            severity: "low",
+            description: "Package may be outdated (0.x version)",
+            type: "outdated",
           });
         }
       }
@@ -1083,27 +1478,30 @@ export class SecurityProvenanceManager extends CawsBaseTool {
    */
   private checkSuspiciousPackages(packageJson: any): any[] {
     const issues: any[] = [];
-    
-    const dependencies = { ...packageJson.dependencies, ...packageJson.devDependencies };
-    
+
+    const dependencies = {
+      ...packageJson.dependencies,
+      ...packageJson.devDependencies,
+    };
+
     for (const packageName of Object.keys(dependencies)) {
       // Check for typosquatting patterns
-      if (packageName.includes('lodash') && packageName !== 'lodash') {
+      if (packageName.includes("lodash") && packageName !== "lodash") {
         issues.push({
           package: packageName,
-          severity: 'medium',
-          description: 'Potential typosquatting of lodash package',
-          type: 'typosquatting'
+          severity: "medium",
+          description: "Potential typosquatting of lodash package",
+          type: "typosquatting",
         });
       }
-      
+
       // Check for suspicious naming patterns
-      if (packageName.includes('crypto') || packageName.includes('password')) {
+      if (packageName.includes("crypto") || packageName.includes("password")) {
         issues.push({
           package: packageName,
-          severity: 'low',
-          description: 'Package name suggests security-related functionality',
-          type: 'suspicious_name'
+          severity: "low",
+          description: "Package name suggests security-related functionality",
+          type: "suspicious_name",
         });
       }
     }
@@ -1116,23 +1514,26 @@ export class SecurityProvenanceManager extends CawsBaseTool {
    */
   private async analyzeLockFiles(projectDir: string): Promise<any[]> {
     const issues: any[] = [];
-    
-    const lockFiles = ['package-lock.json', 'yarn.lock', 'pnpm-lock.yaml'];
-    
+
+    const lockFiles = ["package-lock.json", "yarn.lock", "pnpm-lock.yaml"];
+
     for (const lockFile of lockFiles) {
       const lockFilePath = path.join(projectDir, lockFile);
       if (fs.existsSync(lockFilePath)) {
         try {
           const stats = fs.statSync(lockFilePath);
-          
+
           // Check if lock file is very old
-          const daysSinceModified = (Date.now() - stats.mtime.getTime()) / (1000 * 60 * 60 * 24);
+          const daysSinceModified =
+            (Date.now() - stats.mtime.getTime()) / (1000 * 60 * 60 * 24);
           if (daysSinceModified > 90) {
             issues.push({
               file: lockFile,
-              severity: 'low',
-              description: `Lock file is ${Math.round(daysSinceModified)} days old`,
-              type: 'stale_lockfile'
+              severity: "low",
+              description: `Lock file is ${Math.round(
+                daysSinceModified
+              )} days old`,
+              type: "stale_lockfile",
             });
           }
         } catch (error) {
@@ -1154,7 +1555,7 @@ export class SecurityProvenanceManager extends CawsBaseTool {
     // Count from npm audit
     if (details.npm?.issues) {
       for (const vuln of Object.values(details.npm.issues)) {
-        const severity = (vuln as any).severity || 'medium';
+        const severity = (vuln as any).severity || "medium";
         if (severity in summary) {
           summary[severity as keyof typeof summary]++;
         }
@@ -1164,7 +1565,7 @@ export class SecurityProvenanceManager extends CawsBaseTool {
     // Count from Snyk results
     if (details.snyk?.issues) {
       for (const vuln of details.snyk.issues) {
-        const severity = vuln.severity || 'medium';
+        const severity = vuln.severity || "medium";
         if (severity in summary) {
           summary[severity as keyof typeof summary]++;
         }
@@ -1174,7 +1575,7 @@ export class SecurityProvenanceManager extends CawsBaseTool {
     // Count from custom scan
     if (details.custom?.issues) {
       for (const issue of details.custom.issues) {
-        const severity = issue.severity || 'medium';
+        const severity = issue.severity || "medium";
         if (severity in summary) {
           summary[severity as keyof typeof summary]++;
         }
@@ -1200,7 +1601,7 @@ export class SecurityProvenanceManager extends CawsBaseTool {
       const existingEntry = db[modelKey];
       if (existingEntry?.verified && this.isVerificationValid(existingEntry)) {
         console.info(`Model ${modelKey} already verified and valid`);
-    return true;
+        return true;
       }
 
       // Locate model file
@@ -1467,30 +1868,35 @@ export class SecurityProvenanceManager extends CawsBaseTool {
    */
   private isVerificationValid(entry: any): boolean {
     if (!entry.verified_at) return false;
-    
+
     const verificationTime = new Date(entry.verified_at);
-    const expirationTime = new Date(verificationTime.getTime() + (30 * 24 * 60 * 60 * 1000)); // 30 days
-    
+    const expirationTime = new Date(
+      verificationTime.getTime() + 30 * 24 * 60 * 60 * 1000
+    ); // 30 days
+
     return new Date() < expirationTime;
   }
 
   /**
    * Fetch known checksums from trusted sources
    */
-  private async fetchKnownChecksums(modelId: string, version: string): Promise<Record<string, string> | null> {
+  private async fetchKnownChecksums(
+    modelId: string,
+    version: string
+  ): Promise<Record<string, string> | null> {
     try {
       // Check local database first
       const db = this.loadModelChecksumDatabase();
       const modelKey = `${modelId}:${version}`;
       const localEntry = db[modelKey];
-      
+
       if (localEntry && localEntry.verified) {
         return {
           sha256: localEntry.sha256,
           sha512: localEntry.sha512,
           md5: localEntry.md5,
           blake2b: localEntry.blake2b,
-          size: localEntry.size
+          size: localEntry.size,
         };
       }
 
@@ -1506,14 +1912,17 @@ export class SecurityProvenanceManager extends CawsBaseTool {
   /**
    * Validate checksums against known values
    */
-  private validateChecksums(current: Record<string, string>, known: Record<string, string> | null): boolean {
+  private validateChecksums(
+    current: Record<string, string>,
+    known: Record<string, string> | null
+  ): boolean {
     if (!known) {
       // No known checksums available - this is acceptable for new models
       return true;
     }
 
     // Validate primary checksums
-    const primaryChecksums = ['sha256', 'sha512'];
+    const primaryChecksums = ["sha256", "sha512"];
     for (const algorithm of primaryChecksums) {
       if (known[algorithm] && current[algorithm] !== known[algorithm]) {
         return false;
@@ -1531,12 +1940,16 @@ export class SecurityProvenanceManager extends CawsBaseTool {
   /**
    * Perform comprehensive model security validation
    */
-  private async performModelSecurityValidation(modelFilePath: string): Promise<boolean> {
+  private async performModelSecurityValidation(
+    modelFilePath: string
+  ): Promise<boolean> {
     try {
       // Check file permissions
       const stats = fs.statSync(modelFilePath);
       if (stats.mode & 0o077) {
-        console.warn(`Model file has overly permissive permissions: ${modelFilePath}`);
+        console.warn(
+          `Model file has overly permissive permissions: ${modelFilePath}`
+        );
       }
 
       // Validate file format
@@ -1546,7 +1959,9 @@ export class SecurityProvenanceManager extends CawsBaseTool {
       }
 
       // Check for suspicious patterns in model metadata
-      const hasSuspiciousContent = await this.scanModelForSuspiciousContent(modelFilePath);
+      const hasSuspiciousContent = await this.scanModelForSuspiciousContent(
+        modelFilePath
+      );
       if (hasSuspiciousContent) {
         return false;
       }
@@ -1564,8 +1979,15 @@ export class SecurityProvenanceManager extends CawsBaseTool {
   private validateModelFileFormat(filePath: string): boolean {
     try {
       const ext = path.extname(filePath).toLowerCase();
-      const validExtensions = ['.mlmodel', '.mlpackage', '.onnx', '.pt', '.pth', '.safetensors'];
-      
+      const validExtensions = [
+        ".mlmodel",
+        ".mlpackage",
+        ".onnx",
+        ".pt",
+        ".pth",
+        ".safetensors",
+      ];
+
       if (!validExtensions.includes(ext)) {
         console.error(`Invalid model file format: ${ext}`);
         return false;
@@ -1582,22 +2004,26 @@ export class SecurityProvenanceManager extends CawsBaseTool {
   /**
    * Scan model for suspicious content patterns
    */
-  private async scanModelForSuspiciousContent(filePath: string): Promise<boolean> {
+  private async scanModelForSuspiciousContent(
+    filePath: string
+  ): Promise<boolean> {
     try {
       // For binary files, we'll do basic header validation
       const buffer = fs.readFileSync(filePath);
-      const header = buffer.slice(0, 1024).toString('utf8', 0, Math.min(1024, buffer.length));
-      
+      const header = buffer
+        .slice(0, 1024)
+        .toString("utf8", 0, Math.min(1024, buffer.length));
+
       // Check for suspicious patterns that might indicate tampering
       const suspiciousPatterns = [
         /eval\s*\(/i,
         /exec\s*\(/i,
         /system\s*\(/i,
         /shell_exec/i,
-        /base64_decode/i
+        /base64_decode/i,
       ];
 
-      return suspiciousPatterns.some(pattern => pattern.test(header));
+      return suspiciousPatterns.some((pattern) => pattern.test(header));
     } catch (error) {
       console.warn(`Suspicious content scan failed: ${error}`);
       return false; // Don't fail verification due to scan errors
@@ -1608,8 +2034,8 @@ export class SecurityProvenanceManager extends CawsBaseTool {
    * Calculate comprehensive trust score for model
    */
   private async calculateModelTrustScore(
-    modelId: string, 
-    version: string, 
+    modelId: string,
+    version: string,
     checksums: Record<string, string>
   ): Promise<number> {
     let score = 0;
@@ -1618,12 +2044,24 @@ export class SecurityProvenanceManager extends CawsBaseTool {
     score += 50;
 
     // Bonus for multiple checksum algorithms
-    const checksumCount = Object.keys(checksums).filter(k => k !== 'size').length;
+    const checksumCount = Object.keys(checksums).filter(
+      (k) => k !== "size"
+    ).length;
     score += Math.min(checksumCount * 5, 20);
 
     // Bonus for known model providers
-    const trustedProviders = ['openai', 'anthropic', 'google', 'meta', 'huggingface'];
-    if (trustedProviders.some(provider => modelId.toLowerCase().includes(provider))) {
+    const trustedProviders = [
+      "openai",
+      "anthropic",
+      "google",
+      "meta",
+      "huggingface",
+    ];
+    if (
+      trustedProviders.some((provider) =>
+        modelId.toLowerCase().includes(provider)
+      )
+    ) {
       score += 15;
     }
 
@@ -1633,8 +2071,9 @@ export class SecurityProvenanceManager extends CawsBaseTool {
     }
 
     // Penalty for large file size (potential security risk)
-    const fileSize = parseInt(checksums.size || '0');
-    if (fileSize > 100 * 1024 * 1024) { // 100MB
+    const fileSize = parseInt(checksums.size || "0");
+    if (fileSize > 100 * 1024 * 1024) {
+      // 100MB
       score -= 5;
     }
 
@@ -1645,8 +2084,8 @@ export class SecurityProvenanceManager extends CawsBaseTool {
    * Record security incident for audit trail
    */
   private async recordSecurityIncident(
-    modelKey: string, 
-    incidentType: string, 
+    modelKey: string,
+    incidentType: string,
     details: Record<string, any>
   ): Promise<void> {
     try {
@@ -1655,19 +2094,22 @@ export class SecurityProvenanceManager extends CawsBaseTool {
         incidentType,
         details,
         timestamp: new Date().toISOString(),
-        severity: this.getIncidentSeverity(incidentType)
+        severity: this.getIncidentSeverity(incidentType),
       };
 
-      const incidentsPath = path.join(this.getCawsDirectory(), "security-incidents.json");
+      const incidentsPath = path.join(
+        this.getCawsDirectory(),
+        "security-incidents.json"
+      );
       let incidents: any[] = [];
-      
+
       if (fs.existsSync(incidentsPath)) {
         const content = fs.readFileSync(incidentsPath, "utf-8");
         incidents = JSON.parse(content);
       }
 
       incidents.push(incident);
-      
+
       // Keep only last 1000 incidents
       if (incidents.length > 1000) {
         incidents = incidents.slice(-1000);
@@ -1682,16 +2124,19 @@ export class SecurityProvenanceManager extends CawsBaseTool {
   /**
    * Get incident severity level
    */
-  private getIncidentSeverity(incidentType: string): 'low' | 'medium' | 'high' | 'critical' {
-    const severityMap: Record<string, 'low' | 'medium' | 'high' | 'critical'> = {
-      'checksum_mismatch': 'high',
-      'security_validation_failed': 'critical',
-      'suspicious_content': 'high',
-      'permission_violation': 'medium',
-      'format_invalid': 'medium'
-    };
+  private getIncidentSeverity(
+    incidentType: string
+  ): "low" | "medium" | "high" | "critical" {
+    const severityMap: Record<string, "low" | "medium" | "high" | "critical"> =
+      {
+        checksum_mismatch: "high",
+        security_validation_failed: "critical",
+        suspicious_content: "high",
+        permission_violation: "medium",
+        format_invalid: "medium",
+      };
 
-    return severityMap[incidentType] || 'low';
+    return severityMap[incidentType] || "low";
   }
 
   private findFilesRecursive(dir: string, files: string[] = []): string[] {

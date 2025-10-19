@@ -6,12 +6,17 @@
 pub mod caws_checker;
 pub mod executor;
 pub mod manager;
+pub mod multimodal_scheduler;
 pub mod router;
 pub mod types;
 
 pub use caws_checker::{CawsChecker, ChangeComplexity};
 pub use executor::TaskExecutor;
 pub use manager::WorkerPoolManager;
+pub use multimodal_scheduler::{
+    MultimodalJobScheduler, MultimodalSchedulerConfig, MultimodalJob, MultimodalJobType,
+    MultimodalJobStatus, JobPriority, SchedulerStats,
+};
 pub use router::TaskRouter;
 pub use types::*;
 

@@ -27,6 +27,10 @@ agent-agency-resilience = { path = "../resilience" }
 agent-agency-contracts = { path = "../agent-agency-contracts" }
 # claim-extraction = { path = "../claim-extraction" }  # Temporarily commented to resolve circular dependency
 
+# Multimodal RAG integration dependencies
+indexers = { path = "../indexers" }
+agent-agency-observability = { path = "../observability" }
+
 # Worker-specific dependencies
 dashmap = "5.5"  # Concurrent hashmap for worker registry
 crossbeam = "0.8"  # Lock-free data structures

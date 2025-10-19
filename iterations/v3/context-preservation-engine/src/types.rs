@@ -16,6 +16,8 @@ pub struct ContextPreservationConfig {
     pub performance: PerformanceConfig,
     /// Integration configuration
     pub integration: IntegrationConfig,
+    /// Encryption configuration
+    pub encryption: EncryptionConfig,
 }
 
 /// Context storage configuration
@@ -336,6 +338,8 @@ pub struct ContextData {
     pub encoding: String,
     /// Context compression
     pub compression: Option<CompressionInfo>,
+    /// Context encryption
+    pub encryption: Option<EncryptionInfo>,
     /// Context checksum
     pub checksum: String,
 }
@@ -595,4 +599,149 @@ pub struct ContextPerformanceData {
     pub utilization_rate: f64,
     /// Freshness score (0.0 to 1.0)
     pub freshness_score: f64,
+}
+
+/// Encryption configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EncryptionConfig {
+    /// Enable encryption
+    pub enabled: bool,
+    /// Encryption algorithm
+    pub algorithm: EncryptionAlgorithm,
+    /// Key derivation function
+    pub key_derivation: KeyDerivationFunction,
+    /// Key rotation interval (hours)
+    pub key_rotation_interval_hours: u32,
+    /// Enable key caching
+    pub enable_key_caching: bool,
+    /// Key cache TTL (seconds)
+    pub key_cache_ttl_seconds: u64,
+    /// Enable audit logging
+    pub enable_audit_logging: bool,
+    /// Maximum key age (hours)
+    pub max_key_age_hours: u32,
+}
+
+/// Encryption algorithm
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub enum EncryptionAlgorithm {
+    /// AES-256-GCM
+    Aes256Gcm,
+    /// AES-256-CBC
+    Aes256Cbc,
+    /// ChaCha20-Poly1305
+    ChaCha20Poly1305,
+}
+
+/// Key derivation function
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub enum KeyDerivationFunction {
+    /// PBKDF2 with SHA-256
+    Pbkdf2Sha256,
+    /// Argon2id
+    Argon2id,
+    /// Scrypt
+    Scrypt,
+}
+
+/// Encryption metadata
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EncryptionInfo {
+    /// Encryption algorithm used
+    pub algorithm: EncryptionAlgorithm,
+    /// Key ID used for encryption
+    pub key_id: String,
+    /// Initialization vector (IV)
+    pub iv: Vec<u8>,
+    /// Authentication tag (for AEAD)
+    pub auth_tag: Option<Vec<u8>>,
+    /// Key derivation salt
+    pub salt: Vec<u8>,
+    /// Encryption timestamp
+    pub encrypted_at: DateTime<Utc>,
+    /// Key version
+    pub key_version: u32,
+}
+
+/// Key management information
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct KeyInfo {
+    /// Key ID
+    pub key_id: String,
+    /// Key version
+    pub key_version: u32,
+    /// Key algorithm
+    pub algorithm: EncryptionAlgorithm,
+    /// Key creation time
+    pub created_at: DateTime<Utc>,
+    /// Key expiration time
+    pub expires_at: Option<DateTime<Utc>>,
+    /// Key status
+    pub status: KeyStatus,
+    /// Key usage count
+    pub usage_count: u64,
+    /// Last used time
+    pub last_used_at: Option<DateTime<Utc>>,
+}
+
+/// Key status
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub enum KeyStatus {
+    /// Active key
+    Active,
+    /// Rotated key (still valid for decryption)
+    Rotated,
+    /// Expired key
+    Expired,
+    /// Revoked key
+    Revoked,
+}
+
+/// Encryption audit log entry
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EncryptionAuditLog {
+    /// Log entry ID
+    pub id: Uuid,
+    /// Operation type
+    pub operation: EncryptionOperation,
+    /// Key ID used
+    pub key_id: String,
+    /// Context ID (if applicable)
+    pub context_id: Option<Uuid>,
+    /// Tenant ID
+    pub tenant_id: String,
+    /// Operation timestamp
+    pub timestamp: DateTime<Utc>,
+    /// Operation result
+    pub result: OperationResult,
+    /// Error message (if failed)
+    pub error_message: Option<String>,
+    /// Additional metadata
+    pub metadata: HashMap<String, String>,
+}
+
+/// Encryption operation type
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub enum EncryptionOperation {
+    /// Key generation
+    KeyGeneration,
+    /// Key rotation
+    KeyRotation,
+    /// Data encryption
+    DataEncryption,
+    /// Data decryption
+    DataDecryption,
+    /// Key revocation
+    KeyRevocation,
+}
+
+/// Operation result
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub enum OperationResult {
+    /// Success
+    Success,
+    /// Failure
+    Failure,
+    /// Partial success
+    PartialSuccess,
 }
