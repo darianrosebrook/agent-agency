@@ -13134,5 +13134,77 @@
     },
     "previous_hash": "26e9c5ee7c7fdfbbe6f0a8b60ff92a442938c2ce7aea7173b35946a483169973",
     "hash": "a35bc1602fdacae1fd1c52ac47b62fffd50664c9650df0e506f3058c6e50e3c6"
+  },
+  {
+    "id": "prov-1760867095205",
+    "timestamp": "2025-10-19T09:44:55.205Z",
+    "commit": {
+      "hash": "b6e65ddec129188ef9a27770ed4601b1b13ecb53",
+      "message": "Implement comprehensive test flakiness analysis in CAWS dashboard",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "PROJ-785",
+      "title": "agent-agency",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": [
+        "WV-0001"
+      ]
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-19T09:44:55.205Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "a35bc1602fdacae1fd1c52ac47b62fffd50664c9650df0e506f3058c6e50e3c6",
+    "hash": "41046bb29a2ca8c1de2f78b605d26184c0cd23df605089247cc25abc8ef45b22"
+  },
+  {
+    "id": "prov-1760867131854",
+    "timestamp": "2025-10-19T09:45:31.854Z",
+    "commit": {
+      "hash": "ffa52a118e2e6dc8210aaf57ccb861a9cdf34d67",
+      "message": "Add comprehensive CAWS flakiness analysis implementation documentation",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "PROJ-785",
+      "title": "agent-agency",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": [
+        "WV-0001"
+      ]
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-19T09:45:31.861Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "41046bb29a2ca8c1de2f78b605d26184c0cd23df605089247cc25abc8ef45b22",
+    "hash": "d45a75c46c8e73451d377123c551b6e162b87b399dd14862db1a5840d6a9de17"
   }
 ]

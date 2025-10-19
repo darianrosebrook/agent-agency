@@ -7,6 +7,7 @@
 
 use crate::types::*;
 use crate::{IngestionConfig, IngestionStats, KnowledgeIngestor};
+use agent_agency_database as database;
 use anyhow::{Context, Result};
 use flate2::read::GzDecoder;
 use serde_json::Value;

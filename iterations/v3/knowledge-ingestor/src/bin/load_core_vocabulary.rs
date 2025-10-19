@@ -2,6 +2,7 @@
 //!
 //! @author @darianrosebrook
 
+use agent_agency_database as database;
 use anyhow::Result;
 use clap::Parser;
 use knowledge_ingestor::*;

@@ -822,7 +822,7 @@ impl ContextResolver {
     /// - On-demand ingestor for missing entities
     /// 
     /// See: iterations/v3/knowledge-ingestor for ingestion pipeline
-    fn link_entities_to_knowledge_bases(&self, entities: &[String]) -> Vec<String> {
+    async fn link_entities_to_knowledge_bases(&self, entities: &[String]) -> Vec<String> {
         let mut linked_entities = Vec::new();
 
         for entity in entities {
@@ -1314,6 +1314,200 @@ impl ContextResolver {
             self.integrate_domain_hints_with_context(context, &conversation_entities);
 
         referent_map
+    }
+
+    /// Generate embedding for entity using embedding service
+    async fn generate_entity_embedding(&self, entity: &str) -> Option<Vec<f32>> {
+        debug!("Generating embedding for entity: {}", entity);
+        
+        // Simulate embedding generation
+        // In a real implementation, this would use the actual embedding service
+        
+        // Simulate processing time
+        tokio::time::sleep(Duration::from_millis(50)).await;
+        
+        // Simulate embedding generation failure occasionally
+        if fastrand::f32() < 0.1 { // 10% failure rate
+            warn!("Failed to generate embedding for entity: {}", entity);
+            return None;
+        }
+        
+        // Generate simulated embedding vector (384 dimensions)
+        let mut embedding = Vec::new();
+        for _ in 0..384 {
+            embedding.push(fastrand::f32() * 2.0 - 1.0); // Random values between -1 and 1
+        }
+        
+        debug!("Generated embedding for entity '{}' with {} dimensions", entity, embedding.len());
+        Some(embedding)
+    }
+
+    /// Query knowledge base semantic search for similar entities
+    async fn query_knowledge_base_semantic_search(
+        &self,
+        embedding: &[f32],
+        entity: &str,
+    ) -> Result<Vec<KnowledgeBaseResult>> {
+        debug!("Querying knowledge base semantic search for entity: {}", entity);
+        
+        // Simulate knowledge base query
+        // In a real implementation, this would use the actual database client
+        
+        // Simulate processing time
+        tokio::time::sleep(Duration::from_millis(100)).await;
+        
+        // Simulate query failure occasionally
+        if fastrand::f32() < 0.05 { // 5% failure rate
+            return Err(anyhow::anyhow!("Simulated knowledge base query failure"));
+        }
+        
+        // Generate simulated search results
+        let mut results = Vec::new();
+        
+        for i in 0..3 {
+            let result = KnowledgeBaseResult {
+                id: uuid::Uuid::new_v4(),
+                canonical_name: format!("{}_related_{}", entity, i + 1),
+                source: if i % 2 == 0 { 
+                    KnowledgeSource::Wikidata 
+                } else { 
+                    KnowledgeSource::WordNet 
+                },
+                properties: std::collections::HashMap::from([
+                    ("confidence".to_string(), (0.8 + i as f64 * 0.05).to_string()),
+                    ("similarity_score".to_string(), (0.85 + i as f64 * 0.03).to_string()),
+                ]),
+            };
+            results.push(result);
+        }
+        
+        debug!("Knowledge base search returned {} results for entity '{}'", results.len(), entity);
+        Ok(results)
+    }
+
+    /// Record knowledge base usage for analytics
+    async fn record_knowledge_base_usage(&self, entity_id: &uuid::Uuid) -> Result<()> {
+        debug!("Recording knowledge base usage for entity: {}", entity_id);
+        
+        // Simulate usage recording
+        // In a real implementation, this would use the actual database client
+        
+        // Simulate processing time
+        tokio::time::sleep(Duration::from_millis(10)).await;
+        
+        // Simulate recording failure occasionally
+        if fastrand::f32() < 0.05 { // 5% failure rate
+            return Err(anyhow::anyhow!("Simulated usage recording failure"));
+        }
+        
+        debug!("Recorded knowledge base usage for entity: {}", entity_id);
+        Ok(())
+    }
+
+    /// Get related entities from knowledge base
+    async fn get_related_entities(&self, entity_id: &uuid::Uuid) -> Result<Vec<RelatedEntity>> {
+        debug!("Getting related entities for: {}", entity_id);
+        
+        // Simulate related entity retrieval
+        // In a real implementation, this would use the actual database client
+        
+        // Simulate processing time
+        tokio::time::sleep(Duration::from_millis(75)).await;
+        
+        // Simulate retrieval failure occasionally
+        if fastrand::f32() < 0.1 { // 10% failure rate
+            return Err(anyhow::anyhow!("Simulated related entity retrieval failure"));
+        }
+        
+        // Generate simulated related entities
+        let mut related_entities = Vec::new();
+        
+        for i in 0..2 {
+            let related = RelatedEntity {
+                id: uuid::Uuid::new_v4(),
+                canonical_name: format!("related_entity_{}", i + 1),
+                relationship_type: if i % 2 == 0 { 
+                    "synonym".to_string() 
+                } else { 
+                    "related_concept".to_string() 
+                },
+                confidence: 0.75 + i as f64 * 0.1,
+            };
+            related_entities.push(related);
+        }
+        
+        debug!("Retrieved {} related entities for: {}", related_entities.len(), entity_id);
+        Ok(related_entities)
+    }
+
+    /// Extract related concepts from knowledge base result properties
+    async fn extract_related_concepts_from_properties(
+        &self,
+        result: &KnowledgeBaseResult,
+        linked_entities: &mut Vec<String>,
+    ) {
+        debug!("Extracting related concepts from properties for: {}", result.canonical_name);
+        
+        // Extract concepts based on knowledge source
+        match result.source {
+            KnowledgeSource::Wikidata => {
+                // Extract senses, forms, translations
+                if let Some(senses) = result.properties.get("senses") {
+                    debug!("Processing Wikidata senses: {}", senses);
+                    // In a real implementation, parse and extract senses
+                    linked_entities.push(format!("{}_sense", result.canonical_name));
+                }
+                
+                if let Some(forms) = result.properties.get("forms") {
+                    debug!("Processing Wikidata forms: {}", forms);
+                    // In a real implementation, parse and extract forms
+                    linked_entities.push(format!("{}_form", result.canonical_name));
+                }
+            }
+            KnowledgeSource::WordNet => {
+                // Extract synonyms, hypernyms, examples
+                if let Some(synonyms) = result.properties.get("synonyms") {
+                    debug!("Processing WordNet synonyms: {}", synonyms);
+                    // In a real implementation, parse and extract synonyms
+                    linked_entities.push(format!("{}_synonym", result.canonical_name));
+                }
+                
+                if let Some(hypernyms) = result.properties.get("hypernyms") {
+                    debug!("Processing WordNet hypernyms: {}", hypernyms);
+                    // In a real implementation, parse and extract hypernyms
+                    linked_entities.push(format!("{}_hypernym", result.canonical_name));
+                }
+            }
+            KnowledgeSource::Custom => {
+                // Extract custom properties
+                if let Some(custom_props) = result.properties.get("custom") {
+                    debug!("Processing custom properties: {}", custom_props);
+                    // In a real implementation, parse and extract custom properties
+                    linked_entities.push(format!("{}_custom", result.canonical_name));
+                }
+            }
+        }
+        
+        debug!("Extracted related concepts for: {}", result.canonical_name);
+    }
+
+    /// Trigger on-demand ingestion for missing entities
+    async fn trigger_on_demand_ingestion(&self, entity: &str) -> Result<()> {
+        debug!("Triggering on-demand ingestion for entity: {}", entity);
+        
+        // Simulate on-demand ingestion
+        // In a real implementation, this would use the actual database client
+        
+        // Simulate processing time
+        tokio::time::sleep(Duration::from_millis(200)).await;
+        
+        // Simulate ingestion failure occasionally
+        if fastrand::f32() < 0.15 { // 15% failure rate
+            return Err(anyhow::anyhow!("Simulated on-demand ingestion failure"));
+        }
+        
+        debug!("Successfully triggered on-demand ingestion for entity: {}", entity);
+        Ok(())
     }
 }
 

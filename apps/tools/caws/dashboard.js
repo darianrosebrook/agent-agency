@@ -6,9 +6,9 @@
  * @author @darianrosebrook
  */
 
-const fs = require('fs');
-const path = require('path');
-const minimatch = require('minimatch');
+const fs = require("fs");
+const path = require("path");
+const minimatch = require("minimatch");
 
 /**
  * Generate real provenance data for trust score calculation
@@ -40,9 +40,13 @@ function generateRealProvenanceData() {
  */
 function getRealCoverage() {
   try {
-    const coveragePath = path.join(process.cwd(), 'coverage', 'coverage-summary.json');
+    const coveragePath = path.join(
+      process.cwd(),
+      "coverage",
+      "coverage-summary.json"
+    );
     if (fs.existsSync(coveragePath)) {
-      const coverageData = JSON.parse(fs.readFileSync(coveragePath, 'utf8'));
+      const coverageData = JSON.parse(fs.readFileSync(coveragePath, "utf8"));
       return coverageData.total.lines.pct / 100;
     }
   } catch (error) {
@@ -57,9 +61,14 @@ function getRealCoverage() {
  */
 function getRealMutationScore() {
   try {
-    const mutationPath = path.join(process.cwd(), 'reports', 'mutation', 'mutation.json');
+    const mutationPath = path.join(
+      process.cwd(),
+      "reports",
+      "mutation",
+      "mutation.json"
+    );
     if (fs.existsSync(mutationPath)) {
-      const mutationData = JSON.parse(fs.readFileSync(mutationPath, 'utf8'));
+      const mutationData = JSON.parse(fs.readFileSync(mutationPath, "utf8"));
       let total = 0,
         killed = 0;
 
@@ -67,7 +76,7 @@ function getRealMutationScore() {
         if (file.mutants) {
           file.mutants.forEach((mutant) => {
             total++;
-            if (mutant.status === 'Killed') killed++;
+            if (mutant.status === "Killed") killed++;
           });
         }
       });
@@ -87,7 +96,13 @@ function getRealMutationScore() {
 function checkContractCompliance() {
   try {
     // Check if contract tests exist and pass
-    const contractTestsPath = path.join(process.cwd(), 'packages', 'caws-cli', 'tests', 'contract');
+    const contractTestsPath = path.join(
+      process.cwd(),
+      "packages",
+      "caws-cli",
+      "tests",
+      "contract"
+    );
     return fs.existsSync(contractTestsPath);
   } catch (error) {
     return false;
@@ -101,10 +116,16 @@ function checkContractCompliance() {
 function checkAccessibilityCompliance() {
   try {
     // Check if axe tests exist
-    const axeTestsPath = path.join(process.cwd(), 'packages', 'caws-cli', 'tests', 'axe');
-    return fs.existsSync(axeTestsPath) ? 'pass' : 'unknown';
+    const axeTestsPath = path.join(
+      process.cwd(),
+      "packages",
+      "caws-cli",
+      "tests",
+      "axe"
+    );
+    return fs.existsSync(axeTestsPath) ? "pass" : "unknown";
   } catch (error) {
-    return 'unknown';
+    return "unknown";
   }
 }
 
@@ -115,8 +136,15 @@ function checkAccessibilityCompliance() {
 function checkPerformanceCompliance() {
   try {
     // Check if performance budgets exist
-    const perfTestsPath = path.join(process.cwd(), 'packages', 'caws-cli', 'tests');
-    const hasPerfTests = fs.existsSync(path.join(perfTestsPath, 'perf-budgets.test.js'));
+    const perfTestsPath = path.join(
+      process.cwd(),
+      "packages",
+      "caws-cli",
+      "tests"
+    );
+    const hasPerfTests = fs.existsSync(
+      path.join(perfTestsPath, "perf-budgets.test.js")
+    );
 
     return {
       api_p95_ms: hasPerfTests ? 180 : 250, // Estimated based on test presence
@@ -145,9 +173,8 @@ function getRealFlakeRate() {
 
     // 3. Calculate overall flake rate
     return calculateFlakeRate(flakeAnalysis);
-
   } catch (error) {
-    console.warn('Failed to analyze test flakiness:', error.message);
+    console.warn("Failed to analyze test flakiness:", error.message);
     // Return conservative estimate on error
     return 0.03; // 3% conservative estimate
   }
@@ -162,23 +189,23 @@ function findTestResultFiles() {
 
   // Common test result directories and files
   const searchPaths = [
-    'test-results',
-    'coverage',
-    'reports',
-    'junit',
-    '.nyc_output',
-    'target/debug/deps', // Rust test results
-    'target/surefire-reports', // Java/Maven test results
-    'build/test-results', // Gradle test results
+    "test-results",
+    "coverage",
+    "reports",
+    "junit",
+    ".nyc_output",
+    "target/debug/deps", // Rust test results
+    "target/surefire-reports", // Java/Maven test results
+    "build/test-results", // Gradle test results
   ];
 
   // Common test result file patterns
   const filePatterns = [
-    'test-results.xml',
-    'junit.xml',
-    '*.xml', // JUnit XML files
-    'lcov.info', // Coverage files that might indicate test runs
-    '*.json', // Test result JSON files
+    "test-results.xml",
+    "junit.xml",
+    "*.xml", // JUnit XML files
+    "lcov.info", // Coverage files that might indicate test runs
+    "*.json", // Test result JSON files
   ];
 
   try {
@@ -192,19 +219,23 @@ function findTestResultFiles() {
     }
 
     // Also look for recent test runs in common locations
-    const commonTestDirs = ['tests', 'test', '__tests__', 'spec'];
+    const commonTestDirs = ["tests", "test", "__tests__", "spec"];
     for (const testDir of commonTestDirs) {
       const fullPath = path.join(process.cwd(), testDir);
       if (fs.existsSync(fullPath)) {
         // Look for test result files in test directories
-        const files = findFilesRecursive(fullPath, ['*.xml', '*.json', '*.log']);
+        const files = findFilesRecursive(fullPath, [
+          "*.xml",
+          "*.json",
+          "*.log",
+        ]);
         resultFiles.push(...files);
       }
     }
 
     return resultFiles;
   } catch (error) {
-    console.warn('Error finding test result files:', error.message);
+    console.warn("Error finding test result files:", error.message);
     return [];
   }
 }
@@ -221,17 +252,16 @@ function analyzeTestFlakiness(testResultFiles) {
 
   for (const filePath of testResultFiles) {
     try {
-      const content = fs.readFileSync(filePath, 'utf8');
+      const content = fs.readFileSync(filePath, "utf8");
 
       // Parse different test result formats
-      if (filePath.endsWith('.xml')) {
+      if (filePath.endsWith(".xml")) {
         const xmlResults = parseJUnitXML(content);
         testRuns.push(...xmlResults);
-      } else if (filePath.endsWith('.json')) {
+      } else if (filePath.endsWith(".json")) {
         const jsonResults = parseTestJson(content);
         testRuns.push(...jsonResults);
       }
-
     } catch (error) {
       // Skip files that can't be parsed
       continue;
@@ -255,17 +285,20 @@ function analyzeTestFlakiness(testResultFiles) {
   for (const [testKey, runs] of testHistory) {
     if (runs.length < 3) continue; // Need multiple runs to detect flakiness
 
-    const hasPassed = runs.some(r => r.status === 'passed');
-    const hasFailed = runs.some(r => r.status === 'failed');
+    const hasPassed = runs.some((r) => r.status === "passed");
+    const hasFailed = runs.some((r) => r.status === "failed");
 
     if (hasPassed && hasFailed) {
-      const failureRate = runs.filter(r => r.status === 'failed').length / runs.length;
+      const failureRate =
+        runs.filter((r) => r.status === "failed").length / runs.length;
 
-      if (failureRate > 0.1 && failureRate < 0.9) { // Between 10% and 90% failure rate
+      if (failureRate > 0.1 && failureRate < 0.9) {
+        // Between 10% and 90% failure rate
         flakyTests.set(testKey, {
           failureRate,
           totalRuns: runs.length,
-          recentFailures: runs.slice(-5).filter(r => r.status === 'failed').length
+          recentFailures: runs.slice(-5).filter((r) => r.status === "failed")
+            .length,
         });
       }
     }
@@ -277,7 +310,7 @@ function analyzeTestFlakiness(testResultFiles) {
     totalTestRuns: testRuns.length,
     uniqueTests: testHistory.size,
     flakyTests,
-    totalTestsAnalyzed: totalTests.size
+    totalTestsAnalyzed: totalTests.size,
   };
 }
 
@@ -334,7 +367,8 @@ function parseJUnitXML(xmlContent) {
 
   try {
     // Simple XML parsing - look for testcase elements
-    const testcaseRegex = /<testcase[^>]*classname="([^"]*)"[^>]*name="([^"]*)"[^>]*>/g;
+    const testcaseRegex =
+      /<testcase[^>]*classname="([^"]*)"[^>]*name="([^"]*)"[^>]*>/g;
     const failureRegex = /<\/testcase>/g;
 
     let match;
@@ -345,13 +379,17 @@ function parseJUnitXML(xmlContent) {
       // Check if this test failed (look for failure element)
       const testStart = match.index;
       const testEndMatch = failureRegex.exec(xmlContent.substring(testStart));
-      const hasFailure = testEndMatch && xmlContent.substring(testStart, testStart + testEndMatch.index).includes('<failure');
+      const hasFailure =
+        testEndMatch &&
+        xmlContent
+          .substring(testStart, testStart + testEndMatch.index)
+          .includes("<failure");
 
       results.push({
         suite,
         name,
-        status: hasFailure ? 'failed' : 'passed',
-        timestamp: Date.now()
+        status: hasFailure ? "failed" : "passed",
+        timestamp: Date.now(),
       });
     }
   } catch (error) {
@@ -378,10 +416,10 @@ function parseTestJson(jsonContent) {
       for (const suite of data.testResults) {
         for (const test of suite.testResults || []) {
           results.push({
-            suite: suite.name || 'unknown',
+            suite: suite.name || "unknown",
             name: test.title,
-            status: test.status === 'passed' ? 'passed' : 'failed',
-            timestamp: Date.now()
+            status: test.status === "passed" ? "passed" : "failed",
+            timestamp: Date.now(),
           });
         }
       }
@@ -390,10 +428,10 @@ function parseTestJson(jsonContent) {
       for (const test of data) {
         if (test.name && test.status) {
           results.push({
-            suite: test.suite || 'unknown',
+            suite: test.suite || "unknown",
             name: test.name,
             status: test.status,
-            timestamp: test.timestamp || Date.now()
+            timestamp: test.timestamp || Date.now(),
           });
         }
       }
@@ -447,15 +485,19 @@ function findFilesRecursive(dir, patterns) {
  */
 function checkModeCompliance() {
   try {
-    const workingSpecPath = path.join(process.cwd(), '.caws', 'working-spec.yaml');
+    const workingSpecPath = path.join(
+      process.cwd(),
+      ".caws",
+      "working-spec.yaml"
+    );
     if (fs.existsSync(workingSpecPath)) {
-      const spec = fs.readFileSync(workingSpecPath, 'utf8');
-      return spec.includes('mode:') ? 'full' : 'partial';
+      const spec = fs.readFileSync(workingSpecPath, "utf8");
+      return spec.includes("mode:") ? "full" : "partial";
     }
   } catch (error) {
-    return 'unknown';
+    return "unknown";
   }
-  return 'full';
+  return "full";
 }
 
 /**
@@ -479,7 +521,7 @@ function checkScopeCompliance() {
 function checkSBOMValidity() {
   try {
     // Check if SBOM files exist
-    const sbomPaths = ['.agent/sbom.json', 'sbom.json'];
+    const sbomPaths = [".agent/sbom.json", "sbom.json"];
     return sbomPaths.some((sbomPath) => fs.existsSync(sbomPath));
   } catch (error) {
     return false;
@@ -493,8 +535,10 @@ function checkSBOMValidity() {
 function checkAttestationValidity() {
   try {
     // Check if attestation files exist
-    const attestationPaths = ['.agent/attestation.json'];
-    return attestationPaths.some((attestationPath) => fs.existsSync(attestationPath));
+    const attestationPaths = [".agent/attestation.json"];
+    return attestationPaths.some((attestationPath) =>
+      fs.existsSync(attestationPath)
+    );
   } catch (error) {
     return false;
   }
@@ -517,12 +561,15 @@ function findSourceFiles(projectRoot) {
 
       if (
         stat.isDirectory() &&
-        !item.startsWith('.') &&
-        item !== 'node_modules' &&
-        item !== 'dist'
+        !item.startsWith(".") &&
+        item !== "node_modules" &&
+        item !== "dist"
       ) {
         scanDirectory(fullPath);
-      } else if (stat.isFile() && (item.endsWith('.js') || item.endsWith('.ts'))) {
+      } else if (
+        stat.isFile() &&
+        (item.endsWith(".js") || item.endsWith(".ts"))
+      ) {
         files.push(fullPath);
       }
     });
@@ -537,9 +584,13 @@ function findSourceFiles(projectRoot) {
 function readHistoricalData() {
   try {
     // Look for historical metrics files
-    const historyPath = path.join(process.cwd(), '.agent', 'metrics-history.json');
+    const historyPath = path.join(
+      process.cwd(),
+      ".agent",
+      "metrics-history.json"
+    );
     if (fs.existsSync(historyPath)) {
-      return JSON.parse(fs.readFileSync(historyPath, 'utf8'));
+      return JSON.parse(fs.readFileSync(historyPath, "utf8"));
     }
   } catch (error) {
     // No historical data available
@@ -565,21 +616,23 @@ function generateSimulatedTrends(dashboard, days) {
 
     // Generate trends with some realistic variation around current values
     const trustVariation = Math.sin(i * 0.1) * 3 + (Math.random() - 0.5) * 2;
-    const coverageVariation = Math.sin(i * 0.15) * 2 + (Math.random() - 0.5) * 1.5;
-    const mutationVariation = Math.sin(i * 0.12) * 4 + (Math.random() - 0.5) * 3;
+    const coverageVariation =
+      Math.sin(i * 0.15) * 2 + (Math.random() - 0.5) * 1.5;
+    const mutationVariation =
+      Math.sin(i * 0.12) * 4 + (Math.random() - 0.5) * 3;
 
     dashboard.trends.trust_score.push({
-      date: date.toISOString().split('T')[0],
+      date: date.toISOString().split("T")[0],
       value: Math.max(60, Math.min(95, baseTrustScore + trustVariation)),
     });
 
     dashboard.trends.coverage.push({
-      date: date.toISOString().split('T')[0],
+      date: date.toISOString().split("T")[0],
       value: Math.max(70, Math.min(95, baseCoverage + coverageVariation)),
     });
 
     dashboard.trends.mutation.push({
-      date: date.toISOString().split('T')[0],
+      date: date.toISOString().split("T")[0],
       value: Math.max(40, Math.min(80, baseMutation + mutationVariation)),
     });
   }
@@ -590,59 +643,59 @@ function generateSimulatedTrends(dashboard, days) {
  */
 const DASHBOARD_METRICS = {
   TRUST_SCORE: {
-    name: 'Trust Score',
-    description: 'Overall CAWS trust score (0-100)',
+    name: "Trust Score",
+    description: "Overall CAWS trust score (0-100)",
     target: 82,
-    trend: 'higher_is_better',
+    trend: "higher_is_better",
   },
 
   COVERAGE: {
-    name: 'Test Coverage',
-    description: 'Branch coverage percentage',
+    name: "Test Coverage",
+    description: "Branch coverage percentage",
     target: 80,
-    trend: 'higher_is_better',
+    trend: "higher_is_better",
   },
 
   MUTATION_SCORE: {
-    name: 'Mutation Score',
-    description: 'Effective mutation testing score',
+    name: "Mutation Score",
+    description: "Effective mutation testing score",
     target: 60,
-    trend: 'higher_is_better',
+    trend: "higher_is_better",
   },
 
   TEST_QUALITY: {
-    name: 'Test Quality',
-    description: 'Advanced test quality score',
+    name: "Test Quality",
+    description: "Advanced test quality score",
     target: 70,
-    trend: 'higher_is_better',
+    trend: "higher_is_better",
   },
 
   FLAKE_RATE: {
-    name: 'Flake Rate',
-    description: 'Percentage of flaky tests',
+    name: "Flake Rate",
+    description: "Percentage of flaky tests",
     target: 0.5,
-    trend: 'lower_is_better',
+    trend: "lower_is_better",
   },
 
   RISK_TIER_COMPLIANCE: {
-    name: 'Risk Tier Compliance',
-    description: 'Percentage of changes meeting tier requirements',
+    name: "Risk Tier Compliance",
+    description: "Percentage of changes meeting tier requirements",
     target: 95,
-    trend: 'higher_is_better',
+    trend: "higher_is_better",
   },
 
   CONTRACT_COMPLIANCE: {
-    name: 'Contract Compliance',
-    description: 'Percentage of changes with valid contracts',
+    name: "Contract Compliance",
+    description: "Percentage of changes with valid contracts",
     target: 90,
-    trend: 'higher_is_better',
+    trend: "higher_is_better",
   },
 
   SECURITY_COMPLIANCE: {
-    name: 'Security Compliance',
-    description: 'Percentage of changes passing security checks',
+    name: "Security Compliance",
+    description: "Percentage of changes passing security checks",
     target: 100,
-    trend: 'higher_is_better',
+    trend: "higher_is_better",
   },
 };
 
@@ -658,8 +711,8 @@ function generateDashboardData(projectDir = process.cwd()) {
     metadata: {
       generated_at: new Date().toISOString(),
       project_name: path.basename(projectDir),
-      tool: 'caws-dashboard',
-      version: '1.0.0',
+      tool: "caws-dashboard",
+      version: "1.0.0",
     },
 
     overview: {
@@ -680,8 +733,8 @@ function generateDashboardData(projectDir = process.cwd()) {
     dashboard.metrics[metric] = {
       current: 0,
       target: DASHBOARD_METRICS[metric].target,
-      status: 'unknown',
-      trend: 'stable',
+      status: "unknown",
+      trend: "stable",
     };
   });
 
@@ -699,37 +752,41 @@ function generateDashboardData(projectDir = process.cwd()) {
  */
 function gatherProjectMetrics(dashboard, projectDir) {
   // Get current working spec
-  const specPath = path.join(projectDir, '.caws/working-spec.yaml');
+  const specPath = path.join(projectDir, ".caws/working-spec.yaml");
   if (fs.existsSync(specPath)) {
     try {
-      const yaml = require('js-yaml');
-      const spec = yaml.load(fs.readFileSync(specPath, 'utf8'));
+      const yaml = require("js-yaml");
+      const spec = yaml.load(fs.readFileSync(specPath, "utf8"));
 
       dashboard.overview.current_tier = spec.risk_tier;
       dashboard.overview.mode = spec.mode;
       dashboard.overview.change_budget = spec.change_budget;
     } catch (error) {
-      console.warn('⚠️  Could not parse working spec');
+      console.warn("⚠️  Could not parse working spec");
     }
   }
 
   // Get trust score from gates tool with real data
   try {
-    const { trustScore } = require('./gates');
+    const { trustScore } = require("./gates");
     const realProv = generateRealProvenanceData();
 
     dashboard.metrics.TRUST_SCORE.current = trustScore(2, realProv);
     dashboard.overview.trust_score = dashboard.metrics.TRUST_SCORE.current;
   } catch (error) {
-    console.warn('⚠️  Could not calculate trust score');
+    console.warn("⚠️  Could not calculate trust score");
     dashboard.metrics.TRUST_SCORE.current = 75; // Default
   }
 
   // Get coverage data
   try {
-    if (fs.existsSync('coverage/coverage-summary.json')) {
-      const coverageData = JSON.parse(fs.readFileSync('coverage/coverage-summary.json', 'utf8'));
-      dashboard.metrics.COVERAGE.current = Math.round(coverageData.total.branches.pct || 0);
+    if (fs.existsSync("coverage/coverage-summary.json")) {
+      const coverageData = JSON.parse(
+        fs.readFileSync("coverage/coverage-summary.json", "utf8")
+      );
+      dashboard.metrics.COVERAGE.current = Math.round(
+        coverageData.total.branches.pct || 0
+      );
     } else {
       dashboard.metrics.COVERAGE.current = 70; // Default
     }
@@ -739,8 +796,10 @@ function gatherProjectMetrics(dashboard, projectDir) {
 
   // Get mutation data
   try {
-    if (fs.existsSync('mutation-report.json')) {
-      const mutationData = JSON.parse(fs.readFileSync('mutation-report.json', 'utf8'));
+    if (fs.existsSync("mutation-report.json")) {
+      const mutationData = JSON.parse(
+        fs.readFileSync("mutation-report.json", "utf8")
+      );
       dashboard.metrics.MUTATION_SCORE.current = Math.round(
         (mutationData.killed / mutationData.total) * 100 || 0
       );
@@ -753,9 +812,10 @@ function gatherProjectMetrics(dashboard, projectDir) {
 
   // Get test quality data
   try {
-    const { analyzeTestDirectory } = require('./test-quality');
-    const testResults = analyzeTestDirectory('tests');
-    dashboard.metrics.TEST_QUALITY.current = testResults.summary.averageQualityScore || 60;
+    const { analyzeTestDirectory } = require("./test-quality");
+    const testResults = analyzeTestDirectory("tests");
+    dashboard.metrics.TEST_QUALITY.current =
+      testResults.summary.averageQualityScore || 60;
   } catch (error) {
     dashboard.metrics.TEST_QUALITY.current = 60; // Default
   }
@@ -772,11 +832,11 @@ function gatherProjectMetrics(dashboard, projectDir) {
   Object.keys(dashboard.metrics).forEach((metric) => {
     const metricInfo = dashboard.metrics[metric];
     if (metricInfo.current >= metricInfo.target) {
-      metricInfo.status = 'passing';
+      metricInfo.status = "passing";
     } else if (metricInfo.current >= metricInfo.target * 0.8) {
-      metricInfo.status = 'warning';
+      metricInfo.status = "warning";
     } else {
-      metricInfo.status = 'failing';
+      metricInfo.status = "failing";
     }
   });
 
@@ -803,51 +863,61 @@ function calculateTrends(dashboard, _projectDir) {
     date.setDate(date.getDate() - i);
 
     dashboard.trends.trust_score.push({
-      date: date.toISOString().split('T')[0],
+      date: date.toISOString().split("T")[0],
       value: Math.max(
         70,
         Math.min(
           95,
-          dashboard.metrics.TRUST_SCORE.current + Math.sin(i * 0.1) * 5 + Math.random() * 3
+          dashboard.metrics.TRUST_SCORE.current +
+            Math.sin(i * 0.1) * 5 +
+            Math.random() * 3
         )
       ),
     });
 
     dashboard.trends.coverage.push({
-      date: date.toISOString().split('T')[0],
+      date: date.toISOString().split("T")[0],
       value: Math.max(
         70,
         Math.min(
           90,
-          dashboard.metrics.COVERAGE.current + Math.sin(i * 0.15) * 3 + Math.random() * 2
+          dashboard.metrics.COVERAGE.current +
+            Math.sin(i * 0.15) * 3 +
+            Math.random() * 2
         )
       ),
     });
 
     dashboard.trends.mutation.push({
-      date: date.toISOString().split('T')[0],
+      date: date.toISOString().split("T")[0],
       value: Math.max(
         40,
         Math.min(
           80,
-          dashboard.metrics.MUTATION_SCORE.current + Math.sin(i * 0.12) * 4 + Math.random() * 3
+          dashboard.metrics.MUTATION_SCORE.current +
+            Math.sin(i * 0.12) * 4 +
+            Math.random() * 3
         )
       ),
     });
   }
 
   // Calculate trend directions
-  const recentTrust = dashboard.trends.trust_score.slice(-7).map((d) => d.value);
-  const olderTrust = dashboard.trends.trust_score.slice(-14, -7).map((d) => d.value);
+  const recentTrust = dashboard.trends.trust_score
+    .slice(-7)
+    .map((d) => d.value);
+  const olderTrust = dashboard.trends.trust_score
+    .slice(-14, -7)
+    .map((d) => d.value);
   const recentAvg = recentTrust.reduce((a, b) => a + b, 0) / recentTrust.length;
   const olderAvg = olderTrust.reduce((a, b) => a + b, 0) / olderTrust.length;
 
   if (recentAvg > olderAvg + 2) {
-    dashboard.metrics.TRUST_SCORE.trend = 'improving';
+    dashboard.metrics.TRUST_SCORE.trend = "improving";
   } else if (recentAvg < olderAvg - 2) {
-    dashboard.metrics.TRUST_SCORE.trend = 'declining';
+    dashboard.metrics.TRUST_SCORE.trend = "declining";
   } else {
-    dashboard.metrics.TRUST_SCORE.trend = 'stable';
+    dashboard.metrics.TRUST_SCORE.trend = "stable";
   }
 }
 
@@ -860,48 +930,52 @@ function generateInsights(dashboard) {
   // Trust score insights
   if (dashboard.metrics.TRUST_SCORE.current >= 90) {
     insights.push({
-      type: 'success',
-      message: 'Excellent trust score! Your CAWS implementation is highly effective.',
-      metric: 'TRUST_SCORE',
+      type: "success",
+      message:
+        "Excellent trust score! Your CAWS implementation is highly effective.",
+      metric: "TRUST_SCORE",
     });
   } else if (dashboard.metrics.TRUST_SCORE.current >= 80) {
     insights.push({
-      type: 'info',
-      message: 'Good trust score. Consider focusing on areas with lower scores.',
-      metric: 'TRUST_SCORE',
+      type: "info",
+      message:
+        "Good trust score. Consider focusing on areas with lower scores.",
+      metric: "TRUST_SCORE",
     });
   } else {
     insights.push({
-      type: 'warning',
-      message: 'Trust score needs improvement. Review failing metrics and address gaps.',
-      metric: 'TRUST_SCORE',
+      type: "warning",
+      message:
+        "Trust score needs improvement. Review failing metrics and address gaps.",
+      metric: "TRUST_SCORE",
     });
   }
 
   // Coverage insights
   if (dashboard.metrics.COVERAGE.current < 70) {
     insights.push({
-      type: 'warning',
-      message: 'Test coverage is below target. Add more comprehensive tests.',
-      metric: 'COVERAGE',
+      type: "warning",
+      message: "Test coverage is below target. Add more comprehensive tests.",
+      metric: "COVERAGE",
     });
   }
 
   // Mutation score insights
   if (dashboard.metrics.MUTATION_SCORE.current < 50) {
     insights.push({
-      type: 'warning',
-      message: 'Mutation score indicates weak test effectiveness. Review test quality.',
-      metric: 'MUTATION_SCORE',
+      type: "warning",
+      message:
+        "Mutation score indicates weak test effectiveness. Review test quality.",
+      metric: "MUTATION_SCORE",
     });
   }
 
   // Flake rate insights
   if (dashboard.metrics.FLAKE_RATE.current > 1) {
     insights.push({
-      type: 'warning',
-      message: 'High flake rate detected. Investigate and fix flaky tests.',
-      metric: 'FLAKE_RATE',
+      type: "warning",
+      message: "High flake rate detected. Investigate and fix flaky tests.",
+      metric: "FLAKE_RATE",
     });
   }
 
@@ -922,7 +996,7 @@ function generateRecommendations(dashboard) {
     if (metricInfo.current < metricInfo.target) {
       const gap = metricInfo.target - metricInfo.current;
       recommendations.push({
-        priority: gap > 20 ? 'high' : gap > 10 ? 'medium' : 'low',
+        priority: gap > 20 ? "high" : gap > 10 ? "medium" : "low",
         category: metric,
         message: `Improve ${metricConfig.name} from ${metricInfo.current} to ${metricInfo.target} (${metricConfig.description})`,
         actions: getActionsForMetric(metric),
@@ -933,12 +1007,13 @@ function generateRecommendations(dashboard) {
   // General recommendations
   if (dashboard.overview.risk_distribution.tier3 > 40) {
     recommendations.push({
-      priority: 'medium',
-      category: 'RISK_MANAGEMENT',
-      message: 'High proportion of Tier 3 changes. Consider if some should be Tier 2.',
+      priority: "medium",
+      category: "RISK_MANAGEMENT",
+      message:
+        "High proportion of Tier 3 changes. Consider if some should be Tier 2.",
       actions: [
-        'Review recent changes for appropriate tier classification',
-        'Consider elevating critical Tier 3 items',
+        "Review recent changes for appropriate tier classification",
+        "Consider elevating critical Tier 3 items",
       ],
     });
   }
@@ -952,54 +1027,54 @@ function generateRecommendations(dashboard) {
 function getActionsForMetric(metric) {
   const actions = {
     TRUST_SCORE: [
-      'Review overall CAWS implementation',
-      'Ensure all quality gates are properly configured',
-      'Address failing individual metrics',
+      "Review overall CAWS implementation",
+      "Ensure all quality gates are properly configured",
+      "Address failing individual metrics",
     ],
     COVERAGE: [
-      'Add tests for uncovered code paths',
-      'Review existing tests for comprehensiveness',
-      'Set up coverage reporting in CI/CD',
+      "Add tests for uncovered code paths",
+      "Review existing tests for comprehensiveness",
+      "Set up coverage reporting in CI/CD",
     ],
     MUTATION_SCORE: [
-      'Run mutation analysis to identify weak tests',
-      'Add tests that kill surviving mutants',
-      'Review test quality and assertion strength',
+      "Run mutation analysis to identify weak tests",
+      "Add tests that kill surviving mutants",
+      "Review test quality and assertion strength",
     ],
     TEST_QUALITY: [
-      'Analyze test meaningfulness beyond coverage',
-      'Add edge case and error condition tests',
-      'Improve test naming and structure',
+      "Analyze test meaningfulness beyond coverage",
+      "Add edge case and error condition tests",
+      "Improve test naming and structure",
     ],
     FLAKE_RATE: [
-      'Investigate and fix flaky tests',
-      'Add proper test isolation',
-      'Review async operations and timing issues',
+      "Investigate and fix flaky tests",
+      "Add proper test isolation",
+      "Review async operations and timing issues",
     ],
     RISK_TIER_COMPLIANCE: [
-      'Review tier classification guidelines',
-      'Ensure changes are appropriately tiered',
-      'Provide training on tier selection',
+      "Review tier classification guidelines",
+      "Ensure changes are appropriately tiered",
+      "Provide training on tier selection",
     ],
     CONTRACT_COMPLIANCE: [
-      'Ensure contracts are updated for API changes',
-      'Run contract tests before merging',
-      'Review contract testing setup',
+      "Ensure contracts are updated for API changes",
+      "Run contract tests before merging",
+      "Review contract testing setup",
     ],
     SECURITY_COMPLIANCE: [
-      'Review security scanning configuration',
-      'Address security vulnerabilities',
-      'Ensure secrets are properly handled',
+      "Review security scanning configuration",
+      "Address security vulnerabilities",
+      "Ensure secrets are properly handled",
     ],
   };
 
-  return actions[metric] || ['Review and improve this metric'];
+  return actions[metric] || ["Review and improve this metric"];
 }
 
 /**
  * Generate HTML dashboard report
  */
-function generateHTMLDashboard(dashboard, outputPath = 'caws-dashboard.html') {
+function generateHTMLDashboard(dashboard, outputPath = "caws-dashboard.html") {
   const html = generateDashboardHTML(dashboard);
 
   fs.writeFileSync(outputPath, html);
@@ -1218,8 +1293,12 @@ function generateDashboardHTML(dashboard) {
 <body>
     <div class="header">
         <h1>CAWS Dashboard</h1>
-        <div class="subtitle">Coding Agent Workflow System - ${dashboard.metadata.project_name}</div>
-        <div class="subtitle">Generated: ${new Date(dashboard.metadata.generated_at).toLocaleString()}</div>
+        <div class="subtitle">Coding Agent Workflow System - ${
+          dashboard.metadata.project_name
+        }</div>
+        <div class="subtitle">Generated: ${new Date(
+          dashboard.metadata.generated_at
+        ).toLocaleString()}</div>
     </div>
 
     <div class="container">
@@ -1235,16 +1314,22 @@ function generateDashboardHTML(dashboard) {
                 </div>
                 <div class="insight-card insight-info">
                     <h3>Risk Distribution</h3>
-                    <div>Tier 1: ${dashboard.overview.risk_distribution.tier1}%</div>
-                    <div>Tier 2: ${dashboard.overview.risk_distribution.tier2}%</div>
-                    <div>Tier 3: ${dashboard.overview.risk_distribution.tier3}%</div>
+                    <div>Tier 1: ${
+                      dashboard.overview.risk_distribution.tier1
+                    }%</div>
+                    <div>Tier 2: ${
+                      dashboard.overview.risk_distribution.tier2
+                    }%</div>
+                    <div>Tier 3: ${
+                      dashboard.overview.risk_distribution.tier3
+                    }%</div>
                 </div>
                 <div class="insight-card insight-info">
                     <h3>Current Tier</h3>
                     <div style="font-size: 1.5rem; font-weight: bold;">
-                        Tier ${dashboard.overview.current_tier || 'N/A'}
+                        Tier ${dashboard.overview.current_tier || "N/A"}
                     </div>
-                    <div>Mode: ${dashboard.overview.mode || 'N/A'}</div>
+                    <div>Mode: ${dashboard.overview.mode || "N/A"}</div>
                 </div>
             </div>
         </div>
@@ -1255,25 +1340,39 @@ function generateDashboardHTML(dashboard) {
               .map((metric) => {
                 const metricInfo = dashboard.metrics[metric];
                 const metricConfig = DASHBOARD_METRICS[metric];
-                const statusClass = `metric-card ${metricInfo.status === 'passing' ? 'success' : metricInfo.status === 'warning' ? 'warning' : 'danger'}`;
+                const statusClass = `metric-card ${
+                  metricInfo.status === "passing"
+                    ? "success"
+                    : metricInfo.status === "warning"
+                    ? "warning"
+                    : "danger"
+                }`;
 
                 return `
                 <div class="${statusClass}">
                     <div class="metric-header">
                         <h3 class="metric-title">${metricConfig.name}</h3>
                         <span class="trend-indicator trend-${metricInfo.trend}">
-                            ${metricInfo.trend === 'improving' ? '↗' : metricInfo.trend === 'declining' ? '↘' : '→'} ${metricInfo.trend}
+                            ${
+                              metricInfo.trend === "improving"
+                                ? "↗"
+                                : metricInfo.trend === "declining"
+                                ? "↘"
+                                : "→"
+                            } ${metricInfo.trend}
                         </span>
                     </div>
                     <div class="metric-value">${metricInfo.current}</div>
-                    <div class="metric-target">Target: ${metricInfo.target}</div>
+                    <div class="metric-target">Target: ${
+                      metricInfo.target
+                    }</div>
                     <div class="metric-status status-${metricInfo.status}">
                         ${metricInfo.status}
                     </div>
                 </div>
               `;
               })
-              .join('')}
+              .join("")}
         </div>
 
         <!-- Insights Section -->
@@ -1286,12 +1385,15 @@ function generateDashboardHTML(dashboard) {
 
                     return `
                     <div class="${typeClass}">
-                        <h4>${DASHBOARD_METRICS[insight.metric]?.name || insight.metric}</h4>
+                        <h4>${
+                          DASHBOARD_METRICS[insight.metric]?.name ||
+                          insight.metric
+                        }</h4>
                         <p>${insight.message}</p>
                     </div>
                   `;
                   })
-                  .join('')}
+                  .join("")}
             </div>
         </div>
 
@@ -1309,12 +1411,14 @@ function generateDashboardHTML(dashboard) {
                         <span class="priority-badge">${rec.priority}</span>
                     </div>
                     <ul class="actions-list">
-                        ${rec.actions.map((action) => `<li>${action}</li>`).join('')}
+                        ${rec.actions
+                          .map((action) => `<li>${action}</li>`)
+                          .join("")}
                     </ul>
                 </div>
               `;
               })
-              .join('')}
+              .join("")}
         </div>
     </div>
 
@@ -1330,35 +1434,35 @@ if (require.main === module) {
   const command = process.argv[2];
 
   switch (command) {
-    case 'generate':
+    case "generate":
       const projectDir = process.argv[3] || process.cwd();
-      const outputFormat = process.argv[4] || 'html';
-      const outputPath = process.argv[5] || 'caws-dashboard.html';
+      const outputFormat = process.argv[4] || "html";
+      const outputPath = process.argv[5] || "caws-dashboard.html";
 
       try {
         const dashboard = generateDashboardData(projectDir);
 
-        if (outputFormat === 'html') {
+        if (outputFormat === "html") {
           generateHTMLDashboard(dashboard, outputPath);
-        } else if (outputFormat === 'json') {
+        } else if (outputFormat === "json") {
           fs.writeFileSync(outputPath, JSON.stringify(dashboard, null, 2));
           console.log(`✅ Generated JSON dashboard: ${outputPath}`);
         }
 
-        console.log('\n📊 Dashboard Summary:');
+        console.log("\n📊 Dashboard Summary:");
         console.log(`   Trust Score: ${dashboard.overview.trust_score}/100`);
         console.log(`   Status: ${dashboard.metrics.TRUST_SCORE.status}`);
         console.log(`   Trend: ${dashboard.metrics.TRUST_SCORE.trend}`);
 
         if (dashboard.insights.length > 0) {
-          console.log('\n💡 Key Insights:');
+          console.log("\n💡 Key Insights:");
           dashboard.insights.forEach((insight) => {
             console.log(`   - ${insight.message}`);
           });
         }
 
         if (dashboard.recommendations.length > 0) {
-          console.log('\n🎯 Top Recommendations:');
+          console.log("\n🎯 Top Recommendations:");
           const topRecs = dashboard.recommendations.slice(0, 3);
           topRecs.forEach((rec) => {
             console.log(`   - [${rec.priority.toUpperCase()}] ${rec.message}`);
@@ -1370,18 +1474,22 @@ if (require.main === module) {
       }
       break;
 
-    case 'metrics':
+    case "metrics":
       const metricsDir = process.argv[3] || process.cwd();
 
       try {
         const dashboard = generateDashboardData(metricsDir);
 
-        console.log('\n📊 CAWS Metrics Summary:');
+        console.log("\n📊 CAWS Metrics Summary:");
         Object.keys(dashboard.metrics).forEach((metric) => {
           const metricInfo = dashboard.metrics[metric];
           const metricConfig = DASHBOARD_METRICS[metric];
           const status =
-            metricInfo.status === 'passing' ? '✅' : metricInfo.status === 'warning' ? '⚠️' : '❌';
+            metricInfo.status === "passing"
+              ? "✅"
+              : metricInfo.status === "warning"
+              ? "⚠️"
+              : "❌";
 
           console.log(
             `${status} ${metricConfig.name}: ${metricInfo.current}/${metricInfo.target} (${metricInfo.trend})`
@@ -1394,19 +1502,21 @@ if (require.main === module) {
       break;
 
     default:
-      console.log('CAWS Dashboard and Analytics Tool');
-      console.log('Usage:');
-      console.log('  node dashboard.js generate [project-dir] [format] [output-path]');
-      console.log('  node dashboard.js metrics [project-dir]');
-      console.log('');
-      console.log('Formats:');
-      console.log('  - html: Interactive HTML dashboard (default)');
-      console.log('  - json: JSON data for external processing');
-      console.log('');
-      console.log('Examples:');
-      console.log('  node dashboard.js generate . html dashboard.html');
-      console.log('  node dashboard.js generate . json metrics.json');
-      console.log('  node dashboard.js metrics .');
+      console.log("CAWS Dashboard and Analytics Tool");
+      console.log("Usage:");
+      console.log(
+        "  node dashboard.js generate [project-dir] [format] [output-path]"
+      );
+      console.log("  node dashboard.js metrics [project-dir]");
+      console.log("");
+      console.log("Formats:");
+      console.log("  - html: Interactive HTML dashboard (default)");
+      console.log("  - json: JSON data for external processing");
+      console.log("");
+      console.log("Examples:");
+      console.log("  node dashboard.js generate . html dashboard.html");
+      console.log("  node dashboard.js generate . json metrics.json");
+      console.log("  node dashboard.js metrics .");
       process.exit(1);
   }
 }

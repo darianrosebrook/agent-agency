@@ -14,6 +14,7 @@ pub mod wordnet;
 
 pub use types::*;
 
+use agent_agency_database as database;
 use anyhow::Result;
 use database::DatabaseClient;
 use embedding_service::EmbeddingService;

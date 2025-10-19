@@ -334,7 +334,7 @@ mod tests {
         tokio::time::sleep(tokio::time::Duration::from_millis(150)).await;
 
         // Reload and verify
-        loader.reload().await.unwrap();
+        loader.load().await.unwrap();
         let config2 = loader.get_config().await;
         assert_eq!(config2.get("server.port").unwrap().as_u64().unwrap(), 4000);
         assert_eq!(config2.get("server.host").unwrap().as_str().unwrap(), "localhost");
@@ -347,7 +347,7 @@ mod tests {
         // Write valid config first
         let valid_config = r#"{"server": {"port": 3000}}"#;
         fs::write(config_path, valid_config).unwrap();
-        loader.reload().await.unwrap();
+        loader.load().await.unwrap();
 
         let config_before = loader.get_config().await;
         assert_eq!(config_before.get("server.port").unwrap().as_u64().unwrap(), 3000);
@@ -359,8 +359,8 @@ mod tests {
         tokio::time::sleep(tokio::time::Duration::from_millis(150)).await;
 
         // Attempt reload - should handle error gracefully and keep old config
-        let reload_result = loader.reload().await;
-        assert!(reload_result.is_err(), "Should fail to reload invalid config");
+        let reload_result = loader.load().await;
+        assert!(reload_result.is_err(), "Should fail to load invalid config");
 
         // Config should remain unchanged
         let config_after = loader.get_config().await;
@@ -369,7 +369,7 @@ mod tests {
         // Restore valid config
         fs::write(config_path, valid_config).unwrap();
         tokio::time::sleep(tokio::time::Duration::from_millis(150)).await;
-        loader.reload().await.unwrap();
+        loader.load().await.unwrap();
     }
 
     async fn test_concurrent_reload_access(loader: &ConfigLoader, config_path: &std::path::Path) {
@@ -392,7 +392,7 @@ mod tests {
                 tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
                 // Try to reload
-                let _ = loader_clone.reload().await;
+                let _ = loader_clone.load().await;
 
                 // Read config
                 let config = loader_clone.get_config().await;
@@ -411,7 +411,7 @@ mod tests {
     async fn test_rapid_config_changes(loader: &ConfigLoader, config_path: &std::path::Path) {
         let initial_config = r#"{"server": {"port": 3000}}"#;
         fs::write(config_path, initial_config).unwrap();
-        loader.reload().await.unwrap();
+        loader.load().await.unwrap();
 
         // Rapidly change config multiple times
         for port in 3001..3011 {
@@ -422,7 +422,7 @@ mod tests {
             tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
 
             // Try to reload
-            let _ = loader.reload().await;
+            let _ = loader.load().await;
         }
 
         // Final check - should have some reasonable port value
@@ -451,7 +451,7 @@ mod tests {
 
         // Test loading large config
         let start_time = std::time::Instant::now();
-        loader.reload().await.expect("Should handle large config");
+        loader.load().await.expect("Should handle large config");
         let load_time = start_time.elapsed();
 
         // Should load within reasonable time (less than 1 second for 1000 entries)

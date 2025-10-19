@@ -302,7 +302,7 @@ impl CoreMLModel {
                 anyhow::bail!("Failed to load Core ML model from path: {}", self.model_path);
             }
 
-            Ok(model)
+            Ok(model as *mut std::ffi::c_void)
         }
     }
 
@@ -334,7 +334,7 @@ impl CoreMLModel {
                 std::ptr::copy_nonoverlapping(tokens.as_ptr(), data_ptr, tokens.len());
             }
 
-            Ok(ml_array)
+            Ok(ml_array as *mut std::ffi::c_void)
         }
     }
 
@@ -369,7 +369,7 @@ impl CoreMLModel {
                 anyhow::bail!("Failed to create MLMultiArray for image input");
             }
 
-            Ok(ml_array)
+            Ok(ml_array as *mut std::ffi::c_void)
         }
     }
 
@@ -407,7 +407,7 @@ impl CoreMLModel {
                 std::ptr::copy_nonoverlapping(feature_values.as_ptr(), data_ptr, feature_values.len());
             }
 
-            Ok(ml_array)
+            Ok(ml_array as *mut std::ffi::c_void)
         }
     }
 

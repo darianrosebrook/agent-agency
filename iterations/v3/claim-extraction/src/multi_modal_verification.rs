@@ -1524,7 +1524,20 @@ impl MultiModalVerificationEngine {
             if term.len() > 4 {
                 // Generate simulated historical claims
                 historical_claims.push(HistoricalClaim {
+                    id: Uuid::new_v4(),
                     claim_text: format!("The system should handle {} correctly", term),
+                    confidence_score: 0.85,
+                    source_count: 1,
+                    verification_status: VerificationStatus::Verified,
+                    last_verified: chrono::Utc::now() - chrono::Duration::days(30),
+                    related_entities: vec![term.clone()],
+                    claim_type: ClaimType::Factual,
+                    created_at: chrono::Utc::now() - chrono::Duration::days(30),
+                    updated_at: chrono::Utc::now(),
+                    metadata: std::collections::HashMap::new(),
+                    source_references: vec!["source://historical".to_string()],
+                    cross_references: vec![],
+                    validation_metadata: std::collections::HashMap::new(),
                     validation_confidence: 0.85,
                     validation_timestamp: chrono::Utc::now() - chrono::Duration::days(30),
                     validation_outcome: ValidationOutcome::Validated,
@@ -2999,17 +3012,20 @@ enum SourceType {
 /// Historical claim validation record
 #[derive(Debug, Clone)]
 struct HistoricalClaim {
-    id: Uuid,
+    id: Option<Uuid>,
     claim_text: String,
-    confidence_score: f32,
-    source_count: usize,
-    verification_status: VerificationStatus,
-    last_verified: chrono::DateTime<chrono::Utc>,
-    related_entities: Vec<String>,
-    claim_type: ClaimType,
-    created_at: chrono::DateTime<chrono::Utc>,
-    updated_at: chrono::DateTime<chrono::Utc>,
-    metadata: std::collections::HashMap<String, serde_json::Value>,
+    confidence_score: Option<f32>,
+    source_count: Option<usize>,
+    verification_status: Option<VerificationStatus>,
+    last_verified: Option<chrono::DateTime<chrono::Utc>>,
+    related_entities: Option<Vec<String>>,
+    claim_type: Option<ClaimType>,
+    created_at: Option<chrono::DateTime<chrono::Utc>>,
+    updated_at: Option<chrono::DateTime<chrono::Utc>>,
+    metadata: Option<std::collections::HashMap<String, serde_json::Value>>,
+    source_references: Option<Vec<String>>,
+    cross_references: Option<Vec<String>>,
+    validation_metadata: Option<std::collections::HashMap<String, String>>,
     // Keep existing fields for backward compatibility
     validation_confidence: f64,
     validation_timestamp: chrono::DateTime<chrono::Utc>,
@@ -3067,6 +3083,9 @@ impl MultiModalVerificationEngine {
                 created_at: chrono::Utc::now() - chrono::Duration::days(i as i64 * 30),
                 updated_at: chrono::Utc::now(),
                 metadata: std::collections::HashMap::new(),
+                source_references: vec![format!("source://historical/{}", i)],
+                cross_references: vec![format!("xref://claim/{}", i)],
+                validation_metadata: std::collections::HashMap::new(),
                 // Backward compatibility fields
                 validation_confidence: (0.75 + (i as f32 * 0.05).min(0.2f32)) as f64,
                 validation_timestamp: chrono::Utc::now() - chrono::Duration::days(i as i64 * 7),
@@ -3110,8 +3129,15 @@ impl MultiModalVerificationEngine {
             let claim = HistoricalClaim {
                 id: uuid::Uuid::new_v4(),
                 claim_text: format!("Database historical claim for '{}'", term),
-                validation_confidence: 0.85 + (i as f64 * 0.02),
-                validation_timestamp: Utc::now() - chrono::Duration::days(i as i64 + 1),
+                confidence_score: (0.85 + (i as f64 * 0.02)) as f32,
+                source_count: 2,
+                verification_status: VerificationStatus::Verified,
+                last_verified: Utc::now() - chrono::Duration::days(i as i64 + 1),
+                related_entities: vec![term.clone()],
+                claim_type: ClaimType::Factual,
+                created_at: Utc::now() - chrono::Duration::days(i as i64 + 1),
+                updated_at: Utc::now(),
+                metadata: std::collections::HashMap::new(),
                 source_references: vec![
                     format!("database://historical_claims/{}", i),
                     format!("cache://verified_claims/{}", i),
@@ -3125,6 +3151,10 @@ impl MultiModalVerificationEngine {
                     ("query_term".to_string(), term.clone()),
                     ("confidence_score".to_string(), (0.85 + (i as f64 * 0.02)).to_string()),
                 ]),
+                // Backward compatibility fields
+                validation_confidence: 0.85 + (i as f64 * 0.02),
+                validation_timestamp: Utc::now() - chrono::Duration::days(i as i64 + 1),
+                validation_outcome: ValidationOutcome::Validated,
             };
             
             db_claims.push(claim);

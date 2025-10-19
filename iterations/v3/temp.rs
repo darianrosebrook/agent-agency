@@ -648,25 +648,151 @@ impl ConsensusCoordinator {
         rules: &CawsTieBreakingRules,
         conflict_analysis: &ConflictAnalysis,
     ) -> Result<TieBreakingResult> {
-        let mut resolution_strategy = "weighted-voting".to_string();
+        let mut high_conflicts = 0usize;
+        let mut medium_conflicts = 0usize;
+        let mut low_conflicts = 0usize;
+        let mut highest_severity_rank = 0u8;
 
-        // Apply rule-based strategy selection
-        if conflict_analysis.conflicts.iter().any(|c| c.severity == ConflictSeverity::High) {
-            resolution_strategy = "expertise-weighted".to_string();
+        for conflict in &conflict_analysis.conflicts {
+            let rank = match conflict.severity {
+                ConflictSeverity::High => {
+                    high_conflicts += 1;
+                    3
+                }
+                ConflictSeverity::Medium => {
+                    medium_conflicts += 1;
+                    2
+                }
+                ConflictSeverity::Low => {
+                    low_conflicts += 1;
+                    1
+                }
+            };
+            if rank > highest_severity_rank {
+                highest_severity_rank = rank;
+            }
         }
 
-        // Apply the selected algorithm
-        let resolution_confidence = match resolution_strategy.as_str() {
-            "expertise-weighted" => 0.85,
-            "evidence-based-consensus" => 0.75,
-            _ => 0.70, // weighted-voting default
+        // Default strategy respects CAWS ordering when no explicit rule matches.
+        let mut resolution_strategy = rules
+            .tie_breaking_algorithms
+            .iter()
+            .find(|alg| alg.as_str() == "weighted-voting")
+            .cloned()
+            .or_else(|| rules.tie_breaking_algorithms.first().cloned())
+            .unwrap_or_else(|| "weighted-voting".to_string());
+
+        let mut applied_rules = Vec::new();
+        let total_conflicts = conflict_analysis.conflicts.len();
+
+        // Apply priority-driven strategy selection.
+        for rule in &rules.priority_rules {
+            let candidate = match rule.as_str() {
+                "expertise-based" if high_conflicts > 0 || (medium_conflicts > 1 && total_conflicts > 2) => {
+                    Some("expertise-weighted")
+                }
+                "evidence-strength"
+                    if (high_conflicts + medium_conflicts > 0)
+                        && rules
+                            .tie_breaking_algorithms
+                            .iter()
+                            .any(|alg| alg == "evidence-based-consensus") =>
+                {
+                    Some("evidence-based-consensus")
+                }
+                "historical-performance" if rules.tie_breaking_algorithms.iter().any(|alg| alg == "weighted-voting") => {
+                    Some("weighted-voting")
+                }
+                _ => None,
+            };
+
+            if let Some(strategy) = candidate {
+                if rules.tie_breaking_algorithms.iter().any(|alg| alg == strategy) {
+                    resolution_strategy = strategy.to_string();
+                    applied_rules.push(rule.clone());
+                    break;
+                }
+            }
+        }
+
+        if applied_rules.is_empty() {
+            if let Some(first_rule) = rules.priority_rules.first() {
+                applied_rules.push(first_rule.clone());
+            }
+        }
+
+        if !applied_rules.iter().any(|rule| rule == &resolution_strategy) {
+            applied_rules.push(resolution_strategy.clone());
+        }
+
+        // Confidence blends severity pressure with algorithm strength.
+        let mut resolution_confidence = if total_conflicts == 0 {
+            0.93
+        } else {
+            match highest_severity_rank {
+                3 => 0.72,
+                2 => 0.78,
+                1 => 0.84,
+                _ => 0.80,
+            }
+        };
+
+        resolution_confidence += match resolution_strategy.as_str() {
+            "expertise-weighted" => 0.06,
+            "evidence-based-consensus" => 0.04,
+            "weighted-voting" => 0.03,
+            _ => 0.02,
+        };
+
+        if total_conflicts > 3 {
+            resolution_confidence -= 0.03;
+        }
+
+        if total_conflicts > 0 {
+            let conflict_pressure = (high_conflicts * 3 + medium_conflicts * 2 + low_conflicts) as f32;
+            let severity_ratio = conflict_pressure / (total_conflicts as f32 * 3.0);
+            resolution_confidence -= (severity_ratio * 0.08).min(0.08);
+        }
+
+        if resolution_confidence < 0.55 {
+            resolution_confidence = 0.55;
+        } else if resolution_confidence > 0.95 {
+            resolution_confidence = 0.95;
+        }
+
+        // Estimate resolved conflicts considering severity and strategy effectiveness.
+        let resolved_conflicts = if total_conflicts == 0 {
+            0
+        } else {
+            let strategy_effectiveness = match resolution_strategy.as_str() {
+                "expertise-weighted" => 0.9,
+                "evidence-based-consensus" => 0.85,
+                "weighted-voting" => 0.8,
+                _ => 0.75,
+            };
+
+            let severity_penalty = if total_conflicts == 0 {
+                0.0
+            } else {
+                (high_conflicts as f32 * 0.2 + medium_conflicts as f32 * 0.1) / total_conflicts as f32
+            };
+
+            let mut resolved_fraction = strategy_effectiveness - severity_penalty;
+            if resolved_fraction < 0.0 {
+                resolved_fraction = 0.0;
+            } else if resolved_fraction > 1.0 {
+                resolved_fraction = 1.0;
+            }
+
+            let estimated = (resolved_fraction * total_conflicts as f32).round() as usize;
+            estimated.min(total_conflicts)
         };
 
         Ok(TieBreakingResult {
             resolution_strategy,
-            applied_rules: rules.tie_breaking_algorithms.clone(),
+            applied_rules,
             resolution_confidence,
-            resolved_conflicts: conflict_analysis.conflicts.len(),
+            resolved_conflicts,
         })
     }
 
