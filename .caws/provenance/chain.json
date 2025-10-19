@@ -12450,5 +12450,77 @@
     },
     "previous_hash": "4051933896f7e4a54ac09ccd1cdca516240ee713a61bff6f15addedf7cdeb83f",
     "hash": "a1817f3b692b9d17a69f7bc775b8cae8bbd7610b294795e7ed9e74f31edbb2f9"
+  },
+  {
+    "id": "prov-1760863746011",
+    "timestamp": "2025-10-19T08:49:06.011Z",
+    "commit": {
+      "hash": "4a6f176c55f1f4b32cc8d5a95e534c69fd6c77a3",
+      "message": "Implement workspace-state-manager TODOs: data compression and delta classification",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "PROJ-785",
+      "title": "agent-agency",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": [
+        "WV-0001"
+      ]
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-19T08:49:06.013Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "a1817f3b692b9d17a69f7bc775b8cae8bbd7610b294795e7ed9e74f31edbb2f9",
+    "hash": "ca23f7f620659aa74ba0665f8c8fc6318ea4fc6f453fce1b996e456819831455"
+  },
+  {
+    "id": "prov-1760863771152",
+    "timestamp": "2025-10-19T08:49:31.152Z",
+    "commit": {
+      "hash": "59f570692c8697059c54fda57b5d308a460850e9",
+      "message": "Add workspace-state-manager implementation documentation",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "PROJ-785",
+      "title": "agent-agency",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": [
+        "WV-0001"
+      ]
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-19T08:49:31.153Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "ca23f7f620659aa74ba0665f8c8fc6318ea4fc6f453fce1b996e456819831455",
+    "hash": "69e05db035db217bc329c644f69c126c93bfc7b739b193b42ad873bae1a68caf"
   }
 ]

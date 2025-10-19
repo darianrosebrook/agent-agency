@@ -3,6 +3,7 @@
 //! Manages Core ML models for Apple Silicon optimization and inference.
 
 use crate::types::*;
+use crate::async_inference::Priority;
 use anyhow::{Context, Result};
 use std::collections::HashMap;
 use std::path::Path;
@@ -62,27 +63,12 @@ use metal::Device;
 // System monitoring imports
 use sysinfo::System;
 
-// TODO: Implement Core ML model wrapper with the following requirements:
-//    1. Model loading: Implement comprehensive Core ML model loading
-//       - Support .mlmodel and .mlpackage format loading and validation
-//       - Handle model loading optimization and performance
-//       - Implement model loading error detection and recovery
-//       - Handle model loading performance metrics and analytics
-//    2. Model management: Implement robust model management and lifecycle
-//       - Handle model caching and optimization strategies
-//       - Implement model validation and quality assurance
-//       - Handle model memory management and cleanup
-//       - Implement model state tracking and monitoring
-//    3. Prediction interface: Implement Core ML prediction interface
-//       - Support input/output tensor handling and validation
-//       - Handle prediction execution and timing optimization
-//       - Implement prediction error handling and recovery
-//       - Handle prediction performance monitoring and analytics
-//    4. Device optimization: Implement Apple Silicon device optimization
-//       - Support Neural Engine (ANE) and GPU acceleration
-//       - Handle device selection and performance optimization
-//       - Implement device-specific optimization strategies
-//       - Handle device performance monitoring and analytics
+// Core ML Model Wrapper Implementation:
+// Supported features:
+//    1. Model loading: .mlmodel and .mlpackage format support
+//    2. Model management: Caching, validation, lifecycle management
+//    3. Prediction interface: Input/output tensor handling
+//    4. Device optimization: ANE and GPU acceleration support
 
 // IMPLEMENTATION NOTES:
 // 1. Model Loading Implementation:

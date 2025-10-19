@@ -173,7 +173,7 @@ impl MultimodalContextProvider {
         let mut global_count = 0;
         let mut project_count = 0;
 
-        for result in retrieval_result.results {
+        for result in retrieval_result {
             // Check budget constraints
             if evidence_items.len() >= budget.max_items {
                 break;
@@ -236,8 +236,8 @@ impl MultimodalContextProvider {
         };
 
         // Calculate deduplication score (items retained / items processed)
-        let dedup_score = if !retrieval_result.results.is_empty() {
-            evidence_items.len() as f32 / retrieval_result.results.len() as f32
+        let dedup_score = if !retrieval_result.is_empty() {
+            evidence_items.len() as f32 / retrieval_result.len() as f32
         } else {
             1.0
         };

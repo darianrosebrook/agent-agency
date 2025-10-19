@@ -895,9 +895,7 @@ export class SecurityProvenanceManager extends CawsBaseTool {
    * Run comprehensive Static Application Security Testing (SAST)
    * Integrates with multiple security scanning tools for comprehensive coverage
    */
-  private async runSAST(
-    projectDir: string
-  ): Promise<{
+  private async runSAST(projectDir: string): Promise<{
     passed: boolean;
     vulnerabilities: number;
     details: Record<string, any>;
@@ -1188,9 +1186,7 @@ export class SecurityProvenanceManager extends CawsBaseTool {
    * Run comprehensive dependency vulnerability scanning
    * Integrates with multiple dependency scanning tools for comprehensive coverage
    */
-  private async scanDependencies(
-    projectDir: string
-  ): Promise<{
+  private async scanDependencies(projectDir: string): Promise<{
     passed: boolean;
     vulnerable: number;
     details: Record<string, any>;

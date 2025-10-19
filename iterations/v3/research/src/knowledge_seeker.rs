@@ -7,7 +7,7 @@ use crate::types::*;
 use crate::ContentProcessingConfig;
 use crate::{
     ConfigurationUpdate, ContentProcessor, ContextBuilder, MultimodalContext,
-    MultimodalContextProvider, MultimodalRetriever, VectorSearchEngine, WebScraper,
+    MultimodalContextProvider, MultimodalRetriever, MultimodalRetrieverConfig, VectorSearchEngine, WebScraper,
 };
 use anyhow::{Context, Result};
 use async_trait::async_trait;
@@ -1604,7 +1604,7 @@ impl KnowledgeSeeker {
 
         // Search multimodal content
         let results = retriever
-            .search_multimodal(query, 10, context.project_scope)
+            .search_multimodal(query, 10, context.project_scope.as_deref())
             .await
             .context("Multimodal search failed")?;
 
@@ -1620,7 +1620,7 @@ impl KnowledgeSeeker {
         };
 
         let multimodal_context = context_provider
-            .provide_context(query, Some(budget), context.project_scope)
+            .provide_context(query, Some(budget), context.project_scope.as_deref())
             .await
             .context("Failed to provide multimodal context")?;
 

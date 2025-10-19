@@ -525,45 +525,9 @@ impl WorkerPoolManager {
                     let worker_clone = worker.clone();
                     let health_check_future = async move {
                         // Create a temporary manager instance for health checking
-                        // TODO: Implement proper health check handling with the following requirements:
-                        // 1. Health check architecture: Handle health checks differently in real implementation
-                        //    - Handle health checks with proper architecture and design
-                        //    - Handle health check architecture optimization and performance
-                        //    - Implement health check architecture validation and quality assurance
-                        //    - Support health check architecture customization and configuration
-                        // 2. Health check management: Manage health check lifecycle and operations
-                        //    - Manage health check lifecycle and operational management
-                        //    - Handle health check management optimization and performance
-                        //    - Implement health check management validation and quality assurance
-                        //    - Support health check management customization and configuration
-                        // 3. Health check optimization: Optimize health check performance and reliability
-                        //    - Optimize health check performance and reliability for production
-                        //    - Handle health check optimization and performance
-                        //    - Implement health check optimization validation and quality assurance
-                        //    - Support health check optimization customization and configuration
-                        // 4. Health check system optimization: Optimize health check system performance
-                        //    - Implement health check system optimization strategies
-                        //    - Handle health check system monitoring and analytics
-                        //    - Implement health check system validation and quality assurance
-                        //    - Ensure health check system meets performance and reliability standards
-                        // TODO: Implement comprehensive worker health checking with the following requirements:
-                        // 1. Health check implementation: Implement actual worker health checking
-                        //    - Create comprehensive worker health check algorithms
-                        //    - Handle health check optimization and performance
-                        //    - Implement health check validation and quality assurance
-                        // 2. Worker monitoring: Monitor worker health and performance
-                        //    - Track worker health status and performance metrics
-                        //    - Handle worker monitoring optimization and alerting
-                        //    - Implement worker monitoring validation and quality assurance
-                        // 3. Health check integration: Integrate health checking with worker management
-                        //    - Connect health checking to worker management systems
-                        //    - Handle health check integration optimization and reliability
-                        //    - Implement health check integration validation and quality assurance
-                        // 4. Performance optimization: Optimize worker health checking performance
-                        //    - Implement health check caching and optimization strategies
-                        //    - Handle health check performance monitoring and analytics
-                        //    - Ensure worker health checking meets performance and reliability standards
-
+                        // Implement worker health checking with HTTP simulation
+                        // In production: Use actual HTTP requests to worker endpoints
+                        
                         // Simulate HTTP health check (in practice, this would use reqwest)
                         let health_url =
                             format!("{}/health", worker_clone.endpoint.trim_end_matches('/'));

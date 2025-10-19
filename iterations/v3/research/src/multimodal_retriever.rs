@@ -98,7 +98,7 @@ impl MultimodalRetriever {
         // Apply project scope filtering
         let filtered_results: Vec<_> = all_results
             .into_iter()
-            .filter(|result| {
+            .filter(|result: &embedding_service::MultimodalSearchResult| {
                 query.project_scope.as_ref().map_or(true, |scope| {
                     result.project_scope.as_ref() == Some(scope)
                 })
@@ -122,7 +122,7 @@ impl MultimodalRetriever {
     ) -> Result<Vec<embedding_service::MultimodalSearchResult>> {
         let multimodal_query = MultimodalQuery {
             text: Some(query.to_string()),
-            query_type: crate::QueryType::Knowledge,
+            query_type: QueryType::Knowledge,
             project_scope: project_scope.map(|s| s.to_string()),
             max_results,
         };
