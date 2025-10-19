@@ -7,7 +7,7 @@ use crate::types::*;
 use anyhow::Result;
 use regex::Regex;
 use std::collections::HashMap;
-use tracing::debug;
+use tracing::{debug, warn};
 use serde_json::Value;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -450,6 +450,7 @@ impl AmbiguityDetector {
 #[derive(Debug)]
 struct ContextResolver {
     domain_context: HashMap<String, String>,
+    named_entity_recognizer: NamedEntityRecognizer,
 }
 
 impl ContextResolver {
@@ -459,7 +460,10 @@ impl ContextResolver {
         domain_context.insert("component".to_string(), "the current component".to_string());
         domain_context.insert("function".to_string(), "the specified function".to_string());
 
-        Self { domain_context }
+        Self {
+            domain_context,
+            named_entity_recognizer: NamedEntityRecognizer::new(),
+        }
     }
 
     /// Find referent for a pronoun using context map (V2 port)
@@ -602,11 +606,11 @@ impl ContextResolver {
         
         // 1. Conversation history analysis
         if let Some(conversation_history) = context.metadata.get("conversation_history") {
-            entities.extend(self.analyze_conversation_history(conversation_history));
+            entities.extend(self.analyze_conversation_history(conversation_history, context));
         }
         
         // 2. Named entity recognition
-        entities.extend(self.perform_named_entity_recognition(&context.input_text));
+        entities.extend(self.perform_named_entity_recognition(&context.input_text, context));
         
         // 3. Entity linking and disambiguation
         let linked_entities = self.link_entities_to_knowledge_bases(&entities);
@@ -622,13 +626,15 @@ impl ContextResolver {
     }
     
     /// Analyze conversation history for entity mentions
-    fn analyze_conversation_history(&self, conversation_history: &serde_json::Value) -> Vec<String> {
+    fn analyze_conversation_history(&self, conversation_history: &serde_json::Value, context: &ProcessingContext) -> Vec<String> {
         let mut entities = Vec::new();
         
         if let Some(messages) = conversation_history.as_array() {
             for message in messages {
                 if let Some(text) = message.get("content").and_then(|v| v.as_str()) {
-                    entities.extend(self.perform_named_entity_recognition(text));
+                    let mut message_context = context.clone();
+                    message_context.input_text = text.to_string();
+                    entities.extend(self.perform_named_entity_recognition(text, &message_context));
                 }
             }
         }
@@ -637,7 +643,7 @@ impl ContextResolver {
     }
     
     /// Perform named entity recognition on text
-    fn perform_named_entity_recognition(&self, text: &str) -> Vec<String> {
+    fn perform_named_entity_recognition(&self, text: &str, context: &ProcessingContext) -> Vec<String> {
         let mut entities = Vec::new();
         
         // TODO: Implement proper Named Entity Recognition (NER) with the following requirements:
@@ -739,21 +745,8 @@ impl ContextResolver {
             //    - Handle Wikipedia API response parsing and entity disambiguation
             //    - Implement Wikipedia API caching and optimization strategies
             // 2. Wikidata integration: Query Wikidata for structured entity data
-            //    - Implement Wikidata SPARQL query interface with proper authentication
-            //    - Handle Wikidata response parsing and entity relationship mapping
-            //    - Implement Wikidata query optimization and result caching
-            // 3. Domain-specific knowledge bases: Integrate specialized knowledge sources
-            //    - Implement domain-specific knowledge base connectors (e.g., medical, legal, technical)
-            //    - Handle knowledge base authentication and access control
-            //    - Implement knowledge base response validation and quality assurance
-            // 4. Entity disambiguation: Resolve entity ambiguity using knowledge base context
-            //    - Implement entity disambiguation algorithms using knowledge base data
-            //    - Handle entity relationship mapping and context resolution
-            //    - Implement entity disambiguation performance optimization and caching
-            // 5. Performance optimization: Optimize knowledge base query performance
-            //    - Implement query batching and parallel processing for multiple entities
-            //    - Handle knowledge base query monitoring and analytics
-            //    - Ensure knowledge base integration meets performance and reliability standards
+            // JSYK, wikidata and wordnet are available at the root of agent-agency. We can ingest this in our own hybrid RAG database for both knowledge graph and vector search.
+            
             
             // For now, add related entities based on simple rules
             match entity.to_lowercase().as_str() {
@@ -818,7 +811,7 @@ impl ContextResolver {
         let mut entities = Vec::new();
         
         if let Some(conversation_history) = context.metadata.get("conversation_history") {
-            entities.extend(self.analyze_conversation_history(conversation_history));
+            entities.extend(self.analyze_conversation_history(conversation_history, context));
         }
         
         entities

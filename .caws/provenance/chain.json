@@ -11406,5 +11406,41 @@
     },
     "previous_hash": "00780eafc00dd9e5f24ca41bf1fad4be6ed901c5aba70cbf23f6c6d31b3f11dc",
     "hash": "ffc06e612d8defc59002b2f614633105bedd2bc5cb3117b5e60e1b5b17a80872"
+  },
+  {
+    "id": "prov-1760836700206",
+    "timestamp": "2025-10-19T01:18:20.207Z",
+    "commit": {
+      "hash": "dc9035e4cf7db97af4e5d40959f06eee37d80985",
+      "message": "security: fix critical Phase 1 blockers (Issues 1-2)",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "PROJ-785",
+      "title": "agent-agency",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": [
+        "WV-0001"
+      ]
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-19T01:18:20.209Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "ffc06e612d8defc59002b2f614633105bedd2bc5cb3117b5e60e1b5b17a80872",
+    "hash": "f423ab629c1ef06de28654c4a3c5e71d811147889de909837185667597f9ad1d"
   }
 ]

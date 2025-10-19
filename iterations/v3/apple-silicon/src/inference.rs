@@ -81,6 +81,34 @@ pub enum ModelArtifact {
 }
 
 impl ModelArtifact {
+    /// Compute hash for compiled model directory
+    fn compute_compiled_hash(&self, path: &Path) -> Result<String> {
+        use sha2::{Sha256, Digest};
+        let mut hasher = Sha256::new();
+        
+        // Hash directory structure and key files
+        if path.is_dir() {
+            // Hash the directory structure
+            let mut entries: Vec<_> = std::fs::read_dir(path)?.collect();
+            entries.sort_by_key(|entry| entry.as_ref().unwrap().path());
+            
+            for entry in entries {
+                let entry = entry?;
+                let path = entry.path();
+                if path.is_file() {
+                    let content = std::fs::read(&path)?;
+                    hasher.update(&content);
+                }
+            }
+        } else {
+            // Hash single file
+            let content = std::fs::read(path)?;
+            hasher.update(&content);
+        }
+        
+        Ok(hex::encode(hasher.finalize()))
+    }
+
     /// Generate cache key for this artifact
     /// Format: {sha256}:{coreml_ver}:{backend}:{compute_units}:{quantization}:{shape_key}:{os_build}
     pub fn cache_key(
@@ -98,8 +126,8 @@ impl ModelArtifact {
                     sha_hex, compute_units_str(compute_units), quantization, shape_key, os_build
                 )
             }
-            ModelArtifact::Compiled { meta, .. } => {
-                let sha_hex = "compiled"; // Use placeholder for compiled
+            ModelArtifact::Compiled { meta, path, .. } => {
+                let sha_hex = self.compute_compiled_hash(path)?;
                 format!(
                     "{}:{}:{}:{}:{}:{}:{}",
                     sha_hex,

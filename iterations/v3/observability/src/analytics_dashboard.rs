@@ -1667,3 +1667,46 @@ pub struct ValidatedPredictions {
     pub cost_projections: Vec<PredictiveModelResult>,
     pub validation_timestamp: DateTime<Utc>,
 }
+
+/// Cached analytics insights
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CachedInsights {
+    /// Cached insights
+    pub insights: Vec<AnalyticsInsight>,
+    /// Cache timestamp
+    pub cached_at: DateTime<Utc>,
+    /// Cache metadata
+    pub metadata: CacheMetadata,
+}
+
+/// Cache metadata
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CacheMetadata {
+    /// Cache key
+    pub cache_key: String,
+    /// Cache size in bytes
+    pub cache_size_bytes: usize,
+    /// Number of insights
+    pub insights_count: usize,
+    /// Cache generation time
+    pub generation_time_ms: u64,
+    /// System state hash
+    pub system_state_hash: String,
+}
+
+/// Cache performance metrics
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CachePerformanceMetrics {
+    /// Cache hit rate
+    pub hit_rate: f64,
+    /// Cache miss rate
+    pub miss_rate: f64,
+    /// Average cache access time
+    pub avg_access_time_ms: f64,
+    /// Cache size
+    pub cache_size_bytes: usize,
+    /// Number of cache operations
+    pub operations_count: u64,
+    /// Last cache update
+    pub last_update: DateTime<Utc>,
+}

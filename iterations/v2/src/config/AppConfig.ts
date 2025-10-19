@@ -10,6 +10,47 @@
 import { z } from "zod";
 
 /**
+ * SECURITY: Masks sensitive information in logging
+ * Prevents database passwords and secrets from appearing in logs
+ */
+class SensitiveDataMasker {
+  private sensitivePatterns = [
+    /password/i,
+    /secret/i,
+    /key/i,
+    /token/i,
+    /credential/i,
+  ];
+
+  maskObject(obj: Record<string, any>): Record<string, any> {
+    const masked: Record<string, any> = {};
+    for (const [key, value] of Object.entries(obj)) {
+      if (this.isSensitiveKey(key)) {
+        masked[key] = this.maskValue(value);
+      } else if (typeof value === "object" && value !== null && !Array.isArray(value)) {
+        masked[key] = this.maskObject(value as Record<string, any>);
+      } else {
+        masked[key] = value;
+      }
+    }
+    return masked;
+  }
+
+  private isSensitiveKey(key: string): boolean {
+    return this.sensitivePatterns.some((pattern) => pattern.test(key));
+  }
+
+  private maskValue(value: any): string {
+    if (typeof value === "string" && value.length > 0) {
+      return "*".repeat(Math.min(value.length, 8)) + "...MASKED";
+    }
+    return "***MASKED***";
+  }
+}
+
+const dataMasker = new SensitiveDataMasker();
+
+/**
  * Application configuration schema with validation
  */
 const configSchema = z.object({
@@ -212,11 +253,17 @@ export class ConfigManager {
     try {
       return configSchema.parse(raw);
     } catch (error) {
-      console.error("Configuration validation failed:", error);
+      // SECURITY: Mask sensitive data when logging configuration errors
+      const maskedRaw = dataMasker.maskObject(raw as Record<string, any>);
+      console.error(
+        "Configuration validation failed. Logged config has sensitive data masked:"
+      );
+      console.error("Masked config:", maskedRaw);
+      console.error("Error:", error);
       throw new Error(
         `Invalid configuration: ${
           error instanceof Error ? error.message : "Unknown error"
-        }`
+        }. Check logs for details (sensitive data has been masked).`
       );
     }
   }

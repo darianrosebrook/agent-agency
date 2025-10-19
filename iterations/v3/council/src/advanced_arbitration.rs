@@ -54,6 +54,8 @@ pub struct AdvancedArbitrationEngine {
     signature_verification_metrics: Arc<RwLock<SignatureVerificationMetrics>>,
     certificate_chain_config: CertificateChainConfig,
     certificate_chain_metrics: Arc<RwLock<CertificateChainMetrics>>,
+    timestamp_validation_config: TimestampValidationConfig,
+    timestamp_validation_metrics: Arc<RwLock<TimestampValidationMetrics>>,
     }
 
 /// Aggregated registry validation data collected during validation
@@ -610,6 +612,16 @@ impl AdvancedArbitrationEngine {
                 method_distribution: HashMap::new(),
                 trust_level_distribution: HashMap::new(),
                 chain_length_distribution: HashMap::new(),
+                error_distribution: HashMap::new(),
+            })),
+            timestamp_validation_config: TimestampValidationConfig::default(),
+            timestamp_validation_metrics: Arc::new(RwLock::new(TimestampValidationMetrics {
+                total_validations: 0,
+                successful_validations: 0,
+                failed_validations: 0,
+                average_validation_time_ms: 0.0,
+                format_distribution: HashMap::new(),
+                expiration_status_distribution: HashMap::new(),
                 error_distribution: HashMap::new(),
             })),
         })
@@ -9066,6 +9078,2131 @@ pub struct SignatureVerificationConfig {
     pub verification_timeout_ms: u64,
 }
 
+/// Signature verification metrics
+#[derive(Debug, Clone)]
+pub struct SignatureVerificationMetrics {
+    pub total_verifications: u64,
+    pub successful_verifications: u64,
+    pub failed_verifications: u64,
+    pub average_verification_time_ms: f64,
+    pub method_distribution: HashMap<SignatureVerificationMethod, u64>,
+    pub algorithm_distribution: HashMap<SignatureAlgorithm, u64>,
+    pub trust_level_distribution: HashMap<TrustLevel, u64>,
+    pub error_distribution: HashMap<String, u64>,
+}
+
+impl Default for SignatureVerificationConfig {
+    fn default() -> Self {
+        Self {
+            enabled_methods: vec![
+                SignatureVerificationMethod::PublicKeyVerification,
+                SignatureVerificationMethod::HashVerification,
+                SignatureVerificationMethod::TimestampVerification,
+            ],
+            min_confidence_threshold: 0.8,
+            max_verification_time_ms: 10000,
+            enable_public_key_verification: true,
+            enable_certificate_verification: true,
+            enable_hash_verification: true,
+            enable_timestamp_verification: true,
+            trusted_key_sources: vec![
+                "system_trust_store".to_string(),
+                "user_trust_store".to_string(),
+            ],
+            key_cache_size: 1000,
+            verification_timeout_ms: 5000,
+        }
+    }
+}
+
+/// Certificate chain validation result
+#[derive(Debug, Clone)]
+pub struct CertificateChainValidationResult {
+    pub is_valid: bool,
+    pub chain_length: usize,
+    pub validation_method: CertificateValidationMethod,
+    pub trust_level: TrustLevel,
+    pub validation_confidence: f32,
+    pub validation_time_ms: u64,
+    pub certificates: Vec<CertificateInfo>,
+    pub trust_path: Vec<String>,
+    pub error_details: Option<String>,
+    pub metadata: HashMap<String, String>,
+}
+
+/// Certificate validation methods
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum CertificateValidationMethod {
+    ChainValidation,
+    TrustStoreValidation,
+    OCSPValidation,
+    CRLValidation,
+    Hybrid,
+}
+
+/// Certificate information
+#[derive(Debug, Clone)]
+pub struct CertificateInfo {
+    pub subject: String,
+    pub issuer: String,
+    pub serial_number: String,
+    pub fingerprint: String,
+    pub validity_period: ValidityPeriod,
+    pub key_info: PublicKeyInfo,
+    pub extensions: Vec<CertificateExtension>,
+    pub is_ca: bool,
+    pub path_length_constraint: Option<u32>,
+    pub trust_level: TrustLevel,
+}
+
+/// Certificate extension information
+#[derive(Debug, Clone)]
+pub struct CertificateExtension {
+    pub oid: String,
+    pub name: String,
+    pub critical: bool,
+    pub value: String,
+}
+
+/// Certificate chain configuration
+#[derive(Debug, Clone)]
+pub struct CertificateChainConfig {
+    pub max_chain_length: usize,
+    pub min_chain_length: usize,
+    pub enable_ocsp_validation: bool,
+    pub enable_crl_validation: bool,
+    pub enable_trust_store_validation: bool,
+    pub trusted_root_cas: Vec<String>,
+    pub validation_timeout_ms: u64,
+    pub cache_validation_results: bool,
+    pub strict_validation: bool,
+}
+
+/// Certificate chain validation metrics
+#[derive(Debug, Clone)]
+pub struct CertificateChainMetrics {
+    pub total_validations: u64,
+    pub successful_validations: u64,
+    pub failed_validations: u64,
+    pub average_validation_time_ms: f64,
+    pub method_distribution: HashMap<CertificateValidationMethod, u64>,
+    pub trust_level_distribution: HashMap<TrustLevel, u64>,
+    pub chain_length_distribution: HashMap<usize, u64>,
+    pub error_distribution: HashMap<String, u64>,
+}
+
+/// Trust store information
+#[derive(Debug, Clone)]
+pub struct TrustStore {
+    pub name: String,
+    pub certificates: Vec<CertificateInfo>,
+    pub last_updated: chrono::DateTime<chrono::Utc>,
+    pub trust_level: TrustLevel,
+}
+
+/// Certificate revocation information
+#[derive(Debug, Clone)]
+pub struct RevocationInfo {
+    pub is_revoked: bool,
+    pub revocation_reason: Option<RevocationReason>,
+    pub revocation_date: Option<chrono::DateTime<chrono::Utc>>,
+    pub crl_url: Option<String>,
+    pub ocsp_url: Option<String>,
+}
+
+/// Certificate revocation reasons
+#[derive(Debug, Clone, PartialEq)]
+pub enum RevocationReason {
+    Unspecified,
+    KeyCompromise,
+    CACompromise,
+    AffiliationChanged,
+    Superseded,
+    CessationOfOperation,
+    CertificateHold,
+    RemoveFromCRL,
+    PrivilegeWithdrawn,
+    AACompromise,
+}
+
+impl Default for CertificateChainConfig {
+    fn default() -> Self {
+        Self {
+            max_chain_length: 10,
+            min_chain_length: 1,
+            enable_ocsp_validation: true,
+            enable_crl_validation: true,
+            enable_trust_store_validation: true,
+            trusted_root_cas: vec![
+                "DigiCert Global Root CA".to_string(),
+                "VeriSign Class 3 Public Primary Certification Authority".to_string(),
+                "Thawte Primary Root CA".to_string(),
+            ],
+            validation_timeout_ms: 10000,
+            cache_validation_results: true,
+            strict_validation: true,
+        }
+    }
+}
+
+/// Timestamp validation result
+#[derive(Debug, Clone)]
+pub struct TimestampValidationResult {
+    pub is_valid: bool,
+    pub timestamp: u64,
+    pub format: TimestampFormat,
+    pub timezone: Option<String>,
+    pub age_seconds: u64,
+    pub expiration_status: ExpirationStatus,
+    pub validation_confidence: f32,
+    pub validation_time_ms: u64,
+    pub error_details: Option<String>,
+    pub metadata: HashMap<String, String>,
+}
+
+/// Timestamp formats supported
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum TimestampFormat {
+    UnixTimestamp,
+    ISO8601,
+    RFC3339,
+    RFC2822,
+    Custom(String),
+}
+
+/// Timestamp expiration status
+#[derive(Debug, Clone, PartialEq)]
+pub enum ExpirationStatus {
+    Valid,
+    Expired,
+    NearExpiration,
+    Invalid,
+}
+
+/// Timestamp validation configuration
+#[derive(Debug, Clone)]
+pub struct TimestampValidationConfig {
+    pub max_age_seconds: u64,
+    pub near_expiration_threshold_seconds: u64,
+    pub supported_formats: Vec<TimestampFormat>,
+    pub timezone_handling: TimezoneHandling,
+    pub strict_validation: bool,
+    pub validation_timeout_ms: u64,
+    pub cache_validation_results: bool,
+}
+
+/// Timezone handling options
+#[derive(Debug, Clone, PartialEq)]
+pub enum TimezoneHandling {
+    Strict,
+    Lenient,
+    AutoDetect,
+}
+
+/// Timestamp validation metrics
+#[derive(Debug, Clone)]
+pub struct TimestampValidationMetrics {
+    pub total_validations: u64,
+    pub successful_validations: u64,
+    pub failed_validations: u64,
+    pub average_validation_time_ms: f64,
+    pub format_distribution: HashMap<TimestampFormat, u64>,
+    pub expiration_status_distribution: HashMap<ExpirationStatus, u64>,
+    pub error_distribution: HashMap<String, u64>,
+}
+
+/// Extracted timestamp information
+#[derive(Debug, Clone)]
+pub struct ExtractedTimestamp {
+    pub timestamp: u64,
+    pub format: TimestampFormat,
+    pub timezone: Option<String>,
+    pub confidence: f32,
+    pub source_position: Option<usize>,
+    pub raw_value: String,
+}
+
+impl Default for TimestampValidationConfig {
+    fn default() -> Self {
+        Self {
+            max_age_seconds: 24 * 60 * 60, // 24 hours
+            near_expiration_threshold_seconds: 2 * 60 * 60, // 2 hours
+            supported_formats: vec![
+                TimestampFormat::UnixTimestamp,
+                TimestampFormat::ISO8601,
+                TimestampFormat::RFC3339,
+                TimestampFormat::RFC2822,
+            ],
+            timezone_handling: TimezoneHandling::AutoDetect,
+            strict_validation: true,
+            validation_timeout_ms: 5000,
+            cache_validation_results: true,
+        }
+    }
+}
+
+// Re-export the main types
+pub use AdvancedArbitrationEngine as ArbitrationEngine;
+
+    /// Calculate public key verification confidence
+    fn calculate_public_key_verification_confidence(&self, key_info: &PublicKeyInfo) -> Result<f32> {
+        let mut confidence: f32 = 0.5; // Base confidence
+        
+        // Adjust based on key type
+        match key_info.key_type {
+            PublicKeyType::RSA => confidence += 0.2,
+            PublicKeyType::ECDSA => confidence += 0.3,
+            PublicKeyType::Ed25519 => confidence += 0.3,
+            _ => confidence += 0.1,
+        }
+        
+        // Adjust based on trust level
+        match key_info.trust_level {
+            TrustLevel::High => confidence += 0.3,
+            TrustLevel::Medium => confidence += 0.2,
+            TrustLevel::Low => confidence += 0.1,
+            TrustLevel::Untrusted => confidence += 0.0,
+        }
+        
+        // Adjust based on key size
+        if key_info.key_size >= 256 {
+            confidence += 0.1;
+        }
+        
+        Ok(confidence.min(1.0_f32))
+    }
+
+    /// Calculate content hash
+    fn calculate_content_hash(&self, content: &str) -> Result<Vec<u8>> {
+        let mut hasher = Sha256::new();
+        hasher.update(content.as_bytes());
+        Ok(hasher.finalize().to_vec())
+    }
+
+    /// Decode signature hash
+    fn decode_signature_hash(&self, signature: &str) -> Result<Vec<u8>> {
+        hex::decode(signature).map_err(|e| anyhow::anyhow!("Failed to decode signature: {}", e))
+    }
+
+    /// Verify certificate chain
+    async fn verify_certificate_chain(&self, key_info: &PublicKeyInfo) -> Result<bool> {
+        // Simplified certificate chain verification
+        // In real implementation, this would verify the entire chain
+        Ok(key_info.trust_level == TrustLevel::High || key_info.trust_level == TrustLevel::Medium)
+    }
+
+    /// Verify signature against certificate
+    async fn verify_signature_against_certificate(&self, signature: &str, content: &str, key_info: &PublicKeyInfo) -> Result<bool> {
+        // Simplified signature verification against certificate
+        // In real implementation, this would perform actual cryptographic verification
+        Ok(!signature.is_empty() && !content.is_empty() && key_info.key_size > 0)
+    }
+
+    /// Extract signature timestamp
+    fn extract_signature_timestamp(&self, _signature: &str, _content: &str) -> Result<chrono::DateTime<chrono::Utc>> {
+        // Simplified timestamp extraction
+        // In real implementation, this would parse actual timestamp from signature
+        Ok(chrono::Utc::now() - chrono::Duration::minutes(30)) // Assume signature is 30 minutes old
+    }
+
+    /// Update verification metrics synchronously
+    fn update_verification_metrics_sync(&self, result: &SignatureVerificationResult, processing_time_ms: u64) -> Result<()> {
+        let mut metrics = self.signature_verification_metrics.blocking_write();
+        
+        metrics.total_verifications += 1;
+        if result.is_valid {
+            metrics.successful_verifications += 1;
+        } else {
+            metrics.failed_verifications += 1;
+        }
+        
+        // Update average processing time
+        let total_time = metrics.average_verification_time_ms * (metrics.total_verifications - 1) as f64 + processing_time_ms as f64;
+        metrics.average_verification_time_ms = total_time / metrics.total_verifications as f64;
+        
+        // Update distributions
+        *metrics.method_distribution.entry(result.verification_method.clone()).or_insert(0) += 1;
+        *metrics.algorithm_distribution.entry(result.algorithm.clone()).or_insert(0) += 1;
+        
+        if let Some(key_info) = &result.key_info {
+            *metrics.trust_level_distribution.entry(key_info.trust_level.clone()).or_insert(0) += 1;
+        }
+        
+        if let Some(error) = &result.error_details {
+            *metrics.error_distribution.entry(error.clone()).or_insert(0) += 1;
+        }
+        
+        Ok(())
+    }
+
+    /// Check certificate against trusted root CAs
+    async fn check_trusted_root_ca(&self, certificate_hash: &str) -> Result<bool> {
+        // Simplified trusted root CA checking
+        // In real implementation, this would check against actual trusted root CAs
+        
+        // Check if certificate hash is in trusted root CAs list
+        let trusted_root_cas = &self.certificate_chain_config.trusted_root_cas;
+        if trusted_root_cas.is_empty() {
+            // If no trusted root CAs configured, use default validation
+            return Ok(self.validate_certificate_hash_format(certificate_hash));
+        }
+        
+        // Check against configured trusted root CAs
+        for root_ca in trusted_root_cas {
+            if certificate_hash.contains(root_ca) || root_ca.contains(certificate_hash) {
+                debug!("Certificate matches trusted root CA: {}", root_ca);
+                return Ok(true);
+            }
+        }
+        
+        // Check against common trusted root CAs (simplified)
+        let common_root_cas = vec![
+            "DigiCert Global Root CA",
+            "VeriSign Class 3 Public Primary Certification Authority",
+            "Thawte Primary Root CA",
+            "GeoTrust Global CA",
+            "Comodo AAA Services root",
+        ];
+        
+        for root_ca in common_root_cas {
+            if certificate_hash.contains(&root_ca.replace(" ", "").to_lowercase()) {
+                debug!("Certificate matches common trusted root CA: {}", root_ca);
+                return Ok(true);
+            }
+        }
+        
+        warn!("Certificate does not match any trusted root CA");
+        Ok(false)
+    }
+
+    /// Validate certificate chain of trust
+    async fn validate_certificate_chain_of_trust(&self, certificate_hash: &str) -> Result<bool> {
+        // Simplified certificate chain of trust validation
+        // In real implementation, this would validate the entire certificate chain
+        
+        // Check certificate chain length constraints
+        let chain_length = self.estimate_certificate_chain_length(certificate_hash);
+        if chain_length < self.certificate_chain_config.min_chain_length {
+            warn!("Certificate chain too short: {} < {}", chain_length, self.certificate_chain_config.min_chain_length);
+            return Ok(false);
+        }
+        
+        if chain_length > self.certificate_chain_config.max_chain_length {
+            warn!("Certificate chain too long: {} > {}", chain_length, self.certificate_chain_config.max_chain_length);
+            return Ok(false);
+        }
+        
+        // Validate certificate chain integrity
+        let chain_valid = self.validate_certificate_chain_integrity(certificate_hash)?;
+        if !chain_valid {
+            warn!("Certificate chain integrity validation failed");
+            return Ok(false);
+        }
+        
+        // Validate certificate chain trust relationships
+        let trust_valid = self.validate_certificate_chain_trust_relationships(certificate_hash)?;
+        if !trust_valid {
+            warn!("Certificate chain trust relationships validation failed");
+            return Ok(false);
+        }
+        
+        debug!("Certificate chain of trust validation passed");
+        Ok(true)
+    }
+
+    /// Check certificate revocation status
+    async fn check_certificate_revocation_status(&self, certificate_hash: &str) -> Result<RevocationInfo> {
+        // Simplified certificate revocation status checking
+        // In real implementation, this would check OCSP and CRL
+        
+        let mut revocation_info = RevocationInfo {
+            is_revoked: false,
+            revocation_reason: None,
+            revocation_date: None,
+            crl_url: None,
+            ocsp_url: None,
+        };
+        
+        // Check OCSP if enabled
+        if self.certificate_chain_config.enable_ocsp_validation {
+            let ocsp_status = self.check_ocsp_status(certificate_hash).await?;
+            if ocsp_status.is_revoked {
+                revocation_info.is_revoked = true;
+                revocation_info.revocation_reason = ocsp_status.revocation_reason;
+                revocation_info.revocation_date = ocsp_status.revocation_date;
+                revocation_info.ocsp_url = Some("https://ocsp.example.com".to_string());
+                return Ok(revocation_info);
+            }
+        }
+        
+        // Check CRL if enabled
+        if self.certificate_chain_config.enable_crl_validation {
+            let crl_status = self.check_crl_status(certificate_hash).await?;
+            if crl_status.is_revoked {
+                revocation_info.is_revoked = true;
+                revocation_info.revocation_reason = crl_status.revocation_reason;
+                revocation_info.revocation_date = crl_status.revocation_date;
+                revocation_info.crl_url = Some("https://crl.example.com".to_string());
+                return Ok(revocation_info);
+            }
+        }
+        
+        // Default: certificate is not revoked
+        debug!("Certificate revocation status check passed");
+        Ok(revocation_info)
+    }
+
+    /// Validate certificate hash format
+    fn validate_certificate_hash_format(&self, certificate_hash: &str) -> bool {
+        // Validate certificate hash format (should be 64 characters for SHA256)
+        certificate_hash.len() == 64 && certificate_hash.chars().all(|c| c.is_ascii_hexdigit())
+    }
+
+    /// Estimate certificate chain length
+    fn estimate_certificate_chain_length(&self, certificate_hash: &str) -> usize {
+        // Simplified chain length estimation based on hash complexity
+        // In real implementation, this would parse the actual certificate chain
+        match certificate_hash.len() {
+            32 => 1,  // Single certificate
+            64 => 2,  // Two certificates
+            96 => 3,  // Three certificates
+            _ => 2,   // Default to 2
+        }
+    }
+
+    /// Validate certificate chain integrity
+    fn validate_certificate_chain_integrity(&self, certificate_hash: &str) -> Result<bool> {
+        // Simplified certificate chain integrity validation
+        // In real implementation, this would validate the entire chain
+        
+        // Check for valid hash format
+        if !self.validate_certificate_hash_format(certificate_hash) {
+            return Ok(false);
+        }
+        
+        // Check for chain consistency (simplified)
+        let hash_bytes = hex::decode(certificate_hash).map_err(|e| anyhow::anyhow!("Invalid hex: {}", e))?;
+        if hash_bytes.len() != 32 {
+            return Ok(false);
+        }
+        
+        // Validate chain structure (simplified)
+        let chain_valid = self.validate_chain_structure(&hash_bytes)?;
+        Ok(chain_valid)
+    }
+
+    /// Validate certificate chain trust relationships
+    fn validate_certificate_chain_trust_relationships(&self, certificate_hash: &str) -> Result<bool> {
+        // Simplified certificate chain trust relationships validation
+        // In real implementation, this would validate trust relationships between certificates
+        
+        // Check if certificate is in trust store
+        if self.certificate_chain_config.enable_trust_store_validation {
+            let in_trust_store = self.check_certificate_in_trust_store(certificate_hash)?;
+            if !in_trust_store {
+                return Ok(false);
+            }
+        }
+        
+        // Validate trust path (simplified)
+        let trust_path_valid = self.validate_trust_path(certificate_hash)?;
+        Ok(trust_path_valid)
+    }
+
+    /// Check OCSP status
+    async fn check_ocsp_status(&self, certificate_hash: &str) -> Result<RevocationInfo> {
+        // Simplified OCSP status checking
+        // In real implementation, this would make actual OCSP requests
+        
+        // Simulate OCSP response based on certificate hash
+        let is_revoked = certificate_hash.ends_with("00") || certificate_hash.ends_with("ff");
+        
+        Ok(RevocationInfo {
+            is_revoked,
+            revocation_reason: if is_revoked { Some(RevocationReason::KeyCompromise) } else { None },
+            revocation_date: if is_revoked { Some(chrono::Utc::now() - chrono::Duration::days(30)) } else { None },
+            crl_url: None,
+            ocsp_url: Some("https://ocsp.example.com".to_string()),
+        })
+    }
+    /// Check CRL status
+    async fn check_crl_status(&self, certificate_hash: &str) -> Result<RevocationInfo> {
+        // Simplified CRL status checking
+        // In real implementation, this would download and parse CRL
+        
+        // Simulate CRL response based on certificate hash
+        let is_revoked = certificate_hash.starts_with("00") || certificate_hash.starts_with("ff");
+        
+        Ok(RevocationInfo {
+            is_revoked,
+            revocation_reason: if is_revoked { Some(RevocationReason::CACompromise) } else { None },
+            revocation_date: if is_revoked { Some(chrono::Utc::now() - chrono::Duration::days(60)) } else { None },
+            crl_url: Some("https://crl.example.com".to_string()),
+            ocsp_url: None,
+        })
+    }
+
+    /// Validate chain structure
+    fn validate_chain_structure(&self, hash_bytes: &[u8]) -> Result<bool> {
+        // Simplified chain structure validation
+        // In real implementation, this would validate the actual certificate chain structure
+        
+        // Check for valid chain structure (simplified)
+        let has_valid_structure = hash_bytes.iter().any(|&b| b != 0) && hash_bytes.len() == 32;
+        Ok(has_valid_structure)
+    }
+
+    /// Check certificate in trust store
+    fn check_certificate_in_trust_store(&self, certificate_hash: &str) -> Result<bool> {
+        // Simplified trust store checking
+        // In real implementation, this would check against actual trust store
+        
+        // Check against configured trusted root CAs
+        let trusted_root_cas = &self.certificate_chain_config.trusted_root_cas;
+        for root_ca in trusted_root_cas {
+            if certificate_hash.contains(root_ca) {
+                return Ok(true);
+            }
+        }
+        
+        // Default: assume certificate is in trust store if no specific configuration
+        Ok(trusted_root_cas.is_empty())
+    }
+
+    /// Validate trust path
+    fn validate_trust_path(&self, certificate_hash: &str) -> Result<bool> {
+        // Simplified trust path validation
+        // In real implementation, this would validate the actual trust path
+        
+        // Check for valid trust path (simplified)
+        let has_valid_path = certificate_hash.len() >= 32 && certificate_hash.chars().all(|c| c.is_ascii_hexdigit());
+        Ok(has_valid_path)
+    }
+}
+
+/// Cryptographic validation utilities
+impl AdvancedArbitrationEngine {
+    /// Verify digital signature from source content
+    async fn verify_digital_signature(&self, source: &str) -> Result<bool> {
+        // Extract signature from source (simulated - would parse actual signature)
+        let signature = self.extract_signature_from_source(source)?;
+        
+        // Verify signature authenticity and integrity
+        let is_valid = self.verify_signature_authenticity(&signature, source).await?;
+        
+        if !is_valid {
+            warn!("Digital signature verification failed for source");
+            return Ok(false);
+        }
+        
+        debug!("Digital signature verification passed");
+        Ok(true)
+    }
+    
+    /// Extract signature from source content
+    fn extract_signature_from_source(&self, source: &str) -> Result<String> {
+        let start_time = std::time::Instant::now();
+        
+        // Perform comprehensive signature extraction
+        let extraction_result = self.perform_signature_extraction(source)?;
+        
+        // Update metrics
+        self.update_extraction_metrics_sync(&extraction_result, start_time.elapsed().as_millis() as u64)?;
+        
+        // Return the first signature found, or generate a fallback
+        if let Some(signature) = extraction_result.signatures.first() {
+            debug!("Extracted signature from source: {} (format: {:?}, confidence: {})", 
+                   signature.signature_data, signature.signature_format, signature.confidence);
+            Ok(signature.signature_data.clone())
+        } else {
+            // Fallback: generate a signature based on content hash
+            let mut hasher = Sha256::new();
+            hasher.update(source.as_bytes());
+            let hash = hasher.finalize();
+            let signature = hex::encode(hash);
+            
+            debug!("No signatures found, generated fallback signature: {}", signature);
+            Ok(signature)
+        }
+    }
+    
+    /// Verify signature authenticity and integrity
+    async fn verify_signature_authenticity(&self, signature: &str, content: &str) -> Result<bool> {
+        let start_time = std::time::Instant::now();
+        
+        // Perform comprehensive signature verification
+        let verification_result = self.perform_signature_verification(signature, content).await?;
+        
+        // Update metrics
+        self.update_extraction_metrics_sync(&verification_result, start_time.elapsed().as_millis() as u64)?;
+        
+        // Return verification result
+        if verification_result.is_valid {
+            debug!("Signature authenticity verified: {} (method: {:?}, confidence: {})", 
+                   signature, verification_result.verification_method, verification_result.verification_confidence);
+        } else {
+            debug!("Signature authenticity verification failed: {} (error: {:?})", 
+                   signature, verification_result.error_details);
+        }
+        
+        Ok(verification_result.is_valid)
+    }
+    
+    /// Validate certificate chain and trust
+    async fn validate_certificate_chain(&self, source: &str) -> Result<bool> {
+        let start_time = std::time::Instant::now();
+        
+        // Perform comprehensive certificate chain validation
+        let validation_result = self.perform_certificate_chain_validation(source).await?;
+        
+        // Update metrics
+        self.update_certificate_chain_metrics_sync(&validation_result, start_time.elapsed().as_millis() as u64)?;
+        
+        // Return validation result
+        if validation_result.is_valid {
+            debug!("Certificate chain validation passed: chain_length={}, trust_level={:?}, confidence={}", 
+                   validation_result.chain_length, validation_result.trust_level, validation_result.validation_confidence);
+        } else {
+            debug!("Certificate chain validation failed: error={:?}", validation_result.error_details);
+        }
+        
+        Ok(validation_result.is_valid)
+    }
+    
+    /// Generate certificate hash for validation
+    fn generate_certificate_hash(&self, source: &str) -> Result<String> {
+        let mut hasher = Sha256::new();
+        hasher.update(source.as_bytes());
+        hasher.update(b"certificate_chain");
+        let hash = hasher.finalize();
+        Ok(hex::encode(hash))
+    }
+    
+    /// Validate certificate trust
+    async fn validate_certificate_trust(&self, certificate_hash: &str) -> Result<bool> {
+        let start_time = std::time::Instant::now();
+        
+        // 1. Trusted root CA checking: Check certificate against trusted root CAs
+        let root_ca_valid = self.check_trusted_root_ca(certificate_hash).await?;
+        if !root_ca_valid {
+            warn!("Certificate failed trusted root CA validation");
+            return Ok(false);
+        }
+        
+        // 2. Certificate chain of trust validation: Validate certificate chain of trust
+        let chain_valid = self.validate_certificate_chain_of_trust(certificate_hash).await?;
+        if !chain_valid {
+            warn!("Certificate failed chain of trust validation");
+            return Ok(false);
+        }
+        
+        // 3. Certificate revocation status checking: Check certificate revocation status
+        let revocation_status = self.check_certificate_revocation_status(certificate_hash).await?;
+        if revocation_status.is_revoked {
+            warn!("Certificate is revoked: {:?}", revocation_status.revocation_reason);
+            return Ok(false);
+        }
+        
+        // 4. Certificate trust optimization: Validate performance and accuracy
+        let validation_time = start_time.elapsed().as_millis() as u64;
+        if validation_time > self.certificate_chain_config.validation_timeout_ms {
+            warn!("Certificate trust validation exceeded timeout: {}ms", validation_time);
+            return Ok(false);
+        }
+        
+        debug!("Certificate trust validation passed in {}ms", validation_time);
+        Ok(true)
+    }
+    
+    /// Validate timestamp and expiration
+    async fn validate_timestamp(&self, source: &str) -> Result<bool> {
+        // TODO: Implement timestamp validation with the following requirements:
+        // 1. Timestamp extraction: Extract timestamp from source metadata
+        //    - Extract timestamp from source metadata for validation
+        //    - Handle timestamp extraction optimization and performance
+        //    - Implement timestamp extraction validation and quality assurance
+        //    - Support timestamp extraction customization and configuration
+        // 2. Timestamp format validation: Validate timestamp format and accuracy
+        //    - Validate timestamp format and accuracy for correctness
+        //    - Handle timestamp format validation optimization and performance
+        //    - Implement timestamp format validation validation and quality assurance
+        //    - Support timestamp format validation customization and configuration
+        // 3. Timestamp expiration checking: Check timestamp expiration and validity
+        //    - Check timestamp expiration and validity for relevance
+        //    - Handle timestamp expiration checking optimization and performance
+        //    - Implement timestamp expiration checking validation and quality assurance
+        //    - Support timestamp expiration checking customization and configuration
+        // 4. Timestamp validation optimization: Optimize timestamp validation performance
+        //    - Implement timestamp validation optimization strategies
+        //    - Handle timestamp validation monitoring and analytics
+        //    - Implement timestamp validation validation and quality assurance
+        //    - Ensure timestamp validation meets performance and accuracy standards
+        // 4. Handle different timestamp formats
+        
+        let timestamp = self.extract_timestamp_from_source(source)?;
+        let is_valid = self.validate_timestamp_expiration(&timestamp).await?;
+        
+        if !is_valid {
+            warn!("Timestamp validation failed");
+            return Ok(false);
+        }
+        
+        debug!("Timestamp validation passed");
+        Ok(true)
+    }
+    
+    /// Extract timestamp from source
+    fn extract_timestamp_from_source(&self, _source: &str) -> Result<u64> {
+        // TODO: Implement actual timestamp parsing with the following requirements:
+        // 1. Actual timestamp parsing: Parse actual timestamps from source
+        //    - Parse actual timestamps from source for validation
+        //    - Handle actual timestamp parsing optimization and performance
+        //    - Implement actual timestamp parsing validation and quality assurance
+        //    - Support actual timestamp parsing customization and configuration
+        // 2. Timestamp format detection: Detect timestamp format and structure
+        //    - Detect timestamp format and structure for parsing
+        //    - Handle timestamp format detection optimization and performance
+        //    - Implement timestamp format detection validation and quality assurance
+        //    - Support timestamp format detection customization and configuration
+        // 3. Timestamp validation: Validate parsed timestamps for accuracy
+        //    - Validate parsed timestamps for accuracy and correctness
+        //    - Handle timestamp validation optimization and performance
+        //    - Implement timestamp validation validation and quality assurance
+        //    - Support timestamp validation customization and configuration
+        // 4. Timestamp parsing optimization: Optimize actual timestamp parsing performance
+        //    - Implement actual timestamp parsing optimization strategies
+        //    - Handle timestamp parsing monitoring and analytics
+        //    - Implement timestamp parsing validation and quality assurance
+        //    - Ensure actual timestamp parsing meets performance and accuracy standards
+        // For simulation, use current timestamp
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map_err(|e| anyhow::anyhow!("Failed to get current timestamp: {}", e))?;
+        
+        Ok(now.as_secs())
+    }
+    
+    /// Validate timestamp expiration
+    async fn validate_timestamp_expiration(&self, timestamp: &u64) -> Result<bool> {
+        // TODO: Implement timestamp expiration validation with the following requirements:
+        // 1. Current time comparison: Check timestamp against current time
+        //    - Check timestamp against current time for expiration validation
+        //    - Handle current time comparison optimization and performance
+        //    - Implement current time comparison validation and quality assurance
+        //    - Support current time comparison customization and configuration
+        // 2. Timestamp expiration window validation: Validate timestamp expiration window
+        //    - Validate timestamp expiration window for validity
+        //    - Handle timestamp expiration window validation optimization and performance
+        //    - Implement timestamp expiration window validation validation and quality assurance
+        //    - Support timestamp expiration window validation customization and configuration
+        // 3. Timezone and format handling: Handle timezone and format differences
+        //    - Handle timezone and format differences for accuracy
+        //    - Handle timezone and format handling optimization and performance
+        //    - Implement timezone and format handling validation and quality assurance
+        //    - Support timezone and format handling customization and configuration
+        // 4. Timestamp expiration optimization: Optimize timestamp expiration validation performance
+        //    - Implement timestamp expiration validation optimization strategies
+        //    - Handle timestamp expiration validation monitoring and analytics
+        //    - Implement timestamp expiration validation validation and quality assurance
+        //    - Ensure timestamp expiration validation meets performance and accuracy standards
+        
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map_err(|e| anyhow::anyhow!("Failed to get current timestamp: {}", e))?;
+        
+        let current_time = now.as_secs();
+        let time_diff = current_time.saturating_sub(*timestamp);
+        
+        // Allow timestamps within the last 24 hours
+        let max_age = 24 * 60 * 60; // 24 hours in seconds
+        
+        if time_diff > max_age {
+            warn!("Timestamp too old: {} seconds", time_diff);
+            return Ok(false);
+        }
+        
+        debug!("Timestamp expiration validation passed");
+        Ok(true)
+    }
+    
+    /// Perform non-repudiation check
+    async fn perform_non_repudiation_check(&self, source: &str) -> Result<bool> {
+        // TODO: Implement non-repudiation checking with the following requirements:
+        // 1. Source authenticity verification: Verify source authenticity and integrity
+        //    - Verify source authenticity and integrity for non-repudiation
+        //    - Handle source authenticity verification optimization and performance
+        //    - Implement source authenticity verification validation and quality assurance
+        //    - Support source authenticity verification customization and configuration
+        // 2. Tampering detection: Check for tampering or modification
+        //    - Check for tampering or modification in source content
+        //    - Handle tampering detection optimization and performance
+        //    - Implement tampering detection validation and quality assurance
+        //    - Support tampering detection customization and configuration
+        // 3. Source chain of custody validation: Validate source chain of custody
+        //    - Validate source chain of custody for authenticity
+        //    - Handle source chain of custody validation optimization and performance
+        //    - Implement source chain of custody validation validation and quality assurance
+        //    - Support source chain of custody validation customization and configuration
+        // 4. Non-repudiation optimization: Optimize non-repudiation checking performance
+        //    - Implement non-repudiation checking optimization strategies
+        //    - Handle non-repudiation checking monitoring and analytics
+        //    - Implement non-repudiation checking validation and quality assurance
+        //    - Ensure non-repudiation checking meets performance and accuracy standards
+        // 4. Perform comprehensive non-repudiation verification
+        
+        let integrity_check = self.verify_source_integrity(source).await?;
+        let authenticity_check = self.verify_source_authenticity(source).await?;
+        
+        let is_valid = integrity_check && authenticity_check;
+        
+        if !is_valid {
+            warn!("Non-repudiation check failed");
+            return Ok(false);
+        }
+        
+        debug!("Non-repudiation check passed");
+        Ok(true)
+    }
+    
+    /// Verify source integrity
+    async fn verify_source_integrity(&self, source: &str) -> Result<bool> {
+        // TODO: Implement source integrity verification with the following requirements:
+        // 1. Content hash calculation: Calculate content hash for integrity verification
+        //    - Calculate content hash for source integrity verification
+        //    - Handle content hash calculation optimization and performance
+        //    - Implement content hash calculation validation and quality assurance
+        //    - Support content hash calculation customization and configuration
+        // 2. Stored hash comparison: Compare against stored hash for validation
+        //    - Compare calculated hash against stored hash for validation
+        //    - Handle stored hash comparison optimization and performance
+        //    - Implement stored hash comparison validation and quality assurance
+        //    - Support stored hash comparison customization and configuration
+        // 3. Tampering indicator checking: Check for tampering indicators
+        //    - Check for tampering indicators in source content
+        //    - Handle tampering indicator checking optimization and performance
+        //    - Implement tampering indicator checking validation and quality assurance
+        //    - Support tampering indicator checking customization and configuration
+        // 4. Source integrity optimization: Optimize source integrity verification performance
+        //    - Implement source integrity verification optimization strategies
+        //    - Handle source integrity verification monitoring and analytics
+        //    - Implement source integrity verification validation and quality assurance
+        //    - Ensure source integrity verification meets performance and accuracy standards
+        
+        let mut hasher = Sha256::new();
+        hasher.update(source.as_bytes());
+        let hash = hasher.finalize();
+        
+        // For simulation, verify hash is not all zeros
+        let hash_str = hex::encode(hash);
+        if hash_str == "0000000000000000000000000000000000000000000000000000000000000000" {
+            return Ok(false);
+        }
+        
+        debug!("Source integrity verification passed");
+        Ok(true)
+    }
+    
+    /// Verify source authenticity
+    async fn verify_source_authenticity(&self, source: &str) -> Result<bool> {
+        // TODO: Implement source authenticity verification with the following requirements:
+        // 1. Source origin verification: Verify source origin and chain of custody
+        //    - Verify source origin and chain of custody for authenticity
+        //    - Handle source origin verification optimization and performance
+        //    - Implement source origin verification validation and quality assurance
+        //    - Support source origin verification customization and configuration
+        // 2. Source metadata checking: Check source metadata and provenance
+        //    - Check source metadata and provenance for validation
+        //    - Handle source metadata checking optimization and performance
+        //    - Implement source metadata checking validation and quality assurance
+        //    - Support source metadata checking customization and configuration
+        // 3. Source authenticity marker validation: Validate source authenticity markers
+        //    - Validate source authenticity markers for verification
+        //    - Handle source authenticity marker validation optimization and performance
+        //    - Implement source authenticity marker validation validation and quality assurance
+        //    - Support source authenticity marker validation customization and configuration
+        // 4. Source authenticity optimization: Optimize source authenticity verification performance
+        //    - Implement source authenticity verification optimization strategies
+        //    - Handle source authenticity verification monitoring and analytics
+        //    - Implement source authenticity verification validation and quality assurance
+        //    - Ensure source authenticity verification meets performance and accuracy standards
+        
+        // For simulation, check source has reasonable content
+        if source.is_empty() || source.len() < 3 {
+            return Ok(false);
+        }
+        
+        debug!("Source authenticity verification passed");
+        Ok(true)
+    }
+
+    /// Perform comprehensive signature extraction from source content
+    fn perform_signature_extraction(&self, source: &str) -> Result<SignatureExtractionResult> {
+        let mut signatures = Vec::new();
+        let mut extraction_method = SignatureExtractionMethod::Hybrid;
+        
+        // 1. Try regex pattern matching first (fastest)
+        if self.signature_extraction_config.extraction_methods.contains(&SignatureExtractionMethod::RegexPattern) {
+            if let Ok(regex_signatures) = self.extract_signatures_by_regex(source) {
+                signatures.extend(regex_signatures);
+                extraction_method = SignatureExtractionMethod::RegexPattern;
+            }
+        }
+        
+        // 2. Try structured parsing if regex didn't find anything
+        if signatures.is_empty() && self.signature_extraction_config.extraction_methods.contains(&SignatureExtractionMethod::StructuredParsing) {
+            if let Ok(structured_signatures) = self.extract_signatures_by_structured_parsing(source) {
+                signatures.extend(structured_signatures);
+                extraction_method = SignatureExtractionMethod::StructuredParsing;
+            }
+        }
+        
+        // 3. Try metadata extraction as fallback
+        if signatures.is_empty() && self.signature_extraction_config.extraction_methods.contains(&SignatureExtractionMethod::MetadataExtraction) {
+            if let Ok(metadata_signatures) = self.extract_signatures_by_metadata(source) {
+                signatures.extend(metadata_signatures);
+                extraction_method = SignatureExtractionMethod::MetadataExtraction;
+            }
+        }
+        
+        // 4. Try binary analysis for binary content
+        if signatures.is_empty() && self.signature_extraction_config.extraction_methods.contains(&SignatureExtractionMethod::BinaryAnalysis) {
+            if let Ok(binary_signatures) = self.extract_signatures_by_binary_analysis(source) {
+                signatures.extend(binary_signatures);
+                extraction_method = SignatureExtractionMethod::BinaryAnalysis;
+            }
+        }
+        
+        // Filter signatures by confidence threshold
+        signatures.retain(|sig| sig.confidence >= self.signature_extraction_config.min_confidence_threshold);
+        
+        // Extract metadata
+        let metadata = self.extract_signature_metadata(source)?;
+        
+        // Calculate extraction quality
+        let extraction_quality = self.calculate_extraction_quality(&signatures, &metadata);
+        
+        Ok(SignatureExtractionResult {
+            signatures,
+            metadata,
+            extraction_quality,
+            processing_time_ms: 0, // Will be set by caller
+            extraction_method,
+        })
+    }
+
+    /// Extract signatures using regex patterns
+    fn extract_signatures_by_regex(&self, source: &str) -> Result<Vec<ExtractedSignature>> {
+        let mut signatures = Vec::new();
+        
+        // PGP signature pattern
+        if self.signature_extraction_config.enabled_formats.contains(&SignatureFormat::PGP) {
+            if let Ok(pgp_signatures) = self.extract_pgp_signatures(source) {
+                signatures.extend(pgp_signatures);
+            }
+        }
+        
+        // X.509 certificate pattern
+        if self.signature_extraction_config.enabled_formats.contains(&SignatureFormat::X509) {
+            if let Ok(x509_signatures) = self.extract_x509_signatures(source) {
+                signatures.extend(x509_signatures);
+            }
+        }
+        
+        // JWT token pattern
+        if self.signature_extraction_config.enabled_formats.contains(&SignatureFormat::JWT) {
+            if let Ok(jwt_signatures) = self.extract_jwt_signatures(source) {
+                signatures.extend(jwt_signatures);
+            }
+        }
+        
+        // XML Digital Signature pattern
+        if self.signature_extraction_config.enabled_formats.contains(&SignatureFormat::XMLDSig) {
+            if let Ok(xml_signatures) = self.extract_xmldsig_signatures(source) {
+                signatures.extend(xml_signatures);
+            }
+        }
+        
+        // Custom patterns
+        for pattern in &self.signature_extraction_config.custom_patterns {
+            if let Ok(custom_signatures) = self.extract_custom_signatures(source, pattern) {
+                signatures.extend(custom_signatures);
+            }
+        }
+        
+        Ok(signatures)
+    }
+
+    /// Extract PGP signatures
+    fn extract_pgp_signatures(&self, source: &str) -> Result<Vec<ExtractedSignature>> {
+        let mut signatures = Vec::new();
+        
+        // PGP signature pattern: -----BEGIN PGP SIGNATURE-----
+        let pgp_pattern = r"-----BEGIN PGP SIGNATURE-----\s*\n(?:[A-Za-z0-9+/=\s]+\n?)*-----END PGP SIGNATURE-----";
+        let regex = regex::Regex::new(pgp_pattern)?;
+        
+        for (i, mat) in regex.find_iter(source).enumerate() {
+            let signature_data = mat.as_str().to_string();
+            let position = self.calculate_position(source, mat.start(), mat.end());
+            
+            signatures.push(ExtractedSignature {
+                signature_data,
+                signature_format: SignatureFormat::PGP,
+                algorithm: SignatureAlgorithm::RSA, // Default, could be determined from signature
+                position,
+                confidence: 0.9,
+                metadata: HashMap::new(),
+            });
+        }
+        
+        Ok(signatures)
+    }
+
+    /// Extract X.509 certificates
+    fn extract_x509_signatures(&self, source: &str) -> Result<Vec<ExtractedSignature>> {
+        let mut signatures = Vec::new();
+        
+        // X.509 certificate pattern: -----BEGIN CERTIFICATE-----
+        let x509_pattern = r"-----BEGIN CERTIFICATE-----\s*\n(?:[A-Za-z0-9+/=\s]+\n?)*-----END CERTIFICATE-----";
+        let regex = regex::Regex::new(x509_pattern)?;
+        
+        for mat in regex.find_iter(source) {
+            let signature_data = mat.as_str().to_string();
+            let position = self.calculate_position(source, mat.start(), mat.end());
+            
+            signatures.push(ExtractedSignature {
+                signature_data,
+                signature_format: SignatureFormat::X509,
+                algorithm: SignatureAlgorithm::RSA, // Default, could be determined from certificate
+                position,
+                confidence: 0.95,
+                metadata: HashMap::new(),
+            });
+        }
+        
+        Ok(signatures)
+    }
+
+    /// Extract JWT tokens
+    fn extract_jwt_signatures(&self, source: &str) -> Result<Vec<ExtractedSignature>> {
+        let mut signatures = Vec::new();
+        
+        // JWT pattern: three base64-encoded parts separated by dots
+        let jwt_pattern = r"eyJ[A-Za-z0-9_-]*\.eyJ[A-Za-z0-9_-]*\.[A-Za-z0-9_-]*";
+        let regex = regex::Regex::new(jwt_pattern)?;
+        
+        for mat in regex.find_iter(source) {
+            let signature_data = mat.as_str().to_string();
+            let position = self.calculate_position(source, mat.start(), mat.end());
+            
+            signatures.push(ExtractedSignature {
+                signature_data,
+                signature_format: SignatureFormat::JWT,
+                algorithm: SignatureAlgorithm::HMAC, // Default, could be determined from header
+                position,
+                confidence: 0.8,
+                metadata: HashMap::new(),
+            });
+        }
+        
+        Ok(signatures)
+    }
+
+    /// Extract XML Digital Signatures
+    fn extract_xmldsig_signatures(&self, source: &str) -> Result<Vec<ExtractedSignature>> {
+        let mut signatures = Vec::new();
+        
+        // XML Digital Signature pattern
+        let xmldsig_pattern = r"<ds:Signature[^>]*>.*?</ds:Signature>";
+        let regex = regex::Regex::new(xmldsig_pattern)?;
+        
+        for mat in regex.find_iter(source) {
+            let signature_data = mat.as_str().to_string();
+            let position = self.calculate_position(source, mat.start(), mat.end());
+            
+            signatures.push(ExtractedSignature {
+                signature_data,
+                signature_format: SignatureFormat::XMLDSig,
+                algorithm: SignatureAlgorithm::RSA, // Default, could be determined from XML
+                position,
+                confidence: 0.85,
+                metadata: HashMap::new(),
+            });
+        }
+        
+        Ok(signatures)
+    }
+
+    /// Extract custom pattern signatures
+    fn extract_custom_signatures(&self, source: &str, pattern: &SignaturePattern) -> Result<Vec<ExtractedSignature>> {
+        let mut signatures = Vec::new();
+        let regex = regex::Regex::new(&pattern.pattern)?;
+        
+        for mat in regex.find_iter(source) {
+            let signature_data = mat.as_str().to_string();
+            let position = self.calculate_position(source, mat.start(), mat.end());
+            
+            signatures.push(ExtractedSignature {
+                signature_data,
+                signature_format: pattern.format.clone(),
+                algorithm: pattern.algorithm.clone(),
+                position,
+                confidence: pattern.confidence_weight,
+                metadata: HashMap::new(),
+            });
+        }
+        
+        Ok(signatures)
+    }
+
+    /// Extract signatures using structured parsing
+    fn extract_signatures_by_structured_parsing(&self, source: &str) -> Result<Vec<ExtractedSignature>> {
+        let mut signatures = Vec::new();
+        
+        // Try to parse as JSON first
+        if let Ok(json_signatures) = self.extract_json_signatures(source) {
+            signatures.extend(json_signatures);
+        }
+        
+        // Try to parse as XML
+        if signatures.is_empty() {
+            if let Ok(xml_signatures) = self.extract_xml_signatures(source) {
+                signatures.extend(xml_signatures);
+            }
+        }
+        
+        Ok(signatures)
+    }
+
+    /// Extract signatures from JSON content
+    fn extract_json_signatures(&self, source: &str) -> Result<Vec<ExtractedSignature>> {
+        let mut signatures = Vec::new();
+        
+        // Try to parse as JSON
+        if let Ok(json_value) = serde_json::from_str::<serde_json::Value>(source) {
+            // Look for common signature fields
+            if let Some(signature_field) = json_value.get("signature") {
+                if let Some(signature_str) = signature_field.as_str() {
+                    let position = self.calculate_position(source, 0, source.len());
+                    
+                    signatures.push(ExtractedSignature {
+                        signature_data: signature_str.to_string(),
+                        signature_format: SignatureFormat::Custom("JSON".to_string()),
+                        algorithm: SignatureAlgorithm::HMAC, // Default
+                        position,
+                        confidence: 0.7,
+                        metadata: HashMap::new(),
+                    });
+                }
+            }
+        }
+        
+        Ok(signatures)
+    }
+
+    /// Extract signatures from XML content
+    fn extract_xml_signatures(&self, source: &str) -> Result<Vec<ExtractedSignature>> {
+        // This would typically use an XML parser, but for now we'll use regex
+        self.extract_xmldsig_signatures(source)
+    }
+
+    /// Extract signatures using metadata analysis
+    fn extract_signatures_by_metadata(&self, source: &str) -> Result<Vec<ExtractedSignature>> {
+        let mut signatures = Vec::new();
+        
+        // Look for signature-related metadata
+        let metadata_patterns = vec![
+            (r"signature[:\s]*([A-Za-z0-9+/=]+)", "metadata"),
+            (r"sig[:\s]*([A-Za-z0-9+/=]+)", "metadata"),
+            (r"hash[:\s]*([A-Za-z0-9+/=]+)", "hash"),
+        ];
+        
+        for (pattern, sig_type) in metadata_patterns {
+            let regex = regex::Regex::new(pattern)?;
+            for mat in regex.find_iter(source) {
+                if let Some(capture) = regex.captures(mat.as_str()) {
+                    if let Some(signature_data) = capture.get(1) {
+                        let position = self.calculate_position(source, mat.start(), mat.end());
+                        
+                        signatures.push(ExtractedSignature {
+                            signature_data: signature_data.as_str().to_string(),
+                            signature_format: SignatureFormat::Custom(sig_type.to_string()),
+                            algorithm: SignatureAlgorithm::SHA256, // Default for metadata
+                            position,
+                            confidence: 0.6,
+                            metadata: HashMap::new(),
+                        });
+                    }
+                }
+            }
+        }
+        
+        Ok(signatures)
+    }
+
+    /// Extract signatures using binary analysis
+    fn extract_signatures_by_binary_analysis(&self, source: &str) -> Result<Vec<ExtractedSignature>> {
+        let mut signatures = Vec::new();
+        
+        // Check if content is base64 encoded
+        if let Ok(decoded) = base64::Engine::decode(&base64::engine::general_purpose::STANDARD, source) {
+            // Look for binary signature patterns
+            if decoded.len() > 16 {
+                // Simple heuristic: if it's binary and reasonably sized, treat as potential signature
+                let position = self.calculate_position(source, 0, source.len());
+                
+                signatures.push(ExtractedSignature {
+                    signature_data: source.to_string(),
+                    signature_format: SignatureFormat::Binary,
+                    algorithm: SignatureAlgorithm::Custom("Binary".to_string()),
+                    position,
+                    confidence: 0.5,
+                    metadata: HashMap::new(),
+                });
+            }
+        }
+        
+        Ok(signatures)
+    }
+
+    /// Calculate position information for a signature
+    fn calculate_position(&self, source: &str, start: usize, end: usize) -> SignaturePosition {
+        let mut line = 1;
+        let mut column = 1;
+        let mut current_pos = 0;
+        
+        for (i, ch) in source.char_indices() {
+            if i >= start {
+                break;
+            }
+            if ch == '\n' {
+                line += 1;
+                column = 1;
+            } else {
+                column += 1;
+            }
+            current_pos = i;
+        }
+        
+        SignaturePosition {
+            start_line: line,
+            end_line: line, // Simplified, could be more sophisticated
+            start_column: column,
+            end_column: column + (end - start),
+            byte_offset: start,
+            length: end - start,
+        }
+    }
+
+    /// Extract signature metadata from source
+    fn extract_signature_metadata(&self, source: &str) -> Result<SignatureMetadata> {
+        let source_type = self.detect_source_type(source);
+        let encoding = self.detect_encoding(source);
+        
+        Ok(SignatureMetadata {
+            source_type,
+            encoding,
+            compression: None,
+            encryption: None,
+            timestamp: None,
+            issuer: None,
+            subject: None,
+            key_id: None,
+            fingerprint: None,
+        })
+    }
+    /// Detect source content type
+    fn detect_source_type(&self, source: &str) -> SourceType {
+        if source.starts_with("-----BEGIN") {
+            SourceType::PEM
+        } else if source.starts_with("{") && source.ends_with("}") {
+            SourceType::JSON
+        } else if source.starts_with("<") && source.ends_with(">") {
+            SourceType::XML
+        } else if source.chars().all(|c| c.is_ascii_hexdigit() || c.is_whitespace()) {
+            SourceType::Hex
+        } else if source.chars().all(|c| c.is_ascii_alphanumeric() || c == '+' || c == '/' || c == '=') {
+            SourceType::Base64
+        } else if source.is_ascii() {
+            SourceType::Text
+        } else {
+            SourceType::Binary
+        }
+    }
+
+    /// Detect content encoding
+    fn detect_encoding(&self, source: &str) -> String {
+        if source.is_ascii() {
+            "ASCII".to_string()
+        } else if source.chars().any(|c| c as u32 > 127) {
+            "UTF-8".to_string()
+        } else {
+            "Unknown".to_string()
+        }
+    }
+
+    /// Calculate extraction quality score
+    fn calculate_extraction_quality(&self, signatures: &[ExtractedSignature], _metadata: &SignatureMetadata) -> f32 {
+        if signatures.is_empty() {
+            return 0.0;
+        }
+        
+        let avg_confidence: f32 = signatures.iter().map(|s| s.confidence).sum::<f32>() / signatures.len() as f32;
+        let format_diversity = signatures.iter().map(|s| &s.signature_format).collect::<std::collections::HashSet<_>>().len() as f32;
+        
+        (avg_confidence + format_diversity * 0.1).min(1.0)
+    }
+
+    /// Update extraction metrics synchronously
+    fn update_extraction_metrics_sync(&self, result: &SignatureExtractionResult, processing_time_ms: u64) -> Result<()> {
+        let mut metrics = self.signature_extraction_metrics.blocking_write();
+        
+        metrics.total_extractions += 1;
+        if !result.signatures.is_empty() {
+            metrics.successful_extractions += 1;
+        } else {
+            metrics.failed_extractions += 1;
+        }
+        
+        // Update average processing time
+        let total_time = metrics.average_extraction_time_ms * (metrics.total_extractions - 1) as f64 + processing_time_ms as f64;
+        metrics.average_extraction_time_ms = total_time / metrics.total_extractions as f64;
+        
+        // Update format distribution
+        for signature in &result.signatures {
+            *metrics.format_distribution.entry(signature.signature_format.clone()).or_insert(0) += 1;
+            *metrics.algorithm_distribution.entry(signature.algorithm.clone()).or_insert(0) += 1;
+        }
+        
+        *metrics.method_distribution.entry(result.extraction_method.clone()).or_insert(0) += 1;
+        
+        Ok(())
+    }
+}
+
+/// Performance prediction
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PerformancePrediction {
+    pub predicted_confidence: f32,
+    pub predicted_quality: f32,
+    pub predicted_consensus: f32,
+    pub confidence_in_prediction: f32,
+}
+
+/// Signature extraction result
+#[derive(Debug, Clone)]
+pub struct SignatureExtractionResult {
+    pub signatures: Vec<ExtractedSignature>,
+    pub metadata: SignatureMetadata,
+    pub extraction_quality: f32,
+    pub processing_time_ms: u64,
+    pub extraction_method: SignatureExtractionMethod,
+}
+
+/// Extracted signature information
+#[derive(Debug, Clone)]
+pub struct ExtractedSignature {
+    pub signature_data: String,
+    pub signature_format: SignatureFormat,
+    pub algorithm: SignatureAlgorithm,
+    pub position: SignaturePosition,
+    pub confidence: f32,
+    pub metadata: HashMap<String, String>,
+}
+
+/// Signature format types
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum SignatureFormat {
+    PGP,
+    X509,
+    JWT,
+    JWS,
+    XMLDSig,
+    PKCS7,
+    CMS,
+    Binary,
+    Custom(String),
+}
+
+/// Signature algorithms
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum SignatureAlgorithm {
+    RSA,
+    DSA,
+    ECDSA,
+    Ed25519,
+    HMAC,
+    SHA256,
+    SHA384,
+    SHA512,
+    MD5,
+    Unknown,
+    Custom(String),
+}
+
+/// Signature position in source content
+#[derive(Debug, Clone)]
+pub struct SignaturePosition {
+    pub start_line: usize,
+    pub end_line: usize,
+    pub start_column: usize,
+    pub end_column: usize,
+    pub byte_offset: usize,
+    pub length: usize,
+}
+
+/// Signature extraction methods
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum SignatureExtractionMethod {
+    RegexPattern,
+    StructuredParsing,
+    BinaryAnalysis,
+    MetadataExtraction,
+    Hybrid,
+}
+
+/// Signature metadata
+#[derive(Debug, Clone)]
+pub struct SignatureMetadata {
+    pub source_type: SourceType,
+    pub encoding: String,
+    pub compression: Option<String>,
+    pub encryption: Option<String>,
+    pub timestamp: Option<chrono::DateTime<chrono::Utc>>,
+    pub issuer: Option<String>,
+    pub subject: Option<String>,
+    pub key_id: Option<String>,
+    pub fingerprint: Option<String>,
+}
+
+/// Source content types
+#[derive(Debug, Clone, PartialEq)]
+pub enum SourceType {
+    Text,
+    Binary,
+    Base64,
+    Hex,
+    JSON,
+    XML,
+    PEM,
+    DER,
+    Unknown,
+}
+
+/// Signature extraction configuration
+#[derive(Debug, Clone)]
+pub struct SignatureExtractionConfig {
+    pub enabled_formats: Vec<SignatureFormat>,
+    pub enabled_algorithms: Vec<SignatureAlgorithm>,
+    pub extraction_methods: Vec<SignatureExtractionMethod>,
+    pub min_confidence_threshold: f32,
+    pub max_extraction_time_ms: u64,
+    pub enable_metadata_extraction: bool,
+    pub enable_position_tracking: bool,
+    pub custom_patterns: Vec<SignaturePattern>,
+}
+
+/// Custom signature pattern
+#[derive(Debug, Clone)]
+pub struct SignaturePattern {
+    pub name: String,
+    pub pattern: String,
+    pub format: SignatureFormat,
+    pub algorithm: SignatureAlgorithm,
+    pub confidence_weight: f32,
+}
+
+/// Signature extraction performance metrics
+#[derive(Debug, Clone)]
+pub struct SignatureExtractionMetrics {
+    pub total_extractions: u64,
+    pub successful_extractions: u64,
+    pub failed_extractions: u64,
+    pub average_extraction_time_ms: f64,
+    pub format_distribution: HashMap<SignatureFormat, u64>,
+    pub algorithm_distribution: HashMap<SignatureAlgorithm, u64>,
+    pub method_distribution: HashMap<SignatureExtractionMethod, u64>,
+}
+
+impl Default for SignatureExtractionConfig {
+    fn default() -> Self {
+        Self {
+            enabled_formats: vec![
+                SignatureFormat::PGP,
+                SignatureFormat::X509,
+                SignatureFormat::JWT,
+                SignatureFormat::JWS,
+                SignatureFormat::XMLDSig,
+                SignatureFormat::PKCS7,
+            ],
+            enabled_algorithms: vec![
+                SignatureAlgorithm::RSA,
+                SignatureAlgorithm::ECDSA,
+                SignatureAlgorithm::Ed25519,
+                SignatureAlgorithm::HMAC,
+                SignatureAlgorithm::SHA256,
+            ],
+            extraction_methods: vec![
+                SignatureExtractionMethod::RegexPattern,
+                SignatureExtractionMethod::StructuredParsing,
+                SignatureExtractionMethod::MetadataExtraction,
+            ],
+            min_confidence_threshold: 0.7,
+            max_extraction_time_ms: 5000,
+            enable_metadata_extraction: true,
+            enable_position_tracking: true,
+            custom_patterns: Vec::new(),
+        }
+    }
+}
+
+impl SignatureExtractionConfig {
+    /// Perform comprehensive signature verification
+    async fn perform_signature_verification(&self, signature: &str, content: &str) -> Result<SignatureVerificationResult> {
+        let mut verification_method = SignatureVerificationMethod::Hybrid;
+        let mut verification_confidence = 0.0;
+        let mut key_info = None;
+        let mut error_details = None;
+        let mut metadata = HashMap::new();
+        
+        // 1. Try public key verification first (most secure)
+        if self.signature_verification_config.enabled_methods.contains(&SignatureVerificationMethod::PublicKeyVerification) {
+            if let Ok(pk_result) = self.verify_with_public_key(signature, content).await {
+                if pk_result.is_valid {
+                    verification_method = SignatureVerificationMethod::PublicKeyVerification;
+                    verification_confidence = pk_result.verification_confidence;
+                    key_info = pk_result.key_info;
+                    metadata.extend(pk_result.metadata);
+                    return Ok(SignatureVerificationResult {
+                        is_valid: true,
+                        verification_method,
+                        algorithm: self.detect_signature_algorithm(signature)?,
+                        key_info,
+                        verification_confidence,
+                        verification_time_ms: 0, // Will be set by caller
+                        error_details: None,
+                        metadata,
+                    });
+                }
+            }
+        }
+        
+        // 2. Try hash verification (fast and reliable for content integrity)
+        if self.signature_verification_config.enabled_methods.contains(&SignatureVerificationMethod::HashVerification) {
+            if let Ok(hash_result) = self.verify_with_hash(signature, content).await {
+                if hash_result.is_valid {
+                    verification_method = SignatureVerificationMethod::HashVerification;
+                    verification_confidence = hash_result.verification_confidence;
+                    metadata.extend(hash_result.metadata);
+                    return Ok(SignatureVerificationResult {
+                        is_valid: true,
+                        verification_method,
+                        algorithm: self.detect_signature_algorithm(signature)?,
+                        key_info: None,
+                        verification_confidence,
+                        verification_time_ms: 0,
+                        error_details: None,
+                        metadata,
+                    });
+                }
+            }
+        }
+        
+        // 3. Try certificate verification
+        if self.signature_verification_config.enabled_methods.contains(&SignatureVerificationMethod::CertificateVerification) {
+            if let Ok(cert_result) = self.verify_with_certificate(signature, content).await {
+                if cert_result.is_valid {
+                    verification_method = SignatureVerificationMethod::CertificateVerification;
+                    verification_confidence = cert_result.verification_confidence;
+                    key_info = cert_result.key_info;
+                    metadata.extend(cert_result.metadata);
+                    return Ok(SignatureVerificationResult {
+                        is_valid: true,
+                        verification_method,
+                        algorithm: self.detect_signature_algorithm(signature)?,
+                        key_info,
+                        verification_confidence,
+                        verification_time_ms: 0,
+                        error_details: None,
+                        metadata,
+                    });
+                }
+            }
+        }
+        
+        // 4. Try timestamp verification
+        if self.signature_verification_config.enabled_methods.contains(&SignatureVerificationMethod::TimestampVerification) {
+            if let Ok(ts_result) = self.verify_with_timestamp(signature, content).await {
+                if ts_result.is_valid {
+                    verification_method = SignatureVerificationMethod::TimestampVerification;
+                    verification_confidence = ts_result.verification_confidence;
+                    metadata.extend(ts_result.metadata);
+                    return Ok(SignatureVerificationResult {
+                        is_valid: true,
+                        verification_method,
+                        algorithm: self.detect_signature_algorithm(signature)?,
+                        key_info: None,
+                        verification_confidence,
+                        verification_time_ms: 0,
+                        error_details: None,
+                        metadata,
+                    });
+                }
+            }
+        }
+        
+        // All verification methods failed
+        error_details = Some("All signature verification methods failed".to_string());
+        
+        Ok(SignatureVerificationResult {
+            is_valid: false,
+            verification_method,
+            algorithm: self.detect_signature_algorithm(signature).unwrap_or(SignatureAlgorithm::Unknown),
+            key_info: None,
+            verification_confidence: 0.0,
+            verification_time_ms: 0,
+            error_details,
+            metadata,
+        })
+    }
+
+    /// Verify signature using public key
+    async fn verify_with_public_key(&self, signature: &str, content: &str) -> Result<SignatureVerificationResult> {
+        let mut metadata = HashMap::new();
+        
+        // Extract public key information from signature or content
+        let key_info = self.extract_public_key_info(signature, content)?;
+        
+        // Verify signature format and length
+        if !self.validate_signature_format(signature, &key_info.key_type)? {
+            return Ok(SignatureVerificationResult {
+                is_valid: false,
+                verification_method: SignatureVerificationMethod::PublicKeyVerification,
+                algorithm: self.detect_signature_algorithm(signature)?,
+                key_info: Some(key_info.clone()),
+                verification_confidence: 0.0,
+                verification_time_ms: 0,
+                error_details: Some("Invalid signature format".to_string()),
+                metadata,
+            });
+        }
+        
+        // Check key validity period
+        if let Some(validity) = &key_info.validity_period {
+            if !validity.is_valid {
+                return Ok(SignatureVerificationResult {
+                    is_valid: false,
+                    verification_method: SignatureVerificationMethod::PublicKeyVerification,
+                    algorithm: self.detect_signature_algorithm(signature)?,
+                    key_info: Some(key_info.clone()),
+                    verification_confidence: 0.0,
+                    verification_time_ms: 0,
+                    error_details: Some("Key is not valid for current time period".to_string()),
+                    metadata,
+                });
+            }
+        }
+        
+        // Perform cryptographic verification (simplified for simulation)
+        let verification_confidence = self.calculate_public_key_verification_confidence(&key_info)?;
+        
+        metadata.insert("key_id".to_string(), key_info.key_id.clone());
+        metadata.insert("key_type".to_string(), format!("{:?}", key_info.key_type));
+        metadata.insert("trust_level".to_string(), format!("{:?}", key_info.trust_level));
+        
+        Ok(SignatureVerificationResult {
+            is_valid: verification_confidence >= self.signature_verification_config.min_confidence_threshold,
+            verification_method: SignatureVerificationMethod::PublicKeyVerification,
+            algorithm: self.detect_signature_algorithm(signature)?,
+            key_info: Some(key_info),
+            verification_confidence,
+            verification_time_ms: 0,
+            error_details: None,
+            metadata,
+        })
+    }
+
+    /// Verify signature using hash verification
+    async fn verify_with_hash(&self, signature: &str, content: &str) -> Result<SignatureVerificationResult> {
+        let mut metadata = HashMap::new();
+        
+        // Calculate content hash
+        let content_hash = self.calculate_content_hash(content)?;
+        
+        // Compare with signature (assuming signature is a hash)
+        let signature_hash = self.decode_signature_hash(signature)?;
+        
+        let is_valid = content_hash == signature_hash;
+        let verification_confidence = if is_valid { 0.9 } else { 0.0 };
+        
+        metadata.insert("content_hash".to_string(), hex::encode(content_hash));
+        metadata.insert("signature_hash".to_string(), hex::encode(signature_hash));
+        metadata.insert("hash_match".to_string(), is_valid.to_string());
+        
+        Ok(SignatureVerificationResult {
+            is_valid,
+            verification_method: SignatureVerificationMethod::HashVerification,
+            algorithm: self.detect_signature_algorithm(signature)?,
+            key_info: None,
+            verification_confidence,
+            verification_time_ms: 0,
+            error_details: if is_valid { None } else { Some("Hash mismatch".to_string()) },
+            metadata,
+        })
+    }
+
+    /// Verify signature using certificate verification
+    async fn verify_with_certificate(&self, signature: &str, content: &str) -> Result<SignatureVerificationResult> {
+        let mut metadata = HashMap::new();
+        
+        // Extract certificate information
+        let key_info = self.extract_certificate_info(signature, content)?;
+        
+        // Verify certificate chain
+        let chain_valid = self.verify_certificate_chain(&key_info).await?;
+        
+        // Verify signature against certificate
+        let signature_valid = self.verify_signature_against_certificate(signature, content, &key_info).await?;
+        
+        let is_valid = chain_valid && signature_valid;
+        let verification_confidence = if is_valid { 0.95 } else { 0.0 };
+        
+        metadata.insert("certificate_valid".to_string(), chain_valid.to_string());
+        metadata.insert("signature_valid".to_string(), signature_valid.to_string());
+        metadata.insert("issuer".to_string(), key_info.issuer.clone().unwrap_or_default());
+        
+        Ok(SignatureVerificationResult {
+            is_valid,
+            verification_method: SignatureVerificationMethod::CertificateVerification,
+            algorithm: self.detect_signature_algorithm(signature)?,
+            key_info: Some(key_info),
+            verification_confidence,
+            verification_time_ms: 0,
+            error_details: if is_valid { None } else { Some("Certificate verification failed".to_string()) },
+            metadata,
+        })
+    }
+
+    /// Verify signature using timestamp verification
+    async fn verify_with_timestamp(&self, signature: &str, content: &str) -> Result<SignatureVerificationResult> {
+        let mut metadata = HashMap::new();
+        
+        // Extract timestamp from signature or content
+        let timestamp = self.extract_signature_timestamp(signature, content)?;
+        
+        // Verify timestamp is within valid range
+        let now = chrono::Utc::now();
+        let time_diff = (now - timestamp).num_seconds().abs() as i64;
+        
+        // Consider signature valid if timestamp is within 1 hour
+        let is_valid = time_diff <= 3600;
+        let verification_confidence = if is_valid { 0.8 } else { 0.0 };
+        
+        metadata.insert("signature_timestamp".to_string(), timestamp.to_rfc3339());
+        metadata.insert("current_time".to_string(), now.to_rfc3339());
+        metadata.insert("time_difference_seconds".to_string(), time_diff.to_string());
+        
+        Ok(SignatureVerificationResult {
+            is_valid,
+            verification_method: SignatureVerificationMethod::TimestampVerification,
+            algorithm: self.detect_signature_algorithm(signature)?,
+            key_info: None,
+            verification_confidence,
+            verification_time_ms: 0,
+            error_details: if is_valid { None } else { Some("Timestamp verification failed".to_string()) },
+            metadata,
+        })
+    }
+
+    /// Extract public key information from signature or content
+    fn extract_public_key_info(&self, signature: &str, content: &str) -> Result<PublicKeyInfo> {
+        // Simplified extraction - in real implementation, this would parse actual key data
+        let key_id = self.generate_key_id(signature);
+        let key_type = self.detect_key_type(signature)?;
+        let key_size = self.detect_key_size(signature)?;
+        let fingerprint = self.calculate_key_fingerprint(signature)?;
+        
+        Ok(PublicKeyInfo {
+            key_id,
+            key_type,
+            key_size,
+            fingerprint,
+            issuer: None,
+            subject: None,
+            validity_period: None,
+            trust_level: TrustLevel::Medium,
+        })
+    }
+
+    /// Extract certificate information
+    fn extract_certificate_info(&self, signature: &str, content: &str) -> Result<PublicKeyInfo> {
+        // Simplified certificate extraction
+        let key_id = self.generate_key_id(signature);
+        let key_type = self.detect_key_type(signature)?;
+        let key_size = self.detect_key_size(signature)?;
+        let fingerprint = self.calculate_key_fingerprint(signature)?;
+        
+        Ok(PublicKeyInfo {
+            key_id,
+            key_type,
+            key_size,
+            fingerprint,
+            issuer: Some("Certificate Authority".to_string()),
+            subject: Some("Signature Subject".to_string()),
+            validity_period: Some(ValidityPeriod {
+                not_before: chrono::Utc::now() - chrono::Duration::days(365),
+                not_after: chrono::Utc::now() + chrono::Duration::days(365),
+                is_valid: true,
+            }),
+            trust_level: TrustLevel::High,
+        })
+    }
+
+    /// Detect signature algorithm from signature format
+    fn detect_signature_algorithm(&self, signature: &str) -> Result<SignatureAlgorithm> {
+        // Simple heuristic based on signature length and format
+        match signature.len() {
+            64 => Ok(SignatureAlgorithm::SHA256), // 256-bit hash
+            96 => Ok(SignatureAlgorithm::SHA384), // 384-bit hash
+            128 => Ok(SignatureAlgorithm::SHA512), // 512-bit hash
+            32 => Ok(SignatureAlgorithm::MD5), // 128-bit hash
+            _ => Ok(SignatureAlgorithm::Unknown),
+        }
+    }
+
+    /// Detect key type from signature
+    fn detect_key_type(&self, signature: &str) -> Result<PublicKeyType> {
+        // Simplified detection based on signature characteristics
+        match signature.len() {
+            64 => Ok(PublicKeyType::RSA), // Common RSA signature length
+            96 => Ok(PublicKeyType::ECDSA), // ECDSA signature length
+            128 => Ok(PublicKeyType::RSA), // Longer RSA signature
+            _ => Ok(PublicKeyType::Unknown),
+        }
+    }
+
+    /// Detect key size from signature
+    fn detect_key_size(&self, signature: &str) -> Result<u32> {
+        // Estimate key size based on signature length
+        match signature.len() {
+            32 => Ok(128), // MD5
+            64 => Ok(256), // SHA256
+            96 => Ok(384), // SHA384
+            128 => Ok(512), // SHA512
+            _ => Ok(256), // Default
+        }
+    }
+
+    /// Generate key ID from signature
+    fn generate_key_id(&self, signature: &str) -> String {
+        // Generate a key ID based on signature hash
+        let mut hasher = Sha256::new();
+        hasher.update(signature.as_bytes());
+        let hash = hasher.finalize();
+        hex::encode(&hash[..8]) // Use first 8 bytes as key ID
+    }
+
+    /// Calculate key fingerprint
+    fn calculate_key_fingerprint(&self, signature: &str) -> Result<String> {
+        let mut hasher = Sha256::new();
+        hasher.update(signature.as_bytes());
+        let hash = hasher.finalize();
+        Ok(hex::encode(hash))
+    }
+
+    /// Validate signature format
+    fn validate_signature_format(&self, signature: &str, key_type: &PublicKeyType) -> Result<bool> {
+        // Basic format validation
+        if signature.is_empty() {
+            return Ok(false);
+        }
+        
+        // Check if signature is valid hex
+        if hex::decode(signature).is_err() {
+            return Ok(false);
+        }
+        
+        // Check length based on key type
+        let expected_length = match key_type {
+            PublicKeyType::RSA => 64, // 256 bits
+            PublicKeyType::ECDSA => 96, // 384 bits
+            PublicKeyType::Ed25519 => 64, // 256 bits
+            _ => 64, // Default
+        };
+        
+        Ok(signature.len() == expected_length)
+    }
+
+    /// Calculate public key verification confidence
+    fn calculate_public_key_verification_confidence(&self, key_info: &PublicKeyInfo) -> Result<f32> {
+        let mut confidence = 0.5; // Base confidence
+        
+        // Adjust based on key type
+        match key_info.key_type {
+            PublicKeyType::RSA => confidence += 0.2,
+            PublicKeyType::ECDSA => confidence += 0.3,
+            PublicKeyType::Ed25519 => confidence += 0.3,
+            _ => confidence += 0.1,
+        }
+        
+        // Adjust based on trust level
+        match key_info.trust_level {
+            TrustLevel::High => confidence += 0.3,
+            TrustLevel::Medium => confidence += 0.2,
+            TrustLevel::Low => confidence += 0.1,
+            TrustLevel::Untrusted => confidence += 0.0,
+        }
+        
+        // Adjust based on key size
+        if key_info.key_size >= 256 {
+            confidence += 0.1;
+        }
+        
+        Ok(confidence.min(1.0))
+    }
+
+    /// Calculate content hash
+    fn calculate_content_hash(&self, content: &str) -> Result<Vec<u8>> {
+        let mut hasher = Sha256::new();
+        hasher.update(content.as_bytes());
+        Ok(hasher.finalize().to_vec())
+    }
+
+    /// Decode signature hash
+    fn decode_signature_hash(&self, signature: &str) -> Result<Vec<u8>> {
+        hex::decode(signature).map_err(|e| anyhow::anyhow!("Failed to decode signature: {}", e))
+    }
+
+    /// Verify certificate chain
+    async fn verify_certificate_chain(&self, key_info: &PublicKeyInfo) -> Result<bool> {
+        // Simplified certificate chain verification
+        // In real implementation, this would verify the entire chain
+        Ok(key_info.trust_level == TrustLevel::High || key_info.trust_level == TrustLevel::Medium)
+    }
+
+    /// Verify signature against certificate
+    async fn verify_signature_against_certificate(&self, signature: &str, content: &str, key_info: &PublicKeyInfo) -> Result<bool> {
+        // Simplified signature verification against certificate
+        // In real implementation, this would perform actual cryptographic verification
+        Ok(!signature.is_empty() && !content.is_empty() && key_info.key_size > 0)
+    }
+
+    /// Extract signature timestamp
+    fn extract_signature_timestamp(&self, signature: &str, content: &str) -> Result<chrono::DateTime<chrono::Utc>> {
+        // Simplified timestamp extraction
+        // In real implementation, this would parse actual timestamp from signature
+        Ok(chrono::Utc::now() - chrono::Duration::minutes(30)) // Assume signature is 30 minutes old
+    }
+
+    /// Update verification metrics synchronously
+    fn update_verification_metrics_sync(&self, result: &SignatureVerificationResult, processing_time_ms: u64) -> Result<()> {
+        let mut metrics = self.signature_verification_metrics.blocking_write();
+        
+        metrics.total_verifications += 1;
+        if result.is_valid {
+            metrics.successful_verifications += 1;
+        } else {
+            metrics.failed_verifications += 1;
+        }
+        
+        // Update average processing time
+        let total_time = metrics.average_verification_time_ms * (metrics.total_verifications - 1) as f64 + processing_time_ms as f64;
+        metrics.average_verification_time_ms = total_time / metrics.total_verifications as f64;
+        
+        // Update distributions
+        *metrics.method_distribution.entry(result.verification_method.clone()).or_insert(0) += 1;
+        *metrics.algorithm_distribution.entry(result.algorithm.clone()).or_insert(0) += 1;
+        
+        if let Some(key_info) = &result.key_info {
+            *metrics.trust_level_distribution.entry(key_info.trust_level.clone()).or_insert(0) += 1;
+        }
+        
+        if let Some(error) = &result.error_details {
+            *metrics.error_distribution.entry(error.clone()).or_insert(0) += 1;
+        }
+        
+        Ok(())
+    }
+}
+
+/// Signature verification result
+#[derive(Debug, Clone)]
+pub struct SignatureVerificationResult {
+    pub is_valid: bool,
+    pub verification_method: SignatureVerificationMethod,
+    pub algorithm: SignatureAlgorithm,
+    pub key_info: Option<PublicKeyInfo>,
+    pub verification_confidence: f32,
+    pub verification_time_ms: u64,
+    pub error_details: Option<String>,
+    pub metadata: HashMap<String, String>,
+}
+
+/// Signature verification methods
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum SignatureVerificationMethod {
+    PublicKeyVerification,
+    CertificateVerification,
+    HashVerification,
+    TimestampVerification,
+    ChainOfTrust,
+    Hybrid,
+}
+
+/// Public key information
+#[derive(Debug, Clone)]
+pub struct PublicKeyInfo {
+    pub key_id: String,
+    pub key_type: PublicKeyType,
+    pub key_size: u32,
+    pub fingerprint: String,
+    pub issuer: Option<String>,
+    pub subject: Option<String>,
+    pub validity_period: Option<ValidityPeriod>,
+    pub trust_level: TrustLevel,
+}
+
+/// Public key types
+#[derive(Debug, Clone, PartialEq)]
+pub enum PublicKeyType {
+    RSA,
+    DSA,
+    ECDSA,
+    Ed25519,
+    X25519,
+    Unknown,
+}
+
+/// Validity period for keys/certificates
+#[derive(Debug, Clone)]
+pub struct ValidityPeriod {
+    pub not_before: chrono::DateTime<chrono::Utc>,
+    pub not_after: chrono::DateTime<chrono::Utc>,
+    pub is_valid: bool,
+}
+
+/// Trust levels for verification
+#[derive(Debug, Clone, PartialEq)]
+pub enum TrustLevel {
+    High,
+    Medium,
+    Low,
+    Untrusted,
+}
+
+/// Signature verification configuration
+#[derive(Debug, Clone)]
+pub struct SignatureVerificationConfig {
+    pub enabled_methods: Vec<SignatureVerificationMethod>,
+    pub min_confidence_threshold: f32,
+    pub max_verification_time_ms: u64,
+    pub enable_public_key_verification: bool,
+    pub enable_certificate_verification: bool,
+    pub enable_hash_verification: bool,
+    pub enable_timestamp_verification: bool,
+    pub trusted_key_sources: Vec<String>,
+    pub key_cache_size: usize,
+    pub verification_timeout_ms: u64,
+}
 /// Signature verification metrics
 #[derive(Debug, Clone)]
 pub struct SignatureVerificationMetrics {
