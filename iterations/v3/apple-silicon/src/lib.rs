@@ -19,6 +19,7 @@ pub mod model_router;
 pub mod quantization;
 pub mod quantization_lab;
 pub mod operator_fusion;
+pub mod enhanced_telemetry;
 pub mod routing;
 #[cfg(target_os = "macos")]
 pub mod telemetry;
@@ -60,6 +61,9 @@ pub use quantization_lab::{
 };
 pub use operator_fusion::{
     OperatorFusionEngine, Operator, OperatorType, FusionPattern, FusionResult, FusionDecision,
+};
+pub use enhanced_telemetry::{
+    EnhancedTelemetry, TelemetryMetric, MetricPoint, SLAConfig, PerformanceAlert, AlertLevel, AnomalyDetectionResult,
 };
 pub use routing::InferenceRouter;
 pub use thermal::ThermalManager;
