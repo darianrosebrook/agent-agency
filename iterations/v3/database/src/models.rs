@@ -191,6 +191,60 @@ pub struct AuditTrailEntry {
     pub created_at: DateTime<Utc>,
 }
 
+/// Source integrity record model from database
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct SourceIntegrityRecord {
+    pub id: Uuid,
+    pub source_id: String,
+    pub source_type: String,
+    pub content_hash: String,
+    pub content_size: i64,
+    pub hash_algorithm: String,
+    pub integrity_status: String,
+    pub tampering_indicators: serde_json::Value,
+    pub verification_metadata: serde_json::Value,
+    pub first_seen_at: DateTime<Utc>,
+    pub last_verified_at: Option<DateTime<Utc>>,
+    pub verification_count: i32,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+/// Source integrity verification model from database
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct SourceIntegrityVerification {
+    pub id: Uuid,
+    pub source_integrity_id: Uuid,
+    pub verification_type: String,
+    pub verification_result: String,
+    pub calculated_hash: String,
+    pub stored_hash: String,
+    pub hash_match: bool,
+    pub tampering_detected: bool,
+    pub verification_details: serde_json::Value,
+    pub verified_by: Option<String>,
+    pub verification_duration_ms: Option<i32>,
+    pub created_at: DateTime<Utc>,
+}
+
+/// Source integrity alert model from database
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct SourceIntegrityAlert {
+    pub id: Uuid,
+    pub source_integrity_id: Uuid,
+    pub alert_type: String,
+    pub severity: String,
+    pub alert_message: String,
+    pub alert_data: serde_json::Value,
+    pub acknowledged: bool,
+    pub acknowledged_by: Option<String>,
+    pub acknowledged_at: Option<DateTime<Utc>>,
+    pub resolved: bool,
+    pub resolved_by: Option<String>,
+    pub resolved_at: Option<DateTime<Utc>>,
+    pub created_at: DateTime<Utc>,
+}
+
 /// Input types for creating new records
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateJudge {
@@ -273,10 +327,41 @@ pub struct CreateKnowledgeEntry {
     pub embedding: Option<Vec<f32>>,
     pub content_type: Option<String>,
     pub metadata: Option<serde_json::Value>,
-    pub embedding_vector: Option<Vec<f32>>,
-    pub access_level: Option<String>,
-    pub version: Option<String>,
-    pub parent_id: Option<Uuid>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CreateSourceIntegrityRecord {
+    pub source_id: String,
+    pub source_type: String,
+    pub content_hash: String,
+    pub content_size: i64,
+    pub hash_algorithm: String,
+    pub integrity_status: String,
+    pub tampering_indicators: serde_json::Value,
+    pub verification_metadata: serde_json::Value,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CreateSourceIntegrityVerification {
+    pub source_integrity_id: Uuid,
+    pub verification_type: String,
+    pub verification_result: String,
+    pub calculated_hash: String,
+    pub stored_hash: String,
+    pub hash_match: bool,
+    pub tampering_detected: bool,
+    pub verification_details: serde_json::Value,
+    pub verified_by: Option<String>,
+    pub verification_duration_ms: Option<i32>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CreateSourceIntegrityAlert {
+    pub source_integrity_id: Uuid,
+    pub alert_type: String,
+    pub severity: String,
+    pub alert_message: String,
+    pub alert_data: serde_json::Value,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

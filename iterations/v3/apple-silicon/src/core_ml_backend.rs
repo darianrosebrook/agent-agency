@@ -584,7 +584,7 @@ impl InferenceEngine for CoreMLBackend {
                     &opts.quantization,
                     "default_shape",
                     "macos_unknown",
-                );
+                )?;
 
                 let prepared = PreparedCoreMLModel {
                     cache_key,
@@ -673,14 +673,14 @@ impl InferenceEngine for CoreMLBackend {
 
         // Serialize inputs to binary format with temp file
         let temp_dir = std::env::temp_dir();
-        let batch = TensorBatch::from_tensor_map(inputs, &prepared.io_schema)?;
+        let mut batch = TensorBatch::from_tensor_map(inputs, &prepared.io_schema)?;
         let inputs_json = batch.to_json_with_data_path(&temp_dir)?;
 
         // Run prediction with timeout and track latency
         let infer_start = Instant::now();
         let timeout_ms = timeout.as_millis() as i32;
         let predict_result = with_autorelease_pool(|| {
-            prepared.model.predict(inputs_json, timeout_ms)
+            prepared.model.predict(&inputs_json, timeout_ms)
         });
 
         let infer_time_ms = infer_start.elapsed().as_millis() as u64;

@@ -52,6 +52,11 @@ pub enum ContentType {
     TaskDescription,
     Evidence,
     Knowledge,
+    VideoFrame,         // Keyframes from video ingestion
+    SlideContent,       // Text/structure from slide pages
+    DiagramNode,        // Named entities in diagrams
+    SpeechTranscript,   // ASR/diarization output
+    VisualCaption,      // Auto-generated captions for figures
 }
 
 /// Stored embedding with metadata
@@ -127,4 +132,44 @@ impl Default for EmbeddingConfig {
             timeout_ms: 30000,
         }
     }
+}
+
+/// Embedding model registry entry (config-driven)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EmbeddingModel {
+    pub id: String,           // registry key (e.g., 'e5-small-v2', 'clip-vit-b32')
+    pub modality: String,     // 'text' | 'image' | 'audio'
+    pub dim: usize,           // vector dimensions
+    pub metric: String,       // 'cosine' | 'ip' | 'l2'
+    pub active: bool,         // whether to use this model
+}
+
+/// Per-block vector (one row per block-model pair)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BlockVector {
+    pub block_id: String,     // UUID of block
+    pub model_id: String,     // embedding model identifier
+    pub modality: String,     // 'text' | 'image' | 'audio'
+    pub vec: EmbeddingVector, // the actual vector
+}
+
+/// Search result feature with per-index scores
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SearchResultFeature {
+    pub score_text: Option<f32>,    // BM25 + dense text similarity
+    pub score_image: Option<f32>,   // CLIP/visual similarity
+    pub score_graph: Option<f32>,   // diagram graph relevance
+    pub fused_score: f32,           // combined via RRF or learned weights
+    pub features_json: serde_json::Value, // audit trail
+}
+
+/// Multimodal search result with citation and feature trace
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MultimodalSearchResult {
+    pub ref_id: String,       // UUID of block/segment
+    pub kind: ContentType,
+    pub snippet: String,
+    pub citation: Option<String>,  // uri + (t0–t1 | bbox)
+    pub feature: SearchResultFeature,
+    pub project_scope: Option<String>,  // scoping info for filtering
 }

@@ -12,7 +12,7 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
-use tdigest::TDigest;
+// Simple percentile tracking without external dependencies
 
 /// Failure mode taxonomy for telemetry
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -61,7 +61,7 @@ pub struct PercentileStats {
 }
 
 /// Performance metrics for Core ML operations
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct CoreMLMetrics {
     /// Compile operation metrics
     pub compile_count: u64,
@@ -96,8 +96,8 @@ pub struct CoreMLMetrics {
     pub sla_ms: u64,
 
     /// T-Digest for accurate percentile tracking
-    pub compile_digest: Arc<Mutex<TDigest>>,
-    pub infer_digest: Arc<Mutex<TDigest>>,
+    pub compile_samples: Arc<Mutex<Vec<f64>>>,
+    pub infer_samples: Arc<Mutex<Vec<f64>>>,
 }
 
 impl Default for CoreMLMetrics {
@@ -128,8 +128,8 @@ impl Default for CoreMLMetrics {
 
             sla_ms: 20, // 20ms target for FastViT
             
-            compile_digest: Arc::new(Mutex::new(TDigest::new_with_size(100))),
-            infer_digest: Arc::new(Mutex::new(TDigest::new_with_size(100))),
+            compile_samples: Arc::new(Mutex::new(Vec::new())),
+            infer_samples: Arc::new(Mutex::new(Vec::new())),
         }
     }
 }
@@ -147,10 +147,21 @@ impl CoreMLMetrics {
                 .and_modify(|c| *c += 1)
                 .or_insert(1);
         }
-        // Update t-digest for accurate p99
-        if let Ok(mut digest) = self.compile_digest.lock() {
-            digest.insert(duration_ms as f64);
-            self.compile_p99_ms = digest.estimate_quantile(0.99) as u64;
+        // Update samples for percentile calculation
+        if let Ok(mut samples) = self.compile_samples.lock() {
+            samples.push(duration_ms as f64);
+            // Keep only last 1000 samples to prevent memory growth
+            if samples.len() > 1000 {
+                let len = samples.len();
+                samples.drain(0..len - 1000);
+            }
+            // Calculate p99
+            if !samples.is_empty() {
+                let mut sorted = samples.clone();
+                sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
+                let p99_idx = ((sorted.len() - 1) as f64 * 0.99) as usize;
+                self.compile_p99_ms = sorted[p99_idx] as u64;
+            }
         }
     }
 
@@ -174,10 +185,21 @@ impl CoreMLMetrics {
             _ => self.cpu_fallback_count += 1,
         }
 
-        // Update t-digest
-        if let Ok(mut digest) = self.infer_digest.lock() {
-            digest.insert(duration_ms as f64);
-            self.infer_p99_ms = digest.estimate_quantile(0.99) as u64;
+        // Update samples for percentile calculation
+        if let Ok(mut samples) = self.infer_samples.lock() {
+            samples.push(duration_ms as f64);
+            // Keep only last 1000 samples to prevent memory growth
+            if samples.len() > 1000 {
+                let len = samples.len();
+                samples.drain(0..len - 1000);
+            }
+            // Calculate p99
+            if !samples.is_empty() {
+                let mut sorted = samples.clone();
+                sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
+                let p99_idx = ((sorted.len() - 1) as f64 * 0.99) as usize;
+                self.infer_p99_ms = sorted[p99_idx] as u64;
+            }
         }
 
         // Check SLA violation
@@ -205,18 +227,46 @@ impl CoreMLMetrics {
 
     /// Get percentile statistics for monitoring
     pub fn get_percentile_stats(&self) -> PercentileStats {
-        let compile_p50 = self.compile_digest.lock()
-            .map(|digest| digest.estimate_quantile(0.5) as u64)
+        let compile_p50 = self.compile_samples.lock()
+            .map(|samples| {
+                if samples.is_empty() { 0 } else {
+                    let mut sorted = samples.clone();
+                    sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
+                    let p50_idx = ((sorted.len() - 1) as f64 * 0.5) as usize;
+                    sorted[p50_idx] as u64
+                }
+            })
             .unwrap_or(0);
-        let compile_p95 = self.compile_digest.lock()
-            .map(|digest| digest.estimate_quantile(0.95) as u64)
+        let compile_p95 = self.compile_samples.lock()
+            .map(|samples| {
+                if samples.is_empty() { 0 } else {
+                    let mut sorted = samples.clone();
+                    sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
+                    let p95_idx = ((sorted.len() - 1) as f64 * 0.95) as usize;
+                    sorted[p95_idx] as u64
+                }
+            })
             .unwrap_or(0);
         
-        let infer_p50 = self.infer_digest.lock()
-            .map(|digest| digest.estimate_quantile(0.5) as u64)
+        let infer_p50 = self.infer_samples.lock()
+            .map(|samples| {
+                if samples.is_empty() { 0 } else {
+                    let mut sorted = samples.clone();
+                    sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
+                    let p50_idx = ((sorted.len() - 1) as f64 * 0.5) as usize;
+                    sorted[p50_idx] as u64
+                }
+            })
             .unwrap_or(0);
-        let infer_p95 = self.infer_digest.lock()
-            .map(|digest| digest.estimate_quantile(0.95) as u64)
+        let infer_p95 = self.infer_samples.lock()
+            .map(|samples| {
+                if samples.is_empty() { 0 } else {
+                    let mut sorted = samples.clone();
+                    sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
+                    let p95_idx = ((sorted.len() - 1) as f64 * 0.95) as usize;
+                    sorted[p95_idx] as u64
+                }
+            })
             .unwrap_or(0);
         
         PercentileStats {

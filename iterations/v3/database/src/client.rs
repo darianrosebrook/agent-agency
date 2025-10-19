@@ -1972,9 +1972,8 @@ impl DatabaseOperations for DatabaseClient {
             r#"
             INSERT INTO knowledge_entries (
                 id, title, content, content_type, source, source_url,
-                tags, metadata, embedding_vector, created_at, updated_at,
-                access_level, version, parent_id
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+                tags, metadata, embedding, created_at, updated_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
             RETURNING *
             "#,
         )
@@ -1986,12 +1985,9 @@ impl DatabaseOperations for DatabaseClient {
         .bind(&entry.source_url)
         .bind(serde_json::to_value(&entry.tags).unwrap_or_default())
         .bind(serde_json::to_value(&entry.metadata).unwrap_or_default())
-        .bind(&entry.embedding_vector)
+        .bind(&entry.embedding)
         .bind(now)
         .bind(now)
-        .bind(&entry.access_level)
-        .bind(entry.version)
-        .bind(&entry.parent_id)
         .fetch_one(&self.pool)
         .await
         .context("Failed to create knowledge entry")?;
@@ -2013,10 +2009,10 @@ impl DatabaseOperations for DatabaseClient {
             updated_at: row.get("updated_at"),
             content_type: row.get("content_type"),
             metadata: row.get("metadata"),
-            embedding_vector: row.get("embedding_vector"),
-            access_level: row.get("access_level"),
-            version: row.get("version"),
-            parent_id: row.get("parent_id"),
+            embedding_vector: row.get("embedding"),
+            access_level: None,
+            version: None,
+            parent_id: None,
         };
 
         info!("Created knowledge entry {}: {}", id, entry.title);
@@ -2142,10 +2138,10 @@ impl DatabaseOperations for DatabaseClient {
                 updated_at: row.get("updated_at"),
                 content_type: row.get("content_type"),
                 metadata: row.get("metadata"),
-                embedding_vector: row.get("embedding_vector"),
-                access_level: row.get("access_level"),
-                version: row.get("version"),
-                parent_id: row.get("parent_id"),
+                embedding_vector: row.get("embedding"),
+            access_level: None,
+            version: None,
+            parent_id: None,
             })
             .collect();
 
@@ -2228,10 +2224,10 @@ impl DatabaseOperations for DatabaseClient {
                 updated_at: row.get("updated_at"),
                 content_type: row.get("content_type"),
                 metadata: row.get("metadata"),
-                embedding_vector: row.get("embedding_vector"),
-                access_level: row.get("access_level"),
-                version: row.get("version"),
-                parent_id: row.get("parent_id"),
+                embedding_vector: row.get("embedding"),
+            access_level: None,
+            version: None,
+            parent_id: None,
             })
             .collect();
 

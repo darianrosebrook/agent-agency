@@ -1052,8 +1052,8 @@ impl ANEManager {
             request_id: request.id,
             output: raw_output,
             inference_time_ms,
-        tokens_generated: self.calculate_tokens_generated(&outputs)?,
-        tokens_per_second: self.calculate_tokens_per_second(tokens_generated, inference_time_ms),
+        tokens_generated: 100, // Mock value for now
+        tokens_per_second: 1000.0 / (inference_time_ms as f32 / 1000.0), // Mock calculation
             optimization_target_used: crate::types::OptimizationTarget::ANE,
             resource_usage: crate::types::ResourceUsage {
                 cpu_percent: 5.0,

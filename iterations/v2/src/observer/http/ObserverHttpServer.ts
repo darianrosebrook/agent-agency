@@ -51,7 +51,10 @@ export class ObserverHttpServer {
     // SECURITY: Middleware to enforce HTTPS and add security headers
     const securityMiddleware = (req: IncomingMessage, res: ServerResponse) => {
       // Add security headers to all responses
-      res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+      res.setHeader(
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      );
       res.setHeader("X-Content-Type-Options", "nosniff");
       res.setHeader("X-Frame-Options", "DENY");
       res.setHeader("X-XSS-Protection", "1; mode=block");

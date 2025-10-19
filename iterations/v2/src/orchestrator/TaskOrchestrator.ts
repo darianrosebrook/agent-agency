@@ -1138,7 +1138,10 @@ export class TaskOrchestrator extends EventEmitter {
     }
   }
 
-  private validateScriptPayload(payload: any, dangerousPatterns: RegExp[]): void {
+  private validateScriptPayload(
+    payload: any,
+    dangerousPatterns: RegExp[]
+  ): void {
     if (!payload.script || typeof payload.script !== "string") {
       throw new Error("Invalid script task: script field must be a string");
     }

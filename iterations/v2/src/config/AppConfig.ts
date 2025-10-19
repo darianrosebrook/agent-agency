@@ -27,7 +27,11 @@ class SensitiveDataMasker {
     for (const [key, value] of Object.entries(obj)) {
       if (this.isSensitiveKey(key)) {
         masked[key] = this.maskValue(value);
-      } else if (typeof value === "object" && value !== null && !Array.isArray(value)) {
+      } else if (
+        typeof value === "object" &&
+        value !== null &&
+        !Array.isArray(value)
+      ) {
         masked[key] = this.maskObject(value as Record<string, any>);
       } else {
         masked[key] = value;

@@ -5,6 +5,7 @@
 
 pub mod cache;
 pub mod context;
+pub mod multimodal_indexer;
 pub mod provider;
 pub mod service;
 pub mod similarity;
@@ -15,6 +16,7 @@ mod tests;
 
 pub use cache::*;
 pub use context::*;
+pub use multimodal_indexer::*;
 pub use provider::*;
 pub use service::*;
 pub use similarity::*;

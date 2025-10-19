@@ -18,10 +18,12 @@ members = [
     "workspace-state-manager",
     "resilience",
     "observability",
+    "source-integrity",
     "config",
     "database",
     "integration-tests",
-    "agent-agency-contracts"
+    "agent-agency-contracts",
+    "ingestors"
 ]
 
 [workspace.package]
@@ -43,7 +45,6 @@ toml = "0.8"
 # Database
 sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "chrono", "uuid"] }
 chrono = { version = "0.4", features = ["serde"] }
-uuid = { version = "1.0", features = ["v4", "serde"] }
 
 # HTTP and web
 reqwest = { version = "0.11", features = ["json", "stream"] }
@@ -60,6 +61,9 @@ opentelemetry = { version = "0.21", features = ["trace", "metrics"] }
 # Error handling
 anyhow = "1.0"
 thiserror = "1.0"
+
+# Utilities
+uuid = { version = "1.0", features = ["v4", "serde"] }
 
 # Configuration
 config = "0.14"

@@ -111,7 +111,9 @@ const DEFAULT_SECURITY_CONFIG: SecurityConfig = {
     }
     if (!secret || secret === "default-jwt-secret-change-in-production") {
       if (process.env.NODE_ENV === "production") {
-        throw new Error("Invalid JWT_SECRET: default value not allowed in production");
+        throw new Error(
+          "Invalid JWT_SECRET: default value not allowed in production"
+        );
       }
       // Development: use a reasonable default for development only
       return "dev-secret-only-for-development-change-in-production";

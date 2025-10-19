@@ -830,7 +830,7 @@ impl AnalyticsDashboard {
         
         // Hash system load
         let system_load = self.get_system_load().await?;
-        (system_load * 1000.0) as u64.hash(&mut hasher);
+        ((system_load * 1000.0) as u64).hash(&mut hasher);
         
         Ok(format!("{:x}", hasher.finish()))
     }

@@ -20,6 +20,8 @@ pub mod routing;
 pub mod telemetry;
 pub mod thermal;
 pub mod types;
+pub mod buffer_pool;
+pub mod model_pool;
 
 pub use adaptive_resource_manager::{
     AllocationPlan, AllocationPlanner, AllocationRequest, DeviceKind, DeviceSensors, ModelRegistry,

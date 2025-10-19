@@ -1,0 +1,43 @@
+[package]
+name = "ingestors"
+version = "0.1.0"
+edition = "2021"
+authors = ["@darianrosebrook"]
+
+[dependencies]
+tokio = { version = "1", features = ["full"] }
+anyhow = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+uuid = { version = "1", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+tracing = "0.1"
+tracing-subscriber = "0.3"
+notify = "6"
+walkdir = "2"
+sha2 = "0.10"
+thiserror = "1"
+
+# Video processing
+av-data = "0.2"
+
+# PDF processing
+pdfium-render = { version = "0.7", optional = true }
+
+# SVG/GraphML parsing
+svg = "0.14"
+roxmltree = "0.19"
+
+# Network for fetching resources
+reqwest = { version = "0.11", features = ["json"] }
+
+# Database
+sqlx = { version = "0.7", features = ["postgres", "uuid", "chrono", "json"] }
+
+[features]
+default = ["pdfkit-bridge"]
+pdfkit-bridge = []
+
+[[bin]]
+name = "ingestors"
+path = "src/main.rs"

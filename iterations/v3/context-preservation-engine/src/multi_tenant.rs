@@ -901,8 +901,12 @@ impl MultiTenantManager {
 
     /// Get tenant context cache
     async fn get_tenant_context_cache(&self, tenant_id: &str) -> Result<std::collections::HashMap<String, CachedContextData>> {
-        // Simulate getting tenant context cache
-        // In a real implementation, this would access the actual cache
+        // TODO: Implement actual tenant context cache retrieval
+        // Acceptance criteria:
+        // 1. Query the persistent cache storage for the given tenant_id
+        // 2. Return all CachedContextData entries associated with this tenant
+        // 3. Handle cache misses gracefully (return empty HashMap if no entries exist)
+        // 4. Ensure thread-safe access to the underlying cache store
         let mut cache = std::collections::HashMap::new();
         
         // Add some sample cached contexts
@@ -977,7 +981,11 @@ impl MultiTenantManager {
             tenant_id, total_contexts, total_size, total_accesses
         );
         
-        // In a real implementation, this would update actual cache statistics
+        // TODO: Implement persistent cache statistics storage
+        // Acceptance criteria:
+        // - Store total_contexts, total_size, and total_accesses to database
+        // - Update statistics table with tenant_id and timestamp
+        // - Ensure atomic updates to prevent race conditions
         Ok(())
     }
 
@@ -1002,14 +1010,11 @@ impl MultiTenantManager {
 
     /// Query active contexts count from database
     async fn query_active_contexts_count(&self, tenant_id: &str, db_client: &DatabaseClient) -> Result<u32> {
-        // Simulate database query for active contexts
-        // In a real implementation, this would execute a SQL query
-        let query = format!(
-            "SELECT COUNT(*) FROM contexts WHERE tenant_id = '{}' AND status = 'active'",
-            tenant_id
-        );
-        
-        // Mock result - in real implementation, this would be the actual query result
+        // TODO: Implement actual database query for active contexts
+        // Acceptance criteria:
+        // - Execute SQL query to count contexts where tenant_id matches and status is 'active'
+        // - Handle database connection errors gracefully
+        // - Return accurate count from database instead of mock values
         let active_count = match tenant_id {
             "tenant_1" => 25,
             "tenant_2" => 18,
@@ -1017,19 +1022,27 @@ impl MultiTenantManager {
             _ => 15,
         };
         
-        debug!("Active contexts query for tenant {}: {}", tenant_id, query);
+        debug!("Active contexts query for tenant {}: {}", tenant_id, active_count);
         Ok(active_count)
     }
 
     /// Query archived contexts count from database
     async fn query_archived_contexts_count(&self, tenant_id: &str, db_client: &DatabaseClient) -> Result<u32> {
-        // Simulate database query for archived contexts
+        // TODO: Implement actual database query for archived contexts
+        // Acceptance criteria:
+        // - Execute SQL query to count contexts where tenant_id matches and status is 'archived'
+        // - Handle database connection errors gracefully
+        // - Return accurate count from database instead of mock values
         let query = format!(
             "SELECT COUNT(*) FROM contexts WHERE tenant_id = '{}' AND status = 'archived'",
             tenant_id
         );
         
-        // Mock result - in real implementation, this would be the actual query result
+        // TODO: Implement actual database query for archived contexts
+        // Acceptance criteria:
+        // - Execute SQL query to count contexts where tenant_id matches and status is 'archived'
+        // - Handle database connection errors gracefully
+        // - Return accurate count from database instead of mock values
         let archived_count = match tenant_id {
             "tenant_1" => 12,
             "tenant_2" => 8,

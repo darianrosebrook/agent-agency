@@ -82,7 +82,7 @@ pub enum ModelArtifact {
 
 impl ModelArtifact {
     /// Compute hash for compiled model directory
-    fn compute_compiled_hash(&self, path: &Path) -> Result<String> {
+    fn compute_compiled_hash(&self, path: &Path) -> Result<String, anyhow::Error> {
         use sha2::{Sha256, Digest};
         let mut hasher = Sha256::new();
         
@@ -106,7 +106,7 @@ impl ModelArtifact {
             hasher.update(&content);
         }
         
-        Ok(hex::encode(hasher.finalize()))
+        Ok(hex::encode(&hasher.finalize()))
     }
 
     /// Generate cache key for this artifact
@@ -117,18 +117,18 @@ impl ModelArtifact {
         quantization: &str,
         shape_key: &str,
         os_build: &str,
-    ) -> String {
+    ) -> Result<String, anyhow::Error> {
         match self {
             ModelArtifact::Authoring { sha256, .. } => {
                 let sha_hex = hex::encode(sha256);
-                format!(
+                Ok(format!(
                     "{}:unknown:unknown:{}:{}:{}:{}",
                     sha_hex, compute_units_str(compute_units), quantization, shape_key, os_build
-                )
+                ))
             }
             ModelArtifact::Compiled { meta, path, .. } => {
                 let sha_hex = self.compute_compiled_hash(path)?;
-                format!(
+                Ok(format!(
                     "{}:{}:{}:{}:{}:{}:{}",
                     sha_hex,
                     meta.coreml_version,
@@ -137,7 +137,7 @@ impl ModelArtifact {
                     quantization,
                     shape_key,
                     os_build
-                )
+                ))
             }
         }
     }
@@ -209,7 +209,7 @@ pub struct TensorBatch {
 
 impl TensorBatch {
     /// Serialize TensorMap to binary format
-    pub fn from_tensor_map(map: &TensorMap, schema: &IoSchema) -> Result<Self> {
+    pub fn from_tensor_map(map: &TensorMap, schema: &IoSchema) -> Result<Self, anyhow::Error> {
         let mut descriptors = Vec::new();
         let mut data = Vec::new();
         
@@ -240,7 +240,7 @@ impl TensorBatch {
     }
 
     /// Deserialize binary format to TensorMap
-    pub fn to_tensor_map(&self) -> Result<TensorMap> {
+    pub fn to_tensor_map(&self) -> Result<TensorMap, anyhow::Error> {
         let mut map = HashMap::new();
         
         for desc in &self.descriptors {
@@ -257,7 +257,7 @@ impl TensorBatch {
     }
 
     /// Write binary data to temp file and return JSON with file reference
-    pub fn to_json_with_data_path(&mut self, temp_dir: &Path) -> Result<String> {
+    pub fn to_json_with_data_path(&mut self, temp_dir: &Path) -> Result<String, anyhow::Error> {
         use std::fs;
         use std::io::Write;
         
@@ -286,7 +286,7 @@ impl TensorBatch {
     }
 
     /// Create TensorBatch from JSON with data file path
-    pub fn from_json_with_data_path(json_str: &str) -> Result<Self> {
+    pub fn from_json_with_data_path(json_str: &str) -> Result<Self, anyhow::Error> {
         use std::fs;
         
         let json_data: serde_json::Value = serde_json::from_str(json_str)?;
@@ -342,7 +342,7 @@ impl TensorBatch {
     }
 
     /// Clean up temporary files
-    pub fn cleanup_temp_files(&self) -> Result<()> {
+    pub fn cleanup_temp_files(&self) -> Result<(), anyhow::Error> {
         use std::fs;
         
         for temp_file in &self.temp_files {

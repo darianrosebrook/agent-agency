@@ -1398,8 +1398,12 @@ impl SystemHealthMonitor {
 
     /// Query embedding service performance metrics
     async fn query_embedding_service_performance(&self) -> Result<EmbeddingServicePerformance> {
-        // Simulate querying embedding service for performance data
-        // In a real implementation, this would make HTTP requests to the embedding service
+        // TODO: Implement actual embedding service integration
+        // Acceptance criteria:
+        // - Make HTTP requests to the embedding service endpoint
+        // - Handle connection errors and timeouts gracefully
+        // - Parse and validate the response metrics
+        // - Add retry logic for failed requests
         let performance = EmbeddingServicePerformance {
             total_requests: 1_500,
             successful_requests: 1_470,
@@ -1919,8 +1923,12 @@ impl MetricsCollector {
 
     /// Calculate disk usage trends and predictions
     async fn calculate_disk_usage_trends(&self, filesystem_usage: &HashMap<String, FilesystemUsage>) -> Result<DiskUsageTrends> {
-        // Simulate historical data and predictions
-        // In a real implementation, this would analyze historical metrics
+        // TODO: Implement proper historical data analysis and predictions
+        // Acceptance criteria:
+        // - Store historical disk usage metrics in a time-series database or cache
+        // - Calculate accurate growth rates using linear regression or similar statistical methods
+        // - Generate predictions for 24h, 7d, and 30d based on historical trends
+        // - Handle edge cases (no historical data, negative growth, etc.)
         let historical_usage = vec![
             DiskUsageDataPoint {
                 timestamp: Utc::now() - chrono::Duration::days(7),
@@ -2037,7 +2045,12 @@ impl MetricsCollector {
     async fn collect_inode_usage(&self, filesystem_usage: &HashMap<String, FilesystemUsage>) -> Result<HashMap<String, InodeUsage>> {
         let mut inode_usage = HashMap::new();
         
-        // Simulate inode usage - in a real implementation, this would use platform-specific APIs
+        // TODO: Implement actual inode usage collection
+        // Acceptance criteria:
+        // - Use platform-specific APIs to collect inode usage statistics
+        // - Handle platform-specific implementation differences
+        // - Ensure inode usage statistics are accurate and reliable
+        // - Add error handling and logging for failed inode collection
         for (mount_point, _usage) in filesystem_usage {
             let total_inodes = 1_000_000; // Simulated
             let used_inodes = 250_000; // Simulated

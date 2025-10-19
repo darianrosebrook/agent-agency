@@ -7,7 +7,7 @@
 
 use crate::inference::{
     CapabilityReport, ComputeUnits, DType, InferenceEngine, IoSchema, ModelArtifact,
-    PreparedModel, PrepareOptions, TensorMap,
+    ModelFmt, PreparedModel, PrepareOptions, TensorMap, TensorSpec,
 };
 use anyhow::{bail, Context, Result};
 use std::collections::HashMap;
@@ -159,7 +159,7 @@ impl InferenceEngine for CandleBackend {
                     &opts.quantization,
                     &self.compute_shape_key(&io_schema),
                     &self.get_os_build(),
-                );
+                )?;
 
                 Ok(Box::new(CandleModel {
                     cache_key,
