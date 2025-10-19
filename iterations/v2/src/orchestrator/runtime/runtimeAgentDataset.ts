@@ -23,7 +23,13 @@ export const runtimeAgentSeeds: RuntimeAgentSeed[] = [
     name: "Documentation Smith",
     modelFamily: "gpt-4",
     capabilities: {
-      taskTypes: ["documentation", "file_editing", "testing", "script", "analysis"],
+      taskTypes: [
+        "documentation",
+        "file_editing",
+        "testing",
+        "script",
+        "analysis",
+      ],
       languages: ["TypeScript", "JavaScript"],
       specializations: ["Frontend architecture", "API design"], // Legacy support
       specializationsV2: [
@@ -62,7 +68,13 @@ export const runtimeAgentSeeds: RuntimeAgentSeed[] = [
     name: "Refactor Sage",
     modelFamily: "claude-3.5",
     capabilities: {
-      taskTypes: ["file_editing", "refactoring", "code-review", "script", "analysis"],
+      taskTypes: [
+        "file_editing",
+        "refactoring",
+        "code-review",
+        "script",
+        "analysis",
+      ],
       languages: ["TypeScript", "Python", "Go"],
       specializations: ["Performance optimization", "Backend architecture"], // Legacy support
       specializationsV2: [

@@ -130,7 +130,9 @@ async function initialize(): Promise<void> {
       healthStatus: stats.healthCheckStatus,
     });
   } catch (error) {
-    logger.warn("Database not available, proceeding with in-memory only", { error });
+    logger.warn("Database not available, proceeding with in-memory only", {
+      error,
+    });
     // Continue without database for testing purposes
   }
 
@@ -146,7 +148,9 @@ async function initialize(): Promise<void> {
     await learningIntegration.initialize();
     logger.info("Learning integration initialized");
   } catch (error) {
-    logger.warn("Learning integration not available, proceeding without", { error });
+    logger.warn("Learning integration not available, proceeding without", {
+      error,
+    });
     // Continue without learning integration for testing purposes
   }
 
