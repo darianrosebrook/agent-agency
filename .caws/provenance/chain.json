@@ -12702,5 +12702,41 @@
     },
     "previous_hash": "3cee46aec01e454a3cc50c20fae45260c10e642b1aaed08901238a9c6427d8a6",
     "hash": "1004c7fe2df0b0749771dec2c71a1468fdfb60f29455a4eb473a2cbff58cb112"
+  },
+  {
+    "id": "prov-1760864974976",
+    "timestamp": "2025-10-19T09:09:34.976Z",
+    "commit": {
+      "hash": "c21a54e7372a152cb2bfb021c6fb7ca41cc8f844",
+      "message": "Fix embedding-service compilation errors: API fixes and type corrections",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "PROJ-785",
+      "title": "agent-agency",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": [
+        "WV-0001"
+      ]
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-19T09:09:34.978Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "1004c7fe2df0b0749771dec2c71a1468fdfb60f29455a4eb473a2cbff58cb112",
+    "hash": "df3c80dda29ad36fed77160c1ac37c3128dc695dbbfdd999217cf74cb51dee04"
   }
 ]

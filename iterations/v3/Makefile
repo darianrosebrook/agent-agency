@@ -15,20 +15,20 @@ endef
 
 .PHONY: verify verify-tier1 verify-tier2 verify-tier3 test-coverage coverage-report schema-validate clean mutants-mcp mutants-mcp-list mutants-mcp-files test-contract test-e2e gates install-hooks build build-dev build-test build-release check check-fast install-tools timing-report perf-report clean-timing
 
-# Build targets using optimized wrapper
+# Build targets using optimized wrapper with timing
 build: build-dev
 
 build-dev:
 	@echo "🔨 Building in dev mode with optimized settings..."
-	@./scripts/build-wrapper.sh dev --workspace
+	@$(call log_timing,build-dev,./scripts/build-wrapper.sh dev --workspace --verbose)
 
 build-test:
 	@echo "🧪 Building tests with optimized settings..."
-	@./scripts/build-wrapper.sh test --workspace
+	@$(call log_timing,build-test,./scripts/build-wrapper.sh test --workspace --verbose)
 
 build-release:
 	@echo "🚀 Building release with optimized settings..."
-	@./scripts/build-wrapper.sh release --workspace
+	@$(call log_timing,build-release,./scripts/build-wrapper.sh release --workspace --verbose)
 
 check:
 	@echo "✅ Checking workspace with optimized settings..."
@@ -130,3 +130,57 @@ mutants-mcp-files:
 	@if [ -z "$(FILES)" ]; then echo "Usage: make mutants-mcp-files FILES='mcp-integration/src/*.rs'"; exit 1; fi
 	@echo "Running cargo-mutants for agent-agency-mcp files: $(FILES)"
 	@cargo mutants --manifest-path v3/Cargo.toml --package agent-agency-mcp --file "$(FILES)" --timeout 900 --no-shuffle --baseline run
+
+# Timing and performance analysis
+timing-report:
+	@echo "📊 Build Timing Report"
+	@echo "===================="
+	@if [ -f $(TIMING_LOG) ]; then \
+		echo "Recent build operations:"; \
+		tail -20 $(TIMING_LOG) | while read line; do \
+			if echo "$$line" | grep -q "START:"; then \
+				task=$$(echo "$$line" | sed 's/.*START: //'); \
+				timestamp=$$(echo "$$line" | cut -d']' -f1 | sed 's/\[//'); \
+				echo "Started: $$task at $$(date -r $$timestamp +'%H:%M:%S')"; \
+			elif echo "$$line" | grep -q "END:"; then \
+				task=$$(echo "$$line" | sed 's/.*END: //' | sed 's/ -.*//'); \
+				duration=$$(echo "$$line" | sed 's/.* - //' | sed 's/ms//'); \
+				echo "  Completed: $$task in $${duration}ms"; \
+			fi; \
+		done; \
+	else \
+		echo "No timing data available. Run a build first."; \
+	fi
+
+perf-report:
+	@echo "📈 Build Performance Metrics"
+	@echo "============================"
+	@if [ -f $(TIMING_LOG) ]; then \
+		echo "Average build times:"; \
+		grep "END:" $(TIMING_LOG) | sed 's/.*END: //' | awk '{ \
+			split($$0, a, " - "); \
+			task=a[1]; \
+			time=a[2]; \
+			gsub("ms", "", time); \
+			times[task] = times[task] " " time; \
+			count[task]++ \
+		} END { \
+			for (task in times) { \
+				split(times[task], t, " "); \
+				sum = 0; \
+				for (i in t) if (t[i] != "") sum += t[i]; \
+				avg = sum / count[task]; \
+				printf "  %s: %.0fms (avg of %d runs)\n", task, avg, count[task]; \
+			} \
+		}'; \
+	else \
+		echo "No performance data available. Run builds first."; \
+	fi
+	@echo
+	@echo "Cache effectiveness:"
+	@sccache --show-stats 2>/dev/null || echo "  sccache stats unavailable"
+
+clean-timing:
+	@echo "🧹 Cleaning timing and performance logs..."
+	@rm -f $(TIMING_LOG) $(PERF_METRICS)
+	@echo "✅ Timing logs cleaned"
