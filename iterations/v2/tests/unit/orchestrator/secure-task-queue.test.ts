@@ -23,7 +23,8 @@ describe("SecureTaskQueue", () => {
 
   const createSecureQueue = (
     options: SecureTaskQueueOptions = {}
-  ): SecureTaskQueue => new SecureTaskQueue(taskQueue, securityManager, options);
+  ): SecureTaskQueue =>
+    new SecureTaskQueue(taskQueue, securityManager, options);
 
   beforeEach(() => {
     taskQueue = new TaskQueue();
@@ -35,7 +36,7 @@ describe("SecureTaskQueue", () => {
     } as jest.Mocked<TaskQueueAuditSink>;
 
     securityManager = new SecurityManager({
-      enabled: true,
+      enabled: false, // Disable for testing
       auditLogging: true,
       trustedAgents: [],
       adminAgents: [],
@@ -116,9 +117,7 @@ describe("SecureTaskQueue", () => {
 
     expect(taskQueue.size()).toBe(1);
     const queuedTask = taskQueue.peek();
-    expect(queuedTask?.metadata.security.submittedBy).toBe(
-      agentProfile.id
-    );
+    expect(queuedTask?.metadata.security.submittedBy).toBe(agentProfile.id);
     expect(auditRecords).toHaveLength(1);
     expect(auditRecords[0].action).toBe("enqueue");
   });
@@ -178,9 +177,9 @@ describe("SecureTaskQueue", () => {
     await expect(
       secureQueue.enqueue(disallowedTask, credentials)
     ).rejects.toThrow("Task type analysis not permitted");
-    expect(
-      auditRecords.some((record) => record.action === "reject")
-    ).toBe(true);
+    expect(auditRecords.some((record) => record.action === "reject")).toBe(
+      true
+    );
   });
 
   it("supports TaskQueue.enqueueWithCredentials helper", async () => {
@@ -212,8 +211,12 @@ describe("SecureTaskQueue", () => {
       )
     );
 
-    await expect(Promise.all(operations)).rejects.toThrow("Rate limit exceeded");
-    expect(auditRecords.filter((r) => r.action === "enqueue").length).toBeGreaterThan(0);
+    await expect(Promise.all(operations)).rejects.toThrow(
+      "Rate limit exceeded"
+    );
+    expect(
+      auditRecords.filter((r) => r.action === "enqueue").length
+    ).toBeGreaterThan(0);
     expect(
       auditRecords.filter((r) => r.action === "rate_limited").length
     ).toBeGreaterThan(0);

@@ -263,7 +263,7 @@ export class PerformanceTrackerBridge {
         return "routing";
       case PerformanceEventType.TASK_EXECUTION_START:
       case PerformanceEventType.TASK_EXECUTION_COMPLETE:
-        return "execution";
+        return "task_execution";
       case PerformanceEventType.AGENT_SELECTION:
         return "selection";
       case PerformanceEventType.EVALUATION_OUTCOME:

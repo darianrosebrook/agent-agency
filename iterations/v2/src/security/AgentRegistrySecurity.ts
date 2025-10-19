@@ -393,6 +393,7 @@ export class AgentRegistrySecurity {
             "debugging",
             "refactoring",
             "api-design",
+            "file_editing",
           ];
           for (const taskType of caps.taskTypes) {
             if (!validTaskTypes.includes(taskType)) {

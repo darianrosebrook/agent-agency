@@ -13,6 +13,8 @@ pub struct ProcessingContext {
     pub line_number: Option<u32>,
     pub surrounding_context: String,
     pub domain_hints: Vec<String>,
+    pub metadata: std::collections::HashMap<String, serde_json::Value>, // Additional metadata
+    pub input_text: String, // Input text being processed
 }
 
 /// Result of claim extraction process
@@ -126,6 +128,10 @@ pub enum EvidenceType {
     SecurityScan,
     ConstitutionalReference, // CAWS compliance
     CouncilDecision,         // Council verification results
+    MultiModalAnalysis,      // Multi-modal verification results
+    ExternalSource,          // External API sources
+    TestResult,              // Individual test result
+    UserFeedback,            // User-provided feedback
 }
 
 /// Source of evidence
@@ -147,6 +153,8 @@ pub enum SourceType {
     TestSuite,
     ToolOutput,
     Analysis,
+    External,        // External API sources
+    Documentation,   // Documentation sources
 }
 
 /// Metadata about the processing operation

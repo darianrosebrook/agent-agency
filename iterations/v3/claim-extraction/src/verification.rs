@@ -394,14 +394,14 @@ impl EvidenceCollector {
     
     /// Calculate content relevance between evidence and claim
     fn calculate_content_relevance(&self, evidence_content: &str, claim_text: &str) -> f64 {
-        let evidence_words: std::collections::HashSet<&str> = evidence_content
+        let evidence_words: std::collections::HashSet<String> = evidence_content
             .split_whitespace()
-            .map(|w| w.to_lowercase().as_str())
+            .map(|w| w.to_lowercase())
             .collect();
         
-        let claim_words: std::collections::HashSet<&str> = claim_text
+        let claim_words: std::collections::HashSet<String> = claim_text
             .split_whitespace()
-            .map(|w| w.to_lowercase().as_str())
+            .map(|w| w.to_lowercase())
             .collect();
         
         let intersection: std::collections::HashSet<_> = evidence_words.intersection(&claim_words).collect();
@@ -440,6 +440,11 @@ impl EvidenceCollector {
             EvidenceType::ExternalSource => 0.6,
             EvidenceType::TestResult => 0.8,
             EvidenceType::UserFeedback => 0.5,
+            EvidenceType::TestResults => 0.8,
+            EvidenceType::ResearchFindings => 0.8,
+            EvidenceType::PerformanceMetrics => 0.8,
+            EvidenceType::SecurityScan => 0.9,
+            EvidenceType::ConstitutionalReference => 0.95,
         }
     }
 }

@@ -2519,9 +2519,11 @@ impl MultiModalVerificationEngine {
                         name: file_name.to_string(),
                         size: entry.metadata().map(|m| m.len()).unwrap_or(0),
                         modified: entry.metadata()
-                            .and_then(|m| m.modified().ok())
+                            .and_then(|m| Ok(m.modified().ok()))
+                            .ok()
+                            .flatten()
                             .map(|t| chrono::DateTime::from(t))
-                            .unwrap_or_else(chrono::Utc::now),
+                            .unwrap_or_else(|| chrono::Utc::now()),
                     });
                 }
             }
@@ -2675,6 +2677,8 @@ impl MultiModalVerificationEngine {
                 ValidationOutcome::Validated => analysis.validated_count += 1,
                 ValidationOutcome::Rejected => analysis.rejected_count += 1,
                 ValidationOutcome::Inconclusive => {},
+                ValidationOutcome::Refuted => analysis.rejected_count += 1,
+                ValidationOutcome::Uncertain => {},
             }
             
             total_confidence += claim.validation_confidence;
@@ -2784,4 +2788,6 @@ enum ValidationOutcome {
     Validated,
     Refuted,
     Uncertain,
+    Rejected,      // Explicitly rejected claims
+    Inconclusive,  // Inconclusive validation results
 }

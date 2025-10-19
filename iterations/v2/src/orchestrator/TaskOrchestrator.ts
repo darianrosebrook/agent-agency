@@ -1077,6 +1077,7 @@ export class TaskOrchestrator extends EventEmitter {
         "data_processing",
         "ai_inference",
         "file_editing",
+        "analysis",
       ].includes(task.type)
     ) {
       throw new Error(`Unsupported task type: ${task.type}`);

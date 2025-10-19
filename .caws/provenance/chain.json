@@ -11154,5 +11154,113 @@
     },
     "previous_hash": "dd70f2629a955abb311d58701a8c6f16994f489060d0f9fbe7e98967b8944d87",
     "hash": "aebf0f883277afa3a41d295cb7f035fe0f9f32b863f758042d0e913bf2ae3e60"
+  },
+  {
+    "id": "prov-1760822385249",
+    "timestamp": "2025-10-18T21:19:45.249Z",
+    "commit": {
+      "hash": "c108d54e45b6ba7c4b65b3230ab05f2fbc1942ff",
+      "message": "Fix council compilation to 0 errors - resolve async recursion, TestData types, and database queries",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "PROJ-785",
+      "title": "agent-agency",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": [
+        "WV-0001"
+      ]
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-18T21:19:45.250Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "aebf0f883277afa3a41d295cb7f035fe0f9f32b863f758042d0e913bf2ae3e60",
+    "hash": "4b515d8ed978e164d286165c3ea47ba25c1ab9e24ff7a19a6659ec9883ee0de6"
+  },
+  {
+    "id": "prov-1760822922608",
+    "timestamp": "2025-10-18T21:28:42.608Z",
+    "commit": {
+      "hash": "41a47228fff770c0306a9d42a9c6c599d05a458b",
+      "message": "Fix syntax error: remove extra closing brace in multi_modal_verification.rs",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "PROJ-785",
+      "title": "agent-agency",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": [
+        "WV-0001"
+      ]
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-18T21:28:42.609Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "4b515d8ed978e164d286165c3ea47ba25c1ab9e24ff7a19a6659ec9883ee0de6",
+    "hash": "2640b0d4539428d31565c48372e7e9211c72e2c4fd866e4f3e843c55ac764579"
+  },
+  {
+    "id": "prov-1760823604156",
+    "timestamp": "2025-10-18T21:40:04.156Z",
+    "commit": {
+      "hash": "27435ee7729931f009819b773a01df7fd2234396",
+      "message": "Progress on claim-extraction: reduce errors from 36 to 24 by fixing syntax errors and enum variants",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "PROJ-785",
+      "title": "agent-agency",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": [
+        "WV-0001"
+      ]
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-18T21:40:04.156Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "2640b0d4539428d31565c48372e7e9211c72e2c4fd866e4f3e843c55ac764579",
+    "hash": "ad90d8063c7270819c367c7981aabe3744898da95e09f113fa91e6a1c3795213"
   }
 ]

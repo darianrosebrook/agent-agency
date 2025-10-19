@@ -413,3 +413,4 @@ system_profiler SPMDataType | grep "Apple Neural Engine"
 ---
 
 **Status:** Gate C documentation complete. Ready for manual local testing.
+

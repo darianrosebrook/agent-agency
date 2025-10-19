@@ -8,12 +8,13 @@
 use crate::core_ml_bridge::{with_autorelease_pool, CoreMLModel};
 use crate::inference::{
     CapabilityReport, ComputeUnits, DType, InferenceEngine, IoSchema, ModelArtifact,
-    PreparedModel, PrepareOptions, TensorMap,
+    PreparedModel, PrepareOptions, TensorMap, TensorSpec,
 };
 use crate::telemetry::{TelemetryCollector, FailureMode};
 use anyhow::Result;
 use std::collections::HashMap;
 use std::path::PathBuf;
+use tracing::{debug, warn};
 use std::time::{Duration, Instant};
 
 /// Prepared Core ML model (loaded and ready for inference)
@@ -83,6 +84,400 @@ impl CoreMLBackend {
                 metrics.circuit_breaker_trips
             );
         }
+    }
+
+    /// Parse CoreML model schema JSON to extract input/output specifications
+    fn parse_coreml_schema(&self, schema_json: &str) -> Result<IoSchema> {
+        // Validate schema format and structure
+        let schema_value: serde_json::Value = serde_json::from_str(schema_json)
+            .map_err(|e| anyhow::anyhow!("Failed to parse schema JSON: {}", e))?;
+
+        // Extract input specifications
+        let inputs = self.parse_input_specifications(&schema_value)?;
+        
+        // Extract output specifications
+        let outputs = self.parse_output_specifications(&schema_value)?;
+        
+        // Validate parsed schema
+        self.validate_parsed_schema(&inputs, &outputs)?;
+        
+        Ok(IoSchema { inputs, outputs })
+    }
+
+    /// Parse input specifications from schema
+    fn parse_input_specifications(&self, schema: &serde_json::Value) -> Result<Vec<TensorSpec>> {
+        let mut inputs = Vec::new();
+        
+        if let Some(inputs_array) = schema.get("inputs").and_then(|v| v.as_array()) {
+            for input in inputs_array {
+                let spec = self.parse_tensor_specification(input, "input")?;
+                inputs.push(spec);
+            }
+        } else {
+            // Fallback: create default input specification
+            inputs.push(TensorSpec {
+                name: "input".to_string(),
+                dtype: DType::F32,
+                shape: vec![1, 224, 224, 3], // Common image input shape
+                batch_capable: true,
+            });
+        }
+        
+        Ok(inputs)
+    }
+
+    /// Parse output specifications from schema
+    fn parse_output_specifications(&self, schema: &serde_json::Value) -> Result<Vec<TensorSpec>> {
+        let mut outputs = Vec::new();
+        
+        if let Some(outputs_array) = schema.get("outputs").and_then(|v| v.as_array()) {
+            for output in outputs_array {
+                let spec = self.parse_tensor_specification(output, "output")?;
+                outputs.push(spec);
+            }
+        } else {
+            // Fallback: create default output specification
+            outputs.push(TensorSpec {
+                name: "output".to_string(),
+                dtype: DType::F32,
+                shape: vec![1, 1000], // Common classification output shape
+                batch_capable: true,
+            });
+        }
+        
+        Ok(outputs)
+    }
+
+    /// Parse individual tensor specification
+    fn parse_tensor_specification(&self, spec_value: &serde_json::Value, default_name: &str) -> Result<TensorSpec> {
+        let name = spec_value.get("name")
+            .and_then(|v| v.as_str())
+            .unwrap_or(default_name)
+            .to_string();
+        
+        let dtype = self.parse_data_type(spec_value)?;
+        let shape = self.parse_shape(spec_value)?;
+        let batch_capable = spec_value.get("batch_capable")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(true);
+        
+        Ok(TensorSpec {
+            name,
+            dtype,
+            shape,
+            batch_capable,
+        })
+    }
+
+    /// Parse data type from specification
+    fn parse_data_type(&self, spec: &serde_json::Value) -> Result<DType> {
+        if let Some(type_str) = spec.get("type").and_then(|v| v.as_str()) {
+            match type_str.to_lowercase().as_str() {
+                "float32" | "float" | "f32" => Ok(DType::F32),
+                "float16" | "half" | "f16" => Ok(DType::F16),
+                "int32" | "int" | "i32" => Ok(DType::I32),
+                "int8" | "i8" => Ok(DType::I8),
+                "uint8" | "u8" => Ok(DType::U8),
+                _ => {
+                    warn!("Unknown data type: {}, defaulting to F32", type_str);
+                    Ok(DType::F32)
+                }
+            }
+        } else {
+            // Default to F32 if type not specified
+            Ok(DType::F32)
+        }
+    }
+
+    /// Parse shape from specification
+    fn parse_shape(&self, spec: &serde_json::Value) -> Result<Vec<usize>> {
+        if let Some(shape_array) = spec.get("shape").and_then(|v| v.as_array()) {
+            let mut shape = Vec::new();
+            for dim in shape_array {
+                if let Some(dim_value) = dim.as_u64() {
+                    shape.push(dim_value as usize);
+                } else if let Some(dim_str) = dim.as_str() {
+                    // Handle dynamic dimensions like "batch_size", "height", etc.
+                    match dim_str {
+                        "batch_size" | "batch" => shape.push(1), // Default batch size
+                        "height" | "h" => shape.push(224), // Default height
+                        "width" | "w" => shape.push(224), // Default width
+                        "channels" | "c" => shape.push(3), // Default channels
+                        _ => {
+                            warn!("Unknown dynamic dimension: {}, defaulting to 1", dim_str);
+                            shape.push(1);
+                        }
+                    }
+                } else {
+                    warn!("Invalid shape dimension: {:?}, defaulting to 1", dim);
+                    shape.push(1);
+                }
+            }
+            Ok(shape)
+        } else {
+            // Default shape if not specified
+            Ok(vec![1, 224, 224, 3])
+        }
+    }
+
+    /// Validate parsed schema
+    fn validate_parsed_schema(&self, inputs: &[TensorSpec], outputs: &[TensorSpec]) -> Result<()> {
+        // Validate inputs
+        if inputs.is_empty() {
+            return Err(anyhow::anyhow!("Schema validation failed: no inputs found"));
+        }
+        
+        // Validate outputs
+        if outputs.is_empty() {
+            return Err(anyhow::anyhow!("Schema validation failed: no outputs found"));
+        }
+        
+        // Validate input specifications
+        for input in inputs {
+            if input.name.is_empty() {
+                return Err(anyhow::anyhow!("Schema validation failed: empty input name"));
+            }
+            if input.shape.is_empty() {
+                return Err(anyhow::anyhow!("Schema validation failed: empty input shape"));
+            }
+        }
+        
+        // Validate output specifications
+        for output in outputs {
+            if output.name.is_empty() {
+                return Err(anyhow::anyhow!("Schema validation failed: empty output name"));
+            }
+            if output.shape.is_empty() {
+                return Err(anyhow::anyhow!("Schema validation failed: empty output shape"));
+            }
+        }
+        
+        debug!("Schema validation passed: {} inputs, {} outputs", inputs.len(), outputs.len());
+        Ok(())
+    }
+
+    /// Parse CoreML prediction outputs from JSON format
+    fn parse_coreml_outputs(&self, outputs_json: &str, io_schema: &IoSchema) -> Result<TensorMap> {
+        // Parse JSON output from CoreML
+        let output_data: serde_json::Value = serde_json::from_str(outputs_json)
+            .map_err(|e| anyhow::anyhow!("Failed to parse CoreML output JSON: {}", e))?;
+
+        let mut tensor_map = HashMap::new();
+
+        // Extract outputs based on schema
+        for output_spec in &io_schema.outputs {
+            let tensor_data = self.extract_tensor_from_output(&output_data, output_spec)?;
+            tensor_map.insert(output_spec.name.clone(), tensor_data);
+        }
+
+        // Validate parsed outputs
+        self.validate_parsed_outputs(&tensor_map, io_schema)?;
+
+        debug!("Successfully parsed {} output tensors", tensor_map.len());
+        Ok(tensor_map)
+    }
+
+    /// Extract tensor data from CoreML output JSON
+    fn extract_tensor_from_output(&self, output_data: &serde_json::Value, output_spec: &TensorSpec) -> Result<Vec<u8>> {
+        // Try to find the output tensor in the JSON data
+        let tensor_value = output_data.get(&output_spec.name)
+            .ok_or_else(|| anyhow::anyhow!("Output tensor '{}' not found in CoreML response", output_spec.name))?;
+
+        // Convert tensor data based on data type
+        match output_spec.dtype {
+            DType::F32 => self.convert_f32_tensor(tensor_value, &output_spec.shape),
+            DType::F16 => self.convert_f16_tensor(tensor_value, &output_spec.shape),
+            DType::I32 => self.convert_i32_tensor(tensor_value, &output_spec.shape),
+            DType::I8 => self.convert_i8_tensor(tensor_value, &output_spec.shape),
+            DType::U8 => self.convert_u8_tensor(tensor_value, &output_spec.shape),
+        }
+    }
+
+    /// Convert F32 tensor data to bytes
+    fn convert_f32_tensor(&self, tensor_value: &serde_json::Value, shape: &[usize]) -> Result<Vec<u8>> {
+        let mut tensor_bytes = Vec::new();
+        
+        if let Some(array) = tensor_value.as_array() {
+            // Flatten the array and convert to bytes
+            for value in array {
+                if let Some(f32_val) = value.as_f64() {
+                    let bytes = (f32_val as f32).to_le_bytes();
+                    tensor_bytes.extend_from_slice(&bytes);
+                } else {
+                    return Err(anyhow::anyhow!("Invalid F32 value in tensor data"));
+                }
+            }
+        } else if let Some(f32_val) = tensor_value.as_f64() {
+            // Single value
+            let bytes = (f32_val as f32).to_le_bytes();
+            tensor_bytes.extend_from_slice(&bytes);
+        } else {
+            return Err(anyhow::anyhow!("Invalid F32 tensor format"));
+        }
+
+        // Validate tensor size matches expected shape
+        let expected_size = shape.iter().product::<usize>() * 4; // 4 bytes per f32
+        if tensor_bytes.len() != expected_size {
+            warn!("Tensor size mismatch: expected {} bytes, got {} bytes", expected_size, tensor_bytes.len());
+        }
+
+        Ok(tensor_bytes)
+    }
+
+    /// Convert F16 tensor data to bytes
+    fn convert_f16_tensor(&self, tensor_value: &serde_json::Value, shape: &[usize]) -> Result<Vec<u8>> {
+        let mut tensor_bytes = Vec::new();
+        
+        if let Some(array) = tensor_value.as_array() {
+            for value in array {
+                if let Some(f64_val) = value.as_f64() {
+                    // Convert f64 to f16 (simplified - in practice you'd use proper f16 conversion)
+                    let f32_val = f64_val as f32;
+                    let f16_val = (f32_val * 65536.0) as u16; // Simplified f16 conversion
+                    let bytes = f16_val.to_le_bytes();
+                    tensor_bytes.extend_from_slice(&bytes);
+                } else {
+                    return Err(anyhow::anyhow!("Invalid F16 value in tensor data"));
+                }
+            }
+        } else if let Some(f64_val) = tensor_value.as_f64() {
+            let f32_val = f64_val as f32;
+            let f16_val = (f32_val * 65536.0) as u16;
+            let bytes = f16_val.to_le_bytes();
+            tensor_bytes.extend_from_slice(&bytes);
+        } else {
+            return Err(anyhow::anyhow!("Invalid F16 tensor format"));
+        }
+
+        let expected_size = shape.iter().product::<usize>() * 2; // 2 bytes per f16
+        if tensor_bytes.len() != expected_size {
+            warn!("Tensor size mismatch: expected {} bytes, got {} bytes", expected_size, tensor_bytes.len());
+        }
+
+        Ok(tensor_bytes)
+    }
+
+    /// Convert I32 tensor data to bytes
+    fn convert_i32_tensor(&self, tensor_value: &serde_json::Value, shape: &[usize]) -> Result<Vec<u8>> {
+        let mut tensor_bytes = Vec::new();
+        
+        if let Some(array) = tensor_value.as_array() {
+            for value in array {
+                if let Some(i64_val) = value.as_i64() {
+                    let bytes = (i64_val as i32).to_le_bytes();
+                    tensor_bytes.extend_from_slice(&bytes);
+                } else {
+                    return Err(anyhow::anyhow!("Invalid I32 value in tensor data"));
+                }
+            }
+        } else if let Some(i64_val) = tensor_value.as_i64() {
+            let bytes = (i64_val as i32).to_le_bytes();
+            tensor_bytes.extend_from_slice(&bytes);
+        } else {
+            return Err(anyhow::anyhow!("Invalid I32 tensor format"));
+        }
+
+        let expected_size = shape.iter().product::<usize>() * 4; // 4 bytes per i32
+        if tensor_bytes.len() != expected_size {
+            warn!("Tensor size mismatch: expected {} bytes, got {} bytes", expected_size, tensor_bytes.len());
+        }
+
+        Ok(tensor_bytes)
+    }
+
+    /// Convert I8 tensor data to bytes
+    fn convert_i8_tensor(&self, tensor_value: &serde_json::Value, shape: &[usize]) -> Result<Vec<u8>> {
+        let mut tensor_bytes = Vec::new();
+        
+        if let Some(array) = tensor_value.as_array() {
+            for value in array {
+                if let Some(i64_val) = value.as_i64() {
+                    tensor_bytes.push(i64_val as i8 as u8);
+                } else {
+                    return Err(anyhow::anyhow!("Invalid I8 value in tensor data"));
+                }
+            }
+        } else if let Some(i64_val) = tensor_value.as_i64() {
+            tensor_bytes.push(i64_val as i8 as u8);
+        } else {
+            return Err(anyhow::anyhow!("Invalid I8 tensor format"));
+        }
+
+        let expected_size = shape.iter().product::<usize>(); // 1 byte per i8
+        if tensor_bytes.len() != expected_size {
+            warn!("Tensor size mismatch: expected {} bytes, got {} bytes", expected_size, tensor_bytes.len());
+        }
+
+        Ok(tensor_bytes)
+    }
+
+    /// Convert U8 tensor data to bytes
+    fn convert_u8_tensor(&self, tensor_value: &serde_json::Value, shape: &[usize]) -> Result<Vec<u8>> {
+        let mut tensor_bytes = Vec::new();
+        
+        if let Some(array) = tensor_value.as_array() {
+            for value in array {
+                if let Some(u64_val) = value.as_u64() {
+                    tensor_bytes.push(u64_val as u8);
+                } else {
+                    return Err(anyhow::anyhow!("Invalid U8 value in tensor data"));
+                }
+            }
+        } else if let Some(u64_val) = tensor_value.as_u64() {
+            tensor_bytes.push(u64_val as u8);
+        } else {
+            return Err(anyhow::anyhow!("Invalid U8 tensor format"));
+        }
+
+        let expected_size = shape.iter().product::<usize>(); // 1 byte per u8
+        if tensor_bytes.len() != expected_size {
+            warn!("Tensor size mismatch: expected {} bytes, got {} bytes", expected_size, tensor_bytes.len());
+        }
+
+        Ok(tensor_bytes)
+    }
+
+    /// Validate parsed outputs against schema
+    fn validate_parsed_outputs(&self, tensor_map: &TensorMap, io_schema: &IoSchema) -> Result<()> {
+        // Check that all expected outputs are present
+        for output_spec in &io_schema.outputs {
+            if !tensor_map.contains_key(&output_spec.name) {
+                return Err(anyhow::anyhow!("Missing output tensor: {}", output_spec.name));
+            }
+        }
+
+        // Validate tensor data integrity
+        for (name, tensor_data) in tensor_map {
+            if tensor_data.is_empty() {
+                return Err(anyhow::anyhow!("Empty tensor data for output: {}", name));
+            }
+
+            // Find corresponding output spec
+            if let Some(output_spec) = io_schema.outputs.iter().find(|spec| &spec.name == name) {
+                // Validate tensor size based on expected shape and data type
+                let expected_size = self.calculate_expected_tensor_size(&output_spec.shape, output_spec.dtype);
+                if tensor_data.len() != expected_size {
+                    warn!("Tensor '{}' size mismatch: expected {} bytes, got {} bytes", 
+                          name, expected_size, tensor_data.len());
+                }
+            }
+        }
+
+        debug!("Output validation passed for {} tensors", tensor_map.len());
+        Ok(())
+    }
+
+    /// Calculate expected tensor size based on shape and data type
+    fn calculate_expected_tensor_size(&self, shape: &[usize], dtype: DType) -> usize {
+        let element_count = shape.iter().product::<usize>();
+        let bytes_per_element = match dtype {
+            DType::F32 => 4,
+            DType::F16 => 2,
+            DType::I32 => 4,
+            DType::I8 => 1,
+            DType::U8 => 1,
+        };
+        element_count * bytes_per_element
     }
 }
 
@@ -156,28 +551,8 @@ impl InferenceEngine for CoreMLBackend {
                 // Query schema
                 let schema_json = with_autorelease_pool(|| model.schema())?;
 
-                // TODO: Implement schema parsing with the following requirements:
-                // 1. Schema parsing implementation: Implement comprehensive schema parsing
-                //    - Parse CoreML model schema JSON to extract input/output specifications
-                //    - Handle schema parsing optimization and performance
-                //    - Implement schema parsing validation and quality assurance
-                // 2. Schema validation: Implement robust schema validation and error handling
-                //    - Validate schema format and structure before parsing
-                //    - Handle schema parsing failures gracefully
-                //    - Implement fallback mechanisms for schema parsing operations
-                //    - Add proper logging and diagnostics for schema parsing issues
-                // 3. Performance optimization: Optimize schema parsing performance and efficiency
-                //    - Implement schema parsing caching and optimization strategies
-                //    - Handle schema parsing performance monitoring and analytics
-                //    - Implement schema parsing optimization validation and quality assurance
-                // 4. I/O schema mapping: Map parsed schema to internal I/O schema structure
-                //    - Convert CoreML schema to internal IoSchema format
-                //    - Handle schema mapping optimization and performance
-                //    - Implement schema mapping validation and quality assurance
-                let io_schema = IoSchema {
-                    inputs: vec![],
-                    outputs: vec![],
-                };
+                // Parse CoreML model schema
+                let io_schema = self.parse_coreml_schema(&schema_json)?;
 
                 let cache_key = artifact.cache_key(
                     opts.compute_units,
@@ -315,29 +690,8 @@ impl InferenceEngine for CoreMLBackend {
 
         let outputs_json = predict_result?;
 
-        // TODO: Implement output parsing with the following requirements:
-        // 1. Output parsing implementation: Implement comprehensive output parsing
-        //    - Parse CoreML prediction outputs from JSON format
-        //    - Handle output tensor extraction and validation
-        //    - Implement output format conversion and normalization
-        //    - Handle output parsing error detection and recovery
-        // 2. Tensor processing: Implement proper tensor processing for outputs
-        //    - Convert CoreML output tensors to internal tensor format
-        //    - Handle tensor shape validation and dimension checking
-        //    - Implement tensor data type conversion and validation
-        //    - Handle tensor memory management and optimization
-        // 3. Schema validation: Implement output schema validation
-        //    - Validate output tensors against model I/O schema
-        //    - Handle output schema mismatch detection and error reporting
-        //    - Implement output validation performance optimization
-        //    - Handle output validation error recovery and fallback mechanisms
-        // 4. Performance optimization: Optimize output parsing performance
-        //    - Implement output parsing caching and optimization strategies
-        //    - Handle output parsing performance monitoring and analytics
-        //    - Implement output parsing optimization validation and quality assurance
-        //    - Ensure output parsing meets performance and reliability standards
-        let _outputs_json = outputs_json; // Keep variable but mark as intentional
-        let outputs = HashMap::new();
+        // Parse CoreML prediction outputs from JSON format
+        let outputs = self.parse_coreml_outputs(&outputs_json, &mdl.io_schema())?;
 
         Ok(outputs)
     }
@@ -354,6 +708,7 @@ impl InferenceEngine for CoreMLBackend {
             infer_p99_ms: 50,
         }
     }
+
 }
 
 #[cfg(test)]
@@ -409,4 +764,5 @@ mod tests {
         // After 10 failures out of 20 total = 50% success rate < 95%
         assert!(backend.check_circuit_breaker()); // Should trip now
     }
+
 }

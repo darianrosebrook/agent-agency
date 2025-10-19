@@ -243,3 +243,30 @@ All documentation is version-controlled. Latest updates:
 ---
 
 📌 **Bookmark this page!** It's your hub for all ARBITER v2 documentation.
+
+## Critical Resources (Start Here!)
+
+| Document | Size | Time | Purpose |
+|----------|------|------|---------|
+| **QUICK_START.md** | 3 KB | 5 min | Getting started guide |
+| **NEXT_ACTIONS.md** | 8 KB | 15 min | Specific high-value fixes (test suite) |
+| **SECURITY_HARDENING_AUDIT.md** | 18 KB | 20 min | **NEW: Security issues & fixes (CRITICAL)** |
+| **PRODUCTION_READINESS.md** | 12 KB | 15 min | Overall status & metrics |
+| **DEPLOYMENT_READINESS.md** | 8 KB | 10 min | Deployment checklist |
+
+---
+
+## 🔒 Security Status (CRITICAL - Must Review!)
+
+**Current Security Posture**: 62% (Development → Production Hardening Phase)
+
+| Issue | Severity | Status | Impact |
+|-------|----------|--------|--------|
+| Default JWT Secret | 🔴 CRITICAL | Unfixed | Authentication bypass |
+| Mock Fallbacks | 🔴 CRITICAL | Unfixed | Privilege escalation |
+| DB Password Logging | 🔴 CRITICAL | Unfixed | Data breach |
+| Auth Rate Limiting | 🔴 CRITICAL | Unfixed | Brute force attacks |
+| HTTPS Enforcement | 🔴 CRITICAL | Unfixed | MITM attacks |
+| Task Validation | 🔴 CRITICAL | Unfixed | Code injection |
+
+**→ See SECURITY_HARDENING_AUDIT.md for details and fixes**

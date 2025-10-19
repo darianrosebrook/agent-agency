@@ -341,7 +341,21 @@ impl<S: DeviceSensors, R: ModelRegistry> SimplePlanner<S, R> {
                 return d;
             }
         }
-        // fallback: pick first supported ignoring throttle
+        // fallback: pick first supported, preferring non-throttled devices
+        for d in [DeviceKind::Gpu, DeviceKind::Cpu, DeviceKind::Ane] {
+            let thermal = self.sensors.thermal(d);
+            if thermal.throttled {
+                continue;
+            }
+            if req
+                .supported_precisions
+                .iter()
+                .any(|&p| self.registry.supports(&req.model, d, p))
+            {
+                return d;
+            }
+        }
+        // Last resort: use any supported device even if throttled
         for d in [DeviceKind::Ane, DeviceKind::Gpu, DeviceKind::Cpu] {
             if req
                 .supported_precisions
