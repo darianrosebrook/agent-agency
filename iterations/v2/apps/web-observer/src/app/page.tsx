@@ -95,7 +95,11 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50 overflow-x-hidden">
-      <DashboardHeader activeTab={activeTab} onTabChange={setActiveTab} />
+      <DashboardHeader
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        isConnected={!error && !loading}
+      />
 
       <main className="container mx-auto px-4 py-6 max-w-full">
         {activeTab === "overview" && (

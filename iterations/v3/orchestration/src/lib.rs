@@ -8,6 +8,8 @@ pub mod persistence;
 pub mod persistence_postgres;
 pub mod planning;
 pub mod provenance;
+pub mod quality;
+pub mod refinement;
 pub mod tracking;
 pub mod multimodal_orchestration;
 

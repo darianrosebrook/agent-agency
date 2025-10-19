@@ -347,7 +347,14 @@ impl QuantizationManager {
         );
 
         // 2. Weight distribution analysis: Analyze weight distributions for quantization
-        let weight_stats = analyze_weight_distribution(original_size).await;
+        // TODO: Implement weight distribution analysis
+        let weight_stats = WeightStats {
+            min_value: -1.0,
+            max_value: 1.0,
+            mean_value: 0.0,
+            std_deviation: 0.5,
+            outlier_count: 0,
+        };
         tracing::debug!(
             "Weight distribution analysis: min={:.6}, max={:.6}, mean={:.6}, std={:.6}",
             weight_stats.min,
@@ -737,7 +744,6 @@ async fn estimate_quantized_parameters(model_size: u64) -> u64 {
 
         Ok(config)
     }
-}
 
     /// Apply INT8 quantization to model weights
     async fn apply_int8_quantization(
@@ -863,6 +869,7 @@ async fn estimate_quantized_parameters(model_size: u64) -> u64 {
         // Estimate parameters based on model size (assuming ~4 bytes per float32)
         (model_size / 4) as u64
     }
+}
 
 impl Default for QuantizationManager {
     fn default() -> Self {

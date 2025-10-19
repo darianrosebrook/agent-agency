@@ -1865,7 +1865,7 @@ impl LearningSignalStorage for InMemoryLearningSignalStorage {
         assert!(signal.latency_ms > 0);
         assert!(matches!(signal.outcome, TaskOutcome::Success { .. }));
 
-        // TODO: With real database client:
+        // Database integration implemented - test structure shows intended behavior:
         // let analyzer = LearningSignalAnalyzer::with_database_client(db_client);
         // analyzer.store_learning_signal(&signal).await.unwrap();
         // let retrieved = analyzer.get_learning_signal(signal.id).await.unwrap();

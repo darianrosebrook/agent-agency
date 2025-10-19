@@ -54,7 +54,7 @@ function substituteEnvVars(obj: any): any {
     return obj.replace(/\$\{([^}]+)\}/g, (match, expr) => {
       const [varName, defaultValue] = expr.split(":", 2);
       const envValue = process.env[varName];
-      return envValue !== undefined ? envValue : (defaultValue || match);
+      return envValue !== undefined ? envValue : defaultValue || match;
     });
   } else if (Array.isArray(obj)) {
     return obj.map(substituteEnvVars);
@@ -271,7 +271,7 @@ export class ConfigManager {
       const validation = this.validateConfig(processedConfig);
       if (!validation.valid) {
         const errorMessage = validation.errors
-          .map(err => `${err.path.map(String).join(".")}: ${err.message}`)
+          .map((err) => `${err.path.map(String).join(".")}: ${err.message}`)
           .join("; ");
         throw new Error(`Configuration validation failed: ${errorMessage}`);
       }
@@ -413,9 +413,11 @@ export class ConfigManager {
         // Rollback on validation failure
         this.config = originalConfig;
         const errorMessage = validation.errors
-          .map(err => `${err.path.map(String).join(".")}: ${err.message}`)
+          .map((err) => `${err.path.map(String).join(".")}: ${err.message}`)
           .join("; ");
-        throw new Error(`Configuration update validation failed: ${errorMessage}`);
+        throw new Error(
+          `Configuration update validation failed: ${errorMessage}`
+        );
       }
 
       // Updates are valid, emit change event
@@ -436,19 +438,23 @@ export class ConfigManager {
   /**
    * Validate configuration against schema
    */
-  private validateConfig(config: any): { valid: boolean; errors: Array<{ path: (string | number)[]; message: string }> } {
+  private validateConfig(config: any): {
+    valid: boolean;
+    errors: Array<{ path: (string | number)[]; message: string }>;
+  } {
     try {
       fullConfigSchema.parse(config);
       return { valid: true, errors: [] };
     } catch (error) {
       if (error instanceof z.ZodError) {
-        const errors = error.errors.map(err => ({
+        const errors = error.errors.map((err) => ({
           path: err.path,
-          message: err.message
+          message: err.message,
         }));
         return { valid: false, errors };
       }
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       return { valid: false, errors: [{ path: [], message: errorMessage }] };
     }
   }

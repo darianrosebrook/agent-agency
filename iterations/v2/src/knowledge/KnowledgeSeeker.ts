@@ -39,6 +39,8 @@ export class KnowledgeSeeker implements IKnowledgeSeeker {
   private activeQueries: Map<string, Promise<KnowledgeResponse>> = new Map();
   private queryCache: Map<string, KnowledgeResponse> = new Map();
   private resultCache: Map<string, any[]> = new Map();
+  private cacheHits: number = 0;
+  private cacheMisses: number = 0;
   private dbClient: KnowledgeDatabaseClient | null = null;
   private verificationEngine: any = null; // VerificationEngineImpl
   private embeddingService: EmbeddingService | null = null;
@@ -403,14 +405,7 @@ export class KnowledgeSeeker implements IKnowledgeSeeker {
 
     // Add mock provider for testing if no providers configured
     if (this.providers.size === 0 && this.config.providers.length === 0) {
-      // For now, create a basic mock provider inline to avoid async issues
-      // TODO: Replace with proper mock provider factory
-      const mockProvider = {
-        name: "mock",
-        search: async () => [],
-        getHealth: () => ({ available: true, responseTimeMs: 0, errorRate: 0 }),
-        shutdown: async () => {},
-      } as any;
+      const mockProvider = SearchProviderFactory.createMockProvider("mock");
       this.providers.set(mockProvider.name, mockProvider);
     }
   }
@@ -546,11 +541,14 @@ export class KnowledgeSeeker implements IKnowledgeSeeker {
     const cached = this.queryCache.get(cacheKey);
 
     if (cached && this.isCacheValid(cached)) {
-      // Update cache access time
+      // Cache hit - increment counter and update access time
+      this.cacheHits++;
       cached.respondedAt = new Date();
       return cached;
     }
 
+    // Cache miss - increment counter
+    this.cacheMisses++;
     return null;
   }
 
@@ -629,12 +627,31 @@ export class KnowledgeSeeker implements IKnowledgeSeeker {
   }
 
   /**
-   * Calculate cache hit rate (simplified)
+   * Calculate cache hit rate
    */
   private calculateCacheHitRate(): number {
-    // This would need proper tracking in production
-    // For now, return a placeholder
-    return 0.0;
+    const totalAccesses = this.cacheHits + this.cacheMisses;
+    if (totalAccesses === 0) {
+      return 0.0;
+    }
+    return this.cacheHits / totalAccesses;
+  }
+
+  /**
+   * Get cache statistics
+   */
+  public getCacheStats(): {
+    hits: number;
+    misses: number;
+    hitRate: number;
+    size: number;
+  } {
+    return {
+      hits: this.cacheHits,
+      misses: this.cacheMisses,
+      hitRate: this.calculateCacheHitRate(),
+      size: this.queryCache.size,
+    };
   }
 
   /**

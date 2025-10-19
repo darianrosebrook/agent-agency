@@ -1,16 +1,14 @@
-import { useState } from "react";
-
 interface DashboardHeaderProps {
   activeTab: "overview" | "tasks" | "events" | "controls";
   onTabChange: (tab: "overview" | "tasks" | "events" | "controls") => void;
+  isConnected?: boolean;
 }
 
 export default function DashboardHeader({
   activeTab,
   onTabChange,
+  isConnected = true,
 }: DashboardHeaderProps) {
-  const [isConnected] = useState(true); // TODO: Implement actual connection status
-
   const tabs = [
     {
       id: "overview" as const,

@@ -224,9 +224,8 @@ export class ResilientDatabaseClient {
     );
 
     // Transform to RegistryStats interface
-    const averageUtilization = stats.totalAgents > 0
-      ? stats.activeAgents / stats.totalAgents
-      : 0;
+    const averageUtilization =
+      stats.totalAgents > 0 ? stats.activeAgents / stats.totalAgents : 0;
 
     return {
       totalAgents: stats.totalAgents,

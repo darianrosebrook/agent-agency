@@ -14,7 +14,7 @@ serde_yaml = "0.9"
 serde_json = "1"
 thiserror = "1"
 uuid = { version = "1", features = ["v4", "serde"] }
-tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "process", "sync", "time"] }
 sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "json", "uuid", "chrono"] }
 parking_lot = "0.12"
 agent-agency-council = { path = "../council" }
@@ -24,6 +24,7 @@ agent-agency-resilience = { path = "../resilience" }
 agent-agency-database = { path = "../database" }
 agent-agency-contracts = { path = "../agent-agency-contracts" }
 tracing = "0.1"
+flate2 = "1.0"
 
 # Multimodal RAG integration dependencies
 ingestors = { path = "../ingestors" }
