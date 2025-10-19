@@ -125,10 +125,11 @@ impl DatabaseVectorStore {
             .unwrap_or_default();
 
         let entry = SearchAuditEntry {
+            id: uuid::Uuid::new_v4(),
             query: query.to_string(),
-            results: search_results,
-            features: feature_map,
-            timestamp: chrono::Utc::now().to_rfc3339(),
+            created_at: chrono::Utc::now(),
+            results: Some(serde_json::to_value(&search_results).unwrap_or(serde_json::Value::Null)),
+            features: Some(serde_json::to_value(&feature_map).unwrap_or(serde_json::Value::Null)),
         };
 
         self.vector_store

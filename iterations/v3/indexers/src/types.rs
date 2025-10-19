@@ -94,10 +94,11 @@ pub struct BlockVectorRecord {
 }
 
 /// Search audit log entry
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct SearchAuditEntry {
+    pub id: Uuid,
     pub query: String,
-    pub results: Vec<SearchResult>,
-    pub features: HashMap<String, f32>,
-    pub timestamp: String,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    pub results: Option<serde_json::Value>,
+    pub features: Option<serde_json::Value>,
 }

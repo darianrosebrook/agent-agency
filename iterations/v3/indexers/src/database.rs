@@ -201,8 +201,7 @@ impl VectorStore for PostgresVectorStore {
     async fn get_search_logs(&self, limit: usize) -> Result<Vec<SearchAuditEntry>> {
         // Query recent search logs from audit table
         let logs = sqlx::query_as::<_, SearchAuditEntry>(
-            "SELECT id, query_vector, model_id, k, results_count, 
-                    execution_time_ms, created_at, project_scope
+            "SELECT id, query, created_at, results, features
              FROM search_logs 
              ORDER BY created_at DESC 
              LIMIT $1"

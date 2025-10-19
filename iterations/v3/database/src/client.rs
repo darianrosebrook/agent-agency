@@ -395,7 +395,7 @@ impl DatabaseClient {
         info!("Database client initialized successfully");
         Ok(Self {
             bridge,
-            pool: sqlx_pool,
+            pool,
             config,
             circuit_breaker,
             metrics,
