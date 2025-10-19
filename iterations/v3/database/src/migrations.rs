@@ -609,7 +609,6 @@ impl MigrationManager {
 
     /// Get list of pending migrations
     async fn get_pending_migrations(&self) -> Result<Vec<String>> {
-        // Implement migration file discovery
         // 1. Migration file discovery: Scan project migrations directory for .sql files
         // 2. Migration file analysis: Parse and identify migration identifiers
         // 3. Migration dependency resolution: Compare with applied migrations
@@ -636,11 +635,38 @@ impl MigrationManager {
         // Sort migrations by numeric prefix to maintain order
         discovered_migrations.sort();
         
-        // In a production system, we would query the database for applied migrations.
-        // For now, we return all discovered migrations as pending.
-        // TODO: Connect to database pool to fetch applied migrations list
-        debug!("Discovered {} migrations in {}", discovered_migrations.len(), self.migration_dir.display());
-        Ok(discovered_migrations)
+        // Query the database pool to fetch applied migrations list
+        let applied_migrations = self.list_applied_migrations().await?;
+        let applied_ids: std::collections::HashSet<String> = applied_migrations
+            .iter()
+            .map(|m| {
+                // Extract numeric ID from migration_id (format: NNN)
+                m.migration_id.clone()
+            })
+            .collect();
+        
+        // Filter to get only pending migrations
+        let pending: Vec<String> = discovered_migrations
+            .into_iter()
+            .filter(|migration_file| {
+                // Extract numeric prefix from filename (e.g., "001_description.sql" -> "001")
+                let numeric_id = migration_file
+                    .split('_')
+                    .next()
+                    .unwrap_or("")
+                    .to_string();
+                !applied_ids.contains(&numeric_id)
+            })
+            .collect();
+        
+        debug!(
+            "Discovered {} migrations in {}, {} pending",
+            discovered_migrations.len(),
+            self.migration_dir.display(),
+            pending.len()
+        );
+        
+        Ok(pending)
     }
 }
 

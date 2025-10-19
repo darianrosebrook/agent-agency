@@ -34,9 +34,7 @@ impl CaptionsIngestor {
             .unwrap_or("")
             .to_lowercase();
 
-        // TODO: PLACEHOLDER - Parse SRT/VTT segments
-        // Extract timings and text
-        // Return speech turns with confidence
+        // Parse SRT/VTT segments and extract timings and text
 
         let speech_turns = match extension.as_str() {
             "srt" => self.parse_srt(path).await?,
@@ -80,10 +78,8 @@ impl CaptionsIngestor {
     }
 
     async fn parse_srt(&self, path: &Path) -> Result<Vec<SpeechTurn>> {
-        // TODO: PLACEHOLDER - SRT parsing
-        // Format: sequence number \n timestamp --> timestamp \n text \n
+        // Parse SRT format: sequence number \n timestamp --> timestamp \n text \n
         // Extract timing and text from each segment
-        // Return SpeechTurn with word timings if present
 
         let content = fs::read_to_string(path).context("Failed to read SRT file")?;
 
@@ -114,15 +110,18 @@ impl CaptionsIngestor {
                     }
 
                     if !text.is_empty() {
+                        // Extract word timings if available (basic implementation)
+                        let word_timings = self.extract_word_timings(&text, t0, t1);
+                        
                         turns.push(SpeechTurn {
                             id: Uuid::new_v4(),
-                            speaker_id: None,
+                            speaker_id: self.extract_speaker_id(&text),
                             provider: "srt".to_string(),
                             t0,
                             t1,
-                            text,
+                            text: self.clean_text(&text),
                             confidence: 0.95,
-                            word_timings: vec![],
+                            word_timings,
                         });
                     }
                 }
@@ -133,8 +132,6 @@ impl CaptionsIngestor {
     }
 
     async fn parse_vtt(&self, path: &Path) -> Result<Vec<SpeechTurn>> {
-        // TODO: PLACEHOLDER - VTT parsing
-        // Similar to SRT but with VTT header and optional cue settings
         // Parse WEBVTT format
 
         let content = fs::read_to_string(path).context("Failed to read VTT file")?;
@@ -170,15 +167,18 @@ impl CaptionsIngestor {
                     }
 
                     if !text.is_empty() {
+                        // Extract word timings if available (basic implementation)
+                        let word_timings = self.extract_word_timings(&text, t0, t1);
+                        
                         turns.push(SpeechTurn {
                             id: Uuid::new_v4(),
-                            speaker_id: None,
+                            speaker_id: self.extract_speaker_id(&text),
                             provider: "vtt".to_string(),
                             t0,
                             t1,
-                            text,
+                            text: self.clean_text(&text),
                             confidence: 0.95,
-                            word_timings: vec![],
+                            word_timings,
                         });
                     }
                 }
@@ -226,6 +226,78 @@ impl CaptionsIngestor {
         let mut hasher = Sha256::new();
         hasher.update(&data);
         Ok(format!("{:x}", hasher.finalize()))
+    }
+
+    /// Extract speaker ID from text if present (e.g., "Speaker 1: Hello world")
+    fn extract_speaker_id(&self, text: &str) -> Option<String> {
+        if let Some(colon_pos) = text.find(':') {
+            let potential_speaker = &text[..colon_pos].trim();
+            if potential_speaker.len() < 50 && potential_speaker.chars().all(|c| c.is_alphanumeric() || c.is_whitespace()) {
+                return Some(potential_speaker.to_string());
+            }
+        }
+        None
+    }
+
+    /// Clean text by removing speaker prefixes and normalizing whitespace
+    fn clean_text(&self, text: &str) -> String {
+        let mut cleaned = text.to_string();
+        
+        // Remove speaker prefix if present
+        if let Some(colon_pos) = cleaned.find(':') {
+            let potential_speaker = &cleaned[..colon_pos].trim();
+            if potential_speaker.len() < 50 && potential_speaker.chars().all(|c| c.is_alphanumeric() || c.is_whitespace()) {
+                cleaned = cleaned[colon_pos + 1..].trim().to_string();
+            }
+        }
+        
+        // Normalize whitespace
+        cleaned = cleaned.split_whitespace().collect::<Vec<_>>().join(" ");
+        
+        // Remove HTML tags if present
+        cleaned = self.remove_html_tags(&cleaned);
+        
+        cleaned
+    }
+
+    /// Remove HTML tags from text
+    fn remove_html_tags(&self, text: &str) -> String {
+        let mut result = String::new();
+        let mut in_tag = false;
+        
+        for ch in text.chars() {
+            match ch {
+                '<' => in_tag = true,
+                '>' => in_tag = false,
+                _ => if !in_tag {
+                    result.push(ch);
+                }
+            }
+        }
+        
+        result
+    }
+
+    /// Extract basic word timings by dividing the time range evenly
+    fn extract_word_timings(&self, text: &str, t0: f32, t1: f32) -> Vec<WordTiming> {
+        let words: Vec<&str> = text.split_whitespace().collect();
+        if words.is_empty() {
+            return vec![];
+        }
+        
+        let duration = t1 - t0;
+        let word_duration = duration / words.len() as f32;
+        
+        words.into_iter().enumerate().map(|(i, word)| {
+            let start_time = t0 + (i as f32 * word_duration);
+            let end_time = start_time + word_duration;
+            
+            WordTiming {
+                t0: start_time,
+                t1: end_time,
+                token: word.to_string(),
+            }
+        }).collect()
     }
 }
 
