@@ -6,6 +6,7 @@
 pub mod backup;
 pub mod client;
 pub mod health;
+pub mod knowledge_queries;
 pub mod migrations;
 pub mod models;
 pub mod queries;

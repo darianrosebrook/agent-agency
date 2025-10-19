@@ -626,3 +626,64 @@ pub struct CawsSpecification {
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
+
+/// Knowledge source type
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum KnowledgeSource {
+    Wikidata,
+    WordNet,
+}
+
+impl KnowledgeSource {
+    /// Convert to string representation
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            KnowledgeSource::Wikidata => "wikidata",
+            KnowledgeSource::WordNet => "wordnet",
+        }
+    }
+}
+
+/// External knowledge entity from database
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExternalKnowledgeEntity {
+    pub id: Option<Uuid>,
+    pub source: KnowledgeSource,
+    pub entity_key: String,
+    pub canonical_name: String,
+    pub lang: Option<String>,
+    pub entity_type: Option<String>,
+    pub properties: serde_json::Value,
+    pub confidence: f64,
+    pub usage_count: i32,
+    pub usage_decay: Option<f64>,
+    pub last_accessed: Option<DateTime<Utc>>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub dump_version: Option<String>,
+    pub toolchain: Option<String>,
+    pub license: Option<String>,
+}
+
+/// Knowledge relationship between entities
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct KnowledgeRelationship {
+    pub id: Option<Uuid>,
+    pub source_entity_id: Uuid,
+    pub target_entity_id: Uuid,
+    pub relationship_type: String,
+    pub confidence: f64,
+    pub metadata: Option<serde_json::Value>,
+}
+
+/// Knowledge base statistics
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct KnowledgeStats {
+    pub source: String,
+    pub total_entities: i64,
+    pub total_vectors: i64,
+    pub total_relationships: i64,
+    pub avg_confidence: f64,
+    pub avg_usage_count: f64,
+    pub last_updated: DateTime<Utc>,
+}

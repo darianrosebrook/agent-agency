@@ -8,7 +8,7 @@ use uuid::Uuid;
 use sqlx::{PgPool, Row};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use quick_xml::{Reader, events::Event};
+use quick_xml;
 use roxmltree::Document;
 
 /// Multimodal indexer with per-modality search capabilities
@@ -519,7 +519,7 @@ impl MultimodalIndexer {
             .collect();
 
         // Execute database transaction for atomic operations
-        db_client.execute_transaction(|conn| {
+        db_client.execute_transaction(|_conn| {
             Box::pin(async move {
                 // 1. Execute batch INSERT for all embedding vectors
                 let inserted_count = db_client.batch_insert_embeddings(embedding_records).await?;
@@ -612,7 +612,7 @@ impl MultimodalIndexer {
             "SELECT COUNT(*) FROM block_vectors WHERE block_id = $1"
         )
         .bind(block_id)
-        .fetch_one(conn)
+        .fetch_one(&mut *conn)
         .await?;
 
         if actual_count as usize != expected_count {
@@ -628,7 +628,7 @@ impl MultimodalIndexer {
             "SELECT COUNT(DISTINCT array_length(vector, 1)) FROM block_vectors WHERE block_id = $1"
         )
         .bind(block_id)
-        .fetch_one(conn)
+        .fetch_one(&mut *conn)
         .await?;
 
         if dimension_query > 1 {

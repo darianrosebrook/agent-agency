@@ -15,6 +15,7 @@ use tokio::task;
 use tracing::{debug, info, warn};
 use walkdir::WalkDir;
 use std::time::{Duration, Instant};
+use uuid::Uuid;
 
 /// Multi-Modal Verification Engine for claim validation
 #[derive(Debug)]
@@ -1793,9 +1794,6 @@ impl MultiModalVerificationEngine {
 
     /// Discover documentation files in the filesystem using pattern matching
     async fn discover_documentation_files(&self, patterns: &[String]) -> Result<Vec<String>> {
-        use std::fs;
-        use std::path::Path;
-        use walkdir::WalkDir;
 
         let mut doc_files = Vec::new();
 
@@ -3032,7 +3030,7 @@ impl MultiModalVerificationEngine {
     /// Query historical claims from database using vector similarity
     async fn query_historical_claims_from_db(
         &self,
-        db_client: &DatabaseClient,
+        _db_client: &dyn std::any::Any, // Generic database client
         claim_terms: &[String],
     ) -> Result<Vec<HistoricalClaim>> {
         let mut historical_claims = Vec::new();

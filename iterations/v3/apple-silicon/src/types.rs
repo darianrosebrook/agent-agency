@@ -517,6 +517,10 @@ pub enum OperationType {
     Pooling,
     Normalization,
     Other,
+    Linear,
+    Attention,
+    RNN,
+    Generic,
 }
 
 /// Compute intensity level
@@ -555,6 +559,62 @@ pub enum MemoryAlignment {
     Page,         // Page aligned (4KB)
     SIMD,         // SIMD aligned (16 bytes)
     DMA,          // DMA aligned (depends on device)
+}
+
+/// Neural network layer types
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum LayerType {
+    Input,
+    Convolutional,
+    Dense,
+    Transformer,
+    Output,
+    RNN,
+    Generic,
+    Metadata,
+}
+
+/// Data structure types for memory analysis
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum DataStructureType {
+    Float16,
+    Float32,
+    Float64,
+    Int32,
+    Int64,
+    Int8,
+    UInt8,
+    Text,
+    Binary,
+}
+
+/// Memory access pattern types
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum AccessPatternType {
+    Sequential,
+    Random,
+    Strided,
+    Scatter,
+}
+
+/// Model format types
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum ModelFormat {
+    CoreML,
+    ONNX,
+    TensorFlow,
+    PyTorch,
+    Generic,
+}
+
+/// Buffer structure types for memory management
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum BufferStructureType {
+    Temporary,
+    Workspace,
+    Cache,
+    Persistent,
+    Scratch,
 }
 
 #[cfg(test)]

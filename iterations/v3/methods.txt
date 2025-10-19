@@ -46,9 +46,58 @@
                 summary: "Insufficient consensus for acceptance".to_string(),
             }
         } else {
+            // Collect required changes from individual verdicts
+            let mut required_changes = Vec::new();
+
+            // Analyze Fail verdicts for violations
+            for (judge_id, verdict) in individual_verdicts {
+                match verdict {
+                    JudgeVerdict::Fail { violations, .. } => {
+                        for violation in violations {
+                            let priority = match violation.severity {
+                                ViolationSeverity::Critical => Priority::Critical,
+                                ViolationSeverity::Major => Priority::High,
+                                ViolationSeverity::Minor => Priority::Medium,
+                                ViolationSeverity::Warning => Priority::Low,
+                            };
+
+                            required_changes.push(RequiredChange {
+                                priority,
+                                description: format!("Address violation: {}", violation.description),
+                                rationale: format!("Judge '{}' identified critical issue: {}", judge_id, violation.rule),
+                                estimated_effort: violation.suggestion.map(|s| format!("Suggested fix: {}", s)),
+                            });
+                        }
+                    }
+                    JudgeVerdict::Uncertain { concerns, recommendation, .. } => {
+                        if matches!(recommendation, Recommendation::Modify) {
+                            for concern in concerns {
+                                let priority = match concern.impact.as_str() {
+                                    "high" | "critical" => Priority::High,
+                                    "medium" => Priority::Medium,
+                                    _ => Priority::Low,
+                                };
+
+                                required_changes.push(RequiredChange {
+                                    priority,
+                                    description: format!("Address concern: {}", concern.description),
+                                    rationale: format!("Judge '{}' concern in area '{}': {}", judge_id, concern.area, concern.impact),
+                                    estimated_effort: concern.mitigation.clone(),
+                                });
+                            }
+                        }
+                    }
+                    _ => {} // Pass verdicts don't contribute to required changes
+                }
+            }
+
+            // Deduplicate and prioritize changes
+            required_changes.sort_by(|a, b| a.priority.cmp(&b.priority));
+            required_changes.dedup_by(|a, b| a.description == b.description);
+
             FinalVerdict::RequiresModification {
-                required_changes: vec![], // TODO: collect actual required changes
-                summary: "Mixed consensus requires modifications".to_string(),
+                required_changes,
+                summary: format!("Mixed consensus requires {} modifications", required_changes.len()),
             }
         }
     }

@@ -805,38 +805,92 @@ impl ContextResolver {
             .any(|name| word.eq_ignore_ascii_case(name))
     }
 
-    /// Link entities to knowledge bases
+    /// Link entities to knowledge bases via hybrid RAG (Wikidata + WordNet)
+    /// 
+    /// This method integrates with the external knowledge base to enrich entity
+    /// disambiguation with semantic relationships from Wikidata and WordNet.
+    /// 
+    /// # Implementation Note
+    /// 
+    /// This is a placeholder implementation that will be fully integrated once
+    /// the database client and embedding service are available in the context.
+    /// 
+    /// Full implementation requires:
+    /// - Database client for querying external_knowledge_entities
+    /// - Embedding service for semantic similarity search
+    /// - On-demand ingestor for missing entities
+    /// 
+    /// See: iterations/v3/knowledge-ingestor for ingestion pipeline
     fn link_entities_to_knowledge_bases(&self, entities: &[String]) -> Vec<String> {
         let mut linked_entities = Vec::new();
 
         for entity in entities {
-            // Knowledge Base Integration - Enhanced entity linking
-            // Future: Integrate with Wikidata, WordNet via hybrid RAG database
-            // Current: Enhanced rule-based entity linking with semantic relationships
+            // TODO: Full implementation requires database client and embedding service
+            // 
+            // Planned implementation:
+            // 1. Generate embedding for entity
+            // 2. Query kb_semantic_search for similar entities
+            // 3. Extract related concepts from properties
+            // 4. Get related entities via kb_get_related
+            // 5. Trigger on-demand ingestion if not found
+            // 6. Record usage via kb_record_usage
+            //
+            // Example code (requires context with db_client and embedding_service):
+            //
+            // if let Some(embedding) = generate_embedding(entity, embedding_service).await {
+            //     let results = db_client
+            //         .kb_semantic_search(&embedding, "kb-text-default", None, 5, 0.7)
+            //         .await
+            //         .unwrap_or_default();
+            //     
+            //     for result in results {
+            //         db_client.kb_record_usage(result.id.unwrap()).await.ok();
+            //         linked_entities.push(result.canonical_name.clone());
+            //         
+            //         // Get related entities
+            //         if let Ok(related) = db_client.kb_get_related(result.id.unwrap(), None, 1).await {
+            //             for rel in related {
+            //                 linked_entities.push(rel.canonical_name);
+            //             }
+            //         }
+            //         
+            //         // Extract from properties based on source
+            //         match result.source {
+            //             KnowledgeSource::Wikidata => {
+            //                 // Extract senses, forms, translations
+            //                 if let Some(senses) = result.properties.get("senses") {
+            //                     // Process Wikidata senses
+            //                 }
+            //             }
+            //             KnowledgeSource::WordNet => {
+            //                 // Extract synonyms, hypernyms, examples
+            //                 if let Some(synonyms) = result.properties.get("synonyms") {
+            //                     // Process WordNet synonyms
+            //                 }
+            //             }
+            //         }
+            //     }
+            // }
 
-            // Query hybrid RAG database for entity relationships
-            // This simulates the v2 knowledge seeker integration
-            let rag_entities = self.query_hybrid_rag_knowledge_base(entity)?;
-
-            // Add RAG-discovered entities
-            linked_entities.extend(rag_entities);
-
-            // Fallback to rule-based expansion for entities not found in RAG
+            // Fallback to rule-based expansion until full integration
             match entity.to_lowercase().as_str() {
                 "api" => linked_entities.extend(vec![
                     "REST API".to_string(),
                     "GraphQL".to_string(),
                     "HTTP".to_string(),
+                    "Application Programming Interface".to_string(),
                 ]),
                 "database" => linked_entities.extend(vec![
                     "SQL".to_string(),
                     "PostgreSQL".to_string(),
                     "MySQL".to_string(),
+                    "data storage".to_string(),
                 ]),
                 "javascript" => linked_entities.extend(vec![
                     "Node.js".to_string(),
                     "TypeScript".to_string(),
                     "React".to_string(),
+                    "programming language".to_string(),
                 ]),
                 _ => {}
             }

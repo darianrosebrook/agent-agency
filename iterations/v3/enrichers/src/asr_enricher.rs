@@ -299,9 +299,9 @@ impl AsrEnricher {
                     1.0
                 } else {
                     1.1
-                }.min(1.0);
+                }.min(1.0_f64);
                 
-                turn.confidence = (avg_word_confidence * length_factor).min(1.0);
+                turn.confidence = (avg_word_confidence * length_factor).min(1.0_f64);
             }
         }
         

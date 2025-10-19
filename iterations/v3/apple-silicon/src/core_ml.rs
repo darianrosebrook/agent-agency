@@ -2162,7 +2162,7 @@ impl CoreMLManager {
         // Run inference on each sample input
         for sample_input in sample_inputs {
             let sample_request = InferenceRequest {
-                id: uuid::Uuid::new_v4().to_string(),
+                id: uuid::Uuid::new_v4(),
                 input: sample_input,
                 model_name: request.model_name.clone(),
                 optimization_target: request.optimization_target.clone(),
@@ -2170,7 +2170,7 @@ impl CoreMLManager {
                 temperature: Some(0.7),
                 top_p: Some(0.9),
                 timeout_ms: Some(30000),
-                priority: Priority::Normal,
+                priority: InferencePriority::Normal,
                 metadata: std::collections::HashMap::new(),
             };
 

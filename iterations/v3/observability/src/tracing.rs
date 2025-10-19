@@ -77,6 +77,63 @@ pub struct TraceAnalytics {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HealthCheckResult {
+    pub service_name: String,
+    pub component: String,
+    pub status: HealthStatus,
+    pub response_time_ms: u64,
+    pub last_checked: chrono::DateTime<chrono::Utc>,
+    pub error_message: Option<String>,
+    pub metrics: HashMap<String, serde_json::Value>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum HealthStatus {
+    Healthy,
+    Degraded,
+    Unhealthy,
+    Unknown,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CircuitBreakerState {
+    pub service_name: String,
+    pub state: CircuitState,
+    pub failure_count: u32,
+    pub last_failure_time: Option<chrono::DateTime<chrono::Utc>>,
+    pub next_retry_time: Option<chrono::DateTime<chrono::Utc>>,
+    pub success_count: u32,
+    pub total_requests: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum CircuitState {
+    Closed,      // Normal operation
+    Open,        // Circuit is open, failing fast
+    HalfOpen,    // Testing if service recovered
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SystemHealthSnapshot {
+    pub timestamp: chrono::DateTime<chrono::Utc>,
+    pub overall_status: HealthStatus,
+    pub service_health: HashMap<String, HealthCheckResult>,
+    pub circuit_breakers: HashMap<String, CircuitBreakerState>,
+    pub system_metrics: SystemMetrics,
+    pub recommendations: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SystemMetrics {
+    pub memory_usage_percent: f32,
+    pub cpu_usage_percent: f32,
+    pub active_connections: u32,
+    pub queue_depth: u32,
+    pub error_rate_percent: f32,
+    pub average_response_time_ms: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TraceConfig {
     pub service_name: String,
     pub service_version: String,
@@ -108,6 +165,8 @@ pub struct TraceCollector {
     completed_traces: Arc<RwLock<Vec<TraceInfo>>>,
     trace_hierarchies: Arc<RwLock<HashMap<String, TraceHierarchy>>>,
     span_relationships: Arc<RwLock<HashMap<String, SpanHierarchyInfo>>>,
+    health_checks: Arc<RwLock<HashMap<String, HealthCheckResult>>>,
+    circuit_breakers: Arc<RwLock<HashMap<String, CircuitBreakerState>>>,
     tracer: Option<opentelemetry::trace::TracerProvider>,
 }
 
@@ -158,6 +217,8 @@ impl TraceCollector {
             completed_traces: Arc::new(RwLock::new(Vec::new())),
             trace_hierarchies: Arc::new(RwLock::new(HashMap::new())),
             span_relationships: Arc::new(RwLock::new(HashMap::new())),
+            health_checks: Arc::new(RwLock::new(HashMap::new())),
+            circuit_breakers: Arc::new(RwLock::new(HashMap::new())),
             tracer,
         })
     }
@@ -660,6 +721,264 @@ impl TraceCollector {
                 trace_hierarchies.remove(&trace_id);
             }
         }
+    }
+
+    /// Perform health check on a service
+    pub async fn perform_health_check(&self, service_name: &str, component: &str) -> Result<HealthCheckResult> {
+        let start_time = std::time::Instant::now();
+
+        // Simulate health check logic (would integrate with actual service health endpoints)
+        let (status, error_message, metrics) = self.check_service_health(service_name, component).await;
+
+        let response_time = start_time.elapsed().as_millis() as u64;
+
+        let result = HealthCheckResult {
+            service_name: service_name.to_string(),
+            component: component.to_string(),
+            status,
+            response_time_ms: response_time,
+            last_checked: chrono::Utc::now(),
+            error_message,
+            metrics,
+        };
+
+        // Store health check result
+        let mut health_checks = self.health_checks.write().await;
+        health_checks.insert(format!("{}:{}", service_name, component), result.clone());
+
+        Ok(result)
+    }
+
+    /// Check circuit breaker state for a service
+    pub async fn check_circuit_breaker(&self, service_name: &str) -> CircuitState {
+        let circuit_breakers = self.circuit_breakers.read().await;
+
+        if let Some(circuit) = circuit_breakers.get(service_name) {
+            // Check if circuit should transition from HalfOpen to Closed on success
+            if circuit.state == CircuitState::HalfOpen {
+                let now = chrono::Utc::now();
+                if let Some(next_retry) = circuit.next_retry_time {
+                    if now >= next_retry {
+                        // Time to test the service again
+                        return CircuitState::HalfOpen;
+                    }
+                }
+            }
+            circuit.state.clone()
+        } else {
+            // No circuit breaker exists, assume closed (healthy)
+            CircuitState::Closed
+        }
+    }
+
+    /// Record service call success/failure for circuit breaker
+    pub async fn record_service_call(&self, service_name: &str, success: bool) {
+        let mut circuit_breakers = self.circuit_breakers.write().await;
+        let now = chrono::Utc::now();
+
+        let circuit = circuit_breakers.entry(service_name.to_string()).or_insert(CircuitBreakerState {
+            service_name: service_name.to_string(),
+            state: CircuitState::Closed,
+            failure_count: 0,
+            last_failure_time: None,
+            next_retry_time: None,
+            success_count: 0,
+            total_requests: 0,
+        });
+
+        circuit.total_requests += 1;
+
+        if success {
+            circuit.success_count += 1;
+            circuit.failure_count = 0; // Reset failure count on success
+
+            // Transition from HalfOpen to Closed on success
+            if circuit.state == CircuitState::HalfOpen {
+                circuit.state = CircuitState::Closed;
+                circuit.next_retry_time = None;
+                tracing::info!("Circuit breaker for {} transitioned to CLOSED (service recovered)", service_name);
+            }
+        } else {
+            circuit.failure_count += 1;
+            circuit.last_failure_time = Some(now);
+
+            // Check if circuit should open
+            if circuit.state == CircuitState::Closed && circuit.failure_count >= 5 {
+                circuit.state = CircuitState::Open;
+                circuit.next_retry_time = Some(now + chrono::Duration::seconds(60)); // 1 minute timeout
+                tracing::warn!("Circuit breaker for {} opened due to {} consecutive failures", service_name, circuit.failure_count);
+            } else if circuit.state == CircuitState::HalfOpen {
+                // Failed during half-open test, go back to open
+                circuit.state = CircuitState::Open;
+                circuit.next_retry_time = Some(now + chrono::Duration::seconds(60));
+                tracing::warn!("Circuit breaker for {} remained OPEN (half-open test failed)", service_name);
+            }
+        }
+    }
+
+    /// Get comprehensive system health snapshot
+    pub async fn get_system_health_snapshot(&self) -> SystemHealthSnapshot {
+        let health_checks = self.health_checks.read().await;
+        let circuit_breakers = self.circuit_breakers.read().await;
+
+        // Calculate overall system status
+        let overall_status = self.calculate_overall_health_status(&health_checks, &circuit_breakers).await;
+
+        // Gather system metrics
+        let system_metrics = self.collect_system_metrics().await;
+
+        // Generate recommendations
+        let recommendations = self.generate_health_recommendations(&health_checks, &circuit_breakers, &system_metrics).await;
+
+        SystemHealthSnapshot {
+            timestamp: chrono::Utc::now(),
+            overall_status,
+            service_health: health_checks.clone(),
+            circuit_breakers: circuit_breakers.clone(),
+            system_metrics,
+            recommendations,
+        }
+    }
+
+    /// Internal method to check service health
+    async fn check_service_health(&self, service_name: &str, component: &str) -> (HealthStatus, Option<String>, HashMap<String, serde_json::Value>) {
+        // Simulate health checks - in production this would make actual HTTP calls,
+        // check database connections, verify service dependencies, etc.
+
+        let mut metrics = HashMap::new();
+
+        match (service_name, component) {
+            ("database", "postgres") => {
+                // Simulate database health check
+                metrics.insert("connection_pool_size".to_string(), serde_json::json!(10));
+                metrics.insert("active_connections".to_string(), serde_json::json!(5));
+                metrics.insert("query_latency_ms".to_string(), serde_json::json!(15.5));
+                (HealthStatus::Healthy, None, metrics)
+            },
+            ("cache", "redis") => {
+                // Simulate cache health check
+                metrics.insert("hit_rate".to_string(), serde_json::json!(0.95));
+                metrics.insert("memory_usage_mb".to_string(), serde_json::json!(256));
+                (HealthStatus::Healthy, None, metrics)
+            },
+            ("api", "gateway") => {
+                // Simulate API gateway health check
+                metrics.insert("requests_per_second".to_string(), serde_json::json!(150.0));
+                metrics.insert("error_rate".to_string(), serde_json::json!(0.02));
+                (HealthStatus::Degraded, Some("High error rate detected".to_string()), metrics)
+            },
+            _ => {
+                // Unknown service/component
+                metrics.insert("status".to_string(), serde_json::json!("unknown"));
+                (HealthStatus::Unknown, Some("Service not recognized".to_string()), metrics)
+            }
+        }
+    }
+
+    /// Calculate overall system health status
+    async fn calculate_overall_health_status(
+        &self,
+        health_checks: &HashMap<String, HealthCheckResult>,
+        circuit_breakers: &HashMap<String, CircuitBreakerState>,
+    ) -> HealthStatus {
+        if health_checks.is_empty() && circuit_breakers.is_empty() {
+            return HealthStatus::Unknown;
+        }
+
+        let mut has_unhealthy = false;
+        let mut has_degraded = false;
+        let mut has_healthy = false;
+
+        // Check health statuses
+        for health_check in health_checks.values() {
+            match health_check.status {
+                HealthStatus::Unhealthy => has_unhealthy = true,
+                HealthStatus::Degraded => has_degraded = true,
+                HealthStatus::Healthy => has_healthy = true,
+                HealthStatus::Unknown => {}
+            }
+        }
+
+        // Check circuit breaker states
+        for circuit in circuit_breakers.values() {
+            if circuit.state == CircuitState::Open {
+                has_unhealthy = true;
+            }
+        }
+
+        if has_unhealthy {
+            HealthStatus::Unhealthy
+        } else if has_degraded {
+            HealthStatus::Degraded
+        } else if has_healthy {
+            HealthStatus::Healthy
+        } else {
+            HealthStatus::Unknown
+        }
+    }
+
+    /// Collect system-wide metrics
+    async fn collect_system_metrics(&self) -> SystemMetrics {
+        // In a real implementation, this would collect actual system metrics
+        // For now, simulate realistic values
+
+        SystemMetrics {
+            memory_usage_percent: 65.0 + (chrono::Utc::now().timestamp_millis() % 20) as f32,
+            cpu_usage_percent: 45.0 + (chrono::Utc::now().timestamp_millis() % 30) as f32,
+            active_connections: 150 + (chrono::Utc::now().timestamp_millis() % 50) as u32,
+            queue_depth: 25 + (chrono::Utc::now().timestamp_millis() % 25) as u32,
+            error_rate_percent: 1.2 + (chrono::Utc::now().timestamp_millis() % 10) as f32,
+            average_response_time_ms: 125.0 + (chrono::Utc::now().timestamp_millis() % 50) as f64,
+        }
+    }
+
+    /// Generate health recommendations based on current state
+    async fn generate_health_recommendations(
+        &self,
+        health_checks: &HashMap<String, HealthCheckResult>,
+        circuit_breakers: &HashMap<String, CircuitBreakerState>,
+        system_metrics: &SystemMetrics,
+    ) -> Vec<String> {
+        let mut recommendations = Vec::new();
+
+        // Check system metrics thresholds
+        if system_metrics.memory_usage_percent > 85.0 {
+            recommendations.push("High memory usage detected. Consider scaling or memory optimization.".to_string());
+        }
+
+        if system_metrics.cpu_usage_percent > 80.0 {
+            recommendations.push("High CPU usage detected. Consider scaling or performance optimization.".to_string());
+        }
+
+        if system_metrics.error_rate_percent > 5.0 {
+            recommendations.push("High error rate detected. Investigate service failures and implement circuit breakers.".to_string());
+        }
+
+        if system_metrics.queue_depth > 100 {
+            recommendations.push("High queue depth detected. Consider scaling workers or optimizing processing.".to_string());
+        }
+
+        // Check circuit breakers
+        for circuit in circuit_breakers.values() {
+            if circuit.state == CircuitState::Open {
+                recommendations.push(format!("Circuit breaker for {} is OPEN. Service may be down.", circuit.service_name));
+            }
+        }
+
+        // Check health statuses
+        for health_check in health_checks.values() {
+            if health_check.status == HealthStatus::Unhealthy {
+                recommendations.push(format!("Service {} component {} is UNHEALTHY: {}",
+                    health_check.service_name, health_check.component,
+                    health_check.error_message.as_deref().unwrap_or("Unknown error")));
+            }
+        }
+
+        if recommendations.is_empty() {
+            recommendations.push("All systems operating normally.".to_string());
+        }
+
+        recommendations
     }
 }
 

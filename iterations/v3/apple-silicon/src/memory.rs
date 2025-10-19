@@ -80,46 +80,12 @@ struct ParsedOperation {
     compute_intensity: ComputeIntensity,
 }
 
-/// Model format enumeration
-#[derive(Debug, Clone)]
-enum ModelFormat {
-    CoreML,
-    ONNX,
-    TensorFlow,
-    Generic,
-}
-
-/// Layer type enumeration
-#[derive(Debug, Clone)]
-enum LayerType {
-    Input,
-    Output,
-    Convolutional,
-    Dense,
-    RNN,
-    Transformer,
-    Generic,
-    Metadata,
-}
-
 /// Data type enumeration
 #[derive(Debug, Clone)]
 enum DataType {
     Float32,
     Float16,
     UInt8,
-}
-
-/// Operation type enumeration
-#[derive(Debug, Clone)]
-enum OperationType {
-    Convolution,
-    Linear,
-    Activation,
-    Attention,
-    Normalization,
-    RNN,
-    Generic,
 }
 
 /// Compute intensity enumeration
@@ -1252,28 +1218,28 @@ impl MemoryManager {
                 name: "input_layer".to_string(),
                 layer_type: LayerType::Input,
                 size_bytes: (model.size_mb * 1024 * 1024 / 10) as usize, // 10% of model
-                precision: Precision::FP16,
+                precision: Precision::Fp16,
                 compression_ratio: 0.2,
             },
             ParsedLayer {
                 name: "conv_layers".to_string(),
                 layer_type: LayerType::Convolutional,
                 size_bytes: (model.size_mb * 1024 * 1024 * 6 / 10) as usize, // 60% of model
-                precision: Precision::FP16,
+                precision: Precision::Fp16,
                 compression_ratio: 0.4,
             },
             ParsedLayer {
                 name: "dense_layers".to_string(),
                 layer_type: LayerType::Dense,
                 size_bytes: (model.size_mb * 1024 * 1024 * 2 / 10) as usize, // 20% of model
-                precision: Precision::FP16,
+                precision: Precision::Fp16,
                 compression_ratio: 0.3,
             },
             ParsedLayer {
                 name: "output_layer".to_string(),
                 layer_type: LayerType::Output,
                 size_bytes: (model.size_mb * 1024 * 1024 / 10) as usize, // 10% of model
-                precision: Precision::FP16,
+                precision: Precision::Fp16,
                 compression_ratio: 0.1,
             },
         ];
@@ -1343,21 +1309,21 @@ impl MemoryManager {
                 name: "input".to_string(),
                 layer_type: LayerType::Input,
                 size_bytes: (model.size_mb * 1024 * 1024 / 15) as usize,
-                precision: Precision::FP32,
+                precision: Precision::Fp32,
                 compression_ratio: 0.15,
             },
             ParsedLayer {
                 name: "transformer_blocks".to_string(),
                 layer_type: LayerType::Transformer,
                 size_bytes: (model.size_mb * 1024 * 1024 * 8 / 10) as usize,
-                precision: Precision::FP32,
+                precision: Precision::Fp32,
                 compression_ratio: 0.35,
             },
             ParsedLayer {
                 name: "output".to_string(),
                 layer_type: LayerType::Output,
                 size_bytes: (model.size_mb * 1024 * 1024 * 2 / 15) as usize,
-                precision: Precision::FP32,
+                precision: Precision::Fp32,
                 compression_ratio: 0.2,
             },
         ];
@@ -1420,28 +1386,28 @@ impl MemoryManager {
                 name: "input_placeholder".to_string(),
                 layer_type: LayerType::Input,
                 size_bytes: (model.size_mb * 1024 * 1024 / 20) as usize,
-                precision: Precision::FP32,
+                precision: Precision::Fp32,
                 compression_ratio: 0.1,
             },
             ParsedLayer {
                 name: "conv_layers".to_string(),
                 layer_type: LayerType::Convolutional,
                 size_bytes: (model.size_mb * 1024 * 1024 * 5 / 10) as usize,
-                precision: Precision::FP32,
+                precision: Precision::Fp32,
                 compression_ratio: 0.3,
             },
             ParsedLayer {
                 name: "rnn_layers".to_string(),
                 layer_type: LayerType::RNN,
                 size_bytes: (model.size_mb * 1024 * 1024 * 3 / 10) as usize,
-                precision: Precision::FP32,
+                precision: Precision::Fp32,
                 compression_ratio: 0.25,
             },
             ParsedLayer {
                 name: "output_layer".to_string(),
                 layer_type: LayerType::Output,
                 size_bytes: (model.size_mb * 1024 * 1024 * 1 / 10) as usize,
-                precision: Precision::FP32,
+                precision: Precision::Fp32,
                 compression_ratio: 0.2,
             },
         ];
@@ -1518,14 +1484,14 @@ impl MemoryManager {
                 name: "generic_layer".to_string(),
                 layer_type: LayerType::Generic,
                 size_bytes: (model.size_mb * 1024 * 1024 * 9 / 10) as usize,
-                precision: Precision::FP32,
+                precision: Precision::Fp32,
                 compression_ratio: 0.25,
             },
             ParsedLayer {
                 name: "metadata_layer".to_string(),
                 layer_type: LayerType::Metadata,
                 size_bytes: (model.size_mb * 1024 * 1024 * 1 / 10) as usize,
-                precision: Precision::UInt8,
+                precision: Precision::Int8,
                 compression_ratio: 0.8,
             },
         ];
@@ -1585,8 +1551,8 @@ impl MemoryManager {
             
             // Precision reduction opportunities
             match layer.precision {
-                Precision::FP32 => opportunities.precision_reduction += (layer.size_bytes as f64 * 0.5) as u64,
-                Precision::FP16 => opportunities.precision_reduction += (layer.size_bytes as f64 * 0.25) as u64,
+                Precision::Fp32 => opportunities.precision_reduction += (layer.size_bytes as f64 * 0.5) as u64,
+                Precision::Fp16 => opportunities.precision_reduction += (layer.size_bytes as f64 * 0.25) as u64,
                 _ => {} // No precision reduction for already compressed formats
             }
         }
