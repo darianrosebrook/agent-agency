@@ -37,5 +37,5 @@ function getRealCoverage() {
 }
 
 module.exports = {
-  getRealCoverage
+  getRealCoverage,
 };

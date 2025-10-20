@@ -7,11 +7,22 @@
  */
 
 // Import modular components
-const { getRealCoverage } = require('./modules/coverage-analysis');
-const { getRealMutationScore } = require('./modules/mutation-analysis');
-const { parseTestResults, analyzeTestExecutionHistory } = require('./modules/test-analysis');
-const { checkContractCompliance, checkAccessibilityCompliance, checkPerformanceCompliance } = require('./modules/compliance-checker');
-const { generateRealProvenanceData, simulateTestHistoryFromGit, countRustFiles } = require('./modules/data-generator');
+const { getRealCoverage } = require("./modules/coverage-analysis");
+const { getRealMutationScore } = require("./modules/mutation-analysis");
+const {
+  parseTestResults,
+  analyzeTestExecutionHistory,
+} = require("./modules/test-analysis");
+const {
+  checkContractCompliance,
+  checkAccessibilityCompliance,
+  checkPerformanceCompliance,
+} = require("./modules/compliance-checker");
+const {
+  generateRealProvenanceData,
+  simulateTestHistoryFromGit,
+  countRustFiles,
+} = require("./modules/data-generator");
 
 const fs = require("fs");
 const path = require("path");
@@ -51,12 +62,24 @@ function runCAWSDashboard(options = {}) {
 function displayMetrics(results) {
   console.log("📊 Current Metrics:");
   console.log(`  • Coverage: ${(results.coverage_branch * 100).toFixed(1)}%`);
-  console.log(`  • Mutation Score: ${(results.mutation_score * 100).toFixed(1)}%`);
-  console.log(`  • Contract Compliance: ${results.contract_compliance ? '✅' : '❌'}`);
-  console.log(`  • Accessibility: ${results.accessibility_compliance ? '✅' : '❌'}`);
-  console.log(`  • Performance: ${results.performance_compliance ? '✅' : '❌'}`);
-  console.log(`  • Security Scan: ${results.security_scan_passed ? '✅' : '❌'}`);
-  console.log(`  • Dependency Audit: ${results.dependency_audit_passed ? '✅' : '❌'}\n`);
+  console.log(
+    `  • Mutation Score: ${(results.mutation_score * 100).toFixed(1)}%`
+  );
+  console.log(
+    `  • Contract Compliance: ${results.contract_compliance ? "✅" : "❌"}`
+  );
+  console.log(
+    `  • Accessibility: ${results.accessibility_compliance ? "✅" : "❌"}`
+  );
+  console.log(
+    `  • Performance: ${results.performance_compliance ? "✅" : "❌"}`
+  );
+  console.log(
+    `  • Security Scan: ${results.security_scan_passed ? "✅" : "❌"}`
+  );
+  console.log(
+    `  • Dependency Audit: ${results.dependency_audit_passed ? "✅" : "❌"}\n`
+  );
 }
 
 /**
@@ -67,18 +90,30 @@ function analyzeAndDisplayTestHistory() {
 
   try {
     // Try to parse real test results
-    const testResults = parseTestResults(path.join(process.cwd(), 'test-results'));
+    const testResults = parseTestResults(
+      path.join(process.cwd(), "test-results")
+    );
     if (testResults.length > 0) {
       const analysis = analyzeTestExecutionHistory(testResults);
       console.log(`  • Total Test Runs: ${analysis.total_runs}`);
-      console.log(`  • Average Pass Rate: ${(analysis.average_pass_rate * 100).toFixed(1)}%`);
-      console.log(`  • Recent Trends: ${analysis.failure_trends.length} data points\n`);
+      console.log(
+        `  • Average Pass Rate: ${(analysis.average_pass_rate * 100).toFixed(
+          1
+        )}%`
+      );
+      console.log(
+        `  • Recent Trends: ${analysis.failure_trends.length} data points\n`
+      );
     } else {
       // Fall back to simulated data
       const simulatedHistory = simulateTestHistoryFromGit();
       const analysis = analyzeTestExecutionHistory(simulatedHistory);
       console.log(`  • Simulated Test Runs: ${analysis.total_runs}`);
-      console.log(`  • Average Pass Rate: ${(analysis.average_pass_rate * 100).toFixed(1)}%`);
+      console.log(
+        `  • Average Pass Rate: ${(analysis.average_pass_rate * 100).toFixed(
+          1
+        )}%`
+      );
       console.log("  • Using simulated data (no real test results found)\n");
     }
   } catch (error) {
@@ -92,9 +127,21 @@ function analyzeAndDisplayTestHistory() {
  */
 function displayComplianceStatus(results) {
   console.log("📋 Compliance Status:");
-  console.log(`  • Contracts: ${results.contract_compliance ? '✅ Compliant' : '❌ Non-compliant'}`);
-  console.log(`  • Accessibility: ${results.accessibility_compliance ? '✅ Compliant' : '❌ Non-compliant'}`);
-  console.log(`  • Performance: ${results.performance_compliance ? '✅ Compliant' : '❌ Non-compliant'}`);
+  console.log(
+    `  • Contracts: ${
+      results.contract_compliance ? "✅ Compliant" : "❌ Non-compliant"
+    }`
+  );
+  console.log(
+    `  • Accessibility: ${
+      results.accessibility_compliance ? "✅ Compliant" : "❌ Non-compliant"
+    }`
+  );
+  console.log(
+    `  • Performance: ${
+      results.performance_compliance ? "✅ Compliant" : "❌ Non-compliant"
+    }`
+  );
   console.log("");
 }
 
@@ -105,13 +152,13 @@ function displayComplianceStatus(results) {
  */
 function calculateTrustScore(results) {
   const weights = {
-    coverage: 0.20,
+    coverage: 0.2,
     mutation: 0.15,
     contracts: 0.15,
-    accessibility: 0.10,
+    accessibility: 0.1,
     performance: 0.15,
     security: 0.15,
-    dependencies: 0.10
+    dependencies: 0.1,
   };
 
   let score = 0;
@@ -131,7 +178,7 @@ function calculateTrustScore(results) {
  * @param {Object} provenanceData - Complete provenance data
  */
 function saveReport(provenanceData) {
-  const reportPath = path.join(process.cwd(), 'caws-report.json');
+  const reportPath = path.join(process.cwd(), "caws-report.json");
   try {
     fs.writeFileSync(reportPath, JSON.stringify(provenanceData, null, 2));
     console.log(`💾 Report saved to: ${reportPath}`);
@@ -144,7 +191,7 @@ function saveReport(provenanceData) {
 if (require.main === module) {
   const args = process.argv.slice(2);
   const options = {
-    saveReport: args.includes('--save') || args.includes('-s')
+    saveReport: args.includes("--save") || args.includes("-s"),
   };
 
   runCAWSDashboard(options);
@@ -152,5 +199,5 @@ if (require.main === module) {
 
 module.exports = {
   runCAWSDashboard,
-  calculateTrustScore
+  calculateTrustScore,
 };

@@ -50,5 +50,5 @@ function getRealMutationScore() {
 }
 
 module.exports = {
-  getRealMutationScore
+  getRealMutationScore,
 };

@@ -35,7 +35,7 @@ class AnalyticsApiClient {
   private baseUrl: string;
 
   constructor(baseUrl?: string) {
-    this.baseUrl = baseUrl ?? "/api/proxy";
+    this.baseUrl = baseUrl ?? "/api/analytics";
   }
 
   /**
@@ -46,26 +46,38 @@ class AnalyticsApiClient {
   async getAnalyticsSummary(
     filters?: AnalyticsFilters
   ): Promise<GetAnalyticsSummaryResponse> {
-    console.warn(
-      "getAnalyticsSummary not implemented - requires V3 analytics API"
-    );
-    // TODO: Milestone 5 - Analytics Summary API Implementation
-    // - [ ] Implement V3 GET /api/v1/analytics/summary endpoint
-    // - [ ] Add time range filtering and granularity support
-    // - [ ] Include anomaly counts and system health scoring
-    // - [ ] Add key insights and recommendations generation
     try {
-      const params = filters
-        ? new URLSearchParams({
-            start: filters.time_range.start,
-            end: filters.time_range.end,
-            granularity: filters.granularity,
-          })
-        : new URLSearchParams();
-      const response = await apiClient.request<GetAnalyticsSummaryResponse>(
-        `/analytics/summary?${params}`
+      const params = new URLSearchParams();
+      if (filters?.time_range) {
+        params.append("start_time", filters.time_range.start);
+        params.append("end_time", filters.time_range.end);
+      }
+      if (filters?.granularity) {
+        params.append("granularity", filters.granularity);
+      }
+
+      const response = await apiClient.request<any>(
+        `${this.baseUrl}?${params}`
       );
-      return response;
+
+      // Transform response to expected format
+      return {
+        summary: response.summary || {
+          total_tasks: 0,
+          active_agents: 0,
+          system_health_score: 0,
+          anomaly_count: 0,
+          average_task_duration: 0,
+          success_rate: 0,
+        },
+        insights: response.insights || [],
+        recommendations: response.recommendations || [],
+        time_range: filters?.time_range || {
+          start: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+          end: new Date().toISOString(),
+        },
+        generated_at: new Date().toISOString(),
+      };
     } catch (error) {
       console.error("Failed to get analytics summary:", error);
       throw new AnalyticsApiError(
@@ -84,39 +96,41 @@ class AnalyticsApiClient {
   async getAnomalies(
     filters?: AnalyticsFilters
   ): Promise<GetAnomaliesResponse> {
-    console.warn(
-      "getAnomalies not implemented - requires V3 anomaly detection API"
-    );
-    // TODO: Milestone 5 - Anomaly Detection API Implementation
-    // - [ ] Implement V3 GET /api/v1/analytics/anomalies endpoint
-    // - [ ] Add real-time anomaly detection algorithms (Z-score, Isolation Forest, Prophet)
-    // - [ ] Include anomaly severity scoring and confidence levels
-    // - [ ] Add anomaly context and metadata
-    // - [ ] Implement anomaly dismissal and acknowledgment
     try {
-      const params = filters
-        ? new URLSearchParams({
-            start: filters.time_range.start,
-            end: filters.time_range.end,
-            granularity: filters.granularity,
-            ...(filters.anomaly_severity && {
-              severity: filters.anomaly_severity.join(","),
-            }),
-            ...(filters.confidence_threshold && {
-              confidence_threshold: filters.confidence_threshold.toString(),
-            }),
-          })
-        : new URLSearchParams();
-      const response = await apiClient.request<GetAnomaliesResponse>(
-        `/analytics/anomalies?${params}`
+      const params = new URLSearchParams();
+      params.append("analytics_type", "anomalies");
+
+      if (filters?.time_range) {
+        params.append("start_time", filters.time_range.start);
+        params.append("end_time", filters.time_range.end);
+      }
+      if (filters?.anomaly_severity) {
+        params.append("severity", filters.anomaly_severity);
+      }
+
+      const response = await apiClient.request<any>(
+        `${this.baseUrl}?${params}`
       );
-      return response;
+
+      return {
+        anomalies: response.anomalies || [],
+        total: response.anomalies?.length || 0,
+        time_range: filters?.time_range || {
+          start: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+          end: new Date().toISOString(),
+        },
+        filters: {
+          severity: filters?.anomaly_severity,
+        },
+        detected_at: new Date().toISOString(),
+      };
     } catch (error) {
       console.error("Failed to get anomalies:", error);
       throw new AnalyticsApiError(
         "anomalies_fetch_failed",
         "Failed to retrieve anomaly data",
-        true
+        true,
+        error instanceof Error ? error.message : "Unknown error"
       );
     }
   }

@@ -1,82 +1,73 @@
-id: AGENT-0006
-title: "Implement flakiness hardening in evaluation"
+id: AGENT-0007
+title: "Make diffs first-class artifacts in observability"
 risk_tier: 2
 mode: feature
 change_budget:
-  max_files: 8
-  max_loc: 450
+  max_files: 6
+  max_loc: 400
 blast_radius:
-  modules: ["self-prompting-agent", "evaluation"]
+  modules: ["observability", "self-prompting-agent"]
   data_migration: false
 operational_rollback_slo: "2m"
 scope:
   in:
-    - "iterations/v3/self-prompting-agent/src/evaluation/code_evaluator.rs"
-    - "iterations/v3/self-prompting-agent/src/evaluation/flakiness.rs"  # New module
-    - "iterations/v3/self-prompting-agent/src/evaluation/mod.rs"  # Add flakiness module
-    - "iterations/v3/self-prompting-agent/src/prompting/adaptive.rs"  # Integrate targeted prompts
+    - "iterations/v3/observability/src/diff_observability.rs"  # New module
+    - "iterations/v3/observability/src/lib.rs"  # Add diff_observability module
+    - "iterations/v3/self-prompting-agent/src/loop_controller.rs"  # Integrate diff generation
+    - "iterations/v3/self-prompting-agent/src/types.rs"  # Add Diff artifact type
   out:
     - "iterations/v3/orchestration/"
     - "iterations/v3/database/"
     - "iterations/v3/interfaces/"
     - "iterations/v3/council/"
 invariants:
-  - "Flaky tests are retried N=2 times with jitter to avoid false positives"
-  - "Test failures are bucketed by category (compilation, types, runtime, assertion, snapshot)"
-  - "Refinement prompts are targeted based on failure category analysis"
-  - "Evaluation results include confidence scores and failure patterns"
-  - "Test execution includes timing jitter to detect race conditions"
+  - "Every iteration generates unified diff artifacts automatically"
+  - "Diff artifacts include allow-list violation highlighting"
+  - "Side-by-side diff viewer shows before/after with syntax highlighting"
+  - "Diff artifacts are stored with iteration metadata for provenance"
+  - "Allow-list violations are toggled and filtered in diff display"
 acceptance:
   - id: "A1"
-    given: "Test run fails on first execution"
-    when: "N=2 retry policy is applied with jitter"
-    then: "test is retried 2 times with randomized delays"
+    given: "Task iteration completes with file changes"
+    when: "diff observability runs"
+    then: "unified diff artifact is generated and stored"
   - id: "A2"
-    given: "Compilation error detected in stderr"
-    when: "failure bucketing analyzes output"
-    then: "failure is categorized as 'compilation' with specific error patterns"
+    given: "Changeset includes files outside allow-list"
+    when: "diff generation processes violations"
+    then: "violations are highlighted with toggle controls"
   - id: "A3"
-    given: "TypeScript type errors in output"
-    when: "failure categorization runs"
-    then: "failure bucketed as 'types' with type error patterns extracted"
+    given: "Diff viewer is invoked on artifact"
+    when: "side-by-side mode is selected"
+    then: "shows before/after with syntax highlighting"
   - id: "A4"
-    given: "Runtime assertion failure"
-    when: "failure analysis processes output"
-    then: "categorized as 'assertion' with test name and assertion details"
+    given: "Diff contains multiple file changes"
+    when: "allow-list violations are toggled"
+    then: "can filter to show only violations or all changes"
   - id: "A5"
-    given: "Snapshot mismatch in test output"
-    when: "failure bucketing analyzes stderr"
-    then: "categorized as 'snapshot' with snapshot file paths"
-  - id: "A6"
-    given: "Compilation failure bucket"
-    when: "targeted refinement prompt generation"
-    then: "prompt includes syntax error fixes and import resolution hints"
-  - id: "A7"
-    given: "Type error bucket"
-    when: "refinement prompt creation"
-    then: "prompt includes type annotation suggestions and interface fixes"
+    given: "Iteration completes successfully"
+    when: "diff artifact generation runs"
+    then: "includes iteration metadata and provenance links"
 contracts:
   - type: "rust-api"
-    path: "iterations/v3/self-prompting-agent/src/evaluation/flakiness.rs"
+    path: "iterations/v3/observability/src/diff_observability.rs"
     endpoints:
-      - "FlakinessHardener::harden_evaluation()"
-      - "FailureBucket::analyze()"
-      - "RefinementPromptGenerator::generate_targeted_prompt()"
+      - "DiffGenerator::generate_unified_diff()"
+      - "DiffViewer::render_side_by_side()"
+      - "AllowListChecker::check_violations()"
     schemas:
-      - name: "FailureBucket"
-        fields: ["category: FailureCategory", "patterns: Vec<String>", "confidence: f64", "examples: Vec<String>"]
-      - name: "FlakinessConfig"
-        fields: ["retry_count: usize", "jitter_ms: u64", "min_confidence_threshold: f64"]
-      - name: "EvaluationResult"
-        fields: ["criterion: EvalCriterion", "confidence: f64", "failure_bucket: Option<FailureBucket>", "retry_count: usize"]
+      - name: "UnifiedDiff"
+        fields: ["header: DiffHeader", "hunks: Vec<DiffHunk>", "stats: DiffStats"]
+      - name: "DiffHunk"
+        fields: ["old_start: u32", "old_lines: u32", "new_start: u32", "new_lines: u32", "lines: Vec<String>", "is_violation: bool"]
+      - name: "DiffStats"
+        fields: ["files_changed: usize", "insertions: usize", "deletions: usize", "violations: usize"]
 non_functional:
   perf:
-    retry_overhead_ms: 50
-    failure_analysis_ms: 10
-    prompt_generation_ms: 25
+    diff_generation_ms: 50
+    diff_rendering_ms: 25
   security:
-    - "no-arbitrary-command-injection"
-    - "bounded-retry-limits"
+    - "no-arbitrary-file-read"
+    - "allow-list-enforcement"
   reliability:
-    - "flaky-test-detection"
-    - "failure-pattern-recognition"
+    - "diff-integrity-verification"
+    - "syntax-highlighting-fallback"

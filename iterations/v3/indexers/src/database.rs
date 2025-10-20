@@ -44,7 +44,7 @@ impl DatabasePool {
 
     /// Get pool size
     pub fn size(&self) -> usize {
-        self.pool.size()
+        self.pool.size() as usize
     }
 }
 

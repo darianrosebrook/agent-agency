@@ -51,5 +51,5 @@ function checkPerformanceCompliance() {
 module.exports = {
   checkContractCompliance,
   checkAccessibilityCompliance,
-  checkPerformanceCompliance
+  checkPerformanceCompliance,
 };

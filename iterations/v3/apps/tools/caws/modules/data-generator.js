@@ -87,10 +87,19 @@ function countRustFiles() {
 
         if (stat.isDirectory()) {
           // Skip common non-source directories
-          if (!['node_modules', '.git', 'target', 'dist', '.next', 'build'].includes(file)) {
+          if (
+            ![
+              "node_modules",
+              ".git",
+              "target",
+              "dist",
+              ".next",
+              "build",
+            ].includes(file)
+          ) {
             count += countFiles(filePath);
           }
-        } else if (file.endsWith('.rs')) {
+        } else if (file.endsWith(".rs")) {
           count++;
         }
       }
@@ -109,10 +118,10 @@ function countRustFiles() {
  */
 function getCurrentCommitHash() {
   try {
-    const { execSync } = require('child_process');
-    return execSync('git rev-parse HEAD', { encoding: 'utf8' }).trim();
+    const { execSync } = require("child_process");
+    return execSync("git rev-parse HEAD", { encoding: "utf8" }).trim();
   } catch (error) {
-    return 'unknown';
+    return "unknown";
   }
 }
 
@@ -122,26 +131,31 @@ function getCurrentCommitHash() {
  */
 function getCurrentBranch() {
   try {
-    const { execSync } = require('child_process');
-    return execSync('git branch --show-current', { encoding: 'utf8' }).trim();
+    const { execSync } = require("child_process");
+    return execSync("git branch --show-current", { encoding: "utf8" }).trim();
   } catch (error) {
-    return 'main';
+    return "main";
   }
 }
 
 // Import functions from other modules to avoid circular dependencies
-let getRealCoverage, getRealMutationScore, checkContractCompliance, checkAccessibilityCompliance, checkPerformanceCompliance;
+let getRealCoverage,
+  getRealMutationScore,
+  checkContractCompliance,
+  checkAccessibilityCompliance,
+  checkPerformanceCompliance;
 
 function initializeDependencies() {
   try {
-    const coverageModule = require('./coverage-analysis');
-    const mutationModule = require('./mutation-analysis');
-    const complianceModule = require('./compliance-checker');
+    const coverageModule = require("./coverage-analysis");
+    const mutationModule = require("./mutation-analysis");
+    const complianceModule = require("./compliance-checker");
 
     getRealCoverage = coverageModule.getRealCoverage;
     getRealMutationScore = mutationModule.getRealMutationScore;
     checkContractCompliance = complianceModule.checkContractCompliance;
-    checkAccessibilityCompliance = complianceModule.checkAccessibilityCompliance;
+    checkAccessibilityCompliance =
+      complianceModule.checkAccessibilityCompliance;
     checkPerformanceCompliance = complianceModule.checkPerformanceCompliance;
   } catch (error) {
     // Fallback to default implementations
@@ -161,5 +175,5 @@ module.exports = {
   simulateTestHistoryFromGit,
   countRustFiles,
   getCurrentCommitHash,
-  getCurrentBranch
+  getCurrentBranch,
 };

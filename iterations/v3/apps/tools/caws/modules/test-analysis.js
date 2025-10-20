@@ -90,7 +90,9 @@ function parseCargoTestOutput(filePath) {
     const output = fs.readFileSync(filePath, "utf8");
 
     // Parse cargo test summary
-    const testMatch = output.match(/test result: (\w+)\. (\d+) passed; (\d+) failed; (\d+) ignored/);
+    const testMatch = output.match(
+      /test result: (\w+)\. (\d+) passed; (\d+) failed; (\d+) ignored/
+    );
     if (testMatch) {
       const result = testMatch[1];
       const passed = parseInt(testMatch[2]);
@@ -129,12 +131,13 @@ function analyzeTestExecutionHistory(testHistory) {
   }
 
   const totalRuns = testHistory.length;
-  const averagePassRate = testHistory.reduce((sum, run) => {
-    return sum + (run.passed / (run.passed + run.failed));
-  }, 0) / totalRuns;
+  const averagePassRate =
+    testHistory.reduce((sum, run) => {
+      return sum + run.passed / (run.passed + run.failed);
+    }, 0) / totalRuns;
 
   // Simple failure trend analysis
-  const failureTrends = testHistory.map(run => ({
+  const failureTrends = testHistory.map((run) => ({
     timestamp: run.timestamp,
     failure_rate: run.failed / (run.passed + run.failed),
   }));
@@ -151,5 +154,5 @@ module.exports = {
   parseTestResults,
   parseJUnitXML,
   parseCargoTestOutput,
-  analyzeTestExecutionHistory
+  analyzeTestExecutionHistory,
 };

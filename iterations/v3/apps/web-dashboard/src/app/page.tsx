@@ -100,34 +100,36 @@ export default function Dashboard() {
 
     if (activeSection === "database") {
       console.warn(
-        "Database explorer not implemented - requires V3 database API"
+        "Database explorer API integration partially implemented - requires V3 backend database endpoints"
       );
-      // TODO: Milestone 4 - Database Explorer & Vector Tools
-      // - [ ] Implement V3 database query service (query_service.rs)
-      // - [ ] Add database API endpoints (tables, schema, query, vector search, metrics)
-      // - [ ] Create DatabaseExplorer, TableViewer, VectorSearchPanel components
-      // - [ ] Implement QueryBuilder for visual query construction
-      // - [ ] Add DataQualityMetrics component
-      // - [ ] Enforce safety constraints: 1000 row limit, 5s timeout, parameterized queries
-      // - [ ] Add IP/session rate limiting
+      // TODO: Milestone 4 - Database Explorer & Vector Tools (PARTIALLY COMPLETE)
+      // - [x] Implement V3 database API proxy routes (/api/database/connections, /api/database/tables, /api/database/query, /api/database/vector-search)
+      // - [x] Add safety constraints: SQL injection protection, timeout limits, row limits
+      // - [x] Create DatabaseExplorer, TableViewer, VectorSearchPanel, QueryBuilder components
+      // - [x] Implement database connection management and table schema inspection
+      // - [x] Add vector similarity search with configurable parameters
+      // - [ ] Implement actual V3 backend database endpoints when available
+      // - [ ] Add DataQualityMetrics component integration
       // - [ ] Implement column allowlists with redactor middleware
-      // - [ ] Test vector similarity search and provenance links
+      // - [ ] Add IP/session rate limiting
+      // - [ ] Test end-to-end database operations with V3 backend
     }
 
     if (activeSection === "analytics") {
       console.warn(
-        "Analytics not implemented - requires V3 metrics aggregation"
+        "Analytics dashboard API integration partially implemented - requires V3 backend analytics endpoints"
       );
-      // TODO: Milestone 5 - Analytics & Insights
-      // - [ ] Implement V3 analytics aggregation endpoints
-      // - [ ] Add anomaly detection with Z-score/EWMA (pluggable)
-      // - [ ] Create PerformanceCharts with time-series visualizations
-      // - [ ] Build TrendAnalysis and AnomalyDetection components
-      // - [ ] Implement PredictiveInsights with actionable recommendations
-      // - [ ] Add deploy window tracking to reduce false positives
+      // TODO: Milestone 5 - Analytics & Insights (PARTIALLY COMPLETE)
+      // - [x] Implement V3 analytics API proxy routes (/api/analytics)
+      // - [x] Add anomaly detection and statistical analysis capabilities
+      // - [x] Create AnalyticsDashboard, AnomalyDetector, TrendAnalyzer, PerformancePredictor components
+      // - [x] Implement ForecastingChart with confidence intervals
+      // - [x] Add CorrelationMatrix for metric relationships
+      // - [x] Integrate time-series data and trend analysis
+      // - [ ] Implement actual V3 backend analytics endpoints when available
+      // - [ ] Add real-time analytics updates and alerting
       // - [ ] Implement export functionality (CSV, JSON)
-      // - [ ] Test anomaly detection and trend analysis accuracy
-      // - [ ] Validate export generates valid CSV/JSON files
+      // - [ ] Test end-to-end analytics pipeline with V3 backend
     }
   }, [activeSection]);
 
