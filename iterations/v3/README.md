@@ -1,10 +1,10 @@
-# Agent Agency V3: Production Multimodal RAG System
+# Agent Agency V3: Production Multimodal RAG + Autonomous Development Agent
 
 ## Overview
 
-**Agent Agency V3** is a **production-ready multimodal RAG system** that combines constitutional AI governance with comprehensive multimodal processing capabilities. Built in Rust for memory safety and performance, it provides end-to-end processing of text, images, audio, video, and documents with real-time constitutional decision-making.
+**Agent Agency V3** is a **production-ready multimodal RAG system** that combines constitutional AI governance with comprehensive multimodal processing capabilities AND **autonomous self-editing development agent** functionality. Built in Rust for memory safety and performance, it provides end-to-end processing of text, images, audio, video, and documents with real-time constitutional decision-making, PLUS the ability to autonomously edit code through iterative self-prompting loops.
 
-This system represents a complete evolution from research prototype to production deployment, featuring Docker-based deployment, comprehensive monitoring, and enterprise-grade security and scalability.
+This system represents a complete evolution from research prototype to production deployment, featuring Docker-based deployment, comprehensive monitoring, autonomous code editing capabilities, and enterprise-grade security and scalability.
 
 ## System Capabilities
 
@@ -28,6 +28,14 @@ V3 provides comprehensive multimodal RAG capabilities with constitutional govern
 - **Cross-Modal Validation**: Ensuring consistency across different content types
 - **Audit Trails**: Comprehensive logging and provenance tracking
 - **Compliance Enforcement**: Runtime constraint verification and governance
+
+### Autonomous Development Agent
+- **Self-Prompting Loops**: Iterative generate-evaluate-refine cycles for autonomous coding
+- **Tool-Call Envelopes**: JSON-schema validated action requests preventing hallucinated edits
+- **Isolated Workspaces**: Safe file editing with Git worktree or temp directory isolation
+- **Evaluation-Based Safety**: Tests, linting, and type-checking before promoting changes
+- **Model Health Monitoring**: Automatic fallback and reliability tracking for robust operation
+- **Execution Modes**: Strict (manual approval), Auto (quality gates), Dry-run (artifacts only)
 
 ## System Architecture
 
@@ -68,6 +76,18 @@ V3 provides comprehensive multimodal RAG capabilities with constitutional govern
 - **Multimodal Metrics**: Specialized metrics for multimodal processing
 - **Alerting**: Real-time alerting with configurable thresholds
 - **Performance Tracking**: SLA compliance and performance optimization
+
+#### Self-Prompting Agent (`self-prompting-agent`)
+- **Loop Controller**: Orchestrates generate-evaluate-refine cycles with safety guards
+- **Prompting Strategies**: Adaptive prompting with tool-call envelope validation
+- **Model Health Monitoring**: Automatic fallback and reliability tracking
+- **Evaluation Orchestrator**: Comprehensive testing and quality assessment
+
+#### File Operations (`file_ops`)
+- **Workspace Management**: Isolated editing with Git worktrees or temp directories
+- **ChangeSet Processing**: Atomic file modifications with rollback capabilities
+- **AllowList Enforcement**: Path and content restrictions for safe editing
+- **Budget Controls**: Resource limits and waiver system for constraint management
 
 ## Getting Started
 
@@ -189,6 +209,38 @@ chmod +x scripts/deploy-production.sh
 # - Kibana: http://localhost:5601
 ```
 
+### Autonomous Development Agent
+
+Agent Agency V3 includes an autonomous self-editing development agent that can iteratively improve code through self-prompting loops. The agent provides multiple execution modes for different safety levels:
+
+#### Execution Modes
+- **Auto Mode** (default): Automatic execution with quality gate validation
+- **Strict Mode**: Manual approval required for each changeset
+- **Dry-run Mode**: Generate artifacts without modifying files
+
+#### Usage Examples
+
+```bash
+# Run autonomous development with quality gates (recommended)
+cargo run --bin self-prompting-cli -- execute "Add error handling to user service" --mode auto
+
+# Require manual approval for changes
+cargo run --bin self-prompting-cli -- execute "Refactor authentication logic" --mode strict
+
+# Preview changes without applying them
+cargo run --bin self-prompting-cli -- execute "Optimize database queries" --mode dry-run --dashboard
+
+# Watch real-time progress with dashboard
+cargo run --bin self-prompting-cli -- execute "Implement user registration" --watch --dashboard
+```
+
+#### Safety Features
+- **Isolated Workspaces**: Changes applied to sandbox before promotion
+- **Evaluation Gates**: Tests, linting, and type-checking required before promotion
+- **Rollback Capability**: Failed evaluations automatically rollback changes
+- **AllowList Enforcement**: Only permitted files can be modified
+- **Model Health Monitoring**: Automatic fallback on model failures
+
 ### Development Setup
 
 ```bash
@@ -268,6 +320,10 @@ k6 run k6-multimodal-rag-test.js
 - **Orchestration Integration**: End-to-end multimodal processing pipeline
 - **Workers Integration**: Scalable job processing with backpressure handling
 - **Observability Integration**: Comprehensive monitoring and alerting
+- **Self-Prompting Agent**: Autonomous code editing with tool-call envelopes and evaluation safety
+- **File Operations Integration**: Isolated workspace management with atomic changesets and rollbacks
+- **Model Health Monitoring**: Automatic fallback and reliability tracking for robust operation
+- **Execution Modes**: Strict/auto/dry-run modes with safety guardrails and dashboard observability
 - **Production Deployment**: Complete Docker-based deployment infrastructure
 - **Load Testing**: K6-based performance testing with custom metrics
 - **Performance Benchmarks**: Database operation SLAs verified (p95 < 100ms) with comprehensive test coverage

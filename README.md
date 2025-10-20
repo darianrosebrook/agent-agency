@@ -48,13 +48,14 @@ What optimizations are possible when leveraging Apple Silicon's Neural Engine fo
 
 ## Research Iterations
 
-### V3: Production Multimodal RAG System
+### V3: Production Multimodal RAG + Autonomous Development Agent
 
-The **V3 iteration** is a **production-ready multimodal RAG system** with integrated constitutional governance, featuring:
+The **V3 iteration** is a **production-ready multimodal RAG system** with integrated constitutional governance AND **autonomous self-editing development agent** capabilities, featuring:
 
 - **Multimodal Processing**: Text, image, audio, video, and document processing with Apple Silicon optimization
 - **Vector Storage**: PostgreSQL with pgvector extension for high-performance similarity search
 - **Constitutional Governance**: Real-time decision-making with evidence-based validation
+- **Autonomous Development**: Self-prompting agent with file editing, evaluation, and iterative improvement
 - **Production Deployment**: Docker-based deployment with monitoring, alerting, and load testing
 
 #### Key System Components
@@ -63,7 +64,17 @@ The **V3 iteration** is a **production-ready multimodal RAG system** with integr
 - **Council System**: Constitutional decision-making with multimodal evidence validation
 - **Research Module**: Knowledge retrieval and context synthesis across modalities
 - **Workers System**: Scalable job processing with backpressure and retry logic
+- **Self-Prompting Agent**: Autonomous code editing with tool-call envelopes and evaluation-based safety
+- **File Operations**: Isolated workspace management with atomic changesets and rollbacks
 - **Observability**: Comprehensive monitoring with Prometheus, Grafana, and alerting
+
+#### Autonomous Development Capabilities
+- **Tool-Call Envelopes**: JSON-schema validated action requests preventing hallucinated edits
+- **Isolated Workspaces**: Safe file editing with Git worktree or temp directory isolation
+- **Evaluation-Based Safety**: Tests, linting, and type-checking before promoting changes
+- **Iterative Refinement**: Self-prompting loop with hysteresis and no-progress guards
+- **Model Health Monitoring**: Automatic fallback and reliability tracking
+- **Execution Modes**: Strict (manual approval), Auto (quality gates), Dry-run (artifacts only)
 
 #### Production Features
 - **Docker Deployment**: Complete containerized deployment with health checks
