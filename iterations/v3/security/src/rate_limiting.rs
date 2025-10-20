@@ -1,14 +1,195 @@
 //! Rate limiting utilities for API protection
 
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
+
+/// Rate limiting configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RateLimitConfig {
+    /// Maximum requests per minute for general endpoints
+    pub requests_per_minute: u32,
+    /// Maximum requests per minute for authentication endpoints
+    pub auth_requests_per_minute: u32,
+    /// Maximum requests per minute for API endpoints
+    pub api_requests_per_minute: u32,
+    /// Burst allowance (additional requests beyond base rate)
+    pub burst_allowance: u32,
+    /// Window duration in seconds for sliding window
+    pub window_seconds: u64,
+    /// Whether to enable distributed rate limiting
+    pub enable_distributed: bool,
+}
+
+impl Default for RateLimitConfig {
+    fn default() -> Self {
+        Self {
+            requests_per_minute: 60,      // 1 req/sec average
+            auth_requests_per_minute: 5,  // Very restrictive for auth
+            api_requests_per_minute: 120, // 2 req/sec for APIs
+            burst_allowance: 10,          // Allow some bursting
+            window_seconds: 60,           // 1 minute windows
+            enable_distributed: false,    // Local only by default
+        }
+    }
+}
+
+/// Rate limiting middleware response
+#[derive(Debug, Clone)]
+pub enum RateLimitResult {
+    /// Request allowed
+    Allowed,
+    /// Request denied with retry information
+    Denied {
+        /// Seconds until next request is allowed
+        retry_after_seconds: u64,
+        /// Current request count
+        current_count: usize,
+        /// Maximum allowed requests
+        limit: u32,
+    },
+}
 
 /// Rate limiter for general API endpoints
 #[derive(Debug)]
 pub struct ApiRateLimiter {
     /// Per-endpoint limits: endpoint -> (requests_per_minute, window_start, count)
     endpoint_limits: Arc<Mutex<HashMap<String, (u32, Instant, u32)>>>,
+}
+
+/// Sliding window rate limiter for more precise control
+#[derive(Debug)]
+pub struct SlidingWindowRateLimiter {
+    /// Per-key request timestamps: key -> VecDeque<timestamp>
+    request_windows: Arc<Mutex<HashMap<String, VecDeque<DateTime<Utc>>>>>,
+    /// Window duration in seconds
+    window_seconds: u64,
+}
+
+impl SlidingWindowRateLimiter {
+    /// Create a new sliding window rate limiter
+    pub fn new(window_seconds: u64) -> Self {
+        Self {
+            request_windows: Arc::new(Mutex::new(HashMap::new())),
+            window_seconds,
+        }
+    }
+
+    /// Check if a request is allowed under the rate limit
+    pub fn allow_request(&self, key: &str, max_requests: u32) -> bool {
+        let mut windows = match self.request_windows.lock() {
+            Ok(lock) => lock,
+            Err(_) => return false, // Deny on mutex poison
+        };
+
+        let now = Utc::now();
+        let window_start = now - chrono::Duration::seconds(self.window_seconds as i64);
+
+        let timestamps = windows.entry(key.to_string()).or_insert_with(VecDeque::new);
+
+        // Remove timestamps outside the sliding window
+        while let Some(&oldest) = timestamps.front() {
+            if oldest < window_start {
+                timestamps.pop_front();
+            } else {
+                break;
+            }
+        }
+
+        // Check if under limit
+        if timestamps.len() >= max_requests as usize {
+            return false;
+        }
+
+        // Add current request timestamp
+        timestamps.push_back(now);
+        true
+    }
+
+    /// Get current request count for a key
+    pub fn get_request_count(&self, key: &str) -> usize {
+        let windows = match self.request_windows.lock() {
+            Ok(lock) => lock,
+            Err(_) => return 0,
+        };
+
+        windows.get(key).map(|timestamps| timestamps.len()).unwrap_or(0)
+    }
+
+    /// Clear all rate limiting data
+    pub fn clear(&self) {
+        if let Ok(mut windows) = self.request_windows.lock() {
+            windows.clear();
+        }
+    }
+}
+
+/// Comprehensive rate limiting service
+#[derive(Debug)]
+pub struct RateLimitingService {
+    config: RateLimitConfig,
+    sliding_limiter: SlidingWindowRateLimiter,
+    fixed_limiter: ApiRateLimiter,
+}
+
+impl RateLimitingService {
+    /// Create a new rate limiting service
+    pub fn new(config: RateLimitConfig) -> Self {
+        Self {
+            sliding_limiter: SlidingWindowRateLimiter::new(config.window_seconds),
+            fixed_limiter: ApiRateLimiter::new(),
+            config,
+        }
+    }
+
+    /// Check rate limit for a request
+    pub fn check_rate_limit(&self, endpoint: &str, client_ip: &str, user_id: Option<&str>) -> RateLimitResult {
+        let key = self.build_rate_limit_key(endpoint, client_ip, user_id);
+
+        // Use different limits based on endpoint type
+        let limit = if endpoint.contains("/auth") || endpoint.contains("/login") {
+            self.config.auth_requests_per_minute
+        } else if endpoint.contains("/api") {
+            self.config.api_requests_per_minute
+        } else {
+            self.config.requests_per_minute
+        };
+
+        let total_limit = limit + self.config.burst_allowance;
+
+        if self.sliding_limiter.allow_request(&key, total_limit) {
+            RateLimitResult::Allowed
+        } else {
+            let current_count = self.sliding_limiter.get_request_count(&key);
+            RateLimitResult::Denied {
+                retry_after_seconds: self.config.window_seconds,
+                current_count,
+                limit: total_limit,
+            }
+        }
+    }
+
+    /// Build a rate limiting key combining endpoint, IP, and optional user ID
+    fn build_rate_limit_key(&self, endpoint: &str, client_ip: &str, user_id: Option<&str>) -> String {
+        match user_id {
+            Some(uid) => format!("{}:{}:{}", endpoint, client_ip, uid),
+            None => format!("{}:{}", endpoint, client_ip),
+        }
+    }
+
+    /// Get current rate limit stats
+    pub fn get_stats(&self) -> HashMap<String, usize> {
+        // This is a simplified stats method - in production you'd want more detailed metrics
+        HashMap::new() // Placeholder
+    }
+
+    /// Clear all rate limiting data
+    pub fn clear_all(&self) {
+        self.sliding_limiter.clear();
+        // Note: fixed_limiter doesn't have a clear method yet
+    }
 }
 
 impl ApiRateLimiter {
@@ -21,7 +202,10 @@ impl ApiRateLimiter {
 
     /// Check if a request to an endpoint is allowed
     pub fn allow_request(&self, endpoint: &str, requests_per_minute: u32) -> bool {
-        let mut limits = self.endpoint_limits.lock().unwrap();
+        let mut limits = match self.endpoint_limits.lock() {
+            Ok(lock) => lock,
+            Err(_) => return false, // If mutex is poisoned, deny request for safety
+        };
         let now = Instant::now();
         let window_duration = Duration::from_secs(60);
 
@@ -44,7 +228,10 @@ impl ApiRateLimiter {
 
     /// Get current stats for all endpoints
     pub fn get_stats(&self) -> HashMap<String, (u32, u32)> {
-        let limits = self.endpoint_limits.lock().unwrap();
+        let limits = match self.endpoint_limits.lock() {
+            Ok(lock) => lock,
+            Err(_) => return HashMap::new(), // Return empty stats on mutex poison
+        };
         limits.iter()
             .map(|(endpoint, (_, _, count))| (endpoint.clone(), (*count, 0))) // (current_count, limit)
             .collect()

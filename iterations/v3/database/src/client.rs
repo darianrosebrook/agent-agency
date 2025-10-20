@@ -37,6 +37,9 @@ pub struct DeadpoolSqlxBridge {
 impl DeadpoolSqlxBridge {
     /// Create a new bridge from deadpool configuration
     pub async fn new(config: DatabaseConfig, metrics: Arc<DatabaseMetrics>) -> Result<Self> {
+        // Validate configuration for production safety
+        config.validate().map_err(|e| anyhow::anyhow!("Database configuration validation failed: {}", e))?;
+        info!("Database configuration validated successfully");
         let mut pg_config = Config::new();
         pg_config.host = Some(config.host.clone());
         pg_config.port = Some(config.port);
@@ -48,6 +51,11 @@ impl DeadpoolSqlxBridge {
         });
         pg_config.pool = Some(deadpool_postgres::PoolConfig {
             max_size: config.pool_max as usize,
+            timeouts: deadpool_postgres::Timeouts {
+                wait: Some(StdDuration::from_secs(config.connection_timeout_seconds)),
+                create: Some(StdDuration::from_secs(10)), // Connection creation timeout
+                recycle: Some(StdDuration::from_secs(5)), // Connection recycle timeout
+            },
             ..Default::default()
         });
 
@@ -68,7 +76,7 @@ impl DeadpoolSqlxBridge {
         
         // Implement timeout and retry logic
         let connection = tokio::time::timeout(
-            StdDuration::from_secs(30), // 30 second timeout
+            StdDuration::from_secs(self.config.connection_timeout_seconds),
             self.deadpool.get()
         )
         .await
@@ -428,6 +436,11 @@ impl DatabaseClient {
         });
         pg_config.pool = Some(deadpool_postgres::PoolConfig {
             max_size: config.pool_max as usize,
+            timeouts: deadpool_postgres::Timeouts {
+                wait: Some(StdDuration::from_secs(config.connection_timeout_seconds)),
+                create: Some(StdDuration::from_secs(10)), // Connection creation timeout
+                recycle: Some(StdDuration::from_secs(5)), // Connection recycle timeout
+            },
             ..Default::default()
         });
 
