@@ -45,6 +45,12 @@ export default function AnomalyDetector({
   const loadAnomalies = useCallback(async () => {
     if (externalAnomalies) return;
 
+    // TODO: Milestone 5 - Integrate timeSeriesData for advanced anomaly detection
+    // Use timeSeriesData for real-time anomaly analysis when available
+    if (timeSeriesData && timeSeriesData.length > 0) {
+      console.log("Time series data available for anomaly detection:", timeSeriesData.length, "series");
+    }
+
     try {
       setState((prev) => ({ ...prev, isDetecting: true, error: null }));
       const response = await analyticsApiClient.getAnomalies(state.filters);

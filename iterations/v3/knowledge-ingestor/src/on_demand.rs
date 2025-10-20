@@ -146,26 +146,31 @@ impl OnDemandIngestor {
         }
     }
     
-    /// TODO: Implement Wikidata API integration for entity ingestion
-    /// - [ ] Integrate Wikidata SPARQL API for entity data retrieval
-    /// - [ ] Parse Wikidata JSON responses and extract structured information
-    /// - [ ] Handle Wikidata entity relationships and property graphs
-    /// - [ ] Support multiple languages for entity labels and descriptions
-    /// - [ ] Implement entity disambiguation and conflict resolution
-    /// - [ ] Add Wikidata change tracking and update synchronization
-    /// - [ ] Support bulk entity ingestion with rate limiting
+    /// Ingest entity from Wikidata
+    async fn ingest_wikidata_entity(&self, entity_key: &str) -> Result<uuid::Uuid> {
+        // TODO: Implement Wikidata API integration for entity ingestion
+        // - [ ] Integrate Wikidata SPARQL API for entity data retrieval
+        // - [ ] Parse Wikidata JSON responses and extract structured information
+        // - [ ] Handle Wikidata entity relationships and property graphs
+        // - [ ] Support multiple languages for entity labels and descriptions
+        // - [ ] Implement entity disambiguation and conflict resolution
+        // - [ ] Add Wikidata change tracking and update synchronization
+        // - [ ] Support bulk entity ingestion with rate limiting
         anyhow::bail!("On-demand Wikidata ingestion not yet implemented for {}", entity_key)
     }
-    
-    /// TODO: Implement WordNet data integration for lexical knowledge
-    /// - [ ] Integrate WordNet database files or API for synset retrieval
-    /// - [ ] Parse WordNet data format and extract semantic relationships
-    /// - [ ] Support hypernym/hyponym hierarchies and part-of-speech tagging
-    /// - [ ] Implement synonym and antonym relationship extraction
-    /// - [ ] Add morphological analysis and derivation support
-    /// - [ ] Support multiple WordNet versions and language variants
-    /// - [ ] Implement efficient indexing and querying of WordNet data
+
+    /// Ingest entity from WordNet
+    async fn ingest_wordnet_entity(&self, entity_key: &str) -> Result<uuid::Uuid> {
+        // TODO: Implement WordNet data integration for lexical knowledge
+        // - [ ] Integrate WordNet database files or API for synset retrieval
+        // - [ ] Parse WordNet data format and extract semantic relationships
+        // - [ ] Support hypernym/hyponym hierarchies and part-of-speech tagging
+        // - [ ] Implement synonym and antonym relationship extraction
+        // - [ ] Add morphological analysis and derivation support
+        // - [ ] Support multiple WordNet versions and language variants
+        // - [ ] Implement efficient indexing and querying of WordNet data
         anyhow::bail!("On-demand WordNet ingestion not yet implemented for {}", entity_key)
+    }
     
     /// Update cache entry
     async fn update_cache(

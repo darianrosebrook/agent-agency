@@ -213,33 +213,86 @@ static ANE_DEVICE_CLASS: Lazy<std::result::Result<AneDeviceClassHandle, &'static
 
 impl ANEManager {
     /// Create a new ANE manager with actual device configuration
-    pub fn new() -> Self {
+    pub async fn new() -> Result<Self> {
         // Detect actual ANE device capabilities
         let device_capabilities = Self::detect_ane_capabilities();
 
         // Configure resource pool based on detected capabilities
         let resource_pool = Self::configure_resource_pool(&device_capabilities);
 
-        Self {
+        // Initialize with proper tokenizer (try HuggingFace, fallback to WordTokenizer)
+        let tokenizer = Self::initialize_tokenizer().await?;
+
+        Ok(Self {
             loaded_models: Arc::new(RwLock::new(HashMap::new())),
             resource_pool: Arc::new(RwLock::new(resource_pool)),
             performance_metrics: Arc::new(RwLock::new(HashMap::new())),
             device_capabilities,
-            tokenizer: Arc::new(WordTokenizer::new()),
+            tokenizer,
             metrics_collector: None,
             cache: None,
+        })
+    }
+
+    /// Initialize tokenizer with proper implementation
+    async fn initialize_tokenizer() -> Result<Arc<dyn Tokenizer>> {
+        use crate::tokenization::{HfTokenizer, WordTokenizer};
+
+        // Try to load a default tokenizer from common locations
+        let possible_paths = [
+            "/opt/homebrew/share/huggingface/tokenizers", // macOS Homebrew
+            "/usr/local/share/huggingface/tokenizers",     // macOS system
+            "./models/tokenizer",                          // Local models directory
+        ];
+
+        for path_str in &possible_paths {
+            let path = Path::new(path_str);
+            if path.exists() {
+                match HfTokenizer::from_pretrained(path).await {
+                    Ok(tokenizer) => {
+                        info!("ANE initialized with HuggingFace tokenizer from: {}", path_str);
+                        return Ok(Arc::new(tokenizer));
+                    }
+                    Err(e) => {
+                        debug!("Failed to load tokenizer from {}: {}", path_str, e);
+                    }
+                }
+            }
+        }
+
+        // Fallback to WordTokenizer if no HuggingFace tokenizer available
+        warn!("No HuggingFace tokenizer found, falling back to WordTokenizer. This may impact ML model performance.");
+        Ok(Arc::new(WordTokenizer::new()))
+    }
+
+    /// Check if ANE is available without creating a manager instance
+    pub fn is_ane_available() -> bool {
+        Self::detect_ane_capabilities().is_available
+    }
+
+    /// Get basic ANE metrics synchronously without creating a manager instance
+    pub fn get_basic_metrics() -> AneMetrics {
+        let capabilities = Self::detect_ane_capabilities();
+
+        AneMetrics {
+            is_available: capabilities.is_available,
+            total_memory_mb: capabilities.max_memory_mb,
+            used_memory_mb: 0, // Cannot determine without instance
+            active_operations: 0, // Cannot determine without instance
+            total_operations: 0, // Cannot determine without instance
+            last_inference_time_ms: 0, // Cannot determine without instance
         }
     }
 
     /// Create ANE manager with observability components
-    pub fn with_observability(
+    pub async fn with_observability(
         metrics: Arc<dyn crate::observability::metrics::MetricsBackend>,
         cache: Arc<dyn crate::observability::cache::CacheBackend>,
-    ) -> Self {
-        let mut manager = Self::new();
+    ) -> Result<Self> {
+        let mut manager = Self::new().await?;
         manager.metrics_collector = Some(metrics);
         manager.cache = Some(cache);
-        manager
+        Ok(manager)
     }
 
     /// Set metrics collector

@@ -275,6 +275,12 @@ impl TextSearchBridge {
 /// - [ ] Support different image formats and quality levels
 /// - [ ] Add visual search result ranking and confidence scoring
 
+/// Bridge for visual search functionality using CLIP embeddings
+#[derive(Debug)]
+pub struct VisualSearchBridge {
+    // TODO: Add CLIP model, visual index, and configuration fields
+}
+
 impl VisualSearchBridge {
     fn new() -> Result<Self> {
         tracing::debug!("Initializing visual search bridge");

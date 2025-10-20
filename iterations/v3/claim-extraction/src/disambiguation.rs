@@ -1894,7 +1894,6 @@ impl ContextResolver {
         debug!("Successfully triggered on-demand ingestion for entity: {}", entity);
         Ok(())
     }
-}
 
 /// Historical entity analysis results
 #[derive(Debug, Clone)]

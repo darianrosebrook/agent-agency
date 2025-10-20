@@ -12,6 +12,12 @@ export default function ForecastingChart({
   isLoading,
   error,
 }: ForecastingChartProps) {
+  // TODO: Milestone 5 - Implement time range controls for forecasting
+  // Use onTimeRangeChange for interactive date range selection
+  const handleTimeRangeChange = (start: string, end: string) => {
+    onTimeRangeChange?.(start, end);
+  };
+
   // Generate mock chart data for demonstration
   const chartData = useMemo(() => {
     if (!prediction) return null;

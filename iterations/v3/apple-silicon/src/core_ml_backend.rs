@@ -160,22 +160,8 @@ impl CoreMLBackend {
     fn detect_ane_dispatch(&self) -> bool {
         #[cfg(target_os = "macos")]
         {
-            // Create ANE manager instance for detection
-            let ane_manager = ANEManager::new();
-            // Use tokio runtime to check ANE availability synchronously
-            // TODO: Implement cached ANE availability checking for performance
-            // - [ ] Cache ANE availability status to avoid repeated hardware checks
-            // - [ ] Implement cache invalidation on system changes or ANE failures
-            // - [ ] Add ANE health monitoring and automatic re-detection
-            // - [ ] Support different caching strategies (memory, disk, distributed)
-            // - [ ] Add cache TTL and refresh mechanisms
-            // - [ ] Implement fallback behavior when cached data is unavailable
-            // - [ ] Add metrics for cache hit rates and ANE availability detection
-            tokio::runtime::Runtime::new()
-                .unwrap()
-                .block_on(async {
-                    ane_manager.is_ane_available().await
-                })
+            // Check ANE availability without creating a manager instance
+            ANEManager::is_ane_available()
         }
 
         #[cfg(not(target_os = "macos"))]
@@ -237,23 +223,17 @@ impl CoreMLBackend {
     fn query_ane_performance_metrics(&self) -> Result<AneMetrics> {
         #[cfg(target_os = "macos")]
         {
-            // Create ANE manager to query metrics
-            let ane_manager = ANEManager::new();
-            tokio::runtime::Runtime::new()
-                .unwrap()
-                .block_on(async {
-                    // Query current ANE status and metrics
-                    // This is a simplified implementation
-                    if ane_manager.is_ane_available().await {
-                        Ok(AneMetrics {
-                            active_operations: 1, // Assume at least one operation
-                            total_operations: 1,
-                            last_inference_time_ms: 0,
-                        })
-                    } else {
-                        Err(anyhow::anyhow!("ANE not available for metrics query"))
-                    }
-                })
+            // Get basic ANE metrics without creating a manager instance
+            let mut metrics = ANEManager::get_basic_metrics();
+
+            // Query current ANE status and metrics
+            if metrics.is_available {
+                // Try to get more detailed metrics if possible
+                // For now, return basic metrics
+                Ok(metrics)
+            } else {
+                Err(anyhow::anyhow!("ANE not available for metrics query"))
+            }
         }
 
         #[cfg(not(target_os = "macos"))]

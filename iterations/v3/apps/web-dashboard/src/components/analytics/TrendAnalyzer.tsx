@@ -39,6 +39,12 @@ export default function TrendAnalyzer({
   const loadTrends = useCallback(async () => {
     if (externalTrends) return;
 
+    // TODO: Milestone 5 - Integrate timeSeriesData for advanced trend analysis
+    // Use timeSeriesData for real-time trend analysis when available
+    if (timeSeriesData && timeSeriesData.length > 0) {
+      console.log("Time series data available for trend analysis:", timeSeriesData.length, "series");
+    }
+
     try {
       setState((prev) => ({ ...prev, isAnalyzing: true, error: null }));
       const response = await analyticsApiClient.getTrends(state.filters);
