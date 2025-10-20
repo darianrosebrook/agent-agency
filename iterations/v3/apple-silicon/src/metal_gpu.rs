@@ -1252,18 +1252,11 @@ impl MetalGPUManager {
         let device = Device::system_default()
             .ok_or_else(|| anyhow!("No Metal device available"))?;
 
-        // Create command queue
-        let command_queue = device.new_command_queue();
-
         // Prepare input data for MPS
         let input_data = self.prepare_mps_input_data(request)?;
 
-        // Create MPS graph for computation
-        let mps_result = self.create_and_execute_mps_graph(
-            &device,
-            &command_queue,
-            &input_data,
-        ).await?;
+        // Create and execute MPS Graph for transformer computation
+        let mps_result = self.create_and_execute_mps_graph(&device, &input_data).await?;
 
         let execution_time_ms = start_time.elapsed().as_millis() as f32;
 
@@ -1293,35 +1286,70 @@ impl MetalGPUManager {
         })
     }
 
-    /// Create and execute MPS graph
+    /// Create and execute MPS graph using Metal Performance Shaders
     async fn create_and_execute_mps_graph(
         &self,
         device: &metal::Device,
-        command_queue: &metal::CommandQueue,
         input_data: &MPSInputData,
     ) -> Result<MPSExecutionResult> {
-        // Create Metal command buffer
-        let command_buffer = command_queue.new_command_buffer();
+        use objc2_metal_performance_shaders_graph::*;
 
-        // Create MPS matrix operations for transformer computation
-        // This is a simplified implementation - real MPS would use MPSGraph or MPSMatrix
+        // Create MPSGraph for transformer operations
+        let graph = MPSGraph::new();
 
-        // Simulate matrix multiplication (attention mechanism)
-        let attention_result = self.execute_mps_attention(device, &command_buffer, input_data)?;
+        // Convert input data to MPS tensors
+        let token_ids_tensor = self.create_mps_tensor_from_data(
+            &graph,
+            &input_data.token_ids,
+            &[1, input_data.sequence_length as u64, 1],
+            "input_ids"
+        )?;
 
-        // Simulate feed-forward network
-        let ff_result = self.execute_mps_feedforward(device, &command_buffer, &attention_result)?;
+        let attention_mask_tensor = self.create_mps_tensor_from_data(
+            &graph,
+            &input_data.attention_mask,
+            &[1, input_data.sequence_length as u64, input_data.sequence_length as u64],
+            "attention_mask"
+        )?;
 
-        // Commit command buffer and wait
-        command_buffer.commit();
-        command_buffer.wait_until_completed();
+        // Create positional embeddings
+        let position_ids = (0..input_data.sequence_length)
+            .map(|i| i as i32)
+            .collect::<Vec<i32>>();
+        let position_tensor = self.create_mps_tensor_from_data(
+            &graph,
+            &position_ids,
+            &[1, input_data.sequence_length as u64, 1],
+            "position_ids"
+        )?;
 
-        // Collect results
-        let output_data = ff_result.output_data;
-        let memory_used_mb = attention_result.memory_used_mb + ff_result.memory_used_mb;
+        // Execute attention mechanism
+        let attention_output = self.execute_mps_attention_graph(
+            &graph,
+            &token_ids_tensor,
+            &attention_mask_tensor,
+            &position_tensor,
+            input_data.sequence_length,
+        )?;
 
-        // Estimate GPU utilization based on computation complexity
-        let gpu_utilization_percent = (input_data.sequence_length as f32 / 1000.0).min(1.0) * 100.0;
+        // Execute feed-forward network
+        let ff_output = self.execute_mps_feedforward_graph(
+            &graph,
+            &attention_output,
+            input_data.sequence_length,
+        )?;
+
+        // Execute the graph
+        let execution_result = self.execute_mps_graph(&graph, &[&ff_output])?;
+
+        // Extract output data
+        let output_data = self.extract_mps_tensor_data(&ff_output)?;
+
+        // Calculate memory usage
+        let memory_used_mb = self.calculate_mps_memory_usage(input_data.sequence_length)?;
+
+        // Estimate GPU utilization
+        let gpu_utilization_percent = self.estimate_mps_gpu_utilization(input_data.sequence_length)?;
 
         Ok(MPSExecutionResult {
             output_data,
@@ -1330,139 +1358,303 @@ impl MetalGPUManager {
         })
     }
 
-    /// Execute MPS attention computation
-    fn execute_mps_attention(
+    /// Create MPS tensor from data
+    fn create_mps_tensor_from_data<T>(
         &self,
-        device: &metal::Device,
-        command_buffer: &metal::CommandBuffer,
-        input_data: &MPSInputData,
-    ) -> Result<MPSOperationResult> {
-        // Create Metal compute pipeline for attention
-        let pipeline = self.create_attention_pipeline(device)?;
+        graph: &objc2_metal_performance_shaders_graph::MPSGraph,
+        data: &[T],
+        shape: &[u64],
+        name: &str,
+    ) -> Result<objc2_metal_performance_shaders_graph::MPSGraphTensor> {
+        use objc2_metal_performance_shaders_graph::*;
 
-        // Create input/output buffers
-        let input_size = input_data.token_ids.len() * std::mem::size_of::<f32>();
-        let input_buffer = device.new_buffer(input_size, metal::MTLResourceOptions::StorageModeShared)?;
+        // Convert data to f32 for MPS operations
+        let float_data: Vec<f32> = data.iter().map(|&x| x as f32).collect();
 
-        let output_size = input_data.sequence_length * 768 * std::mem::size_of::<f32>(); // Hidden size
-        let output_buffer = device.new_buffer(output_size, metal::MTLResourceOptions::StorageModeShared)?;
+        // Create MPS tensor with data
+        let tensor = graph.placeholderWithShape_name_dataType(
+            shape,
+            name,
+            MPSDataType::Float32,
+        );
 
-        // Create compute command encoder
-        let encoder = command_buffer.new_compute_command_encoder();
-        encoder.set_compute_pipeline_state(&pipeline);
-
-        // Set buffer arguments
-        encoder.set_buffer(0, Some(&input_buffer), 0);
-        encoder.set_buffer(1, Some(&output_buffer), 0);
-
-        // Configure thread groups
-        let threadgroup_size = metal::MTLSize { width: 256, height: 1, depth: 1 };
-        let threadgroups = metal::MTLSize {
-            width: (input_data.sequence_length as u64 + 255) / 256,
-            height: 1,
-            depth: 1,
-        };
-
-        encoder.dispatch_threadgroups(threadgroups, threadgroup_size);
-        encoder.end_encoding();
-
-        Ok(MPSOperationResult {
-            output_data: vec![0.0; input_data.sequence_length * 768], // Placeholder output
-            memory_used_mb: (input_size + output_size) as f32 / (1024.0 * 1024.0),
-        })
+        Ok(tensor)
     }
 
-    /// Execute MPS feed-forward computation
-    fn execute_mps_feedforward(
+    /// Execute MPS attention mechanism using MPSGraph
+    fn execute_mps_attention_graph(
         &self,
-        device: &metal::Device,
-        command_buffer: &metal::CommandBuffer,
-        attention_result: &MPSOperationResult,
-    ) -> Result<MPSOperationResult> {
-        // Create Metal compute pipeline for feed-forward
-        let pipeline = self.create_feedforward_pipeline(device)?;
+        graph: &objc2_metal_performance_shaders_graph::MPSGraph,
+        token_ids: &objc2_metal_performance_shaders_graph::MPSGraphTensor,
+        attention_mask: &objc2_metal_performance_shaders_graph::MPSGraphTensor,
+        position_ids: &objc2_metal_performance_shaders_graph::MPSGraphTensor,
+        sequence_length: usize,
+    ) -> Result<objc2_metal_performance_shaders_graph::MPSGraphTensor> {
+        use objc2_metal_performance_shaders_graph::*;
 
-        // Create input/output buffers
-        let input_size = attention_result.output_data.len() * std::mem::size_of::<f32>();
-        let input_buffer = device.new_buffer(input_size, metal::MTLResourceOptions::StorageModeShared)?;
+        // Create embedding layer (simplified - would use actual embeddings)
+        let embedding_dim = 768;
+        let embedding_matrix = graph.placeholderWithShape_name_dataType(
+            &[Self::VOCAB_SIZE as u64, embedding_dim as u64],
+            "embedding_matrix",
+            MPSDataType::Float32,
+        );
 
-        let output_size = attention_result.output_data.len() * std::mem::size_of::<f32>(); // Same size for simplicity
-        let output_buffer = device.new_buffer(output_size, metal::MTLResourceOptions::StorageModeShared)?;
+        let token_embeddings = graph.gatherAlongAxis_withIndices_name(
+            &embedding_matrix,
+            0,
+            token_ids,
+            "token_embeddings",
+        )?;
 
-        // Create compute command encoder
-        let encoder = command_buffer.new_compute_command_encoder();
-        encoder.set_compute_pipeline_state(&pipeline);
+        // Add positional embeddings
+        let position_matrix = graph.placeholderWithShape_name_dataType(
+            &[Self::MAX_SEQ_LEN as u64, embedding_dim as u64],
+            "position_matrix",
+            MPSDataType::Float32,
+        );
 
-        // Set buffer arguments
-        encoder.set_buffer(0, Some(&input_buffer), 0);
-        encoder.set_buffer(1, Some(&output_buffer), 0);
+        let position_embeddings = graph.gatherAlongAxis_withIndices_name(
+            &position_matrix,
+            0,
+            position_ids,
+            "position_embeddings",
+        )?;
 
-        // Configure thread groups
-        let threadgroup_size = metal::MTLSize { width: 256, height: 1, depth: 1 };
-        let threadgroups = metal::MTLSize {
-            width: (attention_result.output_data.len() as u64 + 255) / 256,
-            height: 1,
-            depth: 1,
-        };
+        let input_embeddings = graph.addition_withPrimaryTensor_secondaryTensor_name(
+            &token_embeddings,
+            &position_embeddings,
+            "input_embeddings",
+        )?;
 
-        encoder.dispatch_threadgroups(threadgroups, threadgroup_size);
-        encoder.end_encoding();
+        // Multi-head attention (simplified)
+        let num_heads = 12;
+        let head_dim = embedding_dim / num_heads;
 
-        Ok(MPSOperationResult {
-            output_data: vec![0.0; attention_result.output_data.len()], // Placeholder output
-            memory_used_mb: (input_size + output_size) as f32 / (1024.0 * 1024.0),
-        })
+        // Split into heads (reshape and transpose)
+        let reshaped = graph.reshapeTensor_withShape_name(
+            &input_embeddings,
+            &[sequence_length as u64, num_heads as u64, head_dim as u64],
+            "reshaped_attention_input",
+        )?;
+
+        // Self-attention computation (query, key, value)
+        let qkv_weight = graph.placeholderWithShape_name_dataType(
+            &[embedding_dim as u64, 3 * embedding_dim as u64],
+            "qkv_weight",
+            MPSDataType::Float32,
+        );
+
+        let qkv = graph.matrixMultiplicationWithPrimaryTensor_secondaryTensor_name(
+            &reshaped,
+            &qkv_weight,
+            "qkv_projection",
+        )?;
+
+        // Split Q, K, V
+        let q = graph.sliceTensor_dimension_startLength_name(
+            &qkv, 2, 0, head_dim as u64, "query",
+        )?;
+        let k = graph.sliceTensor_dimension_startLength_name(
+            &qkv, 2, head_dim as u64, head_dim as u64, "key",
+        )?;
+        let v = graph.sliceTensor_dimension_startLength_name(
+            &qkv, 2, 2 * head_dim as u64, head_dim as u64, "value",
+        )?;
+
+        // Attention scores
+        let scores = graph.matrixMultiplicationWithPrimaryTensor_secondaryTensor_name(
+            &q, &k, "attention_scores",
+        )?;
+
+        // Scale attention scores
+        let scale_factor = (head_dim as f32).sqrt();
+        let scaled_scores = graph.multiplicationWithPrimaryTensor_secondaryTensor_name(
+            &scores,
+            &graph.constantWithScalar_name(scale_factor, "scale_factor")?,
+            "scaled_scores",
+        )?;
+
+        // Apply attention mask
+        let masked_scores = graph.addition_withPrimaryTensor_secondaryTensor_name(
+            &scaled_scores,
+            &attention_mask,
+            "masked_scores",
+        )?;
+
+        // Softmax
+        let attention_weights = graph.softMaxWithTensor_name(&masked_scores, "attention_weights")?;
+
+        // Apply attention to values
+        let attention_output = graph.matrixMultiplicationWithPrimaryTensor_secondaryTensor_name(
+            &attention_weights,
+            &v,
+            "attention_output",
+        )?;
+
+        // Concatenate heads
+        let concatenated = graph.reshapeTensor_withShape_name(
+            &attention_output,
+            &[sequence_length as u64, embedding_dim as u64],
+            "concatenated_attention",
+        )?;
+
+        Ok(concatenated)
     }
 
-    /// Create Metal compute pipeline for attention
-    fn create_attention_pipeline(&self, device: &metal::Device) -> Result<metal::ComputePipelineState> {
-        // Create Metal library with attention shader
-        let library_source = r#"
-            #include <metal_stdlib>
-            using namespace metal;
+    /// Execute MPS feed-forward network
+    fn execute_mps_feedforward_graph(
+        &self,
+        graph: &objc2_metal_performance_shaders_graph::MPSGraph,
+        attention_output: &objc2_metal_performance_shaders_graph::MPSGraphTensor,
+        sequence_length: usize,
+    ) -> Result<objc2_metal_performance_shaders_graph::MPSGraphTensor> {
+        use objc2_metal_performance_shaders_graph::*;
 
-            kernel void attention_kernel(
-                device const float* input [[buffer(0)]],
-                device float* output [[buffer(1)]],
-                uint id [[thread_position_in_grid]]
-            ) {
-                // Simplified attention computation
-                // In practice, this would implement proper multi-head attention
-                output[id] = input[id] * 0.1f; // Placeholder computation
-            }
-        "#;
+        let hidden_dim = 768;
+        let ff_dim = 3072; // 4x hidden dimension
 
-        let library = device.new_library_with_source(library_source, &metal::CompileOptions::new())?;
-        let function = library.get_function("attention_kernel", None)?;
-        let pipeline = device.new_compute_pipeline_state(&function)?;
+        // Feed-forward weights
+        let ff_weight1 = graph.placeholderWithShape_name_dataType(
+            &[hidden_dim as u64, ff_dim as u64],
+            "ff_weight1",
+            MPSDataType::Float32,
+        );
 
-        Ok(pipeline)
+        let ff_bias1 = graph.placeholderWithShape_name_dataType(
+            &[ff_dim as u64],
+            "ff_bias1",
+            MPSDataType::Float32,
+        );
+
+        let ff_weight2 = graph.placeholderWithShape_name_dataType(
+            &[ff_dim as u64, hidden_dim as u64],
+            "ff_weight2",
+            MPSDataType::Float32,
+        );
+
+        let ff_bias2 = graph.placeholderWithShape_name_dataType(
+            &[hidden_dim as u64],
+            "ff_bias2",
+            MPSDataType::Float32,
+        );
+
+        // First linear layer
+        let ff1 = graph.matrixMultiplicationWithPrimaryTensor_secondaryTensor_name(
+            attention_output,
+            &ff_weight1,
+            "ff1_linear",
+        )?;
+
+        let ff1_biased = graph.addition_withPrimaryTensor_secondaryTensor_name(
+            &ff1,
+            &ff_bias1,
+            "ff1_biased",
+        )?;
+
+        // GELU activation
+        let ff1_activated = graph.geluWithTensor_name(&ff1_biased, "ff1_gelu")?;
+
+        // Second linear layer
+        let ff2 = graph.matrixMultiplicationWithPrimaryTensor_secondaryTensor_name(
+            &ff1_activated,
+            &ff_weight2,
+            "ff2_linear",
+        )?;
+
+        let ff2_output = graph.addition_withPrimaryTensor_secondaryTensor_name(
+            &ff2,
+            &ff_bias2,
+            "ff2_output",
+        )?;
+
+        Ok(ff2_output)
     }
 
-    /// Create Metal compute pipeline for feed-forward
-    fn create_feedforward_pipeline(&self, device: &metal::Device) -> Result<metal::ComputePipelineState> {
-        // Create Metal library with feed-forward shader
-        let library_source = r#"
-            #include <metal_stdlib>
-            using namespace metal;
+    /// Execute MPS graph and return results
+    fn execute_mps_graph(
+        &self,
+        graph: &objc2_metal_performance_shaders_graph::MPSGraph,
+        output_tensors: &[&objc2_metal_performance_shaders_graph::MPSGraphTensor],
+    ) -> Result<objc2_metal_performance_shaders_graph::MPSGraphExecutionDescriptor> {
+        use objc2_metal_performance_shaders_graph::*;
 
-            kernel void feedforward_kernel(
-                device const float* input [[buffer(0)]],
-                device float* output [[buffer(1)]],
-                uint id [[thread_position_in_grid]]
-            ) {
-                // Simplified feed-forward computation
-                // In practice, this would implement proper MLP layers
-                output[id] = tanh(input[id]) * 0.1f; // Placeholder computation
-            }
-        "#;
+        let descriptor = MPSGraphExecutionDescriptor::new();
 
-        let library = device.new_library_with_source(library_source, &metal::CompileOptions::new())?;
-        let function = library.get_function("feedforward_kernel", None)?;
-        let pipeline = device.new_compute_pipeline_state(&function)?;
+        // Set output tensors
+        for (i, tensor) in output_tensors.iter().enumerate() {
+            descriptor.setResultTensor_atIndex(tensor, i as u64);
+        }
 
-        Ok(pipeline)
+        // Execute on default command queue
+        let device = metal::Device::system_default()
+            .ok_or_else(|| anyhow!("No Metal device available"))?;
+        let command_queue = device.new_command_queue();
+
+        graph.encodeToCommandBuffer_executionDescriptor(
+            &command_queue.new_command_buffer(),
+            &descriptor,
+        );
+
+        Ok(descriptor)
     }
+
+    /// Extract data from MPS tensor
+    fn extract_mps_tensor_data(
+        &self,
+        tensor: &objc2_metal_performance_shaders_graph::MPSGraphTensor,
+    ) -> Result<Vec<f32>> {
+        use objc2_metal_performance_shaders_graph::*;
+
+        // Get tensor data as MPSNDArray
+        let ndarray = tensor.mpsNDArray();
+
+        // Extract float data
+        let data_size = ndarray.length() as usize;
+        let mut output_data = vec![0.0f32; data_size];
+
+        // Copy data from MPS tensor to Rust vector
+        ndarray.readBytes_toBuffer(&mut output_data, data_size * std::mem::size_of::<f32>());
+
+        Ok(output_data)
+    }
+
+    /// Calculate MPS memory usage
+    fn calculate_mps_memory_usage(&self, sequence_length: usize) -> Result<f32> {
+        // Estimate memory usage based on sequence length and model size
+        let embedding_dim = 768;
+        let num_layers = 12;
+        let vocab_size = Self::VOCAB_SIZE;
+
+        // Memory for embeddings
+        let embedding_memory = vocab_size * embedding_dim * std::mem::size_of::<f32>();
+
+        // Memory for attention layers (Q, K, V per layer)
+        let attention_memory = num_layers * sequence_length * embedding_dim * 3 * std::mem::size_of::<f32>();
+
+        // Memory for feed-forward layers
+        let ff_memory = num_layers * sequence_length * embedding_dim * 4 * std::mem::size_of::<f32>();
+
+        let total_memory = embedding_memory + attention_memory + ff_memory;
+        let memory_mb = total_memory as f32 / (1024.0 * 1024.0);
+
+        Ok(memory_mb)
+    }
+
+    /// Estimate MPS GPU utilization
+    fn estimate_mps_gpu_utilization(&self, sequence_length: usize) -> Result<f32> {
+        // Estimate GPU utilization based on sequence length and model complexity
+        let base_utilization = 10.0; // Minimum utilization
+        let sequence_factor = (sequence_length as f32 / 1000.0).min(1.0);
+        let utilization = base_utilization + (sequence_factor * 70.0); // Up to 80% utilization
+
+        Ok(utilization.min(95.0))
+    }
+
+
+    /// Constants for MPS operations
+    const VOCAB_SIZE: usize = 50257; // GPT-2 vocabulary size
+    const MAX_SEQ_LEN: usize = 1024; // Maximum sequence length
 }
 
 impl Default for MetalGPUManager {
