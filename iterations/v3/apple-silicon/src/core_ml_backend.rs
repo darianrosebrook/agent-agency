@@ -47,21 +47,27 @@ impl PreparedModel for PreparedCoreMLModel {
     }
 
     fn sla_estimate(&self) -> Duration {
-        // TODO: Replace rough latency estimate with actual telemetry integration
-        // Requirements for completion:
-        // - [ ] Implement actual Core ML performance telemetry collection
-        // - [ ] Add support for real-time latency measurement and tracking
-        // - [ ] Implement proper performance metrics aggregation and analysis
-        // - [ ] Add support for different model types and their specific latency characteristics
-        // - [ ] Implement proper error handling for telemetry collection failures
-        // - [ ] Add support for telemetry data persistence and historical analysis
-        // - [ ] Implement proper memory management for telemetry data
-        // - [ ] Add support for telemetry data export and reporting
-        // - [ ] Implement proper cleanup of telemetry resources
-        // - [ ] Add support for telemetry-based performance optimization recommendations
-        // Rough estimate based on typical Core ML latency
-        // This can be refined with actual telemetry
-        Duration::from_millis(20)
+        // Use telemetry data for accurate SLA estimation
+        // Access telemetry metrics to provide data-driven latency estimates
+        if let Ok(metrics) = self.telemetry.metrics.lock() {
+            // Use P99 inference latency if available and reasonable
+            if metrics.infer_p99_ms > 0 && metrics.infer_count > 10 {
+                // Use P99 as SLA estimate with 20% buffer for variability
+                let buffered_estimate = metrics.infer_p99_ms * 12 / 10; // 1.2x buffer
+                return Duration::from_millis(buffered_estimate.max(10).min(5000)); // Clamp between 10ms and 5s
+            }
+
+            // Fallback to average latency if P99 not available
+            if metrics.infer_count > 0 {
+                let avg_latency = metrics.infer_total_ms / metrics.infer_count;
+                let buffered_estimate = avg_latency * 15 / 10; // 1.5x buffer for average
+                return Duration::from_millis(buffered_estimate.max(15).min(3000)); // Clamp between 15ms and 3s
+            }
+        }
+
+        // Final fallback to conservative estimate if no telemetry data available
+        // This ensures the system remains functional even with telemetry failures
+        Duration::from_millis(50)
     }
 }
 

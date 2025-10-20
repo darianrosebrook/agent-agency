@@ -35,3 +35,6 @@ embedding-service = { path = "../embedding-service" }
 # Database integration
 agent-agency-database = { path = "../database" }
 
+# Knowledge graph integration
+knowledge-ingestor = { path = "../knowledge-ingestor" }
+

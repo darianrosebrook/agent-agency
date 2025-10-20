@@ -1,21 +1,74 @@
-id: LINT-001
-title: "Fix compilation errors across Rust crates"
-risk_tier: 3
-mode: fix
+id: IMPL-001
+title: "Implement Metal GPU, quantization, and web dashboard TODO items"
+risk_tier: 2
+mode: feature
+change_budget:
+  max_files: 35
+  max_loc: 2000
 blast_radius:
-  modules: ["observability", "embedding-service", "research", "claim-extraction", "indexers", "provenance"]
+  modules: ["apple-silicon", "web-dashboard"]
   data_migration: false
-operational_rollback_slo: "5m"
+operational_rollback_slo: "15m"
 scope:
-  in: ["iterations/v3/"]
-  out: []
+  in: ["iterations/v3/apple-silicon/src/metal_gpu.rs", "iterations/v3/apple-silicon/src/quantization.rs", "iterations/v3/apps/web-dashboard/"]
+  out: ["node_modules/", "target/", "dist/"]
 invariants:
-  - "All Rust crates compile without errors"
+  - "Metal GPU computations use actual pipeline state instead of simulation"
+  - "MPS result data is properly parsed and processed"
+  - "GPU memory utilization is tracked and monitored"
+  - "GPU temperature data is parsed from system_profiler"
+  - "ONNX models support proper quantization"
+  - "Web dashboard UI components are functional"
 acceptance:
   - id: "A1"
-    given: "Multiple Rust crates with compilation errors"
-    when: "Run cargo check across all packages"
-    then: "Zero compilation errors reported"
-contracts: []
+    given: "Metal GPU computation request"
+    when: "Execute with compiled Metal shaders"
+    then: "Pipeline state created and computation succeeds"
+  - id: "A2"
+    given: "MPS computation result"
+    when: "Process MPSMatrix and MPSImage data"
+    then: "Data structures parsed correctly"
+  - id: "A3"
+    given: "Active GPU computations"
+    when: "Track memory allocations"
+    then: "Registry maintains command buffers and allocations"
+  - id: "A4"
+    given: "System profiler output"
+    when: "Parse temperature sensors"
+    then: "GPU temperature data extracted accurately"
+  - id: "A5"
+    given: "GPU utilization metrics"
+    when: "Monitor with thresholds"
+    then: "Alerts triggered on high utilization"
+  - id: "A6"
+    given: "GPU memory fragmentation"
+    when: "Analyze allocation patterns"
+    then: "Defragmentation strategy implemented"
+  - id: "A7"
+    given: "Embedding computation request"
+    when: "Use trained embedding models"
+    then: "Word2Vec/GloVe embeddings loaded and applied"
+  - id: "A8"
+    given: "ONNX model format"
+    when: "Apply quantization"
+    then: "Model quantized using onnxruntime"
+  - id: "A9"
+    given: "Database connection UI"
+    when: "User clicks create connection"
+    then: "Connection creation dialog appears"
+  - id: "A10"
+    given: "Analytics dashboard"
+    when: "User requests data refresh"
+    then: "Cache invalidated and data refreshed"
+  - id: "A11"
+    given: "Time series data available"
+    when: "Run anomaly detection"
+    then: "Advanced analysis uses time series data"
+contracts:
+  - type: "rust_trait"
+    path: "iterations/v3/apple-silicon/src/metal_gpu.rs"
+    description: "Metal GPU computation interface with pipeline state management"
 non_functional:
-  perf: { compile_time_ms: 30000 }
+  perf: { api_p95_ms: 500, lcp_ms: 2000 }
+  security: ["input-validation", "rate-limiting"]
+  a11y: ["keyboard-navigation", "screen-reader-labels"]

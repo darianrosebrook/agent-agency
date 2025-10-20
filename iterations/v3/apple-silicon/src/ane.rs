@@ -11,12 +11,80 @@ use core_foundation::url::CFURL;
 use objc::runtime::Class;
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
+use std::ffi::CStr;
+use std::os::unix::ffi::OsStrExt;
 use std::path::Path;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{debug, info, warn};
+use tracing::{debug, info, warn, error};
 
 use crate::tokenization::{Tokenizer, TokenizerConfig, TokenizerType, create_tokenizer};
+
+/// Filesystem space information
+#[derive(Debug, Clone)]
+pub struct FilesystemSpace {
+    /// Total space in bytes
+    pub total_bytes: u64,
+    /// Available space in bytes
+    pub available_bytes: u64,
+    /// Used space in bytes
+    pub used_bytes: u64,
+    /// Free space in bytes (different from available on some filesystems)
+    pub free_bytes: u64,
+}
+
+/// Get filesystem space information for a given path using statvfs
+pub fn get_filesystem_space<P: AsRef<Path>>(path: P) -> Result<FilesystemSpace> {
+    use std::os::unix::ffi::OsStrExt;
+
+    let path_cstr = std::ffi::CString::new(path.as_ref().as_os_str().as_bytes())
+        .map_err(|_| anyhow::anyhow!("Path contains null bytes"))?;
+
+    // Use statvfs system call
+    let mut statvfs_buf: libc::statvfs = unsafe { std::mem::zeroed() };
+
+    let result = unsafe { libc::statvfs(path_cstr.as_ptr(), &mut statvfs_buf) };
+
+    if result != 0 {
+        let err = std::io::Error::last_os_error();
+        return Err(anyhow::anyhow!("Failed to get filesystem stats: {}", err));
+    }
+
+    // Calculate space values
+    let block_size = statvfs_buf.f_bsize as u64;
+    let total_blocks = statvfs_buf.f_blocks as u64;
+    let available_blocks = statvfs_buf.f_bavail as u64;
+    let free_blocks = statvfs_buf.f_bfree as u64;
+
+    let total_bytes = total_blocks * block_size;
+    let available_bytes = available_blocks * block_size;
+    let free_bytes = free_blocks * block_size;
+    let used_bytes = total_bytes.saturating_sub(free_bytes);
+
+    Ok(FilesystemSpace {
+        total_bytes,
+        available_bytes,
+        used_bytes,
+        free_bytes,
+    })
+}
+
+/// Check if filesystem has sufficient space for cache operations
+pub fn check_filesystem_space<P: AsRef<Path>>(path: P, required_bytes: u64) -> Result<bool> {
+    let space = get_filesystem_space(path)?;
+    Ok(space.available_bytes >= required_bytes)
+}
+
+/// Get recommended cache size based on available filesystem space
+pub fn get_recommended_cache_size<P: AsRef<Path>>(path: P) -> Result<u64> {
+    let space = get_filesystem_space(path)?;
+
+    // Use up to 25% of available space, but cap at 2GB
+    let percentage_based = space.available_bytes / 4;
+    let max_cache_size = 2 * 1024 * 1024 * 1024; // 2GB
+
+    Ok(std::cmp::min(percentage_based, max_cache_size))
+}
 
 /// Apple Neural Engine manager for ANE-accelerated inference
 #[derive(Debug)]
@@ -978,26 +1046,27 @@ impl ANEManager {
             debug!("Created ANE model cache directory: {:?}", cache_dir);
         }
 
-        // Check available disk space for cache
-        let available_space = fs::metadata(&cache_dir)
-            .and_then(|metadata| {
-                // TODO: Implement proper filesystem space checking with statvfs
-                // - [ ] Use statvfs system call for accurate disk space information
-                // - [ ] Handle different filesystem types and mount points
-                // - [ ] Add support for quota-aware space checking
-                // - [ ] Implement cross-platform filesystem space detection
-                // - [ ] Add disk space monitoring and low-space warnings
-                // - [ ] Support different space allocation strategies (percentage-based, absolute)
-                // - [ ] Add filesystem space metrics and alerting
-                // This is a simplified check - in real implementation would use statvfs
-                Ok(metadata.len())
-            })
-            .unwrap_or(1024 * 1024 * 1024); // Assume 1GB available
+        // Check available disk space for cache using statvfs
+        let max_cache_size = match get_recommended_cache_size(&cache_dir) {
+            Ok(recommended_size) => {
+                debug!("Recommended cache size: {} MB", recommended_size / (1024 * 1024));
+                recommended_size
+            }
+            Err(e) => {
+                warn!("Failed to determine filesystem space, using conservative default: {}", e);
+                // Fallback to conservative default
+                512 * 1024 * 1024 // 512MB
+            }
+        };
 
-        let max_cache_size = std::cmp::min(
-            available_space / 4,    // Use up to 25% of available space
-            2 * 1024 * 1024 * 1024, // But no more than 2GB
-        );
+        // Additional space check for minimum requirements
+        let minimum_required = 100 * 1024 * 1024; // 100MB minimum
+        if let Ok(has_space) = check_filesystem_space(&cache_dir, minimum_required) {
+            if !has_space {
+                warn!("Insufficient disk space for ANE cache (need at least {} MB)", minimum_required / (1024 * 1024));
+                // Continue with reduced cache size
+            }
+        }
 
         // Clean up old cache entries if cache is too large
         if let Ok(entries) = fs::read_dir(&cache_dir) {

@@ -8,10 +8,11 @@
 
 use super::*;
 use std::sync::Arc;
+use uuid::Uuid;
 
 /// Database connection pool integration
 pub struct DatabaseConnectionPool {
-    pool: ObjectPool<DatabaseConnection, Box<dyn Fn() -> DatabaseConnection + Send + Sync>>,
+    pool: ObjectPool<DatabaseConnection>,
 }
 
 impl DatabaseConnectionPool {
@@ -19,13 +20,13 @@ impl DatabaseConnectionPool {
         let factory = move || {
             // In real implementation, create actual database connection
             DatabaseConnection {
-                id: uuid::Uuid::new_v4(),
+                id: Uuid::new_v4(),
                 connection_string: connection_string.clone(),
                 created_at: std::time::Instant::now(),
             }
         };
 
-        let pool = ObjectPool::new(Box::new(factory), max_connections);
+        let pool = ObjectPool::new(factory, max_connections);
         Self { pool }
     }
 
@@ -41,7 +42,7 @@ impl DatabaseConnectionPool {
 /// Simulated database connection for demonstration
 #[derive(Debug, Clone)]
 pub struct DatabaseConnection {
-    pub id: uuid::Uuid,
+    pub id: Uuid,
     pub connection_string: String,
     pub created_at: std::time::Instant,
 }
@@ -60,14 +61,14 @@ impl DatabaseConnection {
 
 /// LLM client pool integration
 pub struct LlmClientPool {
-    pool: ObjectPool<LlmClient, Box<dyn Fn() -> LlmClient + Send + Sync>>,
+    pool: ObjectPool<LlmClient>,
 }
 
 impl LlmClientPool {
     pub fn new(max_clients: usize, api_key: String, model: String) -> Self {
         let factory = move || {
             LlmClient {
-                id: uuid::Uuid::new_v4(),
+                id: Uuid::new_v4(),
                 api_key: api_key.clone(),
                 model: model.clone(),
                 created_at: std::time::Instant::now(),
@@ -75,7 +76,7 @@ impl LlmClientPool {
             }
         };
 
-        let pool = ObjectPool::new(Box::new(factory), max_clients);
+        let pool = ObjectPool::new(factory, max_clients);
         Self { pool }
     }
 
@@ -91,7 +92,7 @@ impl LlmClientPool {
 /// Simulated LLM client for demonstration
 #[derive(Debug, Clone)]
 pub struct LlmClient {
-    pub id: uuid::Uuid,
+    pub id: Uuid,
     pub api_key: String,
     pub model: String,
     pub created_at: std::time::Instant,
@@ -117,14 +118,14 @@ impl LlmClient {
 
 /// HTTP client pool integration
 pub struct HttpClientPool {
-    pool: ObjectPool<HttpClient, Box<dyn Fn() -> HttpClient + Send + Sync>>,
+    pool: ObjectPool<HttpClient>,
 }
 
 impl HttpClientPool {
     pub fn new(max_clients: usize, base_url: String, timeout_seconds: u64) -> Self {
         let factory = move || {
             HttpClient {
-                id: uuid::Uuid::new_v4(),
+                id: Uuid::new_v4(),
                 base_url: base_url.clone(),
                 timeout_seconds,
                 created_at: std::time::Instant::now(),
@@ -132,7 +133,7 @@ impl HttpClientPool {
             }
         };
 
-        let pool = ObjectPool::new(Box::new(factory), max_clients);
+        let pool = ObjectPool::new(factory, max_clients);
         Self { pool }
     }
 
@@ -148,7 +149,7 @@ impl HttpClientPool {
 /// Simulated HTTP client for demonstration
 #[derive(Debug, Clone)]
 pub struct HttpClient {
-    pub id: uuid::Uuid,
+    pub id: Uuid,
     pub base_url: String,
     pub timeout_seconds: u64,
     pub created_at: std::time::Instant,
@@ -178,7 +179,7 @@ pub struct SmartCache<K, V> {
 
 impl<K, V> SmartCache<K, V>
 where
-    K: Eq + std::hash::Hash + Clone + Send + Sync,
+    K: Eq + std::hash::Hash + Clone + Send + Sync + std::fmt::Debug,
     V: Clone + Send + Sync,
 {
     pub fn new(
@@ -286,6 +287,7 @@ impl MemoryAwareScheduler {
 }
 
 /// Memory pressure response strategies
+#[derive(Clone)]
 pub enum MemoryPressureStrategy {
     /// Reduce cache sizes
     ReduceCaches,
@@ -327,7 +329,7 @@ impl MemoryPressureManager {
                     }
                     MemoryPressureStrategy::ForceGC => {
                         info!("Forcing garbage collection due to memory pressure");
-                        self.memory_manager.force_gc().await;
+                        self.memory_manager.force_gc();
                     }
                     MemoryPressureStrategy::RejectRequests => {
                         warn!("Rejecting requests due to critical memory pressure");

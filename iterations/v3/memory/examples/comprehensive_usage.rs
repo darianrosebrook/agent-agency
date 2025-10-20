@@ -62,7 +62,7 @@ async fn setup_object_pools(memory_manager: &Arc<MemoryManager>) {
     memory_manager.create_pool(
         "database_connections",
         || DatabaseConnection {
-            id: uuid::Uuid::new_v4(),
+            id: Uuid::new_v4(),
             connection_string: "postgresql://localhost/mydb".to_string(),
             created_at: std::time::Instant::now(),
         },
@@ -73,7 +73,7 @@ async fn setup_object_pools(memory_manager: &Arc<MemoryManager>) {
     memory_manager.create_pool(
         "llm_clients",
         || LlmClient {
-            id: uuid::Uuid::new_v4(),
+            id: Uuid::new_v4(),
             api_key: "sk-...".to_string(),
             model: "gpt-4".to_string(),
             created_at: std::time::Instant::now(),
@@ -86,7 +86,7 @@ async fn setup_object_pools(memory_manager: &Arc<MemoryManager>) {
     memory_manager.create_pool(
         "http_clients",
         || HttpClient {
-            id: uuid::Uuid::new_v4(),
+            id: Uuid::new_v4(),
             base_url: "https://api.example.com".to_string(),
             timeout_seconds: 30,
             created_at: std::time::Instant::now(),
@@ -233,21 +233,5 @@ async fn show_performance_metrics(memory_manager: &Arc<MemoryManager>) {
     println!("  - Total Allocations: {}", global_allocations);
 }
 
-// Helper function to generate UUID (simplified for example)
-#[derive(Debug, Clone)]
-pub struct Uuid(String);
-
-impl Uuid {
-    pub fn new_v4() -> Self {
-        use std::sync::atomic::{AtomicU64, Ordering};
-        static COUNTER: AtomicU64 = AtomicU64::new(0);
-        let count = COUNTER.fetch_add(1, Ordering::Relaxed);
-        Self(format!("uuid-{:016x}", count))
-    }
-}
-
-impl std::fmt::Display for Uuid {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
+// Using uuid crate for proper UUID generation
+use uuid::Uuid;

@@ -19,3 +19,9 @@ futures.workspace = true
 # Caching dependencies
 redis = { version = "0.25", features = ["tokio-comp", "connection-manager"] }
 rand = "0.8"
+sqlparser = "0.45"  # SQL parsing and AST analysis
+once_cell = "1.19"  # Lazy static initialization
+typetag = "0.2"  # Runtime type reflection for serialization
+inventory = "0.3"  # Plugin system for cache types
+erased-serde = "0.3"  # Type-erased serialization
+flate2 = "1.0"  # Compression/decompression

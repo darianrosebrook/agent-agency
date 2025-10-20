@@ -161,7 +161,7 @@ impl DeadpoolSqlxConnection {
 }
 
 /// Production-hardened database client with monitoring and resilience
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct DatabaseClient {
     /// Deadpool-to-sqlx bridge
     bridge: DeadpoolSqlxBridge,
