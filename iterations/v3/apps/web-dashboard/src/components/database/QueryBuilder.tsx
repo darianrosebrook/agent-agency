@@ -484,18 +484,26 @@ export default function QueryBuilder({
               <table className={styles.dataTable}>
                 <thead>
                   <tr>
-                    {state.executionResult.result.columns.map((col: any) => ( // eslint-disable-line @typescript-eslint/no-explicit-any
-                      <th key={col.name}>{col.name}</th>
-                    ))}
+                    {state.executionResult.result.columns.map(
+                      (
+                        col: any // eslint-disable-line @typescript-eslint/no-explicit-any
+                      ) => (
+                        <th key={col.name}>{col.name}</th>
+                      )
+                    )}
                   </tr>
                 </thead>
                 <tbody>
-                  {state.executionResult.result.rows
-                    .slice(0, 100)
-                    .map((row: any, index: number) => ( // eslint-disable-line @typescript-eslint/no-explicit-any
+                  {state.executionResult.result.rows.slice(0, 100).map(
+                    (
+                      row: any,
+                      index: number // eslint-disable-line @typescript-eslint/no-explicit-any
+                    ) => (
                       <tr key={index}>
                         {state.executionResult.result.columns.map(
-                          (col: any) => ( // eslint-disable-line @typescript-eslint/no-explicit-any
+                          (
+                            col: any // eslint-disable-line @typescript-eslint/no-explicit-any
+                          ) => (
                             <td key={col.name}>
                               {row[col.name] !== null
                                 ? String(row[col.name])
@@ -504,7 +512,8 @@ export default function QueryBuilder({
                           )
                         )}
                       </tr>
-                    ))}
+                    )
+                  )}
                 </tbody>
               </table>
               {state.executionResult.result.rows.length > 100 && (

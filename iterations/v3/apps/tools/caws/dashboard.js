@@ -52,17 +52,11 @@ function getRealCoverage() {
     // No coverage data available
   }
   // TODO: Replace default estimate with proper coverage data integration
-  // Requirements for completion:
-  // - [ ] Implement proper coverage data integration from test reports
-  // - [ ] Add support for different coverage formats and tools
-  // - [ ] Implement proper coverage data validation and quality assessment
-  // - [ ] Add support for coverage data performance optimization
-  // - [ ] Implement proper error handling for coverage data failures
-  // - [ ] Add support for coverage data monitoring and alerting
-  // - [ ] Implement proper memory management for coverage data processing
-  // - [ ] Add support for coverage data result validation and quality assessment
-  // - [ ] Implement proper cleanup of coverage data resources
-  // - [ ] Add support for coverage data result caching and optimization
+  // - [ ] Integrate with actual test coverage tools (Istanbul, NYC, etc.)
+  // - [ ] Parse coverage reports from CI/CD pipeline
+  // - [ ] Calculate branch and line coverage metrics
+  // - [ ] Handle coverage report parsing errors gracefully
+  // - [ ] Implement coverage trend analysis over time
   return 0.75; // Default estimate
 }
 
@@ -98,17 +92,11 @@ function getRealMutationScore() {
     // No mutation data available
   }
   // TODO: Replace default estimate with proper mutation score integration
-  // Requirements for completion:
-  // - [ ] Implement proper mutation score integration from mutation reports
-  // - [ ] Add support for different mutation testing tools and formats
-  // - [ ] Implement proper mutation score validation and quality assessment
-  // - [ ] Add support for mutation score performance optimization
-  // - [ ] Implement proper error handling for mutation score failures
-  // - [ ] Add support for mutation score monitoring and alerting
-  // - [ ] Implement proper memory management for mutation score processing
-  // - [ ] Add support for mutation score result validation and quality assessment
-  // - [ ] Implement proper cleanup of mutation score resources
-  // - [ ] Add support for mutation score result caching and optimization
+  // - [ ] Integrate with mutation testing tools (Stryker, PIT, etc.)
+  // - [ ] Parse mutation testing reports from CI/CD pipeline
+  // - [ ] Calculate mutation score metrics and killed/survived ratios
+  // - [ ] Handle mutation report parsing errors gracefully
+  // - [ ] Implement mutation score trend analysis over time
   return 0.55; // Default estimate
 }
 

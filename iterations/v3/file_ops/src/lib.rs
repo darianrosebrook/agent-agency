@@ -3,10 +3,8 @@
 //! Provides structured, deterministic file operations for autonomous agents
 //! with allow-list enforcement, budget controls, and atomic rollback capabilities.
 
-use std::collections::HashSet;
 use std::path::Path;
 use serde::{Deserialize, Serialize};
-use anyhow::Result;
 use thiserror::Error;
 
 /// Unique identifier for a changeset operation
@@ -156,11 +154,31 @@ fn is_path_allowed(path: &str, allowlist: &AllowList) -> bool {
 
 /// Simple glob matching (replace with proper glob library in production)
 fn matches_glob_simple(path: &str, glob: &str) -> bool {
-    // Very basic implementation - expand this with proper glob matching
-    if glob.contains("**") {
-        let prefix = glob.split("**").next().unwrap_or("");
-        let suffix = glob.split("**").nth(1).unwrap_or("");
-        path.starts_with(prefix) && path.ends_with(suffix)
+    // Basic implementation for common patterns
+    if glob == "**/*.rs" {
+        path.ends_with(".rs")
+    } else if glob == "**/*" {
+        true // Allow everything
+    } else if glob.contains("**") {
+        let parts: Vec<&str> = glob.split("**").collect();
+        if parts.len() >= 2 {
+            let prefix = parts[0];
+            let suffix = parts[1];
+
+            // Check prefix match
+            if !prefix.is_empty() && !path.starts_with(prefix) {
+                return false;
+            }
+
+            // Check suffix match
+            if !suffix.is_empty() && !path.ends_with(suffix) {
+                return false;
+            }
+
+            true
+        } else {
+            false
+        }
     } else {
         path == glob
     }

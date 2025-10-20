@@ -39,6 +39,7 @@ roxmltree = "0.19"
 # ML model loading dependencies
 ort = { version = "2.0.0-rc.10", features = ["load-dynamic"] }
 tokenizers = "0.19"
+num_cpus = "1.16"
 
 [dev-dependencies]
 tokio-test = "0.4"

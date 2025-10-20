@@ -1,13 +1,15 @@
 //! Embedding provider trait and implementations
 
 use crate::types::*;
-use anyhow::{Context, Result, bail};
+use anyhow::{anyhow, Context, Result, bail};
 use async_trait::async_trait;
 use tracing::{debug, info, warn};
 use std::hash::Hasher;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::collections::HashMap;
+use ndarray::s;
+use ort::{Session, ExecutionProvider, GraphOptimizationLevel, SessionOutputs, Value};
 
 /// Trait for embedding providers
 #[async_trait]
@@ -217,7 +219,7 @@ pub struct SafeTensorsEmbeddingProvider {
 
 /// ONNX embedding provider for local model inference
 pub struct OnnxEmbeddingProvider {
-    session: Arc<ort::Session>,
+    session: Arc<Session>,
     tokenizer: Arc<dyn crate::tokenization::Tokenizer>,
     dimension: usize,
     model_name: String,
@@ -258,12 +260,12 @@ impl OnnxEmbeddingProvider {
         }
 
         // Create ONNX session with optimized settings
-        let session = ort::Session::builder()?
+        let session = Session::builder()?
             .with_execution_providers([
                 // Prefer CPU execution for embeddings (can be extended to GPU later)
-                ort::ExecutionProvider::CPU(Default::default()),
+                ExecutionProvider::CPU(Default::default()),
             ])?
-            .with_optimization_level(ort::GraphOptimizationLevel::Level3)?
+            .with_optimization_level(GraphOptimizationLevel::Level3)?
             .with_intra_threads(num_cpus::get().min(8) as i16)? // Limit threads for stability
             .commit_from_file(model_path)?;
 
@@ -283,7 +285,7 @@ impl OnnxEmbeddingProvider {
     }
 
     /// Validate model input requirements
-    fn validate_model_inputs(session: &ort::Session) -> Result<()> {
+    fn validate_model_inputs(session: &Session) -> Result<()> {
         let inputs = session.inputs()?;
         if inputs.is_empty() {
             return Err(anyhow!("ONNX model has no inputs"));
@@ -305,7 +307,7 @@ impl OnnxEmbeddingProvider {
     }
 
     /// Validate model output requirements
-    fn validate_model_outputs(session: &ort::Session) -> Result<()> {
+    fn validate_model_outputs(session: &Session) -> Result<()> {
         let outputs = session.outputs()?;
         if outputs.is_empty() {
             return Err(anyhow!("ONNX model has no outputs"));
@@ -321,9 +323,8 @@ impl OnnxEmbeddingProvider {
         input_ids: &[i64],
         attention_masks: &[i64],
         batch_size: usize,
-    ) -> Result<Vec<(&str, ort::Value)>> {
+    ) -> Result<Vec<(&str, Value)>> {
         use ndarray::Array;
-        use ort::Value;
 
         // Reshape input_ids to [batch_size, max_length]
         let input_ids_shape = [batch_size, self.max_length];
@@ -349,7 +350,7 @@ impl OnnxEmbeddingProvider {
     /// Extract embeddings from ONNX model outputs
     fn extract_embeddings_from_outputs(
         &self,
-        outputs: ort::SessionOutputs,
+        outputs: SessionOutputs,
         batch_size: usize,
     ) -> Result<Vec<EmbeddingVector>> {
         // Get the first output (assuming it's the embeddings)
