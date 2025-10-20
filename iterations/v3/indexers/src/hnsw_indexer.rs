@@ -143,14 +143,6 @@ impl HnswIndexer {
             ));
         }
 
-        // Get next available ID
-        let id = {
-            let mut next_id = self.next_id.lock();
-            let current_id = *next_id;
-            *next_id += 1;
-            current_id
-        };
-
         // Insert into HNSW index
         let mut index = self.index.lock();
         let actual_id = index

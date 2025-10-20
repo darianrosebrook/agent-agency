@@ -293,6 +293,133 @@ impl SelfPromptingLoop {
             let _ = sender.send(event);
         }
     }
+
+    /// Generate ActionRequest from model with retry on validation errors
+    async fn generate_action_request_with_retry(
+        &self,
+        model: &dyn ModelProvider,
+        task: &Task,
+        history: &[IterationContext],
+        iteration: usize,
+    ) -> Result<ActionRequest, SelfPromptingError> {
+        let max_retries = 3;
+        let mut attempt = 0;
+
+        loop {
+            attempt += 1;
+
+            // Generate model output
+            let model_output = self.generate_with_context(model, task, history).await
+                .map_err(|e| SelfPromptingError::ModelError(e.to_string()))?;
+
+            // Try to parse as ActionRequest
+            let eval_context = history.last().map(|ctx| &ctx.eval_report);
+            match self.prompting_strategy.generate_action_request(
+                &model_output,
+                task,
+                eval_context,
+            ).await {
+                Ok(action_request) => {
+                    info!("Successfully parsed ActionRequest on attempt {}", attempt);
+                    return Ok(action_request);
+                }
+                Err(error_msg) => {
+                    if attempt >= max_retries {
+                        return Err(SelfPromptingError::ModelError(
+                            format!("Failed to generate valid ActionRequest after {} attempts. Last error: {}",
+                                    max_retries, error_msg)
+                        ));
+                    }
+
+                    warn!("ActionRequest validation failed (attempt {}): {}", attempt, error_msg);
+
+                    // Create re-prompt with error context
+                    // For now, we'll log and continue - in production, you'd modify the prompt
+                    // to include the error and request correction
+                    continue;
+                }
+            }
+        }
+    }
+
+    /// Apply an ActionRequest to the workspace
+    async fn apply_action_request(
+        &self,
+        action_request: &ActionRequest,
+        task: &Task,
+    ) -> Result<(), SelfPromptingError> {
+        // For now, we'll implement basic file operations
+        // In the full implementation, this would use the file_ops Workspace
+
+        match action_request.action_type {
+            crate::types::ActionType::Write | crate::types::ActionType::Patch => {
+                if let Some(changeset) = action_request.changeset() {
+                    // TODO: Integrate with file_ops Workspace
+                    // For now, just log the intent
+                    info!("Would apply changeset with {} patches to workspace",
+                          changeset.patches.len());
+                }
+            }
+            crate::types::ActionType::NoOp => {
+                info!("Action request is NoOp: {}", action_request.reason);
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Create artifacts from an ActionRequest
+    fn create_artifacts_from_action(
+        &self,
+        action_request: &ActionRequest,
+        task: &Task,
+    ) -> Vec<Artifact> {
+        let mut artifacts = Vec::new();
+
+        // Create artifact from changeset if present
+        if let Some(changeset) = action_request.changeset() {
+            for patch in &changeset.patches {
+                // Extract content from patch hunks
+                let mut content = String::new();
+                for hunk in &patch.hunks {
+                    content.push_str(&hunk.lines);
+                    content.push('\n');
+                }
+
+                let artifact = Artifact {
+                    id: uuid::Uuid::new_v4(),
+                    file_path: patch.path.clone(),
+                    content: content.trim().to_string(),
+                    artifact_type: self.infer_artifact_type(task),
+                    created_at: chrono::Utc::now(),
+                };
+                artifacts.push(artifact);
+            }
+        }
+
+        // If no changeset, create a metadata artifact
+        if artifacts.is_empty() {
+            let metadata_content = format!(
+                "Action: {:?}\nReason: {}\nConfidence: {:.2}\nMetadata: {}",
+                action_request.action_type,
+                action_request.reason,
+                action_request.confidence,
+                serde_json::to_string_pretty(&action_request.metadata)
+                    .unwrap_or_else(|_| "{}".to_string())
+            );
+
+            let artifact = Artifact {
+                id: uuid::Uuid::new_v4(),
+                file_path: "action_metadata.txt".to_string(),
+                content: metadata_content,
+                artifact_type: ArtifactType::Documentation,
+                created_at: chrono::Utc::now(),
+            };
+            artifacts.push(artifact);
+        }
+
+        artifacts
+    }
 }
 
 /// Events emitted during self-prompting loop execution

@@ -1,7 +1,7 @@
 //! Embedding provider trait and implementations
 
 use crate::types::*;
-use anyhow::{anyhow, Context, Result, bail};
+use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use tracing::{debug, info, warn};
 use std::hash::Hasher;

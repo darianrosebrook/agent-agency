@@ -1011,7 +1011,7 @@ impl MultimodalIndexer {
     }
 
     /// Retrieve graph content from storage or external source
-    async fn retrieve_graph_content(&self, block_id: Uuid) -> Result<GraphContent> {
+    async fn retrieve_graph_content(&self, _block_id: Uuid) -> Result<GraphContent> {
         // Placeholder implementation - return a simple graph content
         Ok(GraphContent {
             format: GraphContentType::Mermaid,
@@ -1021,7 +1021,7 @@ impl MultimodalIndexer {
     }
 
     /// Parse graph content using appropriate parser based on format
-    async fn parse_graph_content(&self, content: &GraphContent, block_id: Uuid) -> Result<ParsedGraph> {
+    async fn parse_graph_content(&self, _content: &GraphContent, _block_id: Uuid) -> Result<ParsedGraph> {
         // Placeholder implementation - return a simple parsed graph
         let mut nodes = Vec::new();
         let mut edges = Vec::new();

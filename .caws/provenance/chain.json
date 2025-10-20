@@ -15138,5 +15138,39 @@
     },
     "previous_hash": "a584f7f29430c904dd1c0384144e83fddd7ce4a7f2570b44f36a68cf6210c161",
     "hash": "99e4b3eea98ff6b30b49ddd266fdbbe38b70fcad9152a6feee0c17e431715e45"
+  },
+  {
+    "id": "prov-1760929571871",
+    "timestamp": "2025-10-20T03:06:11.871Z",
+    "commit": {
+      "hash": "76e717fa9ce9eb0569d7ae9c8309d276327847bf",
+      "message": "chore: remove temporary test file",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "AGENT-0003",
+      "title": "Add tool-call envelope to prompting strategy",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": []
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-20T03:06:11.872Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "99e4b3eea98ff6b30b49ddd266fdbbe38b70fcad9152a6feee0c17e431715e45",
+    "hash": "2d40269d9fc84cb3aa163f789f27f20c030dc1630c471ce02904b06966d78210"
   }
 ]
