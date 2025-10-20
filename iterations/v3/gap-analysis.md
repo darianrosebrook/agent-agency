@@ -343,4 +343,117 @@ Based on my analysis of v3 against the three key documents, here's how closely i
 4. **Enhance Tool Calling**: Expand MCP integration with dynamic tool discovery and CAWS compliance
 5. **Add Evaluation Scripts**: Implement the detailed evaluation framework from agent-agency.md
 
+---
+
+## 🔗 **Critical Integration Points Needed**
+
+### **1. Self-Prompting Loop ↔ File Operations Integration** (HIGH PRIORITY)
+**Current State**: Loop generates `ActionRequest` but doesn't apply changes
+**Missing**: Connection between `SelfPromptingLoop::apply_action_request()` and `file_ops::Workspace`
+
+**Required Components:**
+- Wire `apply_action_request()` to actually call `file_ops::apply_changeset()`
+- Integrate `WorkspaceFactory` into loop initialization
+- Add rollback logic on evaluation failures
+- Connect `ChangeSetId` to provenance tracking
+
+**Impact**: Enables actual autonomous file editing instead of just planning changes
+
+### **2. Arbiter Authority Component** (HIGH PRIORITY)
+**Current State**: Individual models operate independently
+**Missing**: Central arbiter that enforces CAWS above all model interactions
+
+**Required Components:**
+- `Arbiter` struct that sits above `ModelRegistry`
+- CAWS constitutional validation before all model calls
+- Override authority for policy violations
+- Integration with `AuditedOrchestrator` for governance
+
+**Impact**: Ensures constitutional compliance across all autonomous operations
+
+### **3. Loop Signal → Reflexive Learning Pipeline** (MEDIUM PRIORITY)
+**Current State**: `SelfPromptingEvent` emitted but not consumed
+**Missing**: Feed loop outcomes into learning system for adaptation
+
+**Required Components:**
+- Connect `SelfPromptingEvent` stream to `ReflexiveLearningSystem::process_signals()`
+- Dynamic satisficing threshold adjustment based on historical performance
+- Model preference learning from success/failure patterns
+- Integration with `ModelHealthMonitor` for reliability feedback
+
+**Impact**: Agent learns from experience and improves over time
+
+### **4. Model Health → Loop Failure Recovery** (MEDIUM PRIORITY)
+**Current State**: Health checks exist but not integrated into loop
+**Missing**: Automatic model switching on failures
+
+**Required Components:**
+- Integrate `ModelHealthMonitor` into loop controller
+- Automatic fallback logic in `generate_with_retry()`
+- Health-based model selection in `ModelRegistry`
+- Connection between health events and reflexive learning
+
+**Impact**: Robust operation with automatic recovery from model failures
+
+### **5. User-Visible Diff Approval Mechanisms** (LOW PRIORITY)
+**Current State**: Diffs generated but no interactive approval
+**Missing**: Human-in-the-loop approval for autonomous changes
+
+**Required Components:**
+- Interactive diff viewer in CLI (`--strict` mode)
+- Accept/rollback controls in dashboard UI
+- Integration with `ExecutionMode::Strict` workflow
+- Diff approval events for audit trail
+
+**Impact**: Developer trust and safety for production use
+
+### **6. Evaluation Script Standardization** (MEDIUM PRIORITY)
+**Current State**: Basic evaluation exists but lacks detailed JSON contract
+**Missing**: Standardized evaluation output format
+
+**Required Components:**
+- Implement detailed `EvalReport` JSON schema from agent-agency.md
+- Text/code/token evaluators with uniform reporting
+- `EvaluationOrchestrator` with standardized output format
+- Integration with reflexive learning system
+
+**Impact**: Consistent evaluation data for learning and debugging
+
+---
+
+## 🚀 **Integration Implementation Plan**
+
+### **Phase 1: Core Autonomous Loop** (1-2 weeks)
+1. **Self-Prompting + File Ops Integration**
+   - Wire `apply_action_request()` to `file_ops::Workspace::apply()`
+   - Add workspace lifecycle management to loop
+   - Implement rollback on evaluation failures
+
+2. **Arbiter Authority**
+   - Create `Arbiter` component with CAWS enforcement
+   - Integrate into model call pipeline
+   - Add constitutional override capabilities
+
+### **Phase 2: Learning & Adaptation** (1 week)
+3. **Loop Signal Integration**
+   - Connect `SelfPromptingEvent` to `ReflexiveLearningSystem`
+   - Implement dynamic threshold adjustment
+   - Add model preference learning
+
+4. **Model Health Integration**
+   - Wire health monitoring into loop failure recovery
+   - Implement automatic model fallback
+   - Connect health metrics to learning system
+
+### **Phase 3: User Experience** (1 week)
+5. **User-Visible Diffs**
+   - Add interactive CLI diff viewer
+   - Implement approval workflows
+   - Connect to dashboard UI
+
+6. **Evaluation Standardization**
+   - Implement detailed evaluation JSON schema
+   - Add uniform evaluator interfaces
+   - Integrate with learning pipeline
+
 **Bottom Line**: v3 has an impressive foundation with sophisticated components, but needs integration work to achieve the autonomous self-editing agent capabilities described in the documents. The CAWS governance and safety infrastructure are particularly strong.
