@@ -134,7 +134,7 @@ impl PrometheusMetrics {
     }
 
     /// Extract label values in the correct order for Prometheus
-    fn extract_label_values(&self, labels: &[(&str, &str)]) -> Vec<&str> {
+    fn extract_label_values<'a>(&self, labels: &[(&str, &'a str)]) -> Vec<&'a str> {
         // TODO: Implement proper label order validation and mapping
         // - [ ] Parse Prometheus metric definitions to extract label names
         // - [ ] Implement label order validation against metric schemas

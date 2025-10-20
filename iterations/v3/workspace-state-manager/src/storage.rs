@@ -535,7 +535,7 @@ impl MemoryStorage {
 
         for (key, _diff) in diffs.iter() {
             if removed_state_ids.contains(&key.0) || removed_state_ids.contains(&key.1) {
-                to_remove.push(key.clone());
+                to_remove.push(*key);
             }
         }
 
@@ -630,7 +630,7 @@ impl MemoryStorage {
         let old_diffs: Vec<_> = diffs
             .iter()
             .filter(|(_, diff)| diff.computed_at < cutoff_time)
-            .map(|(key, _)| key.clone())
+            .map(|(key, _)| *key)
             .collect();
 
         for key in old_diffs {
@@ -799,7 +799,7 @@ impl MemoryStorage {
             
             // Compress if over 1MB
             if total_size > 1024 * 1024 {
-                to_compress.push(id.clone());
+                to_compress.push(*id);
             }
         }
         drop(states);
@@ -856,7 +856,7 @@ impl StateStorage for MemoryStorage {
         // Use timeout to prevent deadlocks and implement efficient locking
         let store_result = tokio::time::timeout(std::time::Duration::from_secs(5), async {
             let mut states = self.states.write().await;
-            states.insert(state.id.clone(), serialized_state);
+            states.insert(state.id, serialized_state);
 
             // Update metrics atomically
             let mut metrics = self.metrics.write().await;
@@ -878,7 +878,7 @@ impl StateStorage for MemoryStorage {
                     "Timeout while storing state {:?} - possible deadlock",
                     state.id
                 );
-                Err(WorkspaceError::StorageTimeout(state.id.clone()))
+                Err(WorkspaceError::StorageTimeout(state.id))
             }
         }
     }
@@ -970,7 +970,7 @@ impl StateStorage for MemoryStorage {
         self.validate_diff(diff).await?;
 
         // 2. Diff storage: Store diff in memory storage with atomicity
-        let diff_key = (diff.from_state.clone(), diff.to_state.clone());
+        let diff_key = (diff.from_state, diff.to_state);
         let mut diffs = self.diffs.write().await;
 
         // Check if diff already exists and validate consistency
@@ -984,7 +984,7 @@ impl StateStorage for MemoryStorage {
         }
 
         // Store the diff atomically
-        diffs.insert(diff_key.clone(), diff.clone());
+        diffs.insert(diff_key, diff.clone());
 
         // 3. Storage verification: Verify diff storage success
         if !diffs.contains_key(&diff_key) {

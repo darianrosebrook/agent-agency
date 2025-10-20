@@ -11,6 +11,7 @@ use crate::sandbox::SandboxEnvironment;
 use crate::types::{Task, TaskResult, IterationContext, StopReason, Artifact, ArtifactType, ActionRequest, ActionValidationError};
 use observability::diff_observability::{DiffGenerator, FileChange};
 use observability::agent_telemetry::AgentTelemetryCollector;
+use file_ops::{WorkspaceFactory, Workspace, ChangeSet, Patch, Hunk};
 
 /// Execution modes with different safety guardrails
 #[derive(Debug, Clone)]
@@ -40,6 +41,7 @@ pub struct SelfPromptingLoop {
     satisficing_evaluator: std::cell::RefCell<SatisficingEvaluator>, // Use RefCell for interior mutability
     diff_generator: DiffGenerator, // For generating diff artifacts
     prompting_strategy: Box<dyn PromptingStrategy>,
+    workspace_factory: WorkspaceFactory, // For creating isolated workspaces
     max_iterations: usize,
     execution_mode: ExecutionMode,
     event_sender: Option<mpsc::UnboundedSender<SelfPromptingEvent>>,
@@ -55,6 +57,7 @@ impl SelfPromptingLoop {
             satisficing_evaluator: std::cell::RefCell::new(SatisficingEvaluator::new()), // Initialize with defaults
             diff_generator: DiffGenerator::new(telemetry),
             prompting_strategy: Box::new(AdaptivePromptingStrategy::new()),
+            workspace_factory: WorkspaceFactory::new(), // Initialize workspace factory
             max_iterations: 5,
             execution_mode: ExecutionMode::Auto, // Default to auto mode
             event_sender: None,
@@ -75,6 +78,7 @@ impl SelfPromptingLoop {
             satisficing_evaluator: std::cell::RefCell::new(SatisficingEvaluator::new()),
             diff_generator: DiffGenerator::new(telemetry),
             prompting_strategy: Box::new(AdaptivePromptingStrategy::new()),
+            workspace_factory: WorkspaceFactory::new(),
             max_iterations,
             execution_mode,
             event_sender: None,
@@ -428,16 +432,28 @@ impl SelfPromptingLoop {
         action_request: &ActionRequest,
         task: &Task,
     ) -> Result<(), SelfPromptingError> {
-        // For now, we'll implement basic file operations
-        // In the full implementation, this would use the file_ops Workspace
-
         match action_request.action_type {
             crate::types::ActionType::Write | crate::types::ActionType::Patch => {
                 if let Some(changeset) = action_request.changeset() {
-                    // TODO: Integrate with file_ops Workspace
-                    // For now, just log the intent
-                    info!("Would apply changeset with {} patches to workspace",
-                          changeset.patches.len());
+                    info!("Applying changeset with {} patches to workspace at {}",
+                          changeset.patches.len(), task.project_path);
+
+                    // Create an isolated workspace for this task
+                    let workspace = self.workspace_factory.create(&task.project_path)
+                        .map_err(|e| SelfPromptingError::WorkspaceError(format!("Failed to create workspace: {}", e)))?;
+
+                    // Apply the changeset to the workspace
+                    let changeset_id = workspace.apply_changeset(changeset.clone())
+                        .await
+                        .map_err(|e| SelfPromptingError::WorkspaceError(format!("Failed to apply changeset: {}", e)))?;
+
+                    info!("Successfully applied changeset {} with {} patches",
+                          changeset_id, changeset.patches.len());
+
+                    // Note: We don't promote here - that happens after evaluation passes
+                    // The workspace remains in sandbox until evaluation succeeds
+                } else {
+                    warn!("ActionRequest has no changeset despite Write/Patch type");
                 }
             }
             crate::types::ActionType::NoOp => {
