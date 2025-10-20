@@ -374,6 +374,28 @@ impl PredictionResult {
 
 unsafe impl Send for PredictionResult {}
 
+/// Types of model outputs for proper processing
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ModelOutputType {
+    Classification,
+    Regression,
+    SequenceGeneration,
+    Vision,
+    Generic,
+}
+
+impl std::fmt::Display for ModelOutputType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ModelOutputType::Classification => write!(f, "classification"),
+            ModelOutputType::Regression => write!(f, "regression"),
+            ModelOutputType::SequenceGeneration => write!(f, "sequence_generation"),
+            ModelOutputType::Vision => write!(f, "vision"),
+            ModelOutputType::Generic => write!(f, "generic"),
+        }
+    }
+}
+
 impl PredictionResult {
     /// Create input dictionary for text-based models
     pub async fn create_text_input(text: &str, max_length: usize, tokenizer: &Arc<dyn crate::tokenization::Tokenizer>) -> Result<CFDictionary<CFString, *const std::ffi::c_void>> {
@@ -739,7 +761,200 @@ fn execute_prediction_sync(model: *mut objc::runtime::Object, request: *mut objc
 
         let mut result = serde_json::Map::new();
 
-        // Extract different output types
+        // Detect model type and apply appropriate output processing
+        let model_type = self.detect_model_output_type(outputs);
+
+        match model_type {
+            ModelOutputType::Classification => {
+                self.process_classification_outputs(outputs, &mut result)?;
+            }
+            ModelOutputType::Regression => {
+                self.process_regression_outputs(outputs, &mut result)?;
+            }
+            ModelOutputType::SequenceGeneration => {
+                self.process_sequence_outputs(outputs, &mut result)?;
+            }
+            ModelOutputType::Vision => {
+                self.process_vision_outputs(outputs, &mut result)?;
+            }
+            ModelOutputType::Generic => {
+                self.process_generic_outputs(outputs, &mut result)?;
+            }
+        }
+
+        // Add metadata
+        result.insert("model_type".to_string(), serde_json::Value::String(model_type.to_string()));
+        result.insert("processing_timestamp".to_string(),
+            serde_json::Value::Number(chrono::Utc::now().timestamp().into()));
+
+        // Convert to JSON string
+        let json_result = serde_json::to_string_pretty(&result)
+            .context("Failed to serialize prediction results")?;
+
+        Ok(json_result)
+    }
+
+    /// Detect the type of model output based on available keys and data shapes
+    fn detect_model_output_type(&self, outputs: &CFDictionary<CFString, *const std::ffi::c_void>) -> ModelOutputType {
+        // Check for sequence generation outputs (logits, token probabilities)
+        if self.has_sequence_outputs(outputs) {
+            return ModelOutputType::SequenceGeneration;
+        }
+
+        // Check for vision model outputs
+        if self.has_vision_outputs(outputs) {
+            return ModelOutputType::Vision;
+        }
+
+        // Check for classification outputs (probabilities, logits, scores)
+        if self.has_classification_outputs(outputs) {
+            return ModelOutputType::Classification;
+        }
+
+        // Check for regression outputs (single values, continuous outputs)
+        if self.has_regression_outputs(outputs) {
+            return ModelOutputType::Regression;
+        }
+
+        ModelOutputType::Generic
+    }
+
+    /// Check if outputs contain sequence generation indicators
+    fn has_sequence_outputs(&self, outputs: &CFDictionary<CFString, *const std::ffi::c_void>) -> bool {
+        let sequence_keys = ["logits", "token_probabilities", "next_token_logits"];
+        sequence_keys.iter().any(|key| {
+            let cf_key = CFString::new(key);
+            outputs.find(&cf_key).is_some()
+        })
+    }
+
+    /// Check if outputs contain vision model indicators
+    fn has_vision_outputs(&self, outputs: &CFDictionary<CFString, *const std::ffi::c_void>) -> bool {
+        let vision_keys = ["feature_maps", "bounding_boxes", "segmentation_mask"];
+        vision_keys.iter().any(|key| {
+            let cf_key = CFString::new(key);
+            outputs.find(&cf_key).is_some()
+        })
+    }
+
+    /// Check if outputs contain classification indicators
+    fn has_classification_outputs(&self, outputs: &CFDictionary<CFString, *const std::ffi::c_void>) -> bool {
+        let classification_keys = ["probabilities", "logits", "scores", "classes"];
+        classification_keys.iter().any(|key| {
+            let cf_key = CFString::new(key);
+            outputs.find(&cf_key).is_some()
+        })
+    }
+
+    /// Check if outputs contain regression indicators
+    fn has_regression_outputs(&self, outputs: &CFDictionary<CFString, *const std::ffi::c_void>) -> bool {
+        // Regression typically has single scalar outputs
+        let regression_keys = ["prediction", "value", "output"];
+        regression_keys.iter().any(|key| {
+            let cf_key = CFString::new(key);
+            if let Some(value) = outputs.find(&cf_key) {
+                unsafe {
+                    // Check if it's a scalar NSNumber or single-element array
+                    let ns_number: *mut objc::runtime::Object = value as *mut _;
+                    let is_ns_number: bool = msg_send![ns_number, isKindOfClass: class!(NSNumber)];
+                    if is_ns_number {
+                        return true;
+                    }
+
+                    // Check for single-element MLMultiArray
+                    let is_ml_array: bool = msg_send![ns_number, isKindOfClass: class!(MLMultiArray)];
+                    if is_ml_array {
+                        let shape: *mut objc::runtime::Object = msg_send![ns_number, shape];
+                        if !shape.is_null() {
+                            let count: usize = msg_send![shape, count];
+                            return count == 1; // Single element array
+                        }
+                    }
+                }
+            }
+            false
+        })
+    }
+
+    /// Process classification model outputs
+    fn process_classification_outputs(&self, outputs: &CFDictionary<CFString, *const std::ffi::c_void>, result: &mut serde_json::Map<String, serde_json::Value>) -> Result<()> {
+        // Extract confidence score
+        if let Some(confidence) = self.extract_confidence_output(outputs) {
+            result.insert("confidence".to_string(),
+                serde_json::Value::Number(serde_json::Number::from_f64(confidence)
+                    .unwrap_or(serde_json::Number::from(0))));
+        }
+
+        // Extract class probabilities if available
+        if let Some(probabilities) = self.extract_array_output(outputs) {
+            result.insert("class_probabilities".to_string(), serde_json::Value::Array(probabilities));
+        }
+
+        // Extract predicted class (argmax of probabilities)
+        if let Some(predicted_class) = self.extract_predicted_class(outputs) {
+            result.insert("predicted_class".to_string(), serde_json::Value::Number(predicted_class.into()));
+        }
+
+        Ok(())
+    }
+
+    /// Process regression model outputs
+    fn process_regression_outputs(&self, outputs: &CFDictionary<CFString, *const std::ffi::c_void>, result: &mut serde_json::Map<String, serde_json::Value>) -> Result<()> {
+        // Extract the regression value
+        if let Some(value) = self.extract_regression_value(outputs) {
+            result.insert("prediction".to_string(),
+                serde_json::Value::Number(serde_json::Number::from_f64(value)
+                    .unwrap_or(serde_json::Number::from(0))));
+        }
+
+        // Extract confidence (normalized regression output)
+        if let Some(confidence) = self.extract_confidence_output(outputs) {
+            result.insert("confidence".to_string(),
+                serde_json::Value::Number(serde_json::Number::from_f64(confidence)
+                    .unwrap_or(serde_json::Number::from(0))));
+        }
+
+        Ok(())
+    }
+
+    /// Process sequence generation model outputs
+    fn process_sequence_outputs(&self, outputs: &CFDictionary<CFString, *const std::ffi::c_void>, result: &mut serde_json::Map<String, serde_json::Value>) -> Result<()> {
+        // Extract generated text if available
+        if let Some(text) = self.extract_text_output(outputs) {
+            result.insert("generated_text".to_string(), serde_json::Value::String(text));
+        }
+
+        // Extract token probabilities/logits
+        if let Some(tokens) = self.extract_array_output(outputs) {
+            result.insert("token_probabilities".to_string(), serde_json::Value::Array(tokens));
+        }
+
+        // Extract sequence confidence
+        if let Some(confidence) = self.extract_confidence_output(outputs) {
+            result.insert("sequence_confidence".to_string(),
+                serde_json::Value::Number(serde_json::Number::from_f64(confidence)
+                    .unwrap_or(serde_json::Number::from(0))));
+        }
+
+        Ok(())
+    }
+
+    /// Process vision model outputs
+    fn process_vision_outputs(&self, outputs: &CFDictionary<CFString, *const std::ffi::c_void>, result: &mut serde_json::Map<String, serde_json::Value>) -> Result<()> {
+        // Extract feature maps, bounding boxes, segmentation masks, etc.
+        if let Some(features) = self.extract_array_output(outputs) {
+            result.insert("features".to_string(), serde_json::Value::Array(features));
+        }
+
+        // Vision models typically don't have traditional confidence scores
+        // but may have detection confidence for specific objects
+
+        Ok(())
+    }
+
+    /// Process generic model outputs (fallback)
+    fn process_generic_outputs(&self, outputs: &CFDictionary<CFString, *const std::ffi::c_void>, result: &mut serde_json::Map<String, serde_json::Value>) -> Result<()> {
+        // Extract different output types generically
         if let Some(output_text) = self.extract_text_output(outputs) {
             result.insert("text_output".to_string(), serde_json::Value::String(output_text));
         }
@@ -749,14 +964,92 @@ fn execute_prediction_sync(model: *mut objc::runtime::Object, request: *mut objc
         }
 
         if let Some(confidence) = self.extract_confidence_output(outputs) {
-            result.insert("confidence".to_string(), serde_json::Value::Number(serde_json::Number::from_f64(confidence).unwrap_or(serde_json::Number::from(0))));
+            result.insert("confidence".to_string(),
+                serde_json::Value::Number(serde_json::Number::from_f64(confidence)
+                    .unwrap_or(serde_json::Number::from(0))));
         }
 
-        // Convert to JSON string
-        let json_result = serde_json::to_string_pretty(&result)
-            .context("Failed to serialize prediction results")?;
+        Ok(())
+    }
 
-        Ok(json_result)
+    /// Extract predicted class from classification outputs
+    fn extract_predicted_class(&self, outputs: &CFDictionary<CFString, *const std::ffi::c_void>) -> Option<u32> {
+        let probability_keys = ["probabilities", "scores", "logits"];
+
+        for key_name in &probability_keys {
+            let key = CFString::new(key_name);
+            if let Some(value) = outputs.find(&key) {
+                unsafe {
+                    let ml_array: *mut objc::runtime::Object = value as *mut _;
+                    let is_ml_array: bool = msg_send![ml_array, isKindOfClass: class!(MLMultiArray)];
+                    if !is_ml_array {
+                        continue;
+                    }
+
+                    let data_ptr: *const f32 = msg_send![ml_array, dataPointer];
+                    if data_ptr.is_null() {
+                        continue;
+                    }
+
+                    let shape: *mut objc::runtime::Object = msg_send![ml_array, shape];
+                    if shape.is_null() {
+                        continue;
+                    }
+
+                    let count: usize = msg_send![shape, count];
+                    if count == 0 {
+                        continue;
+                    }
+
+                    // Find argmax (index of maximum probability)
+                    let mut max_prob = *data_ptr;
+                    let mut max_index = 0;
+
+                    for i in 1..count {
+                        let prob = *data_ptr.add(i);
+                        if prob > max_prob {
+                            max_prob = prob;
+                            max_index = i;
+                        }
+                    }
+
+                    return Some(max_index as u32);
+                }
+            }
+        }
+
+        None
+    }
+
+    /// Extract regression value
+    fn extract_regression_value(&self, outputs: &CFDictionary<CFString, *const std::ffi::c_void>) -> Option<f64> {
+        let regression_keys = ["prediction", "value", "output"];
+
+        for key_name in &regression_keys {
+            let key = CFString::new(key_name);
+            if let Some(value) = outputs.find(&key) {
+                unsafe {
+                    // Try as NSNumber first
+                    let ns_number: *mut objc::runtime::Object = value as *mut _;
+                    let is_ns_number: bool = msg_send![ns_number, isKindOfClass: class!(NSNumber)];
+                    if is_ns_number {
+                        let value: f64 = msg_send![ns_number, doubleValue];
+                        return Some(value);
+                    }
+
+                    // Try as single-element MLMultiArray
+                    let is_ml_array: bool = msg_send![ns_number, isKindOfClass: class!(MLMultiArray)];
+                    if is_ml_array {
+                        let data_ptr: *const f32 = msg_send![ns_number, dataPointer];
+                        if !data_ptr.is_null() {
+                            return Some(*data_ptr as f64);
+                        }
+                    }
+                }
+            }
+        }
+
+        None
     }
 
     /// Load Core ML model
@@ -890,7 +1183,7 @@ fn execute_prediction_sync(model: *mut objc::runtime::Object, request: *mut objc
                     }
 
                     // If not NSString, try to extract from MLMultiArray (token indices)
-                    if let Some(token_text) = self.extract_text_from_ml_multiarray(ns_string) {
+                    if let Some(token_text) = self.extract_text_from_ml_multiarray(ns_string).await {
                         return Some(token_text);
                     }
                 }
@@ -901,7 +1194,7 @@ fn execute_prediction_sync(model: *mut objc::runtime::Object, request: *mut objc
     }
 
     /// Extract text from MLMultiArray containing token indices
-    fn extract_text_from_ml_multiarray(&self, ml_array: *mut objc::runtime::Object) -> Option<String> {
+    async fn extract_text_from_ml_multiarray(&self, ml_array: *mut objc::runtime::Object) -> Option<String> {
         unsafe {
             // Get data pointer from MLMultiArray
             let data_ptr: *const i32 = msg_send![ml_array, dataPointer];
@@ -932,13 +1225,61 @@ fn execute_prediction_sync(model: *mut objc::runtime::Object, request: *mut objc
 
             // Detokenize using the tokenizer
             if !token_ids.is_empty() {
-                // We can't await in this synchronous function, so we return a placeholder for now
-                // In a real implementation, this would need to be refactored to be async
-                Some(format!("Detokenized: {} tokens", token_ids.len()))
+                match self.tokenizer.decode(&token_ids).await {
+                    Ok(decoded_text) => {
+                        // Clean up the decoded text
+                        let cleaned_text = self.post_process_decoded_text(decoded_text);
+                        Some(cleaned_text)
+                    }
+                    Err(e) => {
+                        warn!("Failed to decode tokens: {}", e);
+                        Some(format!("Detokenization failed: {} tokens", token_ids.len()))
+                    }
+                }
             } else {
                 None
             }
         }
+    }
+
+    /// Post-process decoded text to clean up artifacts
+    fn post_process_decoded_text(&self, text: String) -> String {
+        let mut cleaned = text;
+
+        // Remove common special tokens that might be left in the output
+        // These patterns depend on the specific tokenizer being used
+        cleaned = cleaned
+            .replace("<|endoftext|>", "")
+            .replace("<|end|>", "")
+            .replace("<|endofprompt|>", "")
+            .replace("<|startoftext|>", "")
+            .replace("<|start|>", "")
+            .replace("<s>", "")
+            .replace("</s>", "")
+            .replace("<pad>", "")
+            .replace("<mask>", "")
+            .replace("<unk>", "")
+            .replace("[UNK]", "")
+            .replace("[PAD]", "")
+            .replace("[CLS]", "")
+            .replace("[SEP]", "")
+            .replace("[MASK]", "");
+
+        // Normalize whitespace
+        cleaned = cleaned
+            .split_whitespace()
+            .collect::<Vec<&str>>()
+            .join(" ");
+
+        // Trim leading/trailing whitespace
+        cleaned = cleaned.trim().to_string();
+
+        // Handle edge cases
+        if cleaned.is_empty() {
+            return "Empty decoded output".to_string();
+        }
+
+        cleaned
     }
 
     /// Extract array output from Core ML results
@@ -999,27 +1340,21 @@ fn execute_prediction_sync(model: *mut objc::runtime::Object, request: *mut objc
         }
     }
 
-    /// Extract confidence output from Core ML results
+    /// Extract confidence output from Core ML results with proper format handling
     fn extract_confidence_output(&self, outputs: &CFDictionary<CFString, *const std::ffi::c_void>) -> Option<f64> {
-        // Try common confidence key names
-        let confidence_keys = ["confidence", "probability", "score", "confidence_score"];
+        // Try common confidence key names with different output formats
+        let confidence_keys = [
+            "confidence", "probability", "score", "confidence_score",
+            "logits", "predictions", "output", "scores"
+        ];
 
         for key_name in &confidence_keys {
             let key = CFString::new(key_name);
             if let Some(value) = outputs.find(&key) {
                 unsafe {
-                    // Try to extract as NSNumber first
-                    let ns_number: *mut objc::runtime::Object = value as *mut _;
-                    let confidence: f64 = msg_send![ns_number, doubleValue];
-
-                    // Validate confidence is in reasonable range [0, 1]
-                    if confidence >= 0.0 && confidence <= 1.0 {
+                    // Try different extraction strategies based on output format
+                    if let Some(confidence) = self.extract_confidence_by_format(value, key_name) {
                         return Some(confidence);
-                    }
-
-                    // If not NSNumber, try to extract from MLMultiArray (e.g., first element of probability array)
-                    if let Some(conf_val) = self.extract_confidence_from_ml_multiarray(ns_number) {
-                        return Some(conf_val);
                     }
                 }
             }
@@ -1028,49 +1363,264 @@ fn execute_prediction_sync(model: *mut objc::runtime::Object, request: *mut objc
         None
     }
 
-    /// Extract confidence from MLMultiArray (e.g., probability distribution)
-    fn extract_confidence_from_ml_multiarray(&self, ml_array: *mut objc::runtime::Object) -> Option<f64> {
-        unsafe {
-            // Get data pointer - assume Float32 probabilities
-            let data_ptr: *const f32 = msg_send![ml_array, dataPointer];
-            if data_ptr.is_null() {
-                return None;
-            }
+    /// Extract confidence based on detected output format
+    unsafe fn extract_confidence_by_format(&self, value_ptr: *const std::ffi::c_void, key_name: &str) -> Option<f64> {
+        // Strategy 1: Direct scalar confidence value (NSNumber)
+        if let Some(scalar_conf) = self.extract_scalar_confidence(value_ptr) {
+            return Some(scalar_conf);
+        }
 
-            // TODO: Replace simplified confidence extraction with proper output format handling
-            // Requirements for completion:
-            // - [ ] Support different Core ML output formats (classification, regression, sequence)
-            // - [ ] Implement proper probability distribution analysis and confidence scoring
-            // - [ ] Add support for multi-class and multi-label classification outputs
-            // - [ ] Implement proper error handling for malformed output data
-            // - [ ] Add support for different data types (Float32, Float16, Int32)
-            // - [ ] Implement proper validation of output tensor shapes and dimensions
-            // - [ ] Add support for output post-processing and normalization
-            // - [ ] Implement proper memory management for large output tensors
-            // - [ ] Add support for output format detection and auto-configuration
-            // - [ ] Implement proper cleanup of output processing resources
-            // For classification, take the maximum probability as confidence
-            // In a real implementation, this would depend on the specific output format
-            let shape: *mut objc::runtime::Object = msg_send![ml_array, shape];
-            if shape.is_null() {
-                return None;
-            }
+        // Strategy 2: Classification probabilities (MLMultiArray)
+        if let Some(class_conf) = self.extract_classification_confidence(value_ptr, key_name) {
+            return Some(class_conf);
+        }
 
-            let count: usize = msg_send![shape, count];
-            if count == 0 {
-                return None;
-            }
+        // Strategy 3: Regression output (normalized)
+        if let Some(reg_conf) = self.extract_regression_confidence(value_ptr) {
+            return Some(reg_conf);
+        }
 
-            // Find maximum value (highest probability)
-            let mut max_prob = 0.0f32;
-            for i in 0..count {
-                let prob = *data_ptr.add(i);
-                if prob > max_prob {
-                    max_prob = prob;
+        // Strategy 4: Sequence output (first token confidence)
+        if let Some(seq_conf) = self.extract_sequence_confidence(value_ptr) {
+            return Some(seq_conf);
+        }
+
+        None
+    }
+
+    /// Extract scalar confidence value (NSNumber)
+    unsafe fn extract_scalar_confidence(&self, value_ptr: *const std::ffi::c_void) -> Option<f64> {
+        let ns_number: *mut objc::runtime::Object = value_ptr as *mut _;
+
+        // Check if it's an NSNumber by trying to get the class
+        let is_ns_number: bool = msg_send![ns_number, isKindOfClass: class!(NSNumber)];
+        if !is_ns_number {
+            return None;
+        }
+
+        let confidence: f64 = msg_send![ns_number, doubleValue];
+
+        // For classification, validate [0, 1] range
+        // For regression, allow any reasonable range [-100, 100]
+        if (confidence >= 0.0 && confidence <= 1.0) || (confidence >= -100.0 && confidence <= 100.0) {
+            Some(confidence)
+        } else {
+            None
+        }
+    }
+
+    /// Extract confidence from classification outputs (probability distributions)
+    unsafe fn extract_classification_confidence(&self, value_ptr: *const std::ffi::c_void, key_name: &str) -> Option<f64> {
+        let ml_array: *mut objc::runtime::Object = value_ptr as *mut _;
+
+        // Verify it's an MLMultiArray
+        let is_ml_array: bool = msg_send![ml_array, isKindOfClass: class!(MLMultiArray)];
+        if !is_ml_array {
+            return None;
+        }
+
+        let data_ptr: *const f32 = msg_send![ml_array, dataPointer];
+        if data_ptr.is_null() {
+            return None;
+        }
+
+        let shape: *mut objc::runtime::Object = msg_send![ml_array, shape];
+        if shape.is_null() {
+            return None;
+        }
+
+        let count: usize = msg_send![shape, count];
+        if count == 0 {
+            return None;
+        }
+
+        // Different strategies based on output type and key name
+        match key_name {
+            "logits" => {
+                // For logits, apply softmax and take max probability
+                self.extract_softmax_confidence(data_ptr, count)
+            }
+            "probabilities" | "predictions" => {
+                // Already probabilities, take max
+                self.extract_max_probability_confidence(data_ptr, count)
+            }
+            "scores" | "output" => {
+                // Could be either logits or probabilities, try both
+                if let Some(conf) = self.extract_max_probability_confidence(data_ptr, count) {
+                    if conf >= 0.0 && conf <= 1.0 {
+                        return Some(conf);
+                    }
+                }
+                self.extract_softmax_confidence(data_ptr, count)
+            }
+            _ => {
+                // Default: assume probabilities if values are in [0,1], otherwise logits
+                let mut in_range = true;
+                for i in 0..count {
+                    let val = *data_ptr.add(i);
+                    if val < 0.0 || val > 1.0 {
+                        in_range = false;
+                        break;
+                    }
+                }
+
+                if in_range {
+                    self.extract_max_probability_confidence(data_ptr, count)
+                } else {
+                    self.extract_softmax_confidence(data_ptr, count)
                 }
             }
+        }
+    }
 
-            Some(max_prob as f64)
+    /// Extract confidence from regression outputs
+    unsafe fn extract_regression_confidence(&self, value_ptr: *const std::ffi::c_void) -> Option<f64> {
+        let ml_array: *mut objc::runtime::Object = value_ptr as *mut _;
+
+        let is_ml_array: bool = msg_send![ml_array, isKindOfClass: class!(MLMultiArray)];
+        if !is_ml_array {
+            return None;
+        }
+
+        let data_ptr: *const f32 = msg_send![ml_array, dataPointer];
+        if data_ptr.is_null() {
+            return None;
+        }
+
+        let shape: *mut objc::runtime::Object = msg_send![ml_array, shape];
+        if shape.is_null() {
+            return None;
+        }
+
+        let count: usize = msg_send![shape, count];
+        if count != 1 {
+            // Regression should output single value
+            return None;
+        }
+
+        let value = *data_ptr as f64;
+
+        // Normalize regression output to [0, 1] confidence range
+        // Use sigmoid function for normalization
+        let confidence = 1.0 / (1.0 + (-value).exp());
+
+        Some(confidence)
+    }
+
+    /// Extract confidence from sequence outputs (e.g., first token)
+    unsafe fn extract_sequence_confidence(&self, value_ptr: *const std::ffi::c_void) -> Option<f64> {
+        let ml_array: *mut objc::runtime::Object = value_ptr as *mut _;
+
+        let is_ml_array: bool = msg_send![ml_array, isKindOfClass: class!(MLMultiArray)];
+        if !is_ml_array {
+            return None;
+        }
+
+        let data_ptr: *const f32 = msg_send![ml_array, dataPointer];
+        if data_ptr.is_null() {
+            return None;
+        }
+
+        let shape: *mut objc::runtime::Object = msg_send![ml_array, shape];
+        if shape.is_null() {
+            return None;
+        }
+
+        let shape_count: usize = msg_send![shape, count];
+        if shape_count < 2 {
+            return None; // Need at least [seq_len, vocab_size]
+        }
+
+        // Get shape dimensions
+        let mut dimensions = Vec::with_capacity(shape_count);
+        for i in 0..shape_count {
+            let dim: usize = msg_send![shape, objectAtIndex: i];
+            dimensions.push(dim);
+        }
+
+        // For sequence outputs, take confidence of the first token (CLS or BOS)
+        if dimensions.len() >= 2 {
+            // Assume shape is [batch_size, seq_len, ...] or [seq_len, vocab_size]
+            // Take first sequence position
+            let vocab_size = dimensions[dimensions.len() - 1];
+
+            if vocab_size > 0 {
+                // For generative models, take probability of EOS token or highest probability
+                // For simplicity, take the highest probability token's confidence
+                let mut max_prob = 0.0f32;
+                for i in 0..vocab_size {
+                    let prob = *data_ptr.add(i);
+                    if prob > max_prob {
+                        max_prob = prob;
+                    }
+                }
+                return Some(max_prob as f64);
+            }
+        }
+
+        None
+    }
+
+    /// Apply softmax to logits and return max probability
+    unsafe fn extract_softmax_confidence(&self, data_ptr: *const f32, count: usize) -> Option<f64> {
+        if count == 0 {
+            return None;
+        }
+
+        // Find max logit for numerical stability
+        let mut max_logit = *data_ptr;
+        for i in 1..count {
+            let logit = *data_ptr.add(i);
+            if logit > max_logit {
+                max_logit = logit;
+            }
+        }
+
+        // Compute softmax probabilities
+        let mut sum_exp = 0.0f32;
+        let mut probabilities = Vec::with_capacity(count);
+
+        for i in 0..count {
+            let logit = *data_ptr.add(i);
+            let exp_val = (logit - max_logit).exp();
+            probabilities.push(exp_val);
+            sum_exp += exp_val;
+        }
+
+        // Normalize and find max probability
+        let mut max_prob = 0.0f32;
+        for &prob in &probabilities {
+            let normalized = prob / sum_exp;
+            if normalized > max_prob {
+                max_prob = normalized;
+            }
+        }
+
+        Some(max_prob as f64)
+    }
+
+    /// Extract max probability from already normalized probabilities
+    unsafe fn extract_max_probability_confidence(&self, data_ptr: *const f32, count: usize) -> Option<f64> {
+        if count == 0 {
+            return None;
+        }
+
+        let mut max_prob = *data_ptr;
+        for i in 1..count {
+            let prob = *data_ptr.add(i);
+            if prob > max_prob {
+                max_prob = prob;
+            }
+        }
+
+        Some(max_prob as f64)
+    }
+
+    /// Extract confidence from MLMultiArray (legacy method - use extract_classification_confidence instead)
+    fn extract_confidence_from_ml_multiarray(&self, ml_array: *mut objc::runtime::Object) -> Option<f64> {
+        // Delegate to the new implementation for backward compatibility
+        unsafe {
+            self.extract_classification_confidence(ml_array as *const std::ffi::c_void, "probabilities")
         }
     }
 }
