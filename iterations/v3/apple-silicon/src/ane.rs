@@ -16,7 +16,7 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, info, warn};
 
-use crate::tokenization::{Tokenizer, WordTokenizer};
+use crate::tokenization::{Tokenizer, TokenizerConfig, TokenizerType, create_tokenizer};
 
 /// Apple Neural Engine manager for ANE-accelerated inference
 #[derive(Debug)]
@@ -85,6 +85,7 @@ pub struct ANEDeviceConfig {
     pub performance_profile: Option<ANEPerformanceProfile>,
     pub thermal_management: Option<ANEThermalConfig>,
     pub power_optimization: Option<ANEPowerConfig>,
+    pub tokenizer_config: Option<TokenizerConfig>,
 }
 
 /// ANE performance profiles
@@ -2018,7 +2019,12 @@ impl ANEManager {
             self.configure_power_optimization(power).await?;
         }
 
-        // 7. Apply hardware-specific optimizations
+        // 7. Configure tokenizer
+        if let Some(tokenizer_config) = &config.tokenizer_config {
+            self.configure_tokenizer(tokenizer_config).await?;
+        }
+
+        // 8. Apply hardware-specific optimizations
         self.apply_hardware_optimizations(&config).await?;
 
         info!("ANE device configuration completed successfully");
@@ -2143,6 +2149,17 @@ impl ANEManager {
             self.enable_idle_power_management().await?;
         }
 
+        Ok(())
+    }
+
+    /// Configure tokenizer
+    async fn configure_tokenizer(&mut self, tokenizer_config: &TokenizerConfig) -> Result<()> {
+        debug!("Configuring ANE tokenizer: {:?}", tokenizer_config.tokenizer_type);
+
+        let tokenizer = create_tokenizer(tokenizer_config).await?;
+        self.tokenizer = Arc::from(tokenizer);
+
+        info!("ANE tokenizer configured successfully");
         Ok(())
     }
 

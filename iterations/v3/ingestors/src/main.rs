@@ -2,7 +2,6 @@
 //! Ingestors module CLI for testing multimodal RAG ingestion
 
 use ingestors::*;
-use std::path::Path;
 use tracing::info;
 
 #[tokio::main]

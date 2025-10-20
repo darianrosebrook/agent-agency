@@ -166,7 +166,6 @@ impl OnDemandIngestor {
     /// - [ ] Support multiple WordNet versions and language variants
     /// - [ ] Implement efficient indexing and querying of WordNet data
         anyhow::bail!("On-demand WordNet ingestion not yet implemented for {}", entity_key)
-    }
     
     /// Update cache entry
     async fn update_cache(

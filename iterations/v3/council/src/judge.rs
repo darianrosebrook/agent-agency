@@ -1369,7 +1369,7 @@ impl Judge for EthicsJudge {
         let verdict = if ethical_assessment.ethical_score < 0.3 {
             // Critical ethical violations - reject
             JudgeVerdict::Reject {
-                confidence: ethical_assessment.assessment_confidence,
+                confidence: ethical_assessment.assessment_confidence as f64,
                 reasoning: format!(
                     "Critical ethical violations detected. Ethical score: {:.2}. Concerns: {}",
                     ethical_assessment.ethical_score,
@@ -1392,7 +1392,7 @@ impl Judge for EthicsJudge {
         } else if ethical_assessment.ethical_score < 0.7 {
             // Moderate ethical concerns - require refinements
             JudgeVerdict::Refine {
-                confidence: ethical_assessment.assessment_confidence,
+                confidence: ethical_assessment.assessment_confidence as f64,
                 reasoning: format!(
                     "Ethical concerns require mitigation. Ethical score: {:.2}. {} concerns identified.",
                     ethical_assessment.ethical_score,
@@ -1416,13 +1416,13 @@ impl Judge for EthicsJudge {
         } else {
             // Ethically acceptable - approve
             JudgeVerdict::Approve {
-                confidence: ethical_assessment.assessment_confidence,
+                confidence: ethical_assessment.assessment_confidence as f64,
                 reasoning: format!(
                     "Ethically acceptable with score {:.2}. {} minor concerns noted but not blocking.",
                     ethical_assessment.ethical_score,
                     ethical_assessment.ethical_concerns.len()
                 ),
-                quality_score: ethical_assessment.ethical_score,
+                quality_score: ethical_assessment.ethical_score as f64,
                 risk_assessment: RiskAssessment {
                     overall_risk: if ethical_assessment.ethical_score > 0.8 {
                         RiskLevel::Low
@@ -1433,7 +1433,7 @@ impl Judge for EthicsJudge {
                         .map(|c| c.description.clone())
                         .collect(),
                     mitigation_suggestions: ethical_assessment.ethical_mitigations,
-                    confidence: ethical_assessment.assessment_confidence,
+                    confidence: ethical_assessment.assessment_confidence as f64,
                 },
             }
         };
@@ -1709,7 +1709,7 @@ impl Judge for MockJudge {
 impl MockJudge {
     fn assess_quality(&self, working_spec: &agent_agency_contracts::working_spec::WorkingSpec) -> f64 {
         // Simple quality assessment based on spec completeness
-        let mut score = 0.5;
+        let mut score: f64 = 0.5;
 
         // Check for acceptance criteria
         if !working_spec.acceptance_criteria.is_empty() {
