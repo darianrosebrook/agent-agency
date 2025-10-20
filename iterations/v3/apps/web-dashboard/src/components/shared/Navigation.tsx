@@ -4,6 +4,7 @@ import styles from "./Navigation.module.scss";
 
 export type SectionType =
   | "overview"
+  | "metrics"
   | "chat"
   | "tasks"
   | "database"
@@ -28,6 +29,13 @@ const navItems: NavItem[] = [
     label: "Overview",
     description: "System health and quick actions",
     icon: "📊",
+    available: true,
+  },
+  {
+    id: "metrics",
+    label: "Metrics",
+    description: "Comprehensive system observability",
+    icon: "📈",
     available: true,
   },
   {
@@ -102,5 +110,3 @@ export default function Navigation({
     </nav>
   );
 }
-
-

@@ -2,7 +2,10 @@
 
 import { useEffect, useRef, useCallback } from "react";
 import { SSEClient } from "@/lib/sse/SSEClient";
-import { RealTimeMetricsStreamProps, MetricsStreamEvent } from "@/types/metrics";
+import {
+  RealTimeMetricsStreamProps,
+  MetricsStreamEvent,
+} from "@/types/metrics";
 
 export default function RealTimeMetricsStream({
   onMetricsUpdate,
@@ -58,7 +61,9 @@ export default function RealTimeMetricsStream({
   useEffect(() => {
     if (!enabled) return;
 
-    console.warn("Real-time metrics stream not implemented - requires V3 metrics SSE endpoint");
+    console.warn(
+      "Real-time metrics stream not implemented - requires V3 metrics SSE endpoint"
+    );
     // TODO: Milestone 3 - Real-time Metrics Streaming
     // - [ ] Implement V3 /metrics/stream SSE endpoint
     // - [ ] Add event types: health_update, agent_performance, coordination_update, business_metrics
@@ -90,7 +95,13 @@ export default function RealTimeMetricsStream({
       }
     };
     */
-  }, [enabled, handleMetricsEvent, handleSSEError, handleSSEOpen, handleSSEClose]);
+  }, [
+    enabled,
+    handleMetricsEvent,
+    handleSSEError,
+    handleSSEOpen,
+    handleSSEClose,
+  ]);
 
   // Handle enabled/disabled changes
   useEffect(() => {

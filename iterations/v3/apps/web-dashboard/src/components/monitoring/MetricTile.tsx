@@ -31,7 +31,8 @@ export default function MetricTile({
       case "bytes":
         if (val < 1024) return `${val}B`;
         if (val < 1024 * 1024) return `${(val / 1024).toFixed(1)}KB`;
-        if (val < 1024 * 1024 * 1024) return `${(val / (1024 * 1024)).toFixed(1)}MB`;
+        if (val < 1024 * 1024 * 1024)
+          return `${(val / (1024 * 1024)).toFixed(1)}MB`;
         return `${(val / (1024 * 1024 * 1024)).toFixed(1)}GB`;
       default:
         return val.toLocaleString();
@@ -91,12 +92,17 @@ export default function MetricTile({
         {(change !== undefined || changeLabel) && (
           <div className={styles.change}>
             {change !== undefined && (
-              <span className={`${styles.changeValue} ${
-                change > 0 ? styles.positive :
-                change < 0 ? styles.negative :
-                styles.neutral
-              }`}>
-                {change > 0 ? "+" : ""}{change.toFixed(1)}%
+              <span
+                className={`${styles.changeValue} ${
+                  change > 0
+                    ? styles.positive
+                    : change < 0
+                    ? styles.negative
+                    : styles.neutral
+                }`}
+              >
+                {change > 0 ? "+" : ""}
+                {change.toFixed(1)}%
               </span>
             )}
             {changeLabel && (

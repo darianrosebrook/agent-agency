@@ -10,7 +10,7 @@ use std::path::Path;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{info, warn, debug};
-use core_foundation::dictionary::CFDictionary;
+use core_foundation::dictionary::{CFDictionary, CFMutableDictionary};
 use core_foundation::string::CFString;
 use core_foundation::base::TCFType;
 use regex::Regex;
@@ -782,16 +782,91 @@ fn execute_prediction_sync(model: *mut objc::runtime::Object, request: *mut objc
             }
         }
 
+        // Extract additional metrics for comprehensive output analysis
+        self.extract_additional_output_metrics(outputs, &mut result);
+
+        // Apply post-processing operations
+        self.apply_output_postprocessing(&mut result, model_type);
+
         // Add metadata
         result.insert("model_type".to_string(), serde_json::Value::String(model_type.to_string()));
         result.insert("processing_timestamp".to_string(),
             serde_json::Value::Number(chrono::Utc::now().timestamp().into()));
+        result.insert("output_extraction_version".to_string(),
+            serde_json::Value::String("2.0".to_string()));
 
         // Convert to JSON string
         let json_result = serde_json::to_string_pretty(&result)
             .context("Failed to serialize prediction results")?;
 
         Ok(json_result)
+    }
+
+    /// Extract additional output metrics beyond basic predictions
+    fn extract_additional_output_metrics(&self, outputs: &CFDictionary<CFString, *const std::ffi::c_void>, result: &mut serde_json::Map<String, serde_json::Value>) {
+        // Extract loss values if present (useful for model validation/training)
+        if let Some(loss) = self.extract_loss_output(outputs) {
+            result.insert("loss".to_string(),
+                serde_json::Value::Number(serde_json::Number::from_f64(loss).unwrap_or(serde_json::Number::from(0))));
+        }
+
+        // Extract attention weights for transformer models
+        if let Some(attention_weights) = self.extract_attention_weights(outputs) {
+            if let Some(weights) = attention_weights.get(0) {
+                result.insert("attention_summary".to_string(),
+                    serde_json::Value::Array(weights.iter().map(|&w|
+                        serde_json::Value::Number(serde_json::Number::from_f64(w as f64).unwrap_or(serde_json::Number::from(0)))
+                    ).collect()));
+            }
+        }
+
+        // Extract embeddings for downstream tasks
+        if let Some(embeddings) = self.extract_embeddings(outputs) {
+            if let Some(first_embedding) = embeddings.get(0) {
+                // Store first 10 dimensions of the embedding for summary
+                let summary_embedding: Vec<serde_json::Value> = first_embedding.iter().take(10).map(|&v|
+                    serde_json::Value::Number(serde_json::Number::from_f64(v as f64).unwrap_or(serde_json::Number::from(0)))
+                ).collect();
+
+                result.insert("embedding_preview".to_string(), serde_json::Value::Array(summary_embedding));
+                result.insert("embedding_dimension".to_string(), serde_json::Value::Number(first_embedding.len().into()));
+                result.insert("embedding_norm".to_string(),
+                    serde_json::Value::Number(serde_json::Number::from_f64(
+                        first_embedding.iter().map(|&v| v * v).sum::<f32>().sqrt() as f64
+                    ).unwrap_or(serde_json::Number::from(0))));
+            }
+        }
+
+        // Add output tensor statistics
+        self.add_output_tensor_statistics(outputs, result);
+    }
+
+    /// Add statistical analysis of output tensors
+    fn add_output_tensor_statistics(&self, outputs: &CFDictionary<CFString, *const std::ffi::c_void>, result: &mut serde_json::Map<String, serde_json::Value>) {
+        let mut tensor_stats = serde_json::Map::new();
+        let mut tensor_count = 0;
+
+        // Analyze all MLMultiArray outputs
+        // This is a simplified analysis - in practice you'd analyze all output tensors
+        if let Some(_) = outputs.find(&CFString::new("logits")) {
+            tensor_count += 1;
+            tensor_stats.insert("has_logits".to_string(), serde_json::Value::Bool(true));
+        }
+        if let Some(_) = outputs.find(&CFString::new("probabilities")) {
+            tensor_count += 1;
+            tensor_stats.insert("has_probabilities".to_string(), serde_json::Value::Bool(true));
+        }
+        if let Some(_) = outputs.find(&CFString::new("embeddings")) {
+            tensor_count += 1;
+            tensor_stats.insert("has_embeddings".to_string(), serde_json::Value::Bool(true));
+        }
+        if let Some(_) = outputs.find(&CFString::new("attention_weights")) {
+            tensor_count += 1;
+            tensor_stats.insert("has_attention_weights".to_string(), serde_json::Value::Bool(true));
+        }
+
+        tensor_stats.insert("total_output_tensors".to_string(), serde_json::Value::Number(tensor_count.into()));
+        result.insert("output_tensor_stats".to_string(), serde_json::Value::Object(tensor_stats));
     }
 
     /// Detect the type of model output based on available keys and data shapes
@@ -1282,6 +1357,348 @@ fn execute_prediction_sync(model: *mut objc::runtime::Object, request: *mut objc
         cleaned
     }
 
+    /// Extract loss values from model outputs (for training/validation)
+    fn extract_loss_output(&self, outputs: &CFDictionary<CFString, *const std::ffi::c_void>) -> Option<f64> {
+        let loss_keys = ["loss", "total_loss", "training_loss", "validation_loss"];
+
+        for key_name in &loss_keys {
+            let key = CFString::new(key_name);
+            if let Some(value) = outputs.find(&key) {
+                unsafe {
+                    // Try as NSNumber first
+                    let ns_number: *mut objc::runtime::Object = value as *mut _;
+                    let is_ns_number: bool = msg_send![ns_number, isKindOfClass: class!(NSNumber)];
+                    if is_ns_number {
+                        let loss: f64 = msg_send![ns_number, doubleValue];
+                        return Some(loss);
+                    }
+
+                    // Try as single-element MLMultiArray
+                    let is_ml_array: bool = msg_send![ns_number, isKindOfClass: class!(MLMultiArray)];
+                    if is_ml_array {
+                        let data_ptr: *const f32 = msg_send![ns_number, dataPointer];
+                        if !data_ptr.is_null() {
+                            return Some(*data_ptr as f64);
+                        }
+                    }
+                }
+            }
+        }
+
+        None
+    }
+
+    /// Extract attention weights from transformer outputs
+    fn extract_attention_weights(&self, outputs: &CFDictionary<CFString, *const std::ffi::c_void>) -> Option<Vec<Vec<f32>>> {
+        let attention_keys = ["attention_weights", "attentions", "attention_scores"];
+
+        for key_name in &attention_keys {
+            let key = CFString::new(key_name);
+            if let Some(value) = outputs.find(&key) {
+                unsafe {
+                    let ml_array: *mut objc::runtime::Object = value as *mut _;
+                    let is_ml_array: bool = msg_send![ml_array, isKindOfClass: class!(MLMultiArray)];
+                    if !is_ml_array {
+                        continue;
+                    }
+
+                    let data_ptr: *const f32 = msg_send![ml_array, dataPointer];
+                    if data_ptr.is_null() {
+                        continue;
+                    }
+
+                    let shape: *mut objc::runtime::Object = msg_send![ml_array, shape];
+                    if shape.is_null() {
+                        continue;
+                    }
+
+                    // Get tensor dimensions
+                    let shape_count: usize = msg_send![shape, count];
+                    let mut dimensions = Vec::with_capacity(shape_count);
+                    for i in 0..shape_count {
+                        let dim: usize = msg_send![shape, objectAtIndex: i];
+                        dimensions.push(dim);
+                    }
+
+                    // For attention weights, expect shape like [batch, heads, seq_len, seq_len]
+                    // or [batch, seq_len, seq_len] for single-head
+                    if dimensions.len() >= 3 {
+                        let total_elements = dimensions.iter().product();
+                        let mut weights = Vec::with_capacity(total_elements);
+
+                        for i in 0..total_elements {
+                            weights.push(*data_ptr.add(i));
+                        }
+
+                        // Reshape into 2D representation (flatten attention heads)
+                        let seq_len = dimensions[dimensions.len() - 1];
+                        let batch_size = dimensions[0];
+                        let mut reshaped = Vec::with_capacity(batch_size * seq_len);
+
+                        for batch in 0..batch_size {
+                            for seq in 0..seq_len {
+                                // Average across attention heads if multi-head
+                                let mut avg_weight = 0.0f32;
+                                let mut head_count = 0;
+
+                                if dimensions.len() == 4 {
+                                    // Multi-head: [batch, heads, seq_len, seq_len]
+                                    let heads = dimensions[1];
+                                    for head in 0..heads {
+                                        let idx = batch * heads * seq_len * seq_len +
+                                                 head * seq_len * seq_len +
+                                                 seq * seq_len + seq;
+                                        avg_weight += weights[idx];
+                                        head_count += 1;
+                                    }
+                                } else {
+                                    // Single-head: [batch, seq_len, seq_len]
+                                    let idx = batch * seq_len * seq_len + seq * seq_len + seq;
+                                    avg_weight = weights[idx];
+                                    head_count = 1;
+                                }
+
+                                reshaped.push(avg_weight / head_count as f32);
+                            }
+                        }
+
+                        return Some(vec![reshaped]);
+                    }
+                }
+            }
+        }
+
+        None
+    }
+
+    /// Extract embeddings from model outputs
+    fn extract_embeddings(&self, outputs: &CFDictionary<CFString, *const std::ffi::c_void>) -> Option<Vec<Vec<f32>>> {
+        let embedding_keys = ["embeddings", "last_hidden_state", "hidden_states", "encoder_outputs"];
+
+        for key_name in &embedding_keys {
+            let key = CFString::new(key_name);
+            if let Some(value) = outputs.find(&key) {
+                unsafe {
+                    let ml_array: *mut objc::runtime::Object = value as *mut _;
+                    let is_ml_array: bool = msg_send![ml_array, isKindOfClass: class!(MLMultiArray)];
+                    if !is_ml_array {
+                        continue;
+                    }
+
+                    let data_ptr: *const f32 = msg_send![ml_array, dataPointer];
+                    if data_ptr.is_null() {
+                        continue;
+                    }
+
+                    let shape: *mut objc::runtime::Object = msg_send![ml_array, shape];
+                    if shape.is_null() {
+                        continue;
+                    }
+
+                    // Get tensor dimensions
+                    let shape_count: usize = msg_send![shape, count];
+                    let mut dimensions = Vec::with_capacity(shape_count);
+                    for i in 0..shape_count {
+                        let dim: usize = msg_send![shape, objectAtIndex: i];
+                        dimensions.push(dim);
+                    }
+
+                    // For embeddings, expect shape like [batch, seq_len, hidden_size]
+                    if dimensions.len() >= 2 {
+                        let batch_size = dimensions[0];
+                        let seq_len = dimensions[1];
+                        let hidden_size = if dimensions.len() >= 3 { dimensions[2] } else { 1 };
+
+                        let mut embeddings = Vec::with_capacity(batch_size);
+
+                        for batch in 0..batch_size {
+                            let mut sequence_embeddings = Vec::with_capacity(seq_len);
+
+                            for seq in 0..seq_len {
+                                let mut token_embedding = Vec::with_capacity(hidden_size);
+
+                                for hidden in 0..hidden_size {
+                                    let idx = if dimensions.len() == 3 {
+                                        batch * seq_len * hidden_size + seq * hidden_size + hidden
+                                    } else {
+                                        batch * seq_len + seq
+                                    };
+                                    token_embedding.push(*data_ptr.add(idx));
+                                }
+
+                                sequence_embeddings.push(token_embedding);
+                            }
+
+                            // For simplicity, take the embedding of the first token (CLS for BERT, BOS for GPT)
+                            if !sequence_embeddings.is_empty() {
+                                embeddings.push(sequence_embeddings[0].clone());
+                            }
+                        }
+
+                        return Some(embeddings);
+                    }
+                }
+            }
+        }
+
+        None
+    }
+
+    /// Apply post-processing operations to model outputs
+    fn apply_output_postprocessing(&self, outputs: &mut serde_json::Map<String, serde_json::Value>, model_type: ModelOutputType) {
+        match model_type {
+            ModelOutputType::Classification => {
+                self.postprocess_classification_outputs(outputs);
+            }
+            ModelOutputType::Regression => {
+                self.postprocess_regression_outputs(outputs);
+            }
+            ModelOutputType::SequenceGeneration => {
+                self.postprocess_sequence_outputs(outputs);
+            }
+            ModelOutputType::Vision => {
+                self.postprocess_vision_outputs(outputs);
+            }
+            ModelOutputType::Generic => {
+                // No specific post-processing for generic outputs
+            }
+        }
+    }
+
+    /// Post-process classification outputs
+    fn postprocess_classification_outputs(&self, outputs: &mut serde_json::Map<String, serde_json::Value>) {
+        // Apply confidence thresholding
+        if let Some(confidence) = outputs.get("confidence").and_then(|c| c.as_f64()) {
+            let threshold = 0.5; // Configurable threshold
+            let is_confident = confidence > threshold;
+            outputs.insert("is_confident".to_string(), serde_json::Value::Bool(is_confident));
+
+            // Add confidence category
+            let category = if confidence > 0.9 {
+                "high"
+            } else if confidence > 0.7 {
+                "medium"
+            } else if confidence > 0.5 {
+                "low"
+            } else {
+                "very_low"
+            };
+            outputs.insert("confidence_category".to_string(), serde_json::Value::String(category.to_string()));
+        }
+
+        // Normalize class probabilities if present
+        if let Some(probs) = outputs.get_mut("class_probabilities") {
+            if let Some(arr) = probs.as_array_mut() {
+                let sum: f64 = arr.iter().filter_map(|v| v.as_f64()).sum();
+                if sum > 0.0 {
+                    for prob in arr.iter_mut() {
+                        if let Some(p) = prob.as_f64() {
+                            *prob = serde_json::Value::Number(serde_json::Number::from_f64(p / sum).unwrap_or(serde_json::Number::from(0)));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// Post-process regression outputs
+    fn postprocess_regression_outputs(&self, outputs: &mut serde_json::Map<String, serde_json::Value>) {
+        // Apply output scaling/normalization if needed
+        if let Some(prediction) = outputs.get("prediction").and_then(|p| p.as_f64()) {
+            // Example: clamp predictions to reasonable range [-10, 10]
+            let clamped = prediction.max(-10.0).min(10.0);
+            if (clamped - prediction).abs() > 1e-6 {
+                outputs.insert("prediction_clamped".to_string(), serde_json::Value::Bool(true));
+                outputs.insert("original_prediction".to_string(),
+                    serde_json::Value::Number(serde_json::Number::from_f64(prediction).unwrap_or(serde_json::Number::from(0))));
+            }
+            outputs.insert("prediction".to_string(),
+                serde_json::Value::Number(serde_json::Number::from_f64(clamped).unwrap_or(serde_json::Number::from(0))));
+        }
+
+        // Add prediction direction indicator
+        if let Some(prediction) = outputs.get("prediction").and_then(|p| p.as_f64()) {
+            let direction = if prediction > 0.1 {
+                "positive"
+            } else if prediction < -0.1 {
+                "negative"
+            } else {
+                "neutral"
+            };
+            outputs.insert("prediction_direction".to_string(), serde_json::Value::String(direction.to_string()));
+        }
+    }
+
+    /// Post-process sequence generation outputs
+    fn postprocess_sequence_outputs(&self, outputs: &mut serde_json::Map<String, serde_json::Value>) {
+        // Clean up generated text
+        if let Some(text) = outputs.get_mut("generated_text") {
+            if let Some(text_str) = text.as_str() {
+                let cleaned = self.post_process_decoded_text(text_str.to_string());
+                *text = serde_json::Value::String(cleaned);
+            }
+        }
+
+        // Add text quality metrics
+        if let Some(text) = outputs.get("generated_text").and_then(|t| t.as_str()) {
+            let word_count = text.split_whitespace().count();
+            let char_count = text.chars().count();
+            let avg_word_length = if word_count > 0 {
+                char_count as f64 / word_count as f64
+            } else {
+                0.0
+            };
+
+            outputs.insert("text_word_count".to_string(), serde_json::Value::Number(word_count.into()));
+            outputs.insert("text_char_count".to_string(), serde_json::Value::Number(char_count.into()));
+            outputs.insert("text_avg_word_length".to_string(),
+                serde_json::Value::Number(serde_json::Number::from_f64(avg_word_length).unwrap_or(serde_json::Number::from(0))));
+        }
+
+        // Analyze sequence confidence distribution
+        if let Some(confidence) = outputs.get("sequence_confidence").and_then(|c| c.as_f64()) {
+            let quality = if confidence > 0.8 {
+                "high"
+            } else if confidence > 0.6 {
+                "medium"
+            } else if confidence > 0.4 {
+                "low"
+            } else {
+                "very_low"
+            };
+            outputs.insert("sequence_quality".to_string(), serde_json::Value::String(quality.to_string()));
+        }
+    }
+
+    /// Post-process vision model outputs
+    fn postprocess_vision_outputs(&self, outputs: &mut serde_json::Map<String, serde_json::Value>) {
+        // Add embedding normalization if present
+        if let Some(features) = outputs.get("features") {
+            if let Some(arr) = features.as_array() {
+                if !arr.is_empty() {
+                    // Calculate L2 norm for first embedding as example
+                    let norm: f64 = arr.iter()
+                        .filter_map(|v| v.as_f64())
+                        .map(|v| v * v)
+                        .sum::<f64>()
+                        .sqrt();
+
+                    if norm > 0.0 {
+                        outputs.insert("feature_norm".to_string(),
+                            serde_json::Value::Number(serde_json::Number::from_f64(norm).unwrap_or(serde_json::Number::from(0))));
+                    }
+                }
+            }
+        }
+
+        // Add feature dimensionality info
+        if let Some(features) = outputs.get("features") {
+            if let Some(arr) = features.as_array() {
+                outputs.insert("feature_dimension".to_string(), serde_json::Value::Number(arr.len().into()));
+            }
+        }
+    }
+
     /// Extract array output from Core ML results
     fn extract_array_output(&self, outputs: &CFDictionary<CFString, *const std::ffi::c_void>) -> Option<Vec<serde_json::Value>> {
         // Try common array output key names
@@ -1623,6 +2040,540 @@ fn execute_prediction_sync(model: *mut objc::runtime::Object, request: *mut objc
             self.extract_classification_confidence(ml_array as *const std::ffi::c_void, "probabilities")
         }
     }
+
+    /// Comprehensive inference timing measurement
+    pub async fn measure_inference_performance(
+        &self,
+        request: &crate::types::InferenceRequest,
+        inference_fn: impl std::future::Future<Output = Result<String>>
+    ) -> Result<InferenceTiming> {
+        let overall_start = std::time::Instant::now();
+
+        // Measure inference execution time
+        let inference_start = std::time::Instant::now();
+        let result = inference_fn.await;
+        let inference_time = inference_start.elapsed();
+
+        let total_time = overall_start.elapsed();
+
+        // Calculate derived metrics
+        let throughput = if inference_time.as_nanos() > 0 {
+            1_000_000_000.0 / inference_time.as_nanos() as f64 // inferences per second
+        } else {
+            0.0
+        };
+
+        let efficiency_score = self.calculate_timing_efficiency(&inference_time, request);
+
+        Ok(InferenceTiming {
+            total_time_ms: total_time.as_millis() as u64,
+            inference_time_ms: inference_time.as_millis() as u64,
+            input_prep_time_ms: 0, // Will be measured separately
+            output_proc_time_ms: 0, // Will be measured separately
+            throughput_inferences_per_sec: throughput,
+            efficiency_score,
+            optimization_target: request.optimization_target.clone(),
+            model_name: request.model_name.clone(),
+            input_tokens: self.estimate_token_count(&request.input),
+            output_tokens: self.estimate_output_tokens(request.max_tokens),
+        })
+    }
+
+    /// Calculate timing efficiency score (0.0-1.0)
+    fn calculate_timing_efficiency(&self, inference_time: &std::time::Duration, request: &crate::types::InferenceRequest) -> f32 {
+        let actual_ms = inference_time.as_millis() as f64;
+
+        // Expected time based on optimization target and input complexity
+        let expected_ms = match request.optimization_target {
+            OptimizationTarget::ANE => (request.input.len() as f64 * 0.01).max(5.0), // Very fast
+            OptimizationTarget::GPU => (request.input.len() as f64 * 0.05).max(10.0), // Fast
+            OptimizationTarget::CPU => (request.input.len() as f64 * 0.2).max(50.0),  // Slower
+            OptimizationTarget::Auto => (request.input.len() as f64 * 0.1).max(20.0), // Balanced
+        };
+
+        // Efficiency is inverse of normalized timing (closer to expected = more efficient)
+        let efficiency = (expected_ms / actual_ms).min(2.0) as f32; // Cap at 2.0x expected
+        efficiency.min(1.0) // Cap at 1.0 (perfect efficiency)
+    }
+
+    /// Estimate token count from input
+    fn estimate_token_count(&self, input: &str) -> usize {
+        // Rough estimation: ~4 characters per token for English text
+        (input.chars().count() as f32 / 4.0).ceil() as usize
+    }
+
+    /// Estimate output token count
+    fn estimate_output_tokens(&self, max_tokens: Option<u32>) -> usize {
+        max_tokens.unwrap_or(100) as usize
+    }
+
+    /// Enhanced inference timing with detailed breakdown
+    pub async fn run_inference_with_detailed_timing(&self, request: InferenceRequest) -> Result<InferenceResult> {
+        let model_name = &request.model_name;
+        let overall_start = std::time::Instant::now();
+
+        info!("Running Core ML inference with detailed timing: {} ({})", model_name, request.id);
+
+        // Check if model is loaded and has Core ML support
+        let has_core_ml = {
+            let models = self.loaded_models.read().await;
+            models
+                .get(model_name)
+                .map(|m| m.core_ml_model.is_some())
+                .unwrap_or(false)
+        };
+
+        // Measure input preparation time
+        let input_prep_start = std::time::Instant::now();
+        let prepared_input = if has_core_ml {
+            #[cfg(target_os = "macos")]
+            {
+                let core_ml_model = {
+                    let models = self.loaded_models.read().await;
+                    models
+                        .get(model_name)
+                        .and_then(|m| m.core_ml_model.clone())
+                        .unwrap()
+                };
+
+                match core_ml_model.prepare_inference_input(&request).await {
+                    Ok(input) => Some(input),
+                    Err(e) => {
+                        warn!("Input preparation failed: {}", e);
+                        None
+                    }
+                }
+            }
+            #[cfg(not(target_os = "macos"))]
+            {
+                None
+            }
+        } else {
+            None
+        };
+        let input_prep_time = input_prep_start.elapsed();
+
+        // Perform inference with timing
+        let (inference_time, output_proc_time, output) = if has_core_ml && prepared_input.is_some() {
+            #[cfg(target_os = "macos")]
+            {
+                let inference_start = std::time::Instant::now();
+                let core_ml_model = {
+                    let models = self.loaded_models.read().await;
+                    models
+                        .get(model_name)
+                        .and_then(|m| m.core_ml_model.clone())
+                        .unwrap()
+                };
+
+                match core_ml_model.execute_prediction(&prepared_input.unwrap()).await {
+                    Ok(output_dict) => {
+                        let inference_elapsed = inference_start.elapsed();
+
+                        // Measure output processing time
+                        let output_proc_start = std::time::Instant::now();
+                        let result = match core_ml_model.process_outputs(&output_dict).await {
+                            Ok(output_text) => output_text,
+                            Err(e) => {
+                                warn!("Output processing failed: {}", e);
+                                format!("Output processing failed: {}", e)
+                            }
+                        };
+                        let output_proc_elapsed = output_proc_start.elapsed();
+
+                        (inference_elapsed, output_proc_elapsed, result)
+                    }
+                    Err(e) => {
+                        warn!("Core ML inference failed: {}", e);
+                        let simulated_time = self.simulate_inference_time(&request).await;
+                        let simulated_duration = std::time::Duration::from_millis(simulated_time);
+                        (simulated_duration, std::time::Duration::from_millis(0), format!("Core ML failed: {}", e))
+                    }
+                }
+            }
+            #[cfg(not(target_os = "macos"))]
+            {
+                let simulated_time = self.simulate_inference_time(&request).await;
+                let simulated_duration = std::time::Duration::from_millis(simulated_time);
+                (simulated_duration, std::time::Duration::from_millis(0), format!("Core ML not available on this platform"))
+            }
+        } else {
+            let simulated_time = self.simulate_inference_time(&request).await;
+            let simulated_duration = std::time::Duration::from_millis(simulated_time);
+            (simulated_duration, std::time::Duration::from_millis(0), format!("Core ML not available for model: {}", model_name))
+        };
+
+        let total_time = overall_start.elapsed();
+
+        // Create detailed timing information
+        let timing = InferenceTiming {
+            total_time_ms: total_time.as_millis() as u64,
+            inference_time_ms: inference_time.as_millis() as u64,
+            input_prep_time_ms: input_prep_time.as_millis() as u64,
+            output_proc_time_ms: output_proc_time.as_millis() as u64,
+            throughput_inferences_per_sec: if inference_time.as_nanos() > 0 {
+                1_000_000_000.0 / inference_time.as_nanos() as f64
+            } else {
+                0.0
+            },
+            efficiency_score: self.calculate_timing_efficiency(&inference_time, &request),
+            optimization_target: request.optimization_target.clone(),
+            model_name: request.model_name.clone(),
+            input_tokens: self.estimate_token_count(&request.input),
+            output_tokens: self.estimate_output_tokens(request.max_tokens),
+        };
+
+        // Update performance metrics
+        self.update_performance_metrics(&timing).await;
+
+        let tokens_generated = request.max_tokens.unwrap_or(100);
+
+        Ok(InferenceResult {
+            id: request.id,
+            model_name: request.model_name,
+            output,
+            confidence: 0.0, // Will be updated by output processing
+            tokens_generated,
+            inference_time_ms: timing.total_time_ms,
+            timing: Some(timing),
+        })
+    }
+
+    /// Update performance metrics in the metrics system
+    async fn update_performance_metrics(&self, timing: &InferenceTiming) {
+        // Record timing metrics
+        if let Some(metrics) = &self.metrics_collector {
+            let _ = metrics.record_histogram(
+                "coreml_inference_time_ms",
+                timing.inference_time_ms as f64,
+                &[("model", &timing.model_name), ("target", &format!("{:?}", timing.optimization_target))]
+            ).await;
+
+            let _ = metrics.record_histogram(
+                "coreml_total_time_ms",
+                timing.total_time_ms as f64,
+                &[("model", &timing.model_name)]
+            ).await;
+
+            let _ = metrics.update_gauge(
+                "coreml_throughput_inferences_per_sec",
+                timing.throughput_inferences_per_sec,
+                &[("model", &timing.model_name)]
+            ).await;
+
+            let _ = metrics.update_gauge(
+                "coreml_efficiency_score",
+                timing.efficiency_score as f64,
+                &[("model", &timing.model_name)]
+            ).await;
+        }
+    }
+
+    /// Prepare inference input from InferenceRequest with proper validation and preprocessing
+    pub async fn prepare_inference_input(&self, request: &crate::types::InferenceRequest) -> Result<CFDictionary<CFString, *const std::ffi::c_void>> {
+        use core_foundation::dictionary::CFMutableDictionary;
+
+        let mut input_dict = CFMutableDictionary::<CFString, *const std::ffi::c_void>::new();
+
+        // Determine input format and apply appropriate preprocessing
+        let input_format = self.detect_input_format(&request.input)?;
+
+        match input_format {
+            InputFormat::RawText => {
+                self.prepare_text_input(&mut input_dict, &request.input, request.max_tokens).await?;
+            }
+            InputFormat::JsonStructured => {
+                self.prepare_structured_input(&mut input_dict, &request.input).await?;
+            }
+            InputFormat::ImagePath => {
+                self.prepare_image_input(&mut input_dict, &request.input).await?;
+            }
+            InputFormat::Multimodal => {
+                self.prepare_multimodal_input(&mut input_dict, &request.input).await?;
+            }
+        }
+
+        // Apply model-specific preprocessing
+        self.apply_model_specific_preprocessing(&mut input_dict, &request.model_name).await?;
+
+        // Validate input dimensions and constraints
+        self.validate_input_constraints(&input_dict, request)?;
+
+        Ok(input_dict.to_immutable())
+    }
+
+    /// Detect the format of input data
+    fn detect_input_format(&self, input: &str) -> Result<InputFormat> {
+        // Try to parse as JSON first
+        if let Ok(json_value) = serde_json::from_str::<serde_json::Value>(input) {
+            if json_value.is_object() {
+                // Check for multimodal indicators
+                if json_value.get("text").is_some() && json_value.get("image").is_some() {
+                    return Ok(InputFormat::Multimodal);
+                }
+                // Check for image path
+                if json_value.get("image").is_some() && json_value.get("text").is_none() {
+                    return Ok(InputFormat::ImagePath);
+                }
+                // Structured input
+                return Ok(InputFormat::JsonStructured);
+            }
+        }
+
+        // Check if it's a file path (simple heuristic)
+        if input.contains('.') && (input.contains('/') || input.contains('\\')) {
+            let path = std::path::Path::new(input);
+            if path.exists() {
+                if let Some(ext) = path.extension() {
+                    if matches!(ext.to_str(), Some("jpg") | Some("jpeg") | Some("png") | Some("bmp") | Some("tiff")) {
+                        return Ok(InputFormat::ImagePath);
+                    }
+                }
+            }
+        }
+
+        // Default to raw text
+        Ok(InputFormat::RawText)
+    }
+
+    /// Prepare text input with proper tokenization and batching
+    async fn prepare_text_input(
+        &self,
+        input_dict: &mut CFMutableDictionary<CFString, *const std::ffi::c_void>,
+        text: &str,
+        max_tokens: Option<u32>
+    ) -> Result<()> {
+        // Determine sequence length (use max_tokens if provided, otherwise config default)
+        let max_length = max_tokens
+            .map(|mt| mt as usize)
+            .unwrap_or(self.config.max_sequence_length);
+
+        // Create text input dictionary with tokenization
+        let text_dict = self.create_text_input_array(text).await?;
+
+        // Merge into main input dictionary
+        let (keys, values) = text_dict.get_keys_and_values();
+        for (key_ptr, value_ptr) in keys.into_iter().zip(values.into_iter()) {
+            unsafe {
+                let key_cf = CFString::wrap_under_get_rule(key_ptr as *mut _);
+                input_dict.set(key_cf, value_ptr);
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Prepare structured input from JSON
+    async fn prepare_structured_input(
+        &self,
+        input_dict: &mut CFMutableDictionary<CFString, *const std::ffi::c_void>,
+        json_input: &str
+    ) -> Result<()> {
+        let input_data: serde_json::Value = serde_json::from_str(json_input)
+            .context("Failed to parse structured input JSON")?;
+
+        // Handle text input
+        if let Some(text_input) = input_data.get("text") {
+            if let Some(text) = text_input.as_str() {
+                let text_dict = self.create_text_input_array(text).await?;
+                let (keys, values) = text_dict.get_keys_and_values();
+                for (key_ptr, value_ptr) in keys.into_iter().zip(values.into_iter()) {
+                    unsafe {
+                        let key_cf = CFString::wrap_under_get_rule(key_ptr as *mut _);
+                        input_dict.set(key_cf, value_ptr);
+                    }
+                }
+            }
+        }
+
+        // Handle image input
+        if let Some(image_input) = input_data.get("image") {
+            if let Some(image_path) = image_input.as_str() {
+                let image_dict = self.create_image_input_array(image_path).await?;
+                let key = CFString::new("input_image");
+                input_dict.set(key, image_dict as *const std::ffi::c_void);
+            }
+        }
+
+        // Handle feature arrays
+        if let Some(features) = input_data.get("features") {
+            if let Some(feature_array) = features.as_array() {
+                let ml_array = self.create_feature_input_array(feature_array)?;
+                let key = CFString::new("input_features");
+                input_dict.set(key, ml_array as *const std::ffi::c_void);
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Prepare image input with preprocessing
+    async fn prepare_image_input(
+        &self,
+        input_dict: &mut CFMutableDictionary<CFString, *const std::ffi::c_void>,
+        image_path: &str
+    ) -> Result<()> {
+        let ml_array = self.create_image_input_array(image_path).await?;
+        let key = CFString::new("input_image");
+        input_dict.set(key, ml_array as *const std::ffi::c_void);
+        Ok(())
+    }
+
+    /// Prepare multimodal input (text + image)
+    async fn prepare_multimodal_input(
+        &self,
+        input_dict: &mut CFMutableDictionary<CFString, *const std::ffi::c_void>,
+        json_input: &str
+    ) -> Result<()> {
+        let input_data: serde_json::Value = serde_json::from_str(json_input)
+            .context("Failed to parse multimodal input JSON")?;
+
+        // Prepare text component
+        if let Some(text_input) = input_data.get("text") {
+            if let Some(text) = text_input.as_str() {
+                let text_dict = self.create_text_input_array(text).await?;
+                let (keys, values) = text_dict.get_keys_and_values();
+                for (key_ptr, value_ptr) in keys.into_iter().zip(values.into_iter()) {
+                    unsafe {
+                        let key_cf = CFString::wrap_under_get_rule(key_ptr as *mut _);
+                        input_dict.set(key_cf, value_ptr);
+                    }
+                }
+            }
+        }
+
+        // Prepare image component
+        if let Some(image_input) = input_data.get("image") {
+            if let Some(image_path) = image_input.as_str() {
+                let image_dict = self.create_image_input_array(image_path).await?;
+                let key = CFString::new("input_image");
+                input_dict.set(key, image_dict as *const std::ffi::c_void);
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Apply model-specific preprocessing
+    async fn apply_model_specific_preprocessing(
+        &self,
+        input_dict: &mut CFMutableDictionary<CFString, *const std::ffi::c_void>,
+        model_name: &str
+    ) -> Result<()> {
+        // Apply preprocessing based on model type
+        if model_name.to_lowercase().contains("bert") || model_name.to_lowercase().contains("transformer") {
+            // For transformer models, ensure token_type_ids are added if needed
+            self.add_token_type_ids_if_needed(input_dict).await?;
+        }
+
+        Ok(())
+    }
+
+    /// Add token_type_ids for models that require them
+    async fn add_token_type_ids_if_needed(
+        &self,
+        input_dict: &mut CFMutableDictionary<CFString, *const std::ffi::c_void>
+    ) -> Result<()> {
+        // Check if input_ids exists and token_type_ids is needed
+        let input_ids_key = CFString::new("input_ids");
+        if input_dict.find(&input_ids_key).is_some() {
+            let token_type_ids_key = CFString::new("token_type_ids");
+
+            // For single sequence, all token_type_ids are 0
+            unsafe {
+                let shape = vec![1usize, self.config.max_sequence_length];
+                let token_type_ids = Self::create_ml_multiarray_int32(
+                    &vec![0i64; self.config.max_sequence_length], &shape
+                )?;
+                input_dict.set(token_type_ids_key, token_type_ids);
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Validate input constraints (dimensions, types, etc.)
+    fn validate_input_constraints(
+        &self,
+        input_dict: &CFMutableDictionary<CFString, *const std::ffi::c_void>,
+        request: &crate::types::InferenceRequest
+    ) -> Result<()> {
+        // Check sequence length constraints
+        if let Some(max_tokens) = request.max_tokens {
+            self.validate_sequence_length(input_dict, max_tokens as usize)?;
+        }
+
+        // Check for required inputs based on model type
+        self.validate_required_inputs(input_dict, &request.model_name)?;
+
+        Ok(())
+    }
+
+    /// Validate sequence length constraints
+    fn validate_sequence_length(
+        &self,
+        input_dict: &CFMutableDictionary<CFString, *const std::ffi::c_void>,
+        max_tokens: usize
+    ) -> Result<()> {
+        let input_ids_key = CFString::new("input_ids");
+        if let Some(input_ids_ptr) = input_dict.find(&input_ids_key) {
+            unsafe {
+                let ml_array: *mut objc::runtime::Object = input_ids_ptr as *mut _;
+                let is_ml_array: bool = msg_send![ml_array, isKindOfClass: class!(MLMultiArray)];
+                if is_ml_array {
+                    let shape: *mut objc::runtime::Object = msg_send![ml_array, shape];
+                    if !shape.is_null() {
+                        let shape_count: usize = msg_send![shape, count];
+                        if shape_count >= 2 {
+                            let seq_len: usize = msg_send![shape, objectAtIndex: shape_count - 1];
+                            if seq_len > max_tokens {
+                                return Err(anyhow::anyhow!(
+                                    "Sequence length {} exceeds maximum allowed tokens {}",
+                                    seq_len, max_tokens
+                                ));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Validate that required inputs are present
+    fn validate_required_inputs(
+        &self,
+        input_dict: &CFMutableDictionary<CFString, *const std::ffi::c_void>,
+        model_name: &str
+    ) -> Result<()> {
+        let model_lower = model_name.to_lowercase();
+
+        if model_lower.contains("bert") || model_lower.contains("transformer") || model_lower.contains("text") {
+            let input_ids_key = CFString::new("input_ids");
+            if input_dict.find(&input_ids_key).is_none() {
+                return Err(anyhow::anyhow!("Text model requires input_ids"));
+            }
+        }
+
+        if model_lower.contains("clip") || model_lower.contains("vision") {
+            let image_key = CFString::new("input_image");
+            if input_dict.find(&image_key).is_none() {
+                return Err(anyhow::anyhow!("Vision model requires input_image"));
+            }
+        }
+
+        Ok(())
+    }
+}
+
+/// Input format types for automatic detection
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum InputFormat {
+    RawText,
+    JsonStructured,
+    ImagePath,
+    Multimodal,
 }
 
 #[cfg(not(target_os = "macos"))]
@@ -1822,21 +2773,35 @@ impl CoreMLManager {
                         .unwrap()
                 };
 
-                match core_ml_model.predict(&request.input).await {
-                    Ok(output_text) => {
-                        let elapsed = start_time.elapsed().as_millis() as u64;
-                        (elapsed, output_text)
+                // Prepare input using the new comprehensive input preparation
+                match core_ml_model.prepare_inference_input(&request).await {
+                    Ok(prepared_input) => {
+                        match core_ml_model.execute_prediction(&prepared_input).await {
+                            Ok(output_dict) => {
+                                // Process the output dictionary
+                                match core_ml_model.process_outputs(&output_dict).await {
+                                    Ok(output_text) => {
+                                        let elapsed = start_time.elapsed().as_millis() as u64;
+                                        (elapsed, output_text)
+                                    }
+                                    Err(e) => {
+                                        warn!("Core ML output processing failed: {}", e);
+                                        let simulated_time = self.simulate_inference_time(&request).await;
+                                        (simulated_time, format!("Core ML processing failed: {}", e))
+                                    }
+                                }
+                            }
+                            Err(e) => {
+                                warn!("Core ML inference execution failed: {}", e);
+                                let simulated_time = self.simulate_inference_time(&request).await;
+                                (simulated_time, format!("Core ML execution failed: {}", e))
+                            }
+                        }
                     }
                     Err(e) => {
-                        warn!(
-                            "Core ML inference failed, falling back to simulation: {}",
-                            e
-                        );
+                        warn!("Core ML input preparation failed: {}", e);
                         let simulated_time = self.simulate_inference_time(&request).await;
-                        (
-                            simulated_time,
-                            format!("Core ML generated output for: {}", request.input),
-                        )
+                        (simulated_time, format!("Core ML input preparation failed: {}", e))
                     }
                 }
             }

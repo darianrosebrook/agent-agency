@@ -89,6 +89,31 @@ pub enum InferencePriority {
     Critical = 4,
 }
 
+/// Detailed inference timing information
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InferenceTiming {
+    /// Total end-to-end time in milliseconds
+    pub total_time_ms: u64,
+    /// Core inference execution time in milliseconds
+    pub inference_time_ms: u64,
+    /// Input preparation time in milliseconds
+    pub input_prep_time_ms: u64,
+    /// Output processing time in milliseconds
+    pub output_proc_time_ms: u64,
+    /// Throughput in inferences per second
+    pub throughput_inferences_per_sec: f64,
+    /// Efficiency score (0.0-1.0, higher is better)
+    pub efficiency_score: f32,
+    /// Optimization target used
+    pub optimization_target: OptimizationTarget,
+    /// Model name
+    pub model_name: String,
+    /// Estimated input token count
+    pub input_tokens: usize,
+    /// Estimated output token count
+    pub output_tokens: usize,
+}
+
 impl Display for InferencePriority {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {

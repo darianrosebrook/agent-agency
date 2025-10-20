@@ -1,10 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import {
-  SystemHealthOverviewProps,
-  SystemHealth,
-} from "@/types/metrics";
+import { SystemHealthOverviewProps, SystemHealth } from "@/types/metrics";
 import { metricsApiClient, MetricsApiError } from "@/lib/metrics-api";
 import MetricTile from "./MetricTile";
 import styles from "./SystemHealthOverview.module.scss";
@@ -18,7 +15,9 @@ export default function SystemHealthOverview({
   const [healthStatus, setHealthStatus] = useState<SystemHealth | null>(
     externalHealthStatus ?? null
   );
-  const [isLoading, setIsLoading] = useState(externalLoading ?? !externalHealthStatus);
+  const [isLoading, setIsLoading] = useState(
+    externalLoading ?? !externalHealthStatus
+  );
   const [error, setError] = useState<string | null>(externalError ?? null);
 
   // Load health status if not provided externally
@@ -115,10 +114,12 @@ export default function SystemHealthOverview({
         <div className={styles.error}>
           <h3>Failed to load system health</h3>
           <p>{error}</p>
-          <button onClick={() => {
-            loadHealthStatus();
-            onRetry?.();
-          }}>
+          <button
+            onClick={() => {
+              loadHealthStatus();
+              onRetry?.();
+            }}
+          >
             Retry
           </button>
         </div>
@@ -153,10 +154,15 @@ export default function SystemHealthOverview({
     <div className={styles.healthOverview}>
       <div className={styles.header}>
         <h2>System Health Overview</h2>
-        <div className={`${styles.overallStatus} ${getStatusColor(healthStatus.status)}`}>
+        <div
+          className={`${styles.overallStatus} ${getStatusColor(
+            healthStatus.status
+          )}`}
+        >
           <span className={styles.statusDot}></span>
           <span className={styles.statusText}>
-            {healthStatus.status.charAt(0).toUpperCase() + healthStatus.status.slice(1)}
+            {healthStatus.status.charAt(0).toUpperCase() +
+              healthStatus.status.slice(1)}
           </span>
         </div>
       </div>
@@ -173,8 +179,11 @@ export default function SystemHealthOverview({
           title="Components"
           value={`${healthyComponents}/${totalComponents}`}
           status={
-            healthyComponents === totalComponents ? "success" :
-            healthyComponents > totalComponents / 2 ? "warning" : "error"
+            healthyComponents === totalComponents
+              ? "success"
+              : healthyComponents > totalComponents / 2
+              ? "warning"
+              : "error"
           }
           icon="🔧"
         />
@@ -200,7 +209,9 @@ export default function SystemHealthOverview({
           {healthStatus.components.map((component) => (
             <div
               key={component.name}
-              className={`${styles.componentCard} ${getStatusColor(component.status)}`}
+              className={`${styles.componentCard} ${getStatusColor(
+                component.status
+              )}`}
             >
               <div className={styles.componentHeader}>
                 <span className={styles.componentIcon}>
@@ -260,7 +271,9 @@ export default function SystemHealthOverview({
                 <h4 className={styles.alertTitle}>{alert.title}</h4>
                 <p className={styles.alertDescription}>{alert.description}</p>
                 {alert.component && (
-                  <span className={styles.alertComponent}>{alert.component}</span>
+                  <span className={styles.alertComponent}>
+                    {alert.component}
+                  </span>
                 )}
               </div>
             ))}

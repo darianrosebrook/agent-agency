@@ -33,7 +33,9 @@ export default function BusinessIntelligence({
       setIsLoading(true);
       setError(null);
 
-      const businessData = await metricsApiClient.getBusinessMetrics(range as any);
+      const businessData = await metricsApiClient.getBusinessMetrics(
+        range as any
+      );
       setMetrics(businessData);
     } catch (err) {
       const errorMessage =
@@ -50,9 +52,10 @@ export default function BusinessIntelligence({
 
   // Handle time range changes
   const handleTimeRangeChange = (newRange: string) => {
-    setSelectedTimeRange(newRange);
-    onTimeRangeChange?.(newRange);
-    loadBusinessMetrics(newRange);
+    const validRange = newRange as "1h" | "6h" | "24h" | "7d" | "30d";
+    setSelectedTimeRange(validRange);
+    onTimeRangeChange?.(validRange);
+    loadBusinessMetrics(validRange);
   };
 
   // Initial load and external prop updates
@@ -104,7 +107,10 @@ export default function BusinessIntelligence({
         <div className={styles.emptyState}>
           <div className={styles.emptyIcon}>📊</div>
           <h3>Business Intelligence</h3>
-          <p>Real-time business metrics and KPIs require V3 business intelligence APIs.</p>
+          <p>
+            Real-time business metrics and KPIs require V3 business intelligence
+            APIs.
+          </p>
           <div className={styles.emptyActions}>
             <button className={styles.secondaryButton} disabled>
               Connect to Business Metrics API
@@ -122,11 +128,11 @@ export default function BusinessIntelligence({
       <div className={styles.header}>
         <h2>Business Intelligence</h2>
         <div className={styles.timeRangeSelector}>
-          {(['1h', '6h', '24h', '7d', '30d'] as const).map((range) => (
+          {(["1h", "6h", "24h", "7d", "30d"] as const).map((range) => (
             <button
               key={range}
               className={`${styles.timeRangeButton} ${
-                selectedTimeRange === range ? styles.active : ''
+                selectedTimeRange === range ? styles.active : ""
               }`}
               onClick={() => handleTimeRangeChange(range)}
             >
@@ -154,7 +160,13 @@ export default function BusinessIntelligence({
         <MetricTile
           title="Success Rate"
           value={`${(businessMetrics.task_success_rate * 100).toFixed(1)}%`}
-          status={businessMetrics.task_success_rate >= 0.95 ? "success" : businessMetrics.task_success_rate >= 0.8 ? "warning" : "error"}
+          status={
+            businessMetrics.task_success_rate >= 0.95
+              ? "success"
+              : businessMetrics.task_success_rate >= 0.8
+              ? "warning"
+              : "error"
+          }
           icon="🎯"
           format="percentage"
         />
@@ -162,7 +174,13 @@ export default function BusinessIntelligence({
         <MetricTile
           title="Avg Completion Time"
           value={businessMetrics.average_task_completion_time_ms}
-          status={businessMetrics.average_task_completion_time_ms < 300000 ? "success" : businessMetrics.average_task_completion_time_ms < 900000 ? "warning" : "error"}
+          status={
+            businessMetrics.average_task_completion_time_ms < 300000
+              ? "success"
+              : businessMetrics.average_task_completion_time_ms < 900000
+              ? "warning"
+              : "error"
+          }
           icon="⏱️"
           format="duration"
         />
@@ -181,14 +199,26 @@ export default function BusinessIntelligence({
           <MetricTile
             title="Quality Checks Failed"
             value={businessMetrics.quality_checks_failed}
-            status={businessMetrics.quality_checks_failed === 0 ? "success" : businessMetrics.quality_checks_failed < 10 ? "warning" : "error"}
+            status={
+              businessMetrics.quality_checks_failed === 0
+                ? "success"
+                : businessMetrics.quality_checks_failed < 10
+                ? "warning"
+                : "error"
+            }
             icon="❌"
           />
 
           <MetricTile
             title="Average Quality Score"
             value={`${businessMetrics.average_quality_score.toFixed(1)}%`}
-            status={businessMetrics.average_quality_score >= 85 ? "success" : businessMetrics.average_quality_score >= 70 ? "warning" : "error"}
+            status={
+              businessMetrics.average_quality_score >= 85
+                ? "success"
+                : businessMetrics.average_quality_score >= 70
+                ? "warning"
+                : "error"
+            }
             icon="📊"
             format="percentage"
           />
@@ -201,7 +231,13 @@ export default function BusinessIntelligence({
           <MetricTile
             title="Total Cost Today"
             value={businessMetrics.total_cost_today}
-            status={businessMetrics.total_cost_today < 100 ? "success" : businessMetrics.total_cost_today < 500 ? "warning" : "error"}
+            status={
+              businessMetrics.total_cost_today < 100
+                ? "success"
+                : businessMetrics.total_cost_today < 500
+                ? "warning"
+                : "error"
+            }
             icon="💰"
             format="currency"
           />
@@ -209,7 +245,13 @@ export default function BusinessIntelligence({
           <MetricTile
             title="Cost Per Task"
             value={businessMetrics.cost_per_task}
-            status={businessMetrics.cost_per_task < 10 ? "success" : businessMetrics.cost_per_task < 25 ? "warning" : "error"}
+            status={
+              businessMetrics.cost_per_task < 10
+                ? "success"
+                : businessMetrics.cost_per_task < 25
+                ? "warning"
+                : "error"
+            }
             icon="💵"
             format="currency"
           />
@@ -218,15 +260,28 @@ export default function BusinessIntelligence({
             title="Efficiency Trend"
             value={`${businessMetrics.efficiency_trend.toFixed(1)}%`}
             change={businessMetrics.efficiency_trend}
-            status={businessMetrics.efficiency_trend > 0 ? "success" : businessMetrics.efficiency_trend > -10 ? "warning" : "error"}
+            status={
+              businessMetrics.efficiency_trend > 0
+                ? "success"
+                : businessMetrics.efficiency_trend > -10
+                ? "warning"
+                : "error"
+            }
             icon="📈"
             format="percentage"
-            trend={businessMetrics.efficiency_trend > 0 ? "up" : businessMetrics.efficiency_trend < 0 ? "down" : "stable"}
+            trend={
+              businessMetrics.efficiency_trend > 0
+                ? "up"
+                : businessMetrics.efficiency_trend < 0
+                ? "down"
+                : "stable"
+            }
           />
         </div>
       </div>
 
-      {(businessMetrics.active_sessions !== undefined || businessMetrics.average_session_duration_ms !== undefined) && (
+      {(businessMetrics.active_sessions !== undefined ||
+        businessMetrics.average_session_duration_ms !== undefined) && (
         <div className={styles.engagementSection}>
           <h3>User Engagement</h3>
           <div className={styles.engagementMetrics}>
@@ -243,7 +298,13 @@ export default function BusinessIntelligence({
               <MetricTile
                 title="Avg Session Duration"
                 value={businessMetrics.average_session_duration_ms}
-                status={businessMetrics.average_session_duration_ms > 300000 ? "success" : businessMetrics.average_session_duration_ms > 60000 ? "warning" : "error"}
+                status={
+                  businessMetrics.average_session_duration_ms > 300000
+                    ? "success"
+                    : businessMetrics.average_session_duration_ms > 60000
+                    ? "warning"
+                    : "error"
+                }
                 icon="⏱️"
                 format="duration"
               />
@@ -258,48 +319,80 @@ export default function BusinessIntelligence({
           <div className={styles.indicator}>
             <div className={styles.indicatorLabel}>
               <span className={styles.indicatorIcon}>
-                {businessMetrics.task_success_rate >= 0.9 ? "✅" : businessMetrics.task_success_rate >= 0.7 ? "⚠️" : "❌"}
+                {businessMetrics.task_success_rate >= 0.9
+                  ? "✅"
+                  : businessMetrics.task_success_rate >= 0.7
+                  ? "⚠️"
+                  : "❌"}
               </span>
               <span>Task Success Rate</span>
             </div>
             <div className={styles.indicatorValue}>
-              {businessMetrics.task_success_rate >= 0.9 ? "Excellent" : businessMetrics.task_success_rate >= 0.7 ? "Good" : "Needs Improvement"}
+              {businessMetrics.task_success_rate >= 0.9
+                ? "Excellent"
+                : businessMetrics.task_success_rate >= 0.7
+                ? "Good"
+                : "Needs Improvement"}
             </div>
           </div>
 
           <div className={styles.indicator}>
             <div className={styles.indicatorLabel}>
               <span className={styles.indicatorIcon}>
-                {businessMetrics.average_task_completion_time_ms < 600000 ? "✅" : businessMetrics.average_task_completion_time_ms < 1800000 ? "⚠️" : "❌"}
+                {businessMetrics.average_task_completion_time_ms < 600000
+                  ? "✅"
+                  : businessMetrics.average_task_completion_time_ms < 1800000
+                  ? "⚠️"
+                  : "❌"}
               </span>
               <span>Task Completion Speed</span>
             </div>
             <div className={styles.indicatorValue}>
-              {businessMetrics.average_task_completion_time_ms < 600000 ? "Fast" : businessMetrics.average_task_completion_time_ms < 1800000 ? "Moderate" : "Slow"}
+              {businessMetrics.average_task_completion_time_ms < 600000
+                ? "Fast"
+                : businessMetrics.average_task_completion_time_ms < 1800000
+                ? "Moderate"
+                : "Slow"}
             </div>
           </div>
 
           <div className={styles.indicator}>
             <div className={styles.indicatorLabel}>
               <span className={styles.indicatorIcon}>
-                {businessMetrics.cost_per_task < 20 ? "✅" : businessMetrics.cost_per_task < 50 ? "⚠️" : "❌"}
+                {businessMetrics.cost_per_task < 20
+                  ? "✅"
+                  : businessMetrics.cost_per_task < 50
+                  ? "⚠️"
+                  : "❌"}
               </span>
               <span>Cost Efficiency</span>
             </div>
             <div className={styles.indicatorValue}>
-              {businessMetrics.cost_per_task < 20 ? "Efficient" : businessMetrics.cost_per_task < 50 ? "Moderate" : "High Cost"}
+              {businessMetrics.cost_per_task < 20
+                ? "Efficient"
+                : businessMetrics.cost_per_task < 50
+                ? "Moderate"
+                : "High Cost"}
             </div>
           </div>
 
           <div className={styles.indicator}>
             <div className={styles.indicatorLabel}>
               <span className={styles.indicatorIcon}>
-                {businessMetrics.quality_checks_failed === 0 ? "✅" : businessMetrics.quality_checks_failed < 5 ? "⚠️" : "❌"}
+                {businessMetrics.quality_checks_failed === 0
+                  ? "✅"
+                  : businessMetrics.quality_checks_failed < 5
+                  ? "⚠️"
+                  : "❌"}
               </span>
               <span>Quality Assurance</span>
             </div>
             <div className={styles.indicatorValue}>
-              {businessMetrics.quality_checks_failed === 0 ? "Perfect" : businessMetrics.quality_checks_failed < 5 ? "Good" : "Needs Attention"}
+              {businessMetrics.quality_checks_failed === 0
+                ? "Perfect"
+                : businessMetrics.quality_checks_failed < 5
+                ? "Good"
+                : "Needs Attention"}
             </div>
           </div>
         </div>

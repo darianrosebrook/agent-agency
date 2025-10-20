@@ -34,7 +34,12 @@ export interface HealthAlert {
 export interface AgentPerformance {
   agent_id: string;
   name: string;
-  type: "planning" | "execution" | "coordination" | "validation" | "specialized";
+  type:
+    | "planning"
+    | "execution"
+    | "coordination"
+    | "validation"
+    | "specialized";
   status: "active" | "idle" | "error" | "maintenance";
 
   // Performance metrics
@@ -108,7 +113,11 @@ export interface BusinessMetrics {
 
 // Real-time Metrics Stream
 export interface MetricsStreamEvent {
-  type: "health_update" | "agent_performance" | "coordination_update" | "business_metrics";
+  type:
+    | "health_update"
+    | "agent_performance"
+    | "coordination_update"
+    | "business_metrics";
   timestamp: string;
   data: any;
   event_id: string;
@@ -181,7 +190,7 @@ export interface SystemHealthOverviewProps {
 }
 
 export interface AgentPerformanceGridProps {
-  agents: AgentPerformance[];
+  agents?: AgentPerformance[];
   isLoading?: boolean;
   error?: string | null;
   onAgentSelect?: (agentId: string) => void;
@@ -255,7 +264,11 @@ export interface GetAlertsResponse {
 
 // Error Types
 export interface MetricsError {
-  code: "metrics_unavailable" | "agent_not_found" | "stream_error" | "server_error";
+  code:
+    | "metrics_unavailable"
+    | "agent_not_found"
+    | "stream_error"
+    | "server_error";
   message: string;
   metric_name?: string;
   timestamp: string;

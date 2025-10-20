@@ -1,10 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import {
-  AgentPerformanceGridProps,
-  AgentPerformance,
-} from "@/types/metrics";
+import { AgentPerformanceGridProps, AgentPerformance } from "@/types/metrics";
 import { metricsApiClient, MetricsApiError } from "@/lib/metrics-api";
 import MetricTile from "./MetricTile";
 import styles from "./AgentPerformanceGrid.module.scss";
@@ -92,12 +89,14 @@ export default function AgentPerformanceGrid({
     }
   };
 
-// Format performance score for status
-const getPerformanceStatus = (score: number): "success" | "warning" | "error" => {
-  if (score >= 85) return "success";
-  if (score >= 70) return "warning";
-  return "error";
-};
+  // Format performance score for status
+  const getPerformanceStatus = (
+    score: number
+  ): "success" | "warning" | "error" => {
+    if (score >= 85) return "success";
+    if (score >= 70) return "warning";
+    return "error";
+  };
 
   if (isLoading) {
     return (
@@ -128,7 +127,10 @@ const getPerformanceStatus = (score: number): "success" | "warning" | "error" =>
         <div className={styles.emptyState}>
           <div className={styles.emptyIcon}>🤖</div>
           <h3>Agent Performance Monitoring</h3>
-          <p>Real-time agent performance metrics require V3 agent monitoring APIs.</p>
+          <p>
+            Real-time agent performance metrics require V3 agent monitoring
+            APIs.
+          </p>
           <div className={styles.emptyActions}>
             <button className={styles.secondaryButton} disabled>
               Connect to Agent Metrics API
@@ -145,7 +147,8 @@ const getPerformanceStatus = (score: number): "success" | "warning" | "error" =>
         <h2>Agent Performance</h2>
         <div className={styles.summary}>
           <span className={styles.summaryText}>
-            {agents.length} agents • {agents.filter(a => a.status === "active").length} active
+            {agents.length} agents •{" "}
+            {agents.filter((a) => a.status === "active").length} active
           </span>
         </div>
       </div>
@@ -169,12 +172,17 @@ const getPerformanceStatus = (score: number): "success" | "warning" | "error" =>
                 <div className={styles.agentInfo}>
                   <h3 className={styles.agentName}>{agent.name}</h3>
                   <span className={styles.agentType}>
-                    {agent.type.charAt(0).toUpperCase() + agent.type.slice(1)} Agent
+                    {agent.type.charAt(0).toUpperCase() + agent.type.slice(1)}{" "}
+                    Agent
                   </span>
                 </div>
               </div>
 
-              <div className={`${styles.agentStatus} ${getStatusColor(agent.status)}`}>
+              <div
+                className={`${styles.agentStatus} ${getStatusColor(
+                  agent.status
+                )}`}
+              >
                 <span className={styles.statusDot}></span>
                 <span className={styles.statusText}>
                   {agent.status.charAt(0).toUpperCase() + agent.status.slice(1)}
@@ -187,7 +195,13 @@ const getPerformanceStatus = (score: number): "success" | "warning" | "error" =>
                 <MetricTile
                   title="Success Rate"
                   value={`${(agent.success_rate * 100).toFixed(1)}%`}
-                  status={agent.success_rate >= 0.95 ? "success" : agent.success_rate >= 0.8 ? "warning" : "error"}
+                  status={
+                    agent.success_rate >= 0.95
+                      ? "success"
+                      : agent.success_rate >= 0.8
+                      ? "warning"
+                      : "error"
+                  }
                   format="percentage"
                 />
 
@@ -195,13 +209,25 @@ const getPerformanceStatus = (score: number): "success" | "warning" | "error" =>
                   title="Response Time"
                   value={agent.average_response_time_ms}
                   format="duration"
-                  status={agent.average_response_time_ms < 1000 ? "success" : agent.average_response_time_ms < 5000 ? "warning" : "error"}
+                  status={
+                    agent.average_response_time_ms < 1000
+                      ? "success"
+                      : agent.average_response_time_ms < 5000
+                      ? "warning"
+                      : "error"
+                  }
                 />
 
                 <MetricTile
                   title="Tasks/Hour"
                   value={agent.throughput_per_hour}
-                  status={agent.throughput_per_hour > 10 ? "success" : agent.throughput_per_hour > 5 ? "warning" : "error"}
+                  status={
+                    agent.throughput_per_hour > 10
+                      ? "success"
+                      : agent.throughput_per_hour > 5
+                      ? "warning"
+                      : "error"
+                  }
                 />
               </div>
 
@@ -210,14 +236,26 @@ const getPerformanceStatus = (score: number): "success" | "warning" | "error" =>
                   title="CPU Usage"
                   value={`${agent.cpu_usage_percent.toFixed(1)}%`}
                   format="percentage"
-                  status={agent.cpu_usage_percent < 70 ? "success" : agent.cpu_usage_percent < 90 ? "warning" : "error"}
+                  status={
+                    agent.cpu_usage_percent < 70
+                      ? "success"
+                      : agent.cpu_usage_percent < 90
+                      ? "warning"
+                      : "error"
+                  }
                 />
 
                 <MetricTile
                   title="Memory"
                   value={agent.memory_usage_mb}
                   format="bytes"
-                  status={agent.memory_usage_mb < 500 ? "success" : agent.memory_usage_mb < 1000 ? "warning" : "error"}
+                  status={
+                    agent.memory_usage_mb < 500
+                      ? "success"
+                      : agent.memory_usage_mb < 1000
+                      ? "warning"
+                      : "error"
+                  }
                 />
 
                 <MetricTile
@@ -231,7 +269,9 @@ const getPerformanceStatus = (score: number): "success" | "warning" | "error" =>
               <div className={styles.agentStats}>
                 <div className={styles.stat}>
                   <span className={styles.statLabel}>Completed:</span>
-                  <span className={styles.statValue}>{agent.tasks_completed}</span>
+                  <span className={styles.statValue}>
+                    {agent.tasks_completed}
+                  </span>
                 </div>
                 <div className={styles.stat}>
                   <span className={styles.statLabel}>Failed:</span>
@@ -239,7 +279,9 @@ const getPerformanceStatus = (score: number): "success" | "warning" | "error" =>
                 </div>
                 <div className={styles.stat}>
                   <span className={styles.statLabel}>Active Connections:</span>
-                  <span className={styles.statValue}>{agent.active_connections}</span>
+                  <span className={styles.statValue}>
+                    {agent.active_connections}
+                  </span>
                 </div>
               </div>
 

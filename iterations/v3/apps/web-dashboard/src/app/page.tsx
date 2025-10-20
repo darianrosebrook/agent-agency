@@ -6,6 +6,7 @@ import Navigation from "@/components/shared/Navigation";
 import ChatInterface from "@/components/chat/ChatInterface";
 import TaskList from "@/components/tasks/TaskList";
 import SystemHealthMonitoring from "@/components/monitoring/SystemHealthOverview";
+import MetricsDashboard from "@/components/metrics/MetricsDashboard";
 import RealTimeMetricsStream from "@/components/monitoring/RealTimeMetricsStream";
 
 interface HealthStatus {
@@ -20,11 +21,28 @@ export default function Dashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeSection, setActiveSection] = useState<
-    "overview" | "chat" | "tasks" | "database" | "analytics"
+    "overview" | "metrics" | "chat" | "tasks" | "database" | "analytics"
   >("overview");
 
   // Warn about unimplemented features
   React.useEffect(() => {
+    if (activeSection === "metrics") {
+      console.warn(
+        "Centralized metrics dashboard not implemented - requires V3 metrics aggregation"
+      );
+      // TODO: Centralized Metrics Dashboard
+      // - [ ] Implement V3 metrics aggregation endpoints
+      // - [ ] Add cross-component metric correlation
+      // - [ ] Implement metrics filtering and time range sync
+      // - [ ] Add metric export capabilities (CSV, JSON)
+      // - [ ] Implement custom dashboard layouts
+      // - [ ] Add metric alerting and threshold monitoring
+      // - [ ] Integrate with task execution metrics
+      // - [ ] Add performance trend analysis
+      // - [ ] Implement metrics comparison tools
+      // - [ ] Add real-time metric subscriptions
+    }
+
     if (activeSection === "chat") {
       console.warn(
         "Chat interface not implemented - requires V3 chat WebSocket API"
@@ -190,6 +208,8 @@ export default function Dashboard() {
               />
             </div>
           )}
+
+          {activeSection === "metrics" && <MetricsDashboard />}
 
           {activeSection === "chat" && (
             <ChatInterface

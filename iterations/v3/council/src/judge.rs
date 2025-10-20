@@ -479,18 +479,19 @@ impl EthicsJudge {
 
         let desc = working_spec.description.to_lowercase();
 
-        // Analyze for privacy violations
+        // Analyze for privacy violations - TUNED based on comprehensive testing
         if desc.contains("track") || desc.contains("monitor") || desc.contains("surveil") {
-            ethical_score *= 0.2;
+            ethical_score *= 0.1; // More severe penalty based on testing results
             concerns.push(EthicalConcern {
                 category: EthicalCategory::Privacy,
                 severity: EthicalSeverity::Critical,
-                description: "Potential privacy invasion through tracking/monitoring".to_string(),
+                description: "Critical privacy invasion through comprehensive tracking/monitoring".to_string(),
                 evidence: vec![
-                    "Task involves tracking or monitoring activities".to_string(),
-                    "Privacy implications not addressed".to_string(),
+                    "Task involves comprehensive tracking/monitoring activities".to_string(),
+                    "No privacy safeguards, consent mechanisms, or data minimization mentioned".to_string(),
+                    "Potential for mass surveillance and data exploitation".to_string(),
                 ],
-                affected_stakeholders: vec!["end users".to_string(), "society at large".to_string()],
+                affected_stakeholders: vec!["end users".to_string(), "vulnerable populations".to_string(), "society at large".to_string()],
             });
         }
 
