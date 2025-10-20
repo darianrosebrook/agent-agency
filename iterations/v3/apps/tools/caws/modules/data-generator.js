@@ -71,11 +71,11 @@ function simulateTestHistoryFromGit() {
  */
 function countRustFiles() {
   // TODO: Implement proper file counting with exclusions
-  // - [ ] Count .rs files recursively
-  // - [ ] Exclude target/, .git/, and other build directories
-  // - [ ] Handle symlinks and special files
-  // - [ ] Provide caching for performance
-  // - [ ] Support different project structures
+  // - [ ] Count .rs files recursively with proper directory traversal
+  // - [ ] Exclude common non-source directories (node_modules, .git, target, etc.)
+  // - [ ] Handle symlinks and special files appropriately
+  // - [ ] Implement caching for performance in large repositories
+  // - [ ] Support different project structures and configurations
 
   function countFiles(dir) {
     let count = 0;

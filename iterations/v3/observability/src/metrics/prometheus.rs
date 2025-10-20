@@ -8,7 +8,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use tokio::sync::Mutex;
 use prometheus::{Encoder, TextEncoder, Registry, CounterVec, GaugeVec, HistogramVec, Counter, Gauge, Histogram};
-use crate::metrics::{MetricsBackend, MetricsBackendError};
+use crate::metrics::MetricsBackend;
 
 /// Prometheus metrics backend
 pub struct PrometheusMetrics {

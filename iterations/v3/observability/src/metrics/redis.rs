@@ -3,24 +3,22 @@
 //! Provides Redis-backed metrics collection with TTL support,
 //! connection pooling, and circuit breaker pattern for reliability.
 
-use std::collections::HashMap;
 use std::sync::Arc;
 use async_trait::async_trait;
-use redis::{Client, Commands, Connection, PipelineCommands};
-use tokio::sync::Mutex;
-use crate::metrics::{MetricsBackend, MetricsBackendError};
+use redis::{Client, Commands, Connection};
+use crate::metrics::MetricsBackend;
 
 /// Redis metrics backend with connection pooling and TTL
 pub struct RedisMetrics {
     client: Client,
-    ttl_seconds: usize,
+    ttl_seconds: i64,
     prefix: String,
     circuit_breaker: Arc<RedisCircuitBreaker>,
 }
 
 impl RedisMetrics {
     /// Create a new Redis metrics backend
-    pub fn new(redis_url: &str, prefix: &str, ttl_seconds: usize) -> Result<Self, MetricsBackendError> {
+    pub fn new(redis_url: &str, prefix: &str, ttl_seconds: i64) -> Result<Self, RedisMetricsError> {
         let client = Client::open(redis_url)
             .map_err(|e| MetricsBackendError::ConnectionError(e.to_string()))?;
 
@@ -33,14 +31,14 @@ impl RedisMetrics {
     }
 
     /// Create with default localhost configuration
-    pub fn localhost(prefix: &str) -> Result<Self, MetricsBackendError> {
+    pub fn localhost(prefix: &str) -> Result<Self, RedisMetricsError> {
         Self::new("redis://127.0.0.1:6379", prefix, 3600) // 1 hour TTL
     }
 
     /// Get a Redis connection (internal use)
-    fn get_connection(&self) -> Result<Connection, MetricsBackendError> {
+    fn get_connection(&self) -> Result<Connection, RedisMetricsError> {
         if self.circuit_breaker.is_open() {
-            return Err(MetricsBackendError::CircuitBreakerOpen);
+            return Err(RedisMetricsError::CircuitBreakerOpen);
         }
 
         match self.client.get_connection() {
@@ -50,7 +48,7 @@ impl RedisMetrics {
             }
             Err(e) => {
                 self.circuit_breaker.record_failure();
-                Err(MetricsBackendError::ConnectionError(e.to_string()))
+                Err(RedisMetricsError::ConnectionError(e.to_string()))
             }
         }
     }
@@ -65,12 +63,12 @@ impl RedisMetrics {
     }
 
     /// Execute Redis command with error handling
-    async fn execute_command<T, F>(&self, operation: F) -> Result<T, MetricsBackendError>
+    async fn execute_command<T, F>(&self, operation: F) -> Result<T, RedisMetricsError>
     where
         F: FnOnce(Connection) -> redis::RedisResult<T>,
     {
         let conn = self.get_connection()?;
-        operation(conn).map_err(|e| MetricsBackendError::CommandError(e.to_string()))
+        operation(conn).map_err(|e| RedisMetricsError::CommandError(e.to_string()))
     }
 }
 
@@ -197,7 +195,7 @@ impl RedisCircuitBreaker {
 
 /// Error types for Redis metrics
 #[derive(Debug, thiserror::Error)]
-pub enum MetricsBackendError {
+pub enum RedisMetricsError {
     #[error("Connection error: {0}")]
     ConnectionError(String),
 

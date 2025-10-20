@@ -13,7 +13,6 @@ use chrono::{Duration, Utc};
 use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
 use pkcs8::der::Decode;
 use pkcs8::{ObjectIdentifier, PrivateKeyInfo};
-use ring::rand;
 use ring::signature::{Ed25519KeyPair, KeyPair, UnparsedPublicKey, ED25519};
 use serde::{Deserialize, Serialize};
 use serde_json::json;

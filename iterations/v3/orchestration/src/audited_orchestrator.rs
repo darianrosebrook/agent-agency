@@ -19,6 +19,7 @@ use crate::audit_trail::{
 use crate::orchestrate::{Orchestrator, OrchestratorConfig, OrchestrationResult, OrchestrationContext};
 use crate::planning::agent::PlanningAgent;
 use crate::frontier::{Frontier, FrontierConfig, FrontierError};
+use file_ops::{validate_changeset_with_waiver, WaiverRequest, apply_waiver};
 
 /// Audited orchestrator that wraps all operations with comprehensive audit logging
 #[derive(Debug)]
@@ -103,6 +104,141 @@ impl AuditedOrchestrator {
     /// Get frontier statistics
     pub fn frontier_stats(&self) -> Option<crate::frontier::FrontierStats> {
         Some(self.frontier.as_ref()?.read().unwrap().stats())
+    }
+
+    /// Process budget violations and generate waiver requests
+    pub async fn process_budget_violations(
+        &self,
+        changeset: &file_ops::ChangeSet,
+        allowlist: &file_ops::AllowList,
+        budgets: &file_ops::Budgets,
+        operation_id: &str,
+    ) -> Result<(), AuditError> {
+        // Check for violations and generate waiver if needed
+        match file_ops::validate_changeset_with_waiver(changeset, allowlist, budgets) {
+            Ok(()) => {
+                // No violations, log successful validation
+                let mut parameters = std::collections::HashMap::new();
+                parameters.insert("operation_id".to_string(), serde_json::Value::String(operation_id.to_string()));
+                parameters.insert("status".to_string(), serde_json::Value::String("compliant".to_string()));
+
+                self.audit_manager.file_operations_auditor()
+                    .record_operation(
+                        "budget_check",
+                        Some(operation_id),
+                        parameters,
+                        crate::audit_trail::AuditResult::Success { data: Some("All budget constraints satisfied".to_string()) },
+                        None,
+                        crate::audit_trail::AuditSeverity::Info,
+                    ).await?;
+            }
+            Err(waiver_request) => {
+                // Violations found, log waiver request
+                let waiver_json = serde_json::to_string(&waiver_request)
+                    .map_err(|e| AuditError::SerializationError(e.to_string()))?;
+
+                let mut parameters = std::collections::HashMap::new();
+                parameters.insert("operation_id".to_string(), serde_json::Value::String(operation_id.to_string()));
+                parameters.insert("waiver_id".to_string(), serde_json::Value::String(waiver_request.id.clone()));
+                parameters.insert("risk_level".to_string(), serde_json::Value::String(format!("{:?}", waiver_request.risk_assessment)));
+                parameters.insert("violation_count".to_string(), serde_json::Value::Number(waiver_request.budget_violations.len().into()));
+
+                let severity = if matches!(waiver_request.risk_assessment, file_ops::RiskLevel::Critical) {
+                    crate::audit_trail::AuditSeverity::Error
+                } else {
+                    crate::audit_trail::AuditSeverity::Warning
+                };
+
+                self.audit_manager.file_operations_auditor()
+                    .record_operation(
+                        "budget_violation",
+                        Some(&waiver_request.id),
+                        parameters,
+                        crate::audit_trail::AuditResult::Failure { error: waiver_json },
+                        None,
+                        severity,
+                    ).await?;
+
+                // Auto-approve low-risk waivers
+                if waiver_request.auto_approved {
+                    let mut approved_waiver = waiver_request;
+                    apply_waiver(
+                        &mut approved_waiver,
+                        "auto-approver",
+                        Some("Auto-approved low-risk budget exceedance".to_string())
+                    ).map_err(|e| AuditError::ValidationError(e))?;
+
+                    let approved_json = serde_json::to_string(&approved_waiver)
+                        .map_err(|e| AuditError::SerializationError(e.to_string()))?;
+
+                    let mut approval_params = std::collections::HashMap::new();
+                    approval_params.insert("waiver_id".to_string(), serde_json::Value::String(approved_waiver.id.clone()));
+                    approval_params.insert("approver".to_string(), serde_json::Value::String("auto-approver".to_string()));
+
+                    self.audit_manager.file_operations_auditor()
+                        .record_operation(
+                            "waiver_approval",
+                            Some(&approved_waiver.id),
+                            approval_params,
+                            crate::audit_trail::AuditResult::Success { data: Some(approved_json) },
+                            None,
+                            crate::audit_trail::AuditSeverity::Info,
+                        ).await?;
+                } else {
+                    // High-risk waiver requires manual approval
+                    return Err(AuditError::ValidationError(
+                        format!("Budget violation requires manual waiver approval. Waiver ID: {}", waiver_request.id)
+                    ));
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Approve a waiver request
+    pub async fn approve_waiver(
+        &self,
+        waiver_id: &str,
+        approver: &str,
+        justification: Option<String>,
+    ) -> Result<(), AuditError> {
+        // In a real implementation, you'd load the waiver from storage
+        // For now, we'll create a mock waiver for demonstration
+        let mut waiver = WaiverRequest {
+            id: waiver_id.to_string(),
+            timestamp: chrono::Utc::now(),
+            changeset_fingerprint: "mock".to_string(),
+            budget_violations: vec![],
+            justification_required: true,
+            risk_assessment: file_ops::RiskLevel::Medium,
+            auto_approved: false,
+            approved_by: None,
+            approval_timestamp: None,
+            justification: None,
+        };
+
+        apply_waiver(&mut waiver, approver, justification)
+            .map_err(|e| AuditError::ValidationError(e))?;
+
+        let waiver_json = serde_json::to_string(&waiver)
+            .map_err(|e| AuditError::SerializationError(e.to_string()))?;
+
+        let mut approval_params = std::collections::HashMap::new();
+        approval_params.insert("waiver_id".to_string(), serde_json::Value::String(waiver_id.to_string()));
+        approval_params.insert("approver".to_string(), serde_json::Value::String(approver.to_string()));
+
+        self.audit_manager.file_operations_auditor()
+            .record_operation(
+                "waiver_approval",
+                Some(waiver_id),
+                approval_params,
+                crate::audit_trail::AuditResult::Success { data: Some(waiver_json) },
+                None,
+                crate::audit_trail::AuditSeverity::Info,
+            ).await?;
+
+        Ok(())
     }
 
     /// Execute a planning operation with full audit trail

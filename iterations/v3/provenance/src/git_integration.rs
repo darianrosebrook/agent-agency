@@ -128,7 +128,7 @@ impl GitTrailerManager {
         let head_commit = head.peel_to_commit()?;
 
         // Create the new reference
-        let reference =
+        let _reference =
             repo.reference(refname, head_commit.id(), true, "Create branch reference")?;
         debug!(
             "Created branch reference: {} -> {}",

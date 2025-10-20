@@ -50,9 +50,9 @@ pub use metrics::{
     MetricsBackend, NoOpMetricsBackend, InMemoryMetricsBackend,
     MetricsCollector, MetricValue, MetricsSnapshot,
 };
-pub use metrics::prometheus::{PrometheusMetrics, MetricsBackendError as PrometheusError};
-pub use metrics::statsd::{StatsDMetrics, StatsDCircuitBreaker, MetricsBackendError as StatsDError};
-pub use metrics::redis::{RedisMetrics, RedisCircuitBreaker, MetricsBackendError as RedisError};
+pub use metrics::prometheus::PrometheusMetrics;
+pub use metrics::statsd::{StatsDMetrics, StatsDCircuitBreaker};
+pub use metrics::redis::{RedisMetrics, RedisCircuitBreaker, RedisMetricsError as RedisError};
 pub use multimodal_metrics::{
     MultimodalMetricsCollector, MultimodalProcessingMetrics, VectorSearchMetrics,
     EmbeddingMetrics, CrossModalValidationMetrics, ContextRetrievalMetrics,

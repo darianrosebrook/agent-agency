@@ -9,6 +9,7 @@ pub mod temp_workspace;
 use std::path::Path;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+use chrono::{DateTime, Utc};
 
 /// Unique identifier for a changeset operation
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -61,6 +62,57 @@ pub struct Budgets {
     pub max_files: usize,
     /// Maximum lines of code that can be changed (across all files)
     pub max_loc: usize,
+}
+
+/// Types of budget violations
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ViolationType {
+    TooManyFiles,
+    TooManyLines,
+    BlockedPath,
+}
+
+/// Severity levels for violations
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ViolationSeverity {
+    Low,      // Minor exceedance, auto-approvable
+    Medium,   // Significant exceedance, requires review
+    High,     // Major exceedance, requires senior approval
+    Critical, // Extreme exceedance, blocked
+}
+
+/// Individual budget violation
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BudgetViolation {
+    pub violation_type: ViolationType,
+    pub actual_value: usize,
+    pub budget_limit: usize,
+    pub severity: ViolationSeverity,
+    pub description: String,
+}
+
+/// Waiver request for budget exceedances
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WaiverRequest {
+    pub id: String,
+    pub timestamp: DateTime<Utc>,
+    pub changeset_fingerprint: String,
+    pub budget_violations: Vec<BudgetViolation>,
+    pub justification_required: bool,
+    pub risk_assessment: RiskLevel,
+    pub auto_approved: bool,
+    pub approved_by: Option<String>,
+    pub approval_timestamp: Option<DateTime<Utc>>,
+    pub justification: Option<String>,
+}
+
+/// Risk assessment for waiver requests
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum RiskLevel {
+    Low,      // Safe to auto-approve
+    Medium,   // Requires justification
+    High,     // Requires explicit approval
+    Critical, // Blocked regardless of approval
 }
 
 /// Workspace abstraction for safe file operations
@@ -144,6 +196,191 @@ pub fn validate_changeset(
     Ok(())
 }
 
+/// Validate changeset and generate waiver request if violations found
+pub fn validate_changeset_with_waiver(
+    changeset: &ChangeSet,
+    allowlist: &AllowList,
+    budgets: &Budgets,
+) -> Result<(), WaiverRequest> {
+    let violations = analyze_budget_violations(changeset, allowlist, budgets);
+
+    if violations.is_empty() {
+        Ok(())
+    } else {
+        Err(generate_waiver_request(changeset, violations))
+    }
+}
+
+/// Analyze budget violations without failing
+pub fn analyze_budget_violations(
+    changeset: &ChangeSet,
+    allowlist: &AllowList,
+    budgets: &Budgets,
+) -> Vec<BudgetViolation> {
+    let mut violations = Vec::new();
+
+    // Check file count budget
+    let file_count = changeset.patches.len();
+    if file_count > budgets.max_files {
+        let severity = calculate_severity(file_count, budgets.max_files);
+        violations.push(BudgetViolation {
+            violation_type: ViolationType::TooManyFiles,
+            actual_value: file_count,
+            budget_limit: budgets.max_files,
+            severity,
+            description: format!("Too many files: {} > {}", file_count, budgets.max_files),
+        });
+    }
+
+    // Check allow-list compliance
+    for patch in &changeset.patches {
+        if !is_path_allowed(&patch.path, allowlist) {
+            violations.push(BudgetViolation {
+                violation_type: ViolationType::BlockedPath,
+                actual_value: 1, // One blocked path
+                budget_limit: 0, // No blocked paths allowed
+                severity: ViolationSeverity::Critical, // Path violations are always critical
+                description: format!("Path not allowed: {}", patch.path),
+            });
+        }
+    }
+
+    // Check total LOC budget
+    let total_loc: usize = changeset.patches.iter()
+        .map(|p| p.hunks.iter().map(|h| h.lines.lines().count()).sum::<usize>())
+        .sum();
+
+    if total_loc > budgets.max_loc {
+        let severity = calculate_severity(total_loc, budgets.max_loc);
+        violations.push(BudgetViolation {
+            violation_type: ViolationType::TooManyLines,
+            actual_value: total_loc,
+            budget_limit: budgets.max_loc,
+            severity,
+            description: format!("Too many lines changed: {} > {}", total_loc, budgets.max_loc),
+        });
+    }
+
+    violations
+}
+
+/// Generate waiver request for budget violations
+pub fn generate_waiver_request(
+    changeset: &ChangeSet,
+    violations: Vec<BudgetViolation>,
+) -> WaiverRequest {
+    use uuid::Uuid;
+
+    let id = Uuid::new_v4().to_string();
+    let timestamp = Utc::now();
+
+    // Generate changeset fingerprint for tracking
+    let changeset_fingerprint = generate_changeset_fingerprint(changeset);
+
+    // Assess overall risk level
+    let risk_assessment = assess_overall_risk(&violations);
+
+    // Determine if justification is required
+    let justification_required = matches!(risk_assessment, RiskLevel::Medium | RiskLevel::High | RiskLevel::Critical);
+
+    // Auto-approve low-risk violations
+    let auto_approved = matches!(risk_assessment, RiskLevel::Low);
+
+    WaiverRequest {
+        id,
+        timestamp,
+        changeset_fingerprint,
+        budget_violations: violations,
+        justification_required,
+        risk_assessment,
+        auto_approved,
+        approved_by: None,
+        approval_timestamp: None,
+        justification: None,
+    }
+}
+
+/// Generate fingerprint for changeset tracking
+fn generate_changeset_fingerprint(changeset: &ChangeSet) -> String {
+    use std::collections::hash_map::DefaultHasher;
+    use std::hash::{Hash, Hasher};
+
+    let mut hasher = DefaultHasher::new();
+    changeset.patches.len().hash(&mut hasher);
+
+    for patch in &changeset.patches {
+        patch.path.hash(&mut hasher);
+        patch.hunks.len().hash(&mut hasher);
+    }
+
+    format!("{:x}", hasher.finish())
+}
+
+/// Calculate violation severity based on exceedance ratio
+fn calculate_severity(actual: usize, limit: usize) -> ViolationSeverity {
+    if limit == 0 {
+        return ViolationSeverity::Critical;
+    }
+
+    let ratio = actual as f64 / limit as f64;
+
+    if ratio <= 1.2 {
+        ViolationSeverity::Low
+    } else if ratio <= 2.0 {
+        ViolationSeverity::Medium
+    } else if ratio <= 5.0 {
+        ViolationSeverity::High
+    } else {
+        ViolationSeverity::Critical
+    }
+}
+
+/// Assess overall risk level from violations
+fn assess_overall_risk(violations: &[BudgetViolation]) -> RiskLevel {
+    let max_severity = violations.iter()
+        .map(|v| &v.severity)
+        .max_by_key(|s| match s {
+            ViolationSeverity::Low => 1,
+            ViolationSeverity::Medium => 2,
+            ViolationSeverity::High => 3,
+            ViolationSeverity::Critical => 4,
+        })
+        .unwrap_or(&ViolationSeverity::Low);
+
+    // Check for path violations (always critical)
+    let has_path_violation = violations.iter()
+        .any(|v| v.violation_type == ViolationType::BlockedPath);
+
+    if has_path_violation {
+        RiskLevel::Critical
+    } else {
+        match max_severity {
+            ViolationSeverity::Low => RiskLevel::Low,
+            ViolationSeverity::Medium => RiskLevel::Medium,
+            ViolationSeverity::High => RiskLevel::High,
+            ViolationSeverity::Critical => RiskLevel::Critical,
+        }
+    }
+}
+
+/// Apply waiver to bypass budget enforcement
+pub fn apply_waiver(wr: &mut WaiverRequest, approver: &str, justification: Option<String>) -> Result<(), String> {
+    if wr.approved_by.is_some() {
+        return Err("Waiver request already approved".to_string());
+    }
+
+    // Validate justification if required
+    if wr.justification_required && justification.is_none() {
+        return Err("Justification required for this waiver".to_string());
+    }
+
+    wr.approved_by = Some(approver.to_string());
+    wr.approval_timestamp = Some(Utc::now());
+    wr.justification = justification;
+
+    Ok(())
+}
+
 /// Check if a path is allowed by the allow-list
 fn is_path_allowed(path: &str, allowlist: &AllowList) -> bool {
     // Simple glob matching - in production, use a proper glob library
@@ -212,6 +449,11 @@ impl WorkspaceFactory {
 pub use git_workspace::GitWorktreeWorkspace;
 pub use temp_workspace::TempMirrorWorkspace;
 
+// Waiver system exports
+pub use self::{
+    ViolationType, ViolationSeverity, BudgetViolation, WaiverRequest, RiskLevel,
+};
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -223,6 +465,203 @@ mod tests {
         let budgets = Budgets { max_files: 10, max_loc: 100 };
 
         assert!(validate_changeset(&changeset, &allowlist, &budgets).is_ok());
+    }
+
+    #[test]
+    fn test_budget_violation_analysis() {
+        let changeset = ChangeSet {
+            patches: vec![
+                Patch {
+                    path: "src/main.rs".to_string(),
+                    hunks: vec![Hunk {
+                        old_start: 1,
+                        old_lines: 0,
+                        new_start: 1,
+                        new_lines: 50,
+                        lines: "+".repeat(50),
+                    }],
+                    expected_prev_sha256: None,
+                },
+                Patch {
+                    path: "src/utils.rs".to_string(),
+                    hunks: vec![Hunk {
+                        old_start: 1,
+                        old_lines: 0,
+                        new_start: 1,
+                        new_lines: 25,
+                        lines: "+".repeat(25),
+                    }],
+                    expected_prev_sha256: None,
+                },
+            ],
+        };
+
+        let allowlist = AllowList {
+            globs: vec!["src/**/*.rs".to_string()],
+        };
+
+        // Budget that allows 1 file, 30 LOC total
+        let budgets = Budgets {
+            max_files: 1,
+            max_loc: 30,
+        };
+
+        let violations = analyze_budget_violations(&changeset, &allowlist, &budgets);
+
+        assert_eq!(violations.len(), 2); // Too many files AND too many LOC
+
+        // Check file count violation
+        let file_violation = violations.iter().find(|v| v.violation_type == ViolationType::TooManyFiles).unwrap();
+        assert_eq!(file_violation.actual_value, 2);
+        assert_eq!(file_violation.budget_limit, 1);
+
+        // Check LOC violation
+        let loc_violation = violations.iter().find(|v| v.violation_type == ViolationType::TooManyLines).unwrap();
+        assert_eq!(loc_violation.actual_value, 75); // 50 + 25
+        assert_eq!(loc_violation.budget_limit, 30);
+    }
+
+    #[test]
+    fn test_waiver_request_generation() {
+        let changeset = ChangeSet {
+            patches: vec![Patch {
+                path: "src/main.rs".to_string(),
+                hunks: vec![Hunk {
+                    old_start: 1,
+                    old_lines: 0,
+                    new_start: 1,
+                    new_lines: 100,
+                    lines: "+".repeat(100),
+                }],
+                expected_prev_sha256: None,
+            }],
+        };
+
+        let violations = vec![BudgetViolation {
+            violation_type: ViolationType::TooManyLines,
+            actual_value: 100,
+            budget_limit: 50,
+            severity: ViolationSeverity::Medium,
+            description: "Too many lines changed".to_string(),
+        }];
+
+        let waiver = generate_waiver_request(&changeset, violations);
+
+        assert!(!waiver.id.is_empty());
+        assert_eq!(waiver.budget_violations.len(), 1);
+        assert_eq!(waiver.risk_assessment, RiskLevel::Medium);
+        assert!(waiver.justification_required);
+        assert!(!waiver.auto_approved);
+    }
+
+    #[test]
+    fn test_validate_changeset_with_waiver() {
+        let changeset = ChangeSet {
+            patches: vec![Patch {
+                path: "src/main.rs".to_string(),
+                hunks: vec![Hunk {
+                    old_start: 1,
+                    old_lines: 0,
+                    new_start: 1,
+                    new_lines: 100,
+                    lines: "+".repeat(100),
+                }],
+                expected_prev_sha256: None,
+            }],
+        };
+
+        let allowlist = AllowList {
+            globs: vec!["src/**/*.rs".to_string()],
+        };
+
+        let budgets = Budgets {
+            max_files: 10,
+            max_loc: 50, // Will exceed this
+        };
+
+        let result = validate_changeset_with_waiver(&changeset, &allowlist, &budgets);
+
+        // Should return waiver request due to LOC violation
+        assert!(result.is_err());
+        let waiver = result.unwrap_err();
+        assert_eq!(waiver.budget_violations.len(), 1);
+        assert_eq!(waiver.budget_violations[0].violation_type, ViolationType::TooManyLines);
+    }
+
+    #[test]
+    fn test_waiver_application() {
+        let violations = vec![BudgetViolation {
+            violation_type: ViolationType::TooManyLines,
+            actual_value: 100,
+            budget_limit: 50,
+            severity: ViolationSeverity::Medium,
+            description: "Too many lines".to_string(),
+        }];
+
+        let changeset = ChangeSet { patches: vec![] };
+        let mut waiver = generate_waiver_request(&changeset, violations);
+
+        // Apply waiver with justification
+        let result = apply_waiver(&mut waiver, "test-user", Some("This change is necessary for feature X".to_string()));
+        assert!(result.is_ok());
+
+        assert_eq!(waiver.approved_by, Some("test-user".to_string()));
+        assert!(waiver.approval_timestamp.is_some());
+        assert_eq!(waiver.justification, Some("This change is necessary for feature X".to_string()));
+    }
+
+    #[test]
+    fn test_critical_path_violation() {
+        let changeset = ChangeSet {
+            patches: vec![Patch {
+                path: "blocked/config.yml".to_string(),
+                hunks: vec![Hunk {
+                    old_start: 1,
+                    old_lines: 0,
+                    new_start: 1,
+                    new_lines: 1,
+                    lines: "+key: value".to_string(),
+                }],
+                expected_prev_sha256: None,
+            }],
+        };
+
+        let allowlist = AllowList {
+            globs: vec!["src/**/*.rs".to_string()], // Doesn't allow config.yml
+        };
+
+        let budgets = Budgets {
+            max_files: 10,
+            max_loc: 1000,
+        };
+
+        let violations = analyze_budget_violations(&changeset, &allowlist, &budgets);
+
+        assert_eq!(violations.len(), 1);
+        assert_eq!(violations[0].violation_type, ViolationType::BlockedPath);
+        assert_eq!(violations[0].severity, ViolationSeverity::Critical);
+
+        let risk = assess_overall_risk(&violations);
+        assert_eq!(risk, RiskLevel::Critical);
+    }
+
+    #[test]
+    fn test_severity_calculation() {
+        // Test low severity (minor exceedance)
+        let severity = calculate_severity(60, 50); // 20% over
+        assert_eq!(severity, ViolationSeverity::Low);
+
+        // Test medium severity (100% over)
+        let severity = calculate_severity(100, 50);
+        assert_eq!(severity, ViolationSeverity::Medium);
+
+        // Test high severity (300% over)
+        let severity = calculate_severity(200, 50);
+        assert_eq!(severity, ViolationSeverity::High);
+
+        // Test critical severity (extreme)
+        let severity = calculate_severity(300, 50);
+        assert_eq!(severity, ViolationSeverity::Critical);
     }
 
     #[test]

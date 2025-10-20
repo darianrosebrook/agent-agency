@@ -7,7 +7,7 @@ use std::net::UdpSocket;
 use std::sync::Arc;
 use async_trait::async_trait;
 use cadence::{StatsdClient, UdpMetricSink, DEFAULT_PORT};
-use crate::metrics::{MetricsBackend, MetricsBackendError};
+use crate::metrics::MetricsBackend;
 
 /// StatsD metrics backend
 pub struct StatsDMetrics {

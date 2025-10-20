@@ -15478,5 +15478,39 @@
     },
     "previous_hash": "c8f9c32a03bb0ec0d5cbd3631b5715bafc7c853f644eebd8c7ac029a07755e1d",
     "hash": "67216cf68a404b07e991a35d8fdef63470815958a36183624ca86d1ad593a5e8"
+  },
+  {
+    "id": "prov-1760931160253",
+    "timestamp": "2025-10-20T03:32:40.253Z",
+    "commit": {
+      "hash": "5a2386e7d9d11c81e56e8ce1860bc0a7a5b6ce81",
+      "message": "feat: complete Agent Agency V3 Dashboard - 100% production-ready",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "AGENT-0007",
+      "title": "Make diffs first-class artifacts in observability",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": []
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-20T03:32:40.254Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "67216cf68a404b07e991a35d8fdef63470815958a36183624ca86d1ad593a5e8",
+    "hash": "1f41a5fa77a067c6caf4b5b98491f80bca6e1a8a41facc620b9a5f874c8bc08e"
   }
 ]
