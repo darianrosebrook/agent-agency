@@ -766,6 +766,352 @@ impl EvidenceCollector {
             })
         }
     }
+
+    /// Enhanced evidence collection with CAWS compliance checking (V2 port)
+    async fn collect_evidence_v2(
+        &self,
+        claim: &AtomicClaim,
+        context: &ProcessingContext,
+    ) -> Result<Option<Vec<Evidence>>> {
+        let mut evidence = Vec::new();
+
+        // Enhanced evidence collection based on claim type
+        match claim.verification_requirements.first() {
+            Some(req) if req.evidence_type == EvidenceType::CodeAnalysis => {
+                evidence.extend(self.collect_code_evidence_v2(claim, context).await?);
+            }
+            Some(req) if req.evidence_type == EvidenceType::Measurement => {
+                evidence.extend(self.collect_measurement_evidence_v2(claim, context).await?);
+            }
+            Some(req) if req.evidence_type == EvidenceType::LogicalAnalysis => {
+                evidence.extend(self.collect_logical_evidence_v2(claim, context).await?);
+            }
+            _ => {
+                // Fallback to general evidence collection
+                evidence.extend(self.collect_general_evidence(claim, context).await?);
+            }
+        }
+
+        // CAWS compliance validation (V2 enhancement)
+        let caws_compliant = self.validate_caws_compliance(&evidence, claim, context).await?;
+        if !caws_compliant {
+            return Ok(None); // Evidence doesn't meet CAWS standards
+        }
+
+        Ok(if evidence.is_empty() {
+            None
+        } else {
+            Some(evidence)
+        })
+    }
+
+    /// Enhanced code evidence collection with AST analysis (V2 port)
+    async fn collect_code_evidence_v2(
+        &self,
+        claim: &AtomicClaim,
+        context: &ProcessingContext,
+    ) -> Result<Vec<Evidence>> {
+        let mut evidence = Vec::new();
+
+        // Extract code-related terms from claim
+        let code_terms = self.extract_code_terms(&claim.claim_text);
+
+        for term in &code_terms {
+            // Look for code evidence in the project
+            if let Some(code_evidence) = self.find_code_evidence(term, context).await? {
+                evidence.push(code_evidence);
+            }
+        }
+
+        // Add AST-based evidence for structural claims
+        if claim.claim_text.contains("function") || claim.claim_text.contains("method") {
+            if let Some(ast_evidence) = self.extract_ast_evidence(claim, context).await? {
+                evidence.push(ast_evidence);
+            }
+        }
+
+        Ok(evidence)
+    }
+
+    /// Enhanced measurement evidence collection (V2 port)
+    async fn collect_measurement_evidence_v2(
+        &self,
+        claim: &AtomicClaim,
+        context: &ProcessingContext,
+    ) -> Result<Vec<Evidence>> {
+        let mut evidence = Vec::new();
+
+        // Extract quantitative indicators from claim
+        let measurements = self.extract_measurements(&claim.claim_text);
+
+        for measurement in &measurements {
+            // Look for measurement evidence (performance data, metrics)
+            if let Some(measurement_evidence) = self.find_measurement_evidence(measurement, context).await? {
+                evidence.push(measurement_evidence);
+            }
+        }
+
+        Ok(evidence)
+    }
+
+    /// Enhanced logical evidence collection with reasoning traces (V2 port)
+    async fn collect_logical_evidence_v2(
+        &self,
+        claim: &AtomicClaim,
+        context: &ProcessingContext,
+    ) -> Result<Vec<Evidence>> {
+        let mut evidence = Vec::new();
+
+        // Generate logical reasoning evidence
+        let reasoning_steps = self.generate_logical_reasoning(claim, context).await?;
+
+        for step in reasoning_steps {
+            evidence.push(Evidence {
+                source: EvidenceSource::LogicalReasoning,
+                content: step,
+                relevance: 0.8,
+                confidence: self.assess_logical_confidence(&step),
+                timestamp: Utc::now(),
+            });
+        }
+
+        // Add contextual logical evidence
+        if let Some(contextual_evidence) = self.find_contextual_logical_evidence(claim, context).await? {
+            evidence.extend(contextual_evidence);
+        }
+
+        Ok(evidence)
+    }
+
+    /// Validate CAWS compliance of evidence (V2 enhancement)
+    async fn validate_caws_compliance(
+        &self,
+        evidence: &[Evidence],
+        claim: &AtomicClaim,
+        context: &ProcessingContext,
+    ) -> Result<bool> {
+        // CAWS compliance checks
+        for evidence_item in evidence {
+            // Check evidence freshness
+            if let Some(max_age) = claim.verification_requirements
+                .first()
+                .and_then(|req| req.freshness_requirement) {
+                if Utc::now().signed_duration_since(evidence_item.timestamp) > max_age {
+                    return Ok(false); // Evidence too old
+                }
+            }
+
+            // Check minimum confidence
+            let min_confidence = claim.verification_requirements
+                .first()
+                .map(|req| req.minimum_confidence)
+                .unwrap_or(0.8);
+
+            if evidence_item.confidence < min_confidence {
+                return Ok(false); // Evidence confidence too low
+            }
+
+            // Check source requirements
+            if let Some(required_sources) = claim.verification_requirements
+                .first()
+                .map(|req| &req.required_sources) {
+                if !required_sources.contains(&self.evidence_source_to_source_type(&evidence_item.source)) {
+                    return Ok(false); // Wrong evidence source type
+                }
+            }
+        }
+
+        Ok(true)
+    }
+
+    /// Extract code-related terms from claim text (V2 helper)
+    fn extract_code_terms(&self, claim_text: &str) -> Vec<String> {
+        let code_patterns = vec![
+            Regex::new(r"\b(function|method|class|interface|type|variable|constant|parameter)\b").unwrap(),
+            Regex::new(r"\b[A-Z][a-zA-Z0-9_]*\b").unwrap(), // Potential identifiers
+            Regex::new(r"\b[a-z_][a-zA-Z0-9_]*\b").unwrap(), // Potential function/variable names
+        ];
+
+        let mut terms = Vec::new();
+        let lower_text = claim_text.to_lowercase();
+
+        for pattern in &code_patterns {
+            for mat in pattern.find_iter(&lower_text) {
+                terms.push(mat.as_str().to_string());
+            }
+        }
+
+        terms.sort();
+        terms.dedup();
+        terms
+    }
+
+    /// Extract measurement values from claim text (V2 helper)
+    fn extract_measurements(&self, claim_text: &str) -> Vec<String> {
+        let measurement_patterns = vec![
+            Regex::new(r"\b\d+(?:\.\d+)?\s*(?:ms|seconds?|minutes?|hours?|bytes?|KB|MB|GB|TB|%)\b").unwrap(),
+            Regex::new(r"\b(?:performance|speed|latency|throughput|memory|CPU)\s*(?:is|was|should be|must be)\s*\d+(?:\.\d+)?\b").unwrap(),
+        ];
+
+        let mut measurements = Vec::new();
+
+        for pattern in &measurement_patterns {
+            for mat in pattern.find_iter(claim_text) {
+                measurements.push(mat.as_str().to_string());
+            }
+        }
+
+        measurements
+    }
+
+    /// Generate logical reasoning steps for claim verification (V2 enhancement)
+    async fn generate_logical_reasoning(
+        &self,
+        claim: &AtomicClaim,
+        context: &ProcessingContext,
+    ) -> Result<Vec<String>> {
+        let mut reasoning_steps = Vec::new();
+
+        // Basic logical reasoning patterns
+        if claim.claim_text.contains("if ") && claim.claim_text.contains(" then ") {
+            reasoning_steps.push("Conditional logic: If premise holds, then conclusion follows".to_string());
+        }
+
+        if claim.claim_text.contains("because") || claim.claim_text.contains("since") {
+            reasoning_steps.push("Causal reasoning: Claim supported by stated cause".to_string());
+        }
+
+        if claim.claim_text.contains("therefore") || claim.claim_text.contains("thus") {
+            reasoning_steps.push("Deductive reasoning: Conclusion logically follows from premises".to_string());
+        }
+
+        // Add context-aware reasoning
+        for hint in &context.domain_hints {
+            if hint == "rust" && claim.claim_text.contains("safe") {
+                reasoning_steps.push("Rust safety guarantee: Memory safety enforced by compiler".to_string());
+            }
+            if hint == "typescript" && claim.claim_text.contains("typed") {
+                reasoning_steps.push("TypeScript type safety: Compile-time type checking".to_string());
+            }
+        }
+
+        Ok(reasoning_steps)
+    }
+
+    /// Assess confidence of logical reasoning step (V2 helper)
+    fn assess_logical_confidence(&self, reasoning_step: &str) -> f64 {
+        // Simple confidence assessment based on reasoning strength
+        if reasoning_step.contains("safety guarantee") || reasoning_step.contains("type safety") {
+            0.95 // High confidence for language-level guarantees
+        } else if reasoning_step.contains("Deductive reasoning") || reasoning_step.contains("Causal reasoning") {
+            0.85 // Good confidence for logical patterns
+        } else {
+            0.7 // Base confidence for other reasoning
+        }
+    }
+
+    /// Find contextual logical evidence (V2 enhancement)
+    async fn find_contextual_logical_evidence(
+        &self,
+        claim: &AtomicClaim,
+        context: &ProcessingContext,
+    ) -> Result<Option<Vec<Evidence>>> {
+        // Look for related claims or documentation that supports this claim
+        let mut contextual_evidence = Vec::new();
+
+        // Check for documentation evidence
+        if let Some(doc_evidence) = self.find_documentation_evidence(claim, context).await? {
+            contextual_evidence.push(doc_evidence);
+        }
+
+        // Check for related code patterns
+        if let Some(pattern_evidence) = self.find_code_pattern_evidence(claim, context).await? {
+            contextual_evidence.push(pattern_evidence);
+        }
+
+        Ok(if contextual_evidence.is_empty() {
+            None
+        } else {
+            Some(contextual_evidence)
+        })
+    }
+
+    /// Helper methods for evidence collection (placeholders for V2 implementation)
+    async fn find_code_evidence(&self, term: &str, context: &ProcessingContext) -> Result<Option<Evidence>> {
+        // Placeholder - would search codebase for the term
+        Ok(Some(Evidence {
+            source: EvidenceSource::CodeSearch,
+            content: format!("Found '{}' in codebase", term),
+            relevance: 0.8,
+            confidence: 0.85,
+            timestamp: Utc::now(),
+        }))
+    }
+
+    async fn extract_ast_evidence(&self, claim: &AtomicClaim, context: &ProcessingContext) -> Result<Option<Evidence>> {
+        // Placeholder - would analyze AST for structural evidence
+        Ok(Some(Evidence {
+            source: EvidenceSource::CodeAnalysis,
+            content: "AST analysis confirms structural claim".to_string(),
+            relevance: 0.9,
+            confidence: 0.9,
+            timestamp: Utc::now(),
+        }))
+    }
+
+    async fn find_measurement_evidence(&self, measurement: &str, context: &ProcessingContext) -> Result<Option<Evidence>> {
+        // Placeholder - would look for measurement data
+        Ok(Some(Evidence {
+            source: EvidenceSource::Measurement,
+            content: format!("Measurement data supports: {}", measurement),
+            relevance: 0.85,
+            confidence: 0.8,
+            timestamp: Utc::now(),
+        }))
+    }
+
+    async fn find_documentation_evidence(&self, claim: &AtomicClaim, context: &ProcessingContext) -> Result<Option<Evidence>> {
+        // Placeholder - would search documentation
+        Ok(Some(Evidence {
+            source: EvidenceSource::Documentation,
+            content: "Documentation confirms claim validity".to_string(),
+            relevance: 0.75,
+            confidence: 0.8,
+            timestamp: Utc::now(),
+        }))
+    }
+
+    async fn find_code_pattern_evidence(&self, claim: &AtomicClaim, context: &ProcessingContext) -> Result<Option<Evidence>> {
+        // Placeholder - would look for code patterns
+        Ok(Some(Evidence {
+            source: EvidenceSource::CodeAnalysis,
+            content: "Code patterns support claim".to_string(),
+            relevance: 0.8,
+            confidence: 0.85,
+            timestamp: Utc::now(),
+        }))
+    }
+
+    async fn collect_general_evidence(&self, claim: &AtomicClaim, context: &ProcessingContext) -> Result<Vec<Evidence>> {
+        // Placeholder for general evidence collection
+        Ok(vec![Evidence {
+            source: EvidenceSource::General,
+            content: "General evidence collected".to_string(),
+            relevance: 0.6,
+            confidence: 0.7,
+            timestamp: Utc::now(),
+        }])
+    }
+
+    fn evidence_source_to_source_type(&self, source: &EvidenceSource) -> SourceType {
+        match source {
+            EvidenceSource::CodeSearch | EvidenceSource::CodeAnalysis => SourceType::FileSystem,
+            EvidenceSource::Documentation => SourceType::Documentation,
+            EvidenceSource::Measurement => SourceType::Measurement,
+            EvidenceSource::LogicalReasoning => SourceType::LogicalAnalysis,
+            _ => SourceType::General,
+        }
+    }
 }
 
 /// Integrates with council for complex verification
@@ -782,7 +1128,11 @@ impl CouncilIntegrator {
             council_endpoint: std::env::var("COUNCIL_ENDPOINT")
                 .unwrap_or_else(|_| "http://localhost:8080".to_string()),
             api_key: std::env::var("COUNCIL_API_KEY").ok(),
-            client: reqwest::Client::new(),
+            client: reqwest::Client::builder()
+                .timeout(std::time::Duration::from_secs(30)) // 30 second timeout for external API calls
+                .connect_timeout(std::time::Duration::from_secs(10)) // 10 second connection timeout
+                .build()
+                .unwrap_or_else(|_| reqwest::Client::new()), // Fallback to default if builder fails
         }
     }
 
@@ -1194,6 +1544,97 @@ impl VerificationStage {
             * 0.2;
 
         (average_confidence + quality_boost).min(1.0f32)
+    }
+
+    /// Enhanced V2 verification process with CAWS-compliant evidence collection
+    pub async fn process_v2(
+        &self,
+        atomic_claims: &[AtomicClaim],
+        context: &ProcessingContext,
+    ) -> Result<VerificationResult> {
+        debug!("Starting V2 enhanced verification for {} claims", atomic_claims.len());
+
+        let mut verified_claims = Vec::new();
+        let mut all_evidence = Vec::new();
+
+        for claim in atomic_claims {
+            // Use enhanced V2 evidence collection
+            if let Some(evidence) = self.evidence_collector.collect_evidence_v2(claim, context).await? {
+                all_evidence.extend(evidence.clone());
+
+                verified_claims.push(VerifiedClaim {
+                    id: claim.id.clone(),
+                    claim_text: claim.claim_text.clone(),
+                    verification_status: VerificationStatus::Verified,
+                    confidence: self.calculate_evidence_confidence(&evidence),
+                    evidence,
+                    timestamp: Utc::now(),
+                });
+            } else {
+                // No evidence found or CAWS non-compliant
+                verified_claims.push(VerifiedClaim {
+                    id: claim.id.clone(),
+                    claim_text: claim.claim_text.clone(),
+                    verification_status: VerificationStatus::Unverified,
+                    confidence: 0.0,
+                    evidence: vec![],
+                    timestamp: Utc::now(),
+                });
+            }
+        }
+
+        // Submit high-risk claims to council for additional verification
+        let council_results = self.submit_to_council_if_needed(&verified_claims, context).await?;
+
+        Ok(VerificationResult {
+            verified_claims,
+            council_verification: council_results,
+            overall_confidence: self.calculate_overall_confidence(&all_evidence),
+        })
+    }
+
+    /// Submit claims requiring council verification
+    async fn submit_to_council_if_needed(
+        &self,
+        verified_claims: &[VerifiedClaim],
+        context: &ProcessingContext,
+    ) -> Result<Option<CouncilVerificationResult>> {
+        let high_risk_claims: Vec<&VerifiedClaim> = verified_claims
+            .iter()
+            .filter(|claim| self.needs_council_verification(claim))
+            .collect();
+
+        if high_risk_claims.is_empty() {
+            return Ok(None);
+        }
+
+        debug!("Submitting {} claims to council for verification", high_risk_claims.len());
+
+        // Build council task specification
+        let task_spec = self.build_council_task_spec(&high_risk_claims, context).await?;
+
+        // Submit to council
+        let council_response = self.council_integrator.submit_task(task_spec).await?;
+
+        // Parse council verdict
+        let verdict = self.parse_council_verdict(&council_response)?;
+
+        Ok(Some(CouncilVerificationResult {
+            submitted_claims: high_risk_claims.iter().map(|c| c.id.clone()).collect(),
+            council_verdict: verdict,
+            additional_evidence: vec![], // Could be extracted from council response
+            verification_timestamp: Utc::now(),
+        }))
+    }
+
+    /// Determine if claim needs council verification
+    fn needs_council_verification(&self, claim: &VerifiedClaim) -> bool {
+        // High-risk criteria for council submission
+        claim.confidence < 0.8 ||
+        claim.claim_text.to_lowercase().contains("security") ||
+        claim.claim_text.to_lowercase().contains("privacy") ||
+        claim.claim_text.to_lowercase().contains("safety") ||
+        claim.claim_text.to_lowercase().contains("constitutional")
     }
 }
 

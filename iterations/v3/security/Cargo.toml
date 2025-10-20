@@ -27,3 +27,8 @@ argon2 = { version = "0.5", features = ["std"] }
 password-hash = "0.5"
 bcrypt = "0.15"
 zxcvbn = "2.2"
+
+# Secret management dependencies
+aws-config = "1.0"
+aws-sdk-secretsmanager = "1.3"
+rand = "0.8"

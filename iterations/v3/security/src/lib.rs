@@ -7,6 +7,7 @@ pub mod circuit_breaker;
 pub mod secure_config;
 pub mod audit;
 pub mod authentication;
+pub mod secret_manager;
 
 pub use input_validation::*;
 pub use sanitization::*;
@@ -15,3 +16,8 @@ pub use circuit_breaker::*;
 pub use secure_config::*;
 pub use audit::*;
 pub use authentication::{AuthService, AuthConfig, PasswordPolicy, Claims, UserCredentials};
+pub use secret_manager::{
+    SecretManager, SecretManagerConfig, SecretProvider, Secret, SecretMetadata,
+    SecretResult, SecretError, SecretProviderTrait,
+    HashiCorpVaultProvider, AwsSecretsManagerProvider, LocalFileProvider
+};
