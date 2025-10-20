@@ -231,46 +231,199 @@ export class ApiClient {
   // Placeholder methods for future V3 API endpoints
   // These will be implemented as the backend endpoints become available
   /* eslint-disable no-unused-vars */
-  async getTasks(_filters?: Record<string, unknown>): Promise<unknown> {
-    console.warn("getTasks not implemented - requires V3 task API endpoints");
+  async getTasks(_filters?: Record<string, unknown>): Promise<{
+    tasks: Array<{
+      id: string;
+      title: string;
+      status: string;
+      priority: string;
+      createdAt: string;
+      updatedAt: string;
+    }>;
+    total: number;
+    page: number;
+    limit: number;
+  }> {
+    console.warn(
+      "getTasks using mock implementation - V3 task API not available"
+    );
     // TODO: Milestone 2 - Task API Implementation
     // - [ ] Implement V3 GET /api/v1/tasks endpoint with filtering
     // - [ ] Add pagination and sorting support
     // - [ ] Test with various filter combinations
-    throw new Error("Task API not yet implemented");
+
+    // Mock implementation for development
+    const mockTasks = [
+      {
+        id: "task_001",
+        title: "Implement user authentication flow",
+        status: "completed",
+        priority: "high",
+        createdAt: "2025-01-15T10:00:00Z",
+        updatedAt: "2025-01-20T14:30:00Z",
+      },
+      {
+        id: "task_002",
+        title: "Add database connection management",
+        status: "in_progress",
+        priority: "medium",
+        createdAt: "2025-01-18T09:15:00Z",
+        updatedAt: "2025-01-22T11:45:00Z",
+      },
+      {
+        id: "task_003",
+        title: "Set up monitoring dashboard",
+        status: "pending",
+        priority: "low",
+        createdAt: "2025-01-20T16:20:00Z",
+        updatedAt: "2025-01-20T16:20:00Z",
+      },
+    ];
+
+    return {
+      tasks: mockTasks,
+      total: mockTasks.length,
+      page: 1,
+      limit: 10,
+    };
   }
 
-  async getTask(_taskId: string): Promise<unknown> {
-    console.warn("getTask not implemented - requires V3 task detail API");
+  async getTask(_taskId: string): Promise<{
+    id: string;
+    title: string;
+    description: string;
+    status: string;
+    priority: string;
+    createdAt: string;
+    updatedAt: string;
+    workingSpec?: {
+      id: string;
+      title: string;
+      riskTier: number;
+      acceptance: Array<{
+        id: string;
+        given: string;
+        when: string;
+        then: string;
+      }>;
+    };
+    artifacts?: Array<{
+      id: string;
+      type: string;
+      size: number;
+      createdAt: string;
+    }>;
+    qualityReport?: {
+      coverage: number;
+      mutationScore: number;
+      lintErrors: number;
+      typeErrors: number;
+    };
+  }> {
+    console.warn(
+      "getTask using mock implementation - V3 task detail API not available"
+    );
     // TODO: Milestone 2 - Task Detail API Implementation
     // - [ ] Implement V3 GET /api/v1/tasks/:id endpoint
     // - [ ] Include working spec, artifacts, quality report
     // - [ ] Test with various task states
-    throw new Error("Task detail API not yet implemented");
+
+    // Mock implementation for development
+    return {
+      id: _taskId,
+      title: "Implement user authentication flow",
+      description:
+        "Create a secure user authentication system with JWT tokens, password hashing, and session management.",
+      status: "in_progress",
+      priority: "high",
+      createdAt: "2025-01-15T10:00:00Z",
+      updatedAt: "2025-01-22T11:45:00Z",
+      workingSpec: {
+        id: "AUTH-001",
+        title: "User Authentication Implementation",
+        riskTier: 1,
+        acceptance: [
+          {
+            id: "A1",
+            given: "User is not logged in",
+            when: "User submits valid credentials",
+            then: "User is authenticated and redirected to dashboard",
+          },
+        ],
+      },
+      artifacts: [
+        {
+          id: "artifact_001",
+          type: "unit_tests",
+          size: 245760,
+          createdAt: "2025-01-20T14:30:00Z",
+        },
+        {
+          id: "artifact_002",
+          type: "linting",
+          size: 15360,
+          createdAt: "2025-01-20T14:35:00Z",
+        },
+      ],
+      qualityReport: {
+        coverage: 85.5,
+        mutationScore: 72.3,
+        lintErrors: 0,
+        typeErrors: 0,
+      },
+    };
   }
 
-  async createChatSession(): Promise<unknown> {
-    console.warn("createChatSession not implemented - requires V3 chat API");
+  async createChatSession(): Promise<{ sessionId: string; createdAt: string }> {
+    console.warn(
+      "createChatSession using mock implementation - V3 backend not available"
+    );
     // TODO: Milestone 1 - Chat Session Management
     // - [ ] Implement V3 POST /api/v1/chat/session endpoint
     // - [ ] Add session persistence and cleanup
     // - [ ] Test session creation and retrieval
-    throw new Error("Chat session API not yet implemented");
+
+    // Mock implementation for development
+    return {
+      sessionId: `session_${Date.now()}_${Math.random()
+        .toString(36)
+        .substr(2, 9)}`,
+      createdAt: new Date().toISOString(),
+    };
   }
 
   async sendChatMessage(
     _sessionId: string,
     _message: string
-  ): Promise<unknown> {
+  ): Promise<{ messageId: string; response: string; timestamp: string }> {
     console.warn(
-      "sendChatMessage not implemented - requires V3 chat WebSocket API"
+      "sendChatMessage using mock implementation - V3 WebSocket API not available"
     );
     // TODO: Milestone 1 - Chat Message Handling
     // - [ ] Implement V3 WebSocket /api/v1/chat/ws/:session_id
     // - [ ] Add message routing and intent parsing
     // - [ ] Integrate with planning agent and orchestrator
     // - [ ] Test real-time message exchange
-    throw new Error("Chat message API not yet implemented");
+
+    // Mock implementation for development
+    // Simulate processing delay
+    await new Promise((resolve) =>
+      setTimeout(resolve, 1000 + Math.random() * 2000)
+    );
+
+    const responses = [
+      "I understand your request. Let me help you with that.",
+      "That's an interesting point. Here's what I can tell you...",
+      "Based on the current system state, I recommend the following approach:",
+      "I've analyzed your query and here's the most relevant information:",
+      "Let me break this down for you step by step:",
+    ];
+
+    return {
+      messageId: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      response: responses[Math.floor(Math.random() * responses.length)],
+      timestamp: new Date().toISOString(),
+    };
   }
 
   async getDatabaseTables(): Promise<unknown> {

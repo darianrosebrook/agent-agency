@@ -8,7 +8,6 @@ export const metadata: Metadata = {
     "Real-time monitoring and conversational interface for Agent Agency V3",
   keywords: ["agent", "monitoring", "dashboard", "real-time", "observability"],
   authors: [{ name: "@darianrosebrook" }],
-  viewport: "width=device-width, initial-scale=1",
 };
 
 export const viewport: Viewport = {

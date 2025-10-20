@@ -6,15 +6,21 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 use async_trait::async_trait;
+use tokio::sync::Mutex;
 use prometheus::{Encoder, TextEncoder, Registry, CounterVec, GaugeVec, HistogramVec, Counter, Gauge, Histogram};
 use crate::metrics::{MetricsBackend, MetricsBackendError};
 
 /// Prometheus metrics backend
 pub struct PrometheusMetrics {
     registry: Registry,
-    counters: HashMap<String, CounterVec>,
-    gauges: HashMap<String, GaugeVec>,
-    histograms: HashMap<String, HistogramVec>,
+    // Store metric families (interior mutability for creation)
+    counters: Arc<Mutex<HashMap<String, CounterVec>>>,
+    gauges: Arc<Mutex<HashMap<String, GaugeVec>>>,
+    histograms: Arc<Mutex<HashMap<String, HistogramVec>>>,
+    // Store metric instances for updating (interior mutability for async access)
+    counter_instances: Arc<Mutex<HashMap<String, prometheus::Counter>>>,
+    gauge_instances: Arc<Mutex<HashMap<String, prometheus::Gauge>>>,
+    histogram_instances: Arc<Mutex<HashMap<String, prometheus::Histogram>>>,
 }
 
 impl PrometheusMetrics {
@@ -24,9 +30,12 @@ impl PrometheusMetrics {
 
         Ok(Self {
             registry,
-            counters: HashMap::new(),
-            gauges: HashMap::new(),
-            histograms: HashMap::new(),
+            counters: Arc::new(Mutex::new(HashMap::new())),
+            gauges: Arc::new(Mutex::new(HashMap::new())),
+            histograms: Arc::new(Mutex::new(HashMap::new())),
+            counter_instances: Arc::new(Mutex::new(HashMap::new())),
+            gauge_instances: Arc::new(Mutex::new(HashMap::new())),
+            histogram_instances: Arc::new(Mutex::new(HashMap::new())),
         })
     }
 
@@ -34,9 +43,12 @@ impl PrometheusMetrics {
     pub fn with_registry(registry: Registry) -> Self {
         Self {
             registry,
-            counters: HashMap::new(),
-            gauges: HashMap::new(),
-            histograms: HashMap::new(),
+            counters: Arc::new(Mutex::new(HashMap::new())),
+            gauges: Arc::new(Mutex::new(HashMap::new())),
+            histograms: Arc::new(Mutex::new(HashMap::new())),
+            counter_instances: Arc::new(Mutex::new(HashMap::new())),
+            gauge_instances: Arc::new(Mutex::new(HashMap::new())),
+            histogram_instances: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 
@@ -58,8 +70,9 @@ impl PrometheusMetrics {
     }
 
     /// Get or create a counter metric
-    fn get_or_create_counter(&mut self, name: &str, help: &str) -> Result<&CounterVec, MetricsBackendError> {
-        if !self.counters.contains_key(name) {
+    async fn get_or_create_counter(&self, name: &str, help: &str) -> Result<CounterVec, MetricsBackendError> {
+        let mut counters = self.counters.lock().await;
+        if !counters.contains_key(name) {
             let counter = CounterVec::new(
                 prometheus::Opts::new(name, help),
                 &["component", "operation", "status"]
@@ -68,15 +81,16 @@ impl PrometheusMetrics {
             self.registry.register(Box::new(counter.clone()))
                 .map_err(|e| MetricsBackendError::RegistrationError(e.to_string()))?;
 
-            self.counters.insert(name.to_string(), counter);
+            counters.insert(name.to_string(), counter);
         }
 
-        Ok(self.counters.get(name).unwrap())
+        Ok(counters.get(name).unwrap().clone())
     }
 
     /// Get or create a gauge metric
-    fn get_or_create_gauge(&mut self, name: &str, help: &str) -> Result<&GaugeVec, MetricsBackendError> {
-        if !self.gauges.contains_key(name) {
+    async fn get_or_create_gauge(&self, name: &str, help: &str) -> Result<GaugeVec, MetricsBackendError> {
+        let mut gauges = self.gauges.lock().await;
+        if !gauges.contains_key(name) {
             let gauge = GaugeVec::new(
                 prometheus::Opts::new(name, help),
                 &["component", "resource"]
@@ -85,15 +99,16 @@ impl PrometheusMetrics {
             self.registry.register(Box::new(gauge.clone()))
                 .map_err(|e| MetricsBackendError::RegistrationError(e.to_string()))?;
 
-            self.gauges.insert(name.to_string(), gauge);
+            gauges.insert(name.to_string(), gauge);
         }
 
-        Ok(self.gauges.get(name).unwrap())
+        Ok(gauges.get(name).unwrap().clone())
     }
 
     /// Get or create a histogram metric
-    fn get_or_create_histogram(&mut self, name: &str, help: &str) -> Result<&HistogramVec, MetricsBackendError> {
-        if !self.histograms.contains_key(name) {
+    async fn get_or_create_histogram(&self, name: &str, help: &str) -> Result<HistogramVec, MetricsBackendError> {
+        let mut histograms = self.histograms.lock().await;
+        if !histograms.contains_key(name) {
             let histogram = HistogramVec::new(
                 prometheus::HistogramOpts::new(name, help),
                 &["component", "operation"]
@@ -102,31 +117,123 @@ impl PrometheusMetrics {
             self.registry.register(Box::new(histogram.clone()))
                 .map_err(|e| MetricsBackendError::RegistrationError(e.to_string()))?;
 
-            self.histograms.insert(name.to_string(), histogram);
+            histograms.insert(name.to_string(), histogram);
         }
 
-        Ok(self.histograms.get(name).unwrap())
+        Ok(histograms.get(name).unwrap().clone())
+    }
+
+
+    /// Create a unique key for metric instances
+    fn make_instance_key(&self, name: &str, labels: &[(&str, &str)]) -> String {
+        let mut key = name.to_string();
+        for (k, v) in labels {
+            key.push_str(&format!("{{{}}}={{{}}};", k, v));
+        }
+        key
+    }
+
+    /// Extract label values in the correct order for Prometheus
+    fn extract_label_values(&self, labels: &[(&str, &str)]) -> Vec<&str> {
+        // For now, assume the order matches the metric definition
+        // In production, you'd want to ensure the order matches the label names
+        labels.iter().map(|(_, v)| *v).collect()
     }
 }
 
 #[async_trait]
 impl MetricsBackend for PrometheusMetrics {
     async fn counter(&self, name: &str, labels: &[(&str, &str)], value: u64) {
-        // Prometheus counters are append-only, so we can't modify existing instances
-        // This is a limitation - we'd need to track instances separately
-        // For now, we'll skip counter updates in this implementation
-        // In production, you'd want to create counters with specific label combinations upfront
-        tracing::debug!("Prometheus counter not implemented: {} with labels {:?}", name, labels);
+        let instance_key = self.make_instance_key(name, labels);
+
+        // Get or create the counter instance
+        let counter = {
+            let mut counter_instances = self.counter_instances.lock().await;
+            if let Some(existing) = counter_instances.get(&instance_key) {
+                existing.clone()
+            } else {
+                // Create new counter vec if needed
+                let counter_vec = self.get_or_create_counter(name, "Generic counter").await
+                    .unwrap_or_else(|e| {
+                        tracing::error!("Failed to create counter vec: {}", e);
+                        panic!("Counter vec creation failed");
+                    });
+
+                let counter = counter_vec.with_label_values(&self.extract_label_values(labels))
+                    .unwrap_or_else(|e| {
+                        tracing::error!("Failed to create counter instance: {}", e);
+                        panic!("Counter creation failed");
+                    });
+
+                counter_instances.insert(instance_key, counter.clone());
+                counter
+            }
+        };
+
+        // Update the counter
+        counter.inc_by(value as f64);
     }
 
     async fn gauge(&self, name: &str, labels: &[(&str, &str)], value: f64) {
-        // Similar limitation with gauges
-        tracing::debug!("Prometheus gauge not implemented: {} with labels {:?}", name, labels);
+        let instance_key = self.make_instance_key(name, labels);
+
+        // Get or create the gauge instance
+        let gauge = {
+            let mut gauge_instances = self.gauge_instances.lock().await;
+            if let Some(existing) = gauge_instances.get(&instance_key) {
+                existing.clone()
+            } else {
+                // Create new gauge vec if needed
+                let gauge_vec = self.get_or_create_gauge(name, "Generic gauge").await
+                    .unwrap_or_else(|e| {
+                        tracing::error!("Failed to create gauge vec: {}", e);
+                        panic!("Gauge vec creation failed");
+                    });
+
+                let gauge = gauge_vec.with_label_values(&self.extract_label_values(labels))
+                    .unwrap_or_else(|e| {
+                        tracing::error!("Failed to create gauge instance: {}", e);
+                        panic!("Gauge creation failed");
+                    });
+
+                gauge_instances.insert(instance_key, gauge.clone());
+                gauge
+            }
+        };
+
+        // Update the gauge
+        gauge.set(value);
     }
 
     async fn histogram(&self, name: &str, labels: &[(&str, &str)], value: f64) {
-        // Similar limitation with histograms
-        tracing::debug!("Prometheus histogram not implemented: {} with labels {:?}", name, labels);
+        let instance_key = self.make_instance_key(name, labels);
+
+        // Get or create the histogram instance
+        let histogram = {
+            let mut histogram_instances = self.histogram_instances.lock().await;
+            if let Some(existing) = histogram_instances.get(&instance_key) {
+                existing.clone()
+            } else {
+                // Create new histogram vec if needed
+                let histogram_vec = self.get_or_create_histogram(name, "Generic histogram").await
+                    .unwrap_or_else(|e| {
+                        tracing::error!("Failed to create histogram vec: {}", e);
+                        panic!("Histogram vec creation failed");
+                    });
+
+                let histogram = histogram_vec.with_label_values(&self.extract_label_values(labels))
+                    .unwrap_or_else(|e| {
+                        tracing::error!("Failed to create histogram instance: {}", e);
+                        panic!("Histogram creation failed");
+                    });
+
+                histogram_instances.insert(instance_key, histogram.clone());
+                histogram
+            }
+        };
+
+        // Update the histogram
+        histogram.observe(value);
     }
 }
 

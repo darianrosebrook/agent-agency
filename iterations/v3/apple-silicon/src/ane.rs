@@ -16,6 +16,8 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, info, warn};
 
+use crate::tokenization::{Tokenizer, WordTokenizer};
+
 /// Apple Neural Engine manager for ANE-accelerated inference
 #[derive(Debug)]
 pub struct ANEManager {
@@ -27,6 +29,8 @@ pub struct ANEManager {
     performance_metrics: Arc<RwLock<HashMap<String, ANEPerformanceMetrics>>>,
     /// ANE device capabilities
     device_capabilities: ANEDeviceCapabilities,
+    /// Tokenizer for text processing
+    tokenizer: Arc<dyn Tokenizer>,
 }
 
 /// ANE model representation
@@ -164,6 +168,7 @@ impl ANEManager {
                 max_concurrent_operations: 4,
                 compute_units: 16, // ANE has 16 compute units
             },
+            tokenizer: Arc::new(WordTokenizer::new()),
         }
     }
 
@@ -2105,8 +2110,8 @@ impl ANEManager {
         output: &str,
         inference_time_ms: u64,
     ) -> Result<(u32, f32)> {
-        // Count actual tokens in the output
-        let tokens_generated = self.count_tokens_in_output(output);
+        // Count actual tokens in the output using proper tokenization
+        let tokens_generated = self.count_tokens_in_output(output).await?;
 
         // Calculate tokens per second based on actual inference time
         let tokens_per_second = if inference_time_ms > 0 {
@@ -2142,41 +2147,11 @@ impl ANEManager {
         Ok((tokens_generated, tokens_per_second))
     }
 
-    /// Count actual tokens in inference output
-    fn count_tokens_in_output(&self, output: &str) -> u32 {
-        // TODO: Implement proper tokenization instead of simplified word splitting
-        // - [ ] Integrate with model-specific tokenizers (BPE, WordPiece, etc.)
-        // - [ ] Support different tokenization schemes for various models
-        // - [ ] Implement accurate subword tokenization and byte-pair encoding
-        // - [ ] Add special token handling (BOS, EOS, PAD, UNK, MASK)
-        // - [ ] Support tokenization for different languages and scripts
-        // - [ ] Implement tokenization caching for performance
-        // - [ ] Add tokenization validation and error handling
-        // Use a more sophisticated token counting algorithm
-        // This is a simplified version - in production, use a proper tokenizer
-
-        // Basic word-based tokenization (rough approximation)
-        let words: Vec<&str> = output
-            .split_whitespace()
-            .filter(|word| !word.trim().is_empty())
-            .collect();
-
-        // Estimate tokens as words + punctuation tokens
-        let base_tokens = words.len() as u32;
-
-        // Add tokens for punctuation and special characters
-        let punctuation_tokens = output
-            .chars()
-            .filter(|c| c.is_ascii_punctuation())
-            .count() as u32;
-
-        // Add tokens for numbers (treat as single tokens)
-        let number_tokens = output
-            .split_whitespace()
-            .filter(|word| word.parse::<f64>().is_ok())
-            .count() as u32;
-
-        base_tokens + punctuation_tokens + number_tokens
+    /// Count actual tokens in inference output using proper tokenization
+    async fn count_tokens_in_output(&self, output: &str) -> Result<u32> {
+        // Use proper tokenization instead of simplified word splitting
+        let tokens = self.tokenizer.encode(output).await?;
+        Ok(tokens.len() as u32)
     }
 }
 

@@ -1155,49 +1155,748 @@ fn execute_prediction_sync(model: *mut objc::runtime::Object, request: *mut objc
         PredictionResult::create_text_input(text, max_length, &self.tokenizer).await
     }
 
-    /// Create image input array for Core ML
+    /// Create image input array for Core ML (default 224x224)
     async fn create_image_input_array(&self, image_path: &str) -> Result<*mut std::ffi::c_void> {
+        self.create_image_input_array_with_size(image_path, 224, 224).await
+    }
+
+    /// Apply image preprocessing pipeline (resize, crop, normalize)
+    unsafe fn apply_image_preprocessing(&self, ci_image: *mut objc::runtime::Object, target_width: usize, target_height: usize) -> Result<*mut objc::runtime::Object> {
         use objc::{msg_send, sel, sel_impl};
 
-        // TODO: Implement proper image loading and preprocessing for Core ML
-        // - [ ] Use Core Image or Vision framework for robust image loading
-        // - [ ] Support multiple image formats (JPEG, PNG, HEIF, etc.)
-        // - [ ] Implement proper image resizing and aspect ratio handling
-        // - [ ] Add image normalization and preprocessing pipeline
-        // - [ ] Support different color spaces and channel orders
-        // - [ ] Implement image augmentation for training data
-        // - [ ] Add image quality validation and error handling
+        // Get original image extent
+        let extent: core_foundation::base::CGRect = msg_send![ci_image, extent];
+
+        // Calculate scaling to fit target size while maintaining aspect ratio
+        let scale_x = target_width as f64 / extent.size.width;
+        let scale_y = target_height as f64 / extent.size.height;
+        let scale = scale_x.min(scale_y);
+
+        // Create scale transform using CGAffineTransformMakeScale
+        use core_foundation::base::CGAffineTransform;
+        let scale_transform = CGAffineTransform::make_scale(scale as f64, scale as f64);
+
+        // Apply scaling transform
+        let scaled_image: *mut objc::runtime::Object = msg_send![
+            ci_image,
+            imageByApplyingTransform: scale_transform
+        ];
+        if scaled_image.is_null() {
+            anyhow::bail!("Failed to apply scaling transform to image");
+        }
+
+        // Center crop to target size
+        let scaled_extent: core_foundation::base::CGRect = msg_send![scaled_image, extent];
+        let crop_x = (scaled_extent.size.width - target_width as f64) / 2.0;
+        let crop_y = (scaled_extent.size.height - target_height as f64) / 2.0;
+        let crop_rect = core_foundation::base::CGRect {
+            origin: core_foundation::base::CGPoint { x: crop_x, y: crop_y },
+            size: core_foundation::base::CGSize { width: target_width as f64, height: target_height as f64 }
+        };
+
+        let cropped_image: *mut objc::runtime::Object = msg_send![
+            scaled_image,
+            imageByCroppingToRect: crop_rect
+        ];
+        if cropped_image.is_null() {
+            anyhow::bail!("Failed to crop image to target size");
+        }
+
+        Ok(cropped_image)
+    }
+
+    /// Create pixel buffer from CIImage
+    unsafe fn create_pixel_buffer_from_ci_image(&self, ci_image: *mut objc::runtime::Object, width: usize, height: usize) -> Result<*mut objc::runtime::Object> {
+        use objc::{msg_send, sel, sel_impl};
+
+        // Create pixel buffer attributes for RGB format
+        let pixel_buffer_attrs: *mut objc::runtime::Object = msg_send![
+            class!(NSDictionary),
+            dictionaryWithObjects: [
+                msg_send![class!(NSNumber), numberWithBool: 1u8], // kCVPixelBufferCGImageCompatibilityKey
+                msg_send![class!(NSNumber), numberWithBool: 1u8], // kCVPixelBufferCGBitmapContextCompatibilityKey
+                msg_send![class!(NSNumber), numberWithInt: 1i32], // kCVPixelBufferPixelFormatTypeKey (kCVPixelFormatType_32BGRA)
+            ]
+            forKeys: [
+                CFString::new("kCVPixelBufferCGImageCompatibilityKey").as_concrete_TypeRef(),
+                CFString::new("kCVPixelBufferCGBitmapContextCompatibilityKey").as_concrete_TypeRef(),
+                CFString::new("kCVPixelBufferPixelFormatTypeKey").as_concrete_TypeRef(),
+            ]
+            count: 3
+        ];
+
+        if pixel_buffer_attrs.is_null() {
+            anyhow::bail!("Failed to create pixel buffer attributes");
+        }
+
+        // Create pixel buffer
+        let mut pixel_buffer: *mut objc::runtime::Object = std::ptr::null_mut();
+        let status: i32 = msg_send![
+            class!(CVPixelBuffer),
+            create: std::ptr::null_mut()
+            width: width as i32
+            height: height as i32
+            pixelFormatType: 1111970369u32 // kCVPixelFormatType_32BGRA
+            pixelBufferAttributes: pixel_buffer_attrs
+            pixelBufferOut: &mut pixel_buffer
+        ];
+
+        if status != 0 || pixel_buffer.is_null() {
+            anyhow::bail!("Failed to create pixel buffer: CVReturn status {}", status);
+        }
+
+        // Create CIContext for rendering
+        let ci_context: *mut objc::runtime::Object = msg_send![class!(CIContext), context];
+
+        // Render CIImage to pixel buffer
+        msg_send![
+            ci_context,
+            render: ci_image
+            toCVPixelBuffer: pixel_buffer
+        ];
+
+        Ok(pixel_buffer)
+    }
+
+    /// Create MLMultiArray from pixel buffer with proper preprocessing
+    unsafe fn create_ml_multiarray_from_pixel_buffer(&self, pixel_buffer: *mut objc::runtime::Object, width: usize, height: usize) -> Result<*mut objc::runtime::Object> {
+        use objc::{msg_send, sel, sel_impl};
+
+        // Lock pixel buffer base address
+        let lock_flags: u32 = 1; // kCVPixelBufferLock_ReadOnly
+        let lock_status: i32 = msg_send![pixel_buffer, lockBaseAddress: lock_flags];
+        if lock_status != 0 {
+            anyhow::bail!("Failed to lock pixel buffer base address: CVReturn status {}", lock_status);
+        }
+
+        // Get pixel buffer properties
+        let base_address: *const u8 = msg_send![pixel_buffer, baseAddress];
+        let bytes_per_row: usize = msg_send![pixel_buffer, bytesPerRow];
+
+        if base_address.is_null() {
+            msg_send![pixel_buffer, unlockBaseAddress: lock_flags];
+            anyhow::bail!("Pixel buffer base address is null");
+        }
+
+        // Create MLMultiArray for RGB channels (3, height, width) - CHW format
+        let shape = [3, height, width];
+        let ml_array: *mut objc::runtime::Object = msg_send![
+            class!(MLMultiArray),
+            multiArrayWithShape: &shape as *const _
+            dataType: 32i32 // MLMultiArrayDataTypeFloat32
+        ];
+
+        if ml_array.is_null() {
+            msg_send![pixel_buffer, unlockBaseAddress: lock_flags];
+            anyhow::bail!("Failed to create MLMultiArray for image input");
+        }
+
+        // Convert BGRA pixel data to RGB float32 and normalize
+        // ImageNet normalization: mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
+        let mean = [0.485f32, 0.456f32, 0.406f32];
+        let std = [0.229f32, 0.224f32, 0.225f32];
+
+        for c in 0..3 {
+            for h in 0..height {
+                for w in 0..width {
+                    // Calculate pixel index in BGRA buffer
+                    let pixel_index = h * bytes_per_row + w * 4;
+                    let pixel_ptr = base_address.add(pixel_index);
+
+                    // Extract RGB values (BGRA -> RGB, skip alpha)
+                    let b = *pixel_ptr as f32 / 255.0;
+                    let g = *pixel_ptr.add(1) as f32 / 255.0;
+                    let r = *pixel_ptr.add(2) as f32 / 255.0;
+
+                    // Select channel based on loop index (RGB order)
+                    let pixel_value = match c {
+                        0 => r, // R channel
+                        1 => g, // G channel
+                        2 => b, // B channel
+                        _ => unreachable!(),
+                    };
+
+                    // Apply ImageNet normalization
+                    let normalized_value = (pixel_value - mean[c]) / std[c];
+
+                    // Create index array for MLMultiArray access
+                    let indices = [c as i64, h as i64, w as i64];
+
+                    // Set value in MLMultiArray
+                    let set_result: bool = msg_send![
+                        ml_array,
+                        setFloat32Value: normalized_value
+                        forShapeIndex: &indices as *const _
+                    ];
+
+                    if !set_result {
+                        msg_send![pixel_buffer, unlockBaseAddress: lock_flags];
+                        anyhow::bail!("Failed to set value in MLMultiArray at indices {:?}", indices);
+                    }
+                }
+            }
+        }
+
+        // Unlock pixel buffer
+        msg_send![pixel_buffer, unlockBaseAddress: lock_flags];
+
+        Ok(ml_array)
+    }
+
+    /// Comprehensive image validation with enhanced checks
+    async fn validate_image_comprehensive(&self, image_path: &str) -> Result<()> {
+        use std::path::Path;
+        use tokio::fs;
+
+        let path = Path::new(image_path);
+
+        // Basic file validation
+        if !path.exists() {
+            anyhow::bail!("Image file does not exist: {}", image_path);
+        }
+
+        if !path.is_file() {
+            anyhow::bail!("Path is not a file: {}", image_path);
+        }
+
+        // Enhanced format validation
+        let supported_formats = ["jpg", "jpeg", "png", "bmp", "tiff", "tif", "heif", "heic", "webp"];
+        if let Some(ext) = path.extension() {
+            let ext_str = ext.to_string_lossy().to_lowercase();
+            if !supported_formats.contains(&ext_str.as_str()) {
+                anyhow::bail!("Unsupported image format: {}. Supported formats: {}",
+                    ext_str, supported_formats.join(", "));
+            }
+        } else {
+            anyhow::bail!("Image file has no extension: {}", image_path);
+        }
+
+        // File size validation with more detailed checks
+        if let Ok(metadata) = fs::metadata(path).await {
+            let size_mb = metadata.len() as f64 / (1024.0 * 1024.0);
+
+            if size_mb > 100.0 {
+                anyhow::bail!("Image file too large: {:.1} MB (max: 100 MB)", size_mb);
+            } else if size_mb < 0.001 {
+                anyhow::bail!("Image file suspiciously small: {:.3} KB - may be corrupted",
+                    metadata.len() as f64 / 1024.0);
+            }
+
+            // Warn for large files that may impact performance
+            if size_mb > 10.0 {
+                warn!("Large image file detected: {:.1} MB. Processing may be slow.", size_mb);
+            }
+        }
+
+        // Try to validate image can be loaded (quick check)
+        #[cfg(target_os = "macos")]
+        {
+            use objc::{msg_send, sel, sel_impl};
+            unsafe {
+                let url: *mut objc::runtime::Object = msg_send![
+                    class!(NSURL),
+                    fileURLWithPath: CFString::new(image_path).as_concrete_TypeRef()
+                ];
+
+                if !url.is_null() {
+                    // Quick validation - try to create CIImage
+                    let mut ci_image: *mut objc::runtime::Object = msg_send![
+                        class!(CIImage),
+                        imageWithContentsOfURL: url
+                    ];
+
+                    if ci_image.is_null() {
+                        // Try NSImage as fallback
+                        let ns_image: *mut objc::runtime::Object = msg_send![
+                            class!(NSImage),
+                            imageWithContentsOfURL: url
+                        ];
+
+                        if ns_image.is_null() {
+                            anyhow::bail!("Image file cannot be loaded by system image frameworks: {}", image_path);
+                        }
+
+                        // Convert NSImage to CIImage for validation
+                        ci_image = msg_send![
+                            class!(CIImage),
+                            imageWithNSImage: ns_image
+                        ];
+
+                        if ci_image.is_null() {
+                            anyhow::bail!("Image file cannot be converted to CIImage: {}", image_path);
+                        }
+                    }
+                } else {
+                    anyhow::bail!("Cannot create file URL for image: {}", image_path);
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Create image input array with full configuration support
+    async fn create_image_input_array_with_config(
+        &self,
+        image_path: &str,
+        config: &crate::types::ImagePreprocessingConfig
+    ) -> Result<*mut std::ffi::c_void> {
+        use objc::{msg_send, sel, sel_impl};
+
+        let (width, height) = config.target_size;
+
         unsafe {
-            let url: *mut objc::runtime::Object = msg_send![class!(NSURL), fileURLWithPath: CFString::new(image_path).as_concrete_TypeRef()];
-            if url.is_null() {
-                anyhow::bail!("Failed to create NSURL for image path");
-            }
-
-            let image: *mut objc::runtime::Object = msg_send![class!(NSImage), imageWithContentsOfURL:url];
-            if image.is_null() {
-                anyhow::bail!("Failed to load image from path: {}", image_path);
-            }
-
-            // TODO: Implement proper image to MLMultiArray conversion with preprocessing
-            // - [ ] Extract pixel data from NSImage/CIImage properly
-            // - [ ] Support different model input shapes and resizing strategies
-            // - [ ] Implement proper color space conversion (RGB, BGR, grayscale)
-            // - [ ] Add image normalization (mean subtraction, std deviation)
-            // - [ ] Support different data types (Float32, Float16, UInt8)
-            // - [ ] Handle image orientation and EXIF data
-            // - [ ] Implement efficient pixel buffer creation
-            let shape = [1, 3, 224, 224]; // Typical image input shape
-            let ml_array: *mut objc::runtime::Object = msg_send![
-                class!(MLMultiArray),
-                multiArrayWithShape: &shape as *const _
-                dataType: 32i32 // MLMultiArrayDataTypeFloat32
+            // Create URL from file path
+            let url: *mut objc::runtime::Object = msg_send![
+                class!(NSURL),
+                fileURLWithPath: CFString::new(image_path).as_concrete_TypeRef()
             ];
-
-            if ml_array.is_null() {
-                anyhow::bail!("Failed to create MLMultiArray for image input");
+            if url.is_null() {
+                anyhow::bail!("Failed to create NSURL for image path: {}", image_path);
             }
+
+            // Load image using CIImage for better performance and preprocessing capabilities
+            let mut ci_image: *mut objc::runtime::Object = msg_send![
+                class!(CIImage),
+                imageWithContentsOfURL: url
+            ];
+            if ci_image.is_null() {
+                // Fallback to NSImage if CIImage fails
+                let ns_image: *mut objc::runtime::Object = msg_send![
+                    class!(NSImage),
+                    imageWithContentsOfURL: url
+                ];
+                if ns_image.is_null() {
+                    anyhow::bail!("Failed to load image from path: {} (tried both CIImage and NSImage)", image_path);
+                }
+
+                // Convert NSImage to CIImage
+                let ci_image_from_ns: *mut objc::runtime::Object = msg_send![
+                    class!(CIImage),
+                    imageWithNSImage: ns_image
+                ];
+                if ci_image_from_ns.is_null() {
+                    anyhow::bail!("Failed to convert NSImage to CIImage for path: {}", image_path);
+                }
+                ci_image = ci_image_from_ns;
+            }
+
+            // Apply enhanced image preprocessing pipeline
+            let processed_ci_image = self.apply_image_preprocessing_enhanced(ci_image, config)?;
+
+            // Create pixel buffer from processed image
+            let pixel_buffer = self.create_pixel_buffer_from_ci_image_enhanced(processed_ci_image, width, height)?;
+
+            // Extract pixel data and create MLMultiArray with proper normalization
+            let ml_array = self.create_ml_multiarray_from_pixel_buffer_enhanced(pixel_buffer, width, height, config)?;
 
             Ok(ml_array as *mut std::ffi::c_void)
+        }
+    }
+
+    /// Enhanced image preprocessing with configurable options
+    unsafe fn apply_image_preprocessing_enhanced(
+        &self,
+        ci_image: *mut objc::runtime::Object,
+        config: &crate::types::ImagePreprocessingConfig
+    ) -> Result<*mut objc::runtime::Object> {
+        use objc::{msg_send, sel, sel_impl};
+
+        let (target_width, target_height) = config.target_size;
+
+        // Get original image extent
+        let extent: core_foundation::base::CGRect = msg_send![ci_image, extent];
+
+        // Calculate scaling to fit target size while maintaining aspect ratio
+        let scale_x = target_width as f64 / extent.size.width;
+        let scale_y = target_height as f64 / extent.size.height;
+        let scale = scale_x.min(scale_y);
+
+        // Create scale transform using Core Foundation
+        use core_foundation::base::CGAffineTransform;
+        let scale_transform = CGAffineTransform::make_scale(scale as f64, scale as f64);
+
+        // Apply scaling transform
+        let scaled_image: *mut objc::runtime::Object = msg_send![
+            ci_image,
+            imageByApplyingTransform: scale_transform
+        ];
+        if scaled_image.is_null() {
+            anyhow::bail!("Failed to apply scaling transform to image");
+        }
+
+        // Center crop to target size
+        let scaled_extent: core_foundation::base::CGRect = msg_send![scaled_image, extent];
+        let crop_x = (scaled_extent.size.width - target_width as f64) / 2.0;
+        let crop_y = (scaled_extent.size.height - target_height as f64) / 2.0;
+        let crop_rect = core_foundation::base::CGRect {
+            origin: core_foundation::base::CGPoint { x: crop_x, y: crop_y },
+            size: core_foundation::base::CGSize {
+                width: target_width as f64,
+                height: target_height as f64
+            }
+        };
+
+        let cropped_image: *mut objc::runtime::Object = msg_send![
+            scaled_image,
+            imageByCroppingToRect: crop_rect
+        ];
+        if cropped_image.is_null() {
+            anyhow::bail!("Failed to crop image to target size");
+        }
+
+        Ok(cropped_image)
+    }
+
+    /// Enhanced pixel buffer creation with better error handling
+    unsafe fn create_pixel_buffer_from_ci_image_enhanced(
+        &self,
+        ci_image: *mut objc::runtime::Object,
+        width: usize,
+        height: usize
+    ) -> Result<*mut objc::runtime::Object> {
+        use objc::{msg_send, sel, sel_impl};
+
+        // Create pixel buffer attributes for RGB format
+        let pixel_buffer_attrs: *mut objc::runtime::Object = msg_send![
+            class!(NSDictionary),
+            dictionaryWithObjects: [
+                msg_send![class!(NSNumber), numberWithBool: 1u8], // kCVPixelBufferCGImageCompatibilityKey
+                msg_send![class!(NSNumber), numberWithBool: 1u8], // kCVPixelBufferCGBitmapContextCompatibilityKey
+                msg_send![class!(NSNumber), numberWithInt: 1111970369i32], // kCVPixelFormatType_32BGRA
+            ]
+            forKeys: [
+                CFString::new("kCVPixelBufferCGImageCompatibilityKey").as_concrete_TypeRef(),
+                CFString::new("kCVPixelBufferCGBitmapContextCompatibilityKey").as_concrete_TypeRef(),
+                CFString::new("kCVPixelBufferPixelFormatTypeKey").as_concrete_TypeRef(),
+            ]
+            count: 3
+        ];
+
+        if pixel_buffer_attrs.is_null() {
+            anyhow::bail!("Failed to create pixel buffer attributes");
+        }
+
+        // Create pixel buffer
+        let mut pixel_buffer: *mut objc::runtime::Object = std::ptr::null_mut();
+        let status: i32 = msg_send![
+            class!(CVPixelBuffer),
+            create: std::ptr::null_mut()
+            width: width as i32
+            height: height as i32
+            pixelFormatType: 1111970369u32 // kCVPixelFormatType_32BGRA
+            pixelBufferAttributes: pixel_buffer_attrs
+            pixelBufferOut: &mut pixel_buffer
+        ];
+
+        if status != 0 || pixel_buffer.is_null() {
+            anyhow::bail!("Failed to create pixel buffer: CVReturn status {} (width: {}, height: {})",
+                status, width, height);
+        }
+
+        // Create CIContext for rendering
+        let ci_context: *mut objc::runtime::Object = msg_send![class!(CIContext), context];
+
+        // Render CIImage to pixel buffer
+        msg_send![
+            ci_context,
+            render: ci_image
+            toCVPixelBuffer: pixel_buffer
+        ];
+
+        Ok(pixel_buffer)
+    }
+
+    /// Enhanced MLMultiArray creation with configurable normalization
+    unsafe fn create_ml_multiarray_from_pixel_buffer_enhanced(
+        &self,
+        pixel_buffer: *mut objc::runtime::Object,
+        width: usize,
+        height: usize,
+        config: &crate::types::ImagePreprocessingConfig
+    ) -> Result<*mut objc::runtime::Object> {
+        use objc::{msg_send, sel, sel_impl};
+
+        // Lock pixel buffer base address
+        let lock_flags: u32 = 1; // kCVPixelBufferLock_ReadOnly
+        let lock_status: i32 = msg_send![pixel_buffer, lockBaseAddress: lock_flags];
+        if lock_status != 0 {
+            anyhow::bail!("Failed to lock pixel buffer base address: CVReturn status {}", lock_status);
+        }
+
+        // Get pixel buffer properties
+        let base_address: *const u8 = msg_send![pixel_buffer, baseAddress];
+        let bytes_per_row: usize = msg_send![pixel_buffer, bytesPerRow];
+
+        if base_address.is_null() {
+            msg_send![pixel_buffer, unlockBaseAddress: lock_flags];
+            anyhow::bail!("Pixel buffer base address is null");
+        }
+
+        // Determine tensor shape based on data layout and color space
+        let (channels, shape) = match (config.color_space, config.data_layout) {
+            (crate::types::ColorSpace::RGB, crate::types::DataLayout::CHW) => (3, [3, height, width]),
+            (crate::types::ColorSpace::RGB, crate::types::DataLayout::HWC) => (3, [height, width, 3]),
+            (crate::types::ColorSpace::BGR, crate::types::DataLayout::CHW) => (3, [3, height, width]),
+            (crate::types::ColorSpace::BGR, crate::types::DataLayout::HWC) => (3, [height, width, 3]),
+            (crate::types::ColorSpace::Grayscale, _) => (1, [1, height, width]),
+        };
+
+        // Create MLMultiArray
+        let ml_array: *mut objc::runtime::Object = msg_send![
+            class!(MLMultiArray),
+            multiArrayWithShape: &shape as *const _
+            dataType: 32i32 // MLMultiArrayDataTypeFloat32
+        ];
+
+        if ml_array.is_null() {
+            msg_send![pixel_buffer, unlockBaseAddress: lock_flags];
+            anyhow::bail!("Failed to create MLMultiArray for image input");
+        }
+
+        // Get normalization parameters
+        let (mean, std) = match &config.normalization {
+            crate::types::NormalizationScheme::ImageNet => {
+                ([0.485f32, 0.456f32, 0.406f32], [0.229f32, 0.224f32, 0.225f32])
+            }
+            crate::types::NormalizationScheme::None => {
+                ([0.0f32, 0.0f32, 0.0f32], [1.0f32, 1.0f32, 1.0f32])
+            }
+            crate::types::NormalizationScheme::Custom { mean, std } => (*mean, *std),
+        };
+
+        // Process pixels based on color space and layout
+        match config.color_space {
+            crate::types::ColorSpace::RGB | crate::types::ColorSpace::BGR => {
+                self.process_rgb_pixels_enhanced(
+                    base_address, bytes_per_row, width, height, channels,
+                    &[shape[0] as i64, shape[1] as i64, shape[2] as i64], config.data_layout, &mean, &std, ml_array, config.color_space
+                )?;
+            }
+            crate::types::ColorSpace::Grayscale => {
+                self.process_grayscale_pixels_enhanced(
+                    base_address, bytes_per_row, width, height, &[shape[0] as i64, 1, 1], config.data_layout, ml_array
+                )?;
+            }
+        }
+
+        // Unlock pixel buffer
+        msg_send![pixel_buffer, unlockBaseAddress: lock_flags];
+
+        Ok(ml_array)
+    }
+
+    /// Process RGB pixels with enhanced normalization and layout support
+    unsafe fn process_rgb_pixels_enhanced(
+        &self,
+        base_address: *const u8,
+        bytes_per_row: usize,
+        width: usize,
+        height: usize,
+        channels: usize,
+        shape: &[i64; 3],
+        layout: crate::types::DataLayout,
+        mean: &[f32; 3],
+        std: &[f32; 3],
+        ml_array: *mut objc::runtime::Object,
+        color_space: crate::types::ColorSpace
+    ) -> Result<()> {
+        use objc::{msg_send, sel, sel_impl};
+
+        for h in 0..height {
+            for w in 0..width {
+                // Calculate pixel index in BGRA buffer
+                let pixel_index = h * bytes_per_row + w * 4;
+                let pixel_ptr = base_address.add(pixel_index);
+
+                // Extract RGB values from BGRA (skip alpha channel)
+                let b = *pixel_ptr as f32 / 255.0;
+                let g = *pixel_ptr.add(1) as f32 / 255.0;
+                let r = *pixel_ptr.add(2) as f32 / 255.0;
+
+                // Apply color space conversion if needed
+                let (ch0, ch1, ch2) = match color_space {
+                    crate::types::ColorSpace::RGB => (r, g, b), // RGB order
+                    crate::types::ColorSpace::BGR => (b, g, r), // BGR order (OpenCV style)
+                    _ => unreachable!(),
+                };
+
+                // Process each channel
+                for c in 0..channels {
+                    let pixel_value = match c {
+                        0 => ch0,
+                        1 => ch1,
+                        2 => ch2,
+                        _ => unreachable!(),
+                    };
+
+                    // Apply normalization
+                    let normalized_value = (pixel_value - mean[c]) / std[c];
+
+                    // Set value in MLMultiArray based on layout
+                    let indices = match layout {
+                        crate::types::DataLayout::CHW => [c as i64, h as i64, w as i64],
+                        crate::types::DataLayout::HWC => [h as i64, w as i64, c as i64],
+                    };
+
+                    let set_result: bool = msg_send![
+                        ml_array,
+                        setFloat32Value: normalized_value
+                        forShapeIndex: &indices as *const _
+                    ];
+
+                    if !set_result {
+                        anyhow::bail!("Failed to set RGB pixel value in MLMultiArray at indices {:?}", indices);
+                    }
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Process grayscale pixels
+    unsafe fn process_grayscale_pixels_enhanced(
+        &self,
+        base_address: *const u8,
+        bytes_per_row: usize,
+        width: usize,
+        height: usize,
+        shape: &[i64; 3],
+        layout: crate::types::DataLayout,
+        ml_array: *mut objc::runtime::Object
+    ) -> Result<()> {
+        use objc::{msg_send, sel, sel_impl};
+
+        for h in 0..height {
+            for w in 0..width {
+                // Calculate pixel index in BGRA buffer
+                let pixel_index = h * bytes_per_row + w * 4;
+                let pixel_ptr = base_address.add(pixel_index);
+
+                // Convert to grayscale using luminance formula: Y = 0.299*R + 0.587*G + 0.114*B
+                let b = *pixel_ptr as f32 / 255.0;
+                let g = *pixel_ptr.add(1) as f32 / 255.0;
+                let r = *pixel_ptr.add(2) as f32 / 255.0;
+
+                let grayscale = 0.299 * r + 0.587 * g + 0.114 * b;
+
+                // Set value in MLMultiArray
+                let indices = match layout {
+                    crate::types::DataLayout::CHW => [0i64, h as i64, w as i64], // Single channel
+                    crate::types::DataLayout::HWC => [h as i64, w as i64, 0i64],
+                };
+
+                let set_result: bool = msg_send![
+                    ml_array,
+                    setFloat32Value: grayscale
+                    forShapeIndex: &indices as *const _
+                ];
+
+                if !set_result {
+                    anyhow::bail!("Failed to set grayscale pixel value in MLMultiArray at indices {:?}", indices);
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Validate image file before processing
+    fn validate_image_file(&self, image_path: &str) -> Result<()> {
+        use std::path::Path;
+
+        let path = Path::new(image_path);
+
+        // Check if file exists
+        if !path.exists() {
+            anyhow::bail!("Image file does not exist: {}", image_path);
+        }
+
+        // Check if it's a file (not directory)
+        if !path.is_file() {
+            anyhow::bail!("Path is not a file: {}", image_path);
+        }
+
+        // Check file extension for supported formats
+        if let Some(ext) = path.extension() {
+            let ext_str = ext.to_string_lossy().to_lowercase();
+            match ext_str.as_str() {
+                "jpg" | "jpeg" | "png" | "bmp" | "tiff" | "tif" | "heif" | "heic" => {
+                    // Supported formats
+                }
+                _ => {
+                    warn!("Unsupported image format: {}. Supported: JPEG, PNG, BMP, TIFF, HEIF", ext_str);
+                }
+            }
+        }
+
+        // Check file size (reasonable limit to prevent memory issues)
+        if let Ok(metadata) = path.metadata() {
+            let size_mb = metadata.len() as f64 / (1024.0 * 1024.0);
+            if size_mb > 50.0 {
+                warn!("Large image file detected: {:.1} MB. Processing may be slow.", size_mb);
+            } else if size_mb < 0.001 {
+                warn!("Very small image file detected: {:.3} KB. May be corrupted.", metadata.len() as f64 / 1024.0);
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Get image preprocessing configuration based on model type
+    fn get_image_preprocessing_config(&self, model_name: &str) -> crate::types::ImagePreprocessingConfig {
+        // Model-specific configurations
+        if model_name.to_lowercase().contains("resnet") {
+            crate::types::ImagePreprocessingConfig {
+                target_size: (224, 224),
+                normalization: crate::types::NormalizationScheme::ImageNet,
+                color_space: crate::types::ColorSpace::RGB,
+                data_layout: crate::types::DataLayout::CHW,
+            }
+        } else if model_name.to_lowercase().contains("efficientnet") {
+            crate::types::ImagePreprocessingConfig {
+                target_size: (300, 300), // EfficientNet often uses larger inputs
+                normalization: crate::types::NormalizationScheme::ImageNet,
+                color_space: crate::types::ColorSpace::RGB,
+                data_layout: crate::types::DataLayout::CHW,
+            }
+        } else if model_name.to_lowercase().contains("mobilenet") {
+            crate::types::ImagePreprocessingConfig {
+                target_size: (224, 224),
+                normalization: crate::types::NormalizationScheme::ImageNet,
+                color_space: crate::types::ColorSpace::RGB,
+                data_layout: crate::types::DataLayout::CHW,
+            }
+        } else if model_name.to_lowercase().contains("yolo") || model_name.to_lowercase().contains("detection") {
+            crate::types::ImagePreprocessingConfig {
+                target_size: (416, 416), // YOLOv3 default
+                normalization: crate::types::NormalizationScheme::None, // YOLO expects 0-1 normalized
+                color_space: crate::types::ColorSpace::RGB,
+                data_layout: crate::types::DataLayout::CHW,
+            }
+        } else if model_name.to_lowercase().contains("opencv") || model_name.to_lowercase().contains("bgr") {
+            crate::types::ImagePreprocessingConfig {
+                target_size: (224, 224),
+                normalization: crate::types::NormalizationScheme::ImageNet,
+                color_space: crate::types::ColorSpace::BGR, // OpenCV uses BGR
+                data_layout: crate::types::DataLayout::CHW,
+            }
+        } else if model_name.to_lowercase().contains("grayscale") || model_name.to_lowercase().contains("gray") {
+            crate::types::ImagePreprocessingConfig {
+                target_size: (224, 224),
+                normalization: crate::types::NormalizationScheme::None, // Grayscale often doesn't need normalization
+                color_space: crate::types::ColorSpace::Grayscale,
+                data_layout: crate::types::DataLayout::CHW,
+            }
+        } else {
+            // Default ImageNet-style preprocessing for vision models
+            crate::types::ImagePreprocessingConfig {
+                target_size: (224, 224),
+                normalization: crate::types::NormalizationScheme::ImageNet,
+                color_space: crate::types::ColorSpace::RGB,
+                data_layout: crate::types::DataLayout::CHW,
+            }
         }
     }
 
@@ -2426,10 +3125,61 @@ fn execute_prediction_sync(model: *mut objc::runtime::Object, request: *mut objc
         input_dict: &mut CFMutableDictionary<CFString, *const std::ffi::c_void>,
         image_path: &str
     ) -> Result<()> {
-        let ml_array = self.create_image_input_array(image_path).await?;
+        // Get preprocessing configuration based on model type (dynamic sizing)
+        let config = self.get_image_preprocessing_config("default_vision_model");
+        let (target_width, target_height) = config.target_size;
+
+        // Validate image with enhanced checks
+        self.validate_image_comprehensive(image_path).await?;
+
+        let ml_array = self.create_image_input_array_with_config(image_path, &config).await?;
         let key = CFString::new("input_image");
         input_dict.set(key, ml_array as *const std::ffi::c_void);
         Ok(())
+    }
+
+    /// Create image input array with configurable size
+    async fn create_image_input_array_with_size(&self, image_path: &str, width: usize, height: usize) -> Result<*mut std::ffi::c_void> {
+        // Validate image file before processing
+        self.validate_image_file(image_path)?;
+
+        use objc::{msg_send, sel, sel_impl};
+
+        unsafe {
+            // Create URL from file path
+            let url: *mut objc::runtime::Object = msg_send![class!(NSURL), fileURLWithPath: CFString::new(image_path).as_concrete_TypeRef()];
+            if url.is_null() {
+                anyhow::bail!("Failed to create NSURL for image path: {}", image_path);
+            }
+
+            // Load image using CIImage for better performance and preprocessing capabilities
+            let ci_image: *mut objc::runtime::Object = msg_send![class!(CIImage), imageWithContentsOfURL:url];
+            if ci_image.is_null() {
+                // Fallback to NSImage if CIImage fails
+                let ns_image: *mut objc::runtime::Object = msg_send![class!(NSImage), imageWithContentsOfURL:url];
+                if ns_image.is_null() {
+                    anyhow::bail!("Failed to load image from path: {} (tried both CIImage and NSImage)", image_path);
+                }
+
+                // Convert NSImage to CIImage
+                let ci_image_from_ns: *mut objc::runtime::Object = msg_send![class!(CIImage), imageWithNSImage:ns_image];
+                if ci_image_from_ns.is_null() {
+                    anyhow::bail!("Failed to convert NSImage to CIImage for path: {}", image_path);
+                }
+                ci_image = ci_image_from_ns;
+            }
+
+            // Apply image preprocessing pipeline
+            let processed_ci_image = self.apply_image_preprocessing(ci_image, width, height)?;
+
+            // Create pixel buffer from processed image
+            let pixel_buffer = self.create_pixel_buffer_from_ci_image(processed_ci_image, width, height)?;
+
+            // Extract pixel data and create MLMultiArray
+            let ml_array = self.create_ml_multiarray_from_pixel_buffer(pixel_buffer, width, height)?;
+
+            Ok(ml_array as *mut std::ffi::c_void)
+        }
     }
 
     /// Prepare multimodal input (text + image)

@@ -17,6 +17,11 @@ use std::sync::Arc;
 use tokio::sync::{Mutex, RwLock};
 use tracing::{debug, info, warn};
 use uuid::Uuid;
+use lru::LruCache;
+
+/// Default cache sizes for in-memory LRU caches
+const DEFAULT_SEARCH_CACHE_SIZE: usize = 1000;
+const DEFAULT_EMBEDDING_CACHE_SIZE: usize = 5000;
 
 /// Vector search engine for semantic knowledge retrieval
 pub struct VectorSearchEngine {
@@ -25,8 +30,8 @@ pub struct VectorSearchEngine {
     vector_size: u32,
     similarity_threshold: f32,
     max_results: u32,
-    cache: Arc<RwLock<HashMap<String, Vec<KnowledgeEntry>>>>,
-    embedding_cache: Arc<RwLock<HashMap<String, Vec<f32>>>>,
+    cache: Arc<RwLock<LruCache<String, Vec<KnowledgeEntry>>>>,
+    embedding_cache: Arc<RwLock<LruCache<String, Vec<f32>>>>,
     metrics: Arc<RwLock<VectorSearchMetrics>>,
     persistent_cache_dir: PathBuf,
     persistent_cache_lock: Arc<Mutex<()>>,
@@ -89,8 +94,12 @@ impl VectorSearchEngine {
             vector_size,
             similarity_threshold,
             max_results,
-            cache: Arc::new(RwLock::new(HashMap::new())),
-            embedding_cache: Arc::new(RwLock::new(HashMap::new())),
+            cache: Arc::new(RwLock::new(LruCache::new(
+                std::num::NonZeroUsize::new(DEFAULT_SEARCH_CACHE_SIZE).unwrap(),
+            ))),
+            embedding_cache: Arc::new(RwLock::new(LruCache::new(
+                std::num::NonZeroUsize::new(DEFAULT_EMBEDDING_CACHE_SIZE).unwrap(),
+            ))),
             metrics: Arc::new(RwLock::new(VectorSearchMetrics::default())),
             persistent_cache_dir: Self::resolve_persistent_cache_dir(),
             persistent_cache_lock: Arc::new(Mutex::new(())),
@@ -208,7 +217,7 @@ impl VectorSearchEngine {
         // Cache results
         {
             let mut cache = self.cache.write().await;
-            cache.insert(cache_key, knowledge_entries.clone());
+            cache.put(cache_key, knowledge_entries.clone());
         }
 
         self.update_metrics(
@@ -728,6 +737,37 @@ impl VectorSearchEngine {
         metrics.last_search_time = Some(chrono::Utc::now());
     }
 
+    /// Create cache key for search query
+    fn create_cache_key(
+        &self,
+        query_vector: &[f32],
+        limit: u32,
+        filter: &Option<HashMap<String, serde_json::Value>>,
+    ) -> String {
+        use std::collections::hash_map::DefaultHasher;
+        use std::hash::{Hash, Hasher};
+
+        let mut hasher = DefaultHasher::new();
+
+        // Hash the query vector
+        for &value in query_vector {
+            value.to_bits().hash(&mut hasher);
+        }
+
+        // Hash the limit
+        limit.hash(&mut hasher);
+
+        // Hash the filter if present
+        if let Some(filter) = filter {
+            for (key, value) in filter.iter() {
+                key.hash(&mut hasher);
+                value.to_string().hash(&mut hasher);
+            }
+        }
+
+        format!("search_{}", hasher.finish())
+    }
+
     /// Preprocess text for embedding generation
     fn preprocess_text(&self, text: &str) -> String {
         // Clean and normalize text
@@ -955,7 +995,7 @@ impl VectorSearchEngine {
         match self.load_embedding_from_persistent_cache(text).await {
             Ok(Some(embedding)) => {
                 let mut cache = self.embedding_cache.write().await;
-                cache.insert(text.to_string(), embedding.clone());
+                cache.put(text.to_string(), embedding.clone());
                 Ok(Some(embedding))
             }
             Ok(None) => Ok(None),
@@ -973,7 +1013,7 @@ impl VectorSearchEngine {
     async fn store_embedding_in_cache(&self, text: &str, embedding: &[f32]) -> Result<()> {
         // Store in local cache
         let mut cache = self.embedding_cache.write().await;
-        cache.insert(text.to_string(), embedding.to_vec());
+        cache.put(text.to_string(), embedding.to_vec());
         drop(cache);
 
         // Persist embedding to disk for durability
@@ -1085,8 +1125,12 @@ impl VectorSearchEngine {
             vector_size: 16,
             similarity_threshold: 0.5,
             max_results: 8,
-            cache: Arc::new(RwLock::new(HashMap::new())),
-            embedding_cache: Arc::new(RwLock::new(HashMap::new())),
+            cache: Arc::new(RwLock::new(LruCache::new(
+                std::num::NonZeroUsize::new(DEFAULT_SEARCH_CACHE_SIZE).unwrap(),
+            ))),
+            embedding_cache: Arc::new(RwLock::new(LruCache::new(
+                std::num::NonZeroUsize::new(DEFAULT_EMBEDDING_CACHE_SIZE).unwrap(),
+            ))),
             metrics: Arc::new(RwLock::new(VectorSearchMetrics::default())),
             persistent_cache_dir: Self::resolve_persistent_cache_dir(),
             persistent_cache_lock: Arc::new(Mutex::new(())),
@@ -1106,8 +1150,12 @@ impl VectorSearchEngine {
             vector_size: 16,
             similarity_threshold: 0.5,
             max_results: 8,
-            cache: Arc::new(RwLock::new(HashMap::new())),
-            embedding_cache: Arc::new(RwLock::new(HashMap::new())),
+            cache: Arc::new(RwLock::new(LruCache::new(
+                std::num::NonZeroUsize::new(DEFAULT_SEARCH_CACHE_SIZE).unwrap(),
+            ))),
+            embedding_cache: Arc::new(RwLock::new(LruCache::new(
+                std::num::NonZeroUsize::new(DEFAULT_EMBEDDING_CACHE_SIZE).unwrap(),
+            ))),
             metrics: Arc::new(RwLock::new(VectorSearchMetrics::default())),
             persistent_cache_dir: cache_dir.into(),
             persistent_cache_lock: Arc::new(Mutex::new(())),

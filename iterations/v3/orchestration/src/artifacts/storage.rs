@@ -405,13 +405,12 @@ impl FileSystemStorage {
 
 /// Database-based artifact storage
 pub struct DatabaseStorage {
-    // Database connection would go here
-    // For now, this is a placeholder
+    db_client: Arc<DatabaseClient>,
 }
 
 impl DatabaseStorage {
-    pub fn new(_connection_string: &str) -> Self {
-        Self {}
+    pub fn new(db_client: Arc<DatabaseClient>) -> Self {
+        Self { db_client }
     }
 }
 
@@ -419,53 +418,181 @@ impl DatabaseStorage {
 impl ArtifactStorage for DatabaseStorage {
     async fn store(
         &self,
-        _artifacts: &ExecutionArtifacts,
-        _metadata: &ArtifactMetadata,
+        artifacts: &ExecutionArtifacts,
+        metadata: &ArtifactMetadata,
     ) -> Result<(), ArtifactStorageError> {
-        // TODO: Implement database storage
-        Err(ArtifactStorageError::NotImplemented("Database storage not yet implemented".to_string()))
+        // Convert ExecutionArtifacts to JSON for storage
+        let artifacts_json = serde_json::to_value(artifacts)
+            .map_err(|e| ArtifactStorageError::SerializationError(e.to_string()))?;
+
+        // Prepare metadata for database storage
+        let metadata_json = serde_json::to_value(metadata)
+            .map_err(|e| ArtifactStorageError::SerializationError(e.to_string()))?;
+
+        // Insert into execution_artifacts table
+        let result = self.db_client.execute_parameterized_query(
+            r#"
+            INSERT INTO execution_artifacts (
+                id, task_id, session_id, execution_id, artifact_type,
+                artifact_data, metadata, size_bytes, compression_type, checksum
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            "#,
+            &[
+                &metadata.id,
+                &metadata.task_id,
+                &metadata.session_id,
+                &metadata.execution_id,
+                &"execution_artifacts", // Default artifact type
+                &artifacts_json,
+                &metadata_json,
+                &(artifacts_json.to_string().len() as i64),
+                &"none",
+                &None::<String>, // No checksum for now
+            ],
+        ).await;
+
+        match result {
+            Ok(_) => Ok(()),
+            Err(e) => Err(ArtifactStorageError::DatabaseError(format!("Failed to store artifact: {}", e))),
+        }
     }
 
     async fn retrieve(
         &self,
-        _metadata: &ArtifactMetadata,
+        metadata: &ArtifactMetadata,
     ) -> Result<ExecutionArtifacts, ArtifactStorageError> {
-        // TODO: Implement database retrieval
-        Err(ArtifactStorageError::NotImplemented("Database retrieval not yet implemented".to_string()))
+        // Query the database for the artifact
+        let result = self.db_client.execute_parameterized_query(
+            r#"
+            SELECT artifact_data FROM execution_artifacts
+            WHERE id = $1 AND task_id = $2
+            "#,
+            &[&metadata.id, &metadata.task_id],
+        ).await;
+
+        match result {
+            Ok(rows) if !rows.is_empty() => {
+                let row = &rows[0];
+                let artifacts_json: serde_json::Value = row.get("artifact_data");
+
+                serde_json::from_value(artifacts_json)
+                    .map_err(|e| ArtifactStorageError::SerializationError(format!("Failed to deserialize artifact: {}", e)))
+            }
+            Ok(_) => Err(ArtifactStorageError::NotFound(metadata.id)),
+            Err(e) => Err(ArtifactStorageError::DatabaseError(format!("Failed to retrieve artifact: {}", e))),
+        }
     }
 
     async fn delete(
         &self,
-        _metadata: &ArtifactMetadata,
+        metadata: &ArtifactMetadata,
     ) -> Result<(), ArtifactStorageError> {
-        // TODO: Implement database deletion
-        Err(ArtifactStorageError::NotImplemented("Database deletion not yet implemented".to_string()))
+        // Delete from execution_artifacts table
+        let result = self.db_client.execute_parameterized_query(
+            "DELETE FROM execution_artifacts WHERE id = $1 AND task_id = $2",
+            &[&metadata.id, &metadata.task_id],
+        ).await;
+
+        match result {
+            Ok(_) => Ok(()),
+            Err(e) => Err(ArtifactStorageError::DatabaseError(format!("Failed to delete artifact: {}", e))),
+        }
     }
 
     async fn find_old_artifacts(
         &self,
-        _cutoff_date: DateTime<Utc>,
+        cutoff_date: DateTime<Utc>,
     ) -> Result<Vec<ArtifactMetadata>, ArtifactStorageError> {
-        // TODO: Implement database query
-        Err(ArtifactStorageError::NotImplemented("Database queries not yet implemented".to_string()))
+        // Query for artifacts older than cutoff date
+        let result = self.db_client.execute_parameterized_query(
+            r#"
+            SELECT id, task_id, session_id, execution_id, artifact_type,
+                   metadata, size_bytes, created_at, expires_at
+            FROM execution_artifacts
+            WHERE created_at < $1 OR (expires_at IS NOT NULL AND expires_at < $1)
+            "#,
+            &[&cutoff_date],
+        ).await;
+
+        match result {
+            Ok(rows) => {
+                let mut artifacts = Vec::new();
+                for row in rows {
+                    // Parse metadata from JSON
+                    let metadata_json: serde_json::Value = row.get("metadata");
+                    let parsed_metadata: ArtifactMetadata = serde_json::from_value(metadata_json)
+                        .map_err(|e| ArtifactStorageError::SerializationError(format!("Failed to parse metadata: {}", e)))?;
+
+                    artifacts.push(parsed_metadata);
+                }
+                Ok(artifacts)
+            }
+            Err(e) => Err(ArtifactStorageError::DatabaseError(format!("Failed to find old artifacts: {}", e))),
+        }
     }
 
     async fn find_latest(
         &self,
-        _task_id: Uuid,
+        task_id: Uuid,
     ) -> Result<ArtifactMetadata, ArtifactStorageError> {
-        // TODO: Implement database query
-        Err(ArtifactStorageError::NotImplemented("Database queries not yet implemented".to_string()))
+        // Query for the latest artifact for this task
+        let result = self.db_client.execute_parameterized_query(
+            r#"
+            SELECT id, task_id, session_id, execution_id, artifact_type,
+                   metadata, size_bytes, created_at, expires_at
+            FROM execution_artifacts
+            WHERE task_id = $1
+            ORDER BY created_at DESC
+            LIMIT 1
+            "#,
+            &[&task_id],
+        ).await;
+
+        match result {
+            Ok(rows) if !rows.is_empty() => {
+                let row = &rows[0];
+                let metadata_json: serde_json::Value = row.get("metadata");
+
+                serde_json::from_value(metadata_json)
+                    .map_err(|e| ArtifactStorageError::SerializationError(format!("Failed to parse metadata: {}", e)))
+            }
+            Ok(_) => Err(ArtifactStorageError::NotFoundForTask(task_id)),
+            Err(e) => Err(ArtifactStorageError::DatabaseError(format!("Failed to find latest artifact: {}", e))),
+        }
     }
 
     async fn count_artifacts(&self) -> Result<usize, ArtifactStorageError> {
-        // TODO: Implement database count
-        Err(ArtifactStorageError::NotImplemented("Database count not yet implemented".to_string()))
+        // Count total artifacts
+        let result = self.db_client.execute_parameterized_query(
+            "SELECT COUNT(*) as count FROM execution_artifacts",
+            &[],
+        ).await;
+
+        match result {
+            Ok(rows) if !rows.is_empty() => {
+                let count: i64 = rows[0].get("count");
+                Ok(count as usize)
+            }
+            Ok(_) => Ok(0),
+            Err(e) => Err(ArtifactStorageError::DatabaseError(format!("Failed to count artifacts: {}", e))),
+        }
     }
 
     async fn total_size(&self) -> Result<u64, ArtifactStorageError> {
-        // TODO: Implement database size calculation
-        Err(ArtifactStorageError::NotImplemented("Database size calculation not yet implemented".to_string()))
+        // Calculate total size of all artifacts
+        let result = self.db_client.execute_parameterized_query(
+            "SELECT COALESCE(SUM(size_bytes), 0) as total_size FROM execution_artifacts",
+            &[],
+        ).await;
+
+        match result {
+            Ok(rows) if !rows.is_empty() => {
+                let total_size: i64 = rows[0].get("total_size");
+                Ok(total_size as u64)
+            }
+            Ok(_) => Ok(0),
+            Err(e) => Err(ArtifactStorageError::DatabaseError(format!("Failed to calculate total size: {}", e))),
+        }
     }
 }
 

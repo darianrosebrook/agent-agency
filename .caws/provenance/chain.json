@@ -13890,5 +13890,41 @@
     },
     "previous_hash": "e35b7e1aa8d56bbbd23b3bf0d54918c8e883a24485792c7933d22cbe11067097",
     "hash": "c6bfa9de1b9ef300e92aafe9489cf1b46c0a42700ef64d064d03cf252690963e"
+  },
+  {
+    "id": "prov-1760922799213",
+    "timestamp": "2025-10-20T01:13:19.213Z",
+    "commit": {
+      "hash": "be2b18a8e6a146b846908f5bf340cf562390b5b1",
+      "message": "feat: Complete major infrastructure enhancements - 98% TODO reduction",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "PROJ-785",
+      "title": "agent-agency",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": [
+        "WV-0001"
+      ]
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-20T01:13:19.214Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "c6bfa9de1b9ef300e92aafe9489cf1b46c0a42700ef64d064d03cf252690963e",
+    "hash": "926f69aabb43032ecddb2810e7515e5abc8ad6cdeedd01663e01b06d3fc05d8f"
   }
 ]

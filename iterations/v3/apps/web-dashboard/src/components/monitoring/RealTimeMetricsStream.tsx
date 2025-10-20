@@ -62,19 +62,136 @@ export default function RealTimeMetricsStream({
     if (!enabled) return;
 
     console.warn(
-      "Real-time metrics stream not implemented - requires V3 metrics SSE endpoint"
+      "Using mock real-time metrics stream - V3 SSE endpoint not available"
     );
-    // TODO: Milestone 3 - Real-time Metrics Streaming
-    // - [ ] Implement V3 /metrics/stream SSE endpoint
-    // - [ ] Add event types: health_update, agent_performance, coordination_update, business_metrics
-    // - [ ] Implement event sequencing and deduplication
-    // - [ ] Add configurable event filtering and sampling
-    // - [ ] Test SSE reconnection and event replay
-    // - [ ] Implement client-side buffering for offline periods
-    // - [ ] Add metrics for SSE connection health and event throughput
 
-    // For now, show empty state - no mock data
-    return;
+    // Mock SSE simulation for development
+    let eventCount = 0;
+    const maxEvents = 100; // Prevent infinite simulation
+
+    const mockEventTypes = [
+      "health_update",
+      "agent_performance",
+      "coordination_update",
+      "business_metrics",
+      "system_load",
+      "error_rate",
+      "throughput",
+    ];
+
+    const mockEventGenerator = () => {
+      if (eventCount >= maxEvents) return;
+
+      eventCount++;
+
+      const eventType =
+        mockEventTypes[Math.floor(Math.random() * mockEventTypes.length)];
+      const timestamp = new Date().toISOString();
+
+      let mockData: any = {
+        event_id: `evt_${Date.now()}_${Math.random()
+          .toString(36)
+          .substr(2, 9)}`,
+        timestamp,
+        event_type: eventType,
+      };
+
+      // Generate mock data based on event type
+      switch (eventType) {
+        case "health_update":
+          mockData.data = {
+            service: ["orchestrator", "worker", "database", "api"][
+              Math.floor(Math.random() * 4)
+            ],
+            status: ["healthy", "degraded", "unhealthy"][
+              Math.floor(Math.random() * 3)
+            ],
+            response_time_ms: Math.floor(Math.random() * 1000) + 50,
+            uptime_seconds: Math.floor(Math.random() * 86400),
+          };
+          break;
+
+        case "agent_performance":
+          mockData.data = {
+            agent_id: `agent_${Math.floor(Math.random() * 10) + 1}`,
+            task_completion_rate: Math.random(),
+            average_response_time_ms: Math.floor(Math.random() * 5000) + 100,
+            error_rate: Math.random() * 0.1,
+            active_tasks: Math.floor(Math.random() * 5),
+          };
+          break;
+
+        case "coordination_update":
+          mockData.data = {
+            coordination_type: [
+              "task_assignment",
+              "resource_allocation",
+              "conflict_resolution",
+            ][Math.floor(Math.random() * 3)],
+            participants: Math.floor(Math.random() * 5) + 1,
+            success: Math.random() > 0.1,
+            duration_ms: Math.floor(Math.random() * 1000) + 50,
+          };
+          break;
+
+        case "business_metrics":
+          mockData.data = {
+            metric_type: [
+              "user_engagement",
+              "task_completion",
+              "system_efficiency",
+            ][Math.floor(Math.random() * 3)],
+            value: Math.floor(Math.random() * 1000),
+            trend: ["up", "down", "stable"][Math.floor(Math.random() * 3)],
+            period: "1h",
+          };
+          break;
+
+        case "system_load":
+          mockData.data = {
+            cpu_usage_percent: Math.floor(Math.random() * 100),
+            memory_usage_percent: Math.floor(Math.random() * 100),
+            disk_usage_percent: Math.floor(Math.random() * 100),
+            network_throughput_mbps: Math.floor(Math.random() * 1000),
+          };
+          break;
+
+        case "error_rate":
+          mockData.data = {
+            service: ["api", "worker", "database", "coordinator"][
+              Math.floor(Math.random() * 4)
+            ],
+            error_count: Math.floor(Math.random() * 10),
+            total_requests: Math.floor(Math.random() * 1000) + 100,
+            error_rate_percent: Math.random() * 5,
+          };
+          break;
+
+        case "throughput":
+          mockData.data = {
+            service: ["api", "worker", "database"][
+              Math.floor(Math.random() * 3)
+            ],
+            requests_per_second: Math.floor(Math.random() * 100) + 10,
+            average_latency_ms: Math.floor(Math.random() * 500) + 50,
+            success_rate_percent: 95 + Math.random() * 5,
+          };
+          break;
+      }
+
+      // Simulate SSE message handling
+      handleMetricsEvent({ data: JSON.stringify(mockData) });
+    };
+
+    // Start mock event stream
+    const intervalId = setInterval(
+      mockEventGenerator,
+      1000 + Math.random() * 2000
+    ); // Random interval 1-3 seconds
+
+    return () => {
+      clearInterval(intervalId);
+    };
 
     // Future implementation:
     /*

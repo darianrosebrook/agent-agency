@@ -114,6 +114,50 @@ pub struct InferenceTiming {
     pub output_tokens: usize,
 }
 
+/// Image preprocessing configuration
+#[derive(Debug, Clone)]
+pub struct ImagePreprocessingConfig {
+    /// Target image size (width, height)
+    pub target_size: (usize, usize),
+    /// Normalization scheme to apply
+    pub normalization: NormalizationScheme,
+    /// Color space for processing
+    pub color_space: ColorSpace,
+    /// Data layout (CHW or HWC)
+    pub data_layout: DataLayout,
+}
+
+/// Normalization schemes for image preprocessing
+#[derive(Debug, Clone)]
+pub enum NormalizationScheme {
+    /// ImageNet normalization: mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
+    ImageNet,
+    /// No normalization applied
+    None,
+    /// Custom normalization with specified mean and std
+    Custom { mean: [f32; 3], std: [f32; 3] },
+}
+
+/// Color spaces for image processing
+#[derive(Debug, Clone)]
+pub enum ColorSpace {
+    /// RGB color space
+    RGB,
+    /// BGR color space (OpenCV default)
+    BGR,
+    /// Grayscale (single channel)
+    Grayscale,
+}
+
+/// Data layout for tensor storage
+#[derive(Debug, Clone)]
+pub enum DataLayout {
+    /// Channel, Height, Width (PyTorch/TensorFlow default)
+    CHW,
+    /// Height, Width, Channel (NumPy default)
+    HWC,
+}
+
 impl Display for InferencePriority {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {

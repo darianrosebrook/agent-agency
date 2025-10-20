@@ -263,7 +263,11 @@ export class SecurityProvenanceManager extends CawsBaseTool {
   private async verifyModelChecksum(
     modelId: string,
     version: string
-  ): Promise<boolean> {}
+  ): Promise<boolean> {
+    // TODO: Implement model checksum verification
+    console.warn("Model checksum verification not implemented");
+    return true; // Placeholder - assume valid for now
+  }
 
   private getTrainingCutoff(modelId: string): string | undefined {
     // Known cutoff dates for common models

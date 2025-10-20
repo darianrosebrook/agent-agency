@@ -8,6 +8,7 @@ import TaskList from "@/components/tasks/TaskList";
 import SystemHealthMonitoring from "@/components/monitoring/SystemHealthOverview";
 import MetricsDashboard from "@/components/metrics/MetricsDashboard";
 import RealTimeMetricsStream from "@/components/monitoring/RealTimeMetricsStream";
+import DatabaseExplorer from "@/components/database/DatabaseExplorer";
 
 interface HealthStatus {
   status: "healthy" | "degraded" | "unhealthy" | "unknown";
@@ -240,24 +241,21 @@ export default function Dashboard() {
             />
           )}
 
-          {activeSection === "database" && (
-            <div className="empty-state">
-              <div className="empty-state-content">
-                <div className="empty-state-icon">🗄️</div>
-                <h1 className="empty-state-title">Database Explorer</h1>
-                <p className="empty-state-description">
-                  Safely inspect database state for efficiency and robustness
-                  research. Query tables, run vector searches, and analyze data
-                  quality. Requires read-only database API access.
-                </p>
-                <div className="empty-state-actions">
-                  <button className="action-button secondary" disabled>
-                    Connect to Database API
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
+              {activeSection === "database" && (
+                <DatabaseExplorer
+                  onConnectionSelect={(connectionId) => {
+                    console.log("Database connection selected:", connectionId);
+                  }}
+                  onConnectionCreate={() => {
+                    console.log("Create new database connection");
+                    // TODO: Milestone 4 - Database Connection Management UI
+                    // - [ ] Implement connection creation dialog
+                    // - [ ] Add connection validation
+                    // - [ ] Support multiple database types (PostgreSQL, MySQL, SQLite)
+                    // - [ ] Implement connection testing before saving
+                  }}
+                />
+              )}
 
           {activeSection === "analytics" && (
             <div className="empty-state">

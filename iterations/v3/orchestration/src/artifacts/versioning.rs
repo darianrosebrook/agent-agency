@@ -481,24 +481,72 @@ impl VersionControl for DatabaseVersionControl {
 
     async fn delete_version(
         &self,
-        _task_id: Uuid,
-        _version: &str,
+        task_id: Uuid,
+        version: &str,
     ) -> Result<(), VersionControlError> {
-        // TODO: Implement database versioning
-        Err(VersionControlError::NotImplemented("Database versioning not yet implemented".to_string()))
+        // Parse version (could be number or label)
+        let version_condition = if let Ok(version_num) = version.parse::<i32>() {
+            format!("av.version_number = {}", version_num)
+        } else {
+            format!("av.version_label = '{}'", version.replace("'", "''"))
+        };
+
+        let query = format!(
+            r#"
+            DELETE FROM artifact_versions av
+            WHERE av.task_id = $1 AND {}
+            "#,
+            version_condition
+        );
+
+        let result = self.db_client.execute_parameterized_query(
+            &query,
+            &[&task_id],
+        ).await;
+
+        match result {
+            Ok(_) => Ok(()),
+            Err(e) => Err(VersionControlError::DatabaseError(format!("Failed to delete version: {}", e))),
+        }
     }
 
     async fn delete_versions(
         &self,
-        _task_id: Uuid,
+        task_id: Uuid,
     ) -> Result<(), VersionControlError> {
-        // TODO: Implement database versioning
-        Err(VersionControlError::NotImplemented("Database versioning not yet implemented".to_string()))
+        let result = self.db_client.execute_parameterized_query(
+            "DELETE FROM artifact_versions WHERE task_id = $1",
+            &[&task_id],
+        ).await;
+
+        match result {
+            Ok(_) => Ok(()),
+            Err(e) => Err(VersionControlError::DatabaseError(format!("Failed to delete versions: {}", e))),
+        }
     }
 
     async fn get_version_statistics(&self) -> Result<HashMap<Uuid, usize>, VersionControlError> {
-        // TODO: Implement database versioning
-        Err(VersionControlError::NotImplemented("Database versioning not yet implemented".to_string()))
+        let result = self.db_client.execute_parameterized_query(
+            r#"
+            SELECT task_id, COUNT(*) as version_count
+            FROM artifact_versions
+            GROUP BY task_id
+            "#,
+            &[],
+        ).await;
+
+        match result {
+            Ok(rows) => {
+                let mut stats = HashMap::new();
+                for row in rows {
+                    let task_id: Uuid = row.get("task_id");
+                    let count: i64 = row.get("version_count");
+                    stats.insert(task_id, count as usize);
+                }
+                Ok(stats)
+            }
+            Err(e) => Err(VersionControlError::DatabaseError(format!("Failed to get version statistics: {}", e))),
+        }
     }
 }
 

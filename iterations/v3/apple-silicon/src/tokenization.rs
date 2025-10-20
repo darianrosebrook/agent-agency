@@ -10,7 +10,7 @@ use async_trait::async_trait;
 
 /// Pluggable tokenizer trait for text processing
 #[async_trait]
-pub trait Tokenizer: Send + Sync {
+pub trait Tokenizer: Send + Sync + std::fmt::Debug {
     /// Encode text into tokens
     async fn encode(&self, text: &str) -> Result<Vec<u32>>;
 
@@ -35,6 +35,7 @@ pub struct SpecialTokens {
 }
 
 /// HuggingFace tokenizer implementation
+#[derive(Debug)]
 pub struct HfTokenizer {
     tokenizer: Arc<tokenizers::tokenizer::Tokenizer>,
     special_tokens: SpecialTokens,
@@ -62,7 +63,7 @@ impl HfTokenizer {
 
     /// Create tokenizer from in-memory config
     pub fn from_config(config: serde_json::Value) -> Result<Self> {
-        let tokenizer = tokenizers::tokenizer::Tokenizer::from_str(&config.to_string())
+        let tokenizer = tokenizers::tokenizer::Tokenizer::from_bytes(config.to_string().as_bytes())
             .map_err(|e| anyhow!("Failed to create tokenizer from config: {}", e))?;
 
         let special_tokens = Self::extract_special_tokens(&tokenizer)?;
@@ -121,6 +122,7 @@ impl Tokenizer for HfTokenizer {
 }
 
 /// Simple word-level tokenizer for fallback
+#[derive(Debug)]
 pub struct WordTokenizer {
     vocab_size: usize,
 }

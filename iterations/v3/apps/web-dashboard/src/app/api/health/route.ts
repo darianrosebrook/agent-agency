@@ -5,6 +5,7 @@ export async function GET() {
   try {
     const targetHost = process.env.V3_BACKEND_HOST ?? "http://localhost:8080";
     const healthUrl = `${targetHost}/health`;
+    const requestStart = Date.now();
 
     console.log(`Checking V3 backend health at: ${healthUrl}`);
 
@@ -74,7 +75,7 @@ export async function GET() {
       backend: {
         ...backendHealth,
         url: targetHost,
-        response_time_ms: Date.now() - Date.now(), // This would need proper timing
+        response_time_ms: Date.now() - requestStart,
       },
     };
 

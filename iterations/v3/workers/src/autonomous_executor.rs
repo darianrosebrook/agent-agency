@@ -33,6 +33,10 @@ pub struct AutonomousExecutorConfig {
     pub circuit_breaker_failure_threshold: u64,
     /// Circuit breaker reset timeout (seconds)
     pub circuit_breaker_reset_timeout_seconds: u64,
+    /// Maximum files allowed in change budget
+    pub change_budget_max_files: usize,
+    /// Maximum lines of code allowed in change budget
+    pub change_budget_max_loc: usize,
 }
 
 impl Default for AutonomousExecutorConfig {
@@ -45,6 +49,8 @@ impl Default for AutonomousExecutorConfig {
             enable_event_streaming: true,
             circuit_breaker_failure_threshold: 5,
             circuit_breaker_reset_timeout_seconds: 60,
+            change_budget_max_files: 50,
+            change_budget_max_loc: 1000,
         }
     }
 }

@@ -87,6 +87,19 @@ pub trait ArtifactStorage: Send + Sync {
         task_id: Uuid,
     ) -> Result<ArtifactMetadata, ArtifactStorageError>;
 
+    /// Find artifact by version
+    async fn find_by_version(
+        &self,
+        task_id: Uuid,
+        version: &str,
+    ) -> Result<ArtifactMetadata, ArtifactStorageError>;
+
+    /// List all versions for a task
+    async fn list_versions(
+        &self,
+        task_id: Uuid,
+    ) -> Result<Vec<ArtifactMetadata>, ArtifactStorageError>;
+
     /// Count total artifacts
     async fn count_artifacts(&self) -> Result<usize, ArtifactStorageError>;
 
@@ -141,6 +154,23 @@ impl DatabaseArtifactStorage {
         let mut hasher = Sha256::new();
         hasher.update(data.as_bytes());
         format!("{:x}", hasher.finalize())
+    }
+
+    /// Get the next version number for a task
+    async fn get_next_version(&self, task_id: Uuid) -> Result<i32, ArtifactStorageError> {
+        let result = sqlx::query(
+            r#"
+            SELECT COALESCE(MAX(version), 0) + 1 as next_version
+            FROM artifact_metadata
+            WHERE task_id = $1
+            "#
+        )
+        .bind(task_id)
+        .fetch_one(&*self.pool)
+        .await
+        .map_err(|e| ArtifactStorageError::DatabaseError(e.to_string()))?;
+
+        Ok(result.get::<i32, _>("next_version"))
     }
 
     /// Map execution artifacts to database rows
@@ -425,6 +455,9 @@ impl ArtifactStorage for DatabaseArtifactStorage {
         let mut tx = self.pool.begin().await
             .map_err(|e| ArtifactStorageError::DatabaseError(e.to_string()))?;
 
+        // Get next version number for this task
+        let next_version = self.get_next_version(metadata.task_id).await?;
+
         // Insert artifact metadata
         sqlx::query(
             r#"
@@ -439,14 +472,14 @@ impl ArtifactStorage for DatabaseArtifactStorage {
         .bind(metadata.task_id)
         .bind(None::<Uuid>) // execution_id
         .bind(None::<Uuid>) // session_id
-        .bind(1) // version
+        .bind(next_version)
         .bind(vec!["unit_tests", "coverage", "linting", "types"]) // artifact_types
         .bind(metadata.size_bytes as i64)
         .bind(1.0) // compression_ratio
         .bind(metadata.created_at)
         .bind(None::<DateTime<Utc>>) // expires_at
         .bind("standard") // retention_policy
-        .bind(serde_json::json!({"checksum": metadata.checksum, "version": metadata.version}))
+        .bind(serde_json::json!({"checksum": metadata.checksum}))
         .execute(&mut *tx)
         .await
         .map_err(|e| ArtifactStorageError::DatabaseError(e.to_string()))?;
@@ -622,10 +655,10 @@ impl ArtifactStorage for DatabaseArtifactStorage {
     ) -> Result<ArtifactMetadata, ArtifactStorageError> {
         let row = sqlx::query(
             r#"
-            SELECT id, task_id, created_at, size_bytes, metadata
+            SELECT id, task_id, created_at, size_bytes, version, metadata
             FROM artifact_metadata
             WHERE task_id = $1
-            ORDER BY created_at DESC
+            ORDER BY version DESC
             LIMIT 1
             "#
         )
@@ -640,6 +673,7 @@ impl ArtifactStorage for DatabaseArtifactStorage {
                 let task_id: Uuid = row.get("task_id");
                 let created_at: DateTime<Utc> = row.get("created_at");
                 let size_bytes: i64 = row.get("size_bytes");
+                let version: i32 = row.get("version");
                 let db_metadata: serde_json::Value = row.get("metadata");
 
                 let checksum = db_metadata
@@ -648,10 +682,52 @@ impl ArtifactStorage for DatabaseArtifactStorage {
                     .unwrap_or("")
                     .to_string();
 
-                let version = db_metadata
-                    .get("version")
+                Ok(ArtifactMetadata {
+                    id,
+                    task_id,
+                    created_at,
+                    size_bytes: size_bytes as u64,
+                    checksum,
+                    version: version.to_string(),
+                    compression_used: false,
+                    integrity_verified: true,
+                })
+            }
+            None => Err(ArtifactStorageError::NotFoundForTask(task_id)),
+        }
+    }
+
+    async fn find_by_version(
+        &self,
+        task_id: Uuid,
+        version: &str,
+    ) -> Result<ArtifactMetadata, ArtifactStorageError> {
+        let row = sqlx::query(
+            r#"
+            SELECT am.id, am.task_id, am.created_at, am.size_bytes, am.version, am.metadata
+            FROM artifact_metadata am
+            WHERE am.task_id = $1 AND am.version = $2
+            "#
+        )
+        .bind(task_id)
+        .bind(version.parse::<i32>().map_err(|_| ArtifactStorageError::DatabaseError("Invalid version format".to_string()))?)
+        .fetch_optional(&*self.pool)
+        .await
+        .map_err(|e| ArtifactStorageError::DatabaseError(e.to_string()))?;
+
+        match row {
+            Some(row) => {
+                let id: Uuid = row.get("id");
+                let task_id: Uuid = row.get("task_id");
+                let created_at: DateTime<Utc> = row.get("created_at");
+                let size_bytes: i64 = row.get("size_bytes");
+                let version: i32 = row.get("version");
+                let db_metadata: serde_json::Value = row.get("metadata");
+
+                let checksum = db_metadata
+                    .get("checksum")
                     .and_then(|v| v.as_str())
-                    .unwrap_or("1")
+                    .unwrap_or("")
                     .to_string();
 
                 Ok(ArtifactMetadata {
@@ -660,13 +736,65 @@ impl ArtifactStorage for DatabaseArtifactStorage {
                     created_at,
                     size_bytes: size_bytes as u64,
                     checksum,
-                    version,
+                    version: version.to_string(),
                     compression_used: false,
                     integrity_verified: true,
                 })
             }
             None => Err(ArtifactStorageError::NotFoundForTask(task_id)),
         }
+    }
+
+    async fn list_versions(
+        &self,
+        task_id: Uuid,
+    ) -> Result<Vec<ArtifactMetadata>, ArtifactStorageError> {
+        let rows = sqlx::query(
+            r#"
+            SELECT am.id, am.task_id, am.created_at, am.size_bytes, am.metadata
+            FROM artifact_metadata am
+            WHERE am.task_id = $1
+            ORDER BY am.version DESC
+            "#
+        )
+        .bind(task_id)
+        .fetch_all(&*self.pool)
+        .await
+        .map_err(|e| ArtifactStorageError::DatabaseError(e.to_string()))?;
+
+        let mut artifacts = Vec::new();
+        for row in rows {
+            let id: Uuid = row.get("id");
+            let task_id: Uuid = row.get("task_id");
+            let created_at: DateTime<Utc> = row.get("created_at");
+            let size_bytes: i64 = row.get("size_bytes");
+            let db_metadata: serde_json::Value = row.get("metadata");
+
+            let checksum = db_metadata
+                .get("checksum")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
+
+            let version = db_metadata
+                .get("version")
+                .and_then(|v| v.as_str())
+                .unwrap_or("1")
+                .to_string();
+
+            artifacts.push(ArtifactMetadata {
+                id,
+                task_id,
+                created_at,
+                size_bytes: size_bytes as u64,
+                checksum,
+                version,
+                compression_used: false,
+                integrity_verified: true,
+            });
+        }
+
+        Ok(artifacts)
     }
 
     async fn count_artifacts(&self) -> Result<usize, ArtifactStorageError> {

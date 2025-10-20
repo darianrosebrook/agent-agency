@@ -30,3 +30,6 @@ cadence = "1.4"   # StatsD client
 
 # Cache backends
 redis = { version = "0.24", features = ["tokio-comp", "connection-manager"] }
+
+# Random number generation for model simulation
+rand = "0.8"

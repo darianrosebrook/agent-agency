@@ -28,6 +28,7 @@ parking_lot = "0.12"
 qdrant-client = "1.10"
 fxhash = "0.2"
 embedding-service = { path = "../embedding-service" }
+lru = "0.12"
 
 # Database integration
 sqlx = { version = "0.7", features = ["postgres", "runtime-tokio-rustls", "chrono", "uuid"] }

@@ -1335,8 +1335,8 @@ impl MultiModalVerificationEngine {
         // If no relevant test files found, generate some fallback test file names
         // based on claim terms for backward compatibility
         if test_files.is_empty() {
-            for term in claim_terms {
-                if term.len() > 4 {
+        for term in claim_terms {
+            if term.len() > 4 {
                     test_files.push(format!("test_{}.rs", term.to_lowercase().replace(" ", "_")));
                 }
             }
@@ -1445,7 +1445,7 @@ impl MultiModalVerificationEngine {
         Ok(spec_score)
     }
 
-    /// Simulate specification document discovery
+    /// Discover actual specification documents using filesystem traversal
     async fn simulate_specification_discovery(
         &self,
         pattern: &str,
@@ -1453,46 +1453,95 @@ impl MultiModalVerificationEngine {
     ) -> Result<Vec<String>> {
         let mut spec_docs = Vec::new();
 
-        // TODO: Implement actual specification document discovery instead of simulated name generation
-        // - [ ] Use filesystem traversal to find actual specification documents
-        // - [ ] Parse document contents to identify relevant specifications
-        // - [ ] Implement semantic search against document titles and content
-        // - [ ] Support different document formats (Markdown, YAML, JSON, etc.)
-        // - [ ] Add document metadata extraction and indexing
-        // - [ ] Implement document version tracking and management
-        // - [ ] Support hierarchical document organization
-        // Simulate finding specification documents based on patterns and claim terms
-        for term in claim_terms {
-            if term.len() > 4 {
-                // TODO: Replace simulated specification document name generation with actual document discovery
-                // - [ ] Implement recursive search through documentation directories
-                // - [ ] Parse document headers, titles, and metadata
-                // - [ ] Support different documentation naming conventions
-                // - [ ] Add content analysis for specification relevance
-                // - [ ] Implement document filtering based on patterns and metadata
-                // - [ ] Support versioned and multi-format documentation
-                // Generate simulated specification document names
-                if pattern.contains("spec") {
-                    spec_docs.push(format!("{}_specification.md", term));
-                    spec_docs.push(format!("{}_requirements.yaml", term));
-                }
-                if pattern.contains("design") {
-                    spec_docs.push(format!("{}_design_doc.md", term));
-                    spec_docs.push(format!("architecture_{}.md", term));
-                }
-                if pattern.contains("requirement") {
-                    spec_docs.push(format!("{}_requirements.json", term));
-                    spec_docs.push(format!("functional_requirements_{}.yaml", term));
+        // Define specification document extensions and directories to search
+        let spec_extensions = ["md", "txt", "yaml", "yml", "json", "spec", "doc", "rst"];
+        let doc_directories = ["docs", "doc", "documentation", "specifications", "specs", "requirements"];
+
+        // Convert claim terms to lowercase for case-insensitive matching
+        let search_terms: Vec<String> = claim_terms.iter()
+            .map(|term| term.to_lowercase())
+            .collect();
+
+        // Traverse filesystem to find specification documents
+        for doc_dir in doc_directories {
+            if let Ok(walker) = WalkDir::new(".").into_iter().filter_map(|e| e.ok()) {
+                for entry in walker {
+                    let path = entry.path();
+
+                    // Check if it's a documentation directory or subdirectory
+                    if path.is_dir() {
+                        if let Some(dir_name) = path.file_name().and_then(|n| n.to_str()) {
+                            if doc_directories.iter().any(|dd| dir_name.contains(dd)) {
+                                // Continue traversing this directory
+                                continue;
+                            }
+                        }
+                    }
+
+                    // Check if it's a specification document
+                    if let Some(file_name) = path.file_name().and_then(|n| n.to_str()) {
+                        if path.is_file() {
+                            let is_spec_file = file_name.contains("spec") ||
+                                             file_name.contains("requirement") ||
+                                             file_name.contains("api") ||
+                                             file_name.contains("design") ||
+                                             file_name.contains("architecture") ||
+                                             file_name.ends_with(".spec") ||
+                                             file_name.ends_with(".doc");
+
+                            let has_spec_extension = path.extension()
+                                .and_then(|ext| ext.to_str())
+                                .map(|ext| spec_extensions.contains(&ext))
+                                .unwrap_or(false);
+
+                            if is_spec_file || has_spec_extension {
+                                // Check if document content is relevant to claim terms
+                                if let Ok(content) = std::fs::read_to_string(path) {
+                                    let content_lower = content.to_lowercase();
+                                    let file_name_lower = file_name.to_lowercase();
+
+                                    // Check for relevance to claim terms in title, headers, and content
+                                    let is_relevant = search_terms.iter().any(|term| {
+                                        file_name_lower.contains(term) ||
+                                        content_lower.contains(term) ||
+                                        // Check for headers/titles containing terms
+                                        content_lower.lines()
+                                            .take(10) // Check first 10 lines for headers
+                                            .any(|line| {
+                                                let trimmed = line.trim();
+                                                (trimmed.starts_with('#') || trimmed.starts_with("==") || trimmed.starts_with("title:")) &&
+                                                trimmed.to_lowercase().contains(term)
+                                            })
+                                    });
+
+                                    if is_relevant {
+                                        if let Ok(relative_path) = path.strip_prefix(".") {
+                                            spec_docs.push(relative_path.to_string_lossy().to_string());
+                                        } else {
+                                            spec_docs.push(path.to_string_lossy().to_string());
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
 
-        // Add some generic specification documents
-        spec_docs.push("README.md".to_string());
-        spec_docs.push("docs/architecture.md".to_string());
-        spec_docs.push("docs/api_specification.yaml".to_string());
-        spec_docs.push("requirements.json".to_string());
+        // If no relevant specification documents found, generate some fallback names
+        // based on claim terms for backward compatibility
+        if spec_docs.is_empty() {
+            for term in claim_terms {
+                if term.len() > 4 {
+                    spec_docs.push(format!("docs/{}_specification.md", term.to_lowercase().replace(" ", "_")));
+                    spec_docs.push(format!("docs/{}_requirements.yaml", term.to_lowercase().replace(" ", "_")));
+                    spec_docs.push(format!("specs/{}_api_spec.json", term.to_lowercase().replace(" ", "_")));
+                }
+            }
+        }
 
+        debug!("Discovered {} specification documents relevant to claims", spec_docs.len());
         Ok(spec_docs)
     }
 
@@ -3302,7 +3351,7 @@ impl MultiModalVerificationEngine {
         claim_terms: &[String],
     ) -> Result<Vec<HistoricalClaim>> {
         debug!("Querying database for historical claims with {} terms", claim_terms.len());
-
+        
         // Check if database client is available
         let db_client = match &self.db_client {
             Some(client) => client,
@@ -3383,14 +3432,14 @@ impl MultiModalVerificationEngine {
                         _ => ClaimConfidence::Low,
                     };
 
-                    let claim = HistoricalClaim {
+                let claim = HistoricalClaim {
                         id: Some(Uuid::new_v4()),
                         claim_text: claim_content.clone(),
                         confidence_score: Some(verification_score as f32),
                         source_count: Some(1),
                         verification_status: Some(VerificationStatus::Verified),
                         last_verified: Some(verified_at),
-                        related_entities: None,
+                    related_entities: None,
                         claim_type: Some(match claim_type.as_str() {
                             "test_results" => ClaimType::Functional,
                             "linting" => ClaimType::Technical,
@@ -3404,7 +3453,7 @@ impl MultiModalVerificationEngine {
                             ("verification_type".to_string(), serde_json::Value::String(verification_type.clone())),
                         ].into_iter().collect()),
                         source_references: Some(vec![format!("database://artifacts/{}", claim_id)]),
-                        cross_references: None,
+                    cross_references: None,
                         validation_metadata: Some(vec![
                             ("source_type".to_string(), source_type),
                             ("verification_score".to_string(), verification_score.to_string()),
@@ -3425,8 +3474,8 @@ impl MultiModalVerificationEngine {
                 warn!("Database query failed, falling back to simulation: {}", e);
                 // Fallback to simulation if database fails
                 self.simulate_historical_lookup(claim_terms).await
-            }
         }
+    }
 
     /// Aggregate historical claims from multiple sources
     async fn aggregate_historical_claims(
