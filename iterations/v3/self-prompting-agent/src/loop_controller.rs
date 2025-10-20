@@ -248,8 +248,12 @@ impl SelfPromptingLoop {
 
     /// Extract output from evaluation report (for context building)
     fn get_output_from_report(&self, report: &EvalReport) -> String {
-        // For now, assume the output is stored in artifacts
-        // In a real implementation, we'd store the raw output separately
+        // TODO: Implement separate raw output storage and retrieval
+        // - [ ] Create dedicated output storage system separate from artifacts
+        // - [ ] Implement output versioning and historical tracking
+        // - [ ] Add output compression and efficient storage mechanisms
+        // - [ ] Implement output validation and integrity checking
+        // - [ ] Add output search and filtering capabilities
         format!("Evaluation Report: Score {:.2}, Status {:?}", report.score, report.status)
     }
 
@@ -269,8 +273,12 @@ impl SelfPromptingLoop {
         task: Task,
         sandbox: &mut SandboxEnvironment,
     ) -> Result<SelfPromptingResult, SelfPromptingError> {
-        // For now, just execute normally - sandbox integration would be added here
-        // This would involve:
+        // TODO: Implement sandbox integration for secure code execution
+        // - [ ] Integrate with sandbox execution environment
+        // - [ ] Implement resource limits and execution timeouts
+        // - [ ] Add code isolation and security measures
+        // - [ ] Implement execution result validation and sanitization
+        // - [ ] Add sandbox monitoring and error handling
         // 1. Creating diff from generated output
         // 2. Applying diff to sandbox
         // 3. Running tests in sandbox

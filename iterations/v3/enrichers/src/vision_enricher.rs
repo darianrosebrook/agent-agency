@@ -234,8 +234,12 @@ impl VisionEnricher {
     /// - [ ] Add support for minimum text height configuration
     /// - [ ] Support automatic language detection configuration
     async fn create_text_recognition_request(&self) -> Result<VNRecognizeTextRequest> {
-        // In a real implementation, this would call Swift/Objective-C bridge
-        // For now, simulate the request creation
+        // TODO: Implement Swift/Objective-C bridge for vision processing requests
+        // - [ ] Set up Swift/Objective-C bridge for macOS vision APIs
+        // - [ ] Implement VNImageRequestHandler creation and configuration
+        // - [ ] Add proper image buffer handling through FFI
+        // - [ ] Handle vision framework permissions and entitlements
+        // - [ ] Implement error handling for vision request failures
 
         Ok(VNRecognizeTextRequest {
             recognition_level: "accurate".to_string(), // or "fast"
@@ -260,8 +264,12 @@ impl VisionEnricher {
     /// - [ ] Support proper image validation and format checking
     /// - [ ] Implement proper error reporting for invalid image data
     async fn create_vision_request_handler(&self, image_path: &std::path::Path) -> Result<VNImageRequestHandler> {
-        // In a real implementation, this would call Swift/Objective-C bridge
-        // For now, simulate the handler creation
+        // TODO: Implement Swift/Objective-C bridge for vision request handler
+        // - [ ] Create VNImageRequestHandler with proper CGImage/CIImage handling
+        // - [ ] Implement image orientation and metadata extraction
+        // - [ ] Add support for different image formats (JPEG, PNG, TIFF)
+        // - [ ] Handle memory management for large images
+        // - [ ] Implement concurrent request processing
 
         Ok(VNImageRequestHandler {
             image_url: image_path.to_path_buf(),
@@ -287,8 +295,12 @@ impl VisionEnricher {
         handler: &VNImageRequestHandler,
         request: &VNRecognizeTextRequest,
     ) -> Result<Vec<VNRecognizedTextObservation>> {
-        // In a real implementation, this would call Swift/Objective-C bridge
-        // For now, simulate text recognition results
+        // TODO: Implement Swift/Objective-C bridge for text recognition execution
+        // - [ ] Execute VNRecognizeTextRequest through Swift bridge
+        // - [ ] Handle asynchronous vision request processing
+        // - [ ] Parse VNRecognizedTextObservation results
+        // - [ ] Implement confidence scoring and result filtering
+        // - [ ] Add support for multiple text recognition results
 
         // Simulate realistic text detection results
         Ok(vec![
@@ -394,8 +406,12 @@ impl VisionEnricher {
 
     /// Get image dimensions from image data
     async fn get_image_dimensions(&self, image_data: &[u8]) -> Result<(u32, u32)> {
-        // In a real implementation, this would parse image headers
-        // For now, assume standard dimensions
+        // TODO: Implement proper image header parsing for dimensions
+        // - [ ] Parse image file headers (JPEG, PNG, TIFF) for actual dimensions
+        // - [ ] Handle different image formats and compression types
+        // - [ ] Extract EXIF orientation and apply transformations
+        // - [ ] Validate image integrity and format compatibility
+        // - [ ] Implement efficient header-only reading for large files
         Ok((1920, 1080))
     }
     

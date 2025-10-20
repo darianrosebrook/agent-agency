@@ -21,6 +21,7 @@ export default function RealTimeMetricsStream({
   }, [enabled]);
 
   const handleMetricsEvent = useCallback(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (event: any) => {
       if (!enabledRef.current) return;
 
@@ -88,6 +89,7 @@ export default function RealTimeMetricsStream({
         mockEventTypes[Math.floor(Math.random() * mockEventTypes.length)];
       const timestamp = new Date().toISOString();
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const mockData: any = {
         event_id: `evt_${Date.now()}_${Math.random()
           .toString(36)

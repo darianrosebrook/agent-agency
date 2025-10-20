@@ -111,8 +111,12 @@ impl E2eAssertions {
 
     /// Assert that task progress follows expected sequence
     pub fn assert_progress_sequence(task: &TaskTestState, expected_sequence: &[&str]) -> Result<(), AssertionError> {
-        // This would require access to the full execution history
-        // For now, just check that progress reaches 100%
+        // TODO: Implement comprehensive task execution history validation
+        // - [ ] Access full task execution history and timeline
+        // - [ ] Implement execution progress validation against expected milestones
+        // - [ ] Add execution time analysis and performance validation
+        // - [ ] Validate execution state transitions and error handling
+        // - [ ] Implement execution result consistency checking
         if (task.progress_percentage - 100.0).abs() > f64::EPSILON {
             return Err(AssertionError::ProgressSequenceInvalid {
                 task_id: task.task_id,

@@ -1694,15 +1694,23 @@ impl ConsensusCoordinator {
 
     /// Calculate participant expertise weight (mock implementation)
     fn calculate_participant_expertise_weight(&self, _participant_id: &str) -> f32 {
-        // In a real implementation, this would query historical performance data
-        // For now, return a reasonable default weight
+        // TODO: Implement historical performance data analysis for participant weighting
+        // - [ ] Query historical decision accuracy and performance metrics
+        // - [ ] Implement statistical analysis of participant reliability
+        // - [ ] Add time-weighted performance scoring (recent vs old performance)
+        // - [ ] Handle cold start problem for new participants
+        // - [ ] Implement performance trend analysis and alerting
         1.0
     }
 
     /// Calculate historical performance weight (mock implementation)
     fn calculate_historical_performance_weight(&self, _participant_id: &str) -> f32 {
-        // In a real implementation, this would analyze past decision accuracy
-        // For now, return a reasonable default weight
+        // TODO: Implement past decision accuracy analysis for participant scoring
+        // - [ ] Track decision outcomes and accuracy over time
+        // - [ ] Implement confidence interval analysis for participant reliability
+        // - [ ] Add domain-specific performance tracking
+        // - [ ] Handle decision quality assessment and feedback loops
+        // - [ ] Implement performance-based participant ranking
         1.0
     }
 

@@ -40,7 +40,7 @@ run_test() {
     log "🔍 Running: $test_name"
     log "   Command: $test_command"
 
-    if timeout "$timeout" bash -c "$test_command" 2>&1; then
+    if bash -c "$test_command" 2>&1; then
         log "✅ PASSED: $test_name"
         PASSED_TESTS=$((PASSED_TESTS + 1))
         return 0

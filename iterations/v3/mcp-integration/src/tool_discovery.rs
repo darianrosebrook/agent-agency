@@ -1128,7 +1128,12 @@ impl ToolDiscovery {
         /// - [ ] Support secure WebSocket connections (WSS) with TLS validation
         tracing::debug!("WebSocket health check not fully implemented for: {}", endpoint);
 
-        // For now, just check if the endpoint looks like a valid WebSocket URL
+        // TODO: Implement comprehensive WebSocket endpoint validation
+        // - [ ] Add actual WebSocket connection testing and validation
+        // - [ ] Implement WebSocket protocol handshake verification
+        // - [ ] Add SSL/TLS certificate validation for WSS endpoints
+        // - [ ] Implement endpoint health checking and availability monitoring
+        // - [ ] Add support for WebSocket subprotocols and extensions
         endpoint.starts_with("ws://") || endpoint.starts_with("wss://")
     }
 }

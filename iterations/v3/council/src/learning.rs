@@ -1292,8 +1292,12 @@ struct MonitoringAlert {
                 LIMIT 5
             "#;
 
-            // For now, return a score based on simulated database lookup
-            // In a full implementation, this would execute the query and analyze results
+            // TODO: Implement real database query execution and result analysis
+            // - [ ] Execute actual SQL queries against performance database
+            // - [ ] Implement query result analysis and scoring algorithms
+            // - [ ] Add query performance monitoring and optimization
+            // - [ ] Handle database connection failures and query timeouts
+            // - [ ] Implement result caching for frequently accessed data
             let historical_score = match (task_spec.task_type, task_spec.risk_tier) {
                 (crate::types::TaskType::CodeReview, crate::models::RiskTier::Tier1) => 7.5,
                 (crate::types::TaskType::CodeReview, crate::models::RiskTier::Tier2) => 6.8,

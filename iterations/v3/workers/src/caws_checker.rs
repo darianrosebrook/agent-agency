@@ -2451,7 +2451,12 @@ mod tests {
         // let stats = checker.get_compliance_stats().await.unwrap();
         // assert!(stats.get("total_validations").unwrap().as_i64().unwrap() >= 1);
 
-        // For now, just validate the method signatures and data structures exist
+        // TODO: Implement comprehensive CAWS validation and verification testing
+        // - [ ] Add real CAWS spec parsing and validation logic
+        // - [ ] Implement working spec compliance checking
+        // - [ ] Add risk tier validation and change budget enforcement
+        // - [ ] Implement acceptance criteria verification
+        // - [ ] Add CAWS provenance tracking and validation
         let task_spec = TaskSpec {
             id: Uuid::new_v4(),
             title: "Integration Test".to_string(),

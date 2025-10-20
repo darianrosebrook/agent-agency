@@ -300,8 +300,12 @@ impl ContextBuilder {
 
     /// Collect historical task completion data
     async fn collect_historical_data(&self) -> Result<HistoricalData> {
-        // In a real implementation, this would query a database or analytics service
-        // For now, return placeholder data
+        // TODO: Implement database/analytics service integration for historical performance
+        // - [ ] Connect to performance analytics database or service
+        // - [ ] Implement historical performance data queries and aggregation
+        // - [ ] Add performance trend analysis and forecasting
+        // - [ ] Handle data availability and quality validation
+        // - [ ] Implement caching for frequently accessed performance data
 
         let completed_tasks = vec![
             TaskHistory {
@@ -332,8 +336,12 @@ impl ContextBuilder {
 
     /// Analyze recent incidents that might affect planning
     async fn analyze_recent_incidents(&self) -> Result<Vec<Incident>> {
-        // In a real implementation, this would query incident management systems
-        // For now, return empty list (no recent incidents)
+        // TODO: Integrate with incident management systems for recent incident data
+        // - [ ] Connect to incident management systems (Jira, ServiceNow, etc.)
+        // - [ ] Query recent incidents and their impact on task planning
+        // - [ ] Implement incident trend analysis and risk assessment
+        // - [ ] Add incident data validation and deduplication
+        // - [ ] Handle incident data access permissions and security
 
         Ok(vec![])
     }

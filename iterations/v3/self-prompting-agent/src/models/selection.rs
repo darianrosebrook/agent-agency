@@ -111,8 +111,12 @@ impl ModelRegistry {
         base_context: &super::ModelContext,
         model: &dyn ModelProvider,
     ) -> String {
-        // For now, just return the task history as formatted context
-        // In the future, this could adapt based on model capabilities
+        // TODO: Implement adaptive context formatting based on model capabilities
+        // - [ ] Analyze model capabilities and context window limitations
+        // - [ ] Implement intelligent context summarization and prioritization
+        // - [ ] Add context compression and relevance filtering
+        // - [ ] Handle different context formats for various model types
+        // - [ ] Implement context effectiveness measurement and optimization
         let mut context = String::new();
 
         if !base_context.task_history.is_empty() {

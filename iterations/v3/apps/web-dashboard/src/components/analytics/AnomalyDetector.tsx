@@ -48,11 +48,16 @@ export default function AnomalyDetector({
     // TODO: Milestone 5 - Integrate timeSeriesData for advanced anomaly detection
     // Use timeSeriesData for real-time anomaly analysis when available
     if (timeSeriesData && timeSeriesData.length > 0) {
-      console.log("Time series data available for anomaly detection:", timeSeriesData.length, "series");
+      console.log(
+        "Time series data available for anomaly detection:",
+        timeSeriesData.length,
+        "series"
+      );
     }
 
     try {
       setState((prev) => ({ ...prev, isDetecting: true, error: null }));
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const response = await analyticsApiClient.getAnomalies(state.filters);
       setState((prev) => ({
         ...prev,

@@ -34,7 +34,7 @@ export default function BusinessIntelligence({
       setError(null);
 
       const businessData = await metricsApiClient.getBusinessMetrics(
-        range as any
+        range as any // eslint-disable-line @typescript-eslint/no-explicit-any
       );
       setMetrics(businessData);
     } catch (err) {

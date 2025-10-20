@@ -2170,8 +2170,12 @@ impl PlanningAgent {
 
     /// Extract a concise title from the task description
     fn extract_title_from_description(&self, description: &str) -> String {
-        // Use LLM to generate a concise title
-        // For now, use a simple heuristic
+        // TODO: Implement LLM-based title generation for task descriptions
+        // - [ ] Integrate with LLM service for intelligent title generation
+        // - [ ] Implement prompt engineering for task title creation
+        // - [ ] Add title quality validation and refinement
+        // - [ ] Handle LLM API failures with fallback heuristics
+        // - [ ] Implement title uniqueness and consistency checking
         let words: Vec<&str> = description.split_whitespace().take(8).collect();
         format!("{}...", words.join(" "))
     }

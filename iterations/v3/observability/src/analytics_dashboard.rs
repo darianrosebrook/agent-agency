@@ -31,24 +31,23 @@ trait RedisClient {
 /// Production Redis client implementation
 #[derive(Debug)]
 struct ProductionRedisClient {
-    connection: Connection,
+    client: redis::Client,
 }
 
 impl ProductionRedisClient {
     async fn new(redis_url: &str) -> Result<Self> {
-        let client = RedisClientImpl::open(redis_url)
+        let client = redis::Client::open(redis_url)
             .context("Failed to create Redis client")?;
-        let connection = client.get_async_connection().await
-            .context("Failed to connect to Redis")?;
 
-        Ok(Self { connection })
+        Ok(Self { client })
     }
 }
 
 #[async_trait::async_trait]
 impl RedisClient for ProductionRedisClient {
     async fn get(&self, key: &str) -> Result<Option<Vec<u8>>> {
-        let mut conn = self.connection.clone();
+        let mut conn = self.client.get_async_connection().await
+            .map_err(|e| anyhow::anyhow!("Failed to get Redis connection: {}", e))?;
         match conn.get::<_, Option<Vec<u8>>>(key).await {
             Ok(result) => Ok(result),
             Err(e) => Err(anyhow::anyhow!("Redis GET failed: {}", e)),
@@ -56,40 +55,54 @@ impl RedisClient for ProductionRedisClient {
     }
 
     async fn set(&self, key: &str, value: &[u8], ttl_seconds: u64) -> Result<()> {
-        let mut conn = self.connection.clone();
-        conn.set_ex(key, value, ttl_seconds as usize)
-            .await
-            .context("Redis SET failed")?;
-        Ok(())
+        let mut conn = self.client.get_async_connection().await
+            .map_err(|e| anyhow::anyhow!("Failed to get Redis connection: {}", e))?;
+        match conn.set_ex::<_, _, ()>(key, value, ttl_seconds as usize).await {
+            Ok(()) => Ok(()),
+            Err(e) => Err(anyhow::anyhow!("Redis SET failed: {}", e)),
+        }
     }
 
     async fn del(&self, key: &str) -> Result<()> {
-        let mut conn = self.connection.clone();
-        conn.del(key).await.context("Redis DEL failed")?;
-        Ok(())
+        let mut conn = self.client.get_async_connection().await
+            .map_err(|e| anyhow::anyhow!("Failed to get Redis connection: {}", e))?;
+        match conn.del::<_, ()>(key).await {
+            Ok(()) => Ok(()),
+            Err(e) => Err(anyhow::anyhow!("Redis DEL failed: {}", e)),
+        }
     }
 
     async fn exists(&self, key: &str) -> Result<bool> {
-        let mut conn = self.connection.clone();
-        match conn.exists(key).await {
+        let mut conn = self.client.get_async_connection().await
+            .map_err(|e| anyhow::anyhow!("Failed to get Redis connection: {}", e))?;
+        match conn.exists::<_, bool>(key).await {
             Ok(result) => Ok(result),
             Err(e) => Err(anyhow::anyhow!("Redis EXISTS failed: {}", e)),
         }
     }
 
     async fn incr(&self, key: &str) -> Result<i64> {
-        let mut conn = self.connection.clone();
-        conn.incr(key, 1).await.context("Redis INCR failed")
+        let mut conn = self.client.get_async_connection().await
+            .map_err(|e| anyhow::anyhow!("Failed to get Redis connection: {}", e))?;
+        match conn.incr::<_, i64>(key).await {
+            Ok(result) => Ok(result),
+            Err(e) => Err(anyhow::anyhow!("Redis INCR failed: {}", e)),
+        }
     }
 
     async fn incr_by(&self, key: &str, increment: i64) -> Result<i64> {
-        let mut conn = self.connection.clone();
-        conn.incr(key, increment).await.context("Redis INCRBY failed")
+        let mut conn = self.client.get_async_connection().await
+            .map_err(|e| anyhow::anyhow!("Failed to get Redis connection: {}", e))?;
+        match conn.incr_by::<_, i64>(key, increment).await {
+            Ok(result) => Ok(result),
+            Err(e) => Err(anyhow::anyhow!("Redis INCRBY failed: {}", e)),
+        }
     }
 
     async fn expire(&self, key: &str, seconds: u64) -> Result<bool> {
-        let mut conn = self.connection.clone();
-        match conn.expire(key, seconds as i64).await {
+        let mut conn = self.client.get_async_connection().await
+            .map_err(|e| anyhow::anyhow!("Failed to get Redis connection: {}", e))?;
+        match conn.expire::<_, bool>(key, seconds as usize).await {
             Ok(result) => Ok(result),
             Err(e) => Err(anyhow::anyhow!("Redis EXPIRE failed: {}", e)),
         }
@@ -97,7 +110,6 @@ impl RedisClient for ProductionRedisClient {
 }
 
 /// Advanced analytics dashboard service
-#[derive(Debug)]
 pub struct AnalyticsDashboard {
     /// Analytics engine
     analytics_engine: Arc<AnalyticsEngine>,
@@ -456,6 +468,8 @@ impl AnalyticsDashboard {
             sessions: Arc::new(RwLock::new(HashMap::new())),
             db_client: Some(db_client),
             redis_client: None,
+            http_client: Arc::new(HttpClient::new()),
+            statsd_client: None,
             cache_total_entries: Arc::new(std::sync::atomic::AtomicU64::new(0)),
             cache_total_insights: Arc::new(std::sync::atomic::AtomicU64::new(0)),
             cache_hits: Arc::new(std::sync::atomic::AtomicU64::new(0)),
@@ -479,6 +493,8 @@ impl AnalyticsDashboard {
             sessions: Arc::new(RwLock::new(HashMap::new())),
             db_client: None,
             redis_client,
+            http_client: Arc::new(HttpClient::new()),
+            statsd_client: None,
             cache_total_entries: Arc::new(std::sync::atomic::AtomicU64::new(0)),
             cache_total_insights: Arc::new(std::sync::atomic::AtomicU64::new(0)),
             cache_hits: Arc::new(std::sync::atomic::AtomicU64::new(0)),
@@ -503,6 +519,8 @@ impl AnalyticsDashboard {
             sessions: Arc::new(RwLock::new(HashMap::new())),
             db_client: Some(db_client),
             redis_client,
+            http_client: Arc::new(HttpClient::new()),
+            statsd_client: None,
             cache_total_entries: Arc::new(std::sync::atomic::AtomicU64::new(0)),
             cache_total_insights: Arc::new(std::sync::atomic::AtomicU64::new(0)),
             cache_hits: Arc::new(std::sync::atomic::AtomicU64::new(0)),
@@ -1833,9 +1851,12 @@ impl AnalyticsDashboard {
         statsd_client.gauge("agent_agency.error_rate", 0.025).ok();
         statsd_client.gauge("agent_agency.uptime", 87800.0).ok();
 
-        // In a real implementation, you would collect metrics from a StatsD server
-        // For now, we'll simulate the collection by returning reasonable values
-        // In production, this would parse metrics received from the StatsD UDP server
+        // TODO: Implement real StatsD server integration for metrics collection
+        // - [ ] Set up StatsD UDP server listener and parsing
+        // - [ ] Implement metrics aggregation and statistical calculations
+        // - [ ] Add metrics storage and time-series database integration
+        // - [ ] Handle high-volume metrics ingestion and performance optimization
+        // - [ ] Implement metrics validation and anomaly detection
 
         tracing::debug!("Sent test metrics to StatsD and simulating collection");
 
@@ -1948,9 +1969,12 @@ impl AnalyticsDashboard {
         let total_time = user + nice + system + idle + iowait + irq + softirq + steal;
         let idle_time = idle + iowait;
 
-        // For CPU percentage calculation, we need previous values to calculate deltas
-        // For now, return a simple calculation based on current idle ratio
-        // In production, this should track previous values and calculate over time intervals
+        // TODO: Implement proper CPU utilization tracking with historical data
+        // - [ ] Track CPU metrics over time intervals for delta calculations
+        // - [ ] Implement sliding window statistics for CPU usage patterns
+        // - [ ] Add CPU utilization prediction and trend analysis
+        // - [ ] Handle CPU core-specific metrics and load balancing
+        // - [ ] Implement CPU usage anomaly detection and alerting
         if total_time == 0 {
             return Ok(0.0);
         }
@@ -2620,8 +2644,12 @@ impl AnalyticsDashboard {
         // This is a simplified implementation that would normally use
         // proper protobuf parsing with onnxruntime or onnx-proto crate
 
-        // For now, we'll simulate metadata extraction based on file size
-        // and some basic heuristics
+        // TODO: Implement proper file metadata extraction and analysis
+        // - [ ] Parse actual file headers and metadata structures
+        // - [ ] Implement file type detection and content analysis
+        // - [ ] Add file integrity validation and corruption detection
+        // - [ ] Implement file metadata indexing and search capabilities
+        // - [ ] Add support for various file formats and compression types
         let file_size_kb = onnx_data.len() / 1024;
 
         // Estimate input/output shapes based on file characteristics

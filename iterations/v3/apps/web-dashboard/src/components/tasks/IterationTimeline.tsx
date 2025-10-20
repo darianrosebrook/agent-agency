@@ -1,8 +1,5 @@
 import React from "react";
-import {
-  IterationTimelineProps,
-  SelfPromptingIterationEvent,
-} from "../../types/tasks";
+import { IterationTimelineProps } from "../../types/tasks";
 
 import styles from "./IterationTimeline.module.scss";
 
@@ -40,10 +37,10 @@ export const IterationTimeline: React.FC<IterationTimelineProps> = ({
       (m) => m.iteration === iteration
     );
     return {
-      model: modelUsage?.model_id || "unknown",
-      latency: modelUsage?.latency_ms || 0,
+      model: modelUsage?.model_id ?? "unknown",
+      latency: modelUsage?.latency_ms ?? 0,
       tokens:
-        (modelUsage?.prompt_tokens || 0) + (modelUsage?.completion_tokens || 0),
+        (modelUsage?.prompt_tokens ?? 0) + (modelUsage?.completion_tokens ?? 0),
       success: modelUsage?.success ?? true,
     };
   };

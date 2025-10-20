@@ -630,7 +630,12 @@ mod tests {
         // let alerts = storage.get_alerts(&alert.source_integrity_id, Some(10)).await.unwrap();
         // assert!(!alerts.is_empty());
 
-        // For now, just validate the data structures work
+        // TODO: Implement comprehensive source integrity validation tests
+        // - [ ] Add real database integration tests with proper setup/teardown
+        // - [ ] Implement source integrity validation logic testing
+        // - [ ] Add edge case testing for corrupted or malicious sources
+        // - [ ] Implement performance testing for integrity operations
+        // - [ ] Add integration tests with external source providers
         assert_eq!(record.source_id.starts_with("test-source-"), true);
         assert_eq!(record.content_size, 1024);
         assert_eq!(verification.verification_result, VerificationResult::Passed);
@@ -648,7 +653,12 @@ mod tests {
         // TODO: Test transaction isolation
         // TODO: Test connection pool behavior under load
 
-        // For now, just validate basic concurrency setup
+        // TODO: Implement comprehensive concurrency and threading tests
+        // - [ ] Add concurrent read/write operation testing
+        // - [ ] Implement deadlock detection and prevention testing
+        // - [ ] Add race condition testing for shared data structures
+        // - [ ] Implement stress testing with multiple concurrent operations
+        // - [ ] Add performance benchmarking for concurrent operations
         use std::sync::Arc;
         use tokio::sync::Mutex;
 

@@ -436,8 +436,12 @@ impl WebSocketApi {
 
     /// Cancel a task
     async fn cancel_task(&self, connection_id: Uuid, task_id: Uuid) -> Result<(), WebSocketError> {
-        // In practice, this would cancel the task through the orchestrator
-        // For now, just cancel in progress tracker
+        // TODO: Implement proper task cancellation through orchestrator
+        // - [ ] Connect to orchestrator service for task cancellation
+        // - [ ] Implement graceful task shutdown and resource cleanup
+        // - [ ] Add cancellation reason tracking and logging
+        // - [ ] Handle partial cancellation and rollback scenarios
+        // - [ ] Implement cancellation timeout and force termination
         self.progress_tracker.cancel_execution(task_id).await
             .map_err(|e| WebSocketError::CancellationError(e.to_string()))?;
 

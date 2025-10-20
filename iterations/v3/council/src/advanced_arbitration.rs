@@ -2319,15 +2319,22 @@ impl SourceValidator {
         // Query knowledge entries that might contain registry information
         // In a production system, this would query a dedicated trusted_registries table
 
-        // For now, we'll use knowledge entries as a proxy for registry data
-        // and extract trust information from the metadata
+        // TODO: Implement proper registry data integration instead of knowledge proxy
+        // - [ ] Create dedicated trust registry database schema
+        // - [ ] Implement registry data synchronization from external sources
+        // - [ ] Add trust score calculation and validation algorithms
+        // - [ ] Implement registry data versioning and conflict resolution
+        // - [ ] Add registry health monitoring and data freshness checks
 
         // Create a simple hash of the source to use as a lookup key
         let source_hash = self.calculate_source_hash(source);
 
-        // In production, this would be a proper registry query
-        // For now, we'll return None to indicate no registry data found
-        // This allows the system to fall back to static registry checks
+        // TODO: Replace knowledge proxy with actual registry database queries
+        // - [ ] Implement proper database queries for registry data lookup
+        // - [ ] Add registry data caching and performance optimization
+        // - [ ] Implement registry data validation and integrity checks
+        // - [ ] Add registry query metrics and monitoring
+        // - [ ] Handle registry database connection failures gracefully
 
         debug!(
             "Querying trusted registry for source: {} (hash: {})",
@@ -2997,9 +3004,12 @@ impl ConflictResolver {
         // 1. Query the database for current judge verdicts
         // 2. Filter by active judges in current debate session
         // 3. Return only verdicts from the current round
-        //
-        // For now, return None to indicate no verdicts available
-        // This allows the consensus algorithms to use default fallback behavior
+        // TODO: Implement verdict history database integration
+        // - [ ] Create verdicts database table with proper indexing
+        // - [ ] Implement verdict storage and retrieval operations
+        // - [ ] Add verdict versioning and conflict resolution
+        // - [ ] Implement verdict expiration and cleanup policies
+        // - [ ] Add verdict quality scoring and filtering
         None
     }
 
@@ -3595,7 +3605,12 @@ impl ConflictResolver {
         // 3. Track notification delivery status
         // 4. Handle notification failures and retries
 
-        // For now, log the notification and simulate success
+        // TODO: Implement real notification delivery system
+        // - [ ] Integrate with notification service (email, Slack, etc.)
+        // - [ ] Implement notification queuing and delivery guarantees
+        // - [ ] Add notification templates and customization
+        // - [ ] Handle notification failures and retry logic
+        // - [ ] Add notification metrics and delivery tracking
         debug!(
             "Human arbitrator notification sent for ticket {}: method=log, status=simulated_success",
             ticket_id
@@ -5575,8 +5590,12 @@ impl QualityWeighter {
         // Try to extract timestamp from various possible metadata fields
         // This is a simplified implementation - in practice, you'd need access to the actual WorkerOutput
 
-        // For now, we'll use a placeholder that simulates recent timestamps
-        // In a real implementation, you'd extract this from the worker output metadata
+        // TODO: Extract real timestamps from worker output metadata
+        // - [ ] Parse worker output metadata for actual execution timestamps
+        // - [ ] Implement timestamp validation and consistency checks
+        // - [ ] Add timestamp precision and timezone handling
+        // - [ ] Handle missing or corrupted timestamp data
+        // - [ ] Implement timestamp-based performance analysis
         let simulated_hours_ago = match worker_id.chars().last() {
             Some('1') => 0.5,  // Very recent
             Some('2') => 2.0,  // Recent

@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
 
-// Declare window for ESLint
+// Declare window for ESLint - WebSocket support
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 declare const window: any;
 import {
   ChatInterfaceProps,
@@ -164,6 +165,7 @@ export default function ChatInterface({
   );
 
   const handleWebSocketMessage = useCallback(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (message: any) => {
       console.log("Received WebSocket message:", message);
 

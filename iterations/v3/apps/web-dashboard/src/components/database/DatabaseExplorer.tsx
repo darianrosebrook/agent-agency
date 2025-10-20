@@ -25,20 +25,24 @@ interface DatabaseExplorerState {
   error: string | null;
   // Query execution state
   isExecutingQuery?: boolean;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   queryResults?: any;
   queryError?: string | null;
   // Vector search state
   isSearching?: boolean;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   searchResults?: any[];
   searchError?: string | null;
   // Table data state
   isLoadingTableData?: boolean;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   tableData?: any;
   tableError?: string | null;
   isExporting?: boolean;
   exportError?: string | null;
   // Metrics state
   isLoadingMetrics?: boolean;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   metrics?: any;
   metricsError?: string | null;
 }
@@ -365,7 +369,7 @@ export default function DatabaseExplorer({
                           filters: {
                             ...prev.filters,
                             type: e.target.value
-                              ? [e.target.value as any]
+                              ? [e.target.value as any] // eslint-disable-line @typescript-eslint/no-explicit-any
                               : undefined,
                           },
                         }))

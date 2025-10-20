@@ -687,8 +687,12 @@ impl DatabaseArtifactStorage {
         let code_change_data = artifacts_by_type.get("code_changes");
         if let Some(values) = code_change_data {
             if let Some(first) = values.first() {
-                // TODO: Parse actual code changes from database
-                // For now, return defaults
+                // TODO: Implement parsing of actual code changes from database
+                // - [ ] Parse git diff data from database storage
+                // - [ ] Extract added/removed/modified lines statistics
+                // - [ ] Identify changed files and their types
+                // - [ ] Calculate code churn metrics and complexity changes
+                // - [ ] Handle large diff data efficiently
                 CodeChanges {
                     diffs: vec![],
                     new_files: vec![],
@@ -1095,9 +1099,12 @@ mod tests {
     #[tokio::test]
     async fn test_database_artifact_storage_creation() {
         let config = DatabaseConfig::default();
-        // Note: This test would require a running PostgreSQL instance
-        // For now, we just test that the struct can be created
-        // In a real test environment, we'd set up a test database
+        // TODO: Implement integration tests with real PostgreSQL database
+        // - [ ] Set up test PostgreSQL instance for integration testing
+        // - [ ] Implement database migration and schema setup in tests
+        // - [ ] Add test data seeding and cleanup procedures
+        // - [ ] Implement concurrent access and transaction testing
+        // - [ ] Add performance testing for database operations
         let _config = config;
     }
 }

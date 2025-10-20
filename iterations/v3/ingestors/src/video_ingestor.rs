@@ -159,8 +159,12 @@ impl VideoIngestor {
 
     /// Create AVAssetReader for video file through Swift bridge
     async fn create_av_asset_reader(&self, video_path: &Path) -> Result<AVAssetReader> {
-        // In a real implementation, this would call Swift/Objective-C bridge
-        // For now, simulate the AVAssetReader creation
+        // TODO: Implement Swift/Objective-C bridge for AVAssetReader creation
+        // - [ ] Set up Swift/Objective-C bridge for macOS AVFoundation APIs
+        // - [ ] Implement AVAssetReader creation with proper video file handling
+        // - [ ] Add video format validation and codec support detection
+        // - [ ] Handle video file permissions and access controls
+        // - [ ] Implement proper error handling for video file corruption
 
         Ok(AVAssetReader {
             asset_url: video_path.to_path_buf(),

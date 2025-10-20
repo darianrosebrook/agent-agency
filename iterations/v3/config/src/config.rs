@@ -560,7 +560,7 @@ mod tls_validation {
     }
 
     pub fn validate_ca_file(path: &&Option<PathBuf>) -> Result<(), ValidationError> {
-        if let Some(ref path) = path {
+        if let Some(ref path) = *path {
             if path.to_string_lossy().is_empty() {
                 return Err(ValidationError::new("CA certificate path cannot be empty"));
             }

@@ -461,8 +461,12 @@ mod auditors {
             stats.total_events += 1;
             *stats.events_by_category.entry(event.category.clone()).or_insert(0) += 1;
 
-            // In a real implementation, this would write to persistent storage
-            // For now, just log to console
+            // TODO: Implement persistent audit log storage system
+            // - [ ] Set up database schema for audit log storage
+            // - [ ] Implement audit log writing with proper indexing
+            // - [ ] Add audit log retention and cleanup policies
+            // - [ ] Implement audit log querying and search capabilities
+            // - [ ] Add audit log integrity and tamper detection
             if self.config.log_level != AuditLogLevel::Minimal {
                 println!("📁 FILE AUDIT: {} {} {:?}", event.operation, event.target.as_deref().unwrap_or(""), event.result);
             }

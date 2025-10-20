@@ -377,8 +377,12 @@ impl CliInterface {
 
     /// Display task status in a formatted way
     async fn display_task_status(&self, task_id: Uuid) -> Result<(), CliError> {
-        // In practice, this would query the progress tracker or REST API
-        // For now, we'll simulate status display
+        // TODO: Implement real-time task status querying from progress tracker
+        // - [ ] Connect to progress tracker service for live status updates
+        // - [ ] Implement REST API client for status retrieval
+        // - [ ] Add real-time status streaming and updates
+        // - [ ] Handle connection failures and fallback to cached status
+        // - [ ] Implement status polling with exponential backoff
 
         println!("📋 Task Status: {}", task_id);
         println!("═".repeat(50));

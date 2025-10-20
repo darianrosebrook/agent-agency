@@ -59,8 +59,12 @@ fn test_phase3b_benchmark_simulation() {
 
     // Simulate inference loop
     for i in 0..cycles {
-        // In real execution, this would call Core ML
-        // For now, we're just simulating the measurement framework
+        // TODO: Integrate with actual Core ML inference execution
+        // - [ ] Set up real Core ML model loading and inference pipeline
+        // - [ ] Implement proper inference cycle timing and measurement
+        // - [ ] Add Core ML performance profiling and optimization
+        // - [ ] Handle Core ML model compilation and warmup phases
+        // - [ ] Implement inference result validation and accuracy testing
         let _cycle_start = Instant::now();
 
         // Simulated work (actual inference would happen here)

@@ -182,8 +182,12 @@ Please provide an improved version that fixes these issues while maintaining the
 
     /// Select best refinement template based on evaluation results
     fn select_refinement_template(&self, eval_report: &EvalReport) -> &PromptTemplate {
-        // For now, just use the first template
-        // In the future, this could be adaptive based on learning
+        // TODO: Implement adaptive template selection based on evaluation results
+        // - [ ] Analyze evaluation report metrics for template effectiveness
+        // - [ ] Implement machine learning-based template selection
+        // - [ ] Add template performance tracking and optimization
+        // - [ ] Handle template fallback and error recovery
+        // - [ ] Implement A/B testing for template improvements
         &self.refinement_templates[0]
     }
 

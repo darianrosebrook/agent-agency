@@ -835,8 +835,12 @@ impl MetalGPUManager {
         // In a real implementation, this would track command buffers
         // across all active Metal command queues
 
-        // For now, estimate based on recent activity
-        // This would be implemented by maintaining a registry of active command buffers
+        // TODO: Implement proper GPU memory utilization tracking
+        // - [ ] Maintain registry of active Metal command buffers and memory allocations
+        // - [ ] Track GPU memory usage per command buffer and operation
+        // - [ ] Implement memory leak detection and reporting
+        // - [ ] Add memory usage profiling and optimization recommendations
+        // - [ ] Handle memory fragmentation analysis and defragmentation
 
         let mut active_count = 0;
 
@@ -960,8 +964,12 @@ impl MetalGPUManager {
             .output() {
             Ok(output) => {
                 let output_str = String::from_utf8_lossy(&output.stdout);
-                // For now, return baseline temperature
-                // Real implementation would parse temperature data
+                // TODO: Implement proper GPU temperature data parsing
+                // - [ ] Parse actual temperature sensor data from system_profiler output
+                // - [ ] Extract GPU-specific temperature readings
+                // - [ ] Handle different temperature sensor formats and units
+                // - [ ] Implement temperature validation and outlier detection
+                // - [ ] Add temperature trend analysis and thermal throttling detection
                 return Ok(55.0);
             }
             Err(_) => {}
@@ -1023,7 +1031,12 @@ impl MetalGPUManager {
         // Store performance metrics for trend analysis and alerting
         // This would implement rolling window statistics and performance regression detection
 
-        // For now, just log significant changes
+        // TODO: Implement comprehensive GPU utilization monitoring and alerting
+        // - [ ] Add configurable utilization thresholds and alerting
+        // - [ ] Implement utilization trend analysis and prediction
+        // - [ ] Add GPU utilization anomaly detection
+        // - [ ] Integrate with monitoring systems for alerts and notifications
+        // - [ ] Implement utilization-based resource allocation recommendations
         let utilization_threshold = 80.0;
         if metrics.utilization_percent > utilization_threshold {
             warn!(

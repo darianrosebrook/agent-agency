@@ -209,8 +209,12 @@ impl WebSocketHandler {
         task_id: Uuid,
         since: Option<chrono::DateTime<chrono::Utc>>,
     ) -> Result<(), WebSocketError> {
-        // This would integrate with the progress tracker to get historical events
-        // For now, send a placeholder message
+        // TODO: Integrate with progress tracker for real historical event retrieval
+        // - [ ] Connect to progress tracker service for historical data queries
+        // - [ ] Implement event pagination and time-based filtering
+        // - [ ] Add event serialization and WebSocket transmission
+        // - [ ] Handle large event histories efficiently
+        // - [ ] Implement real-time event streaming and updates
         let history_message = serde_json::json!({
             "type": "historical_events",
             "task_id": task_id,

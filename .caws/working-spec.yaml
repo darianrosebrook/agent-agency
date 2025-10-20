@@ -1,119 +1,73 @@
-id: PROJ-785
-title: agent-agency
+id: AGENT-0002
+title: "Implement first-class File Ops tool with schema and guard"
 risk_tier: 2
-waiver_ids:
-  - WV-0001
 mode: feature
 change_budget:
-  max_files: 75
-  max_loc: 7000
+  max_files: 15
+  max_loc: 800
 blast_radius:
-  modules:
-    - src
-    - tests
+  modules: ["orchestration", "workspace"]
   data_migration: false
-operational_rollback_slo: 5m
-threats: []
+operational_rollback_slo: "5m"
 scope:
   in:
-    - iterations/v2/src/
-    - iterations/v2/tests/
-    - iterations/v2/docs/
-    - apps/mcp-arbiter-observer/
-    - docs/api/
+    - "iterations/v3/file_ops/"
+    - "iterations/v3/orchestration/src/lib.rs"  # Add dependency
+    - "iterations/v3/Cargo.toml"  # Add new crate
   out:
-    - node_modules/
-    - dist/
-    - build/
-    - iterations/v2/data/
+    - "iterations/v3/interfaces/"
+    - "iterations/v3/council/"
+    - "iterations/v3/database/"
+    - "iterations/v3/security/"
 invariants:
-  - System maintains data consistency
-  - Arbiter observer bridge performs I/O off the orchestrator event loop and never blocks task execution
-  - Observer degradation surfaces via status APIs without halting orchestration
-  - Sensitive data is redacted before persistence or streaming to observers
+  - "File operations are deterministic and reversible"
+  - "Allow-list and budget enforcement happens at tool boundary"
+  - "Content hashing prevents undetected file modifications"
+  - "ChangeSet operations are atomic within a workspace"
+  - "No direct file system access outside workspace abstraction"
 acceptance:
-  - id: A1
-    given: current state,
-    when: action occurs,
-    then: expected result
-  - id: GPT5-P1
-    given: task submitted to ArbiterOrchestrator
-    when: prompting engine processes task
-    then: reasoning effort, agent eagerness, and tool budget are dynamically optimized
-  - id: GPT5-P2
-    given: complex task with XML instructions
-    when: XMLPromptProcessor parses instructions
-    then: agent adheres to structured prompting guidelines
-  - id: GPT5-P3
-    given: prompting engine encounters failure
-    when: error occurs during optimization
-    then: system gracefully degrades with conservative defaults
-non_functional:
-  a11y:
-    - keyboard
-  perf:
-    api_p95_ms: 250
-  security:
-    - validation
-  prompting:
-    reasoning_effort_adaptation_ms: 50
-    eagerness_calibration_ms: 10
-    xml_parsing_ms: 25
-    tool_budget_allocation_ms: 5
+  - id: "A1"
+    given: "A valid ChangeSet with patches"
+    when: "apply() is called on a workspace"
+    then: "Files are modified atomically and ChangeSetId is returned"
+  - id: "A2"
+    given: "A ChangeSet that violates allow-list"
+    when: "apply() is called"
+    then: "Operation is blocked with clear error message"
+  - id: "A3"
+    given: "A ChangeSet that exceeds budget limits"
+    when: "apply() is called"
+    then: "Operation is blocked with budget status"
+  - id: "A4"
+    given: "A valid ChangeSetId from apply()"
+    when: "revert() is called"
+    then: "All changes are undone deterministically"
+  - id: "A5"
+    given: "File contents before apply()"
+    when: "apply() then revert() are called"
+    then: "File contents are identical to original state"
 contracts:
-  - type: typescript
-    path: src/types/agent-prompting.ts
-    description: GPT-5 prompting control interfaces and reasoning effort contracts
-  - type: typescript
-    path: src/types/arbiter-orchestration.ts
-    description: Arbiter orchestrator interfaces with prompting integration
-observability:
-  logs:
-    - level: info
-      events: ["prompting_engine_optimization", "task_processing_with_prompting"]
-    - level: warn
-      events: ["prompting_engine_fallback", "xml_parsing_warning"]
-    - level: error
-      events: ["prompting_engine_failure", "xml_parsing_error"]
-  metrics:
-    - "prompting_engine_processing_time"
-    - "task_optimization_success_rate"
-    - "tool_budget_efficiency"
-  traces:
-    - "task_submission_to_processing"
-    - "prompting_engine_optimization_flow"
-migrations: []
-rollback:
-  - type: feature_flag
-    description: Disable prompting engine via config to revert to basic task processing
-ai_assessment:
-  confidence_level: 0.9
-  uncertainty_areas:
-    - Long-term prompting optimization effectiveness across diverse task types
-    - XML instruction parsing complexity limits and edge cases
-    - Performance impact of dynamic prompting on high-throughput scenarios
-  complexity_factors:
-    - Dynamic prompting behavior prediction and adaptation
-    - Multi-agent orchestration coordination with prompting state
-    - Constitutional compliance maintenance with advanced prompting techniques
-    - Self-reflection rubric effectiveness across different domains
-  risk_factors:
-    - Over-optimization causing performance degradation for simple tasks
-    - Complex prompting leading to unpredictable agent behavior patterns
-    - XML parsing failures causing task processing interruptions
-    - Tool budget misallocation affecting resource utilization
-  completed_components:
-    - GPT-5 prompting engine integration into ArbiterOrchestrator
-    - Reasoning effort controller with dynamic adaptation
-    - Agent eagerness manager with calibration logic
-    - Tool budget manager with escalation policies
-    - XML structured prompt processor with validation
-    - Self-reflection rubric system for complex tasks
-    - Context gathering coordinator framework
-    - Comprehensive integration testing (18/18 tests passing)
-    - Quality gates and CAWS validation integration
-  next_priorities:
-    - Complete ARBITER-001 (Agent Registry Manager) production readiness
-    - Implement remaining ARBITER components in dependency order
-    - Validate end-to-end agent workflows with prompting optimization
-    - Performance benchmarking and optimization
+  - type: "rust-api"
+    path: "iterations/v3/file_ops/src/lib.rs"
+    endpoints:
+      - "Workspace::apply()"
+      - "Workspace::revert()"
+      - "ChangeSet::new()"
+    schemas:
+      - name: "ChangeSet"
+        fields: ["patches: Vec<Patch>"]
+      - name: "Patch"
+        fields: ["path: String", "hunks: Vec<Hunk>", "expected_prev_sha256: Option<String>"]
+      - name: "Hunk"
+        fields: ["old_start: u32", "old_lines: u32", "new_start: u32", "new_lines: u32", "lines: String"]
+non_functional:
+  perf:
+    apply_p95_ms: 100
+    revert_p95_ms: 50
+  security:
+    - "no-arbitrary-file-access"
+    - "content-hash-validation"
+    - "workspace-isolation"
+  reliability:
+    - "atomic-operations"
+    - "deterministic-rollback"

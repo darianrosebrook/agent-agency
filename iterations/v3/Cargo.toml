@@ -28,7 +28,8 @@ members = [
     "ingestors",
     "enrichers",
     "indexers",
-    "knowledge-ingestor"
+    "knowledge-ingestor",
+    "file_ops"
 ]
 
 [workspace.package]

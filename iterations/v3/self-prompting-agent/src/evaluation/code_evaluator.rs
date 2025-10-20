@@ -185,8 +185,12 @@ impl CodeEvaluator {
 
         for path in &coverage_paths {
             if project_root.join(path).exists() {
-                // For now, assume coverage is adequate if report exists
-                // TODO: Parse actual coverage numbers
+                // TODO: Implement proper coverage analysis and validation
+                // - [ ] Parse actual coverage numbers from coverage reports
+                // - [ ] Implement coverage threshold validation
+                // - [ ] Add coverage trend analysis and improvement tracking
+                // - [ ] Implement coverage gap identification and recommendations
+                // - [ ] Add support for different coverage report formats
                 return Ok(EvalCriterion {
                     id: "coverage-adequate".to_string(),
                     description: format!("Code coverage meets {}% threshold", (self.config.coverage_threshold * 100.0) as u32),

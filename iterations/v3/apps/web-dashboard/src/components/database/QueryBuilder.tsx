@@ -12,10 +12,12 @@ import styles from "./QueryBuilder.module.scss";
 
 interface QueryBuilderState {
   sqlQuery: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   parameters: any[];
   isReadOnly: boolean;
   isExecuting: boolean;
   error: string | null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   executionResult: any;
   savedQueries: SavedQuery[];
   showSaveDialog: boolean;
@@ -482,7 +484,7 @@ export default function QueryBuilder({
               <table className={styles.dataTable}>
                 <thead>
                   <tr>
-                    {state.executionResult.result.columns.map((col: any) => (
+                    {state.executionResult.result.columns.map((col: any) => ( // eslint-disable-line @typescript-eslint/no-explicit-any
                       <th key={col.name}>{col.name}</th>
                     ))}
                   </tr>
@@ -490,10 +492,10 @@ export default function QueryBuilder({
                 <tbody>
                   {state.executionResult.result.rows
                     .slice(0, 100)
-                    .map((row: any, index: number) => (
+                    .map((row: any, index: number) => ( // eslint-disable-line @typescript-eslint/no-explicit-any
                       <tr key={index}>
                         {state.executionResult.result.columns.map(
-                          (col: any) => (
+                          (col: any) => ( // eslint-disable-line @typescript-eslint/no-explicit-any
                             <td key={col.name}>
                               {row[col.name] !== null
                                 ? String(row[col.name])
