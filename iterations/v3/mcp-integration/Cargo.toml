@@ -15,6 +15,9 @@ anyhow.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
 
+# Security framework
+agent-agency-security = { path = "../security" }
+
 # MCP-specific dependencies
 jsonrpc-core = "18.0"
 jsonrpc-derive = "18.0"

@@ -13,14 +13,14 @@ use uuid::Uuid;
 use chrono;
 
 use crate::{DatabaseClient, DatabaseConfig};
-use agent_agency_contracts::{ExecutionArtifacts, execution_artifacts::CodeChangeStats};
+use agent_agency_contracts::{ExecutionArtifacts, execution_artifacts::{CodeChangeStats, ArtifactMetadata}};
 
 /// Unique identifier for artifacts
 pub type ArtifactId = Uuid;
 
 /// Metadata for stored artifacts (storage layer)
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct ArtifactMetadata {
+pub struct DatabaseArtifactMetadata {
     pub id: Uuid,
     pub task_id: Uuid,
     pub created_at: chrono::DateTime<chrono::Utc>,
@@ -430,6 +430,39 @@ impl DatabaseArtifactStorage {
             issues_by_file: std::collections::HashMap::new(),
             linter_version: None,
             config_used: None,
+        }
+    }
+
+    /// Map database rows to code change statistics
+    fn map_code_changes(&self, artifacts_by_type: &std::collections::HashMap<String, Vec<serde_json::Value>>) -> execution_artifacts::CodeChangeStats {
+        use execution_artifacts::*;
+
+        let code_change_data = artifacts_by_type.get("code_changes");
+        if let Some(values) = code_change_data {
+            if let Some(first) = values.first() {
+                // TODO: Parse actual code change statistics from database
+                // For now, return defaults
+                CodeChangeStats {
+                    files_modified: 0,
+                    lines_added: 0,
+                    lines_removed: 0,
+                    total_loc: 0,
+                }
+            } else {
+                CodeChangeStats {
+                    files_modified: 0,
+                    lines_added: 0,
+                    lines_removed: 0,
+                    total_loc: 0,
+                }
+            }
+        } else {
+            CodeChangeStats {
+                files_modified: 0,
+                lines_added: 0,
+                lines_removed: 0,
+                total_loc: 0,
+            }
         }
     }
 }

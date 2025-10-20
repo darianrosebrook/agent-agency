@@ -24,7 +24,7 @@ lazy_static::lazy_static! {
     static ref EMAIL_PATTERN: Regex = Regex::new(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$").unwrap();
     static ref URL_PATTERN: Regex = Regex::new(r"^https?://[^\s/$.?#].[^\s]*$").unwrap();
     static ref ALPHANUMERIC_PATTERN: Regex = Regex::new(r"^[a-zA-Z0-9]+$").unwrap();
-    static ref SAFE_PATH_PATTERN: Regex = Regex::new(r"^[^<>\"'|?*\[\]{}\\,;:%$#]*$").unwrap();
+    static ref SAFE_PATH_PATTERN: Regex = Regex::new(r#"^[^<>"'|?*\[\]{}\\,;:%$#]*$"#).unwrap();
 }
 
 /// Validate and sanitize a string input

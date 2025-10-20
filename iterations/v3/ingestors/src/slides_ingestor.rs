@@ -368,7 +368,6 @@ impl SlidesIngestor {
             Some(text_parts.join(" ").trim().to_string())
         }
     }
-    }
 
     fn compute_sha256(&self, path: &Path) -> Result<String> {
         let data = fs::read(path).context("Failed to read slides file")?;

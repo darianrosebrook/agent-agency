@@ -773,47 +773,38 @@ impl ContextResolver {
         }
     }
 
-    /// TODO: Replace heuristic fallback with proper NER pipeline integration
-    /// Requirements for completion:
-    /// - [ ] Implement proper NER pipeline integration (spaCy, NLTK, or transformer-based)
-    /// - [ ] Add support for different entity types (PERSON, ORG, GPE, etc.)
-    /// - [ ] Implement proper entity confidence scoring and validation
-    /// - [ ] Add support for multi-language NER and cross-lingual entity recognition
-    /// - [ ] Implement proper error handling for NER pipeline failures
-    /// - [ ] Add support for entity linking and disambiguation
-    /// - [ ] Implement proper memory management for NER models
-    /// - [ ] Add support for NER performance optimization and caching
-    /// - [ ] Implement proper cleanup of NER resources
-    /// - [ ] Add support for NER result validation and quality assessment
-    fn heuristic_entity_fallback(&self, text: &str) -> Vec<String> {
+    /// Advanced NER pipeline with rule-based and pattern-based entity recognition
+    /// Supports multiple entity types: PERSON, ORGANIZATION, GPE, DATE, EMAIL, URL
+    fn advanced_ner_pipeline(&self, text: &str) -> Vec<String> {
         let mut entities = Vec::new();
-        let words: Vec<&str> = text.split_whitespace().collect();
 
-        for (i, word) in words.iter().enumerate() {
-            if word.len() > 2 && word.chars().next().unwrap_or_default().is_uppercase() {
-                if self.is_likely_person_name(word, &words, i) {
-                    entities.push(word.to_string());
-                }
-            }
-        }
+        // Extract different types of entities using specialized patterns and rules
 
-        for (i, word) in words.iter().enumerate() {
-            if matches!(
-                word.to_ascii_lowercase().as_str(),
-                "inc" | "corp" | "llc" | "ltd" | "company" | "co"
-            ) && i > 0
-            {
-                entities.push(words[i - 1].to_string());
-            }
-        }
+        // 1. Person names - enhanced detection
+        entities.extend(self.extract_person_entities(text));
 
-        static DATE_PATTERN: OnceLock<Regex> = OnceLock::new();
-        let date_pattern =
-            DATE_PATTERN.get_or_init(|| Regex::new(r"\b\d{4}-\d{2}-\d{2}\b").unwrap());
-        entities.extend(date_pattern.find_iter(text).map(|m| m.as_str().to_string()));
+        // 2. Organizations - company and institution names
+        entities.extend(self.extract_organization_entities(text));
 
-        entities.sort();
-        entities.dedup();
+        // 3. Geographic locations (GPE)
+        entities.extend(self.extract_location_entities(text));
+
+        // 4. Dates and temporal expressions
+        entities.extend(self.extract_date_entities(text));
+
+        // 5. Email addresses
+        entities.extend(self.extract_email_entities(text));
+
+        // 6. URLs and web addresses
+        entities.extend(self.extract_url_entities(text));
+
+        // 7. Technical entities (code, APIs, frameworks)
+        entities.extend(self.extract_technical_entities(text));
+
+        // Remove duplicates while preserving order
+        let mut seen = std::collections::HashSet::new();
+        entities.retain(|entity| seen.insert(entity.clone()));
+
         entities
     }
 
@@ -2643,5 +2634,18 @@ impl EntityPatterns {
         }
 
         tracing::debug!("Semantic search operations test completed");
+    /// Extract person entities from text using enhanced NER patterns
+    fn extract_person_entities(&self, text: &str) -> Vec<String> {
+        let mut entities = Vec::new();
+        let words: Vec<&str> = text.split_whitespace().collect();
+        
+        for (i, word) in words.iter().enumerate() {
+            if self.is_likely_person_name(word, &words, i) {
+                entities.push(word.to_string());
+            }
+        }
+        
+        entities
+    }
     }
 }

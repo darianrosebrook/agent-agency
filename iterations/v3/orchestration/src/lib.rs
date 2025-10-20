@@ -1,6 +1,7 @@
 //! Orchestration core for V3
 pub mod adapter;
 pub mod artifacts;
+pub mod autonomous_executor;
 pub mod caws_runtime;
 pub mod db;
 pub mod orchestrate;
@@ -19,6 +20,11 @@ pub mod audited_orchestrator;
 // Re-export key components
 pub use multimodal_orchestration::{
     MultimodalOrchestrator, ProcessingResult, ProcessingStatus, ProcessingStats,
+};
+
+// Autonomous executor exports
+pub use autonomous_executor::{
+    AutonomousExecutor, AutonomousExecutorConfig, TaskExecutionState,
 };
 
 // Audit trail exports

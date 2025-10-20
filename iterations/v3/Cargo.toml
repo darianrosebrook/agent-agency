@@ -10,6 +10,7 @@ members = [
     "claim-extraction",
     "reflexive-learning",
     "model-benchmarking",
+    "security",
     "security-policy-enforcer",
     "minimal-diff-evaluator",
     "context-preservation-engine",

@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: agent-agency
+  labels:
+    name: agent-agency
+    app.kubernetes.io/name: agent-agency
+    app.kubernetes.io/version: "3.0.0"
+    app.kubernetes.io/component: platform
+    app.kubernetes.io/part-of: agent-agency

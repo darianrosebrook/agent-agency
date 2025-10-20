@@ -10,11 +10,11 @@ use jsonrpc_http_server::hyper::{Body, Response, StatusCode};
 use jsonrpc_http_server::{RequestMiddlewareAction, ServerBuilder};
 use jsonrpc_ws_server::ws;
 use jsonrpc_ws_server::ServerBuilder as WsServerBuilder;
-use security::input_validation::{validate_api_input, validate_json_input, ValidationType};
-use security::sanitization::sanitize_api_input;
-use security::circuit_breaker::{init_circuit_breaker_registry, get_circuit_breaker_registry, CircuitBreakerConfig};
-use security::audit::{init_audit_logger, get_audit_logger, SecurityEventSeverity};
-use security::rate_limiting::{RateLimitConfig, RateLimitMiddleware};
+use agent_agency_security::input_validation::{validate_api_input, validate_json_input, ValidationType};
+use agent_agency_security::sanitization::sanitize_api_input;
+use agent_agency_security::circuit_breaker::{init_circuit_breaker_registry, get_circuit_breaker_registry, CircuitBreakerConfig};
+use agent_agency_security::audit::{init_audit_logger, get_audit_logger, SecurityEventSeverity};
+use agent_agency_security::rate_limiting::{RateLimitConfig, RateLimitMiddleware};
 use observability::slo::{SLOTracker, create_default_slos};
 use std::collections::HashMap;
 use std::net::SocketAddr;
@@ -1039,7 +1039,7 @@ impl MCPServer {
     }
 
     /// Get circuit breaker statistics
-    pub async fn get_circuit_breaker_stats(&self) -> HashMap<String, security::CircuitBreakerStats> {
+    pub async fn get_circuit_breaker_stats(&self) -> HashMap<String, agent_agency_security::CircuitBreakerStats> {
         get_circuit_breaker_registry().get_all_stats()
     }
 
