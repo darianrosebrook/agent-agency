@@ -713,14 +713,10 @@ impl ArtifactStorage for DatabaseArtifactStorage {
                     .to_string();
 
                 Ok(ArtifactMetadata {
-                    id,
-                    task_id,
-                    created_at,
-                    size_bytes: size_bytes as u64,
-                    checksum,
-                    version: version.to_string(),
-                    compression_used: false,
-                    integrity_verified: true,
+                    compression_applied: Some(false),
+                    storage_location: Some("database".to_string()),
+                    retention_policy: Some("standard".to_string()),
+                    tags: vec![],
                 })
             }
             None => Err(ArtifactStorageError::NotFoundForTask(task_id)),
@@ -761,14 +757,10 @@ impl ArtifactStorage for DatabaseArtifactStorage {
                     .to_string();
 
                 Ok(ArtifactMetadata {
-                    id,
-                    task_id,
-                    created_at,
-                    size_bytes: size_bytes as u64,
-                    checksum,
-                    version: version.to_string(),
-                    compression_used: false,
-                    integrity_verified: true,
+                    compression_applied: Some(false),
+                    storage_location: Some("database".to_string()),
+                    retention_policy: Some("standard".to_string()),
+                    tags: vec![],
                 })
             }
             None => Err(ArtifactStorageError::NotFoundForTask(task_id)),
@@ -808,14 +800,10 @@ impl ArtifactStorage for DatabaseArtifactStorage {
                 .to_string();
 
             artifacts.push(ArtifactMetadata {
-                id,
-                task_id,
-                created_at,
-                size_bytes: size_bytes as u64,
-                checksum,
-                version: version.to_string(),
-                compression_used: false,
-                integrity_verified: true,
+                compression_applied: Some(false),
+                storage_location: Some("database".to_string()),
+                retention_policy: Some("standard".to_string()),
+                tags: vec![],
             });
         }
 

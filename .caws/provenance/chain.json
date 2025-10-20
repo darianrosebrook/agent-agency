@@ -14394,5 +14394,41 @@
     },
     "previous_hash": "75794508427c674271c73ec7b661f462ec2a3b0a8a6df6c378c5053f1b291c05",
     "hash": "1b266e68a64051ca6354f536e328dc7d9c83040be3d07d35cf28a79b7d5d2e36"
+  },
+  {
+    "id": "prov-1760926525770",
+    "timestamp": "2025-10-20T02:15:25.770Z",
+    "commit": {
+      "hash": "730d0029ea75f13fe1efb3bf545814c10ee32051",
+      "message": "feat: final architecture refinements and provenance updates",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "PROJ-785",
+      "title": "agent-agency",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": [
+        "WV-0001"
+      ]
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-20T02:15:25.772Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "1b266e68a64051ca6354f536e328dc7d9c83040be3d07d35cf28a79b7d5d2e36",
+    "hash": "6810a89322969d3f3fd1f8808d6e1c532721da3b0dd2181ead550533679add43"
   }
 ]
