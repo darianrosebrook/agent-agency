@@ -3,6 +3,9 @@
 //! Provides structured, deterministic file operations for autonomous agents
 //! with allow-list enforcement, budget controls, and atomic rollback capabilities.
 
+pub mod git_workspace;
+pub mod temp_workspace;
+
 use std::path::Path;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -183,6 +186,31 @@ fn matches_glob_simple(path: &str, glob: &str) -> bool {
         path == glob
     }
 }
+
+/// Factory for creating appropriate workspace based on project type
+pub struct WorkspaceFactory;
+
+impl WorkspaceFactory {
+    /// Create a workspace for the given project path, auto-detecting Git vs non-Git
+    pub async fn from_path(project_path: &Path, task_id: &str) -> Result<Box<dyn Workspace>> {
+        if Self::is_git_repository(project_path) {
+            let workspace = git_workspace::GitWorktreeWorkspace::new(project_path, task_id).await?;
+            Ok(Box::new(workspace))
+        } else {
+            let workspace = temp_workspace::TempMirrorWorkspace::new(project_path, task_id).await?;
+            Ok(Box::new(workspace))
+        }
+    }
+
+    /// Check if a path is a Git repository
+    fn is_git_repository(path: &Path) -> bool {
+        path.join(".git").exists()
+    }
+}
+
+// Re-export workspace types for convenience
+pub use git_workspace::GitWorktreeWorkspace;
+pub use temp_workspace::TempMirrorWorkspace;
 
 #[cfg(test)]
 mod tests {

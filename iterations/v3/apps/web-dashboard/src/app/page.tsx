@@ -18,6 +18,24 @@ interface HealthStatus {
   uptime?: number;
 }
 
+interface HealthResponse {
+  status: "healthy" | "degraded" | "unhealthy" | "unknown";
+  timestamp: string;
+  dashboard: {
+    status: string;
+    version: string;
+    uptime: number;
+    node_version?: string;
+  };
+  backend: {
+    status: string;
+    url: string;
+    response_time_ms: number;
+    error?: string;
+    raw_response?: string;
+  };
+}
+
 export default function Dashboard() {
   const [healthStatus, setHealthStatus] = useState<HealthStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -118,11 +136,37 @@ export default function Dashboard() {
         throw new Error(`Health check failed: ${response.status}`);
       }
 
-      const data: HealthStatus = await response.json();
-      setHealthStatus(data);
+      const healthResponse: HealthResponse = await response.json();
+
+      // Create a simplified HealthStatus for the Header component
+      const headerHealthStatus: HealthStatus = {
+        status: healthResponse.status,
+        timestamp: healthResponse.timestamp,
+        version: healthResponse.dashboard.version,
+        uptime: healthResponse.dashboard.uptime,
+      };
+
+      setHealthStatus(headerHealthStatus);
+
+      // Log backend health details for debugging
+      console.log("V3 Backend Health:", {
+        status: healthResponse.backend.status,
+        url: healthResponse.backend.url,
+        responseTime: `${healthResponse.backend.response_time_ms}ms`,
+        error: healthResponse.backend.error,
+      });
+
+      // Set error if backend is unhealthy
+      if (healthResponse.backend.status !== "healthy") {
+        const backendError = healthResponse.backend.error ||
+          `Backend status: ${healthResponse.backend.status}`;
+        setError(`V3 Backend: ${backendError}`);
+      }
+
     } catch (err) {
       console.error("Health check error:", err);
-      setError(err instanceof Error ? err.message : "Health check failed");
+      const errorMessage = err instanceof Error ? err.message : "Health check failed";
+      setError(errorMessage);
       setHealthStatus({
         status: "unhealthy",
         timestamp: new Date().toISOString(),
@@ -163,12 +207,14 @@ export default function Dashboard() {
                 <SystemHealthMonitoring
                   onRetry={() => {
                     console.log("Retrying health check...");
-                    // TODO: Milestone 3 - System Health Monitoring
-                    // - [ ] Implement V3 /health endpoint with component status
-                    // - [ ] Add system uptime and version tracking
-                    // - [ ] Implement component health checks (database, agents, coordination)
-                    // - [ ] Add alert system integration
-                    // - [ ] Test health endpoint with various failure scenarios
+                    checkHealth();
+                    // TODO: Milestone 3 - System Health Monitoring (PARTIALLY COMPLETE)
+                    // - [x] Implement V3 /health endpoint proxy with component status
+                    // - [x] Add system uptime and version tracking
+                    // - [x] Handle backend connectivity and error scenarios
+                    // - [ ] Add detailed component health checks (database, agents, coordination)
+                    // - [ ] Implement alert system integration
+                    // - [ ] Add health metrics visualization and trends
                   }}
                 />
 

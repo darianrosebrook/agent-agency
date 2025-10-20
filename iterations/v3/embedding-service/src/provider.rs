@@ -9,7 +9,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::collections::HashMap;
 use ndarray::s;
-use ort::{Session, ExecutionProvider, GraphOptimizationLevel, SessionOutputs, Value};
+use ort::Session;
 
 /// Trait for embedding providers
 #[async_trait]
