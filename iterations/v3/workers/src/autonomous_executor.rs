@@ -147,8 +147,14 @@ impl AutonomousExecutor {
             Some(&self.circuit_breaker),
         ).await?;
 
-        // For now, simulate collecting worker outputs
-        // In a full implementation, this would collect actual outputs from workers
+        // TODO: Implement real worker output collection system
+        // - Establish communication channels with worker processes
+        // - Implement worker output aggregation and validation
+        // - Add worker health monitoring and status tracking
+        // - Support distributed worker coordination
+        // - Implement worker output streaming and buffering
+        // - Add worker performance metrics and analytics
+        // PLACEHOLDER: Simulating worker outputs for now
         let worker_output = WorkerOutput {
             worker_id: assignment.worker_id,
             task_id,
@@ -172,8 +178,14 @@ impl AutonomousExecutor {
         verdict: &ArbiterVerdict,
         task_id: Uuid,
     ) -> Result<ExecutionResult, AutonomousExecutionError> {
-        // For now, simulate successful execution
-        // In a full implementation, this would apply the approved changes
+        // TODO: Implement actual verdict execution system
+        // - Parse and validate verdict change specifications
+        // - Implement change application with rollback capability
+        // - Add execution safety checks and validation
+        // - Support partial execution and error recovery
+        // - Implement execution progress tracking and reporting
+        // - Add execution result verification and testing
+        // PLACEHOLDER: Simulating successful execution for now
         let artifacts = ExecutionArtifacts {
             id: Uuid::new_v4(),
             task_id,
@@ -745,7 +757,14 @@ impl AutonomousExecutor {
             &[], // no patches
             &[], // no language hints
             artifacts.test_results.total > 0, // tests added if we have results
-            true, // assume deterministic for now
+            // TODO: Implement determinism validation and verification
+            // - Analyze code changes for deterministic behavior
+            // - Implement determinism testing and validation
+            // - Add determinism metrics and monitoring
+            // - Support non-deterministic operation detection
+            // - Implement determinism guarantees and contracts
+            // - Add determinism failure analysis and reporting
+            true, // PLACEHOLDER: Assuming deterministic for now
             vec![], // no waivers
         ).await?;
 

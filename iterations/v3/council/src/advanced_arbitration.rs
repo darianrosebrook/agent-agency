@@ -1793,7 +1793,13 @@ impl PleadingWorkflow {
             round_number: round_num as usize, // Changed to usize
             arguments: arguments.into_iter().map(|(k, v)| v).collect(), // Convert HashMap to Vec
             rebuttals: Vec::new(),            // No rebuttals in this context
-            argument_scores: HashMap::new(),  // Empty for now
+            // TODO: Implement argument scoring system
+            // - Define scoring criteria and algorithms
+            // - Implement evidence-based scoring
+            // - Add confidence intervals for scores
+            // - Support weighted scoring factors
+            // - Add score validation and normalization
+            argument_scores: HashMap::new(),  // PLACEHOLDER: Empty implementation
             consensus_reached: false,
             quality_scores, // Use provided quality_scores
         })

@@ -604,7 +604,14 @@ impl VerdictAggregator {
                 risk_levels.into_iter().max().unwrap_or(crate::judge::RiskLevel::Medium)
             },
             RiskAggregationStrategy::WeightedAverage => {
-                // Simplified: use most conservative for now
+                // TODO: Implement proper risk aggregation strategies
+                // - Define weighted risk scoring algorithms
+                // - Implement confidence-based risk aggregation
+                // - Add risk factor correlation analysis
+                // - Support dynamic weighting based on context
+                // - Add risk aggregation validation and testing
+                // - Implement risk threshold calibration
+                // PLACEHOLDER: Using most conservative risk level
                 risk_levels.into_iter().max().unwrap_or(crate::judge::RiskLevel::Medium)
             },
             RiskAggregationStrategy::RiskFactorFrequency => {

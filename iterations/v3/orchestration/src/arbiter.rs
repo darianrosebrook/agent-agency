@@ -343,7 +343,14 @@ impl ArbiterOrchestrator {
                 &output.diff_stats,
                 &[], // patches - not needed for examination
                 &[], // language hints
-                true, // assume tests added for now
+                // TODO: Implement comprehensive test detection and validation
+                // - Analyze code changes for test requirements
+                // - Implement test file discovery and parsing
+                // - Add test coverage analysis and reporting
+                // - Support multiple testing frameworks
+                // - Implement test result aggregation and validation
+                // - Add automated test generation suggestions
+                true, // PLACEHOLDER: Assuming tests added
                 true, // assume deterministic
                 vec![], // no waivers in examination
             ).await
@@ -393,56 +400,153 @@ impl ArbiterOrchestrator {
         &self,
         output: &WorkerOutput,
     ) -> Result<EvidenceManifest, ArbiterError> {
-        // Split output into sentences for claim extraction
-        let sentences = self.split_into_sentences(&output.content);
+        // Use enhanced V2 claim extraction processor
+        let mut processor = ClaimExtractionProcessor::new();
 
-        let mut all_claims = Vec::new();
-        let mut verification_results = Vec::new();
-
-        for sentence in sentences {
-            let context = ProcessingContext {
-                task_id: output.task_id,
-                working_spec_id: "extraction-context".to_string(), // Will be set properly in integration
-                source_file: None,
-                line_number: None,
-                surrounding_context: output.content.clone(),
-                domain_hints: vec!["code".to_string(), "api".to_string()], // Default hints
-                metadata: output.metadata.clone(),
-                input_text: sentence.clone(),
-            };
-
-            let result = self.claim_processor.process_sentence(&sentence, &context)
-                .await
-                .map_err(|e| ArbiterError::ClaimExtractionError(e.to_string()))?;
-
-            all_claims.extend(result.atomic_claims);
-            // For now, create mock verification results - will be enhanced in integration
-            verification_results.push(claim_extraction::VerificationResult {
-                claim_id: Uuid::new_v4(),
-                status: claim_extraction::VerificationStatus::Verified,
-                evidence_quality: 0.9,
-                caws_compliance: true,
-                verification_trail: vec![],
-            });
-        }
-
-        // Calculate scores based on claims
-        let factual_accuracy_score = if all_claims.is_empty() {
-            0.8 // Default score
-        } else {
-            all_claims.iter()
-                .map(|c| c.confidence)
-                .sum::<f64>() / all_claims.len() as f64
+        // Create processing context with enhanced domain detection
+        let context = ProcessingContext {
+            document_id: output.task_id.to_string(),
+            section_id: Some("worker-output".to_string()),
+            confidence_threshold: 0.8,
+            max_entities: 100,
+            language: self.detect_output_language(&output.content),
+            domain_hints: self.detect_output_domains(&output.content),
         };
 
-        let caws_compliance_score = 0.9; // Placeholder - will be enhanced
+        // Run enhanced V2 claim extraction
+        let extraction_result = processor.run(&output.content, &context)
+            .await
+            .map_err(|e| ArbiterError::ClaimExtractionError(format!("Failed to extract claims: {}", e)))?;
+
+        // Convert to EvidenceManifest format with enhanced scoring
+        let claims = extraction_result.verified_claims.into_iter()
+            .map(|vc| claim_extraction::AtomicClaim {
+                id: vc.id,
+                claim_text: vc.claim_text,
+                subject: "extracted".to_string(), // Will be populated by decomposition
+                predicate: "claims".to_string(),
+                object: None,
+                context_brackets: vec![],
+                verification_requirements: vec![],
+                confidence: vc.confidence,
+                position: (0, 0),
+                sentence_fragment: vc.claim_text.clone(),
+            })
+            .collect();
+
+        // Calculate enhanced factual accuracy scores using V2 patterns
+        let factual_accuracy_score = self.calculate_enhanced_factual_accuracy(&extraction_result);
+        let caws_compliance_score = self.calculate_enhanced_caws_compliance(&extraction_result);
 
         Ok(EvidenceManifest {
-            claims: all_claims,
-            verification_results,
+            claims,
+            verification_results: extraction_result.verified_claims.into_iter()
+                .map(|vc| claim_extraction::VerificationResult {
+                    claim_id: vc.id,
+                    verification_status: vc.verification_status,
+                    confidence: vc.confidence,
+                    evidence: vc.evidence,
+                    timestamp: vc.timestamp,
+                })
+                .collect(),
             factual_accuracy_score,
             caws_compliance_score,
         })
+    }
+
+    /// Detect the programming language of output content
+    fn detect_output_language(&self, content: &str) -> claim_extraction::Language {
+        // Enhanced language detection with V2 patterns
+        if content.contains("fn ") || content.contains("impl ") || content.contains("struct ") {
+            claim_extraction::Language::Rust
+        } else if content.contains("function") || content.contains("const ") || content.contains("let ") {
+            claim_extraction::Language::TypeScript
+        } else if content.contains("def ") || content.contains("import ") || content.contains("class ") {
+            claim_extraction::Language::Python
+        } else {
+            claim_extraction::Language::English // Default for natural language
+        }
+    }
+
+    /// Detect domains/topics in output content
+    fn detect_output_domains(&self, content: &str) -> Vec<String> {
+        let mut domains = Vec::new();
+        let lower_content = content.to_lowercase();
+
+        // V2-enhanced domain detection patterns
+        if lower_content.contains("security") || lower_content.contains("auth") || lower_content.contains("encrypt") {
+            domains.push("security".to_string());
+        }
+        if lower_content.contains("performance") || lower_content.contains("latency") || lower_content.contains("throughput") {
+            domains.push("performance".to_string());
+        }
+        if lower_content.contains("ui") || lower_content.contains("ux") || lower_content.contains("user") {
+            domains.push("usability".to_string());
+        }
+        if lower_content.contains("api") || lower_content.contains("endpoint") || lower_content.contains("http") {
+            domains.push("api".to_string());
+        }
+        if lower_content.contains("database") || lower_content.contains("query") || lower_content.contains("sql") {
+            domains.push("data".to_string());
+        }
+
+        // Default domain if none detected
+        if domains.is_empty() {
+            domains.push("general".to_string());
+        }
+
+        domains
+    }
+
+    /// Calculate enhanced factual accuracy score using V2 patterns
+    fn calculate_enhanced_factual_accuracy(&self, extraction_result: &ClaimExtractionResult) -> f64 {
+        if extraction_result.verified_claims.is_empty() {
+            return 0.5; // Neutral score for no claims
+        }
+
+        let total_claims = extraction_result.verified_claims.len() as f64;
+        let verified_claims = extraction_result.verified_claims.iter()
+            .filter(|vc| matches!(vc.verification_status, claim_extraction::VerificationStatus::Verified))
+            .count() as f64;
+
+        let base_accuracy = verified_claims / total_claims;
+
+        // V2 enhancement: boost score for claims with high-confidence evidence
+        let high_confidence_boost = extraction_result.verified_claims.iter()
+            .filter(|vc| vc.confidence > 0.9)
+            .count() as f64 * 0.05; // 5% boost per high-confidence claim
+
+        (base_accuracy + high_confidence_boost).min(1.0)
+    }
+
+    /// Calculate enhanced CAWS compliance score using V2 patterns
+    fn calculate_enhanced_caws_compliance(&self, extraction_result: &ClaimExtractionResult) -> f64 {
+        if extraction_result.verified_claims.is_empty() {
+            return 0.8; // Default compliance for no claims
+        }
+
+        // V2 enhancement: check for CAWS-specific compliance indicators
+        let mut compliance_score = 0.7; // Base score
+
+        for claim in &extraction_result.verified_claims {
+            // Boost for claims that follow CAWS evidence requirements
+            if claim.evidence.len() >= 2 { // Multiple evidence sources
+                compliance_score += 0.1;
+            }
+
+            // Boost for claims with recent evidence (within last hour)
+            let one_hour_ago = Utc::now() - chrono::Duration::hours(1);
+            if claim.evidence.iter().any(|e| e.timestamp > one_hour_ago) {
+                compliance_score += 0.05;
+            }
+
+            // Boost for claims with high evidence quality
+            if claim.evidence.iter().any(|e| e.confidence > 0.8) {
+                compliance_score += 0.05;
+            }
+        }
+
+        compliance_score.min(1.0)
     }
 
     fn split_into_sentences(&self, text: &str) -> Vec<String> {

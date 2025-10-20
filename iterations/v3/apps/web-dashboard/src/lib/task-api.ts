@@ -255,6 +255,92 @@ export class TaskApiClient {
       throw new TaskApiError("server_error", "Failed to create task", true);
     }
   }
+
+  // Get arbiter verdict for a task
+  async getArbiterVerdict(taskId: string): Promise<any> {
+    try {
+      const response = await apiClient.get(
+        `${this.baseUrl}/${taskId}/arbiter-verdict`
+      );
+      return response.data;
+    } catch (error: any) {
+      if (error.response?.status === 404) {
+        return null; // No verdict available
+      }
+      console.error("Failed to get arbiter verdict:", error);
+      throw new TaskApiError(
+        "server_error",
+        "Failed to get arbiter verdict",
+        true
+      );
+    }
+  }
+
+  // Get claim verification data for a task
+  async getClaimVerificationData(taskId: string): Promise<any> {
+    try {
+      const response = await apiClient.get(
+        `${this.baseUrl}/${taskId}/claim-verification`
+      );
+      return response.data;
+    } catch (error: any) {
+      if (error.response?.status === 404) {
+        return null; // No verification data available
+      }
+      console.error("Failed to get claim verification data:", error);
+      throw new TaskApiError(
+        "server_error",
+        "Failed to get claim verification data",
+        true
+      );
+    }
+  }
+
+  // Get debate data for a task
+  async getDebateData(taskId: string): Promise<any> {
+    try {
+      const response = await apiClient.get(`${this.baseUrl}/${taskId}/debate`);
+      return response.data;
+    } catch (error: any) {
+      if (error.response?.status === 404) {
+        return null; // No debate data available
+      }
+      console.error("Failed to get debate data:", error);
+      throw new TaskApiError("server_error", "Failed to get debate data", true);
+    }
+  }
+
+  // Request waiver for arbiter verdict
+  async requestWaiver(taskId: string, reason: string): Promise<any> {
+    try {
+      const response = await apiClient.post(
+        `${this.baseUrl}/${taskId}/waiver`,
+        {
+          reason,
+        }
+      );
+      return response.data;
+    } catch (error: any) {
+      console.error("Failed to request waiver:", error);
+      throw new TaskApiError("server_error", "Failed to request waiver", true);
+    }
+  }
+
+  // Appeal arbiter verdict
+  async appealVerdict(taskId: string, reason: string): Promise<any> {
+    try {
+      const response = await apiClient.post(
+        `${this.baseUrl}/${taskId}/appeal`,
+        {
+          reason,
+        }
+      );
+      return response.data;
+    } catch (error: any) {
+      console.error("Failed to appeal verdict:", error);
+      throw new TaskApiError("server_error", "Failed to appeal verdict", true);
+    }
+  }
 }
 
 // Default task API client instance

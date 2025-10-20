@@ -216,8 +216,14 @@ impl AuditedOrchestrator {
         approver: &str,
         justification: Option<String>,
     ) -> Result<(), AuditError> {
-        // In a real implementation, you'd load the waiver from storage
-        // For now, we'll create a mock waiver for demonstration
+        // TODO: Implement waiver persistence and retrieval system
+        // - Create waiver database schema and storage
+        // - Implement waiver CRUD operations
+        // - Add waiver versioning and audit trail
+        // - Support waiver expiration and renewal
+        // - Implement waiver approval workflow
+        // - Add waiver validation and integrity checks
+        // PLACEHOLDER: Creating mock waiver for demonstration
         let mut waiver = WaiverRequest {
             id: waiver_id.to_string(),
             timestamp: chrono::Utc::now(),
@@ -352,7 +358,14 @@ impl AuditedOrchestrator {
                     .record_error_recovery_attempt(
                         "planning_error",
                         "retry_with_simplification",
-                        false, // Assume failure for now
+                        // TODO: Implement error recovery success tracking
+                        // - Track actual success/failure of recovery attempts
+                        // - Implement recovery strategy effectiveness metrics
+                        // - Add recovery attempt categorization and analysis
+                        // - Support recovery attempt retry limits
+                        // - Implement recovery success prediction
+                        // - Add recovery outcome validation
+                        false, // PLACEHOLDER: Assuming failure for now
                         planning_start.elapsed(),
                         {
                             let mut context = HashMap::new();

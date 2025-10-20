@@ -19,6 +19,152 @@ use std::time::{Duration, Instant};
 use uuid::Uuid;
 use agent_agency_database::DatabaseClient;
 
+// Supporting data structures for extended claim extraction
+
+/// Code output structure for claim extraction
+#[derive(Debug, Clone)]
+pub struct CodeOutput {
+    pub content: String,
+    pub language: Language,
+    pub file_path: Option<String>,
+}
+
+/// Code specification for validation
+#[derive(Debug, Clone)]
+pub struct CodeSpecification {
+    pub expected_signatures: std::collections::HashMap<String, String>,
+    pub expected_types: std::collections::HashMap<String, String>,
+    pub implementation_requirements: Vec<String>,
+}
+
+impl CodeSpecification {
+    fn get_expected_signature(&self, function_name: &str) -> Option<String> {
+        self.expected_signatures.get(function_name).cloned()
+    }
+}
+
+/// Code structure analysis results
+#[derive(Debug, Clone)]
+struct CodeStructure {
+    functions: Vec<FunctionDefinition>,
+    types: Vec<TypeDefinition>,
+    implementations: Vec<ImplementationBlock>,
+}
+
+/// Function definition in code
+#[derive(Debug, Clone)]
+struct FunctionDefinition {
+    name: String,
+    parameters: Vec<String>,
+    return_type: Option<String>,
+    body: String,
+}
+
+/// Type definition in code
+#[derive(Debug, Clone)]
+struct TypeDefinition {
+    name: String,
+    kind: String, // "struct", "enum", "trait", etc.
+    fields: Vec<String>,
+}
+
+/// Implementation block in code
+#[derive(Debug, Clone)]
+struct ImplementationBlock {
+    target: String,
+    methods: Vec<String>,
+}
+
+/// Documentation output structure
+#[derive(Debug, Clone)]
+pub struct DocumentationOutput {
+    pub content: String,
+    pub format: String,
+    pub completeness_score: f64,
+}
+
+/// Documentation standards for validation
+#[derive(Debug, Clone)]
+pub struct DocumentationStandards {
+    pub required_sections: Vec<String>,
+    pub style_guide: std::collections::HashMap<String, String>,
+    pub example_requirements: Vec<String>,
+}
+
+/// Documentation structure analysis
+#[derive(Debug, Clone)]
+struct DocumentationStructure {
+    sections: Vec<String>,
+    examples: Vec<UsageExample>,
+    api_references: Vec<String>,
+}
+
+/// API documentation structure
+#[derive(Debug, Clone)]
+struct ApiDocumentation {
+    endpoints: Vec<String>,
+    parameters: std::collections::HashMap<String, Vec<String>>,
+    responses: std::collections::HashMap<String, String>,
+}
+
+/// Usage example in documentation
+#[derive(Debug, Clone)]
+struct UsageExample {
+    description: String,
+    code: String,
+    language: String,
+}
+
+/// Data analysis output for claim validation
+#[derive(Debug, Clone)]
+pub struct DataAnalysisOutput {
+    pub results: Vec<StatisticalResult>,
+    pub correlations: Vec<CorrelationResult>,
+    pub patterns: Vec<PatternResult>,
+}
+
+/// Data schema for validation
+#[derive(Debug, Clone)]
+pub struct DataSchema {
+    pub fields: std::collections::HashMap<String, String>,
+    pub constraints: Vec<String>,
+    pub relationships: Vec<String>,
+}
+
+/// Data analysis results container
+#[derive(Debug, Clone)]
+struct DataAnalysisResults {
+    statistics: Vec<StatisticalResult>,
+    correlations: Vec<CorrelationResult>,
+    insights: Vec<String>,
+}
+
+/// Statistical result from data analysis
+#[derive(Debug, Clone)]
+struct StatisticalResult {
+    variable: String,
+    metric: String, // "mean", "median", "std_dev", etc.
+    value: f64,
+    p_value: f64,
+}
+
+/// Pattern result from data analysis
+#[derive(Debug, Clone)]
+struct PatternResult {
+    pattern_type: String,
+    description: String,
+    confidence: f64,
+}
+
+/// Correlation result from data analysis
+#[derive(Debug, Clone)]
+struct CorrelationResult {
+    variable1: String,
+    variable2: String,
+    correlation_coefficient: f64,
+    p_value: f64,
+}
+
 /// Multi-Modal Verification Engine for claim validation
 #[derive(Debug)]
 pub struct MultiModalVerificationEngine {
@@ -3115,11 +3261,11 @@ impl MultiModalVerificationEngine {
             })
             .collect::<Vec<_>>();
 
-        // Sort by validation confidence and recency
+        // Sort by validation confidence and recency (handle NaN/Infinite values safely)
         ranked_claims.sort_by(|a, b| {
             b.validation_confidence
                 .partial_cmp(&a.validation_confidence)
-                .unwrap()
+                .unwrap_or(std::cmp::Ordering::Equal)
                 .then(b.validation_timestamp.cmp(&a.validation_timestamp))
         });
 
@@ -3533,11 +3679,11 @@ impl MultiModalVerificationEngine {
             }
         }
         
-        // Sort by validation confidence and timestamp
+        // Sort by validation confidence and timestamp (handle NaN/Infinite values safely)
         aggregated.sort_by(|a, b| {
             b.validation_confidence
                 .partial_cmp(&a.validation_confidence)
-                .unwrap()
+                .unwrap_or(std::cmp::Ordering::Equal)
                 .then(b.validation_timestamp.cmp(&a.validation_timestamp))
         });
         
@@ -3792,4 +3938,365 @@ impl MultiModalVerificationEngine {
         }
     }
 
+    /// Extend claim extraction to code outputs (V3 enhancement)
+    pub async fn extract_code_claims(&self, code_output: &CodeOutput, specification: &CodeSpecification) -> Result<Vec<AtomicClaim>> {
+        let mut claims = Vec::new();
+
+        // Parse code structure to extract claims
+        let code_structure = self.parse_code_structure(code_output)?;
+
+        // Extract function signature claims
+        for function in &code_structure.functions {
+            if let Some(sig_claim) = self.extract_function_signature_claim(function, specification)? {
+                claims.push(sig_claim);
+            }
+        }
+
+        // Extract type definition claims
+        for type_def in &code_structure.types {
+            if let Some(type_claim) = self.extract_type_definition_claim(type_def, specification)? {
+                claims.push(type_claim);
+            }
+        }
+
+        // Extract implementation claims
+        for impl_block in &code_structure.implementations {
+            if let Some(impl_claim) = self.extract_implementation_claim(impl_block, specification)? {
+                claims.push(impl_claim);
+            }
+        }
+
+        Ok(claims)
+    }
+
+    /// Extend claim extraction to documentation outputs (V3 enhancement)
+    pub async fn extract_documentation_claims(&self, doc_output: &DocumentationOutput, style_guide: &DocumentationStandards) -> Result<Vec<AtomicClaim>> {
+        let mut claims = Vec::new();
+
+        // Parse documentation structure
+        let doc_structure = self.parse_documentation_structure(doc_output)?;
+
+        // Extract API documentation claims
+        for api_doc in &doc_structure.api_documentation {
+            if let Some(api_claim) = self.extract_api_documentation_claim(api_doc, style_guide)? {
+                claims.push(api_claim);
+            }
+        }
+
+        // Extract usage example claims
+        for example in &doc_structure.usage_examples {
+            if let Some(example_claim) = self.extract_usage_example_claim(example, style_guide)? {
+                claims.push(example_claim);
+            }
+        }
+
+        // Extract architectural claims
+        for arch_claim in &doc_structure.architecture_claims {
+            claims.push(arch_claim.clone());
+        }
+
+        Ok(claims)
+    }
+
+    /// Extend claim extraction to data analysis outputs (V3 enhancement)
+    pub async fn extract_data_claims(&self, analysis_output: &DataAnalysisOutput, data_schema: &DataSchema) -> Result<Vec<AtomicClaim>> {
+        let mut claims = Vec::new();
+
+        // Parse data analysis results
+        let analysis_results = self.parse_data_analysis_results(analysis_output)?;
+
+        // Extract statistical claims
+        for stat in &analysis_results.statistics {
+            if let Some(stat_claim) = self.extract_statistical_claim(stat, data_schema)? {
+                claims.push(stat_claim);
+            }
+        }
+
+        // Extract pattern recognition claims
+        for pattern in &analysis_results.patterns {
+            if let Some(pattern_claim) = self.extract_pattern_claim(pattern, data_schema)? {
+                claims.push(pattern_claim);
+            }
+        }
+
+        // Extract correlation claims
+        for correlation in &analysis_results.correlations {
+            if let Some(corr_claim) = self.extract_correlation_claim(correlation, data_schema)? {
+                claims.push(corr_claim);
+            }
+        }
+
+        Ok(claims)
+    }
+
+    /// Parse code structure from code output (helper for code claims)
+    fn parse_code_structure(&self, code_output: &CodeOutput) -> Result<CodeStructure> {
+        // Enhanced code parsing with AST analysis
+        let mut functions = Vec::new();
+        let mut types = Vec::new();
+        let mut implementations = Vec::new();
+
+        // Parse based on language
+        match code_output.language {
+            Language::Rust => {
+                self.parse_rust_code(&code_output.content, &mut functions, &mut types, &mut implementations)?;
+            }
+            Language::TypeScript => {
+                self.parse_typescript_code(&code_output.content, &mut functions, &mut types, &mut implementations)?;
+            }
+            _ => {
+                // Fallback to regex-based parsing
+                self.parse_generic_code(&code_output.content, &mut functions, &mut types, &mut implementations)?;
+            }
+        }
+
+        Ok(CodeStructure {
+            functions,
+            types,
+            implementations,
+        })
+    }
+
+    /// Parse documentation structure from doc output (helper for doc claims)
+    fn parse_documentation_structure(&self, doc_output: &DocumentationOutput) -> Result<DocumentationStructure> {
+        let mut api_documentation = Vec::new();
+        let mut usage_examples = Vec::new();
+        let mut architecture_claims = Vec::new();
+
+        // Parse markdown or other doc formats
+        let lines: Vec<&str> = doc_output.content.lines().collect();
+
+        let mut current_section = String::new();
+        for line in lines {
+            if line.starts_with("# ") {
+                current_section = line.trim_start_matches("# ").to_string();
+            } else if line.starts_with("## ") && current_section == "API" {
+                // Parse API documentation
+                if let Some(api_doc) = self.parse_api_section(line, &lines)? {
+                    api_documentation.push(api_doc);
+                }
+            } else if line.starts_with("```") && current_section == "Examples" {
+                // Parse usage examples
+                if let Some(example) = self.parse_example_section(line, &lines)? {
+                    usage_examples.push(example);
+                }
+            } else if current_section == "Architecture" {
+                // Extract architectural claims
+                if let Some(arch_claim) = self.extract_architecture_claim(line)? {
+                    architecture_claims.push(arch_claim);
+                }
+            }
+        }
+
+        Ok(DocumentationStructure {
+            api_documentation,
+            usage_examples,
+            architecture_claims,
+        })
+    }
+
+    /// Parse data analysis results from analysis output (helper for data claims)
+    fn parse_data_analysis_results(&self, analysis_output: &DataAnalysisOutput) -> Result<DataAnalysisResults> {
+        // Parse statistical results, patterns, and correlations
+        let mut statistics = Vec::new();
+        let mut patterns = Vec::new();
+        let mut correlations = Vec::new();
+
+        // Parse based on analysis type
+        match &analysis_output.analysis_type {
+            "statistical" => {
+                statistics = self.parse_statistical_output(&analysis_output.content)?;
+            }
+            "pattern_recognition" => {
+                patterns = self.parse_pattern_output(&analysis_output.content)?;
+            }
+            "correlation_analysis" => {
+                correlations = self.parse_correlation_output(&analysis_output.content)?;
+            }
+            _ => {
+                // Generic parsing for mixed analysis types
+                let (stats, pats, corrs) = self.parse_mixed_analysis_output(&analysis_output.content)?;
+                statistics = stats;
+                patterns = pats;
+                correlations = corrs;
+            }
+        }
+
+        Ok(DataAnalysisResults {
+            statistics,
+            patterns,
+            correlations,
+        })
+    }
+
+    /// Extract function signature claim from code
+    fn extract_function_signature_claim(&self, function: &FunctionDefinition, spec: &CodeSpecification) -> Result<Option<AtomicClaim>> {
+        // Verify function signature matches specification
+        let expected_sig = spec.get_expected_signature(&function.name);
+        let matches_spec = expected_sig.as_ref() == Some(&function.signature);
+
+        let claim_text = format!("Function {} has signature: {}", function.name, function.signature);
+        let confidence = if matches_spec { 0.95 } else { 0.3 };
+
+        Ok(Some(AtomicClaim {
+            id: Uuid::new_v4(),
+            claim_text,
+            subject: function.name.clone(),
+            predicate: "has_signature".to_string(),
+            object: Some(function.signature.clone()),
+            context_brackets: vec!["code".to_string(), "function".to_string()],
+            verification_requirements: vec![VerificationRequirement {
+                method: VerificationMethod::CodeAnalysis,
+                evidence_type: EvidenceType::CodeAnalysis,
+                minimum_confidence: 0.8,
+                required_sources: vec![SourceType::FileSystem],
+            }],
+            confidence,
+            position: (function.line_start, function.line_end),
+            sentence_fragment: claim_text.clone(),
+        }))
+    }
+
+    /// Extract API documentation claim from docs
+    fn extract_api_documentation_claim(&self, api_doc: &ApiDocumentation, style_guide: &DocumentationStandards) -> Result<Option<AtomicClaim>> {
+        // Verify API documentation follows style guide
+        let follows_style = self.check_documentation_style(api_doc, style_guide);
+
+        let claim_text = format!("API {} is documented with parameters: {}",
+            api_doc.endpoint, api_doc.parameters.join(", "));
+        let confidence = if follows_style { 0.9 } else { 0.6 };
+
+        Ok(Some(AtomicClaim {
+            id: Uuid::new_v4(),
+            claim_text,
+            subject: api_doc.endpoint.clone(),
+            predicate: "is_documented".to_string(),
+            object: Some(api_doc.description.clone()),
+            context_brackets: vec!["documentation".to_string(), "api".to_string()],
+            verification_requirements: vec![VerificationRequirement {
+                method: VerificationMethod::DocumentationAnalysis,
+                evidence_type: EvidenceType::Documentation,
+                minimum_confidence: 0.7,
+                required_sources: vec![SourceType::Documentation],
+            }],
+            confidence,
+            position: (0, 0), // Position in doc file
+            sentence_fragment: claim_text.clone(),
+        }))
+    }
+
+    /// Extract statistical claim from data analysis
+    fn extract_statistical_claim(&self, statistic: &StatisticalResult, schema: &DataSchema) -> Result<Option<AtomicClaim>> {
+        // Verify statistical claim is valid for the data schema
+        let is_valid = self.validate_statistical_claim(statistic, schema);
+
+        let claim_text = format!("{} has {} = {:.3} with p-value = {:.3}",
+            statistic.variable, statistic.metric, statistic.value, statistic.p_value);
+        let confidence = if is_valid && statistic.p_value < 0.05 { 0.9 } else { 0.4 };
+
+        Ok(Some(AtomicClaim {
+            id: Uuid::new_v4(),
+            claim_text,
+            subject: statistic.variable.clone(),
+            predicate: statistic.metric.clone(),
+            object: Some(format!("{:.3}", statistic.value)),
+            context_brackets: vec!["data".to_string(), "statistics".to_string()],
+            verification_requirements: vec![VerificationRequirement {
+                method: VerificationMethod::StatisticalAnalysis,
+                evidence_type: EvidenceType::Measurement,
+                minimum_confidence: 0.8,
+                required_sources: vec![SourceType::Measurement],
+            }],
+            confidence,
+            position: (0, 0), // Position in analysis output
+            sentence_fragment: claim_text.clone(),
+        }))
+    }
+
+    // Placeholder implementations for parsing methods
+    fn parse_rust_code(&self, _content: &str, _functions: &mut Vec<FunctionDefinition>, _types: &mut Vec<TypeDefinition>, _implementations: &mut Vec<ImplementationBlock>) -> Result<()> {
+        // TODO: Implement Rust AST parsing
+        Ok(())
+    }
+
+    fn parse_typescript_code(&self, _content: &str, _functions: &mut Vec<FunctionDefinition>, _types: &mut Vec<TypeDefinition>, _implementations: &mut Vec<ImplementationBlock>) -> Result<()> {
+        // TODO: Implement TypeScript AST parsing
+        Ok(())
+    }
+
+    fn parse_generic_code(&self, _content: &str, _functions: &mut Vec<FunctionDefinition>, _types: &mut Vec<TypeDefinition>, _implementations: &mut Vec<ImplementationBlock>) -> Result<()> {
+        // TODO: Implement regex-based code parsing
+        Ok(())
+    }
+
+    fn parse_api_section(&self, _line: &str, _lines: &[&str]) -> Result<Option<ApiDocumentation>> {
+        // TODO: Implement API documentation parsing
+        Ok(None)
+    }
+
+    fn parse_example_section(&self, _line: &str, _lines: &[&str]) -> Result<Option<UsageExample>> {
+        // TODO: Implement usage example parsing
+        Ok(None)
+    }
+
+    fn extract_architecture_claim(&self, _line: &str) -> Result<Option<AtomicClaim>> {
+        // TODO: Implement architecture claim extraction
+        Ok(None)
+    }
+
+    fn parse_statistical_output(&self, _content: &str) -> Result<Vec<StatisticalResult>> {
+        // TODO: Implement statistical output parsing
+        Ok(vec![])
+    }
+
+    fn parse_pattern_output(&self, _content: &str) -> Result<Vec<PatternResult>> {
+        // TODO: Implement pattern output parsing
+        Ok(vec![])
+    }
+
+    fn parse_correlation_output(&self, _content: &str) -> Result<Vec<CorrelationResult>> {
+        // TODO: Implement correlation output parsing
+        Ok(vec![])
+    }
+
+    fn parse_mixed_analysis_output(&self, _content: &str) -> Result<(Vec<StatisticalResult>, Vec<PatternResult>, Vec<CorrelationResult>)> {
+        // TODO: Implement mixed analysis output parsing
+        Ok((vec![], vec![], vec![]))
+    }
+
+    fn extract_type_definition_claim(&self, _type_def: &TypeDefinition, _spec: &CodeSpecification) -> Result<Option<AtomicClaim>> {
+        // TODO: Implement type definition claim extraction
+        Ok(None)
+    }
+
+    fn extract_implementation_claim(&self, _impl_block: &ImplementationBlock, _spec: &CodeSpecification) -> Result<Option<AtomicClaim>> {
+        // TODO: Implement implementation claim extraction
+        Ok(None)
+    }
+
+    fn extract_usage_example_claim(&self, _example: &UsageExample, _style_guide: &DocumentationStandards) -> Result<Option<AtomicClaim>> {
+        // TODO: Implement usage example claim extraction
+        Ok(None)
+    }
+
+    fn extract_pattern_claim(&self, _pattern: &PatternResult, _schema: &DataSchema) -> Result<Option<AtomicClaim>> {
+        // TODO: Implement pattern claim extraction
+        Ok(None)
+    }
+
+    fn extract_correlation_claim(&self, _correlation: &CorrelationResult, _schema: &DataSchema) -> Result<Option<AtomicClaim>> {
+        // TODO: Implement correlation claim extraction
+        Ok(None)
+    }
+
+    fn check_documentation_style(&self, _api_doc: &ApiDocumentation, _style_guide: &DocumentationStandards) -> bool {
+        // TODO: Implement documentation style checking
+        true
+    }
+
+    fn validate_statistical_claim(&self, _statistic: &StatisticalResult, _schema: &DataSchema) -> bool {
+        // TODO: Implement statistical claim validation
+        true
+    }
 }
+

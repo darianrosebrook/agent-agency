@@ -1943,9 +1943,14 @@ impl LearningSignalStorage for InMemoryLearningSignalStorage {
             caws_spec: None,
         };
 
-        // Test historical resource data retrieval
-        // let analyzer = LearningSignalAnalyzer::new(); // Use fallback for now
-        // let historical_data = analyzer.retrieve_historical_resource_data(&task_spec).await.unwrap();
+         // TODO: Implement historical resource data retrieval
+         // - Create resource usage database schema
+         // - Implement data collection and storage pipeline
+         // - Add historical data aggregation and analysis
+         // - Support time-series queries and trend analysis
+         // - Implement data retention and cleanup policies
+         // - Add resource usage prediction algorithms
+         // PLACEHOLDER: Skipping historical data retrieval for now
 
         // Test that fallback simulation works
         let analyzer = LearningSignalAnalyzer::new();

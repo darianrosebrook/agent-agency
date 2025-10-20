@@ -502,7 +502,14 @@ impl McpServer {
 
     /// Handle resources list request
     async fn handle_resources_list(&self, _request: McpRequest) -> Result<McpResponse, McpError> {
-        // Return empty resources list for now
+        // TODO: Implement MCP resources discovery and management
+        // - Define MCP resource schema and metadata
+        // - Implement resource registration and discovery
+        // - Add resource versioning and compatibility checking
+        // - Support resource access control and permissions
+        // - Implement resource health monitoring and status
+        // - Add resource usage tracking and analytics
+        // PLACEHOLDER: Returning empty resources list
         let result = serde_json::json!({
             "resources": []
         });

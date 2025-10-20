@@ -66,7 +66,14 @@ impl SelfPromptingAgent {
 
             Some(SandboxEnvironment::new(
                 std::path::PathBuf::from(sandbox_path),
-                vec![], // Allow all paths for now
+                // TODO: Implement path-based security sandboxing
+                // - Define allowed path patterns and restrictions
+                // - Implement path validation and sanitization
+                // - Add configurable security policies per task
+                // - Support path-based access control lists
+                // - Implement path traversal attack prevention
+                // - Add security audit logging for path access
+                vec![], // PLACEHOLDER: Allowing all paths for now
                 crate::sandbox::SafetyMode::Sandbox,
                 config.enable_git_snapshots,
             ).await?)

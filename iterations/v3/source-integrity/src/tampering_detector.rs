@@ -410,66 +410,6 @@ impl TamperingDetector {
     }
 
     /// Analyze file content for tampering indicators
-    async fn analyze_file_content(&self, content: &str) -> Result<Option<SourceSpecificAnalysis>> {
-        // File-specific analysis would depend on file type
-        // TODO: Replace basic analysis with comprehensive tampering detection
-        /// Requirements for completion:
-        /// - [ ] Implement comprehensive tampering detection using multiple techniques
-        /// - [ ] Add support for different tampering types and attack vectors
-        /// - [ ] Implement proper tampering pattern recognition and classification
-        /// - [ ] Add support for tampering detection confidence scoring
-        /// - [ ] Implement proper error handling for tampering detection failures
-        /// - [ ] Add support for tampering detection performance optimization
-        /// - [ ] Implement proper memory management for tampering detection
-        /// - [ ] Add support for tampering detection monitoring and alerting
-        /// - [ ] Implement proper cleanup of tampering detection resources
-        /// - [ ] Add support for tampering detection result validation and quality assessment
-        // TODO: Replace basic analysis with comprehensive tampering detection
-        // - [ ] Implement advanced statistical analysis for tampering patterns
-        // - [ ] Add machine learning-based anomaly detection
-        // - [ ] Integrate with external threat intelligence feeds
-        // - [ ] Implement real-time tampering monitoring and alerting
-        // - [ ] Add tampering detection result confidence scoring
-        Ok(None)
-    }
-
-    /// Detect obfuscated code patterns
-    fn detect_obfuscated_code(&self, content: &str) -> bool {
-        // TODO: Replace simple heuristics with proper obfuscation detection
-        /// Requirements for completion:
-        /// - [ ] Implement proper obfuscation detection using static analysis
-        /// - [ ] Add support for different obfuscation techniques and patterns
-        /// - [ ] Implement proper obfuscation classification and confidence scoring
-        /// - [ ] Add support for obfuscation detection performance optimization
-        /// - [ ] Implement proper error handling for obfuscation detection failures
-        /// - [ ] Add support for obfuscation detection monitoring and alerting
-        /// - [ ] Implement proper memory management for obfuscation detection
-        /// - [ ] Add support for obfuscation detection result validation
-        /// - [ ] Implement proper cleanup of obfuscation detection resources
-        /// - [ ] Add support for obfuscation detection quality assessment
-        // Simple heuristics for obfuscated code detection
-        let obfuscation_indicators = [
-            "\\x",    // Hex encoding
-            "\\u",    // Unicode encoding
-            "eval(",  // Dynamic code execution
-            "base64", // Base64 encoding
-            "rot13",  // ROT13 encoding
-        ];
-
-        obfuscation_indicators
-            .iter()
-            .any(|indicator| content.contains(indicator))
-    }
-
-    /// Detect unexpected markup changes
-    fn detect_unexpected_markup_changes(&self, content: &str) -> bool {
-        // Check for suspicious HTML/XML modifications
-        let suspicious_markup = ["<script>", "<iframe>", "javascript:", "onload=", "onerror="];
-
-        suspicious_markup
-            .iter()
-            .any(|markup| content.contains(markup))
-    }
 
     /// Analyze file content for tampering indicators based on file type
     async fn analyze_file_content(&self, content: &str) -> Result<Option<SourceSpecificAnalysis>> {
@@ -482,7 +422,7 @@ impl TamperingDetector {
         match file_type {
             FileType::Executable => {
                 // Check for suspicious executable patterns
-                if self.detect_executable_tampering(content) {
+                if self.detect_executable_tampering(content.as_bytes()) {
                     indicators.push(TamperingIndicator::ContentPattern);
                     confidence += 0.8;
                 }
@@ -515,13 +455,14 @@ impl TamperingDetector {
         }
 
         if confidence > 0.0 {
+            let has_indicators = !indicators.is_empty();
             Ok(Some(SourceSpecificAnalysis {
                 indicators,
                 confidence: confidence.min(0.9),
                 details: serde_json::json!({
                     "analysis_type": "file_analysis",
                     "detected_file_type": file_type.to_string(),
-                    "tampering_indicators_detected": !indicators.is_empty()
+                    "tampering_indicators_detected": has_indicators
                 }),
             }))
         } else {
@@ -544,18 +485,18 @@ impl TamperingDetector {
     }
 
     /// Detect tampering in executable files
-    fn detect_executable_tampering(&self, content: &str) -> bool {
+    fn detect_executable_tampering(&self, content: &[u8]) -> bool {
         // Check for suspicious patterns in executable content
-        let suspicious_exec_patterns = [
-            "\x90\x90\x90\x90", // NOP sled
-            "\xeb\xfe",         // Infinite loop
-            "\xcd\x80",         // System call
-            "\x48\x31\xc0",     // XOR rax, rax (shellcode start)
+        let suspicious_exec_patterns: &[&[u8]] = &[
+            b"\x90\x90\x90\x90", // NOP sled
+            b"\xeb\xfe",         // Infinite loop
+            b"\xcd\x80",         // System call
+            b"\x48\x31\xc0",     // XOR rax, rax (shellcode start)
         ];
 
         suspicious_exec_patterns
             .iter()
-            .any(|pattern| content.contains(pattern))
+            .any(|pattern| content.windows(pattern.len()).any(|window| window == *pattern))
     }
 
     /// Detect tampering in archive files
@@ -744,7 +685,7 @@ mod tests {
         let detector = TamperingDetector::new();
 
         // Test executable file detection
-        let exec_content = "\x7fELF\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x03\x00\x01\x00\x00\x00\x54\x80\x04\x08\x34\x00\x00\x00";
+        let exec_content = b"\x7fELF\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x03\x00\x01\x00\x00\x00\x54\x80\x04\x08\x34\x00\x00\x00";
         let result = detector
             .detect_tampering(
                 exec_content,

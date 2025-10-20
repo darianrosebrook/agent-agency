@@ -30,8 +30,14 @@ def download_fastvit_t8() -> torch.nn.Module:
     """Download FastViT T8 from torchvision model zoo."""
     print("[*] Downloading FastViT T8 from torchvision...")
     try:
-        # FastViT T8 may be available via timm or custom implementation
-        # For now, use a standard vision model as placeholder
+         # TODO: Implement FastViT model support
+         # - Integrate FastViT architecture and weights
+         # - Add FastViT model variants (T8, T12, S12, etc.)
+         # - Implement FastViT-specific preprocessing
+         # - Add FastViT performance optimizations
+         # - Support FastViT fine-tuning and training
+         # - Implement FastViT model validation and benchmarking
+         # PLACEHOLDER: Using standard vision model
         model = models.mobilenet_v3_small(pretrained=True)
         model.eval()
         print("[✓] Model downloaded successfully")

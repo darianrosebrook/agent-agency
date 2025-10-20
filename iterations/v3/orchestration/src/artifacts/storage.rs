@@ -447,7 +447,14 @@ impl ArtifactStorage for DatabaseStorage {
                 &metadata_json,
                 &(artifacts_json.to_string().len() as i64),
                 &"none",
-                &None::<String>, // No checksum for now
+                // TODO: Implement artifact integrity verification
+                // - Add checksum calculation for artifacts (SHA-256, Blake3)
+                // - Implement checksum validation on retrieval
+                // - Support multiple checksum algorithms
+                // - Add checksum database storage and indexing
+                // - Implement checksum-based deduplication
+                // - Add integrity verification on storage operations
+                &None::<String>, // PLACEHOLDER: No checksum implementation
             ],
         ).await;
 

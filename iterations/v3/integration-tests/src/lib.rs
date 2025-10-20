@@ -8,10 +8,12 @@ pub mod helpers;
 pub mod mocks;
 pub mod test_utils;
 
+pub mod autonomous_pipeline_test;
 pub mod claim_extraction_tests;
 pub mod council_tests;
 pub mod multimodal_rag_e2e_tests;
 pub mod multimodal_rag_integration_test;
+pub mod performance_benchmarks;
 
 pub use fixtures::*;
 pub use helpers::*;

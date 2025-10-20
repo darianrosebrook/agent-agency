@@ -213,8 +213,14 @@ impl Workspace for TempMirrorWorkspace {
 
     async fn revert(&self, _changeset_id: &ChangeSetId) -> Result<()> {
         // Find the changeset to revert
-        // In a real implementation, we'd have persistent storage of applied changesets
-        // For now, we'll need to implement a different strategy
+          // TODO: Implement persistent changeset storage
+          // - Create changeset database schema and models
+          // - Implement changeset serialization and storage
+          // - Add changeset retrieval and replay capabilities
+          // - Support changeset versioning and conflict resolution
+          // - Implement changeset cleanup and retention policies
+          // - Add changeset integrity validation and checksums
+          // PLACEHOLDER: Using in-memory approach for now
 
         // Since we don't have persistent changeset tracking yet,
         // we'll restore from the most recent snapshot
@@ -254,8 +260,14 @@ mod tests {
         Ok((temp_dir, project_path))
     }
 
-    // Note: Async tests require tokio-test dependency
-    // For now, we'll rely on integration tests in the main test suite
+      // TODO: Implement comprehensive async testing infrastructure
+      // - Add tokio-test dependency and configuration
+      // - Create async test utilities and fixtures
+      // - Implement proper async test cleanup and teardown
+      // - Add async test timeouts and cancellation handling
+      // - Support concurrent test execution
+      // - Add async test debugging and profiling tools
+      // PLACEHOLDER: Relying on integration tests for now
 
     #[test]
     fn test_temp_workspace_types() {

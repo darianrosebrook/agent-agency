@@ -32,6 +32,7 @@ impl ClaimExtractionProcessor {
 
     /// Run the complete claim extraction and verification pipeline
     /// Implements the four-stage Claimify pipeline with V3 multi-modal verification
+    /// Enhanced with V2 advanced patterns for superior claim extraction
     pub async fn run(
         &mut self,
         input: &str,
@@ -48,27 +49,27 @@ impl ClaimExtractionProcessor {
             .await
             .map_err(|e| ClaimExtractionError::DisambiguationFailed(e.to_string()))?;
 
-        // Stage 2: Qualification (Ported from V2)
+        // Stage 2: Qualification (Enhanced V2 with domain-aware verifiability)
         debug!("Stage 2: Qualification");
-        let _qualification_result = self
+        let qualification_result = self
             .qualification_stage
-            .process(&disambiguation_result.disambiguated_sentence, ctx)
+            .process_v2(&disambiguation_result.disambiguated_sentence, ctx)
             .await
             .map_err(|e| ClaimExtractionError::QualificationFailed(e.to_string()))?;
 
-        // Stage 3: Decomposition (Ported from V2 with compound sentence handling)
+        // Stage 3: Decomposition (Enhanced V2 with advanced atomic claim extraction)
         debug!("Stage 3: Decomposition");
         let decomposition_result = self
             .decomposition_stage
-            .process(&disambiguation_result.disambiguated_sentence, ctx)
+            .process_v2(&disambiguation_result.disambiguated_sentence, ctx)
             .await
             .map_err(|e| ClaimExtractionError::DecompositionFailed(e.to_string()))?;
 
-        // Stage 4: Verification (Ported from V2 evidence-based verification)
+        // Stage 4: Verification (Enhanced V2 with CAWS-compliant evidence collection)
         debug!("Stage 4: Verification");
         let verification_result = self
             .verification_stage
-            .process(&decomposition_result.atomic_claims, ctx)
+            .process_v2(&decomposition_result.atomic_claims, ctx)
             .await
             .map_err(|e| ClaimExtractionError::VerificationFailed(e.to_string()))?;
 

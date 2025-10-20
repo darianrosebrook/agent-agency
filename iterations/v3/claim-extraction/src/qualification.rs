@@ -41,7 +41,7 @@ impl QualificationStage {
         })
     }
 
-    /// Detect verifiable content in a sentence
+    /// Detect verifiable content in a sentence (enhanced V2 port)
     pub async fn detect_verifiable_content(
         &self,
         sentence: &str,
@@ -49,22 +49,34 @@ impl QualificationStage {
     ) -> Result<VerifiabilityAssessment> {
         let mut verifiable_parts = Vec::new();
 
-        // Detect factual claims
+        // Enhanced factual claims detection (V2 patterns)
         verifiable_parts.extend(
             self.verifiability_detector
-                .detect_factual_claims(sentence)?,
+                .detect_factual_claims_v2(sentence, context)?,
         );
 
-        // Detect technical assertions
+        // Enhanced technical assertions with domain awareness
         verifiable_parts.extend(
             self.verifiability_detector
-                .detect_technical_assertions(sentence, context)?,
+                .detect_technical_assertions_v2(sentence, context)?,
         );
 
-        // Detect measurable outcomes
+        // Measurable outcomes with quantitative indicators
         verifiable_parts.extend(
             self.verifiability_detector
-                .detect_measurable_outcomes(sentence)?,
+                .detect_measurable_outcomes_v2(sentence, context)?,
+        );
+
+        // New V2 patterns: causal relationships
+        verifiable_parts.extend(
+            self.verifiability_detector
+                .detect_causal_relationships(sentence)?,
+        );
+
+        // New V2 patterns: temporal assertions
+        verifiable_parts.extend(
+            self.verifiability_detector
+                .detect_temporal_assertions(sentence)?,
         );
 
         // Detect unverifiable content
@@ -259,7 +271,353 @@ impl VerifiabilityDetector {
             _ => format!("{} (needs objective criteria)", content),
         }
     }
+
+    /// Enhanced unverifiable parts processing with V2 patterns (domain-aware)
+    fn enhance_unverifiable_parts_v2(
+        &self,
+        unverifiable_parts: &mut Vec<UnverifiableContent>,
+        context: &ProcessingContext,
+    ) {
+        // Apply domain-specific enhancements to unverifiable parts
+        for part in unverifiable_parts.iter_mut() {
+            // Domain-specific rewrite suggestions
+            if let Some(domain) = context.domain_hints.first() {
+                match domain.as_str() {
+                    "security" => {
+                        if part.original_content.to_lowercase().contains("secure") {
+                            part.suggested_rewrite = Some("satisfies OWASP ASVS Level 2 requirements".to_string());
+                        }
+                    }
+                    "performance" => {
+                        if part.original_content.to_lowercase().contains("fast") {
+                            part.suggested_rewrite = Some("maintains p95 latency ≤ 200ms".to_string());
+                        }
+                    }
+                    "usability" => {
+                        if part.original_content.to_lowercase().contains("easy") {
+                            part.suggested_rewrite = Some("passes user testing with ≥ 85% success rate".to_string());
+                        }
+                    }
+                    _ => {}
+                }
+            }
+
+            // Enhanced reason classification (V2)
+            if part.reason == UnverifiableReason::SubjectiveLanguage {
+                // Check for improvement terms that need quantification
+                let improvement_terms = ["better", "improved", "enhanced", "optimized"];
+                if improvement_terms.iter().any(|&term| part.original_content.to_lowercase().contains(term)) {
+                    part.reason = UnverifiableReason::ImprovementClaim;
+                    part.suggested_rewrite = Some("demonstrates measurable improvement against baseline metrics".to_string());
+                }
+            }
+        }
+    }
 }
+
+    /// Enhanced factual claims detection with context awareness (V2 port)
+    fn detect_factual_claims_v2(&self, sentence: &str, context: &ProcessingContext) -> Result<Vec<VerifiableContent>> {
+        let mut claims = Vec::new();
+
+        // Enhanced patterns with context awareness
+        let enhanced_factual_patterns = vec![
+            Regex::new(r"\b(is|are|was|were|has|have|had|will|should|must|can|cannot)\b.*?\b(implemented|working|functional|operational|complete|finished)\b").unwrap(),
+            Regex::new(r"\b(contains|includes|excludes|equals|matches|differs)\b.*?\b(error|exception|failure|success|result)\b").unwrap(),
+            Regex::new(r"\b(implements|extends|inherits|overrides|calls|returns)\b.*?\b(interface|class|method|function)\b").unwrap(),
+        ];
+
+        for pattern in &enhanced_factual_patterns {
+            for mat in pattern.find_iter(sentence) {
+                let content = mat.as_str().to_string();
+                // Higher confidence for contextually relevant claims
+                let confidence = if self.is_contextually_relevant(&content, context) { 0.9 } else { 0.7 };
+
+                claims.push(VerifiableContent {
+                    position: (mat.start(), mat.end()),
+                    content,
+                    verification_method: VerificationMethod::CodeAnalysis,
+                    evidence_requirements: vec![EvidenceRequirement {
+                        evidence_type: EvidenceType::CodeAnalysis,
+                        minimum_confidence: confidence,
+                        source_requirements: vec![SourceRequirement {
+                            source_type: SourceType::FileSystem,
+                            authority_level: AuthorityLevel::Primary,
+                            freshness_requirement: None,
+                        }],
+                    }],
+                });
+            }
+        }
+
+        Ok(claims)
+    }
+
+    /// Enhanced technical assertions with domain awareness (V2 port)
+    fn detect_technical_assertions_v2(&self, sentence: &str, context: &ProcessingContext) -> Result<Vec<VerifiableContent>> {
+        let mut assertions = Vec::new();
+
+        // Domain-aware technical patterns
+        let domain_patterns = match context.domain_hints.first().map(|s| s.as_str()) {
+            Some("rust") => vec![
+                Regex::new(r"\b(implements|uses|provides)\b.*?\b(trait|struct|enum|macro)\b").unwrap(),
+                Regex::new(r"\b(compiles|runs|executes)\b.*?\b(without|with)\b.*?\b(error|warning)\b").unwrap(),
+            ],
+            Some("typescript") => vec![
+                Regex::new(r"\b(implements|extends)\b.*?\b(interface|class|type)\b").unwrap(),
+                Regex::new(r"\b(typed|compiled|transpiled)\b.*?\b(strictly|correctly)\b").unwrap(),
+            ],
+            _ => vec![
+                Regex::new(r"\b(function|method|class|interface|type|API|endpoint)\b").unwrap(),
+                Regex::new(r"\b(implements|extends|inherits|overrides|calls|returns)\b").unwrap(),
+                Regex::new(r"\b(validates|processes|handles|manages|creates|updates|deletes)\b").unwrap(),
+            ],
+        };
+
+        for pattern in &domain_patterns {
+            for mat in pattern.find_iter(sentence) {
+                assertions.push(VerifiableContent {
+                    position: (mat.start(), mat.end()),
+                    content: mat.as_str().to_string(),
+                    verification_method: VerificationMethod::CodeAnalysis,
+                    evidence_requirements: vec![EvidenceRequirement {
+                        evidence_type: EvidenceType::CodeAnalysis,
+                        minimum_confidence: 0.85,
+                        source_requirements: vec![SourceRequirement {
+                            source_type: SourceType::FileSystem,
+                            authority_level: AuthorityLevel::Primary,
+                            freshness_requirement: None,
+                        }],
+                    }],
+                });
+            }
+        }
+
+        Ok(assertions)
+    }
+
+    /// Measurable outcomes with quantitative indicators (V2 enhancement)
+    fn detect_measurable_outcomes_v2(&self, sentence: &str, context: &ProcessingContext) -> Result<Vec<VerifiableContent>> {
+        let mut outcomes = Vec::new();
+
+        // Enhanced measurable patterns with units and thresholds
+        let measurable_patterns = vec![
+            Regex::new(r"\b(\d+(?:\.\d+)?)\s*(ms|seconds?|minutes?|hours?|bytes?|KB|MB|GB|TB)\b").unwrap(),
+            Regex::new(r"\b(performance|speed|latency|throughput|memory|CPU|bandwidth)\b.*?\b(?:is|was|should be|must be)\b.*?\b(\d+(?:\.\d+)?)\b").unwrap(),
+            Regex::new(r"\b(response time|execution time|processing time)\b.*?\b(?:<|>|<=|>=|=)\b.*?\b(\d+(?:\.\d+)?)\b").unwrap(),
+            Regex::new(r"\b(?:uses|consumes|requires)\b.*?\b(\d+(?:\.\d+)?)\s*(ms|seconds?|minutes?|hours?|bytes?|KB|MB|GB|TB|%)\b").unwrap(),
+        ];
+
+        for pattern in &measurable_patterns {
+            for mat in pattern.find_iter(sentence) {
+                outcomes.push(VerifiableContent {
+                    position: (mat.start(), mat.end()),
+                    content: mat.as_str().to_string(),
+                    verification_method: VerificationMethod::Measurement,
+                    evidence_requirements: vec![EvidenceRequirement {
+                        evidence_type: EvidenceType::Measurement,
+                        minimum_confidence: 0.95, // High confidence for quantitative claims
+                        source_requirements: vec![SourceRequirement {
+                            source_type: SourceType::Measurement,
+                            authority_level: AuthorityLevel::Primary,
+                            freshness_requirement: Some(Duration::from_secs(300)), // 5 minutes max age
+                        }],
+                    }],
+                });
+            }
+        }
+
+        Ok(outcomes)
+    }
+
+    /// Detect causal relationships (V2 addition)
+    fn detect_causal_relationships(&self, sentence: &str) -> Result<Vec<VerifiableContent>> {
+        let mut relationships = Vec::new();
+
+        let causal_patterns = vec![
+            Regex::new(r"\b(because|since|due to|caused by|leads to|results in|triggers)\b").unwrap(),
+            Regex::new(r"\b(if|when|whenever)\b.*?\b(then|will|shall|must)\b").unwrap(),
+            Regex::new(r"\b(therefore|thus|consequently|as a result)\b").unwrap(),
+        ];
+
+        for pattern in &causal_patterns {
+            for mat in pattern.find_iter(sentence) {
+                relationships.push(VerifiableContent {
+                    position: (mat.start(), mat.end()),
+                    content: mat.as_str().to_string(),
+                    verification_method: VerificationMethod::LogicalAnalysis,
+                    evidence_requirements: vec![EvidenceRequirement {
+                        evidence_type: EvidenceType::LogicalAnalysis,
+                        minimum_confidence: 0.7, // Lower confidence for causal claims
+                        source_requirements: vec![SourceRequirement {
+                            source_type: SourceType::Documentation,
+                            authority_level: AuthorityLevel::Secondary,
+                            freshness_requirement: None,
+                        }],
+                    }],
+                });
+            }
+        }
+
+        Ok(relationships)
+    }
+
+    /// Detect temporal assertions (V2 addition)
+    fn detect_temporal_assertions(&self, sentence: &str) -> Result<Vec<VerifiableContent>> {
+        let mut assertions = Vec::new();
+
+        let temporal_patterns = vec![
+            Regex::new(r"\b(before|after|during|while|until|since)\b.*?\b(?:the\s+)?(?:function|method|process|operation)\b").unwrap(),
+            Regex::new(r"\b(?:starts?|begins?|ends?|completes?|finishes?)\b.*?\b(before|after|during|while)\b").unwrap(),
+            Regex::new(r"\b(?:first|then|next|finally|lastly)\b.*?\b(?:the\s+)?(?:step|phase|stage)\b").unwrap(),
+        ];
+
+        for pattern in &temporal_patterns {
+            for mat in pattern.find_iter(sentence) {
+                assertions.push(VerifiableContent {
+                    position: (mat.start(), mat.end()),
+                    content: mat.as_str().to_string(),
+                    verification_method: VerificationMethod::ProcessAnalysis,
+                    evidence_requirements: vec![EvidenceRequirement {
+                        evidence_type: EvidenceType::ProcessAnalysis,
+                        minimum_confidence: 0.8,
+                        source_requirements: vec![SourceRequirement {
+                            source_type: SourceType::Documentation,
+                            authority_level: AuthorityLevel::Primary,
+                            freshness_requirement: None,
+                        }],
+                    }],
+                });
+            }
+        }
+
+        Ok(assertions)
+    }
+
+    /// Check if content is contextually relevant (V2 enhancement)
+    fn is_contextually_relevant(&self, content: &str, context: &ProcessingContext) -> bool {
+        // Check if the content relates to the document's domain hints
+        for hint in &context.domain_hints {
+            if content.to_lowercase().contains(&hint.to_lowercase()) {
+                return true;
+            }
+        }
+
+        // Check if the content relates to technical concepts when document is technical
+        if context.language == Language::Rust || context.language == Language::TypeScript {
+            let technical_indicators = ["function", "method", "class", "interface", "type", "api", "endpoint"];
+            for indicator in &technical_indicators {
+                if content.to_lowercase().contains(indicator) {
+                    return true;
+                }
+            }
+        }
+
+        false
+    }
+
+    /// Enhanced V2 qualification process with domain-aware verifiability detection
+    pub async fn process_v2(
+        &self,
+        sentence: &str,
+        context: &ProcessingContext,
+    ) -> Result<QualificationResult> {
+        debug!("Starting V2 enhanced qualification for: {}", sentence);
+
+        // Detect verifiable content using enhanced V2 patterns
+        let assessment = self.detect_verifiable_content_v2(sentence, context).await?;
+
+        Ok(QualificationResult {
+            verifiable_parts: assessment.verifiable_parts,
+            unverifiable_parts: assessment.unverifiable_parts,
+            overall_verifiability: assessment.overall_verifiability,
+        })
+    }
+
+    /// Enhanced verifiable content detection with V2 patterns (domain-aware)
+    pub async fn detect_verifiable_content_v2(
+        &self,
+        sentence: &str,
+        context: &ProcessingContext,
+    ) -> Result<VerifiabilityAssessment> {
+        let mut verifiable_parts = Vec::new();
+
+        // Enhanced factual claims detection (V2 patterns)
+        verifiable_parts.extend(
+            self.detect_factual_claims_v2(sentence, context)?,
+        );
+
+        // Enhanced technical assertions with domain awareness
+        verifiable_parts.extend(
+            self.detect_technical_assertions_v2(sentence, context)?,
+        );
+
+        // Measurable outcomes with quantitative indicators
+        verifiable_parts.extend(
+            self.detect_measurable_outcomes_v2(sentence, context)?,
+        );
+
+        // New V2 patterns: causal relationships
+        verifiable_parts.extend(
+            self.detect_causal_relationships(sentence)?,
+        );
+
+        // New V2 patterns: temporal assertions
+        verifiable_parts.extend(
+            self.detect_temporal_assertions(sentence)?,
+        );
+
+        // Detect unverifiable content with enhanced rewriting
+        let mut unverifiable_parts = self
+            .verifiability_detector
+            .detect_unverifiable_content(sentence)?;
+        self.content_rewriter
+            .enhance_unverifiable_parts_v2(&mut unverifiable_parts, context);
+
+        // Calculate overall verifiability with domain weighting
+        let overall_verifiability =
+            self.calculate_overall_verifiability_v2(&verifiable_parts, &unverifiable_parts, context);
+
+        Ok(VerifiabilityAssessment {
+            overall_verifiability,
+            verifiable_parts,
+            unverifiable_parts,
+            confidence: 0.9, // Higher confidence for V2 enhanced detection
+        })
+    }
+
+    /// Enhanced overall verifiability calculation with domain weighting (V2)
+    fn calculate_overall_verifiability_v2(
+        &self,
+        verifiable: &[VerifiableContent],
+        unverifiable: &[UnverifiableContent],
+        context: &ProcessingContext,
+    ) -> VerifiabilityLevel {
+        let total_parts = verifiable.len() + unverifiable.len();
+        if total_parts == 0 {
+            return VerifiabilityLevel::Unverifiable;
+        }
+
+        let verifiable_ratio = verifiable.len() as f32 / total_parts as f32;
+
+        // Domain-specific weighting (V2 enhancement)
+        let domain_boost = match context.domain_hints.first().map(|s| s.as_str()) {
+            Some("rust") | Some("typescript") => 0.2, // Technical domains get boost
+            Some("security") => 0.3, // Security claims need high verifiability
+            _ => 0.0,
+        };
+
+        let adjusted_ratio = (verifiable_ratio + domain_boost).min(1.0);
+
+        if adjusted_ratio >= 0.8 {
+            VerifiabilityLevel::HighlyVerifiable
+        } else if adjusted_ratio >= 0.6 {
+            VerifiabilityLevel::ModeratelyVerifiable
+        } else if adjusted_ratio >= 0.3 {
+            VerifiabilityLevel::LowVerifiability
+        } else {
+            VerifiabilityLevel::Unverifiable
+        }
+    }
 
 /// Rewrites content to make it verifiable
 #[derive(Debug)]

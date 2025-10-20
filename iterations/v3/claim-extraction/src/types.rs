@@ -357,6 +357,7 @@ pub enum UnverifiableReason {
     OpinionBased,
     FuturePrediction,
     EmotionalContent,
+    ImprovementClaim, // V2 enhancement: claims of improvement without baseline metrics
 }
 
 /// Assessment of content verifiability

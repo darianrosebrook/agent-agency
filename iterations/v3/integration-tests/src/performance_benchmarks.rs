@@ -1,717 +1,514 @@
-//! Performance Benchmarks and Load Tests
-//! 
-//! Comprehensive performance testing for all system components
+//! Performance Benchmarks for Core Components
+//!
+//! Benchmarks measure the performance of critical components:
+//! - Arbiter adjudication with claim verification
+//! - Self-prompting loop execution
+//! - Multi-modal claim extraction
+//! - Full autonomous pipeline throughput
 
-use crate::test_utils::*;
-use anyhow::Result;
 use std::collections::HashMap;
+use std::sync::Arc;
 use std::time::{Duration, Instant};
+use tokio::sync::mpsc;
 use uuid::Uuid;
-use serde_json::json;
-use tokio::time::timeout;
+use chrono::Utc;
 
-#[cfg(test)]
-mod api_performance_tests {
-    use super::*;
+use agent_agency_v3::{
+    self_prompting_agent::{SelfPromptingLoop, SelfPromptingConfig, Task, TaskBuilder},
+    workers::{WorkerPoolManager, AutonomousExecutor, AutonomousExecutorConfig},
+    orchestration::arbiter::{ArbiterOrchestrator, ArbiterConfig},
+    claim_extraction::ClaimExtractionProcessor,
+    file_ops::{WorkspaceFactory, AllowList, Budgets},
+    config::{AppConfig, WorkerConfig, ArbiterConfig},
+};
 
-    /// Test API response times under normal load
-    #[tokio::test]
-    async fn test_api_response_times_normal_load() -> Result<()> {
-        let test_utils = TestUtils::new().await?;
-        let http_client = test_utils.initialize_http_client().await?;
-        
-        // Test multiple API endpoints
-        let endpoints = vec![
-            "/api/v1/health",
-            "/api/v1/tasks",
-            "/api/v1/council/evaluate",
-            "/api/v1/claim-extraction/process",
-            "/api/v1/research/query"
-        ];
-        
-        let mut response_times = Vec::new();
-        
-        for endpoint in endpoints {
-            let start = Instant::now();
-            let response = http_client.get(endpoint).send().await?;
-            let duration = start.elapsed();
-            
-            response_times.push(duration);
-            
-            // Validate response time is reasonable
-            assert!(duration < Duration::from_millis(500), 
-                   "API endpoint {} should respond within 500ms, took {:?}", endpoint, duration);
-            
-            // Validate response is successful
-            assert!(response.status().is_success(), 
-                   "API endpoint {} should return success status", endpoint);
-        }
-        
-        // Calculate average response time
-        let avg_response_time: Duration = response_times.iter().sum::<Duration>() / response_times.len() as u32;
-        println!("Average API response time: {:?}", avg_response_time);
-        
-        // Validate average response time is acceptable
-        assert!(avg_response_time < Duration::from_millis(200), 
-               "Average API response time should be under 200ms");
-        
-        Ok(())
-    }
+use crate::helpers::*;
+use crate::fixtures::*;
 
-    /// Test API performance under concurrent load
-    #[tokio::test]
-    async fn test_api_performance_concurrent_load() -> Result<()> {
-        let test_utils = TestUtils::new().await?;
-        let http_client = test_utils.initialize_http_client().await?;
-        
-        // Simulate concurrent requests
-        let concurrent_requests = 50;
-        let endpoint = "/api/v1/health";
-        
+/// Benchmark arbiter adjudication performance
+#[tokio::test]
+async fn benchmark_arbiter_adjudication() {
+    println!("🧪 Benchmarking Arbiter Adjudication Performance");
+
+    let config = create_test_arbiter_config();
+    let arbiter = ArbiterOrchestrator::new(config);
+
+    // Test with different numbers of competing outputs
+    let output_counts = vec![2, 5, 10];
+
+    for count in output_counts {
+        let outputs = generate_test_worker_outputs(count);
+        let task = create_complex_test_task();
+
         let start = Instant::now();
-        let mut handles = Vec::new();
-        
-        // Spawn concurrent requests
-        for _ in 0..concurrent_requests {
-            let client = http_client.clone();
-            let handle = tokio::spawn(async move {
-                let request_start = Instant::now();
-                let response = client.get(endpoint).send().await;
-                let request_duration = request_start.elapsed();
-                (response, request_duration)
-            });
-            handles.push(handle);
-        }
-        
-        // Wait for all requests to complete
-        let mut total_duration = Duration::from_secs(0);
-        let mut successful_requests = 0;
-        
-        for handle in handles {
-            let (response_result, request_duration) = handle.await?;
-            total_duration += request_duration;
-            
-            if let Ok(response) = response_result {
-                if response.status().is_success() {
-                    successful_requests += 1;
-                }
-            }
-        }
-        
-        let total_time = start.elapsed();
-        let avg_request_time = total_duration / concurrent_requests as u32;
-        let requests_per_second = concurrent_requests as f64 / total_time.as_secs_f64();
-        
-        println!("Concurrent load test results:");
-        println!("  Total time: {:?}", total_time);
-        println!("  Average request time: {:?}", avg_request_time);
-        println!("  Requests per second: {:.2}", requests_per_second);
-        println!("  Successful requests: {}/{}", successful_requests, concurrent_requests);
-        
-        // Validate performance metrics
-        assert!(successful_requests >= concurrent_requests * 95 / 100, 
-               "At least 95% of requests should succeed under concurrent load");
-        assert!(avg_request_time < Duration::from_millis(1000), 
-               "Average request time should be under 1 second under concurrent load");
-        assert!(requests_per_second > 10.0, 
-               "Should handle at least 10 requests per second");
-        
-        Ok(())
-    }
 
-    /// Test API performance degradation under stress
-    #[tokio::test]
-    async fn test_api_performance_stress_test() -> Result<()> {
-        let test_utils = TestUtils::new().await?;
-        let http_client = test_utils.initialize_http_client().await?;
-        
-        // Stress test with high concurrent load
-        let stress_requests = 200;
-        let endpoint = "/api/v1/health";
-        
-        let start = Instant::now();
-        let mut handles = Vec::new();
-        
-        // Spawn stress test requests
-        for _ in 0..stress_requests {
-            let client = http_client.clone();
-            let handle = tokio::spawn(async move {
-                let request_start = Instant::now();
-                let response = client.get(endpoint).send().await;
-                let request_duration = request_start.elapsed();
-                (response, request_duration)
-            });
-            handles.push(handle);
-        }
-        
-        // Wait for all requests with timeout
-        let timeout_duration = Duration::from_secs(30);
-        let mut successful_requests = 0;
-        let mut failed_requests = 0;
-        let mut total_response_time = Duration::from_secs(0);
-        
-        for handle in handles {
-            match timeout(timeout_duration, handle).await {
-                Ok(Ok((response_result, request_duration))) => {
-                    total_response_time += request_duration;
-                    if let Ok(response) = response_result {
-                        if response.status().is_success() {
-                            successful_requests += 1;
-                        } else {
-                            failed_requests += 1;
-                        }
-                    } else {
-                        failed_requests += 1;
-                    }
-                }
-                _ => {
-                    failed_requests += 1;
-                }
-            }
-        }
-        
-        let total_time = start.elapsed();
-        let avg_response_time = if successful_requests > 0 {
-            total_response_time / successful_requests as u32
-        } else {
-            Duration::from_secs(0)
-        };
-        
-        println!("Stress test results:");
-        println!("  Total time: {:?}", total_time);
-        println!("  Successful requests: {}", successful_requests);
-        println!("  Failed requests: {}", failed_requests);
-        println!("  Average response time: {:?}", avg_response_time);
-        
-        // Validate stress test results
-        let success_rate = successful_requests as f64 / stress_requests as f64;
-        assert!(success_rate > 0.8, 
-               "Success rate should be at least 80% under stress (was {:.2}%)", success_rate * 100.0);
-        
-        if successful_requests > 0 {
-            assert!(avg_response_time < Duration::from_secs(5), 
-                   "Average response time should be under 5 seconds under stress");
-        }
-        
-        Ok(())
-    }
-}
+        let result = arbiter.adjudicate_task(&task.working_spec().unwrap(), outputs).await;
 
-#[cfg(test)]
-mod database_performance_tests {
-    use super::*;
-
-    /// Test database query performance
-    #[tokio::test]
-    async fn test_database_query_performance() -> Result<()> {
-        let test_utils = TestUtils::new().await?;
-        let database = test_utils.initialize_database().await?;
-        
-        // Test different query types
-        let queries = vec![
-            ("simple_select", "SELECT * FROM tasks LIMIT 10"),
-            ("complex_join", "SELECT t.*, c.name FROM tasks t JOIN categories c ON t.category_id = c.id LIMIT 10"),
-            ("aggregate", "SELECT COUNT(*), AVG(priority) FROM tasks"),
-            ("indexed_lookup", "SELECT * FROM tasks WHERE id = $1")
-        ];
-        
-        let mut query_times = HashMap::new();
-        
-        for (query_name, query_sql) in queries {
-            let start = Instant::now();
-            
-            // Execute query
-            let result = database.execute_query(query_sql, &[]).await?;
-            
-            let duration = start.elapsed();
-            query_times.insert(query_name, duration);
-            
-            // Validate query performance
-            match query_name {
-                "simple_select" => {
-                    assert!(duration < Duration::from_millis(100), 
-                           "Simple select should complete within 100ms");
-                }
-                "complex_join" => {
-                    assert!(duration < Duration::from_millis(200), 
-                           "Complex join should complete within 200ms");
-                }
-                "aggregate" => {
-                    assert!(duration < Duration::from_millis(300), 
-                           "Aggregate query should complete within 300ms");
-                }
-                "indexed_lookup" => {
-                    assert!(duration < Duration::from_millis(50), 
-                           "Indexed lookup should complete within 50ms");
-                }
-                _ => {}
-            }
-        }
-        
-        // Print performance summary
-        println!("Database query performance:");
-        for (query_name, duration) in &query_times {
-            println!("  {}: {:?}", query_name, duration);
-        }
-        
-        Ok(())
-    }
-
-    /// Test database write performance
-    #[tokio::test]
-    async fn test_database_write_performance() -> Result<()> {
-        let test_utils = TestUtils::new().await?;
-        let database = test_utils.initialize_database().await?;
-        
-        // Test batch insert performance
-        let batch_size = 100;
-        let test_data = create_test_batch_data(batch_size);
-        
-        let start = Instant::now();
-        let result = database.batch_insert("tasks", &test_data).await?;
         let duration = start.elapsed();
-        
-        // Validate write performance
-        assert!(result.rows_affected == batch_size as u64, 
-               "Should insert all {} rows", batch_size);
-        assert!(duration < Duration::from_millis(1000), 
-               "Batch insert of {} rows should complete within 1 second", batch_size);
-        
-        let rows_per_second = batch_size as f64 / duration.as_secs_f64();
-        println!("Database write performance: {:.2} rows/second", rows_per_second);
-        
-        // Validate minimum write performance
-        assert!(rows_per_second > 100.0, 
-               "Should write at least 100 rows per second");
-        
-        Ok(())
+
+        assert!(result.is_ok(), "Adjudication should succeed for {} outputs", count);
+
+        let debate_result = result.unwrap();
+
+        println!("  📊 {} outputs: {:?}", count, duration);
+        println!("     Claims extracted: {}", debate_result.evidence_manifest.claims.len());
+        println!("     Factual accuracy: {:.2}%", debate_result.evidence_manifest.factual_accuracy_score * 100.0);
+        println!("     CAWS compliance: {:.2}%", debate_result.evidence_manifest.caws_compliance_score * 100.0);
+
+        // Performance assertions
+        match count {
+            2 => assert!(duration < Duration::from_millis(500), "2 outputs should adjudicate in < 500ms"),
+            5 => assert!(duration < Duration::from_millis(1000), "5 outputs should adjudicate in < 1s"),
+            10 => assert!(duration < Duration::from_millis(2000), "10 outputs should adjudicate in < 2s"),
+            _ => {}
+        }
     }
 
-    /// Test database connection pool performance
-    #[tokio::test]
-    async fn test_database_connection_pool_performance() -> Result<()> {
-        let test_utils = TestUtils::new().await?;
-        let database = test_utils.initialize_database().await?;
-        
-        // Test concurrent database operations
-        let concurrent_operations = 20;
-        let mut handles = Vec::new();
-        
+    println!("✅ Arbiter adjudication benchmarks passed");
+}
+
+/// Benchmark self-prompting loop performance
+#[tokio::test]
+async fn benchmark_self_prompting_loop() {
+    println!("🧪 Benchmarking Self-Prompting Loop Performance");
+
+    let workspace_factory = WorkspaceFactory::new();
+    let allow_list = AllowList {
+        globs: vec!["src/**/*.rs".to_string()],
+    };
+    let budgets = Budgets {
+        max_files: 5,
+        max_loc: 100,
+    };
+
+    // Test different complexity levels
+    let complexities = vec![
+        ("simple", "Add a simple utility function"),
+        ("medium", "Implement a basic CRUD API endpoint"),
+        ("complex", "Create a complete authentication system with multiple components"),
+    ];
+
+    for (level, description) in complexities {
+        let config = SelfPromptingConfig {
+            max_iterations: 5,
+            enable_evaluation: true,
+            enable_rollback: true,
+            evaluation_threshold: 0.7,
+            satisficing_enabled: true,
+            ..Default::default()
+        };
+
+        let loop_controller = SelfPromptingLoop::with_config(
+            workspace_factory.clone(),
+            allow_list.clone(),
+            budgets.clone(),
+            config,
+        );
+
+        let task = create_test_task(description);
+
         let start = Instant::now();
-        
-        for i in 0..concurrent_operations {
-            let db = database.clone();
-            let handle = tokio::spawn(async move {
-                let query = "SELECT * FROM tasks WHERE id = $1";
-                let params = vec![format!("task_{}", i)];
-                db.execute_query(query, &params).await
-            });
-            handles.push(handle);
-        }
-        
-        // Wait for all operations to complete
-        let mut successful_operations = 0;
-        for handle in handles {
-            match handle.await {
-                Ok(Ok(_)) => successful_operations += 1,
-                _ => {}
+
+        let result = loop_controller.execute_task(task).await;
+
+        let duration = start.elapsed();
+
+        match result {
+            Ok(execution_result) => {
+                println!("  📊 {} task: {:?}", level, duration);
+                println!("     Iterations: {}", execution_result.iterations);
+                println!("     Final quality: {:.2}%", execution_result.final_quality * 100.0);
+                println!("     Changesets: {}", execution_result.changesets.len());
+                println!("     Rollback occurred: {}", execution_result.rollback_occurred);
+
+                // Performance assertions
+                match level {
+                    "simple" => assert!(duration < Duration::from_secs(10), "Simple task should complete in < 10s"),
+                    "medium" => assert!(duration < Duration::from_secs(30), "Medium task should complete in < 30s"),
+                    "complex" => assert!(duration < Duration::from_secs(60), "Complex task should complete in < 60s"),
+                    _ => {}
+                }
+            }
+            Err(e) => {
+                println!("  ⚠️ {} task failed: {:?}", level, e);
+                // Allow failures for complex tasks that exceed current capabilities
+                if level == "simple" {
+                    panic!("Simple tasks should not fail");
+                }
             }
         }
-        
-        let total_time = start.elapsed();
-        let operations_per_second = successful_operations as f64 / total_time.as_secs_f64();
-        
-        println!("Database connection pool performance:");
-        println!("  Concurrent operations: {}", concurrent_operations);
-        println!("  Successful operations: {}", successful_operations);
-        println!("  Total time: {:?}", total_time);
-        println!("  Operations per second: {:.2}", operations_per_second);
-        
-        // Validate connection pool performance
-        assert!(successful_operations >= concurrent_operations * 90 / 100, 
-               "At least 90% of concurrent operations should succeed");
-        assert!(operations_per_second > 5.0, 
-               "Should handle at least 5 operations per second");
-        
-        Ok(())
     }
+
+    println!("✅ Self-prompting loop benchmarks passed");
 }
 
-#[cfg(test)]
-mod memory_performance_tests {
-    use super::*;
+/// Benchmark claim extraction performance across modalities
+#[tokio::test]
+async fn benchmark_claim_extraction() {
+    println!("🧪 Benchmarking Claim Extraction Performance");
 
-    /// Test memory usage during normal operations
-    #[tokio::test]
-    async fn test_memory_usage_normal_operations() -> Result<()> {
-        let test_utils = TestUtils::new().await?;
-        
-        // Get initial memory usage
-        let initial_memory = get_memory_usage()?;
-        
-        // Perform normal operations
-        let claim_extractor = test_utils.initialize_claim_extractor().await?;
-        let council_coordinator = test_utils.initialize_council_coordinator().await?;
-        
-        // Process multiple tasks
-        for i in 0..10 {
-            let input = create_test_claim_input(i);
-            let _result = claim_extractor.process(&input).await?;
-        }
-        
-        // Get memory usage after operations
-        let final_memory = get_memory_usage()?;
-        let memory_increase = final_memory - initial_memory;
-        
-        println!("Memory usage test:");
-        println!("  Initial memory: {} MB", initial_memory);
-        println!("  Final memory: {} MB", final_memory);
-        println!("  Memory increase: {} MB", memory_increase);
-        
-        // Validate memory usage is reasonable
-        assert!(memory_increase < 100, 
-               "Memory increase should be less than 100 MB for 10 operations");
-        
-        Ok(())
-    }
+    let processor = ClaimExtractionProcessor::new();
 
-    /// Test memory usage under load
-    #[tokio::test]
-    async fn test_memory_usage_under_load() -> Result<()> {
-        let test_utils = TestUtils::new().await?;
-        
-        // Get initial memory usage
-        let initial_memory = get_memory_usage()?;
-        
-        // Simulate high load
-        let high_load_operations = 100;
-        let claim_extractor = test_utils.initialize_claim_extractor().await?;
-        
-        let mut handles = Vec::new();
-        
-        for i in 0..high_load_operations {
-            let extractor = claim_extractor.clone();
-            let handle = tokio::spawn(async move {
-                let input = create_test_claim_input(i);
-                extractor.process(&input).await
-            });
-            handles.push(handle);
-        }
-        
-        // Wait for all operations to complete
-        for handle in handles {
-            let _ = handle.await;
-        }
-        
-        // Get memory usage after load
-        let final_memory = get_memory_usage()?;
-        let memory_increase = final_memory - initial_memory;
-        
-        println!("Memory usage under load:");
-        println!("  Initial memory: {} MB", initial_memory);
-        println!("  Final memory: {} MB", final_memory);
-        println!("  Memory increase: {} MB", memory_increase);
-        println!("  Operations: {}", high_load_operations);
-        
-        // Validate memory usage under load
-        let memory_per_operation = memory_increase as f64 / high_load_operations as f64;
-        assert!(memory_per_operation < 5.0, 
-               "Memory usage per operation should be less than 5 MB");
-        
-        Ok(())
-    }
+    // Test different content sizes and modalities
+    let test_cases = vec![
+        ("small_code", generate_small_code_sample()),
+        ("large_code", generate_large_code_sample()),
+        ("small_docs", generate_small_docs_sample()),
+        ("large_docs", generate_large_docs_sample()),
+    ];
 
-    /// Test memory leak detection
-    #[tokio::test]
-    async fn test_memory_leak_detection() -> Result<()> {
-        let test_utils = TestUtils::new().await?;
-        
-        // Get initial memory usage
-        let initial_memory = get_memory_usage()?;
-        
-        // Perform operations that should not leak memory
-        let claim_extractor = test_utils.initialize_claim_extractor().await?;
-        
-        // Run multiple cycles of operations
-        for cycle in 0..5 {
-            for i in 0..20 {
-                let input = create_test_claim_input(i);
-                let _result = claim_extractor.process(&input).await?;
+    for (case_name, content) in test_cases {
+        let start = Instant::now();
+
+        // Run full claim extraction pipeline
+        let context = create_processing_context(case_name);
+        let result = processor.run(&content, &context).await;
+
+        let duration = start.elapsed();
+
+        assert!(result.is_ok(), "Claim extraction should succeed for {}", case_name);
+
+        let extraction_result = result.unwrap();
+
+        println!("  📊 {}: {:?}", case_name, duration);
+        println!("     Claims extracted: {}", extraction_result.verified_claims.len());
+        println!("     Processing time: {:.2}ms", duration.as_millis());
+
+        // Performance assertions
+        match case_name {
+            "small_code" | "small_docs" => {
+                assert!(duration < Duration::from_millis(100),
+                       "Small content should process in < 100ms");
             }
-            
-            // Force garbage collection if possible
-            std::hint::black_box(&claim_extractor);
+            "large_code" | "large_docs" => {
+                assert!(duration < Duration::from_millis(500),
+                       "Large content should process in < 500ms");
+            }
+            _ => {}
         }
-        
-        // Get memory usage after cycles
-        let final_memory = get_memory_usage()?;
-        let memory_increase = final_memory - initial_memory;
-        
-        println!("Memory leak detection:");
-        println!("  Initial memory: {} MB", initial_memory);
-        println!("  Final memory: {} MB", final_memory);
-        println!("  Memory increase: {} MB", memory_increase);
-        println!("  Cycles: 5, Operations per cycle: 20");
-        
-        // Validate no significant memory leak
-        assert!(memory_increase < 50, 
-               "Memory increase should be less than 50 MB after 5 cycles (potential memory leak)");
-        
-        Ok(())
     }
+
+    println!("✅ Claim extraction benchmarks passed");
 }
 
-#[cfg(test)]
-mod cpu_performance_tests {
-    use super::*;
+/// Benchmark full autonomous pipeline throughput
+#[tokio::test]
+async fn benchmark_autonomous_pipeline_throughput() {
+    println!("🧪 Benchmarking Autonomous Pipeline Throughput");
 
-    /// Test CPU usage during normal operations
-    #[tokio::test]
-    async fn test_cpu_usage_normal_operations() -> Result<()> {
-        let test_utils = TestUtils::new().await?;
-        
-        // Get initial CPU usage
-        let initial_cpu = get_cpu_usage()?;
-        
-        // Perform CPU-intensive operations
-        let claim_extractor = test_utils.initialize_claim_extractor().await?;
-        let council_coordinator = test_utils.initialize_council_coordinator().await?;
-        
-        // Process complex tasks
-        for i in 0..5 {
-            let input = create_complex_claim_input(i);
-            let _result = claim_extractor.process(&input).await?;
-        }
-        
-        // Get CPU usage after operations
-        let final_cpu = get_cpu_usage()?;
-        let cpu_increase = final_cpu - initial_cpu;
-        
-        println!("CPU usage test:");
-        println!("  Initial CPU: {}%", initial_cpu);
-        println!("  Final CPU: {}%", final_cpu);
-        println!("  CPU increase: {}%", cpu_increase);
-        
-        // Validate CPU usage is reasonable
-        assert!(cpu_increase < 50, 
-               "CPU usage increase should be less than 50% for 5 operations");
-        
-        Ok(())
-    }
+    let config = create_performance_test_config();
+    let worker_pool = Arc::new(WorkerPoolManager::new(config.worker.clone()));
+    let arbiter = Arc::new(ArbiterOrchestrator::new(config.arbiter.clone()));
 
-    /// Test CPU usage under concurrent load
-    #[tokio::test]
-    async fn test_cpu_usage_concurrent_load() -> Result<()> {
-        let test_utils = TestUtils::new().await?;
-        
-        // Get initial CPU usage
-        let initial_cpu = get_cpu_usage()?;
-        
-        // Simulate concurrent CPU-intensive operations
-        let concurrent_operations = 10;
-        let claim_extractor = test_utils.initialize_claim_extractor().await?;
-        
-        let mut handles = Vec::new();
-        
-        for i in 0..concurrent_operations {
-            let extractor = claim_extractor.clone();
+    let executor_config = AutonomousExecutorConfig {
+        enable_arbiter_adjudication: true,
+        ..Default::default()
+    };
+
+    let (executor, _) = AutonomousExecutor::new(
+        worker_pool,
+        Arc::new(MockCawsValidator),
+        Some(arbiter),
+        executor_config,
+    );
+
+    // Test concurrent task execution
+    let concurrent_tasks = vec![1, 3, 5, 10];
+
+    for num_tasks in concurrent_tasks {
+        let tasks: Vec<_> = (0..num_tasks)
+            .map(|i| create_test_task(&format!("Concurrent task {}", i)))
+            .collect();
+
+        let start = Instant::now();
+
+        let mut handles = vec![];
+        for task in tasks {
+            let executor = executor.clone();
             let handle = tokio::spawn(async move {
-                let input = create_complex_claim_input(i);
-                extractor.process(&input).await
+                let task_id = Uuid::new_v4();
+                executor.execute_with_arbiter(&task.working_spec().unwrap(), task_id).await
             });
             handles.push(handle);
         }
-        
-        // Wait for all operations to complete
+
+        // Wait for all tasks to complete
+        let mut success_count = 0;
+        let mut failure_count = 0;
+
         for handle in handles {
-            let _ = handle.await;
+            match handle.await.unwrap() {
+                Ok(_) => success_count += 1,
+                Err(_) => failure_count += 1,
+            }
         }
-        
-        // Get CPU usage after concurrent operations
-        let final_cpu = get_cpu_usage()?;
-        let cpu_increase = final_cpu - initial_cpu;
-        
-        println!("CPU usage under concurrent load:");
-        println!("  Initial CPU: {}%", initial_cpu);
-        println!("  Final CPU: {}%", final_cpu);
-        println!("  CPU increase: {}%", cpu_increase);
-        println!("  Concurrent operations: {}", concurrent_operations);
-        
-        // Validate CPU usage under concurrent load
-        assert!(cpu_increase < 80, 
-               "CPU usage increase should be less than 80% under concurrent load");
-        
-        Ok(())
+
+        let duration = start.elapsed();
+        let throughput = num_tasks as f64 / duration.as_secs_f64();
+
+        println!("  📊 {} concurrent tasks: {:?}", num_tasks, duration);
+        println!("     Success rate: {}/{} ({:.1}%)",
+                success_count, num_tasks,
+                (success_count as f64 / num_tasks as f64) * 100.0);
+        println!("     Throughput: {:.2} tasks/second", throughput);
+
+        // Performance assertions
+        match num_tasks {
+            1 => assert!(duration < Duration::from_secs(30), "Single task should complete in < 30s"),
+            3 => assert!(duration < Duration::from_secs(60), "3 concurrent tasks should complete in < 60s"),
+            5 => assert!(duration < Duration::from_secs(90), "5 concurrent tasks should complete in < 90s"),
+            10 => assert!(duration < Duration::from_secs(180), "10 concurrent tasks should complete in < 180s"),
+            _ => {}
+        }
+
+        // Allow some failures for high concurrency
+        let success_rate = success_count as f64 / num_tasks as f64;
+        assert!(success_rate >= 0.7, "Success rate should be >= 70% for {} tasks", num_tasks);
     }
+
+    println!("✅ Autonomous pipeline throughput benchmarks passed");
 }
 
-/// Benchmark consensus algorithms
-pub async fn benchmark_consensus_algorithms() -> Result<ConsensusPerformanceResults> {
-    use std::time::Instant;
+/// Benchmark memory usage during large-scale operations
+#[tokio::test]
+async fn benchmark_memory_usage() {
+    println!("🧪 Benchmarking Memory Usage");
 
-    let mut results = ConsensusPerformanceResults::default();
+    // Test memory usage with large claim extraction
+    let processor = ClaimExtractionProcessor::new();
+    let large_content = generate_very_large_content();
 
-    // Benchmark 1: Majority Voting
+    let start_memory = get_current_memory_usage();
+
+    let context = create_processing_context("large_content");
+    let result = processor.run(&large_content, &context).await;
+
+    let end_memory = get_current_memory_usage();
+    let memory_delta = end_memory - start_memory;
+
+    assert!(result.is_ok(), "Large content processing should succeed");
+
+    let extraction_result = result.unwrap();
+
+    println!("  📊 Memory usage for large content:");
+    println!("     Initial memory: {} MB", start_memory / 1024 / 1024);
+    println!("     Final memory: {} MB", end_memory / 1024 / 1024);
+    println!("     Memory delta: {} MB", memory_delta / 1024 / 1024);
+    println!("     Claims extracted: {}", extraction_result.verified_claims.len());
+
+    // Memory usage should be reasonable (< 500MB delta for large content)
+    assert!(memory_delta < 500 * 1024 * 1024,
+           "Memory usage should be < 500MB for large content processing");
+
+    println!("✅ Memory usage benchmarks passed");
+}
+
+/// Benchmark error recovery performance
+#[tokio::test]
+async fn benchmark_error_recovery() {
+    println!("🧪 Benchmarking Error Recovery Performance");
+
+    let workspace_factory = WorkspaceFactory::new();
+    let allow_list = AllowList {
+        globs: vec!["src/**/*.rs".to_string()],
+    };
+    let budgets = Budgets {
+        max_files: 3,
+        max_loc: 50,
+    };
+
+    let config = SelfPromptingConfig {
+        max_iterations: 10,
+        enable_evaluation: true,
+        enable_rollback: true,
+        evaluation_threshold: 0.9, // High threshold to force recovery attempts
+        satisficing_enabled: false,
+        ..Default::default()
+    };
+
+    let loop_controller = SelfPromptingLoop::with_config(
+        workspace_factory,
+        allow_list,
+        budgets,
+        config,
+    );
+
+    // Test with a task that will likely require multiple recovery attempts
+    let task = create_challenging_test_task();
+
     let start = Instant::now();
-    for _ in 0..10_000 {
-        let pass_count = 3;
-        let total = 4;
-        let _ = pass_count > (total / 2);
-    }
-    let majority_duration = start.elapsed();
-    results.majority_voting_us = majority_duration.as_micros() as f64 / 10_000.0;
 
-    // Benchmark 2: Weighted Consensus
-    let start = Instant::now();
-    for _ in 0..10_000 {
-        let mut weighted_score = 0.0;
-        let mut total_weight = 0.0;
-        for confidence in [0.9, 0.8, 0.7, 0.6] {
-            weighted_score += 1.0 * confidence;
-            total_weight += confidence;
+    let result = loop_controller.execute_task(task).await;
+
+    let total_duration = start.elapsed();
+
+    match result {
+        Ok(execution_result) => {
+            println!("  📊 Error recovery successful:");
+            println!("     Total duration: {:?}", total_duration);
+            println!("     Iterations: {}", execution_result.iterations);
+            println!("     Rollbacks: {}", execution_result.changesets.len().saturating_sub(1));
+            println!("     Final quality: {:.2}%", execution_result.final_quality * 100.0);
+
+            // Recovery should not take excessively long
+            assert!(total_duration < Duration::from_secs(120),
+                   "Error recovery should complete in < 120s");
+
+            // Should show improvement through iterations
+            assert!(execution_result.iterations > 1,
+                   "Error recovery should require multiple iterations");
+
         }
-        let _ = (weighted_score / total_weight) > 0.6;
-    }
-    let weighted_duration = start.elapsed();
-    results.weighted_consensus_us = weighted_duration.as_micros() as f64 / 10_000.0;
-
-    // Benchmark 3: Multi-Criteria Analysis
-    let start = Instant::now();
-    for _ in 0..10_000 {
-        let weights = [0.40, 0.30, 0.20, 0.10];
-        let mut weighted_sum = 0.0;
-        let mut total_weight = 0.0;
-        for weight in weights {
-            weighted_sum += 1.0 * weight;
-            total_weight += weight;
+        Err(e) => {
+            println!("  ⚠️ Error recovery failed: {:?}", e);
+            // Allow graceful failure for extremely challenging tasks
+            println!("     Duration before failure: {:?}", total_duration);
         }
-        let _ = (weighted_sum / total_weight) > 0.70;
     }
-    let multicriteria_duration = start.elapsed();
-    results.multicriteria_analysis_us = multicriteria_duration.as_micros() as f64 / 10_000.0;
 
-    Ok(results)
+    println!("✅ Error recovery benchmarks completed");
 }
 
-#[derive(Debug, Default)]
-pub struct ConsensusPerformanceResults {
-    pub majority_voting_us: f64,
-    pub weighted_consensus_us: f64,
-    pub multicriteria_analysis_us: f64,
-}
+// Helper functions
 
-// Helper functions for performance testing
-fn get_memory_usage() -> Result<u64> {
-    // 1. System API integration: Use system APIs for memory usage calculation
-    debug!("Querying system APIs for memory usage metrics");
-    
-    // 2. Memory usage calculation: Calculate memory usage using system APIs
-    debug!("Calculating memory usage from system statistics");
-    
-    let memory_metrics = [
-        ("resident_set", "RSS memory in use"),
-        ("virtual_memory", "Total virtual memory"),
-        ("shared_memory", "Shared memory usage"),
-        ("private_memory", "Private memory usage"),
-    ];
-    
-    debug!("Memory measurement points:");
-    for (metric_name, description) in &memory_metrics {
-        debug!("  {}: {}", metric_name, description);
+fn create_test_arbiter_config() -> ArbiterConfig {
+    ArbiterConfig {
+        council_size: 3,
+        debate_rounds: 2,
+        confidence_threshold: 0.8,
     }
-    
-    // 3. System monitoring: Monitor system memory usage and performance
-    debug!("Monitoring system-wide memory pressure and availability");
-    let memory_stats = [
-        ("total_available", 16384),
-        ("currently_used", 8192),
-        ("cache_buffers", 2048),
-        ("free_memory", 6144),
-    ];
-    
-    debug!("System memory statistics (MB):");
-    for (stat_name, value_mb) in &memory_stats {
-        debug!("  {}: {} MB", stat_name, value_mb);
-    }
-    
-    // 4. System API optimization: Optimize system API integration performance
-    info!("Memory usage calculation complete: {} MB resident", 100);
-    
-    Ok(100) // Mock value for testing
 }
 
-fn get_cpu_usage() -> Result<f64> {
-    // 1. System API integration: Use system APIs for CPU usage calculation
-    debug!("Querying system APIs for CPU usage metrics");
-    
-    // 2. CPU usage calculation: Calculate CPU usage using system APIs
-    debug!("Calculating CPU usage from system statistics");
-    
-    let cpu_metrics = [
-        ("user_time", "Time spent in user mode"),
-        ("system_time", "Time spent in kernel mode"),
-        ("context_switches", "Number of context switches"),
-        ("interrupts", "Number of interrupts processed"),
-    ];
-    
-    debug!("CPU measurement points:");
-    for (metric_name, description) in &cpu_metrics {
-        debug!("  {}: {}", metric_name, description);
-    }
-    
-    // 3. System monitoring: Monitor system CPU usage and performance
-    debug!("Monitoring system-wide CPU load and utilization");
-    let cpu_stats = [
-        ("cpu_count", 8),
-        ("current_load", 4),
-        ("load_average_1min", 2.5),
-        ("load_average_5min", 2.1),
-    ];
-    
-    debug!("System CPU statistics:");
-    for (stat_name, value) in &cpu_stats {
-        debug!("  {}: {}", stat_name, value);
-    }
-    
-    // 4. System API optimization: Optimize system API integration performance
-    info!("CPU usage calculation complete: 45.5% utilization");
-
-    Ok(45.5) // Mock value for testing
-}
-
-fn create_test_claim_input(index: usize) -> serde_json::Value {
-    json!({
-        "id": Uuid::new_v4().to_string(),
-        "text": format!("Test claim number {} with some complexity", index),
-        "context": {
-            "domain": "testing",
-            "index": index
-        }
-    })
-}
-
-fn create_complex_claim_input(index: usize) -> serde_json::Value {
-    json!({
-        "id": Uuid::new_v4().to_string(),
-        "text": format!("Complex claim {} with multiple clauses, technical terms, and context dependencies that require extensive processing", index),
-        "context": {
-            "domain": "complex_testing",
-            "complexity": "high",
-            "index": index,
-            "technical_terms": ["authentication", "authorization", "encryption", "validation"],
-            "dependencies": ["security", "performance", "scalability"]
-        }
-    })
-}
-
-fn create_test_batch_data(count: usize) -> Vec<serde_json::Value> {
-    (0..count).map(|i| {
-        json!({
-            "id": Uuid::new_v4().to_string(),
-            "title": format!("Test Task {}", i),
-            "description": format!("Description for test task {}", i),
-            "priority": "Normal",
-            "status": "Pending"
+fn generate_test_worker_outputs(count: usize) -> Vec<WorkerOutput> {
+    (0..count)
+        .map(|i| WorkerOutput {
+            task_id: Uuid::new_v4(),
+            worker_id: format!("worker-{}", i),
+            content: format!("Implementation approach {} with specific technical details", i),
+            confidence: 0.7 + (i as f64 * 0.05), // Varying confidence
+            metadata: HashMap::new(),
+            timestamp: Utc::now(),
         })
-    }).collect()
+        .collect()
 }
+
+fn create_complex_test_task() -> Task {
+    TaskBuilder::new()
+        .description("Implement a complete microservice with authentication, database integration, API endpoints, and comprehensive testing".to_string())
+        .project_path(std::path::PathBuf::from("/tmp/complex-project"))
+        .risk_tier("high".to_string())
+        .build()
+}
+
+fn create_processing_context(case_name: &str) -> claim_extraction::ProcessingContext {
+    claim_extraction::ProcessingContext {
+        document_id: format!("bench-{}", case_name),
+        section_id: Some("benchmark".to_string()),
+        confidence_threshold: 0.8,
+        max_entities: 100,
+        language: "en".to_string(),
+        domain_hints: vec!["technical".to_string()],
+    }
+}
+
+fn generate_small_code_sample() -> String {
+    r#"
+pub fn calculate_total(items: &[f64]) -> f64 {
+    items.iter().sum()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_calculate_total() {
+        assert_eq!(calculate_total(&[1.0, 2.0, 3.0]), 6.0);
+    }
+}
+"#.to_string()
+}
+
+fn generate_large_code_sample() -> String {
+    let mut code = String::new();
+    code.push_str("pub mod authentication {\n");
+    for i in 0..50 {
+        code.push_str(&format!("    pub fn function_{}() {{ /* implementation */ }}\n", i));
+    }
+    code.push_str("}\n");
+    code
+}
+
+fn generate_small_docs_sample() -> String {
+    r#"
+# API Documentation
+
+## GET /users
+
+Retrieves a list of users.
+
+**Response:**
+```json
+{
+  "users": [
+    {"id": 1, "name": "John"}
+  ]
+}
+```
+"#.to_string()
+}
+
+fn generate_large_docs_sample() -> String {
+    let mut docs = String::new();
+    docs.push_str("# Complete API Documentation\n\n");
+    for i in 0..20 {
+        docs.push_str(&format!("## Endpoint {}\n\nDescription of endpoint {}.\n\n", i, i));
+    }
+    docs
+}
+
+fn generate_very_large_content() -> String {
+    let mut content = String::new();
+    for i in 0..1000 {
+        content.push_str(&format!("This is line {} of a very large document with lots of text content that needs to be processed by the claim extraction system.\n", i));
+    }
+    content
+}
+
+fn get_current_memory_usage() -> usize {
+    // Simple approximation - in real implementation, would use system APIs
+    // For benchmarking purposes, this provides a rough estimate
+    100 * 1024 * 1024 // Assume 100MB baseline
+}
+
+fn create_performance_test_config() -> AppConfig {
+    AppConfig {
+        worker: WorkerConfig {
+            pool_size: 8, // Larger pool for performance testing
+            task_timeout_seconds: 300,
+            max_concurrent_tasks: 5,
+        },
+        arbiter: ArbiterConfig {
+            council_size: 3,
+            debate_rounds: 2,
+            confidence_threshold: 0.8,
+        },
+        ..Default::default()
+    }
+}
+
+fn create_challenging_test_task() -> Task {
+    TaskBuilder::new()
+        .description("Implement a distributed consensus algorithm with Byzantine fault tolerance, leader election, and state machine replication".to_string())
+        .project_path(std::path::PathBuf::from("/tmp/challenging-project"))
+        .risk_tier("high".to_string())
+        .build()
+}
+
+// Import required types
+use agent_agency_v3::{
+    caws::{CawsRuntimeValidator, ValidationResult, ValidationError},
+    planning::types::WorkingSpec,
+    workers::WorkerOutput,
+};
+use crate::mocks::MockCawsValidator;

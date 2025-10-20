@@ -477,7 +477,13 @@ export default function DatabaseExplorer({
                 onQuerySave={(name, query) => {
                   // TODO: Implement query saving functionality
                   console.log("Save query:", name, query);
-                  // For now, just store in localStorage as a mock implementation
+                  // TODO: Implement proper query persistence system
+                  // - Add database schema for saved queries
+                  // - Implement user authentication and authorization
+                  // - Add query sharing and collaboration features
+                  // - Implement query versioning and history
+                  // - Add query performance analytics
+                  // - Support query templates and favorites
                   if (typeof window !== "undefined") {
                     // eslint-disable-next-line no-undef
                     const savedQueries = JSON.parse(

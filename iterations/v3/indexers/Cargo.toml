@@ -24,8 +24,15 @@ parking_lot = "0.12"
 lru = "0.12"
 
 # Search and indexing
-# tantivy = "0.24"  # BM25 full-text search - temporarily disabled due to compilation issues
-# Note: HNSW implementation will use a simplified approach for now
+# TODO: Implement full-text search with Tantivy and HNSW
+# - Integrate Tantivy for BM25 full-text search capabilities
+# - Implement HNSW (Hierarchical Navigable Small World) indexing
+# - Add search query parsing and optimization
+# - Support fuzzy search and relevance scoring
+# - Implement index persistence and loading
+# - Add search result highlighting and snippets
+# - Optimize memory usage and search performance
+# PLACEHOLDER: Disabled due to compilation issues
 
 [features]
 default = ["postgres"]

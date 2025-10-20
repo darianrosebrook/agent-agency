@@ -190,7 +190,14 @@ impl ClarificationSystem {
                     "Should work with React frontend, Node.js backend, PostgreSQL database".to_string()
                 },
                 QuestionType::ScopeBoundaries => {
-                    "Focus on core authentication features, exclude social login and MFA for now".to_string()
+                    // TODO: Implement dynamic scope boundary suggestions
+                    // - Analyze codebase to determine appropriate scope boundaries
+                    // - Implement feature dependency analysis
+                    // - Add complexity and risk assessment for scope suggestions
+                    // - Support configurable scope boundary rules
+                    // - Implement scope validation and consistency checking
+                    // - Add scope boundary negotiation and refinement
+                    "Focus on core authentication features, exclude social login and MFA for now".to_string() // PLACEHOLDER: Hardcoded scope suggestion
                 },
                 QuestionType::SuccessCriteria => {
                     "Users can register, login securely, and reset passwords when forgotten".to_string()

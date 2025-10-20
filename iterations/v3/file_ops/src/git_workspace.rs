@@ -329,8 +329,14 @@ mod tests {
         Ok((temp_dir, repo_path))
     }
 
-    // Note: Async tests require tokio-test dependency
-    // For now, we'll rely on integration tests in the main test suite
+      // TODO: Implement comprehensive async testing infrastructure
+      // - Add tokio-test dependency and configuration
+      // - Create async test utilities and fixtures
+      // - Implement proper async test cleanup and teardown
+      // - Add async test timeouts and cancellation handling
+      // - Support concurrent test execution
+      // - Add async test debugging and profiling tools
+      // PLACEHOLDER: Relying on integration tests for now
 
     #[test]
     fn test_git_workspace_types() {

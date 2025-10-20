@@ -11,7 +11,9 @@ use crate::sandbox::SandboxEnvironment;
 use crate::types::{Task, TaskResult, IterationContext, StopReason, Artifact, ArtifactType, ActionRequest, ActionValidationError};
 use observability::diff_observability::{DiffGenerator, FileChange};
 use observability::agent_telemetry::AgentTelemetryCollector;
-use file_ops::{WorkspaceFactory, Workspace, ChangeSet, Patch, Hunk};
+
+// Import file_ops workspace for deterministic file operations
+use file_ops::{WorkspaceFactory, Workspace, AllowList, Budgets, ChangeSetId, ChangeSet, Patch, Hunk};
 
 /// Execution modes with different safety guardrails
 #[derive(Debug, Clone)]
@@ -42,6 +44,9 @@ pub struct SelfPromptingLoop {
     diff_generator: DiffGenerator, // For generating diff artifacts
     prompting_strategy: Box<dyn PromptingStrategy>,
     workspace_factory: WorkspaceFactory, // For creating isolated workspaces
+    allow_list: AllowList, // File operation allow-list
+    budgets: Budgets, // Change budget constraints
+    changeset_history: std::cell::RefCell<Vec<ChangeSetId>>, // For rollback capability
     max_iterations: usize,
     execution_mode: ExecutionMode,
     event_sender: Option<mpsc::UnboundedSender<SelfPromptingEvent>>,
@@ -58,6 +63,14 @@ impl SelfPromptingLoop {
             diff_generator: DiffGenerator::new(telemetry),
             prompting_strategy: Box::new(AdaptivePromptingStrategy::new()),
             workspace_factory: WorkspaceFactory::new(), // Initialize workspace factory
+            allow_list: AllowList {
+                globs: vec!["src/**/*.rs".to_string(), "src/**/*.ts".to_string(), "tests/**/*.rs".to_string()], // Default allow-list
+            },
+            budgets: Budgets {
+                max_files: 10,
+                max_loc: 500,
+            },
+            changeset_history: std::cell::RefCell::new(Vec::new()),
             max_iterations: 5,
             execution_mode: ExecutionMode::Auto, // Default to auto mode
             event_sender: None,
@@ -79,6 +92,14 @@ impl SelfPromptingLoop {
             diff_generator: DiffGenerator::new(telemetry),
             prompting_strategy: Box::new(AdaptivePromptingStrategy::new()),
             workspace_factory: WorkspaceFactory::new(),
+            allow_list: AllowList {
+                globs: vec!["src/**/*.rs".to_string(), "src/**/*.ts".to_string(), "tests/**/*.rs".to_string()],
+            },
+            budgets: Budgets {
+                max_files: 10,
+                max_loc: 500,
+            },
+            changeset_history: std::cell::RefCell::new(Vec::new()),
             max_iterations,
             execution_mode,
             event_sender: None,
@@ -105,6 +126,15 @@ impl SelfPromptingLoop {
             satisficing_evaluator: std::cell::RefCell::new(SatisficingEvaluator::new()), // Initialize with defaults
             diff_generator: DiffGenerator::new(telemetry),
             prompting_strategy: Box::new(AdaptivePromptingStrategy::new()),
+            workspace_factory: WorkspaceFactory::new(),
+            allow_list: AllowList {
+                globs: vec!["src/**/*.rs".to_string(), "src/**/*.ts".to_string(), "tests/**/*.rs".to_string()],
+            },
+            budgets: Budgets {
+                max_files: 10,
+                max_loc: 500,
+            },
+            changeset_history: std::cell::RefCell::new(Vec::new()),
             max_iterations,
             execution_mode,
             event_sender,
@@ -168,9 +198,11 @@ impl SelfPromptingLoop {
             // 4. Create artifacts from action request
                 let artifacts_from_action = self.create_artifacts_from_action(&action_request, &task);
 
-                // Generate diff artifact for observability
-                if let Some(diff_artifact) = self.generate_diff_artifact(&action_request, iteration, &task).await {
-                    artifacts.push(diff_artifact);
+                // Generate diff artifact for observability (after changeset application)
+                if action_request.requires_changes() {
+                    if let Some(diff_artifact) = self.generate_diff_artifact(iteration, &task).await {
+                        artifacts.push(diff_artifact);
+                    }
                 }
 
                 artifacts.extend(artifacts_from_action);
@@ -198,6 +230,28 @@ impl SelfPromptingLoop {
                 timestamp: chrono::Utc::now(),
             });
 
+            // Check for quality degradation and trigger rollback if needed
+            if let Some(previous_report) = history.get(history.len().saturating_sub(2)) {
+                if eval_report.score < previous_report.score - 0.1 { // 10% degradation threshold
+                    info!("Quality degradation detected ({} -> {}), triggering rollback",
+                          previous_report.score, eval_report.score);
+
+                    // Rollback last changeset
+                    if let Some(changeset_id) = self.changeset_history.borrow_mut().pop() {
+                        if let Err(e) = self.rollback_changeset(&changeset_id, &task).await {
+                            warn!("Failed to rollback changeset {}: {}", changeset_id.0, e);
+                        } else {
+                            info!("Successfully rolled back changeset {}", changeset_id.0);
+
+                            self.emit_event(SelfPromptingEvent::ChangesetReverted {
+                                changeset_id: changeset_id.0,
+                                reason: "Quality degradation detected".to_string(),
+                            });
+                        }
+                    }
+                }
+            }
+
             // 5. Check satisficing with hysteresis and no-progress guards
             let mut satisficing_evaluator = self.satisficing_evaluator.borrow_mut();
             let satisficing_decision = satisficing_evaluator.should_continue(&eval_report, &history);
@@ -205,8 +259,14 @@ impl SelfPromptingLoop {
             // Additional no-progress checks
             if satisficing_decision.should_continue {
                 // Check for no progress based on recent action (if available)
-                // Note: In a full implementation, we'd track the changeset from the action
-                // For now, we'll rely on the hysteresis logic
+                // TODO: Implement changeset tracking for progress detection
+                // - Track changesets generated by each action
+                // - Implement progress metrics based on changeset impact
+                // - Add changeset-based termination conditions
+                // - Support changeset rollback on failure
+                // - Implement changeset validation and verification
+                // - Add changeset performance and quality metrics
+                // PLACEHOLDER: Relying on hysteresis logic for now
             }
 
             if !satisficing_decision.should_continue {
@@ -435,16 +495,21 @@ impl SelfPromptingLoop {
 
                     warn!("ActionRequest validation failed (attempt {}): {}", attempt, error_msg);
 
-                    // Create re-prompt with error context
-                    // For now, we'll log and continue - in production, you'd modify the prompt
-                    // to include the error and request correction
+                    // TODO: Implement dynamic error-based re-prompting
+                    // - Analyze validation errors to generate targeted fixes
+                    // - Implement error-specific prompt modifications
+                    // - Add error context preservation across retries
+                    // - Support error pattern recognition and learning
+                    // - Implement progressive prompt refinement
+                    // - Add error recovery strategy selection
+                    // PLACEHOLDER: Logging and continuing for now
                     continue;
                 }
             }
         }
     }
 
-    /// Apply an ActionRequest to the workspace
+    /// Apply an ActionRequest to the workspace using file_ops
     async fn apply_action_request(
         &self,
         action_request: &ActionRequest,
@@ -452,32 +517,83 @@ impl SelfPromptingLoop {
     ) -> Result<(), SelfPromptingError> {
         match action_request.action_type {
             crate::types::ActionType::Write | crate::types::ActionType::Patch => {
-                if let Some(changeset) = action_request.changeset() {
-                    info!("Applying changeset with {} patches to workspace at {}",
-                          changeset.patches.len(), task.project_path);
+                // Convert ActionRequest to file_ops ChangeSet
+                let changeset = self.action_request_to_changeset(action_request)?;
+                info!("Applying changeset with {} patches to workspace at {}",
+                      changeset.patches.len(), task.project_path.display());
 
-                    // Create an isolated workspace for this task
-                    let workspace = self.workspace_factory.create(&task.project_path)
-                        .map_err(|e| SelfPromptingError::WorkspaceError(format!("Failed to create workspace: {}", e)))?;
+                // Get workspace (auto-detects git vs temp)
+                let mut workspace = WorkspaceFactory::from_path(&task.project_path)
+                    .map_err(|e| SelfPromptingError::WorkspaceError(format!("Failed to create workspace: {}", e)))?;
 
-                    // Apply the changeset to the workspace
-                    let changeset_id = workspace.apply_changeset(changeset.clone())
-                        .await
-                        .map_err(|e| SelfPromptingError::WorkspaceError(format!("Failed to apply changeset: {}", e)))?;
+                // Begin workspace transaction
+                workspace.begin().await
+                    .map_err(|e| SelfPromptingError::WorkspaceError(format!("Failed to begin workspace: {}", e)))?;
 
-                    info!("Successfully applied changeset {} with {} patches",
-                          changeset_id, changeset.patches.len());
+                // Apply changeset with budget enforcement
+                let result = workspace.apply(
+                    &changeset,
+                    &self.allow_list,
+                    &self.budgets,
+                ).await
+                .map_err(|e| SelfPromptingError::WorkspaceError(format!("Failed to apply changeset: {}", e)))?;
 
-                    // Note: We don't promote here - that happens after evaluation passes
-                    // The workspace remains in sandbox until evaluation succeeds
-                } else {
-                    warn!("ActionRequest has no changeset despite Write/Patch type");
-                }
+                // Store changeset_id for rollback capability
+                self.changeset_history.borrow_mut().push(result.changeset_id.clone());
+
+                info!("Successfully applied changeset {} with {} patches",
+                      result.changeset_id.0, changeset.patches.len());
+
+                // Note: We don't promote here - that happens after evaluation passes
+                // The workspace remains in sandbox until evaluation succeeds
             }
             crate::types::ActionType::NoOp => {
                 info!("Action request is NoOp: {}", action_request.reason);
             }
         }
+
+        Ok(())
+    }
+
+    /// Convert ActionRequest to file_ops ChangeSet
+    fn action_request_to_changeset(&self, action_request: &ActionRequest) -> Result<ChangeSet, SelfPromptingError> {
+        if let Some(changeset) = action_request.changeset() {
+            // Convert existing changeset format to file_ops ChangeSet
+            let patches = changeset.patches.iter().map(|patch| {
+                Patch {
+                    path: patch.path.clone(),
+                    hunks: patch.hunks.iter().map(|hunk| {
+                        Hunk {
+                            old_start: hunk.old_start,
+                            old_lines: hunk.old_lines,
+                            new_start: hunk.new_start,
+                            new_lines: hunk.new_lines,
+                            lines: hunk.lines.clone(),
+                        }
+                    }).collect(),
+                    expected_prev_sha256: None, // Will be computed during application
+                }
+            }).collect();
+
+            Ok(ChangeSet { patches })
+        } else {
+            Err(SelfPromptingError::WorkspaceError(
+                "ActionRequest has no changeset despite Write/Patch type".to_string()
+            ))
+        }
+    }
+
+    /// Rollback a changeset using workspace revert
+    async fn rollback_changeset(&self, changeset_id: &ChangeSetId, task: &Task) -> Result<(), SelfPromptingError> {
+        info!("Rolling back changeset {} for task {}", changeset_id.0, task.id);
+
+        // Get workspace for this task's project
+        let mut workspace = WorkspaceFactory::from_path(&task.project_path)
+            .map_err(|e| SelfPromptingError::WorkspaceError(format!("Failed to create workspace for rollback: {}", e)))?;
+
+        // Revert the changeset
+        workspace.revert(changeset_id).await
+            .map_err(|e| SelfPromptingError::WorkspaceError(format!("Failed to revert changeset: {}", e)))?;
 
         Ok(())
     }
@@ -517,49 +633,42 @@ impl SelfPromptingLoop {
     /// Generate a diff artifact for observability
     async fn generate_diff_artifact(
         &self,
-        action_request: &ActionRequest,
         iteration: usize,
         task: &Task,
     ) -> Option<Artifact> {
-        if action_request.changeset.is_none() {
-            return None;
-        }
+        // Get the most recent changeset ID
+        let changeset_id = self.changeset_history.borrow().last().cloned()?;
 
-        // Create a simplified diff representation
-        // In a full implementation, this would compare actual file states
-        let mut diff_content = format!(
-            "# Unified Diff - Iteration {}\n",
-            iteration
-        );
-        diff_content.push_str(&format!("Task: {}\n", task.id));
-        diff_content.push_str(&format!("Agent: self-prompting-loop\n"));
-        diff_content.push_str(&format!("Timestamp: {}\n\n", chrono::Utc::now().to_rfc3339()));
-
-        if let Some(changeset) = &action_request.changeset {
-            for patch in &changeset.patches {
-                diff_content.push_str(&format!(
-                    "diff --git a/{} b/{}\n",
-                    patch.path, patch.path
-                ));
-
-                // Simplified hunk representation
-                let old_lines = patch.hunks.iter().map(|h| h.old_lines).sum::<u32>();
-                let new_lines = patch.hunks.iter().map(|h| h.new_lines).sum::<u32>();
-
-                diff_content.push_str(&format!(
-                    "@@ -1,{} +1,{} @@\n",
-                    old_lines, new_lines
-                ));
-
-                for hunk in &patch.hunks {
-                    for line in &hunk.lines {
-                        diff_content.push_str(line);
-                        diff_content.push('\n');
-                    }
-                }
-                diff_content.push('\n');
+        // Generate diff using workspace
+        let workspace = match WorkspaceFactory::from_path(&task.project_path) {
+            Ok(w) => w,
+            Err(e) => {
+                warn!("Failed to create workspace for diff generation: {}", e);
+                return None;
             }
-        }
+        };
+
+        // Generate unified diff for the changeset
+        let diff_content = match workspace.generate_diff(&changeset_id).await {
+            Ok(diff) => diff,
+            Err(e) => {
+                warn!("Failed to generate diff for changeset {}: {}", changeset_id.0, e);
+                return None;
+            }
+        };
+
+        // Create diff artifact using workspace-generated diff
+        let diff_content = format!(
+            "# Unified Diff - Iteration {}\n\
+             Task: {}\n\
+             Agent: self-prompting-loop\n\
+             Changeset: {}\n\
+             Timestamp: {}\n\n",
+            iteration,
+            task.id,
+            changeset_id.0,
+            chrono::Utc::now().to_rfc3339()
+        ) + &diff_content;
 
         Some(Artifact {
             id: uuid::Uuid::new_v4(),
@@ -567,6 +676,7 @@ impl SelfPromptingLoop {
             content: diff_content,
             artifact_type: ArtifactType::Diff,
             created_at: chrono::Utc::now(),
+            size_bytes: diff_content.len() as u64,
         })
     }
 
@@ -645,6 +755,10 @@ pub enum SelfPromptingEvent {
         new_model: String,
         reason: String,
         timestamp: chrono::Utc::now(),
+    },
+    ChangesetReverted {
+        changeset_id: String,
+        reason: String,
     },
     LoopCompleted {
         task_id: uuid::Uuid,

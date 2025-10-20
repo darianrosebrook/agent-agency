@@ -670,8 +670,13 @@ impl MetalGPUManager {
         // Update performance metrics
         self.update_performance_metrics(gpu_compute_time).await?;
 
-        // Generate output from MPS result data (simplified for now)
-        let output = format!(
+        // TODO: Implement proper MPS result data processing
+        // - Parse MPSMatrix and MPSImage data structures
+        // - Handle different data types (float32, int32, etc.)
+        // - Add proper error handling for MPS failures
+        // - Support batched operations
+        // - Add memory management for GPU results
+         let output = format!(
             "Metal GPU inference completed with {} computations in {:.1}ms",
             gpu_result.output_data.len(),
             gpu_compute_time

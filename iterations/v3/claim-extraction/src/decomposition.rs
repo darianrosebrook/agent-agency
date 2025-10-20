@@ -664,6 +664,327 @@ impl ContextBracketAdder {
 
         None
     }
+
+    /// Enhanced compound sentence decomposition (V2 port - advanced pattern)
+    fn decompose_compound_sentence_v2(&self, sentence: &str) -> Vec<String> {
+        let mut clauses = Vec::new();
+
+        // Enhanced compound sentence patterns (V2 style)
+        let compound_patterns = vec![
+            Regex::new(r"([^,]*?)\s+(and|or|but|yet|so|for|nor)\s+([^,]*?)(?:\s*,|\s*$)")
+                .unwrap(),
+            Regex::new(r"([^;]*?);\s*([^;]*?)(?:\s*;|\s*$)").unwrap(),
+            Regex::new(r"([^:]*?):\s*([^:]*?)(?:\s*:|\s*$)").unwrap(),
+        ];
+
+        let mut remaining = sentence.to_string();
+
+        for pattern in &compound_patterns {
+            if let Some(captures) = pattern.captures(&remaining) {
+                if let (Some(clause1), Some(clause2)) = (captures.get(1), captures.get(3).or_else(|| captures.get(2))) {
+                    let clause1_str = clause1.as_str().trim().to_string();
+                    let clause2_str = clause2.as_str().trim().to_string();
+
+                    // Only split if both clauses have subjects and predicates
+                    if self.has_subject_predicate_structure(&clause1_str) &&
+                       self.has_subject_predicate_structure(&clause2_str) {
+                        clauses.push(clause1_str);
+                        clauses.push(clause2_str);
+                        break; // Successfully decomposed
+                    }
+                }
+            }
+        }
+
+        // If no compound structure found, return original sentence
+        if clauses.is_empty() {
+            clauses.push(sentence.to_string());
+        }
+
+        clauses
+    }
+
+    /// Advanced atomic claim extraction with dependency analysis (V2 port)
+    fn extract_atomic_claims_v2(&self, sentence: &str, context: &ProcessingContext) -> Result<Vec<AtomicClaim>> {
+        let mut claims = Vec::new();
+
+        // First decompose compound sentences
+        let clauses = self.decompose_compound_sentence_v2(sentence);
+
+        for (clause_idx, clause) in clauses.iter().enumerate() {
+            // Extract subject-predicate-object triples
+            if let Some(triple) = self.extract_subject_predicate_object(clause) {
+                // Check if this forms a verifiable atomic claim
+                if self.is_atomic_verifiable_claim(&triple, context) {
+                    let claim_text = format!("{} {} {}",
+                        triple.subject,
+                        triple.predicate,
+                        triple.object.as_deref().unwrap_or("")
+                    ).trim().to_string();
+
+                    claims.push(AtomicClaim {
+                        id: uuid::Uuid::new_v4(),
+                        claim_text,
+                        subject: triple.subject,
+                        predicate: triple.predicate,
+                        object: triple.object,
+                        context_brackets: self.add_contextual_brackets_v2(clause, context),
+                        verification_requirements: self.determine_verification_requirements(&triple, context),
+                        confidence: self.calculate_claim_confidence(&triple, context),
+                        position: (0, clause.len()), // Approximate position in original sentence
+                        sentence_fragment: clause.clone(),
+                    });
+                }
+            }
+        }
+
+        // Fallback: extract using original patterns if no structured claims found
+        if claims.is_empty() {
+            claims.extend(self.extract_atomic_claims_fallback(sentence, context)?);
+        }
+
+        Ok(claims)
+    }
+
+    /// Extract subject-predicate-object triple from clause (V2 enhancement)
+    fn extract_subject_predicate_object(&self, clause: &str) -> Option<SubjectPredicateObject> {
+        // Enhanced SPO extraction using dependency parsing heuristics
+        let clause_lower = clause.to_lowercase();
+
+        // Find main verb (predicate)
+        let verb_patterns = vec![
+            Regex::new(r"\b(is|are|was|were|has|have|had|will|can|could|should|would|must|does|did|makes?|creates?|builds?|runs?|executes?|processes?|handles?|manages?|validates?|checks?|verifies?)\b").unwrap(),
+        ];
+
+        for pattern in &verb_patterns {
+            if let Some(mat) = pattern.find(&clause_lower) {
+                let verb = mat.as_str().to_string();
+
+                // Extract subject (text before verb)
+                let before_verb = &clause[..mat.start()].trim();
+                let subject = self.extract_subject_from_text(before_verb)?;
+
+                // Extract object (text after verb)
+                let after_verb = &clause[mat.end()..].trim();
+                let object = if after_verb.is_empty() {
+                    None
+                } else {
+                    Some(self.extract_object_from_text(after_verb))
+                };
+
+                return Some(SubjectPredicateObject {
+                    subject,
+                    predicate: verb,
+                    object,
+                });
+            }
+        }
+
+        None
+    }
+
+    /// Extract subject from text fragment (V2 helper)
+    fn extract_subject_from_text(&self, text: &str) -> Option<String> {
+        // Simple subject extraction - take the last noun phrase
+        let words: Vec<&str> = text.split_whitespace().collect();
+        if words.is_empty() {
+            return None;
+        }
+
+        // Look for noun-like words (capitalized or common nouns)
+        for word in words.iter().rev() {
+            if word.chars().next()?.is_uppercase() ||
+               matches!(word.to_lowercase().as_str(),
+                   "system" | "function" | "method" | "class" | "component" |
+                   "service" | "user" | "process" | "application" | "code") {
+                return Some(word.to_string());
+            }
+        }
+
+        // Fallback to last word
+        words.last().map(|s| s.to_string())
+    }
+
+    /// Extract object from text fragment (V2 helper)
+    fn extract_object_from_text(&self, text: &str) -> String {
+        // Simple object extraction - take meaningful part after removing stop words
+        let stop_words = ["the", "a", "an", "this", "that", "these", "those"];
+
+        let words: Vec<&str> = text.split_whitespace()
+            .filter(|w| !stop_words.contains(&w.to_lowercase().as_str()))
+            .collect();
+
+        words.join(" ")
+    }
+
+    /// Check if triple forms a verifiable atomic claim (V2 logic)
+    fn is_atomic_verifiable_claim(&self, triple: &SubjectPredicateObject, context: &ProcessingContext) -> bool {
+        // V2 criteria for atomic claims:
+        // 1. Subject exists and is a noun-like entity
+        // 2. Predicate is an action/state verb
+        // 3. Object exists (for transitive verbs) or is absent (for intransitive)
+        // 4. Claim is contextually relevant
+
+        if triple.subject.is_empty() || triple.predicate.is_empty() {
+            return false;
+        }
+
+        // Check if subject is noun-like
+        if !self.is_noun_like(&triple.subject) {
+            return false;
+        }
+
+        // Check if predicate is meaningful
+        let meaningful_predicates = [
+            "is", "are", "was", "were", "has", "have", "had", "will",
+            "can", "could", "should", "would", "must", "does", "did",
+            "makes", "creates", "builds", "runs", "executes", "processes",
+            "handles", "manages", "validates", "checks", "verifies"
+        ];
+
+        if !meaningful_predicates.contains(&triple.predicate.as_str()) {
+            return false;
+        }
+
+        // Context relevance check
+        self.is_claim_contextually_relevant(triple, context)
+    }
+
+    /// Check if text is noun-like (V2 helper)
+    fn is_noun_like(&self, text: &str) -> bool {
+        // Simple heuristic: capitalized words or common technical nouns
+        if text.chars().next().unwrap_or(' ').is_uppercase() {
+            return true;
+        }
+
+        let common_nouns = [
+            "system", "function", "method", "class", "component", "service",
+            "user", "process", "application", "code", "data", "result",
+            "error", "response", "request", "api", "interface"
+        ];
+
+        common_nouns.contains(&text.to_lowercase().as_str())
+    }
+
+    /// Check contextual relevance of claim (V2 logic)
+    fn is_claim_contextually_relevant(&self, triple: &SubjectPredicateObject, context: &ProcessingContext) -> bool {
+        let claim_text = format!("{} {} {}", triple.subject, triple.predicate, triple.object.as_deref().unwrap_or(""));
+
+        // Check domain hints
+        for hint in &context.domain_hints {
+            if claim_text.to_lowercase().contains(&hint.to_lowercase()) {
+                return true;
+            }
+        }
+
+        // Check technical terms based on language
+        if matches!(context.language, Language::Rust | Language::TypeScript) {
+            let technical_terms = ["function", "method", "class", "interface", "type", "api", "struct", "enum"];
+            for term in &technical_terms {
+                if claim_text.to_lowercase().contains(term) {
+                    return true;
+                }
+            }
+        }
+
+        false
+    }
+
+    /// Add contextual brackets with enhanced scope (V2 port)
+    fn add_contextual_brackets_v2(&self, clause: &str, context: &ProcessingContext) -> Vec<String> {
+        let mut brackets = Vec::new();
+
+        // Add temporal context
+        if clause.to_lowercase().contains("before") || clause.to_lowercase().contains("after") {
+            brackets.push("temporal".to_string());
+        }
+
+        // Add conditional context
+        if clause.to_lowercase().contains("if ") || clause.to_lowercase().contains("when ") {
+            brackets.push("conditional".to_string());
+        }
+
+        // Add domain context
+        for hint in &context.domain_hints {
+            brackets.push(format!("domain:{}", hint));
+        }
+
+        // Add language context
+        brackets.push(format!("language:{:?}", context.language));
+
+        brackets
+    }
+
+    /// Determine verification requirements for claim (V2 logic)
+    fn determine_verification_requirements(&self, triple: &SubjectPredicateObject, context: &ProcessingContext) -> Vec<VerificationRequirement> {
+        let mut requirements = Vec::new();
+
+        // Base requirement based on predicate type
+        let (method, evidence_type) = match triple.predicate.as_str() {
+            "is" | "are" | "was" | "were" => (VerificationMethod::CodeAnalysis, EvidenceType::CodeAnalysis),
+            "has" | "have" | "had" => (VerificationMethod::CodeAnalysis, EvidenceType::CodeAnalysis),
+            "can" | "could" | "should" | "would" | "must" => (VerificationMethod::LogicalAnalysis, EvidenceType::LogicalAnalysis),
+            "makes" | "creates" | "builds" => (VerificationMethod::CodeAnalysis, EvidenceType::CodeAnalysis),
+            "runs" | "executes" | "processes" => (VerificationMethod::Measurement, EvidenceType::Measurement),
+            _ => (VerificationMethod::CodeAnalysis, EvidenceType::CodeAnalysis),
+        };
+
+        requirements.push(VerificationRequirement {
+            method,
+            evidence_type,
+            minimum_confidence: 0.8,
+            required_sources: vec![SourceType::FileSystem],
+        });
+
+        requirements
+    }
+
+    /// Calculate confidence score for claim (V2 logic)
+    fn calculate_claim_confidence(&self, triple: &SubjectPredicateObject, context: &ProcessingContext) -> f64 {
+        let mut confidence = 0.7; // Base confidence
+
+        // Boost for strong predicates
+        if matches!(triple.predicate.as_str(), "is" | "are" | "was" | "were" | "has" | "have") {
+            confidence += 0.1;
+        }
+
+        // Boost for technical subjects
+        if self.is_noun_like(&triple.subject) {
+            confidence += 0.1;
+        }
+
+        // Boost for contextual relevance
+        if self.is_claim_contextually_relevant(triple, context) {
+            confidence += 0.1;
+        }
+
+        confidence.min(1.0)
+    }
+
+    /// Fallback atomic claim extraction (V2 compatibility)
+    fn extract_atomic_claims_fallback(&self, sentence: &str, context: &ProcessingContext) -> Result<Vec<AtomicClaim>> {
+        // Use original patterns as fallback
+        self.extract_atomic_claims(sentence, context)
+    }
+
+    /// Enhanced V2 decomposition process with advanced atomic claim extraction
+    pub async fn process_v2(
+        &self,
+        sentence: &str,
+        context: &ProcessingContext,
+    ) -> Result<DecompositionResult> {
+        debug!("Starting V2 enhanced decomposition for: {}", sentence);
+
+        // Use enhanced V2 atomic claim extraction
+        let atomic_claims = self.extract_atomic_claims_v2(sentence, context).await?;
+
+        let decomposition_confidence = self.calculate_decomposition_confidence(&atomic_claims);
+
+        Ok(DecompositionResult {
+            atomic_claims,
+            decomposition_confidence,
+        })
+    }
 }
 
 /// Context that is implied but not explicitly stated

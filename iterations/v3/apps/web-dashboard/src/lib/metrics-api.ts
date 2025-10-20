@@ -239,8 +239,14 @@ export class MetricsApiClient {
   // Acknowledge an alert
   async acknowledgeAlert(alertId: string): Promise<void> {
     try {
-      // For now, this is a no-op since we're using the unified metrics endpoint
-      // In a real implementation, this would call a specific alert management endpoint
+      // TODO: Implement dedicated alert management API
+      // - Create separate alert management endpoints
+      // - Add alert creation, update, and deletion
+      // - Implement alert escalation policies
+      // - Add alert acknowledgment system
+      // - Support alert templates and rules
+      // - Integrate with notification systems
+      // PLACEHOLDER: Using unified metrics endpoint for now
       console.warn(
         `Alert acknowledgment for ${alertId} not implemented - requires V3 alert management API`
       );
@@ -257,8 +263,7 @@ export class MetricsApiClient {
   // Resolve an alert
   async resolveAlert(alertId: string): Promise<void> {
     try {
-      // For now, this is a no-op since we're using the unified metrics endpoint
-      // In a real implementation, this would call a specific alert management endpoint
+      // PLACEHOLDER: Using unified metrics endpoint for now
       console.warn(
         `Alert resolution for ${alertId} not implemented - requires V3 alert management API`
       );

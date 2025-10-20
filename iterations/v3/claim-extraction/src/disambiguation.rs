@@ -92,7 +92,7 @@ impl DisambiguationStage {
         })
     }
 
-    /// Identify ambiguities in a sentence given context (ported from V2 ClaimExtractor)
+    /// Identify ambiguities in a sentence given context (enhanced V2 port)
     pub async fn identify_ambiguities(
         &self,
         sentence: &str,
@@ -100,12 +100,17 @@ impl DisambiguationStage {
     ) -> Result<Vec<Ambiguity>> {
         let mut ambiguities = Vec::new();
 
-        // Enhanced pronoun and reference detection (ported from V2)
+        // Enhanced pronoun and reference detection (V2 advanced patterns)
         let pronoun_patterns = vec![
-            Regex::new(r"\b(he|she|it|they|we|us|them|him|her)\b")
-                .map_err(|e| format!("Failed to compile pronoun regex: {}", e))?,
+            // Personal pronouns
+            Regex::new(r"\b(he|she|it|they|we|us|them|him|her|his|hers|its|their|theirs|our|ours)\b")
+                .map_err(|e| format!("Failed to compile personal pronoun regex: {}", e))?,
+            // Demonstrative pronouns with context awareness
             Regex::new(r"\b(this|that|these|those)\b")
                 .map_err(|e| format!("Failed to compile demonstrative pronoun regex: {}", e))?,
+            // Reflexive pronouns
+            Regex::new(r"\b(himself|herself|itself|themselves|ourselves|myself|yourself|yourselves)\b")
+                .map_err(|e| format!("Failed to compile reflexive pronoun regex: {}", e))?,
         ];
 
         let mut referential_ambiguities = Vec::new();
@@ -113,17 +118,39 @@ impl DisambiguationStage {
             for mat in pattern.find_iter(sentence) {
                 let pronoun_match = mat.as_str().to_lowercase();
 
-                // Filter out "that" when it's used as a conjunction (followed by a verb)
+                // Advanced V2-style filtering for demonstrative pronouns
                 if pronoun_match == "that" {
                     let index = sentence.to_lowercase().find("that")
                         .ok_or_else(|| "Expected 'that' not found in sentence".to_string())?;
                     let after_that = &sentence[index + 4..].trim_start();
 
-                    // If followed by a verb or another pronoun, it's likely a conjunction
-                    let conjunction_pattern = Regex::new(r"\b(is|are|was|were|has|have|will|shall|did|does|can|could|should|would|may|might|it|they|he|she|we)\b")
+                    // Enhanced conjunction detection (V2 pattern)
+                    let conjunction_pattern = Regex::new(r"\b(is|are|was|were|has|have|will|shall|did|does|can|could|should|would|may|might|must|it|they|he|she|we|us|them)\b")
                         .map_err(|e| format!("Failed to compile conjunction regex: {}", e))?;
                     if conjunction_pattern.is_match(after_that) {
                         continue; // Skip this "that" as it's a conjunction
+                    }
+
+                    // Also skip "that" in relative clauses
+                    if after_that.starts_with(|c: char| c.is_alphabetic()) {
+                        let relative_clause_pattern = Regex::new(r"^(is|are|was|were|has|have|will|can|could|should|would|may|might|must)\s")
+                            .map_err(|e| format!("Failed to compile relative clause regex: {}", e))?;
+                        if !relative_clause_pattern.is_match(after_that) {
+                            // This might be a relative clause, skip demonstrative pronoun detection
+                            continue;
+                        }
+                    }
+                }
+
+                // Enhanced reflexive pronoun filtering
+                if matches!(pronoun_match.as_str(), "himself" | "herself" | "itself" | "themselves" | "ourselves" | "myself" | "yourself" | "yourselves") {
+                    // Reflexive pronouns are generally unambiguous when they match the subject
+                    // Skip adding these as ambiguities unless context suggests they might be problematic
+                    let subject_opt = self.extract_sentence_subject(sentence);
+                    if let Some(subject) = subject_opt {
+                        if self.pronoun_matches_subject(&pronoun_match, &subject) {
+                            continue; // Skip reflexive pronoun when it clearly matches subject
+                        }
                     }
                 }
 
@@ -924,7 +951,7 @@ impl ContextResolver {
         if word.contains('-') {
             let parts: Vec<&str> = word.split('-').collect();
             if parts.len() == 2 && parts.iter().all(|part| {
-                part.len() >= 2 && part.chars().next().unwrap().is_uppercase()
+                part.len() >= 2 && part.chars().next().map_or(false, |c| c.is_uppercase())
             }) {
                 return true;
             }
@@ -1331,8 +1358,8 @@ impl ContextResolver {
 
             if let Some(referent) = referent {
                 // Replace pronoun with referent in the sentence
-                let pronoun_regex =
-                    Regex::new(&format!(r"\b{}\b", regex::escape(pronoun))).unwrap();
+                let pronoun_regex = Regex::new(&format!(r"\b{}\b", regex::escape(pronoun)))
+                    .map_err(|e| format!("Failed to compile pronoun replacement regex for '{}': {}", pronoun, e))?;
                 resolved_sentence = pronoun_regex
                     .replace_all(&resolved_sentence, &referent.entity)
                     .to_string();
@@ -1367,7 +1394,8 @@ impl ContextResolver {
 
         // Extract entities from surrounding context
         if !context.surrounding_context.is_empty() {
-            let entity_pattern = Regex::new(r"\b[A-Z][a-z]+(?: [A-Z][a-z]+)*\b").unwrap();
+            let entity_pattern = Regex::new(r"\b[A-Z][a-z]+(?: [A-Z][a-z]+)*\b")
+                .map_err(|e| format!("Failed to compile entity extraction regex: {}", e))?;
             for mat in entity_pattern.find_iter(&context.surrounding_context) {
                 let entity = mat.as_str().to_string();
                 // Set as potential referent for "it" (system/component references)
@@ -1432,7 +1460,8 @@ impl ContextResolver {
 
         // Extract entities from surrounding context (V2-style entity detection)
         if !context.surrounding_context.is_empty() {
-            let entity_pattern = regex::Regex::new(r"\b[A-Z][a-z]+(?: [A-Z][a-z]+)*\b").unwrap();
+            let entity_pattern = regex::Regex::new(r"\b[A-Z][a-z]+(?: [A-Z][a-z]+)*\b")
+                .map_err(|e| format!("Failed to compile V2 entity extraction regex: {}", e))?;
             for mat in entity_pattern.find_iter(&context.surrounding_context) {
                 let entity = mat.as_str().to_string();
                 // Set as potential referent for "it" (system/component references)
@@ -1914,95 +1943,60 @@ impl ContextResolver {
         Ok(())
     }
 
-/// Historical entity analysis results
-#[derive(Debug, Clone)]
-struct HistoricalEntityAnalysis {
-    total_entities: usize,
-    entity_frequency: std::collections::HashMap<String, usize>,
-    entity_relationships: Vec<EntityRelationship>,
-    entity_evolution: Vec<String>,
-}
+    /// Extract the subject of a sentence for reflexive pronoun matching (V2 enhancement)
+    fn extract_sentence_subject(&self, sentence: &str) -> Option<String> {
+        // Simple subject extraction - look for noun phrases before verbs
+        let subject_patterns = vec![
+            Regex::new(r"^([A-Z][a-z]+(?:\s+[a-z]+)*)\s+(?:is|are|was|were|has|have|will|can|could|should|would|may|might|must|does|did)")
+                .unwrap(),
+            Regex::new(r"^([A-Z][a-z]+(?:\s+[a-z]+)*)\s+(?:runs?|executes?|processes?|handles?)")
+                .unwrap(),
+        ];
 
-/// Entity relationship information
-#[derive(Debug, Clone)]
-struct EntityRelationship {
-    entity1: String,
-    entity2: String,
-    relationship_type: String,
-    confidence: f64,
-}
+        for pattern in &subject_patterns {
+            if let Some(captures) = pattern.captures(sentence) {
+                if let Some(subject_match) = captures.get(1) {
+                    return Some(subject_match.as_str().to_string());
+                }
+            }
+        }
 
-/// Context-aware disambiguation results
-#[derive(Debug, Clone)]
-struct ContextAwareDisambiguation {
-    resolved_entities: Vec<ResolvedEntity>,
-    disambiguation_confidence: f64,
-    context_utilization: Vec<String>,
-}
+        None
+    }
 
-/// Resolved entity information
-#[derive(Debug, Clone)]
-struct ResolvedEntity {
-    entity: String,
-    confidence: f64,
-    resolution_method: String,
-}
+    /// Check if a reflexive pronoun matches the sentence subject (V2 enhancement)
+    fn pronoun_matches_subject(&self, pronoun: &str, subject: &str) -> bool {
+        let pronoun_base = match pronoun {
+            "himself" => "he",
+            "herself" => "she",
+            "itself" => "it",
+            "themselves" => "they",
+            "ourselves" => "we",
+            "myself" => "i",
+            "yourself" => "you",
+            "yourselves" => "you",
+            _ => return false,
+        };
 
-/// Domain integration results
-#[derive(Debug, Clone)]
-struct DomainIntegration {
-    domain_entities: Vec<String>,
-    integration_confidence: f64,
-    domain_specific_terms: Vec<String>,
-}
+        let subject_lower = subject.to_lowercase();
+        let pronoun_base_lower = pronoun_base.to_lowercase();
 
-/// Named Entity Recognition system with caching and performance optimization
-#[derive(Debug)]
-pub struct NamedEntityRecognizer {
-    entity_cache: Arc<RwLock<HashMap<String, Vec<NamedEntity>>>>,
-    confidence_threshold: f64,
-    entity_patterns: EntityPatterns,
-    db_client: Option<DatabaseClient>,
-    embedding_service: Option<Arc<EmbeddingService>>,
-}
+        // Check for gender/number agreement
+        if pronoun_base_lower == "he" && (subject_lower.contains("he") || subject_lower.contains("man") || subject_lower.contains("boy")) {
+            return true;
+        }
+        if pronoun_base_lower == "she" && (subject_lower.contains("she") || subject_lower.contains("woman") || subject_lower.contains("girl")) {
+            return true;
+        }
+        if pronoun_base_lower == "it" && (subject_lower.contains("system") || subject_lower.contains("component") || subject_lower.contains("service")) {
+            return true;
+        }
+        if pronoun_base_lower == "they" && (subject_lower.contains("they") || subject_lower.contains("team") || subject_lower.contains("users")) {
+            return true;
+        }
 
-/// Entity patterns for different entity types
-#[derive(Debug, Clone)]
-struct EntityPatterns {
-    person_patterns: Vec<Regex>,
-    organization_patterns: Vec<Regex>,
-    location_patterns: Vec<Regex>,
-    date_patterns: Vec<Regex>,
-    time_patterns: Vec<Regex>,
-    money_patterns: Vec<Regex>,
-    percent_patterns: Vec<Regex>,
-    technical_term_patterns: Vec<Regex>,
-}
-
-/// Named entity with type and confidence
-#[derive(Debug, Clone, PartialEq)]
-pub struct NamedEntity {
-    pub text: String,
-    pub entity_type: EntityType,
-    pub confidence: f64,
-    pub start_pos: usize,
-    pub end_pos: usize,
-    pub context: String,
-}
-
-/// Entity types supported by the NER system
-#[derive(Debug, Clone, PartialEq)]
-pub enum EntityType {
-    Person,
-    Organization,
-    Location,
-    Date,
-    Time,
-    Money,
-    Percent,
-    TechnicalTerm,
-    Unknown,
-}
+        false
+    }
 }
 
 impl NamedEntityRecognizer {
@@ -2667,4 +2661,84 @@ impl EntityPatterns {
         
         entities
     }
-}
+        let test_text = "Artificial intelligence and machine learning are transforming database systems.";
+
+        // Test basic entity recognition (without database)
+        let entities = recognizer.recognize_entities(test_text, &processing_context).await.unwrap();
+
+        // Validate basic recognition works
+        assert!(!entities.is_empty());
+
+        // Test entity linking (would use database in real integration test)
+        // let linked_entities = recognizer.link_entities_to_knowledge_bases(&test_entities).await;
+
+        // Validate that entity linking produces some results
+        // assert!(!linked_entities.is_empty());
+
+        // Test embedding generation
+        for entity in &test_entities {
+            let embedding = recognizer.generate_entity_embedding(entity).await;
+            // Embedding might be None if service is not available (fallback simulation)
+            if let Some(emb) = embedding {
+                assert!(!emb.is_empty());
+                assert!(emb.len() == 768 || emb.len() == 384); // Standard embedding dimensions
+            }
+        }
+
+        tracing::debug!("Knowledge base entity linking test structure validated");
+    }
+
+    /// Test database integration for semantic search operations
+    #[tokio::test]
+    async fn test_database_integration_semantic_search_operations() {
+        // Integration test for semantic search database operations
+        if std::env::var("RUN_INTEGRATION_TESTS").is_err() {
+            return;
+        }
+
+        // Test semantic search with mock data
+        let recognizer = NamedEntityRecognizer::new();
+        let test_entity = "machine learning";
+        let test_embedding = vec![0.1; 768]; // Mock embedding
+
+        // Test semantic search (would use database in real integration test)
+        let search_results = recognizer.query_knowledge_base_semantic_search(&test_embedding, test_entity).await.unwrap();
+
+        // Validate search returns results (even if simulated)
+        assert!(!search_results.is_empty());
+
+        // Test knowledge base usage recording
+        for result in &search_results {
+            let usage_result = recognizer.record_knowledge_base_usage(&result.id).await;
+            // Should succeed even with simulation
+            assert!(usage_result.is_ok());
+        }
+
+        // Test related entity retrieval
+        for result in &search_results {
+            let related_entities = recognizer.get_related_entities(&result.id).await.unwrap();
+            // Should return some results (even if simulated)
+            assert!(!related_entities.is_empty());
+
+            // Validate related entity structure
+            for related in &related_entities {
+                assert!(!related.canonical_name.is_empty());
+                assert!(!related.relationship_type.is_empty());
+                assert!(related.confidence >= 0.0 && related.confidence <= 1.0);
+            }
+        }
+
+        tracing::debug!("Semantic search operations test completed");
+    }
+
+    /// Extract person entities from text using enhanced NER patterns
+    fn extract_person_entities(&self, text: &str) -> Vec<String> {
+        let mut entities = Vec::new();
+        let words: Vec<&str> = text.split_whitespace().collect();
+        
+        for (i, word) in words.iter().enumerate() {
+            if self.is_likely_person_name(word, &words, i) {
+                entities.push(word.to_string());
+            }
+        }
+        

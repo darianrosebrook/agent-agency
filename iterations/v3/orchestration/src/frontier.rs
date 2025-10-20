@@ -381,9 +381,14 @@ impl Frontier {
 
     /// Try to evict the lowest priority task when at capacity
     fn evict_lowest_priority(&mut self) -> bool {
-        // BinaryHeap doesn't support efficient removal of arbitrary elements
-        // For now, we'll just reject if at capacity
-        // In a production implementation, you might want a different data structure
+        // TODO: Implement efficient priority queue with arbitrary removal
+        // - Replace BinaryHeap with data structure supporting O(log n) removal
+        // - Implement priority queue with key-based updates
+        // - Add concurrent access support with proper locking
+        // - Support priority queue persistence and recovery
+        // - Implement queue size limits and eviction policies
+        // - Add queue performance monitoring and metrics
+        // PLACEHOLDER: Rejecting at capacity for now
         false
     }
 }

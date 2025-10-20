@@ -83,8 +83,22 @@ impl CoreMLProvider {
             capabilities: ModelCapabilities {
                 max_context: 4096, // Conservative estimate, varies by model
                 supports_streaming: false, // Core ML doesn't support streaming yet
-                supports_function_calling: false, // Not implemented
-                supports_vision: false, // Text-only for now
+                // TODO: Implement function calling support for CoreML models
+                // - Add function schema definition and validation
+                // - Implement function call parsing from model outputs
+                // - Add function execution environment and sandboxing
+                // - Support function result formatting and injection
+                // - Implement function call safety and validation
+                // - Add function calling metrics and monitoring
+                supports_function_calling: false, // PLACEHOLDER: Not implemented
+                // TODO: Implement vision capabilities for CoreML models
+                // - Add image preprocessing and feature extraction
+                // - Implement vision model loading and inference
+                // - Support multiple image formats and sizes
+                // - Add vision-specific prompt formatting
+                // - Implement vision result interpretation
+                // - Add vision model performance optimization
+                supports_vision: false, // PLACEHOLDER: Text-only implementation
             },
         };
 

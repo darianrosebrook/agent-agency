@@ -5,7 +5,7 @@
 resolver = "2"
 members = [
     "iterations/v3/council",
-    "iterations/v3/workers", 
+    "iterations/v3/workers",
     "iterations/v3/apple-silicon",
     "iterations/v3/research",
     "iterations/v3/mcp-integration",
@@ -22,6 +22,7 @@ members = [
     "iterations/v3/resilience",
     "iterations/v3/config",
     "iterations/v3/database",
+    "iterations/v3/caching",
     "iterations/v3/integration-tests"
 ]
 
@@ -48,6 +49,9 @@ uuid = { version = "1.0", features = ["v4", "serde"] }
 
 # HTTP and web
 reqwest = { version = "0.11", features = ["json", "stream"] }
+
+# Caching
+redis = { version = "0.25", features = ["tokio-comp", "connection-manager"] }
 axum = { version = "0.7", features = ["json", "ws"] }
 tower = "0.4"
 tower-http = { version = "0.5", features = ["cors", "trace"] }
