@@ -54,6 +54,7 @@ agent-agency-observability = { path = "../observability" }
 # Metrics and monitoring
 prometheus = "0.13"
 warp = "0.3"
+cadence = "0.29"
 
 # Half-precision floating point support
 half = "2.4"

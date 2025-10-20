@@ -21,7 +21,9 @@
 //! }
 //! ```
 //!
-//! ## Prometheus Metrics Integration
+//! ## Observability Integration
+//!
+//! ### Prometheus Metrics
 //!
 //! Comprehensive observability with Prometheus metrics collection:
 //!
@@ -37,16 +39,37 @@
 //!     // Start Prometheus HTTP endpoint on port 9090
 //!     let manager = manager.start_prometheus_endpoint(9090).await?;
 //!
-//!     // Metrics are automatically collected during inference:
-//!     // - coreml_requests_total (counter)
-//!     // - coreml_cache_hits_total (counter)
-//!     // - coreml_inference_duration_ms (histogram)
-//!     // - coreml_efficiency_score (gauge)
-//!     // - coreml_throughput_inferences_per_sec (gauge)
+//!     Ok(())
+//! }
+//! ```
+//!
+//! ### StatsD Metrics
+//!
+//! High-performance UDP-based metrics collection:
+//!
+//! ```rust,no_run
+//! use agent_agency_apple_silicon::CoreMLManager;
+//!
+//! #[tokio::main]
+//! async fn main() -> Result<(), Box<dyn std::error::Error>> {
+//!     // Create manager with StatsD metrics
+//!     let manager = CoreMLManager::new()
+//!         .with_local_statsd_metrics("coreml")?;
+//!
+//!     // Or with custom StatsD server
+//!     let manager = CoreMLManager::new()
+//!         .with_statsd_metrics("statsd.example.com", 8125, "coreml")?;
 //!
 //!     Ok(())
 //! }
 //! ```
+//!
+//! ## Automatic Metrics Collection
+//!
+//! Both Prometheus and StatsD automatically collect during inference:
+//! - **Counters**: `coreml_requests_total`, `coreml_cache_hits_total`
+//! - **Histograms**: `coreml_inference_duration_ms`
+//! - **Gauges**: `coreml_efficiency_score`, `coreml_throughput_inferences_per_sec`
 
 use crate::types::*;
 use crate::async_inference::Priority;
@@ -3525,6 +3548,22 @@ impl CoreMLManager {
             .map_err(|e| format!("Failed to create Prometheus metrics: {}", e))?;
 
         Ok(self.with_metrics_collector(Arc::new(prometheus_metrics)))
+    }
+
+    /// Create with StatsD metrics collector
+    pub fn with_statsd_metrics(self, host: &str, port: u16, prefix: &str) -> Result<Self, Box<dyn std::error::Error>> {
+        let statsd_metrics = agent_agency_observability::metrics::statsd::StatsDMetrics::new(host, port, prefix)
+            .map_err(|e| format!("Failed to create StatsD metrics: {}", e))?;
+
+        Ok(self.with_metrics_collector(Arc::new(statsd_metrics)))
+    }
+
+    /// Create with localhost StatsD metrics (convenience method)
+    pub fn with_local_statsd_metrics(self, prefix: &str) -> Result<Self, Box<dyn std::error::Error>> {
+        let statsd_metrics = agent_agency_observability::metrics::statsd::StatsDMetrics::localhost(prefix)
+            .map_err(|e| format!("Failed to create StatsD metrics: {}", e))?;
+
+        Ok(self.with_metrics_collector(Arc::new(statsd_metrics)))
     }
 
     /// Get Prometheus metrics exporter (for HTTP endpoint)
