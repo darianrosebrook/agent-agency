@@ -335,6 +335,220 @@ pub enum ValidationType {
     SqlSafe,
 }
 
+/// Validate file upload data
+pub fn validate_file_upload(
+    filename: &str,
+    content_type: &str,
+    size_bytes: usize,
+    allowed_types: &[&str],
+) -> ValidationResult {
+    let mut result = ValidationResult {
+        is_valid: true,
+        errors: Vec::new(),
+        sanitized_value: Some(filename.to_string()),
+    };
+
+    // Filename validation
+    if filename.len() > MAX_FILENAME_LENGTH {
+        result.errors.push(format!(
+            "Filename exceeds maximum length of {} characters",
+            MAX_FILENAME_LENGTH
+        ));
+        result.is_valid = false;
+    }
+
+    // Check for dangerous filename patterns
+    if filename.contains("..") || filename.contains("/") || filename.contains("\\") {
+        result.errors.push("Filename contains dangerous path traversal patterns".to_string());
+        result.is_valid = false;
+    }
+
+    // Check for script injection in filename
+    if filename.contains('<') || filename.contains('>') || filename.contains('"') ||
+       filename.contains('\'') || filename.contains('|') {
+        result.errors.push("Filename contains potentially dangerous characters".to_string());
+        result.is_valid = false;
+    }
+
+    // File size validation
+    if size_bytes > MAX_FILE_SIZE_BYTES {
+        result.errors.push(format!(
+            "File size {} bytes exceeds maximum allowed size of {} bytes",
+            size_bytes, MAX_FILE_SIZE_BYTES
+        ));
+        result.is_valid = false;
+    }
+
+    // Content type validation
+    if !allowed_types.is_empty() && !allowed_types.contains(&content_type) {
+        result.errors.push(format!(
+            "Content type '{}' is not allowed. Allowed types: {:?}",
+            content_type, allowed_types
+        ));
+        result.is_valid = false;
+    }
+
+    // MIME type format validation
+    if !content_type.contains('/') || content_type.len() > 100 {
+        result.errors.push("Invalid content type format".to_string());
+        result.is_valid = false;
+    }
+
+    result
+}
+
+/// Validate API payload size and structure
+pub fn validate_api_payload(payload: &str, content_type: &str) -> ValidationResult {
+    let mut result = ValidationResult {
+        is_valid: true,
+        errors: Vec::new(),
+        sanitized_value: Some(payload.to_string()),
+    };
+
+    // Size validation based on content type
+    let max_size = match content_type {
+        "application/json" => MAX_JSON_PAYLOAD_SIZE,
+        "application/x-www-form-urlencoded" | "multipart/form-data" => MAX_FORM_DATA_SIZE,
+        _ => MAX_STRING_LENGTH,
+    };
+
+    if payload.len() > max_size {
+        result.errors.push(format!(
+            "Payload size {} bytes exceeds maximum allowed size of {} bytes for content type {}",
+            payload.len(), max_size, content_type
+        ));
+        result.is_valid = false;
+    }
+
+    // JSON structure validation
+    if content_type == "application/json" {
+        if let Err(e) = serde_json::from_str::<serde_json::Value>(payload) {
+            result.errors.push(format!("Invalid JSON structure: {}", e));
+            result.is_valid = false;
+        }
+
+        // Additional JSON security checks
+        if payload.contains('\0') {
+            result.errors.push("JSON payload contains null bytes".to_string());
+            result.is_valid = false;
+        }
+
+        // Check for extremely nested structures (potential DoS)
+        let nesting_depth = count_json_nesting(payload);
+        if nesting_depth > 10 {
+            result.errors.push("JSON payload has excessive nesting depth".to_string());
+            result.is_valid = false;
+        }
+    }
+
+    result
+}
+
+/// Validate query parameters
+pub fn validate_query_params(params: &[(String, String)]) -> ValidationResult {
+    let mut result = ValidationResult {
+        is_valid: true,
+        errors: Vec::new(),
+        sanitized_value: None,
+    };
+
+    for (key, value) in params {
+        // Key validation
+        if key.len() > 100 {
+            result.errors.push(format!("Query parameter key '{}' is too long", key));
+            result.is_valid = false;
+        }
+
+        if !IDENTIFIER_PATTERN.is_match(key) {
+            result.errors.push(format!("Query parameter key '{}' contains invalid characters", key));
+            result.is_valid = false;
+        }
+
+        // Value validation
+        if value.len() > MAX_QUERY_PARAM_LENGTH {
+            result.errors.push(format!("Query parameter '{}' value is too long", key));
+            result.is_valid = false;
+        }
+
+        // Check for injection patterns
+        if value.contains('<') || value.contains('>') || value.contains('"') ||
+           value.contains('\'') || value.contains('|') || value.contains(';') {
+            result.errors.push(format!("Query parameter '{}' contains potentially dangerous characters", key));
+            result.is_valid = false;
+        }
+    }
+
+    result
+}
+
+/// Validate HTTP headers
+pub fn validate_http_headers(headers: &[(String, String)]) -> ValidationResult {
+    let mut result = ValidationResult {
+        is_valid: true,
+        errors: Vec::new(),
+        sanitized_value: None,
+    };
+
+    for (key, value) in headers {
+        // Header name validation
+        if key.len() > 100 {
+            result.errors.push(format!("Header name '{}' is too long", key));
+            result.is_valid = false;
+        }
+
+        // RFC 7230 header name validation (token characters)
+        if !key.chars().all(|c| c.is_ascii() && (c.is_alphanumeric() || c == '-' || c == '_')) {
+            result.errors.push(format!("Header name '{}' contains invalid characters", key));
+            result.is_valid = false;
+        }
+
+        // Header value validation
+        if value.len() > MAX_HEADER_VALUE_LENGTH {
+            result.errors.push(format!("Header '{}' value is too long", key));
+            result.is_valid = false;
+        }
+
+        // Check for header injection
+        if value.contains('\r') || value.contains('\n') {
+            result.errors.push(format!("Header '{}' contains CRLF characters", key));
+            result.is_valid = false;
+        }
+
+        // Check for control characters
+        if value.chars().any(|c| c.is_control() && c != '\t') {
+            result.errors.push(format!("Header '{}' contains control characters", key));
+            result.is_valid = false;
+        }
+    }
+
+    result
+}
+
+/// Count JSON nesting depth to prevent DoS attacks
+fn count_json_nesting(json_str: &str) -> usize {
+    let mut max_depth = 0;
+    let mut current_depth = 0;
+    let mut in_string = false;
+    let mut escaped = false;
+
+    for c in json_str.chars() {
+        match c {
+            '"' if !escaped => in_string = !in_string,
+            '{' | '[' if !in_string => {
+                current_depth += 1;
+                max_depth = max_depth.max(current_depth);
+            }
+            '}' | ']' if !in_string => {
+                current_depth = current_depth.saturating_sub(1);
+            }
+            '\\' if in_string => escaped = !escaped,
+            _ => escaped = false,
+        }
+    }
+
+    max_depth
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -401,5 +615,152 @@ mod tests {
         assert!(validate_sql_safe("normal input", "field").is_valid);
         assert!(!validate_sql_safe("DROP TABLE users", "field").is_valid);
         assert!(!validate_sql_safe("SELECT * FROM users WHERE 1=1", "field").is_valid);
+    }
+
+    #[test]
+    fn test_file_upload_validation() {
+        // Valid file upload
+        let result = validate_file_upload(
+            "document.pdf",
+            "application/pdf",
+            1024 * 1024, // 1MB
+            ALLOWED_DOCUMENT_TYPES,
+        );
+        assert!(result.is_valid);
+
+        // Invalid filename (path traversal)
+        let result = validate_file_upload(
+            "../../../etc/passwd",
+            "text/plain",
+            100,
+            ALLOWED_DOCUMENT_TYPES,
+        );
+        assert!(!result.is_valid);
+
+        // Invalid file size
+        let result = validate_file_upload(
+            "large_file.pdf",
+            "application/pdf",
+            MAX_FILE_SIZE_BYTES + 1,
+            ALLOWED_DOCUMENT_TYPES,
+        );
+        assert!(!result.is_valid);
+
+        // Invalid content type
+        let result = validate_file_upload(
+            "script.exe",
+            "application/x-msdownload",
+            100,
+            ALLOWED_DOCUMENT_TYPES,
+        );
+        assert!(!result.is_valid);
+    }
+
+    #[test]
+    fn test_api_payload_validation() {
+        // Valid JSON payload
+        let result = validate_api_payload(
+            r#"{"key": "value", "number": 42}"#,
+            "application/json"
+        );
+        assert!(result.is_valid);
+
+        // Invalid JSON
+        let result = validate_api_payload(
+            r#"{"invalid": json}"#,
+            "application/json"
+        );
+        assert!(!result.is_valid);
+
+        // Oversized payload
+        let large_payload = "x".repeat(MAX_JSON_PAYLOAD_SIZE + 1);
+        let result = validate_api_payload(&large_payload, "application/json");
+        assert!(!result.is_valid);
+
+        // JSON with null bytes (security issue)
+        let result = validate_api_payload(
+            "{\"key\": \"value\\0bad\"}",
+            "application/json"
+        );
+        assert!(!result.is_valid);
+    }
+
+    #[test]
+    fn test_query_param_validation() {
+        // Valid parameters
+        let params = vec![
+            ("user_id".to_string(), "123".to_string()),
+            ("search".to_string(), "query".to_string()),
+        ];
+        let result = validate_query_params(&params);
+        assert!(result.is_valid);
+
+        // Invalid key characters
+        let params = vec![
+            ("user-id".to_string(), "123".to_string()), // hyphens not allowed in our pattern
+        ];
+        let result = validate_query_params(&params);
+        assert!(!result.is_valid);
+
+        // Oversized value
+        let large_value = "x".repeat(MAX_QUERY_PARAM_LENGTH + 1);
+        let params = vec![
+            ("param".to_string(), large_value),
+        ];
+        let result = validate_query_params(&params);
+        assert!(!result.is_valid);
+
+        // Dangerous characters
+        let params = vec![
+            ("param".to_string(), "value<script>".to_string()),
+        ];
+        let result = validate_query_params(&params);
+        assert!(!result.is_valid);
+    }
+
+    #[test]
+    fn test_http_header_validation() {
+        // Valid headers
+        let headers = vec![
+            ("content-type".to_string(), "application/json".to_string()),
+            ("authorization".to_string(), "Bearer token".to_string()),
+        ];
+        let result = validate_http_headers(&headers);
+        assert!(result.is_valid);
+
+        // Invalid header name
+        let headers = vec![
+            ("content type".to_string(), "application/json".to_string()), // spaces not allowed
+        ];
+        let result = validate_http_headers(&headers);
+        assert!(!result.is_valid);
+
+        // Oversized header value
+        let large_value = "x".repeat(MAX_HEADER_VALUE_LENGTH + 1);
+        let headers = vec![
+            ("x-custom".to_string(), large_value),
+        ];
+        let result = validate_http_headers(&headers);
+        assert!(!result.is_valid);
+
+        // CRLF injection
+        let headers = vec![
+            ("x-header".to_string(), "value\r\ninjected".to_string()),
+        ];
+        let result = validate_http_headers(&headers);
+        assert!(!result.is_valid);
+    }
+
+    #[test]
+    fn test_json_nesting_depth() {
+        // Shallow nesting
+        let json = r#"{"a": {"b": {"c": "value"}}}"#;
+        let result = validate_api_payload(json, "application/json");
+        assert!(result.is_valid);
+
+        // Deep nesting (DoS protection)
+        let deep_json = (0..12).fold("x".to_string(), |acc, _| format!(r#"{{"nested": {}}}"#, acc));
+        let result = validate_api_payload(&deep_json, "application/json");
+        assert!(!result.is_valid);
     }
 }
