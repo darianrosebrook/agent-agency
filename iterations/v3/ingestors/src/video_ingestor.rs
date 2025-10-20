@@ -174,7 +174,7 @@ impl VideoIngestor {
     }
 
     /// Get video tracks from AVAsset through Swift bridge
-    async fn get_video_tracks(&self, asset_reader: &AVAssetReader) -> Result<Vec<AVAssetTrack>> {
+    async fn get_video_tracks(&self, _asset_reader: &AVAssetReader) -> Result<Vec<AVAssetTrack>> {
         // Simulate video track detection
         // In real implementation, this would query AVAsset for video tracks
 
@@ -189,7 +189,7 @@ impl VideoIngestor {
     }
 
     /// Extract video metadata using AVAsset
-    async fn extract_video_metadata(&self, asset_reader: &AVAssetReader) -> Result<VideoMetadata> {
+    async fn extract_video_metadata(&self, _asset_reader: &AVAssetReader) -> Result<VideoMetadata> {
         // Simulate metadata extraction
         // In real implementation, this would query AVAsset properties
 

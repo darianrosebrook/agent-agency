@@ -140,7 +140,7 @@ impl GitWorktreeWorkspace {
             } else {
                 base_start.saturating_sub(offset.abs() as usize)
             };
-            let end_line = start_line + (hunk.old_lines as usize);
+            let _end_line = start_line + (hunk.old_lines as usize);
 
             // Remove old lines
             if start_line < lines.len() {

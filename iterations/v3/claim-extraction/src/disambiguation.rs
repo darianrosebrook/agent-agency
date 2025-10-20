@@ -835,7 +835,7 @@ impl ContextResolver {
         }
 
         // Must start with uppercase letter (common in Western names)
-        if !word.chars().next().unwrap().is_uppercase() {
+        if !word.chars().next().map_or(false, |c| c.is_uppercase()) {
             return false;
         }
 
@@ -860,7 +860,7 @@ impl ContextResolver {
             let next_word = words[index + 1];
             // Next word should also be capitalized and reasonable length for a last name
             if next_word.len() >= 2 && next_word.len() <= 20 &&
-               next_word.chars().next().unwrap().is_uppercase() &&
+               next_word.chars().next().map_or(false, |c| c.is_uppercase()) &&
                !next_word.contains(|c: char| !c.is_alphabetic() && c != '-' && c != '\'') {
                 return true;
             }
@@ -872,9 +872,9 @@ impl ContextResolver {
             let next_next_word = words[index + 2];
             // Middle initial pattern: single letter followed by period, then capitalized last name
             if next_word.len() == 2 && next_word.ends_with('.') &&
-               next_word.chars().next().unwrap().is_uppercase() &&
+               next_word.chars().next().map_or(false, |c| c.is_uppercase()) &&
                next_next_word.len() >= 2 && next_next_word.len() <= 20 &&
-               next_next_word.chars().next().unwrap().is_uppercase() {
+               next_next_word.chars().next().map_or(false, |c| c.is_uppercase()) {
                 return true;
             }
         }

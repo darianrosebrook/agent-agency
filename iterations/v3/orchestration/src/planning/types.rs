@@ -555,4 +555,20 @@ pub enum ExecutionEvent {
         stop_reason: String,
         timestamp: DateTime<Utc>,
     },
+
+    /// Arbiter adjudication started
+    AdjudicationStarted {
+        task_id: Uuid,
+        output_count: usize,
+        timestamp: DateTime<Utc>,
+    },
+
+    /// Arbiter adjudication completed
+    AdjudicationCompleted {
+        task_id: Uuid,
+        verdict_status: String,
+        confidence: f64,
+        waiver_required: bool,
+        timestamp: DateTime<Utc>,
+    },
 }

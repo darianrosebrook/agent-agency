@@ -3,7 +3,7 @@
 use crate::types::*;
 use anyhow::Result;
 use async_trait::async_trait;
-use tracing::{debug, warn};
+use tracing::warn;
 use std::hash::Hasher;
 use std::path::PathBuf;
 use std::sync::Arc;

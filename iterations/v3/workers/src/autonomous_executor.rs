@@ -15,6 +15,7 @@ use agent_agency_resilience::{CircuitBreaker, CircuitBreakerConfig};
 
 use super::super::orchestration::planning::types::{WorkingSpec, ExecutionArtifacts, ExecutionEvent};
 use super::super::orchestration::caws_runtime::{CawsRuntimeValidator, DiffStats, TaskDescriptor};
+use super::super::orchestration::arbiter::{ArbiterOrchestrator, ArbiterVerdict, VerdictStatus, WorkerOutput};
 
 // Optional self-prompting agent integration
 #[cfg(feature = "self-prompting")]
@@ -43,6 +44,8 @@ pub struct AutonomousExecutorConfig {
     pub change_budget_max_loc: usize,
     /// Enable self-prompting agent mode
     pub enable_self_prompting: bool,
+    /// Enable arbiter adjudication for all executions
+    pub enable_arbiter_adjudication: bool,
 }
 
 impl Default for AutonomousExecutorConfig {
@@ -58,6 +61,7 @@ impl Default for AutonomousExecutorConfig {
             change_budget_max_files: 50,
             change_budget_max_loc: 1000,
             enable_self_prompting: false, // Disabled by default
+            enable_arbiter_adjudication: true, // Enabled by default for CAWS governance
         }
     }
 }
@@ -66,6 +70,7 @@ impl Default for AutonomousExecutorConfig {
 pub struct AutonomousExecutor {
     worker_manager: Arc<WorkerPoolManager>,
     validator: Arc<dyn CawsRuntimeValidator>,
+    arbiter: Option<Arc<ArbiterOrchestrator>>,
     config: AutonomousExecutorConfig,
     event_sender: mpsc::UnboundedSender<ExecutionEvent>,
     circuit_breaker: Arc<CircuitBreaker>,
@@ -77,6 +82,7 @@ impl AutonomousExecutor {
     pub fn new(
         worker_manager: Arc<WorkerPoolManager>,
         validator: Arc<dyn CawsRuntimeValidator>,
+        arbiter: Option<Arc<ArbiterOrchestrator>>,
         config: AutonomousExecutorConfig,
     ) -> (Self, mpsc::UnboundedReceiver<ExecutionEvent>) {
         let (event_sender, event_receiver) = mpsc::unbounded_channel();
@@ -93,10 +99,18 @@ impl AutonomousExecutor {
 
         let circuit_breaker = Arc::new(CircuitBreaker::new(circuit_breaker_config));
 
+        // Initialize arbiter if enabled and provided
+        let arbiter = if config.enable_arbiter_adjudication {
+            arbiter
+        } else {
+            None
+        };
+
         (
             Self {
                 worker_manager,
                 validator,
+                arbiter,
                 config: config.clone(),
                 event_sender,
                 circuit_breaker,
@@ -116,6 +130,135 @@ impl AutonomousExecutor {
             },
             event_receiver,
         )
+    }
+
+    /// Execute task and collect worker outputs for arbiter adjudication
+    async fn execute_and_collect_outputs(
+        &self,
+        working_spec: &WorkingSpec,
+        task_id: Uuid,
+    ) -> Result<Vec<WorkerOutput>, AutonomousExecutionError> {
+        // Convert working spec to task spec
+        let task_spec = self.working_spec_to_task_spec(working_spec, task_id)?;
+
+        // Execute with workers and collect outputs
+        let assignment = self.worker_manager.execute_task(
+            task_spec.clone(),
+            Some(&self.circuit_breaker),
+        ).await?;
+
+        // For now, simulate collecting worker outputs
+        // In a full implementation, this would collect actual outputs from workers
+        let worker_output = WorkerOutput {
+            worker_id: assignment.worker_id,
+            task_id,
+            content: "Simulated worker output - would contain actual diff/changes".to_string(),
+            rationale: "Generated based on task requirements and CAWS compliance".to_string(),
+            diff_stats: DiffStats {
+                files_changed: 1,
+                lines_changed: 10,
+                touched_paths: vec!["src/example.rs".to_string()],
+            },
+            metadata: std::collections::HashMap::new(),
+        };
+
+        Ok(vec![worker_output])
+    }
+
+    /// Execute an approved verdict by applying the changes
+    async fn execute_approved_verdict(
+        &self,
+        working_spec: &WorkingSpec,
+        verdict: &ArbiterVerdict,
+        task_id: Uuid,
+    ) -> Result<ExecutionResult, AutonomousExecutionError> {
+        // For now, simulate successful execution
+        // In a full implementation, this would apply the approved changes
+        let artifacts = ExecutionArtifacts {
+            id: Uuid::new_v4(),
+            task_id,
+            artifacts: vec![],
+            created_at: Utc::now(),
+            total_size_bytes: 0,
+        };
+
+        Ok(ExecutionResult {
+            task_id,
+            working_spec_id: working_spec.id.clone(),
+            success: true,
+            artifacts,
+            error_message: None,
+            execution_time_ms: 1000, // simulated
+            completed_at: Utc::now(),
+        })
+    }
+
+    /// Execute a working spec autonomously with arbiter adjudication
+    pub async fn execute_with_arbiter(
+        &self,
+        working_spec: &WorkingSpec,
+        task_id: Uuid,
+    ) -> Result<ArbiterMediatedResult, AutonomousExecutionError> {
+        if !self.config.enable_arbiter_adjudication || self.arbiter.is_none() {
+            return Err(AutonomousExecutionError::ConfigurationError(
+                "Arbiter adjudication not enabled or arbiter not configured".to_string()
+            ));
+        }
+
+        let arbiter = self.arbiter.as_ref().unwrap();
+
+        tracing::info!("Starting arbiter-mediated execution for task: {} (spec: {})",
+            task_id, working_spec.id);
+
+        // Send initial event
+        self.send_event(ExecutionEvent::ExecutionStarted {
+            task_id,
+            working_spec_id: working_spec.id.clone(),
+            timestamp: Utc::now(),
+        }).await;
+
+        // Phase 1: Execute task and collect worker outputs
+        let execution_start = std::time::Instant::now();
+        let worker_outputs = self.execute_and_collect_outputs(working_spec, task_id).await?;
+
+        // Phase 2: Submit to arbiter for adjudication
+        self.send_event(ExecutionEvent::AdjudicationStarted {
+            task_id,
+            output_count: worker_outputs.len(),
+            timestamp: Utc::now(),
+        }).await;
+
+        let verdict = tokio::time::timeout(
+            std::time::Duration::from_secs(self.config.max_execution_time_seconds),
+            arbiter.adjudicate_task(working_spec, worker_outputs),
+        ).await
+        .map_err(|_| AutonomousExecutionError::TimeoutError)??;
+
+        self.send_event(ExecutionEvent::AdjudicationCompleted {
+            task_id,
+            verdict_status: verdict.status.clone(),
+            confidence: verdict.confidence,
+            waiver_required: verdict.waiver_required,
+            timestamp: Utc::now(),
+        }).await;
+
+        // Phase 3: Execute verdict (apply changes if approved)
+        let execution_result = if verdict.status == VerdictStatus::Approved {
+            Some(self.execute_approved_verdict(working_spec, &verdict, task_id).await?)
+        } else {
+            None
+        };
+
+        let total_duration = execution_start.elapsed();
+
+        Ok(ArbiterMediatedResult {
+            task_id,
+            working_spec_id: working_spec.id.clone(),
+            verdict,
+            execution_result,
+            total_duration_ms: total_duration.as_millis() as u64,
+            completed_at: Utc::now(),
+        })
     }
 
     /// Execute a working spec autonomously with full tracking
@@ -692,6 +835,17 @@ pub struct ExecutionResult {
 
 pub type Result<T> = std::result::Result<T, AutonomousExecutionError>;
 
+/// Result of arbiter-mediated execution
+#[derive(Debug, Clone)]
+pub struct ArbiterMediatedResult {
+    pub task_id: Uuid,
+    pub working_spec_id: String,
+    pub verdict: ArbiterVerdict,
+    pub execution_result: Option<ExecutionResult>,
+    pub total_duration_ms: u64,
+    pub completed_at: DateTime<Utc>,
+}
+
 #[derive(Debug, thiserror::Error)]
 pub enum AutonomousExecutionError {
     #[error("Worker execution failed: {0}")]
@@ -708,4 +862,7 @@ pub enum AutonomousExecutionError {
 
     #[error("Invalid working spec: {0}")]
     InvalidSpec(String),
+
+    #[error("Configuration error: {0}")]
+    ConfigurationError(String),
 }

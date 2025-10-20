@@ -103,7 +103,7 @@ impl SecretsManager {
         tags: Vec<String>,
     ) -> Result<()> {
         let now = chrono::Utc::now();
-        let metadata = SecretMetadata {
+        let _metadata = SecretMetadata {
             name: name.to_string(),
             description: description.map(|s| s.to_string()),
             created_at: now,

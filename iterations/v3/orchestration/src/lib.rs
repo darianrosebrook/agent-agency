@@ -1,5 +1,6 @@
 //! Orchestration core for V3
 pub mod adapter;
+pub mod arbiter;
 pub mod artifacts;
 pub mod autonomous_executor;
 pub mod caws_runtime;
@@ -45,4 +46,10 @@ pub use audited_orchestrator::{
 // Frontier exports
 pub use frontier::{
     Frontier, FrontierConfig, FrontierStats, FrontierError, TaskEntry,
+};
+
+// Arbiter exports
+pub use arbiter::{
+    ArbiterOrchestrator, ArbiterConfig, ArbiterVerdict, VerdictStatus,
+    WorkerOutput, EvidenceManifest, DebateResult, ArbiterError,
 };

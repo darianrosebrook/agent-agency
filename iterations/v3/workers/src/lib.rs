@@ -11,7 +11,7 @@ pub mod multimodal_scheduler;
 pub mod router;
 pub mod types;
 
-pub use autonomous_executor::{AutonomousExecutor, AutonomousExecutorConfig, ExecutionResult};
+pub use autonomous_executor::{AutonomousExecutor, AutonomousExecutorConfig, ExecutionResult, ArbiterMediatedResult};
 pub use caws_checker::{CawsChecker, ChangeComplexity};
 pub use executor::TaskExecutor;
 pub use manager::WorkerPoolManager;

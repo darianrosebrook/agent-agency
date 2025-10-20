@@ -518,9 +518,7 @@ impl MemoryStorage {
     }
 
     /// Optimize storage performance
-
     /// Clean up old states to free memory
-
     /// Clean up diffs that reference removed states
     async fn cleanup_orphaned_diffs(
         &self,
@@ -548,7 +546,6 @@ impl MemoryStorage {
     }
 
     /// Compress large states to save memory
-
     /// Compress data using gzip compression
     fn compress_data(&self, data: &[u8]) -> Result<Vec<u8>, WorkspaceError> {
         let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
@@ -561,7 +558,6 @@ impl MemoryStorage {
     }
 
     /// Update storage metrics
-
     async fn validate_diff(&self, diff: &WorkspaceDiff) -> Result<(), WorkspaceError> {
         // For file storage, validation is the same as memory storage
         if diff.from_state == diff.to_state {
@@ -1253,13 +1249,9 @@ impl DatabaseStorage {
     }
 
     /// Optimize storage performance
-
     /// Clean up old states to free memory
-
     /// Compress large states to save memory
-
     /// Update storage metrics
-
     /// Validate state before serialization
     fn validate_state_for_serialization(
         &self,

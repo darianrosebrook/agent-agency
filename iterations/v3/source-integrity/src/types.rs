@@ -184,6 +184,18 @@ pub enum AlertType {
     IntegrityUnknown,
 }
 
+impl AlertType {
+    pub fn from_string(s: &str) -> Result<Self, String> {
+        match s {
+            "tampering_detected" => Ok(AlertType::TamperingDetected),
+            "hash_mismatch" => Ok(AlertType::HashMismatch),
+            "verification_failed" => Ok(AlertType::VerificationFailed),
+            "integrity_unknown" => Ok(AlertType::IntegrityUnknown),
+            _ => Err(format!("Unknown alert type: {}", s)),
+        }
+    }
+}
+
 impl std::fmt::Display for AlertType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -202,6 +214,18 @@ pub enum AlertSeverity {
     Medium,
     High,
     Critical,
+}
+
+impl AlertSeverity {
+    pub fn from_string(s: &str) -> Result<Self, String> {
+        match s {
+            "low" => Ok(AlertSeverity::Low),
+            "medium" => Ok(AlertSeverity::Medium),
+            "high" => Ok(AlertSeverity::High),
+            "critical" => Ok(AlertSeverity::Critical),
+            _ => Err(format!("Unknown alert severity: {}", s)),
+        }
+    }
 }
 
 impl std::fmt::Display for AlertSeverity {
