@@ -115,11 +115,13 @@ impl DisambiguationStage {
 
                 // Filter out "that" when it's used as a conjunction (followed by a verb)
                 if pronoun_match == "that" {
-                    let index = sentence.to_lowercase().find("that").unwrap();
+                    let index = sentence.to_lowercase().find("that")
+                        .ok_or_else(|| "Expected 'that' not found in sentence".to_string())?;
                     let after_that = &sentence[index + 4..].trim_start();
 
                     // If followed by a verb or another pronoun, it's likely a conjunction
-                    let conjunction_pattern = Regex::new(r"\b(is|are|was|were|has|have|will|shall|did|does|can|could|should|would|may|might|it|they|he|she|we)\b").unwrap();
+                    let conjunction_pattern = Regex::new(r"\b(is|are|was|were|has|have|will|shall|did|does|can|could|should|would|may|might|it|they|he|she|we)\b")
+                        .map_err(|e| format!("Failed to compile conjunction regex: {}", e))?;
                     if conjunction_pattern.is_match(after_that) {
                         continue; // Skip this "that" as it's a conjunction
                     }
@@ -135,7 +137,8 @@ impl DisambiguationStage {
 
         for pronoun in unique_referential {
             // Find all occurrences of this pronoun
-            let pronoun_pattern = Regex::new(&format!(r"\b{}\b", regex::escape(&pronoun))).unwrap();
+            let pronoun_pattern = Regex::new(&format!(r"\b{}\b", regex::escape(&pronoun)))
+                .map_err(|e| format!("Failed to compile pronoun pattern for '{}': {}", pronoun, e))?;
             for mat in pronoun_pattern.find_iter(sentence) {
                 ambiguities.push(Ambiguity {
                     ambiguity_type: AmbiguityType::Pronoun,
@@ -151,9 +154,12 @@ impl DisambiguationStage {
 
         // Basic structural ambiguities (ported from V2)
         let structural_patterns = vec![
-            Regex::new(r"\b[A-Z][a-z]+ (is|are|was|were) [a-z]+ (and|or) [a-z]+\b").unwrap(),
-            Regex::new(r"\b[A-Z][a-z]+ (called|named|known as) [A-Z][a-z]+\b").unwrap(),
-            Regex::new(r"\b(before|after|during|while) [a-z]+ (and|or) [a-z]+\b").unwrap(),
+            Regex::new(r"\b[A-Z][a-z]+ (is|are|was|were) [a-z]+ (and|or) [a-z]+\b")
+                .map_err(|e| format!("Failed to compile structural pattern 1: {}", e))?,
+            Regex::new(r"\b[A-Z][a-z]+ (called|named|known as) [A-Z][a-z]+\b")
+                .map_err(|e| format!("Failed to compile structural pattern 2: {}", e))?,
+            Regex::new(r"\b(before|after|during|while) [a-z]+ (and|or) [a-z]+\b")
+                .map_err(|e| format!("Failed to compile structural pattern 3: {}", e))?,
         ];
 
         for pattern in &structural_patterns {
@@ -170,8 +176,10 @@ impl DisambiguationStage {
 
         // Temporal patterns (ported from V2)
         let temporal_patterns = vec![
-            Regex::new(r"\b(next|last|previous|upcoming|recent|soon|recently)\b").unwrap(),
-            Regex::new(r"\b(tomorrow|yesterday|today|now|then)\b").unwrap(),
+            Regex::new(r"\b(next|last|previous|upcoming|recent|soon|recently)\b")
+                .map_err(|e| format!("Failed to compile temporal pattern 1: {}", e))?,
+            Regex::new(r"\b(tomorrow|yesterday|today|now|then)\b")
+                .map_err(|e| format!("Failed to compile temporal pattern 2: {}", e))?,
         ];
 
         for pattern in &temporal_patterns {
@@ -216,7 +224,8 @@ impl DisambiguationStage {
             if let Some(referent) = referent_opt {
                 // Replace pronoun with referent in the sentence
                 let pronoun_regex =
-                    regex::Regex::new(&format!(r"\b{}\b", regex::escape(&pronoun))).unwrap();
+                    regex::Regex::new(&format!(r"\b{}\b", regex::escape(&pronoun)))
+                        .map_err(|e| format!("Failed to compile pronoun replacement regex for '{}': {}", pronoun, e))?;
                 resolved_sentence = pronoun_regex
                     .replace_all(&resolved_sentence, &referent.entity)
                     .to_string();
@@ -351,19 +360,23 @@ struct AmbiguityDetector {
 impl AmbiguityDetector {
     fn new() -> Self {
         Self {
-            pronoun_regex: Regex::new(r"\b(it|this|that|they|them|their|these|those)\b").unwrap(),
+            // SAFETY: Static regex patterns that are validated at compile time
+            pronoun_regex: Regex::new(r"\b(it|this|that|they|them|their|these|those)\b")
+                .expect("Static pronoun regex pattern should never fail"),
             technical_term_patterns: vec![
-                Regex::new(r"\b(API|UI|UX|DB|SQL|HTTP|JSON|XML)\b").unwrap(),
-                Regex::new(r"\b(function|method|class|interface|type)\b").unwrap(),
+                Regex::new(r"\b(API|UI|UX|DB|SQL|HTTP|JSON|XML)\b")
+                    .expect("Static technical term regex pattern should never fail"),
+                Regex::new(r"\b(function|method|class|interface|type)\b")
+                    .expect("Static programming term regex pattern should never fail"),
             ],
             scope_boundary_patterns: vec![Regex::new(
                 r"\b(in|within|inside|outside|across|between)\s+([a-zA-Z_]+)\b",
             )
-            .unwrap()],
+            .expect("Static scope boundary regex pattern should never fail")],
             temporal_patterns: vec![Regex::new(
                 r"\b(before|after|during|while|when|then|now|later)\b",
             )
-            .unwrap()],
+            .expect("Static temporal regex pattern should never fail")],
         }
     }
 
@@ -630,7 +643,9 @@ impl ContextResolver {
 
         // Extract from surrounding context (basic entity detection)
         if !context.surrounding_context.is_empty() {
-            let entity_pattern = Regex::new(r"\b[A-Z][a-z]+\b").unwrap();
+            // SAFETY: Static regex pattern for entity detection that is validated at compile time
+            let entity_pattern = Regex::new(r"\b[A-Z][a-z]+\b")
+                .expect("Static entity regex pattern should never fail");
             for mat in entity_pattern.find_iter(&context.surrounding_context) {
                 entities.push(mat.as_str().to_string());
             }

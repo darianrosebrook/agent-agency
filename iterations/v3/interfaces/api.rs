@@ -21,6 +21,7 @@ use crate::orchestration::orchestrate::Orchestrator;
 use crate::orchestration::planning::types::{WorkingSpec, ExecutionArtifacts};
 use crate::orchestration::tracking::{ProgressTracker, ExecutionProgress};
 use crate::orchestration::quality::QualityReport;
+use crate::self_prompting_agent::loop_controller::{SelfPromptingLoop, SelfPromptingEvent, ExecutionMode};
 
 /// API configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -89,6 +90,43 @@ pub struct TaskResultResponse {
     pub error_message: Option<String>,
 }
 
+/// Dashboard iteration summary
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DashboardIterationSummary {
+    pub iteration: usize,
+    pub score: f64,
+    pub stop_reason: String,
+    pub file_changes: usize,
+    pub timestamp: DateTime<Utc>,
+    pub model_used: String,
+}
+
+/// Dashboard task summary
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DashboardTaskSummary {
+    pub task_id: Uuid,
+    pub description: String,
+    pub status: String,
+    pub current_iteration: usize,
+    pub total_iterations: usize,
+    pub score: Option<f64>,
+    pub execution_mode: String,
+    pub start_time: DateTime<Utc>,
+    pub last_update: DateTime<Utc>,
+    pub iterations: Vec<DashboardIterationSummary>,
+}
+
+/// Diff summary for dashboard
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DashboardDiffSummary {
+    pub iteration: usize,
+    pub file_path: String,
+    pub change_type: String,
+    pub lines_added: usize,
+    pub lines_removed: usize,
+    pub diff_preview: String,
+}
+
 /// REST API server
 pub struct RestApi {
     config: ApiConfig,
@@ -147,6 +185,8 @@ impl RestApi {
             .route("/tasks/:task_id/cancel", post(cancel_task))
             .route("/tasks", get(list_tasks))
             .route("/metrics", get(get_metrics))
+            .route("/dashboard/tasks/:task_id", get(get_dashboard_data))
+            .route("/dashboard/tasks/:task_id/diffs/:iteration", get(get_diff_summary))
             .with_state(state)
     }
 
@@ -370,6 +410,60 @@ impl RestApi {
 
         Ok(metrics)
     }
+
+    /// Get dashboard data for a task
+    pub async fn get_dashboard_data(&self, task_id: Uuid) -> Result<DashboardTaskSummary, ApiError> {
+        let active_tasks = self.active_tasks.read().await;
+        let task_state = active_tasks.get(&task_id)
+            .ok_or_else(|| ApiError::TaskNotFound(task_id))?;
+
+        let progress = self.progress_tracker.get_progress(task_id).await
+            .map_err(|e| ApiError::InternalError(format!("Progress retrieval failed: {:?}", e)))?;
+
+        // Build iteration summaries (placeholder - would come from actual iteration data)
+        let iterations = vec![
+            DashboardIterationSummary {
+                iteration: 1,
+                score: 85.0,
+                stop_reason: "Quality plateau reached".to_string(),
+                file_changes: 3,
+                timestamp: Utc::now(),
+                model_used: "gpt-4-turbo".to_string(),
+            }
+        ];
+
+        Ok(DashboardTaskSummary {
+            task_id,
+            description: task_state.task_description.clone(),
+            status: format!("{:?}", task_state.status).to_lowercase(),
+            current_iteration: progress.current_iteration as usize,
+            total_iterations: progress.total_iterations as usize,
+            score: task_state.quality_report.as_ref().map(|r| r.overall_score),
+            execution_mode: "auto".to_string(), // Placeholder
+            start_time: task_state.started_at,
+            last_update: task_state.completed_at.unwrap_or_else(|| Utc::now()),
+            iterations,
+        })
+    }
+
+    /// Get diff summary for a task iteration
+    pub async fn get_diff_summary(&self, task_id: Uuid, iteration: usize) -> Result<Vec<DashboardDiffSummary>, ApiError> {
+        let active_tasks = self.active_tasks.read().await;
+        let _task_state = active_tasks.get(&task_id)
+            .ok_or_else(|| ApiError::TaskNotFound(task_id))?;
+
+        // Placeholder diff data - would come from actual artifacts
+        Ok(vec![
+            DashboardDiffSummary {
+                iteration,
+                file_path: "src/main.rs".to_string(),
+                change_type: "modified".to_string(),
+                lines_added: 15,
+                lines_removed: 5,
+                diff_preview: "@@ -10,5 +10,15 @@\n- old code\n+ new code".to_string(),
+            }
+        ])
+    }
 }
 
 #[derive(Clone)]
@@ -430,6 +524,22 @@ async fn get_metrics(
 ) -> Result<Json<HashMap<String, serde_json::Value>>, ApiError> {
     let metrics = state.api.get_metrics().await?;
     Ok(Json(metrics))
+}
+
+async fn get_dashboard_data(
+    State(state): State<ApiState>,
+    Path(task_id): Path<Uuid>,
+) -> Result<Json<DashboardTaskSummary>, ApiError> {
+    let dashboard_data = state.api.get_dashboard_data(task_id).await?;
+    Ok(Json(dashboard_data))
+}
+
+async fn get_diff_summary(
+    State(state): State<ApiState>,
+    Path((task_id, iteration)): Path<(Uuid, usize)>,
+) -> Result<Json<Vec<DashboardDiffSummary>>, ApiError> {
+    let diff_summary = state.api.get_diff_summary(task_id, iteration).await?;
+    Ok(Json(diff_summary))
 }
 
 pub type Result<T> = std::result::Result<T, ApiError>;

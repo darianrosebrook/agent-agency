@@ -405,7 +405,7 @@ impl Council {
                     let result = timeout(
                         Duration::from_secs(judge_timeout),
                         Self::conduct_single_judge_review_with_error_handling(
-                            judge_for_first_attempt, &context, circuit_breakers, recovery_orchestrator
+                            judge_for_first_attempt, &context, circuit_breakers, recovery_orchestrator.clone()
                         )
                     ).await;
 
@@ -534,7 +534,18 @@ impl Council {
         // Execute the judge review with circuit breaker protection if applicable
         let verdict_result = if let Some(circuit_breaker) = circuit_breakers.get("llm_service") {
             // Use circuit breaker for LLM-based judges
-            circuit_breaker.execute(|| judge.review_spec(context)).await
+            circuit_breaker.execute(|| async {
+                judge.review_spec(context).await.map_err(|e| {
+                    AgencyError::new(
+                        crate::error_handling::ErrorCategory::ExternalService,
+                        "JUDGE_REVIEW_FAILED",
+                        &format!("Judge review failed: {}", e),
+                        crate::error_handling::ErrorSeverity::Error,
+                        "council",
+                        "conduct_single_judge_review_with_error_handling"
+                    )
+                })
+            }).await
         } else {
             // Direct execution for other judges
             judge.review_spec(context).await.map_err(|e| {

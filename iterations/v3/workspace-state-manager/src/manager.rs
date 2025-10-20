@@ -997,7 +997,7 @@ impl WorkspaceStateManager {
             if let Some(previous_file) = previous_state.files.get(file_path) {
                 if current_file.content_hash != previous_file.content_hash {
                     // File was modified
-                    let new_content = current_file.content.clone().unwrap_or_else(|| Vec::new());
+                    let new_content = current_file.content.clone().unwrap_or_default();
                     changes.push(DiffChange::Modify {
                         path: file_path.clone(),
                         old_content: previous_file.content.clone(),
@@ -1006,7 +1006,7 @@ impl WorkspaceStateManager {
                 }
             } else {
                 // File was added
-                let content = current_file.content.clone().unwrap_or_else(|| Vec::new());
+                let content = current_file.content.clone().unwrap_or_default();
                 changes.push(DiffChange::Add {
                     path: file_path.clone(),
                     content,
@@ -1015,7 +1015,7 @@ impl WorkspaceStateManager {
         }
 
         // Check for deleted files
-        for (file_path, _previous_file) in &previous_state.files {
+        for file_path in previous_state.files.keys() {
             if !current_state.files.contains_key(file_path) {
                 // File was deleted
                 changes.push(DiffChange::Remove {

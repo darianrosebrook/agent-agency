@@ -5,9 +5,10 @@
 
 use crate::analytics::*;
 use agent_agency_database::DatabaseClient;
-use anyhow::Result;
+use anyhow::{Context, Result};
 use chrono::{DateTime, Timelike, Utc};
-use cadence::{BufferedUdpMetricSink, QueuingMetricSink, StatsdClient, UdpMetricSink};
+use thiserror::Error;
+use cadence::{BufferedUdpMetricSink, Counted, Gauged, Histogrammed, QueuingMetricSink, StatsdClient, UdpMetricSink};
 use redis::{AsyncCommands, Client as RedisClientImpl, aio::Connection};
 use reqwest::Client as HttpClient;
 use serde::{Deserialize, Serialize};
@@ -15,6 +16,15 @@ use std::collections::HashMap;
 use std::net::UdpSocket;
 use std::sync::Arc;
 use tokio::sync::RwLock;
+
+/// Analytics-specific errors
+#[derive(Debug, thiserror::Error)]
+pub enum AnalyticsError {
+    #[error("Model loading error: {0}")]
+    ModelLoadError(String),
+    #[error("Inference error: {0}")]
+    InferenceError(String),
+}
 
 /// Redis client trait for cache operations
 #[async_trait::async_trait]

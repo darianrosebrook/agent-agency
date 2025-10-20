@@ -10,6 +10,7 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use crate::error::{CouncilError, CouncilResult};
+use crate::risk_scorer::ComputationalComplexity;
 
 /// Judge verdict on a working specification
 #[derive(Debug, Clone, PartialEq)]

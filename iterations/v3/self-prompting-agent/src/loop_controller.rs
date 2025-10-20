@@ -91,6 +91,7 @@ impl SelfPromptingLoop {
         model_registry: Arc<ModelRegistry>,
         evaluator: Arc<EvaluationOrchestrator>,
         max_iterations: usize,
+        execution_mode: ExecutionMode,
         event_sender: Option<mpsc::UnboundedSender<SelfPromptingEvent>>,
     ) -> Self {
         let telemetry = AgentTelemetryCollector::new("self-prompting-loop".to_string());
@@ -101,6 +102,7 @@ impl SelfPromptingLoop {
             diff_generator: DiffGenerator::new(telemetry),
             prompting_strategy: Box::new(AdaptivePromptingStrategy::new()),
             max_iterations,
+            execution_mode,
             event_sender,
         }
     }
@@ -139,9 +141,24 @@ impl SelfPromptingLoop {
             info!("Iteration {}: Generated action request (type: {:?}, confidence: {:.2})",
                   iteration, action_request.action_type, action_request.confidence);
 
-            // 3. Apply the action if it requires changes
+            // 3. Apply the action if it requires changes (mode-dependent)
             if action_request.requires_changes() {
-                self.apply_action_request(&action_request, &task).await?;
+                match self.execution_mode {
+                    ExecutionMode::DryRun => {
+                        info!("Dry-run mode: Skipping changeset application");
+                        // Still generate artifacts but don't apply changes
+                    }
+                    ExecutionMode::Strict => {
+                        info!("Strict mode: Requesting user approval for changeset");
+                        // TODO: Implement user approval prompt
+                        // For now, skip application in strict mode
+                        warn!("Strict mode not yet implemented - skipping changeset application");
+                    }
+                    ExecutionMode::Auto => {
+                        info!("Auto mode: Applying changeset with quality gate validation");
+                        self.apply_action_request(&action_request, &task).await?;
+                    }
+                }
             }
 
             // 4. Create artifacts from action request

@@ -3063,8 +3063,11 @@ impl MultiModalVerificationEngine {
             }
         }
 
-        // Sort by relevance score
-        analyzed_files.sort_by(|a, b| b.relevance_score.partial_cmp(&a.relevance_score).unwrap());
+        // Sort by relevance score (handle potential NaN/Infinite values safely)
+        analyzed_files.sort_by(|a, b| {
+            b.relevance_score.partial_cmp(&a.relevance_score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
 
         // Limit results
         analyzed_files.truncate(20);

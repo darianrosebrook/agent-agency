@@ -87,7 +87,7 @@ impl WorkspaceViewManager {
 
         // Restore files from state
         let mut files_restored = 0;
-        for (relative_path, _file_state) in &state.files {
+        for relative_path in state.files.keys() {
             let target_path = view_path.join(relative_path);
 
             // Create parent directories

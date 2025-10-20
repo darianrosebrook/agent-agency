@@ -16,5 +16,6 @@ acceptance:
     given: "Multiple Rust crates with compilation errors"
     when: "Run cargo check across all packages"
     then: "Zero compilation errors reported"
+contracts: []
 non_functional:
   perf: { compile_time_ms: 30000 }

@@ -795,38 +795,89 @@ impl RecoveryOrchestrator {
             ErrorSeverity::Fatal => tracing::Level::ERROR,
         };
 
-        tracing::event!(
-            log_level,
-            error_id = %error.error_id,
-            category = ?error.category,
-            code = %error.code,
-            component = %error.component,
-            operation = %error.operation,
-            severity = ?error.severity,
-            retryable = error.retryable,
-            correlation_id = ?error.correlation_id,
-            "Error occurred: {}",
-            error.message
-        );
+        match log_level {
+            tracing::Level::ERROR => tracing::error!(
+                error_id = %error.error_id,
+                category = ?error.category,
+                code = %error.code,
+                component = %error.component,
+                operation = %error.operation,
+                severity = ?error.severity,
+                retryable = error.retryable,
+                correlation_id = ?error.correlation_id,
+                "Error occurred: {}",
+                error.message
+            ),
+            tracing::Level::WARN => tracing::warn!(
+                error_id = %error.error_id,
+                category = ?error.category,
+                code = %error.code,
+                component = %error.component,
+                operation = %error.operation,
+                severity = ?error.severity,
+                retryable = error.retryable,
+                correlation_id = ?error.correlation_id,
+                "Error occurred: {}",
+                error.message
+            ),
+            tracing::Level::INFO => tracing::info!(
+                error_id = %error.error_id,
+                category = ?error.category,
+                code = %error.code,
+                component = %error.component,
+                operation = %error.operation,
+                severity = ?error.severity,
+                retryable = error.retryable,
+                correlation_id = ?error.correlation_id,
+                "Error occurred: {}",
+                error.message
+            ),
+            tracing::Level::DEBUG => tracing::debug!(
+                error_id = %error.error_id,
+                category = ?error.category,
+                code = %error.code,
+                component = %error.component,
+                operation = %error.operation,
+                severity = ?error.severity,
+                retryable = error.retryable,
+                correlation_id = ?error.correlation_id,
+                "Error occurred: {}",
+                error.message
+            ),
+            _ => tracing::trace!(
+                error_id = %error.error_id,
+                category = ?error.category,
+                code = %error.code,
+                component = %error.component,
+                operation = %error.operation,
+                severity = ?error.severity,
+                retryable = error.retryable,
+                correlation_id = ?error.correlation_id,
+                "Error occurred: {}",
+                error.message
+            ),
+        }
 
         // Log error chain if present
         if !error.error_chain.is_empty() {
-            tracing::event!(
-                log_level,
-                error_id = %error.error_id,
-                "Error chain: {:?}",
-                error.error_chain
-            );
+            match log_level {
+                tracing::Level::ERROR => tracing::error!(error_id = %error.error_id, "Error chain: {:?}", error.error_chain),
+                tracing::Level::WARN => tracing::warn!(error_id = %error.error_id, "Error chain: {:?}", error.error_chain),
+                tracing::Level::INFO => tracing::info!(error_id = %error.error_id, "Error chain: {:?}", error.error_chain),
+                tracing::Level::DEBUG => tracing::debug!(error_id = %error.error_id, "Error chain: {:?}", error.error_chain),
+                tracing::Level::TRACE => tracing::trace!(error_id = %error.error_id, "Error chain: {:?}", error.error_chain),
+            }
         }
 
         // Log recovery strategies
         if !error.recovery_strategies.is_empty() {
-            tracing::event!(
-                log_level,
-                error_id = %error.error_id,
-                "Available recovery strategies: {}",
-                error.recovery_strategies.len()
-            );
+            match log_level {
+                tracing::Level::ERROR => tracing::error!(error_id = %error.error_id, "Available recovery strategies: {}", error.recovery_strategies.len()),
+                tracing::Level::WARN => tracing::warn!(error_id = %error.error_id, "Available recovery strategies: {}", error.recovery_strategies.len()),
+                tracing::Level::INFO => tracing::info!(error_id = %error.error_id, "Available recovery strategies: {}", error.recovery_strategies.len()),
+                tracing::Level::DEBUG => tracing::debug!(error_id = %error.error_id, "Available recovery strategies: {}", error.recovery_strategies.len()),
+                tracing::Level::TRACE => tracing::trace!(error_id = %error.error_id, "Available recovery strategies: {}", error.recovery_strategies.len()),
+            }
         }
     }
 
