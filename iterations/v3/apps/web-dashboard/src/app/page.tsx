@@ -241,21 +241,21 @@ export default function Dashboard() {
             />
           )}
 
-              {activeSection === "database" && (
-                <DatabaseExplorer
-                  onConnectionSelect={(connectionId) => {
-                    console.log("Database connection selected:", connectionId);
-                  }}
-                  onConnectionCreate={() => {
-                    console.log("Create new database connection");
-                    // TODO: Milestone 4 - Database Connection Management UI
-                    // - [ ] Implement connection creation dialog
-                    // - [ ] Add connection validation
-                    // - [ ] Support multiple database types (PostgreSQL, MySQL, SQLite)
-                    // - [ ] Implement connection testing before saving
-                  }}
-                />
-              )}
+          {activeSection === "database" && (
+            <DatabaseExplorer
+              onConnectionSelect={(connectionId) => {
+                console.log("Database connection selected:", connectionId);
+              }}
+              onConnectionCreate={() => {
+                console.log("Create new database connection");
+                // TODO: Milestone 4 - Database Connection Management UI
+                // - [ ] Implement connection creation dialog
+                // - [ ] Add connection validation
+                // - [ ] Support multiple database types (PostgreSQL, MySQL, SQLite)
+                // - [ ] Implement connection testing before saving
+              }}
+            />
+          )}
 
           {activeSection === "analytics" && (
             <div className="empty-state">

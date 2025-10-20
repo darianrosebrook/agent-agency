@@ -584,8 +584,8 @@ impl AsrEnricher {
     /// Execute speech recognition using SFSpeechRecognizer
     async fn execute_speech_recognition(
         &self,
-        _speech_recognizer: &str, // Placeholder for speech recognizer
-        _recognition_request: &str, // Placeholder for recognition request
+        _speech_recognizer: &SwiftSpeechRecognizer, // Swift speech recognizer
+        _recognition_request: &SFSpeechAudioBufferRecognitionRequest, // Recognition request
     ) -> Result<AsrResult> {
         // This would integrate with the Swift bridge to execute speech recognition
         // For now, return a placeholder result

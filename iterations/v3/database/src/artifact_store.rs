@@ -60,45 +60,45 @@ pub trait ArtifactStorage: Send + Sync {
     async fn store(
         &self,
         artifacts: &ExecutionArtifacts,
-        metadata: &ArtifactMetadata,
+        metadata: &agent_agency_contracts::execution_artifacts::ArtifactMetadata,
     ) -> Result<(), ArtifactStorageError>;
 
     /// Retrieve execution artifacts
     async fn retrieve(
         &self,
-        metadata: &ArtifactMetadata,
+        metadata: &agent_agency_contracts::execution_artifacts::ArtifactMetadata,
     ) -> Result<ExecutionArtifacts, ArtifactStorageError>;
 
     /// Delete artifacts
     async fn delete(
         &self,
-        metadata: &ArtifactMetadata,
+        metadata: &agent_agency_contracts::execution_artifacts::ArtifactMetadata,
     ) -> Result<(), ArtifactStorageError>;
 
     /// Find artifacts older than cutoff date
     async fn find_old_artifacts(
         &self,
         cutoff_date: chrono::DateTime<chrono::Utc>,
-    ) -> Result<Vec<ArtifactMetadata>, ArtifactStorageError>;
+    ) -> Result<Vec<agent_agency_contracts::execution_artifacts::ArtifactMetadata>, ArtifactStorageError>;
 
     /// Find latest artifact for task
     async fn find_latest(
         &self,
         task_id: Uuid,
-    ) -> Result<ArtifactMetadata, ArtifactStorageError>;
+    ) -> Result<agent_agency_contracts::execution_artifacts::ArtifactMetadata, ArtifactStorageError>;
 
     /// Find artifact by version
     async fn find_by_version(
         &self,
         task_id: Uuid,
         version: &str,
-    ) -> Result<ArtifactMetadata, ArtifactStorageError>;
+    ) -> Result<agent_agency_contracts::execution_artifacts::ArtifactMetadata, ArtifactStorageError>;
 
     /// List all versions for a task
     async fn list_versions(
         &self,
         task_id: Uuid,
-    ) -> Result<Vec<ArtifactMetadata>, ArtifactStorageError>;
+    ) -> Result<Vec<String>, ArtifactStorageError>;
 
     /// Count total artifacts
     async fn count_artifacts(&self) -> Result<usize, ArtifactStorageError>;
@@ -112,6 +112,59 @@ pub trait ArtifactStorage: Send + Sync {
 pub struct DatabaseArtifactStorage {
     pool: Arc<PgPool>,
     client: Arc<DatabaseClient>,
+}
+
+impl DatabaseArtifactStorage {
+    /// Convert contract ArtifactMetadata to database metadata
+    fn contract_to_db_metadata(
+        &self,
+        contract_metadata: &agent_agency_contracts::execution_artifacts::ArtifactMetadata,
+        task_id: Uuid,
+        size_bytes: u64,
+        version: String,
+    ) -> DatabaseArtifactMetadata {
+        DatabaseArtifactMetadata {
+            id: Uuid::new_v4(),
+            task_id,
+            created_at: chrono::Utc::now(),
+            size_bytes,
+            checksum: String::new(), // Will be calculated during storage
+            version,
+            compression_used: contract_metadata.compression_applied.unwrap_or(false),
+            integrity_verified: true,
+        }
+    }
+
+    /// Convert database metadata to contract ArtifactMetadata
+    fn db_to_contract_metadata(
+        &self,
+        db_metadata: &DatabaseArtifactMetadata,
+    ) -> agent_agency_contracts::execution_artifacts::ArtifactMetadata {
+        agent_agency_contracts::execution_artifacts::ArtifactMetadata {
+            compression_applied: Some(db_metadata.compression_used),
+            storage_location: Some(format!("database:{}", db_metadata.id)),
+            retention_policy: Some("default".to_string()),
+            tags: vec![],
+        }
+    }
+
+    /// Get the next version number for a task
+    async fn get_next_version_for_task(&self, task_id: Uuid) -> Result<i32, ArtifactStorageError> {
+        let row = sqlx::query(
+            r#"
+            SELECT COALESCE(MAX(CAST(version AS INTEGER)), 0) as max_version
+            FROM artifact_metadata
+            WHERE task_id = $1
+            "#
+        )
+        .bind(task_id)
+        .fetch_one(&*self.pool)
+        .await
+        .map_err(|e| ArtifactStorageError::DatabaseError(e.to_string()))?;
+
+        let max_version: i32 = row.get("max_version");
+        Ok(max_version + 1)
+    }
 }
 
 impl DatabaseArtifactStorage {
@@ -326,7 +379,7 @@ impl DatabaseArtifactStorage {
     }
 
     /// Map database rows to test artifacts structure
-    fn map_test_artifacts(&self, artifacts_by_type: &std::collections::HashMap<String, Vec<serde_json::Value>>) -> execution_artifacts::TestArtifacts {
+    fn map_test_artifacts(&self, artifacts_by_type: &std::collections::HashMap<String, Vec<serde_json::Value>>) -> agent_agency_contracts::execution_artifacts::TestArtifacts {
         use agent_agency_contracts::execution_artifacts::*;
 
         let unit_tests_data = artifacts_by_type.get("unit_tests");
@@ -342,7 +395,7 @@ impl DatabaseArtifactStorage {
     }
 
     /// Map database rows to test suite results
-    fn map_test_suite_results(&self, data: Option<&Vec<serde_json::Value>>) -> execution_artifacts::TestSuiteResults {
+    fn map_test_suite_results(&self, data: Option<&Vec<serde_json::Value>>) -> agent_agency_contracts::execution_artifacts::TestSuiteResults {
         use agent_agency_contracts::execution_artifacts::*;
 
         if let Some(values) = data {
@@ -364,8 +417,8 @@ impl DatabaseArtifactStorage {
     }
 
     /// Map database rows to E2E test results
-    fn map_e2e_test_results(&self, data: Option<&Vec<serde_json::Value>>) -> execution_artifacts::E2eTestResults {
-        use execution_artifacts::*;
+    fn map_e2e_test_results(&self, data: Option<&Vec<serde_json::Value>>) -> agent_agency_contracts::execution_artifacts::E2eTestResults {
+        use agent_agency_contracts::execution_artifacts::*;
 
         if let Some(values) = data {
             if let Some(first) = values.first() {
@@ -386,7 +439,7 @@ impl DatabaseArtifactStorage {
     }
 
     /// Map database rows to coverage results
-    fn map_coverage_results(&self, artifacts_by_type: &std::collections::HashMap<String, Vec<serde_json::Value>>) -> execution_artifacts::CoverageResults {
+    fn map_coverage_results(&self, artifacts_by_type: &std::collections::HashMap<String, Vec<serde_json::Value>>) -> agent_agency_contracts::execution_artifacts::CoverageResults {
         use agent_agency_contracts::execution_artifacts::*;
 
         let coverage_data = artifacts_by_type.get("coverage");
@@ -410,8 +463,8 @@ impl DatabaseArtifactStorage {
     }
 
     /// Map database rows to linting results
-    fn map_linting_results(&self, artifacts_by_type: &std::collections::HashMap<String, Vec<serde_json::Value>>) -> execution_artifacts::LintingResults {
-        use execution_artifacts::*;
+    fn map_linting_results(&self, artifacts_by_type: &std::collections::HashMap<String, Vec<serde_json::Value>>) -> agent_agency_contracts::execution_artifacts::LintingResults {
+        use agent_agency_contracts::execution_artifacts::*;
 
         let linting_data = artifacts_by_type.get("linting");
         if let Some(values) = linting_data {
@@ -433,35 +486,50 @@ impl DatabaseArtifactStorage {
         }
     }
 
-    /// Map database rows to code change statistics
-    fn map_code_changes(&self, artifacts_by_type: &std::collections::HashMap<String, Vec<serde_json::Value>>) -> execution_artifacts::CodeChangeStats {
-        use execution_artifacts::*;
+    /// Map database rows to code changes
+    fn map_code_changes(&self, artifacts_by_type: &std::collections::HashMap<String, Vec<serde_json::Value>>) -> agent_agency_contracts::execution_artifacts::CodeChanges {
+        use agent_agency_contracts::execution_artifacts::*;
 
         let code_change_data = artifacts_by_type.get("code_changes");
         if let Some(values) = code_change_data {
             if let Some(first) = values.first() {
-                // TODO: Parse actual code change statistics from database
+                // TODO: Parse actual code changes from database
                 // For now, return defaults
-                CodeChangeStats {
-                    files_modified: 0,
-                    lines_added: 0,
-                    lines_removed: 0,
-                    total_loc: 0,
+                CodeChanges {
+                    diffs: vec![],
+                    new_files: vec![],
+                    deleted_files: vec![],
+                    statistics: CodeChangeStats {
+                        files_modified: 0,
+                        lines_added: 0,
+                        lines_removed: 0,
+                        total_loc: 0,
+                    },
                 }
             } else {
-                CodeChangeStats {
-                    files_modified: 0,
-                    lines_added: 0,
-                    lines_removed: 0,
-                    total_loc: 0,
+                CodeChanges {
+                    diffs: vec![],
+                    new_files: vec![],
+                    deleted_files: vec![],
+                    statistics: CodeChangeStats {
+                        files_modified: 0,
+                        lines_added: 0,
+                        lines_removed: 0,
+                        total_loc: 0,
+                    },
                 }
             }
         } else {
-            CodeChangeStats {
-                files_modified: 0,
-                lines_added: 0,
-                lines_removed: 0,
-                total_loc: 0,
+            CodeChanges {
+                diffs: vec![],
+                new_files: vec![],
+                deleted_files: vec![],
+                statistics: CodeChangeStats {
+                    files_modified: 0,
+                    lines_added: 0,
+                    lines_removed: 0,
+                    total_loc: 0,
+                },
             }
         }
     }
@@ -483,37 +551,46 @@ impl ArtifactStorage for DatabaseArtifactStorage {
     async fn store(
         &self,
         artifacts: &ExecutionArtifacts,
-        metadata: &ArtifactMetadata,
+        contract_metadata: &agent_agency_contracts::execution_artifacts::ArtifactMetadata,
     ) -> Result<(), ArtifactStorageError> {
         let mut tx = self.pool.begin().await
             .map_err(|e| ArtifactStorageError::DatabaseError(e.to_string()))?;
 
+        // Calculate artifact size and create checksum
+        let artifact_data = serde_json::to_string(artifacts)
+            .map_err(|e| ArtifactStorageError::SerializationError(e.to_string()))?;
+        let total_size_bytes = artifact_data.len() as i64;
+        let checksum = Sha256::digest(artifact_data.as_bytes());
+        let checksum_hex = format!("{:x}", checksum);
+
         // Get next version number for this task
-        // TODO: Fix metadata type mismatch - contracts ArtifactMetadata vs DatabaseArtifactMetadata
-        let next_version = 1; // Temporary stub
+        let next_version = self.get_next_version_for_task(artifacts.task_id).await?;
+
+        // Create database metadata from contract metadata
+        let db_metadata = self.contract_to_db_metadata(
+            contract_metadata,
+            artifacts.task_id,
+            total_size_bytes as u64,
+            next_version.to_string(),
+        );
 
         // Insert artifact metadata
         sqlx::query(
             r#"
             INSERT INTO artifact_metadata (
-                id, task_id, execution_id, session_id, version,
-                artifact_types, total_size_bytes, compression_ratio,
-                created_at, expires_at, retention_policy, metadata
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+                id, task_id, created_at, size_bytes, checksum, version,
+                compression_used, integrity_verified
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
             "#
         )
-        .bind(uuid::Uuid::new_v4()) // task_id
-        .bind(uuid::Uuid::new_v4()) // id
-        .bind(None::<Uuid>) // execution_id
-        .bind(None::<Uuid>) // session_id
-        .bind(next_version)
-        .bind(vec!["unit_tests", "coverage", "linting", "types"]) // artifact_types
-        .bind(1000i64) // size_bytes
-        .bind(1.0) // compression_ratio
-        .bind(chrono::Utc::now()) // created_at
-        .bind(None::<DateTime<Utc>>) // expires_at
-        .bind("standard") // retention_policy
-        .bind(serde_json::json!({"checksum": "stub-checksum"})) // TODO: Fix metadata type
+        .bind(db_metadata.id)
+        .bind(db_metadata.task_id)
+        .bind(db_metadata.created_at)
+        .bind(db_metadata.size_bytes as i64)
+        .bind(checksum_hex)
+        .bind(db_metadata.version)
+        .bind(db_metadata.compression_used)
+        .bind(db_metadata.integrity_verified)
         .execute(&mut *tx)
         .await
         .map_err(|e| ArtifactStorageError::DatabaseError(e.to_string()))?;
@@ -562,7 +639,7 @@ impl ArtifactStorage for DatabaseArtifactStorage {
 
     async fn retrieve(
         &self,
-        metadata: &ArtifactMetadata,
+        metadata: &agent_agency_contracts::execution_artifacts::ArtifactMetadata,
     ) -> Result<ExecutionArtifacts, ArtifactStorageError> {
         let rows = sqlx::query(
             r#"
@@ -604,7 +681,7 @@ impl ArtifactStorage for DatabaseArtifactStorage {
 
     async fn delete(
         &self,
-        metadata: &ArtifactMetadata,
+        metadata: &agent_agency_contracts::execution_artifacts::ArtifactMetadata,
     ) -> Result<(), ArtifactStorageError> {
         let mut tx = self.pool.begin().await
             .map_err(|e| ArtifactStorageError::DatabaseError(e.to_string()))?;
@@ -632,7 +709,7 @@ impl ArtifactStorage for DatabaseArtifactStorage {
     async fn find_old_artifacts(
         &self,
         cutoff_date: DateTime<Utc>,
-    ) -> Result<Vec<ArtifactMetadata>, ArtifactStorageError> {
+    ) -> Result<Vec<agent_agency_contracts::execution_artifacts::ArtifactMetadata>, ArtifactStorageError> {
         let rows = sqlx::query(
             r#"
             SELECT id, task_id, created_at, size_bytes, metadata
@@ -682,7 +759,7 @@ impl ArtifactStorage for DatabaseArtifactStorage {
     async fn find_latest(
         &self,
         task_id: Uuid,
-    ) -> Result<ArtifactMetadata, ArtifactStorageError> {
+    ) -> Result<agent_agency_contracts::execution_artifacts::ArtifactMetadata, ArtifactStorageError> {
         let row = sqlx::query(
             r#"
             SELECT id, task_id, created_at, size_bytes, version, metadata
@@ -727,7 +804,7 @@ impl ArtifactStorage for DatabaseArtifactStorage {
         &self,
         task_id: Uuid,
         version: &str,
-    ) -> Result<ArtifactMetadata, ArtifactStorageError> {
+    ) -> Result<agent_agency_contracts::execution_artifacts::ArtifactMetadata, ArtifactStorageError> {
         let row = sqlx::query(
             r#"
             SELECT am.id, am.task_id, am.created_at, am.size_bytes, am.version, am.metadata
@@ -770,7 +847,7 @@ impl ArtifactStorage for DatabaseArtifactStorage {
     async fn list_versions(
         &self,
         task_id: Uuid,
-    ) -> Result<Vec<ArtifactMetadata>, ArtifactStorageError> {
+    ) -> Result<Vec<String>, ArtifactStorageError> {
         let rows = sqlx::query(
             r#"
             SELECT am.id, am.task_id, am.created_at, am.size_bytes, am.version, am.metadata
@@ -784,30 +861,15 @@ impl ArtifactStorage for DatabaseArtifactStorage {
         .await
         .map_err(|e| ArtifactStorageError::DatabaseError(e.to_string()))?;
 
-        let mut artifacts = Vec::new();
-        for row in rows {
-            let id: Uuid = row.get("id");
-            let task_id: Uuid = row.get("task_id");
-            let created_at: DateTime<Utc> = row.get("created_at");
-            let size_bytes: i64 = row.get("size_bytes");
-            let version: i32 = row.get("version");
-            let db_metadata: serde_json::Value = row.get("metadata");
+        let versions: Vec<String> = rows
+            .into_iter()
+            .map(|row| {
+                let version: i32 = row.get("version");
+                version.to_string()
+            })
+            .collect();
 
-            let checksum = db_metadata
-                .get("checksum")
-                .and_then(|v| v.as_str())
-                .unwrap_or("")
-                .to_string();
-
-            artifacts.push(ArtifactMetadata {
-                compression_applied: Some(false),
-                storage_location: Some("database".to_string()),
-                retention_policy: Some("standard".to_string()),
-                tags: vec![],
-            });
-        }
-
-        Ok(artifacts)
+        Ok(versions)
     }
 
     async fn count_artifacts(&self) -> Result<usize, ArtifactStorageError> {

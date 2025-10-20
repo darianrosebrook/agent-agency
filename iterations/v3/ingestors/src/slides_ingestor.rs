@@ -184,7 +184,7 @@ impl SlidesIngestor {
     fn find_slide_elements<'a>(&self, presentation: &'a roxmltree::Node<'a, '_>) -> impl Iterator<Item = roxmltree::Node<'a, '_>> {
         presentation
             .descendants()
-            .filter(|node| {
+            .filter(move |node| {
                 let tag_name = node.tag_name().name();
                 tag_name == "slide" || tag_name == "key:slide"
             })
@@ -207,14 +207,11 @@ impl SlidesIngestor {
                 stability_score: None,
                 blocks: vec![Block {
                     id: Uuid::new_v4(),
-                    block_type: BlockType::Text,
+                    role: BlockRole::Title,
+                    text: title,
                     bbox: None,
-                    content: title,
-                    confidence: 1.0,
-                    metadata: HashMap::from([
-                        ("slide_index".to_string(), slide_index.to_string()),
-                        ("element_type".to_string(), "title".to_string()),
-                    ]),
+                    ocr_confidence: Some(1.0),
+                    raw_bytes: None,
                 }],
             });
         }
@@ -274,15 +271,11 @@ impl SlidesIngestor {
                         stability_score: None,
                         blocks: vec![Block {
                             id: Uuid::new_v4(),
-                            block_type: BlockType::Text,
+                            role: BlockRole::Bullet,
+                            text: text_content,
                             bbox: None,
-                            content: text_content,
-                            confidence: 1.0,
-                            metadata: HashMap::from([
-                                ("slide_index".to_string(), slide_index.to_string()),
-                                ("element_type".to_string(), "text".to_string()),
-                                ("text_index".to_string(), text_index.to_string()),
-                            ]),
+                            ocr_confidence: Some(1.0),
+                            raw_bytes: None,
                         }],
                     });
                 }
@@ -320,15 +313,11 @@ impl SlidesIngestor {
                 stability_score: None,
                 blocks: vec![Block {
                     id: Uuid::new_v4(),
-                    block_type: BlockType::Image,
+                    role: BlockRole::Code,
+                    text: description,
                     bbox: None,
-                    content: description,
-                    confidence: 1.0,
-                    metadata: HashMap::from([
-                        ("slide_index".to_string(), slide_index.to_string()),
-                        ("element_type".to_string(), media_type),
-                        ("media_index".to_string(), media_index.to_string()),
-                    ]),
+                    ocr_confidence: Some(1.0),
+                    raw_bytes: None,
                 }],
             });
         }
@@ -363,15 +352,11 @@ impl SlidesIngestor {
                 stability_score: None,
                 blocks: vec![Block {
                     id: Uuid::new_v4(),
-                    block_type: BlockType::Text,
+                    role: BlockRole::Code,
+                    text: description,
                     bbox: None,
-                    content: description,
-                    confidence: 1.0,
-                    metadata: HashMap::from([
-                        ("slide_index".to_string(), slide_index.to_string()),
-                        ("element_type".to_string(), shape_type),
-                        ("shape_index".to_string(), shape_index.to_string()),
-                    ]),
+                    ocr_confidence: Some(1.0),
+                    raw_bytes: None,
                 }],
             });
         }

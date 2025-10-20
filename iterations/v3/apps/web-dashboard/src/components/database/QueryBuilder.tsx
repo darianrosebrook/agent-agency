@@ -1,7 +1,12 @@
 "use client";
 
 import React, { useState, useCallback } from "react";
-import { QueryBuilderProps, QueryRequest, DatabaseTable, SavedQuery } from "@/types/database";
+import {
+  QueryBuilderProps,
+  QueryRequest,
+  DatabaseTable,
+  SavedQuery,
+} from "@/types/database";
 import { databaseApiClient, DatabaseApiError } from "@/lib/database-api";
 import styles from "./QueryBuilder.module.scss";
 
@@ -94,7 +99,13 @@ export default function QueryBuilder({
       showSaveDialog: false,
       saveQueryName: "",
     }));
-  }, [state.saveQueryName, state.sqlQuery, state.parameters, state.isReadOnly, onQuerySave]);
+  }, [
+    state.saveQueryName,
+    state.sqlQuery,
+    state.parameters,
+    state.isReadOnly,
+    onQuerySave,
+  ]);
 
   // Load saved query
   const handleLoadQuery = useCallback((savedQuery: SavedQuery) => {
@@ -141,17 +152,23 @@ export default function QueryBuilder({
   }, []);
 
   // Insert column name into query
-  const handleInsertColumn = useCallback((tableName: string, columnName: string) => {
-    const insertText = `"${tableName}"."${columnName}"`;
-    setState((prev) => ({
-      ...prev,
-      sqlQuery: prev.sqlQuery + insertText,
-    }));
-  }, []);
+  const handleInsertColumn = useCallback(
+    (tableName: string, columnName: string) => {
+      const insertText = `"${tableName}"."${columnName}"`;
+      setState((prev) => ({
+        ...prev,
+        sqlQuery: prev.sqlQuery + insertText,
+      }));
+    },
+    []
+  );
 
   // Generate sample SELECT query
   const generateSelectQuery = useCallback((table: DatabaseTable) => {
-    const columns = table.columns.slice(0, 5).map((col) => `"${col.name}"`).join(", ");
+    const columns = table.columns
+      .slice(0, 5)
+      .map((col) => `"${col.name}"`)
+      .join(", ");
     const query = `SELECT ${columns}\nFROM "${table.schema}"."${table.name}"\nLIMIT 100;`;
     setState((prev) => ({ ...prev, sqlQuery: query }));
   }, []);
@@ -171,7 +188,8 @@ export default function QueryBuilder({
       <div className={styles.builderHeader}>
         <h2>SQL Query Builder</h2>
         <p className={styles.description}>
-          Build and execute SQL queries against your database with safety constraints.
+          Build and execute SQL queries against your database with safety
+          constraints.
         </p>
       </div>
 
@@ -185,7 +203,12 @@ export default function QueryBuilder({
                 <input
                   type="checkbox"
                   checked={state.isReadOnly}
-                  onChange={(e) => setState((prev) => ({ ...prev, isReadOnly: e.target.checked }))}
+                  onChange={(e) =>
+                    setState((prev) => ({
+                      ...prev,
+                      isReadOnly: e.target.checked,
+                    }))
+                  }
                 />
                 Read-only query
               </label>
@@ -200,9 +223,7 @@ export default function QueryBuilder({
                     Executing...
                   </>
                 ) : (
-                  <>
-                    ▶️ Execute Query
-                  </>
+                  <>▶️ Execute Query</>
                 )}
               </button>
             </div>
@@ -210,7 +231,9 @@ export default function QueryBuilder({
 
           <textarea
             value={state.sqlQuery}
-            onChange={(e) => setState((prev) => ({ ...prev, sqlQuery: e.target.value }))}
+            onChange={(e) =>
+              setState((prev) => ({ ...prev, sqlQuery: e.target.value }))
+            }
             placeholder="Enter your SQL query here..."
             className={styles.queryTextarea}
             rows={10}
@@ -227,7 +250,9 @@ export default function QueryBuilder({
                     <input
                       type="text"
                       value={param}
-                      onChange={(e) => handleParameterChange(index, e.target.value)}
+                      onChange={(e) =>
+                        handleParameterChange(index, e.target.value)
+                      }
                       placeholder="Parameter value"
                       className={styles.parameterInput}
                     />
@@ -240,7 +265,10 @@ export default function QueryBuilder({
                   </div>
                 ))}
               </div>
-              <button onClick={handleAddParameter} className={styles.addParameterButton}>
+              <button
+                onClick={handleAddParameter}
+                className={styles.addParameterButton}
+              >
                 + Add Parameter
               </button>
             </div>
@@ -249,7 +277,9 @@ export default function QueryBuilder({
           {/* Query Actions */}
           <div className={styles.queryActions}>
             <button
-              onClick={() => setState((prev) => ({ ...prev, showSaveDialog: true }))}
+              onClick={() =>
+                setState((prev) => ({ ...prev, showSaveDialog: true }))
+              }
               disabled={!state.sqlQuery.trim()}
               className={styles.saveButton}
             >
@@ -271,7 +301,10 @@ export default function QueryBuilder({
             <h3>Tables</h3>
             <div className={styles.tableList}>
               {tables.map((table) => (
-                <details key={`${table.schema}.${table.name}`} className={styles.tableItem}>
+                <details
+                  key={`${table.schema}.${table.name}`}
+                  className={styles.tableItem}
+                >
                   <summary className={styles.tableSummary}>
                     <span className={styles.tableName}>{table.name}</span>
                     <span className={styles.tableType}>{table.type}</span>
@@ -295,12 +328,22 @@ export default function QueryBuilder({
                       <h4>Columns</h4>
                       {table.columns.map((column) => (
                         <div key={column.name} className={styles.columnItem}>
-                          <span className={styles.columnName}>{column.name}</span>
-                          <span className={styles.columnType}>{column.type}</span>
-                          {column.primary_key && <span className={styles.pkBadge}>PK</span>}
-                          {column.foreign_key && <span className={styles.fkBadge}>FK</span>}
+                          <span className={styles.columnName}>
+                            {column.name}
+                          </span>
+                          <span className={styles.columnType}>
+                            {column.type}
+                          </span>
+                          {column.primary_key && (
+                            <span className={styles.pkBadge}>PK</span>
+                          )}
+                          {column.foreign_key && (
+                            <span className={styles.fkBadge}>FK</span>
+                          )}
                           <button
-                            onClick={() => handleInsertColumn(table.name, column.name)}
+                            onClick={() =>
+                              handleInsertColumn(table.name, column.name)
+                            }
                             className={styles.insertColumnButton}
                           >
                             +
@@ -322,7 +365,9 @@ export default function QueryBuilder({
                 {state.savedQueries.map((query) => (
                   <div key={query.id} className={styles.savedQueryItem}>
                     <div className={styles.savedQueryHeader}>
-                      <span className={styles.savedQueryName}>{query.name}</span>
+                      <span className={styles.savedQueryName}>
+                        {query.name}
+                      </span>
                       <span className={styles.savedQueryDate}>
                         {new Date(query.created_at).toLocaleDateString()}
                       </span>
@@ -349,41 +394,52 @@ export default function QueryBuilder({
             <h3>Query Templates</h3>
             <div className={styles.templatesList}>
               <button
-                onClick={() => setState((prev) => ({
-                  ...prev,
-                  sqlQuery: "SELECT * FROM table_name LIMIT 100;",
-                  parameters: [],
-                }))}
+                onClick={() =>
+                  setState((prev) => ({
+                    ...prev,
+                    sqlQuery: "SELECT * FROM table_name LIMIT 100;",
+                    parameters: [],
+                  }))
+                }
                 className={styles.templateButton}
               >
                 Basic SELECT
               </button>
               <button
-                onClick={() => setState((prev) => ({
-                  ...prev,
-                  sqlQuery: "SELECT COUNT(*) FROM table_name WHERE column_name = $1;",
-                  parameters: [""],
-                }))}
+                onClick={() =>
+                  setState((prev) => ({
+                    ...prev,
+                    sqlQuery:
+                      "SELECT COUNT(*) FROM table_name WHERE column_name = $1;",
+                    parameters: [""],
+                  }))
+                }
                 className={styles.templateButton}
               >
                 COUNT with WHERE
               </button>
               <button
-                onClick={() => setState((prev) => ({
-                  ...prev,
-                  sqlQuery: "SELECT * FROM table_name ORDER BY column_name DESC LIMIT 10;",
-                  parameters: [],
-                }))}
+                onClick={() =>
+                  setState((prev) => ({
+                    ...prev,
+                    sqlQuery:
+                      "SELECT * FROM table_name ORDER BY column_name DESC LIMIT 10;",
+                    parameters: [],
+                  }))
+                }
                 className={styles.templateButton}
               >
                 TOP 10 Ordered
               </button>
               <button
-                onClick={() => setState((prev) => ({
-                  ...prev,
-                  sqlQuery: "SELECT column_name, COUNT(*) FROM table_name GROUP BY column_name ORDER BY COUNT(*) DESC;",
-                  parameters: [],
-                }))}
+                onClick={() =>
+                  setState((prev) => ({
+                    ...prev,
+                    sqlQuery:
+                      "SELECT column_name, COUNT(*) FROM table_name GROUP BY column_name ORDER BY COUNT(*) DESC;",
+                    parameters: [],
+                  }))
+                }
                 className={styles.templateButton}
               >
                 GROUP BY Count
@@ -411,12 +467,17 @@ export default function QueryBuilder({
                 {state.executionResult.result?.row_count || 0} rows returned
               </span>
               <span>
-                Executed in {(state.executionResult.execution_stats?.execution_time_ms || 0).toFixed(2)}ms
+                Executed in{" "}
+                {(
+                  state.executionResult.execution_stats?.execution_time_ms || 0
+                ).toFixed(2)}
+                ms
               </span>
             </div>
           </div>
 
-          {state.executionResult.result?.rows && state.executionResult.result.rows.length > 0 ? (
+          {state.executionResult.result?.rows &&
+          state.executionResult.result.rows.length > 0 ? (
             <div className={styles.resultsTable}>
               <table className={styles.dataTable}>
                 <thead>
@@ -427,20 +488,27 @@ export default function QueryBuilder({
                   </tr>
                 </thead>
                 <tbody>
-                  {state.executionResult.result.rows.slice(0, 100).map((row: any, index: number) => (
-                    <tr key={index}>
-                      {state.executionResult.result.columns.map((col: any) => (
-                        <td key={col.name}>
-                          {row[col.name] !== null ? String(row[col.name]) : "NULL"}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
+                  {state.executionResult.result.rows
+                    .slice(0, 100)
+                    .map((row: any, index: number) => (
+                      <tr key={index}>
+                        {state.executionResult.result.columns.map(
+                          (col: any) => (
+                            <td key={col.name}>
+                              {row[col.name] !== null
+                                ? String(row[col.name])
+                                : "NULL"}
+                            </td>
+                          )
+                        )}
+                      </tr>
+                    ))}
                 </tbody>
               </table>
               {state.executionResult.result.rows.length > 100 && (
                 <div className={styles.resultsNote}>
-                  Showing first 100 rows of {state.executionResult.result.row_count} total rows.
+                  Showing first 100 rows of{" "}
+                  {state.executionResult.result.row_count} total rows.
                 </div>
               )}
             </div>
@@ -469,7 +537,12 @@ export default function QueryBuilder({
                 <input
                   type="text"
                   value={state.saveQueryName}
-                  onChange={(e) => setState((prev) => ({ ...prev, saveQueryName: e.target.value }))}
+                  onChange={(e) =>
+                    setState((prev) => ({
+                      ...prev,
+                      saveQueryName: e.target.value,
+                    }))
+                  }
                   placeholder="Enter a name for this query"
                   className={styles.modalInput}
                 />
@@ -477,7 +550,9 @@ export default function QueryBuilder({
             </div>
             <div className={styles.modalActions}>
               <button
-                onClick={() => setState((prev) => ({ ...prev, showSaveDialog: false }))}
+                onClick={() =>
+                  setState((prev) => ({ ...prev, showSaveDialog: false }))
+                }
                 className={styles.cancelButton}
               >
                 Cancel

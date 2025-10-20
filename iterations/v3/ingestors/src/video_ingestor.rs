@@ -175,14 +175,14 @@ impl VideoIngestor {
         // Simulate video track detection
         // In real implementation, this would query AVAsset for video tracks
 
-        vec![AVAssetTrack {
+        Ok(vec![AVAssetTrack {
             track_id: 1,
             media_type: "vide".to_string(),
             natural_size: (1920.0, 1080.0),
             nominal_frame_rate: 30.0,
             estimated_data_rate: 5000000.0,
             format_descriptions: vec!["H.264".to_string()],
-        }]
+        }])
     }
 
     /// Extract video metadata using AVAsset

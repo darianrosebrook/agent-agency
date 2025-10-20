@@ -117,7 +117,12 @@ class DatabaseApiClient {
         primary_key: "id",
         columns: [
           { name: "id", type: "uuid", nullable: false, primary_key: true },
-          { name: "task_id", type: "uuid", nullable: false, primary_key: false },
+          {
+            name: "task_id",
+            type: "uuid",
+            nullable: false,
+            primary_key: false,
+          },
           {
             name: "artifact_type",
             type: "varchar(50)",
@@ -157,7 +162,12 @@ class DatabaseApiClient {
         primary_key: "id",
         columns: [
           { name: "id", type: "uuid", nullable: false, primary_key: true },
-          { name: "task_id", type: "uuid", nullable: false, primary_key: false },
+          {
+            name: "task_id",
+            type: "uuid",
+            nullable: false,
+            primary_key: false,
+          },
           {
             name: "version_number",
             type: "integer",
@@ -353,9 +363,7 @@ class DatabaseApiClient {
       // Mock write operation
       return {
         result: {
-          columns: [
-            { name: "count", type: "bigint", nullable: false },
-          ],
+          columns: [{ name: "count", type: "bigint", nullable: false }],
           rows: [],
           row_count: 0,
           execution_time_ms: 12.5,
@@ -371,9 +379,7 @@ class DatabaseApiClient {
       const query = "CREATE INDEX idx_example ON example_table(column);";
       return {
         result: {
-          columns: [
-            { name: "count", type: "bigint", nullable: false },
-          ],
+          columns: [{ name: "count", type: "bigint", nullable: false }],
           rows: [],
           row_count: 0,
           execution_time_ms: 8.3,
@@ -406,7 +412,7 @@ class DatabaseApiClient {
     try {
       const payload = {
         ...tableQuery,
-        connection_id: connectionId,
+        connection_id: _connectionId,
       };
 
       const response = await apiClient.request<ExecuteQueryResponse>(
@@ -491,7 +497,7 @@ class DatabaseApiClient {
     ];
 
     return {
-      results: mockResults.map(result => ({
+      results: mockResults.map((result) => ({
         ...result,
         similarity: result.score || result.distance || 0.85,
       })),

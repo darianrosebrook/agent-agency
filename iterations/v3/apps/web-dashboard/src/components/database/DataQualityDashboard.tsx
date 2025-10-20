@@ -1,7 +1,11 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { DataQualityDashboardProps, DatabaseMetrics, DataQualityMetric } from "@/types/database";
+import {
+  DataQualityDashboardProps,
+  DatabaseMetrics,
+  DataQualityMetric,
+} from "@/types/database";
 import { databaseApiClient, DatabaseApiError } from "@/lib/database-api";
 import styles from "./DataQualityDashboard.module.scss";
 
@@ -181,7 +185,9 @@ export default function DataQualityDashboard({
         <div className={styles.headerActions}>
           <div className={styles.lastRefresh}>
             {state.lastRefresh && (
-              <span>Last updated: {state.lastRefresh.toLocaleTimeString()}</span>
+              <span>
+                Last updated: {state.lastRefresh.toLocaleTimeString()}
+              </span>
             )}
           </div>
           <button onClick={handleRefresh} className={styles.refreshButton}>
@@ -241,11 +247,15 @@ export default function DataQualityDashboard({
           <h3>Connection Pool</h3>
           <div className={styles.metricGrid}>
             <div className={styles.metricCard}>
-              <div className={styles.metricValue}>{metrics.connections_active}</div>
+              <div className={styles.metricValue}>
+                {metrics.connections_active}
+              </div>
               <div className={styles.metricLabel}>Active Connections</div>
             </div>
             <div className={styles.metricCard}>
-              <div className={styles.metricValue}>{metrics.connections_idle}</div>
+              <div className={styles.metricValue}>
+                {metrics.connections_idle}
+              </div>
               <div className={styles.metricLabel}>Idle Connections</div>
             </div>
           </div>
@@ -259,10 +269,17 @@ export default function DataQualityDashboard({
               .flatMap((table) => table.data_quality)
               .slice(0, 12) // Show top 12 metrics
               .map((metric, index) => (
-                <div key={`${metric.name}-${index}`} className={styles.qualityMetric}>
+                <div
+                  key={`${metric.name}-${index}`}
+                  className={styles.qualityMetric}
+                >
                   <div className={styles.metricHeader}>
                     <span className={styles.metricName}>{metric.name}</span>
-                    <span className={`${styles.metricStatus} ${getStatusColor(metric.status)}`}>
+                    <span
+                      className={`${styles.metricStatus} ${getStatusColor(
+                        metric.status
+                      )}`}
+                    >
                       {getStatusIcon(metric.status)}
                     </span>
                   </div>
@@ -299,12 +316,18 @@ export default function DataQualityDashboard({
                 <div className={styles.tableCell}>Quality Score</div>
               </div>
               {metrics.table_metrics
-                .sort((a, b) => b.performance.avg_query_time_ms - a.performance.avg_query_time_ms)
+                .sort(
+                  (a, b) =>
+                    b.performance.avg_query_time_ms -
+                    a.performance.avg_query_time_ms
+                )
                 .slice(0, 10)
                 .map((table) => (
                   <div key={table.table_name} className={styles.tableRow}>
                     <div className={styles.tableCell}>
-                      <code className={styles.tableName}>{table.table_name}</code>
+                      <code className={styles.tableName}>
+                        {table.table_name}
+                      </code>
                     </div>
                     <div className={styles.tableCell}>
                       {table.row_count.toLocaleString()}
@@ -320,14 +343,32 @@ export default function DataQualityDashboard({
                         <div
                           className={styles.qualityBar}
                           style={{
-                            width: `${Math.min(table.data_quality.reduce((sum, m) =>
-                              sum + (m.status === "good" ? 1 : m.status === "warning" ? 0.5 : 0), 0
-                            ) / table.data_quality.length * 100, 100)}%`
+                            width: `${Math.min(
+                              (table.data_quality.reduce(
+                                (sum, m) =>
+                                  sum +
+                                  (m.status === "good"
+                                    ? 1
+                                    : m.status === "warning"
+                                    ? 0.5
+                                    : 0),
+                                0
+                              ) /
+                                table.data_quality.length) *
+                                100,
+                              100
+                            )}%`,
                           }}
                         ></div>
                         <span className={styles.qualityPercent}>
-                          {((table.data_quality.filter(m => m.status === "good").length /
-                             table.data_quality.length) * 100).toFixed(0)}%
+                          {(
+                            (table.data_quality.filter(
+                              (m) => m.status === "good"
+                            ).length /
+                              table.data_quality.length) *
+                            100
+                          ).toFixed(0)}
+                          %
                         </span>
                       </div>
                     </div>
@@ -341,14 +382,21 @@ export default function DataQualityDashboard({
         <div className={styles.section}>
           <h3>Performance Insights</h3>
           <div className={styles.insights}>
-            {metrics.table_metrics.some(t => t.performance.slow_queries > 5) && (
+            {metrics.table_metrics.some(
+              (t) => t.performance.slow_queries > 5
+            ) && (
               <div className={styles.insight}>
                 <span className={styles.insightIcon}>🐌</span>
                 <div className={styles.insightContent}>
                   <h4>Slow Query Alert</h4>
                   <p>
-                    {metrics.table_metrics.filter(t => t.performance.slow_queries > 5).length} tables
-                    have high slow query counts. Consider adding indexes or optimizing queries.
+                    {
+                      metrics.table_metrics.filter(
+                        (t) => t.performance.slow_queries > 5
+                      ).length
+                    }{" "}
+                    tables have high slow query counts. Consider adding indexes
+                    or optimizing queries.
                   </p>
                 </div>
               </div>
@@ -360,8 +408,9 @@ export default function DataQualityDashboard({
                 <div className={styles.insightContent}>
                   <h4>Low Cache Hit Ratio</h4>
                   <p>
-                    Cache hit ratio is {(metrics.cache_hit_ratio * 100).toFixed(1)}%.
-                    Consider increasing shared buffer size or adding more indexes.
+                    Cache hit ratio is{" "}
+                    {(metrics.cache_hit_ratio * 100).toFixed(1)}%. Consider
+                    increasing shared buffer size or adding more indexes.
                   </p>
                 </div>
               </div>
@@ -373,21 +422,24 @@ export default function DataQualityDashboard({
                 <div className={styles.insightContent}>
                   <h4>High Connection Usage</h4>
                   <p>
-                    Active connections ({metrics.connections_active}) significantly exceed
-                    idle connections ({metrics.connections_idle}). Consider connection pooling.
+                    Active connections ({metrics.connections_active})
+                    significantly exceed idle connections (
+                    {metrics.connections_idle}). Consider connection pooling.
                   </p>
                 </div>
               </div>
             )}
 
-            {metrics.table_metrics.some(t => t.data_quality.some(m => m.status === "error")) && (
+            {metrics.table_metrics.some((t) =>
+              t.data_quality.some((m) => m.status === "error")
+            ) && (
               <div className={styles.insight}>
                 <span className={styles.insightIcon}>⚠️</span>
                 <div className={styles.insightContent}>
                   <h4>Data Quality Issues</h4>
                   <p>
-                    Some tables have failing data quality checks.
-                    Review constraints and data validation rules.
+                    Some tables have failing data quality checks. Review
+                    constraints and data validation rules.
                   </p>
                 </div>
               </div>

@@ -1,7 +1,11 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { TableViewerProps, QueryResult, TableQueryRequest } from "@/types/database";
+import {
+  TableViewerProps,
+  QueryResult,
+  TableQueryRequest,
+} from "@/types/database";
 import { databaseApiClient, DatabaseApiError } from "@/lib/database-api";
 import styles from "./TableViewer.module.scss";
 
@@ -112,7 +116,14 @@ export default function TableViewer({
   // Reload data when dependencies change
   useEffect(() => {
     loadTableData();
-  }, [table.name, selectedColumns, state.currentPage, state.pageSize, state.sortColumn, state.sortDirection]);
+  }, [
+    table.name,
+    selectedColumns,
+    state.currentPage,
+    state.pageSize,
+    state.sortColumn,
+    state.sortDirection,
+  ]);
 
   // Update state when external props change
   useEffect(() => {
@@ -131,7 +142,9 @@ export default function TableViewer({
 
     // Handle different data types
     if (typeof value === "boolean") {
-      return <span className={styles.booleanValue}>{value ? "TRUE" : "FALSE"}</span>;
+      return (
+        <span className={styles.booleanValue}>{value ? "TRUE" : "FALSE"}</span>
+      );
     }
 
     if (typeof value === "object") {
@@ -166,13 +179,13 @@ export default function TableViewer({
   return (
     <div className={styles.tableViewer}>
       <div className={styles.viewerHeader}>
-        <h2>{table.schema}.{table.name}</h2>
+        <h2>
+          {table.schema}.{table.name}
+        </h2>
         <div className={styles.viewerActions}>
           {onExport && (
             <div className={styles.exportDropdown}>
-              <button className={styles.exportButton}>
-                Export ▼
-              </button>
+              <button className={styles.exportButton}>Export ▼</button>
               <div className={styles.exportMenu}>
                 <button onClick={() => onExport("csv")}>Export as CSV</button>
                 <button onClick={() => onExport("json")}>Export as JSON</button>
@@ -193,9 +206,7 @@ export default function TableViewer({
       {/* Table Schema Overview */}
       <div className={styles.schemaOverview}>
         <div className={styles.schemaStats}>
-          <span className={styles.stat}>
-            {table.columns.length} columns
-          </span>
+          <span className={styles.stat}>{table.columns.length} columns</span>
           {table.row_count !== undefined && (
             <span className={styles.stat}>
               {table.row_count.toLocaleString()} rows
@@ -222,10 +233,17 @@ export default function TableViewer({
               />
               <span className={styles.columnName}>{column.name}</span>
               <span className={styles.columnType}>{column.type}</span>
-              {column.primary_key && <span className={styles.primaryKeyBadge}>PK</span>}
-              {column.foreign_key && <span className={styles.foreignKeyBadge}>FK</span>}
+              {column.primary_key && (
+                <span className={styles.primaryKeyBadge}>PK</span>
+              )}
+              {column.foreign_key && (
+                <span className={styles.foreignKeyBadge}>FK</span>
+              )}
               {column.vector_dimension && (
-                <span className={styles.vectorBadge} title={`Vector dimension: ${column.vector_dimension}`}>
+                <span
+                  className={styles.vectorBadge}
+                  title={`Vector dimension: ${column.vector_dimension}`}
+                >
                   🔍
                 </span>
               )}
@@ -266,7 +284,8 @@ export default function TableViewer({
               </div>
               <div className={styles.executionStats}>
                 <span>
-                  Query executed in {(state.data.execution_time_ms || 0).toFixed(2)}ms
+                  Query executed in{" "}
+                  {(state.data.execution_time_ms || 0).toFixed(2)}ms
                 </span>
                 <span>
                   {state.data.row_count} of {state.data.row_count} rows shown
@@ -288,8 +307,12 @@ export default function TableViewer({
                         onClick={() => handleSort(column.name)}
                       >
                         <div className={styles.headerContent}>
-                          <span className={styles.columnName}>{column.name}</span>
-                          <span className={styles.columnType}>{column.type}</span>
+                          <span className={styles.columnName}>
+                            {column.name}
+                          </span>
+                          <span className={styles.columnType}>
+                            {column.type}
+                          </span>
                           {state.sortColumn === column.name && (
                             <span className={styles.sortIndicator}>
                               {state.sortDirection === "asc" ? "↑" : "↓"}
@@ -302,7 +325,12 @@ export default function TableViewer({
                 </thead>
                 <tbody>
                   {state.data.rows.map((row, index) => (
-                    <tr key={index} className={index % 2 === 0 ? styles.evenRow : styles.oddRow}>
+                    <tr
+                      key={index}
+                      className={
+                        index % 2 === 0 ? styles.evenRow : styles.oddRow
+                      }
+                    >
                       {state.data!.columns.map((column) => (
                         <td key={column.name} className={styles.tableCell}>
                           {renderCellValue(row[column.name], column.type)}
@@ -326,12 +354,16 @@ export default function TableViewer({
                 </button>
 
                 <div className={styles.pageInfo}>
-                  Page {state.currentPage} of {Math.ceil(state.data.row_count / state.pageSize)}
+                  Page {state.currentPage} of{" "}
+                  {Math.ceil(state.data.row_count / state.pageSize)}
                 </div>
 
                 <button
                   className={styles.pageButton}
-                  disabled={state.currentPage >= Math.ceil(state.data.row_count / state.pageSize)}
+                  disabled={
+                    state.currentPage >=
+                    Math.ceil(state.data.row_count / state.pageSize)
+                  }
                   onClick={() => handlePageChange(state.currentPage + 1)}
                 >
                   Next
@@ -344,7 +376,10 @@ export default function TableViewer({
             <div className={styles.emptyIcon}>📋</div>
             <h3>No Data Available</h3>
             <p>Select columns and click refresh to load table data.</p>
-            <button onClick={() => loadTableData()} className={styles.primaryButton}>
+            <button
+              onClick={() => loadTableData()}
+              className={styles.primaryButton}
+            >
               Load Data
             </button>
           </div>

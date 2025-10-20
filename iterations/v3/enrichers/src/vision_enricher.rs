@@ -9,6 +9,7 @@
 use crate::circuit_breaker::{CircuitBreaker, CircuitBreakerConfig};
 use crate::types::{OcrResult, OcrBlock, BoundingBox, Table, TableCell, TextRegion, EnricherConfig};
 use anyhow::{anyhow, Result};
+use std::io::Write;
 use std::path::PathBuf;
 use std::time::Instant;
 use tempfile::NamedTempFile;
@@ -214,7 +215,7 @@ impl VisionEnricher {
         use tokio::io::AsyncWriteExt;
 
         let mut temp_file = NamedTempFile::with_suffix(".png")?;
-        temp_file.write_all(image_data).await?;
+        temp_file.write_all(image_data)?;
 
         // Ensure file is flushed and synced
         temp_file.as_file().sync_all()?;
@@ -444,6 +445,12 @@ impl VisionEnricher {
         
         // Default to paragraph
         "paragraph".to_string()
+    }
+
+    /// Check if image contains table indicators (lines, grids, etc.)
+    async fn contains_table_indicators(&self, _image_data: &[u8]) -> Result<bool> {
+        // Placeholder implementation - would use Vision Framework to detect table structures
+        Ok(false)
     }
 
     /// Extract tables from image data using Vision Framework

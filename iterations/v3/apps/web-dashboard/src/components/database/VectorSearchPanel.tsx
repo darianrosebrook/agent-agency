@@ -1,7 +1,11 @@
 "use client";
 
 import React, { useState, useCallback } from "react";
-import { VectorSearchPanelProps, VectorSearchQuery, VectorSearchResult } from "@/types/database";
+import {
+  VectorSearchPanelProps,
+  VectorSearchQuery,
+  VectorSearchResult,
+} from "@/types/database";
 import { databaseApiClient, DatabaseApiError } from "@/lib/database-api";
 import styles from "./VectorSearchPanel.module.scss";
 
@@ -74,33 +78,45 @@ export default function VectorSearchPanel({
 
       return values;
     } catch (error) {
-      throw new Error(`Invalid vector format: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Invalid vector format: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
     }
   }, []);
 
   // Handle vector input change
-  const handleVectorInputChange = useCallback((input: string) => {
-    setState((prev) => ({ ...prev, vectorInput: input }));
+  const handleVectorInputChange = useCallback(
+    (input: string) => {
+      setState((prev) => ({ ...prev, vectorInput: input }));
 
-    try {
-      const vector = parseVectorInput(input);
-      setState((prev) => ({
-        ...prev,
-        searchVector: vector,
-        error: null,
-      }));
-    } catch (error) {
-      setState((prev) => ({
-        ...prev,
-        searchVector: [],
-        error: error instanceof Error ? error.message : "Invalid vector input",
-      }));
-    }
-  }, [parseVectorInput]);
+      try {
+        const vector = parseVectorInput(input);
+        setState((prev) => ({
+          ...prev,
+          searchVector: vector,
+          error: null,
+        }));
+      } catch (error) {
+        setState((prev) => ({
+          ...prev,
+          searchVector: [],
+          error:
+            error instanceof Error ? error.message : "Invalid vector input",
+        }));
+      }
+    },
+    [parseVectorInput]
+  );
 
   // Handle search
   const handleSearch = useCallback(async () => {
-    if (!state.selectedTable || !state.selectedColumn || state.searchVector.length === 0) {
+    if (
+      !state.selectedTable ||
+      !state.selectedColumn ||
+      state.searchVector.length === 0
+    ) {
       setState((prev) => ({
         ...prev,
         error: "Please select a table, column, and provide a search vector",
@@ -139,7 +155,14 @@ export default function VectorSearchPanel({
       }));
       console.error("Vector search error:", error);
     }
-  }, [state.selectedTable, state.selectedColumn, state.searchVector, state.limit, state.threshold, onSearch]);
+  }, [
+    state.selectedTable,
+    state.selectedColumn,
+    state.searchVector,
+    state.limit,
+    state.threshold,
+    onSearch,
+  ]);
 
   // Handle table/column selection
   const handleTableChange = useCallback((tableName: string) => {
@@ -158,12 +181,18 @@ export default function VectorSearchPanel({
   }, []);
 
   // Generate sample vectors for testing
-  const generateSampleVector = useCallback((dimension: number) => {
-    const vector = Array.from({ length: dimension }, () => Math.random() * 2 - 1); // Random values between -1 and 1
-    const vectorString = JSON.stringify(vector);
-    setState((prev) => ({ ...prev, vectorInput: vectorString }));
-    handleVectorInputChange(vectorString);
-  }, [handleVectorInputChange]);
+  const generateSampleVector = useCallback(
+    (dimension: number) => {
+      const vector = Array.from(
+        { length: dimension },
+        () => Math.random() * 2 - 1
+      ); // Random values between -1 and 1
+      const vectorString = JSON.stringify(vector);
+      setState((prev) => ({ ...prev, vectorInput: vectorString }));
+      handleVectorInputChange(vectorString);
+    },
+    [handleVectorInputChange]
+  );
 
   // Update state when external props change
   React.useEffect(() => {
@@ -180,7 +209,8 @@ export default function VectorSearchPanel({
       <div className={styles.panelHeader}>
         <h2>Vector Similarity Search</h2>
         <p className={styles.description}>
-          Search for similar vectors in your database using cosine similarity or other distance metrics.
+          Search for similar vectors in your database using cosine similarity or
+          other distance metrics.
         </p>
       </div>
 
@@ -232,7 +262,9 @@ export default function VectorSearchPanel({
               value={state.vectorInput}
               onChange={(e) => handleVectorInputChange(e.target.value)}
               placeholder="Enter vector as JSON array [1.0, 2.0, 3.0] or comma-separated values 1.0, 2.0, 3.0"
-              className={`${styles.vectorInput} ${state.searchVector.length === 0 ? styles.invalid : ""}`}
+              className={`${styles.vectorInput} ${
+                state.searchVector.length === 0 ? styles.invalid : ""
+              }`}
               rows={3}
             />
             {state.selectedColumn && (
@@ -240,7 +272,9 @@ export default function VectorSearchPanel({
                 <button
                   onClick={() => {
                     const dimension = vectorColumns.find(
-                      (col) => col.table === state.selectedTable && col.column === state.selectedColumn
+                      (col) =>
+                        col.table === state.selectedTable &&
+                        col.column === state.selectedColumn
                     )?.dimension;
                     if (dimension) {
                       generateSampleVector(dimension);
@@ -251,11 +285,12 @@ export default function VectorSearchPanel({
                   Generate Sample Vector
                 </button>
                 <span className={styles.vectorInfo}>
-                  Expected dimension: {
-                    vectorColumns.find(
-                      (col) => col.table === state.selectedTable && col.column === state.selectedColumn
-                    )?.dimension || "unknown"
-                  }
+                  Expected dimension:{" "}
+                  {vectorColumns.find(
+                    (col) =>
+                      col.table === state.selectedTable &&
+                      col.column === state.selectedColumn
+                  )?.dimension || "unknown"}
                 </span>
               </div>
             )}
@@ -270,7 +305,12 @@ export default function VectorSearchPanel({
               <input
                 type="number"
                 value={state.limit}
-                onChange={(e) => setState((prev) => ({ ...prev, limit: Number(e.target.value) }))}
+                onChange={(e) =>
+                  setState((prev) => ({
+                    ...prev,
+                    limit: Number(e.target.value),
+                  }))
+                }
                 min={1}
                 max={1000}
                 className={styles.numberInput}
@@ -282,13 +322,20 @@ export default function VectorSearchPanel({
               <input
                 type="number"
                 value={state.threshold}
-                onChange={(e) => setState((prev) => ({ ...prev, threshold: Number(e.target.value) }))}
+                onChange={(e) =>
+                  setState((prev) => ({
+                    ...prev,
+                    threshold: Number(e.target.value),
+                  }))
+                }
                 min={0}
                 max={1}
                 step={0.01}
                 className={styles.numberInput}
               />
-              <span className={styles.inputHelp}>Minimum similarity score (0-1)</span>
+              <span className={styles.inputHelp}>
+                Minimum similarity score (0-1)
+              </span>
             </div>
           </div>
         </div>
@@ -306,7 +353,12 @@ export default function VectorSearchPanel({
       <div className={styles.searchActions}>
         <button
           onClick={handleSearch}
-          disabled={state.isSearching || !state.selectedTable || !state.selectedColumn || state.searchVector.length === 0}
+          disabled={
+            state.isSearching ||
+            !state.selectedTable ||
+            !state.selectedColumn ||
+            state.searchVector.length === 0
+          }
           className={styles.searchButton}
         >
           {state.isSearching ? (
@@ -315,9 +367,7 @@ export default function VectorSearchPanel({
               Searching...
             </>
           ) : (
-            <>
-              🔍 Search Vectors
-            </>
+            <>🔍 Search Vectors</>
           )}
         </button>
       </div>
@@ -357,8 +407,12 @@ export default function VectorSearchPanel({
                   </div>
                 </div>
                 <div className={styles.cell}>
-                  <span className={styles.vectorPreview} title={JSON.stringify(result.vector)}>
-                    [{result.vector.slice(0, 5).join(", ")}{result.vector.length > 5 ? "..." : ""}]
+                  <span
+                    className={styles.vectorPreview}
+                    title={JSON.stringify(result.vector)}
+                  >
+                    [{result.vector.slice(0, 5).join(", ")}
+                    {result.vector.length > 5 ? "..." : ""}]
                   </span>
                   <span className={styles.dimensionBadge}>
                     {result.vector.length}D
@@ -388,7 +442,8 @@ export default function VectorSearchPanel({
           <div className={styles.emptyIcon}>🔍</div>
           <h3>No Search Results</h3>
           <p>
-            Configure your search parameters and click "Search Vectors" to find similar vectors in your database.
+            Configure your search parameters and click "Search Vectors" to find
+            similar vectors in your database.
           </p>
         </div>
       )}
