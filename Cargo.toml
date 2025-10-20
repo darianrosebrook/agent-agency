@@ -23,6 +23,7 @@ members = [
     "iterations/v3/config",
     "iterations/v3/database",
     "iterations/v3/caching",
+    "iterations/v3/memory",
     "iterations/v3/integration-tests"
 ]
 

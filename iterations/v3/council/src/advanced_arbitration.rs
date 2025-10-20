@@ -1545,7 +1545,14 @@ impl DeviationCalculator {
 
     /// Calculate response time deviation from expected norms
     fn calculate_response_time_deviation(&self, response_time_ms: u64) -> f32 {
-        // Expected response times based on task complexity (simplified)
+        // TODO: Implement sophisticated response time prediction model
+        // - Collect historical response time data
+        // - Build machine learning model for time estimation
+        // - Consider task complexity, resource availability, and historical patterns
+        // - Implement confidence intervals for estimates
+        // - Add real-time adjustment based on current system load
+        // - Support different SLA tiers and priority levels
+        // PLACEHOLDER: Using simplified complexity-based estimation
         // Typical ranges: 1s-30s for normal tasks, 30s-120s for complex tasks
 
         if response_time_ms < 500 {
@@ -2031,7 +2038,14 @@ impl CredibilityAssessor {
         let content_quality = self.evaluate_content_quality(&evidence.content);
         credibility_score = credibility_score * 0.4 + content_quality * 0.6;
 
-        // Factor 2: Source reputation (simplified - would use historical data)
+        // TODO: Implement historical source reputation tracking system
+        // - Create source reputation database and scoring algorithm
+        // - Track historical accuracy and reliability metrics
+        // - Implement reputation decay and recovery mechanisms
+        // - Add source verification history and audit trail
+        // - Support reputation sharing across council instances
+        // - Implement reputation-based source prioritization
+        // PLACEHOLDER: Using simplified static reputation scoring
         let source_reputation = self.evaluate_source_reputation(&evidence.source);
         credibility_score = credibility_score * 0.7 + source_reputation * 0.3;
 
@@ -2073,7 +2087,15 @@ impl CredibilityAssessor {
         quality.min(1.0f32)
     }
 
-    /// Evaluate source reputation (simplified)
+    /// Evaluate source reputation
+    /// TODO: Replace simplified reputation evaluation with comprehensive system
+    /// - Implement multi-dimensional reputation scoring (accuracy, timeliness, consistency)
+    /// - Add reputation history tracking and trend analysis
+    /// - Support reputation inheritance for related sources
+    /// - Implement reputation validation and verification
+    /// - Add reputation-based trust levels and access controls
+    /// - Support reputation recovery and rehabilitation mechanisms
+    /// PLACEHOLDER: Using simplified heuristic-based evaluation
     fn evaluate_source_reputation(&self, source: &str) -> f32 {
         // Simplified reputation calculation based on source characteristics
         let mut reputation_score = 0.5; // Start with neutral score

@@ -1749,6 +1749,7 @@ impl MultiTurnLearningCoordinator {
         &mut self,
         session: &LearningSession,
         analysis: &PerformanceAnalysisResult,
+    ) -> Result<(), LearningSystemError> {
     /// TODO: Implement proper transaction-like operation for learning updates
     /// - [ ] Use database transactions for atomic learning updates
     /// - [ ] Implement rollback mechanisms for failed updates
@@ -1772,7 +1773,7 @@ impl MultiTurnLearningCoordinator {
         // Update in-memory caches
         self.update_performance_cache(session.task_type.clone(), &performance_update);
 
-        Ok((performance_update, pattern_updates))
+        Ok(())
     }
 
     /// Rollback performance update on failure
@@ -2163,16 +2164,6 @@ impl MultiTurnLearningCoordinator {
         Ok(())
     }
 
-    /// TODO: Implement actual success rate improvement analysis
-    /// - [ ] Analyze historical success rates with proper statistical methods
-    /// - [ ] Implement success rate trend analysis and prediction
-    /// - [ ] Support different success rate metrics (task completion, quality thresholds)
-    /// - [ ] Add confidence intervals for success rate improvements
-    /// - [ ] Implement success rate anomaly detection and alerting
-    /// - [ ] Support multivariate success rate analysis (by task type, worker, etc.)
-    /// - [ ] Add success rate improvement attribution and root cause analysis
-        Ok(data.aggregated_metrics.quality_scores.iter().sum::<f64>() / data.aggregated_metrics.quality_scores.len().max(1) as f64)
-    }
 
     /// Aggregate performance data from multiple sources
     fn aggregate_performance_data(

@@ -330,7 +330,15 @@ fn analyze_debate_consensus(
     None // No consensus reached
 }
 
-/// Extract position/decision from contribution content (simplified)
+/// Extract position/decision from contribution content
+/// TODO: Implement sophisticated position extraction and decision parsing
+/// - Add natural language processing for position identification
+/// - Implement decision confidence scoring and validation
+/// - Support complex decision structures and reasoning chains
+/// - Add position consistency checking across contributions
+/// - Implement decision aggregation and conflict resolution
+/// - Add position extraction performance optimization
+/// PLACEHOLDER: Using simplified keyword-based extraction
 fn extract_position_from_content(content: &str) -> Option<String> {
     // Simple keyword-based position extraction
     if content.to_lowercase().contains("approve") || content.to_lowercase().contains("accept") {

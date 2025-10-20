@@ -418,7 +418,14 @@ impl SlidesIngestor {
     fn extract_text_objects(&self, _contents: &dyn std::any::Any) -> Result<Vec<(String, BoundingBox)>> {
         let mut text_objects = Vec::new();
 
-        // TODO: Implement proper PDF content stream parsing instead of simplified text generation
+        // TODO: Implement proper PDF content stream parsing
+        // - Integrate PDF parsing library (pdf-extract, lopdf, etc.)
+        // - Parse PDF content streams and operators
+        // - Extract text, images, and layout information
+        // - Handle PDF encryption and compression
+        // - Support different PDF versions and formats
+        // - Implement PDF structure analysis and metadata extraction
+        // PLACEHOLDER: Using simplified text generation
         // - [ ] Use PDF parsing library (pdf-extract, lopdf, or pdfium) for content stream analysis
         // - [ ] Parse PDF operators for text positioning and rendering
         // - [ ] Extract text with accurate bounding boxes and positioning

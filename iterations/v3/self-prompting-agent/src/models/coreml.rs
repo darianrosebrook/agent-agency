@@ -160,7 +160,14 @@ impl CoreMLProvider {
         // Create input tensors
         let mut inputs = HashMap::new();
 
-        // Convert text to tokens (simplified - would need proper tokenization)
+        // TODO: Implement proper text tokenization for CoreML models
+        // - Integrate tokenizer library (e.g., tokenizers crate)
+        // - Add vocabulary loading and management
+        // - Implement byte-pair encoding (BPE) or similar
+        // - Support special tokens (BOS, EOS, PAD, UNK)
+        // - Add tokenization performance optimization
+        // - Implement streaming tokenization for large texts
+        // PLACEHOLDER: Using character-based tokenization
         let input_ids = self.tokenize_text(input_text)?;
 
         // Create tensor batch

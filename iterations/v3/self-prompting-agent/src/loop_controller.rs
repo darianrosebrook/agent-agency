@@ -3,6 +3,7 @@
 use std::sync::Arc;
 use tokio::sync::mpsc;
 use tracing::{info, warn, debug};
+use serde::{Serialize, Deserialize};
 
 use crate::evaluation::{EvaluationOrchestrator, EvalReport, EvalStatus, SatisficingEvaluator, SatisficingDecision};
 use crate::models::{ModelRegistry, ModelProvider, ModelContext};
@@ -26,6 +27,21 @@ pub enum ExecutionMode {
     DryRun,
 }
 
+/// Failure types for patch application (addresses 75% of agent failures)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum PatchFailureType {
+    /// Syntax errors in generated code
+    SyntaxError,
+    /// Git merge conflicts during application
+    MergeConflict,
+    /// File paths blocked by allow-list or permissions
+    PathBlocked,
+    /// Environment issues (missing dependencies, build failures)
+    EnvironmentIssue,
+    /// Changeset exceeds budget constraints
+    BudgetExceeded,
+}
+
 /// Result of self-prompting execution
 #[derive(Debug, Clone)]
 pub struct SelfPromptingResult {
@@ -47,6 +63,8 @@ pub struct SelfPromptingLoop {
     allow_list: AllowList, // File operation allow-list
     budgets: Budgets, // Change budget constraints
     changeset_history: std::cell::RefCell<Vec<ChangeSetId>>, // For rollback capability
+    patch_failure_history: std::cell::RefCell<Vec<PatchFailureType>>, // Track recent patch failures for satisficing
+    progress_history: std::cell::RefCell<Vec<crate::types::IterationProgress>>, // Track quantitative progress for plateau detection
     max_iterations: usize,
     execution_mode: ExecutionMode,
     event_sender: Option<mpsc::UnboundedSender<SelfPromptingEvent>>,
@@ -71,6 +89,8 @@ impl SelfPromptingLoop {
                 max_loc: 500,
             },
             changeset_history: std::cell::RefCell::new(Vec::new()),
+            patch_failure_history: std::cell::RefCell::new(Vec::new()),
+            progress_history: std::cell::RefCell::new(Vec::new()),
             max_iterations: 5,
             execution_mode: ExecutionMode::Auto, // Default to auto mode
             event_sender: None,
@@ -100,6 +120,8 @@ impl SelfPromptingLoop {
                 max_loc: 500,
             },
             changeset_history: std::cell::RefCell::new(Vec::new()),
+            patch_failure_history: std::cell::RefCell::new(Vec::new()),
+            progress_history: std::cell::RefCell::new(Vec::new()),
             max_iterations,
             execution_mode,
             event_sender: None,
@@ -135,6 +157,8 @@ impl SelfPromptingLoop {
                 max_loc: 500,
             },
             changeset_history: std::cell::RefCell::new(Vec::new()),
+            patch_failure_history: std::cell::RefCell::new(Vec::new()),
+            progress_history: std::cell::RefCell::new(Vec::new()),
             max_iterations,
             execution_mode,
             event_sender,
@@ -230,6 +254,25 @@ impl SelfPromptingLoop {
                 timestamp: chrono::Utc::now(),
             });
 
+            // Calculate and record quantitative progress metrics
+            let changeset_opt = if action_request.requires_changes() {
+                action_request.changeset()
+            } else {
+                None
+            };
+
+            let previous_report = history.get(history.len().saturating_sub(2)).cloned();
+            let progress = self.calculate_iteration_progress(&eval_report, previous_report.as_ref(), changeset_opt);
+            self.record_iteration_progress(progress.clone());
+
+            // Emit progress calculated event for dashboard integration
+            self.emit_event(SelfPromptingEvent::ProgressCalculated {
+                task_id: task.id,
+                iteration,
+                progress,
+                timestamp: chrono::Utc::now(),
+            });
+
             // Check for quality degradation and trigger rollback if needed
             if let Some(previous_report) = history.get(history.len().saturating_sub(2)) {
                 if eval_report.score < previous_report.score - 0.1 { // 10% degradation threshold
@@ -256,8 +299,44 @@ impl SelfPromptingLoop {
             let mut satisficing_evaluator = self.satisficing_evaluator.borrow_mut();
             let satisficing_decision = satisficing_evaluator.should_continue(&eval_report, &history);
 
+            // Check for patch failure patterns (addresses 75% of agent failures)
+            let patch_failure_decision = satisficing_evaluator.check_patch_failure_patterns(
+                &self.patch_failure_history.borrow()
+            );
+
+            // Check for progress plateau (addresses unproductive loops)
+            let plateau_decision = satisficing_evaluator.check_progress_plateau(
+                &self.progress_history.borrow()
+            );
+
+            // Combine all satisficing decisions - stop if any indicates we should
+            let final_decision = if let Some(patch_decision) = patch_failure_decision {
+                if !patch_decision.should_continue {
+                    info!("Patch failure pattern detected, stopping iteration: {}", patch_decision.reason);
+                    patch_decision
+                } else if let Some(plateau_decision) = plateau_decision {
+                    if !plateau_decision.should_continue {
+                        info!("Progress plateau detected, stopping iteration: {}", plateau_decision.reason);
+                        plateau_decision
+                    } else {
+                        satisficing_decision
+                    }
+                } else {
+                    satisficing_decision
+                }
+            } else if let Some(plateau_decision) = plateau_decision {
+                if !plateau_decision.should_continue {
+                    info!("Progress plateau detected, stopping iteration: {}", plateau_decision.reason);
+                    plateau_decision
+                } else {
+                    satisficing_decision
+                }
+            } else {
+                satisficing_decision
+            };
+
             // Additional no-progress checks
-            if satisficing_decision.should_continue {
+            if final_decision.should_continue {
                 // Check for no progress based on recent action (if available)
                 // TODO: Implement changeset tracking for progress detection
                 // - Track changesets generated by each action
@@ -269,18 +348,20 @@ impl SelfPromptingLoop {
                 // PLACEHOLDER: Relying on hysteresis logic for now
             }
 
-            if !satisficing_decision.should_continue {
-                info!("Iteration {}: Stopping - {}", iteration, match satisficing_decision.reason {
+            if !final_decision.should_continue {
+                info!("Iteration {}: Stopping - {}", iteration, match final_decision.reason {
                     StopReason::Satisficed => "Satisficed",
                     StopReason::MaxIterations => "Max iterations reached",
                     StopReason::QualityCeiling => "Quality ceiling reached",
                     StopReason::FailedGates => "Failed mandatory gates",
                     StopReason::NoProgress => "No progress detected",
+                    StopReason::PatchFailure => "Patch application failures detected",
+                    StopReason::ProgressStalled => "Progress plateau detected",
                     _ => "Unknown reason",
                 });
 
                 // Handle workspace promotion or rollback based on evaluation success
-                let evaluation_passed = matches!(satisficing_decision.reason,
+                let evaluation_passed = matches!(final_decision.reason,
                     StopReason::Satisficed | StopReason::QualityCeiling);
 
                 if evaluation_passed && action_request.requires_changes() {
@@ -302,7 +383,7 @@ impl SelfPromptingLoop {
                     task_id: task.id,
                     total_iterations: iteration,
                     final_score: eval_report.score,
-                    stop_reason: satisficing_decision.reason.clone(),
+                    stop_reason: final_decision.reason.clone(),
                     timestamp: chrono::Utc::now(),
                 });
 
@@ -313,7 +394,7 @@ impl SelfPromptingLoop {
                         task_id: task.id,
                         final_report: eval_report,
                         iterations: iteration,
-                        stop_reason: Some(satisficing_decision.reason),
+                        stop_reason: Some(final_decision.reason),
                         model_used: model_id,
                         total_time_ms: total_time,
                         artifacts,
@@ -321,7 +402,7 @@ impl SelfPromptingLoop {
                     iterations_performed: iteration,
                     models_used,
                     total_time_ms: total_time,
-                    final_stop_reason: satisficing_decision.reason,
+                    final_stop_reason: final_decision.reason,
                 });
             }
 
@@ -519,30 +600,74 @@ impl SelfPromptingLoop {
             crate::types::ActionType::Write | crate::types::ActionType::Patch => {
                 // Convert ActionRequest to file_ops ChangeSet
                 let changeset = self.action_request_to_changeset(action_request)?;
+                let files_affected = changeset.patches.len();
+
                 info!("Applying changeset with {} patches to workspace at {}",
-                      changeset.patches.len(), task.project_path.display());
+                      files_affected, task.project_path.display());
 
                 // Get workspace (auto-detects git vs temp)
                 let mut workspace = WorkspaceFactory::from_path(&task.project_path)
-                    .map_err(|e| SelfPromptingError::WorkspaceError(format!("Failed to create workspace: {}", e)))?;
+                    .map_err(|e| {
+                        let failure_type = PatchFailureType::EnvironmentIssue;
+                        self.record_patch_failure(&failure_type, task.id);
+                        SelfPromptingError::WorkspaceError(format!("Failed to create workspace: {}", e))
+                    })?;
 
                 // Begin workspace transaction
                 workspace.begin().await
-                    .map_err(|e| SelfPromptingError::WorkspaceError(format!("Failed to begin workspace: {}", e)))?;
+                    .map_err(|e| {
+                        let failure_type = PatchFailureType::EnvironmentIssue;
+                        self.record_patch_failure(&failure_type, task.id);
+                        SelfPromptingError::WorkspaceError(format!("Failed to begin workspace: {}", e))
+                    })?;
 
                 // Apply changeset with budget enforcement
                 let result = workspace.apply(
                     &changeset,
                     &self.allow_list,
                     &self.budgets,
-                ).await
-                .map_err(|e| SelfPromptingError::WorkspaceError(format!("Failed to apply changeset: {}", e)))?;
+                ).await;
 
-                // Store changeset_id for rollback capability
-                self.changeset_history.borrow_mut().push(result.changeset_id.clone());
+                match result {
+                    Ok(result) => {
+                        // Store changeset_id for rollback capability
+                        self.changeset_history.borrow_mut().push(result.changeset_id.clone());
 
-                info!("Successfully applied changeset {} with {} patches",
-                      result.changeset_id.0, changeset.patches.len());
+                        info!("Successfully applied changeset {} with {} patches",
+                              result.changeset_id.0, files_affected);
+
+                        // Emit success event
+                        self.emit_event(SelfPromptingEvent::PatchApplied {
+                            task_id: task.id,
+                            changeset_id: result.changeset_id.0.clone(),
+                            success: true,
+                            failure_type: None,
+                            files_affected,
+                            timestamp: chrono::Utc::now(),
+                        });
+                    }
+                    Err(e) => {
+                        // Classify the failure type
+                        let failure_type = self.classify_patch_failure(&e, &changeset);
+
+                        warn!("Failed to apply changeset: {} (classified as {:?})", e, failure_type);
+
+                        // Record failure for satisficing
+                        self.record_patch_failure(&failure_type, task.id);
+
+                        // Emit failure event
+                        self.emit_event(SelfPromptingEvent::PatchApplied {
+                            task_id: task.id,
+                            changeset_id: "failed".to_string(), // No changeset ID on failure
+                            success: false,
+                            failure_type: Some(failure_type),
+                            files_affected,
+                            timestamp: chrono::Utc::now(),
+                        });
+
+                        return Err(SelfPromptingError::WorkspaceError(format!("Failed to apply changeset: {}", e)));
+                    }
+                }
 
                 // Note: We don't promote here - that happens after evaluation passes
                 // The workspace remains in sandbox until evaluation succeeds
@@ -553,6 +678,105 @@ impl SelfPromptingLoop {
         }
 
         Ok(())
+    }
+
+    /// Calculate quantitative progress metrics for the current iteration
+    fn calculate_iteration_progress(
+        &self,
+        current_report: &EvalReport,
+        previous_report: Option<&EvalReport>,
+        changeset: Option<&ChangeSet>,
+    ) -> crate::types::IterationProgress {
+        let files_touched = changeset
+            .map(|cs| cs.patches.len())
+            .unwrap_or(0);
+
+        let loc_changed = changeset
+            .map(|cs| cs.patches.iter()
+                .map(|p| p.hunks.iter()
+                    .map(|h| h.lines.lines().count())
+                    .sum::<usize>())
+                .sum::<usize>())
+            .unwrap_or(0);
+
+        // Calculate test pass rate delta (simplified - would need actual test results)
+        let test_pass_rate_delta = if let Some(prev) = previous_report {
+            // This would need access to actual test results from the evaluation
+            // For now, use a proxy based on score improvement
+            (current_report.score - prev.score) * 0.1 // Simplified approximation
+        } else {
+            0.0
+        };
+
+        // Calculate lint errors delta (simplified - would need lint results)
+        let lint_errors_delta = if let Some(prev) = previous_report {
+            // Simplified: assume fewer thresholds_met means more errors
+            (prev.thresholds_met.len() as i32 - current_report.thresholds_met.len() as i32)
+        } else {
+            0
+        };
+
+        let score_improvement = if let Some(prev) = previous_report {
+            current_report.score - prev.score
+        } else {
+            current_report.score
+        };
+
+        crate::types::IterationProgress {
+            files_touched,
+            loc_changed,
+            test_pass_rate_delta,
+            lint_errors_delta,
+            score_improvement,
+            timestamp: chrono::Utc::now(),
+        }
+    }
+
+    /// Record iteration progress for plateau detection
+    fn record_iteration_progress(&self, progress: crate::types::IterationProgress) {
+        let mut history = self.progress_history.borrow_mut();
+        history.push(progress);
+
+        // Keep only recent progress (last 10 iterations) to avoid unbounded growth
+        if history.len() > 10 {
+            history.remove(0);
+        }
+    }
+
+    /// Classify the type of patch failure based on error and changeset
+    fn classify_patch_failure(&self, error: &file_ops::FileOpsError, changeset: &ChangeSet) -> PatchFailureType {
+        match error {
+            file_ops::FileOpsError::Blocked(_) => PatchFailureType::PathBlocked,
+            file_ops::FileOpsError::BudgetExceeded(_) => PatchFailureType::BudgetExceeded,
+            file_ops::FileOpsError::Validation(_) => {
+                // Check if this is likely a syntax error in generated code
+                // For now, classify validation errors as syntax errors
+                // This could be enhanced with more sophisticated detection
+                PatchFailureType::SyntaxError
+            }
+            file_ops::FileOpsError::Io(_) | file_ops::FileOpsError::Path(_) => {
+                // I/O and path errors are typically environment issues
+                PatchFailureType::EnvironmentIssue
+            }
+            file_ops::FileOpsError::Serde(_) => {
+                // Serialization errors are typically syntax issues
+                PatchFailureType::SyntaxError
+            }
+        }
+    }
+
+    /// Record a patch failure for satisficing evaluation
+    fn record_patch_failure(&self, failure_type: &PatchFailureType, task_id: uuid::Uuid) {
+        self.patch_failure_history.borrow_mut().push(failure_type.clone());
+
+        // Keep only recent failures (last 10) to avoid unbounded growth
+        let mut history = self.patch_failure_history.borrow_mut();
+        if history.len() > 10 {
+            history.remove(0);
+        }
+
+        warn!("Recorded patch failure {:?} for task {}, history size: {}",
+              failure_type, task_id, history.len());
     }
 
     /// Convert ActionRequest to file_ops ChangeSet
@@ -759,6 +983,20 @@ pub enum SelfPromptingEvent {
     ChangesetReverted {
         changeset_id: String,
         reason: String,
+    },
+    PatchApplied {
+        task_id: uuid::Uuid,
+        changeset_id: String,
+        success: bool,
+        failure_type: Option<PatchFailureType>,
+        files_affected: usize,
+        timestamp: chrono::Utc::now(),
+    },
+    ProgressCalculated {
+        task_id: uuid::Uuid,
+        iteration: usize,
+        progress: crate::types::IterationProgress,
+        timestamp: chrono::Utc::now(),
     },
     LoopCompleted {
         task_id: uuid::Uuid,

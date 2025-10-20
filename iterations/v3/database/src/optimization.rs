@@ -588,13 +588,13 @@ impl DatabaseOptimizationManager {
     }
 
     /// Execute query with performance monitoring
-    pub async fn execute_query_monitored<T>(
+    pub async fn execute_query_monitored<'a, T>(
         &self,
         query: &str,
         params: &[T],
     ) -> Result<Vec<sqlx::postgres::PgRow>>
     where
-        T: sqlx::Encode<sqlx::Postgres> + sqlx::Type<sqlx::Postgres> + Send + Sync,
+        T: sqlx::Encode<'a, sqlx::Postgres> + sqlx::Type<sqlx::Postgres> + Send + Sync,
     {
         let start_time = Instant::now();
 
@@ -658,13 +658,13 @@ impl MonitoredQueryExecutor {
     }
 
     /// Execute query with automatic performance monitoring
-    pub async fn execute<T>(
+    pub async fn execute<'a, T>(
         &self,
         query: &str,
         params: &[T],
     ) -> Result<Vec<sqlx::postgres::PgRow>>
     where
-        T: sqlx::Encode<sqlx::Postgres> + sqlx::Type<sqlx::Postgres> + Send + Sync,
+        T: sqlx::Encode<'a, sqlx::Postgres> + sqlx::Type<sqlx::Postgres> + Send + Sync,
     {
         let start_time = Instant::now();
 

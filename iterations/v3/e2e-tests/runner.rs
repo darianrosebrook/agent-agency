@@ -269,7 +269,14 @@ impl E2eTestRunner {
         let total_tasks: usize = results.iter().map(|r| r.task_results.len()).sum();
         let average_tasks = total_tasks as f64 / results.len() as f64;
 
-        // Collect system resource usage (simplified)
+        // TODO: Implement comprehensive system resource monitoring
+        // - Add detailed CPU usage tracking per process and core
+        // - Implement memory usage analysis with heap/stack breakdown
+        // - Support disk I/O monitoring and bottleneck detection
+        // - Add network usage tracking and bandwidth analysis
+        // - Implement GPU memory and utilization monitoring
+        // - Support resource usage profiling and flame graphs
+        // PLACEHOLDER: Using simplified resource collection
         let mut resource_usage = HashMap::new();
 
         if let Some(harness) = self.harness.lock().await.as_ref() {

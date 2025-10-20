@@ -6,7 +6,7 @@
 use crate::types::*;
 use anyhow::{anyhow, Context, Result};
 use chrono::Utc;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::ffi::OsStr;
 use std::fs::File;
 use std::io::Read;
@@ -18,8 +18,104 @@ use walkdir::WalkDir;
 use std::time::{Duration, Instant};
 use uuid::Uuid;
 use agent_agency_database::DatabaseClient;
+use lru::LruCache;
+use md5;
+use once_cell::sync::Lazy;
+use regex::Regex;
+
+/// Static patterns for coreference resolution
+static PRONOUNS: Lazy<HashMap<&'static str, Vec<&'static str>>> = Lazy::new(|| {
+    HashMap::from([
+        ("personal", vec!["i", "me", "my", "mine", "you", "your", "yours", "he", "him", "his", "she", "her", "hers", "it", "its", "we", "us", "our", "ours", "they", "them", "their", "theirs"]),
+        ("demonstrative", vec!["this", "that", "these", "those"]),
+        ("relative", vec!["who", "whom", "whose", "which", "that", "what"]),
+    ])
+});
+
+/// Common code/system entities for disambiguation
+static CODE_ENTITIES: Lazy<Vec<&'static str>> = Lazy::new(|| {
+    vec![
+        "function", "method", "class", "struct", "module", "package", "library",
+        "api", "endpoint", "service", "database", "table", "column", "query",
+        "algorithm", "model", "component", "system", "application", "server",
+        "client", "user", "admin", "developer", "code", "implementation",
+    ]
+});
 
 // Supporting data structures for extended claim extraction
+
+/// Coreference resolution data structures
+#[derive(Debug, Clone)]
+pub struct Entity {
+    pub id: String,
+    pub text: String,
+    pub entity_type: EntityType,
+    pub confidence: f64,
+    pub position: (usize, usize), // (start, end) character positions
+    pub metadata: HashMap<String, String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum EntityType {
+    Person,
+    Organization,
+    Location,
+    CodeEntity, // functions, classes, variables
+    SystemComponent, // APIs, services, databases
+    Concept, // abstract concepts
+    Other,
+}
+
+#[derive(Debug, Clone)]
+pub struct CoreferenceChain {
+    pub representative: Entity,
+    pub mentions: Vec<Entity>,
+    pub confidence: f64,
+    pub chain_type: CoreferenceType,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CoreferenceType {
+    Identity, // Same entity (he/she/it -> specific entity)
+    Appositive, // Descriptive (John, the developer -> John)
+    Predicate, // Predicative (he is John -> John)
+    Anaphoric, // Backward reference
+    Cataphoric, // Forward reference
+}
+
+#[derive(Debug, Clone)]
+pub struct CoreferenceResolution {
+    pub chains: Vec<CoreferenceChain>,
+    pub unresolved_pronouns: Vec<String>,
+    pub confidence_score: f64,
+    pub processing_time_ms: u64,
+}
+
+/// Entity disambiguation result
+#[derive(Debug, Clone)]
+pub struct EntityDisambiguation {
+    pub original_entity: Entity,
+    pub candidates: Vec<EntityCandidate>,
+    pub best_match: Option<EntityCandidate>,
+    pub disambiguation_method: DisambiguationMethod,
+}
+
+#[derive(Debug, Clone)]
+pub struct EntityCandidate {
+    pub entity: Entity,
+    pub similarity_score: f64,
+    pub context_match: bool,
+    pub source: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum DisambiguationMethod {
+    ExactMatch,
+    FuzzyMatch,
+    ContextBased,
+    KnowledgeGraph,
+    EmbeddingSimilarity,
+}
 
 /// Code output structure for claim extraction
 #[derive(Debug, Clone)]
@@ -180,6 +276,8 @@ pub struct MultiModalVerificationEngine {
     context_resolver: ContextDependencyResolver,
     /// Semantic analyzer for meaning extraction and validation
     semantic_analyzer: SemanticAnalyzer,
+    /// Coreference resolution cache for performance optimization
+    coreference_cache: LruCache<String, CoreferenceResolution>,
 }
 
 /// Cross-reference validator for consistency across sources
@@ -285,6 +383,7 @@ impl MultiModalVerificationEngine {
                 meaning_extractor: MeaningExtractor,
                 intent_analyzer: IntentAnalyzer,
             },
+            coreference_cache: LruCache::new(std::num::NonZeroUsize::new(100).unwrap()),
         }
     }
 
@@ -3758,31 +3857,518 @@ impl MultiModalVerificationEngine {
         Ok(())
     }
 
-    /// Check if text contains pronouns that can be resolved with available context
-    fn has_resolvable_pronouns(&self, text: &str) -> bool {
-        let pronouns = ["it", "this", "that", "these", "those", "they", "them", "their", "its"];
-        let text_lower = text.to_lowercase();
+    /// Perform comprehensive coreference resolution on text
+    pub async fn resolve_coreferences(&self, text: &str) -> Result<CoreferenceResolution> {
+        let start_time = Instant::now();
 
-        // Check for pronoun presence
-        let has_pronouns = pronouns.iter().any(|&pronoun| text_lower.contains(pronoun));
-
-        if !has_pronouns {
-            return false;
+        // Check cache first
+        let cache_key = format!("{:x}", md5::compute(text));
+        if let Some(cached_result) = self.coreference_cache.get(&cache_key) {
+            return Ok(cached_result.clone());
         }
 
-        // Basic resolution check: look for potential antecedents in surrounding context
-        // This is a simplified approach - real NLP would use coreference resolution
+        // Step 1: Extract entities from text
+        let entities = self.extract_entities(text)?;
+
+        // Step 2: Identify pronouns and potential antecedents
+        let pronouns = self.identify_pronouns(text);
+
+        // Step 3: Perform coreference resolution
+        let chains = self.perform_coreference_resolution(text, &entities, &pronouns)?;
+
+        // Step 4: Calculate confidence score
+        let confidence_score = self.calculate_coreference_confidence(&chains, &pronouns);
+
+        // Step 5: Identify unresolved pronouns
+        let unresolved_pronouns = self.identify_unresolved_pronouns(&pronouns, &chains);
+
+        let processing_time_ms = start_time.elapsed().as_millis() as u64;
+
+        let result = CoreferenceResolution {
+            chains,
+            unresolved_pronouns,
+            confidence_score,
+            processing_time_ms,
+        };
+
+        // Cache the result
+        self.coreference_cache.put(cache_key, result.clone());
+
+        Ok(result)
+    }
+
+    /// Extract entities from text using rule-based and pattern matching
+    fn extract_entities(&self, text: &str) -> Result<Vec<Entity>> {
+        let mut entities = Vec::new();
+        let text_lower = text.to_lowercase();
+
+        // Extract code entities (functions, classes, etc.)
+        for entity_type in CODE_ENTITIES.iter() {
+            let pattern = format!(r"\b(?:the\s+)?{}\b", entity_type);
+            if let Ok(regex) = Regex::new(&pattern) {
+                for capture in regex.find_iter(&text_lower) {
+                    entities.push(Entity {
+                        id: format!("entity_{}", entities.len()),
+                        text: capture.as_str().to_string(),
+                        entity_type: EntityType::CodeEntity,
+                        confidence: 0.8,
+                        position: (capture.start(), capture.end()),
+                        metadata: HashMap::from([("source".to_string(), "pattern_match".to_string())]),
+                    });
+                }
+            }
+        }
+
+        // Extract system components
+        let system_patterns = [
+            r"\b(?:the\s+)?(?:api|endpoint|service|database|server|client)\b",
+            r"\b(?:the\s+)?(?:user|admin|developer)\b",
+        ];
+
+        for pattern in &system_patterns {
+            if let Ok(regex) = Regex::new(pattern) {
+                for capture in regex.find_iter(&text_lower) {
+                    entities.push(Entity {
+                        id: format!("entity_{}", entities.len()),
+                        text: capture.as_str().to_string(),
+                        entity_type: EntityType::SystemComponent,
+                        confidence: 0.7,
+                        position: (capture.start(), capture.end()),
+                        metadata: HashMap::from([("source".to_string(), "pattern_match".to_string())]),
+                    });
+                }
+            }
+        }
+
+        Ok(entities)
+    }
+
+    /// Identify pronouns in text
+    fn identify_pronouns(&self, text: &str) -> Vec<(String, (usize, usize))> {
+        let mut pronouns = Vec::new();
+        let text_lower = text.to_lowercase();
+
+        for pronoun_list in PRONOUNS.values() {
+            for &pronoun in pronoun_list {
+                let pattern = format!(r"\b{}\b", pronoun);
+                if let Ok(regex) = Regex::new(&pattern) {
+                    for capture in regex.find_iter(&text_lower) {
+                        pronouns.push((
+                            pronoun.to_string(),
+                            (capture.start(), capture.end())
+                        ));
+                    }
+                }
+            }
+        }
+
+        pronouns
+    }
+
+    /// Perform coreference resolution using rule-based approach
+    fn perform_coreference_resolution(
+        &self,
+        text: &str,
+        entities: &[Entity],
+        pronouns: &[(String, (usize, usize))],
+    ) -> Result<Vec<CoreferenceChain>> {
+        let mut chains = Vec::new();
+
+        for (pronoun, pronoun_pos) in pronouns {
+            // Find potential antecedents within reasonable distance
+            let antecedent_candidates = self.find_antecedent_candidates(
+                text, entities, pronoun_pos, 500 // 500 chars window
+            );
+
+            if let Some(best_match) = self.select_best_antecedent(pronoun, &antecedent_candidates) {
+                // Create or extend coreference chain
+                let mut found_chain = false;
+                for chain in &mut chains {
+                    if chain.representative.id == best_match.id {
+                        chain.mentions.push(Entity {
+                            id: format!("mention_{}", chain.mentions.len()),
+                            text: pronoun.clone(),
+                            entity_type: EntityType::Other,
+                            confidence: 0.6,
+                            position: *pronoun_pos,
+                            metadata: HashMap::from([("antecedent".to_string(), best_match.text.clone())]),
+                        });
+                        chain.confidence = (chain.confidence + 0.6) / 2.0;
+                        found_chain = true;
+                        break;
+                    }
+                }
+
+                if !found_chain {
+                    chains.push(CoreferenceChain {
+                        representative: best_match.clone(),
+                        mentions: vec![Entity {
+                            id: format!("mention_0"),
+                            text: pronoun.clone(),
+                            entity_type: EntityType::Other,
+                            confidence: 0.6,
+                            position: *pronoun_pos,
+                            metadata: HashMap::from([("antecedent".to_string(), best_match.text.clone())]),
+                        }],
+                        confidence: 0.7,
+                        chain_type: CoreferenceType::Anaphoric,
+                    });
+                }
+            }
+        }
+
+        Ok(chains)
+    }
+
+    /// Find potential antecedent candidates within text window
+    fn find_antecedent_candidates(
+        &self,
+        text: &str,
+        entities: &[Entity],
+        pronoun_pos: &(usize, usize),
+        window_size: usize,
+    ) -> Vec<&Entity> {
+        let pronoun_start = pronoun_pos.0;
+        let window_start = pronoun_start.saturating_sub(window_size);
+
+        entities.iter()
+            .filter(|entity| {
+                let entity_end = entity.position.1;
+                entity_end < pronoun_start && entity_end >= window_start
+            })
+            .collect()
+    }
+
+    /// Select best antecedent based on pronoun type and entity characteristics
+    fn select_best_antecedent<'a>(&self, pronoun: &str, candidates: &[&'a Entity]) -> Option<&'a Entity> {
+        if candidates.is_empty() {
+            return None;
+        }
+
+        // Simple heuristic: prefer entities that match pronoun semantics
+        let mut best_candidate = None;
+        let mut best_score = 0.0;
+
+        for candidate in candidates {
+            let mut score = candidate.confidence;
+
+            // Boost score for semantic matches
+            match pronoun {
+                "it" | "this" | "that" => {
+                    if matches!(candidate.entity_type, EntityType::CodeEntity | EntityType::SystemComponent) {
+                        score *= 1.5;
+                    }
+                }
+                "they" | "them" => {
+                    if matches!(candidate.entity_type, EntityType::Organization) {
+                        score *= 1.3;
+                    }
+                }
+                _ => {}
+            }
+
+            if score > best_score {
+                best_score = score;
+                best_candidate = Some(*candidate);
+            }
+        }
+
+        best_candidate
+    }
+
+    /// Calculate overall confidence score for coreference resolution
+    fn calculate_coreference_confidence(
+        &self,
+        chains: &[CoreferenceChain],
+        pronouns: &[(String, (usize, usize))],
+    ) -> f64 {
+        if pronouns.is_empty() {
+            return 1.0;
+        }
+
+        let resolved_count = chains.iter().map(|chain| chain.mentions.len()).sum::<usize>();
+        let total_pronouns = pronouns.len();
+
+        resolved_count as f64 / total_pronouns as f64
+    }
+
+    /// Identify pronouns that could not be resolved
+    fn identify_unresolved_pronouns(
+        &self,
+        pronouns: &[(String, (usize, usize))],
+        chains: &[CoreferenceChain],
+    ) -> Vec<String> {
+        let resolved_positions: HashSet<_> = chains.iter()
+            .flat_map(|chain| chain.mentions.iter().map(|mention| mention.position))
+            .collect();
+
+        pronouns.iter()
+            .filter(|(_, pos)| !resolved_positions.contains(pos))
+            .map(|(pronoun, _)| pronoun.clone())
+            .collect()
+    }
+
+    /// Check if text contains pronouns that can be resolved with available context
+    fn has_resolvable_pronouns(&self, text: &str) -> bool {
+        // Use the new coreference resolution to determine resolvability
+        // This is a simplified wrapper for backward compatibility
+        let pronouns = self.identify_pronouns(text);
         let word_count = text.split_whitespace().count();
-        let has_sufficient_context = word_count > 15; // Need enough context for resolution
 
-        // Check for named entities or clear referents
-        let has_clear_referents = text_lower.contains("the system") ||
-                                 text_lower.contains("the function") ||
-                                 text_lower.contains("the code") ||
-                                 text_lower.contains("the user") ||
-                                 text_lower.contains("the application");
+        // Basic heuristics for backward compatibility
+        let has_sufficient_context = word_count > 15;
+        let has_clear_entities = pronouns.len() > 0;
 
-        has_pronouns && (has_sufficient_context || has_clear_referents)
+        has_sufficient_context && has_clear_entities
+    }
+
+    /// Perform entity disambiguation using multiple strategies
+    pub async fn disambiguate_entity(&self, entity: &Entity, context: &str) -> Result<EntityDisambiguation> {
+        let mut candidates = Vec::new();
+
+        // Strategy 1: Exact match within context
+        if let Some(exact_match) = self.find_exact_match(entity, context) {
+            candidates.push(EntityCandidate {
+                entity: exact_match,
+                similarity_score: 1.0,
+                context_match: true,
+                source: "exact_match".to_string(),
+            });
+        }
+
+        // Strategy 2: Fuzzy matching with similar entities
+        let fuzzy_matches = self.find_fuzzy_matches(entity, context);
+        candidates.extend(fuzzy_matches);
+
+        // Strategy 3: Context-based disambiguation
+        let context_matches = self.find_context_matches(entity, context);
+        candidates.extend(context_matches);
+
+        // Select best match
+        let best_match = self.select_best_entity_match(&candidates);
+
+        let method = if candidates.iter().any(|c| c.similarity_score >= 0.9) {
+            DisambiguationMethod::ExactMatch
+        } else if candidates.iter().any(|c| c.context_match) {
+            DisambiguationMethod::ContextBased
+        } else {
+            DisambiguationMethod::FuzzyMatch
+        };
+
+        Ok(EntityDisambiguation {
+            original_entity: entity.clone(),
+            candidates,
+            best_match,
+            disambiguation_method: method,
+        })
+    }
+
+    /// Find exact matches for entity in context
+    fn find_exact_match(&self, entity: &Entity, context: &str) -> Option<Entity> {
+        let context_lower = context.to_lowercase();
+        let entity_text_lower = entity.text.to_lowercase();
+
+        // Look for exact matches or close variations
+        if context_lower.contains(&entity_text_lower) {
+            Some(Entity {
+                id: format!("exact_{}", entity.id),
+                text: entity.text.clone(),
+                entity_type: entity.entity_type.clone(),
+                confidence: 0.95,
+                position: (0, entity.text.len()), // Placeholder position
+                metadata: HashMap::from([
+                    ("match_type".to_string(), "exact".to_string()),
+                    ("source".to_string(), "context_match".to_string()),
+                ]),
+            })
+        } else {
+            None
+        }
+    }
+
+    /// Find fuzzy matches using string similarity
+    fn find_fuzzy_matches(&self, entity: &Entity, context: &str) -> Vec<EntityCandidate> {
+        let mut candidates = Vec::new();
+        let words: Vec<&str> = context.split_whitespace().collect();
+
+        for (i, &word) in words.iter().enumerate() {
+            let similarity = self.calculate_string_similarity(&entity.text, word);
+            if similarity > 0.7 {
+                // Look for context around the word
+                let start = i.saturating_sub(2);
+                let end = (i + 3).min(words.len());
+                let context_window = words[start..end].join(" ");
+
+                candidates.push(EntityCandidate {
+                    entity: Entity {
+                        id: format!("fuzzy_{}_{}", entity.id, i),
+                        text: word.to_string(),
+                        entity_type: self.infer_entity_type(word),
+                        confidence: similarity,
+                        position: (0, word.len()),
+                        metadata: HashMap::from([
+                            ("similarity".to_string(), similarity.to_string()),
+                            ("context_window".to_string(), context_window),
+                        ]),
+                    },
+                    similarity_score: similarity,
+                    context_match: false,
+                    source: "fuzzy_match".to_string(),
+                });
+            }
+        }
+
+        candidates
+    }
+
+    /// Find context-based matches using semantic patterns
+    fn find_context_matches(&self, entity: &Entity, context: &str) -> Vec<EntityCandidate> {
+        let mut candidates = Vec::new();
+        let context_lower = context.to_lowercase();
+
+        // Define patterns for different entity types
+        let patterns = match entity.entity_type {
+            EntityType::CodeEntity => vec![
+                r"\b(function|method|class|struct|module)\s+\w+\b",
+                r"\b\w+\(\)\s*\{",
+                r"\bconst\s+\w+\s*=",
+            ],
+            EntityType::SystemComponent => vec![
+                r"\b(api|service|database|server)\s+\w+\b",
+                r"\bendpoint\s+[\w/]+\b",
+                r"\btable\s+\w+\b",
+            ],
+            _ => vec![r"\b\w+\b"],
+        };
+
+        for pattern in patterns {
+            if let Ok(regex) = Regex::new(pattern) {
+                for capture in regex.find_iter(&context_lower) {
+                    let matched_text = capture.as_str();
+                    let similarity = self.calculate_semantic_similarity(&entity.text, matched_text);
+
+                    if similarity > 0.6 {
+                        candidates.push(EntityCandidate {
+                            entity: Entity {
+                                id: format!("context_{}_{}", entity.id, candidates.len()),
+                                text: matched_text.to_string(),
+                                entity_type: entity.entity_type.clone(),
+                                confidence: similarity,
+                                position: capture.range(),
+                                metadata: HashMap::from([
+                                    ("pattern".to_string(), pattern.to_string()),
+                                    ("context_match".to_string(), "true".to_string()),
+                                ]),
+                            },
+                            similarity_score: similarity,
+                            context_match: true,
+                            source: "context_pattern".to_string(),
+                        });
+                    }
+                }
+            }
+        }
+
+        candidates
+    }
+
+    /// Select the best entity match from candidates
+    fn select_best_entity_match(&self, candidates: &[EntityCandidate]) -> Option<EntityCandidate> {
+        if candidates.is_empty() {
+            return None;
+        }
+
+        let mut best_candidate = None;
+        let mut best_score = 0.0;
+
+        for candidate in candidates {
+            let score = candidate.similarity_score * candidate.entity.confidence
+                      * if candidate.context_match { 1.2 } else { 1.0 };
+
+            if score > best_score {
+                best_score = score;
+                best_candidate = Some(candidate.clone());
+            }
+        }
+
+        best_candidate
+    }
+
+    /// Calculate string similarity using Levenshtein distance
+    fn calculate_string_similarity(&self, s1: &str, s2: &str) -> f64 {
+        let len1 = s1.chars().count();
+        let len2 = s2.chars().count();
+
+        if len1 == 0 && len2 == 0 {
+            return 1.0;
+        }
+        if len1 == 0 || len2 == 0 {
+            return 0.0;
+        }
+
+        let max_len = len1.max(len2);
+        let distance = self.levenshtein_distance(s1, s2);
+
+        1.0 - (distance as f64 / max_len as f64)
+    }
+
+    /// Calculate semantic similarity based on word overlap and entity types
+    fn calculate_semantic_similarity(&self, s1: &str, s2: &str) -> f64 {
+        let words1: HashSet<_> = s1.to_lowercase().split_whitespace().collect();
+        let words2: HashSet<_> = s2.to_lowercase().split_whitespace().collect();
+
+        let intersection = words1.intersection(&words2).count();
+        let union = words1.len() + words2.len() - intersection;
+
+        if union == 0 {
+            0.0
+        } else {
+            intersection as f64 / union as f64
+        }
+    }
+
+    /// Calculate Levenshtein distance between two strings
+    fn levenshtein_distance(&self, s1: &str, s2: &str) -> usize {
+        let chars1: Vec<char> = s1.chars().collect();
+        let chars2: Vec<char> = s2.chars().collect();
+
+        let len1 = chars1.len();
+        let len2 = chars2.len();
+
+        let mut matrix = vec![vec![0; len2 + 1]; len1 + 1];
+
+        for i in 0..=len1 {
+            matrix[i][0] = i;
+        }
+        for j in 0..=len2 {
+            matrix[0][j] = j;
+        }
+
+        for i in 1..=len1 {
+            for j in 1..=len2 {
+                let cost = if chars1[i - 1] == chars2[j - 1] { 0 } else { 1 };
+
+                matrix[i][j] = (matrix[i - 1][j] + 1)
+                    .min(matrix[i][j - 1] + 1)
+                    .min(matrix[i - 1][j - 1] + cost);
+            }
+        }
+
+        matrix[len1][len2]
+    }
+
+    /// Infer entity type from text content
+    fn infer_entity_type(&self, text: &str) -> EntityType {
+        let text_lower = text.to_lowercase();
+
+        if CODE_ENTITIES.contains(&text_lower.as_str()) {
+            EntityType::CodeEntity
+        } else if text_lower.contains("api") || text_lower.contains("service") ||
+                  text_lower.contains("database") || text_lower.contains("server") {
+            EntityType::SystemComponent
+        } else {
+            EntityType::Other
+        }
     }
 
     /// Compute semantic similarities using basic word vector approach
@@ -4300,3 +4886,4 @@ impl MultiModalVerificationEngine {
     }
 }
 
+}

@@ -210,7 +210,14 @@ impl MetricsCollector for InMemoryMetricsCollector {
             *count += 1;
             *sum += value;
 
-            // Update quantiles (simplified)
+            // TODO: Implement proper quantile estimation algorithms
+            // - Add streaming quantile estimation (P², TDigest, etc.)
+            // - Implement quantile merging for distributed systems
+            // - Support configurable quantile precision and accuracy
+            // - Add quantile validation and error bounds
+            // - Implement quantile-based alerting and monitoring
+            // - Add quantile performance optimization for high throughput
+            // PLACEHOLDER: Using simplified quantile approximation
             let avg = *sum / *count as f64;
             for (_, quantile_value) in quantiles.iter_mut() {
                 *quantile_value = avg; // Simplified

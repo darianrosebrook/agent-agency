@@ -97,7 +97,15 @@ impl HnswIndexer {
             metadata.model_id, metadata.dim, metadata.metric
         );
 
-        // TODO: Implement proper HNSW (Hierarchical Navigable Small World) index instead of simplified version
+        // TODO: Implement proper HNSW (Hierarchical Navigable Small World) index
+        // - Implement hierarchical graph structure with multiple layers
+        // - Add navigable small world connectivity algorithm
+        // - Support dynamic index updates and insertions
+        // - Implement efficient nearest neighbor search with pruning
+        // - Add index persistence and loading from disk
+        // - Support parallel index construction and querying
+        // - Implement index optimization and memory management
+        // PLACEHOLDER: Using simplified linear search
         // - [ ] Use established HNSW library (hnswlib, faiss, or ann-search) for production-grade implementation
         // - [ ] Implement hierarchical graph construction with multiple layers
         // - [ ] Add proper neighbor selection and pruning algorithms

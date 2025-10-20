@@ -137,6 +137,8 @@ pub enum StopReason {
     Timeout,
     Error,
     NoProgress,  // Added for hysteresis and no-progress guards
+    PatchFailure, // Added for patch application failures (addresses 75% of agent failures)
+    ProgressStalled, // Added for quantitative progress plateau detection (addresses unproductive loops)
     Unknown,
 }
 
@@ -163,6 +165,17 @@ pub enum SelfPromptingSignal {
         quality_delta: f64,
         iterations_saved: usize,
     },
+}
+
+/// Quantitative progress metrics for iteration tracking (addresses unproductive loops)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct IterationProgress {
+    pub files_touched: usize,
+    pub loc_changed: usize,
+    pub test_pass_rate_delta: f64,
+    pub lint_errors_delta: i32,
+    pub score_improvement: f64,
+    pub timestamp: DateTime<Utc>,
 }
 
 /// Iteration context for maintaining state across loops

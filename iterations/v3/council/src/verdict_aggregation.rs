@@ -696,7 +696,14 @@ impl VerdictAggregator {
             }
         }
 
-        // Remove duplicate changes (simplified - just keep first occurrence)
+        // TODO: Implement sophisticated duplicate change detection and merging
+        // - Add semantic change analysis and deduplication
+        // - Implement change conflict resolution strategies
+        // - Support change prioritization and ranking
+        // - Add change dependency analysis and ordering
+        // - Implement change merging for compatible modifications
+        // - Add change deduplication performance optimization
+        // PLACEHOLDER: Using simplified first-occurrence deduplication
         let mut unique_changes = Vec::new();
         let mut seen = std::collections::HashSet::new();
         for change in &all_changes {

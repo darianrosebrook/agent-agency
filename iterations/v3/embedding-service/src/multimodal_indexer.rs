@@ -1190,7 +1190,14 @@ impl MultimodalIndexer {
         let mut nodes = Vec::new();
         let mut edges = Vec::new();
         
-        // TODO: Implement proper DOT format parsing instead of simplified line-based approach
+        // TODO: Implement proper DOT format parsing
+        // - Integrate Graphviz DOT parser library
+        // - Parse complete graph structure with nodes and edges
+        // - Support DOT attributes and styling information
+        // - Handle complex graph layouts and hierarchies
+        // - Implement DOT syntax validation and error handling
+        // - Add DOT format conversion and export capabilities
+        // PLACEHOLDER: Using simplified line-based parsing
         // - [ ] Use established graph parsing library (petgraph, dot-parser, etc.)
         // - [ ] Parse complete DOT grammar including subgraphs and clusters
         // - [ ] Support DOT attributes (color, shape, style, etc.)

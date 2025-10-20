@@ -120,7 +120,14 @@ impl DatabaseQueryCache {
 
     /// Invalidate query cache by table name
     pub async fn invalidate_by_table(&self, table_name: &str) -> CacheResult<()> {
-        // This is a simplified invalidation - in practice you'd need to track query-to-table mappings
+        // TODO: Implement proper query-to-table mapping for cache invalidation
+        // - Create query AST parsing and analysis
+        // - Build table dependency tracking system
+        // - Implement automatic cache invalidation on schema changes
+        // - Add support for complex queries with JOINs and subqueries
+        // - Implement selective cache invalidation strategies
+        // - Add cache invalidation metrics and monitoring
+        // PLACEHOLDER: Using simplified table-based invalidation
         warn!("Table-based cache invalidation not fully implemented for: {}", table_name);
         Ok(())
     }

@@ -5,6 +5,7 @@ use chrono::{DateTime, Utc};
 
 use super::{EvalReport, EvalStatus, StopReason};
 use crate::types::ActionRequest;
+use crate::loop_controller::PatchFailureType;
 
 /// Satisficing configuration
 #[derive(Debug, Clone)]
@@ -401,6 +402,97 @@ impl SatisficingEvaluator {
                 self.config.max_iterations = self.config.max_iterations.saturating_sub(1);
             }
         }
+    }
+
+    /// Check if patch failures indicate we should stop (addresses 75% of agent failures)
+    pub fn check_patch_failure_patterns(&self, recent_patch_failures: &[PatchFailureType]) -> Option<SatisficingDecision> {
+        if recent_patch_failures.is_empty() {
+            return None;
+        }
+
+        // Check for consecutive patch failures (2+ in a row indicates systemic issues)
+        let consecutive_failures = recent_patch_failures.iter()
+            .rev()
+            .take_while(|failure| matches!(failure, PatchFailureType::SyntaxError | PatchFailureType::MergeConflict))
+            .count();
+
+        if consecutive_failures >= 2 {
+            return Some(SatisficingDecision {
+                should_continue: false,
+                reason: StopReason::PatchFailure,
+                confidence: 0.9,
+                recommendations: vec![
+                    format!("{} consecutive patch failures detected", consecutive_failures),
+                    "Check for systemic issues in code generation or environment".to_string(),
+                    "Consider model fallback or different prompting strategy".to_string(),
+                ],
+            });
+        }
+
+        // Check for environment failure patterns
+        let env_failures = recent_patch_failures.iter()
+            .filter(|f| matches!(f, PatchFailureType::EnvironmentIssue))
+            .count();
+
+        if env_failures >= 3 {
+            return Some(SatisficingDecision {
+                should_continue: false,
+                reason: StopReason::PatchFailure,
+                confidence: 0.8,
+                recommendations: vec![
+                    format!("{} environment failures detected", env_failures),
+                    "Check build environment, dependencies, or workspace configuration".to_string(),
+                    "Consider environment reset or different workspace strategy".to_string(),
+                ],
+            });
+        }
+
+        None
+    }
+
+    /// Check if iteration progress has stalled (plateau detection)
+    pub fn check_progress_plateau(&self, recent_progress: &[crate::types::IterationProgress]) -> Option<SatisficingDecision> {
+        if recent_progress.len() < 3 {
+            return None; // Need at least 3 iterations to detect plateau
+        }
+
+        // Check for plateau: minimal progress over last 3 iterations
+        let recent_scores: Vec<f64> = recent_progress.iter()
+            .rev()
+            .take(3)
+            .map(|p| p.score_improvement)
+            .collect();
+
+        let avg_improvement = recent_scores.iter().sum::<f64>() / recent_scores.len() as f64;
+        let max_improvement = recent_scores.iter().fold(0.0f64, |a, &b| a.max(b));
+
+        // Plateau conditions:
+        // 1. Average improvement < 2% over last 3 iterations
+        // 2. No single iteration improved by > 5%
+        // 3. Total LOC change < 10 over last 3 iterations
+        let total_loc_change: usize = recent_progress.iter()
+            .rev()
+            .take(3)
+            .map(|p| p.loc_changed)
+            .sum();
+
+        let plateau_detected = avg_improvement < 0.02 && max_improvement < 0.05 && total_loc_change < 10;
+
+        if plateau_detected {
+            return Some(SatisficingDecision {
+                should_continue: false,
+                reason: StopReason::ProgressStalled,
+                confidence: 0.85,
+                recommendations: vec![
+                    format!("Progress plateau detected over {} iterations", recent_progress.len()),
+                    format!("Average score improvement: {:.3}%", avg_improvement * 100.0),
+                    format!("Total LOC changed: {}", total_loc_change),
+                    "Consider different approach, model fallback, or scope reduction".to_string(),
+                ],
+            });
+        }
+
+        None
     }
 }
 

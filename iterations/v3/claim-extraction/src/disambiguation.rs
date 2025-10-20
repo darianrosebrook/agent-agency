@@ -2742,3 +2742,6 @@ impl EntityPatterns {
             }
         }
         
+
+        entities
+    }

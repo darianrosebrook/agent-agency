@@ -1,181 +1,170 @@
-# Production Docker Compose for Multimodal RAG System
-# Complete production deployment with all services
-
 version: '3.8'
 
 services:
-  # PostgreSQL with pgvector extension
+  # PostgreSQL Database
   postgres:
-    image: pgvector/pgvector:pg16
-    container_name: multimodal-rag-postgres
+    image: postgres:15-alpine
+    container_name: agent-agency-postgres
     environment:
-      POSTGRES_DB: multimodal_rag
-      POSTGRES_USER: multimodal_rag
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+      POSTGRES_DB: agent_agency
+      POSTGRES_USER: agent_agency
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-secure-password-change-me}
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./migrations:/docker-entrypoint-initdb.d
     ports:
       - "5432:5432"
+    networks:
+      - agent-agency-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U multimodal_rag -d multimodal_rag"]
+      test: ["CMD-SHELL", "pg_isready -U agent_agency -d agent_agency"]
       interval: 10s
       timeout: 5s
       retries: 5
-    networks:
-      - multimodal-rag-network
+    restart: unless-stopped
 
-  # Redis for caching and job queues
+  # Redis Cache
   redis:
     image: redis:7-alpine
-    container_name: multimodal-rag-redis
-    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    container_name: agent-agency-redis
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-secure-redis-password}
     volumes:
       - redis_data:/data
     ports:
       - "6379:6379"
+    networks:
+      - agent-agency-network
     healthcheck:
       test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
       interval: 10s
       timeout: 3s
       retries: 5
-    networks:
-      - multimodal-rag-network
-
-  # PostgreSQL exporter for database metrics
-  postgres-exporter:
-    image: prometheuscommunity/postgres-exporter:latest
-    container_name: multimodal-rag-postgres-exporter
-    environment:
-      DATA_SOURCE_NAME: postgresql://multimodal_rag:${POSTGRES_PASSWORD}@postgres:5432/multimodal_rag?sslmode=disable
-    ports:
-      - "9187:9187"
-    depends_on:
-      - postgres
-    networks:
-      - multimodal-rag-network
     restart: unless-stopped
 
-  # Redis exporter for cache metrics
-  redis-exporter:
-    image: oliver006/redis_exporter:latest
-    container_name: multimodal-rag-redis-exporter
-    environment:
-      REDIS_ADDR: redis:6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD}
-    ports:
-      - "9121:9121"
-    depends_on:
-      - redis
-    networks:
-      - multimodal-rag-network
-    restart: unless-stopped
-
-  # Node exporter for system metrics
-  node-exporter:
-    image: prom/node-exporter:latest
-    container_name: multimodal-rag-node-exporter
-    ports:
-      - "9100:9100"
-    volumes:
-      - /proc:/host/proc:ro
-      - /sys:/host/sys:ro
-      - /:/rootfs:ro
-    command:
-      - '--path.procfs=/host/proc'
-      - '--path.rootfs=/rootfs'
-      - '--path.sysfs=/host/sys'
-      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
-    networks:
-      - multimodal-rag-network
-    restart: unless-stopped
-
-  # Nginx exporter for reverse proxy metrics
-  nginx-exporter:
-    image: nginx/nginx-prometheus-exporter:latest
-    container_name: multimodal-rag-nginx-exporter
-    ports:
-      - "9113:9113"
-    command:
-      - '-nginx.scrape-uri=http://nginx:80/stub_status'
-    depends_on:
-      - nginx
-    networks:
-      - multimodal-rag-network
-    restart: unless-stopped
-
-  # Multimodal RAG Service
-  multimodal-rag-service:
+  # Agent Agency API Service
+  api:
     build:
-      context: .
-      dockerfile: docker/Dockerfile.multimodal-rag
-    container_name: multimodal-rag-service
+      context: ..
+      dockerfile: docker/Dockerfile.api
+    container_name: agent-agency-api
     environment:
-      # Database configuration
-      DATABASE_URL: postgresql://multimodal_rag:${POSTGRES_PASSWORD}@postgres:5432/multimodal_rag
-      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
-      
-      # Service configuration
-      RUST_LOG: info
-      RUST_BACKTRACE: 1
-      SERVICE_PORT: 8080
-      METRICS_PORT: 8081
-      
-      # Multimodal processing
-      EMBEDDING_MODEL: e5-small-v2
-      MAX_CONCURRENT_JOBS: 10
-      VECTOR_DIMENSION: 384
-      
-      # Security
-      JWT_SECRET: ${JWT_SECRET}
-      API_KEY: ${API_KEY}
+      DATABASE_URL: postgresql://agent_agency:${DATABASE_PASSWORD:-secure-password-change-me}@postgres:5432/agent_agency
+      REDIS_URL: redis://:${REDIS_PASSWORD:-secure-redis-password}@redis:6379
+      JWT_SECRET: ${JWT_SECRET:-your-super-secure-jwt-secret-change-me}
+      API_KEY: ${API_KEY:-your-api-key-change-me}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      ARBITER_COUNCIL_SIZE: ${ARBITER_COUNCIL_SIZE:-3}
+      ARBITER_DEBATE_ROUNDS: ${ARBITER_DEBATE_ROUNDS:-2}
+      MAX_CONCURRENT_TASKS: ${MAX_CONCURRENT_TASKS:-5}
+      TASK_TIMEOUT_SECONDS: ${TASK_TIMEOUT_SECONDS:-600}
+      RUST_LOG: ${RUST_LOG:-info}
     ports:
-      - "8080:8080"
-      - "8081:8081"
+      - "3000:3000"
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-    volumes:
-      - ./data/uploads:/app/data/uploads
-      - ./data/models:/app/data/models
-      - ./logs:/app/logs
+    networks:
+      - agent-agency-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    volumes:
+      - ./logs:/app/logs
+      - ./workspace:/app/workspace
+
+  # Agent Agency Web Dashboard
+  dashboard:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.dashboard
+    container_name: agent-agency-dashboard
+    environment:
+      NEXT_PUBLIC_API_URL: http://api:3000
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-your-nextauth-secret-change-me}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3001}
+    ports:
+      - "3001:3001"
+    depends_on:
+      - api
     networks:
-      - multimodal-rag-network
+      - agent-agency-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     restart: unless-stopped
 
-  # Nginx reverse proxy
+  # Worker Pool for Task Execution
+  worker:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.worker
+    container_name: agent-agency-worker
+    environment:
+      DATABASE_URL: postgresql://agent_agency:${DATABASE_PASSWORD:-secure-password-change-me}@postgres:5432/agent_agency
+      REDIS_URL: redis://:${REDIS_PASSWORD:-secure-redis-password}@redis:6379
+      WORKER_POOL_SIZE: ${WORKER_POOL_SIZE:-10}
+      MAX_MEMORY_MB: ${MAX_MEMORY_MB:-4096}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      RUST_LOG: ${RUST_LOG:-info}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      api:
+        condition: service_started
+    networks:
+      - agent-agency-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9090/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    volumes:
+      - ./logs:/app/logs
+      - ./workspace:/app/workspace
+    deploy:
+      replicas: 2
+
+  # Nginx Reverse Proxy
   nginx:
-    image: nginx:alpine
-    container_name: multimodal-rag-nginx
+    image: nginx:1.24-alpine
+    container_name: agent-agency-nginx
     ports:
       - "80:80"
       - "443:443"
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
-      - ./nginx/ssl:/etc/nginx/ssl
-      - ./logs/nginx:/var/log/nginx
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - nginx_logs:/var/log/nginx
     depends_on:
-      - multimodal-rag-service
+      - api
+      - dashboard
     networks:
-      - multimodal-rag-network
+      - agent-agency-network
     restart: unless-stopped
 
-  # Prometheus for metrics collection
+  # Monitoring Stack (Optional)
   prometheus:
     image: prom/prometheus:latest
-    container_name: multimodal-rag-prometheus
+    container_name: agent-agency-prometheus
     ports:
       - "9090:9090"
     volumes:
-      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus_data:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
@@ -185,81 +174,55 @@ services:
       - '--storage.tsdb.retention.time=200h'
       - '--web.enable-lifecycle'
     networks:
-      - multimodal-rag-network
+      - agent-agency-network
     restart: unless-stopped
 
-  # Alertmanager for alert routing and notifications
-  alertmanager:
-    image: prom/alertmanager:latest
-    container_name: multimodal-rag-alertmanager
-    ports:
-      - "9093:9093"
-    volumes:
-      - ./monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml
-    command:
-      - '--config.file=/etc/alertmanager/alertmanager.yml'
-      - '--storage.path=/alertmanager'
-    networks:
-      - multimodal-rag-network
-    restart: unless-stopped
-
-  # Grafana for monitoring dashboards
   grafana:
     image: grafana/grafana:latest
-    container_name: multimodal-rag-grafana
-    ports:
-      - "3000:3000"
+    container_name: agent-agency-grafana
     environment:
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD}
-      GF_USERS_ALLOW_SIGN_UP: false
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    ports:
+      - "3002:3000"
     volumes:
       - grafana_data:/var/lib/grafana
-      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
-      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
     depends_on:
       - prometheus
-      - alertmanager
     networks:
-      - multimodal-rag-network
+      - agent-agency-network
     restart: unless-stopped
 
-  # Elasticsearch for log aggregation
-  elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
-    container_name: multimodal-rag-elasticsearch
-    environment:
-      - discovery.type=single-node
-      - xpack.security.enabled=false
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+  # Log Aggregation (Optional)
+  fluent-bit:
+    image: fluent/fluent-bit:latest
+    container_name: agent-agency-fluent-bit
     volumes:
-      - elasticsearch_data:/usr/share/elasticsearch/data
+      - ./monitoring/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf:ro
+      - ./logs:/var/log/agent-agency:ro
     ports:
-      - "9200:9200"
+      - "24224:24224"
     networks:
-      - multimodal-rag-network
-    restart: unless-stopped
-
-  # Kibana for log visualization
-  kibana:
-    image: docker.elastic.co/kibana/kibana:8.11.0
-    container_name: multimodal-rag-kibana
-    environment:
-      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
-    ports:
-      - "5601:5601"
-    depends_on:
-      - elasticsearch
-    networks:
-      - multimodal-rag-network
+      - agent-agency-network
     restart: unless-stopped
 
 volumes:
   postgres_data:
+    driver: local
   redis_data:
+    driver: local
   prometheus_data:
+    driver: local
   grafana_data:
-  elasticsearch_data:
+    driver: local
+  nginx_logs:
+    driver: local
 
 networks:
-  multimodal-rag-network:
+  agent-agency-network:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

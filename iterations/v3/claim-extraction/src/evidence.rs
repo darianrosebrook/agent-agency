@@ -717,7 +717,14 @@ impl EvidenceCollector {
 
         let content = if test_times_path.exists() {
             if let Ok(_timing_data) = std::fs::read_to_string(test_times_path) {
-                // TODO: Replace simplified test timing data parsing with proper schema validation
+                // TODO: Implement proper test timing data parsing and validation
+                // - Add structured schema for test timing data
+                // - Implement comprehensive parsing with error handling
+                // - Support multiple timing data formats and sources
+                // - Add timing data validation and statistical analysis
+                // - Implement timing data aggregation and reporting
+                // - Add timing data performance optimization
+                // PLACEHOLDER: Using simplified parsing
                 /// Requirements for completion:
                 /// - [ ] Parse JSON timing data with proper schema validation
                 /// - [ ] Extract individual test execution times and metadata

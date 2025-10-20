@@ -1410,7 +1410,14 @@ impl MetalGPUManager {
     ) -> Result<objc2_metal_performance_shaders_graph::MPSGraphTensor> {
         use objc2_metal_performance_shaders_graph::*;
 
-        // Create embedding layer (simplified - would use actual embeddings)
+        // TODO: Implement proper embedding layer with trained embeddings
+        // - Load pre-trained embedding models (Word2Vec, GloVe, etc.)
+        // - Implement embedding lookup and caching
+        // - Add embedding dimensionality and vocabulary management
+        // - Support multiple embedding types (token, position, segment)
+        // - Implement embedding fine-tuning and adaptation
+        // - Add embedding performance optimization and quantization
+        // PLACEHOLDER: Using simplified random embedding initialization
         let embedding_dim = 768;
         let embedding_matrix = graph.placeholderWithShape_name_dataType(
             &[Self::VOCAB_SIZE as u64, embedding_dim as u64],

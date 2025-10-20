@@ -84,6 +84,70 @@ pub struct TenantLimits {
     pub retention_hours: u32,
     /// Maximum concurrent operations
     pub max_concurrent_operations: u32,
+    /// Storage quota configuration
+    pub storage_quota: StorageQuota,
+}
+
+/// Storage quota configuration for tenants
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StorageQuota {
+    /// Hard limit for storage usage (bytes)
+    pub hard_limit_bytes: u64,
+    /// Soft limit for storage usage (bytes) - triggers warnings
+    pub soft_limit_bytes: u64,
+    /// Quota reset period (hours) - for periodic quotas
+    pub reset_period_hours: Option<u32>,
+    /// Compression ratio for storage calculations (0.0-1.0)
+    pub compression_ratio: f64,
+    /// Whether to allow quota overrides for critical operations
+    pub allow_overrides: bool,
+    /// Billing tier affecting quota limits
+    pub billing_tier: BillingTier,
+}
+
+/// Billing tiers affecting storage quotas
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub enum BillingTier {
+    /// Free tier with basic limits
+    Free,
+    /// Standard tier with moderate limits
+    Standard,
+    /// Premium tier with high limits
+    Premium,
+    /// Enterprise tier with custom limits
+    Enterprise,
+}
+
+/// Storage usage metrics for monitoring and alerting
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StorageUsageMetrics {
+    /// Current storage usage (bytes)
+    pub current_usage_bytes: u64,
+    /// Soft limit usage percentage (0.0-1.0)
+    pub soft_limit_percentage: f64,
+    /// Hard limit usage percentage (0.0-1.0)
+    pub hard_limit_percentage: f64,
+    /// Projected usage if current trends continue (bytes)
+    pub projected_usage_bytes: u64,
+    /// Time until quota exceeded at current rate (hours)
+    pub time_to_exceed_hours: Option<u64>,
+    /// Compression savings achieved (bytes)
+    pub compression_savings_bytes: u64,
+    /// Last updated timestamp
+    pub last_updated: DateTime<Utc>,
+}
+
+/// Storage quota alert types
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum StorageQuotaAlert {
+    /// Warning when approaching soft limit
+    SoftLimitWarning { usage_percentage: f64, projected_exceed_hours: Option<u64> },
+    /// Critical alert when approaching hard limit
+    HardLimitApproaching { usage_percentage: f64, projected_exceed_hours: Option<u64> },
+    /// Alert when hard limit exceeded
+    HardLimitExceeded { overage_bytes: u64 },
+    /// Alert for unusual usage patterns
+    UnusualUsagePattern { description: String },
 }
 
 /// Context synthesis configuration

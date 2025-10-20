@@ -112,7 +112,14 @@ impl AdaptivePromptingStrategy {
             if let Some(notes) = &criterion.notes {
                 if notes.contains("[Failure:") && notes.contains("patterns:") {
                     // Parse the failure bucket from notes
-                    // This is a simplified implementation - in practice you'd want more robust parsing
+                    // TODO: Implement robust action request parsing and validation
+                    // - Add formal grammar definition for action requests
+                    // - Implement comprehensive parsing with error recovery
+                    // - Support complex action request structures and nesting
+                    // - Add action request validation against schema
+                    // - Implement action request normalization and canonicalization
+                    // - Add action request parsing performance optimization
+                    // PLACEHOLDER: Using simplified regex-based parsing
                     return Some(FailureBucket {
                         category: crate::evaluation::FailureCategory::Unknown, // Would parse from notes
                         patterns: vec!["parsed_pattern".to_string()], // Would extract from notes

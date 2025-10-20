@@ -620,7 +620,14 @@ where
 
     /// Invalidate cache by tags
     pub async fn invalidate_by_tags(&self, tags: &[String]) -> CacheResult<usize> {
-        // This is a simplified implementation
+        // TODO: Implement proper typed cache invalidation system
+        // - Add type-safe cache key generation and validation
+        // - Implement typed cache serialization/deserialization
+        // - Add cache entry metadata and TTL management
+        // - Support cache warming strategies for typed data
+        // - Implement cache consistency guarantees
+        // - Add typed cache performance monitoring
+        // PLACEHOLDER: Using simplified generic invalidation
         // In a real system, you'd need to track tag-to-key mappings
         let memory_entries = self.memory_cache.entries.read().await;
         let mut invalidated = 0;
@@ -794,7 +801,14 @@ impl CacheManager {
         let caches = self.caches.read().await;
         let mut stats = HashMap::new();
 
-        // This is simplified - in practice you'd need to handle the Any type properly
+        // TODO: Implement proper Any type handling for cache operations
+        // - Add type-safe Any downcasting with proper error handling
+        // - Implement type registry for cache serialization
+        // - Add runtime type validation and conversion
+        // - Support polymorphic cache operations
+        // - Implement type-safe cache entry access
+        // - Add type metadata and versioning support
+        // PLACEHOLDER: Using unsafe Any type operations
         // For now, return empty stats
         for name in caches.keys() {
             stats.insert(name.clone(), CacheStats::default());

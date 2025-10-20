@@ -34,11 +34,11 @@ struct VectorIndex {
 struct TextSearchBridge {
     bm25_index: Bm25Index,
     vector_index: VectorIndex,
-    embedding_service: Arc<EmbeddingService>,
+    embedding_service: Arc<dyn EmbeddingService>,
 }
 
 impl TextSearchBridge {
-    async fn new(embedding_service: Arc<EmbeddingService>) -> Result<Self> {
+    async fn new(embedding_service: Arc<dyn EmbeddingService>) -> Result<Self> {
         tracing::debug!("Initializing text search bridge with BM25 and vector search");
 
         let bm25_index = Bm25Index {

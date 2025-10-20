@@ -525,7 +525,14 @@ impl PredictionResult {
             .context("Failed to read image file")?;
 
         // Create CVPixelBuffer from image data
-        // This is a simplified implementation - in practice, you'd need proper image decoding
+        // TODO: Implement proper image decoding and preprocessing
+        // - Integrate image processing library (image crate, etc.)
+        // - Support multiple image formats (JPEG, PNG, WebP, etc.)
+        // - Implement image resizing and normalization
+        // - Add image color space conversion and channel handling
+        // - Support batch image processing and optimization
+        // - Implement image quality validation and error handling
+        // PLACEHOLDER: Using simplified pixel array processing
         unsafe {
             // Create image key
             let image_key = CFString::new("image");

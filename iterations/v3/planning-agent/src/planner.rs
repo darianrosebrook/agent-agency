@@ -328,7 +328,14 @@ impl PlanningAgent {
 
     /// Generate initial working specification from task request
     async fn generate_working_spec(&self, task_request: &agent_agency_contracts::task_request::TaskRequest) -> PlanningResult<agent_agency_contracts::working_spec::WorkingSpec> {
-        // This is a simplified implementation - in practice this would use
+        // TODO: Implement sophisticated goal extraction and analysis
+        // - Add natural language processing for goal identification
+        // - Implement goal hierarchy and dependency analysis
+        // - Support goal prioritization and ranking algorithms
+        // - Add goal validation against project constraints
+        // - Implement goal decomposition into actionable tasks
+        // - Add goal progress tracking and completion criteria
+        // PLACEHOLDER: Using simplified keyword extraction
         // more sophisticated analysis of the task description
         let working_spec_id = format!("{}-{}", task_request.id.simple(), Uuid::new_v4().simple());
 

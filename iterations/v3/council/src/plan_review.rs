@@ -256,7 +256,14 @@ impl PlanReviewService {
     /// Parse verdict from participant contribution
     fn parse_contribution_verdict(&self, contribution: &ParticipantContribution) -> Result<PlanVerdict> {
         // Parse based on contribution content and confidence
-        // This is a simplified implementation - real implementation would parse structured verdicts
+        // TODO: Implement structured verdict parsing and analysis
+        // - Add verdict schema definition and validation
+        // - Implement verdict structure parsing and normalization
+        // - Support verdict confidence scoring and aggregation
+        // - Add verdict consistency checking and validation
+        // - Implement verdict comparison and conflict resolution
+        // - Add verdict provenance tracking and audit trail
+        // PLACEHOLDER: Using simplified text-based parsing
 
         match contribution.confidence_score {
             score if score >= 0.8 => Ok(PlanVerdict::Approved),

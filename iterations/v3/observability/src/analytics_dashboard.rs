@@ -2616,7 +2616,14 @@ impl AnalyticsDashboard {
             )));
         }
 
-        // Extract basic metadata from ONNX protobuf (simplified)
+        // TODO: Implement comprehensive ONNX protobuf metadata extraction
+        // - Parse complete ONNX protobuf structure with protobuf crate
+        // - Extract model graph, operators, and tensor information
+        // - Add ONNX version compatibility and validation
+        // - Support ONNX opset versioning and compatibility
+        // - Implement ONNX model optimization analysis
+        // - Add ONNX metadata caching and performance optimization
+        // PLACEHOLDER: Using simplified metadata extraction
         // In a real implementation, this would use onnxruntime or protobuf parsing
         let model_info = self.extract_onnx_metadata(&onnx_data)?;
 

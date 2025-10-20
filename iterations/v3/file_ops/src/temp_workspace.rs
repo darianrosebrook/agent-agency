@@ -224,7 +224,14 @@ impl Workspace for TempMirrorWorkspace {
 
         // Since we don't have persistent changeset tracking yet,
         // we'll restore from the most recent snapshot
-        // This is a simplified implementation
+        // TODO: Implement comprehensive changeset application system
+        // - Add changeset validation and conflict detection
+        // - Implement atomic changeset application with rollback
+        // - Support partial changeset application and recovery
+        // - Add changeset dependency resolution and ordering
+        // - Implement changeset progress tracking and status
+        // - Add changeset application performance monitoring
+        // PLACEHOLDER: Using simplified in-memory application
 
         Err(FileOpsError::Path("Revert not yet implemented for temp workspace".to_string()))
     }
