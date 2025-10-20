@@ -7,45 +7,21 @@ license.workspace = true
 
 [dependencies]
 # Workspace dependencies
-tokio.workspace = true
-async-trait.workspace = true
 serde.workspace = true
 serde_json.workspace = true
-sqlx = { version = "0.7", default-features = false, features = ["runtime-tokio-rustls", "postgres", "chrono", "uuid", "macros"] }
-chrono.workspace = true
-uuid.workspace = true
-reqwest.workspace = true
-anyhow.workspace = true
-thiserror.workspace = true
+tokio.workspace = true
+async-trait.workspace = true
 tracing.workspace = true
-config.workspace = true
+thiserror.workspace = true
+uuid.workspace = true
+chrono.workspace = true
+futures = "0.3"
 
-# Council-specific dependencies
-dashmap = "5.5"  # Concurrent hashmap for verdict storage
-crossbeam = "0.8"  # Lock-free data structures
-parking_lot = "0.12"  # Fast mutexes for coordination
-regex = "1.10"  # Regex patterns for claim extraction
-rand = "0.8"  # Random jitter for retry logic
-
-# Cryptographic dependencies
-ring = "0.17"  # Cryptographic primitives and Ed25519 signatures
-sha2 = "0.10"  # SHA-2 hashing
-hex = "0.4"  # Hex encoding/decoding
-base64 = "0.21"  # Base64 encoding/decoding
-
-# Embedding service integration
-embedding-service = { path = "../embedding-service" }
-
-# Claim extraction integration
-claim-extraction = { path = "../claim-extraction" }
-
-# Database integration
+# Local crates
+agent-agency-contracts = { path = "../agent-agency-contracts" }
 agent-agency-database = { path = "../database" }
 
-# Source integrity integration
-source-integrity = { path = "../source-integrity" }
-
-[dev-dependencies]
-jsonschema = "0.17"
-serde_json = "1"
-tokio-test = "0.4"
+# Additional dependencies
+anyhow = "1.0"
+regex = "1.10"
+rand = "0.8"

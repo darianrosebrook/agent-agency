@@ -100,6 +100,42 @@ pub struct MonitoringConfig {
     pub log_level: String,
     pub structured_logging: bool,
     pub prometheus_endpoint: Option<String>,
+    /// Redis configuration for metrics caching
+    pub redis: Option<RedisConfig>,
+    /// Prometheus configuration for metrics collection
+    pub prometheus: Option<PrometheusConfig>,
+    /// StatsD configuration for metrics aggregation
+    pub statsd: Option<StatsDConfig>,
+}
+
+/// Redis configuration for observability backends
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
+pub struct RedisConfig {
+    pub host: String,
+    pub port: u16,
+    pub password: Option<String>,
+    pub database: u8,
+    pub pool_size: usize,
+    pub connection_timeout_seconds: u64,
+    pub command_timeout_seconds: u64,
+}
+
+/// Prometheus configuration for metrics collection
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
+pub struct PrometheusConfig {
+    pub endpoint: String,
+    pub push_interval_seconds: u64,
+    pub job_name: String,
+    pub instance: String,
+}
+
+/// StatsD configuration for metrics aggregation
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
+pub struct StatsDConfig {
+    pub host: String,
+    pub port: u16,
+    pub prefix: String,
+    pub flush_interval_seconds: u64,
 }
 
 /// Component-specific configurations
@@ -236,6 +272,27 @@ impl AppConfig {
                 log_level: "info".to_string(),
                 structured_logging: true,
                 prometheus_endpoint: Some("http://localhost:9090/metrics".to_string()),
+                redis: Some(RedisConfig {
+                    host: "localhost".to_string(),
+                    port: 6379,
+                    password: None,
+                    database: 0,
+                    pool_size: 10,
+                    connection_timeout_seconds: 5,
+                    command_timeout_seconds: 3,
+                }),
+                prometheus: Some(PrometheusConfig {
+                    endpoint: "http://localhost:9090".to_string(),
+                    push_interval_seconds: 15,
+                    job_name: "agent-agency".to_string(),
+                    instance: "default".to_string(),
+                }),
+                statsd: Some(StatsDConfig {
+                    host: "localhost".to_string(),
+                    port: 8125,
+                    prefix: "agent_agency".to_string(),
+                    flush_interval_seconds: 10,
+                }),
             },
             components: ComponentConfigs {
                 orchestration: OrchestrationConfig {

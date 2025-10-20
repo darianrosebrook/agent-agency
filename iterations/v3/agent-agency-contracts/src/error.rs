@@ -3,6 +3,12 @@ use std::fmt;
 /// Contract artifact categories handled by the interoperability layer.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ContractKind {
+    TaskRequest,
+    TaskResponse,
+    WorkingSpec,
+    ExecutionArtifacts,
+    QualityReport,
+    RefinementDecision,
     WorkerOutput,
     JudgeVerdict,
     FinalVerdict,
@@ -12,6 +18,12 @@ pub enum ContractKind {
 impl fmt::Display for ContractKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let label = match self {
+            ContractKind::TaskRequest => "task-request",
+            ContractKind::TaskResponse => "task-response",
+            ContractKind::WorkingSpec => "working-spec",
+            ContractKind::ExecutionArtifacts => "execution-artifacts",
+            ContractKind::QualityReport => "quality-report",
+            ContractKind::RefinementDecision => "refinement-decision",
             ContractKind::WorkerOutput => "worker-output",
             ContractKind::JudgeVerdict => "judge-verdict",
             ContractKind::FinalVerdict => "final-verdict",

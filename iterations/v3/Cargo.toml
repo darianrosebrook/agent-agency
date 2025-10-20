@@ -1,7 +1,6 @@
 [workspace]
 resolver = "2"
 members = [
-    "council",
     "workers",
     "apple-silicon",
     "research",
@@ -23,6 +22,8 @@ members = [
     "database",
     "integration-tests",
     "agent-agency-contracts",
+    "planning-agent",
+    "council",
     "ingestors",
     "enrichers",
     "indexers",
@@ -86,6 +87,11 @@ pkcs8 = "0.10"
 
 # Security utilities
 security = { path = "security" }
+
+# Observability backends (now in individual crates)
+# redis = { version = "0.24", features = ["tokio-comp", "connection-manager"] }
+# prometheus = "0.13"
+# cadence = "1.4"   # StatsD client
 
 [profile.release]
 opt-level = 3

@@ -43,6 +43,7 @@ sysinfo = "0.30"
 
 # Text processing
 regex = "1.10"
+tokenizers = "0.19"
 
 # Concurrent data structures
 dashmap = "5.5"

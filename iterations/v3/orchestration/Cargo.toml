@@ -31,3 +31,9 @@ ingestors = { path = "../ingestors" }
 enrichers = { path = "../enrichers" }
 indexers = { path = "../indexers" }
 agent-agency-research = { path = "../research" }
+reqwest = { workspace = true, features = ["json"] }
+clap = { version = "4.0", features = ["derive"] }
+
+[[bin]]
+name = "agent-agency"
+path = "src/main.rs"

@@ -1,9 +1,76 @@
-//! Basic metrics collection implementation
+//! Metrics collection and backend interfaces
+//!
+//! Provides unified interfaces for different metrics backends (Prometheus, StatsD, Redis)
+//! with circuit breaker patterns and graceful degradation.
 
+use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
+
+/// Unified metrics backend trait for pluggable implementations
+#[async_trait::async_trait]
+pub trait MetricsBackend: Send + Sync {
+    /// Record a counter increment
+    async fn counter(&self, name: &str, labels: &[(&str, &str)], value: u64);
+
+    /// Record a gauge value
+    async fn gauge(&self, name: &str, labels: &[(&str, &str)], value: f64);
+
+    /// Record a histogram observation
+    async fn histogram(&self, name: &str, labels: &[(&str, &str)], value: f64);
+}
+
+/// No-op metrics backend that drops all metrics (for testing/development)
+#[derive(Debug, Clone)]
+pub struct NoOpMetricsBackend;
+
+#[async_trait::async_trait]
+impl MetricsBackend for NoOpMetricsBackend {
+    async fn counter(&self, _name: &str, _labels: &[(&str, &str)], _value: u64) {
+        // No-op
+    }
+
+    async fn gauge(&self, _name: &str, _labels: &[(&str, &str)], _value: f64) {
+        // No-op
+    }
+
+    async fn histogram(&self, _name: &str, _labels: &[(&str, &str)], _value: f64) {
+        // No-op
+    }
+}
+
+/// In-memory metrics backend using the existing MetricsCollector
+#[derive(Debug)]
+pub struct InMemoryMetricsBackend {
+    collector: MetricsCollector,
+}
+
+impl InMemoryMetricsBackend {
+    pub fn new() -> Self {
+        Self {
+            collector: MetricsCollector::new(),
+        }
+    }
+}
+
+#[async_trait::async_trait]
+impl MetricsBackend for InMemoryMetricsBackend {
+    async fn counter(&self, name: &str, labels: &[(&str, &str)], value: u64) {
+        for _ in 0..value {
+            self.collector.increment_counter(name, labels).await;
+        }
+    }
+
+    async fn gauge(&self, name: &str, labels: &[(&str, &str)], value: f64) {
+        self.collector.update_gauge(name, value, labels).await;
+    }
+
+    async fn histogram(&self, name: &str, labels: &[(&str, &str)], value: f64) {
+        self.collector.record_histogram(name, value, labels).await;
+    }
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MetricValue {

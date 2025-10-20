@@ -13566,5 +13566,41 @@
     },
     "previous_hash": "143be7434e5abff5cda191e7717ba0ac22b683827b0d4009b06b1afa99ca6794",
     "hash": "816cea9752545ad39279a3d889a94989819d97f6fe7c9f37d7c8b55561311c79"
+  },
+  {
+    "id": "prov-1760915070063",
+    "timestamp": "2025-10-19T23:04:30.063Z",
+    "commit": {
+      "hash": "4273d98a910c4757a5c0410e85dab52b64489a94",
+      "message": "feat: Complete Apple Silicon Core ML implementation with comprehensive TODO resolution",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "PROJ-785",
+      "title": "agent-agency",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": [
+        "WV-0001"
+      ]
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-19T23:04:30.064Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "816cea9752545ad39279a3d889a94989819d97f6fe7c9f37d7c8b55561311c79",
+    "hash": "31fc80c6198a1ecdde34e775c0f5a234ce1791c42f7d7b65021fe55fd2c73e1e"
   }
 ]

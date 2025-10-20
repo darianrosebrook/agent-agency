@@ -720,7 +720,7 @@ impl MemoryManager {
 
         // Improved cache size estimation using system information
         // This provides a more accurate estimate based on system memory patterns
-        let estimated_cache_mb = 0u64;
+        let mut estimated_cache_mb = 0u64;
 
         if cfg!(target_os = "macos") {
             // On macOS, cache typically uses 10-25% of system memory
@@ -1073,17 +1073,17 @@ impl MemoryManager {
         // Perfect for ML model weights that need fast decompression
         
         // TODO: Replace compression ratio estimation with actual compression analysis
-        /// Requirements for completion:
-        /// - [ ] Implement actual compression ratio analysis using real compression algorithms
-        /// - [ ] Add support for different compression algorithms (LZ4, Zstd, Brotli)
-        /// - [ ] Implement proper compression performance benchmarking
-        /// - [ ] Add support for model-specific compression optimization
-        /// - [ ] Implement proper error handling for compression failures
-        /// - [ ] Add support for compression quality vs speed trade-offs
-        /// - [ ] Implement proper memory management for compression processes
-        /// - [ ] Add support for compression result validation and quality assessment
-        /// - [ ] Implement proper cleanup of compression resources
-        /// - [ ] Add support for compression monitoring and performance tracking
+        // Requirements for completion:
+        // - [ ] Implement actual compression ratio analysis using real compression algorithms
+        // - [ ] Add support for different compression algorithms (LZ4, Zstd, Brotli)
+        // - [ ] Implement proper compression performance benchmarking
+        // - [ ] Add support for model-specific compression optimization
+        // - [ ] Implement proper error handling for compression failures
+        // - [ ] Add support for compression quality vs speed trade-offs
+        // - [ ] Implement proper memory management for compression processes
+        // - [ ] Add support for compression result validation and quality assessment
+        // - [ ] Implement proper cleanup of compression resources
+        // - [ ] Add support for compression monitoring and performance tracking
         // Estimate compression ratio based on model size and type
         let compression_ratio = match model.size_mb {
             s if s < 50 => 0.15,  // Small models: 15% compression
@@ -1108,17 +1108,17 @@ impl MemoryManager {
     /// Apply quantization compression to reduce model precision and size
     async fn apply_quantization_compression(&self, model: &ModelUsageStats) -> Result<u64> {
         // TODO: Replace simplified quantization estimation with actual quantization implementation
-        /// Requirements for completion:
-        /// - [ ] Implement actual model quantization (FP32 -> FP16 -> INT8)
-        /// - [ ] Add support for different quantization algorithms and strategies
-        /// - [ ] Implement proper accuracy validation and loss measurement
-        /// - [ ] Add support for quantization-aware training and fine-tuning
-        /// - [ ] Implement proper error handling for quantization failures
-        /// - [ ] Add support for different model architectures and quantization compatibility
-        /// - [ ] Implement proper memory management for quantization processes
-        /// - [ ] Add support for quantization optimization and performance tuning
-        /// - [ ] Implement proper cleanup of quantization resources
-        /// - [ ] Add support for quantization result validation and quality assessment
+        // Requirements for completion:
+        // - [ ] Implement actual model quantization (FP32 -> FP16 -> INT8)
+        // - [ ] Add support for different quantization algorithms and strategies
+        // - [ ] Implement proper accuracy validation and loss measurement
+        // - [ ] Add support for quantization-aware training and fine-tuning
+        // - [ ] Implement proper error handling for quantization failures
+        // - [ ] Add support for different model architectures and quantization compatibility
+        // - [ ] Implement proper memory management for quantization processes
+        // - [ ] Add support for quantization optimization and performance tuning
+        // - [ ] Implement proper cleanup of quantization resources
+        // - [ ] Add support for quantization result validation and quality assessment
         // Quantization reduces precision from FP32 -> FP16 -> INT8 where appropriate
         // This can reduce model size by 50-75% with minimal accuracy loss
         
@@ -1179,17 +1179,17 @@ impl MemoryManager {
         // Typically 5-15% of model size, with 80-90% compression ratio
         
         // TODO: Replace metadata size assumption with actual metadata analysis
-        /// Requirements for completion:
-        /// - [ ] Implement actual metadata size analysis using model introspection
-        /// - [ ] Add support for different metadata types and structures
-        /// - [ ] Implement proper metadata parsing and validation
-        /// - [ ] Add support for metadata compression optimization
-        /// - [ ] Implement proper error handling for metadata analysis failures
-        /// - [ ] Add support for metadata versioning and compatibility
-        /// - [ ] Implement proper memory management for metadata processing
-        /// - [ ] Add support for metadata quality assessment and validation
-        /// - [ ] Implement proper cleanup of metadata analysis resources
-        /// - [ ] Add support for metadata monitoring and performance tracking
+        // Requirements for completion:
+        // - [ ] Implement actual metadata size analysis using model introspection
+        // - [ ] Add support for different metadata types and structures
+        // - [ ] Implement proper metadata parsing and validation
+        // - [ ] Add support for metadata compression optimization
+        // - [ ] Implement proper error handling for metadata analysis failures
+        // - [ ] Add support for metadata versioning and compatibility
+        // - [ ] Implement proper memory management for metadata processing
+        // - [ ] Add support for metadata quality assessment and validation
+        // - [ ] Implement proper cleanup of metadata analysis resources
+        // - [ ] Add support for metadata monitoring and performance tracking
         let metadata_size = (model.size_mb as f64 * 0.1) as u64; // Assume 10% is metadata
         let metadata_compression_ratio = 0.85; // 85% compression
         let compressed_metadata = (metadata_size as f64 * metadata_compression_ratio) as u64;

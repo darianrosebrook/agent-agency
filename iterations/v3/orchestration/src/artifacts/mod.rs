@@ -8,5 +8,5 @@ pub mod storage;
 pub mod versioning;
 
 pub use manager::{ArtifactManager, ArtifactManagerConfig};
-pub use storage::{ArtifactStorage, FileSystemStorage, DatabaseStorage};
+pub use storage::{ArtifactStorage, FileSystemStorage, DatabaseStorage, InMemoryStorage};
 pub use versioning::{VersionControl, GitVersionControl, DatabaseVersionControl};

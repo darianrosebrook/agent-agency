@@ -22,3 +22,10 @@ agent-agency-database = { path = "../database" }
 
 # Observability dependencies
 tracing-subscriber = { version = "0.3", features = ["json", "env-filter"] }
+
+# Metrics backends
+prometheus = "0.13"
+cadence = "1.4"   # StatsD client
+
+# Cache backends
+redis = { version = "0.24", features = ["tokio-comp", "connection-manager"] }

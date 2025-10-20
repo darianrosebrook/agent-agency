@@ -6,6 +6,18 @@ use tracing::debug;
 use crate::error::ContractKind;
 
 /// Raw schema sources embedded at compile time.
+pub(crate) static TASK_REQUEST_SCHEMA_RAW: &str =
+    include_str!("../../docs/contracts/task-request.schema.json");
+pub(crate) static TASK_RESPONSE_SCHEMA_RAW: &str =
+    include_str!("../../docs/contracts/task-response.schema.json");
+pub(crate) static WORKING_SPEC_SCHEMA_RAW: &str =
+    include_str!("../../docs/contracts/working-spec.schema.json");
+pub(crate) static EXECUTION_ARTIFACTS_SCHEMA_RAW: &str =
+    include_str!("../../docs/contracts/execution-artifacts.schema.json");
+pub(crate) static QUALITY_REPORT_SCHEMA_RAW: &str =
+    include_str!("../../docs/contracts/quality-report.schema.json");
+pub(crate) static REFINEMENT_DECISION_SCHEMA_RAW: &str =
+    include_str!("../../docs/contracts/refinement-decision.schema.json");
 pub(crate) static WORKER_OUTPUT_SCHEMA_RAW: &str =
     include_str!("../../docs/contracts/worker-output.schema.json");
 pub(crate) static JUDGE_VERDICT_SCHEMA_RAW: &str =
@@ -24,6 +36,24 @@ fn compile(kind: ContractKind, raw: &'static str) -> JSONSchema {
         .unwrap_or_else(|err| panic!("Failed to compile {kind:?} JSON schema: {err}"))
 }
 
+pub(crate) static TASK_REQUEST_SCHEMA: Lazy<JSONSchema> =
+    Lazy::new(|| compile(ContractKind::TaskRequest, TASK_REQUEST_SCHEMA_RAW));
+
+pub(crate) static TASK_RESPONSE_SCHEMA: Lazy<JSONSchema> =
+    Lazy::new(|| compile(ContractKind::TaskResponse, TASK_RESPONSE_SCHEMA_RAW));
+
+pub(crate) static WORKING_SPEC_SCHEMA: Lazy<JSONSchema> =
+    Lazy::new(|| compile(ContractKind::WorkingSpec, WORKING_SPEC_SCHEMA_RAW));
+
+pub(crate) static EXECUTION_ARTIFACTS_SCHEMA: Lazy<JSONSchema> =
+    Lazy::new(|| compile(ContractKind::ExecutionArtifacts, EXECUTION_ARTIFACTS_SCHEMA_RAW));
+
+pub(crate) static QUALITY_REPORT_SCHEMA: Lazy<JSONSchema> =
+    Lazy::new(|| compile(ContractKind::QualityReport, QUALITY_REPORT_SCHEMA_RAW));
+
+pub(crate) static REFINEMENT_DECISION_SCHEMA: Lazy<JSONSchema> =
+    Lazy::new(|| compile(ContractKind::RefinementDecision, REFINEMENT_DECISION_SCHEMA_RAW));
+
 pub(crate) static WORKER_OUTPUT_SCHEMA: Lazy<JSONSchema> =
     Lazy::new(|| compile(ContractKind::WorkerOutput, WORKER_OUTPUT_SCHEMA_RAW));
 
@@ -35,6 +65,30 @@ pub(crate) static FINAL_VERDICT_SCHEMA: Lazy<JSONSchema> =
 
 pub(crate) static ROUTER_DECISION_SCHEMA: Lazy<JSONSchema> =
     Lazy::new(|| compile(ContractKind::RouterDecision, ROUTER_DECISION_SCHEMA_RAW));
+
+pub fn task_request_schema_source() -> &'static str {
+    TASK_REQUEST_SCHEMA_RAW
+}
+
+pub fn task_response_schema_source() -> &'static str {
+    TASK_RESPONSE_SCHEMA_RAW
+}
+
+pub fn working_spec_schema_source() -> &'static str {
+    WORKING_SPEC_SCHEMA_RAW
+}
+
+pub fn execution_artifacts_schema_source() -> &'static str {
+    EXECUTION_ARTIFACTS_SCHEMA_RAW
+}
+
+pub fn quality_report_schema_source() -> &'static str {
+    QUALITY_REPORT_SCHEMA_RAW
+}
+
+pub fn refinement_decision_schema_source() -> &'static str {
+    REFINEMENT_DECISION_SCHEMA_RAW
+}
 
 pub fn worker_output_schema_source() -> &'static str {
     WORKER_OUTPUT_SCHEMA_RAW

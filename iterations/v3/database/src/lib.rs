@@ -3,6 +3,7 @@
 //! Provides database connectivity, connection pooling, and data access patterns
 //! for the council-based arbiter system.
 
+pub mod artifact_store;
 pub mod backup;
 pub mod client;
 pub mod health;
@@ -12,6 +13,7 @@ pub mod models;
 pub mod queries;
 pub mod vector_store;
 
+pub use artifact_store::DatabaseArtifactStorage;
 pub use backup::{BackupManager, BackupResult};
 pub use client::{DatabaseClient, DatabaseHealthStatus};
 pub use health::{DatabaseHealthChecker, HealthCheckResult};

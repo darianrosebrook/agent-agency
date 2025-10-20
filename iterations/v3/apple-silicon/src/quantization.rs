@@ -349,11 +349,11 @@ impl QuantizationManager {
         // 2. Weight distribution analysis: Analyze weight distributions for quantization
         // TODO: Implement weight distribution analysis
         let weight_stats = WeightStats {
-            min_value: -1.0,
-            max_value: 1.0,
-            mean_value: 0.0,
-            std_deviation: 0.5,
-            outlier_count: 0,
+            min: -1.0,
+            max: 1.0,
+            mean: 0.0,
+            std_dev: 0.5,
+            num_parameters: 1000, // Placeholder
         };
         tracing::debug!(
             "Weight distribution analysis: min={:.6}, max={:.6}, mean={:.6}, std={:.6}",
@@ -378,7 +378,7 @@ impl QuantizationManager {
         );
 
         // Apply actual INT8 quantization to model weights
-        self.apply_int8_quantization(input_path, output_path, scale_factor, zero_point)
+        self.apply_int8_quantization(std::path::Path::new(input_path), std::path::Path::new(output_path), scale_factor, zero_point)
             .await?;
 
         // Calculate quantized size with compression ratio
@@ -401,7 +401,7 @@ impl QuantizationManager {
         );
 
         // 4. Model quantization optimization: Optimize model quantization performance
-        let parameters_quantized = estimate_quantized_parameters(original_size).await;
+        let parameters_quantized = self.estimate_quantized_parameters(original_size).await;
 
         tracing::info!(
             "INT8 quantization optimization complete: {} parameters quantized",
@@ -673,11 +673,6 @@ async fn analyze_weight_distribution(model_size: u64) -> WeightStats {
         }
     }
 
-/// Estimate the number of quantized parameters
-async fn estimate_quantized_parameters(model_size: u64) -> u64 {
-        // Estimate parameters based on model size (assuming ~4 bytes per float32)
-        (model_size / 4) as u64
-    }
 
     /// Get quantization statistics
     pub async fn get_stats(&self) -> HashMap<String, QuantizationResult> {
@@ -764,7 +759,7 @@ async fn estimate_quantized_parameters(model_size: u64) -> u64 {
         // Try to load as SafeTensors format
         if let Ok(tensors) = SafeTensors::deserialize(&model_data) {
             tracing::debug!("Detected SafeTensors format, applying quantization to {} tensors",
-                          tensors.tensors().count());
+                          tensors.tensors().len());
 
             // Create quantized tensors
             let mut quantized_tensors = HashMap::new();
@@ -774,13 +769,13 @@ async fn estimate_quantized_parameters(model_size: u64) -> u64 {
                     tensor_view,
                     scale_factor,
                     zero_point,
-                    name
+                    &name
                 )?;
                 quantized_tensors.insert(name.to_string(), quantized_tensor);
             }
 
             // Serialize quantized model
-            let quantized_data = safetensors::serialize(&quantized_tensors, &HashMap::new())
+            let quantized_data = safetensors::serialize(&quantized_tensors, &Some(HashMap::new()))
                 .map_err(|e| anyhow!("Failed to serialize quantized tensors: {}", e))?;
 
             fs::write(output_path, quantized_data)
@@ -846,8 +841,8 @@ async fn estimate_quantized_parameters(model_size: u64) -> u64 {
                 let shape = tensor_view.shape().to_vec();
                 let quantized_view = safetensors::tensor::TensorView::new(
                     safetensors::Dtype::I8,
+                    shape.clone(),
                     bytemuck::cast_slice(&quantized_data),
-                    &shape,
                 ).map_err(|e| anyhow!("Failed to create quantized tensor view: {}", e))?;
 
                 tracing::debug!("Quantized tensor '{}' from F32 to I8, shape: {:?}",

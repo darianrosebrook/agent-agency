@@ -27,6 +27,7 @@ pub mod routing;
 #[cfg(target_os = "macos")]
 pub mod telemetry;
 pub mod thermal;
+pub mod tokenization;
 pub mod types;
 
 pub use adaptive_resource_manager::{
@@ -76,6 +77,10 @@ pub use routing::InferenceRouter;
 #[cfg(target_os = "macos")]
 pub use telemetry::{CoreMLMetrics, FailureMode, TelemetryCollector};
 pub use thermal::ThermalManager;
+pub use tokenization::{
+    Tokenizer, TokenizerConfig, TokenizerType, HfTokenizer, WordTokenizer, SpecialTokens,
+    create_tokenizer,
+};
 pub use types::*;
 
 /// Convenience function to plan an allocation using a provided planner.

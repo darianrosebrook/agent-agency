@@ -6,11 +6,13 @@
 //! - Basic metrics collection
 //! - Agent-specific telemetry and performance tracking
 //! - Real-time system monitoring and business intelligence
+//! - Caching backends for performance optimization
 
 pub mod agent_telemetry;
 pub mod alerts;
 pub mod analytics;
 pub mod analytics_dashboard;
+pub mod cache;
 pub mod dashboard;
 pub mod logging;
 pub mod metrics;
@@ -40,9 +42,13 @@ pub use analytics_dashboard::{
     OptimizationUpdates, PredictionUpdates, PredictiveInsightsSummary, TrendAnalysisSummary,
     TrendUpdates, VisualData,
 };
+pub use cache::{RedisCache, CacheBackend, CacheError};
 pub use dashboard::*;
 pub use logging::*;
-pub use metrics::*;
+pub use metrics::{
+    MetricsBackend, NoOpMetricsBackend, InMemoryMetricsBackend,
+    MetricsCollector, MetricValue, MetricsSnapshot,
+};
 pub use multimodal_metrics::{
     MultimodalMetricsCollector, MultimodalProcessingMetrics, VectorSearchMetrics,
     EmbeddingMetrics, CrossModalValidationMetrics, ContextRetrievalMetrics,

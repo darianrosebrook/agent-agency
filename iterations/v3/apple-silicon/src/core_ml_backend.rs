@@ -48,17 +48,17 @@ impl PreparedModel for PreparedCoreMLModel {
 
     fn sla_estimate(&self) -> Duration {
         // TODO: Replace rough latency estimate with actual telemetry integration
-        /// Requirements for completion:
-        /// - [ ] Implement actual Core ML performance telemetry collection
-        /// - [ ] Add support for real-time latency measurement and tracking
-        /// - [ ] Implement proper performance metrics aggregation and analysis
-        /// - [ ] Add support for different model types and their specific latency characteristics
-        /// - [ ] Implement proper error handling for telemetry collection failures
-        /// - [ ] Add support for telemetry data persistence and historical analysis
-        /// - [ ] Implement proper memory management for telemetry data
-        /// - [ ] Add support for telemetry data export and reporting
-        /// - [ ] Implement proper cleanup of telemetry resources
-        /// - [ ] Add support for telemetry-based performance optimization recommendations
+        // Requirements for completion:
+        // - [ ] Implement actual Core ML performance telemetry collection
+        // - [ ] Add support for real-time latency measurement and tracking
+        // - [ ] Implement proper performance metrics aggregation and analysis
+        // - [ ] Add support for different model types and their specific latency characteristics
+        // - [ ] Implement proper error handling for telemetry collection failures
+        // - [ ] Add support for telemetry data persistence and historical analysis
+        // - [ ] Implement proper memory management for telemetry data
+        // - [ ] Add support for telemetry data export and reporting
+        // - [ ] Implement proper cleanup of telemetry resources
+        // - [ ] Add support for telemetry-based performance optimization recommendations
         // Rough estimate based on typical Core ML latency
         // This can be refined with actual telemetry
         Duration::from_millis(20)

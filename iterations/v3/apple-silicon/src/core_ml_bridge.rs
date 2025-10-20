@@ -12,8 +12,8 @@ use anyhow::{bail, Result};
 use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
 
-/// C FFI declarations – these match Swift @_cdecl exports
-/// These must align exactly with coreml-bridge/Sources/CoreMLBridge.swift
+// C FFI declarations – these match Swift @_cdecl exports
+// These must align exactly with coreml-bridge/Sources/CoreMLBridge.swift
 extern "C" {
     /// Compile .mlmodel → .mlmodelc
     /// Returns: 0 success, 1 failure

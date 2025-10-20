@@ -2,12 +2,16 @@
 //!
 //! Defines storage interfaces and implementations for execution artifacts.
 
+use std::collections::HashMap;
 use std::path::PathBuf;
+use std::sync::Arc;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
+use tokio::sync::RwLock;
 use uuid::Uuid;
 
-use super::manager::{ArtifactMetadata, ExecutionArtifacts};
+use super::manager::{ArtifactId, ArtifactMetadata, ExecutionArtifacts, ArtifactStorageError};
+use agent_agency_database::{DatabaseClient, DatabaseArtifactStorage};
 
 /// Artifact storage trait
 #[async_trait]
@@ -48,6 +52,107 @@ pub trait ArtifactStorage: Send + Sync {
 
     /// Get total storage size
     async fn total_size(&self) -> Result<u64, ArtifactStorageError>;
+}
+
+/// In-memory artifact storage for testing and development
+#[derive(Debug, Default)]
+pub struct InMemoryStorage {
+    artifacts: Arc<RwLock<HashMap<ArtifactId, ExecutionArtifacts>>>,
+    metadata: Arc<RwLock<HashMap<ArtifactId, ArtifactMetadata>>>,
+}
+
+impl InMemoryStorage {
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
+
+#[async_trait]
+impl ArtifactStorage for InMemoryStorage {
+    async fn store(
+        &self,
+        artifacts: &ExecutionArtifacts,
+        metadata: &ArtifactMetadata,
+    ) -> Result<(), ArtifactStorageError> {
+        let mut artifacts_store = self.artifacts.write().await;
+        let mut metadata_store = self.metadata.write().await;
+
+        artifacts_store.insert(metadata.id, artifacts.clone());
+        metadata_store.insert(metadata.id, metadata.clone());
+
+        Ok(())
+    }
+
+    async fn retrieve(
+        &self,
+        metadata: &ArtifactMetadata,
+    ) -> Result<ExecutionArtifacts, ArtifactStorageError> {
+        let artifacts_store = self.artifacts.read().await;
+        artifacts_store
+            .get(&metadata.id)
+            .cloned()
+            .ok_or_else(|| ArtifactStorageError::NotFound(metadata.id))
+    }
+
+    async fn delete(
+        &self,
+        metadata: &ArtifactMetadata,
+    ) -> Result<(), ArtifactStorageError> {
+        let mut artifacts_store = self.artifacts.write().await;
+        let mut metadata_store = self.metadata.write().await;
+
+        artifacts_store.remove(&metadata.id);
+        metadata_store.remove(&metadata.id);
+
+        Ok(())
+    }
+
+    async fn find_old_artifacts(
+        &self,
+        cutoff_date: DateTime<Utc>,
+    ) -> Result<Vec<ArtifactMetadata>, ArtifactStorageError> {
+        let metadata_store = self.metadata.read().await;
+        let old_artifacts = metadata_store
+            .values()
+            .filter(|metadata| metadata.created_at < cutoff_date)
+            .cloned()
+            .collect();
+
+        Ok(old_artifacts)
+    }
+
+    async fn find_latest(
+        &self,
+        task_id: Uuid,
+    ) -> Result<ArtifactMetadata, ArtifactStorageError> {
+        let metadata_store = self.metadata.read().await;
+        let mut candidates: Vec<_> = metadata_store
+            .values()
+            .filter(|metadata| metadata.task_id == task_id)
+            .collect();
+
+        candidates.sort_by(|a, b| b.created_at.cmp(&a.created_at));
+
+        candidates
+            .first()
+            .cloned()
+            .cloned()
+            .ok_or_else(|| ArtifactStorageError::NotFoundForTask(task_id))
+    }
+
+    async fn count_artifacts(&self) -> Result<usize, ArtifactStorageError> {
+        let artifacts_store = self.artifacts.read().await;
+        Ok(artifacts_store.len())
+    }
+
+    async fn total_size(&self) -> Result<u64, ArtifactStorageError> {
+        let artifacts_store = self.artifacts.read().await;
+        let total_size: u64 = artifacts_store
+            .values()
+            .map(|artifacts| serde_json::to_string(artifacts).unwrap_or_default().len() as u64)
+            .sum();
+        Ok(total_size)
+    }
 }
 
 /// File system-based artifact storage
@@ -364,6 +469,74 @@ impl ArtifactStorage for DatabaseStorage {
     }
 }
 
+/// Database-backed artifact storage (wrapper around database crate implementation)
+#[derive(Debug)]
+pub struct DatabaseArtifactStorage {
+    db_storage: agent_agency_database::DatabaseArtifactStorage,
+}
+
+impl DatabaseArtifactStorage {
+    /// Create a new database artifact storage
+    pub fn new(db_client: std::sync::Arc<DatabaseClient>) -> Self {
+        let db_storage = agent_agency_database::DatabaseArtifactStorage::from_client(db_client);
+        Self { db_storage }
+    }
+}
+
+#[async_trait]
+impl ArtifactStorage for DatabaseArtifactStorage {
+    async fn store(
+        &self,
+        artifacts: &ExecutionArtifacts,
+        metadata: &ArtifactMetadata,
+    ) -> Result<(), ArtifactStorageError> {
+        self.db_storage.store(artifacts, metadata).await
+            .map_err(|e| ArtifactStorageError::DatabaseError(e.to_string()))
+    }
+
+    async fn retrieve(
+        &self,
+        metadata: &ArtifactMetadata,
+    ) -> Result<ExecutionArtifacts, ArtifactStorageError> {
+        self.db_storage.retrieve(metadata).await
+            .map_err(|e| ArtifactStorageError::DatabaseError(e.to_string()))
+    }
+
+    async fn delete(
+        &self,
+        metadata: &ArtifactMetadata,
+    ) -> Result<(), ArtifactStorageError> {
+        self.db_storage.delete(metadata).await
+            .map_err(|e| ArtifactStorageError::DatabaseError(e.to_string()))
+    }
+
+    async fn find_old_artifacts(
+        &self,
+        cutoff_date: DateTime<Utc>,
+    ) -> Result<Vec<ArtifactMetadata>, ArtifactStorageError> {
+        self.db_storage.find_old_artifacts(cutoff_date).await
+            .map_err(|e| ArtifactStorageError::DatabaseError(e.to_string()))
+    }
+
+    async fn find_latest(
+        &self,
+        task_id: Uuid,
+    ) -> Result<ArtifactMetadata, ArtifactStorageError> {
+        self.db_storage.find_latest(task_id).await
+            .map_err(|e| ArtifactStorageError::DatabaseError(e.to_string()))
+    }
+
+    async fn count_artifacts(&self) -> Result<usize, ArtifactStorageError> {
+        self.db_storage.count_artifacts().await
+            .map_err(|e| ArtifactStorageError::DatabaseError(e.to_string()))
+    }
+
+    async fn total_size(&self) -> Result<u64, ArtifactStorageError> {
+        self.db_storage.total_size().await
+            .map_err(|e| ArtifactStorageError::DatabaseError(e.to_string()))
+    }
+}
+
 pub type Result<T> = std::result::Result<T, ArtifactStorageError>;
 
 #[derive(Debug, thiserror::Error)]
@@ -385,4 +558,7 @@ pub enum ArtifactStorageError {
 
     #[error("Feature not implemented: {0}")]
     NotImplemented(String),
+
+    #[error("Database error: {0}")]
+    DatabaseError(String),
 }

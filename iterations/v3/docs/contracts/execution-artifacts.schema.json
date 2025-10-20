@@ -1,0 +1,413 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-agency/v3/contracts/execution-artifacts.schema.json",
+  "title": "ExecutionArtifacts",
+  "description": "All artifacts produced during task execution with provenance",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Contract version for compatibility"
+    },
+    "task_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Task identifier"
+    },
+    "working_spec_id": {
+      "type": "string",
+      "pattern": "^[A-Z]+-[0-9]+$",
+      "description": "Working spec identifier"
+    },
+    "iteration": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Execution iteration number"
+    },
+    "code_changes": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "diffs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "file_path": {"type": "string"},
+              "change_type": {
+                "type": "string",
+                "enum": ["added", "modified", "deleted", "renamed"]
+              },
+              "diff_content": {"type": "string"},
+              "lines_added": {"type": "integer", "minimum": 0},
+              "lines_removed": {"type": "integer", "minimum": 0},
+              "hunks": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "old_start": {"type": "integer"},
+                    "old_lines": {"type": "integer"},
+                    "new_start": {"type": "integer"},
+                    "new_lines": {"type": "integer"},
+                    "lines": {
+                      "type": "array",
+                      "items": {"type": "string"}
+                    }
+                  },
+                  "required": ["old_start", "old_lines", "new_start", "new_lines"]
+                }
+              }
+            },
+            "required": ["file_path", "change_type"]
+          },
+          "description": "Unified diffs for all code changes"
+        },
+        "new_files": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "path": {"type": "string"},
+              "content": {"type": "string"},
+              "permissions": {"type": "string"}
+            },
+            "required": ["path", "content"]
+          },
+          "description": "Newly created files"
+        },
+        "deleted_files": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Paths of deleted files"
+        },
+        "statistics": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "files_modified": {"type": "integer", "minimum": 0},
+            "lines_added": {"type": "integer", "minimum": 0},
+            "lines_removed": {"type": "integer", "minimum": 0},
+            "total_loc": {"type": "integer", "minimum": 0}
+          },
+          "description": "Code change statistics"
+        }
+      },
+      "description": "All code changes made during execution"
+    },
+    "tests": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "unit_tests": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "total": {"type": "integer", "minimum": 0},
+            "passed": {"type": "integer", "minimum": 0},
+            "failed": {"type": "integer", "minimum": 0},
+            "skipped": {"type": "integer", "minimum": 0},
+            "duration_ms": {"type": "integer", "minimum": 0},
+            "results": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "name": {"type": "string"},
+                  "status": {
+                    "type": "string",
+                    "enum": ["passed", "failed", "skipped", "error"]
+                  },
+                  "duration_ms": {"type": "integer", "minimum": 0},
+                  "error_message": {"type": "string"},
+                  "assertions": {"type": "integer", "minimum": 0}
+                },
+                "required": ["name", "status"]
+              }
+            }
+          },
+          "description": "Unit test execution results"
+        },
+        "integration_tests": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "total": {"type": "integer", "minimum": 0},
+            "passed": {"type": "integer", "minimum": 0},
+            "failed": {"type": "integer", "minimum": 0},
+            "skipped": {"type": "integer", "minimum": 0},
+            "duration_ms": {"type": "integer", "minimum": 0},
+            "results": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "name": {"type": "string"},
+                  "status": {
+                    "type": "string",
+                    "enum": ["passed", "failed", "skipped", "error"]
+                  },
+                  "duration_ms": {"type": "integer", "minimum": 0},
+                  "components_tested": {
+                    "type": "array",
+                    "items": {"type": "string"}
+                  },
+                  "error_message": {"type": "string"}
+                },
+                "required": ["name", "status"]
+              }
+            }
+          },
+          "description": "Integration test execution results"
+        },
+        "e2e_tests": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "total": {"type": "integer", "minimum": 0},
+            "passed": {"type": "integer", "minimum": 0},
+            "failed": {"type": "integer", "minimum": 0},
+            "skipped": {"type": "integer", "minimum": 0},
+            "duration_ms": {"type": "integer", "minimum": 0},
+            "scenarios": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "name": {"type": "string"},
+                  "user_journey": {"type": "string"},
+                  "status": {
+                    "type": "string",
+                    "enum": ["passed", "failed", "skipped", "error"]
+                  },
+                  "duration_ms": {"type": "integer", "minimum": 0},
+                  "screenshots": {
+                    "type": "array",
+                    "items": {"type": "string"}
+                  },
+                  "error_message": {"type": "string"}
+                },
+                "required": ["name", "status"]
+              }
+            }
+          },
+          "description": "End-to-end test execution results"
+        },
+        "test_files": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "path": {"type": "string"},
+              "type": {
+                "type": "string",
+                "enum": ["unit", "integration", "e2e", "contract"]
+              },
+              "status": {
+                "type": "string",
+                "enum": ["new", "modified", "existing"]
+              }
+            },
+            "required": ["path", "type"]
+          },
+          "description": "Test files created or modified"
+        }
+      },
+      "description": "All test artifacts and execution results"
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "line_coverage": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Percentage of lines covered by tests"
+        },
+        "branch_coverage": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Percentage of branches covered by tests"
+        },
+        "function_coverage": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Percentage of functions covered by tests"
+        },
+        "mutation_score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Mutation testing score"
+        },
+        "coverage_report_path": {"type": "string"},
+        "uncovered_lines": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "file": {"type": "string"},
+              "lines": {
+                "type": "array",
+                "items": {"type": "integer"}
+              }
+            },
+            "required": ["file", "lines"]
+          }
+        },
+        "uncovered_branches": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "file": {"type": "string"},
+              "line": {"type": "integer"},
+              "conditions": {
+                "type": "array",
+                "items": {"type": "string"}
+              }
+            },
+            "required": ["file", "line", "conditions"]
+          }
+        }
+      },
+      "description": "Code coverage analysis results"
+    },
+    "linting": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "total_issues": {"type": "integer", "minimum": 0},
+        "errors": {"type": "integer", "minimum": 0},
+        "warnings": {"type": "integer", "minimum": 0},
+        "info": {"type": "integer", "minimum": 0},
+        "issues_by_file": {
+          "type": "object",
+          "patternProperties": {
+            "^.*$": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "line": {"type": "integer"},
+                  "column": {"type": "integer"},
+                  "severity": {
+                    "type": "string",
+                    "enum": ["error", "warning", "info"]
+                  },
+                  "code": {"type": "string"},
+                  "message": {"type": "string"},
+                  "suggestion": {"type": "string"}
+                },
+                "required": ["line", "severity", "code", "message"]
+              }
+            }
+          }
+        },
+        "linter_version": {"type": "string"},
+        "config_used": {"type": "string"}
+      },
+      "description": "Linting and static analysis results"
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "execution_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Unique execution identifier"
+        },
+        "worker_id": {"type": "string"},
+        "worker_version": {"type": "string"},
+        "started_at": {"type": "string", "format": "date-time"},
+        "completed_at": {"type": "string", "format": "date-time"},
+        "duration_ms": {"type": "integer", "minimum": 0},
+        "environment": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "os": {"type": "string"},
+            "architecture": {"type": "string"},
+            "rust_version": {"type": "string"},
+            "dependencies": {
+              "type": "object",
+              "patternProperties": {
+                "^.*$": {"type": "string"}
+              }
+            }
+          }
+        },
+        "git_info": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "commit_hash": {"type": "string"},
+            "branch": {"type": "string"},
+            "dirty": {"type": "boolean"},
+            "uncommitted_changes": {
+              "type": "array",
+              "items": {"type": "string"}
+            }
+          }
+        },
+        "seeds_used": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "time_seed": {"type": "string"},
+            "uuid_seed": {"type": "string"},
+            "random_seed": {"type": "integer"}
+          },
+          "description": "Deterministic seeds used for reproducible execution"
+        },
+        "audit_trail": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "timestamp": {"type": "string", "format": "date-time"},
+              "event": {"type": "string"},
+              "details": {"type": "object", "additionalProperties": true}
+            },
+            "required": ["timestamp", "event"]
+          },
+          "description": "Complete audit trail of execution steps"
+        }
+      },
+      "required": ["execution_id", "started_at"],
+      "description": "Complete provenance and audit trail"
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "compression_applied": {"type": "boolean"},
+        "storage_location": {"type": "string"},
+        "retention_policy": {"type": "string"},
+        "tags": {
+          "type": "array",
+          "items": {"type": "string"}
+        }
+      },
+      "description": "Artifact storage and management metadata"
+    }
+  },
+  "required": ["version", "task_id", "working_spec_id", "iteration", "code_changes", "tests", "coverage", "linting", "provenance"]
+}
