@@ -15104,5 +15104,39 @@
     },
     "previous_hash": "c2c47429c71c5d8f16bb1fe52150c27f04234a6dfb7a849e26064927241baf06",
     "hash": "a584f7f29430c904dd1c0384144e83fddd7ce4a7f2570b44f36a68cf6210c161"
+  },
+  {
+    "id": "prov-1760929556996",
+    "timestamp": "2025-10-20T03:05:56.996Z",
+    "commit": {
+      "hash": "fd64fda161639d600dd8b53ecc1e9ffd753d5a20",
+      "message": "feat: implement chat WebSocket integration with V3 backend",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "AGENT-0003",
+      "title": "Add tool-call envelope to prompting strategy",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": []
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-20T03:05:56.996Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "a584f7f29430c904dd1c0384144e83fddd7ce4a7f2570b44f36a68cf6210c161",
+    "hash": "99e4b3eea98ff6b30b49ddd266fdbbe38b70fcad9152a6feee0c17e431715e45"
   }
 ]

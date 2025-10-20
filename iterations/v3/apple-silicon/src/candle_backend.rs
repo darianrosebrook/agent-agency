@@ -10,6 +10,7 @@ use crate::inference::{
 };
 use anyhow::{anyhow, bail, Context, Result};
 use candle_core::{Device, Tensor};
+use ort::Session;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -1032,13 +1033,14 @@ impl CandleInferenceModel for OnnxPreparedModel {
             let tensor_data = onnx_tensor.try_extract_tensor::<f32>()
                 .with_context(|| format!("Failed to extract tensor data for '{}'", name))?;
 
-            // Convert to Candle tensor
-            let candle_tensor = candle_core::Tensor::from_slice(
-                &tensor_data.view().as_slice().unwrap(),
-                tensor_data.shape(),
-                &self.device,
-            )
-            .with_context(|| format!("Failed to create Candle tensor for '{}'", name))?;
+            // Get the data as a flat slice
+            let data_slice = tensor_data.view().as_slice()
+                .ok_or_else(|| anyhow!("Failed to get tensor data as slice for '{}'", name))?;
+
+            // Create Candle tensor from the data
+            let shape: Vec<usize> = tensor_data.shape().to_vec();
+            let candle_tensor = candle_core::Tensor::from_slice(data_slice, &shape, &self.device)
+                .with_context(|| format!("Failed to create Candle tensor for '{}'", name))?;
 
             outputs.insert(name, candle_tensor);
         }

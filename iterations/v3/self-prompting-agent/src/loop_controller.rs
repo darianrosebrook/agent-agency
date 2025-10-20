@@ -8,7 +8,7 @@ use crate::evaluation::{EvaluationOrchestrator, EvalReport, EvalStatus};
 use crate::models::{ModelRegistry, ModelProvider, ModelContext};
 use crate::prompting::{PromptingStrategy, AdaptivePromptingStrategy};
 use crate::sandbox::SandboxEnvironment;
-use crate::types::{Task, TaskResult, IterationContext, StopReason, Artifact, ArtifactType};
+use crate::types::{Task, TaskResult, IterationContext, StopReason, Artifact, ArtifactType, ActionRequest, ActionValidationError};
 
 /// Result of self-prompting execution
 #[derive(Debug, Clone)]
@@ -86,19 +86,19 @@ impl SelfPromptingLoop {
 
             info!("Iteration {}: Using model {}", iteration, model_id);
 
-            // 2. Generate output using current context
-            let output = self.generate_with_context(&*model, &task, &history).await?;
-            info!("Iteration {}: Generated output ({} chars)", iteration, output.len());
+            // 2. Generate ActionRequest using tool-call envelope
+            let action_request = self.generate_action_request_with_retry(&*model, &task, &history, iteration).await?;
+            info!("Iteration {}: Generated action request (type: {:?}, confidence: {:.2})",
+                  iteration, action_request.action_type, action_request.confidence);
 
-            // 3. Create artifacts from output (for now, assume it's code/text)
-            let artifact = Artifact {
-                id: uuid::Uuid::new_v4(),
-                file_path: task.target_files.first().cloned().unwrap_or_else(|| "generated.txt".to_string()),
-                content: output.clone(),
-                artifact_type: self.infer_artifact_type(&task),
-                created_at: chrono::Utc::now(),
-            };
-            artifacts.push(artifact.clone());
+            // 3. Apply the action if it requires changes
+            if action_request.requires_changes() {
+                self.apply_action_request(&action_request, &task).await?;
+            }
+
+            // 4. Create artifacts from action request
+            let artifacts_from_action = self.create_artifacts_from_action(&action_request, &task);
+            artifacts.extend(artifacts_from_action);
 
             // 4. Evaluate the output
             let eval_context = crate::evaluation::EvalContext {
