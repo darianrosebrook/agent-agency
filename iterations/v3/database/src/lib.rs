@@ -12,11 +12,18 @@ pub mod migrations;
 pub mod models;
 pub mod queries;
 pub mod vector_store;
+pub mod optimization;
 
 pub use artifact_store::{DatabaseArtifactStorage, VersionMetadata, VersionDiff};
 pub use backup::{BackupManager, BackupResult};
 pub use client::{DatabaseClient, DatabaseHealthStatus};
 pub use health::{DatabaseHealthChecker, HealthCheckResult};
+pub use optimization::{
+    DatabaseOptimizationManager, DatabaseOptimizationConfig, ReadWriteSplitClient,
+    DatabasePerformanceMonitor, DatabaseIndexManager, MonitoredQueryExecutor,
+    QueryMetrics, IndexRecommendation, IndexPriority, DatabaseOptimizationReport,
+    TableStats
+};
 pub use migrations::{MigrationManager, MigrationResult};
 pub use models::*;
 pub use vector_store::{DatabaseVectorStore, VectorStoreStats};
@@ -34,6 +41,19 @@ pub struct DatabaseConfig {
     pub connection_timeout_seconds: u64,
     pub idle_timeout_seconds: u64,
     pub max_lifetime_seconds: u64,
+    /// Enable read/write splitting
+    pub enable_read_write_splitting: bool,
+    /// Read replica configurations
+    pub read_replicas: Vec<DatabaseReplicaConfig>,
+}
+
+/// Read replica configuration
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct DatabaseReplicaConfig {
+    pub host: String,
+    pub port: u16,
+    pub weight: u32, // For load balancing (higher = more traffic)
+    pub is_sync: bool, // Synchronous replication
 }
 
 impl Default for DatabaseConfig {
@@ -49,6 +69,8 @@ impl Default for DatabaseConfig {
             connection_timeout_seconds: 30,
             idle_timeout_seconds: 600,
             max_lifetime_seconds: 3600,
+            enable_read_write_splitting: false,
+            read_replicas: Vec::new(),
         }
     }
 }
