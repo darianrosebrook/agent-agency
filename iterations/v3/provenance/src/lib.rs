@@ -12,7 +12,7 @@ pub mod types;
 
 pub use git_integration::{GitIntegration, GitTrailerManager};
 pub use service::ProvenanceService;
-pub use signer::{JwsSigner, LocalKeySigner, SignerTrait};
+pub use signer::{JwsSigner, LocalKeySigner, SignerTrait, SigningAlgorithm};
 pub use types::*;
 
 /// Provenance service configuration

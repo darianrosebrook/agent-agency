@@ -21,7 +21,6 @@ use std::ffi::OsStr;
 use std::fs::{self, OpenOptions};
 use std::io::Write;
 use std::path::Path;
-use tracing::{debug, info};
 
 #[cfg(unix)]
 use std::os::unix::fs::OpenOptionsExt;

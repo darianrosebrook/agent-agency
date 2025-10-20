@@ -5,7 +5,8 @@ import { NextRequest } from "next/server";
 
 export async function GET(request: NextRequest) {
   try {
-    const v3BackendHost = process.env.V3_BACKEND_HOST ?? "http://localhost:8080";
+    const v3BackendHost =
+      process.env.V3_BACKEND_HOST ?? "http://localhost:8080";
     const { searchParams } = new URL(request.url);
 
     // Build query parameters for metrics stream filtering
@@ -33,7 +34,9 @@ export async function GET(request: NextRequest) {
     const aggregation = searchParams.get("aggregation");
     if (aggregation) params.append("aggregation", aggregation);
 
-    const streamUrl = `${v3BackendHost}/api/v1/metrics/stream${params.toString() ? `?${params}` : ""}`;
+    const streamUrl = `${v3BackendHost}/api/v1/metrics/stream${
+      params.toString() ? `?${params}` : ""
+    }`;
 
     console.log(`Proxying metrics SSE stream to: ${streamUrl}`);
 
@@ -130,7 +133,6 @@ export async function GET(request: NextRequest) {
         "Access-Control-Allow-Headers": "Cache-Control",
       },
     });
-
   } catch (error) {
     console.error("Metrics stream SSE setup failed:", error);
 

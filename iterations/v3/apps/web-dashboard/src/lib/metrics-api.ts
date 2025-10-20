@@ -75,7 +75,9 @@ export class MetricsApiClient {
       const response = await apiClient.request<GetAgentPerformanceResponse>(
         `${this.baseUrl}?metric_type=agent_performance`
       );
-      return response.metrics.filter((m: any) => m.type === "agent_performance") as AgentPerformance[];
+      return response.metrics.filter(
+        (m: any) => m.type === "agent_performance"
+      ) as AgentPerformance[];
     } catch (error) {
       console.error("Failed to get agent performance:", error);
       throw new MetricsApiError(
@@ -90,9 +92,13 @@ export class MetricsApiClient {
   async getAgentPerformanceById(agentId: string): Promise<AgentPerformance> {
     try {
       const response = await apiClient.request<any>(
-        `${this.baseUrl}?metric_type=agent_performance&agent_id=${encodeURIComponent(agentId)}`
+        `${
+          this.baseUrl
+        }?metric_type=agent_performance&agent_id=${encodeURIComponent(agentId)}`
       );
-      const agentMetrics = response.metrics.find((m: any) => m.agent_id === agentId);
+      const agentMetrics = response.metrics.find(
+        (m: any) => m.agent_id === agentId
+      );
       if (!agentMetrics) {
         throw new MetricsApiError(
           "agent_not_found",
@@ -120,15 +126,19 @@ export class MetricsApiClient {
       const response = await apiClient.request<any>(
         `${this.baseUrl}?metric_type=coordination`
       );
-      const coordinationMetrics = response.metrics.find((m: any) => m.type === "coordination");
-      return coordinationMetrics || {
-        total_agents: 0,
-        active_coordinations: 0,
-        coordination_efficiency: 0,
-        average_response_time: 0,
-        conflict_resolution_rate: 0,
-        timestamp: new Date().toISOString(),
-      };
+      const coordinationMetrics = response.metrics.find(
+        (m: any) => m.type === "coordination"
+      );
+      return (
+        coordinationMetrics || {
+          total_agents: 0,
+          active_coordinations: 0,
+          coordination_efficiency: 0,
+          average_response_time: 0,
+          conflict_resolution_rate: 0,
+          timestamp: new Date().toISOString(),
+        }
+      );
     } catch (error) {
       console.error("Failed to get coordination metrics:", error);
       throw new MetricsApiError(
@@ -167,12 +177,16 @@ export class MetricsApiClient {
       }
 
       const response = await apiClient.request<any>(
-        `${this.baseUrl}?metric_type=business&start_time=${startTime.toISOString()}&end_time=${endTime.toISOString()}`
+        `${
+          this.baseUrl
+        }?metric_type=business&start_time=${startTime.toISOString()}&end_time=${endTime.toISOString()}`
       );
 
       return {
         summary: response.summary || {},
-        trends: response.metrics.filter((m: any) => m.type === "business_trend") || [],
+        trends:
+          response.metrics.filter((m: any) => m.type === "business_trend") ||
+          [],
         alerts: response.alerts || [],
         time_range: timeRange,
         timestamp: new Date().toISOString(),
@@ -200,10 +214,14 @@ export class MetricsApiClient {
       // Filter alerts based on parameters
       let filteredAlerts = alerts;
       if (status) {
-        filteredAlerts = filteredAlerts.filter((alert: any) => alert.status === status);
+        filteredAlerts = filteredAlerts.filter(
+          (alert: any) => alert.status === status
+        );
       }
       if (severity) {
-        filteredAlerts = filteredAlerts.filter((alert: any) => alert.severity === severity);
+        filteredAlerts = filteredAlerts.filter(
+          (alert: any) => alert.severity === severity
+        );
       }
 
       return {
@@ -226,7 +244,9 @@ export class MetricsApiClient {
     try {
       // For now, this is a no-op since we're using the unified metrics endpoint
       // In a real implementation, this would call a specific alert management endpoint
-      console.warn(`Alert acknowledgment for ${alertId} not implemented - requires V3 alert management API`);
+      console.warn(
+        `Alert acknowledgment for ${alertId} not implemented - requires V3 alert management API`
+      );
     } catch (error) {
       console.error("Failed to acknowledge alert:", error);
       throw new MetricsApiError(
@@ -242,7 +262,9 @@ export class MetricsApiClient {
     try {
       // For now, this is a no-op since we're using the unified metrics endpoint
       // In a real implementation, this would call a specific alert management endpoint
-      console.warn(`Alert resolution for ${alertId} not implemented - requires V3 alert management API`);
+      console.warn(
+        `Alert resolution for ${alertId} not implemented - requires V3 alert management API`
+      );
     } catch (error) {
       console.error("Failed to resolve alert:", error);
       throw new MetricsApiError(

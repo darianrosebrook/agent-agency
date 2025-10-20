@@ -6,7 +6,8 @@ import { NextRequest, NextResponse } from "next/server";
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const v3BackendHost = process.env.V3_BACKEND_HOST ?? "http://localhost:8080";
+    const v3BackendHost =
+      process.env.V3_BACKEND_HOST ?? "http://localhost:8080";
 
     // Build query parameters for metrics filtering
     const params = new URLSearchParams();
@@ -42,7 +43,9 @@ export async function GET(request: NextRequest) {
     const offset = searchParams.get("offset");
     if (offset) params.append("offset", offset);
 
-    const metricsUrl = `${v3BackendHost}/api/v1/metrics${params.toString() ? `?${params}` : ""}`;
+    const metricsUrl = `${v3BackendHost}/api/v1/metrics${
+      params.toString() ? `?${params}` : ""
+    }`;
 
     console.log(`Proxying metrics request to: ${metricsUrl}`);
 
@@ -97,7 +100,6 @@ export async function GET(request: NextRequest) {
       },
       timestamp: new Date().toISOString(),
     });
-
   } catch (error) {
     console.error("Metrics proxy error:", error);
 

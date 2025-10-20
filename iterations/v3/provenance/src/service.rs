@@ -11,7 +11,7 @@ use uuid::Uuid;
 
 use crate::{
     git_integration::{GitIntegration, GitTrailerManager},
-    signer::{SignerFactory, SignerTrait, SigningAlgorithm},
+    signer::{SignerFactory, SignerTrait},
     types::{
         BudgetAdherence, CawsComplianceProvenance, ExportFormat, ExportMetadata, FilterOperator,
         FilterType, IntegrityCheckResult, IntegrityIssue, IntegrityIssueType, IntegritySeverity,
@@ -65,9 +65,9 @@ impl ProvenanceService {
             &config.signing.key_path,
             config.signing.key_id.clone(),
             match config.signing.algorithm {
-                crate::SigningAlgorithm::RS256 => crate::signer::SigningAlgorithm::RS256,
-                crate::SigningAlgorithm::ES256 => crate::signer::SigningAlgorithm::ES256,
-                crate::SigningAlgorithm::EdDSA => crate::signer::SigningAlgorithm::EdDSA,
+                SigningAlgorithm::RS256 => crate::signer::SigningAlgorithm::RS256,
+                SigningAlgorithm::ES256 => crate::signer::SigningAlgorithm::ES256,
+                SigningAlgorithm::EdDSA => crate::signer::SigningAlgorithm::EdDSA,
             },
         )?;
 
