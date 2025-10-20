@@ -30,7 +30,7 @@ export class TaskApiClient {
   private baseUrl: string;
 
   constructor(baseUrl?: string) {
-    this.baseUrl = baseUrl ?? "/api/proxy";
+    this.baseUrl = baseUrl ?? "/api/tasks";
   }
 
   // Get list of tasks with optional filtering
@@ -42,12 +42,14 @@ export class TaskApiClient {
     sortOrder: "asc" | "desc" = "desc"
   ): Promise<GetTasksResponse> {
     try {
-      const params = new URLSearchParams({
-        page: page.toString(),
-        page_size: pageSize.toString(),
-        sort_by: sortBy,
-        sort_order: sortOrder,
-      });
+      const params = new URLSearchParams();
+
+      // Convert page/pageSize to offset/limit for backend compatibility
+      const offset = (page - 1) * pageSize;
+      params.append("limit", pageSize.toString());
+      params.append("offset", offset.toString());
+      params.append("sort_by", sortBy);
+      params.append("sort_order", sortOrder);
 
       // Add filters to query params
       if (filters) {
@@ -62,20 +64,21 @@ export class TaskApiClient {
             params.append("priority", priority)
           );
         }
-        if (filters.agent_id) {
-          params.append("agent_id", filters.agent_id);
-        }
         if (filters.working_spec_id) {
           params.append("working_spec_id", filters.working_spec_id);
         }
         if (filters.date_range) {
-          params.append("date_start", filters.date_range.start);
-          params.append("date_end", filters.date_range.end);
+          if (filters.date_range.start) {
+            params.append("start_date", filters.date_range.start);
+          }
+          if (filters.date_range.end) {
+            params.append("end_date", filters.date_range.end);
+          }
         }
       }
 
       const response = await apiClient.request<GetTasksResponse>(
-        `/tasks?${params}`
+        `${this.baseUrl}?${params}`
       );
 
       return response;
@@ -89,7 +92,7 @@ export class TaskApiClient {
   async getTask(taskId: string): Promise<GetTaskResponse> {
     try {
       const response = await apiClient.request<GetTaskResponse>(
-        `/tasks/${encodeURIComponent(taskId)}`
+        `${this.baseUrl}/${encodeURIComponent(taskId)}`
       );
 
       return response;
@@ -178,7 +181,7 @@ export class TaskApiClient {
   ): Promise<TaskActionResponse> {
     try {
       const response = await apiClient.request<TaskActionResponse>(
-        `/tasks/${encodeURIComponent(taskId)}/action`,
+        `${this.baseUrl}/${encodeURIComponent(taskId)}/action`,
         {
           method: "POST",
           body: JSON.stringify(action),

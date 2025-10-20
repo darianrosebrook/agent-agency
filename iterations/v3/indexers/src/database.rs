@@ -39,12 +39,12 @@ impl DatabasePool {
 
     /// Get number of active connections
     pub fn num_idle(&self) -> usize {
-        self.pool.num_idle() as usize
+        self.pool.num_idle()
     }
 
     /// Get pool size
     pub fn size(&self) -> usize {
-        self.pool.size() as usize
+        self.pool.size()
     }
 }
 

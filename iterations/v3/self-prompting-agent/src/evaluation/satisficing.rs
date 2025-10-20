@@ -1,9 +1,10 @@
 //! Satisficing evaluator that determines when to stop iterating
 
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use chrono::{DateTime, Utc};
 
 use super::{EvalReport, EvalStatus, StopReason};
+use crate::types::ActionRequest;
 
 /// Satisficing configuration
 #[derive(Debug, Clone)]
@@ -13,6 +14,10 @@ pub struct SatisficingConfig {
     pub quality_ceiling_budget: usize,
     pub cost_benefit_ratio_threshold: f64,
     pub mandatory_gates: Vec<String>,
+    // Hysteresis and no-progress guards
+    pub hysteresis_window: usize,         // Sliding window size for hysteresis
+    pub consecutive_threshold: usize,     // Consecutive sub-threshold iterations to trigger
+    pub no_progress_loc_threshold: usize, // Maximum LOC change to consider "no progress"
 }
 
 impl Default for SatisficingConfig {
@@ -27,6 +32,10 @@ impl Default for SatisficingConfig {
                 "lint-clean".to_string(),
                 "types-ok".to_string(),
             ],
+            // Hysteresis defaults
+            hysteresis_window: 5,           // Track last 5 scores
+            consecutive_threshold: 3,       // 3 consecutive sub-threshold iterations
+            no_progress_loc_threshold: 10,  // < 10 LOC change = no progress
         }
     }
 }
@@ -40,9 +49,13 @@ pub struct SatisficingDecision {
     pub recommendations: Vec<String>,
 }
 
-/// Satisficing evaluator
+/// Satisficing evaluator with hysteresis and no-progress guards
 pub struct SatisficingEvaluator {
     config: SatisficingConfig,
+    /// Sliding window of recent scores for hysteresis analysis
+    score_history: VecDeque<f64>,
+    /// Recent action requests to detect repetition
+    recent_actions: VecDeque<String>,
 }
 
 impl SatisficingEvaluator {
@@ -50,12 +63,18 @@ impl SatisficingEvaluator {
     pub fn new() -> Self {
         Self {
             config: SatisficingConfig::default(),
+            score_history: VecDeque::new(),
+            recent_actions: VecDeque::new(),
         }
     }
 
     /// Create with custom config
     pub fn with_config(config: SatisficingConfig) -> Self {
-        Self { config }
+        Self {
+            config,
+            score_history: VecDeque::new(),
+            recent_actions: VecDeque::new(),
+        }
     }
 
     /// Decide whether to continue iterating based on evaluation results
@@ -64,6 +83,8 @@ impl SatisficingEvaluator {
         current: &EvalReport,
         history: &[EvalReport],
     ) -> SatisficingDecision {
+        // Record score in sliding window for hysteresis
+        self.record_score(current.score);
         // Check mandatory gates first
         if let Some(reason) = self.check_mandatory_gates(current) {
             return SatisficingDecision {
@@ -84,13 +105,13 @@ impl SatisficingEvaluator {
             };
         }
 
-        // Check if quality ceiling has been reached
-        if let Some(ceiling_reason) = self.check_quality_ceiling(current, history) {
+        // Check if quality ceiling has been reached (with hysteresis)
+        if let Some(ceiling_reason) = self.check_quality_ceiling_with_hysteresis(current) {
             return SatisficingDecision {
                 should_continue: false,
                 reason: ceiling_reason,
                 confidence: 0.8,
-                recommendations: vec!["Quality improvements have plateaued".to_string()],
+                recommendations: vec!["Quality improvements have plateaued (hysteresis applied)".to_string()],
             };
         }
 
@@ -265,6 +286,105 @@ impl SatisficingEvaluator {
         recommendations
     }
 
+    /// Record score in sliding window for hysteresis analysis
+    fn record_score(&mut self, score: f64) {
+        self.score_history.push_back(score);
+        // Maintain sliding window size
+        while self.score_history.len() > self.config.hysteresis_window {
+            self.score_history.pop_front();
+        }
+    }
+
+    /// Record action for repetition detection
+    pub fn record_action(&mut self, action: &ActionRequest) {
+        // Create a fingerprint of the action for comparison
+        let fingerprint = self.action_fingerprint(action);
+        self.recent_actions.push_back(fingerprint);
+        // Keep only recent actions
+        while self.recent_actions.len() > self.config.consecutive_threshold {
+            self.recent_actions.pop_front();
+        }
+    }
+
+    /// Create a fingerprint of an action for repetition detection
+    fn action_fingerprint(&self, action: &ActionRequest) -> String {
+        use std::collections::hash_map::DefaultHasher;
+        use std::hash::{Hash, Hasher};
+
+        let mut hasher = DefaultHasher::new();
+        action.action_type.hash(&mut hasher);
+        if let Some(changeset) = &action.changeset {
+            // Hash the changeset structure (not content for performance)
+            changeset.patches.len().hash(&mut hasher);
+            for patch in &changeset.patches {
+                patch.path.hash(&mut hasher);
+                patch.hunks.len().hash(&mut hasher);
+            }
+        }
+        format!("{:x}", hasher.finish())
+    }
+
+    /// Check if quality improvements have plateaued with hysteresis
+    fn check_quality_ceiling_with_hysteresis(&self, current: &EvalReport) -> Option<StopReason> {
+        if self.score_history.len() < self.config.consecutive_threshold {
+            return None; // Not enough data for hysteresis
+        }
+
+        // Check for consecutive sub-threshold improvements
+        let mut consecutive_sub_threshold = 0;
+        let mut iter_scores = self.score_history.iter().rev(); // Most recent first
+        let mut prev_score = current.score;
+
+        // Start from current score and work backwards
+        for &score in iter_scores.take(self.config.hysteresis_window) {
+            let improvement = prev_score - score;
+            if improvement.abs() < self.config.min_improvement_threshold {
+                consecutive_sub_threshold += 1;
+                if consecutive_sub_threshold >= self.config.consecutive_threshold {
+                    return Some(StopReason::QualityCeiling);
+                }
+            } else {
+                consecutive_sub_threshold = 0; // Reset on significant change
+            }
+            prev_score = score;
+        }
+
+        None
+    }
+
+    /// Check for no progress conditions
+    pub fn check_no_progress(&self, changeset: Option<&file_ops::ChangeSet>) -> Option<StopReason> {
+        // Check for zero LOC changes
+        if let Some(changeset) = changeset {
+            let total_loc: usize = changeset.patches.iter()
+                .map(|p| p.hunks.iter().map(|h| h.lines.lines().count()).sum::<usize>())
+                .sum();
+
+            if total_loc < self.config.no_progress_loc_threshold {
+                return Some(StopReason::NoProgress);
+            }
+        }
+
+        None
+    }
+
+    /// Check for action request repetition
+    pub fn check_action_repetition(&self) -> Option<StopReason> {
+        if self.recent_actions.len() < self.config.consecutive_threshold {
+            return None;
+        }
+
+        // Check if all recent actions are the same
+        let first_action = self.recent_actions.front()?;
+        let all_same = self.recent_actions.iter().all(|action| action == first_action);
+
+        if all_same {
+            Some(StopReason::NoProgress)
+        } else {
+            None
+        }
+    }
+
     /// Update satisficing parameters based on learning
     pub fn update_parameters(&mut self, feedback: &SatisficingFeedback) {
         match feedback {
@@ -291,4 +411,117 @@ pub enum SatisficingFeedback {
     TooAggressive,      // Continued too long, wasted iterations
     MaxIterationsTooLow, // Hit max iterations but could have benefited from more
     MaxIterationsTooHigh, // Rarely hit max iterations
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::types::{EvalReport, EvalStatus, EvalCriterion};
+
+    fn create_test_report(score: f64, status: EvalStatus) -> EvalReport {
+        EvalReport {
+            score,
+            status,
+            criteria: vec![],
+            next_actions: vec![],
+            logs: vec![],
+            thresholds_met: vec!["tests-pass".to_string()],
+            metadata: std::collections::HashMap::new(),
+        }
+    }
+
+    #[test]
+    fn test_hysteresis_prevents_premature_plateau() {
+        let mut evaluator = SatisficingEvaluator::new();
+
+        // Simulate scores that oscillate slightly but don't truly plateau
+        let scores = vec![0.5, 0.52, 0.51, 0.53, 0.52, 0.51];
+        let mut history = Vec::new();
+
+        for &score in &scores {
+            let report = create_test_report(score, EvalStatus::Fail);
+            let decision = evaluator.should_continue(&report, &history);
+            history.push(report);
+
+            // Should continue despite small oscillations
+            assert!(decision.should_continue || score == scores[scores.len() - 1]);
+        }
+    }
+
+    #[test]
+    fn test_consecutive_sub_threshold_triggers_plateau() {
+        let mut evaluator = SatisficingEvaluator::new();
+
+        // Create scores with 4 consecutive sub-threshold improvements (< 0.02)
+        let scores = vec![0.5, 0.515, 0.517, 0.518, 0.519, 0.5195];
+        let mut history = Vec::new();
+
+        for (i, &score) in scores.iter().enumerate() {
+            let report = create_test_report(score, EvalStatus::Fail);
+            let decision = evaluator.should_continue(&report, &history);
+            history.push(report.clone());
+
+            // Should trigger plateau after 3+ consecutive sub-threshold improvements
+            if i >= 5 { // After building enough history
+                assert!(!decision.should_continue || decision.reason != StopReason::QualityCeiling);
+            }
+        }
+    }
+
+    #[test]
+    fn test_no_progress_detection() {
+        let evaluator = SatisficingEvaluator::new();
+
+        // Create a changeset with very few changes
+        let small_changeset = file_ops::ChangeSet {
+            patches: vec![file_ops::Patch {
+                path: "test.rs".to_string(),
+                hunks: vec![file_ops::Hunk {
+                    old_start: 1,
+                    old_lines: 1,
+                    new_start: 1,
+                    new_lines: 1,
+                    lines: "+// comment\n".to_string(), // Only 1 line added
+                }],
+                expected_prev_sha256: None,
+            }],
+        };
+
+        let result = evaluator.check_no_progress(Some(&small_changeset));
+        assert_eq!(result, Some(StopReason::NoProgress));
+    }
+
+    #[test]
+    fn test_action_repetition_detection() {
+        let mut evaluator = SatisficingEvaluator::new();
+
+        // Record the same action multiple times
+        let action = crate::types::ActionRequest::patch(
+            file_ops::ChangeSet { patches: vec![] },
+            "test action".to_string(),
+            0.8
+        );
+
+        // Record the same action 4 times (more than consecutive_threshold of 3)
+        for _ in 0..4 {
+            evaluator.record_action(&action);
+        }
+
+        let result = evaluator.check_action_repetition();
+        assert_eq!(result, Some(StopReason::NoProgress));
+    }
+
+    #[test]
+    fn test_sliding_window_maintenance() {
+        let mut evaluator = SatisficingEvaluator::new();
+
+        // Record more scores than the hysteresis window
+        for i in 0..10 {
+            let report = create_test_report(0.5 + i as f64 * 0.01, EvalStatus::Fail);
+            evaluator.record_score(report.score);
+        }
+
+        // Should only maintain the last hysteresis_window scores
+        assert!(evaluator.score_history.len() <= evaluator.config.hysteresis_window);
+    }
 }

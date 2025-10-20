@@ -16,7 +16,7 @@ pub mod types;
 #[cfg(test)]
 mod tests;
 
-pub use cache::*;
+pub use cache::{EmbeddingCache, ModelCache, ModelCacheStats, ModelCacheInfo, ModelCacheError};
 pub use context::*;
 pub use provider::*;
 pub use service::*;

@@ -13,7 +13,6 @@ use uuid::Uuid;
 
 /// In-memory BM25 index backed by thread-safe data structures.
 pub struct Bm25Indexer {
-    index_root: PathBuf,
     documents: Arc<RwLock<HashMap<Uuid, DocumentRecord>>>,
     inverted_index: Arc<RwLock<HashMap<String, HashMap<Uuid, u32>>>>,
     stats: Arc<Mutex<Bm25Stats>>,
@@ -39,7 +38,6 @@ impl Bm25Indexer {
         }
 
         Ok(Self {
-            index_root: index_path.to_path_buf(),
             documents: Arc::new(RwLock::new(HashMap::new())),
             inverted_index: Arc::new(RwLock::new(HashMap::new())),
             stats: Arc::new(Mutex::new(Bm25Stats::default())),
@@ -77,7 +75,7 @@ impl Bm25Indexer {
         for (term, freq) in &record.term_freqs {
             inverted_index
                 .entry(term.clone())
-                .or_insert_with(HashMap::new)
+                .or_default()
                 .insert(block_id, *freq);
         }
 

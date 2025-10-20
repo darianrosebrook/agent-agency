@@ -13,15 +13,13 @@ use uuid::Uuid;
 struct SimpleHnswIndex {
     vectors: Vec<Vec<f32>>,
     dimension: usize,
-    max_neighbors: usize,
 }
 
 impl SimpleHnswIndex {
-    fn new(dimension: usize, max_neighbors: usize) -> Self {
+    fn new(dimension: usize, _max_neighbors: usize) -> Self {
         Self {
             vectors: Vec::new(),
             dimension,
-            max_neighbors,
         }
     }
 
@@ -63,10 +61,6 @@ impl SimpleHnswIndex {
         results.truncate(k);
 
         Ok(results)
-    }
-
-    fn node_count(&self) -> usize {
-        self.vectors.len()
     }
 }
 
@@ -114,7 +108,7 @@ impl HnswIndexer {
         // Create simplified HNSW index
         let index = Arc::new(Mutex::new(SimpleHnswIndex::new(
             metadata.dim as usize,
-            metadata.max_neighbors,
+            32, // default max_neighbors
         )));
 
         Ok(Self {

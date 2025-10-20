@@ -1,72 +1,70 @@
-id: AGENT-0003
-title: "Add tool-call envelope to prompting strategy"
+id: AGENT-0004
+title: "Implement hysteresis and no-progress guards in SatisficingEvaluator"
 risk_tier: 2
 mode: feature
 change_budget:
-  max_files: 12
-  max_loc: 600
+  max_files: 8
+  max_loc: 400
 blast_radius:
-  modules: ["self-prompting-agent", "orchestration"]
+  modules: ["self-prompting-agent", "evaluation"]
   data_migration: false
-operational_rollback_slo: "5m"
+operational_rollback_slo: "2m"
 scope:
   in:
-    - "iterations/v3/self-prompting-agent/src/prompting/"
-    - "iterations/v3/self-prompting-agent/src/types.rs"  # Add ActionRequest types
-    - "iterations/v3/self-prompting-agent/src/agent.rs"  # Update agent to use tool calls
-    - "iterations/v3/self-prompting-agent/src/loop_controller.rs"  # Integrate tool call validation
+    - "iterations/v3/self-prompting-agent/src/evaluation/satisficing.rs"
+    - "iterations/v3/self-prompting-agent/src/types.rs"  # Add NoProgress StopReason
+    - "iterations/v3/self-prompting-agent/src/loop_controller.rs"  # Integrate no-progress detection
   out:
     - "iterations/v3/orchestration/"
     - "iterations/v3/database/"
     - "iterations/v3/interfaces/"
     - "iterations/v3/council/"
 invariants:
-  - "All prompting returns structured JSON tool calls, not free text"
-  - "Tool calls are validated against JSON schema before execution"
-  - "Invalid tool calls trigger re-prompting with error context"
-  - "ActionRequest types are strongly typed and serializable"
-  - "Prompting strategy maintains backward compatibility for evaluation"
+  - "Hysteresis prevents continue/stop flapping"
+  - "No-progress detection stops on ineffective iterations"
+  - "Sliding window analysis prevents premature plateau detection"
+  - "Action request repetition detection catches loops"
+  - "Zero-LOC diffs trigger immediate stop"
 acceptance:
   - id: "A1"
-    given: "Valid ActionRequest JSON from generate_action_request()"
-    when: "JSON is parsed and validated"
-    then: "ActionRequest struct is created with correct type, changeset, reason, confidence"
+    given: "Sliding window of N scores with K consecutive sub-threshold improvements"
+    when: "plateau detection runs"
+    then: "requires hysteresis before declaring plateau"
   - id: "A2"
-    given: "Invalid JSON from generate_action_request()"
-    when: "JSON parsing fails"
-    then: "Validation error is returned with helpful error message"
+    given: "Changeset with zero net LOC change"
+    when: "no-progress guard evaluates"
+    then: "stops iteration with NoProgress reason"
   - id: "A3"
-    given: "ActionRequest with type='patch' and valid changeset"
-    when: "apply_changeset() is called"
-    then: "Changes are applied to workspace safely"
+    given: "Same ActionRequest generated K times consecutively"
+    when: "repetition guard evaluates"
+    then: "stops iteration with NoProgress reason"
   - id: "A4"
-    given: "ActionRequest with type='noop' and reason"
-    when: "processed by loop controller"
-    then: "No changes made, reason logged for learning"
+    given: "Continue/stop decisions oscillating"
+    when: "hysteresis applied"
+    then: "maintains stable decision until clear trend emerges"
   - id: "A5"
-    given: "Tool call violates allow-list or budget"
-    when: "validated at tool boundary"
-    then: "ActionRequest is rejected, re-prompting triggered"
+    given: "SatisficingEvaluator with hysteresis enabled"
+    when: "evaluated over multiple iterations"
+    then: "shows reduced decision volatility"
 contracts:
   - type: "rust-api"
-    path: "iterations/v3/self-prompting-agent/src/prompting/mod.rs"
+    path: "iterations/v3/self-prompting-agent/src/evaluation/satisficing.rs"
     endpoints:
-      - "PromptingStrategy::generate_action_request()"
-      - "ActionRequest::validate()"
-      - "ActionRequest::apply()"
+      - "SatisficingEvaluator::should_continue()"
+      - "SatisficingEvaluator::check_no_progress()"
+      - "SatisficingEvaluator::check_action_repetition()"
     schemas:
-      - name: "ActionRequest"
-        fields: ["type: ActionType", "changeset: Option<ChangeSet>", "reason: String", "confidence: f64"]
-      - name: "ActionType"
-        fields: ["Patch", "Write", "NoOp"]
+      - name: "SatisficingConfig"
+        fields: ["hysteresis_window: usize", "consecutive_threshold: usize", "no_progress_loc_threshold: usize"]
+      - name: "StopReason"
+        fields: ["NoProgress", "Satisficed", "MaxIterations", "QualityCeiling", "FailedGates", "Timeout", "Error", "Unknown"]
 non_functional:
   perf:
-    action_request_generation_ms: 200
-    json_validation_ms: 10
+    hysteresis_evaluation_ms: 5
+    no_progress_check_ms: 2
   security:
-    - "structured-tool-calls"
-    - "no-arbitrary-code-execution"
-    - "allow-list-enforcement"
+    - "no-arbitrary-decision-injection"
+    - "bounded-iteration-prevention"
   reliability:
-    - "json-schema-validation"
-    - "error-recovery-reprompting"
+    - "stable-decision-making"
+    - "loop-prevention"

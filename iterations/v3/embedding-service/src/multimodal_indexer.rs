@@ -1723,7 +1723,7 @@ impl MultimodalIndexer {
     }
 
     /// Extract content features from search result
-    async fn extract_content_features(&self, result: &MultimodalSearchResult) -> Result<crate::types::ContentFeatures> {
+    async fn extract_content_features(&self, _result: &MultimodalSearchResult) -> Result<crate::types::ContentFeatures> {
         // Extract features from the search result
         Ok(crate::types::ContentFeatures {
             text_features: Vec::new(), // Would extract from result content
@@ -1861,7 +1861,7 @@ impl MultimodalIndexer {
     }
 
     /// Generate embedding for project scope
-    async fn generate_scope_embedding(&self, project_scope: &str) -> Result<Option<EmbeddingVector>> {
+    async fn generate_scope_embedding(&self, _project_scope: &str) -> Result<Option<EmbeddingVector>> {
         // Generate embedding using the same models used for content
         // This would typically call the embedding service
         Ok(Some(vec![0.1; 384])) // Placeholder embedding

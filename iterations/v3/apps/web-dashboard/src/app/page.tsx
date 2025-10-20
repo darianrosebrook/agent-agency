@@ -82,17 +82,20 @@ export default function Dashboard() {
 
     if (activeSection === "tasks") {
       console.warn(
-        "Task monitoring not implemented - requires V3 task streaming API"
+        "Task monitoring API integration partially implemented - requires V3 backend task endpoints"
       );
-      // TODO: Milestone 2 - Task Monitoring & Visualization
-      // - [ ] Implement V3 task API endpoints (list, detail, events, artifacts, quality)
-      // - [ ] Add SSE stream for task events with event_seq ordering
-      // - [ ] Create TaskList, TaskCard, TaskTimeline components
-      // - [ ] Build ExecutionPhaseViewer and WorkingSpecViewer
-      // - [ ] Implement SSE client for real-time task updates
-      // - [ ] Add event deduplication using task_id:event_seq
-      // - [ ] Integrate pause/resume/context endpoints for research
-      // - [ ] Test real-time phase changes and artifact updates
+      // TODO: Milestone 2 - Task Monitoring & Visualization (PARTIALLY COMPLETE)
+      // - [x] Implement V3 task API proxy endpoints (list, detail, actions, events)
+      // - [x] Add SSE stream proxy for task events with real-time updates
+      // - [x] Create TaskList, TaskCard, TaskTimeline components with real API integration
+      // - [x] Implement task filtering, sorting, pagination via API
+      // - [x] Add task action controls (pause, resume, cancel, restart) via API
+      // - [x] Implement SSE client for real-time task event streaming
+      // - [ ] Implement V3 backend task endpoints when available
+      // - [ ] Add real-time task events streaming from V3 backend
+      // - [ ] Integrate task artifacts and quality reports
+      // - [ ] Add comprehensive task metrics and performance tracking
+      // - [ ] Test end-to-end task lifecycle with V3 backend
     }
 
     if (activeSection === "database") {

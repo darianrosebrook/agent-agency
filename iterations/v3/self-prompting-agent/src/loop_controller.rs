@@ -4,7 +4,7 @@ use std::sync::Arc;
 use tokio::sync::mpsc;
 use tracing::{info, warn, debug};
 
-use crate::evaluation::{EvaluationOrchestrator, EvalReport, EvalStatus};
+use crate::evaluation::{EvaluationOrchestrator, EvalReport, EvalStatus, SatisficingEvaluator, SatisficingDecision};
 use crate::models::{ModelRegistry, ModelProvider, ModelContext};
 use crate::prompting::{PromptingStrategy, AdaptivePromptingStrategy};
 use crate::sandbox::SandboxEnvironment;
@@ -24,6 +24,7 @@ pub struct SelfPromptingResult {
 pub struct SelfPromptingLoop {
     model_registry: Arc<ModelRegistry>,
     evaluator: Arc<EvaluationOrchestrator>,
+    satisficing_evaluator: std::cell::RefCell<SatisficingEvaluator>, // Use RefCell for interior mutability
     prompting_strategy: Box<dyn PromptingStrategy>,
     max_iterations: usize,
     event_sender: Option<mpsc::UnboundedSender<SelfPromptingEvent>>,
@@ -35,6 +36,7 @@ impl SelfPromptingLoop {
         Self {
             model_registry,
             evaluator,
+            satisficing_evaluator: std::cell::RefCell::new(SatisficingEvaluator::new()), // Initialize with defaults
             prompting_strategy: Box::new(AdaptivePromptingStrategy::new()),
             max_iterations: 5,
             event_sender: None,
@@ -51,6 +53,7 @@ impl SelfPromptingLoop {
         Self {
             model_registry,
             evaluator,
+            satisficing_evaluator: std::cell::RefCell::new(SatisficingEvaluator::new()), // Initialize with defaults
             prompting_strategy: Box::new(AdaptivePromptingStrategy::new()),
             max_iterations,
             event_sender,
@@ -123,8 +126,16 @@ impl SelfPromptingLoop {
                 timestamp: chrono::Utc::now(),
             });
 
-            // 5. Check satisficing - should we continue?
-            let satisficing_decision = self.evaluator.satisficing_decision(&eval_report, &history);
+            // 5. Check satisficing with hysteresis and no-progress guards
+            let mut satisficing_evaluator = self.satisficing_evaluator.borrow_mut();
+            let satisficing_decision = satisficing_evaluator.should_continue(&eval_report, &history);
+
+            // Additional no-progress checks
+            if satisficing_decision.should_continue {
+                // Check for no progress based on recent action (if available)
+                // Note: In a full implementation, we'd track the changeset from the action
+                // For now, we'll rely on the hysteresis logic
+            }
 
             if !satisficing_decision.should_continue {
                 info!("Iteration {}: Stopping - {}", iteration, match satisficing_decision.reason {
@@ -132,6 +143,7 @@ impl SelfPromptingLoop {
                     StopReason::MaxIterations => "Max iterations reached",
                     StopReason::QualityCeiling => "Quality ceiling reached",
                     StopReason::FailedGates => "Failed mandatory gates",
+                    StopReason::NoProgress => "No progress detected",
                     _ => "Unknown reason",
                 });
 

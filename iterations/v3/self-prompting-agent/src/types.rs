@@ -135,6 +135,7 @@ pub enum StopReason {
     FailedGates,
     Timeout,
     Error,
+    NoProgress,  // Added for hysteresis and no-progress guards
     Unknown,
 }
 

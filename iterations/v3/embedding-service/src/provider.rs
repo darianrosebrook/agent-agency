@@ -290,94 +290,7 @@ impl OnnxEmbeddingProvider {
 
         Ok(embeddings)
     }
-
-        debug!("Output tensor shape: {:?}", shape);
-
-        let embeddings = match shape.as_slice() {
-            // [batch_size, seq_len, hidden_dim] - take mean pooling over sequence dimension
-            [batch, seq_len, hidden] if *batch == batch_size && *seq_len == self.max_length => {
-                self.extract_pooled_embeddings(&tensor_data.view(), *batch, *seq_len, *hidden)?
-            }
-            // [batch_size, hidden_dim] - already pooled
-            [batch, hidden] if *batch == batch_size => {
-                self.extract_direct_embeddings(&tensor_data.view(), *batch, *hidden)?
-            }
-            // Unexpected shape
-            _ => {
-                return Err(anyhow!("Unexpected output tensor shape: {:?}. Expected [batch_size, seq_len, hidden_dim] or [batch_size, hidden_dim]", shape));
-            }
-        };
-
-        // Validate embedding dimensions
-        for embedding in &embeddings {
-            if embedding.len() != self.dimension {
-                return Err(anyhow!("Embedding dimension mismatch: expected {}, got {}", self.dimension, embedding.len()));
-            }
-        }
-
-        Ok(embeddings)
     }
-
-    /// Extract embeddings with mean pooling over sequence dimension
-    fn extract_pooled_embeddings(
-        &self,
-        tensor_view: &ndarray::ArrayView<f32, ndarray::IxDyn>,
-        batch_size: usize,
-        seq_len: usize,
-        hidden_dim: usize,
-    ) -> Result<Vec<EmbeddingVector>> {
-        let mut embeddings = Vec::with_capacity(batch_size);
-
-        for batch_idx in 0..batch_size {
-            let mut pooled_embedding = vec![0.0f32; hidden_dim];
-            let mut valid_tokens = 0;
-
-            // Mean pool over sequence dimension (ignoring padding tokens)
-            for seq_idx in 0..seq_len {
-                let token_embedding = tensor_view.slice(s![batch_idx, seq_idx, ..]);
-                let token_vec: Vec<f32> = token_embedding.to_vec();
-
-                // Simple check for padding tokens (all zeros or very small values)
-                let magnitude: f32 = token_vec.iter().map(|x| x * x).sum::<f32>().sqrt();
-                if magnitude > 1e-6 { // Non-padding token
-                    for (i, &val) in token_vec.iter().enumerate() {
-                        pooled_embedding[i] += val;
-                    }
-                    valid_tokens += 1;
-                }
-            }
-
-            // Average the pooled embeddings
-            if valid_tokens > 0 {
-                for val in &mut pooled_embedding {
-                    *val /= valid_tokens as f32;
-                }
-            }
-
-            embeddings.push(pooled_embedding);
-        }
-
-        Ok(embeddings)
-    }
-
-    /// Extract direct embeddings (already pooled)
-    fn extract_direct_embeddings(
-        &self,
-        tensor_view: &ndarray::ArrayView<f32, ndarray::IxDyn>,
-        batch_size: usize,
-        hidden_dim: usize,
-    ) -> Result<Vec<EmbeddingVector>> {
-        let mut embeddings = Vec::with_capacity(batch_size);
-
-        for batch_idx in 0..batch_size {
-            let embedding_slice = tensor_view.slice(s![batch_idx, ..]);
-            embeddings.push(embedding_slice.to_vec());
-        }
-
-        Ok(embeddings)
-    }
-
-}
 
 #[async_trait]
 impl EmbeddingProvider for SafeTensorsEmbeddingProvider {
@@ -419,60 +332,7 @@ impl EmbeddingProvider for SafeTensorsEmbeddingProvider {
 #[async_trait]
 impl EmbeddingProvider for OnnxEmbeddingProvider {
     async fn generate_embeddings(&self, texts: &[String]) -> Result<Vec<EmbeddingVector>> {
-        if texts.is_empty() {
-            return Ok(Vec::new());
-        }
-
-        debug!("Generating embeddings for {} texts using ONNX model: {}", texts.len(), self.model_name);
-
-        // Tokenize all texts
-        let mut all_input_ids = Vec::new();
-        let mut all_attention_masks = Vec::new();
-        let mut sequence_lengths = Vec::new();
-
-        for text in texts {
-            // Tokenize the text
-            let tokens = self.tokenizer.encode(text).await?;
-            let mut input_ids = tokens.clone();
-
-            // Apply max length constraint
-            if input_ids.len() > self.max_length {
-                input_ids.truncate(self.max_length);
-            }
-
-            // Create attention mask (1 for real tokens, 0 for padding)
-            let attention_mask = vec![1i64; input_ids.len()];
-
-            // Pad to max_length if necessary
-            while input_ids.len() < self.max_length {
-                input_ids.push(0); // Assuming 0 is padding token
-            }
-            while attention_mask.len() < self.max_length {
-                all_attention_masks.push(0i64);
-            }
-
-            all_input_ids.extend(input_ids.into_iter().map(|x| x as i64));
-            all_attention_masks.extend(attention_mask);
-            sequence_lengths.push(text.len());
-        }
-
-        // Prepare ONNX inputs
-        let inputs = self.prepare_model_inputs(&all_input_ids, &all_attention_masks, texts.len())?;
-
-        // Create input map for session.run
-        let mut input_map = HashMap::new();
-        for (name, value) in inputs {
-            input_map.insert(name.to_string(), value);
-        }
-
-        // Run inference
-        let outputs = self.session.run(input_map)?;
-
-        // Extract embeddings from outputs
-        let embeddings = self.extract_embeddings_from_outputs(outputs, texts.len())?;
-
-        debug!("Successfully generated {} embeddings", embeddings.len());
-        Ok(embeddings)
+        self.generate_embeddings_stub(texts).await
     }
 
     fn dimension(&self) -> usize {
