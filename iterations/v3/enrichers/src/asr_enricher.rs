@@ -321,10 +321,9 @@ impl AsrEnricher {
             
             result.confidence = (avg_turn_confidence * speaker_factor).min(1.0);
         }
-        
+
         Ok(())
     }
-
 
     /// Transcribe using Apple Speech Framework
     async fn transcribe_apple(

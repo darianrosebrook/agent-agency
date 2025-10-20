@@ -1,67 +1,10 @@
 # Clippy configuration for agent-agency project
 # @darianrosebrook
 
-# Allow some common patterns in this codebase
-allow = [
-    "too_many_arguments",           # Some complex functions need many args
-    "module_name_repetitions",      # Common in workspace structure
-    "missing_errors_doc",           # Not all public functions need error docs
-    "missing_panics_doc",           # Not all public functions need panic docs
-    "must_use_candidate",           # Allow some functions without must_use
-]
-
-# Deny important issues
-deny = [
-    "unused_must_use",              # Must handle Result types
-    "unused_imports",               # Clean up unused imports
-    "dead_code",                    # Remove unused code
-    "unreachable_code",             # Fix unreachable code
-    "unused_variables",             # Clean up unused variables
-    "unused_mut",                   # Remove unnecessary mutability
-    "unused_assignments",           # Fix unused assignments
-    "unreachable_patterns",         # Fix unreachable patterns
-    "mismatched_lifetime_syntaxes", # Consistent lifetime syntax
-    "ambiguous_glob_reexports",     # Fix ambiguous re-exports
-]
-
-# Warnings for code quality
-warn = [
-    "clippy::all",                  # Enable all clippy lints
-    "clippy::pedantic",             # Extra pedantic lints
-    "clippy::nursery",              # Experimental lints
-    "clippy::cargo",                # Cargo-specific lints
-]
-
 # Specific configuration
-[clippy]
-# Allow some complexity in this domain
 cognitive-complexity-threshold = 30
-
-# Allow longer functions in complex business logic
 too-many-lines-threshold = 100
-
-# Allow some duplication in test code
-single-char-lifetime-names = false
-
-# Allow some unwraps in test code
 disallowed-names = ["foo", "bar", "baz", "tmp"]
 
-# Performance-related lints
-[clippy::perf]
-# Enable performance-related lints
-all = true
-
-# Style-related lints
-[clippy::style]
-# Enable style-related lints
-all = true
-
-# Correctness-related lints
-[clippy::correctness]
-# Enable correctness-related lints
-all = true
-
-# Suspicious code patterns
-[clippy::suspicious]
-# Enable suspicious pattern detection
-all = true
+# Clippy version compatibility
+msrv = "1.70"

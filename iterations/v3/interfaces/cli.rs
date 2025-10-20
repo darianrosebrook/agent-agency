@@ -140,6 +140,65 @@ pub enum Commands {
         #[command(subcommand)]
         command: QualityCommands,
     },
+
+    /// Self-prompting agent commands
+    SelfPrompt {
+        #[command(subcommand)]
+        command: SelfPromptCommands,
+    },
+}
+
+/// Self-prompting agent subcommands
+#[derive(Debug, Subcommand)]
+pub enum SelfPromptCommands {
+    /// Execute task with self-prompting agent
+    Execute {
+        /// Task description
+        #[arg(help = "Natural language description of the task")]
+        description: String,
+
+        /// Target files (comma-separated)
+        #[arg(long, help = "Files to work on (comma-separated)")]
+        files: Option<String>,
+
+        /// Model to use
+        #[arg(long, help = "Specific model to use for execution")]
+        model: Option<String>,
+
+        /// Watch execution progress
+        #[arg(long, help = "Watch execution progress in real-time")]
+        watch: bool,
+
+        /// Maximum iterations
+        #[arg(long, default_value = "5", help = "Maximum number of self-prompting iterations")]
+        max_iterations: usize,
+    },
+
+    /// List available models
+    Models,
+
+    /// Hot-swap a model
+    Swap {
+        /// Current model ID
+        old_model: String,
+
+        /// New model ID
+        new_model: String,
+    },
+
+    /// Run playground tests
+    Playground {
+        /// Specific test to run
+        #[arg(long, help = "Run specific test (typescript, rust, python)")]
+        test: Option<String>,
+    },
+
+    /// View self-prompting execution history
+    History {
+        /// Limit number of results
+        #[arg(long, default_value = "10")]
+        limit: usize,
+    },
 }
 
 /// Quality management subcommands

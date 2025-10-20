@@ -584,3 +584,28 @@ pub enum LearningSystemError {
     #[error("Learning algorithm failed: {0}")]
     LearningAlgorithmFailed(String),
 }
+
+/// Learning signals from self-prompting agent execution
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum SelfPromptingSignal {
+    /// Iteration efficiency patterns
+    IterationEfficiency {
+        iterations: usize,
+        quality: f64,
+        time: f64, // milliseconds per iteration
+    },
+
+    /// Model performance on specific tasks
+    ModelPerformance {
+        model_id: String,
+        task_type: String,
+        score: f64,
+    },
+
+    /// Effectiveness of satisficing decisions
+    SatisficingEffectiveness {
+        stopped_early: bool,
+        quality_delta: f64,
+        iterations_saved: usize,
+    },
+}

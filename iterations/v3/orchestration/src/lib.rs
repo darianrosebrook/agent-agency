@@ -13,8 +13,24 @@ pub mod production;
 pub mod refinement;
 pub mod tracking;
 pub mod multimodal_orchestration;
+pub mod audit_trail;
+pub mod audited_orchestrator;
 
 // Re-export key components
 pub use multimodal_orchestration::{
     MultimodalOrchestrator, ProcessingResult, ProcessingStatus, ProcessingStats,
+};
+
+// Audit trail exports
+pub use audit_trail::{
+    AuditTrailManager, AuditConfig, AuditLogLevel, AuditOutputFormat,
+    FileOperationsAuditor, TerminalAuditor, CouncilAuditor, AgentThinkingAuditor,
+    PerformanceAuditor, ErrorRecoveryAuditor, LearningAuditor,
+    AuditEvent, AuditCategory, AuditSeverity, AuditResult, AuditPerformance,
+    AuditQuery, AuditError,
+};
+
+// Audited orchestrator exports
+pub use audited_orchestrator::{
+    AuditedOrchestrator, AuditedOrchestratorConfig, AuditStatistics,
 };

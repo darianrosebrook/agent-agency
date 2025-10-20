@@ -262,6 +262,124 @@ export interface TaskActionResponse {
   timestamp: string;
 }
 
+// Self-Prompting Task Types
+export interface SelfPromptingTask extends Task {
+  self_prompting_config: SelfPromptingConfig;
+  current_iteration: number;
+  max_iterations: number;
+  model_history: ModelUsage[];
+  satisficing_metrics: SatisficingMetrics;
+}
+
+export interface SelfPromptingConfig {
+  enabled: boolean;
+  max_iterations: number;
+  min_improvement_threshold: number;
+  quality_ceiling_budget: number;
+  cost_benefit_ratio_threshold: number;
+  mandatory_gates: string[];
+  models: ModelConfig[];
+  current_model: string;
+}
+
+export interface ModelConfig {
+  id: string;
+  name: string;
+  provider: string;
+  capabilities: ModelCapabilities;
+  performance_stats: ModelPerformanceStats;
+}
+
+export interface ModelCapabilities {
+  max_context: number;
+  supports_streaming: boolean;
+  supports_function_calling: boolean;
+  supports_vision: boolean;
+}
+
+export interface ModelPerformanceStats {
+  total_requests: number;
+  successful_requests: number;
+  average_latency_ms: number;
+  error_rate: number;
+  last_used: string;
+}
+
+export interface ModelUsage {
+  iteration: number;
+  model_id: string;
+  prompt_tokens: number;
+  completion_tokens: number;
+  latency_ms: number;
+  success: boolean;
+}
+
+export interface SatisficingMetrics {
+  stopped_early: boolean;
+  quality_delta: number;
+  iterations_saved: number;
+  cost_benefit_ratio: number;
+  ceiling_detected: boolean;
+}
+
+// Self-Prompting Event Types
+export interface SelfPromptingIterationEvent {
+  type: "iteration_started" | "evaluation_completed" | "model_swapped" | "loop_completed";
+  task_id: string;
+  iteration: number;
+  data: SelfPromptingIterationData;
+  timestamp: string;
+  event_id: string;
+  sequence_number: number;
+}
+
+export interface SelfPromptingIterationData {
+  model_id?: string;
+  score?: number;
+  status?: string;
+  should_continue?: boolean;
+  old_model?: string;
+  new_model?: string;
+  reason?: string;
+  total_iterations?: number;
+  final_score?: number;
+  stop_reason?: string;
+}
+
+// Self-Prompting Component Props
+export interface SelfPromptingMonitorProps {
+  task: SelfPromptingTask;
+  events?: SelfPromptingIterationEvent[];
+  onModelSwitch?: (modelId: string) => void;
+  onIterationSelect?: (iteration: number) => void;
+  onPause?: () => void;
+  onResume?: () => void;
+  onStop?: () => void;
+}
+
+export interface IterationTimelineProps {
+  task: SelfPromptingTask;
+  selectedIteration?: number;
+  onIterationClick?: (iteration: number) => void;
+  showDetails?: boolean;
+}
+
+export interface ModelPerformanceChartProps {
+  models: ModelConfig[];
+  timeRange?: "1h" | "24h" | "7d" | "30d";
+  onModelSelect?: (modelId: string) => void;
+}
+
+export interface SatisficingDashboardProps {
+  metrics: SatisficingMetrics;
+  thresholds: {
+    min_improvement: number;
+    quality_ceiling_budget: number;
+    cost_benefit_ratio: number;
+  };
+  recommendations: string[];
+}
+
 // Error Types
 export interface TaskError {
   code:

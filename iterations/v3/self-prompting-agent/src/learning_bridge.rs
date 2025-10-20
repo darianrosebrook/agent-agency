@@ -64,6 +64,9 @@ pub enum LearningSignal {
         evaluation_count: usize,
         timestamp: DateTime<Utc>,
     },
+
+    /// Convert to reflexive learning SelfPromptingSignal
+    SelfPrompting(crate::types::SelfPromptingSignal),
 }
 
 /// Trait for reflexive learning system integration
@@ -211,6 +214,34 @@ impl LearningBridge {
             evaluation_count: eval_history.len(),
             timestamp: Utc::now(),
         });
+
+        // 6. Self-prompting signals for reflexive learning system
+        signals.push(LearningSignal::SelfPrompting(crate::types::SelfPromptingSignal::IterationEfficiency {
+            iterations: task_result.iterations,
+            quality: task_result.final_report.score,
+            time: task_result.total_time_ms as f64 / task_result.iterations as f64,
+        }));
+
+        signals.push(LearningSignal::SelfPrompting(crate::types::SelfPromptingSignal::ModelPerformance {
+            model_id: task_result.model_used.clone(),
+            task_type: format!("{:?}", task_result.task_type),
+            score: task_result.final_report.score,
+        }));
+
+        // Calculate satisficing effectiveness
+        let stopped_early = matches!(task_result.stop_reason, Some(crate::types::StopReason::Satisficed));
+        let quality_delta = if eval_history.len() > 1 {
+            self.calculate_quality_improvement(eval_history)?
+        } else {
+            0.0
+        };
+        let iterations_saved = if stopped_early { 2.max(task_result.iterations) - task_result.iterations } else { 0 };
+
+        signals.push(LearningSignal::SelfPrompting(crate::types::SelfPromptingSignal::SatisficingEffectiveness {
+            stopped_early,
+            quality_delta,
+            iterations_saved,
+        }));
 
         Ok(signals)
     }
