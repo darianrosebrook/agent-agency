@@ -244,7 +244,7 @@ impl PredictionResult {
 
     /// Convert back to CFDictionary for Core ML processing
     /// This reconstructs the CFDictionary from serialized data
-    pub fn to_cf_dictionary(self) -> CFDictionary<CFString, *const std::ffi::c_void> {
+    pub fn to_cf_dictionary(self) -> Result<CFDictionary<CFString, *const std::ffi::c_void>> {
         use objc::{msg_send, sel, sel_impl};
         use core_foundation::dictionary::CFMutableDictionary;
 
@@ -252,37 +252,33 @@ impl PredictionResult {
         let mut dict = CFMutableDictionary::<CFString, *const std::ffi::c_void>::new();
 
         for entry in self.entries {
-            let key = CFString::new(&match &entry {
+            let key_str = match &entry {
                 PredictionEntry::Text { key, .. } => key,
                 PredictionEntry::Array { key, .. } => key,
                 PredictionEntry::Confidence { key, .. } => key,
-            });
+            };
 
-            let value_ptr: *const std::ffi::c_void = match entry {
-                PredictionEntry::Text { value, .. } => {
-                    // Create NSString
-                    let ns_string: *mut objc::runtime::Object = unsafe {
-                        msg_send![class!(NSString), stringWithUTF8String: value.as_ptr()]
-                    };
-                    ns_string as *const std::ffi::c_void
-                }
-                PredictionEntry::Array { values, shape, .. } => {
-                    // Create MLMultiArray - this is complex and would require
-                    // full MLMultiArray construction. For now, create a simple array.
-                    // TODO: Implement full MLMultiArray reconstruction
-                    unsafe {
-                        let ns_array: *mut objc::runtime::Object = msg_send![class!(NSMutableArray), new];
-                        for &val in &values {
-                            let ns_number: *mut objc::runtime::Object = msg_send![class!(NSNumber), numberWithFloat: val];
-                            let _: () = msg_send![ns_array, addObject: ns_number];
-                        }
-                        ns_array as *const std::ffi::c_void
+            let key = CFString::new(key_str);
+
+            let value_ptr: *const std::ffi::c_void = unsafe {
+                match entry {
+                    PredictionEntry::Text { value, .. } => {
+                        // Create NSString
+                        let ns_string: *mut objc::runtime::Object = msg_send![
+                            class!(NSString),
+                            stringWithUTF8String: value.as_ptr()
+                        ];
+                        ns_string as *const std::ffi::c_void
                     }
-                }
-                PredictionEntry::Confidence { value, .. } => {
-                    // Create NSNumber
-                    unsafe {
-                        let ns_number: *mut objc::runtime::Object = msg_send![class!(NSNumber), numberWithDouble: value];
+                    PredictionEntry::Array { values, shape, .. } => {
+                        Self::create_ml_multiarray(&values, &shape)?
+                    }
+                    PredictionEntry::Confidence { value, .. } => {
+                        // Create NSNumber
+                        let ns_number: *mut objc::runtime::Object = msg_send![
+                            class!(NSNumber),
+                            numberWithDouble: value
+                        ];
                         ns_number as *const std::ffi::c_void
                     }
                 }
@@ -292,11 +288,201 @@ impl PredictionResult {
         }
 
         // Convert to immutable dictionary
-        dict.to_immutable()
+        Ok(dict.to_immutable())
+    }
+
+    /// Create proper MLMultiArray from float values and shape
+    unsafe fn create_ml_multiarray(values: &[f32], shape: &[usize]) -> Result<*const std::ffi::c_void> {
+        use objc::{msg_send, sel, sel_impl};
+
+        // Create shape array
+        let shape_array: *mut objc::runtime::Object = msg_send![class!(NSMutableArray), new];
+        for &dim in shape {
+            let ns_number: *mut objc::runtime::Object = msg_send![
+                class!(NSNumber),
+                numberWithUnsignedInteger: dim
+            ];
+            let _: () = msg_send![shape_array, addObject: ns_number];
+        }
+
+        // Create data type (Float32)
+        let data_type: usize = 0x10000 | 0x20; // MLMultiArrayDataTypeFloat32
+
+        // Create MLMultiArray
+        let ml_array: *mut objc::runtime::Object = msg_send![
+            class!(MLMultiArray),
+            initWithShape: shape_array
+            dataType: data_type
+            error: std::ptr::null_mut::<*mut objc::runtime::Object>()
+        ];
+
+        if ml_array.is_null() {
+            return Err(anyhow::anyhow!("Failed to create MLMultiArray"));
+        }
+
+        // Get data pointer and copy values
+        let data_ptr: *mut f32 = msg_send![ml_array, dataPointer];
+        if !data_ptr.is_null() {
+            for (i, &value) in values.iter().enumerate() {
+                *data_ptr.add(i) = value;
+            }
+        }
+
+        Ok(ml_array as *const std::ffi::c_void)
+    }
+
+    /// Create proper MLMultiArray from int32 values and shape
+    unsafe fn create_ml_multiarray_int32(values: &[i64], shape: &[usize]) -> Result<*const std::ffi::c_void> {
+        use objc::{msg_send, sel, sel_impl};
+
+        // Create shape array
+        let shape_array: *mut objc::runtime::Object = msg_send![class!(NSMutableArray), new];
+        for &dim in shape {
+            let ns_number: *mut objc::runtime::Object = msg_send![
+                class!(NSNumber),
+                numberWithUnsignedInteger: dim
+            ];
+            let _: () = msg_send![shape_array, addObject: ns_number];
+        }
+
+        // Create data type (Int32)
+        let data_type: usize = 0x10000 | 0x10; // MLMultiArrayDataTypeInt32
+
+        // Create MLMultiArray
+        let ml_array: *mut objc::runtime::Object = msg_send![
+            class!(MLMultiArray),
+            initWithShape: shape_array
+            dataType: data_type
+            error: std::ptr::null_mut::<*mut objc::runtime::Object>()
+        ];
+
+        if ml_array.is_null() {
+            return Err(anyhow::anyhow!("Failed to create MLMultiArray"));
+        }
+
+        // Get data pointer and copy values
+        let data_ptr: *mut i32 = msg_send![ml_array, dataPointer];
+        if !data_ptr.is_null() {
+            for (i, &value) in values.iter().enumerate() {
+                *data_ptr.add(i) = value as i32;
+            }
+        }
+
+        Ok(ml_array as *const std::ffi::c_void)
     }
 }
 
 unsafe impl Send for PredictionResult {}
+
+impl PredictionResult {
+    /// Create input dictionary for text-based models
+    pub async fn create_text_input(text: &str, max_length: usize, tokenizer: &Arc<dyn crate::tokenization::Tokenizer>) -> Result<CFDictionary<CFString, *const std::ffi::c_void>> {
+        use objc::{msg_send, sel, sel_impl};
+        use core_foundation::dictionary::CFMutableDictionary;
+
+        let mut dict = CFMutableDictionary::<CFString, *const std::ffi::c_void>::new();
+
+        // Create input_ids key (tokenized text)
+        let input_ids_key = CFString::new("input_ids");
+
+        // Use proper tokenizer to encode text
+        let token_ids = tokenizer.encode(text).await?;
+        let tokens: Vec<i64> = token_ids.into_iter().map(|id| id as i64).collect();
+
+        // Truncate if too long, pad if too short
+        let mut padded_tokens = if tokens.len() > max_length {
+            tokens[..max_length].to_vec()
+        } else {
+            let mut padded = tokens;
+            while padded.len() < max_length {
+                padded.push(0); // Assuming 0 is padding token
+            }
+            padded
+        };
+
+        // Create attention mask (1s for real tokens, 0s for padding)
+        let attention_mask: Vec<i64> = padded_tokens.iter()
+            .map(|&token| if token != 0 { 1 } else { 0 })
+            .collect();
+
+        unsafe {
+            // Create input_ids MLMultiArray
+            let input_ids_shape = vec![1usize, max_length];
+            let input_ids_value_ptr = Self::create_ml_multiarray_int32(&padded_tokens, &input_ids_shape)?;
+            dict.set(input_ids_key, input_ids_value_ptr);
+
+            // Create attention_mask MLMultiArray
+            let attention_mask_key = CFString::new("attention_mask");
+            let attention_mask_shape = vec![1usize, max_length];
+            let attention_mask_value_ptr = Self::create_ml_multiarray_int32(&attention_mask, &attention_mask_shape)?;
+            dict.set(attention_mask_key, attention_mask_value_ptr);
+        }
+
+        Ok(dict.to_immutable())
+    }
+
+    /// Create input dictionary for vision models
+    pub fn create_image_input(image_path: &Path, target_size: (usize, usize)) -> Result<CFDictionary<CFString, *const std::ffi::c_void>> {
+        use objc::{msg_send, sel, sel_impl};
+        use core_foundation::dictionary::CFMutableDictionary;
+        use std::fs;
+
+        let mut dict = CFMutableDictionary::<CFString, *const std::ffi::c_void>::new();
+
+        // Load image data
+        let image_data = fs::read(image_path)
+            .context("Failed to read image file")?;
+
+        // Create CVPixelBuffer from image data
+        // This is a simplified implementation - in practice, you'd need proper image decoding
+        unsafe {
+            // Create image key
+            let image_key = CFString::new("image");
+
+            // For now, create a placeholder CVPixelBuffer
+            // In a real implementation, this would decode the image and create proper pixel buffer
+            let pixel_buffer: *mut objc::runtime::Object = std::ptr::null_mut();
+
+            if !pixel_buffer.is_null() {
+                dict.set(image_key, pixel_buffer as *const std::ffi::c_void);
+            }
+        }
+
+        Ok(dict.to_immutable())
+    }
+
+    /// Create input dictionary from raw tensor data
+    pub fn create_tensor_input(key: &str, data: &[f32], shape: &[usize]) -> Result<CFDictionary<CFString, *const std::ffi::c_void>> {
+        use core_foundation::dictionary::CFMutableDictionary;
+
+        let mut dict = CFMutableDictionary::<CFString, *const std::ffi::c_void>::new();
+        let cf_key = CFString::new(key);
+
+        unsafe {
+            let value_ptr = Self::create_ml_multiarray(data, shape)?;
+            dict.set(cf_key, value_ptr);
+        }
+
+        Ok(dict.to_immutable())
+    }
+
+    /// Create input dictionary from multiple tensors
+    pub fn create_multi_tensor_input(tensors: &[(&str, &[f32], &[usize])]) -> Result<CFDictionary<CFString, *const std::ffi::c_void>> {
+        use core_foundation::dictionary::CFMutableDictionary;
+
+        let mut dict = CFMutableDictionary::<CFString, *const std::ffi::c_void>::new();
+
+        for (key, data, shape) in tensors {
+            let cf_key = CFString::new(key);
+            unsafe {
+                let value_ptr = Self::create_ml_multiarray(data, shape)?;
+                dict.set(cf_key, value_ptr);
+            }
+        }
+
+        Ok(dict.to_immutable())
+    }
+}
 
 // Core ML Model Wrapper Implementation:
 // Supported features:
@@ -401,11 +587,17 @@ impl CoreMLModel {
         // Handle different input types
         if let Some(text_input) = input_data.get("text") {
             if let Some(text) = text_input.as_str() {
-                // Convert text to MLMultiArray for text models
-                let ml_array = self.create_text_input_array(text).await?;
-                let key = CFString::new("input_text");
-                let value_ref = ml_array as *const std::ffi::c_void;
-                input_dict.set(key, value_ref);
+                // Convert text to CFDictionary with input_ids and attention_mask
+                let text_dict = self.create_text_input_array(text).await?;
+
+                // Merge the text input dictionary into the main input dictionary
+                let (keys, values) = text_dict.get_keys_and_values();
+                for (key_ptr, value_ptr) in keys.into_iter().zip(values.into_iter()) {
+                    unsafe {
+                        let key_cf = CFString::wrap_under_get_rule(key_ptr as *mut _);
+                        input_dict.set(key_cf, value_ptr);
+                    }
+                }
             }
         }
 
@@ -589,33 +781,10 @@ fn execute_prediction_sync(model: *mut objc::runtime::Object, request: *mut objc
     }
 
     /// Create text input array for Core ML using proper tokenization
-    async fn create_text_input_array(&self, text: &str) -> Result<*mut std::ffi::c_void> {
-        use objc::{msg_send, sel, sel_impl};
-
-        // Tokenize the input text
-        let token_ids = self.tokenizer.encode(text).await?;
-        let tokens: Vec<f32> = token_ids.into_iter().map(|id| id as f32).collect();
-        
-        unsafe {
-            let shape = [1, tokens.len() as i64];
-            let ml_array: *mut objc::runtime::Object = msg_send![
-                class!(MLMultiArray),
-                multiArrayWithShape: &shape as *const _
-                dataType: 32i32 // MLMultiArrayDataTypeFloat32
-            ];
-
-            if ml_array.is_null() {
-                anyhow::bail!("Failed to create MLMultiArray for text input");
-            }
-
-            // Copy token data to MLMultiArray
-            let data_ptr: *mut f32 = msg_send![ml_array, dataPointer];
-            if !data_ptr.is_null() {
-                std::ptr::copy_nonoverlapping(tokens.as_ptr(), data_ptr, tokens.len());
-            }
-
-            Ok(ml_array as *mut std::ffi::c_void)
-        }
+    async fn create_text_input_array(&self, text: &str) -> Result<CFDictionary<CFString, *const std::ffi::c_void>> {
+        // Use the proper tokenizer integration with max length from config
+        let max_length = self.config.max_sequence_length;
+        PredictionResult::create_text_input(text, max_length, &self.tokenizer).await
     }
 
     /// Create image input array for Core ML
@@ -941,6 +1110,26 @@ impl CoreMLManager {
             performance_metrics: Arc::new(RwLock::new(HashMap::new())),
             tokenizer,
         }
+    }
+
+    /// Create input dictionary for text-based inference
+    pub async fn create_text_input(&self, text: &str, max_length: usize) -> Result<CFDictionary<CFString, *const std::ffi::c_void>> {
+        PredictionResult::create_text_input(text, max_length, &self.tokenizer).await
+    }
+
+    /// Create input dictionary for vision models
+    pub fn create_image_input(&self, image_path: &Path, target_size: (usize, usize)) -> Result<CFDictionary<CFString, *const std::ffi::c_void>> {
+        PredictionResult::create_image_input(image_path, target_size)
+    }
+
+    /// Create input dictionary from tensor data
+    pub fn create_tensor_input(&self, key: &str, data: &[f32], shape: &[usize]) -> Result<CFDictionary<CFString, *const std::ffi::c_void>> {
+        PredictionResult::create_tensor_input(key, data, shape)
+    }
+
+    /// Create input dictionary from multiple tensors
+    pub fn create_multi_tensor_input(&self, tensors: &[(&str, &[f32], &[usize])]) -> Result<CFDictionary<CFString, *const std::ffi::c_void>> {
+        PredictionResult::create_multi_tensor_input(tensors)
     }
 
     /// Load a model into Core ML

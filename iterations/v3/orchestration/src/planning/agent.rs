@@ -261,6 +261,216 @@ pub enum PerformanceFeasibility {
     Impossible,
 }
 
+/// Recommended implementation approach based on risk
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum RecommendedApproach {
+    DirectImplementation,
+    PhasedImplementation,
+    PrototypeFirst,
+    ReconsiderRequirements,
+}
+
+/// Comprehensive risk assessment combining all dimensions
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ComprehensiveRiskAssessment {
+    /// Overall risk score (0.0 = low risk, 1.0 = high risk)
+    pub overall_risk_score: f32,
+    /// Ambiguity assessment results
+    pub ambiguity_assessment: AmbiguityAssessment,
+    /// Feasibility assessment results
+    pub feasibility_assessment: FeasibilityAssessment,
+    /// Identified risk factors
+    pub risk_factors: Vec<RiskFactor>,
+    /// Recommended mitigation strategies
+    pub mitigation_strategies: Vec<String>,
+    /// Contingency plans for high-risk scenarios
+    pub contingency_plans: Vec<String>,
+    /// Recommended implementation approach
+    pub recommended_approach: RecommendedApproach,
+}
+
+/// Individual risk factor
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RiskFactor {
+    /// Type of risk factor
+    pub factor_type: RiskFactorType,
+    /// Severity level
+    pub severity: RiskSeverity,
+    /// Description of the risk
+    pub description: String,
+    /// Probability of impact (0.0-1.0)
+    pub impact_probability: f32,
+}
+
+/// Types of risk factors
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum RiskFactorType {
+    /// Ambiguity-related risk
+    Ambiguity,
+    /// Feasibility-related risk
+    Feasibility,
+    /// Technical complexity risk
+    Technical,
+    /// Resource availability risk
+    Resource,
+    /// Timeline risk
+    Timeline,
+}
+
+/// Risk severity levels
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum RiskSeverity {
+    /// Low impact, easily mitigated
+    Low,
+    /// Moderate impact, requires planning
+    Medium,
+    /// High impact, significant mitigation needed
+    High,
+    /// Critical impact, may require project changes
+    Critical,
+}
+
+/// Domain expertise validation result
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DomainExpertiseValidation {
+    /// Domains required for the task
+    pub required_domains: Vec<String>,
+    /// Expertise level required for each domain (1-5)
+    pub expertise_levels: HashMap<String, u8>,
+    /// Whether expertise is available internally
+    pub available_expertise: HashMap<String, bool>,
+    /// Whether expertise acquisition is feasible
+    pub acquisition_feasible: bool,
+    /// Time required to acquire missing expertise (weeks)
+    pub acquisition_time_weeks: Option<u8>,
+    /// Cost estimate for expertise acquisition
+    pub acquisition_cost: Option<String>,
+}
+
+/// Domain requirement specification
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DomainRequirement {
+    /// Description of the domain expertise
+    pub description: String,
+    /// Typical expertise levels needed (1-5 scale)
+    pub typical_expertise_levels: Vec<u8>,
+    /// Common technologies in this domain
+    pub common_technologies: Vec<String>,
+}
+
+/// Mathematical complexity assessment
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MathematicalComplexity {
+    /// Computational complexity class
+    pub complexity_class: ComputationalComplexity,
+    /// Mathematical maturity level required (1-5)
+    pub mathematical_maturity_level: u8,
+    /// Complexity of mathematical proofs required
+    pub proof_complexity: String,
+    /// Whether numerical stability is a concern
+    pub numerical_stability_concerns: bool,
+    /// Implementation challenges identified
+    pub implementation_challenges: Vec<String>,
+    /// Complexity patterns identified in the task
+    pub identified_patterns: Vec<String>,
+}
+
+/// Computational complexity classes
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ComputationalComplexity {
+    Constant,
+    Logarithmic,
+    Linear,
+    Polynomial,
+    Exponential,
+    Undecidable,
+}
+
+/// Performance feasibility modeling result
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PerformanceFeasibilityModel {
+    /// Extracted performance requirements
+    pub extracted_requirements: PerformanceRequirements,
+    /// Hardware constraints analysis
+    pub hardware_constraints: HardwareConstraints,
+    /// Theoretical performance bounds
+    pub theoretical_bounds: TheoreticalBounds,
+    /// Practical achievability assessment
+    pub practical_assessment: PracticalAssessment,
+    /// Performance optimization recommendations
+    pub optimization_recommendations: Vec<String>,
+}
+
+/// Performance requirements extracted from task
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PerformanceRequirements {
+    /// Required latency in microseconds
+    pub latency_microseconds: Option<u64>,
+    /// Required throughput in operations per second
+    pub throughput_operations_per_second: Option<u32>,
+    /// Memory requirements in GB
+    pub memory_requirements_gb: Option<f32>,
+    /// Network bandwidth requirements in Mbps
+    pub network_bandwidth_mbps: Option<u32>,
+}
+
+/// Hardware constraints analysis
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HardwareConstraints {
+    /// Identified hardware constraints
+    pub identified_constraints: Vec<String>,
+    /// Recommended hardware configurations
+    pub recommended_hardware: Vec<String>,
+    /// Cost implications of hardware requirements
+    pub cost_implications: String,
+}
+
+/// Theoretical performance bounds
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TheoreticalBounds {
+    /// Latency theoretical bounds
+    pub latency_bounds: Option<TheoreticalLatency>,
+    /// Throughput theoretical bounds
+    pub throughput_bounds: Option<TheoreticalThroughput>,
+}
+
+/// Theoretical latency bounds
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TheoreticalLatency {
+    /// Requested latency
+    pub requested: u64,
+    /// Theoretical minimum latency (GHz limit)
+    pub theoretical_minimum: u64,
+    /// Light speed limit for distributed systems
+    pub light_speed_limit: u64,
+    /// Whether the requirement is theoretically achievable
+    pub achievable: bool,
+}
+
+/// Theoretical throughput bounds
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TheoreticalThroughput {
+    /// Requested throughput
+    pub requested: u32,
+    /// Theoretical maximum throughput
+    pub theoretical_maximum: u32,
+    /// Practical throughput limit
+    pub practical_limit: u32,
+    /// Whether the requirement is theoretically achievable
+    pub achievable: bool,
+}
+
+/// Practical achievability assessment
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PracticalAssessment {
+    /// Overall feasibility score (0.0 = impossible, 1.0 = highly feasible)
+    pub feasibility_score: f32,
+    /// Identified practical concerns
+    pub identified_concerns: Vec<String>,
+    /// Recommended implementation approach
+    pub recommended_approach: String,
+}
+
 /// Result of working spec generation
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum WorkingSpecResult {
@@ -860,6 +1070,563 @@ impl PlanningAgent {
             r if r < 0.8 => RecommendedApproach::PrototypeFirst,
             _ => RecommendedApproach::ReconsiderRequirements,
         }
+    }
+
+    /// Validate domain expertise requirements for a task
+    pub async fn validate_domain_expertise(&self, task_description: &str) -> Result<DomainExpertiseValidation> {
+        tracing::info!("Validating domain expertise for task: {}", task_description);
+
+        // Define domain expertise requirements for common technical areas
+        let domain_requirements = self.get_domain_expertise_requirements();
+
+        // Analyze task for domain requirements using LLM
+        let analysis_prompt = format!(
+            "Analyze the following task for required domain expertise. \
+             Consider specialized knowledge areas, technical domains, and expertise levels needed. \
+             Map to these expertise areas: {}\n\n\
+             Task: {}\n\n\
+             Provide analysis in JSON format with required_domains array, expertise_levels object, \
+             available_expertise object, and acquisition_assessment.",
+            domain_requirements.keys().collect::<Vec<_>>().join(", "),
+            task_description
+        );
+
+        let messages = vec![
+            Message {
+                role: MessageRole::System,
+                content: "You are a technical architect assessing domain expertise requirements. Always respond with valid JSON.".to_string(),
+            },
+            Message {
+                role: MessageRole::User,
+                content: analysis_prompt,
+            }
+        ];
+
+        let request = GenerationRequest {
+            messages,
+            temperature: 0.1,
+            max_tokens: 800,
+            ..Default::default()
+        };
+
+        let response = self.llm_client.generate(request).await?;
+        let analysis: serde_json::Value = serde_json::from_str(&response.content)
+            .map_err(|e| PlanningError::LLMError(anyhow::anyhow!("Failed to parse expertise analysis: {}", e)))?;
+
+        // Parse domain requirements
+        let required_domains = analysis["required_domains"]
+            .as_array()
+            .unwrap_or(&vec![])
+            .iter()
+            .filter_map(|d| d.as_str().map(|s| s.to_string()))
+            .collect::<Vec<String>>();
+
+        // Parse expertise levels
+        let expertise_levels = analysis["expertise_levels"]
+            .as_object()
+            .unwrap_or(&serde_json::Map::new())
+            .iter()
+            .filter_map(|(domain, level)| {
+                level.as_u64().map(|l| (domain.clone(), l as u8))
+            })
+            .collect::<HashMap<String, u8>>();
+
+        // Parse available expertise (assume current team capabilities)
+        let available_expertise = analysis["available_expertise"]
+            .as_object()
+            .unwrap_or(&serde_json::Map::new())
+            .iter()
+            .filter_map(|(domain, available)| {
+                available.as_bool().map(|a| (domain.clone(), a))
+            })
+            .collect::<HashMap<String, bool>>();
+
+        // Parse acquisition assessment
+        let acquisition_assessment = analysis["acquisition_assessment"]
+            .as_object()
+            .unwrap_or(&serde_json::Map::new());
+
+        let acquisition_feasible = acquisition_assessment["feasible"].as_bool().unwrap_or(true);
+        let acquisition_time_weeks = acquisition_assessment["time_weeks"].as_u64().map(|w| w as u8);
+        let acquisition_cost = acquisition_assessment["cost_estimate"].as_str().map(|s| s.to_string());
+
+        Ok(DomainExpertiseValidation {
+            required_domains,
+            expertise_levels,
+            available_expertise,
+            acquisition_feasible,
+            acquisition_time_weeks,
+            acquisition_cost,
+        })
+    }
+
+    /// Get predefined domain expertise requirements
+    fn get_domain_expertise_requirements(&self) -> HashMap<String, DomainRequirement> {
+        let mut requirements = HashMap::new();
+
+        requirements.insert("cryptography".to_string(), DomainRequirement {
+            description: "Cryptographic algorithms, security protocols, key management".to_string(),
+            typical_expertise_levels: vec![3, 4, 5], // Expert to world-class
+            common_technologies: vec!["AES", "RSA", "ECC", "quantum-resistant", "PKI"].into_iter().map(|s| s.to_string()).collect(),
+        });
+
+        requirements.insert("quantum_computing".to_string(), DomainRequirement {
+            description: "Quantum algorithms, quantum information theory, quantum hardware".to_string(),
+            typical_expertise_levels: vec![5], // World-class only
+            common_technologies: vec!["Shor's algorithm", "Grover's algorithm", "quantum gates", "QKD"].into_iter().map(|s| s.to_string()).collect(),
+        });
+
+        requirements.insert("distributed_systems".to_string(), DomainRequirement {
+            description: "Distributed consensus, fault tolerance, scalability patterns".to_string(),
+            typical_expertise_levels: vec![2, 3, 4, 5],
+            common_technologies: vec!["Raft", "Paxos", "CAP theorem", " Byzantine fault tolerance"].into_iter().map(|s| s.to_string()).collect(),
+        });
+
+        requirements.insert("blockchain".to_string(), DomainRequirement {
+            description: "Blockchain protocols, smart contracts, decentralized systems".to_string(),
+            typical_expertise_levels: vec![2, 3, 4],
+            common_technologies: vec!["Bitcoin", "Ethereum", "smart contracts", "consensus mechanisms"].into_iter().map(|s| s.to_string()).collect(),
+        });
+
+        requirements.insert("machine_learning".to_string(), DomainRequirement {
+            description: "ML algorithms, model training, optimization techniques".to_string(),
+            typical_expertise_levels: vec![2, 3, 4, 5],
+            common_technologies: vec!["neural networks", "gradient descent", "backpropagation", "transformers"].into_iter().map(|s| s.to_string()).collect(),
+        });
+
+        requirements.insert("performance_engineering".to_string(), DomainRequirement {
+            description: "High-performance systems, optimization, low-latency design".to_string(),
+            typical_expertise_levels: vec![3, 4, 5],
+            common_technologies: vec!["JIT compilation", "SIMD", "memory hierarchies", "lock-free algorithms"].into_iter().map(|s| s.to_string()).collect(),
+        });
+
+        requirements.insert("security_hardening".to_string(), DomainRequirement {
+            description: "Security architecture, threat modeling, secure coding practices".to_string(),
+            typical_expertise_levels: vec![2, 3, 4],
+            common_technologies: vec!["OWASP", "threat modeling", "secure SDLC", "cryptography"].into_iter().map(|s| s.to_string()).collect(),
+        });
+
+        requirements
+    }
+
+    /// Evaluate mathematical complexity of a task
+    pub async fn evaluate_mathematical_complexity(&self, task_description: &str) -> Result<MathematicalComplexity> {
+        tracing::info!("Evaluating mathematical complexity for task: {}", task_description);
+
+        // Analyze task for mathematical complexity patterns
+        let complexity_patterns = self.identify_complexity_patterns(task_description);
+
+        // Use LLM to assess mathematical complexity
+        let analysis_prompt = format!(
+            "Analyze the mathematical complexity of the following task. \
+             Consider algorithmic complexity, mathematical proofs required, computational complexity classes, \
+             numerical stability, and mathematical maturity needed.\n\n\
+             Task: {}\n\n\
+             Identified patterns: {}\n\n\
+             Provide analysis in JSON format with complexity_class (constant|logarithmic|linear|polynomial|exponential|undecidable), \
+             mathematical_maturity_level (1-5), proof_complexity, numerical_stability_concerns, \
+             and implementation_challenges array.",
+            task_description,
+            complexity_patterns.join(", ")
+        );
+
+        let messages = vec![
+            Message {
+                role: MessageRole::System,
+                content: "You are a computational complexity theorist analyzing mathematical requirements. Always respond with valid JSON.".to_string(),
+            },
+            Message {
+                role: MessageRole::User,
+                content: analysis_prompt,
+            }
+        ];
+
+        let request = GenerationRequest {
+            messages,
+            temperature: 0.1,
+            max_tokens: 600,
+            ..Default::default()
+        };
+
+        let response = self.llm_client.generate(request).await?;
+        let analysis: serde_json::Value = serde_json::from_str(&response.content)
+            .map_err(|e| PlanningError::LLMError(anyhow::anyhow!("Failed to parse complexity analysis: {}", e)))?;
+
+        let complexity_class = match analysis["complexity_class"].as_str().unwrap_or("polynomial") {
+            "constant" => ComputationalComplexity::Constant,
+            "logarithmic" => ComputationalComplexity::Logarithmic,
+            "linear" => ComputationalComplexity::Linear,
+            "polynomial" => ComputationalComplexity::Polynomial,
+            "exponential" => ComputationalComplexity::Exponential,
+            "undecidable" => ComputationalComplexity::Undecidable,
+            _ => ComputationalComplexity::Polynomial,
+        };
+
+        let mathematical_maturity = analysis["mathematical_maturity_level"].as_u64().unwrap_or(3) as u8;
+        let proof_complexity = analysis["proof_complexity"].as_str().unwrap_or("moderate").to_string();
+        let numerical_stability = analysis["numerical_stability_concerns"].as_bool().unwrap_or(false);
+
+        let implementation_challenges = analysis["implementation_challenges"]
+            .as_array()
+            .unwrap_or(&vec![])
+            .iter()
+            .filter_map(|c| c.as_str().map(|s| s.to_string()))
+            .collect();
+
+        Ok(MathematicalComplexity {
+            complexity_class,
+            mathematical_maturity_level: mathematical_maturity,
+            proof_complexity,
+            numerical_stability_concerns: numerical_stability,
+            implementation_challenges,
+            identified_patterns: complexity_patterns,
+        })
+    }
+
+    /// Identify complexity patterns in task description
+    fn identify_complexity_patterns(&self, task_description: &str) -> Vec<String> {
+        let mut patterns = Vec::new();
+        let desc = task_description.to_lowercase();
+
+        // Cryptographic complexity patterns
+        if desc.contains("quantum") && desc.contains("resistant") {
+            patterns.push("post-quantum cryptography".to_string());
+        }
+        if desc.contains("zero-knowledge") || desc.contains("zkp") {
+            patterns.push("zero-knowledge proofs".to_string());
+        }
+        if desc.contains("homomorphic") {
+            patterns.push("homomorphic encryption".to_string());
+        }
+
+        // Algorithmic complexity patterns
+        if desc.contains("optimization") && desc.contains("np") {
+            patterns.push("NP-complete optimization".to_string());
+        }
+        if desc.contains("graph") && (desc.contains("algorithm") || desc.contains("traversal")) {
+            patterns.push("graph algorithms".to_string());
+        }
+        if desc.contains("sorting") && desc.contains("comparison") {
+            patterns.push("comparison-based sorting".to_string());
+        }
+
+        // Mathematical complexity patterns
+        if desc.contains("prime") && desc.contains("generation") {
+            patterns.push("prime number generation".to_string());
+        }
+        if desc.contains("floating") && desc.contains("precision") {
+            patterns.push("floating-point precision".to_string());
+        }
+        if desc.contains("numerical") && desc.contains("stability") {
+            patterns.push("numerical stability".to_string());
+        }
+
+        // Performance complexity patterns
+        if desc.contains("microsecond") || desc.contains("nanosecond") {
+            patterns.push("extreme low-latency requirements".to_string());
+        }
+        if desc.contains("real-time") && desc.contains("processing") {
+            patterns.push("real-time processing constraints".to_string());
+        }
+
+        if patterns.is_empty() {
+            patterns.push("general algorithmic complexity".to_string());
+        }
+
+        patterns
+    }
+
+    /// Model performance feasibility for a task
+    pub async fn model_performance_feasibility(&self, task_description: &str) -> Result<PerformanceFeasibilityModel> {
+        tracing::info!("Modeling performance feasibility for task: {}", task_description);
+
+        // Extract performance requirements from task
+        let perf_requirements = self.extract_performance_requirements(task_description);
+
+        // Analyze hardware constraints
+        let hardware_constraints = self.analyze_hardware_constraints(&perf_requirements);
+
+        // Model theoretical performance bounds
+        let theoretical_bounds = self.calculate_theoretical_bounds(&perf_requirements);
+
+        // Assess practical achievability
+        let practical_assessment = self.assess_practical_achievability(&perf_requirements, &hardware_constraints);
+
+        // Generate optimization recommendations
+        let optimization_recommendations = self.generate_performance_optimizations(&perf_requirements);
+
+        Ok(PerformanceFeasibilityModel {
+            extracted_requirements: perf_requirements,
+            hardware_constraints,
+            theoretical_bounds,
+            practical_assessment,
+            optimization_recommendations,
+        })
+    }
+
+    /// Extract performance requirements from task description
+    fn extract_performance_requirements(&self, task_description: &str) -> PerformanceRequirements {
+        let desc = task_description.to_lowercase();
+
+        // Extract latency requirements
+        let latency_us = if desc.contains("microsecond") {
+            desc.split_whitespace()
+                .find(|w| w.parse::<u64>().is_ok() && desc.contains("microsecond"))
+                .and_then(|w| w.parse().ok())
+                .unwrap_or(1000) // 1ms default for microsecond mentions
+        } else if desc.contains("millisecond") || desc.contains("ms") {
+            desc.split_whitespace()
+                .find(|w| w.parse::<u64>().is_ok())
+                .and_then(|w| w.parse().ok())
+                .map(|ms| ms * 1000) // convert to microseconds
+                .unwrap_or(1000000) // 1 second default
+        } else {
+            None
+        };
+
+        // Extract throughput requirements
+        let throughput_ops = if desc.contains("per second") || desc.contains("/s") {
+            desc.split_whitespace()
+                .find(|w| w.parse::<u32>().is_ok())
+                .and_then(|w| w.parse().ok())
+        } else {
+            None
+        };
+
+        // Extract memory requirements
+        let memory_gb = if desc.contains("gb") || desc.contains("gigabyte") {
+            desc.split_whitespace()
+                .find(|w| w.parse::<f32>().is_ok())
+                .and_then(|w| w.parse().ok())
+        } else {
+            None
+        };
+
+        // Extract network requirements
+        let network_mbps = if desc.contains("mbps") || desc.contains("mb/s") {
+            desc.split_whitespace()
+                .find(|w| w.parse::<u32>().is_ok())
+                .and_then(|w| w.parse().ok())
+        } else {
+            None
+        };
+
+        PerformanceRequirements {
+            latency_microseconds: latency_us,
+            throughput_operations_per_second: throughput_ops,
+            memory_requirements_gb: memory_gb,
+            network_bandwidth_mbps: network_mbps,
+        }
+    }
+
+    /// Analyze hardware constraints for performance requirements
+    fn analyze_hardware_constraints(&self, requirements: &PerformanceRequirements) -> HardwareConstraints {
+        let mut constraints = Vec::new();
+
+        if let Some(latency) = requirements.latency_microseconds {
+            if latency < 1000 { // Sub-millisecond
+                constraints.push("Requires specialized hardware (FPGA, ASIC, or custom silicon)".to_string());
+            } else if latency < 10000 { // Sub-10ms
+                constraints.push("Requires high-performance CPU with optimized memory access".to_string());
+            }
+        }
+
+        if let Some(throughput) = requirements.throughput_operations_per_second {
+            if throughput > 1000000 { // 1M+ ops/sec
+                constraints.push("Requires parallel processing (GPU, multi-core CPU)".to_string());
+            } else if throughput > 100000 { // 100K+ ops/sec
+                constraints.push("Requires optimized single-threaded performance".to_string());
+            }
+        }
+
+        if let Some(memory) = requirements.memory_requirements_gb {
+            if memory > 512.0 {
+                constraints.push("Requires high-memory server or distributed architecture".to_string());
+            } else if memory > 64.0 {
+                constraints.push("Requires workstation-grade memory (64GB+)".to_string());
+            }
+        }
+
+        if let Some(network) = requirements.network_bandwidth_mbps {
+            if network > 10000 { // 10Gbps+
+                constraints.push("Requires high-bandwidth network infrastructure".to_string());
+            } else if network > 1000 { // 1Gbps+
+                constraints.push("Requires enterprise-grade networking".to_string());
+            }
+        }
+
+        HardwareConstraints {
+            identified_constraints: constraints,
+            recommended_hardware: self.recommend_hardware(requirements),
+            cost_implications: self.estimate_hardware_cost(requirements),
+        }
+    }
+
+    /// Recommend hardware for performance requirements
+    fn recommend_hardware(&self, requirements: &PerformanceRequirements) -> Vec<String> {
+        let mut recommendations = Vec::new();
+
+        if requirements.latency_microseconds.unwrap_or(u64::MAX) < 10000 {
+            recommendations.push("Apple Silicon M2/M3 Ultra (for Neural Engine acceleration)".to_string());
+            recommendations.push("NVIDIA RTX 40-series GPU (for CUDA acceleration)".to_string());
+        }
+
+        if requirements.throughput_operations_per_second.unwrap_or(0) > 500000 {
+            recommendations.push("Multi-core CPU (16+ cores) with high clock speed".to_string());
+            recommendations.push("NVIDIA A100/H100 GPU for parallel processing".to_string());
+        }
+
+        if requirements.memory_requirements_gb.unwrap_or(0.0) > 128.0 {
+            recommendations.push("Server with 512GB+ RAM".to_string());
+            recommendations.push("Consider distributed architecture".to_string());
+        }
+
+        if requirements.network_bandwidth_mbps.unwrap_or(0) > 5000 {
+            recommendations.push("10Gbps+ network infrastructure".to_string());
+            recommendations.push("RDMA-enabled networking for low latency".to_string());
+        }
+
+        if recommendations.is_empty() {
+            recommendations.push("Standard workstation/server hardware sufficient".to_string());
+        }
+
+        recommendations
+    }
+
+    /// Estimate hardware cost implications
+    fn estimate_hardware_cost(&self, requirements: &PerformanceRequirements) -> String {
+        let base_cost = if requirements.latency_microseconds.unwrap_or(u64::MAX) < 1000 {
+            50000..150000 // Custom hardware
+        } else if requirements.memory_requirements_gb.unwrap_or(0.0) > 256.0 {
+            10000..30000 // High-memory server
+        } else if requirements.throughput_operations_per_second.unwrap_or(0) > 1000000 {
+            5000..15000 // GPU workstation
+        } else {
+            2000..8000 // Standard workstation
+        };
+
+        format!("${}-${}", base_cost.start, base_cost.end)
+    }
+
+    /// Calculate theoretical performance bounds
+    fn calculate_theoretical_bounds(&self, requirements: &PerformanceRequirements) -> TheoreticalBounds {
+        // Simplified theoretical calculations
+        let theoretical_latency = requirements.latency_microseconds
+            .map(|req| {
+                // Light speed limit for network operations
+                let light_speed_limit = 300000000.0 / 2.0; // speed of light round trip / 2
+                let theoretical_min = (1.0 / 3000000000.0) * 1000000.0; // 1 GHz theoretical min
+
+                TheoreticalLatency {
+                    requested: req,
+                    theoretical_minimum: theoretical_min as u64,
+                    light_speed_limit: light_speed_limit as u64,
+                    achievable: req >= theoretical_min as u64,
+                }
+            });
+
+        let theoretical_throughput = requirements.throughput_operations_per_second
+            .map(|req| {
+                // CPU throughput limits
+                let max_cpu_throughput = 100000000; // 100M ops/sec theoretical max
+                let practical_cpu_limit = 10000000; // 10M ops/sec practical limit
+
+                TheoreticalThroughput {
+                    requested: req,
+                    theoretical_maximum: max_cpu_throughput,
+                    practical_limit: practical_cpu_limit,
+                    achievable: req <= practical_cpu_limit,
+                }
+            });
+
+        TheoreticalBounds {
+            latency_bounds: theoretical_latency,
+            throughput_bounds: theoretical_throughput,
+        }
+    }
+
+    /// Assess practical achievability of performance requirements
+    fn assess_practical_achievability(&self, requirements: &PerformanceRequirements, constraints: &HardwareConstraints) -> PracticalAssessment {
+        let mut feasibility_score = 1.0;
+        let mut concerns = Vec::new();
+
+        // Assess latency feasibility
+        if let Some(latency) = requirements.latency_microseconds {
+            if latency < 100 { // Sub-100μs
+                feasibility_score *= 0.1;
+                concerns.push("Sub-100μs latency requires custom hardware or extreme optimization".to_string());
+            } else if latency < 1000 { // Sub-1ms
+                feasibility_score *= 0.5;
+                concerns.push("Sub-1ms latency challenging but achievable with optimization".to_string());
+            }
+        }
+
+        // Assess throughput feasibility
+        if let Some(throughput) = requirements.throughput_operations_per_second {
+            if throughput > 50000000 { // 50M+ ops/sec
+                feasibility_score *= 0.2;
+                concerns.push("50M+ ops/sec requires specialized parallel hardware".to_string());
+            } else if throughput > 10000000 { // 10M+ ops/sec
+                feasibility_score *= 0.6;
+                concerns.push("10M+ ops/sec requires high-end parallel processing".to_string());
+            }
+        }
+
+        // Assess memory feasibility
+        if let Some(memory) = requirements.memory_requirements_gb {
+            if memory > 1024.0 { // 1TB+
+                feasibility_score *= 0.3;
+                concerns.push("1TB+ memory requires specialized server hardware".to_string());
+            } else if memory > 256.0 { // 256GB+
+                feasibility_score *= 0.7;
+                concerns.push("256GB+ memory requires high-end server".to_string());
+            }
+        }
+
+        PracticalAssessment {
+            feasibility_score,
+            identified_concerns: concerns,
+            recommended_approach: if feasibility_score > 0.8 {
+                "Standard implementation with performance monitoring".to_string()
+            } else if feasibility_score > 0.5 {
+                "Optimized implementation with performance profiling".to_string()
+            } else {
+                "Prototype and benchmark before full implementation".to_string()
+            },
+        }
+    }
+
+    /// Generate performance optimization recommendations
+    fn generate_performance_optimizations(&self, requirements: &PerformanceRequirements) -> Vec<String> {
+        let mut recommendations = Vec::new();
+
+        if requirements.latency_microseconds.is_some() {
+            recommendations.push("Use zero-copy data structures".to_string());
+            recommendations.push("Implement SIMD instructions where applicable".to_string());
+            recommendations.push("Optimize memory access patterns (cache-friendly)".to_string());
+            recommendations.push("Consider lock-free algorithms for concurrency".to_string());
+        }
+
+        if requirements.throughput_operations_per_second.is_some() {
+            recommendations.push("Implement parallel processing with async/await".to_string());
+            recommendations.push("Use vectorized operations (SIMD)".to_string());
+            recommendations.push("Consider GPU acceleration for compute-intensive tasks".to_string());
+            recommendations.push("Implement work-stealing schedulers".to_string());
+        }
+
+        if requirements.memory_requirements_gb.is_some() {
+            recommendations.push("Implement memory pooling to reduce allocation overhead".to_string());
+            recommendations.push("Use compact data structures".to_string());
+            recommendations.push("Consider memory-mapped files for large datasets".to_string());
+        }
+
+        if requirements.network_bandwidth_mbps.is_some() {
+            recommendations.push("Implement connection pooling".to_string());
+            recommendations.push("Use compression for data transfer".to_string());
+            recommendations.push("Consider protocol buffers over JSON".to_string());
+        }
+
+        recommendations
     }
 
     /// Generate a working spec from a natural language task description with ambiguity handling

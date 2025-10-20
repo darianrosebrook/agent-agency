@@ -8,6 +8,7 @@ use uuid::Uuid;
 use chrono::{DateTime, Utc};
 
 use super::manager::{ArtifactMetadata, ExecutionArtifacts, ArtifactVersion};
+use agent_agency_database::DatabaseClient;
 
 /// Version control trait
 #[async_trait]
@@ -322,13 +323,12 @@ impl VersionControl for GitVersionControl {
 
 /// Database-based version control
 pub struct DatabaseVersionControl {
-    // Database connection would go here
-    // For now, this is a placeholder
+    db_client: std::sync::Arc<DatabaseClient>,
 }
 
 impl DatabaseVersionControl {
-    pub fn new(_connection_string: &str) -> Self {
-        Self {}
+    pub fn new(db_client: std::sync::Arc<DatabaseClient>) -> Self {
+        Self { db_client }
     }
 }
 
@@ -336,28 +336,147 @@ impl DatabaseVersionControl {
 impl VersionControl for DatabaseVersionControl {
     async fn create_version(
         &self,
-        _metadata: &ArtifactMetadata,
-        _artifacts: &ExecutionArtifacts,
+        metadata: &ArtifactMetadata,
+        artifacts: &ExecutionArtifacts,
     ) -> Result<(), VersionControlError> {
-        // TODO: Implement database versioning
-        Err(VersionControlError::NotImplemented("Database versioning not yet implemented".to_string()))
+        // First, ensure the artifact exists in the database
+        let artifact_result = self.db_client.execute_parameterized_query(
+            r#"
+            SELECT id FROM execution_artifacts
+            WHERE task_id = $1 AND session_id = $2 AND execution_id = $3
+            LIMIT 1
+            "#,
+            &[&metadata.task_id, &metadata.session_id, &metadata.execution_id],
+        ).await;
+
+        let artifact_id = match artifact_result {
+            Ok(rows) if !rows.is_empty() => {
+                rows[0].get::<Uuid>("id")
+            }
+            _ => {
+                return Err(VersionControlError::ArtifactNotFound(format!(
+                    "Artifact not found for task {} with metadata {:?}", metadata.task_id, metadata
+                )));
+            }
+        };
+
+        // Create new version using the database function
+        let result = self.db_client.execute_parameterized_query(
+            "SELECT create_new_version($1, $2, $3, $4, $5, $6, $7)",
+            &[
+                &metadata.task_id,
+                &artifact_id,
+                &"Version created via API".to_string(),
+                &"modified",
+                &"patch",
+                &Some(format!("v{}", metadata.version)),
+                &"system",
+            ],
+        ).await;
+
+        match result {
+            Ok(_) => Ok(()),
+            Err(e) => Err(VersionControlError::DatabaseError(format!("Failed to create version: {}", e))),
+        }
     }
 
     async fn get_version(
         &self,
-        _task_id: Uuid,
-        _version: &str,
+        task_id: Uuid,
+        version: &str,
     ) -> Result<ArtifactVersion, VersionControlError> {
-        // TODO: Implement database versioning
-        Err(VersionControlError::NotImplemented("Database versioning not yet implemented".to_string()))
+        // Parse version (could be number or label)
+        let version_condition = if let Ok(version_num) = version.parse::<i32>() {
+            format!("av.version_number = {}", version_num)
+        } else {
+            format!("av.version_label = '{}'", version.replace("'", "''"))
+        };
+
+        let query = format!(
+            r#"
+            SELECT
+                av.id, av.version_number, av.version_label, av.created_at,
+                av.created_by, av.change_summary, av.change_type,
+                av.compatibility_level, av.metadata,
+                ea.artifact_data, ea.size_bytes
+            FROM artifact_versions av
+            JOIN execution_artifacts ea ON av.artifact_id = ea.id
+            WHERE av.task_id = $1 AND {}
+            ORDER BY av.version_number DESC
+            LIMIT 1
+            "#,
+            version_condition
+        );
+
+        let result = self.db_client.execute_parameterized_query(
+            &query,
+            &[&task_id],
+        ).await;
+
+        match result {
+            Ok(rows) if !rows.is_empty() => {
+                let row = &rows[0];
+                Ok(ArtifactVersion {
+                    id: row.get("id"),
+                    task_id,
+                    version_number: row.get("version_number"),
+                    version_label: row.get("version_label"),
+                    created_at: row.get("created_at"),
+                    created_by: row.get("created_by"),
+                    change_summary: row.get("change_summary"),
+                    change_type: row.get("change_type"),
+                    compatibility_level: row.get("compatibility_level"),
+                    size_bytes: row.get("size_bytes"),
+                    metadata: serde_json::from_value(row.get("metadata")).unwrap_or_default(),
+                })
+            }
+            Ok(_) => Err(VersionControlError::VersionNotFound(format!(
+                "Version {} not found for task {}", version, task_id
+            ))),
+            Err(e) => Err(VersionControlError::DatabaseError(format!("Failed to get version: {}", e))),
+        }
     }
 
     async fn list_versions(
         &self,
-        _task_id: Uuid,
+        task_id: Uuid,
     ) -> Result<Vec<ArtifactVersion>, VersionControlError> {
-        // TODO: Implement database versioning
-        Err(VersionControlError::NotImplemented("Database versioning not yet implemented".to_string()))
+        let result = self.db_client.execute_parameterized_query(
+            r#"
+            SELECT
+                av.id, av.version_number, av.version_label, av.created_at,
+                av.created_by, av.change_summary, av.change_type,
+                av.compatibility_level, av.metadata, ea.size_bytes
+            FROM artifact_versions av
+            JOIN execution_artifacts ea ON av.artifact_id = ea.id
+            WHERE av.task_id = $1
+            ORDER BY av.version_number DESC
+            "#,
+            &[&task_id],
+        ).await;
+
+        match result {
+            Ok(rows) => {
+                let mut versions = Vec::new();
+                for row in rows {
+                    versions.push(ArtifactVersion {
+                        id: row.get("id"),
+                        task_id,
+                        version_number: row.get("version_number"),
+                        version_label: row.get("version_label"),
+                        created_at: row.get("created_at"),
+                        created_by: row.get("created_by"),
+                        change_summary: row.get("change_summary"),
+                        change_type: row.get("change_type"),
+                        compatibility_level: row.get("compatibility_level"),
+                        size_bytes: row.get("size_bytes"),
+                        metadata: serde_json::from_value(row.get("metadata")).unwrap_or_default(),
+                    });
+                }
+                Ok(versions)
+            }
+            Err(e) => Err(VersionControlError::DatabaseError(format!("Failed to list versions: {}", e))),
+        }
     }
 
     async fn delete_version(
@@ -401,6 +520,12 @@ pub enum VersionControlError {
 
     #[error("UUID parsing error: {0}")]
     UuidError(#[from] uuid::Error),
+
+    #[error("Database error: {0}")]
+    DatabaseError(String),
+
+    #[error("Artifact not found: {0}")]
+    ArtifactNotFound(String),
 
     #[error("Feature not implemented: {0}")]
     NotImplemented(String),

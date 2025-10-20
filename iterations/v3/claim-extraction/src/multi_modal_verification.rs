@@ -11,15 +11,19 @@ use std::ffi::OsStr;
 use std::fs::File;
 use std::io::Read;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 use tokio::task;
 use tracing::{debug, info, warn};
 use walkdir::WalkDir;
 use std::time::{Duration, Instant};
 use uuid::Uuid;
+use agent_agency_database::DatabaseClient;
 
 /// Multi-Modal Verification Engine for claim validation
 #[derive(Debug)]
 pub struct MultiModalVerificationEngine {
+    /// Database client for historical claim lookups
+    db_client: Option<Arc<DatabaseClient>>,
     /// Cross-reference validator for consistency checking
     cross_reference_validator: CrossReferenceValidator,
     /// Code behavior analyzer for runtime verification

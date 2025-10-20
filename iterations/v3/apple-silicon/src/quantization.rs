@@ -920,7 +920,6 @@ async fn analyze_weight_distribution(model_size: u64) -> WeightStats {
             num_parameters: total_params as u32,
         })
     }
-}
 
 impl Default for QuantizationManager {
     fn default() -> Self {

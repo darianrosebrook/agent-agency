@@ -5,6 +5,7 @@ import Header from "@/components/shared/Header";
 import Navigation from "@/components/shared/Navigation";
 import SystemHealthOverview from "@/components/shared/SystemHealthOverview";
 import ChatInterface from "@/components/chat/ChatInterface";
+import TaskList from "@/components/tasks/TaskList";
 
 interface HealthStatus {
   status: "healthy" | "degraded" | "unhealthy" | "unknown";
@@ -192,22 +193,14 @@ export default function Dashboard() {
           )}
 
           {activeSection === "tasks" && (
-            <div className="empty-state">
-              <div className="empty-state-content">
-                <div className="empty-state-icon">📋</div>
-                <h1 className="empty-state-title">Task Monitoring</h1>
-                <p className="empty-state-description">
-                  Monitor autonomous task execution in real-time. View planning
-                  phases, execution progress, quality checks, and refinement
-                  cycles. Requires SSE connection to V3 task streaming API.
-                </p>
-                <div className="empty-state-actions">
-                  <button className="action-button secondary" disabled>
-                    Connect to Task Stream
-                  </button>
-                </div>
-              </div>
-            </div>
+            <TaskList
+              onTaskSelect={(task) => {
+                console.log("Task selected:", task.id);
+              }}
+              onTaskFilter={(filters) => {
+                console.log("Task filters changed:", filters);
+              }}
+            />
           )}
 
           {activeSection === "database" && (
