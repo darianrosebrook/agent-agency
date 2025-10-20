@@ -302,30 +302,6 @@ impl AsrEnricher {
         Ok(())
     }
 
-    /// Calculate improved confidence scores
-    async fn calculate_improved_confidence(&self, result: &mut AsrResult) -> Result<()> {
-        tracing::debug!("Calculating improved confidence scores");
-        
-        // Calculate turn-level confidence based on word-level confidence
-        for turn in &mut result.turns {
-            if !turn.word_timings.is_empty() {
-                let avg_word_confidence: f32 = turn.word_timings
-                    .iter()
-                    .map(|w| w.confidence)
-                    .sum::<f32>() / turn.word_timings.len() as f32;
-                
-                // Combine with text length factor
-                let length_factor = if turn.text.len() < 10 {
-                    0.9_f32
-                } else if turn.text.len() < 50 {
-                    1.0_f32
-                } else {
-                    1.1_f32
-                }.min(1.0_f32);
-
-                turn.confidence = (avg_word_confidence * length_factor).min(1.0_f32);
-            }
-        }
         
         // Calculate overall confidence
         if !result.turns.is_empty() {
@@ -349,32 +325,6 @@ impl AsrEnricher {
         Ok(())
     }
 
-    /// Update speaker statistics
-    async fn update_speaker_statistics(&self, result: &mut AsrResult) -> Result<()> {
-        tracing::debug!("Updating speaker statistics");
-        
-        // Calculate turn counts and durations for each speaker
-        let mut speaker_stats: std::collections::HashMap<String, (usize, f32)> = std::collections::HashMap::new();
-        
-        for turn in &result.turns {
-            if let Some(speaker_id) = &turn.speaker_id {
-                let duration = turn.t1 - turn.t0;
-                let (turn_count, total_duration) = speaker_stats.entry(speaker_id.clone()).or_insert((0, 0.0));
-                *turn_count += 1;
-                *total_duration += duration;
-            }
-        }
-        
-        // Update speaker information
-        for speaker in &mut result.speakers {
-            if let Some((turn_count, total_duration)) = speaker_stats.get(&speaker.speaker_id) {
-                speaker.turn_count = *turn_count;
-                speaker.total_duration_ms = (total_duration * 1000.0) as u64;
-            }
-        }
-        
-        Ok(())
-    }
 
     /// Transcribe using Apple Speech Framework
     async fn transcribe_apple(
@@ -568,6 +518,7 @@ impl AsrEnricher {
         result.speakers = speaker_stats.into_iter()
             .map(|(speaker_id, (turn_count, total_duration))| Speaker {
                 speaker_id,
+                name: None, // Speaker name not available from basic stats
                 turn_count,
                 total_duration_ms: (total_duration * 1000.0) as u64,
             })
@@ -637,6 +588,36 @@ impl AsrEnricher {
         }
         
         Ok(())
+    }
+
+    /// Enhance Apple Speech Framework result with additional processing
+    async fn enhance_apple_result(&self, result: AsrResult) -> Result<AsrResult> {
+        tracing::debug!("Enhancing Apple Speech Framework result");
+
+        let mut enhanced = result;
+
+        // Apply confidence improvements
+        self.calculate_improved_confidence(&mut enhanced).await?;
+
+        // Update speaker statistics
+        self.update_speaker_statistics(&mut enhanced).await?;
+
+        Ok(enhanced)
+    }
+
+    /// Execute speech recognition using SFSpeechRecognizer
+    async fn execute_speech_recognition(
+        &self,
+        _speech_recognizer: &str, // Placeholder for speech recognizer
+        _recognition_request: &str, // Placeholder for recognition request
+    ) -> Result<AsrResult> {
+        // This would integrate with the Swift bridge to execute speech recognition
+        // For now, return a placeholder result
+
+        tracing::debug!("Executing speech recognition via Swift bridge");
+
+        // Placeholder implementation - would call into Swift code
+        Err(anyhow!("Speech recognition execution not yet implemented - requires Swift bridge"))
     }
 }
 

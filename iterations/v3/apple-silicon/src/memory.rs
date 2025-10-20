@@ -2911,28 +2911,217 @@ impl MemoryManager {
         Ok(0)
     }
 
-    /// Estimate ANE buffer usage with comprehensive API integration and ML workload analysis
+    /// Estimate ANE buffer usage using system tools and Core ML integration
     async fn estimate_ane_buffer_usage(&self) -> Result<u64> {
-        // ANE (Apple Neural Engine) buffer usage estimation with full API integration
+        // ANE (Apple Neural Engine) buffer usage monitoring using multiple methods
         let mut total_ane_usage = 0u64;
-        
-        // 1. ANE API integration: Query Apple Neural Engine APIs for buffer usage
-        let ane_device_usage = self.query_ane_device_apis().await?;
-        total_ane_usage += ane_device_usage;
-        
-        // 2. ML workload analysis: Analyze ML workload buffer requirements
-        let ml_workload_usage = self.analyze_ml_workload_buffers().await?;
-        total_ane_usage += ml_workload_usage;
-        
-        // 3. ANE buffer monitoring: Monitor current ANE buffer usage and performance
-        let monitored_usage = self.monitor_ane_buffer_performance().await?;
-        total_ane_usage += monitored_usage;
-        
-        // 4. ANE buffer optimization: Apply optimization strategies and validate
-        let optimized_usage = self.optimize_ane_buffer_estimation(total_ane_usage).await?;
-        
-        debug!("ANE buffer usage estimation: {} MB", optimized_usage / (1024 * 1024));
-        Ok(optimized_usage)
+
+        // Method 1: Monitor active Core ML models and their buffer requirements
+        let coreml_usage = self.monitor_coreml_model_buffers().await?;
+        total_ane_usage += coreml_usage;
+
+        // Method 2: Monitor ANE device activity through system tools
+        let device_usage = self.monitor_ane_device_activity().await?;
+        total_ane_usage += device_usage;
+
+        // Method 3: Monitor process memory associated with ML workloads
+        let process_usage = self.monitor_ml_process_memory().await?;
+        total_ane_usage += process_usage;
+
+        // Method 4: Estimate based on active neural network operations
+        let nn_usage = self.estimate_neural_network_buffers().await?;
+        total_ane_usage += nn_usage;
+
+        // Apply reasonable bounds (ANE has limited dedicated memory)
+        let bounded_usage = total_ane_usage.min(256 * 1024 * 1024); // Max 256MB for ANE
+
+        debug!("ANE buffer usage estimation: {} MB", bounded_usage / (1024 * 1024));
+        Ok(bounded_usage)
+    }
+
+    /// Monitor Core ML model buffer allocations
+    async fn monitor_coreml_model_buffers(&self) -> Result<u64> {
+        use sysinfo::System;
+
+        let mut system = System::new();
+        system.refresh_processes();
+
+        let mut coreml_memory = 0u64;
+
+        // Look for processes running Core ML models
+        for process in system.processes().values() {
+            let cmd = process.cmd().join(" ").to_lowercase();
+
+            if cmd.contains("coreml") || cmd.contains("mlmodel") ||
+               cmd.contains("neural") || cmd.contains("tensor") {
+
+                // Estimate ANE buffer usage based on process memory patterns
+                // Core ML models typically use shared memory with ANE
+                let process_memory = process.memory();
+                let estimated_ane_portion = (process_memory as f32 * 0.3) as u64; // Estimate 30% for ANE
+
+                coreml_memory += estimated_ane_portion.min(50 * 1024 * 1024); // Cap per process
+            }
+        }
+
+        Ok(coreml_memory)
+    }
+
+    /// Monitor ANE device activity through system tools
+    async fn monitor_ane_device_activity(&self) -> Result<u64> {
+        use std::process::Command;
+
+        // Try to get ANE activity information from system tools
+
+        // Method 1: Check powermetrics for ANE information
+        if let Ok(output) = Command::new("powermetrics")
+            .args(&["--samplers", "ane", "-n", "1", "-i", "100"])
+            .output() {
+            if let Some(usage) = self.parse_powermetrics_ane_memory(&String::from_utf8_lossy(&output.stdout)) {
+                return Ok(usage);
+            }
+        }
+
+        // Method 2: Check IORegistry for ANE device memory information
+        if let Ok(output) = Command::new("ioreg")
+            .args(&["-c", "AppleARMIODevice", "-r"])
+            .output() {
+            if let Some(usage) = self.parse_ioreg_ane_memory(&String::from_utf8_lossy(&output.stdout)) {
+                return Ok(usage);
+            }
+        }
+
+        // Method 3: Estimate based on system activity
+        self.estimate_ane_memory_from_activity()
+    }
+
+    /// Parse powermetrics output for ANE memory usage
+    fn parse_powermetrics_ane_memory(&self, output: &str) -> Option<u64> {
+        // Look for ANE memory usage in powermetrics output
+        // This is complex as powermetrics may not expose detailed ANE memory info
+
+        if output.contains("ANE") || output.contains("Neural Engine") {
+            // If ANE is mentioned, estimate usage based on activity indicators
+            if output.contains("active") || output.contains("busy") {
+                return Some(32 * 1024 * 1024); // 32MB when active
+            } else {
+                return Some(8 * 1024 * 1024); // 8MB baseline
+            }
+        }
+
+        None
+    }
+
+    /// Parse IORegistry output for ANE memory information
+    fn parse_ioreg_ane_memory(&self, output: &str) -> Option<u64> {
+        // Parse IORegistry for ANE memory allocation information
+        // Look for memory-related properties
+
+        if output.contains("ANE") || output.contains("Neural") {
+            // Extract memory values from the registry
+            for line in output.lines() {
+                if line.contains("Memory") || line.contains("Size") || line.contains("Length") {
+                    // Try to extract numeric values
+                    for word in line.split_whitespace() {
+                        if let Ok(size) = word.parse::<u64>() {
+                            if size > 1024 && size < 1024 * 1024 * 1024 { // Reasonable memory range
+                                return Some(size);
+                            }
+                        }
+                    }
+                }
+            }
+
+            // If ANE found but no specific memory info, use baseline
+            return Some(16 * 1024 * 1024); // 16MB baseline
+        }
+
+        None
+    }
+
+    /// Estimate ANE memory from system activity
+    fn estimate_ane_memory_from_activity(&self) -> Result<u64> {
+        use sysinfo::System;
+
+        let mut system = System::new();
+        system.refresh_processes();
+
+        // Count ML/AI related processes
+        let ml_processes = system.processes().values()
+            .filter(|p| {
+                let cmd = p.cmd().join(" ").to_lowercase();
+                cmd.contains("ml") || cmd.contains("neural") || cmd.contains("tensor") ||
+                cmd.contains("inference") || cmd.contains("model")
+            })
+            .count();
+
+        // Estimate ANE memory based on number of active ML processes
+        let base_memory = 4 * 1024 * 1024; // 4MB baseline
+        let per_process_memory = 8 * 1024 * 1024; // 8MB per ML process
+
+        let estimated_memory = base_memory + (ml_processes as u64 * per_process_memory);
+        Ok(estimated_memory.min(128 * 1024 * 1024)) // Cap at 128MB
+    }
+
+    /// Monitor process memory associated with ML workloads
+    async fn monitor_ml_process_memory(&self) -> Result<u64> {
+        use sysinfo::System;
+
+        let mut system = System::new();
+        system.refresh_processes();
+
+        let mut ml_memory_total = 0u64;
+
+        for process in system.processes().values() {
+            let cmd = process.cmd().join(" ").to_lowercase();
+
+            if cmd.contains("ml") || cmd.contains("neural") || cmd.contains("tensor") ||
+               cmd.contains("inference") || cmd.contains("model") || cmd.contains("pytorch") ||
+               cmd.contains("tensorflow") {
+
+                // Add a portion of process memory that might be ANE-related
+                let process_memory = process.memory();
+                let ane_portion = (process_memory as f32 * 0.2) as u64; // Estimate 20% for ANE
+                ml_memory_total += ane_portion;
+            }
+        }
+
+        Ok(ml_memory_total)
+    }
+
+    /// Estimate neural network buffer requirements
+    async fn estimate_neural_network_buffers(&self) -> Result<u64> {
+        // Estimate buffer requirements for typical neural network operations
+        // This is based on common model architectures and their memory patterns
+
+        use sysinfo::System;
+
+        let mut system = System::new();
+        system.refresh_processes();
+
+        // Look for signs of active neural network processing
+        let nn_processes = system.processes().values()
+            .filter(|p| {
+                let cmd = p.cmd().join(" ").to_lowercase();
+                // Common neural network frameworks and tools
+                cmd.contains("transform") || cmd.contains("bert") || cmd.contains("gpt") ||
+                cmd.contains("llama") || cmd.contains("neural") || cmd.contains("torch") ||
+                cmd.contains("mlx") // Apple MLX framework
+            })
+            .count();
+
+        if nn_processes > 0 {
+            // Estimate buffer requirements for transformer models
+            // Typical requirements: attention matrices, KV cache, activations
+            let attention_buffers = 64 * 1024 * 1024; // 64MB for attention
+            let kv_cache = 32 * 1024 * 1024; // 32MB for KV cache
+            let activations = 16 * 1024 * 1024; // 16MB for activations
+
+            let total_nn_buffers = attention_buffers + kv_cache + activations;
+            Ok(total_nn_buffers.min(96 * 1024 * 1024)) // Cap at 96MB
+        } else {
+            Ok(0)
+        }
     }
 
     /// Query ANE device APIs for buffer allocation information

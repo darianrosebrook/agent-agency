@@ -437,3 +437,122 @@ pub struct CouncilVote {
     pub rationale: String,
     pub confidence: f64,
 }
+
+/// Execution event types for real-time monitoring
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ExecutionEvent {
+    /// Execution started
+    ExecutionStarted {
+        task_id: Uuid,
+        working_spec_id: String,
+        timestamp: DateTime<Utc>,
+    },
+
+    /// Worker assignment started
+    WorkerAssignmentStarted {
+        task_id: Uuid,
+        timestamp: DateTime<Utc>,
+    },
+
+    /// Worker assigned to task
+    WorkerAssigned {
+        task_id: Uuid,
+        worker_id: Uuid,
+        worker_name: String,
+        timestamp: DateTime<Utc>,
+    },
+
+    /// Execution phase started
+    ExecutionPhaseStarted {
+        task_id: Uuid,
+        phase: String,
+        timestamp: DateTime<Utc>,
+    },
+
+    /// Execution progress update
+    ExecutionProgress {
+        task_id: Uuid,
+        phase: String,
+        progress_percentage: f32,
+        message: String,
+        timestamp: DateTime<Utc>,
+    },
+
+    /// Execution phase completed
+    ExecutionPhaseCompleted {
+        task_id: Uuid,
+        phase: String,
+        success: bool,
+        timestamp: DateTime<Utc>,
+    },
+
+    /// Artifact produced
+    ArtifactProduced {
+        task_id: Uuid,
+        artifact_path: String,
+        artifact_type: String,
+        size_bytes: u64,
+        timestamp: DateTime<Utc>,
+    },
+
+    /// Quality check completed
+    QualityCheckCompleted {
+        task_id: Uuid,
+        passed: bool,
+        score: f64,
+        issues: Vec<String>,
+        timestamp: DateTime<Utc>,
+    },
+
+    /// Execution completed successfully
+    ExecutionCompleted {
+        task_id: Uuid,
+        success: bool,
+        artifacts_summary: String,
+        execution_time_ms: u64,
+        timestamp: DateTime<Utc>,
+    },
+
+    /// Execution failed
+    ExecutionFailed {
+        task_id: Uuid,
+        error: String,
+        timestamp: DateTime<Utc>,
+    },
+
+    /// Self-prompting iteration started
+    SelfPromptingIterationStarted {
+        task_id: Uuid,
+        iteration: usize,
+        model_id: String,
+        timestamp: DateTime<Utc>,
+    },
+
+    /// Self-prompting evaluation completed
+    SelfEvaluationCompleted {
+        task_id: Uuid,
+        iteration: usize,
+        score: f64,
+        status: String,
+        should_continue: bool,
+        timestamp: DateTime<Utc>,
+    },
+
+    /// Model swapped during execution
+    ModelSwapped {
+        task_id: Uuid,
+        old_model: String,
+        new_model: String,
+        reason: String,
+        timestamp: DateTime<Utc>,
+    },
+
+    /// Self-prompting loop completed
+    SelfPromptingLoopCompleted {
+        task_id: Uuid,
+        total_iterations: usize,
+        final_score: f64,
+        stop_reason: String,
+        timestamp: DateTime<Utc>,
+    },
+}

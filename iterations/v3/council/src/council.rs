@@ -12,6 +12,7 @@ use crate::error::{CouncilError, CouncilResult};
 use crate::judge::{Judge, JudgeContribution, ReviewContext, PreviousReview, VerdictSummary};
 use crate::verdict_aggregation::{VerdictAggregator, AggregationResult};
 use crate::decision_making::{DecisionEngine, FinalDecision, DecisionContext, OrganizationalConstraints, ResourceConstraints, HistoricalDecision, EmergencyFlags, ConsensusStrategy, RiskThresholds, TaskPriority, ImpactLevel};
+use crate::error_handling::{AgencyError, CircuitBreaker, CircuitBreakerConfig, RecoveryOrchestrator, DegradationManager, DegradationPolicy, error_factory};
 
 /// Configuration for the council
 #[derive(Debug, Clone)]
@@ -39,6 +40,15 @@ pub struct CouncilConfig {
 
     /// Timeout per judge review (seconds)
     pub judge_timeout_seconds: u64,
+
+    /// Enable circuit breaker protection for external services
+    pub enable_circuit_breakers: bool,
+
+    /// Enable graceful degradation on failures
+    pub enable_graceful_degradation: bool,
+
+    /// Enable automatic error recovery
+    pub enable_error_recovery: bool,
 }
 
 /// Judge selection strategy
@@ -93,6 +103,12 @@ pub struct Council {
     available_judges: Vec<Arc<dyn Judge>>,
     verdict_aggregator: Arc<VerdictAggregator>,
     decision_engine: Box<dyn DecisionEngine>,
+    /// Circuit breakers for external service resilience
+    circuit_breakers: std::collections::HashMap<String, Arc<CircuitBreaker>>,
+    /// Recovery orchestrator for error handling
+    recovery_orchestrator: Option<Arc<RecoveryOrchestrator>>,
+    /// Degradation manager for graceful degradation
+    degradation_manager: Option<Arc<DegradationManager>>,
 }
 
 impl Council {
@@ -103,12 +119,117 @@ impl Council {
         verdict_aggregator: Arc<VerdictAggregator>,
         decision_engine: Box<dyn DecisionEngine>,
     ) -> Self {
+        let (circuit_breakers, recovery_orchestrator, degradation_manager) =
+            Self::initialize_error_handling(&config);
+
         Self {
             config,
             available_judges,
             verdict_aggregator,
             decision_engine,
+            circuit_breakers,
+            recovery_orchestrator,
+            degradation_manager,
         }
+    }
+
+    /// Initialize error handling components based on configuration
+    fn initialize_error_handling(
+        config: &CouncilConfig,
+    ) -> (
+        std::collections::HashMap<String, Arc<CircuitBreaker>>,
+        Option<Arc<RecoveryOrchestrator>>,
+        Option<Arc<DegradationManager>>,
+    ) {
+        let mut circuit_breakers = std::collections::HashMap::new();
+
+        if config.enable_circuit_breakers {
+            // Create circuit breakers for common external services
+            let services = vec!["llm_service", "database", "external_api", "cache_service"];
+
+            for service in services {
+                let breaker = Arc::new(CircuitBreaker::new(
+                    service.to_string(),
+                    CircuitBreakerConfig {
+                        failure_threshold: 5,
+                        success_threshold: 3,
+                        recovery_timeout: Duration::from_secs(60),
+                        monitoring_window: Duration::from_secs(300), // 5 minutes
+                        request_timeout: Duration::from_secs(config.judge_timeout_seconds as u64),
+                    },
+                ));
+                circuit_breakers.insert(service.to_string(), breaker);
+            }
+        }
+
+        let degradation_manager = if config.enable_graceful_degradation {
+            let mut policies = std::collections::HashMap::new();
+
+            // Define degradation policies for key components
+            policies.insert(
+                "ethics_judge".to_string(),
+                DegradationPolicy {
+                    component: "ethics_judge".to_string(),
+                    levels: vec![
+                        DegradationLevel {
+                            name: "reduced_analysis".to_string(),
+                            description: "Skip detailed stakeholder analysis".to_string(),
+                            performance_impact: 0.3,
+                            functionality_impact: 0.2,
+                            recovery_priority: 3,
+                        },
+                        DegradationLevel {
+                            name: "basic_ethics".to_string(),
+                            description: "Use basic privacy/harm detection only".to_string(),
+                            performance_impact: 0.6,
+                            functionality_impact: 0.5,
+                            recovery_priority: 2,
+                        },
+                    ],
+                    recovery_conditions: vec![
+                        "error_rate < 0.05".to_string(),
+                        "response_time < 5s".to_string(),
+                    ],
+                },
+            );
+
+            policies.insert(
+                "quality_judge".to_string(),
+                DegradationPolicy {
+                    component: "quality_judge".to_string(),
+                    levels: vec![
+                        DegradationLevel {
+                            name: "skip_detailed_checks".to_string(),
+                            description: "Skip detailed code quality analysis".to_string(),
+                            performance_impact: 0.2,
+                            functionality_impact: 0.1,
+                            recovery_priority: 4,
+                        },
+                    ],
+                    recovery_conditions: vec![
+                        "memory_usage < 80%".to_string(),
+                        "cpu_usage < 70%".to_string(),
+                    ],
+                },
+            );
+
+            Some(Arc::new(DegradationManager::new(policies)))
+        } else {
+            None
+        };
+
+        let recovery_orchestrator = if config.enable_error_recovery {
+            Some(Arc::new(RecoveryOrchestrator::new(
+                circuit_breakers.clone(),
+                degradation_manager.clone().unwrap_or_else(|| {
+                    Arc::new(DegradationManager::new(std::collections::HashMap::new()))
+                }),
+            )))
+        } else {
+            None
+        };
+
+        (circuit_breakers, recovery_orchestrator, degradation_manager)
     }
 
     /// Conduct a complete council review session
@@ -268,19 +389,64 @@ impl Council {
         let mut contributions = Vec::new();
 
         if self.config.enable_parallel_reviews {
-            // Parallel execution
+            // Parallel execution with enhanced error handling
             let mut handles = Vec::new();
 
             for judge in &session.selected_judges {
                 let judge = judge.clone();
                 let context = context.clone();
                 let judge_timeout = self.config.judge_timeout_seconds;
+                let circuit_breakers = self.circuit_breakers.clone();
+                let recovery_orchestrator = self.recovery_orchestrator.clone();
 
                 let handle = tokio::spawn(async move {
-                    timeout(
+                    let result = timeout(
                         Duration::from_secs(judge_timeout),
-                        Self::conduct_single_judge_review(judge, &context)
-                    ).await
+                        Self::conduct_single_judge_review_with_error_handling(
+                            judge, &context, circuit_breakers, recovery_orchestrator
+                        )
+                    ).await;
+
+                    match result {
+                        Ok(Ok(contribution)) => Ok(contribution),
+                        Ok(Err(agency_error)) => {
+                            // Try to handle the error with recovery orchestrator
+                            if let Some(orchestrator) = recovery_orchestrator {
+                                let recovery_result = orchestrator.handle_error(agency_error).await;
+                                match recovery_result {
+                                    Ok(_) => {
+                                        tracing::info!("Error recovered successfully");
+                                        // Try the review again after recovery
+                                        match timeout(
+                                            Duration::from_secs(judge_timeout),
+                                            Self::conduct_single_judge_review(judge, &context)
+                                        ).await {
+                                            Ok(Ok(contribution)) => Ok(contribution),
+                                            _ => Err(AgencyError::new(
+                                                crate::error_handling::ErrorCategory::Internal,
+                                                "RECOVERY_FAILED",
+                                                "Failed to recover from judge error",
+                                                crate::error_handling::ErrorSeverity::Error,
+                                                "council",
+                                                "conduct_judge_reviews"
+                                            )),
+                                        }
+                                    }
+                                    Err(e) => Err(e),
+                                }
+                            } else {
+                                Err(agency_error)
+                            }
+                        }
+                        Err(_) => Err(AgencyError::new(
+                            crate::error_handling::ErrorCategory::Timeout,
+                            "JUDGE_TIMEOUT",
+                            "Judge review timed out",
+                            crate::error_handling::ErrorSeverity::Warning,
+                            "council",
+                            "conduct_judge_reviews"
+                        )),
+                    }
                 });
 
                 handles.push(handle);
@@ -289,35 +455,48 @@ impl Council {
             // Wait for all reviews to complete
             for handle in handles {
                 match handle.await {
-                    Ok(Ok(Ok(contribution))) => {
+                    Ok(Ok(contribution)) => {
                         contributions.push(contribution);
                     },
-                    Ok(Ok(Err(e))) => {
-                        tracing::warn!("Judge review failed: {}", e);
-                        // Continue with other judges
-                    },
-                    Ok(Err(_)) => {
-                        tracing::warn!("Judge review timed out");
-                        // Continue with other judges
+                    Ok(Err(agency_error)) => {
+                        tracing::warn!("Judge review failed with error handling: {}", agency_error);
+
+                        // Check if we should degrade this component
+                        if let Some(degradation_manager) = &self.degradation_manager {
+                            if let Some(degradation_level) = degradation_manager
+                                .should_degrade("judge_system", 1, Duration::from_secs(300))
+                                .await
+                            {
+                                let _ = degradation_manager
+                                    .degrade_component("judge_system", degradation_level)
+                                    .await;
+                            }
+                        }
                     },
                     Err(e) => {
                         tracing::error!("Judge task panicked: {}", e);
-                        // Continue with other judges
                     },
                 }
             }
         } else {
-            // Sequential execution
+            // Sequential execution with error handling
             for judge in &session.selected_judges {
-                match timeout(
+                let result = timeout(
                     Duration::from_secs(self.config.judge_timeout_seconds),
-                    Self::conduct_single_judge_review(judge.clone(), context)
-                ).await {
+                    Self::conduct_single_judge_review_with_error_handling(
+                        judge.clone(),
+                        context,
+                        self.circuit_breakers.clone(),
+                        self.recovery_orchestrator.clone()
+                    )
+                ).await;
+
+                match result {
                     Ok(Ok(contribution)) => {
                         contributions.push(contribution);
                     },
-                    Ok(Err(e)) => {
-                        tracing::warn!("Judge review failed: {}", e);
+                    Ok(Err(agency_error)) => {
+                        tracing::warn!("Judge review failed: {}", agency_error);
                     },
                     Err(_) => {
                         tracing::warn!("Judge review timed out");
@@ -328,6 +507,84 @@ impl Council {
 
         session.contributions = contributions;
         Ok(())
+    }
+
+    async fn conduct_single_judge_review_with_error_handling(
+        judge: Arc<dyn Judge>,
+        context: &ReviewContext,
+        circuit_breakers: std::collections::HashMap<String, Arc<CircuitBreaker>>,
+        recovery_orchestrator: Option<Arc<RecoveryOrchestrator>>,
+    ) -> Result<JudgeContribution, AgencyError> {
+        let start_time = std::time::Instant::now();
+
+        // Check if judge is available
+        if !judge.is_available() {
+            return Err(AgencyError::new(
+                crate::error_handling::ErrorCategory::ResourceExhaustion,
+                "JUDGE_UNAVAILABLE",
+                &format!("Judge {} is not available", judge.config().judge_id),
+                crate::error_handling::ErrorSeverity::Warning,
+                "council",
+                "conduct_single_judge_review_with_error_handling"
+            ));
+        }
+
+        // Execute the judge review with circuit breaker protection if applicable
+        let verdict_result = if let Some(circuit_breaker) = circuit_breakers.get("llm_service") {
+            // Use circuit breaker for LLM-based judges
+            circuit_breaker.execute(|| judge.review_spec(context)).await
+        } else {
+            // Direct execution for other judges
+            judge.review_spec(context).await.map_err(|e| {
+                AgencyError::new(
+                    crate::error_handling::ErrorCategory::ExternalService,
+                    "JUDGE_REVIEW_FAILED",
+                    &format!("Judge review failed: {}", e),
+                    crate::error_handling::ErrorSeverity::Error,
+                    "council",
+                    "conduct_single_judge_review_with_error_handling"
+                )
+            })
+        };
+
+        let verdict = match verdict_result {
+            Ok(v) => v,
+            Err(agency_error) => {
+                // Try recovery if orchestrator is available
+                if let Some(orchestrator) = recovery_orchestrator {
+                    match orchestrator.handle_error(agency_error).await {
+                        Ok(_) => {
+                            // Recovery successful, try again
+                            judge.review_spec(context).await.map_err(|e| {
+                                AgencyError::new(
+                                    crate::error_handling::ErrorCategory::ExternalService,
+                                    "JUDGE_REVIEW_FAILED_AFTER_RECOVERY",
+                                    &format!("Judge review failed even after recovery: {}", e),
+                                    crate::error_handling::ErrorSeverity::Error,
+                                    "council",
+                                    "conduct_single_judge_review_with_error_handling"
+                                )
+                            })?
+                        }
+                        Err(e) => return Err(e),
+                    }
+                } else {
+                    return Err(agency_error);
+                }
+            }
+        };
+
+        let processing_time_ms = start_time.elapsed().as_millis() as u64;
+
+        Ok(JudgeContribution {
+            judge_id: judge.config().judge_id.clone(),
+            judge_type: judge.config().judge_type.clone(),
+            verdict,
+            processing_time_ms,
+            model_version: "mock-model-v1".to_string(),
+            token_usage: None,
+            metadata: std::collections::HashMap::new(),
+        })
     }
 
     async fn conduct_single_judge_review(
@@ -472,6 +729,9 @@ pub fn create_default_council() -> CouncilResult<Council> {
         risk_thresholds: RiskThresholds::default(),
         enable_parallel_reviews: true,
         judge_timeout_seconds: 60,
+        enable_circuit_breakers: true,
+        enable_graceful_degradation: true,
+        enable_error_recovery: true,
     };
 
     let judges = create_mock_judge_panel().into_iter()

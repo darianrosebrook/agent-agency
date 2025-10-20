@@ -1502,3 +1502,15 @@ struct MPSOperationResult {
     output_data: Vec<f32>,
     memory_used_mb: f32,
 }
+
+/// Detailed Metal GPU performance metrics
+#[derive(Debug, Clone)]
+struct MetalGPUMetrics {
+    utilization_percent: f32,
+    memory_used_mb: f32,
+    temperature_celsius: f32,
+    power_watts: f32,
+    active_command_buffers: usize,
+    kernel_execution_time_ns: u64,
+    memory_bandwidth_gbps: f32,
+}

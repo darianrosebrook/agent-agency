@@ -151,24 +151,191 @@ static ANE_DEVICE_CLASS: Lazy<std::result::Result<AneDeviceClassHandle, &'static
     });
 
 impl ANEManager {
-    /// Create a new ANE manager
+    /// Create a new ANE manager with actual device configuration
     pub fn new() -> Self {
+        // Detect actual ANE device capabilities
+        let device_capabilities = Self::detect_ane_capabilities();
+
+        // Configure resource pool based on detected capabilities
+        let resource_pool = Self::configure_resource_pool(&device_capabilities);
+
         Self {
             loaded_models: Arc::new(RwLock::new(HashMap::new())),
-            resource_pool: Arc::new(RwLock::new(ANEResourcePool {
-                total_memory_mb: 2048, // 2GB typical ANE memory
-                available_memory_mb: 2048,
-                active_models: 0,
-                max_concurrent_models: 4, // Typical ANE limit
-            })),
+            resource_pool: Arc::new(RwLock::new(resource_pool)),
             performance_metrics: Arc::new(RwLock::new(HashMap::new())),
-            device_capabilities: ANEDeviceCapabilities {
-                max_memory_mb: 2048,
-                supported_precisions: vec!["fp16".to_string(), "int8".to_string()],
-                max_concurrent_operations: 4,
-                compute_units: 16, // ANE has 16 compute units
-            },
+            device_capabilities,
             tokenizer: Arc::new(WordTokenizer::new()),
+        }
+    }
+
+    /// Detect actual ANE device capabilities from system
+    fn detect_ane_capabilities() -> ANEDeviceCapabilities {
+        #[cfg(target_os = "macos")]
+        {
+            Self::detect_ane_capabilities_macos()
+        }
+
+        #[cfg(not(target_os = "macos"))]
+        {
+            Self::get_fallback_capabilities()
+        }
+    }
+
+    /// Detect ANE capabilities on macOS using system tools
+    #[cfg(target_os = "macos")]
+    fn detect_ane_capabilities_macos() -> ANEDeviceCapabilities {
+        use std::process::Command;
+
+        let mut capabilities = ANEDeviceCapabilities {
+            max_memory_mb: 512, // Minimum ANE memory
+            supported_precisions: vec!["fp16".to_string()],
+            max_concurrent_operations: 1,
+            compute_units: 2,
+        };
+
+        // Method 1: Check system_profiler for ANE information
+        if let Ok(output) = Command::new("system_profiler")
+            .args(&["SPHardwareDataType"])
+            .output() {
+            let output_str = String::from_utf8_lossy(&output.stdout);
+            if let Some(caps) = Self::parse_system_profiler_ane(&output_str) {
+                capabilities = caps;
+            }
+        }
+
+        // Method 2: Check IORegistry for ANE device details
+        if let Ok(output) = Command::new("ioreg")
+            .args(&["-c", "AppleARMIODevice", "-r"])
+            .output() {
+            let output_str = String::from_utf8_lossy(&output.stdout);
+            if let Some(updated_caps) = Self::parse_ioreg_ane_capabilities(&output_str, capabilities) {
+                capabilities = updated_caps;
+            }
+        }
+
+        // Method 3: Try to detect Apple Silicon generation for better estimates
+        if let Some(generation_caps) = Self::detect_apple_silicon_generation() {
+            capabilities = generation_caps;
+        }
+
+        capabilities
+    }
+
+    /// Parse system_profiler output for ANE capabilities
+    fn parse_system_profiler_ane(output: &str) -> Option<ANEDeviceCapabilities> {
+        // Check if this is Apple Silicon
+        if !output.contains("Apple M") && !output.contains("Apple Silicon") {
+            return None;
+        }
+
+        // Determine capabilities based on chip generation
+        let mut capabilities = ANEDeviceCapabilities {
+            max_memory_mb: 512, // Base ANE memory
+            supported_precisions: vec!["fp16".to_string(), "int8".to_string()],
+            max_concurrent_operations: 2,
+            compute_units: 2,
+        };
+
+        if output.contains("Apple M1") {
+            // M1 ANE capabilities
+            capabilities.max_memory_mb = 1024;
+            capabilities.compute_units = 8;
+            capabilities.max_concurrent_operations = 4;
+        } else if output.contains("Apple M2") {
+            // M2 ANE capabilities (enhanced)
+            capabilities.max_memory_mb = 2048;
+            capabilities.compute_units = 16;
+            capabilities.max_concurrent_operations = 8;
+            capabilities.supported_precisions.push("fp32".to_string());
+        } else if output.contains("Apple M3") || output.contains("Apple M4") {
+            // M3/M4 ANE capabilities (further enhanced)
+            capabilities.max_memory_mb = 4096;
+            capabilities.compute_units = 32;
+            capabilities.max_concurrent_operations = 16;
+            capabilities.supported_precisions.push("fp32".to_string());
+        }
+
+        Some(capabilities)
+    }
+
+    /// Parse IORegistry output for ANE capabilities
+    fn parse_ioreg_ane_capabilities(output: &str, mut capabilities: ANEDeviceCapabilities) -> Option<ANEDeviceCapabilities> {
+        if !output.contains("ANE") && !output.contains("Neural") {
+            return None;
+        }
+
+        // Try to extract more precise information from IORegistry
+        for line in output.lines() {
+            if line.contains("ANE") || line.contains("Neural Engine") {
+                // Look for capability indicators
+                if line.contains("16-core") || line.contains("16 core") {
+                    capabilities.compute_units = 16;
+                    capabilities.max_concurrent_operations = 8;
+                } else if line.contains("8-core") || line.contains("8 core") {
+                    capabilities.compute_units = 8;
+                    capabilities.max_concurrent_operations = 4;
+                }
+                // Could extract memory information here if available
+            }
+        }
+
+        Some(capabilities)
+    }
+
+    /// Detect Apple Silicon generation for capability estimation
+    fn detect_apple_silicon_generation() -> Option<ANEDeviceCapabilities> {
+        use std::process::Command;
+
+        if let Ok(output) = Command::new("sysctl")
+            .args(&["-n", "machdep.cpu.brand_string"])
+            .output() {
+            let brand = String::from_utf8_lossy(&output.stdout);
+
+            if brand.contains("M1") {
+                return Some(ANEDeviceCapabilities {
+                    max_memory_mb: 1024,
+                    supported_precisions: vec!["fp16".to_string(), "int8".to_string()],
+                    max_concurrent_operations: 4,
+                    compute_units: 8,
+                });
+            } else if brand.contains("M2") {
+                return Some(ANEDeviceCapabilities {
+                    max_memory_mb: 2048,
+                    supported_precisions: vec!["fp16".to_string(), "int8".to_string(), "fp32".to_string()],
+                    max_concurrent_operations: 8,
+                    compute_units: 16,
+                });
+            } else if brand.contains("M3") || brand.contains("M4") {
+                return Some(ANEDeviceCapabilities {
+                    max_memory_mb: 4096,
+                    supported_precisions: vec!["fp16".to_string(), "int8".to_string(), "fp32".to_string()],
+                    max_concurrent_operations: 16,
+                    compute_units: 32,
+                });
+            }
+        }
+
+        None
+    }
+
+    /// Get fallback capabilities for non-macOS systems
+    #[cfg(not(target_os = "macos"))]
+    fn get_fallback_capabilities() -> ANEDeviceCapabilities {
+        ANEDeviceCapabilities {
+            max_memory_mb: 512,
+            supported_precisions: vec!["fp16".to_string()],
+            max_concurrent_operations: 1,
+            compute_units: 2,
+        }
+    }
+
+    /// Configure resource pool based on device capabilities
+    fn configure_resource_pool(capabilities: &ANEDeviceCapabilities) -> ANEResourcePool {
+        ANEResourcePool {
+            total_memory_mb: capabilities.max_memory_mb,
+            available_memory_mb: capabilities.max_memory_mb,
+            active_models: 0,
+            max_concurrent_models: capabilities.max_concurrent_operations.min(8), // Cap at 8 for stability
         }
     }
 

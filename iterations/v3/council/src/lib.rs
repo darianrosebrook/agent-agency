@@ -11,6 +11,7 @@ pub mod decision_making;
 pub mod verdict_aggregation;
 pub mod workflow;
 pub mod risk_scorer;
+pub mod error_handling;
 
 pub use error::{CouncilError, CouncilResult};
 pub use judge::{
@@ -28,3 +29,10 @@ pub use decision_making::{DecisionEngine, ConsensusStrategy};
 pub use verdict_aggregation::{VerdictAggregator, AggregationResult};
 pub use workflow::{CouncilWorkflow, WorkflowState};
 pub use risk_scorer::{RiskScorer, TechnicalRiskWeights, EthicalRiskWeights, OperationalRiskWeights, BusinessRiskWeights, DimensionWeights};
+pub use error_handling::{
+    AgencyError, ErrorCategory, ErrorSeverity, RecoveryStrategy, RecoveryStrategyType,
+    CircuitBreaker, CircuitBreakerConfig, CircuitBreakerStats, CircuitBreakerState,
+    RetryConfig, with_retry, DegradationManager, DegradationState, DegradationPolicy,
+    DegradationLevel, RecoveryOrchestrator, SystemHealth, HealthStatus,
+    error_factory,
+};

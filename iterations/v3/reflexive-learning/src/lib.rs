@@ -198,4 +198,126 @@ impl ReflexiveLearningSystem {
             impact_assessment,
         })
     }
+
+    /// Process self-prompting signals from autonomous agent execution
+    pub async fn process_self_prompting_signals(
+        &mut self,
+        signals: Vec<crate::types::SelfPromptingSignal>,
+    ) -> Result<LearningUpdate, LearningSystemError> {
+        tracing::info!("Processing {} self-prompting learning signals", signals.len());
+
+        let mut changes = Vec::new();
+
+        for signal in signals {
+            match signal {
+                crate::types::SelfPromptingSignal::IterationEfficiency { iterations, quality, time } => {
+                    // Adjust iteration limits and quality thresholds based on efficiency
+                    let efficiency_score = quality / (iterations as f64 * time / 1000.0);
+
+                    if efficiency_score > 0.8 {
+                        // High efficiency - can be more aggressive
+                        changes.push(LearningChange {
+                            change_type: ChangeType::LearningRate,
+                            description: "Increasing learning rate for high-efficiency patterns".to_string(),
+                            magnitude: 0.15,
+                            expected_impact: ExpectedImpact {
+                                performance_impact: 0.2,
+                                quality_impact: 0.1,
+                                efficiency_impact: 0.3,
+                                confidence: 0.8,
+                            },
+                        });
+                    } else if efficiency_score < 0.3 {
+                        // Low efficiency - be more conservative
+                        changes.push(LearningChange {
+                            change_type: ChangeType::QualityThreshold,
+                            description: "Adjusting quality thresholds for low-efficiency patterns".to_string(),
+                            magnitude: -0.1,
+                            expected_impact: ExpectedImpact {
+                                performance_impact: 0.1,
+                                quality_impact: 0.2,
+                                efficiency_impact: 0.1,
+                                confidence: 0.7,
+                            },
+                        });
+                    }
+                }
+                crate::types::SelfPromptingSignal::ModelPerformance { model_id, task_type, score } => {
+                    // Update model preferences and selection weights
+                    changes.push(LearningChange {
+                        change_type: ChangeType::StrategyWeight,
+                        description: format!("Updating preferences for model {} on {} tasks (score: {:.2})", model_id, task_type, score),
+                        magnitude: score - 0.5, // Adjust based on performance relative to baseline
+                        expected_impact: ExpectedImpact {
+                            performance_impact: 0.25,
+                            quality_impact: 0.15,
+                            efficiency_impact: 0.2,
+                            confidence: 0.9,
+                        },
+                    });
+                }
+                crate::types::SelfPromptingSignal::SatisficingEffectiveness { stopped_early, quality_delta, iterations_saved } => {
+                    // Tune satisficing parameters
+                    if stopped_early && quality_delta > 0.05 {
+                        // Good satisficing - reinforce early stopping
+                        changes.push(LearningChange {
+                            change_type: ChangeType::QualityThreshold,
+                            description: "Reinforcing early satisficing for good quality outcomes".to_string(),
+                            magnitude: 0.05,
+                            expected_impact: ExpectedImpact {
+                                performance_impact: 0.15,
+                                quality_impact: 0.1,
+                                efficiency_impact: 0.25,
+                                confidence: 0.8,
+                            },
+                        });
+                    } else if !stopped_early && iterations_saved > 2 {
+                        // Could have stopped earlier - adjust thresholds
+                        changes.push(LearningChange {
+                            change_type: ChangeType::QualityThreshold,
+                            description: "Adjusting satisficing thresholds to stop earlier".to_string(),
+                            magnitude: -0.05,
+                            expected_impact: ExpectedImpact {
+                                performance_impact: 0.1,
+                                quality_impact: 0.05,
+                                efficiency_impact: 0.2,
+                                confidence: 0.7,
+                            },
+                        });
+                    }
+                }
+            }
+        }
+
+        let impact_assessment = ImpactAssessment {
+            overall_impact: changes
+                .iter()
+                .map(|c| c.expected_impact.performance_impact)
+                .sum::<f64>()
+                / changes.len().max(1) as f64,
+            risk_level: if changes.len() > 2 {
+                RiskLevel::Medium
+            } else {
+                RiskLevel::Low
+            },
+            implementation_effort: ImplementationEffort::Low,
+            rollback_plan: Some(RollbackPlan {
+                rollback_steps: vec![RollbackStep {
+                    step_number: 1,
+                    description: "Revert satisficing and model preference changes".to_string(),
+                    estimated_time: chrono::Duration::seconds(60),
+                }],
+                rollback_time_estimate: chrono::Duration::minutes(2),
+                rollback_risk: RiskLevel::Low,
+            }),
+        };
+
+        Ok(LearningUpdate {
+            update_id: uuid::Uuid::new_v4(),
+            session_id: uuid::Uuid::new_v4(), // This should come from the active session
+            update_type: LearningUpdateType::SelfPromptingOptimization,
+            changes,
+            impact_assessment,
+        })
+    }
 }

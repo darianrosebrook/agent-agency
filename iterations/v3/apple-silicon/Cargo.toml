@@ -48,6 +48,13 @@ tokenizers = "0.19"
 # Concurrent data structures
 dashmap = "5.5"
 
+# Observability and caching
+agent-agency-observability = { path = "../observability" }
+
+# Metrics and monitoring
+prometheus = "0.13"
+warp = "0.3"
+
 # Half-precision floating point support
 half = "2.4"
 

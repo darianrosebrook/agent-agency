@@ -16,6 +16,10 @@ use agent_agency_resilience::{CircuitBreaker, CircuitBreakerConfig};
 use super::super::orchestration::planning::types::{WorkingSpec, ExecutionArtifacts, ExecutionEvent};
 use super::super::orchestration::caws_runtime::{CawsRuntimeValidator, DiffStats, TaskDescriptor};
 
+// Optional self-prompting agent integration
+#[cfg(feature = "self-prompting")]
+use self_prompting_agent::{SelfPromptingAgent, Task, SelfPromptingResult};
+
 /// Configuration for autonomous execution
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct AutonomousExecutorConfig {
@@ -37,6 +41,8 @@ pub struct AutonomousExecutorConfig {
     pub change_budget_max_files: usize,
     /// Maximum lines of code allowed in change budget
     pub change_budget_max_loc: usize,
+    /// Enable self-prompting agent mode
+    pub enable_self_prompting: bool,
 }
 
 impl Default for AutonomousExecutorConfig {
@@ -51,6 +57,7 @@ impl Default for AutonomousExecutorConfig {
             circuit_breaker_reset_timeout_seconds: 60,
             change_budget_max_files: 50,
             change_budget_max_loc: 1000,
+            enable_self_prompting: false, // Disabled by default
         }
     }
 }
@@ -62,6 +69,8 @@ pub struct AutonomousExecutor {
     config: AutonomousExecutorConfig,
     event_sender: mpsc::UnboundedSender<ExecutionEvent>,
     circuit_breaker: Arc<CircuitBreaker>,
+    #[cfg(feature = "self-prompting")]
+    self_prompting_agent: Option<Arc<SelfPromptingAgent>>,
 }
 
 impl AutonomousExecutor {
@@ -88,9 +97,22 @@ impl AutonomousExecutor {
             Self {
                 worker_manager,
                 validator,
-                config,
+                config: config.clone(),
                 event_sender,
                 circuit_breaker,
+                #[cfg(feature = "self-prompting")]
+                self_prompting_agent: if config.enable_self_prompting {
+                    // TODO: Initialize self-prompting agent with proper dependencies
+                    // This would need model registry, evaluator, etc.
+                    Some(Arc::new(SelfPromptingAgent::new(
+                        self_prompting_agent::SelfPromptingAgentConfig::default(),
+                        // TODO: Pass proper model registry and evaluator
+                        todo!("Initialize with proper dependencies"),
+                        todo!("Initialize with proper evaluator"),
+                    ).await.unwrap()))
+                } else {
+                    None
+                },
             },
             event_receiver,
         )
@@ -168,6 +190,216 @@ impl AutonomousExecutor {
 
                 Ok(final_result)
             }
+        }
+    }
+
+    /// Execute a working spec using self-prompting agent
+    #[cfg(feature = "self-prompting")]
+    pub async fn execute_with_self_prompting(
+        &self,
+        working_spec: &WorkingSpec,
+        task_id: Uuid,
+    ) -> Result<ExecutionResult, AutonomousExecutionError> {
+        if !self.config.enable_self_prompting {
+            return Err(AutonomousExecutionError::ConfigurationError(
+                "Self-prompting is not enabled in configuration".to_string()
+            ));
+        }
+
+        let agent = self.self_prompting_agent.as_ref()
+            .ok_or_else(|| AutonomousExecutionError::ConfigurationError(
+                "Self-prompting agent not initialized".to_string()
+            ))?;
+
+        tracing::info!("Starting self-prompting execution for task: {} (spec: {})",
+            task_id, working_spec.id);
+
+        // Send initial event
+        self.send_event(ExecutionEvent::ExecutionStarted {
+            task_id,
+            working_spec_id: working_spec.id.clone(),
+            timestamp: Utc::now(),
+        }).await;
+
+        // Convert working spec to self-prompting task
+        let task = self.working_spec_to_self_prompting_task(working_spec, task_id)?;
+
+        // Execute with self-prompting agent
+        let execution_start = std::time::Instant::now();
+        let result = tokio::time::timeout(
+            std::time::Duration::from_secs(self.config.max_execution_time_seconds),
+            agent.execute_task(task),
+        ).await;
+
+        let execution_duration = execution_start.elapsed();
+
+        match result {
+            Ok(Ok(self_prompting_result)) => {
+                // Convert self-prompting result to execution result
+                let final_result = self.self_prompting_result_to_execution_result(
+                    &self_prompting_result,
+                    working_spec,
+                    execution_duration,
+                );
+
+                self.send_event(ExecutionEvent::ExecutionCompleted {
+                    task_id,
+                    success: final_result.success,
+                    artifacts_summary: self.summarize_artifacts(&final_result.artifacts),
+                    execution_time_ms: final_result.execution_time_ms,
+                    timestamp: final_result.completed_at,
+                }).await;
+
+                Ok(final_result)
+            }
+            Ok(Err(e)) => {
+                let error_msg = format!("Self-prompting execution failed: {}", e);
+
+                self.send_event(ExecutionEvent::ExecutionFailed {
+                    task_id,
+                    error: error_msg.clone(),
+                    timestamp: Utc::now(),
+                }).await;
+
+                Ok(ExecutionResult {
+                    task_id,
+                    working_spec_id: working_spec.id.clone(),
+                    success: false,
+                    artifacts: ExecutionArtifacts {
+                        id: Uuid::new_v4(),
+                        task_id,
+                        artifacts: Vec::new(),
+                        created_at: Utc::now(),
+                        total_size_bytes: 0,
+                    },
+                    error_message: Some(error_msg),
+                    execution_time_ms: execution_duration.as_millis() as u64,
+                    completed_at: Utc::now(),
+                })
+            }
+            Err(_) => {
+                let error_msg = format!("Self-prompting execution timed out after {} seconds",
+                    self.config.max_execution_time_seconds);
+
+                self.send_event(ExecutionEvent::ExecutionFailed {
+                    task_id,
+                    error: error_msg.clone(),
+                    timestamp: Utc::now(),
+                }).await;
+
+                Ok(ExecutionResult {
+                    task_id,
+                    working_spec_id: working_spec.id.clone(),
+                    success: false,
+                    artifacts: ExecutionArtifacts {
+                        id: Uuid::new_v4(),
+                        task_id,
+                        artifacts: Vec::new(),
+                        created_at: Utc::now(),
+                        total_size_bytes: 0,
+                    },
+                    error_message: Some(error_msg),
+                    execution_time_ms: execution_duration.as_millis() as u64,
+                    completed_at: Utc::now(),
+                })
+            }
+        }
+    }
+
+    /// Convert working spec to self-prompting task
+    #[cfg(feature = "self-prompting")]
+    fn working_spec_to_self_prompting_task(
+        &self,
+        working_spec: &WorkingSpec,
+        task_id: Uuid,
+    ) -> Result<Task, AutonomousExecutionError> {
+        let mut target_files = Vec::new();
+
+        // Extract target files from working spec scope
+        if let Some(scope) = &working_spec.scope {
+            if let Some(in_scope) = &scope.in_scope {
+                target_files.extend(in_scope.clone());
+            }
+        }
+
+        Ok(Task {
+            id: task_id,
+            description: working_spec.description.clone(),
+            task_type: self.map_working_spec_task_type(working_spec),
+            target_files,
+            constraints: working_spec.constraints.iter()
+                .map(|s| (s.clone(), String::new()))
+                .collect(),
+            refinement_context: Vec::new(),
+        })
+    }
+
+    /// Map working spec task type to self-prompting task type
+    #[cfg(feature = "self-prompting")]
+    fn map_working_spec_task_type(&self, working_spec: &WorkingSpec) -> crate::types::TaskType {
+        // Simple mapping based on description keywords
+        let desc_lower = working_spec.description.to_lowercase();
+
+        if desc_lower.contains("fix") || desc_lower.contains("bug") {
+            crate::types::TaskType::CodeFix
+        } else if desc_lower.contains("generate") || desc_lower.contains("create") {
+            crate::types::TaskType::CodeGeneration
+        } else if desc_lower.contains("transform") || desc_lower.contains("rewrite") {
+            crate::types::TaskType::TextTransformation
+        } else if desc_lower.contains("document") {
+            crate::types::TaskType::DocumentationUpdate
+        } else {
+            crate::types::TaskType::CodeFix // Default fallback
+        }
+    }
+
+    /// Convert self-prompting result to execution result
+    #[cfg(feature = "self-prompting")]
+    fn self_prompting_result_to_execution_result(
+        &self,
+        result: &SelfPromptingResult,
+        working_spec: &WorkingSpec,
+        execution_duration: std::time::Duration,
+    ) -> ExecutionResult {
+        // Convert artifacts to execution artifacts
+        let artifacts = ExecutionArtifacts {
+            id: Uuid::new_v4(),
+            task_id: result.task_result.task_id,
+            artifacts: result.task_result.artifacts.iter()
+                .map(|artifact| crate::types::Artifact {
+                    id: artifact.id,
+                    file_path: artifact.file_path.clone(),
+                    content: artifact.content.clone(),
+                    artifact_type: self.map_artifact_type(artifact.artifact_type),
+                    created_at: artifact.created_at,
+                    size_bytes: artifact.content.len() as u64,
+                })
+                .collect(),
+            created_at: Utc::now(),
+            total_size_bytes: result.task_result.artifacts.iter()
+                .map(|a| a.content.len() as u64)
+                .sum(),
+        };
+
+        ExecutionResult {
+            task_id: result.task_result.task_id,
+            working_spec_id: working_spec.id.clone(),
+            success: matches!(result.task_result.final_report.status, crate::evaluation::EvalStatus::Pass),
+            artifacts,
+            error_message: None, // Self-prompting doesn't use error_message field
+            execution_time_ms: execution_duration.as_millis() as u64,
+            completed_at: Utc::now(),
+        }
+    }
+
+    /// Map self-prompting artifact type to execution artifact type
+    #[cfg(feature = "self-prompting")]
+    fn map_artifact_type(&self, artifact_type: crate::types::ArtifactType) -> crate::types::ArtifactType {
+        match artifact_type {
+            crate::types::ArtifactType::Code => crate::types::ArtifactType::Code,
+            crate::types::ArtifactType::Test => crate::types::ArtifactType::Test,
+            crate::types::ArtifactType::Documentation => crate::types::ArtifactType::Documentation,
+            crate::types::ArtifactType::Configuration => crate::types::ArtifactType::Configuration,
         }
     }
 
