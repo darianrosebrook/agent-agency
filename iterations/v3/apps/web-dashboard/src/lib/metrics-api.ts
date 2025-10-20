@@ -3,8 +3,6 @@ import {
   SystemHealth,
   AgentPerformance,
   CoordinationMetrics,
-  BusinessMetrics,
-  HealthAlert,
   GetSystemHealthResponse,
   GetAgentPerformanceResponse,
   GetCoordinationMetricsResponse,

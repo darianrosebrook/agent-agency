@@ -1,9 +1,8 @@
 "use client";
 
-import React, { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import { SSEClient } from "@/lib/sse/SSEClient";
 import { RealTimeMetricsStreamProps, MetricsStreamEvent } from "@/types/metrics";
-import { metricsApiClient } from "@/lib/metrics-api";
 
 export default function RealTimeMetricsStream({
   onMetricsUpdate,

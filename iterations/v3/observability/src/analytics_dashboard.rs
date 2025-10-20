@@ -7,6 +7,7 @@ use crate::analytics::*;
 use agent_agency_database::DatabaseClient;
 use anyhow::Result;
 use chrono::{DateTime, Timelike, Utc};
+use redis::{AsyncCommands, Client as RedisClientImpl, aio::Connection};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -24,6 +25,74 @@ trait RedisClient {
     async fn expire(&self, key: &str, seconds: u64) -> Result<bool>;
 }
 
+/// Production Redis client implementation
+#[derive(Debug)]
+struct ProductionRedisClient {
+    connection: Connection,
+}
+
+impl ProductionRedisClient {
+    async fn new(redis_url: &str) -> Result<Self> {
+        let client = RedisClientImpl::open(redis_url)
+            .context("Failed to create Redis client")?;
+        let connection = client.get_async_connection().await
+            .context("Failed to connect to Redis")?;
+
+        Ok(Self { connection })
+    }
+}
+
+#[async_trait::async_trait]
+impl RedisClient for ProductionRedisClient {
+    async fn get(&self, key: &str) -> Result<Option<Vec<u8>>> {
+        let mut conn = self.connection.clone();
+        match conn.get::<_, Option<Vec<u8>>>(key).await {
+            Ok(result) => Ok(result),
+            Err(e) => Err(anyhow::anyhow!("Redis GET failed: {}", e)),
+        }
+    }
+
+    async fn set(&self, key: &str, value: &[u8], ttl_seconds: u64) -> Result<()> {
+        let mut conn = self.connection.clone();
+        conn.set_ex(key, value, ttl_seconds as usize)
+            .await
+            .context("Redis SET failed")?;
+        Ok(())
+    }
+
+    async fn del(&self, key: &str) -> Result<()> {
+        let mut conn = self.connection.clone();
+        conn.del(key).await.context("Redis DEL failed")?;
+        Ok(())
+    }
+
+    async fn exists(&self, key: &str) -> Result<bool> {
+        let mut conn = self.connection.clone();
+        match conn.exists(key).await {
+            Ok(result) => Ok(result),
+            Err(e) => Err(anyhow::anyhow!("Redis EXISTS failed: {}", e)),
+        }
+    }
+
+    async fn incr(&self, key: &str) -> Result<i64> {
+        let mut conn = self.connection.clone();
+        conn.incr(key, 1).await.context("Redis INCR failed")
+    }
+
+    async fn incr_by(&self, key: &str, increment: i64) -> Result<i64> {
+        let mut conn = self.connection.clone();
+        conn.incr(key, increment).await.context("Redis INCRBY failed")
+    }
+
+    async fn expire(&self, key: &str, seconds: u64) -> Result<bool> {
+        let mut conn = self.connection.clone();
+        match conn.expire(key, seconds as i64).await {
+            Ok(result) => Ok(result),
+            Err(e) => Err(anyhow::anyhow!("Redis EXPIRE failed: {}", e)),
+        }
+    }
+}
+
 /// Advanced analytics dashboard service
 #[derive(Debug)]
 pub struct AnalyticsDashboard {
@@ -37,6 +106,8 @@ pub struct AnalyticsDashboard {
     sessions: Arc<RwLock<HashMap<String, AnalyticsSession>>>,
     /// Database client for persistent caching
     db_client: Option<DatabaseClient>,
+    /// Redis client for distributed caching
+    redis_client: Option<Box<dyn RedisClient + Send + Sync>>,
     /// Cache metrics for monitoring
     cache_total_entries: Arc<std::sync::atomic::AtomicU64>,
     cache_total_insights: Arc<std::sync::atomic::AtomicU64>,
@@ -354,6 +425,7 @@ impl AnalyticsDashboard {
             insights_cache: Arc::new(RwLock::new(HashMap::new())),
             sessions: Arc::new(RwLock::new(HashMap::new())),
             db_client: None,
+            redis_client: None,
             cache_total_entries: Arc::new(std::sync::atomic::AtomicU64::new(0)),
             cache_total_insights: Arc::new(std::sync::atomic::AtomicU64::new(0)),
             cache_hits: Arc::new(std::sync::atomic::AtomicU64::new(0)),
@@ -374,12 +446,60 @@ impl AnalyticsDashboard {
             insights_cache: Arc::new(RwLock::new(HashMap::new())),
             sessions: Arc::new(RwLock::new(HashMap::new())),
             db_client: Some(db_client),
+            redis_client: None,
             cache_total_entries: Arc::new(std::sync::atomic::AtomicU64::new(0)),
             cache_total_insights: Arc::new(std::sync::atomic::AtomicU64::new(0)),
             cache_hits: Arc::new(std::sync::atomic::AtomicU64::new(0)),
             cache_misses: Arc::new(std::sync::atomic::AtomicU64::new(0)),
             cache_metrics_history: Arc::new(tokio::sync::Mutex::new(Vec::new())),
         }
+    }
+
+    /// Create a new analytics dashboard with Redis client
+    pub async fn with_redis_client(
+        analytics_engine: Arc<AnalyticsEngine>,
+        config: AnalyticsDashboardConfig,
+        redis_url: &str,
+    ) -> Result<Self> {
+        let redis_client = Some(Arc::new(ProductionRedisClient::new(redis_url).await?));
+
+        Ok(Self {
+            analytics_engine,
+            config,
+            insights_cache: Arc::new(RwLock::new(HashMap::new())),
+            sessions: Arc::new(RwLock::new(HashMap::new())),
+            db_client: None,
+            redis_client,
+            cache_total_entries: Arc::new(std::sync::atomic::AtomicU64::new(0)),
+            cache_total_insights: Arc::new(std::sync::atomic::AtomicU64::new(0)),
+            cache_hits: Arc::new(std::sync::atomic::AtomicU64::new(0)),
+            cache_misses: Arc::new(std::sync::atomic::AtomicU64::new(0)),
+            cache_metrics_history: Arc::new(tokio::sync::Mutex::new(Vec::new())),
+        })
+    }
+
+    /// Create a new analytics dashboard with both database and Redis clients
+    pub async fn with_clients(
+        analytics_engine: Arc<AnalyticsEngine>,
+        config: AnalyticsDashboardConfig,
+        db_client: DatabaseClient,
+        redis_url: &str,
+    ) -> Result<Self> {
+        let redis_client = Some(Arc::new(ProductionRedisClient::new(redis_url).await?));
+
+        Ok(Self {
+            analytics_engine,
+            config,
+            insights_cache: Arc::new(RwLock::new(HashMap::new())),
+            sessions: Arc::new(RwLock::new(HashMap::new())),
+            db_client: Some(db_client),
+            redis_client,
+            cache_total_entries: Arc::new(std::sync::atomic::AtomicU64::new(0)),
+            cache_total_insights: Arc::new(std::sync::atomic::AtomicU64::new(0)),
+            cache_hits: Arc::new(std::sync::atomic::AtomicU64::new(0)),
+            cache_misses: Arc::new(std::sync::atomic::AtomicU64::new(0)),
+            cache_metrics_history: Arc::new(tokio::sync::Mutex::new(Vec::new())),
+        })
     }
 
     /// Start the analytics dashboard
@@ -889,7 +1009,15 @@ impl AnalyticsDashboard {
     /// - [ ] Support Redis command pipelining for performance
     /// - [ ] Implement Redis client metrics and telemetry collection
     async fn get_redis_client(&self) -> Result<Option<Box<dyn RedisClient + Send + Sync>>> {
-        Ok(None)
+        if let Some(ref redis_client) = self.redis_client {
+            Ok(Some(Box::new(ProductionRedisClient {
+                connection: redis_client.as_ref().downcast_ref::<ProductionRedisClient>()
+                    .ok_or_else(|| anyhow::anyhow!("Failed to downcast Redis client"))?
+                    .connection.clone(),
+            })))
+        } else {
+            Ok(None)
+        }
     }
 
     /// Remove expired entry from Redis cache

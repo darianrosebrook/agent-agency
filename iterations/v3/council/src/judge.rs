@@ -139,6 +139,7 @@ pub enum JudgeType {
     Testing,
     Compliance,
     DomainExpert,
+    Ethics, // Advanced ethical reasoning judge
 }
 
 /// Judge configuration
@@ -211,6 +212,187 @@ pub enum VerdictSummary {
     Rejected { critical_issue_count: usize },
 }
 
+/// Advanced ethical assessment result
+#[derive(Debug, Clone)]
+pub struct EthicalAssessment {
+    /// Overall ethical acceptability (0.0 = highly unethical, 1.0 = highly ethical)
+    pub ethical_score: f32,
+    /// Specific ethical concerns identified
+    pub ethical_concerns: Vec<EthicalConcern>,
+    /// Stakeholder impact analysis
+    pub stakeholder_impacts: Vec<StakeholderImpact>,
+    /// Ethical trade-offs identified
+    pub ethical_tradeoffs: Vec<EthicalTradeoff>,
+    /// Long-term consequence assessment
+    pub long_term_consequences: Vec<ConsequenceAssessment>,
+    /// Cultural/contextual ethical considerations
+    pub cultural_considerations: Vec<CulturalConsideration>,
+    /// Recommended ethical mitigations
+    pub ethical_mitigations: Vec<String>,
+    /// Ethical uncertainty factors
+    pub uncertainty_factors: Vec<String>,
+    /// Assessment confidence
+    pub assessment_confidence: f32,
+}
+
+/// Specific ethical concern identified
+#[derive(Debug, Clone)]
+pub struct EthicalConcern {
+    /// Category of ethical concern
+    pub category: EthicalCategory,
+    /// Severity level
+    pub severity: EthicalSeverity,
+    /// Detailed description
+    pub description: String,
+    /// Evidence supporting the concern
+    pub evidence: Vec<String>,
+    /// Affected stakeholders
+    pub affected_stakeholders: Vec<String>,
+}
+
+/// Ethical concern categories
+#[derive(Debug, Clone, PartialEq)]
+pub enum EthicalCategory {
+    /// Harm to individuals or groups
+    Harm,
+    /// Privacy violations
+    Privacy,
+    /// Discrimination or bias
+    Discrimination,
+    /// Autonomy and consent issues
+    Autonomy,
+    /// Fairness and justice concerns
+    Fairness,
+    /// Transparency issues
+    Transparency,
+    /// Accountability problems
+    Accountability,
+    /// Societal impact concerns
+    SocietalImpact,
+    /// Environmental concerns
+    Environmental,
+    /// Long-term future implications
+    FutureGenerations,
+}
+
+/// Ethical severity levels
+#[derive(Debug, Clone, PartialEq)]
+pub enum EthicalSeverity {
+    /// Minor ethical concern
+    Minor,
+    /// Moderate ethical issue
+    Moderate,
+    /// Serious ethical problem
+    Serious,
+    /// Critical ethical violation
+    Critical,
+}
+
+/// Stakeholder impact analysis
+#[derive(Debug, Clone)]
+pub struct StakeholderImpact {
+    /// Stakeholder group
+    pub stakeholder_group: String,
+    /// Type of impact (positive/negative/neutral)
+    pub impact_type: ImpactType,
+    /// Impact magnitude (-1.0 to 1.0, negative = harm)
+    pub impact_magnitude: f32,
+    /// Duration of impact
+    pub duration: ImpactDuration,
+    /// Description of the impact
+    pub description: String,
+    /// Mitigation strategies for negative impacts
+    pub mitigation_strategies: Vec<String>,
+}
+
+/// Type of stakeholder impact
+#[derive(Debug, Clone)]
+pub enum ImpactType {
+    Positive,
+    Negative,
+    Neutral,
+    Mixed,
+}
+
+/// Duration of impact
+#[derive(Debug, Clone)]
+pub enum ImpactDuration {
+    ShortTerm,    // Days to weeks
+    MediumTerm,   // Weeks to months
+    LongTerm,     // Months to years
+    Permanent,    // Lasting impact
+}
+
+/// Ethical trade-off analysis
+#[derive(Debug, Clone)]
+pub struct EthicalTradeoff {
+    /// Conflicting ethical principles
+    pub conflicting_principles: Vec<String>,
+    /// Description of the trade-off
+    pub description: String,
+    /// Recommended resolution approach
+    pub recommended_resolution: String,
+    /// Alternative approaches considered
+    pub alternative_approaches: Vec<String>,
+}
+
+/// Long-term consequence assessment
+#[derive(Debug, Clone)]
+pub struct ConsequenceAssessment {
+    /// Time horizon for consequences
+    pub time_horizon: TimeHorizon,
+    /// Likelihood of occurrence (0.0-1.0)
+    pub likelihood: f32,
+    /// Potential consequence description
+    pub consequence: String,
+    /// Severity of consequence
+    pub severity: ConsequenceSeverity,
+    /// Mitigation strategies
+    pub mitigation_strategies: Vec<String>,
+}
+
+/// Time horizon for consequences
+#[derive(Debug, Clone)]
+pub enum TimeHorizon {
+    Immediate,   // Within hours/days
+    ShortTerm,   // Days to weeks
+    MediumTerm,  // Weeks to months
+    LongTerm,    // Months to years
+    Generational, // Multiple generations
+}
+
+/// Consequence severity levels
+#[derive(Debug, Clone)]
+pub enum ConsequenceSeverity {
+    Negligible,
+    Minor,
+    Moderate,
+    Major,
+    Catastrophic,
+}
+
+/// Cultural and contextual considerations
+#[derive(Debug, Clone)]
+pub struct CulturalConsideration {
+    /// Cultural or contextual factor
+    pub factor: String,
+    /// Relevant ethical frameworks
+    pub ethical_frameworks: Vec<String>,
+    /// Cultural sensitivity implications
+    pub cultural_sensitivity: CulturalSensitivity,
+    /// Alternative ethical perspectives
+    pub alternative_perspectives: Vec<String>,
+}
+
+/// Cultural sensitivity levels
+#[derive(Debug, Clone)]
+pub enum CulturalSensitivity {
+    Low,      // Minimal cultural implications
+    Moderate, // Some cultural considerations needed
+    High,     // Significant cultural sensitivity required
+    Critical, // Culturally sensitive, requires expert consultation
+}
+
 /// The Judge trait for reviewing working specifications
 #[async_trait]
 pub trait Judge: Send + Sync {
@@ -241,6 +423,312 @@ pub struct JudgeHealthMetrics {
     pub error_rate: f64,
     pub last_review_time: Option<chrono::DateTime<chrono::Utc>>,
     pub consecutive_failures: u32,
+}
+
+/// Advanced ethical reasoning judge
+pub struct EthicsJudge {
+    config: JudgeConfig,
+    ethical_frameworks: Vec<String>,
+    cultural_contexts: Vec<String>,
+    stakeholder_groups: Vec<String>,
+}
+
+impl EthicsJudge {
+    pub fn new(config: JudgeConfig) -> Self {
+        Self {
+            config,
+            ethical_frameworks: vec![
+                "utilitarianism".to_string(),
+                "deontology".to_string(),
+                "virtue ethics".to_string(),
+                "rights-based ethics".to_string(),
+                "care ethics".to_string(),
+                "justice as fairness".to_string(),
+            ],
+            cultural_contexts: vec![
+                "western liberal democracy".to_string(),
+                "eastern collectivist cultures".to_string(),
+                "indigenous perspectives".to_string(),
+                "global human rights framework".to_string(),
+            ],
+            stakeholder_groups: vec![
+                "end users".to_string(),
+                "developers".to_string(),
+                "organizations".to_string(),
+                "society at large".to_string(),
+                "vulnerable populations".to_string(),
+                "future generations".to_string(),
+                "environment".to_string(),
+            ],
+        }
+    }
+
+    /// Perform comprehensive ethical assessment
+    async fn perform_ethical_assessment(
+        &self,
+        working_spec: &agent_agency_contracts::working_spec::WorkingSpec,
+    ) -> EthicalAssessment {
+        let mut ethical_score = 1.0; // Start with perfect ethics
+        let mut concerns = Vec::new();
+        let mut stakeholder_impacts = Vec::new();
+        let mut tradeoffs = Vec::new();
+        let mut consequences = Vec::new();
+        let mut cultural_considerations = Vec::new();
+        let mut mitigations = Vec::new();
+        let mut uncertainties = Vec::new();
+
+        let desc = working_spec.description.to_lowercase();
+
+        // Analyze for privacy violations
+        if desc.contains("track") || desc.contains("monitor") || desc.contains("surveil") {
+            ethical_score *= 0.2;
+            concerns.push(EthicalConcern {
+                category: EthicalCategory::Privacy,
+                severity: EthicalSeverity::Critical,
+                description: "Potential privacy invasion through tracking/monitoring".to_string(),
+                evidence: vec![
+                    "Task involves tracking or monitoring activities".to_string(),
+                    "Privacy implications not addressed".to_string(),
+                ],
+                affected_stakeholders: vec!["end users".to_string(), "society at large".to_string()],
+            });
+        }
+
+        // Analyze for discrimination potential
+        if desc.contains("categorize") || desc.contains("classify") || desc.contains("profile") {
+            if desc.contains("demographic") || desc.contains("group") || desc.contains("category") {
+                ethical_score *= 0.3;
+                concerns.push(EthicalConcern {
+                    category: EthicalCategory::Discrimination,
+                    severity: EthicalSeverity::Serious,
+                    description: "Potential for discriminatory categorization or profiling".to_string(),
+                    evidence: vec![
+                        "Task involves demographic or categorical classification".to_string(),
+                        "Risk of biased decision-making".to_string(),
+                    ],
+                    affected_stakeholders: vec!["vulnerable populations".to_string(), "minority groups".to_string()],
+                });
+            }
+        }
+
+        // Analyze for harm potential
+        if desc.contains("control") || desc.contains("restrict") || desc.contains("block") {
+            ethical_score *= 0.4;
+            concerns.push(EthicalConcern {
+                category: EthicalCategory::Harm,
+                severity: EthicalSeverity::Serious,
+                description: "Potential to cause harm through control/restriction mechanisms".to_string(),
+                evidence: vec![
+                    "Task involves control or restriction of behavior".to_string(),
+                    "Could negatively impact user autonomy".to_string(),
+                ],
+                affected_stakeholders: vec!["end users".to_string()],
+            });
+        }
+
+        // Stakeholder impact analysis
+        stakeholder_impacts.push(StakeholderImpact {
+            stakeholder_group: "end users".to_string(),
+            impact_type: if ethical_score > 0.7 { ImpactType::Positive } else { ImpactType::Negative },
+            impact_magnitude: if ethical_score > 0.7 { 0.3 } else { -0.5 },
+            duration: ImpactDuration::LongTerm,
+            description: format!("User experience and trust impact (ethical score: {:.1})", ethical_score),
+            mitigation_strategies: if ethical_score <= 0.7 {
+                vec![
+                    "Implement user consent mechanisms".to_string(),
+                    "Add transparency features".to_string(),
+                    "Include user feedback loops".to_string(),
+                ]
+            } else {
+                vec![]
+            },
+        });
+
+        // Long-term consequence assessment
+        if desc.contains("ai") || desc.contains("automation") {
+            consequences.push(ConsequenceAssessment {
+                time_horizon: TimeHorizon::LongTerm,
+                likelihood: 0.6,
+                consequence: "Potential job displacement in automated sectors".to_string(),
+                severity: ConsequenceSeverity::Moderate,
+                mitigation_strategies: vec![
+                    "Include retraining programs".to_string(),
+                    "Gradual implementation with transition support".to_string(),
+                    "Focus on augmentation rather than replacement".to_string(),
+                ],
+            });
+        }
+
+        // Cultural considerations
+        if desc.contains("global") || desc.contains("international") {
+            cultural_considerations.push(CulturalConsideration {
+                factor: "Global deployment implications".to_string(),
+                ethical_frameworks: vec![
+                    "universal human rights".to_string(),
+                    "cultural relativism".to_string(),
+                ],
+                cultural_sensitivity: CulturalSensitivity::High,
+                alternative_perspectives: vec![
+                    "Western privacy norms vs Eastern collectivist approaches".to_string(),
+                    "Individual rights vs community obligations".to_string(),
+                ],
+            });
+        }
+
+        // Generate mitigation strategies
+        if ethical_score < 0.8 {
+            mitigations.extend(vec![
+                "Conduct ethical impact assessment with stakeholders".to_string(),
+                "Implement privacy-by-design principles".to_string(),
+                "Add bias detection and mitigation mechanisms".to_string(),
+                "Include ethical review checkpoints in development process".to_string(),
+                "Establish user consent and control mechanisms".to_string(),
+            ]);
+        }
+
+        // Ethical uncertainties
+        if desc.contains("predict") || desc.contains("forecast") {
+            uncertainties.push("Prediction accuracy and potential for false positives".to_string());
+        }
+        if desc.contains("automated") && desc.contains("decision") {
+            uncertainties.push("Appropriate level of human oversight in automated decisions".to_string());
+        }
+
+        EthicalAssessment {
+            ethical_score,
+            ethical_concerns: concerns,
+            stakeholder_impacts,
+            ethical_tradeoffs: tradeoffs,
+            long_term_consequences: consequences,
+            cultural_considerations,
+            ethical_mitigations: mitigations,
+            uncertainty_factors: uncertainties,
+            assessment_confidence: 0.85,
+        }
+    }
+}
+
+#[async_trait]
+impl Judge for EthicsJudge {
+    fn config(&self) -> &JudgeConfig {
+        &self.config
+    }
+
+    async fn review_spec(
+        &self,
+        context: &ReviewContext,
+    ) -> CouncilResult<JudgeVerdict> {
+        // Perform comprehensive ethical assessment
+        let ethical_assessment = self.perform_ethical_assessment(&context.working_spec).await;
+
+        // Convert ethical assessment to judge verdict
+        let verdict = if ethical_assessment.ethical_score < 0.3 {
+            // Critical ethical violations - reject
+            JudgeVerdict::Reject {
+                confidence: ethical_assessment.assessment_confidence,
+                reasoning: format!(
+                    "Critical ethical violations detected. Ethical score: {:.2}. Concerns: {}",
+                    ethical_assessment.ethical_score,
+                    ethical_assessment.ethical_concerns.len()
+                ),
+                critical_issues: ethical_assessment.ethical_concerns.into_iter().map(|concern| {
+                    CriticalIssue {
+                        severity: match concern.severity {
+                            EthicalSeverity::Critical => IssueSeverity::Critical,
+                            EthicalSeverity::Serious => IssueSeverity::Critical,
+                            _ => IssueSeverity::High,
+                        },
+                        category: format!("{:?}", concern.category).to_lowercase(),
+                        description: concern.description,
+                        evidence: concern.evidence,
+                    }
+                }).collect(),
+                alternative_approaches: ethical_assessment.ethical_mitigations,
+            }
+        } else if ethical_assessment.ethical_score < 0.7 {
+            // Moderate ethical concerns - require refinements
+            JudgeVerdict::Refine {
+                confidence: ethical_assessment.assessment_confidence,
+                reasoning: format!(
+                    "Ethical concerns require mitigation. Ethical score: {:.2}. {} concerns identified.",
+                    ethical_assessment.ethical_score,
+                    ethical_assessment.ethical_concerns.len()
+                ),
+                required_changes: vec![
+                    RequiredChange {
+                        category: ChangeCategory::Requirements,
+                        description: "Address identified ethical concerns and implement mitigation strategies".to_string(),
+                        impact: ChangeImpact::Moderate,
+                        rationale: format!("{} ethical issues require resolution before implementation", ethical_assessment.ethical_concerns.len()),
+                    }
+                ],
+                priority: ChangePriority::High,
+                estimated_effort: EffortEstimate {
+                    person_hours: (ethical_assessment.ethical_concerns.len() as f64 * 4.0).max(8.0),
+                    complexity: ComplexityLevel::Complex,
+                    dependencies: vec!["ethical review".to_string(), "stakeholder consultation".to_string()],
+                },
+            }
+        } else {
+            // Ethically acceptable - approve
+            JudgeVerdict::Approve {
+                confidence: ethical_assessment.assessment_confidence,
+                reasoning: format!(
+                    "Ethically acceptable with score {:.2}. {} minor concerns noted but not blocking.",
+                    ethical_assessment.ethical_score,
+                    ethical_assessment.ethical_concerns.len()
+                ),
+                quality_score: ethical_assessment.ethical_score,
+                risk_assessment: RiskAssessment {
+                    overall_risk: if ethical_assessment.ethical_score > 0.8 {
+                        RiskLevel::Low
+                    } else {
+                        RiskLevel::Medium
+                    },
+                    risk_factors: ethical_assessment.ethical_concerns.iter()
+                        .map(|c| c.description.clone())
+                        .collect(),
+                    mitigation_suggestions: ethical_assessment.ethical_mitigations,
+                    confidence: ethical_assessment.assessment_confidence,
+                },
+            }
+        };
+
+        Ok(verdict)
+    }
+
+    fn specialization_score(&self, context: &ReviewContext) -> f64 {
+        // Ethics judge is highly specialized for tasks with ethical implications
+        let desc = context.working_spec.description.to_lowercase();
+
+        let ethical_indicators = [
+            "privacy", "security", "bias", "fairness", "harm", "consent",
+            "autonomy", "discrimination", "surveillance", "tracking", "monitoring",
+            "control", "restrict", "ai", "automation", "decision", "predict",
+            "categorize", "classify", "profile", "global", "society"
+        ];
+
+        let indicator_count = ethical_indicators.iter()
+            .filter(|&indicator| desc.contains(indicator))
+            .count();
+
+        // Higher specialization score for tasks with more ethical indicators
+        (indicator_count as f64 * 0.1).min(0.95) + 0.05 // Base score of 0.05
+    }
+
+    fn is_available(&self) -> bool {
+        true // Ethics judge is always available
+    }
+
+    fn health_metrics(&self) -> JudgeHealthMetrics {
+        JudgeHealthMetrics {
+            response_time_p95_ms: 800, // Ethical analysis takes longer
+            success_rate: 0.98,
+            error_rate: 0.02,
+            last_review_time: Some(chrono::Utc::now()),
+            consecutive_failures: 0,
+        }
+    }
 }
 
 /// Mock judge implementation for testing
@@ -550,5 +1038,20 @@ pub fn create_mock_judge_panel() -> Vec<Box<dyn Judge>> {
             },
             VerdictStrategy::AlwaysApprove,
         )),
+        Box::new(EthicsJudge::new(JudgeConfig {
+            judge_id: "ethics-judge".to_string(),
+            judge_type: JudgeType::Ethics,
+            model_name: "gpt-4".to_string(),
+            temperature: 0.1, // Low temperature for consistent ethical analysis
+            max_tokens: 3000, // More tokens for detailed ethical analysis
+            timeout_seconds: 60, // Longer timeout for comprehensive analysis
+            expertise_areas: vec![
+                "ethical analysis".to_string(),
+                "stakeholder impact".to_string(),
+                "long-term consequences".to_string(),
+                "cultural considerations".to_string(),
+            ],
+            bias_tendencies: HashMap::new(),
+        })),
     ]
 }

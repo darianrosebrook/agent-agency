@@ -3,9 +3,10 @@
 import React, { useEffect, useState } from "react";
 import Header from "@/components/shared/Header";
 import Navigation from "@/components/shared/Navigation";
-import SystemHealthOverview from "@/components/shared/SystemHealthOverview";
 import ChatInterface from "@/components/chat/ChatInterface";
 import TaskList from "@/components/tasks/TaskList";
+import SystemHealthMonitoring from "@/components/monitoring/SystemHealthOverview";
+import RealTimeMetricsStream from "@/components/monitoring/RealTimeMetricsStream";
 
 interface HealthStatus {
   status: "healthy" | "degraded" | "unhealthy" | "unknown";
@@ -139,11 +140,16 @@ export default function Dashboard() {
               <h1 className="section-title">System Overview</h1>
 
               <div className="overview-grid">
-                <SystemHealthOverview
-                  healthStatus={healthStatus}
-                  isLoading={isLoading}
-                  error={error}
-                  onRetry={checkHealth}
+                <SystemHealthMonitoring
+                  onRetry={() => {
+                    console.log("Retrying health check...");
+                    // TODO: Milestone 3 - System Health Monitoring
+                    // - [ ] Implement V3 /health endpoint with component status
+                    // - [ ] Add system uptime and version tracking
+                    // - [ ] Implement component health checks (database, agents, coordination)
+                    // - [ ] Add alert system integration
+                    // - [ ] Test health endpoint with various failure scenarios
+                  }}
                 />
 
                 <div className="welcome-card">
@@ -171,6 +177,17 @@ export default function Dashboard() {
                   </div>
                 </div>
               </div>
+
+              {/* Real-time metrics stream for the overview */}
+              <RealTimeMetricsStream
+                onMetricsUpdate={(event) => {
+                  console.log("Metrics update:", event);
+                }}
+                onError={(error) => {
+                  console.error("Metrics stream error:", error);
+                }}
+                enabled={true}
+              />
             </div>
           )}
 

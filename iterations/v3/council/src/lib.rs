@@ -12,7 +12,16 @@ pub mod verdict_aggregation;
 pub mod workflow;
 
 pub use error::{CouncilError, CouncilResult};
-pub use judge::{Judge, JudgeConfig, JudgeVerdict, JudgeType, JudgeContribution};
+pub use judge::{
+    Judge, JudgeConfig, JudgeVerdict, JudgeType, JudgeContribution,
+    // Ethical analysis types
+    EthicalAssessment, EthicalConcern, EthicalCategory, EthicalSeverity,
+    StakeholderImpact, ImpactType, ImpactDuration, EthicalTradeoff,
+    ConsequenceAssessment, TimeHorizon, ConsequenceSeverity,
+    CulturalConsideration, CulturalSensitivity,
+    // Ethics judge
+    EthicsJudge,
+};
 pub use council::{Council, CouncilConfig, CouncilSession, ReviewContext};
 pub use decision_making::{DecisionEngine, ConsensusStrategy};
 pub use verdict_aggregation::{VerdictAggregator, AggregationResult};

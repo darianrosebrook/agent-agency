@@ -1,0 +1,168 @@
+@import '@/styles/mixins.scss';
+
+.metricTile {
+  @include card-base;
+  @include card-hover;
+  display: flex;
+  flex-direction: column;
+  padding: var(--spacing-lg);
+  min-height: 120px;
+  transition: all var(--transition-fast);
+
+  &.success {
+    border-left: 4px solid var(--color-success);
+  }
+
+  &.warning {
+    border-left: 4px solid var(--color-warning);
+  }
+
+  &.error {
+    border-left: 4px solid var(--color-error);
+  }
+
+  &.neutral {
+    border-left: 4px solid var(--color-gray-400);
+  }
+}
+
+.tileHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
+}
+
+.title {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  margin: 0;
+  flex: 1;
+}
+
+.icon {
+  font-size: var(--font-size-xl);
+  opacity: 0.7;
+}
+
+.tileBody {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.value {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+  margin-bottom: var(--spacing-xs);
+  line-height: var(--line-height-tight);
+}
+
+.change {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  font-size: var(--font-size-sm);
+}
+
+.changeValue {
+  font-family: var(--font-family-mono);
+  font-weight: var(--font-weight-medium);
+
+  &.positive {
+    color: var(--color-success-700);
+  }
+
+  &.negative {
+    color: var(--color-error-700);
+  }
+
+  &.neutral {
+    color: var(--color-gray-600);
+  }
+}
+
+.changeLabel {
+  color: var(--color-text-secondary);
+}
+
+.trendIcon {
+  font-size: var(--font-size-base);
+}
+
+// Loading state
+.loading {
+  .loadingSkeleton {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+  }
+
+  .skeletonHeader {
+    height: 20px;
+    background: linear-gradient(90deg, var(--color-gray-200) 25%, var(--color-gray-100) 50%, var(--color-gray-200) 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s infinite;
+    border-radius: var(--radius-sm);
+  }
+
+  .skeletonValue {
+    height: 32px;
+    background: linear-gradient(90deg, var(--color-gray-200) 25%, var(--color-gray-100) 50%, var(--color-gray-200) 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s infinite;
+    border-radius: var(--radius-sm);
+  }
+
+  .skeletonChange {
+    height: 16px;
+    width: 60px;
+    background: linear-gradient(90deg, var(--color-gray-200) 25%, var(--color-gray-100) 50%, var(--color-gray-200) 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s infinite;
+    border-radius: var(--radius-sm);
+  }
+}
+
+@keyframes loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+// Responsive design
+@include breakpoint(md) {
+  .metricTile {
+    padding: var(--spacing-md);
+    min-height: 100px;
+  }
+
+  .title {
+    font-size: var(--font-size-sm);
+  }
+
+  .value {
+    font-size: var(--font-size-xl);
+  }
+}
+
+@include breakpoint(sm) {
+  .metricTile {
+    padding: var(--spacing-sm);
+    min-height: 80px;
+  }
+
+  .tileHeader {
+    margin-bottom: var(--spacing-sm);
+  }
+
+  .value {
+    font-size: var(--font-size-lg);
+  }
+}

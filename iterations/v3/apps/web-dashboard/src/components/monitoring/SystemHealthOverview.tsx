@@ -4,7 +4,6 @@ import React, { useState, useEffect } from "react";
 import {
   SystemHealthOverviewProps,
   SystemHealth,
-  ComponentHealth,
 } from "@/types/metrics";
 import { metricsApiClient, MetricsApiError } from "@/lib/metrics-api";
 import MetricTile from "./MetricTile";
@@ -17,10 +16,10 @@ export default function SystemHealthOverview({
   onRetry,
 }: SystemHealthOverviewProps) {
   const [healthStatus, setHealthStatus] = useState<SystemHealth | null>(
-    externalHealthStatus || null
+    externalHealthStatus ?? null
   );
-  const [isLoading, setIsLoading] = useState(externalLoading || !externalHealthStatus);
-  const [error, setError] = useState<string | null>(externalError || null);
+  const [isLoading, setIsLoading] = useState(externalLoading ?? !externalHealthStatus);
+  const [error, setError] = useState<string | null>(externalError ?? null);
 
   // Load health status if not provided externally
   const loadHealthStatus = async () => {

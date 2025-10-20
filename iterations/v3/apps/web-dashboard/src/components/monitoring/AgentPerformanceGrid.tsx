@@ -17,12 +17,12 @@ export default function AgentPerformanceGrid({
   selectedAgentId,
 }: AgentPerformanceGridProps) {
   const [agents, setAgents] = useState<AgentPerformance[]>(
-    externalAgents || []
+    externalAgents ?? []
   );
   const [isLoading, setIsLoading] = useState(
-    externalLoading || !externalAgents
+    externalLoading ?? !externalAgents
   );
-  const [error, setError] = useState<string | null>(externalError || null);
+  const [error, setError] = useState<string | null>(externalError ?? null);
 
   // Load agent performance if not provided externally
   const loadAgentPerformance = async () => {
@@ -92,13 +92,12 @@ export default function AgentPerformanceGrid({
     }
   };
 
-  // Format performance score
-  const getPerformanceColor = (score: number) => {
-    if (score >= 90) return styles.excellent;
-    if (score >= 75) return styles.good;
-    if (score >= 60) return styles.fair;
-    return styles.poor;
-  };
+// Format performance score for status
+const getPerformanceStatus = (score: number): "success" | "warning" | "error" => {
+  if (score >= 85) return "success";
+  if (score >= 70) return "warning";
+  return "error";
+};
 
   if (isLoading) {
     return (
@@ -225,7 +224,7 @@ export default function AgentPerformanceGrid({
                   title="Efficiency"
                   value={`${agent.efficiency_score}%`}
                   format="percentage"
-                  status={getPerformanceColor(agent.efficiency_score)}
+                  status={getPerformanceStatus(agent.efficiency_score)}
                 />
               </div>
 
