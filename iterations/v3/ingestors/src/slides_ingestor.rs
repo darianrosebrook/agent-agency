@@ -181,7 +181,7 @@ impl SlidesIngestor {
     }
 
     /// Find all slide elements in the presentation
-    fn find_slide_elements<'a>(&self, presentation: &'a roxmltree::Node) -> impl Iterator<Item = roxmltree::Node<'a>> {
+    fn find_slide_elements<'a>(&self, presentation: &'a roxmltree::Node<'a, '_>) -> impl Iterator<Item = roxmltree::Node<'a, '_>> {
         presentation
             .descendants()
             .filter(|node| {
