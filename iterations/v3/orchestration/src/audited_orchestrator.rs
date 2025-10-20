@@ -32,6 +32,8 @@ pub struct AuditedOrchestrator {
     active_contexts: Arc<RwLock<HashMap<String, OperationContext>>>,
     /// Frontier queue for spawned tasks (optional)
     frontier: Option<std::sync::RwLock<Frontier>>,
+    /// Circuit breakers for external services
+    circuit_breakers: HashMap<String, Arc<crate::audit_trail::CircuitBreaker>>,
 }
 
 /// Context for tracking active operations
@@ -78,12 +80,23 @@ impl AuditedOrchestrator {
             audit_manager,
             active_contexts: Arc::new(RwLock::new(HashMap::new())),
             frontier,
+            circuit_breakers: HashMap::new(),
         }
     }
 
     /// Get the audit trail manager for direct access
     pub fn audit_manager(&self) -> Arc<AuditTrailManager> {
         self.audit_manager.clone()
+    }
+
+    /// Set circuit breaker for external service protection
+    pub fn set_circuit_breaker(&mut self, service_name: String, circuit_breaker: Arc<crate::audit_trail::CircuitBreaker>) {
+        self.circuit_breakers.insert(service_name, circuit_breaker);
+    }
+
+    /// Set multiple circuit breakers at once
+    pub fn set_circuit_breakers(&mut self, circuit_breakers: HashMap<String, Arc<crate::audit_trail::CircuitBreaker>>) {
+        self.circuit_breakers.extend(circuit_breakers);
     }
 
     /// Spawn a task to the frontier queue (if enabled)
@@ -274,10 +287,39 @@ impl AuditedOrchestrator {
                 start_time.elapsed(),
             ).await?;
 
-        // Execute the actual planning operation with performance tracking
+        // Execute the actual planning operation with circuit breaker protection and performance tracking
         let planning_start = Instant::now();
-        let result = match self.orchestrator.execute_planning(task_description, context).await {
-            Ok(result) => {
+        let result = if let Some(circuit_breaker) = self.circuit_breakers.get("llm_service") {
+            // Protect LLM/planning calls with circuit breaker
+            match circuit_breaker.execute(|| async {
+                self.orchestrator.execute_planning(task_description, context).await
+            }).await {
+                Ok(result) => result,
+                Err(e) => {
+                    // Circuit breaker opened or operation failed
+                    self.audit_manager.error_recovery_auditor()
+                        .record_error_recovery_attempt(
+                            "planning_circuit_breaker",
+                            "circuit_breaker_protection",
+                            false,
+                            planning_start.elapsed(),
+                            {
+                                let mut metadata = HashMap::new();
+                                metadata.insert("error".to_string(), serde_json::Value::String(e.to_string()));
+                                metadata.insert("circuit_breaker".to_string(), serde_json::Value::String("llm_service".to_string()));
+                                metadata
+                            }
+                        ).await?;
+                    return Err(AuditError::CircuitBreakerError(e.to_string()));
+                }
+            }
+        } else {
+            // No circuit breaker - direct call
+            self.orchestrator.execute_planning(task_description, context).await
+                .map_err(|e| AuditError::ExecutionError(e.to_string()))?
+        };
+
+        match result {
                 self.audit_manager.performance_auditor()
                     .record_operation_performance(
                         "planning_execution",

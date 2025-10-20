@@ -185,15 +185,41 @@ pub async fn orchestrate_task(
         );
     }
 
-    let result: ConsensusResult = coordinator
-        .evaluate_task(to_task_spec(desc))
-        .await
-        .context("council evaluation failed")?;
+    // Evaluate task with council (may involve LLM calls) - protect with circuit breaker
+    let result: ConsensusResult = if let Some(circuit_breaker) = _council_circuit_breaker {
+        circuit_breaker
+            .execute(|| async {
+                coordinator
+                    .evaluate_task(to_task_spec(desc))
+                    .await
+                    .context("council evaluation failed")
+            })
+            .await
+            .context("council evaluation failed due to circuit breaker")?
+    } else {
+        coordinator
+            .evaluate_task(to_task_spec(desc))
+            .await
+            .context("council evaluation failed")?
+    };
 
-    writer
-        .persist_consensus(&result)
-        .await
-        .context("persisting final verdict failed")?;
+    // Persist consensus result to database - protect with circuit breaker
+    if let Some(circuit_breaker) = _db_circuit_breaker {
+        circuit_breaker
+            .execute(|| async {
+                writer
+                    .persist_consensus(&result)
+                    .await
+                    .context("persisting final verdict failed")
+            })
+            .await
+            .context("database persistence failed due to circuit breaker")?
+    } else {
+        writer
+            .persist_consensus(&result)
+            .await
+            .context("persisting final verdict failed")?
+    }
 
     orch_emitter
         .orchestrate_exit(&desc.task_id, "completed")
