@@ -9,7 +9,8 @@ export async function POST(
 ) {
   try {
     const taskId = params.taskId;
-    const v3BackendHost = process.env.V3_BACKEND_HOST ?? "http://localhost:8080";
+    const v3BackendHost =
+      process.env.V3_BACKEND_HOST ?? "http://localhost:8080";
     const body = await request.json();
 
     const { action, ...actionParams } = body;
@@ -27,15 +28,21 @@ export async function POST(
       return NextResponse.json(
         {
           error: "validation_error",
-          message: `Invalid action: ${action}. Must be one of: ${validActions.join(", ")}`
+          message: `Invalid action: ${action}. Must be one of: ${validActions.join(
+            ", "
+          )}`,
         },
         { status: 400 }
       );
     }
 
-    const actionUrl = `${v3BackendHost}/api/v1/tasks/${encodeURIComponent(taskId)}/${action}`;
+    const actionUrl = `${v3BackendHost}/api/v1/tasks/${encodeURIComponent(
+      taskId
+    )}/${action}`;
 
-    console.log(`Proxying task ${action} request for ${taskId} to: ${actionUrl}`);
+    console.log(
+      `Proxying task ${action} request for ${taskId} to: ${actionUrl}`
+    );
 
     const response = await fetch(actionUrl, {
       method: "POST",
@@ -70,7 +77,6 @@ export async function POST(
       executed_via_proxy: true,
       timestamp: new Date().toISOString(),
     });
-
   } catch (error) {
     console.error("Task action proxy error:", error);
 

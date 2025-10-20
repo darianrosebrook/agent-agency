@@ -6,7 +6,8 @@ import { NextRequest, NextResponse } from "next/server";
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const v3BackendHost = process.env.V3_BACKEND_HOST ?? "http://localhost:8080";
+    const v3BackendHost =
+      process.env.V3_BACKEND_HOST ?? "http://localhost:8080";
 
     // Build query parameters for filtering
     const params = new URLSearchParams();
@@ -48,7 +49,9 @@ export async function GET(request: NextRequest) {
     const sortOrder = searchParams.get("sort_order");
     if (sortOrder) params.append("sort_order", sortOrder);
 
-    const tasksUrl = `${v3BackendHost}/api/v1/tasks${params.toString() ? `?${params}` : ""}`;
+    const tasksUrl = `${v3BackendHost}/api/v1/tasks${
+      params.toString() ? `?${params}` : ""
+    }`;
 
     console.log(`Proxying task list request to: ${tasksUrl}`);
 
@@ -86,7 +89,8 @@ export async function GET(request: NextRequest) {
         phase,
         priority,
         working_spec_id: workingSpecId,
-        date_range: startDate && endDate ? { start: startDate, end: endDate } : null,
+        date_range:
+          startDate && endDate ? { start: startDate, end: endDate } : null,
       },
       pagination: {
         limit: limit ? parseInt(limit) : 20,
@@ -95,7 +99,6 @@ export async function GET(request: NextRequest) {
       },
       timestamp: new Date().toISOString(),
     });
-
   } catch (error) {
     console.error("Task list proxy error:", error);
 
@@ -117,7 +120,8 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const v3BackendHost = process.env.V3_BACKEND_HOST ?? "http://localhost:8080";
+    const v3BackendHost =
+      process.env.V3_BACKEND_HOST ?? "http://localhost:8080";
     const body = await request.json();
 
     const createTaskUrl = `${v3BackendHost}/api/v1/tasks`;
@@ -156,7 +160,6 @@ export async function POST(request: NextRequest) {
       created_via_proxy: true,
       timestamp: new Date().toISOString(),
     });
-
   } catch (error) {
     console.error("Task creation proxy error:", error);
 

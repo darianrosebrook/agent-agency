@@ -26,6 +26,7 @@ ndarray-linalg = "0.16"
 # For caching and performance
 dashmap = "5.0"
 lru = "0.12"
+futures = "0.3"
 chrono = { version = "0.4", features = ["serde"] }
 
 # Database dependencies

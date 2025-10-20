@@ -69,7 +69,6 @@ export class TaskEventsClient {
         console.log("Task events SSE connection closed");
         this.options.onClose?.();
       };
-
     } catch (error) {
       console.error("Failed to create SSE connection:", error);
       this.options.onError(error as Error);
@@ -84,7 +83,8 @@ export class TaskEventsClient {
     }
 
     this.reconnectAttempts++;
-    const delay = this.options.reconnectInterval! * Math.pow(2, this.reconnectAttempts - 1); // Exponential backoff
+    const delay =
+      this.options.reconnectInterval! * Math.pow(2, this.reconnectAttempts - 1); // Exponential backoff
 
     console.log(
       `Scheduling SSE reconnect attempt ${this.reconnectAttempts}/${this.options.maxReconnectAttempts} in ${delay}ms`

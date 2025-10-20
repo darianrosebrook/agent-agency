@@ -495,11 +495,11 @@ impl ModelCache {
             max_models: self.max_models,
             current_memory_bytes: *current_memory,
             max_memory_bytes: self.max_memory_bytes,
-            hit_rate: stats.calculate_hit_rate(),
-            total_hits: stats.hits,
-            total_misses: stats.misses,
-            total_evictions: stats.evictions,
-            total_manual_removals: stats.manual_removals,
+            hit_rate: stats.hit_rate,
+            total_hits: stats.total_hits,
+            total_misses: stats.total_misses,
+            total_evictions: stats.total_evictions,
+            total_manual_removals: stats.total_manual_removals,
         }
     }
 

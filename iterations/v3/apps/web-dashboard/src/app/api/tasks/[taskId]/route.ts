@@ -9,9 +9,12 @@ export async function GET(
 ) {
   try {
     const taskId = params.taskId;
-    const v3BackendHost = process.env.V3_BACKEND_HOST ?? "http://localhost:8080";
+    const v3BackendHost =
+      process.env.V3_BACKEND_HOST ?? "http://localhost:8080";
 
-    const taskUrl = `${v3BackendHost}/api/v1/tasks/${encodeURIComponent(taskId)}`;
+    const taskUrl = `${v3BackendHost}/api/v1/tasks/${encodeURIComponent(
+      taskId
+    )}`;
 
     console.log(`Proxying task detail request for ${taskId} to: ${taskUrl}`);
 
@@ -42,7 +45,6 @@ export async function GET(
       fetched_via_proxy: true,
       timestamp: new Date().toISOString(),
     });
-
   } catch (error) {
     console.error("Task detail proxy error:", error);
 
@@ -65,10 +67,13 @@ export async function PATCH(
 ) {
   try {
     const taskId = params.taskId;
-    const v3BackendHost = process.env.V3_BACKEND_HOST ?? "http://localhost:8080";
+    const v3BackendHost =
+      process.env.V3_BACKEND_HOST ?? "http://localhost:8080";
     const body = await request.json();
 
-    const taskUrl = `${v3BackendHost}/api/v1/tasks/${encodeURIComponent(taskId)}`;
+    const taskUrl = `${v3BackendHost}/api/v1/tasks/${encodeURIComponent(
+      taskId
+    )}`;
 
     console.log(`Proxying task update request for ${taskId} to: ${taskUrl}`);
 
@@ -103,7 +108,6 @@ export async function PATCH(
       updated_via_proxy: true,
       timestamp: new Date().toISOString(),
     });
-
   } catch (error) {
     console.error("Task update proxy error:", error);
 

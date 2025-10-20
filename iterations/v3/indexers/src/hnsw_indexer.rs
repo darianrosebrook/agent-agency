@@ -107,7 +107,7 @@ impl HnswIndexer {
         // - [ ] Support parallel index construction and querying
         // Create simplified HNSW index
         let index = Arc::new(Mutex::new(SimpleHnswIndex::new(
-            metadata.dim as usize,
+            metadata.dim,
             32, // default max_neighbors
         )));
 
@@ -129,7 +129,7 @@ impl HnswIndexer {
         );
 
         // Validate vector dimensions
-        if vector.len() != self.metadata.dim as usize {
+        if vector.len() != self.metadata.dim {
             return Err(anyhow::anyhow!(
                 "Vector dimension mismatch: expected {}, got {}",
                 self.metadata.dim,

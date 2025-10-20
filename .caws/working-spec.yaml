@@ -1,70 +1,72 @@
-id: AGENT-0004
-title: "Implement hysteresis and no-progress guards in SatisficingEvaluator"
+id: AGENT-0005
+title: "Add Frontier queue for spawned tasks"
 risk_tier: 2
 mode: feature
 change_budget:
-  max_files: 8
-  max_loc: 400
+  max_files: 6
+  max_loc: 350
 blast_radius:
-  modules: ["self-prompting-agent", "evaluation"]
+  modules: ["orchestration"]
   data_migration: false
 operational_rollback_slo: "2m"
 scope:
   in:
-    - "iterations/v3/self-prompting-agent/src/evaluation/satisficing.rs"
-    - "iterations/v3/self-prompting-agent/src/types.rs"  # Add NoProgress StopReason
-    - "iterations/v3/self-prompting-agent/src/loop_controller.rs"  # Integrate no-progress detection
+    - "iterations/v3/orchestration/src/frontier.rs"
+    - "iterations/v3/orchestration/src/lib.rs"  # Add frontier module
+    - "iterations/v3/orchestration/src/audited_orchestrator.rs"  # Integrate frontier
   out:
-    - "iterations/v3/orchestration/"
+    - "iterations/v3/self-prompting-agent/"
     - "iterations/v3/database/"
     - "iterations/v3/interfaces/"
     - "iterations/v3/council/"
 invariants:
-  - "Hysteresis prevents continue/stop flapping"
-  - "No-progress detection stops on ineffective iterations"
-  - "Sliding window analysis prevents premature plateau detection"
-  - "Action request repetition detection catches loops"
-  - "Zero-LOC diffs trigger immediate stop"
+  - "Spawned tasks are deduplicated by fingerprint to prevent redundant work"
+  - "Rate limiting prevents task explosion from single parent"
+  - "Scope envelopes ensure spawned tasks respect parent boundaries"
+  - "Priority ordering ensures high-value tasks are processed first"
+  - "Frontier state is maintained across orchestrator operations"
 acceptance:
   - id: "A1"
-    given: "Sliding window of N scores with K consecutive sub-threshold improvements"
-    when: "plateau detection runs"
-    then: "requires hysteresis before declaring plateau"
+    given: "Two identical tasks with same fingerprint"
+    when: "both added to frontier"
+    then: "only one task is queued, duplicate is rejected"
   - id: "A2"
-    given: "Changeset with zero net LOC change"
-    when: "no-progress guard evaluates"
-    then: "stops iteration with NoProgress reason"
+    given: "Parent task exceeds spawn rate limit"
+    when: "attempting to add new task"
+    then: "task is rejected with rate limit error"
   - id: "A3"
-    given: "Same ActionRequest generated K times consecutively"
-    when: "repetition guard evaluates"
-    then: "stops iteration with NoProgress reason"
+    given: "Task outside parent scope envelope"
+    when: "added to frontier"
+    then: "task is filtered out or rejected"
   - id: "A4"
-    given: "Continue/stop decisions oscillating"
-    when: "hysteresis applied"
-    then: "maintains stable decision until clear trend emerges"
+    given: "Frontier with multiple tasks of different priorities"
+    when: "pop() is called repeatedly"
+    then: "tasks are returned in priority order"
   - id: "A5"
-    given: "SatisficingEvaluator with hysteresis enabled"
-    when: "evaluated over multiple iterations"
-    then: "shows reduced decision volatility"
+    given: "Frontier reaches maximum capacity"
+    when: "new task is added"
+    then: "lowest priority task is evicted or addition is rejected"
 contracts:
   - type: "rust-api"
-    path: "iterations/v3/self-prompting-agent/src/evaluation/satisficing.rs"
+    path: "iterations/v3/orchestration/src/frontier.rs"
     endpoints:
-      - "SatisficingEvaluator::should_continue()"
-      - "SatisficingEvaluator::check_no_progress()"
-      - "SatisficingEvaluator::check_action_repetition()"
+      - "Frontier::push()"
+      - "Frontier::pop()"
+      - "Frontier::contains_fingerprint()"
+      - "Frontier::check_rate_limit()"
     schemas:
-      - name: "SatisficingConfig"
-        fields: ["hysteresis_window: usize", "consecutive_threshold: usize", "no_progress_loc_threshold: usize"]
-      - name: "StopReason"
-        fields: ["NoProgress", "Satisficed", "MaxIterations", "QualityCeiling", "FailedGates", "Timeout", "Error", "Unknown"]
+      - name: "Frontier"
+        fields: ["queue: PriorityQueue<TaskEntry>", "fingerprints: HashSet<String>", "rate_limits: HashMap<String, usize>", "max_size: usize"]
+      - name: "TaskEntry"
+        fields: ["task: Task", "fingerprint: String", "parent_id: String", "priority: f64", "timestamp: DateTime<Utc>"]
 non_functional:
   perf:
-    hysteresis_evaluation_ms: 5
-    no_progress_check_ms: 2
+    push_operation_ms: 5
+    pop_operation_ms: 10
+    fingerprint_check_ms: 2
   security:
-    - "no-arbitrary-decision-injection"
-    - "bounded-iteration-prevention"
+    - "scope-envelope-enforcement"
+    - "rate-limit-prevention"
   reliability:
-    - "stable-decision-making"
-    - "loop-prevention"
+    - "duplicate-prevention"
+    - "priority-ordering"

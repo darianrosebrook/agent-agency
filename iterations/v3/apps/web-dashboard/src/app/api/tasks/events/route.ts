@@ -5,7 +5,8 @@ import { NextRequest } from "next/server";
 
 export async function GET(request: NextRequest) {
   try {
-    const v3BackendHost = process.env.V3_BACKEND_HOST ?? "http://localhost:8080";
+    const v3BackendHost =
+      process.env.V3_BACKEND_HOST ?? "http://localhost:8080";
     const { searchParams } = new URL(request.url);
 
     // Build query parameters for filtering task events
@@ -27,7 +28,9 @@ export async function GET(request: NextRequest) {
     const sinceSequence = searchParams.get("since_sequence");
     if (sinceSequence) params.append("since_sequence", sinceSequence);
 
-    const eventsUrl = `${v3BackendHost}/api/v1/tasks/events${params.toString() ? `?${params}` : ""}`;
+    const eventsUrl = `${v3BackendHost}/api/v1/tasks/events${
+      params.toString() ? `?${params}` : ""
+    }`;
 
     console.log(`Proxying task events SSE stream to: ${eventsUrl}`);
 
@@ -101,7 +104,9 @@ export async function GET(request: NextRequest) {
         const writer = writable.getWriter();
         const errorEvent = `data: ${JSON.stringify({
           error: "connection_error",
-          message: `Failed to connect to task events: ${error instanceof Error ? error.message : "Unknown error"}`,
+          message: `Failed to connect to task events: ${
+            error instanceof Error ? error.message : "Unknown error"
+          }`,
           timestamp: new Date().toISOString(),
         })}\n\n`;
         await writer.write(new TextEncoder().encode(errorEvent));
@@ -113,12 +118,11 @@ export async function GET(request: NextRequest) {
       headers: {
         "Content-Type": "text/event-stream",
         "Cache-Control": "no-cache",
-        "Connection": "keep-alive",
+        Connection: "keep-alive",
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Headers": "Cache-Control",
       },
     });
-
   } catch (error) {
     console.error("Task events SSE setup failed:", error);
 
