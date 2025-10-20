@@ -48,19 +48,19 @@ export default function Dashboard() {
   React.useEffect(() => {
     if (activeSection === "metrics") {
       console.warn(
-        "Centralized metrics dashboard not implemented - requires V3 metrics aggregation"
+        "Metrics dashboard API integration partially implemented - requires V3 backend metrics endpoints"
       );
-      // TODO: Centralized Metrics Dashboard
-      // - [ ] Implement V3 metrics aggregation endpoints
-      // - [ ] Add cross-component metric correlation
-      // - [ ] Implement metrics filtering and time range sync
+      // TODO: Centralized Metrics Dashboard (PARTIALLY COMPLETE)
+      // - [x] Implement V3 metrics API proxy endpoints (/api/metrics, /api/metrics/stream)
+      // - [x] Add real-time metrics streaming via SSE (/api/metrics/stream)
+      // - [x] Implement metrics filtering and time range sync
+      // - [x] Add metric aggregation and alerting capabilities
+      // - [x] Integrate with task execution metrics
+      // - [ ] Implement actual V3 backend metrics endpoints when available
       // - [ ] Add metric export capabilities (CSV, JSON)
       // - [ ] Implement custom dashboard layouts
-      // - [ ] Add metric alerting and threshold monitoring
-      // - [ ] Integrate with task execution metrics
-      // - [ ] Add performance trend analysis
-      // - [ ] Implement metrics comparison tools
-      // - [ ] Add real-time metric subscriptions
+      // - [ ] Add performance trend analysis and comparison tools
+      // - [ ] Add real-time metric subscriptions with advanced filtering
     }
 
     if (activeSection === "chat") {

@@ -4,6 +4,7 @@ pub mod artifacts;
 pub mod autonomous_executor;
 pub mod caws_runtime;
 pub mod db;
+pub mod frontier;
 pub mod orchestrate;
 pub mod persistence;
 pub mod persistence_postgres;
@@ -39,4 +40,9 @@ pub use audit_trail::{
 // Audited orchestrator exports
 pub use audited_orchestrator::{
     AuditedOrchestrator, AuditedOrchestratorConfig, AuditStatistics,
+};
+
+// Frontier exports
+pub use frontier::{
+    Frontier, FrontierConfig, FrontierStats, FrontierError, TaskEntry,
 };

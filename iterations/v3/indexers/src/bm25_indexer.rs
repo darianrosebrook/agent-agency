@@ -6,7 +6,7 @@ use anyhow::{Context, Result};
 use parking_lot::{Mutex, RwLock};
 use std::collections::HashMap;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::sync::Arc;
 use tracing::debug;
 use uuid::Uuid;

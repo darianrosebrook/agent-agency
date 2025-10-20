@@ -15240,5 +15240,39 @@
     },
     "previous_hash": "caffa6788bc0d30e9054bb8c764b67aecb5c8b00bf1707418bf4aff610254e95",
     "hash": "63ae8ff13dae2c0986c16a06b778cdda29119616fede830a997a270e1739ff63"
+  },
+  {
+    "id": "prov-1760929914354",
+    "timestamp": "2025-10-20T03:11:54.354Z",
+    "commit": {
+      "hash": "5f561b9d2571b1095026c9318b6faa69ea73cf41",
+      "message": "feat: implement comprehensive model caching with LRU eviction and persistence",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "AGENT-0005",
+      "title": "Add Frontier queue for spawned tasks",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": []
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-20T03:11:54.355Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "63ae8ff13dae2c0986c16a06b778cdda29119616fede830a997a270e1739ff63",
+    "hash": "ca24009649c5874f3694464905e49135454c2838e5bbbec933875e1ee06755fa"
   }
 ]

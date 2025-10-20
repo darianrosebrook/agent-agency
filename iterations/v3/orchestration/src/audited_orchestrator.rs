@@ -18,6 +18,7 @@ use crate::audit_trail::{
 };
 use crate::orchestrate::{Orchestrator, OrchestratorConfig, OrchestrationResult, OrchestrationContext};
 use crate::planning::agent::PlanningAgent;
+use crate::frontier::{Frontier, FrontierConfig, FrontierError};
 
 /// Audited orchestrator that wraps all operations with comprehensive audit logging
 #[derive(Debug)]
@@ -28,6 +29,8 @@ pub struct AuditedOrchestrator {
     audit_manager: Arc<AuditTrailManager>,
     /// Active operation contexts for correlation
     active_contexts: Arc<RwLock<HashMap<String, OperationContext>>>,
+    /// Frontier queue for spawned tasks (optional)
+    frontier: Option<std::sync::RwLock<Frontier>>,
 }
 
 /// Context for tracking active operations
@@ -56,6 +59,8 @@ pub struct AuditedOrchestratorConfig {
     pub enable_correlation: bool,
     /// Whether to track nested operations
     pub track_nested_operations: bool,
+    /// Frontier configuration (optional)
+    pub frontier_config: Option<FrontierConfig>,
 }
 
 impl AuditedOrchestrator {
@@ -64,16 +69,40 @@ impl AuditedOrchestrator {
         let audit_manager = Arc::new(AuditTrailManager::new(config.audit_config));
         let orchestrator = Arc::new(Orchestrator::new(config.orchestrator_config));
 
+        let frontier = config.frontier_config
+            .map(|fc| std::sync::RwLock::new(Frontier::with_config(fc)));
+
         Self {
             orchestrator,
             audit_manager,
             active_contexts: Arc::new(RwLock::new(HashMap::new())),
+            frontier,
         }
     }
 
     /// Get the audit trail manager for direct access
     pub fn audit_manager(&self) -> Arc<AuditTrailManager> {
         self.audit_manager.clone()
+    }
+
+    /// Spawn a task to the frontier queue (if enabled)
+    pub fn spawn_task(&self, task: crate::planning::types::Task, parent_operation_id: &str) -> Result<(), FrontierError> {
+        if let Some(frontier) = &self.frontier {
+            let mut frontier = frontier.write().unwrap();
+            frontier.push(task, parent_operation_id)?;
+        }
+        // If no frontier configured, silently ignore (not an error)
+        Ok(())
+    }
+
+    /// Get the next task from the frontier queue
+    pub fn get_next_task(&self) -> Option<crate::planning::types::Task> {
+        self.frontier.as_ref()?.read().unwrap().pop()
+    }
+
+    /// Get frontier statistics
+    pub fn frontier_stats(&self) -> Option<crate::frontier::FrontierStats> {
+        Some(self.frontier.as_ref()?.read().unwrap().stats())
     }
 
     /// Execute a planning operation with full audit trail

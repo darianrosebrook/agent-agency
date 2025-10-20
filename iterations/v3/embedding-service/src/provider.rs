@@ -3,12 +3,11 @@
 use crate::types::*;
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
-use tracing::{debug, info, warn};
+use tracing::debug;
 use std::hash::Hasher;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::collections::HashMap;
-use ndarray::s;
 
 /// Trait for embedding providers
 #[async_trait]

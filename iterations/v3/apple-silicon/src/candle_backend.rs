@@ -890,29 +890,32 @@ impl InferenceEngine for CandleBackend {
             .with_context(|| format!("Failed to create ONNX session for: {}", path.display()))?;
 
         // Extract input/output information from the model
-        let inputs = session
-            .inputs
+        let session_inputs = session.inputs()
+            .with_context(|| "Failed to get session inputs")?;
+        let session_outputs = session.outputs()
+            .with_context(|| "Failed to get session outputs")?;
+
+        let inputs = session_inputs
             .iter()
             .map(|input| {
-                let shape = input.dimensions().collect::<Vec<_>>();
+                let shape = input.shape().to_vec();
                 TensorSpec {
-                    name: input.name.clone(),
+                    name: input.name().to_string(),
                     dtype: DType::F32, // Default to F32 for ONNX models
-                    shape,
+                    shape: shape.iter().map(|&x| x as usize).collect(),
                     batch_capable: shape.first().map(|&dim| dim < 0).unwrap_or(false),
                 }
             })
             .collect::<Vec<_>>();
 
-        let outputs = session
-            .outputs
+        let outputs = session_outputs
             .iter()
             .map(|output| {
-                let shape = output.dimensions().collect::<Vec<_>>();
+                let shape = output.shape().to_vec();
                 TensorSpec {
-                    name: output.name.clone(),
+                    name: output.name().to_string(),
                     dtype: DType::F32, // Default to F32 for ONNX models
-                    shape,
+                    shape: shape.iter().map(|&x| x as usize).collect(),
                     batch_capable: shape.first().map(|&dim| dim < 0).unwrap_or(false),
                 }
             })
