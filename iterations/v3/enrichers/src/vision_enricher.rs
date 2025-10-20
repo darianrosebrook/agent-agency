@@ -16,7 +16,6 @@ use tokio::io::AsyncWriteExt;
 use uuid::Uuid;
 
 /// Vision Framework bridge structures for Swift/Objective-C integration
-
 /// VNRecognizeTextRequest for optical character recognition
 #[derive(Debug, Clone)]
 struct VNRecognizeTextRequest {

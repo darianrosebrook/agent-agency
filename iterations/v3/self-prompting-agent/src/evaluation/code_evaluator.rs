@@ -6,7 +6,7 @@ use tokio::process::Command;
 use tokio::fs;
 use async_trait::async_trait;
 
-use super::{Evaluator, EvalContext, EvalCriterion, EvaluationError};
+use super::{Evaluator, EvalContext, EvalCriterion, EvaluationError, FlakinessHardener, HardenedEvaluationResult};
 use crate::types::{Artifact, TaskType};
 
 /// Code evaluator configuration
@@ -32,6 +32,7 @@ impl Default for CodeEvaluatorConfig {
 /// Code evaluator for running tests and quality checks
 pub struct CodeEvaluator {
     config: CodeEvaluatorConfig,
+    flakiness_hardener: FlakinessHardener,
 }
 
 impl CodeEvaluator {
@@ -39,47 +40,85 @@ impl CodeEvaluator {
     pub fn new() -> Self {
         Self {
             config: CodeEvaluatorConfig::default(),
+            flakiness_hardener: FlakinessHardener::new(),
         }
     }
 
     /// Create with custom config
     pub fn with_config(config: CodeEvaluatorConfig) -> Self {
-        Self { config }
+        Self {
+            config,
+            flakiness_hardener: FlakinessHardener::new(),
+        }
     }
 
-    /// Run test command and parse results
+    /// Run test command with flakiness hardening
     async fn run_tests(&self, project_root: &Path) -> Result<EvalCriterion, EvaluationError> {
-        let output = Command::new("sh")
-            .arg("-c")
-            .arg(&self.config.test_command)
-            .current_dir(project_root)
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .output()
-            .await
-            .map_err(|e| EvaluationError::CommandError(format!("Failed to run tests: {}", e)))?;
+        // Use flakiness hardener to run tests with retries
+        let hardened_result = self.flakiness_hardener.harden_evaluation(|| async {
+            let output = Command::new("sh")
+                .arg("-c")
+                .arg(&self.config.test_command)
+                .current_dir(project_root)
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .output()
+                .await
+                .map_err(|e| EvaluationError::CommandError(format!("Failed to run tests: {}", e)))?;
 
-        let success = output.status.success();
-        let stdout = String::from_utf8_lossy(&output.stdout);
-        let stderr = String::from_utf8_lossy(&output.stderr);
+            let success = output.status.success();
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            let stderr = String::from_utf8_lossy(&output.stderr);
 
-        let score = if success { 1.0 } else { 0.0 };
-        let passed = success;
+            let score = if success { 1.0 } else { 0.0 };
+            let passed = success;
 
-        let notes = if success {
-            format!("Tests passed. Output: {}", stdout.chars().take(200).collect::<String>())
-        } else {
-            format!("Tests failed. Stderr: {}", stderr.chars().take(200).collect::<String>())
-        };
+            let notes = if success {
+                format!("Tests passed. Output: {}", stdout.chars().take(200).collect::<String>())
+            } else {
+                format!("Tests failed. Stderr: {}", stderr.chars().take(200).collect::<String>())
+            };
 
-        Ok(EvalCriterion {
-            id: "tests-pass".to_string(),
-            description: "All tests pass without errors".to_string(),
-            weight: 0.4,
-            passed,
-            score,
-            notes: Some(notes),
-        })
+            // Add retry information to notes if applicable
+            let enhanced_notes = if !passed && !notes.is_empty() {
+                format!("{} (retried for flakiness)", notes)
+            } else {
+                notes
+            };
+
+            Ok(EvalCriterion {
+                id: "tests-pass".to_string(),
+                description: "All tests pass without errors".to_string(),
+                weight: 0.4,
+                passed,
+                score,
+                notes: Some(enhanced_notes),
+            })
+        }).await?;
+
+        // Enhance the criterion with confidence and failure analysis
+        let mut enhanced_criterion = hardened_result.criterion;
+        let confidence_note = format!(" (confidence: {:.1}%, retries: {})",
+                                    hardened_result.confidence * 100.0,
+                                    hardened_result.retry_count);
+
+        enhanced_criterion.notes = Some(format!("{}{}",
+            enhanced_criterion.notes.as_deref().unwrap_or(""),
+            confidence_note
+        ));
+
+        // Add failure bucket information if available
+        if let Some(bucket) = hardened_result.failure_bucket {
+            let bucket_note = format!(" [Failure: {:?}, patterns: {}]",
+                                    bucket.category,
+                                    bucket.patterns.len());
+            enhanced_criterion.notes = Some(format!("{}{}",
+                enhanced_criterion.notes.as_deref().unwrap_or(""),
+                bucket_note
+            ));
+        }
+
+        Ok(enhanced_criterion)
     }
 
     /// Run linting command

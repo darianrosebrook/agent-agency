@@ -3,6 +3,10 @@
 //! Provides unified interfaces for different metrics backends (Prometheus, StatsD, Redis)
 //! with circuit breaker patterns and graceful degradation.
 
+pub mod prometheus;
+pub mod statsd;
+pub mod redis;
+
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;

@@ -29,7 +29,7 @@ class DatabaseApiClient {
   private baseUrl: string;
 
   constructor(baseUrl?: string) {
-    this.baseUrl = baseUrl ?? "/api/proxy";
+    this.baseUrl = baseUrl ?? "/api/database";
   }
 
   /**
@@ -37,42 +37,22 @@ class DatabaseApiClient {
    * @returns A promise that resolves to an array of DatabaseConnection objects.
    */
   async getConnections(): Promise<DatabaseConnection[]> {
-    console.warn(
-      "getConnections using mock implementation - V3 database connection management API not available"
-    );
-    // TODO: Milestone 4 - Database Connection Management
-    // - [ ] Implement V3 GET /api/v1/database/connections endpoint
-    // - [ ] Add connection status monitoring
-    // - [ ] Implement connection pool management
-    // - [ ] Add connection health checks
+    try {
+      const response = await apiClient.request<{ connections: DatabaseConnection[] }>(
+        `${this.baseUrl}/connections`
+      );
 
-    // Mock implementation for development
-    return [
-      {
-        id: "main_db",
-        name: "Main Database",
-        engine: "postgresql",
-        host: "localhost",
-        port: 5432,
-        database: "agent_agency",
-        status: "connected",
-        // connectionPoolSize: 10, // Not in interface yet
-        // activeConnections: 3, // Not in interface yet
-        // lastHealthCheck: new Date().toISOString(), // Not in interface yet
-      },
-      {
-        id: "vector_db",
-        name: "Vector Database",
-        engine: "postgresql",
-        host: "localhost",
-        port: 5432,
-        database: "agent_agency_vectors",
-        status: "connected",
-        // connectionPoolSize: 5, // Not in interface yet
-        // activeConnections: 1, // Not in interface yet
-        // lastHealthCheck: new Date().toISOString(), // Not in interface yet
-      },
-    ];
+      return response.connections || [];
+    } catch (error) {
+      console.error("Failed to get database connections:", error);
+      throw new DatabaseApiError(
+        "server_error",
+        "Failed to retrieve database connections",
+        true,
+        error instanceof Error ? error.message : "Unknown error"
+      );
+    }
+  }
   }
 
   /**
@@ -81,20 +61,63 @@ class DatabaseApiClient {
    * @returns A promise that resolves to a GetDatabaseTablesResponse.
    */
   async getTables(connectionId?: string): Promise<GetDatabaseTablesResponse> {
-    console.warn(
-      "getTables using mock implementation - V3 database tables API not available"
-    );
-    // TODO: Milestone 4 - Database Tables API Implementation
-    // - [ ] Implement V3 GET /api/v1/database/tables endpoint
-    // - [ ] Add table metadata (row count, size, indexes)
-    // - [ ] Implement table filtering and sorting
-    // - [ ] Add table schema information
+    try {
+      if (!connectionId) {
+        throw new DatabaseApiError(
+          "validation_error",
+          "connectionId is required for table listing",
+          false
+        );
+      }
 
-    // Mock implementation for development
-    const mockTables = [
-      {
-        name: "execution_artifacts",
-        schema: "public",
+      const response = await apiClient.request<GetDatabaseTablesResponse>(
+        `${this.baseUrl}/tables?connection_id=${encodeURIComponent(connectionId)}`
+      );
+
+      return response;
+    } catch (error) {
+      console.error("Failed to get database tables:", error);
+      throw new DatabaseApiError(
+        "server_error",
+        "Failed to retrieve database tables",
+        true,
+        error instanceof Error ? error.message : "Unknown error"
+      );
+    }
+  }
+
+  /**
+   * Fetches detailed schema information for a specific table.
+   * @param tableName - The name of the table.
+   * @param connectionId - The ID of the database connection.
+   * @param schema - The schema name (optional).
+   * @returns A promise that resolves to a GetTableSchemaResponse.
+   */
+  async getTableSchema(
+    tableName: string,
+    connectionId: string,
+    schema?: string
+  ): Promise<GetTableSchemaResponse> {
+    try {
+      const params = new URLSearchParams();
+      params.append("connection_id", connectionId);
+      if (schema) params.append("schema", schema);
+
+      const response = await apiClient.request<GetTableSchemaResponse>(
+        `${this.baseUrl}/tables/${encodeURIComponent(tableName)}/schema?${params}`
+      );
+
+      return response;
+    } catch (error) {
+      console.error("Failed to get table schema:", error);
+      throw new DatabaseApiError(
+        "server_error",
+        "Failed to retrieve table schema",
+        true,
+        error instanceof Error ? error.message : "Unknown error"
+      );
+    }
+  }
         connection_id: connectionId ?? "main_db",
         row_count: 1250,
         size_bytes: 52428800, // 50MB

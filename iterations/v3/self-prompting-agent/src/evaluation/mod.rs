@@ -5,12 +5,14 @@ pub mod text_evaluator;
 pub mod token_evaluator;
 pub mod caws_evaluator;
 pub mod satisficing;
+pub mod flakiness;
 
 pub use code_evaluator::CodeEvaluator;
 pub use text_evaluator::TextEvaluator;
 pub use token_evaluator::TokenEvaluator;
 pub use caws_evaluator::CawsEvaluator;
 pub use satisficing::{SatisficingEvaluator, SatisficingDecision};
+pub use flakiness::{FlakinessHardener, FlakinessConfig, FailureBucket, FailureCategory, HardenedEvaluationResult, RefinementPromptGenerator};
 
 use std::collections::HashMap;
 use chrono::{DateTime, Utc};

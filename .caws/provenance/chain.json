@@ -15308,5 +15308,39 @@
     },
     "previous_hash": "ca24009649c5874f3694464905e49135454c2838e5bbbec933875e1ee06755fa",
     "hash": "a5e3f8091f04d174fc8bd112a08c403b88b7ee0745980c688ac76197c6b1710e"
+  },
+  {
+    "id": "prov-1760930213142",
+    "timestamp": "2025-10-20T03:16:53.142Z",
+    "commit": {
+      "hash": "f2b6d1844d0a9c09ebceb91b0626610583b18cb9",
+      "message": "feat: implement proper ONNX model loading for Apple Silicon",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "AGENT-0005",
+      "title": "Add Frontier queue for spawned tasks",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": []
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-20T03:16:53.145Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "a5e3f8091f04d174fc8bd112a08c403b88b7ee0745980c688ac76197c6b1710e",
+    "hash": "a012a3f84fb12e903d1b3e105429d95c00ab53dfbdd3c5324f11558ff96646c0"
   }
 ]

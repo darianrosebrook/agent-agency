@@ -488,18 +488,18 @@ impl ModelCache {
     pub async fn stats(&self) -> ModelCacheStats {
         let cache = self.cache.read().await;
         let current_memory = self.current_memory_bytes.read().await;
-        let stats = self.stats.read().await;
+        let model_stats = self.stats.read().await;
 
         ModelCacheStats {
             model_count: cache.len(),
             max_models: self.max_models,
             current_memory_bytes: *current_memory,
             max_memory_bytes: self.max_memory_bytes,
-            hit_rate: stats.hit_rate,
-            total_hits: stats.total_hits,
-            total_misses: stats.total_misses,
-            total_evictions: stats.total_evictions,
-            total_manual_removals: stats.total_manual_removals,
+            hit_rate: model_stats.hit_rate,
+            total_hits: model_stats.total_hits,
+            total_misses: model_stats.total_misses,
+            total_evictions: model_stats.total_evictions,
+            total_manual_removals: model_stats.total_manual_removals,
         }
     }
 

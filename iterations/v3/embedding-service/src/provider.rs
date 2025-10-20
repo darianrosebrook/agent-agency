@@ -1,13 +1,12 @@
 //! Embedding provider trait and implementations
 
 use crate::types::*;
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use async_trait::async_trait;
-use tracing::debug;
+use tracing::{debug, warn};
 use std::hash::Hasher;
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::collections::HashMap;
 
 /// Trait for embedding providers
 #[async_trait]
