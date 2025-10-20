@@ -1,0 +1,21 @@
+[package]
+name = "agent-agency-caching"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+# Workspace dependencies
+tokio.workspace = true
+async-trait.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+chrono.workspace = true
+tracing.workspace = true
+thiserror.workspace = true
+futures.workspace = true
+
+# Caching dependencies
+redis = { version = "0.25", features = ["tokio-comp", "connection-manager"] }
+rand = "0.8"
