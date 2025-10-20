@@ -485,8 +485,8 @@ export default function DatabaseExplorer({
                     );
                   }
                 }}
-                isExecuting={state.isExecutingQuery || false}
-                error={state.queryError || null}
+                isExecuting={state.isExecutingQuery ?? false}
+                error={state.queryError ?? null}
               />
             )}
 
@@ -517,17 +517,17 @@ export default function DatabaseExplorer({
                     }));
                   }
                 }}
-                results={state.searchResults || []}
-                isSearching={state.isSearching || false}
-                error={state.searchError || null}
+                results={state.searchResults ?? []}
+                isSearching={state.isSearching ?? false}
+                error={state.searchError ?? null}
               />
             )}
 
             {state.activeTab === "quality" && (
               <DataQualityDashboard
                 metrics={state.metrics}
-                isLoading={state.isLoadingMetrics || false}
-                error={state.metricsError || null}
+                isLoading={state.isLoadingMetrics ?? false}
+                error={state.metricsError ?? null}
                 onRefresh={async () => {
                   setState((prev) => ({
                     ...prev,

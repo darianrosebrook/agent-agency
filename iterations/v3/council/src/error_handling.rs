@@ -557,8 +557,10 @@ pub struct DegradationState {
     /// Degraded components and their degradation levels
     pub degraded_components: HashMap<String, DegradationLevel>,
     /// Timestamp when degradation started
+    #[serde(skip)]
     pub degradation_start: Option<Instant>,
     /// Expected recovery time
+    #[serde(skip)]
     pub expected_recovery: Option<Instant>,
 }
 
@@ -574,7 +576,6 @@ pub struct DegradationPolicy {
 }
 
 /// Degradation level with specific strategies
-#[derive(Debug, Clone)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DegradationLevel {
     /// Level name (e.g., "reduced_accuracy", "limited_functionality")
@@ -612,7 +613,7 @@ impl DegradationManager {
             state.degradation_start = Some(Instant::now());
         }
 
-        state.degraded_components.insert(component.to_string(), level);
+        state.degraded_components.insert(component.to_string(), level.clone());
 
         // Log degradation event
         tracing::warn!(

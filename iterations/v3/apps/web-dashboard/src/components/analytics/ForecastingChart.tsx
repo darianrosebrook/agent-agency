@@ -8,7 +8,7 @@ export default function ForecastingChart({
   prediction,
   historicalData,
   showConfidenceIntervals = true,
-  onTimeRangeChange: _onTimeRangeChange,
+  onTimeRangeChange,
   isLoading,
   error,
 }: ForecastingChartProps) {

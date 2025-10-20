@@ -19,7 +19,7 @@ interface AnomalyDetectorState {
 
 export default function AnomalyDetector({
   anomalies: externalAnomalies,
-  timeSeriesData: _timeSeriesData,
+  timeSeriesData,
   onAnomalySelect,
   onAnomalyDismiss,
   filters: externalFilters,

@@ -161,7 +161,7 @@ export default function DataQualityDashboard({
     );
   }
 
-  if (state.error || !state.metrics) {
+  if (state.error ?? !state.metrics) {
     return (
       <div className={styles.dataQualityDashboard}>
         <div className={styles.error}>

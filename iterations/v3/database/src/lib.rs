@@ -13,7 +13,7 @@ pub mod models;
 pub mod queries;
 pub mod vector_store;
 
-pub use artifact_store::DatabaseArtifactStorage;
+pub use artifact_store::{DatabaseArtifactStorage, VersionMetadata, VersionDiff};
 pub use backup::{BackupManager, BackupResult};
 pub use client::{DatabaseClient, DatabaseHealthStatus};
 pub use health::{DatabaseHealthChecker, HealthCheckResult};

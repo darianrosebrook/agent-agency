@@ -31,6 +31,40 @@ pub struct DatabaseArtifactMetadata {
     pub integrity_verified: bool,
 }
 
+/// Version metadata information
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct VersionMetadata {
+    /// Version string (e.g., "1", "2", "3")
+    pub version: String,
+    /// When this version was created
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    /// Total size in bytes for this version
+    pub size_bytes: u64,
+    /// Checksum for integrity verification
+    pub checksum: String,
+    /// Whether compression was used
+    pub compression_used: bool,
+    /// Number of artifacts in this version
+    pub artifact_count: usize,
+}
+
+/// Version diff information between two versions
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct VersionDiff {
+    /// From version
+    pub from_version: String,
+    /// To version
+    pub to_version: String,
+    /// Size difference in bytes (to - from)
+    pub size_difference_bytes: i64,
+    /// Time difference in seconds (to - from)
+    pub time_difference_seconds: i64,
+    /// Checksum of from version
+    pub from_checksum: String,
+    /// Checksum of to version
+    pub to_checksum: String,
+}
+
 /// Error type for artifact storage operations
 #[derive(Debug, thiserror::Error)]
 pub enum ArtifactStorageError {
@@ -164,6 +198,161 @@ impl DatabaseArtifactStorage {
 
         let max_version: i32 = row.get("max_version");
         Ok(max_version + 1)
+    }
+
+    /// Validate version number format and range
+    fn validate_version(&self, version: &str) -> Result<i32, ArtifactStorageError> {
+        match version.parse::<i32>() {
+            Ok(v) if v > 0 => Ok(v),
+            Ok(v) => Err(ArtifactStorageError::DatabaseError(format!("Version must be positive, got: {}", v))),
+            Err(_) => Err(ArtifactStorageError::DatabaseError(format!("Invalid version format: {}", version))),
+        }
+    }
+
+    /// Compare two version strings
+    fn compare_versions(&self, v1: &str, v2: &str) -> Result<std::cmp::Ordering, ArtifactStorageError> {
+        let v1_num = self.validate_version(v1)?;
+        let v2_num = self.validate_version(v2)?;
+        Ok(v1_num.cmp(&v2_num))
+    }
+
+    /// Get version metadata including creation time and size
+    pub async fn get_version_metadata(&self, task_id: Uuid, version: &str) -> Result<VersionMetadata, ArtifactStorageError> {
+        let version_num = self.validate_version(version)?;
+
+        let row = sqlx::query(
+            r#"
+            SELECT am.created_at, am.size_bytes, am.checksum, am.compression_used,
+                   COUNT(ea.id) as artifact_count
+            FROM artifact_metadata am
+            LEFT JOIN execution_artifacts ea ON ea.task_id = am.task_id
+            WHERE am.task_id = $1 AND am.version = $2
+            GROUP BY am.id, am.created_at, am.size_bytes, am.checksum, am.compression_used
+            "#
+        )
+        .bind(task_id)
+        .bind(version_num)
+        .fetch_optional(&*self.pool)
+        .await
+        .map_err(|e| ArtifactStorageError::DatabaseError(e.to_string()))?;
+
+        match row {
+            Some(row) => {
+                let created_at: DateTime<Utc> = row.get("created_at");
+                let size_bytes: i64 = row.get("size_bytes");
+                let checksum: String = row.get("checksum");
+                let compression_used: bool = row.get("compression_used");
+                let artifact_count: i64 = row.get("artifact_count");
+
+                Ok(VersionMetadata {
+                    version: version.to_string(),
+                    created_at,
+                    size_bytes: size_bytes as u64,
+                    checksum,
+                    compression_used,
+                    artifact_count: artifact_count as usize,
+                })
+            }
+            None => Err(ArtifactStorageError::NotFoundForTask(task_id)),
+        }
+    }
+
+    /// Rollback to a specific version (delete all versions newer than specified)
+    pub async fn rollback_to_version(&self, task_id: Uuid, version: &str) -> Result<(), ArtifactStorageError> {
+        let version_num = self.validate_version(version)?;
+
+        let mut tx = self.pool.begin().await
+            .map_err(|e| ArtifactStorageError::DatabaseError(e.to_string()))?;
+
+        // Delete artifact metadata for versions newer than specified
+        sqlx::query("DELETE FROM artifact_metadata WHERE task_id = $1 AND CAST(version AS INTEGER) > $2")
+            .bind(task_id)
+            .bind(version_num)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| ArtifactStorageError::DatabaseError(e.to_string()))?;
+
+        // Delete execution artifacts for versions newer than specified
+        sqlx::query("DELETE FROM execution_artifacts WHERE task_id = $1 AND version > $2")
+            .bind(task_id)
+            .bind(version_num)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| ArtifactStorageError::DatabaseError(e.to_string()))?;
+
+        tx.commit().await
+            .map_err(|e| ArtifactStorageError::DatabaseError(e.to_string()))?;
+
+        Ok(())
+    }
+
+    /// Clean up old versions based on retention policy
+    pub async fn cleanup_old_versions(&self, task_id: Uuid, keep_versions: usize) -> Result<(), ArtifactStorageError> {
+        if keep_versions == 0 {
+            return Err(ArtifactStorageError::DatabaseError("Must keep at least 1 version".to_string()));
+        }
+
+        let mut tx = self.pool.begin().await
+            .map_err(|e| ArtifactStorageError::DatabaseError(e.to_string()))?;
+
+        // Get versions to delete (keep only the most recent N versions)
+        let rows = sqlx::query(
+            r#"
+            SELECT version
+            FROM artifact_metadata
+            WHERE task_id = $1
+            ORDER BY CAST(version AS INTEGER) DESC
+            OFFSET $2
+            "#
+        )
+        .bind(task_id)
+        .bind(keep_versions as i64)
+        .fetch_all(&*self.pool)
+        .await
+        .map_err(|e| ArtifactStorageError::DatabaseError(e.to_string()))?;
+
+        for row in rows {
+            let version_to_delete: i32 = row.get("version");
+
+            // Delete artifact metadata
+            sqlx::query("DELETE FROM artifact_metadata WHERE task_id = $1 AND version = $2")
+                .bind(task_id)
+                .bind(version_to_delete)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| ArtifactStorageError::DatabaseError(e.to_string()))?;
+
+            // Delete execution artifacts
+            sqlx::query("DELETE FROM execution_artifacts WHERE task_id = $1 AND version = $2")
+                .bind(task_id)
+                .bind(version_to_delete)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| ArtifactStorageError::DatabaseError(e.to_string()))?;
+        }
+
+        tx.commit().await
+            .map_err(|e| ArtifactStorageError::DatabaseError(e.to_string()))?;
+
+        Ok(())
+    }
+
+    /// Get version diff information between two versions
+    pub async fn get_version_diff(&self, task_id: Uuid, from_version: &str, to_version: &str) -> Result<VersionDiff, ArtifactStorageError> {
+        let from_meta = self.get_version_metadata(task_id, from_version).await?;
+        let to_meta = self.get_version_metadata(task_id, to_version).await?;
+
+        let size_diff = to_meta.size_bytes as i64 - from_meta.size_bytes as i64;
+        let time_diff = to_meta.created_at.signed_duration_since(from_meta.created_at);
+
+        Ok(VersionDiff {
+            from_version: from_meta.version,
+            to_version: to_meta.version,
+            size_difference_bytes: size_diff,
+            time_difference_seconds: time_diff.num_seconds(),
+            from_checksum: from_meta.checksum,
+            to_checksum: to_meta.checksum,
+        })
     }
 }
 

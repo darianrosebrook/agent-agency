@@ -8,6 +8,25 @@ use crate::judge::*;
 use crate::error::{CouncilError, CouncilResult};
 use agent_agency_contracts::working_spec::WorkingSpec;
 
+/// Computational complexity classes
+#[derive(Debug, Clone, PartialEq)]
+pub enum ComputationalComplexity {
+    /// O(1) - constant time
+    Constant,
+    /// O(log n) - logarithmic time
+    Logarithmic,
+    /// O(n) - linear time
+    Linear,
+    /// O(n log n) - linearithmic time
+    Linearithmic,
+    /// O(n^k) - polynomial time
+    Polynomial,
+    /// O(k^n) - exponential time
+    Exponential,
+    /// O(n!) - factorial time
+    Factorial,
+}
+
 /// Multi-dimensional risk scorer
 pub struct RiskScorer {
     /// Technical risk weights (should sum to 1.0)
@@ -435,7 +454,7 @@ impl RiskScorer {
                 MonitoringIntensity::Moderate
             },
             support_staffing: if desc.contains("enterprise") { 3.0 } else { 1.0 },
-            emergency_response_time: std::time::Duration::from_hours(if desc.contains("critical") { 1 } else { 4 }),
+            emergency_response_time: std::time::Duration::from_secs(if desc.contains("critical") { 1 * 3600 } else { 4 * 3600 }),
             cost_per_month: Some(if desc.contains("enterprise") { 50000.0 } else { 5000.0 }),
         };
 
@@ -468,7 +487,7 @@ impl RiskScorer {
 
         // Incident response
         let incident_response = IncidentResponseAssessment {
-            response_time_sla: std::time::Duration::from_minutes(if desc.contains("critical") { 15 } else { 60 }),
+            response_time_sla: std::time::Duration::from_secs(if desc.contains("critical") { 15 * 60 } else { 60 * 60 }),
             severity_classification: IncidentSeverityLevels {
                 critical_incidents: true,
                 high_incidents: true,
@@ -477,12 +496,12 @@ impl RiskScorer {
             },
             escalation_procedures: if desc.contains("enterprise") { EscalationComplexity::MultiLevel } else { EscalationComplexity::Moderate },
             recovery_time_objectives: RecoveryObjectives {
-                rto_critical: std::time::Duration::from_hours(4),
-                rto_high: std::time::Duration::from_hours(8),
-                rto_medium: std::time::Duration::from_hours(24),
-                rpo_critical: std::time::Duration::from_minutes(15),
-                rpo_high: std::time::Duration::from_hours(1),
-                rpo_medium: std::time::Duration::from_hours(4),
+                rto_critical: std::time::Duration::from_secs(4 * 3600),
+                rto_high: std::time::Duration::from_secs(8 * 3600),
+                rto_medium: std::time::Duration::from_secs(24 * 3600),
+                rpo_critical: std::time::Duration::from_secs(15 * 60),
+                rpo_high: std::time::Duration::from_secs(1 * 3600),
+                rpo_medium: std::time::Duration::from_secs(4 * 3600),
             },
         };
 

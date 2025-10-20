@@ -552,11 +552,15 @@ impl VerdictAggregator {
             // Refine decision
             let aggregated_changes = self.aggregate_changes(contributions);
 
+            let changes = aggregated_changes.changes;
+            let priority = self.calculate_highest_change_priority(&aggregated_changes);
+            let estimated_effort = aggregated_changes.estimated_effort;
+
             Ok(CouncilDecision::Refine {
                 confidence: consensus_strength,
-                required_changes: aggregated_changes.changes,
-                priority: self.calculate_highest_change_priority(&aggregated_changes),
-                estimated_effort: aggregated_changes.estimated_effort,
+                required_changes: changes,
+                priority,
+                estimated_effort,
             })
         } else {
             // Reject decision
