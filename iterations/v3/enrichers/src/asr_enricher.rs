@@ -302,29 +302,6 @@ impl AsrEnricher {
         Ok(())
     }
 
-        
-        // Calculate overall confidence
-        if !result.turns.is_empty() {
-            let avg_turn_confidence: f32 = result.turns
-                .iter()
-                .map(|t| t.confidence)
-                .sum::<f32>() / result.turns.len() as f32;
-            
-            // Adjust based on number of speakers and turns
-            let speaker_factor = if result.speakers.len() == 1 {
-                1.0
-            } else if result.speakers.len() <= 3 {
-                0.95
-            } else {
-                0.9
-            };
-            
-            result.confidence = (avg_turn_confidence * speaker_factor).min(1.0);
-        }
-
-        Ok(())
-    }
-
     /// Transcribe using Apple Speech Framework
     async fn transcribe_apple(
         &self,

@@ -14358,5 +14358,41 @@
     },
     "previous_hash": "f6b730f395bbbb26c537e3868cdf93a3c6a2a5d34dcafc7b934a9addb6820703",
     "hash": "75794508427c674271c73ec7b661f462ec2a3b0a8a6df6c378c5053f1b291c05"
+  },
+  {
+    "id": "prov-1760926420762",
+    "timestamp": "2025-10-20T02:13:40.762Z",
+    "commit": {
+      "hash": "80a476a68b3823081a971f85d62d06f82fb8a88e",
+      "message": "feat: implement expert override and authority escalation mechanisms",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "PROJ-785",
+      "title": "agent-agency",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": [
+        "WV-0001"
+      ]
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-20T02:13:40.763Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "75794508427c674271c73ec7b661f462ec2a3b0a8a6df6c378c5053f1b291c05",
+    "hash": "1b266e68a64051ca6354f536e328dc7d9c83040be3d07d35cf28a79b7d5d2e36"
   }
 ]
