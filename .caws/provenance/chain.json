@@ -15410,5 +15410,39 @@
     },
     "previous_hash": "d3a2b5af18de97f5b177f1e906a244a5fe9fdd381c911a657bba47b86f1e135a",
     "hash": "987d73505601c8bf0368778a3fbc7e0677270ca41263f5d75408c48340d0e5f8"
+  },
+  {
+    "id": "prov-1760931092817",
+    "timestamp": "2025-10-20T03:31:32.817Z",
+    "commit": {
+      "hash": "22ba8271b0f69d3e839b06bcb3e03294e22064f0",
+      "message": "fix: resolve linting errors for production readiness",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "AGENT-0007",
+      "title": "Make diffs first-class artifacts in observability",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": []
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-20T03:31:32.818Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "987d73505601c8bf0368778a3fbc7e0677270ca41263f5d75408c48340d0e5f8",
+    "hash": "c8f9c32a03bb0ec0d5cbd3631b5715bafc7c853f644eebd8c7ac029a07755e1d"
   }
 ]

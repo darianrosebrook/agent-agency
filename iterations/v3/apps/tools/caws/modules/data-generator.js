@@ -39,6 +39,11 @@ function generateRealProvenanceData() {
  */
 function simulateTestHistoryFromGit() {
   // TODO: Implement proper git history analysis for test data
+  // - [ ] Analyze git history for test-related commits and changes
+  // - [ ] Parse test result files from git history and branches
+  // - [ ] Correlate test results with code changes and commits
+  // - [ ] Generate realistic test history from git metadata
+  // - [ ] Handle large repositories efficiently with pagination
   // - [ ] Analyze git history for test-related commits
   // - [ ] Parse test result files from git history
   // - [ ] Correlate test results with code changes
