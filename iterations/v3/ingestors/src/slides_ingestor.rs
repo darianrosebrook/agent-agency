@@ -198,17 +198,24 @@ impl SlidesIngestor {
         if let Some(title) = self.extract_slide_title(slide_element) {
             segments.push(Segment {
                 id: Uuid::new_v4(),
-                document_id: Uuid::new_v4(), // Will be set by caller
-                kind: SegmentKind::Title,
-                content: title,
-                position: slide_index * 1000, // Base position for slide
-                metadata: HashMap::from([
-                    ("slide_index".to_string(), slide_index.to_string()),
-                    ("element_type".to_string(), "title".to_string()),
-                ]),
-                embedding: None,
-                created_at: Utc::now(),
-                updated_at: Utc::now(),
+                segment_type: SegmentType::Slide,
+                t0: None,
+                t1: None,
+                bbox: None,
+                content_hash: format!("{:x}", Sha256::digest(title.as_bytes())),
+                quality_score: 1.0,
+                stability_score: None,
+                blocks: vec![Block {
+                    id: Uuid::new_v4(),
+                    block_type: BlockType::Text,
+                    bbox: None,
+                    content: title,
+                    confidence: 1.0,
+                    metadata: HashMap::from([
+                        ("slide_index".to_string(), slide_index.to_string()),
+                        ("element_type".to_string(), "title".to_string()),
+                    ]),
+                }],
             });
         }
 
@@ -258,18 +265,25 @@ impl SlidesIngestor {
                 if !text_content.trim().is_empty() {
                     segments.push(Segment {
                         id: Uuid::new_v4(),
-                        document_id: Uuid::new_v4(), // Will be set by caller
-                        kind: SegmentKind::Text,
-                        content: text_content,
-                        position: slide_index * 1000 + text_index + 1,
-                        metadata: HashMap::from([
-                            ("slide_index".to_string(), slide_index.to_string()),
-                            ("element_type".to_string(), "text".to_string()),
-                            ("text_index".to_string(), text_index.to_string()),
-                        ]),
-                        embedding: None,
-                        created_at: Utc::now(),
-                        updated_at: Utc::now(),
+                        segment_type: SegmentType::Slide,
+                        t0: None,
+                        t1: None,
+                        bbox: None,
+                        content_hash: format!("{:x}", Sha256::digest(text_content.as_bytes())),
+                        quality_score: 1.0,
+                        stability_score: None,
+                        blocks: vec![Block {
+                            id: Uuid::new_v4(),
+                            block_type: BlockType::Text,
+                            bbox: None,
+                            content: text_content,
+                            confidence: 1.0,
+                            metadata: HashMap::from([
+                                ("slide_index".to_string(), slide_index.to_string()),
+                                ("element_type".to_string(), "text".to_string()),
+                                ("text_index".to_string(), text_index.to_string()),
+                            ]),
+                        }],
                     });
                 }
             }
@@ -297,18 +311,25 @@ impl SlidesIngestor {
 
             segments.push(Segment {
                 id: Uuid::new_v4(),
-                document_id: Uuid::new_v4(), // Will be set by caller
-                kind: SegmentKind::Image, // Default to image, could be refined
-                content: description,
-                position: slide_index * 1000 + media_index + 100, // Offset for media elements
-                metadata: HashMap::from([
-                    ("slide_index".to_string(), slide_index.to_string()),
-                    ("element_type".to_string(), media_type),
-                    ("media_index".to_string(), media_index.to_string()),
-                ]),
-                embedding: None,
-                created_at: Utc::now(),
-                updated_at: Utc::now(),
+                segment_type: SegmentType::Slide,
+                t0: None,
+                t1: None,
+                bbox: None,
+                content_hash: format!("{:x}", Sha256::digest(description.as_bytes())),
+                quality_score: 1.0,
+                stability_score: None,
+                blocks: vec![Block {
+                    id: Uuid::new_v4(),
+                    block_type: BlockType::Image,
+                    bbox: None,
+                    content: description,
+                    confidence: 1.0,
+                    metadata: HashMap::from([
+                        ("slide_index".to_string(), slide_index.to_string()),
+                        ("element_type".to_string(), media_type),
+                        ("media_index".to_string(), media_index.to_string()),
+                    ]),
+                }],
             });
         }
 
@@ -333,18 +354,25 @@ impl SlidesIngestor {
 
             segments.push(Segment {
                 id: Uuid::new_v4(),
-                document_id: Uuid::new_v4(), // Will be set by caller
-                kind: SegmentKind::Text, // Shapes often contain text
-                content: description,
-                position: slide_index * 1000 + shape_index + 200, // Offset for shape elements
-                metadata: HashMap::from([
-                    ("slide_index".to_string(), slide_index.to_string()),
-                    ("element_type".to_string(), shape_type),
-                    ("shape_index".to_string(), shape_index.to_string()),
-                ]),
-                embedding: None,
-                created_at: Utc::now(),
-                updated_at: Utc::now(),
+                segment_type: SegmentType::Slide,
+                t0: None,
+                t1: None,
+                bbox: None,
+                content_hash: format!("{:x}", Sha256::digest(description.as_bytes())),
+                quality_score: 1.0,
+                stability_score: None,
+                blocks: vec![Block {
+                    id: Uuid::new_v4(),
+                    block_type: BlockType::Text,
+                    bbox: None,
+                    content: description,
+                    confidence: 1.0,
+                    metadata: HashMap::from([
+                        ("slide_index".to_string(), slide_index.to_string()),
+                        ("element_type".to_string(), shape_type),
+                        ("shape_index".to_string(), shape_index.to_string()),
+                    ]),
+                }],
             });
         }
 
