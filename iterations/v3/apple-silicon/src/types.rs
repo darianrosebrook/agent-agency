@@ -137,6 +137,8 @@ pub struct InferenceResult {
     pub resource_usage: ResourceUsage,
     pub quality_metrics: QualityMetrics,
     pub error: Option<String>,
+    /// Detailed timing information (optional for backward compatibility)
+    pub timing: Option<InferenceTiming>,
 }
 
 /// Quality metrics for inference

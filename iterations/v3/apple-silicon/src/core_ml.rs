@@ -2228,13 +2228,26 @@ fn execute_prediction_sync(model: *mut objc::runtime::Object, request: *mut objc
 
         let tokens_generated = request.max_tokens.unwrap_or(100);
 
+        // Get current resource usage
+        let resource_usage = self.get_current_resource_usage().await;
+
+        // Calculate tokens per second
+        let tokens_per_second = if timing.inference_time_ms > 0 {
+            (tokens_generated as f32 / timing.inference_time_ms as f32) * 1000.0
+        } else {
+            0.0
+        };
+
         Ok(InferenceResult {
-            id: request.id,
-            model_name: request.model_name,
+            request_id: request.id,
             output,
-            confidence: 0.0, // Will be updated by output processing
-            tokens_generated,
             inference_time_ms: timing.total_time_ms,
+            tokens_generated,
+            tokens_per_second,
+            optimization_target_used: request.optimization_target.clone(),
+            resource_usage,
+            quality_metrics: self.calculate_quality_metrics(&request, &resource_usage).await,
+            error: None,
             timing: Some(timing),
         })
     }
@@ -2840,6 +2853,7 @@ impl CoreMLManager {
                 .calculate_quality_metrics(&request, &resource_usage)
                 .await,
             error: None,
+            timing: None, // Basic timing info available in inference_time_ms
         };
 
         // Update performance metrics
