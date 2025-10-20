@@ -217,7 +217,7 @@ impl VerdictAggregator {
     pub async fn aggregate_verdicts(
         &self,
         contributions: Vec<JudgeContribution>,
-        review_context: &crate::council::ReviewContext,
+        review_context: &crate::judge::ReviewContext,
     ) -> CouncilResult<AggregationResult> {
         let start_time = std::time::Instant::now();
 
@@ -285,7 +285,7 @@ impl VerdictAggregator {
     async fn calculate_weights(
         &self,
         contributions: Vec<JudgeContribution>,
-        context: &crate::council::ReviewContext,
+        context: &crate::judge::ReviewContext,
     ) -> CouncilResult<Vec<WeightedContribution>> {
         let mut weighted_contributions = Vec::new();
 
@@ -317,7 +317,7 @@ impl VerdictAggregator {
     fn calculate_specialization_score(
         &self,
         contribution: &JudgeContribution,
-        context: &crate::council::ReviewContext,
+        context: &crate::judge::ReviewContext,
     ) -> f64 {
         // Calculate how well this judge's expertise matches the task
         let task_description = context.working_spec.description.to_lowercase();
@@ -552,8 +552,8 @@ impl VerdictAggregator {
             // Refine decision
             let aggregated_changes = self.aggregate_changes(contributions);
 
-            let changes = aggregated_changes.changes;
             let priority = self.calculate_highest_change_priority(&aggregated_changes);
+            let changes = aggregated_changes.changes;
             let estimated_effort = aggregated_changes.estimated_effort;
 
             Ok(CouncilDecision::Refine {

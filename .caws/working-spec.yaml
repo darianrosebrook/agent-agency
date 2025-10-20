@@ -1,70 +1,20 @@
-id: AGENT-0008
-title: "Complete budget enforcement at tool boundary with waiver requests"
-risk_tier: 2
-mode: feature
-change_budget:
-  max_files: 5
-  max_loc: 300
+id: LINT-001
+title: "Fix compilation errors across Rust crates"
+risk_tier: 3
+mode: fix
 blast_radius:
-  modules: ["file_ops", "orchestration", "audit_trail"]
+  modules: ["observability", "embedding-service", "research", "claim-extraction", "indexers", "provenance"]
   data_migration: false
-operational_rollback_slo: "2m"
+operational_rollback_slo: "5m"
 scope:
-  in:
-    - "iterations/v3/file_ops/src/lib.rs"  # Add waiver system and enhanced budget enforcement
-    - "iterations/v3/orchestration/src/lib.rs"  # Add waiver request generation
-    - "iterations/v3/orchestration/src/audited_orchestrator.rs"  # Integrate waiver requests with audit events
-  out:
-    - "iterations/v3/self-prompting-agent/"
-    - "iterations/v3/database/"
-    - "iterations/v3/interfaces/"
-    - "iterations/v3/council/"
+  in: ["iterations/v3/"]
+  out: []
 invariants:
-  - "Budget violations generate structured waiver requests with justification requirements"
-  - "Waiver requests are attached to audit events for traceability"
-  - "Tool boundary enforcement prevents unauthorized budget exceedances"
-  - "Waiver approval workflow integrates with existing audit trail"
-  - "Budget enforcement is enforced before any file operations"
+  - "All Rust crates compile without errors"
 acceptance:
   - id: "A1"
-    given: "Changeset exceeds budget limits"
-    when: "apply() is called"
-    then: "operation is blocked and waiver request is generated"
-  - id: "A2"
-    given: "Waiver request is approved"
-    when: "apply_with_waiver() is called"
-    then: "budget enforcement is bypassed with audit trail"
-  - id: "A3"
-    given: "Budget violation occurs"
-    when: "waiver request generation runs"
-    then: "request includes violation details, justification requirements, and risk assessment"
-  - id: "A4"
-    given: "Waiver request is attached to audit event"
-    when: "audit trail is reviewed"
-    then: "waiver decision and rationale are fully traceable"
-  - id: "A5"
-    given: "Tool boundary enforcement is active"
-    when: "unauthorized budget exceedance is attempted"
-    then: "operation fails with clear error message and waiver request instructions"
-contracts:
-  - type: "rust-api"
-    path: "iterations/v3/file_ops/src/lib.rs"
-    endpoints:
-      - "validate_changeset_with_waiver()"
-      - "generate_waiver_request()"
-      - "apply_with_waiver()"
-    schemas:
-      - name: "WaiverRequest"
-        fields: ["id: String", "budget_violations: Vec<BudgetViolation>", "justification_required: bool", "risk_assessment: RiskLevel", "auto_approved: bool"]
-      - name: "BudgetViolation"
-        fields: ["violation_type: ViolationType", "actual_value: usize", "budget_limit: usize", "severity: ViolationSeverity"]
+    given: "Multiple Rust crates with compilation errors"
+    when: "Run cargo check across all packages"
+    then: "Zero compilation errors reported"
 non_functional:
-  perf:
-    waiver_generation_ms: 10
-    budget_validation_ms: 5
-  security:
-    - "waiver-approval-required-for-risky-operations"
-    - "audit-trail-integrity-maintained"
-  reliability:
-    - "waiver-requests-are-traceable"
-    - "budget-enforcement-never-bypassed-without-authorization"
+  perf: { compile_time_ms: 30000 }

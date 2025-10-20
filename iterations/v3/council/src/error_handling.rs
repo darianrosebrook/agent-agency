@@ -93,6 +93,8 @@ impl AgencyError {
 
     /// Set correlation ID for tracing
     pub fn with_correlation_id(mut self, correlation_id: String) -> Self {
+        self.correlation_id = Some(correlation_id);
+        self
     }
 
     /// Add to error chain
@@ -141,6 +143,25 @@ pub enum ErrorCategory {
     Internal,
     /// Timeout errors
     Timeout,
+}
+
+impl std::fmt::Display for ErrorCategory {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let category_str = match self {
+            ErrorCategory::Network => "Network",
+            ErrorCategory::Authentication => "Authentication",
+            ErrorCategory::Validation => "Validation",
+            ErrorCategory::ExternalService => "ExternalService",
+            ErrorCategory::ResourceExhaustion => "ResourceExhaustion",
+            ErrorCategory::Configuration => "Configuration",
+            ErrorCategory::BusinessLogic => "BusinessLogic",
+            ErrorCategory::Security => "Security",
+            ErrorCategory::Performance => "Performance",
+            ErrorCategory::Internal => "Internal",
+            ErrorCategory::Timeout => "Timeout",
+        };
+        write!(f, "{}", category_str)
+    }
 }
 
 /// Error severity levels

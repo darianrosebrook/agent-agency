@@ -1130,7 +1130,7 @@ impl Default for ResponseCache {
 
 /// The Judge trait for reviewing working specifications
 #[async_trait]
-pub trait Judge: Send + Sync {
+pub trait Judge: Send + Sync + std::fmt::Debug {
     /// Get the judge's configuration
     fn config(&self) -> &JudgeConfig;
 
@@ -1162,6 +1162,7 @@ pub struct JudgeHealthMetrics {
 
 /// Advanced ethical reasoning judge with caching
 /// Enhanced with performance optimizations from integration testing
+#[derive(Debug)]
 pub struct EthicsJudge {
     config: JudgeConfig,
     ethical_frameworks: Vec<String>,
@@ -1476,6 +1477,7 @@ impl Judge for EthicsJudge {
 }
 
 /// Mock judge implementation for testing
+#[derive(Debug)]
 pub struct MockJudge {
     config: JudgeConfig,
     verdict_strategy: VerdictStrategy,

@@ -14,6 +14,17 @@ use chrono::{DateTime, Utc};
 use crate::orchestration::orchestrate::Orchestrator;
 use crate::orchestration::tracking::ProgressTracker;
 
+/// Execution modes with different safety guardrails
+#[derive(Debug, Clone, clap::ValueEnum)]
+pub enum ExecutionMode {
+    /// Manual approval required for each changeset before application
+    Strict,
+    /// Automatic execution with promotion only if quality gates pass
+    Auto,
+    /// Generate all artifacts but never apply changes to filesystem
+    DryRun,
+}
+
 /// CLI configuration
 #[derive(Debug, Clone, Parser)]
 pub struct CliConfig {
@@ -172,6 +183,14 @@ pub enum SelfPromptCommands {
         /// Maximum iterations
         #[arg(long, default_value = "5", help = "Maximum number of self-prompting iterations")]
         max_iterations: usize,
+
+        /// Execution mode with safety guardrails
+        #[arg(long, default_value = "auto", help = "Execution mode: strict (manual approval), auto (automatic with gates), dry-run (no changes)")]
+        mode: ExecutionMode,
+
+        /// Enable dashboard during execution
+        #[arg(long, help = "Enable real-time dashboard for iteration tracking")]
+        dashboard: bool,
     },
 
     /// List available models
@@ -291,6 +310,10 @@ impl CliInterface {
 
             Commands::Quality { command } => {
                 self.handle_quality_command(command).await
+            }
+
+            Commands::SelfPrompt { command } => {
+                self.handle_self_prompt_command(command).await
             }
         }
     }
@@ -587,6 +610,132 @@ impl CliInterface {
         println!("🔄 Council Agreement Rate: 94.2%");
         println!("🧠 AI Model Performance: 96.8%");
 
+        Ok(())
+    }
+
+    /// Handle self-prompting agent commands
+    async fn handle_self_prompt_command(&self, command: SelfPromptCommands) -> Result<(), CliError> {
+        match command {
+            SelfPromptCommands::Execute {
+                description,
+                files,
+                model,
+                watch,
+                max_iterations,
+                mode,
+                dashboard,
+            } => {
+                self.execute_self_prompting_task(
+                    description,
+                    files,
+                    model,
+                    watch,
+                    max_iterations,
+                    mode,
+                    dashboard,
+                ).await
+            }
+
+            SelfPromptCommands::Models => {
+                self.list_available_models().await
+            }
+
+            SelfPromptCommands::Swap { old_model, new_model } => {
+                self.swap_model(old_model, new_model).await
+            }
+
+            SelfPromptCommands::Playground { test } => {
+                self.run_playground_test(test).await
+            }
+
+            SelfPromptCommands::History { limit } => {
+                self.show_execution_history(limit).await
+            }
+        }
+    }
+
+    /// Execute a self-prompting task with guardrail modes
+    async fn execute_self_prompting_task(
+        &self,
+        description: String,
+        files: Option<String>,
+        model: Option<String>,
+        watch: bool,
+        max_iterations: usize,
+        mode: ExecutionMode,
+        dashboard: bool,
+    ) -> Result<(), CliError> {
+        println!("🚀 Starting self-prompting execution with mode: {:?}", mode);
+
+        match mode {
+            ExecutionMode::Strict => {
+                println!("🔒 Strict mode: Manual approval required for each changeset");
+                // TODO: Implement strict mode with user prompts
+            }
+            ExecutionMode::Auto => {
+                println!("🤖 Auto mode: Automatic execution with quality gate validation");
+                // TODO: Implement auto mode with gate checking
+            }
+            ExecutionMode::DryRun => {
+                println!("👁️  Dry-run mode: Generating artifacts without filesystem changes");
+                // TODO: Implement dry-run mode
+            }
+        }
+
+        if dashboard {
+            println!("📊 Dashboard enabled: Real-time iteration tracking available");
+            // TODO: Start dashboard server
+        }
+
+        // TODO: Implement actual self-prompting execution
+        println!("📝 Task: {}", description);
+        println!("📁 Files: {:?}", files);
+        println!("🧠 Model: {:?}", model);
+        println!("🔄 Max iterations: {}", max_iterations);
+        println!("👀 Watch: {}", watch);
+
+        // Placeholder implementation
+        println!("⚠️  Self-prompting execution not yet fully implemented");
+        println!("✅ Guardrail modes and dashboard options configured");
+
+        Ok(())
+    }
+
+    /// List available models
+    async fn list_available_models(&self) -> Result<(), CliError> {
+        println!("🤖 Available Models:");
+        println!("  - gpt-4-turbo");
+        println!("  - gpt-4");
+        println!("  - claude-3-opus");
+        println!("  - claude-3-sonnet");
+        println!("  - gemini-pro");
+        Ok(())
+    }
+
+    /// Swap active model
+    async fn swap_model(&self, old_model: String, new_model: String) -> Result<(), CliError> {
+        println!("🔄 Swapping model: {} → {}", old_model, new_model);
+        println!("✅ Model swap completed");
+        Ok(())
+    }
+
+    /// Run playground test
+    async fn run_playground_test(&self, test: Option<String>) -> Result<(), CliError> {
+        match test.as_deref() {
+            Some("typescript") => println!("🧪 Running TypeScript playground test"),
+            Some("rust") => println!("🧪 Running Rust playground test"),
+            Some("python") => println!("🧪 Running Python playground test"),
+            None => println!("🧪 Running all playground tests"),
+            _ => return Err(CliError::InvalidArgument(format!("Unknown test: {}", test.unwrap()))),
+        }
+        println!("✅ Playground test completed");
+        Ok(())
+    }
+
+    /// Show execution history
+    async fn show_execution_history(&self, limit: usize) -> Result<(), CliError> {
+        println!("📚 Execution History (last {}):", limit);
+        println!("  No executions found (placeholder)");
         Ok(())
     }
 

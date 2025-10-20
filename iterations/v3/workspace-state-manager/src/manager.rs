@@ -196,7 +196,7 @@ impl WorkspaceStateManager {
         let mut added_directories = Vec::new();
         let mut removed_directories = Vec::new();
 
-        for (path, _) in &to.directories {
+        for path in to.directories.keys() {
             if !from.directories.contains_key(path) {
                 added_directories.push(path.clone());
             }
@@ -622,10 +622,7 @@ impl WorkspaceStateManager {
         };
 
         // Get the previous commit for diff comparison
-        let previous_commit = match current_commit.parent(0) {
-            Ok(commit) => Some(commit),
-            Err(_) => None, // First commit, no previous commit to compare
-        };
+        let previous_commit = current_commit.parent(0).ok(); // First commit, no previous commit to compare
 
         // Analyze git diff to identify changes
         let changes = if let Some(prev_commit) = previous_commit {

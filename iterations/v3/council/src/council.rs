@@ -12,7 +12,8 @@ use crate::error::{CouncilError, CouncilResult};
 use crate::judge::{Judge, JudgeContribution, ReviewContext, PreviousReview, VerdictSummary};
 use crate::verdict_aggregation::{VerdictAggregator, AggregationResult};
 use crate::decision_making::{DecisionEngine, FinalDecision, DecisionContext, OrganizationalConstraints, ResourceConstraints, HistoricalDecision, EmergencyFlags, ConsensusStrategy, RiskThresholds, TaskPriority, ImpactLevel};
-use crate::error_handling::{AgencyError, CircuitBreaker, CircuitBreakerConfig, RecoveryOrchestrator, DegradationManager, DegradationPolicy, error_factory};
+use crate::error_handling::{AgencyError, CircuitBreaker, CircuitBreakerConfig, RecoveryOrchestrator, DegradationManager, DegradationPolicy, DegradationLevel, error_factory};
+use crate::risk_scorer::ComputationalComplexity;
 
 /// Configuration for the council
 #[derive(Debug, Clone)]
@@ -78,7 +79,7 @@ pub struct CouncilSession {
     selected_judges: Vec<Arc<dyn Judge>>,
     contributions: Vec<JudgeContribution>,
     aggregation_result: Option<AggregationResult>,
-    final_decision: Option<FinalDecision>,
+    pub final_decision: Option<FinalDecision>,
     start_time: chrono::DateTime<chrono::Utc>,
     end_time: Option<chrono::DateTime<chrono::Utc>>,
     status: SessionStatus,
@@ -398,12 +399,13 @@ impl Council {
                 let judge_timeout = self.config.judge_timeout_seconds;
                 let circuit_breakers = self.circuit_breakers.clone();
                 let recovery_orchestrator = self.recovery_orchestrator.clone();
+                let judge_for_first_attempt = judge.clone();
 
                 let handle = tokio::spawn(async move {
                     let result = timeout(
                         Duration::from_secs(judge_timeout),
                         Self::conduct_single_judge_review_with_error_handling(
-                            judge, &context, circuit_breakers, recovery_orchestrator
+                            judge_for_first_attempt, &context, circuit_breakers, recovery_orchestrator
                         )
                     ).await;
 
@@ -735,7 +737,7 @@ pub fn create_default_council() -> CouncilResult<Council> {
     };
 
     let judges = create_mock_judge_panel().into_iter()
-        .map(|judge| judge)
+        .map(|judge| Arc::from(judge) as Arc<dyn Judge>)
         .collect();
 
     let verdict_aggregator = Arc::new(create_verdict_aggregator());

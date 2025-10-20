@@ -15580,5 +15580,39 @@
     },
     "previous_hash": "03bfcb62ae8d8560a3a6f8b99c00d2ec25d7898d9b9e2239140ce17df5980c6f",
     "hash": "a6a41a803e23f394321e17d25411955c531ef675f83dcd0b5a01d9bd3586c255"
+  },
+  {
+    "id": "prov-1760932131359",
+    "timestamp": "2025-10-20T03:48:51.359Z",
+    "commit": {
+      "hash": "9cca803e54ecad3695322603e31fdafcbaaab0c3",
+      "message": "feat: complete budget enforcement at tool boundary with waiver system",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "AGENT-0008",
+      "title": "Complete budget enforcement at tool boundary with waiver requests",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": []
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-20T03:48:51.360Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "a6a41a803e23f394321e17d25411955c531ef675f83dcd0b5a01d9bd3586c255",
+    "hash": "49d5ab9b8862ad39eda3304f97a3415fc56740d4548476689e5a4dacef2d69e6"
   }
 ]

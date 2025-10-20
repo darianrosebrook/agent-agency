@@ -12,6 +12,17 @@ use crate::types::{Task, TaskResult, IterationContext, StopReason, Artifact, Art
 use observability::diff_observability::{DiffGenerator, FileChange};
 use observability::agent_telemetry::AgentTelemetryCollector;
 
+/// Execution modes with different safety guardrails
+#[derive(Debug, Clone)]
+pub enum ExecutionMode {
+    /// Manual approval required for each changeset before application
+    Strict,
+    /// Automatic execution with promotion only if quality gates pass
+    Auto,
+    /// Generate all artifacts but never apply changes to filesystem
+    DryRun,
+}
+
 /// Result of self-prompting execution
 #[derive(Debug, Clone)]
 pub struct SelfPromptingResult {
@@ -30,6 +41,7 @@ pub struct SelfPromptingLoop {
     diff_generator: DiffGenerator, // For generating diff artifacts
     prompting_strategy: Box<dyn PromptingStrategy>,
     max_iterations: usize,
+    execution_mode: ExecutionMode,
     event_sender: Option<mpsc::UnboundedSender<SelfPromptingEvent>>,
 }
 
@@ -44,8 +56,34 @@ impl SelfPromptingLoop {
             diff_generator: DiffGenerator::new(telemetry),
             prompting_strategy: Box::new(AdaptivePromptingStrategy::new()),
             max_iterations: 5,
+            execution_mode: ExecutionMode::Auto, // Default to auto mode
             event_sender: None,
         }
+    }
+
+    /// Create a new self-prompting loop controller with specific configuration
+    pub fn with_config(
+        model_registry: Arc<ModelRegistry>,
+        evaluator: Arc<EvaluationOrchestrator>,
+        execution_mode: ExecutionMode,
+        max_iterations: usize,
+    ) -> Self {
+        let telemetry = AgentTelemetryCollector::new("self-prompting-loop".to_string());
+        Self {
+            model_registry,
+            evaluator,
+            satisficing_evaluator: std::cell::RefCell::new(SatisficingEvaluator::new()),
+            diff_generator: DiffGenerator::new(telemetry),
+            prompting_strategy: Box::new(AdaptivePromptingStrategy::new()),
+            max_iterations,
+            execution_mode,
+            event_sender: None,
+        }
+    }
+
+    /// Set the execution mode
+    pub fn set_execution_mode(&mut self, mode: ExecutionMode) {
+        self.execution_mode = mode;
     }
 
     /// Create with custom configuration

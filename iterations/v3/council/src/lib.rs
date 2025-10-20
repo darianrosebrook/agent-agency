@@ -24,7 +24,8 @@ pub use judge::{
     // Ethics judge
     EthicsJudge,
 };
-pub use council::{Council, CouncilConfig, CouncilSession, ReviewContext};
+pub use council::{Council, CouncilConfig, CouncilSession};
+pub use judge::ReviewContext;
 pub use decision_making::{DecisionEngine, ConsensusStrategy};
 pub use verdict_aggregation::{VerdictAggregator, AggregationResult};
 pub use workflow::{CouncilWorkflow, WorkflowState};

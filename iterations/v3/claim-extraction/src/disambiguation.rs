@@ -102,8 +102,10 @@ impl DisambiguationStage {
 
         // Enhanced pronoun and reference detection (ported from V2)
         let pronoun_patterns = vec![
-            Regex::new(r"\b(he|she|it|they|we|us|them|him|her)\b").unwrap(),
-            Regex::new(r"\b(this|that|these|those)\b").unwrap(),
+            Regex::new(r"\b(he|she|it|they|we|us|them|him|her)\b")
+                .map_err(|e| format!("Failed to compile pronoun regex: {}", e))?,
+            Regex::new(r"\b(this|that|these|those)\b")
+                .map_err(|e| format!("Failed to compile demonstrative pronoun regex: {}", e))?,
         ];
 
         let mut referential_ambiguities = Vec::new();

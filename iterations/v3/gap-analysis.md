@@ -11,7 +11,7 @@ Based on the comprehensive expert review, here's a structured plan to implement 
 **Risk Level**: T2 (standard features, not critical infrastructure)  
 **Success Criteria**: All acceptance checks pass, autonomous loop becomes reliable for real dev workflows
 
-**Progress Status**: ✅ **7/9 features implemented** (Weeks 1-7 complete, 2 remaining)
+**Progress Status**: ✅ **8/9 features implemented** (Weeks 1-8 complete, 1 remaining)
 - ✅ File Ops Tool Implementation
 - ✅ Workspace Strategy Abstraction
 - ✅ Tool-Call Envelope for Prompting
@@ -19,7 +19,7 @@ Based on the comprehensive expert review, here's a structured plan to implement 
 - ✅ Frontier Queue for Task Generation
 - ✅ Evaluation Flakiness Hardening
 - ✅ Diffs as First-Class Artifacts
-- 🔄 Budget Enforcement at Tool Boundary (in progress)
+- ✅ Budget Enforcement at Tool Boundary
 - ⏳ Model Selection Bandits (pending)
 - ⏳ CLI Guardrails & Dashboard (pending)
 
@@ -88,19 +88,19 @@ Based on the comprehensive expert review, here's a structured plan to implement 
 **Risk**: Low - Internal logic change, external API unchanged
 **Testing**: ✅ Unit tests for hysteresis logic, integration tests for loop termination
 
-### 2.3 **Budget Enforcement at Tool Boundary** 🔄 **IN PROGRESS**
+### 2.3 **Budget Enforcement at Tool Boundary** ✅ **IMPLEMENTED**
 **Priority**: High - Prevents scope violations
 
-**Current Status**: Budget enforcement is partially implemented in file_ops crate, but waiver request generation and tool boundary blocking need completion.
-
-**Remaining Tasks**:
-- Move budget enforcement from model to tool boundary
-- `apply_patch()` blocks when budgets exceeded
-- Auto-generates waiver requests attached to audit events
-- Clear error messages with budget status
+**✅ Implementation Complete**:
+- Enhanced budget enforcement with waiver request system in `file_ops` crate
+- `validate_changeset_with_waiver()` generates structured waiver requests for violations
+- Auto-approval for low-risk violations, manual approval required for high-risk
+- Waiver requests include violation details, risk assessment, and justification requirements
+- Integrated waiver processing into `AuditedOrchestrator` with audit trail logging
+- Comprehensive test coverage for violation analysis, waiver generation, and application
 
 **Risk**: Low - Stricter validation, existing valid operations continue
-**Testing**: Budget violation tests, waiver request generation
+**Testing**: ✅ Budget violation tests, waiver request generation, approval workflow
 
 ---
 
@@ -199,10 +199,11 @@ Based on the comprehensive expert review, here's a structured plan to implement 
 4. ⏳ **Provider swap resilience**: Mid-loop swaps don't degrade success rate *(PENDING - depends on Model Selection Bandits)*
 5. ✅ **Frontier bounded**: Spawned tasks stay within limits, dedupe prevents growth *(IMPLEMENTED)*
 
-**Implementation Status**: **3/5 acceptance checks implemented**
+**Implementation Status**: **4/5 acceptance checks implemented**
 - ✅ File operations are now deterministic with content hashing and clean rollbacks
 - ✅ Hysteresis prevents continue/stop oscillation with sliding window analysis
 - ✅ Frontier queue enforces rate limits, deduplication, and scope boundaries
+- ✅ Budget violations generate structured waiver requests with risk assessment
 - ⏳ Strict/auto modes require CLI guardrails implementation
 - ⏳ Provider swap resilience requires model selection bandits
 
@@ -227,7 +228,7 @@ Based on the comprehensive expert review, here's a structured plan to implement 
 - ✅ **Loop reliability**: Hysteresis prevents infinite loops and context drift *(ACHIEVED)*
 - ✅ **Debuggability**: Clear iteration traces with diff artifacts and decision rationale *(ACHIEVED)*
 
-**Overall Progress**: **85% feature complete** - Core autonomous agent capabilities are now production-ready
+**Overall Progress**: **89% feature complete** - Core autonomous agent capabilities are now production-ready with comprehensive safety controls
 
 ---
 
