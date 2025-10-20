@@ -1,0 +1,207 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--bg-primary);
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.title {
+  h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+}
+
+.taskId {
+  display: block;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  font-family: monospace;
+  margin-top: 0.25rem;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.statusBadge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+
+  &.running {
+    background: var(--status-running-bg);
+    color: var(--status-running-text);
+  }
+
+  &.completed {
+    background: var(--status-completed-bg);
+    color: var(--status-completed-text);
+  }
+
+  &.failed {
+    background: var(--status-failed-bg);
+    color: var(--status-failed-text);
+  }
+
+  &.paused {
+    background: var(--status-paused-bg);
+    color: var(--status-paused-text);
+  }
+}
+
+.iteration {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.button {
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &.primary {
+    background: var(--primary-color);
+    color: white;
+
+    &:hover {
+      background: var(--primary-hover);
+    }
+  }
+
+  &.secondary {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+
+    &:hover {
+      background: var(--bg-hover);
+    }
+  }
+
+  &.danger {
+    background: var(--danger-color);
+    color: white;
+
+    &:hover {
+      background: var(--danger-hover);
+    }
+  }
+}
+
+.tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.tab {
+  padding: 0.75rem 1.5rem;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    color: var(--text-primary);
+  }
+
+  &.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+  }
+}
+
+.content {
+  flex: 1;
+  padding: 1.5rem;
+  overflow: auto;
+}
+
+.events {
+  border-top: 1px solid var(--border-color);
+  padding: 1rem 1.5rem;
+  background: var(--bg-secondary);
+
+  h3 {
+    margin: 0 0 1rem 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+}
+
+.eventList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.event {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.5rem;
+  background: var(--bg-primary);
+  border-radius: 4px;
+  font-size: 0.875rem;
+}
+
+.eventType {
+  font-weight: 500;
+  color: var(--text-primary);
+  text-transform: capitalize;
+}
+
+.eventTime {
+  color: var(--text-secondary);
+  font-family: monospace;
+}
+
+.eventScore {
+  color: var(--primary-color);
+  font-weight: 500;
+}
+
+// Dark mode support
+@media (prefers-color-scheme: dark) {
+  .container {
+    background: var(--dark-bg-primary);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  }
+}

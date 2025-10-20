@@ -324,7 +324,11 @@ export interface SatisficingMetrics {
 
 // Self-Prompting Event Types
 export interface SelfPromptingIterationEvent {
-  type: "iteration_started" | "evaluation_completed" | "model_swapped" | "loop_completed";
+  type:
+    | "iteration_started"
+    | "evaluation_completed"
+    | "model_swapped"
+    | "loop_completed";
   task_id: string;
   iteration: number;
   data: SelfPromptingIterationData;
