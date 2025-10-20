@@ -137,6 +137,7 @@ export default function TableViewer({
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const renderCellValue = (value: any, _columnType: string) => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     // eslint-disable-line @typescript-eslint/no-explicit-any
     // TODO: Use _columnType for data type-specific rendering
     // Currently all data is treated as generic, but this could be enhanced

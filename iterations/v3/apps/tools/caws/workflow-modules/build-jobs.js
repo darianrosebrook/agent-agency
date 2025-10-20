@@ -13,14 +13,14 @@
  */
 function createBuildJob(options = {}) {
   const {
-    runner = 'ubuntu-latest',
-    language = 'javascript',
+    runner = "ubuntu-latest",
+    language = "javascript",
     enableTierConditionals = true,
   } = options;
 
   const job = {
-    'runs-on': runner,
-    needs: ['setup', 'lint'],
+    "runs-on": runner,
+    needs: ["setup", "lint"],
   };
 
   // Build runs for all tiers except when tier 3 and no critical changes
@@ -30,27 +30,27 @@ function createBuildJob(options = {}) {
 
   job.steps = [
     {
-      name: 'Checkout code',
-      uses: 'actions/checkout@v4',
+      name: "Checkout code",
+      uses: "actions/checkout@v4",
     },
     {
-      name: 'Setup Node.js',
-      uses: 'actions/setup-node@v4',
-      with: { 'node-version': '18', cache: 'npm' },
+      name: "Setup Node.js",
+      uses: "actions/setup-node@v4",
+      with: { "node-version": "18", cache: "npm" },
     },
     {
-      name: 'Install dependencies',
-      run: 'npm ci',
+      name: "Install dependencies",
+      run: "npm ci",
     },
     {
-      name: 'Build application',
+      name: "Build application",
       run: getBuildCommand(language, options),
     },
     {
-      name: 'Upload build artifacts',
-      uses: 'actions/upload-artifact@v4',
+      name: "Upload build artifacts",
+      uses: "actions/upload-artifact@v4",
       with: {
-        name: 'build-artifacts',
+        name: "build-artifacts",
         path: getBuildArtifactsPath(language),
       },
     },
@@ -66,14 +66,14 @@ function createBuildJob(options = {}) {
  */
 function createDeployJob(options = {}) {
   const {
-    runner = 'ubuntu-latest',
-    environment = 'staging',
+    runner = "ubuntu-latest",
+    environment = "staging",
     enableTierConditionals = true,
   } = options;
 
   const job = {
-    'runs-on': runner,
-    needs: ['setup', 'lint', 'test', 'build'],
+    "runs-on": runner,
+    needs: ["setup", "lint", "test", "build"],
     environment: environment,
   };
 
@@ -82,19 +82,19 @@ function createDeployJob(options = {}) {
 
   job.steps = [
     {
-      name: 'Checkout code',
-      uses: 'actions/checkout@v4',
+      name: "Checkout code",
+      uses: "actions/checkout@v4",
     },
     {
-      name: 'Download build artifacts',
-      uses: 'actions/download-artifact@v4',
+      name: "Download build artifacts",
+      uses: "actions/download-artifact@v4",
       with: {
-        name: 'build-artifacts',
-        path: './dist',
+        name: "build-artifacts",
+        path: "./dist",
       },
     },
     {
-      name: 'Deploy to staging',
+      name: "Deploy to staging",
       run: `
         echo "Deploying to ${environment} environment..."
         # Deployment logic would go here
@@ -103,12 +103,12 @@ function createDeployJob(options = {}) {
       `,
       env: {
         DEPLOY_ENV: environment,
-        API_KEY: '${{ secrets.DEPLOY_API_KEY }}',
+        API_KEY: "${{ secrets.DEPLOY_API_KEY }}",
       },
     },
     {
-      name: 'Run smoke tests',
-      run: 'npm run test:smoke',
+      name: "Run smoke tests",
+      run: "npm run test:smoke",
       env: {
         TEST_ENV: environment,
       },
@@ -124,11 +124,11 @@ function createDeployJob(options = {}) {
  * @returns {Object} Docker build job configuration
  */
 function createDockerJob(options = {}) {
-  const { runner = 'ubuntu-latest', enableTierConditionals = true } = options;
+  const { runner = "ubuntu-latest", enableTierConditionals = true } = options;
 
   const job = {
-    'runs-on': runner,
-    needs: ['setup', 'lint'],
+    "runs-on": runner,
+    needs: ["setup", "lint"],
   };
 
   // Docker builds for higher tiers
@@ -138,34 +138,34 @@ function createDockerJob(options = {}) {
 
   job.steps = [
     {
-      name: 'Checkout code',
-      uses: 'actions/checkout@v4',
+      name: "Checkout code",
+      uses: "actions/checkout@v4",
     },
     {
-      name: 'Set up Docker Buildx',
-      uses: 'docker/setup-buildx-action@v3',
+      name: "Set up Docker Buildx",
+      uses: "docker/setup-buildx-action@v3",
     },
     {
-      name: 'Log in to container registry',
-      uses: 'docker/login-action@v3',
+      name: "Log in to container registry",
+      uses: "docker/login-action@v3",
       with: {
-        registry: '${{ secrets.CONTAINER_REGISTRY }}',
-        username: '${{ secrets.CONTAINER_USERNAME }}',
-        password: '${{ secrets.CONTAINER_PASSWORD }}',
+        registry: "${{ secrets.CONTAINER_REGISTRY }}",
+        username: "${{ secrets.CONTAINER_USERNAME }}",
+        password: "${{ secrets.CONTAINER_PASSWORD }}",
       },
     },
     {
-      name: 'Build and push Docker image',
-      uses: 'docker/build-push-action@v5',
+      name: "Build and push Docker image",
+      uses: "docker/build-push-action@v5",
       with: {
-        context: '.',
+        context: ".",
         push: true,
         tags: [
-          '${{ secrets.CONTAINER_REGISTRY }}/app:${{ github.sha }}',
-          '${{ secrets.CONTAINER_REGISTRY }}/app:latest',
-        ].join('\n'),
-        cache_from: 'type=gha',
-        cache_to: 'type=gha,mode=max',
+          "${{ secrets.CONTAINER_REGISTRY }}/app:${{ github.sha }}",
+          "${{ secrets.CONTAINER_REGISTRY }}/app:latest",
+        ].join("\n"),
+        cache_from: "type=gha",
+        cache_to: "type=gha,mode=max",
       },
     },
   ];
@@ -183,15 +183,15 @@ function getBuildCommand(language, options = {}) {
   const { optimize = true } = options;
 
   switch (language) {
-    case 'javascript':
-    case 'typescript':
-      return optimize ? 'npm run build:production' : 'npm run build';
-    case 'rust':
-      return optimize ? 'cargo build --release' : 'cargo build';
-    case 'python':
-      return optimize ? 'python -m build --wheel' : 'python setup.py build';
+    case "javascript":
+    case "typescript":
+      return optimize ? "npm run build:production" : "npm run build";
+    case "rust":
+      return optimize ? "cargo build --release" : "cargo build";
+    case "python":
+      return optimize ? "python -m build --wheel" : "python setup.py build";
     default:
-      return 'npm run build';
+      return "npm run build";
   }
 }
 
@@ -202,15 +202,15 @@ function getBuildCommand(language, options = {}) {
  */
 function getBuildArtifactsPath(language) {
   switch (language) {
-    case 'javascript':
-    case 'typescript':
-      return 'dist/';
-    case 'rust':
-      return 'target/release/';
-    case 'python':
-      return 'dist/';
+    case "javascript":
+    case "typescript":
+      return "dist/";
+    case "rust":
+      return "target/release/";
+    case "python":
+      return "dist/";
     default:
-      return 'dist/';
+      return "dist/";
   }
 }
 

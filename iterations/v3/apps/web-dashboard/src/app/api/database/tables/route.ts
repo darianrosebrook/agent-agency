@@ -6,7 +6,8 @@ import { NextRequest, NextResponse } from "next/server";
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const v3BackendHost = process.env.V3_BACKEND_HOST ?? "http://localhost:8080";
+    const v3BackendHost =
+      process.env.V3_BACKEND_HOST ?? "http://localhost:8080";
 
     const connectionId = searchParams.get("connection_id");
     const schema = searchParams.get("schema");
@@ -14,7 +15,10 @@ export async function GET(request: NextRequest) {
 
     if (!connectionId) {
       return NextResponse.json(
-        { error: "validation_error", message: "connection_id parameter is required" },
+        {
+          error: "validation_error",
+          message: "connection_id parameter is required",
+        },
         { status: 400 }
       );
     }
@@ -53,13 +57,12 @@ export async function GET(request: NextRequest) {
     const backendResponse = await response.json();
 
     return NextResponse.json({
-      tables: backendResponse.tables || [],
+      tables: backendResponse.tables ?? [],
       connection_id: connectionId,
-      schema: schema || null,
+      schema: schema ?? null,
       table_pattern: tablePattern || null,
       timestamp: new Date().toISOString(),
     });
-
   } catch (error) {
     console.error("Database tables proxy error:", error);
 

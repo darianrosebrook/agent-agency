@@ -71,8 +71,8 @@ class AnalyticsApiClient {
           success_rate: 0,
         },
         insights: response.insights || [],
-        recommendations: response.recommendations || [],
-        time_range: filters?.time_range || {
+        recommendations: response.recommendations ?? [],
+        time_range: filters?.time_range ?? {
           start: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
           end: new Date().toISOString(),
         },
@@ -115,7 +115,7 @@ class AnalyticsApiClient {
       return {
         anomalies: response.anomalies || [],
         total: response.anomalies?.length || 0,
-        time_range: filters?.time_range || {
+        time_range: filters?.time_range ?? {
           start: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
           end: new Date().toISOString(),
         },

@@ -13,14 +13,14 @@
  */
 function createLintJob(options = {}) {
   const {
-    runner = 'ubuntu-latest',
+    runner = "ubuntu-latest",
     enableTierConditionals = true,
     enableSelectiveLinting = true,
   } = options;
 
   const job = {
-    'runs-on': runner,
-    needs: 'setup',
+    "runs-on": runner,
+    needs: "setup",
   };
 
   // Add conditional execution for tier-based optimization
@@ -30,20 +30,20 @@ function createLintJob(options = {}) {
 
   job.steps = [
     {
-      name: 'Checkout code',
-      uses: 'actions/checkout@v4',
+      name: "Checkout code",
+      uses: "actions/checkout@v4",
     },
     {
-      name: 'Setup Node.js',
-      uses: 'actions/setup-node@v4',
-      with: { 'node-version': '18', cache: 'npm' },
+      name: "Setup Node.js",
+      uses: "actions/setup-node@v4",
+      with: { "node-version": "18", cache: "npm" },
     },
     {
-      name: 'Install dependencies',
-      run: 'npm ci',
+      name: "Install dependencies",
+      run: "npm ci",
     },
     {
-      name: 'Run linting',
+      name: "Run linting",
       run: enableSelectiveLinting
         ? `
           # Selective linting based on changed files
@@ -55,7 +55,7 @@ function createLintJob(options = {}) {
             npm run lint
           fi
         `
-        : 'npm run lint',
+        : "npm run lint",
     },
   ];
 
@@ -69,15 +69,15 @@ function createLintJob(options = {}) {
  */
 function createTestJob(options = {}) {
   const {
-    runner = 'ubuntu-latest',
-    language = 'javascript',
+    runner = "ubuntu-latest",
+    language = "javascript",
     enableTierConditionals = true,
     enableSelectiveTests = true,
   } = options;
 
   const job = {
-    'runs-on': runner,
-    needs: 'setup',
+    "runs-on": runner,
+    needs: "setup",
     services: {},
   };
 
@@ -87,47 +87,49 @@ function createTestJob(options = {}) {
   }
 
   // Add database services if needed
-  if (language === 'javascript' || language === 'typescript') {
+  if (language === "javascript" || language === "typescript") {
     job.services = {
       postgres: {
-        image: 'postgres:15',
+        image: "postgres:15",
         env: {
-          POSTGRES_PASSWORD: 'postgres',
-          POSTGRES_DB: 'test_db',
+          POSTGRES_PASSWORD: "postgres",
+          POSTGRES_DB: "test_db",
         },
-        options: '--health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5',
+        options:
+          "--health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5",
       },
       redis: {
-        image: 'redis:7-alpine',
-        options: '--health-cmd "redis-cli ping" --health-interval 10s --health-timeout 5s --health-retries 5',
+        image: "redis:7-alpine",
+        options:
+          '--health-cmd "redis-cli ping" --health-interval 10s --health-timeout 5s --health-retries 5',
       },
     };
   }
 
   job.steps = [
     {
-      name: 'Checkout code',
-      uses: 'actions/checkout@v4',
+      name: "Checkout code",
+      uses: "actions/checkout@v4",
     },
     {
-      name: 'Setup Node.js',
-      uses: 'actions/setup-node@v4',
-      with: { 'node-version': '18', cache: 'npm' },
+      name: "Setup Node.js",
+      uses: "actions/setup-node@v4",
+      with: { "node-version": "18", cache: "npm" },
     },
     {
-      name: 'Install dependencies',
-      run: 'npm ci',
+      name: "Install dependencies",
+      run: "npm ci",
     },
     {
-      name: 'Wait for services',
-      run: 'sleep 10',
+      name: "Wait for services",
+      run: "sleep 10",
     },
     {
-      name: 'Run tests',
+      name: "Run tests",
       run: getTestCommand(language, options),
       env: {
-        DATABASE_URL: 'postgresql://postgres:postgres@localhost:5432/test_db',
-        REDIS_URL: 'redis://localhost:6379',
+        DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/test_db",
+        REDIS_URL: "redis://localhost:6379",
       },
     },
   ];
@@ -148,17 +150,17 @@ function getTestCommand(language, options = {}) {
   if (enableSelectiveTests) {
     switch (tier) {
       case 1: // Critical tier - full test suite
-        return 'npm run test:full';
+        return "npm run test:full";
       case 2: // Standard tier - comprehensive but optimized
-        return 'npm run test:ci';
+        return "npm run test:ci";
       case 3: // Low risk - minimal tests
-        return 'npm run test:smoke';
+        return "npm run test:smoke";
       default:
-        return 'npm test';
+        return "npm test";
     }
   }
 
-  return 'npm test';
+  return "npm test";
 }
 
 /**
@@ -167,11 +169,11 @@ function getTestCommand(language, options = {}) {
  * @returns {Object} Security scan job configuration
  */
 function createSecurityJob(options = {}) {
-  const { runner = 'ubuntu-latest', enableTierConditionals = true } = options;
+  const { runner = "ubuntu-latest", enableTierConditionals = true } = options;
 
   const job = {
-    'runs-on': runner,
-    needs: 'setup',
+    "runs-on": runner,
+    needs: "setup",
   };
 
   // Security scans always run for Tier 1 and experimental
@@ -181,15 +183,15 @@ function createSecurityJob(options = {}) {
 
   job.steps = [
     {
-      name: 'Checkout code',
-      uses: 'actions/checkout@v4',
+      name: "Checkout code",
+      uses: "actions/checkout@v4",
     },
     {
-      name: 'Run security scan',
-      uses: 'github/super-linter/slim@v5',
+      name: "Run security scan",
+      uses: "github/super-linter/slim@v5",
       env: {
-        DEFAULT_BRANCH: 'main',
-        GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN }}',
+        DEFAULT_BRANCH: "main",
+        GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}",
         VALIDATE_ALL_CODEBASE: false,
         VALIDATE_JAVASCRIPT_ES: true,
         VALIDATE_TYPESCRIPT_ES: true,

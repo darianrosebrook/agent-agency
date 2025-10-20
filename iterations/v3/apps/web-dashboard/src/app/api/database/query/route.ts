@@ -5,7 +5,8 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(request: NextRequest) {
   try {
-    const v3BackendHost = process.env.V3_BACKEND_HOST ?? "http://localhost:8080";
+    const v3BackendHost =
+      process.env.V3_BACKEND_HOST ?? "http://localhost:8080";
     const body = await request.json();
 
     const { connection_id, sql_query, parameters, limit, timeout } = body;
@@ -20,7 +21,10 @@ export async function POST(request: NextRequest) {
 
     if (!sql_query || typeof sql_query !== "string") {
       return NextResponse.json(
-        { error: "validation_error", message: "Valid sql_query string is required" },
+        {
+          error: "validation_error",
+          message: "Valid sql_query string is required",
+        },
         { status: 400 }
       );
     }
@@ -32,9 +36,16 @@ export async function POST(request: NextRequest) {
     const enforcedTimeout = Math.min(timeout || 10000, maxTimeout);
 
     // Basic SQL injection protection (additional validation would be done in V3 backend)
-    const dangerousKeywords = ["DROP", "DELETE", "UPDATE", "INSERT", "ALTER", "CREATE"];
+    const dangerousKeywords = [
+      "DROP",
+      "DELETE",
+      "UPDATE",
+      "INSERT",
+      "ALTER",
+      "CREATE",
+    ];
     const upperQuery = sql_query.toUpperCase();
-    const hasDangerousKeywords = dangerousKeywords.some(keyword =>
+    const hasDangerousKeywords = dangerousKeywords.some((keyword) =>
       upperQuery.includes(keyword)
     );
 
@@ -43,7 +54,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error: "security_error",
-          message: "Query contains potentially dangerous keywords. Only SELECT queries are allowed.",
+          message:
+            "Query contains potentially dangerous keywords. Only SELECT queries are allowed.",
         },
         { status: 403 }
       );
@@ -51,7 +63,9 @@ export async function POST(request: NextRequest) {
 
     const queryUrl = `${v3BackendHost}/api/v1/database/query`;
 
-    console.log(`Proxying database query for connection ${connection_id} to: ${queryUrl}`);
+    console.log(
+      `Proxying database query for connection ${connection_id} to: ${queryUrl}`
+    );
 
     const response = await fetch(queryUrl, {
       method: "POST",
@@ -92,7 +106,6 @@ export async function POST(request: NextRequest) {
       applied_timeout: enforcedTimeout,
       timestamp: new Date().toISOString(),
     });
-
   } catch (error) {
     console.error("Database query proxy error:", error);
 

@@ -12,13 +12,13 @@
  * @returns {Object} Base workflow object
  */
 function createBaseWorkflow(options = {}) {
-  const { name = 'CAWS Optimized CI/CD' } = options;
+  const { name = "CAWS Optimized CI/CD" } = options;
 
   return {
     name,
     on: {
-      push: { branches: ['main', 'develop'] },
-      pull_request: { branches: ['main', 'develop'] },
+      push: { branches: ["main", "develop"] },
+      pull_request: { branches: ["main", "develop"] },
     },
     jobs: {},
   };
@@ -30,7 +30,7 @@ function createBaseWorkflow(options = {}) {
  * @returns {Object} Trigger configuration
  */
 function getWorkflowTriggers(options = {}) {
-  const { branches = ['main', 'develop'] } = options;
+  const { branches = ["main", "develop"] } = options;
 
   return {
     push: { branches },
@@ -45,31 +45,31 @@ function getWorkflowTriggers(options = {}) {
  */
 function createSetupJob(options = {}) {
   const {
-    runner = 'ubuntu-latest',
-    nodeVersion = '18',
+    runner = "ubuntu-latest",
+    nodeVersion = "18",
     enableRiskDetection = true,
   } = options;
 
   const job = {
-    'runs-on': runner,
+    "runs-on": runner,
     outputs: {
-      risk_tier: '${{ steps.detect.outputs.tier }}',
-      changed_files: '${{ steps.detect.outputs.files }}',
-      is_experimental: '${{ steps.detect.outputs.experimental }}',
+      risk_tier: "${{ steps.detect.outputs.tier }}",
+      changed_files: "${{ steps.detect.outputs.files }}",
+      is_experimental: "${{ steps.detect.outputs.experimental }}",
     },
     steps: [
       {
-        name: 'Checkout code',
-        uses: 'actions/checkout@v4',
-        with: { 'fetch-depth': 2 },
+        name: "Checkout code",
+        uses: "actions/checkout@v4",
+        with: { "fetch-depth": 2 },
       },
     ],
   };
 
   if (enableRiskDetection) {
     job.steps.push({
-      id: 'detect',
-      name: 'Detect CAWS configuration',
+      id: "detect",
+      name: "Detect CAWS configuration",
       run: `
         # Detect risk tier from working spec
         if [ -f .caws/working-spec.yaml ]; then
@@ -101,11 +101,11 @@ function createSetupJob(options = {}) {
   // Setup Node.js if needed
   if (nodeVersion) {
     job.steps.push({
-      name: 'Setup Node.js',
-      uses: 'actions/setup-node@v4',
+      name: "Setup Node.js",
+      uses: "actions/setup-node@v4",
       with: {
-        'node-version': nodeVersion,
-        cache: 'npm',
+        "node-version": nodeVersion,
+        cache: "npm",
       },
     });
   }

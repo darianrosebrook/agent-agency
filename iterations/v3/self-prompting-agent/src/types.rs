@@ -72,6 +72,7 @@ pub enum ArtifactType {
     Test,
     Documentation,
     Configuration,
+    Diff,  // First-class diff artifacts for observability
 }
 
 /// Model response from a provider

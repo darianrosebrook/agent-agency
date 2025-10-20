@@ -165,7 +165,7 @@ export default function Dashboard() {
       // Set error if backend is unhealthy
       if (healthResponse.backend.status !== "healthy") {
         const backendError =
-          healthResponse.backend.error ||
+          healthResponse.backend.error ??
           `Backend status: ${healthResponse.backend.status}`;
         setError(`V3 Backend: ${backendError}`);
       }

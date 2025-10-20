@@ -11,7 +11,7 @@ const {
   createBaseWorkflow,
   getWorkflowTriggers,
   createSetupJob,
-} = require('./workflow-base');
+} = require("./workflow-base");
 
 // Quality assurance jobs
 const {
@@ -19,7 +19,7 @@ const {
   createTestJob,
   createSecurityJob,
   getTestCommand,
-} = require('./quality-jobs');
+} = require("./quality-jobs");
 
 // Build and deployment jobs
 const {
@@ -28,7 +28,7 @@ const {
   createDockerJob,
   getBuildCommand,
   getBuildArtifactsPath,
-} = require('./build-jobs');
+} = require("./build-jobs");
 
 module.exports = {
   // Base workflow

@@ -40,7 +40,7 @@ export const ModelPerformanceChart: React.FC<ModelPerformanceChartProps> = ({
         <select
           className={styles.timeRange}
           value={timeRange}
-          onChange={(_e) => {
+          onChange={() => {
             // TODO: Implement time range filtering
           }}
         >

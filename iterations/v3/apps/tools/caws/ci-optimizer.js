@@ -6,9 +6,9 @@
  * @author @darianrosebrook
  */
 
-const fs = require('fs');
-const path = require('path');
-const yaml = require('js-yaml');
+const fs = require("fs");
+const path = require("path");
+const yaml = require("js-yaml");
 
 // Import workflow modules
 const {
@@ -20,26 +20,26 @@ const {
   createBuildJob,
   createDeployJob,
   createDockerJob,
-} = require('./workflow-modules');
+} = require("./workflow-modules");
 
 /**
  * CI optimization strategies
  */
 const OPTIMIZATION_STRATEGIES = {
   TIER_BASED_CONDITIONAL: {
-    name: 'Tier-based Conditional Runs',
-    description: 'Skip expensive checks for low-risk changes',
-    impact: 'high',
+    name: "Tier-based Conditional Runs",
+    description: "Skip expensive checks for low-risk changes",
+    impact: "high",
   },
   SELECTIVE_TESTING: {
-    name: 'Selective Test Execution',
-    description: 'Run only relevant tests based on changes',
-    impact: 'medium',
+    name: "Selective Test Execution",
+    description: "Run only relevant tests based on changes",
+    impact: "medium",
   },
   TWO_PHASE_VALIDATION: {
-    name: 'Two-Phase Validation',
-    description: 'Fast feedback first, comprehensive checks second',
-    impact: 'high',
+    name: "Two-Phase Validation",
+    description: "Fast feedback first, comprehensive checks second",
+    impact: "high",
   },
 };
 
@@ -50,7 +50,7 @@ const OPTIMIZATION_STRATEGIES = {
  */
 function generateOptimizedWorkflow(options = {}) {
   const {
-    language = 'javascript',
+    language = "javascript",
     tier = 2,
     enableTwoPhase = true,
     enableSelectiveTests = true,
@@ -60,11 +60,11 @@ function generateOptimizedWorkflow(options = {}) {
   } = options;
 
   // Create base workflow structure
-  const workflow = createBaseWorkflow({ name: 'CAWS Optimized CI/CD' });
+  const workflow = createBaseWorkflow({ name: "CAWS Optimized CI/CD" });
 
   // Add setup job
   workflow.jobs.setup = createSetupJob({
-    nodeVersion: language === 'javascript' ? '18' : null,
+    nodeVersion: language === "javascript" ? "18" : null,
   });
 
   // Add quality assurance jobs
@@ -108,7 +108,7 @@ function generateOptimizedWorkflow(options = {}) {
   // Add deployment job if enabled (only for main branch and high-risk changes)
   if (enableDeploy && tier === 1) {
     workflow.jobs.deploy = createDeployJob({
-      environment: 'staging',
+      environment: "staging",
       enableTierConditionals,
     });
   }
@@ -129,7 +129,7 @@ function generateWorkflowYAML(workflow) {
       noRefs: true,
     });
   } catch (error) {
-    console.error('Error generating workflow YAML:', error.message);
+    console.error("Error generating workflow YAML:", error.message);
     throw error;
   }
 }
@@ -139,7 +139,10 @@ function generateWorkflowYAML(workflow) {
  * @param {Object} workflow - Workflow configuration
  * @param {string} outputPath - Output file path
  */
-function saveWorkflow(workflow, outputPath = '.github/workflows/caws-optimized.yml') {
+function saveWorkflow(
+  workflow,
+  outputPath = ".github/workflows/caws-optimized.yml"
+) {
   const yamlContent = generateWorkflowYAML(workflow);
 
   // Ensure directory exists
@@ -148,7 +151,7 @@ function saveWorkflow(workflow, outputPath = '.github/workflows/caws-optimized.y
     fs.mkdirSync(dir, { recursive: true });
   }
 
-  fs.writeFileSync(outputPath, yamlContent, 'utf8');
+  fs.writeFileSync(outputPath, yamlContent, "utf8");
   console.log(`✅ Generated optimized workflow: ${outputPath}`);
 }
 
@@ -165,34 +168,36 @@ function analyzeRepository(options = {}) {
   };
 
   // Check for existing workflow
-  const workflowPath = '.github/workflows/caws-optimized.yml';
+  const workflowPath = ".github/workflows/caws-optimized.yml";
   if (fs.existsSync(workflowPath)) {
     try {
-      results.currentWorkflow = yaml.load(fs.readFileSync(workflowPath, 'utf8'));
+      results.currentWorkflow = yaml.load(
+        fs.readFileSync(workflowPath, "utf8")
+      );
     } catch (error) {
-      console.warn('Could not parse existing workflow:', error.message);
+      console.warn("Could not parse existing workflow:", error.message);
     }
   }
 
   // Analyze repository structure and suggest optimizations
-  if (fs.existsSync('package.json')) {
+  if (fs.existsSync("package.json")) {
     results.recommendations.push({
-      type: 'language',
-      language: 'javascript',
-      confidence: 'high',
+      type: "language",
+      language: "javascript",
+      confidence: "high",
     });
   }
 
-  if (fs.existsSync('Cargo.toml')) {
+  if (fs.existsSync("Cargo.toml")) {
     results.recommendations.push({
-      type: 'language',
-      language: 'rust',
-      confidence: 'high',
+      type: "language",
+      language: "rust",
+      confidence: "high",
     });
   }
 
   // Check for CAWS configuration
-  if (fs.existsSync('.caws/working-spec.yaml')) {
+  if (fs.existsSync(".caws/working-spec.yaml")) {
     results.optimizations.push(OPTIMIZATION_STRATEGIES.TIER_BASED_CONDITIONAL);
     results.optimizations.push(OPTIMIZATION_STRATEGIES.SELECTIVE_TESTING);
   }
@@ -205,10 +210,10 @@ function analyzeRepository(options = {}) {
  */
 function main() {
   const args = process.argv.slice(2);
-  const command = args[0] || 'generate';
+  const command = args[0] || "generate";
 
   switch (command) {
-    case 'generate':
+    case "generate":
       const options = parseCLIOptions(args.slice(1));
       const workflow = generateOptimizedWorkflow(options);
 
@@ -219,25 +224,29 @@ function main() {
       }
       break;
 
-    case 'analyze':
+    case "analyze":
       const analysis = analyzeRepository();
-      console.log('📊 Repository Analysis:');
+      console.log("📊 Repository Analysis:");
       console.log(JSON.stringify(analysis, null, 2));
       break;
 
     default:
-      console.log('Usage: node ci-optimizer.js [generate|analyze] [options]');
-      console.log('');
-      console.log('Commands:');
-      console.log('  generate  Generate optimized workflow (default)');
-      console.log('  analyze   Analyze repository and suggest optimizations');
-      console.log('');
-      console.log('Options:');
-      console.log('  --language <lang>    Programming language (javascript, rust, python)');
-      console.log('  --tier <1-3>         Risk tier (1=critical, 2=standard, 3=low)');
-      console.log('  --output <file>      Output file path');
-      console.log('  --no-selective       Disable selective testing');
-      console.log('  --no-tier-checks     Disable tier-based conditionals');
+      console.log("Usage: node ci-optimizer.js [generate|analyze] [options]");
+      console.log("");
+      console.log("Commands:");
+      console.log("  generate  Generate optimized workflow (default)");
+      console.log("  analyze   Analyze repository and suggest optimizations");
+      console.log("");
+      console.log("Options:");
+      console.log(
+        "  --language <lang>    Programming language (javascript, rust, python)"
+      );
+      console.log(
+        "  --tier <1-3>         Risk tier (1=critical, 2=standard, 3=low)"
+      );
+      console.log("  --output <file>      Output file path");
+      console.log("  --no-selective       Disable selective testing");
+      console.log("  --no-tier-checks     Disable tier-based conditionals");
       process.exit(1);
   }
 }
@@ -253,25 +262,25 @@ function parseCLIOptions(args) {
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
     switch (arg) {
-      case '--language':
+      case "--language":
         options.language = args[++i];
         break;
-      case '--tier':
+      case "--tier":
         options.tier = parseInt(args[++i]);
         break;
-      case '--output':
+      case "--output":
         options.output = args[++i];
         break;
-      case '--no-selective':
+      case "--no-selective":
         options.enableSelectiveTests = false;
         break;
-      case '--no-tier-checks':
+      case "--no-tier-checks":
         options.enableTierConditionals = false;
         break;
-      case '--enable-docker':
+      case "--enable-docker":
         options.enableDocker = true;
         break;
-      case '--enable-deploy':
+      case "--enable-deploy":
         options.enableDeploy = true;
         break;
     }

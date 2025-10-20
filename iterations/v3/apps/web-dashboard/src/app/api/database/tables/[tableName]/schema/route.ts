@@ -10,14 +10,18 @@ export async function GET(
   try {
     const { searchParams } = new URL(request.url);
     const tableName = params.tableName;
-    const v3BackendHost = process.env.V3_BACKEND_HOST ?? "http://localhost:8080";
+    const v3BackendHost =
+      process.env.V3_BACKEND_HOST ?? "http://localhost:8080";
 
     const connectionId = searchParams.get("connection_id");
     const schema = searchParams.get("schema");
 
     if (!connectionId) {
       return NextResponse.json(
-        { error: "validation_error", message: "connection_id parameter is required" },
+        {
+          error: "validation_error",
+          message: "connection_id parameter is required",
+        },
         { status: 400 }
       );
     }
@@ -27,9 +31,13 @@ export async function GET(
     params.append("connection_id", connectionId);
     if (schema) params.append("schema", schema);
 
-    const schemaUrl = `${v3BackendHost}/api/v1/database/tables/${encodeURIComponent(tableName)}/schema?${params}`;
+    const schemaUrl = `${v3BackendHost}/api/v1/database/tables/${encodeURIComponent(
+      tableName
+    )}/schema?${params}`;
 
-    console.log(`Proxying table schema request for ${tableName} to: ${schemaUrl}`);
+    console.log(
+      `Proxying table schema request for ${tableName} to: ${schemaUrl}`
+    );
 
     const response = await fetch(schemaUrl, {
       method: "GET",
@@ -62,7 +70,6 @@ export async function GET(
       schema_inspected_via_proxy: true,
       timestamp: new Date().toISOString(),
     });
-
   } catch (error) {
     console.error("Table schema proxy error:", error);
 

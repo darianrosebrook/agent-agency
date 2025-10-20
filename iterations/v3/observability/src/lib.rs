@@ -14,6 +14,7 @@ pub mod analytics;
 pub mod analytics_dashboard;
 pub mod cache;
 pub mod dashboard;
+pub mod diff_observability;
 pub mod logging;
 pub mod metrics;
 pub mod multimodal_metrics;
@@ -58,3 +59,8 @@ pub use multimodal_metrics::{
     DeduplicationMetrics, MultimodalSystemHealth, PerformanceSummary,
 };
 pub use slo::*;
+pub use diff_observability::{
+    DiffGenerator, DiffViewer, UnifiedDiff, DiffHeader, DiffHunk, DiffStats, DiffMetadata,
+    SideBySideConfig, SideBySideView, ViolationSummary, FileNavigation, ViolationSeverity,
+    DiffGeneratorConfig, FileChange, DiffError,
+};

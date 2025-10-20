@@ -3,9 +3,10 @@ import { NextRequest, NextResponse } from "next/server";
 // Database connections API proxy
 // Proxies requests to V3 backend database connection management
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
-    const v3BackendHost = process.env.V3_BACKEND_HOST ?? "http://localhost:8080";
+    const v3BackendHost =
+      process.env.V3_BACKEND_HOST ?? "http://localhost:8080";
 
     const connectionsUrl = `${v3BackendHost}/api/v1/database/connections`;
 
@@ -21,7 +22,9 @@ export async function GET(request: NextRequest) {
     });
 
     if (!response.ok) {
-      console.warn(`V3 backend database connections failed: ${response.status}`);
+      console.warn(
+        `V3 backend database connections failed: ${response.status}`
+      );
       return NextResponse.json(
         {
           error: "backend_error",
@@ -38,7 +41,6 @@ export async function GET(request: NextRequest) {
       connections: backendResponse.connections || [],
       timestamp: new Date().toISOString(),
     });
-
   } catch (error) {
     console.error("Database connections proxy error:", error);
 

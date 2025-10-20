@@ -9,6 +9,8 @@ use crate::models::{ModelRegistry, ModelProvider, ModelContext};
 use crate::prompting::{PromptingStrategy, AdaptivePromptingStrategy};
 use crate::sandbox::SandboxEnvironment;
 use crate::types::{Task, TaskResult, IterationContext, StopReason, Artifact, ArtifactType, ActionRequest, ActionValidationError};
+use observability::diff_observability::{DiffGenerator, FileChange};
+use observability::agent_telemetry::AgentTelemetryCollector;
 
 /// Result of self-prompting execution
 #[derive(Debug, Clone)]
@@ -25,6 +27,7 @@ pub struct SelfPromptingLoop {
     model_registry: Arc<ModelRegistry>,
     evaluator: Arc<EvaluationOrchestrator>,
     satisficing_evaluator: std::cell::RefCell<SatisficingEvaluator>, // Use RefCell for interior mutability
+    diff_generator: DiffGenerator, // For generating diff artifacts
     prompting_strategy: Box<dyn PromptingStrategy>,
     max_iterations: usize,
     event_sender: Option<mpsc::UnboundedSender<SelfPromptingEvent>>,
@@ -33,10 +36,12 @@ pub struct SelfPromptingLoop {
 impl SelfPromptingLoop {
     /// Create a new self-prompting loop controller
     pub fn new(model_registry: Arc<ModelRegistry>, evaluator: Arc<EvaluationOrchestrator>) -> Self {
+        let telemetry = AgentTelemetryCollector::new("self-prompting-loop".to_string());
         Self {
             model_registry,
             evaluator,
             satisficing_evaluator: std::cell::RefCell::new(SatisficingEvaluator::new()), // Initialize with defaults
+            diff_generator: DiffGenerator::new(telemetry),
             prompting_strategy: Box::new(AdaptivePromptingStrategy::new()),
             max_iterations: 5,
             event_sender: None,
@@ -50,10 +55,12 @@ impl SelfPromptingLoop {
         max_iterations: usize,
         event_sender: Option<mpsc::UnboundedSender<SelfPromptingEvent>>,
     ) -> Self {
+        let telemetry = AgentTelemetryCollector::new("self-prompting-loop".to_string());
         Self {
             model_registry,
             evaluator,
             satisficing_evaluator: std::cell::RefCell::new(SatisficingEvaluator::new()), // Initialize with defaults
+            diff_generator: DiffGenerator::new(telemetry),
             prompting_strategy: Box::new(AdaptivePromptingStrategy::new()),
             max_iterations,
             event_sender,
@@ -100,8 +107,14 @@ impl SelfPromptingLoop {
             }
 
             // 4. Create artifacts from action request
-            let artifacts_from_action = self.create_artifacts_from_action(&action_request, &task);
-            artifacts.extend(artifacts_from_action);
+                let artifacts_from_action = self.create_artifacts_from_action(&action_request, &task);
+
+                // Generate diff artifact for observability
+                if let Some(diff_artifact) = self.generate_diff_artifact(&action_request, iteration, &task).await {
+                    artifacts.push(diff_artifact);
+                }
+
+                artifacts.extend(artifacts_from_action);
 
             // 4. Evaluate the output
             let eval_context = crate::evaluation::EvalContext {
@@ -378,6 +391,62 @@ impl SelfPromptingLoop {
         }
 
         Ok(())
+    }
+
+    /// Generate a diff artifact for observability
+    async fn generate_diff_artifact(
+        &self,
+        action_request: &ActionRequest,
+        iteration: usize,
+        task: &Task,
+    ) -> Option<Artifact> {
+        if action_request.changeset.is_none() {
+            return None;
+        }
+
+        // Create a simplified diff representation
+        // In a full implementation, this would compare actual file states
+        let mut diff_content = format!(
+            "# Unified Diff - Iteration {}\n",
+            iteration
+        );
+        diff_content.push_str(&format!("Task: {}\n", task.id));
+        diff_content.push_str(&format!("Agent: self-prompting-loop\n"));
+        diff_content.push_str(&format!("Timestamp: {}\n\n", chrono::Utc::now().to_rfc3339()));
+
+        if let Some(changeset) = &action_request.changeset {
+            for patch in &changeset.patches {
+                diff_content.push_str(&format!(
+                    "diff --git a/{} b/{}\n",
+                    patch.path, patch.path
+                ));
+
+                // Simplified hunk representation
+                let old_lines = patch.hunks.iter().map(|h| h.old_lines).sum::<u32>();
+                let new_lines = patch.hunks.iter().map(|h| h.new_lines).sum::<u32>();
+
+                diff_content.push_str(&format!(
+                    "@@ -1,{} +1,{} @@\n",
+                    old_lines, new_lines
+                ));
+
+                for hunk in &patch.hunks {
+                    for line in &hunk.lines {
+                        diff_content.push_str(line);
+                        diff_content.push('\n');
+                    }
+                }
+                diff_content.push('\n');
+            }
+        }
+
+        Some(Artifact {
+            id: uuid::Uuid::new_v4(),
+            file_path: format!("diffs/iteration-{}.diff", iteration),
+            content: diff_content,
+            artifact_type: ArtifactType::Diff,
+            created_at: chrono::Utc::now(),
+        })
     }
 
     /// Create artifacts from an ActionRequest

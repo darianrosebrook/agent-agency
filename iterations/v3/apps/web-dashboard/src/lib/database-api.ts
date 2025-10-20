@@ -5,9 +5,7 @@ import {
   GetTableSchemaResponse,
   ExecuteQueryResponse,
   VectorSearchResponse,
-  GetDatabaseMetricsResponse,
   QueryRequest,
-  TableQueryRequest,
   VectorSearchQuery,
   DatabaseError,
 } from "@/types/database";
@@ -25,7 +23,7 @@ export class DatabaseApiError extends Error {
   }
 }
 
-class DatabaseApiClient {
+class _DatabaseApiClient {
   private baseUrl: string;
 
   constructor(baseUrl?: string) {
@@ -38,9 +36,9 @@ class DatabaseApiClient {
    */
   async getConnections(): Promise<DatabaseConnection[]> {
     try {
-      const response = await apiClient.request<{ connections: DatabaseConnection[] }>(
-        `${this.baseUrl}/connections`
-      );
+      const response = await apiClient.request<{
+        connections: DatabaseConnection[];
+      }>(`${this.baseUrl}/connections`);
 
       return response.connections || [];
     } catch (error) {
@@ -70,7 +68,9 @@ class DatabaseApiClient {
       }
 
       const response = await apiClient.request<GetDatabaseTablesResponse>(
-        `${this.baseUrl}/tables?connection_id=${encodeURIComponent(connectionId)}`
+        `${this.baseUrl}/tables?connection_id=${encodeURIComponent(
+          connectionId
+        )}`
       );
 
       return response;
@@ -103,7 +103,9 @@ class DatabaseApiClient {
       if (schema) params.append("schema", schema);
 
       const response = await apiClient.request<GetTableSchemaResponse>(
-        `${this.baseUrl}/tables/${encodeURIComponent(tableName)}/schema?${params}`
+        `${this.baseUrl}/tables/${encodeURIComponent(
+          tableName
+        )}/schema?${params}`
       );
 
       return response;
@@ -145,7 +147,9 @@ class DatabaseApiClient {
     }
   }
 
-  async vectorSearch(searchQuery: VectorSearchQuery): Promise<VectorSearchResponse> {
+  async vectorSearch(
+    searchQuery: VectorSearchQuery
+  ): Promise<VectorSearchResponse> {
     try {
       const response = await apiClient.request<VectorSearchResponse>(
         `${this.baseUrl}/vector-search`,

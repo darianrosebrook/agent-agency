@@ -6,7 +6,8 @@ import { NextRequest, NextResponse } from "next/server";
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const v3BackendHost = process.env.V3_BACKEND_HOST ?? "http://localhost:8080";
+    const v3BackendHost =
+      process.env.V3_BACKEND_HOST ?? "http://localhost:8080";
 
     // Build query parameters for analytics filtering
     const params = new URLSearchParams();
@@ -36,7 +37,9 @@ export async function GET(request: NextRequest) {
     const algorithm = searchParams.get("algorithm");
     if (algorithm) params.append("algorithm", algorithm);
 
-    const analyticsUrl = `${v3BackendHost}/api/v1/analytics${params.toString() ? `?${params}` : ""}`;
+    const analyticsUrl = `${v3BackendHost}/api/v1/analytics${
+      params.toString() ? `?${params}` : ""
+    }`;
 
     console.log(`Proxying analytics request to: ${analyticsUrl}`);
 
@@ -83,11 +86,10 @@ export async function GET(request: NextRequest) {
       },
       metadata: {
         processed_at: new Date().toISOString(),
-        algorithm: algorithm || "default",
+        algorithm: algorithm ?? "default",
         confidence_threshold: confidence ? parseFloat(confidence) : 0.95,
       },
     });
-
   } catch (error) {
     console.error("Analytics proxy error:", error);
 
