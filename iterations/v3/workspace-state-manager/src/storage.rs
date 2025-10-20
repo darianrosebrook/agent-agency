@@ -136,15 +136,15 @@ impl FileStorage {
         state: &WorkspaceState,
     ) -> Result<Vec<u8>, WorkspaceError> {
         // Serialize to JSON
-        let json_data = serde_json::to_vec(state).map_err(|e| WorkspaceError::Serialization(e))?;
+        let json_data = serde_json::to_vec(state).map_err(WorkspaceError::Serialization)?;
 
         // Compress the JSON data
         let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
         encoder
             .write_all(&json_data)
-            .map_err(|e| WorkspaceError::Io(e))?;
+            .map_err(WorkspaceError::Io)?;
 
-        let compressed_data = encoder.finish().map_err(|e| WorkspaceError::Io(e))?;
+        let compressed_data = encoder.finish().map_err(WorkspaceError::Io)?;
 
         debug!(
             "Serialized state {}: {} bytes -> {} bytes (compression ratio: {:.2})",
@@ -414,8 +414,8 @@ impl StateStorage for FileStorage {
         }
 
         let mut removed_count = 0;
-        for entry in fs::read_dir(&diff_dir).map_err(|e| WorkspaceError::Io(e))? {
-            let entry = entry.map_err(|e| WorkspaceError::Io(e))?;
+        for entry in fs::read_dir(&diff_dir).map_err(WorkspaceError::Io)? {
+            let entry = entry.map_err(WorkspaceError::Io)?;
             let path = entry.path();
 
             if path.extension().and_then(|s| s.to_str()) == Some("diff") {
@@ -424,7 +424,7 @@ impl StateStorage for FileStorage {
                     if let Ok(modified) = metadata.modified() {
                         let modified_time = chrono::DateTime::<chrono::Utc>::from(modified);
                         if modified_time < cutoff_time {
-                            fs::remove_file(&path).map_err(|e| WorkspaceError::Io(e))?;
+                            fs::remove_file(&path).map_err(WorkspaceError::Io)?;
                             removed_count += 1;
                         }
                     }
@@ -518,56 +518,8 @@ impl MemoryStorage {
     }
 
     /// Optimize storage performance
-    async fn optimize_storage_performance(&self) -> Result<(), WorkspaceError> {
-        // Implement storage optimization strategies
-
-        // 1. Clean up old states if storage is getting full
-        if false {
-            self.cleanup_old_states().await?;
-        }
-
-        // 2. Compress large states
-        self.compress_large_states().await?;
-
-        // 3. Update storage metrics
-        self.update_storage_metrics().await?;
-
-        Ok(())
-    }
 
     /// Clean up old states to free memory
-    async fn cleanup_old_states(&self) -> Result<(), WorkspaceError> {
-        let now = chrono::Utc::now();
-        let cutoff_time = now - chrono::Duration::hours(1); // 1 hour ago
-
-        let mut to_remove = Vec::new();
-
-        // Clean up old states from memory storage
-        let states = self.states.read().await;
-        for (id, state) in states.iter() {
-            if state.timestamp < cutoff_time {
-                to_remove.push(id.clone());
-            }
-        }
-
-        // Remove old states from memory storage
-        if !to_remove.is_empty() {
-            let mut states = self.states.write().await;
-            for id in &to_remove {
-                states.remove(id);
-                debug!("Cleaned up old state: {}", id);
-            }
-        }
-
-        // Clean up old diffs that reference removed states
-        self.cleanup_orphaned_diffs(&to_remove).await?;
-
-        debug!(
-            "✅ Database cleanup completed: removed {} old states",
-            to_remove.len()
-        );
-        Ok(())
-    }
 
     /// Clean up diffs that reference removed states
     async fn cleanup_orphaned_diffs(
@@ -596,49 +548,6 @@ impl MemoryStorage {
     }
 
     /// Compress large states to save memory
-    async fn compress_large_states(&self) -> Result<(), WorkspaceError> {
-        let mut to_compress = Vec::new();
-
-        // Get all states from memory storage
-        let states = self.states.read().await;
-        for (id, state) in states.iter() {
-            // Calculate total size of the state
-            let total_size: u64 = state
-                .files
-                .values()
-                .map(|file| file.content.as_ref().map(|c| c.len()).unwrap_or(0) as u64)
-                .sum();
-
-            // Check if state exceeds 10MB threshold
-            if total_size > 10 * 1024 * 1024 {
-                to_compress.push(id.clone());
-            }
-        }
-        drop(states); // Release the read lock
-
-        // Compress large states
-        for id in to_compress {
-            if let Some(state) = self.states.write().await.get_mut(&id) {
-                // Compress file contents
-                for file in state.files.values_mut() {
-                    if let Some(ref content) = file.content {
-                        if !content.is_empty() {
-                            let compressed = self.compress_data(content)?;
-                            file.content = Some(compressed);
-                            file.compressed = true;
-                        }
-                    }
-                }
-                debug!(
-                    "Compressed large state: {} ({} files)",
-                    id,
-                    state.files.len()
-                );
-            }
-        }
-
-        Ok(())
-    }
 
     /// Compress data using gzip compression
     fn compress_data(&self, data: &[u8]) -> Result<Vec<u8>, WorkspaceError> {
@@ -652,46 +561,6 @@ impl MemoryStorage {
     }
 
     /// Update storage metrics
-    async fn update_storage_metrics(&self) -> Result<(), WorkspaceError> {
-        // Collect metrics from memory storage
-        let states = self.states.read().await;
-        let total_states = states.len();
-        let total_size: u64 = states
-            .values()
-            .map(|state| {
-                state
-                    .files
-                    .values()
-                    .map(|file| file.content.as_ref().map(|c| c.len()).unwrap_or(0) as u64)
-                    .sum::<u64>()
-            })
-            .sum();
-
-        // Collect diff metrics
-        let diffs = self.diffs.read().await;
-        let total_diffs = diffs.len();
-        let diff_size: u64 = diffs
-            .values()
-            .map(|diff| {
-                diff.changes.len() as u64 * 100 // Rough estimate
-            })
-            .sum();
-
-        debug!(
-            "Storage metrics - States: {}, Total size: {} bytes, Diffs: {}, Diff size: {} bytes",
-            total_states, total_size, total_diffs, diff_size
-        );
-
-        // Update metrics
-        {
-            let mut metrics = self.metrics.write().await;
-            metrics.total_states_stored = total_states;
-            metrics.total_diffs_stored = total_diffs;
-            metrics.total_storage_size_bytes = total_size as u64 + diff_size as u64;
-        }
-
-        Ok(())
-    }
 
     async fn validate_diff(&self, diff: &WorkspaceDiff) -> Result<(), WorkspaceError> {
         // For file storage, validation is the same as memory storage
@@ -816,15 +685,15 @@ impl MemoryStorage {
         state: &WorkspaceState,
     ) -> Result<Vec<u8>, WorkspaceError> {
         // Serialize to JSON
-        let json_data = serde_json::to_vec(state).map_err(|e| WorkspaceError::Serialization(e))?;
+        let json_data = serde_json::to_vec(state).map_err(WorkspaceError::Serialization)?;
 
         // Compress the JSON data
         let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
         encoder
             .write_all(&json_data)
-            .map_err(|e| WorkspaceError::Io(e))?;
+            .map_err(WorkspaceError::Io)?;
 
-        let compressed_data = encoder.finish().map_err(|e| WorkspaceError::Io(e))?;
+        let compressed_data = encoder.finish().map_err(WorkspaceError::Io)?;
 
         debug!(
             "Serialized state {}: {} bytes -> {} bytes (compression ratio: {:.2})",
@@ -867,6 +736,111 @@ impl MemoryStorage {
 
         Ok(())
     }
+
+    /// Optimize storage performance
+    async fn optimize_storage_performance(&self) -> Result<(), WorkspaceError> {
+        // Memory storage optimization
+        debug!("Optimizing memory storage performance");
+        
+        // Clean up old states if needed
+        self.cleanup_old_states().await?;
+        
+        // Compress large states
+        self.compress_large_states().await?;
+        
+        // Update metrics
+        self.update_storage_metrics().await?;
+        
+        Ok(())
+    }
+    
+    /// Clean up old states to free memory
+    async fn cleanup_old_states(&self) -> Result<(), WorkspaceError> {
+        let now = chrono::Utc::now();
+        let cutoff_time = now - chrono::Duration::hours(24);
+        
+        let mut to_remove = Vec::new();
+        
+        // Clean up old states
+        let states = self.states.read().await;
+        for (id, state) in states.iter() {
+            if state.captured_at < cutoff_time {
+                to_remove.push(*id);
+            }
+        }
+        
+        // Remove old states
+        if !to_remove.is_empty() {
+            let mut states = self.states.write().await;
+            for id in &to_remove {
+                states.remove(id);
+                debug!("Cleaned up old state: {}", id);
+            }
+            
+            // Update metrics
+            let mut metrics = self.metrics.write().await;
+            metrics.total_states_stored = metrics.total_states_stored.saturating_sub(to_remove.len());
+            metrics.last_cleanup_time = Some(now);
+        }
+        
+        Ok(())
+    }
+    
+    /// Compress large states to save memory
+    async fn compress_large_states(&self) -> Result<(), WorkspaceError> {
+        let mut to_compress = Vec::new();
+        
+        // Find large states
+        let states = self.states.read().await;
+        for (id, state) in states.iter() {
+            let total_size: u64 = state.files.values()
+                .map(|file| file.content.as_ref().map(|c| c.len()).unwrap_or(0) as u64)
+                .sum();
+            
+            // Compress if over 1MB
+            if total_size > 1024 * 1024 {
+                to_compress.push(id.clone());
+            }
+        }
+        drop(states);
+        
+        // Compress the large states
+        for id in to_compress {
+            if let Some(state) = self.states.write().await.get_mut(&id) {
+                for file in state.files.values_mut() {
+                    if let Some(ref content) = file.content {
+                        if !content.is_empty() && !file.compressed {
+                            let compressed = self.compress_data(content)?;
+                            file.content = Some(compressed);
+                            file.compressed = true;
+                        }
+                    }
+                }
+                debug!("Compressed large state: {}", id);
+            }
+        }
+        
+        Ok(())
+    }
+    
+    /// Update storage metrics
+    async fn update_storage_metrics(&self) -> Result<(), WorkspaceError> {
+        let states = self.states.read().await;
+        let diffs = self.diffs.read().await;
+        
+        let mut metrics = self.metrics.write().await;
+        metrics.total_states_stored = states.len();
+        metrics.total_diffs_stored = diffs.len();
+        
+        metrics.total_storage_size_bytes = states.values()
+            .map(|state| state.files.values()
+                 .map(|file| file.content.as_ref().map(|c| c.len()).unwrap_or(0) as u64)
+                 .sum::<u64>())
+            .sum();
+        
+        Ok(())
+    }
+    
 }
 
 #[async_trait]
@@ -1279,101 +1253,12 @@ impl DatabaseStorage {
     }
 
     /// Optimize storage performance
-    async fn optimize_storage_performance(&self) -> Result<(), WorkspaceError> {
-        // Implement storage optimization strategies
-
-        // 1. Clean up old states if storage is getting full
-        if false {
-            self.cleanup_old_states().await?;
-        }
-
-        // 2. Compress large states
-        self.compress_large_states().await?;
-
-        // 3. Update storage metrics
-        self.update_storage_metrics().await?;
-
-        Ok(())
-    }
 
     /// Clean up old states to free memory
-    async fn cleanup_old_states(&self) -> Result<(), WorkspaceError> {
-        let now = chrono::Utc::now();
-        let cutoff_time = now - chrono::Duration::hours(1); // 1 hour ago
-
-        // Delete old states from database
-        let result = sqlx::query("DELETE FROM workspace_states WHERE captured_at < $1")
-            .bind(cutoff_time)
-            .execute(&self.pool)
-            .await
-            .map_err(|e| WorkspaceError::Storage(format!("Failed to cleanup old states: {}", e)))?;
-
-        let deleted_count = result.rows_affected();
-        debug!("Cleaned up {} old states from database", deleted_count);
-
-        Ok(())
-    }
 
     /// Compress large states to save memory
-    async fn compress_large_states(&self) -> Result<(), WorkspaceError> {
-        // Find large states in database
-        let large_states = sqlx::query(
-            "SELECT id, total_size FROM workspace_states WHERE total_size > $1"
-        )
-        .bind(10 * 1024 * 1024i64) // 10MB threshold
-        .fetch_all(&self.pool)
-        .await
-        .map_err(|e| WorkspaceError::Storage(format!("Failed to query large states: {}", e)))?;
-
-        for row in large_states {
-            let state_id: uuid::Uuid = row.get("id");
-            let total_size: i64 = row.get("total_size");
-
-            // Implement data compression for large state data
-            let compression_ratio = if total_size > 1024 * 1024 {
-                // Large state > 1MB - compression would be beneficial
-                0.7  // Assume 70% compression ratio
-            } else {
-                1.0  // Skip compression for smaller states
-            };
-            
-            let compressed_size = (total_size as f64 * compression_ratio) as i64;
-            let savings = total_size - compressed_size;
-            
-            debug!(
-                "Large state {} (size {} bytes) could save {} bytes with compression (ratio: {:.1}%)",
-                state_id, total_size, savings, compression_ratio * 100.0
-            );
-            
-            // In production: Apply compression algorithms (gzip, lz4, zstd)
-            // Handle: Compression caching, performance monitoring, validation
-        }
-
-        Ok(())
-    }
 
     /// Update storage metrics
-    async fn update_storage_metrics(&self) -> Result<(), WorkspaceError> {
-        // Get actual metrics from database
-        let total_states = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM workspace_states")
-            .fetch_one(&self.pool)
-            .await
-            .map_err(|e| WorkspaceError::Storage(format!("Failed to count states: {}", e)))?;
-
-        let total_size = sqlx::query_scalar::<_, i64>(
-            "SELECT COALESCE(SUM(total_size), 0) FROM workspace_states",
-        )
-        .fetch_one(&self.pool)
-        .await
-        .map_err(|e| WorkspaceError::Storage(format!("Failed to sum state sizes: {}", e)))?;
-
-        debug!(
-            "Storage metrics - States: {}, Total size: {} bytes",
-            total_states, total_size
-        );
-
-        Ok(())
-    }
 
     /// Validate state before serialization
     fn validate_state_for_serialization(
@@ -1419,15 +1304,15 @@ impl DatabaseStorage {
         state: &WorkspaceState,
     ) -> Result<Vec<u8>, WorkspaceError> {
         // Serialize to JSON
-        let json_data = serde_json::to_vec(state).map_err(|e| WorkspaceError::Serialization(e))?;
+        let json_data = serde_json::to_vec(state).map_err(WorkspaceError::Serialization)?;
 
         // Compress the JSON data
         let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
         encoder
             .write_all(&json_data)
-            .map_err(|e| WorkspaceError::Io(e))?;
+            .map_err(WorkspaceError::Io)?;
 
-        let compressed_data = encoder.finish().map_err(|e| WorkspaceError::Io(e))?;
+        let compressed_data = encoder.finish().map_err(WorkspaceError::Io)?;
 
         debug!(
             "Serialized state {}: {} bytes -> {} bytes (compression ratio: {:.2})",
@@ -1476,10 +1361,10 @@ impl DatabaseStorage {
 impl StateStorage for DatabaseStorage {
     async fn store_state(&self, state: &WorkspaceState) -> Result<(), WorkspaceError> {
         let metadata_json =
-            serde_json::to_value(&state.metadata).map_err(|e| WorkspaceError::Serialization(e))?;
+            serde_json::to_value(&state.metadata).map_err(WorkspaceError::Serialization)?;
 
         let state_json =
-            serde_json::to_value(state).map_err(|e| WorkspaceError::Serialization(e))?;
+            serde_json::to_value(state).map_err(WorkspaceError::Serialization)?;
 
         sqlx::query(
             r#"
@@ -1525,7 +1410,7 @@ impl StateStorage for DatabaseStorage {
 
         let state_json: serde_json::Value = row.get("state_data");
         let state: WorkspaceState =
-            serde_json::from_value(state_json).map_err(|e| WorkspaceError::Serialization(e))?;
+            serde_json::from_value(state_json).map_err(WorkspaceError::Serialization)?;
 
         debug!("Retrieved workspace state {:?} from database", id);
         Ok(state)
@@ -1555,7 +1440,7 @@ impl StateStorage for DatabaseStorage {
     }
 
     async fn store_diff(&self, diff: &WorkspaceDiff) -> Result<(), WorkspaceError> {
-        let diff_json = serde_json::to_value(diff).map_err(|e| WorkspaceError::Serialization(e))?;
+        let diff_json = serde_json::to_value(diff).map_err(WorkspaceError::Serialization)?;
 
         sqlx::query(
             r#"
@@ -1607,7 +1492,7 @@ impl StateStorage for DatabaseStorage {
 
         let diff_json: serde_json::Value = row.get("diff_data");
         let diff: WorkspaceDiff =
-            serde_json::from_value(diff_json).map_err(|e| WorkspaceError::Serialization(e))?;
+            serde_json::from_value(diff_json).map_err(WorkspaceError::Serialization)?;
 
         debug!(
             "Retrieved workspace diff {:?} -> {:?} from database",

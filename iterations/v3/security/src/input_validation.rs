@@ -10,6 +10,26 @@ pub const MAX_IDENTIFIER_LENGTH: usize = 100;
 pub const MAX_URL_LENGTH: usize = 2048;
 pub const MAX_EMAIL_LENGTH: usize = 254;
 
+/// File upload limits
+pub const MAX_FILE_SIZE_BYTES: usize = 10 * 1024 * 1024; // 10MB
+pub const MAX_FILENAME_LENGTH: usize = 255;
+
+/// API payload limits
+pub const MAX_JSON_PAYLOAD_SIZE: usize = 1024 * 1024; // 1MB
+pub const MAX_FORM_DATA_SIZE: usize = 10 * 1024 * 1024; // 10MB
+pub const MAX_QUERY_PARAM_LENGTH: usize = 1000;
+pub const MAX_HEADER_VALUE_LENGTH: usize = 8192;
+
+/// Content type validation
+pub const ALLOWED_IMAGE_TYPES: &[&str] = &["image/jpeg", "image/png", "image/gif", "image/webp"];
+pub const ALLOWED_DOCUMENT_TYPES: &[&str] = &[
+    "application/pdf",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "text/plain",
+    "text/csv",
+];
+
 /// Input validation result
 #[derive(Debug, Clone)]
 pub struct ValidationResult {

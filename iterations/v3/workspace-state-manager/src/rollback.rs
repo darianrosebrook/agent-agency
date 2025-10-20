@@ -64,7 +64,7 @@ impl WorkspaceViewManager {
         let view_name = view_name.unwrap_or_else(|| {
             format!(
                 "view-{}-{}",
-                state_id.0.to_string()[..8].to_string(),
+                &state_id.0.to_string()[..8],
                 chrono::Utc::now().format("%Y%m%d-%H%M%S")
             )
         });
@@ -77,13 +77,13 @@ impl WorkspaceViewManager {
         );
 
         // Ensure views directory exists
-        std::fs::create_dir_all(&self.views_dir).map_err(|e| WorkspaceError::Io(e))?;
+        std::fs::create_dir_all(&self.views_dir).map_err(WorkspaceError::Io)?;
 
         // Create view directory
         if view_path.exists() {
-            std::fs::remove_dir_all(&view_path).map_err(|e| WorkspaceError::Io(e))?;
+            std::fs::remove_dir_all(&view_path).map_err(WorkspaceError::Io)?;
         }
-        std::fs::create_dir_all(&view_path).map_err(|e| WorkspaceError::Io(e))?;
+        std::fs::create_dir_all(&view_path).map_err(WorkspaceError::Io)?;
 
         // Restore files from state
         let mut files_restored = 0;
@@ -92,13 +92,13 @@ impl WorkspaceViewManager {
 
             // Create parent directories
             if let Some(parent) = target_path.parent() {
-                std::fs::create_dir_all(parent).map_err(|e| WorkspaceError::Io(e))?;
+                std::fs::create_dir_all(parent).map_err(WorkspaceError::Io)?;
             }
 
             // Copy file from workspace root
             let source_path = state.workspace_root.join(relative_path);
             if source_path.exists() {
-                std::fs::copy(&source_path, &target_path).map_err(|e| WorkspaceError::Io(e))?;
+                std::fs::copy(&source_path, &target_path).map_err(WorkspaceError::Io)?;
                 files_restored += 1;
             } else {
                 warnings.push(format!("Source file not found: {:?}", source_path));
@@ -117,8 +117,8 @@ impl WorkspaceViewManager {
 
         let metadata_path = view_path.join(".workspace-view.json");
         let metadata_json = serde_json::to_string_pretty(&view_metadata)
-            .map_err(|e| WorkspaceError::Serialization(e))?;
-        std::fs::write(&metadata_path, metadata_json).map_err(|e| WorkspaceError::Io(e))?;
+            .map_err(WorkspaceError::Serialization)?;
+        std::fs::write(&metadata_path, metadata_json).map_err(WorkspaceError::Io)?;
 
         let duration = start_time.elapsed();
         info!(
@@ -141,15 +141,15 @@ impl WorkspaceViewManager {
             return Ok(views);
         }
 
-        for entry in std::fs::read_dir(&self.views_dir).map_err(|e| WorkspaceError::Io(e))? {
-            let entry = entry.map_err(|e| WorkspaceError::Io(e))?;
+        for entry in std::fs::read_dir(&self.views_dir).map_err(WorkspaceError::Io)? {
+            let entry = entry.map_err(WorkspaceError::Io)?;
             let path = entry.path();
 
             if path.is_dir() {
                 let metadata_path = path.join(".workspace-view.json");
                 if metadata_path.exists() {
                     let metadata_json = std::fs::read_to_string(&metadata_path)
-                        .map_err(|e| WorkspaceError::Io(e))?;
+                        .map_err(WorkspaceError::Io)?;
 
                     if let Ok(metadata) = serde_json::from_str::<ViewMetadata>(&metadata_json) {
                         views.push(metadata);
@@ -169,7 +169,7 @@ impl WorkspaceViewManager {
         let view_path = self.views_dir.join(view_name);
 
         if view_path.exists() {
-            std::fs::remove_dir_all(&view_path).map_err(|e| WorkspaceError::Io(e))?;
+            std::fs::remove_dir_all(&view_path).map_err(WorkspaceError::Io)?;
             info!("Deleted workspace view '{}'", view_name);
         }
 
@@ -189,10 +189,10 @@ impl WorkspaceViewManager {
         }
 
         let metadata_json =
-            std::fs::read_to_string(&metadata_path).map_err(|e| WorkspaceError::Io(e))?;
+            std::fs::read_to_string(&metadata_path).map_err(WorkspaceError::Io)?;
 
         let metadata: ViewMetadata =
-            serde_json::from_str(&metadata_json).map_err(|e| WorkspaceError::Serialization(e))?;
+            serde_json::from_str(&metadata_json).map_err(WorkspaceError::Serialization)?;
 
         Ok(metadata)
     }
@@ -325,7 +325,7 @@ impl RollbackManager {
         let size_delta = 0i64;
 
         // Ensure workspace root exists
-        std::fs::create_dir_all(&target_state.workspace_root).map_err(|e| WorkspaceError::Io(e))?;
+        std::fs::create_dir_all(&target_state.workspace_root).map_err(WorkspaceError::Io)?;
 
         // Restore files from target state
         for (relative_path, file_state) in &target_state.files {
@@ -334,7 +334,7 @@ impl RollbackManager {
 
             // Create parent directories
             if let Some(parent) = target_path.parent() {
-                std::fs::create_dir_all(parent).map_err(|e| WorkspaceError::Io(e))?;
+                std::fs::create_dir_all(parent).map_err(WorkspaceError::Io)?;
             }
 
             // Check if file exists and is different
@@ -360,7 +360,7 @@ impl RollbackManager {
 
             if needs_restore {
                 if source_path.exists() {
-                    std::fs::copy(&source_path, &target_path).map_err(|e| WorkspaceError::Io(e))?;
+                    std::fs::copy(&source_path, &target_path).map_err(WorkspaceError::Io)?;
 
                     if target_path.exists() {
                         files_modified += 1;
@@ -377,7 +377,7 @@ impl RollbackManager {
                 if !target_state.files.contains_key(relative_path) {
                     let file_path = target_state.workspace_root.join(relative_path);
                     if file_path.exists() {
-                        std::fs::remove_file(&file_path).map_err(|e| WorkspaceError::Io(e))?;
+                        std::fs::remove_file(&file_path).map_err(WorkspaceError::Io)?;
                         files_removed += 1;
                     }
                 }

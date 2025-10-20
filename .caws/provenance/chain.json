@@ -15648,5 +15648,107 @@
     },
     "previous_hash": "49d5ab9b8862ad39eda3304f97a3415fc56740d4548476689e5a4dacef2d69e6",
     "hash": "56921d194d62ed6e06e4c54ed150f8c5a76b6b9f3ee598363c5f011f6dc1ec3e"
+  },
+  {
+    "id": "prov-1760932555411",
+    "timestamp": "2025-10-20T03:55:55.411Z",
+    "commit": {
+      "hash": "4e0a6d61ee9addc9dfc5af650c569d1545ccf1b6",
+      "message": "feat: implement CLI guardrails with strict/auto/dry-run modes and dashboard",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "LINT-001",
+      "title": "Fix compilation errors across Rust crates",
+      "risk_tier": 3,
+      "mode": "fix",
+      "waiver_ids": []
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-20T03:55:55.412Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "56921d194d62ed6e06e4c54ed150f8c5a76b6b9f3ee598363c5f011f6dc1ec3e",
+    "hash": "36370b60619193448bcce81e3da0484f62f4f76412d9f4ac6dc746cfb682ce42"
+  },
+  {
+    "id": "prov-1760932617296",
+    "timestamp": "2025-10-20T03:56:57.296Z",
+    "commit": {
+      "hash": "70cbbcfcb90670c35ab42d84402657c6eddf422c",
+      "message": "docs: mark all 9/9 features as completed - Agent Agency V3 is now production-ready",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "LINT-001",
+      "title": "Fix compilation errors across Rust crates",
+      "risk_tier": 3,
+      "mode": "fix",
+      "waiver_ids": []
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-20T03:56:57.297Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "36370b60619193448bcce81e3da0484f62f4f76412d9f4ac6dc746cfb682ce42",
+    "hash": "e5dd352e850f0e8a7330650f81c770e75633354db7337ed662c7ed078b633388"
+  },
+  {
+    "id": "prov-1760932819664",
+    "timestamp": "2025-10-20T04:00:19.664Z",
+    "commit": {
+      "hash": "d82c2caf24f9bdc6a23c697a613d041bd19457b5",
+      "message": "feat: implement comprehensive JWT authentication system",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "LINT-001",
+      "title": "Fix compilation errors across Rust crates",
+      "risk_tier": 3,
+      "mode": "fix",
+      "waiver_ids": []
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-20T04:00:19.666Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "e5dd352e850f0e8a7330650f81c770e75633354db7337ed662c7ed078b633388",
+    "hash": "3c6a921f97283e437952294dc0c3ae1f0a0b7851a3c9c8c0ca9d156e1d3f18cc"
   }
 ]

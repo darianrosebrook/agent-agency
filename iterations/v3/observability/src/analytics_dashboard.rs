@@ -26,6 +26,12 @@ pub enum AnalyticsError {
     InferenceError(String),
 }
 
+impl From<AnalyticsError> for anyhow::Error {
+    fn from(error: AnalyticsError) -> Self {
+        anyhow::anyhow!("{}", error)
+    }
+}
+
 /// Redis client trait for cache operations
 #[async_trait::async_trait]
 trait RedisClient {
@@ -67,7 +73,7 @@ impl RedisClient for ProductionRedisClient {
     async fn set(&self, key: &str, value: &[u8], ttl_seconds: u64) -> Result<()> {
         let mut conn = self.client.get_async_connection().await
             .map_err(|e| anyhow::anyhow!("Failed to get Redis connection: {}", e))?;
-        match conn.set_ex::<_, _, ()>(key, value, ttl_seconds as usize).await {
+        match conn.set_ex::<_, _, ()>(key, value, ttl_seconds).await {
             Ok(()) => Ok(()),
             Err(e) => Err(anyhow::anyhow!("Redis SET failed: {}", e)),
         }
@@ -94,7 +100,7 @@ impl RedisClient for ProductionRedisClient {
     async fn incr(&self, key: &str) -> Result<i64> {
         let mut conn = self.client.get_async_connection().await
             .map_err(|e| anyhow::anyhow!("Failed to get Redis connection: {}", e))?;
-        match conn.incr::<_, i64>(key).await {
+        match conn.incr::<_, _, i64>(key, 1).await {
             Ok(result) => Ok(result),
             Err(e) => Err(anyhow::anyhow!("Redis INCR failed: {}", e)),
         }
@@ -103,7 +109,7 @@ impl RedisClient for ProductionRedisClient {
     async fn incr_by(&self, key: &str, increment: i64) -> Result<i64> {
         let mut conn = self.client.get_async_connection().await
             .map_err(|e| anyhow::anyhow!("Failed to get Redis connection: {}", e))?;
-        match conn.incr_by::<_, i64>(key, increment).await {
+        match conn.incr::<_, _, i64>(key, increment).await {
             Ok(result) => Ok(result),
             Err(e) => Err(anyhow::anyhow!("Redis INCRBY failed: {}", e)),
         }
@@ -112,7 +118,7 @@ impl RedisClient for ProductionRedisClient {
     async fn expire(&self, key: &str, seconds: u64) -> Result<bool> {
         let mut conn = self.client.get_async_connection().await
             .map_err(|e| anyhow::anyhow!("Failed to get Redis connection: {}", e))?;
-        match conn.expire::<_, bool>(key, seconds as usize).await {
+        match conn.expire::<_, bool>(key, seconds as i64).await {
             Ok(result) => Ok(result),
             Err(e) => Err(anyhow::anyhow!("Redis EXPIRE failed: {}", e)),
         }
@@ -554,7 +560,7 @@ impl AnalyticsDashboard {
         // Create StatsD sink with buffering and queuing
         let udp_sink = UdpMetricSink::from((statsd_host, statsd_port), socket)
             .map_err(|e| anyhow::anyhow!("Failed to create UDP sink for StatsD: {}", e))?;
-        let buffered_sink = BufferedUdpMetricSink::from(udp_sink)
+        let buffered_sink = BufferedUdpMetricSink::from(udp_sink, socket)
             .map_err(|e| anyhow::anyhow!("Failed to create buffered sink for StatsD: {}", e))?;
         let queuing_sink = QueuingMetricSink::from(buffered_sink);
 
