@@ -117,7 +117,7 @@ impl std::fmt::Display for AgencyError {
 impl std::error::Error for AgencyError {}
 
 /// Error categories for classification
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum ErrorCategory {
     /// Network and connectivity issues
     Network,

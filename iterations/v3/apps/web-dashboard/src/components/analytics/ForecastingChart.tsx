@@ -21,20 +21,23 @@ export default function ForecastingChart({
 
     // Combine historical and predicted data
     const combined = [
-      ...historical.map(point => ({
+      ...historical.map((point) => ({
         timestamp: point.timestamp,
         value: point.value,
-        type: 'historical' as const,
+        type: "historical" as const,
       })),
-      ...predicted.map(point => ({
+      ...predicted.map((point) => ({
         timestamp: point.timestamp,
         value: point.value,
-        type: 'predicted' as const,
+        type: "predicted" as const,
       })),
     ];
 
     // Sort by timestamp
-    combined.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+    combined.sort(
+      (a, b) =>
+        new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    );
 
     return combined;
   }, [prediction, historicalData]);
@@ -74,8 +77,8 @@ export default function ForecastingChart({
   }
 
   // Calculate chart dimensions
-  const maxValue = Math.max(...chartData.map(d => d.value));
-  const minValue = Math.min(...chartData.map(d => d.value));
+  const maxValue = Math.max(...chartData.map((d) => d.value));
+  const minValue = Math.min(...chartData.map((d) => d.value));
   const range = maxValue - minValue;
   const padding = range * 0.1;
 
@@ -88,7 +91,7 @@ export default function ForecastingChart({
   const chartHeight = height - margin.top - margin.bottom;
 
   const xScale = (timestamp: string) => {
-    const timestamps = chartData.map(d => new Date(d.timestamp).getTime());
+    const timestamps = chartData.map((d) => new Date(d.timestamp).getTime());
     const minTime = Math.min(...timestamps);
     const maxTime = Math.max(...timestamps);
     const timeRange = maxTime - minTime;
@@ -96,7 +99,10 @@ export default function ForecastingChart({
   };
 
   const yScale = (value: number) => {
-    return chartHeight - ((value - (minValue - padding)) / (range + 2 * padding)) * chartHeight;
+    return (
+      chartHeight -
+      ((value - (minValue - padding)) / (range + 2 * padding)) * chartHeight
+    );
   };
 
   // Create path for the line
@@ -104,21 +110,25 @@ export default function ForecastingChart({
     .map((point, index) => {
       const x = xScale(point.timestamp);
       const y = yScale(point.value);
-      return `${index === 0 ? 'M' : 'L'} ${x} ${y}`;
+      return `${index === 0 ? "M" : "L"} ${x} ${y}`;
     })
-    .join(' ');
+    .join(" ");
 
   // Split data by type for different styling
-  const historicalDataPoints = chartData.filter(d => d.type === 'historical');
-  const predictedDataPoints = chartData.filter(d => d.type === 'predicted');
+  const historicalDataPoints = chartData.filter((d) => d.type === "historical");
+  const predictedDataPoints = chartData.filter((d) => d.type === "predicted");
 
   return (
     <div className={styles.forecastingChart}>
       <div className={styles.chartHeader}>
         <h3>Forecast: {prediction.metric}</h3>
         <div className={styles.chartMeta}>
-          <span>Model Accuracy: {(prediction.model_accuracy * 100).toFixed(1)}%</span>
-          <span>Forecast Horizon: {prediction.predicted_values.length} periods</span>
+          <span>
+            Model Accuracy: {(prediction.model_accuracy * 100).toFixed(1)}%
+          </span>
+          <span>
+            Forecast Horizon: {prediction.predicted_values.length} periods
+          </span>
         </div>
       </div>
 
@@ -126,8 +136,18 @@ export default function ForecastingChart({
         <svg width={width} height={height} className={styles.chart}>
           {/* Background grid */}
           <defs>
-            <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-              <path d="M 40 0 L 0 0 0 40" fill="none" stroke="var(--color-border-light)" strokeWidth="1"/>
+            <pattern
+              id="grid"
+              width="40"
+              height="40"
+              patternUnits="userSpaceOnUse"
+            >
+              <path
+                d="M 40 0 L 0 0 0 40"
+                fill="none"
+                stroke="var(--color-border-light)"
+                strokeWidth="1"
+              />
             </pattern>
           </defs>
           <rect width="100%" height="100%" fill="url(#grid)" />
@@ -157,9 +177,9 @@ export default function ForecastingChart({
                 .map((point, index) => {
                   const x = xScale(point.timestamp) + margin.left;
                   const y = yScale(point.value) + margin.top;
-                  return `${index === 0 ? 'M' : 'L'} ${x} ${y}`;
+                  return `${index === 0 ? "M" : "L"} ${x} ${y}`;
                 })
-                .join(' ')}
+                .join(" ")}
               fill="none"
               stroke="var(--color-primary-500)"
               strokeWidth="3"
@@ -175,9 +195,9 @@ export default function ForecastingChart({
                 .map((point, index) => {
                   const x = xScale(point.timestamp) + margin.left;
                   const y = yScale(point.value) + margin.top;
-                  return `${index === 0 ? 'M' : 'L'} ${x} ${y}`;
+                  return `${index === 0 ? "M" : "L"} ${x} ${y}`;
                 })
-                .join(' ')}
+                .join(" ")}
               fill="none"
               stroke="var(--color-accent-500)"
               strokeWidth="3"
@@ -215,7 +235,7 @@ export default function ForecastingChart({
           {chartData.map((point, index) => {
             const x = xScale(point.timestamp) + margin.left;
             const y = yScale(point.value) + margin.top;
-            const isPredicted = point.type === 'predicted';
+            const isPredicted = point.type === "predicted";
 
             return (
               <circle
@@ -223,7 +243,11 @@ export default function ForecastingChart({
                 cx={x}
                 cy={y}
                 r="4"
-                fill={isPredicted ? "var(--color-accent-500)" : "var(--color-primary-500)"}
+                fill={
+                  isPredicted
+                    ? "var(--color-accent-500)"
+                    : "var(--color-primary-500)"
+                }
                 stroke="var(--color-bg-primary)"
                 strokeWidth="2"
               />
@@ -234,16 +258,28 @@ export default function ForecastingChart({
 
       <div className={styles.chartLegend}>
         <div className={styles.legendItem}>
-          <div className={styles.legendColor} style={{ backgroundColor: 'var(--color-primary-500)' }}></div>
+          <div
+            className={styles.legendColor}
+            style={{ backgroundColor: "var(--color-primary-500)" }}
+          ></div>
           <span>Historical Data</span>
         </div>
         <div className={styles.legendItem}>
-          <div className={styles.legendColor} style={{ backgroundColor: 'var(--color-accent-500)', borderStyle: 'dashed' }}></div>
+          <div
+            className={styles.legendColor}
+            style={{
+              backgroundColor: "var(--color-accent-500)",
+              borderStyle: "dashed",
+            }}
+          ></div>
           <span>Predicted Data</span>
         </div>
         {showConfidenceIntervals && (
           <div className={styles.legendItem}>
-            <div className={styles.legendColor} style={{ backgroundColor: 'var(--color-accent-200)' }}></div>
+            <div
+              className={styles.legendColor}
+              style={{ backgroundColor: "var(--color-accent-200)" }}
+            ></div>
             <span>Confidence Interval</span>
           </div>
         )}
@@ -257,16 +293,17 @@ export default function ForecastingChart({
             <div className={styles.predictionItem}>
               <span className={styles.predictionLabel}>Value:</span>
               <span className={styles.predictionValue}>
-                {prediction.predicted_values[0]?.value.toFixed(2) || 'N/A'}
+                {prediction.predicted_values[0]?.value.toFixed(2) || "N/A"}
               </span>
             </div>
             <div className={styles.predictionItem}>
               <span className={styles.predictionLabel}>Date:</span>
               <span className={styles.predictionValue}>
                 {prediction.predicted_values[0]
-                  ? new Date(prediction.predicted_values[0].timestamp).toLocaleDateString()
-                  : 'N/A'
-                }
+                  ? new Date(
+                      prediction.predicted_values[0].timestamp
+                    ).toLocaleDateString()
+                  : "N/A"}
               </span>
             </div>
             <div className={styles.predictionItem}>

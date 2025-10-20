@@ -60,9 +60,12 @@ export default function CorrelationMatrix({
   }, [externalCorrelations]);
 
   // Handle correlation selection
-  const handleCorrelationSelect = useCallback((correlation: Correlation) => {
-    onCorrelationSelect?.(correlation);
-  }, [onCorrelationSelect]);
+  const handleCorrelationSelect = useCallback(
+    (correlation: Correlation) => {
+      onCorrelationSelect?.(correlation);
+    },
+    [onCorrelationSelect]
+  );
 
   // Run correlation analysis
   const runCorrelationAnalysis = useCallback(async () => {
@@ -70,10 +73,7 @@ export default function CorrelationMatrix({
       setState((prev) => ({ ...prev, isAnalyzing: true, error: null }));
 
       // Re-fetch correlations with current settings
-      const response = await analyticsApiClient.getCorrelations(
-        undefined,
-        0.1
-      );
+      const response = await analyticsApiClient.getCorrelations(undefined, 0.1);
 
       setState((prev) => ({
         ...prev,
@@ -110,10 +110,15 @@ export default function CorrelationMatrix({
       error: externalError ?? prev.error,
       minCorrelationStrength,
     }));
-  }, [externalCorrelations, externalAnalyzing, externalError, minCorrelationStrength]);
+  }, [
+    externalCorrelations,
+    externalAnalyzing,
+    externalError,
+    minCorrelationStrength,
+  ]);
 
   // Filter correlations based on minimum strength
-  const filteredCorrelations = state.correlations.filter(correlation => {
+  const filteredCorrelations = state.correlations.filter((correlation) => {
     const strengthLevels = {
       weak: 0,
       moderate: 1,
@@ -128,29 +133,38 @@ export default function CorrelationMatrix({
   });
 
   // Get unique metrics for matrix
-  const allMetrics = Array.from(new Set([
-    ...filteredCorrelations.flatMap(c => [c.metric_a, c.metric_b]),
-    ...(metrics || []),
-  ]));
+  const allMetrics = Array.from(
+    new Set([
+      ...filteredCorrelations.flatMap((c) => [c.metric_a, c.metric_b]),
+      ...(metrics || []),
+    ])
+  );
 
   // Create correlation matrix
-  const correlationMatrix = allMetrics.map(metricA =>
-    allMetrics.map(metricB => {
+  const correlationMatrix = allMetrics.map((metricA) =>
+    allMetrics.map((metricB) => {
       if (metricA === metricB) {
-        return { correlation: 1, strength: "perfect" as const, direction: "positive" as const };
+        return {
+          correlation: 1,
+          strength: "perfect" as const,
+          direction: "positive" as const,
+        };
       }
 
       const correlation = filteredCorrelations.find(
-        c => (c.metric_a === metricA && c.metric_b === metricB) ||
-             (c.metric_a === metricB && c.metric_b === metricA)
+        (c) =>
+          (c.metric_a === metricA && c.metric_b === metricB) ||
+          (c.metric_a === metricB && c.metric_b === metricA)
       );
 
-      return correlation ? {
-        correlation: correlation.correlation_coefficient,
-        strength: correlation.strength,
-        direction: correlation.direction,
-        fullCorrelation: correlation,
-      } : null;
+      return correlation
+        ? {
+            correlation: correlation.correlation_coefficient,
+            strength: correlation.strength,
+            direction: correlation.direction,
+            fullCorrelation: correlation,
+          }
+        : null;
     })
   );
 
@@ -178,7 +192,8 @@ export default function CorrelationMatrix({
       <div className={styles.matrixHeader}>
         <h2>Correlation Analysis</h2>
         <p className={styles.description}>
-          Statistical analysis of relationships between metrics using correlation coefficients.
+          Statistical analysis of relationships between metrics using
+          correlation coefficients.
         </p>
 
         <div className={styles.matrixControls}>
@@ -190,7 +205,8 @@ export default function CorrelationMatrix({
                 onChange={(e) =>
                   setState((prev) => ({
                     ...prev,
-                    minCorrelationStrength: e.target.value as Correlation["strength"],
+                    minCorrelationStrength: e.target
+                      .value as Correlation["strength"],
                   }))
                 }
               >
@@ -213,9 +229,7 @@ export default function CorrelationMatrix({
                 Analyzing...
               </>
             ) : (
-              <>
-                🔗 Analyze Correlations
-              </>
+              <>🔗 Analyze Correlations</>
             )}
           </button>
         </div>
@@ -239,15 +253,9 @@ export default function CorrelationMatrix({
         ) : filteredCorrelations.length > 0 ? (
           <>
             <div className={styles.matrixStats}>
-              <span>
-                Total Correlations: {filteredCorrelations.length}
-              </span>
-              <span>
-                Metrics Analyzed: {allMetrics.length}
-              </span>
-              <span>
-                Significance Threshold: 0.1
-              </span>
+              <span>Total Correlations: {filteredCorrelations.length}</span>
+              <span>Metrics Analyzed: {allMetrics.length}</span>
+              <span>Significance Threshold: 0.1</span>
             </div>
 
             <div className={styles.matrixContainer}>
@@ -274,8 +282,13 @@ export default function CorrelationMatrix({
                       if (rowIndex === colIndex) {
                         // Diagonal - perfect correlation
                         return (
-                          <div key={colIndex} className={`${styles.matrixCell} ${styles.correlationPerfect}`}>
-                            <span className={styles.correlationValue}>1.00</span>
+                          <div
+                            key={colIndex}
+                            className={`${styles.matrixCell} ${styles.correlationPerfect}`}
+                          >
+                            <span className={styles.correlationValue}>
+                              1.00
+                            </span>
                           </div>
                         );
                       }
@@ -283,7 +296,10 @@ export default function CorrelationMatrix({
                       if (!cellData) {
                         // No correlation data
                         return (
-                          <div key={colIndex} className={`${styles.matrixCell} ${styles.correlationEmpty}`}>
+                          <div
+                            key={colIndex}
+                            className={`${styles.matrixCell} ${styles.correlationEmpty}`}
+                          >
                             <span className={styles.correlationValue}>-</span>
                           </div>
                         );
@@ -292,13 +308,21 @@ export default function CorrelationMatrix({
                       return (
                         <div
                           key={colIndex}
-                          className={`${styles.matrixCell} ${getCorrelationColor(cellData.correlation)} ${
+                          className={`${
+                            styles.matrixCell
+                          } ${getCorrelationColor(cellData.correlation)} ${
                             cellData.fullCorrelation ? styles.clickable : ""
                           }`}
-                          onClick={() => cellData.fullCorrelation && handleCorrelationSelect(cellData.fullCorrelation)}
-                          title={cellData.fullCorrelation ?
-                            `${metricA} ↔ ${metricB}: ${cellData.correlation.toFixed(3)} (${cellData.strength})` :
-                            undefined
+                          onClick={() =>
+                            cellData.fullCorrelation &&
+                            handleCorrelationSelect(cellData.fullCorrelation)
+                          }
+                          title={
+                            cellData.fullCorrelation
+                              ? `${metricA} ↔ ${metricB}: ${cellData.correlation.toFixed(
+                                  3
+                                )} (${cellData.strength})`
+                              : undefined
                           }
                         >
                           <span className={styles.correlationValue}>
@@ -320,23 +344,33 @@ export default function CorrelationMatrix({
               <h4>Correlation Strength</h4>
               <div className={styles.legendGrid}>
                 <div className={styles.legendItem}>
-                  <div className={`${styles.legendColor} ${styles.correlationVeryStrong}`}></div>
+                  <div
+                    className={`${styles.legendColor} ${styles.correlationVeryStrong}`}
+                  ></div>
                   <span>Very Strong (±0.8+)</span>
                 </div>
                 <div className={styles.legendItem}>
-                  <div className={`${styles.legendColor} ${styles.correlationStrong}`}></div>
+                  <div
+                    className={`${styles.legendColor} ${styles.correlationStrong}`}
+                  ></div>
                   <span>Strong (±0.6-0.8)</span>
                 </div>
                 <div className={styles.legendItem}>
-                  <div className={`${styles.legendColor} ${styles.correlationModerate}`}></div>
+                  <div
+                    className={`${styles.legendColor} ${styles.correlationModerate}`}
+                  ></div>
                   <span>Moderate (±0.3-0.6)</span>
                 </div>
                 <div className={styles.legendItem}>
-                  <div className={`${styles.legendColor} ${styles.correlationWeak}`}></div>
+                  <div
+                    className={`${styles.legendColor} ${styles.correlationWeak}`}
+                  ></div>
                   <span>Weak (±0.1-0.3)</span>
                 </div>
                 <div className={styles.legendItem}>
-                  <div className={`${styles.legendColor} ${styles.correlationNone}`}></div>
+                  <div
+                    className={`${styles.legendColor} ${styles.correlationNone}`}
+                  ></div>
                   <span>No Correlation</span>
                 </div>
               </div>
@@ -347,7 +381,11 @@ export default function CorrelationMatrix({
               <h4>Top Correlations</h4>
               <div className={styles.correlationsList}>
                 {filteredCorrelations
-                  .sort((a, b) => Math.abs(b.correlation_coefficient) - Math.abs(a.correlation_coefficient))
+                  .sort(
+                    (a, b) =>
+                      Math.abs(b.correlation_coefficient) -
+                      Math.abs(a.correlation_coefficient)
+                  )
                   .slice(0, 10)
                   .map((correlation, index) => (
                     <div
@@ -356,17 +394,25 @@ export default function CorrelationMatrix({
                       onClick={() => handleCorrelationSelect(correlation)}
                     >
                       <div className={styles.correlationMetrics}>
-                        <span className={styles.metricA}>{correlation.metric_a}</span>
+                        <span className={styles.metricA}>
+                          {correlation.metric_a}
+                        </span>
                         <span className={styles.correlationSymbol}>
                           {correlation.direction === "positive" ? "↔" : "⮂"}
                         </span>
-                        <span className={styles.metricB}>{correlation.metric_b}</span>
+                        <span className={styles.metricB}>
+                          {correlation.metric_b}
+                        </span>
                       </div>
                       <div className={styles.correlationDetails}>
                         <span className={styles.correlationCoefficient}>
                           {correlation.correlation_coefficient.toFixed(3)}
                         </span>
-                        <span className={`${styles.correlationStrength} ${styles[correlation.strength]}`}>
+                        <span
+                          className={`${styles.correlationStrength} ${
+                            styles[correlation.strength]
+                          }`}
+                        >
                           {correlation.strength.replace("_", " ").toUpperCase()}
                         </span>
                         <span className={styles.correlationPValue}>
@@ -383,8 +429,8 @@ export default function CorrelationMatrix({
             <div className={styles.emptyIcon}>🔗</div>
             <h3>No Correlation Data</h3>
             <p>
-              Correlation analysis will be available once multiple metrics have been collected
-              and analyzed for statistical relationships.
+              Correlation analysis will be available once multiple metrics have
+              been collected and analyzed for statistical relationships.
             </p>
             <div className={styles.analysisInfo}>
               <h4>About Correlation Analysis:</h4>
