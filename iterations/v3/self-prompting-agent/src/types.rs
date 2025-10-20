@@ -172,3 +172,128 @@ pub struct IterationContext {
     pub refinement_prompt: String,
     pub timestamp: DateTime<Utc>,
 }
+
+/// Structured action request from model (tool-call envelope)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ActionRequest {
+    /// Type of action to perform
+    pub action_type: ActionType,
+    /// File changes to apply (for patch/write actions)
+    pub changeset: Option<file_ops::ChangeSet>,
+    /// Human-readable reason for this action
+    pub reason: String,
+    /// Model's confidence in this action (0.0 to 1.0)
+    pub confidence: f64,
+    /// Additional metadata for the action
+    pub metadata: HashMap<String, serde_json::Value>,
+}
+
+impl ActionRequest {
+    /// Create a new action request
+    pub fn new(action_type: ActionType, reason: String, confidence: f64) -> Self {
+        Self {
+            action_type,
+            changeset: None,
+            reason,
+            confidence,
+            metadata: HashMap::new(),
+        }
+    }
+
+    /// Create a patch action request
+    pub fn patch(changeset: file_ops::ChangeSet, reason: String, confidence: f64) -> Self {
+        Self {
+            action_type: ActionType::Patch,
+            changeset: Some(changeset),
+            reason,
+            confidence,
+            metadata: HashMap::new(),
+        }
+    }
+
+    /// Create a write action request
+    pub fn write(changeset: file_ops::ChangeSet, reason: String, confidence: f64) -> Self {
+        Self {
+            action_type: ActionType::Write,
+            changeset: Some(changeset),
+            reason,
+            confidence,
+            metadata: HashMap::new(),
+        }
+    }
+
+    /// Create a no-op action request
+    pub fn noop(reason: String, confidence: f64) -> Self {
+        Self {
+            action_type: ActionType::NoOp,
+            changeset: None,
+            reason,
+            confidence,
+            metadata: HashMap::new(),
+        }
+    }
+
+    /// Validate the action request
+    pub fn validate(&self) -> Result<(), ActionValidationError> {
+        // Validate confidence range
+        if !(0.0..=1.0).contains(&self.confidence) {
+            return Err(ActionValidationError::InvalidConfidence(self.confidence));
+        }
+
+        // Validate changeset presence for patch/write actions
+        match self.action_type {
+            ActionType::Patch | ActionType::Write => {
+                if self.changeset.is_none() {
+                    return Err(ActionValidationError::MissingChangeset);
+                }
+            }
+            ActionType::NoOp => {
+                if self.changeset.is_some() {
+                    return Err(ActionValidationError::UnexpectedChangeset);
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Check if this action requires file changes
+    pub fn requires_changes(&self) -> bool {
+        matches!(self.action_type, ActionType::Patch | ActionType::Write)
+    }
+
+    /// Get the changeset if present
+    pub fn changeset(&self) -> Option<&file_ops::ChangeSet> {
+        self.changeset.as_ref()
+    }
+}
+
+/// Types of actions that can be requested
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ActionType {
+    /// Apply patches to existing files
+    Patch,
+    /// Write new files or overwrite existing ones
+    Write,
+    /// No operation needed (task is complete or no changes required)
+    NoOp,
+}
+
+/// Errors that can occur during action request validation
+#[derive(Debug, thiserror::Error)]
+pub enum ActionValidationError {
+    #[error("Invalid confidence value: {0} (must be between 0.0 and 1.0)")]
+    InvalidConfidence(f64),
+
+    #[error("Changeset required for patch/write actions")]
+    MissingChangeset,
+
+    #[error("Changeset not allowed for no-op actions")]
+    UnexpectedChangeset,
+
+    #[error("JSON schema validation failed: {0}")]
+    SchemaValidation(String),
+
+    #[error("File operation validation failed: {0}")]
+    FileOpsValidation(String),
+}

@@ -6,7 +6,7 @@ pub use adaptive::AdaptivePromptingStrategy;
 
 use async_trait::async_trait;
 use crate::evaluation::EvalReport;
-use crate::types::Task;
+use crate::types::{Task, ActionRequest};
 
 /// Trait for prompting strategies
 #[async_trait]
@@ -19,4 +19,13 @@ pub trait PromptingStrategy: Send + Sync {
 
     /// Generate self-critique prompt for internal evaluation
     fn generate_self_critique_prompt(&self, output: &str) -> String;
+
+    /// Generate structured action request from model output
+    /// Returns a validated ActionRequest or an error message for re-prompting
+    async fn generate_action_request(
+        &self,
+        model_output: &str,
+        task: &Task,
+        eval_context: Option<&EvalReport>,
+    ) -> Result<ActionRequest, String>;
 }

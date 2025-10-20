@@ -6,8 +6,7 @@ use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use sqlx::postgres::PgPoolOptions;
 use sqlx::{Pool, Postgres};
-use std::collections::HashMap;
-use tracing::{debug, warn};
+use tracing::debug;
 use uuid::Uuid;
 
 /// Database connection pool wrapper

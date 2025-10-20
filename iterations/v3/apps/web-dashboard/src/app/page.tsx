@@ -65,15 +65,16 @@ export default function Dashboard() {
 
     if (activeSection === "chat") {
       console.warn(
-        "Chat interface not implemented - requires V3 chat WebSocket API"
+        "Chat interface connecting to V3 backend - WebSocket integration partially implemented"
       );
-      // TODO: Milestone 1 - Conversational Interface
-      // - [ ] Implement V3 chat WebSocket endpoint (/api/v1/chat/ws/:session_id)
-      // - [ ] Create chat session management (/api/v1/chat/session)
-      // - [ ] Add chat message history API (/api/v1/chat/history/:session_id)
-      // - [ ] Build ChatInterface, MessageList, MessageInput, ContextPanel components
+      // TODO: Milestone 1 - Conversational Interface (PARTIALLY COMPLETE)
+      // - [x] Implement V3 chat WebSocket endpoint proxy (/api/chat/ws/:session_id)
+      // - [x] Create chat session management proxy (/api/proxy/chat/session)
+      // - [x] Add chat message history API proxy (/api/proxy/chat/history/:session_id)
+      // - [x] Build ChatInterface, MessageList, MessageInput, ContextPanel components
+      // - [x] Implement WebSocket client with auto-reconnect and heartbeat
+      // - [ ] Implement actual V3 backend chat endpoints when available
       // - [ ] Implement intent parsing and routing in V3 chat_handler.rs
-      // - [ ] Add WebSocket client with auto-reconnect and heartbeat
       // - [ ] Integrate with planning agent for task initiation
       // - [ ] Add progress query and guidance request handling
       // - [ ] Test end-to-end chat flow with task creation
@@ -158,14 +159,15 @@ export default function Dashboard() {
 
       // Set error if backend is unhealthy
       if (healthResponse.backend.status !== "healthy") {
-        const backendError = healthResponse.backend.error ||
+        const backendError =
+          healthResponse.backend.error ||
           `Backend status: ${healthResponse.backend.status}`;
         setError(`V3 Backend: ${backendError}`);
       }
-
     } catch (err) {
       console.error("Health check error:", err);
-      const errorMessage = err instanceof Error ? err.message : "Health check failed";
+      const errorMessage =
+        err instanceof Error ? err.message : "Health check failed";
       setError(errorMessage);
       setHealthStatus({
         status: "unhealthy",

@@ -5,7 +5,8 @@ use async_trait::async_trait;
 
 use super::PromptingStrategy;
 use crate::evaluation::EvalReport;
-use crate::types::{Task, TaskType};
+use crate::types::{Task, TaskType, ActionRequest, ActionType, ActionValidationError};
+use serde_json;
 
 /// Template for prompts
 #[derive(Debug, Clone)]
@@ -40,7 +41,28 @@ Requirements:
 - Add comments for complex logic
 - Follow language best practices
 
-Generate the complete implementation:"#.to_string(),
+IMPORTANT: Respond with a JSON ActionRequest object in this exact format:
+{
+  "action_type": "write",
+  "changeset": {
+    "patches": [{
+      "path": "path/to/file.ext",
+      "hunks": [{
+        "old_start": 1,
+        "old_lines": 0,
+        "new_start": 1,
+        "new_lines": N,
+        "lines": "+line1\n+line2\n..."
+      }],
+      "expected_prev_sha256": null
+    }]
+  },
+  "reason": "Brief explanation of the changes",
+  "confidence": 0.95,
+  "metadata": {}
+}
+
+Generate the complete implementation as a structured action:"#.to_string(),
                 variables: vec!["description".to_string()],
             },
         ]);
@@ -63,7 +85,28 @@ Requirements:
 - Fix any bugs or issues
 - Add proper error handling if needed
 
-Provide the corrected code:"#.to_string(),
+IMPORTANT: Respond with a JSON ActionRequest object in this exact format:
+{
+  "action_type": "patch",
+  "changeset": {
+    "patches": [{
+      "path": "path/to/file.ext",
+      "hunks": [{
+        "old_start": LINE_NUMBER,
+        "old_lines": OLD_LINE_COUNT,
+        "new_start": NEW_LINE_NUMBER,
+        "new_lines": NEW_LINE_COUNT,
+        "lines": "-old line\n+new line\n..."
+      }],
+      "expected_prev_sha256": null
+    }]
+  },
+  "reason": "Brief explanation of the fix",
+  "confidence": 0.90,
+  "metadata": {}
+}
+
+Provide the corrected code as a structured patch:"#.to_string(),
                 variables: vec!["description".to_string(), "code_context".to_string()],
             },
         ]);
@@ -146,14 +189,56 @@ Failed criteria:
 Specific feedback:
 {feedback}
 
-Please revise your solution to address these issues:"#.to_string(),
+IMPORTANT: Respond with a JSON ActionRequest object showing your refined solution:
+{
+  "action_type": "patch",
+  "changeset": {
+    "patches": [{
+      "path": "path/to/file.ext",
+      "hunks": [{
+        "old_start": LINE_NUMBER,
+        "old_lines": OLD_LINE_COUNT,
+        "new_start": NEW_LINE_NUMBER,
+        "new_lines": NEW_LINE_COUNT,
+        "lines": "-old line\n+new line\n..."
+      }],
+      "expected_prev_sha256": null
+    }]
+  },
+  "reason": "Addressed the failed criteria and feedback",
+  "confidence": 0.85,
+  "metadata": {}
+}
+
+Please revise your solution as a structured action to address these issues:"#.to_string(),
                 variables: vec!["score".to_string(), "failed_criteria".to_string(), "feedback".to_string()],
             },
             PromptTemplate {
                 template: r#"The previous implementation had these problems:
 {issues}
 
-Please provide an improved version that fixes these issues while maintaining the original requirements."#.to_string(),
+IMPORTANT: Respond with a JSON ActionRequest object with your improvements:
+{
+  "action_type": "patch",
+  "changeset": {
+    "patches": [{
+      "path": "path/to/file.ext",
+      "hunks": [{
+        "old_start": LINE_NUMBER,
+        "old_lines": OLD_LINE_COUNT,
+        "new_start": NEW_LINE_NUMBER,
+        "new_lines": NEW_LINE_COUNT,
+        "lines": "-old line\n+new line\n..."
+      }],
+      "expected_prev_sha256": null
+    }]
+  },
+  "reason": "Fixed the identified issues",
+  "confidence": 0.80,
+  "metadata": {}
+}
+
+Please provide an improved version as a structured action that fixes these issues:"#.to_string(),
                 variables: vec!["issues".to_string()],
             },
         ];
@@ -309,6 +394,45 @@ Evaluation criteria:
 Provide a detailed critique and suggestions for improvement:"#,
             output
         )
+    }
+
+    async fn generate_action_request(
+        &self,
+        model_output: &str,
+        task: &Task,
+        eval_context: Option<&EvalReport>,
+    ) -> Result<ActionRequest, String> {
+        // Try to parse as JSON ActionRequest first
+        match serde_json::from_str::<ActionRequest>(model_output) {
+            Ok(mut action_request) => {
+                // Validate the parsed request
+                match action_request.validate() {
+                    Ok(_) => {
+                        // Additional validation for changeset if present
+                        if let Some(changeset) = &action_request.changeset {
+                            // Basic validation - more thorough validation happens at workspace level
+                            if changeset.patches.is_empty() {
+                                return Err("Changeset contains no patches".to_string());
+                            }
+                        }
+
+                        Ok(action_request)
+                    }
+                    Err(e) => Err(format!("ActionRequest validation failed: {}", e)),
+                }
+            }
+            Err(json_error) => {
+                // JSON parsing failed, generate helpful error and re-prompt instruction
+                let error_msg = format!(
+                    "Failed to parse model output as JSON ActionRequest: {}. \
+                     Expected format: {{'action_type': 'patch'|'write'|'noop', \
+                     'changeset': ChangeSet, 'reason': string, 'confidence': number}}",
+                    json_error
+                );
+
+                Err(error_msg)
+            }
+        }
     }
 }
 

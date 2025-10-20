@@ -44,6 +44,12 @@ export class ChatApiClient {
         }
       );
 
+      // If no websocket_url provided by backend, construct it
+      if (!response.websocket_url && response.session?.id) {
+        const v3BackendHost = process.env.V3_BACKEND_HOST ?? "http://localhost:8080";
+        response.websocket_url = `ws://${v3BackendHost.replace(/^https?:\/\//, "")}/api/v1/chat/ws/${response.session.id}`;
+      }
+
       return response;
     } catch (error) {
       console.error("Failed to create chat session:", error);

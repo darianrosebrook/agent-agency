@@ -103,14 +103,37 @@ export default function ChatInterface({
         const response = await chatApiRef.current.getSession(id);
         const session = response.session;
 
-        // Initialize WebSocket connection
-        const wsUrl =
-          typeof window !== "undefined"
-            ? // eslint-disable-next-line no-undef
-              `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${
-                window.location.host
-              }/api/proxy/chat/ws/${id}`
-            : `ws://localhost:8080/chat/ws/${id}`;
+        // Get WebSocket URL from backend configuration
+        let wsUrl: string;
+        try {
+          const wsConfigResponse = await fetch(`/api/chat/ws/${id}`);
+          const wsConfig = await wsConfigResponse.json();
+
+          if (wsConfig.backend_url) {
+            // Use the backend WebSocket URL directly
+            wsUrl = wsConfig.backend_url;
+          } else {
+            // Fallback to proxy URL
+            wsUrl =
+              typeof window !== "undefined"
+                ? // eslint-disable-next-line no-undef
+                  `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${
+                    window.location.host
+                  }/api/proxy/chat/ws/${id}`
+                : `ws://localhost:8080/chat/ws/${id}`;
+          }
+        } catch (configError) {
+          console.warn("Failed to get WebSocket config, using fallback:", configError);
+          // Fallback to proxy URL
+          wsUrl =
+            typeof window !== "undefined"
+              ? // eslint-disable-next-line no-undef
+                `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${
+                  window.location.host
+                }/api/proxy/chat/ws/${id}`
+              : `ws://localhost:8080/chat/ws/${id}`;
+        }
+
         initializeWebSocket(session.id, wsUrl);
 
         setState((prev) => ({

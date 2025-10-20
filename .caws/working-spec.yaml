@@ -1,73 +1,72 @@
-id: AGENT-0002
-title: "Implement first-class File Ops tool with schema and guard"
+id: AGENT-0003
+title: "Add tool-call envelope to prompting strategy"
 risk_tier: 2
 mode: feature
 change_budget:
-  max_files: 15
-  max_loc: 800
+  max_files: 12
+  max_loc: 600
 blast_radius:
-  modules: ["orchestration", "workspace"]
+  modules: ["self-prompting-agent", "orchestration"]
   data_migration: false
 operational_rollback_slo: "5m"
 scope:
   in:
-    - "iterations/v3/file_ops/"
-    - "iterations/v3/orchestration/src/lib.rs"  # Add dependency
-    - "iterations/v3/Cargo.toml"  # Add new crate
+    - "iterations/v3/self-prompting-agent/src/prompting/"
+    - "iterations/v3/self-prompting-agent/src/types.rs"  # Add ActionRequest types
+    - "iterations/v3/self-prompting-agent/src/agent.rs"  # Update agent to use tool calls
+    - "iterations/v3/self-prompting-agent/src/loop_controller.rs"  # Integrate tool call validation
   out:
+    - "iterations/v3/orchestration/"
+    - "iterations/v3/database/"
     - "iterations/v3/interfaces/"
     - "iterations/v3/council/"
-    - "iterations/v3/database/"
-    - "iterations/v3/security/"
 invariants:
-  - "File operations are deterministic and reversible"
-  - "Allow-list and budget enforcement happens at tool boundary"
-  - "Content hashing prevents undetected file modifications"
-  - "ChangeSet operations are atomic within a workspace"
-  - "No direct file system access outside workspace abstraction"
+  - "All prompting returns structured JSON tool calls, not free text"
+  - "Tool calls are validated against JSON schema before execution"
+  - "Invalid tool calls trigger re-prompting with error context"
+  - "ActionRequest types are strongly typed and serializable"
+  - "Prompting strategy maintains backward compatibility for evaluation"
 acceptance:
   - id: "A1"
-    given: "A valid ChangeSet with patches"
-    when: "apply() is called on a workspace"
-    then: "Files are modified atomically and ChangeSetId is returned"
+    given: "Valid ActionRequest JSON from generate_action_request()"
+    when: "JSON is parsed and validated"
+    then: "ActionRequest struct is created with correct type, changeset, reason, confidence"
   - id: "A2"
-    given: "A ChangeSet that violates allow-list"
-    when: "apply() is called"
-    then: "Operation is blocked with clear error message"
+    given: "Invalid JSON from generate_action_request()"
+    when: "JSON parsing fails"
+    then: "Validation error is returned with helpful error message"
   - id: "A3"
-    given: "A ChangeSet that exceeds budget limits"
-    when: "apply() is called"
-    then: "Operation is blocked with budget status"
+    given: "ActionRequest with type='patch' and valid changeset"
+    when: "apply_changeset() is called"
+    then: "Changes are applied to workspace safely"
   - id: "A4"
-    given: "A valid ChangeSetId from apply()"
-    when: "revert() is called"
-    then: "All changes are undone deterministically"
+    given: "ActionRequest with type='noop' and reason"
+    when: "processed by loop controller"
+    then: "No changes made, reason logged for learning"
   - id: "A5"
-    given: "File contents before apply()"
-    when: "apply() then revert() are called"
-    then: "File contents are identical to original state"
+    given: "Tool call violates allow-list or budget"
+    when: "validated at tool boundary"
+    then: "ActionRequest is rejected, re-prompting triggered"
 contracts:
   - type: "rust-api"
-    path: "iterations/v3/file_ops/src/lib.rs"
+    path: "iterations/v3/self-prompting-agent/src/prompting/mod.rs"
     endpoints:
-      - "Workspace::apply()"
-      - "Workspace::revert()"
-      - "ChangeSet::new()"
+      - "PromptingStrategy::generate_action_request()"
+      - "ActionRequest::validate()"
+      - "ActionRequest::apply()"
     schemas:
-      - name: "ChangeSet"
-        fields: ["patches: Vec<Patch>"]
-      - name: "Patch"
-        fields: ["path: String", "hunks: Vec<Hunk>", "expected_prev_sha256: Option<String>"]
-      - name: "Hunk"
-        fields: ["old_start: u32", "old_lines: u32", "new_start: u32", "new_lines: u32", "lines: String"]
+      - name: "ActionRequest"
+        fields: ["type: ActionType", "changeset: Option<ChangeSet>", "reason: String", "confidence: f64"]
+      - name: "ActionType"
+        fields: ["Patch", "Write", "NoOp"]
 non_functional:
   perf:
-    apply_p95_ms: 100
-    revert_p95_ms: 50
+    action_request_generation_ms: 200
+    json_validation_ms: 10
   security:
-    - "no-arbitrary-file-access"
-    - "content-hash-validation"
-    - "workspace-isolation"
+    - "structured-tool-calls"
+    - "no-arbitrary-code-execution"
+    - "allow-list-enforcement"
   reliability:
-    - "atomic-operations"
-    - "deterministic-rollback"
+    - "json-schema-validation"
+    - "error-recovery-reprompting"

@@ -23,6 +23,7 @@ agent-agency-provenance = { path = "../provenance" }
 agent-agency-resilience = { path = "../resilience" }
 agent-agency-database = { path = "../database" }
 agent-agency-contracts = { path = "../agent-agency-contracts" }
+file_ops = { path = "../file_ops" }
 tracing = "0.1"
 flate2 = "1.0"
 

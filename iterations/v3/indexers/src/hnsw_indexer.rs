@@ -6,7 +6,7 @@ use anyhow::{Context, Result};
 use parking_lot::Mutex;
 use std::collections::HashMap;
 use std::sync::Arc;
-use tracing::{debug, info, warn};
+use tracing::debug;
 use uuid::Uuid;
 
 /// Simplified HNSW index for vector search

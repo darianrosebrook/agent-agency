@@ -82,7 +82,13 @@ describe("Header", () => {
   describe("Retry Functionality", () => {
     it("calls onRetryHealthCheck when retry button is clicked", () => {
       const mockRetry = jest.fn();
-      render(<Header {...defaultProps} error="Test error" onRetryHealthCheck={mockRetry} />);
+      render(
+        <Header
+          {...defaultProps}
+          error="Test error"
+          onRetryHealthCheck={mockRetry}
+        />
+      );
 
       const retryButton = screen.getByRole("button", { name: /retry/i });
       fireEvent.click(retryButton);
@@ -92,7 +98,9 @@ describe("Header", () => {
 
     it("shows retry button when there is an error", () => {
       render(<Header {...defaultProps} error="Test error" />);
-      expect(screen.getByRole("button", { name: /retry/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: /retry/i })
+      ).toBeInTheDocument();
     });
   });
 
@@ -104,7 +112,9 @@ describe("Header", () => {
       };
       render(<Header {...defaultProps} healthStatus={healthStatus} />);
 
-      const statusButton = screen.getByRole("button", { name: /system healthy/i });
+      const statusButton = screen.getByRole("button", {
+        name: /system healthy/i,
+      });
       expect(statusButton).toHaveClass("healthy");
     });
 
@@ -115,7 +125,9 @@ describe("Header", () => {
       };
       render(<Header {...defaultProps} healthStatus={healthStatus} />);
 
-      const statusButton = screen.getByRole("button", { name: /system degraded/i });
+      const statusButton = screen.getByRole("button", {
+        name: /system degraded/i,
+      });
       expect(statusButton).toHaveClass("degraded");
     });
 
@@ -126,14 +138,18 @@ describe("Header", () => {
       };
       render(<Header {...defaultProps} healthStatus={healthStatus} />);
 
-      const statusButton = screen.getByRole("button", { name: /system unhealthy/i });
+      const statusButton = screen.getByRole("button", {
+        name: /system unhealthy/i,
+      });
       expect(statusButton).toHaveClass("unhealthy");
     });
 
     it("applies correct CSS class for unknown status", () => {
       render(<Header {...defaultProps} />);
 
-      const statusButton = screen.getByRole("button", { name: /status unknown/i });
+      const statusButton = screen.getByRole("button", {
+        name: /status unknown/i,
+      });
       expect(statusButton).toHaveClass("unknown");
     });
   });

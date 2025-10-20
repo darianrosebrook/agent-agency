@@ -995,6 +995,58 @@ impl PreparedModel for OnnxPreparedModel {
     }
 }
 
+impl CandleInferenceModel for OnnxPreparedModel {
+    fn forward(&self, inputs: &HashMap<String, Tensor>) -> Result<HashMap<String, Tensor>> {
+        use ort::Value;
+        use ndarray::{Array, Dimension};
+
+        // Convert Candle tensors to ONNX inputs
+        let mut onnx_inputs = HashMap::new();
+        for (name, candle_tensor) in inputs {
+            // Get the tensor data as a slice
+            let data = candle_tensor.to_vec1::<f32>()
+                .with_context(|| format!("Failed to convert tensor '{}' to f32 slice", name))?;
+
+            // Get tensor shape
+            let shape = candle_tensor.shape().dims().to_vec();
+
+            // Create ndarray from the data
+            let array = Array::from_shape_vec(shape, data)
+                .with_context(|| format!("Failed to create ndarray for tensor '{}'", name))?;
+
+            // Create ONNX tensor
+            let onnx_tensor = Value::from_array(array)
+                .with_context(|| format!("Failed to create ONNX tensor for '{}'", name))?;
+
+            onnx_inputs.insert(name.clone(), onnx_tensor);
+        }
+
+        // Run ONNX inference
+        let onnx_outputs = self.session.run(onnx_inputs)
+            .with_context(|| "Failed to run ONNX inference")?;
+
+        // Convert ONNX outputs back to Candle tensors
+        let mut outputs = HashMap::new();
+        for (name, onnx_tensor) in onnx_outputs {
+            // Extract tensor data
+            let tensor_data = onnx_tensor.try_extract_tensor::<f32>()
+                .with_context(|| format!("Failed to extract tensor data for '{}'", name))?;
+
+            // Convert to Candle tensor
+            let candle_tensor = candle_core::Tensor::from_slice(
+                &tensor_data.view().as_slice().unwrap(),
+                tensor_data.shape(),
+                &self.device,
+            )
+            .with_context(|| format!("Failed to create Candle tensor for '{}'", name))?;
+
+            outputs.insert(name, candle_tensor);
+        }
+
+        Ok(outputs)
+    }
+}
+
 /// Trait for Candle inference models (placeholder for actual model types)
 trait CandleInferenceModel: Send + Sync {
     fn forward(&self, inputs: &HashMap<String, Tensor>) -> Result<HashMap<String, Tensor>>;
