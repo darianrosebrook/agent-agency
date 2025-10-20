@@ -219,6 +219,24 @@ impl SelfPromptingLoop {
                     _ => "Unknown reason",
                 });
 
+                // Handle workspace promotion or rollback based on evaluation success
+                let evaluation_passed = matches!(satisficing_decision.reason,
+                    StopReason::Satisficed | StopReason::QualityCeiling);
+
+                if evaluation_passed && action_request.requires_changes() {
+                    info!("Evaluation passed - promoting workspace changes to source");
+                    if let Err(e) = self.promote_workspace_changes(&task).await {
+                        warn!("Failed to promote workspace changes: {}", e);
+                        // Continue with result even if promotion fails - changes are still in workspace
+                    }
+                } else if !evaluation_passed && action_request.requires_changes() {
+                    info!("Evaluation failed - rolling back workspace changes");
+                    if let Err(e) = self.rollback_workspace_changes(&task).await {
+                        warn!("Failed to rollback workspace changes: {}", e);
+                        // Continue with result even if rollback fails
+                    }
+                }
+
                 // Emit final result event
                 self.emit_event(SelfPromptingEvent::LoopCompleted {
                     task_id: task.id,
@@ -464,6 +482,38 @@ impl SelfPromptingLoop {
         Ok(())
     }
 
+    /// Promote workspace changes to the source directory after successful evaluation
+    async fn promote_workspace_changes(&self, task: &Task) -> Result<(), SelfPromptingError> {
+        info!("Promoting workspace changes for task {}", task.id);
+
+        // Create workspace and promote changes
+        let workspace = self.workspace_factory.create(&task.project_path)
+            .map_err(|e| SelfPromptingError::WorkspaceError(format!("Failed to create workspace for promotion: {}", e)))?;
+
+        workspace.promote()
+            .await
+            .map_err(|e| SelfPromptingError::WorkspaceError(format!("Failed to promote workspace: {}", e)))?;
+
+        info!("Successfully promoted workspace changes for task {}", task.id);
+        Ok(())
+    }
+
+    /// Rollback workspace changes after failed evaluation
+    async fn rollback_workspace_changes(&self, task: &Task) -> Result<(), SelfPromptingError> {
+        info!("Rolling back workspace changes for task {}", task.id);
+
+        // Create workspace and rollback changes
+        let workspace = self.workspace_factory.create(&task.project_path)
+            .map_err(|e| SelfPromptingError::WorkspaceError(format!("Failed to create workspace for rollback: {}", e)))?;
+
+        workspace.revert()
+            .await
+            .map_err(|e| SelfPromptingError::WorkspaceError(format!("Failed to rollback workspace: {}", e)))?;
+
+        info!("Successfully rolled back workspace changes for task {}", task.id);
+        Ok(())
+    }
+
     /// Generate a diff artifact for observability
     async fn generate_diff_artifact(
         &self,
@@ -625,4 +675,7 @@ pub enum SelfPromptingError {
 
     #[error("Maximum iterations exceeded")]
     MaxIterationsExceeded,
+
+    #[error("Workspace operation failed: {0}")]
+    WorkspaceError(String),
 }

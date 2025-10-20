@@ -8,6 +8,7 @@ orchestration = { path = "../orchestration" }
 reflexive-learning = { path = "../reflexive-learning" }
 agent-agency-workers = { path = "../workers" }
 agent-agency-apple-silicon = { path = "../apple-silicon" }
+file_ops = { path = "../file_ops" }
 tokio = { workspace = true, features = ["full"] }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
