@@ -562,8 +562,8 @@ export default function DatabaseExplorer({
               <TableViewer
                 table={state.selectedTable}
                 data={state.tableData}
-                isLoading={state.isLoadingTableData || false}
-                error={state.tableError || null}
+                isLoading={state.isLoadingTableData ?? false}
+                error={state.tableError ?? null}
                 onQuery={async (query) => {
                   if (!state.selectedTable) return;
                   setState((prev) => ({

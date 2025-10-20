@@ -245,7 +245,7 @@ pub struct MitigationPriority {
 }
 
 /// Mitigation priority levels
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum MitigationPriorityLevel {
     Critical,
     High,

@@ -6,7 +6,6 @@ use anyhow::{anyhow, Context, Result};
 use chrono::Utc;
 use pdf::file::FileOptions;
 use sha2::{Digest, Sha256};
-use std::collections::HashMap;
 use std::fs;
 use std::io::Read;
 use std::path::Path;

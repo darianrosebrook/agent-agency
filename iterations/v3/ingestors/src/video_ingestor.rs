@@ -5,7 +5,6 @@ use crate::types::*;
 use anyhow::{Context, Result};
 use chrono::Utc;
 use image::{DynamicImage, ImageBuffer, Rgb, RgbImage};
-use imageproc::definitions::Image;
 use sha2::{Digest, Sha256};
 use std::fs;
 use std::path::Path;

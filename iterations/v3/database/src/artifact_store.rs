@@ -13,7 +13,7 @@ use uuid::Uuid;
 use chrono;
 
 use crate::{DatabaseClient, DatabaseConfig};
-use agent_agency_contracts::{ExecutionArtifacts, execution_artifacts::{CodeChangeStats, ArtifactMetadata}};
+use agent_agency_contracts::{ExecutionArtifacts, execution_artifacts::ArtifactMetadata};
 
 /// Unique identifier for artifacts
 pub type ArtifactId = Uuid;

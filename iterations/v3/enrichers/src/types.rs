@@ -2,7 +2,6 @@
 //! Shared types for multimodal enrichers
 
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use uuid::Uuid;
 
 /// Result of Vision OCR enrichment

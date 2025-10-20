@@ -9,13 +9,9 @@
 use crate::circuit_breaker::{CircuitBreaker, CircuitBreakerConfig};
 use crate::types::{AsrResult, EnricherConfig, Speaker, SpeechSegment, WordTiming};
 use anyhow::{anyhow, Result};
-use std::collections::HashMap;
 use std::path::PathBuf;
 use std::time::Instant;
-use tempfile::NamedTempFile;
-use tokio::fs;
 use tokio::io::AsyncWriteExt;
-use uuid::Uuid;
 
 /// Swift Speech Recognizer bridge for Apple Speech Framework
 #[derive(Debug, Clone)]
@@ -187,7 +183,7 @@ impl AsrEnricher {
         }
         
         // Analyze speaking patterns for this speaker
-        let mut durations: Vec<f32> = turn_indices
+        let durations: Vec<f32> = turn_indices
             .iter()
             .map(|&i| turns[i].t1 - turns[i].t0)
             .collect();

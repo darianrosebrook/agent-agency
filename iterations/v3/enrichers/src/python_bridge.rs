@@ -5,7 +5,6 @@
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 use std::fs;
-use std::path::{Path, PathBuf};
 use std::process::Command;
 use uuid::Uuid;
 

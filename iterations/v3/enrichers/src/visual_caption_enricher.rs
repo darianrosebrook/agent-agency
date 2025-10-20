@@ -9,7 +9,6 @@
 use crate::circuit_breaker::{CircuitBreaker, CircuitBreakerConfig};
 use crate::types::{CaptionResult, EnricherConfig};
 use anyhow::Result;
-use uuid::Uuid;
 
 pub struct VisualCaptionEnricher {
     circuit_breaker: CircuitBreaker,
