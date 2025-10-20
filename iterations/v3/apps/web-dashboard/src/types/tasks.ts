@@ -23,27 +23,23 @@ export interface Task {
 }
 
 export type TaskStatus =
-  | 'pending'
-  | 'running'
-  | 'paused'
-  | 'completed'
-  | 'failed'
-  | 'cancelled';
+  | "pending"
+  | "running"
+  | "paused"
+  | "completed"
+  | "failed"
+  | "cancelled";
 
 export type TaskPhase =
-  | 'planning'
-  | 'analysis'
-  | 'execution'
-  | 'validation'
-  | 'refinement'
-  | 'qa'
-  | 'finalization';
+  | "planning"
+  | "analysis"
+  | "execution"
+  | "validation"
+  | "refinement"
+  | "qa"
+  | "finalization";
 
-export type TaskPriority =
-  | 'low'
-  | 'medium'
-  | 'high'
-  | 'critical';
+export type TaskPriority = "low" | "medium" | "high" | "critical";
 
 export interface TaskContext {
   goals: string[];
@@ -55,7 +51,7 @@ export interface TaskContext {
 }
 
 export interface TaskResource {
-  type: 'file' | 'url' | 'data' | 'tool';
+  type: "file" | "url" | "data" | "tool";
   id: string;
   name: string;
   path?: string;
@@ -72,7 +68,7 @@ export interface WorkingSpec {
   acceptance_criteria: string[];
   deliverables: string[];
   risk_tier: 1 | 2 | 3;
-  mode: 'feature' | 'fix' | 'refactor' | 'chore';
+  mode: "feature" | "fix" | "refactor" | "chore";
 }
 
 export interface RepositoryContext {
@@ -84,10 +80,10 @@ export interface RepositoryContext {
 
 export interface AgentAssignment {
   agent_id: string;
-  role: 'primary' | 'secondary' | 'reviewer' | 'validator';
+  role: "primary" | "secondary" | "reviewer" | "validator";
   capabilities: string[];
   assigned_at: string;
-  status: 'assigned' | 'working' | 'completed' | 'failed';
+  status: "assigned" | "working" | "completed" | "failed";
 }
 
 export interface TaskProgress {
@@ -114,14 +110,14 @@ export interface TaskArtifact {
 }
 
 export type ArtifactType =
-  | 'code'
-  | 'test'
-  | 'documentation'
-  | 'design'
-  | 'data'
-  | 'log'
-  | 'report'
-  | 'binary';
+  | "code"
+  | "test"
+  | "documentation"
+  | "design"
+  | "data"
+  | "log"
+  | "report"
+  | "binary";
 
 export interface QualityReport {
   id: string;
@@ -139,14 +135,21 @@ export interface QualityCriterion {
   description: string;
   score: number; // 0-100
   weight: number; // 0-1
-  status: 'passed' | 'failed' | 'warning' | 'pending';
+  status: "passed" | "failed" | "warning" | "pending";
   details?: string;
   evidence?: any;
 }
 
 // SSE Event Types for Task Monitoring
 export interface TaskEvent {
-  type: 'task_created' | 'task_updated' | 'task_completed' | 'task_failed' | 'phase_changed' | 'artifact_added' | 'quality_checked';
+  type:
+    | "task_created"
+    | "task_updated"
+    | "task_completed"
+    | "task_failed"
+    | "phase_changed"
+    | "artifact_added"
+    | "quality_checked";
   task_id: string;
   data: any;
   timestamp: string;
@@ -249,7 +252,7 @@ export interface GetTaskResponse {
 }
 
 export interface TaskActionRequest {
-  action: 'pause' | 'resume' | 'cancel' | 'restart';
+  action: "pause" | "resume" | "cancel" | "restart";
   reason?: string;
 }
 
@@ -261,7 +264,11 @@ export interface TaskActionResponse {
 
 // Error Types
 export interface TaskError {
-  code: 'task_not_found' | 'invalid_action' | 'permission_denied' | 'server_error';
+  code:
+    | "task_not_found"
+    | "invalid_action"
+    | "permission_denied"
+    | "server_error";
   message: string;
   task_id?: string;
   retryable: boolean;

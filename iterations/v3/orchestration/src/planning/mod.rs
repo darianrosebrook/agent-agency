@@ -35,6 +35,8 @@ pub use agent::{
     // Performance modeling types
     PerformanceFeasibilityModel, PerformanceRequirements, HardwareConstraints,
     TheoreticalBounds, TheoreticalLatency, TheoreticalThroughput, PracticalAssessment,
+    // Resource constraint validation types
+    ResourceConstraintValidation, ResourceValidationLevel,
 };
 pub use context_builder::{ContextBuilder, ContextBuilderConfig};
 pub use llm_client::{LLMClient, OpenAIClient, OllamaClient, LLMConfig, Message, MessageRole, GenerationRequest, GenerationResponse, TokenUsage, FinishReason};

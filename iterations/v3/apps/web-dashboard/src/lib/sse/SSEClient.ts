@@ -29,7 +29,7 @@ export class SSEClient {
       reconnectInterval: 1000,
       maxReconnectAttempts: 10,
       withCredentials: false,
-      ...options
+      ...options,
     };
     this.connect();
   }
@@ -46,18 +46,20 @@ export class SSEClient {
 
       // Append last event ID for resuming
       if (this.lastEventId) {
-        const separator = url.includes('?') ? '&' : '?';
-        url += `${separator}lastEventId=${encodeURIComponent(this.lastEventId)}`;
+        const separator = url.includes("?") ? "&" : "?";
+        url += `${separator}lastEventId=${encodeURIComponent(
+          this.lastEventId
+        )}`;
       }
 
-      console.log('Connecting to SSE:', url);
+      console.log("Connecting to SSE:", url);
 
       this.eventSource = new EventSource(url, {
-        withCredentials: this.options.withCredentials
+        withCredentials: this.options.withCredentials,
       });
 
       this.eventSource.onopen = () => {
-        console.log('SSE connection opened');
+        console.log("SSE connection opened");
         this.reconnectAttempts = 0;
         this.options.onOpen?.();
       };
@@ -66,9 +68,9 @@ export class SSEClient {
         try {
           const data = event.data ? JSON.parse(event.data) : null;
           const message: SSEMessageEvent = {
-            type: event.type || 'message',
+            type: event.type || "message",
             data,
-            id: event.lastEventId || undefined
+            id: event.lastEventId || undefined,
           };
 
           // Store last event ID for reconnection
@@ -78,13 +80,13 @@ export class SSEClient {
 
           this.options.onMessage(message);
         } catch (error) {
-          console.error('Failed to parse SSE message:', error, event.data);
+          console.error("Failed to parse SSE message:", error, event.data);
           this.options.onError(event);
         }
       };
 
       this.eventSource.onerror = (error) => {
-        console.error('SSE connection error:', error);
+        console.error("SSE connection error:", error);
         this.options.onError(error);
 
         // Don't reconnect if the connection was intentionally closed
@@ -94,9 +96,8 @@ export class SSEClient {
 
         this.scheduleReconnect();
       };
-
     } catch (error) {
-      console.error('Failed to create SSE connection:', error);
+      console.error("Failed to create SSE connection:", error);
       this.options.onError(error as Event);
       this.scheduleReconnect();
     }
@@ -116,54 +117,58 @@ export class SSEClient {
 
   private scheduleReconnect() {
     if (this.reconnectAttempts >= (this.options.maxReconnectAttempts ?? 10)) {
-      console.error('Max SSE reconnection attempts reached');
+      console.error("Max SSE reconnection attempts reached");
       return;
     }
 
     this.reconnectAttempts++;
-    const delay = (this.options.reconnectInterval ?? 1000) * Math.pow(2, this.reconnectAttempts - 1); // Exponential backoff
+    const delay =
+      (this.options.reconnectInterval ?? 1000) *
+      Math.pow(2, this.reconnectAttempts - 1); // Exponential backoff
 
-    console.log(`Scheduling SSE reconnect attempt ${this.reconnectAttempts} in ${delay}ms`);
+    console.log(
+      `Scheduling SSE reconnect attempt ${this.reconnectAttempts} in ${delay}ms`
+    );
     this.reconnectTimer = setTimeout(() => {
       this.connect();
     }, delay);
   }
 
   // Public API
-  getState(): 'connecting' | 'open' | 'closed' {
-    if (!this.eventSource) return 'closed';
+  getState(): "connecting" | "open" | "closed" {
+    if (!this.eventSource) return "closed";
 
     switch (this.eventSource.readyState) {
       case EventSource.CONNECTING:
-        return 'connecting';
+        return "connecting";
       case EventSource.OPEN:
-        return 'open';
+        return "open";
       case EventSource.CLOSED:
-        return 'closed';
+        return "closed";
       default:
-        return 'closed';
+        return "closed";
     }
   }
 
   isConnected(): boolean {
-    return this.getState() === 'open';
+    return this.getState() === "open";
   }
 
   reconnect() {
-    console.log('Manually triggering SSE reconnect');
+    console.log("Manually triggering SSE reconnect");
     this.disconnect();
     this.reconnectAttempts = 0;
     this.connect();
   }
 
   disconnect() {
-    console.log('Disconnecting SSE client');
+    console.log("Disconnecting SSE client");
     this.cleanup();
     this.options.onClose?.();
   }
 
   destroy() {
-    console.log('Destroying SSE client');
+    console.log("Destroying SSE client");
     this.disconnect();
   }
 }

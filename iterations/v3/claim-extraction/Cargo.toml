@@ -32,3 +32,6 @@ embedding-service = { path = "../embedding-service" }
 # Database integration
 agent-agency-database = { path = "../database" }
 
+# Database integration
+agent-agency-database = { path = "../database" }
+

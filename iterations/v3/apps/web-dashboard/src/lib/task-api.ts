@@ -1,4 +1,4 @@
-import { apiClient } from '@/lib/api-client';
+import { apiClient } from "@/lib/api-client";
 import {
   Task,
   GetTasksResponse,
@@ -9,16 +9,20 @@ import {
   TaskEvent,
   TaskArtifact,
   QualityReport,
-  TaskError
-} from '@/types/tasks';
+  TaskError,
+} from "@/types/tasks";
 
 // Task API Client
 // Handles REST API calls for task management and monitoring
 
 export class TaskApiError extends Error {
-  constructor(public code: TaskError['code'], message: string, public retryable: boolean = false) {
+  constructor(
+    public code: TaskError["code"],
+    message: string,
+    public retryable: boolean = false
+  ) {
     super(message);
-    this.name = 'TaskApiError';
+    this.name = "TaskApiError";
   }
 }
 
@@ -26,7 +30,7 @@ export class TaskApiClient {
   private baseUrl: string;
 
   constructor(baseUrl?: string) {
-    this.baseUrl = baseUrl ?? '/api/proxy';
+    this.baseUrl = baseUrl ?? "/api/proxy";
   }
 
   // Get list of tasks with optional filtering
@@ -34,37 +38,39 @@ export class TaskApiClient {
     filters?: TaskFilters,
     page: number = 1,
     pageSize: number = 20,
-    sortBy: 'created_at' | 'updated_at' | 'priority' = 'updated_at',
-    sortOrder: 'asc' | 'desc' = 'desc'
+    sortBy: "created_at" | "updated_at" | "priority" = "updated_at",
+    sortOrder: "asc" | "desc" = "desc"
   ): Promise<GetTasksResponse> {
     try {
       const params = new URLSearchParams({
         page: page.toString(),
         page_size: pageSize.toString(),
         sort_by: sortBy,
-        sort_order: sortOrder
+        sort_order: sortOrder,
       });
 
       // Add filters to query params
       if (filters) {
         if (filters.status?.length) {
-          filters.status.forEach(status => params.append('status', status));
+          filters.status.forEach((status) => params.append("status", status));
         }
         if (filters.phase?.length) {
-          filters.phase.forEach(phase => params.append('phase', phase));
+          filters.phase.forEach((phase) => params.append("phase", phase));
         }
         if (filters.priority?.length) {
-          filters.priority.forEach(priority => params.append('priority', priority));
+          filters.priority.forEach((priority) =>
+            params.append("priority", priority)
+          );
         }
         if (filters.agent_id) {
-          params.append('agent_id', filters.agent_id);
+          params.append("agent_id", filters.agent_id);
         }
         if (filters.working_spec_id) {
-          params.append('working_spec_id', filters.working_spec_id);
+          params.append("working_spec_id", filters.working_spec_id);
         }
         if (filters.date_range) {
-          params.append('date_start', filters.date_range.start);
-          params.append('date_end', filters.date_range.end);
+          params.append("date_start", filters.date_range.start);
+          params.append("date_end", filters.date_range.end);
         }
       }
 
@@ -74,12 +80,8 @@ export class TaskApiClient {
 
       return response;
     } catch (error) {
-      console.error('Failed to get tasks:', error);
-      throw new TaskApiError(
-        'server_error',
-        'Failed to retrieve tasks',
-        true
-      );
+      console.error("Failed to get tasks:", error);
+      throw new TaskApiError("server_error", "Failed to retrieve tasks", true);
     }
   }
 
@@ -92,17 +94,13 @@ export class TaskApiClient {
 
       return response;
     } catch (error) {
-      console.error('Failed to get task:', error);
-      if (error instanceof Error && error.message.includes('404')) {
-        throw new TaskApiError(
-          'task_not_found',
-          'Task not found',
-          false
-        );
+      console.error("Failed to get task:", error);
+      if (error instanceof Error && error.message.includes("404")) {
+        throw new TaskApiError("task_not_found", "Task not found", false);
       }
       throw new TaskApiError(
-        'server_error',
-        'Failed to retrieve task details',
+        "server_error",
+        "Failed to retrieve task details",
         true
       );
     }
@@ -116,10 +114,10 @@ export class TaskApiClient {
   ): Promise<TaskEvent[]> {
     try {
       const params = new URLSearchParams({
-        limit: limit.toString()
+        limit: limit.toString(),
       });
       if (before) {
-        params.append('before', before);
+        params.append("before", before);
       }
 
       const response = await apiClient.request<{ events: TaskEvent[] }>(
@@ -128,10 +126,10 @@ export class TaskApiClient {
 
       return response.events;
     } catch (error) {
-      console.error('Failed to get task events:', error);
+      console.error("Failed to get task events:", error);
       throw new TaskApiError(
-        'server_error',
-        'Failed to retrieve task events',
+        "server_error",
+        "Failed to retrieve task events",
         true
       );
     }
@@ -146,10 +144,10 @@ export class TaskApiClient {
 
       return response.artifacts;
     } catch (error) {
-      console.error('Failed to get task artifacts:', error);
+      console.error("Failed to get task artifacts:", error);
       throw new TaskApiError(
-        'server_error',
-        'Failed to retrieve task artifacts',
+        "server_error",
+        "Failed to retrieve task artifacts",
         true
       );
     }
@@ -158,16 +156,16 @@ export class TaskApiClient {
   // Get task quality report
   async getTaskQualityReport(taskId: string): Promise<QualityReport> {
     try {
-      const response = await apiClient.request<{ quality_report: QualityReport }>(
-        `/tasks/${encodeURIComponent(taskId)}/quality`
-      );
+      const response = await apiClient.request<{
+        quality_report: QualityReport;
+      }>(`/tasks/${encodeURIComponent(taskId)}/quality`);
 
       return response.quality_report;
     } catch (error) {
-      console.error('Failed to get task quality report:', error);
+      console.error("Failed to get task quality report:", error);
       throw new TaskApiError(
-        'server_error',
-        'Failed to retrieve quality report',
+        "server_error",
+        "Failed to retrieve quality report",
         true
       );
     }
@@ -182,17 +180,17 @@ export class TaskApiClient {
       const response = await apiClient.request<TaskActionResponse>(
         `/tasks/${encodeURIComponent(taskId)}/action`,
         {
-          method: 'POST',
-          body: JSON.stringify(action)
+          method: "POST",
+          body: JSON.stringify(action),
         }
       );
 
       return response;
     } catch (error) {
-      console.error('Failed to perform task action:', error);
+      console.error("Failed to perform task action:", error);
       throw new TaskApiError(
-        'invalid_action',
-        'Failed to perform task action',
+        "invalid_action",
+        "Failed to perform task action",
         true
       );
     }
@@ -201,8 +199,8 @@ export class TaskApiClient {
   // Pause task
   async pauseTask(taskId: string, reason?: string): Promise<Task> {
     const response = await this.performTaskAction(taskId, {
-      action: 'pause',
-      reason
+      action: "pause",
+      reason,
     });
     return response.task;
   }
@@ -210,8 +208,8 @@ export class TaskApiClient {
   // Resume task
   async resumeTask(taskId: string, reason?: string): Promise<Task> {
     const response = await this.performTaskAction(taskId, {
-      action: 'resume',
-      reason
+      action: "resume",
+      reason,
     });
     return response.task;
   }
@@ -219,8 +217,8 @@ export class TaskApiClient {
   // Cancel task
   async cancelTask(taskId: string, reason?: string): Promise<Task> {
     const response = await this.performTaskAction(taskId, {
-      action: 'cancel',
-      reason
+      action: "cancel",
+      reason,
     });
     return response.task;
   }
@@ -228,8 +226,8 @@ export class TaskApiClient {
   // Restart task
   async restartTask(taskId: string, reason?: string): Promise<Task> {
     const response = await this.performTaskAction(taskId, {
-      action: 'restart',
-      reason
+      action: "restart",
+      reason,
     });
     return response.task;
   }
@@ -239,26 +237,19 @@ export class TaskApiClient {
     working_spec_id: string;
     title: string;
     description?: string;
-    priority?: Task['priority'];
-    context?: Partial<Task['context']>;
+    priority?: Task["priority"];
+    context?: Partial<Task["context"]>;
   }): Promise<Task> {
     try {
-      const response = await apiClient.request<{ task: Task }>(
-        '/tasks',
-        {
-          method: 'POST',
-          body: JSON.stringify(taskData)
-        }
-      );
+      const response = await apiClient.request<{ task: Task }>("/tasks", {
+        method: "POST",
+        body: JSON.stringify(taskData),
+      });
 
       return response.task;
     } catch (error) {
-      console.error('Failed to create task:', error);
-      throw new TaskApiError(
-        'server_error',
-        'Failed to create task',
-        true
-      );
+      console.error("Failed to create task:", error);
+      throw new TaskApiError("server_error", "Failed to create task", true);
     }
   }
 }

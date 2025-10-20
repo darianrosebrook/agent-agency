@@ -1,11 +1,11 @@
-'use client'
+"use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { TaskListProps, Task, TaskFilters } from '@/types/tasks';
-import { taskApiClient, TaskApiError } from '@/lib/task-api';
-import TaskCard from './TaskCard';
-import TaskFiltersBar from './TaskFiltersBar';
-import styles from './TaskList.module.scss';
+import React, { useState, useEffect, useCallback } from "react";
+import { TaskListProps, Task, TaskFilters } from "@/types/tasks";
+import { taskApiClient, TaskApiError } from "@/lib/task-api";
+import TaskCard from "./TaskCard";
+import TaskFiltersBar from "./TaskFiltersBar";
+import styles from "./TaskList.module.scss";
 
 interface TaskListState {
   tasks: Task[];
@@ -25,7 +25,7 @@ export default function TaskList({
   isLoading: externalLoading,
   onTaskSelect,
   onTaskFilter,
-  selectedTaskId
+  selectedTaskId,
 }: TaskListProps) {
   const [state, setState] = useState<TaskListState>({
     tasks: tasks ?? [],
@@ -36,78 +36,95 @@ export default function TaskList({
       page: 1,
       pageSize: 20,
       totalCount: 0,
-      filteredCount: 0
-    }
+      filteredCount: 0,
+    },
   });
 
   // Load tasks from API if not provided externally
-  const loadTasks = useCallback(async (filters: TaskFilters = {}, page: number = 1) => {
-    if (tasks) return; // Use external tasks if provided
+  const loadTasks = useCallback(
+    async (filters: TaskFilters = {}, page: number = 1) => {
+      if (tasks) return; // Use external tasks if provided
 
-    try {
-      setState(prev => ({ ...prev, isLoading: true, error: null }));
+      try {
+        setState((prev) => ({ ...prev, isLoading: true, error: null }));
 
-      const response = await taskApiClient.getTasks(filters, page, state.pagination.pageSize);
-
-      setState(prev => ({
-        ...prev,
-        tasks: response.tasks,
-        isLoading: false,
-        filters,
-        pagination: {
-          ...prev.pagination,
+        const response = await taskApiClient.getTasks(
+          filters,
           page,
-          totalCount: response.total_count,
-          filteredCount: response.filtered_count
-        }
-      }));
+          state.pagination.pageSize
+        );
 
-      onTaskFilter?.(filters);
-    } catch (error) {
-      const errorMessage = error instanceof TaskApiError
-        ? error.message
-        : 'Failed to load tasks';
+        setState((prev) => ({
+          ...prev,
+          tasks: response.tasks,
+          isLoading: false,
+          filters,
+          pagination: {
+            ...prev.pagination,
+            page,
+            totalCount: response.total_count,
+            filteredCount: response.filtered_count,
+          },
+        }));
 
-      setState(prev => ({
-        ...prev,
-        isLoading: false,
-        error: errorMessage
-      }));
+        onTaskFilter?.(filters);
+      } catch (error) {
+        const errorMessage =
+          error instanceof TaskApiError
+            ? error.message
+            : "Failed to load tasks";
 
-      console.error('Failed to load tasks:', error);
-    }
-  }, [tasks, state.pagination.pageSize, onTaskFilter]);
+        setState((prev) => ({
+          ...prev,
+          isLoading: false,
+          error: errorMessage,
+        }));
+
+        console.error("Failed to load tasks:", error);
+      }
+    },
+    [tasks, state.pagination.pageSize, onTaskFilter]
+  );
 
   // Initial load
   useEffect(() => {
     if (!tasks) {
       loadTasks();
     } else {
-      setState(prev => ({
+      setState((prev) => ({
         ...prev,
         tasks: tasks,
-        isLoading: false
+        isLoading: false,
       }));
     }
   }, [tasks, loadTasks]);
 
   // Handle filter changes
-  const handleFiltersChange = useCallback((newFilters: TaskFilters) => {
-    setState(prev => ({ ...prev, filters: newFilters }));
-    loadTasks(newFilters, 1); // Reset to first page
-  }, [loadTasks]);
+  const handleFiltersChange = useCallback(
+    (newFilters: TaskFilters) => {
+      setState((prev) => ({ ...prev, filters: newFilters }));
+      loadTasks(newFilters, 1); // Reset to first page
+    },
+    [loadTasks]
+  );
 
   // Handle page changes
-  const handlePageChange = useCallback((newPage: number) => {
-    loadTasks(state.filters, newPage);
-  }, [loadTasks, state.filters]);
+  const handlePageChange = useCallback(
+    (newPage: number) => {
+      loadTasks(state.filters, newPage);
+    },
+    [loadTasks, state.filters]
+  );
 
   // Handle task selection
-  const handleTaskSelect = useCallback((task: Task) => {
-    onTaskSelect?.(task);
-  }, [onTaskSelect]);
+  const handleTaskSelect = useCallback(
+    (task: Task) => {
+      onTaskSelect?.(task);
+    },
+    [onTaskSelect]
+  );
 
-  if (state.isLoading && !initialTasks) {
+  if (state.isLoading && !tasks) {
     return (
       <div className={styles.taskList}>
         <div className={styles.loading}>
@@ -124,7 +141,9 @@ export default function TaskList({
         <div className={styles.error}>
           <h3>Failed to load tasks</h3>
           <p>{state.error}</p>
-          <button onClick={() => loadTasks(state.filters, state.pagination.page)}>
+          <button
+            onClick={() => loadTasks(state.filters, state.pagination.page)}
+          >
             Retry
           </button>
         </div>
@@ -138,7 +157,8 @@ export default function TaskList({
         <h2>Task Monitoring</h2>
         <div className={styles.stats}>
           <span className={styles.stat}>
-            {state.pagination.filteredCount} of {state.pagination.totalCount} tasks
+            {state.pagination.filteredCount} of {state.pagination.totalCount}{" "}
+            tasks
           </span>
         </div>
       </div>
@@ -155,8 +175,8 @@ export default function TaskList({
             <h3>No tasks found</h3>
             <p>
               {Object.keys(state.filters).length > 0
-                ? 'Try adjusting your filters to see more tasks.'
-                : 'No tasks are currently running or available.'}
+                ? "Try adjusting your filters to see more tasks."
+                : "No tasks are currently running or available."}
             </p>
           </div>
         ) : (
@@ -183,12 +203,20 @@ export default function TaskList({
           </button>
 
           <span className={styles.pageInfo}>
-            Page {state.pagination.page} of {Math.ceil(state.pagination.filteredCount / state.pagination.pageSize)}
+            Page {state.pagination.page} of{" "}
+            {Math.ceil(
+              state.pagination.filteredCount / state.pagination.pageSize
+            )}
           </span>
 
           <button
             className={styles.pageButton}
-            disabled={state.pagination.page >= Math.ceil(state.pagination.filteredCount / state.pagination.pageSize)}
+            disabled={
+              state.pagination.page >=
+              Math.ceil(
+                state.pagination.filteredCount / state.pagination.pageSize
+              )
+            }
             onClick={() => handlePageChange(state.pagination.page + 1)}
           >
             Next

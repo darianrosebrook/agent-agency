@@ -1,8 +1,8 @@
-'use client'
+"use client";
 
-import React from 'react';
-import { TaskCardProps, Task } from '@/types/tasks';
-import styles from './TaskCard.module.scss';
+import React from "react";
+import { TaskCardProps, Task } from "@/types/tasks";
+import styles from "./TaskCard.module.scss";
 
 export default function TaskCard({
   task,
@@ -11,60 +11,60 @@ export default function TaskCard({
   onClick,
   onPause,
   onResume,
-  onCancel
+  onCancel,
 }: TaskCardProps) {
-  const getStatusColor = (status: Task['status']) => {
+  const getStatusColor = (status: Task["status"]) => {
     switch (status) {
-      case 'completed':
+      case "completed":
         return styles.success;
-      case 'running':
+      case "running":
         return styles.primary;
-      case 'pending':
+      case "pending":
         return styles.warning;
-      case 'paused':
+      case "paused":
         return styles.secondary;
-      case 'failed':
+      case "failed":
         return styles.error;
-      case 'cancelled':
+      case "cancelled":
         return styles.neutral;
       default:
         return styles.neutral;
     }
   };
 
-  const getPhaseIcon = (phase: Task['phase']) => {
+  const getPhaseIcon = (phase: Task["phase"]) => {
     switch (phase) {
-      case 'planning':
-        return '🧠';
-      case 'analysis':
-        return '🔍';
-      case 'execution':
-        return '⚡';
-      case 'validation':
-        return '✅';
-      case 'refinement':
-        return '🔧';
-      case 'qa':
-        return '🧪';
-      case 'finalization':
-        return '🎯';
+      case "planning":
+        return "🧠";
+      case "analysis":
+        return "🔍";
+      case "execution":
+        return "⚡";
+      case "validation":
+        return "✅";
+      case "refinement":
+        return "🔧";
+      case "qa":
+        return "🧪";
+      case "finalization":
+        return "🎯";
       default:
-        return '📋';
+        return "📋";
     }
   };
 
-  const getPriorityIcon = (priority: Task['priority']) => {
+  const getPriorityIcon = (priority: Task["priority"]) => {
     switch (priority) {
-      case 'critical':
-        return '🔴';
-      case 'high':
-        return '🟠';
-      case 'medium':
-        return '🟡';
-      case 'low':
-        return '🟢';
+      case "critical":
+        return "🔴";
+      case "high":
+        return "🟠";
+      case "medium":
+        return "🟡";
+      case "low":
+        return "🟢";
       default:
-        return '⚪';
+        return "⚪";
     }
   };
 
@@ -89,10 +89,11 @@ export default function TaskCard({
     const diffMinutes = Math.floor(diffMs / (1000 * 60));
 
     if (diffMinutes < 1) {
-      return 'Just now';
+      return "Just now";
     } else if (diffMinutes < 60) {
       return `${diffMinutes}m ago`;
-    } else if (diffMinutes < 1440) { // 24 hours
+    } else if (diffMinutes < 1440) {
+      // 24 hours
       return `${Math.floor(diffMinutes / 60)}h ago`;
     } else {
       return date.toLocaleDateString();
@@ -101,11 +102,13 @@ export default function TaskCard({
 
   return (
     <div
-      className={`${styles.taskCard} ${isSelected ? styles.selected : ''} ${getStatusColor(task.status)}`}
+      className={`${styles.taskCard} ${
+        isSelected ? styles.selected : ""
+      } ${getStatusColor(task.status)}`}
       onClick={onClick}
-      role={onClick ? 'button' : undefined}
+      role={onClick ? "button" : undefined}
       tabIndex={onClick ? 0 : undefined}
-      onKeyDown={onClick ? (e) => e.key === 'Enter' && onClick() : undefined}
+      onKeyDown={onClick ? (e) => e.key === "Enter" && onClick() : undefined}
     >
       <div className={styles.cardHeader}>
         <div className={styles.titleSection}>
@@ -147,7 +150,8 @@ export default function TaskCard({
             {task.progress.current_step}
             {task.progress.total_steps && (
               <span className={styles.stepCount}>
-                ({(task.progress.current_step_index ?? 0) + 1}/{task.progress.total_steps})
+                ({(task.progress.current_step_index ?? 0) + 1}/
+                {task.progress.total_steps})
               </span>
             )}
           </div>
@@ -182,7 +186,7 @@ export default function TaskCard({
         </div>
 
         <div className={styles.actions}>
-          {task.status === 'running' && onPause && (
+          {task.status === "running" && onPause && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -195,7 +199,7 @@ export default function TaskCard({
             </button>
           )}
 
-          {task.status === 'paused' && onResume && (
+          {task.status === "paused" && onResume && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -208,18 +212,19 @@ export default function TaskCard({
             </button>
           )}
 
-          {(task.status === 'running' || task.status === 'paused') && onCancel && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onCancel();
-              }}
-              className={`${styles.actionButton} ${styles.cancel}`}
-              title="Cancel task"
-            >
-              ❌
-            </button>
-          )}
+          {(task.status === "running" || task.status === "paused") &&
+            onCancel && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onCancel();
+                }}
+                className={`${styles.actionButton} ${styles.cancel}`}
+                title="Cancel task"
+              >
+                ❌
+              </button>
+            )}
         </div>
 
         <div className={styles.metadata}>
@@ -228,9 +233,11 @@ export default function TaskCard({
           </span>
 
           {task.quality_report && (
-            <span className={`${styles.qualityScore} ${
-              task.quality_report.passed ? styles.passed : styles.failed
-            }`}>
+            <span
+              className={`${styles.qualityScore} ${
+                task.quality_report.passed ? styles.passed : styles.failed
+              }`}
+            >
               Q: {task.quality_report.overall_score}%
             </span>
           )}
