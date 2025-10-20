@@ -62,9 +62,9 @@ const navItems: NavItem[] = [
   {
     id: "analytics",
     label: "Analytics",
-    description: "Trends and insights",
-    icon: "📈",
-    available: false,
+    description: "Advanced analytics and anomaly detection",
+    icon: "🔬",
+    available: true,
   },
 ];
 

@@ -43,7 +43,9 @@ class AnalyticsApiClient {
    * @param filters - Analytics filters including time range and granularity.
    * @returns A promise that resolves to analytics summary data.
    */
-  async getAnalyticsSummary(filters?: AnalyticsFilters): Promise<GetAnalyticsSummaryResponse> {
+  async getAnalyticsSummary(
+    filters?: AnalyticsFilters
+  ): Promise<GetAnalyticsSummaryResponse> {
     console.warn(
       "getAnalyticsSummary not implemented - requires V3 analytics API"
     );
@@ -79,7 +81,9 @@ class AnalyticsApiClient {
    * @param filters - Analytics filters to apply to anomaly detection.
    * @returns A promise that resolves to anomalies data.
    */
-  async getAnomalies(filters?: AnalyticsFilters): Promise<GetAnomaliesResponse> {
+  async getAnomalies(
+    filters?: AnalyticsFilters
+  ): Promise<GetAnomaliesResponse> {
     console.warn(
       "getAnomalies not implemented - requires V3 anomaly detection API"
     );
@@ -122,7 +126,9 @@ class AnalyticsApiClient {
    * @param request - Anomaly detection request parameters.
    * @returns A promise that resolves to newly detected anomalies.
    */
-  async detectAnomalies(request: AnomalyDetectionRequest): Promise<GetAnomaliesResponse> {
+  async detectAnomalies(
+    request: AnomalyDetectionRequest
+  ): Promise<GetAnomaliesResponse> {
     console.warn(
       "detectAnomalies not implemented - requires V3 anomaly detection API"
     );
@@ -157,9 +163,7 @@ class AnalyticsApiClient {
    * @returns A promise that resolves to trends data.
    */
   async getTrends(filters?: AnalyticsFilters): Promise<GetTrendsResponse> {
-    console.warn(
-      "getTrends not implemented - requires V3 trend analysis API"
-    );
+    console.warn("getTrends not implemented - requires V3 trend analysis API");
     // TODO: Milestone 5 - Trend Analysis API Implementation
     // - [ ] Implement V3 GET /api/v1/analytics/trends endpoint
     // - [ ] Add linear regression and trend detection algorithms
@@ -255,9 +259,10 @@ class AnalyticsApiClient {
             granularity: filters.granularity,
           })
         : new URLSearchParams();
-      const response = await apiClient.request<GetPerformancePredictionsResponse>(
-        `/analytics/predictions?${params}`
-      );
+      const response =
+        await apiClient.request<GetPerformancePredictionsResponse>(
+          `/analytics/predictions?${params}`
+        );
       return response;
     } catch (error) {
       console.error("Failed to get performance predictions:", error);
@@ -274,7 +279,9 @@ class AnalyticsApiClient {
    * @param request - Forecasting request parameters.
    * @returns A promise that resolves to new performance predictions.
    */
-  async generateForecasting(request: ForecastingRequest): Promise<GetPerformancePredictionsResponse> {
+  async generateForecasting(
+    request: ForecastingRequest
+  ): Promise<GetPerformancePredictionsResponse> {
     console.warn(
       "generateForecasting not implemented - requires V3 forecasting API"
     );
@@ -285,13 +292,14 @@ class AnalyticsApiClient {
     // - [ ] Add forecast horizon configuration
     // - [ ] Implement model validation and accuracy metrics
     try {
-      const response = await apiClient.request<GetPerformancePredictionsResponse>(
-        "/analytics/forecasting",
-        {
-          method: "POST",
-          body: JSON.stringify(request),
-        }
-      );
+      const response =
+        await apiClient.request<GetPerformancePredictionsResponse>(
+          "/analytics/forecasting",
+          {
+            method: "POST",
+            body: JSON.stringify(request),
+          }
+        );
       return response;
     } catch (error) {
       console.error("Failed to generate forecasting:", error);
@@ -308,7 +316,9 @@ class AnalyticsApiClient {
    * @param filters - Analytics filters to apply to time series data.
    * @returns A promise that resolves to time series data.
    */
-  async getTimeSeriesData(filters?: AnalyticsFilters): Promise<GetTimeSeriesDataResponse> {
+  async getTimeSeriesData(
+    filters?: AnalyticsFilters
+  ): Promise<GetTimeSeriesDataResponse> {
     console.warn(
       "getTimeSeriesData not implemented - requires V3 time series API"
     );

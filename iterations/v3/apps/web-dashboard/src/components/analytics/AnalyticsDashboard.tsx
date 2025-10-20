@@ -18,7 +18,12 @@ import styles from "./AnalyticsDashboard.module.scss";
 interface AnalyticsDashboardState {
   summary: AnalyticsSummary | null;
   filters: AnalyticsFilters;
-  activeTab: "overview" | "anomalies" | "trends" | "predictions" | "correlations";
+  activeTab:
+    | "overview"
+    | "anomalies"
+    | "trends"
+    | "predictions"
+    | "correlations";
   isLoading: boolean;
   error: string | null;
   lastUpdated: Date | null;
@@ -53,7 +58,9 @@ export default function AnalyticsDashboard({
 
     try {
       setState((prev) => ({ ...prev, isLoading: true, error: null }));
-      const response = await analyticsApiClient.getAnalyticsSummary(state.filters);
+      const response = await analyticsApiClient.getAnalyticsSummary(
+        state.filters
+      );
       setState((prev) => ({
         ...prev,
         summary: response.summary,
@@ -75,15 +82,21 @@ export default function AnalyticsDashboard({
   }, [externalSummary, state.filters]);
 
   // Handle filter changes
-  const handleFiltersChange = useCallback((newFilters: AnalyticsFilters) => {
-    setState((prev) => ({ ...prev, filters: newFilters }));
-    onFiltersChange?.(newFilters);
-  }, [onFiltersChange]);
+  const handleFiltersChange = useCallback(
+    (newFilters: AnalyticsFilters) => {
+      setState((prev) => ({ ...prev, filters: newFilters }));
+      onFiltersChange?.(newFilters);
+    },
+    [onFiltersChange]
+  );
 
   // Handle tab changes
-  const handleTabChange = useCallback((tab: AnalyticsDashboardState["activeTab"]) => {
-    setState((prev) => ({ ...prev, activeTab: tab }));
-  }, []);
+  const handleTabChange = useCallback(
+    (tab: AnalyticsDashboardState["activeTab"]) => {
+      setState((prev) => ({ ...prev, activeTab: tab }));
+    },
+    []
+  );
 
   // Handle refresh
   const handleRefresh = useCallback(() => {
@@ -128,20 +141,27 @@ export default function AnalyticsDashboard({
           {icon && <span className={styles.cardIcon}>{icon}</span>}
           <span>{title}</span>
         </div>
-        {status && <span className={`${styles.statusBadge} ${styles[status]}`}>{status}</span>}
+        {status && (
+          <span className={`${styles.statusBadge} ${styles[status]}`}>
+            {status}
+          </span>
+        )}
       </div>
 
-      <div className={styles.cardValue}>
-        {value}
-      </div>
+      <div className={styles.cardValue}>{value}</div>
 
       {change && (
         <div className={`${styles.cardChange} ${styles[change.type]}`}>
           <span className={styles.changeIcon}>
-            {change.type === "increase" ? "↗️" : change.type === "decrease" ? "↘️" : "➡️"}
+            {change.type === "increase"
+              ? "↗️"
+              : change.type === "decrease"
+              ? "↘️"
+              : "➡️"}
           </span>
           <span className={styles.changeValue}>
-            {change.value > 0 ? "+" : ""}{change.value}
+            {change.value > 0 ? "+" : ""}
+            {change.value}
           </span>
           <span className={styles.changePeriod}>{change.period}</span>
         </div>
@@ -154,9 +174,7 @@ export default function AnalyticsDashboard({
       )}
 
       {description && (
-        <div className={styles.cardDescription}>
-          {description}
-        </div>
+        <div className={styles.cardDescription}>{description}</div>
       )}
     </div>
   );
@@ -166,14 +184,17 @@ export default function AnalyticsDashboard({
       <div className={styles.dashboardHeader}>
         <h1>Analytics & Insights</h1>
         <p className={styles.description}>
-          Advanced analytics with anomaly detection, trend analysis, and performance predictions for agent research and optimization.
+          Advanced analytics with anomaly detection, trend analysis, and
+          performance predictions for agent research and optimization.
         </p>
 
         <div className={styles.headerControls}>
           <div className={styles.timeRangeControls}>
             <label>Time Range:</label>
             <select
-              value={`${state.filters.time_range.start.split("T")[0]} to ${state.filters.time_range.end.split("T")[0]}`}
+              value={`${state.filters.time_range.start.split("T")[0]} to ${
+                state.filters.time_range.end.split("T")[0]
+              }`}
               onChange={(e) => {
                 // Parse the selected range and update filters
                 const ranges = {
@@ -182,15 +203,21 @@ export default function AnalyticsDashboard({
                     end: new Date().toISOString(),
                   },
                   "Last 24 hours": {
-                    start: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+                    start: new Date(
+                      Date.now() - 24 * 60 * 60 * 1000
+                    ).toISOString(),
                     end: new Date().toISOString(),
                   },
                   "Last 7 days": {
-                    start: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+                    start: new Date(
+                      Date.now() - 7 * 24 * 60 * 60 * 1000
+                    ).toISOString(),
                     end: new Date().toISOString(),
                   },
                   "Last 30 days": {
-                    start: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+                    start: new Date(
+                      Date.now() - 30 * 24 * 60 * 60 * 1000
+                    ).toISOString(),
                     end: new Date().toISOString(),
                   },
                 };
@@ -219,7 +246,8 @@ export default function AnalyticsDashboard({
               onChange={(e) =>
                 handleFiltersChange({
                   ...state.filters,
-                  granularity: e.target.value as AnalyticsFilters["granularity"],
+                  granularity: e.target
+                    .value as AnalyticsFilters["granularity"],
                 })
               }
             >
@@ -253,31 +281,41 @@ export default function AnalyticsDashboard({
       {/* Tab Navigation */}
       <div className={styles.tabNavigation}>
         <button
-          className={`${styles.tabButton} ${state.activeTab === "overview" ? styles.active : ""}`}
+          className={`${styles.tabButton} ${
+            state.activeTab === "overview" ? styles.active : ""
+          }`}
           onClick={() => handleTabChange("overview")}
         >
           Overview
         </button>
         <button
-          className={`${styles.tabButton} ${state.activeTab === "anomalies" ? styles.active : ""}`}
+          className={`${styles.tabButton} ${
+            state.activeTab === "anomalies" ? styles.active : ""
+          }`}
           onClick={() => handleTabChange("anomalies")}
         >
           Anomalies ({state.summary?.total_anomalies || 0})
         </button>
         <button
-          className={`${styles.tabButton} ${state.activeTab === "trends" ? styles.active : ""}`}
+          className={`${styles.tabButton} ${
+            state.activeTab === "trends" ? styles.active : ""
+          }`}
           onClick={() => handleTabChange("trends")}
         >
           Trends
         </button>
         <button
-          className={`${styles.tabButton} ${state.activeTab === "predictions" ? styles.active : ""}`}
+          className={`${styles.tabButton} ${
+            state.activeTab === "predictions" ? styles.active : ""
+          }`}
           onClick={() => handleTabChange("predictions")}
         >
           Predictions
         </button>
         <button
-          className={`${styles.tabButton} ${state.activeTab === "correlations" ? styles.active : ""}`}
+          className={`${styles.tabButton} ${
+            state.activeTab === "correlations" ? styles.active : ""
+          }`}
           onClick={() => handleTabChange("correlations")}
         >
           Correlations
@@ -339,7 +377,9 @@ export default function AnalyticsDashboard({
 
                   <AnalyticsCard
                     title="Prediction Accuracy"
-                    value={`${(state.summary.prediction_accuracy * 100).toFixed(1)}%`}
+                    value={`${(state.summary.prediction_accuracy * 100).toFixed(
+                      1
+                    )}%`}
                     status={
                       state.summary.prediction_accuracy >= 0.8
                         ? "success"
@@ -349,7 +389,9 @@ export default function AnalyticsDashboard({
                     }
                     icon="🔮"
                     trend={
-                      state.summary.prediction_accuracy >= 0.75 ? "up" : "stable"
+                      state.summary.prediction_accuracy >= 0.75
+                        ? "up"
+                        : "stable"
                     }
                     description="Accuracy of performance predictions"
                   />
@@ -369,19 +411,25 @@ export default function AnalyticsDashboard({
                   <div className={styles.severityGrid}>
                     <div className={styles.severityItem}>
                       <span className={styles.severityLabel}>Critical</span>
-                      <span className={`${styles.severityValue} ${styles.critical}`}>
+                      <span
+                        className={`${styles.severityValue} ${styles.critical}`}
+                      >
                         {state.summary.anomalies_by_severity.critical}
                       </span>
                     </div>
                     <div className={styles.severityItem}>
                       <span className={styles.severityLabel}>High</span>
-                      <span className={`${styles.severityValue} ${styles.high}`}>
+                      <span
+                        className={`${styles.severityValue} ${styles.high}`}
+                      >
                         {state.summary.anomalies_by_severity.high}
                       </span>
                     </div>
                     <div className={styles.severityItem}>
                       <span className={styles.severityLabel}>Medium</span>
-                      <span className={`${styles.severityValue} ${styles.medium}`}>
+                      <span
+                        className={`${styles.severityValue} ${styles.medium}`}
+                      >
                         {state.summary.anomalies_by_severity.medium}
                       </span>
                     </div>
@@ -411,12 +459,14 @@ export default function AnalyticsDashboard({
                 <div className={styles.recommendationsSection}>
                   <h3>Recommendations</h3>
                   <div className={styles.recommendationsList}>
-                    {state.summary.recommendations.map((recommendation, index) => (
-                      <div key={index} className={styles.recommendationItem}>
-                        <span className={styles.recommendationIcon}>🎯</span>
-                        <span>{recommendation}</span>
-                      </div>
-                    ))}
+                    {state.summary.recommendations.map(
+                      (recommendation, index) => (
+                        <div key={index} className={styles.recommendationItem}>
+                          <span className={styles.recommendationIcon}>🎯</span>
+                          <span>{recommendation}</span>
+                        </div>
+                      )
+                    )}
                   </div>
                 </div>
               </>
@@ -425,8 +475,9 @@ export default function AnalyticsDashboard({
                 <div className={styles.emptyIcon}>📊</div>
                 <h3>No Analytics Data Available</h3>
                 <p>
-                  Analytics data will be available once the V3 analytics APIs are implemented.
-                  Configure anomaly detection, trend analysis, and forecasting in your agent system.
+                  Analytics data will be available once the V3 analytics APIs
+                  are implemented. Configure anomaly detection, trend analysis,
+                  and forecasting in your agent system.
                 </p>
                 <div className={styles.setupSteps}>
                   <h4>To enable analytics:</h4>

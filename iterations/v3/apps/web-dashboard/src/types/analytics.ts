@@ -112,7 +112,9 @@ export interface AnalyticsConfig {
   anomaly_detection: {
     enabled: boolean;
     sensitivity: "low" | "medium" | "high";
-    algorithms: Array<"zscore" | "isolation_forest" | "prophet" | "autoencoder">;
+    algorithms: Array<
+      "zscore" | "isolation_forest" | "prophet" | "autoencoder"
+    >;
     min_confidence: number;
   };
   forecasting: {
