@@ -10,6 +10,7 @@ pub mod council;
 pub mod decision_making;
 pub mod verdict_aggregation;
 pub mod workflow;
+pub mod risk_scorer;
 
 pub use error::{CouncilError, CouncilResult};
 pub use judge::{
@@ -26,3 +27,4 @@ pub use council::{Council, CouncilConfig, CouncilSession, ReviewContext};
 pub use decision_making::{DecisionEngine, ConsensusStrategy};
 pub use verdict_aggregation::{VerdictAggregator, AggregationResult};
 pub use workflow::{CouncilWorkflow, WorkflowState};
+pub use risk_scorer::{RiskScorer, TechnicalRiskWeights, EthicalRiskWeights, OperationalRiskWeights, BusinessRiskWeights, DimensionWeights};

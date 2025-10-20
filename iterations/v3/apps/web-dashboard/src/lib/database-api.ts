@@ -1,11 +1,6 @@
 import { apiClient } from "@/lib/api-client";
 import {
   DatabaseConnection,
-  DatabaseTable,
-  QueryResult,
-  VectorSearchResult,
-  VectorSearchQuery,
-  DatabaseMetrics,
   GetDatabaseTablesResponse,
   GetTableSchemaResponse,
   ExecuteQueryResponse,
@@ -13,6 +8,7 @@ import {
   GetDatabaseMetricsResponse,
   QueryRequest,
   TableQueryRequest,
+  VectorSearchQuery,
   DatabaseError,
 } from "@/types/database";
 
@@ -372,6 +368,7 @@ class DatabaseApiClient {
       };
     } else {
       // Mock DDL or other operations
+      const query = "CREATE INDEX idx_example ON example_table(column);";
       return {
         result: {
           columns: [
@@ -380,7 +377,7 @@ class DatabaseApiClient {
           rows: [],
           row_count: 0,
           execution_time_ms: 8.3,
-          query: "CREATE INDEX idx_example ON example_table(column);",
+          query,
         },
         execution_stats: {
           execution_time_ms: 8.3,
@@ -397,7 +394,7 @@ class DatabaseApiClient {
    */
   async queryTable(
     tableQuery: TableQueryRequest,
-    connectionId?: string
+    _connectionId?: string
   ): Promise<ExecuteQueryResponse> {
     console.warn("queryTable not implemented - requires V3 table query API");
     // TODO: Milestone 4 - Table Query API Implementation
@@ -439,7 +436,7 @@ class DatabaseApiClient {
    */
   async vectorSearch(
     searchQuery: VectorSearchQuery,
-    connectionId?: string
+    _connectionId?: string
   ): Promise<VectorSearchResponse> {
     console.warn(
       "vectorSearch not implemented - requires V3 vector search API"
@@ -510,7 +507,7 @@ class DatabaseApiClient {
    * @returns A promise that resolves to a GetDatabaseMetricsResponse.
    */
   async getDatabaseMetrics(
-    connectionId?: string
+    _connectionId?: string
   ): Promise<GetDatabaseMetricsResponse> {
     console.warn(
       "getDatabaseMetrics not implemented - requires V3 database metrics API"
@@ -548,8 +545,8 @@ class DatabaseApiClient {
   async exportTable(
     tableName: string,
     format: "csv" | "json" | "sql",
-    query?: Partial<TableQueryRequest>,
-    connectionId?: string
+    _query?: Partial<TableQueryRequest>,
+    _connectionId?: string
   ): Promise<Blob | string> {
     console.warn(
       "exportTable using mock implementation - V3 data export API not available"

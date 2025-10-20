@@ -64,6 +64,10 @@ pub struct ResourceUsage {
     pub thermal_celsius: f32,
     pub power_watts: f32,
     pub timestamp: chrono::DateTime<chrono::Utc>,
+    /// Detailed GPU memory statistics
+    pub gpu_memory: Option<GpuMemoryStats>,
+    /// Detailed ANE statistics
+    pub ane_stats: Option<AneStats>,
 }
 
 /// Model inference request
@@ -156,6 +160,30 @@ pub enum DataLayout {
     CHW,
     /// Height, Width, Channel (NumPy default)
     HWC,
+}
+
+/// GPU memory statistics
+#[derive(Debug, Clone)]
+pub struct GpuMemoryStats {
+    /// Total GPU memory in bytes
+    pub total: u64,
+    /// Currently used GPU memory in bytes
+    pub used: u64,
+    /// Available GPU memory in bytes
+    pub available: u64,
+}
+
+/// ANE (Apple Neural Engine) statistics
+#[derive(Debug, Clone)]
+pub struct AneStats {
+    /// ANE utilization percentage (0.0-100.0)
+    pub utilization_percent: f32,
+    /// ANE power consumption in watts
+    pub power_watts: f32,
+    /// Number of active ANE cores
+    pub active_cores: u32,
+    /// ANE temperature in Celsius
+    pub temperature_celsius: f32,
 }
 
 impl Display for InferencePriority {

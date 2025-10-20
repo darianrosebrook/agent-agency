@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useCallback } from "react";
-import { VectorSearchPanelProps, VectorSearchQuery, VectorSearchResult, DatabaseTable } from "@/types/database";
+import { VectorSearchPanelProps, VectorSearchQuery, VectorSearchResult } from "@/types/database";
 import { databaseApiClient, DatabaseApiError } from "@/lib/database-api";
 import styles from "./VectorSearchPanel.module.scss";
 

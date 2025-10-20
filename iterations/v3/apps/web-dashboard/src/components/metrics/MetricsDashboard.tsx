@@ -158,7 +158,9 @@ export default function MetricsDashboard() {
             onClick={() => {
               console.log("Refreshing all metrics...");
               // Mock refresh - update timestamps and slight variations
-              window.location.reload();
+              if (typeof window !== "undefined") {
+                window.location.reload();
+              }
             }}
           >
             🔄 Refresh All
@@ -179,14 +181,16 @@ export default function MetricsDashboard() {
                 type: "application/json",
               });
               const url = URL.createObjectURL(blob);
-              const a = document.createElement("a");
-              a.href = url;
-              a.download = `metrics-export-${
-                new Date().toISOString().split("T")[0]
-              }.json`;
-              document.body.appendChild(a);
-              a.click();
-              document.body.removeChild(a);
+              if (typeof document !== "undefined") {
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `metrics-export-${
+                  new Date().toISOString().split("T")[0]
+                }.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+              }
               URL.revokeObjectURL(url);
             }}
           >

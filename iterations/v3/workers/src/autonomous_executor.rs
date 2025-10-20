@@ -362,8 +362,8 @@ impl AutonomousExecutor {
                 scope_in: working_spec.scope.as_ref()
                     .and_then(|s| s.included.clone())
                     .unwrap_or_default(),
-                change_budget_max_files: 50, // TODO: Make configurable
-                change_budget_max_loc: 1000, // TODO: Make configurable
+                change_budget_max_files: self.config.change_budget_max_files,
+                change_budget_max_loc: self.config.change_budget_max_loc,
             },
             &task_desc,
             &diff_stats,

@@ -332,7 +332,7 @@ export default function DatabaseExplorer({
                   <div className={styles.filterGroup}>
                     <label>Schema:</label>
                     <select
-                      value={state.filters.schema?.[0] || ""}
+                      value={state.filters.schema?.[0] ?? ""}
                       onChange={(e) =>
                         setState((prev) => ({
                           ...prev,
@@ -358,7 +358,7 @@ export default function DatabaseExplorer({
                   <div className={styles.filterGroup}>
                     <label>Type:</label>
                     <select
-                      value={state.filters.type?.[0] || ""}
+                      value={state.filters.type?.[0] ?? ""}
                       onChange={(e) =>
                         setState((prev) => ({
                           ...prev,
@@ -607,12 +607,14 @@ export default function DatabaseExplorer({
                         format === "json" ? "application/json" : "text/plain",
                     });
                     const url = URL.createObjectURL(blob);
-                    const a = document.createElement("a");
-                    a.href = url;
-                    a.download = `${state.selectedTable.name}_export.${format}`;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
+                    if (typeof document !== "undefined") {
+                      const a = document.createElement("a");
+                      a.href = url;
+                      a.download = `${state.selectedTable.name}_export.${format}`;
+                      document.body.appendChild(a);
+                      a.click();
+                      document.body.removeChild(a);
+                    }
                     URL.revokeObjectURL(url);
                     setState((prev) => ({ ...prev, isExporting: false }));
                   } catch (error) {

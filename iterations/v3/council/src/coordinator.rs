@@ -15,8 +15,10 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
-use tracing::{debug, info};
+use tokio::time::{sleep, Duration};
+use tracing::{debug, info, warn, error};
 use uuid::Uuid;
+use async_trait;
 
 /// Result of CAWS tie-breaking resolution
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -2307,13 +2309,184 @@ impl ConsensusCoordinator {
     fn calculate_administration_efficiency(&self, queue_tracker: &QueueTracker) -> f64 {
         let successful_operations = queue_tracker.performance_metrics.total_processed;
         let total_operations = successful_operations + queue_tracker.performance_metrics.total_failed;
-        
+
         if total_operations > 0 {
             successful_operations as f64 / total_operations as f64
         } else {
             1.0
         }
     }
+
+    /// Run autonomous executor loop with progress tracking
+    ///
+    /// This method continuously processes tasks from a task source, tracking progress
+    /// and providing real-time updates on evaluation status.
+    pub async fn run_autonomous_executor<T>(
+        &mut self,
+        mut task_source: T,
+        progress_callback: Option<Box<dyn Fn(ExecutorProgress) + Send + Sync>>,
+    ) -> Result<()>
+    where
+        T: TaskSource + Send,
+    {
+        info!("Starting autonomous council executor loop");
+
+        let mut consecutive_errors = 0;
+        let max_consecutive_errors = 5;
+        let mut total_tasks_processed = 0;
+        let start_time = std::time::Instant::now();
+
+        loop {
+            // Check for shutdown signal or health status
+            if self.should_shutdown().await {
+                info!("Shutdown signal received, stopping autonomous executor");
+                break;
+            }
+
+            // Get next task from source
+            let task_result = task_source.next_task().await;
+
+            match task_result {
+                Ok(Some(task_spec)) => {
+                    let task_id = task_spec.id;
+                    info!("Processing task {} in autonomous mode", task_id);
+
+                    // Update progress
+                    if let Some(ref callback) = progress_callback {
+                        callback(ExecutorProgress {
+                            total_tasks_processed,
+                            current_task: Some(task_id),
+                            uptime_seconds: start_time.elapsed().as_secs(),
+                            status: ExecutorStatus::Processing,
+                        });
+                    }
+
+                    // Process the task
+                    let evaluation_result = self.evaluate_task(task_spec.clone()).await;
+
+                    match evaluation_result {
+                        Ok(consensus_result) => {
+                            consecutive_errors = 0;
+                            total_tasks_processed += 1;
+
+                            info!("Successfully processed task {}: {:?}", task_id, consensus_result.final_verdict);
+
+                            // Mark task as completed in source
+                            if let Err(e) = task_source.mark_completed(task_id, &consensus_result).await {
+                                warn!("Failed to mark task {} as completed: {}", task_id, e);
+                            }
+
+                            // Update progress
+                            if let Some(ref callback) = progress_callback {
+                                callback(ExecutorProgress {
+                                    total_tasks_processed,
+                                    current_task: None,
+                                    uptime_seconds: start_time.elapsed().as_secs(),
+                                    status: ExecutorStatus::Idle,
+                                });
+                            }
+                        }
+                        Err(e) => {
+                            consecutive_errors += 1;
+                            error!("Failed to evaluate task {}: {}", task_id, e);
+
+                            // Mark task as failed
+                            if let Err(mark_err) = task_source.mark_failed(task_id, &e).await {
+                                error!("Failed to mark task {} as failed: {}", task_id, mark_err);
+                            }
+
+                            // Check if we should continue after errors
+                            if consecutive_errors >= max_consecutive_errors {
+                                error!("Too many consecutive errors ({}), entering cooldown", consecutive_errors);
+                                sleep(Duration::from_secs(30)).await;
+                                consecutive_errors = 0;
+                            }
+                        }
+                    }
+                }
+                Ok(None) => {
+                    // No tasks available, wait before checking again
+                    debug!("No tasks available, waiting...");
+                    sleep(Duration::from_secs(5)).await;
+
+                    // Update progress to show idle status
+                    if let Some(ref callback) = progress_callback {
+                        callback(ExecutorProgress {
+                            total_tasks_processed,
+                            current_task: None,
+                            uptime_seconds: start_time.elapsed().as_secs(),
+                            status: ExecutorStatus::WaitingForTasks,
+                        });
+                    }
+                }
+                Err(e) => {
+                    consecutive_errors += 1;
+                    error!("Failed to get next task: {}", e);
+
+                    if consecutive_errors >= max_consecutive_errors {
+                        error!("Too many consecutive task source errors, entering cooldown");
+                        sleep(Duration::from_secs(60)).await;
+                        consecutive_errors = 0;
+                    } else {
+                        sleep(Duration::from_secs(10)).await;
+                    }
+                }
+            }
+
+            // Brief pause between iterations to prevent tight looping
+            sleep(Duration::from_millis(100)).await;
+        }
+
+        info!("Autonomous executor completed. Processed {} tasks in {} seconds",
+              total_tasks_processed, start_time.elapsed().as_secs());
+
+        Ok(())
+    }
+
+    /// Check if the executor should shutdown
+    async fn should_shutdown(&self) -> bool {
+        // Check health indicators for shutdown conditions
+        // This could be extended to check external signals, health checks, etc.
+        let metrics = self.metrics.read().unwrap();
+        let error_rate = if metrics.total_evaluations > 0 {
+            metrics.failed_evaluations as f64 / metrics.total_evaluations as f64
+        } else {
+            0.0
+        };
+
+        // Shutdown if error rate exceeds 80%
+        error_rate > 0.8
+    }
+}
+
+/// Progress tracking for autonomous executor
+#[derive(Debug, Clone)]
+pub struct ExecutorProgress {
+    pub total_tasks_processed: u64,
+    pub current_task: Option<Uuid>,
+    pub uptime_seconds: u64,
+    pub status: ExecutorStatus,
+}
+
+/// Current status of the autonomous executor
+#[derive(Debug, Clone, PartialEq)]
+pub enum ExecutorStatus {
+    WaitingForTasks,
+    Processing,
+    Idle,
+}
+
+/// Trait for task sources that provide tasks to the autonomous executor
+#[async_trait::async_trait]
+pub trait TaskSource: Send {
+    /// Get the next task to process
+    async fn next_task(&mut self) -> Result<Option<TaskSpec>>;
+
+    /// Mark a task as completed with its result
+    async fn mark_completed(&mut self, task_id: Uuid, result: &ConsensusResult) -> Result<()>;
+
+    /// Mark a task as failed with an error
+    async fn mark_failed(&mut self, task_id: Uuid, error: &anyhow::Error) -> Result<()>;
 }
 
 /// Comprehensive metrics snapshot for monitoring and dashboards

@@ -101,7 +101,7 @@ export default function QueryBuilder({
     setState((prev) => ({
       ...prev,
       sqlQuery: savedQuery.query.sql,
-      parameters: savedQuery.query.parameters || [],
+      parameters: savedQuery.query.parameters ?? [],
       isReadOnly: savedQuery.query.read_only,
     }));
   }, []);

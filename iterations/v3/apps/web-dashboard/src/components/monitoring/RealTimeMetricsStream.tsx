@@ -88,7 +88,7 @@ export default function RealTimeMetricsStream({
         mockEventTypes[Math.floor(Math.random() * mockEventTypes.length)];
       const timestamp = new Date().toISOString();
 
-      let mockData: any = {
+      const mockData: any = {
         event_id: `evt_${Date.now()}_${Math.random()
           .toString(36)
           .substr(2, 9)}`,

@@ -751,7 +751,7 @@ impl ArtifactStorage for DatabaseArtifactStorage {
     ) -> Result<Vec<ArtifactMetadata>, ArtifactStorageError> {
         let rows = sqlx::query(
             r#"
-            SELECT am.id, am.task_id, am.created_at, am.size_bytes, am.metadata
+            SELECT am.id, am.task_id, am.created_at, am.size_bytes, am.version, am.metadata
             FROM artifact_metadata am
             WHERE am.task_id = $1
             ORDER BY am.version DESC
@@ -768,6 +768,7 @@ impl ArtifactStorage for DatabaseArtifactStorage {
             let task_id: Uuid = row.get("task_id");
             let created_at: DateTime<Utc> = row.get("created_at");
             let size_bytes: i64 = row.get("size_bytes");
+            let version: i32 = row.get("version");
             let db_metadata: serde_json::Value = row.get("metadata");
 
             let checksum = db_metadata
@@ -776,19 +777,13 @@ impl ArtifactStorage for DatabaseArtifactStorage {
                 .unwrap_or("")
                 .to_string();
 
-            let version = db_metadata
-                .get("version")
-                .and_then(|v| v.as_str())
-                .unwrap_or("1")
-                .to_string();
-
             artifacts.push(ArtifactMetadata {
                 id,
                 task_id,
                 created_at,
                 size_bytes: size_bytes as u64,
                 checksum,
-                version,
+                version: version.to_string(),
                 compression_used: false,
                 integrity_verified: true,
             });
