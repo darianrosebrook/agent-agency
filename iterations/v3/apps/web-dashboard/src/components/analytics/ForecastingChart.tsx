@@ -14,6 +14,7 @@ export default function ForecastingChart({
 }: ForecastingChartProps) {
   // TODO: Milestone 5 - Implement time range controls for forecasting
   // Use onTimeRangeChange for interactive date range selection
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleTimeRangeChange = (start: string, end: string) => {
     onTimeRangeChange?.(start, end);
   };

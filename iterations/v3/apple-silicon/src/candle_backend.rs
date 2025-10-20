@@ -340,8 +340,12 @@ impl InferenceEngine for CandleBackend {
         // - [ ] Add support for custom ONNX operators and extensions
         // - [ ] Optimize parsing performance for large models
 
-        // For now, we'll use a basic protobuf approach to extract metadata
-        // This is a placeholder - full ONNX parsing would require onnx-proto crate
+        // TODO: Implement proper ONNX metadata extraction
+        // - [ ] Add onnx-proto crate dependency for full ONNX format support
+        // - [ ] Parse ONNX protobuf format to extract model metadata
+        // - [ ] Handle custom operators and extensions properly
+        // - [ ] Validate ONNX version compatibility
+        // - [ ] Extract input/output tensor specifications from ONNX graph
 
         // Look for ONNX magic bytes and basic structure
         if model_data.len() < 8 {
@@ -682,7 +686,12 @@ impl InferenceEngine for CandleBackend {
             );
         }
 
-        // Use CPU device for now
+        // TODO: Implement proper device selection for Candle backend
+        // - [ ] Add device detection logic based on available hardware (CPU/GPU)
+        // - [ ] Implement device capability checking for tensor operations
+        // - [ ] Add configuration option to specify preferred device
+        // - [ ] Handle device-specific optimizations and memory management
+        // - [ ] Add fallback logic when preferred device is unavailable
         let device = candle_core::Device::Cpu;
 
         // Create tensor from bytes

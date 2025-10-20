@@ -1884,7 +1884,7 @@ impl ContextResolver {
     /// - [ ] Support batch ingestion for multiple entities
         
         // Simulate processing time
-        tokio::time::sleep(Duration::from_millis(200)).await;
+        tokio::time::sleep(std::time::Duration::from_millis(200)).await;
         
         // Simulate ingestion failure occasionally
         if fastrand::f32() < 0.15 { // 15% failure rate

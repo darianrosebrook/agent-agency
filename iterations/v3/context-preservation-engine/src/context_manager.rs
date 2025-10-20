@@ -107,8 +107,12 @@ impl ContextManager {
     
     /// Generate or load master key
     fn generate_or_load_master_key(&self) -> Result<Vec<u8>> {
-        // In production, this would load from secure key store
-        // For now, generate a new key
+        // TODO: Implement secure key store integration for master key management
+        // - [ ] Integrate with secure key storage system (AWS KMS, HashiCorp Vault, etc.)
+        // - [ ] Implement key rotation and lifecycle management
+        // - [ ] Add key backup and recovery procedures
+        // - [ ] Implement proper key access controls and audit logging
+        // - [ ] Handle key store connection failures and fallbacks
         let mut master_key = vec![0u8; 32]; // 256-bit key
         rand::RngCore::fill(&mut rand::thread_rng(), &mut master_key);
         

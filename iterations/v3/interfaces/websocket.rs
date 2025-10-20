@@ -354,8 +354,12 @@ impl WebSocketApi {
 
         // Send historical events if requested
         if include_history {
-            // In practice, this would retrieve historical events from the progress tracker
-            // For now, just confirm subscription
+            // TODO: Implement historical event retrieval from progress tracker
+            // - [ ] Connect to progress tracker for historical event queries
+            // - [ ] Implement event pagination and filtering by time range
+            // - [ ] Add event serialization for WebSocket transmission
+            // - [ ] Handle large event histories efficiently
+            // - [ ] Implement event replay for disconnected clients
         }
 
         // Forward events to connection

@@ -664,8 +664,12 @@ function detectFlakyTests(testHistory) {
     // - [ ] Add temporal analysis for time-of-day or day-of-week patterns
     // - [ ] Implement confidence intervals for flaky test classification
     // - [ ] Support integration with external flaky test detection services
-    // In a real implementation, this would analyze individual test results
-    // For now, simulate detection based on overall failure patterns
+    // TODO: Implement comprehensive flaky test detection from individual test results
+    // - [ ] Analyze individual test execution patterns and failure modes
+    // - [ ] Implement statistical analysis for flaky test identification
+    // - [ ] Add historical test result correlation and trend analysis
+    // - [ ] Integrate with external flaky test detection algorithms
+    // - [ ] Provide confidence scores for flaky test classifications
 
     const failureRate = testHistory.failedTests / testHistory.totalTests;
 

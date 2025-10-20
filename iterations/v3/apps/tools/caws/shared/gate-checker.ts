@@ -1732,8 +1732,12 @@ export class CawsGateChecker extends CawsBaseTool {
    * Check if approver has authority for the given tier
    */
   private hasTierApprovalAuthority(approver: string, tier: number): boolean {
-    // This would typically check against a user/role database
-    // For now, implement basic role-based checks
+    // TODO: Implement proper user/role database integration for approval authority
+    // - [ ] Connect to user management system or role database
+    // - [ ] Query user roles and permissions dynamically
+    // - [ ] Implement role hierarchy and inheritance logic
+    // - [ ] Add caching for role lookups to improve performance
+    // - [ ] Handle database connection failures and fallbacks
     const tier1Approvers = ["admin", "tech-lead", "engineering-manager"];
     const tier2Approvers = [
       "senior-dev",

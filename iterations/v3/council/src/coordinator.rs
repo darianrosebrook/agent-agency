@@ -389,8 +389,12 @@ fn analyze_majority_vote(votes: &[(String, String)]) -> Option<String> {
 
 /// Collect and analyze final votes from participants
 fn collect_final_votes(participants: &[String]) -> Vec<(String, String)> {
-    // In production, this would collect actual votes from participants
-    // For now, simulate votes
+    // TODO: Implement real participant voting collection system
+    // - [ ] Establish communication channels with council participants
+    // - [ ] Implement vote collection protocol with timeouts
+    // - [ ] Add participant authentication and authorization
+    // - [ ] Handle partial vote collections and consensus requirements
+    // - [ ] Implement vote validation and fraud detection
     participants
         .iter()
         .enumerate()

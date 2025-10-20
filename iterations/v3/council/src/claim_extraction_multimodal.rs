@@ -231,8 +231,12 @@ impl MultimodalEvidenceEnricher {
         claim: &str,
         modality: &str,
     ) -> Result<Vec<ModalityEvidence>> {
-        // PLACEHOLDER: In production, this would call the MultimodalRetriever
-        // For now, return mock evidence for testing
+        // TODO: Integrate with MultimodalRetriever for real evidence gathering
+        // - [ ] Establish connection to MultimodalRetriever service
+        // - [ ] Implement modality-specific evidence retrieval (text, image, audio, etc.)
+        // - [ ] Add evidence quality scoring and filtering
+        // - [ ] Handle MultimodalRetriever API errors and timeouts
+        // - [ ] Implement caching for frequently requested evidence
         let mock_evidence = match modality {
             "text" => vec![ModalityEvidence {
                 modality: "text".to_string(),

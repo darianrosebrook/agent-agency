@@ -290,7 +290,7 @@ export default function VectorSearchPanel({
                     (col) =>
                       col.table === state.selectedTable &&
                       col.column === state.selectedColumn
-                  )?.dimension || "unknown"}
+                  )?.dimension ?? "unknown"}
                 </span>
               </div>
             )}

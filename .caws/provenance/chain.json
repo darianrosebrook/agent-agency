@@ -14826,5 +14826,77 @@
     },
     "previous_hash": "3d05a6bb337664c462885a84e06e5c0de9e16166dfa7b82742ab3b94e96256cd",
     "hash": "76dccec308a61f81342b7b7cb4c4bb810edddf0586eaed71b07e6cf4b0adc400"
+  },
+  {
+    "id": "prov-1760928137128",
+    "timestamp": "2025-10-20T02:42:17.128Z",
+    "commit": {
+      "hash": "24ba372dcd4c8d4d555fd0265274befa053c2539",
+      "message": "feat: implement proper ANE tokenization with HuggingFace integration",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "PROJ-785",
+      "title": "agent-agency",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": [
+        "WV-0001"
+      ]
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-20T02:42:17.128Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "76dccec308a61f81342b7b7cb4c4bb810edddf0586eaed71b07e6cf4b0adc400",
+    "hash": "fe177032db6df04ff25cb90e15c504ff2040ed9ec486bda48ec800dde380d060"
+  },
+  {
+    "id": "prov-1760928247997",
+    "timestamp": "2025-10-20T02:44:07.997Z",
+    "commit": {
+      "hash": "650ff7504ead530163894000d00787ea46e6c549",
+      "message": "feat: implement comprehensive test infrastructure for self-governing agent",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "PROJ-785",
+      "title": "agent-agency",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": [
+        "WV-0001"
+      ]
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-20T02:44:07.998Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "fe177032db6df04ff25cb90e15c504ff2040ed9ec486bda48ec800dde380d060",
+    "hash": "d5ba7afb1fa63f772f528665682e46b836c15ade708742b6f7fdda091cbd38eb"
   }
 ]

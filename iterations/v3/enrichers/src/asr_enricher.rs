@@ -583,8 +583,12 @@ impl AsrEnricher {
         _speech_recognizer: &SwiftSpeechRecognizer, // Swift speech recognizer
         _recognition_request: &SFSpeechAudioBufferRecognitionRequest, // Recognition request
     ) -> Result<AsrResult> {
-        // This would integrate with the Swift bridge to execute speech recognition
-        // For now, return a placeholder result
+        // TODO: Implement Swift bridge integration for speech recognition
+        // - [ ] Set up Swift/Objective-C bridge for macOS integration
+        // - [ ] Implement SFSpeechRecognizer API calls through FFI
+        // - [ ] Handle speech recognition permissions and entitlements
+        // - [ ] Add audio format validation and conversion
+        // - [ ] Implement proper error handling for speech recognition failures
 
         tracing::debug!("Executing speech recognition via Swift bridge");
 

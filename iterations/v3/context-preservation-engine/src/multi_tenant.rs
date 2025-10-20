@@ -1060,8 +1060,12 @@ impl MultiTenantManager {
     ) -> Result<std::collections::HashMap<String, CachedContextData>> {
         let mut cache = std::collections::HashMap::new();
 
-        // In a real implementation, this would query an in-memory cache like Redis
-        // For now, we'll provide some sample data for testing
+        // TODO: Implement Redis or distributed cache integration for context storage
+        // - [ ] Set up Redis cluster or distributed cache infrastructure
+        // - [ ] Implement cache serialization/deserialization for context data
+        // - [ ] Add cache key naming strategy and tenant isolation
+        // - [ ] Implement cache TTL and eviction policies
+        // - [ ] Handle cache connection failures and fallbacks
         cache.insert(
             "context_1".to_string(),
             CachedContextData {
@@ -1584,16 +1588,24 @@ impl MultiTenantManager {
         tenant_id: &str,
         count: u32,
     ) -> Result<()> {
-        // In a real implementation, this would store to an in-memory cache like Redis
-        // For now, we'll log the operation and store in a local cache structure
+        // TODO: Implement Redis or distributed cache integration for context count storage
+        // - [ ] Set up Redis cluster or distributed cache infrastructure
+        // - [ ] Implement cache serialization/deserialization for count data
+        // - [ ] Add cache key naming strategy and tenant isolation
+        // - [ ] Implement cache TTL and eviction policies
+        // - [ ] Handle cache connection failures and fallbacks
         
         debug!(
             "Stored context count {} for tenant {} in memory cache",
             count, tenant_id
         );
 
-        // In a real implementation, this would update a shared cache structure
-        // with proper TTL handling and thread-safe access
+        // TODO: Implement thread-safe shared cache structure with TTL management
+        // - [ ] Create thread-safe cache implementation using RwLock or similar
+        // - [ ] Implement TTL (Time-To-Live) handling for cache entries
+        // - [ ] Add automatic cleanup of expired cache entries
+        // - [ ] Implement cache size limits and LRU eviction
+        // - [ ] Add cache statistics and monitoring capabilities
         
         Ok(())
     }
@@ -1727,8 +1739,12 @@ impl MultiTenantManager {
         // - [ ] Implement cache warming and prefetching
         // - [ ] Add cache performance monitoring and metrics
         // - [ ] Support cache invalidation and consistency
-        // In a real implementation, this would query an in-memory cache like Redis
-        // For now, we'll simulate cache behavior with some sample data
+        // TODO: Replace cache simulation with actual Redis/memory cache queries
+        // - [ ] Establish connection to Redis or memory cache backend
+        // - [ ] Implement proper cache key generation and tenant isolation
+        // - [ ] Add error handling for cache connection failures
+        // - [ ] Implement cache miss handling and fallback to database
+        // - [ ] Add cache hit/miss statistics and monitoring
         
         let cached_count = match tenant_id {
             "tenant_1" => 37,

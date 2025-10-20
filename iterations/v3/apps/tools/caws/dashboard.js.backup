@@ -456,8 +456,12 @@ function analyzeTestPatterns(testHistory) {
     // Group tests by name and analyze failure patterns
     const testResults = new Map();
 
-    // In a real implementation, this would analyze individual test results
-    // For now, simulate flaky test detection based on failure rates
+    // TODO: Implement comprehensive flaky test detection from individual test results
+    // - [ ] Analyze individual test execution patterns and failure modes
+    // - [ ] Implement statistical analysis for flaky test identification
+    // - [ ] Add historical test result correlation and trend analysis
+    // - [ ] Integrate with external flaky test detection algorithms
+    // - [ ] Provide confidence scores for flaky test classifications
 
     const failureRate = testHistory.failedTests / testHistory.totalTests;
 
@@ -570,8 +574,12 @@ function detectFlakyTests(testHistory) {
   const flakyTests = [];
 
   try {
-    // In a real implementation, this would analyze individual test results
-    // For now, simulate detection based on overall failure patterns
+    // TODO: Implement comprehensive flaky test detection from individual test results
+    // - [ ] Analyze individual test execution patterns and failure modes
+    // - [ ] Implement statistical analysis for flaky test identification
+    // - [ ] Add historical test result correlation and trend analysis
+    // - [ ] Integrate with external flaky test detection algorithms
+    // - [ ] Provide confidence scores for flaky test classifications
 
     const failureRate = testHistory.failedTests / testHistory.totalTests;
 

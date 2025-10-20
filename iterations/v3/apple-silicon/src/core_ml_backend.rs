@@ -141,8 +141,12 @@ impl CoreMLBackend {
                 "neuralnetwork" => true,
                 // MLProgram models can be ANE-compatible depending on operations
                 "mlprogram" => {
-                    // Check if the model contains ANE-compatible operations
-                    // For now, assume MLProgram models with certain characteristics are compatible
+                    // TODO: Implement proper ANE compatibility checking for MLProgram models
+                    // - [ ] Analyze MLProgram operations to determine ANE compatibility
+                    // - [ ] Check for unsupported operations that prevent ANE acceleration
+                    // - [ ] Validate tensor shapes and data types for ANE requirements
+                    // - [ ] Implement operation mapping from MLProgram to ANE instruction set
+                    // - [ ] Add performance profiling to verify ANE acceleration benefits
                     prepared.model.can_use_ane()
                 },
                 // Other model types (like pipelines) may not be ANE-compatible
@@ -228,8 +232,12 @@ impl CoreMLBackend {
 
             // Query current ANE status and metrics
             if metrics.is_available {
-                // Try to get more detailed metrics if possible
-                // For now, return basic metrics
+                // TODO: Implement comprehensive ANE metrics collection
+                // - [ ] Add detailed performance counters from ANE hardware
+                // - [ ] Implement memory bandwidth utilization tracking
+                // - [ ] Add power consumption metrics for ANE operations
+                // - [ ] Track operation latency breakdowns by ANE component
+                // - [ ] Implement real-time metrics streaming and historical analysis
                 Ok(metrics)
             } else {
                 Err(anyhow::anyhow!("ANE not available for metrics query"))

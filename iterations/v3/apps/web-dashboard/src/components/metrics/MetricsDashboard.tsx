@@ -159,6 +159,7 @@ export default function MetricsDashboard() {
               console.log("Refreshing all metrics...");
               // Mock refresh - update timestamps and slight variations
               if (typeof window !== "undefined") {
+                // eslint-disable-next-line no-undef
                 window.location.reload();
               }
             }}
@@ -182,13 +183,16 @@ export default function MetricsDashboard() {
               });
               const url = URL.createObjectURL(blob);
               if (typeof document !== "undefined") {
+                // eslint-disable-next-line no-undef
                 const a = document.createElement("a");
                 a.href = url;
                 a.download = `metrics-export-${
                   new Date().toISOString().split("T")[0]
                 }.json`;
+                // eslint-disable-next-line no-undef
                 document.body.appendChild(a);
                 a.click();
+                // eslint-disable-next-line no-undef
                 document.body.removeChild(a);
               }
               URL.revokeObjectURL(url);

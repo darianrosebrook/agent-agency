@@ -475,10 +475,13 @@ export default function DatabaseExplorer({
                   console.log("Save query:", name, query);
                   // For now, just store in localStorage as a mock implementation
                   if (typeof window !== "undefined") {
+                    // eslint-disable-next-line no-undef
                     const savedQueries = JSON.parse(
+                      // eslint-disable-next-line no-undef
                       localStorage.getItem("savedQueries") ?? "{}"
                     );
                     savedQueries[name] = query;
+                    // eslint-disable-next-line no-undef
                     localStorage.setItem(
                       "savedQueries",
                       JSON.stringify(savedQueries)
@@ -608,11 +611,14 @@ export default function DatabaseExplorer({
                     });
                     const url = URL.createObjectURL(blob);
                     if (typeof document !== "undefined") {
+                      // eslint-disable-next-line no-undef
                       const a = document.createElement("a");
                       a.href = url;
                       a.download = `${state.selectedTable.name}_export.${format}`;
+                      // eslint-disable-next-line no-undef
                       document.body.appendChild(a);
                       a.click();
+                      // eslint-disable-next-line no-undef
                       document.body.removeChild(a);
                     }
                     URL.revokeObjectURL(url);

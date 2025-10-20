@@ -530,8 +530,12 @@ impl PredictionResult {
             // Create image key
             let image_key = CFString::new("image");
 
-            // For now, create a placeholder CVPixelBuffer
-            // In a real implementation, this would decode the image and create proper pixel buffer
+            // TODO: Implement proper CVPixelBuffer creation from image data
+            // - [ ] Add image decoding capabilities (JPEG, PNG, etc.)
+            // - [ ] Create CVPixelBuffer with correct dimensions and pixel format
+            // - [ ] Handle image orientation and metadata extraction
+            // - [ ] Implement proper memory management for pixel buffer lifecycle
+            // - [ ] Add validation for supported image formats and sizes
             let pixel_buffer: *mut objc::runtime::Object = std::ptr::null_mut();
 
             if !pixel_buffer.is_null() {
@@ -2492,7 +2496,12 @@ fn execute_prediction_sync(model: *mut objc::runtime::Object, request: *mut objc
     /// Extract array data from MLMultiArray
     fn extract_array_from_ml_multiarray(&self, ml_array: *mut objc::runtime::Object) -> Option<Vec<serde_json::Value>> {
         unsafe {
-            // Get data pointer - assume Float32 for now
+            // TODO: Implement proper data type detection for MLMultiArray
+            // - [ ] Detect actual data type from MLMultiArray (Float32, Int32, etc.)
+            // - [ ] Handle different data type conversions appropriately
+            // - [ ] Add validation for data type compatibility
+            // - [ ] Implement proper byte ordering and endianness handling
+            // - [ ] Add support for quantized data types
             let data_ptr: *const f32 = msg_send![ml_array, dataPointer];
             if data_ptr.is_null() {
                 return None;
@@ -4784,8 +4793,12 @@ impl CoreMLManager {
         // In production, this would use Metal Performance Shaders APIs
         // to get real-time GPU utilization metrics
 
-        // For now, return a reasonable estimate based on system activity
-        // Actual implementation would use MPS instrumentation APIs
+        // TODO: Implement proper MPS GPU utilization querying
+        // - [ ] Integrate with Metal Performance Shaders instrumentation APIs
+        // - [ ] Query real-time GPU utilization metrics from MPS
+        // - [ ] Handle multiple GPU devices and workload distribution
+        // - [ ] Implement proper error handling for MPS API failures
+        // - [ ] Add GPU memory utilization tracking alongside compute utilization
 
         // Use powermetrics or iostat to estimate GPU activity
         match std::process::Command::new("powermetrics")
@@ -4868,8 +4881,12 @@ impl CoreMLManager {
             // Extract utilization from IORegistry data
             // This is a simplified implementation
 
-            // For now, return None as this requires more complex parsing
-            // In production, this would parse the IORegistry structure
+            // TODO: Implement proper IORegistry GPU utilization parsing
+            // - [ ] Parse IORegistry structure for GPU utilization data
+            // - [ ] Handle different GPU architectures and register layouts
+            // - [ ] Implement proper error handling for IOKit API calls
+            // - [ ] Add support for multiple GPU devices in IORegistry
+            // - [ ] Validate parsed utilization values for reasonableness
             None
         } else {
             None
@@ -4915,8 +4932,12 @@ impl CoreMLManager {
         // This is a simplified implementation - in production you'd track
         // command buffer submissions and completions
 
-        // For now, return a reasonable estimate based on system activity
-        // In a full implementation, you'd maintain a counter of active command buffers
+        // TODO: Implement proper command buffer tracking for GPU utilization
+        // - [ ] Maintain registry of active Metal command buffers
+        // - [ ] Track command buffer submission and completion times
+        // - [ ] Implement real-time GPU queue depth monitoring
+        // - [ ] Add command buffer fence synchronization tracking
+        // - [ ] Calculate utilization based on actual GPU workload vs capacity
         2 // Conservative estimate: 2 active command buffers
     }
 
@@ -5622,8 +5643,12 @@ impl CoreMLManager {
 
     /// Parse powermetrics plist format
     fn parse_powermetrics_plist(&self, _output: &str) -> Option<crate::types::ThermalStats> {
-        // Plist parsing would require additional dependencies
-        // For now, fall back to legacy parsing
+        // TODO: Implement proper plist parsing for powermetrics output
+        // - [ ] Add plist parsing library dependency (plist or similar)
+        // - [ ] Parse thermal sensor data from structured plist format
+        // - [ ] Extract temperature readings for CPU, GPU, and other components
+        // - [ ] Handle plist format versions and compatibility
+        // - [ ] Implement error handling for malformed plist data
         None
     }
 
@@ -6144,8 +6169,12 @@ impl CoreMLManager {
         // system_profiler doesn't typically show real-time temperatures
         // but we can use it to verify thermal monitoring capability
 
-        // For now, if system_profiler runs successfully, assume baseline temperature
-        // In production, this would parse actual thermal sensor data
+        // TODO: Implement proper thermal sensor data parsing from system_profiler
+        // - [ ] Parse system_profiler output for thermal sensor readings
+        // - [ ] Extract temperature data for CPU cores, GPU, and other components
+        // - [ ] Handle different system_profiler output formats and versions
+        // - [ ] Implement temperature validation and outlier detection
+        // - [ ] Add support for thermal throttling indicators and fan speeds
 
         if output.contains("Hardware") {
             // System profiler ran successfully, return conservative estimate

@@ -837,14 +837,22 @@ impl MCPServer {
 
         // SLO endpoints
         io.add_sync_method("slo/status", |_| {
-            // Return current SLO status - this would need access to SLO tracker
-            // For now, return a placeholder
+            // TODO: Integrate with SLO tracker for real-time status reporting
+            // - [ ] Connect to SLO tracker service or database
+            // - [ ] Implement SLO status queries with current metrics
+            // - [ ] Add SLO violation detection and alerting
+            // - [ ] Handle SLO tracker connection failures gracefully
+            // - [ ] Implement SLO status caching for performance
             Ok(serde_json::to_value(observability::slo::create_default_slos()).unwrap())
         });
 
         io.add_sync_method("slo/alerts", |_| {
-            // Return recent SLO alerts - this would need access to SLO tracker
-            // For now, return empty array
+            // TODO: Implement SLO alerts retrieval from tracker
+            // - [ ] Query SLO tracker for recent alerts and violations
+            // - [ ] Implement alert filtering by time range and severity
+            // - [ ] Add alert acknowledgment and resolution tracking
+            // - [ ] Handle alert pagination for large result sets
+            // - [ ] Implement real-time alert streaming via WebSocket
             Ok(serde_json::to_value(Vec::<observability::slo::SLOAlert>::new()).unwrap())
         });
 

@@ -135,6 +135,7 @@ export default function TableViewer({
     }));
   }, [externalData, externalLoading, externalError]);
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const renderCellValue = (value: any, _columnType: string) => {
     if (value === null || value === undefined) {
       return <span className={styles.nullValue}>NULL</span>;

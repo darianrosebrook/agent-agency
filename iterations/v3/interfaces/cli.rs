@@ -313,8 +313,12 @@ impl CliInterface {
             None
         };
 
-        // For now, we'll simulate the task submission since we don't have a full HTTP client
-        // In practice, this would make an HTTP request to the REST API
+        // TODO: Implement HTTP client for actual task submission to REST API
+        // - [ ] Add HTTP client library (reqwest, hyper, etc.) dependency
+        // - [ ] Implement REST API client with proper authentication
+        // - [ ] Add request/response serialization for task data
+        // - [ ] Handle HTTP errors and API response parsing
+        // - [ ] Implement connection pooling and timeout handling
         let task_id = Uuid::new_v4();
 
         println!("🚀 Submitted task: {}", task_id);

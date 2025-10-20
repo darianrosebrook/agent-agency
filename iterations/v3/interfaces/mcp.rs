@@ -439,8 +439,12 @@ impl McpServer {
             .and_then(|v| v.as_u64())
             .unwrap_or(20) as usize;
 
-        // In practice, this would query the progress tracker for all tasks
-        // For now, return a sample response
+        // TODO: Integrate with progress tracker for real task status queries
+        // - [ ] Connect to progress tracker service or database
+        // - [ ] Implement task status queries with filtering and pagination
+        // - [ ] Add real-time task progress updates
+        // - [ ] Handle progress tracker connection failures
+        // - [ ] Implement task status caching for performance
         let tasks = serde_json::json!([
             {
                 "task_id": "550e8400-e29b-41d4-a716-446655440000",

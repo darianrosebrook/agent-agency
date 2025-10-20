@@ -332,7 +332,6 @@ impl VisualSearchBridge {
             },
         ])
     }
-}
 
 /// Text search result
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -548,8 +548,12 @@ export class SecurityProvenanceManager extends CawsBaseTool {
       }
     }
 
-    // In production, this would validate certificate chain
-    // For now, we ensure the key is from a trusted source
+    // TODO: Implement proper certificate chain validation for model signatures
+    // - [ ] Validate complete X.509 certificate chain for model signatures
+    // - [ ] Implement certificate revocation checking (CRL/OCSP)
+    // - [ ] Verify certificate authority trustworthiness and validity periods
+    // - [ ] Add support for certificate pinning for known trusted authorities
+    // - [ ] Implement proper error handling for certificate validation failures
   }
 
   /**
@@ -1896,8 +1900,12 @@ export class SecurityProvenanceManager extends CawsBaseTool {
         };
       }
 
-      // In production, this would fetch from trusted model registries
-      // For now, return null to indicate no known checksums
+      // TODO: Implement model checksum verification against trusted registries
+      // - [ ] Integrate with trusted model registries (HuggingFace, OpenAI, etc.)
+      // - [ ] Fetch and validate model checksums from official sources
+      // - [ ] Implement checksum verification for model integrity
+      // - [ ] Add support for multiple registry sources and fallback
+      // - [ ] Handle registry authentication and rate limiting
       return null;
     } catch (error) {
       console.warn(`Failed to fetch known checksums: ${error}`);

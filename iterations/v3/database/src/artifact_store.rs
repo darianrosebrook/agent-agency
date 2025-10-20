@@ -520,7 +520,12 @@ impl DatabaseArtifactStorage {
         // Map linting results
         let linting = self.map_linting_results(&artifacts_by_type);
 
-        // Create provenance (placeholder for now)
+        // TODO: Implement comprehensive provenance tracking for artifact retrieval
+        // - [ ] Generate proper execution IDs and track full execution lifecycle
+        // - [ ] Record detailed timing information for performance analysis
+        // - [ ] Capture environment and system metadata
+        // - [ ] Implement provenance chain linking for dependent operations
+        // - [ ] Add provenance validation and integrity checking
         let provenance = Provenance {
             execution_id: Uuid::new_v4(),
             worker_id: Some("database-retrieval".to_string()),

@@ -3296,8 +3296,12 @@ impl MultiModalVerificationEngine {
         // Create search query from claim terms
         let search_query = claim_terms.join(" ");
 
-        // Query historical claims using text similarity search
-        // For now, we'll use text-based similarity until vector embeddings are implemented
+        // TODO: Implement vector embedding-based similarity search for historical claims
+        // - [ ] Integrate vector embedding model (BERT, Sentence Transformers, etc.)
+        // - [ ] Generate embeddings for claim texts during ingestion
+        // - [ ] Implement vector similarity search in database (pgvector, chroma, etc.)
+        // - [ ] Add semantic similarity scoring beyond keyword matching
+        // - [ ] Optimize embedding storage and search performance
         for term in claim_terms {
             if term.len() > 3 {
                 match self.query_similar_claims_from_db(db_client, term).await {
@@ -3396,9 +3400,12 @@ impl MultiModalVerificationEngine {
             return Ok(Vec::new());
         }
 
-        // Build query to search for historical claims
-        // Note: This assumes a future claims table. For now, we'll search in existing tables
-        // that might contain claim-like data (artifacts, task history, etc.)
+        // TODO: Implement dedicated claims table and proper claim storage schema
+        // - [ ] Design and create dedicated claims database table with proper indexing
+        // - [ ] Implement claim versioning and historical tracking
+        // - [ ] Add claim metadata storage (verification status, confidence scores, etc.)
+        // - [ ] Create migration scripts for existing claim-like data
+        // - [ ] Implement proper claim deduplication and relationship tracking
         let query = r#"
             SELECT DISTINCT
                 'artifact-' || ea.id as claim_id,
