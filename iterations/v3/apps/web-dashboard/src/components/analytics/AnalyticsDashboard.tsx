@@ -12,7 +12,6 @@ import AnomalyDetector from "./AnomalyDetector";
 import TrendAnalyzer from "./TrendAnalyzer";
 import PerformancePredictor from "./PerformancePredictor";
 import CorrelationMatrix from "./CorrelationMatrix";
-import ForecastingChart from "./ForecastingChart";
 import styles from "./AnalyticsDashboard.module.scss";
 
 interface AnalyticsDashboardState {
@@ -294,7 +293,7 @@ export default function AnalyticsDashboard({
           }`}
           onClick={() => handleTabChange("anomalies")}
         >
-          Anomalies ({state.summary?.total_anomalies || 0})
+          Anomalies ({state.summary?.total_anomalies ?? 0})
         </button>
         <button
           className={`${styles.tabButton} ${

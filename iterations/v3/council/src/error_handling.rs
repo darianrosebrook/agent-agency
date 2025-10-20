@@ -210,7 +210,7 @@ pub struct CircuitBreaker {
 }
 
 /// Circuit breaker states
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum CircuitBreakerState {
     /// Normal operation
     Closed,
@@ -550,7 +550,7 @@ pub struct DegradationManager {
 }
 
 /// Current degradation state
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DegradationState {
     /// Whether the system is in degraded mode
     pub degraded: bool,
@@ -575,6 +575,7 @@ pub struct DegradationPolicy {
 
 /// Degradation level with specific strategies
 #[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DegradationLevel {
     /// Level name (e.g., "reduced_accuracy", "limited_functionality")
     pub name: String,

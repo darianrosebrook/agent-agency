@@ -95,7 +95,7 @@ class DatabaseApiClient {
       {
         name: "execution_artifacts",
         schema: "public",
-        connection_id: connectionId || "main_db",
+        connection_id: connectionId ?? "main_db",
         row_count: 1250,
         size_bytes: 52428800, // 50MB
         created_at: "2025-01-15T10:00:00Z",
@@ -140,7 +140,7 @@ class DatabaseApiClient {
       {
         name: "artifact_versions",
         schema: "public",
-        connection_id: connectionId || "main_db",
+        connection_id: connectionId ?? "main_db",
         row_count: 340,
         size_bytes: 15728640, // 15MB
         created_at: "2025-01-15T10:00:00Z",
@@ -185,7 +185,7 @@ class DatabaseApiClient {
       {
         name: "tasks",
         schema: "public",
-        connection_id: connectionId || "main_db",
+        connection_id: connectionId ?? "main_db",
         row_count: 89,
         size_bytes: 2097152, // 2MB
         created_at: "2025-01-10T09:00:00Z",
@@ -400,7 +400,7 @@ class DatabaseApiClient {
    */
   async queryTable(
     tableQuery: TableQueryRequest,
-    _connectionId?: string
+    _connectionId?: string // eslint-disable-line @typescript-eslint/no-unused-vars
   ): Promise<ExecuteQueryResponse> {
     console.warn("queryTable not implemented - requires V3 table query API");
     // TODO: Milestone 4 - Table Query API Implementation
@@ -442,7 +442,7 @@ class DatabaseApiClient {
    */
   async vectorSearch(
     searchQuery: VectorSearchQuery,
-    _connectionId?: string
+    _connectionId?: string // eslint-disable-line @typescript-eslint/no-unused-vars
   ): Promise<VectorSearchResponse> {
     console.warn(
       "vectorSearch not implemented - requires V3 vector search API"
@@ -499,7 +499,7 @@ class DatabaseApiClient {
     return {
       results: mockResults.map((result) => ({
         ...result,
-        similarity: result.score || result.distance || 0.85,
+        similarity: result.score ?? result.distance ?? 0.85,
       })),
       total_count: mockResults.length,
       search_time_ms: 145.7,
@@ -513,7 +513,7 @@ class DatabaseApiClient {
    * @returns A promise that resolves to a GetDatabaseMetricsResponse.
    */
   async getDatabaseMetrics(
-    _connectionId?: string
+    _connectionId?: string // eslint-disable-line @typescript-eslint/no-unused-vars
   ): Promise<GetDatabaseMetricsResponse> {
     console.warn(
       "getDatabaseMetrics not implemented - requires V3 database metrics API"
@@ -551,8 +551,8 @@ class DatabaseApiClient {
   async exportTable(
     tableName: string,
     format: "csv" | "json" | "sql",
-    _query?: Partial<TableQueryRequest>,
-    _connectionId?: string
+    _query?: Partial<TableQueryRequest>, // eslint-disable-line @typescript-eslint/no-unused-vars
+    _connectionId?: string // eslint-disable-line @typescript-eslint/no-unused-vars
   ): Promise<Blob | string> {
     console.warn(
       "exportTable using mock implementation - V3 data export API not available"
@@ -588,7 +588,7 @@ class DatabaseApiClient {
     ];
 
     switch (format) {
-      case "csv":
+      case "csv": {
         const csvHeader = "id,task_id,artifact_type,size_bytes,created_at\n";
         const csvRows = mockData
           .map(
@@ -597,11 +597,12 @@ class DatabaseApiClient {
           )
           .join("\n");
         return csvHeader + csvRows;
+      }
 
       case "json":
         return JSON.stringify(mockData, null, 2);
 
-      case "sql":
+      case "sql": {
         const sqlInserts = mockData
           .map(
             (row) =>
@@ -609,6 +610,7 @@ class DatabaseApiClient {
           )
           .join("\n");
         return `-- Export of ${tableName}\n${sqlInserts}`;
+      }
 
       default:
         throw new DatabaseApiError(

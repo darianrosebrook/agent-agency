@@ -19,7 +19,7 @@ interface AnomalyDetectorState {
 
 export default function AnomalyDetector({
   anomalies: externalAnomalies,
-  timeSeriesData,
+  timeSeriesData: _timeSeriesData,
   onAnomalySelect,
   onAnomalyDismiss,
   filters: externalFilters,
@@ -217,11 +217,11 @@ export default function AnomalyDetector({
             <div className={styles.filterGroup}>
               <label>Min Severity:</label>
               <select
-                value={state.filters.anomaly_severity?.[0] || "low"}
+                value={state.filters.anomaly_severity?.[0] ?? "low"}
                 onChange={(e) =>
                   handleFilterChange("anomaly_severity", [
                     e.target.value as Anomaly["severity"],
-                    ...(state.filters.anomaly_severity?.slice(1) || []),
+                    ...(state.filters.anomaly_severity?.slice(1) ?? []),
                   ])
                 }
               >
@@ -239,7 +239,7 @@ export default function AnomalyDetector({
                 min="0"
                 max="1"
                 step="0.1"
-                value={state.filters.confidence_threshold || 0.5}
+                value={state.filters.confidence_threshold ?? 0.5}
                 onChange={(e) =>
                   handleFilterChange(
                     "confidence_threshold",

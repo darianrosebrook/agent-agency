@@ -365,6 +365,14 @@ impl VerdictAggregator {
                     score += 0.2;
                 }
             },
+            crate::judge::JudgeType::Ethics => {
+                // Ethics judges prioritize high-risk, sensitive tasks
+                if context.risk_tier == agent_agency_contracts::task_request::RiskTier::Tier1 ||
+                   task_description.contains("privacy") || task_description.contains("ethics") ||
+                   task_description.contains("bias") || task_description.contains("fair") {
+                    score += 0.4;
+                }
+            },
         }
 
         score.min(1.0)
@@ -680,10 +688,10 @@ impl VerdictAggregator {
         // Remove duplicate changes (simplified - just keep first occurrence)
         let mut unique_changes = Vec::new();
         let mut seen = std::collections::HashSet::new();
-        for change in all_changes {
+        for change in &all_changes {
                     let key = format!("{:?}:{}", change.category, change.description);
-            if seen.insert(key) {
-                unique_changes.push(change);
+            if seen.insert(key.clone()) {
+                unique_changes.push(change.clone());
             }
         }
 

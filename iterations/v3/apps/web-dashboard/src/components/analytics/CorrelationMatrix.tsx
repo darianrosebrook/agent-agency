@@ -133,12 +133,12 @@ export default function CorrelationMatrix({
   });
 
   // Get unique metrics for matrix
-  const allMetrics = Array.from(
-    new Set([
-      ...filteredCorrelations.flatMap((c) => [c.metric_a, c.metric_b]),
-      ...(metrics || []),
-    ])
-  );
+    const allMetrics = Array.from(
+      new Set([
+        ...filteredCorrelations.flatMap((c) => [c.metric_a, c.metric_b]),
+        ...(metrics ?? []),
+      ])
+    );
 
   // Create correlation matrix
   const correlationMatrix = allMetrics.map((metricA) =>

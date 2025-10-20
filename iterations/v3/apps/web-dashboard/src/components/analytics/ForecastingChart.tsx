@@ -8,7 +8,7 @@ export default function ForecastingChart({
   prediction,
   historicalData,
   showConfidenceIntervals = true,
-  onTimeRangeChange,
+  onTimeRangeChange: _onTimeRangeChange,
   isLoading,
   error,
 }: ForecastingChartProps) {
@@ -16,7 +16,7 @@ export default function ForecastingChart({
   const chartData = useMemo(() => {
     if (!prediction) return null;
 
-    const historical = historicalData?.data || [];
+    const historical = historicalData?.data ?? [];
     const predicted = prediction.predicted_values;
 
     // Combine historical and predicted data
@@ -105,14 +105,7 @@ export default function ForecastingChart({
     );
   };
 
-  // Create path for the line
-  const linePath = chartData
-    .map((point, index) => {
-      const x = xScale(point.timestamp);
-      const y = yScale(point.value);
-      return `${index === 0 ? "M" : "L"} ${x} ${y}`;
-    })
-    .join(" ");
+  // Create paths for the lines (used directly in JSX)
 
   // Split data by type for different styling
   const historicalDataPoints = chartData.filter((d) => d.type === "historical");

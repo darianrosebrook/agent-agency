@@ -15,7 +15,7 @@ interface TrendAnalyzerState {
 
 export default function TrendAnalyzer({
   trends: externalTrends,
-  timeSeriesData,
+  timeSeriesData: _timeSeriesData,
   onTrendSelect,
   filters: externalFilters,
   isAnalyzing: externalAnalyzing,

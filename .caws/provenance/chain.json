@@ -14646,5 +14646,41 @@
     },
     "previous_hash": "09358723df4b95d6dec367afabcaec7bee4cb7a4c2f1bbae122e3a0355f45659",
     "hash": "c434dd36b7383c11609db08969590631f1e6d4224f74a8050f5c050b115c2316"
+  },
+  {
+    "id": "prov-1760927571539",
+    "timestamp": "2025-10-20T02:32:51.539Z",
+    "commit": {
+      "hash": "42a2ff9b73bf431d766977cd99a026f200965263",
+      "message": "feat: complete analytics dashboard implementation",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "PROJ-785",
+      "title": "agent-agency",
+      "risk_tier": 2,
+      "mode": "feature",
+      "waiver_ids": [
+        "WV-0001"
+      ]
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-20T02:32:51.540Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "c434dd36b7383c11609db08969590631f1e6d4224f74a8050f5c050b115c2316",
+    "hash": "f1a7f7b23414ac20413446573e0424141ada4d64e6d6af584f80ef16f71d34ef"
   }
 ]
