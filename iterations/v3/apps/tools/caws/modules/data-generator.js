@@ -44,11 +44,6 @@ function simulateTestHistoryFromGit() {
   // - [ ] Correlate test results with code changes and commits
   // - [ ] Generate realistic test history from git metadata
   // - [ ] Handle large repositories efficiently with pagination
-  // - [ ] Analyze git history for test-related commits
-  // - [ ] Parse test result files from git history
-  // - [ ] Correlate test results with code changes
-  // - [ ] Generate realistic test history from git data
-  // - [ ] Handle large repositories efficiently
 
   const history = [];
   const now = new Date();
