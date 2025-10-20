@@ -68,6 +68,8 @@ pub struct ResourceUsage {
     pub gpu_memory: Option<GpuMemoryStats>,
     /// Detailed ANE statistics
     pub ane_stats: Option<AneStats>,
+    /// Comprehensive thermal monitoring data
+    pub thermal_stats: Option<ThermalStats>,
 }
 
 /// Model inference request
@@ -184,6 +186,27 @@ pub struct AneStats {
     pub active_cores: u32,
     /// ANE temperature in Celsius
     pub temperature_celsius: f32,
+}
+
+/// Comprehensive thermal monitoring data
+#[derive(Debug, Clone)]
+pub struct ThermalStats {
+    /// Overall system temperature in Celsius
+    pub system_temperature: f32,
+    /// CPU temperature in Celsius
+    pub cpu_temperature: Option<f32>,
+    /// GPU temperature in Celsius
+    pub gpu_temperature: Option<f32>,
+    /// ANE temperature in Celsius
+    pub ane_temperature: Option<f32>,
+    /// Battery temperature in Celsius (if available)
+    pub battery_temperature: Option<f32>,
+    /// Thermal pressure level (0-100, higher = more throttling)
+    pub thermal_pressure: f32,
+    /// Fan speed as percentage (if available)
+    pub fan_speed_percent: Option<f32>,
+    /// Whether thermal throttling is active
+    pub is_throttling: bool,
 }
 
 impl Display for InferencePriority {

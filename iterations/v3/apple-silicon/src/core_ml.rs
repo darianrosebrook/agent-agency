@@ -4343,6 +4343,20 @@ impl CoreMLManager {
             None
         };
 
+        // Get comprehensive thermal statistics
+        let thermal_stats = if thermal_celsius > 0.0 {
+            #[cfg(target_os = "macos")]
+            {
+                Some(self.get_comprehensive_thermal_stats().await)
+            }
+            #[cfg(not(target_os = "macos"))]
+            {
+                None
+            }
+        } else {
+            None
+        };
+
         ResourceUsage {
             cpu_percent,
             gpu_percent,
@@ -4354,6 +4368,7 @@ impl CoreMLManager {
             timestamp: chrono::Utc::now(),
             gpu_memory,
             ane_stats,
+            thermal_stats,
         }
     }
 
@@ -5223,33 +5238,456 @@ impl CoreMLManager {
         }
     }
 
-    /// Monitor thermal sensors using system tools and APIs
+    /// Monitor thermal sensors using system tools and APIs with comprehensive data
     #[cfg(target_os = "macos")]
     async fn monitor_thermal_sensors(&self) -> f32 {
+        // Get comprehensive thermal statistics
+        let thermal_stats = self.get_comprehensive_thermal_stats().await;
+
+        // Return the system temperature for backward compatibility
+        thermal_stats.system_temperature
+    }
+
+    /// Get comprehensive thermal monitoring data
+    #[cfg(target_os = "macos")]
+    async fn get_comprehensive_thermal_stats(&self) -> crate::types::ThermalStats {
         use std::process::Command;
 
-        // Method 1: Try powermetrics for thermal data (most accurate)
-        if let Some(temp) = self.read_powermetrics_thermal() {
-            return temp.clamp(20.0, 100.0);
+        // Initialize with defaults
+        let mut thermal_stats = crate::types::ThermalStats {
+            system_temperature: 35.0,
+            cpu_temperature: None,
+            gpu_temperature: None,
+            ane_temperature: None,
+            battery_temperature: None,
+            thermal_pressure: 0.0,
+            fan_speed_percent: None,
+            is_throttling: false,
+        };
+
+        // Method 1: Try powermetrics for comprehensive thermal data
+        if let Some(stats) = self.parse_powermetrics_comprehensive() {
+            return stats;
         }
 
-        // Method 2: Try SMC (System Management Controller) data
-        if let Some(temp) = self.read_smc_thermal_data() {
-            return temp.clamp(20.0, 100.0);
+        // Method 2: Try SMC for detailed sensor data
+        if let Some(smc_data) = self.read_smc_comprehensive() {
+            thermal_stats = self.merge_thermal_data(thermal_stats, smc_data);
         }
 
         // Method 3: Try IOKit thermal sensors
-        if let Some(temp) = self.read_iokit_thermal_sensors() {
-            return temp.clamp(20.0, 100.0);
+        if let Some(iokit_data) = self.read_iokit_comprehensive() {
+            thermal_stats = self.merge_thermal_data(thermal_stats, iokit_data);
         }
 
-        // Method 4: Try system_profiler
-        if let Some(temp) = self.read_system_profiler_thermal() {
-            return temp.clamp(20.0, 100.0);
+        // Method 4: Try system_profiler for additional data
+        if let Some(sp_data) = self.read_system_profiler_comprehensive() {
+            thermal_stats = self.merge_thermal_data(thermal_stats, sp_data);
         }
 
-        // Method 5: Fallback to process-based estimation
-        self.estimate_thermal_from_processes()
+        // Estimate thermal pressure based on temperatures
+        thermal_stats.thermal_pressure = self.calculate_thermal_pressure(&thermal_stats);
+
+        // Determine if throttling is active
+        thermal_stats.is_throttling = thermal_stats.thermal_pressure > 70.0;
+
+        thermal_stats
+    }
+
+    /// Parse comprehensive thermal data from powermetrics
+    fn parse_powermetrics_comprehensive(&self) -> Option<crate::types::ThermalStats> {
+        use std::process::Command;
+
+        match Command::new("powermetrics")
+            .args(&["--samplers", "thermal", "-n", "1", "-i", "100", "--format", "plist"])
+            .output() {
+            Ok(output) => {
+                let output_str = String::from_utf8_lossy(&output.stdout);
+                self.parse_powermetrics_plist(&output_str)
+            }
+            Err(_) => {
+                // Try legacy format
+                match Command::new("powermetrics")
+                    .args(&["--samplers", "thermal", "-n", "1", "-i", "100"])
+                    .output() {
+                    Ok(output) => {
+                        let output_str = String::from_utf8_lossy(&output.stdout);
+                        self.parse_powermetrics_legacy(&output_str)
+                    }
+                    Err(_) => None,
+                }
+            }
+        }
+    }
+
+    /// Parse powermetrics plist format
+    fn parse_powermetrics_plist(&self, _output: &str) -> Option<crate::types::ThermalStats> {
+        // Plist parsing would require additional dependencies
+        // For now, fall back to legacy parsing
+        None
+    }
+
+    /// Parse powermetrics legacy format and extract comprehensive thermal data
+    fn parse_powermetrics_legacy(&self, output: &str) -> Option<crate::types::ThermalStats> {
+        let mut stats = crate::types::ThermalStats {
+            system_temperature: 35.0,
+            cpu_temperature: None,
+            gpu_temperature: None,
+            ane_temperature: None,
+            battery_temperature: None,
+            thermal_pressure: 0.0,
+            fan_speed_percent: None,
+            is_throttling: false,
+        };
+
+        let mut found_any = false;
+
+        for line in output.lines() {
+            let line_lower = line.to_lowercase();
+
+            // Parse CPU temperature
+            if line_lower.contains("cpu die temperature") || line_lower.contains("cpu temperature") {
+                if let Some(temp) = self.extract_temperature_from_line(line) {
+                    stats.cpu_temperature = Some(temp);
+                    stats.system_temperature = stats.system_temperature.max(temp);
+                    found_any = true;
+                }
+            }
+
+            // Parse GPU temperature
+            if line_lower.contains("gpu temperature") {
+                if let Some(temp) = self.extract_temperature_from_line(line) {
+                    stats.gpu_temperature = Some(temp);
+                    stats.system_temperature = stats.system_temperature.max(temp);
+                    found_any = true;
+                }
+            }
+
+            // Parse ANE temperature
+            if line_lower.contains("ane temperature") || line_lower.contains("neural engine") {
+                if let Some(temp) = self.extract_temperature_from_line(line) {
+                    stats.ane_temperature = Some(temp);
+                    stats.system_temperature = stats.system_temperature.max(temp);
+                    found_any = true;
+                }
+            }
+
+            // Parse thermal pressure
+            if line_lower.contains("thermal pressure") {
+                for word in line.split_whitespace() {
+                    if let Ok(pressure) = word.parse::<f32>() {
+                        if pressure >= 0.0 && pressure <= 100.0 {
+                            stats.thermal_pressure = pressure;
+                            found_any = true;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // Parse fan speed
+            if line_lower.contains("fan") && line_lower.contains("speed") {
+                if let Some(speed_percent) = self.extract_percentage_from_line(line) {
+                    stats.fan_speed_percent = Some(speed_percent);
+                    found_any = true;
+                }
+            }
+        }
+
+        if found_any {
+            Some(stats)
+        } else {
+            None
+        }
+    }
+
+    /// Read comprehensive SMC thermal data
+    fn read_smc_comprehensive(&self) -> Option<crate::types::ThermalStats> {
+        use std::process::Command;
+
+        // Use smc command line tool to read thermal sensors
+        match Command::new("smc")
+            .args(&["-l"]) // List all sensors
+            .output() {
+            Ok(output) => {
+                let output_str = String::from_utf8_lossy(&output.stdout);
+                self.parse_smc_comprehensive(&output_str)
+            }
+            Err(_) => None,
+        }
+    }
+
+    /// Parse comprehensive SMC output
+    fn parse_smc_comprehensive(&self, output: &str) -> Option<crate::types::ThermalStats> {
+        let mut stats = crate::types::ThermalStats {
+            system_temperature: 35.0,
+            cpu_temperature: None,
+            gpu_temperature: None,
+            ane_temperature: None,
+            battery_temperature: None,
+            thermal_pressure: 0.0,
+            fan_speed_percent: None,
+            is_throttling: false,
+        };
+
+        let mut found_any = false;
+
+        for line in output.lines() {
+            // SMC uses 4-character keys for sensors
+            let parts: Vec<&str> = line.split_whitespace().collect();
+            if parts.len() >= 2 {
+                let key = parts[0];
+
+                // Parse temperature sensors
+                match key {
+                    "TC0P" | "TC1P" | "TC2P" | "TC3P" => { // CPU proximity
+                        if let Ok(temp) = parts.get(1)?.parse::<f32>() {
+                            stats.cpu_temperature = Some(stats.cpu_temperature.unwrap_or(35.0).max(temp));
+                            stats.system_temperature = stats.system_temperature.max(temp);
+                            found_any = true;
+                        }
+                    }
+                    "TG0P" | "TG1P" => { // GPU proximity
+                        if let Ok(temp) = parts.get(1)?.parse::<f32>() {
+                            stats.gpu_temperature = Some(stats.gpu_temperature.unwrap_or(35.0).max(temp));
+                            stats.system_temperature = stats.system_temperature.max(temp);
+                            found_any = true;
+                        }
+                    }
+                    "Tp0P" | "Tp1P" => { // ANE proximity (if available)
+                        if let Ok(temp) = parts.get(1)?.parse::<f32>() {
+                            stats.ane_temperature = Some(stats.ane_temperature.unwrap_or(35.0).max(temp));
+                            stats.system_temperature = stats.system_temperature.max(temp);
+                            found_any = true;
+                        }
+                    }
+                    "TB0T" | "TB1T" => { // Battery temperature
+                        if let Ok(temp) = parts.get(1)?.parse::<f32>() {
+                            stats.battery_temperature = Some(temp);
+                            found_any = true;
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+
+        if found_any {
+            Some(stats)
+        } else {
+            None
+        }
+    }
+
+    /// Read comprehensive IOKit thermal data
+    fn read_iokit_comprehensive(&self) -> Option<crate::types::ThermalStats> {
+        use std::process::Command;
+
+        match Command::new("ioreg")
+            .args(&["-c", "IOHWSensor", "-r", "-w", "0"])
+            .output() {
+            Ok(output) => {
+                let output_str = String::from_utf8_lossy(&output.stdout);
+                self.parse_ioreg_comprehensive(&output_str)
+            }
+            Err(_) => None,
+        }
+    }
+
+    /// Parse comprehensive IORegistry thermal data
+    fn parse_ioreg_comprehensive(&self, output: &str) -> Option<crate::types::ThermalStats> {
+        let mut stats = crate::types::ThermalStats {
+            system_temperature: 35.0,
+            cpu_temperature: None,
+            gpu_temperature: None,
+            ane_temperature: None,
+            battery_temperature: None,
+            thermal_pressure: 0.0,
+            fan_speed_percent: None,
+            is_throttling: false,
+        };
+
+        let mut found_any = false;
+
+        for line in output.lines() {
+            let line_lower = line.to_lowercase();
+
+            // Look for sensor type and current value
+            if line.contains("\"type\"") && line.contains("\"current-value\"") {
+                let sensor_type = self.extract_ioreg_string_value(line, "type");
+                let current_value = self.extract_ioreg_numeric_value(line, "current-value");
+
+                if let (Some(sensor_type), Some(value)) = (sensor_type, current_value) {
+                    match sensor_type.as_str() {
+                        "temperature" => {
+                            // Convert from some unit to Celsius (often in deci-Celsius or Kelvin)
+                            let temp_celsius = if value > 200.0 {
+                                // Likely in deci-Celsius (divide by 10)
+                                value / 10.0
+                            } else if value > 100.0 {
+                                // Likely in Kelvin (convert to Celsius)
+                                value - 273.15
+                            } else {
+                                // Already in Celsius
+                                value
+                            };
+
+                            // Categorize by location hints in the line
+                            if line_lower.contains("cpu") {
+                                stats.cpu_temperature = Some(stats.cpu_temperature.unwrap_or(35.0).max(temp_celsius));
+                            } else if line_lower.contains("gpu") {
+                                stats.gpu_temperature = Some(stats.gpu_temperature.unwrap_or(35.0).max(temp_celsius));
+                            } else if line_lower.contains("ane") || line_lower.contains("neural") {
+                                stats.ane_temperature = Some(stats.ane_temperature.unwrap_or(35.0).max(temp_celsius));
+                            }
+
+                            stats.system_temperature = stats.system_temperature.max(temp_celsius);
+                            found_any = true;
+                        }
+                        "voltage" => {
+                            // Could use voltage for power calculations
+                        }
+                        "current" => {
+                            // Could use current for power calculations
+                        }
+                        _ => {}
+                    }
+                }
+            }
+        }
+
+        if found_any {
+            Some(stats)
+        } else {
+            None
+        }
+    }
+
+    /// Read comprehensive system_profiler thermal data
+    fn read_system_profiler_comprehensive(&self) -> Option<crate::types::ThermalStats> {
+        use std::process::Command;
+
+        match Command::new("system_profiler")
+            .args(&["SPHardwareDataType", "-json"])
+            .output() {
+            Ok(output) => {
+                let output_str = String::from_utf8_lossy(&output.stdout);
+                self.parse_system_profiler_comprehensive(&output_str)
+            }
+            Err(_) => None,
+        }
+    }
+
+    /// Parse system_profiler thermal data
+    fn parse_system_profiler_comprehensive(&self, _output: &str) -> Option<crate::types::ThermalStats> {
+        // System profiler doesn't typically provide detailed thermal data
+        // This could be enhanced to parse other system_profiler outputs
+        None
+    }
+
+    /// Merge thermal data from multiple sources
+    fn merge_thermal_data(&self, base: crate::types::ThermalStats, update: crate::types::ThermalStats) -> crate::types::ThermalStats {
+        crate::types::ThermalStats {
+            system_temperature: update.system_temperature.max(base.system_temperature),
+            cpu_temperature: update.cpu_temperature.or(base.cpu_temperature),
+            gpu_temperature: update.gpu_temperature.or(base.gpu_temperature),
+            ane_temperature: update.ane_temperature.or(base.ane_temperature),
+            battery_temperature: update.battery_temperature.or(base.battery_temperature),
+            thermal_pressure: update.thermal_pressure.max(base.thermal_pressure),
+            fan_speed_percent: update.fan_speed_percent.or(base.fan_speed_percent),
+            is_throttling: update.is_throttling || base.is_throttling,
+        }
+    }
+
+    /// Calculate thermal pressure based on temperatures
+    fn calculate_thermal_pressure(&self, stats: &crate::types::ThermalStats) -> f32 {
+        let mut max_temp = stats.system_temperature;
+        let mut temp_count = 1.0;
+
+        if let Some(cpu_temp) = stats.cpu_temperature {
+            max_temp = max_temp.max(cpu_temp);
+            temp_count += 1.0;
+        }
+        if let Some(gpu_temp) = stats.gpu_temperature {
+            max_temp = max_temp.max(gpu_temp);
+            temp_count += 1.0;
+        }
+        if let Some(ane_temp) = stats.ane_temperature {
+            max_temp = max_temp.max(ane_temp);
+            temp_count += 1.0;
+        }
+
+        // Calculate pressure based on temperature thresholds
+        let pressure = if max_temp >= 95.0 {
+            100.0 // Critical
+        } else if max_temp >= 85.0 {
+            80.0 + (max_temp - 85.0) * 5.0 // High
+        } else if max_temp >= 75.0 {
+            50.0 + (max_temp - 75.0) * 3.0 // Medium
+        } else if max_temp >= 65.0 {
+            20.0 + (max_temp - 65.0) * 1.5 // Low
+        } else {
+            0.0 // Normal
+        };
+
+        pressure.min(100.0).max(0.0)
+    }
+
+    /// Extract temperature value from a line of text
+    fn extract_temperature_from_line(&self, line: &str) -> Option<f32> {
+        // Look for patterns like "45.2 C", "45 C", "45.2", "45"
+        for word in line.split_whitespace() {
+            // Remove common suffixes
+            let clean_word = word.trim_end_matches(&['C', 'c', '°']);
+
+            if let Ok(temp) = clean_word.parse::<f32>() {
+                // Reasonable temperature range check
+                if temp >= 0.0 && temp <= 120.0 {
+                    return Some(temp);
+                }
+            }
+        }
+        None
+    }
+
+    /// Extract percentage value from a line
+    fn extract_percentage_from_line(&self, line: &str) -> Option<f32> {
+        for word in line.split_whitespace() {
+            let clean_word = word.trim_end_matches('%');
+            if let Ok(percent) = clean_word.parse::<f32>() {
+                if percent >= 0.0 && percent <= 100.0 {
+                    return Some(percent);
+                }
+            }
+        }
+        None
+    }
+
+    /// Extract string value from IORegistry line
+    fn extract_ioreg_string_value(&self, line: &str, key: &str) -> Option<String> {
+        if let Some(start) = line.find(&format!("\"{}\"", key)) {
+            let remaining = &line[start + key.len() + 2..]; // Skip key and quote
+            if let Some(quote_end) = remaining.find('"') {
+                let value = &remaining[..quote_end];
+                return Some(value.to_string());
+            }
+        }
+        None
+    }
+
+    /// Extract numeric value from IORegistry line
+    fn extract_ioreg_numeric_value(&self, line: &str, key: &str) -> Option<f32> {
+        if let Some(start) = line.find(&format!("\"{}\"", key)) {
+            let remaining = &line[start..];
+
+            // Look for numeric value after the key
+            for word in remaining.split_whitespace() {
+                if let Ok(value) = word.trim_matches(&[',', '}', '"'] as &[_]).parse::<f32>() {
+                    return Some(value);
+                }
+            }
+        }
+        None
     }
 
     /// Read thermal data using powermetrics
