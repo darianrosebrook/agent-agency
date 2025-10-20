@@ -1874,15 +1874,17 @@ impl ContextResolver {
         debug!("Extracted related concepts for: {}", result.canonical_name);
     }
 
-    /// TODO: Implement actual on-demand entity ingestion system
-    /// - [ ] Integrate with on-demand ingestion service for missing entities
-    /// - [ ] Implement ingestion job queuing and prioritization
-    /// - [ ] Add ingestion progress tracking and status monitoring
-    /// - [ ] Support different data sources (APIs, databases, web scraping)
-    /// - [ ] Implement ingestion failure handling and retry mechanisms
-    /// - [ ] Add entity validation and quality assurance checks
-    /// - [ ] Support batch ingestion for multiple entities
-        
+    /// Trigger on-demand entity ingestion for missing entities
+    async fn trigger_on_demand_ingestion(&self, entity: &str) -> Result<()> {
+        // TODO: Implement actual on-demand entity ingestion system
+        // - [ ] Integrate with on-demand ingestion service for missing entities
+        // - [ ] Implement ingestion job queuing and prioritization
+        // - [ ] Add ingestion progress tracking and status monitoring
+        // - [ ] Support different data sources (APIs, databases, web scraping)
+        // - [ ] Implement ingestion failure handling and retry mechanisms
+        // - [ ] Add entity validation and quality assurance checks
+        // - [ ] Support batch ingestion for multiple entities
+
         // Simulate processing time
         tokio::time::sleep(std::time::Duration::from_millis(200)).await;
         
@@ -1983,6 +1985,7 @@ pub enum EntityType {
     Percent,
     TechnicalTerm,
     Unknown,
+}
 }
 
 impl NamedEntityRecognizer {
@@ -2591,6 +2594,7 @@ impl EntityPatterns {
 
         tracing::debug!("Knowledge base entity linking test structure validated");
     }
+}
 
     /// Test database integration for semantic search operations
     #[tokio::test]
@@ -2645,6 +2649,5 @@ impl EntityPatterns {
         }
         
         entities
-    }
     }
 }

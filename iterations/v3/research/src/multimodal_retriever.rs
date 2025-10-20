@@ -287,18 +287,21 @@ impl VisualSearchBridge {
         Ok(Self {})
     }
 
-    /// TODO: Implement actual CLIP-based visual search execution
-    /// - [ ] Generate CLIP embeddings for text query using CLIP text encoder
-    /// - [ ] Normalize embeddings and perform cosine similarity search
-    /// - [ ] Retrieve top-k most similar images from visual index
-    /// - [ ] Implement efficient approximate nearest neighbor search
-    /// - [ ] Support different similarity metrics (cosine, euclidean, dot product)
-    /// - [ ] Add result confidence scoring and ranking
-    /// - [ ] Implement query expansion for visual search (text-to-image-to-text)
+    /// Search for visual content using CLIP embeddings
+    pub async fn search_visual(&self, query: &str, k: usize) -> Result<Vec<VisualSearchResult>> {
+        // TODO: Implement actual CLIP-based visual search execution
+        // - [ ] Generate CLIP embeddings for text query using CLIP text encoder
+        // - [ ] Normalize embeddings and perform cosine similarity search
+        // - [ ] Retrieve top-k most similar images from visual index
+        // - [ ] Implement efficient approximate nearest neighbor search
+        // - [ ] Support different similarity metrics (cosine, euclidean, dot product)
+        // - [ ] Add result confidence scoring and ranking
+        // - [ ] Implement query expansion for visual search (text-to-image-to-text)
+
         // 3. Return ranked visual results
-        
+
         tracing::debug!("Searching visual index for: '{}' (k={})", query, k);
-        
+
         // Simulate processing time
         tokio::time::sleep(std::time::Duration::from_millis(75)).await;
 

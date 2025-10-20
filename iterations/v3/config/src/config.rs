@@ -559,17 +559,15 @@ mod tls_validation {
         Ok(())
     }
 
-    pub fn validate_ca_file(path: &&Option<PathBuf>) -> Result<(), ValidationError> {
-        if let Some(ref path) = *path {
-            if path.to_string_lossy().is_empty() {
-                return Err(ValidationError::new("CA certificate path cannot be empty"));
-            }
+    pub fn validate_ca_file(path: &&PathBuf) -> Result<(), ValidationError> {
+        if path.to_string_lossy().is_empty() {
+            return Err(ValidationError::new("CA certificate path cannot be empty"));
+        }
 
-            // Check for common CA file extensions
-            let path_str = path.to_string_lossy().to_lowercase();
-            if !path_str.ends_with(".pem") && !path_str.ends_with(".crt") && !path_str.ends_with(".cer") {
-                return Err(ValidationError::new("CA certificate file should have .pem, .crt, or .cer extension"));
-            }
+        // Check for common CA file extensions
+        let path_str = path.to_string_lossy().to_lowercase();
+        if !path_str.ends_with(".pem") && !path_str.ends_with(".crt") && !path_str.ends_with(".cer") {
+            return Err(ValidationError::new("CA certificate file should have .pem, .crt, or .cer extension"));
         }
 
         Ok(())

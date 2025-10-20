@@ -219,16 +219,13 @@ pub struct ViewMetadata {
 pub struct RollbackManager {
     /// Base workspace state manager
     manager: Arc<WorkspaceStateManager>,
-    /// Backup directory for rollback operations
-    backup_dir: PathBuf,
 }
 
 impl RollbackManager {
     /// Create a new rollback manager
-    pub fn new(manager: Arc<WorkspaceStateManager>, backup_dir: impl AsRef<Path>) -> Self {
+    pub fn new(manager: Arc<WorkspaceStateManager>) -> Self {
         Self {
             manager,
-            backup_dir: backup_dir.as_ref().to_path_buf(),
         }
     }
 

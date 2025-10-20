@@ -1030,20 +1030,4 @@ impl WorkspaceStateManager {
         changes
     }
 
-    /// Calculate size difference for a file
-    fn calculate_size_diff(
-        &self,
-        file_path: &PathBuf,
-        current_state: &WorkspaceState,
-        previous_state: &WorkspaceState,
-    ) -> i64 {
-        let current_size = self.get_file_size(file_path, current_state);
-        let previous_size = self.get_file_size(file_path, previous_state);
-        current_size as i64 - previous_size as i64
-    }
-
-    /// Get file size from state
-    fn get_file_size(&self, file_path: &PathBuf, state: &WorkspaceState) -> u64 {
-        state.files.get(file_path).map(|f| f.size).unwrap_or(0)
-    }
 }

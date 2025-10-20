@@ -201,7 +201,7 @@ pub fn validate_changeset_with_waiver(
     changeset: &ChangeSet,
     allowlist: &AllowList,
     budgets: &Budgets,
-) -> Result<(), WaiverRequest> {
+) -> std::result::Result<(), WaiverRequest> {
     let violations = analyze_budget_violations(changeset, allowlist, budgets);
 
     if violations.is_empty() {
@@ -364,7 +364,7 @@ fn assess_overall_risk(violations: &[BudgetViolation]) -> RiskLevel {
 }
 
 /// Apply waiver to bypass budget enforcement
-pub fn apply_waiver(wr: &mut WaiverRequest, approver: &str, justification: Option<String>) -> Result<(), String> {
+pub fn apply_waiver(wr: &mut WaiverRequest, approver: &str, justification: Option<String>) -> std::result::Result<(), String> {
     if wr.approved_by.is_some() {
         return Err("Waiver request already approved".to_string());
     }
@@ -410,9 +410,25 @@ fn matches_glob_simple(path: &str, glob: &str) -> bool {
                 return false;
             }
 
-            // Check suffix match
-            if !suffix.is_empty() && !path.ends_with(suffix) {
-                return false;
+            // Check suffix match - handle glob patterns
+            if !suffix.is_empty() {
+                // Extract the actual pattern from the suffix
+                // For "/*.rs", we want to match "*.rs"
+                let pattern = if suffix.starts_with('/') {
+                    &suffix[1..] // Remove leading slash
+                } else {
+                    suffix
+                };
+
+                if pattern.starts_with("*.") {
+                    // Handle patterns like "*.rs" -> ends with ".rs"
+                    let ext = &pattern[1..]; // Remove the "*"
+                    if !path.ends_with(ext) {
+                        return false;
+                    }
+                } else if !path.ends_with(pattern) {
+                    return false;
+                }
             }
 
             true
@@ -449,10 +465,7 @@ impl WorkspaceFactory {
 pub use git_workspace::GitWorktreeWorkspace;
 pub use temp_workspace::TempMirrorWorkspace;
 
-// Waiver system exports
-pub use self::{
-    ViolationType, ViolationSeverity, BudgetViolation, WaiverRequest, RiskLevel,
-};
+// Waiver system types are already public in the module
 
 #[cfg(test)]
 mod tests {
@@ -478,7 +491,7 @@ mod tests {
                         old_lines: 0,
                         new_start: 1,
                         new_lines: 50,
-                        lines: "+".repeat(50),
+                        lines: (0..50).map(|i| format!("+line {}\n", i)).collect::<String>(),
                     }],
                     expected_prev_sha256: None,
                 },
@@ -489,7 +502,7 @@ mod tests {
                         old_lines: 0,
                         new_start: 1,
                         new_lines: 25,
-                        lines: "+".repeat(25),
+                        lines: (0..25).map(|i| format!("+line {}\n", i)).collect::<String>(),
                     }],
                     expected_prev_sha256: None,
                 },
@@ -531,7 +544,7 @@ mod tests {
                     old_lines: 0,
                     new_start: 1,
                     new_lines: 100,
-                    lines: "+".repeat(100),
+                        lines: (0..100).map(|i| format!("+line {}\n", i)).collect::<String>(),
                 }],
                 expected_prev_sha256: None,
             }],
@@ -564,7 +577,7 @@ mod tests {
                     old_lines: 0,
                     new_start: 1,
                     new_lines: 100,
-                    lines: "+".repeat(100),
+                        lines: (0..100).map(|i| format!("+line {}\n", i)).collect::<String>(),
                 }],
                 expected_prev_sha256: None,
             }],

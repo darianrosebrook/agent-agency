@@ -20,8 +20,6 @@ pub struct FileStorage {
     base_path: PathBuf,
     /// Whether to compress stored data
     compress: bool,
-    /// Storage metrics
-    metrics: std::sync::RwLock<StorageMetrics>,
 }
 
 impl FileStorage {
@@ -30,7 +28,6 @@ impl FileStorage {
         Self {
             base_path: base_path.as_ref().to_path_buf(),
             compress,
-            metrics: std::sync::RwLock::new(StorageMetrics::default()),
         }
     }
 
