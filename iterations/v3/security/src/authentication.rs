@@ -35,6 +35,39 @@ pub struct Claims {
     pub jti: String,
 }
 
+/// Password policy configuration
+#[derive(Debug, Clone)]
+pub struct PasswordPolicy {
+    /// Minimum password length
+    pub min_length: usize,
+    /// Require at least one uppercase letter
+    pub require_uppercase: bool,
+    /// Require at least one lowercase letter
+    pub require_lowercase: bool,
+    /// Require at least one digit
+    pub require_digit: bool,
+    /// Require at least one special character
+    pub require_special: bool,
+    /// Maximum password age in days (0 = no expiration)
+    pub max_age_days: u64,
+    /// Prevent reuse of last N passwords
+    pub prevent_reuse_count: usize,
+}
+
+impl Default for PasswordPolicy {
+    fn default() -> Self {
+        Self {
+            min_length: 12,
+            require_uppercase: true,
+            require_lowercase: true,
+            require_digit: true,
+            require_special: true,
+            max_age_days: 90, // 90 days
+            prevent_reuse_count: 5,
+        }
+    }
+}
+
 /// Authentication configuration
 #[derive(Debug, Clone)]
 pub struct AuthConfig {
@@ -50,6 +83,8 @@ pub struct AuthConfig {
     pub max_failed_attempts: u32,
     /// Account lockout duration in seconds
     pub lockout_duration_seconds: u64,
+    /// Password policy configuration
+    pub password_policy: PasswordPolicy,
 }
 
 /// User authentication data
@@ -217,20 +252,41 @@ impl AuthService {
     // Helper methods
 
     fn validate_password_strength(&self, password: &str) -> Result<()> {
-        if password.len() < 8 {
-            return Err(anyhow::anyhow!("Password must be at least 8 characters long"));
+        let policy = &self.config.password_policy;
+
+        // Length check
+        if password.len() < policy.min_length {
+            return Err(anyhow::anyhow!(
+                "Password must be at least {} characters long",
+                policy.min_length
+            ));
         }
 
-        if !password.chars().any(|c| c.is_uppercase()) {
+        // Character requirements
+        if policy.require_uppercase && !password.chars().any(|c| c.is_uppercase()) {
             return Err(anyhow::anyhow!("Password must contain at least one uppercase letter"));
         }
 
-        if !password.chars().any(|c| c.is_lowercase()) {
+        if policy.require_lowercase && !password.chars().any(|c| c.is_lowercase()) {
             return Err(anyhow::anyhow!("Password must contain at least one lowercase letter"));
         }
 
-        if !password.chars().any(|c| c.is_numeric()) {
-            return Err(anyhow::anyhow!("Password must contain at least one number"));
+        if policy.require_digit && !password.chars().any(|c| c.is_ascii_digit()) {
+            return Err(anyhow::anyhow!("Password must contain at least one digit"));
+        }
+
+        if policy.require_special && !password.chars().any(|c| !c.is_alphanumeric()) {
+            return Err(anyhow::anyhow!("Password must contain at least one special character"));
+        }
+
+        // Check for common weak passwords
+        let common_passwords = [
+            "password", "123456", "qwerty", "admin", "letmein", "welcome",
+            "monkey", "dragon", "password1", "qwerty123"
+        ];
+
+        if common_passwords.contains(&password.to_lowercase().as_str()) {
+            return Err(anyhow::anyhow!("Password is too common and easily guessable"));
         }
 
         Ok(())
@@ -367,6 +423,7 @@ mod tests {
             password_hash_params: argon2::Params::default(),
             max_failed_attempts: 5,
             lockout_duration_seconds: 300,
+            password_policy: PasswordPolicy::default(),
         };
 
         let auth_service = AuthService::new(config);
@@ -390,6 +447,7 @@ mod tests {
             password_hash_params: argon2::Params::default(),
             max_failed_attempts: 5,
             lockout_duration_seconds: 300,
+            password_policy: PasswordPolicy::default(),
         };
 
         let auth_service = AuthService::new(config);

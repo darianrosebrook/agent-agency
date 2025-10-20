@@ -14,4 +14,4 @@ pub use rate_limiting::*;
 pub use circuit_breaker::*;
 pub use secure_config::*;
 pub use audit::*;
-pub use authentication::*;
+pub use authentication::{AuthService, AuthConfig, PasswordPolicy, Claims, UserCredentials};
