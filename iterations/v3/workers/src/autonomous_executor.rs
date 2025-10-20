@@ -11,7 +11,7 @@ use chrono::{DateTime, Utc};
 
 use crate::manager::WorkerPoolManager;
 use crate::types::{TaskSpec, WorkerAssignment, TaskExecutionResult};
-use crate::resilience::CircuitBreaker;
+use agent_agency_resilience::{CircuitBreaker, CircuitBreakerConfig};
 
 use super::super::orchestration::planning::types::{WorkingSpec, ExecutionArtifacts, ExecutionEvent};
 use super::super::orchestration::caws_runtime::{CawsRuntimeValidator, DiffStats, TaskDescriptor};
@@ -29,6 +29,24 @@ pub struct AutonomousExecutorConfig {
     pub max_artifacts_size_mb: u64,
     /// Enable real-time event streaming
     pub enable_event_streaming: bool,
+    /// Circuit breaker failure threshold
+    pub circuit_breaker_failure_threshold: u64,
+    /// Circuit breaker reset timeout (seconds)
+    pub circuit_breaker_reset_timeout_seconds: u64,
+}
+
+impl Default for AutonomousExecutorConfig {
+    fn default() -> Self {
+        Self {
+            max_execution_time_seconds: 300, // 5 minutes
+            progress_report_interval_seconds: 30,
+            enable_detailed_artifacts: true,
+            max_artifacts_size_mb: 100,
+            enable_event_streaming: true,
+            circuit_breaker_failure_threshold: 5,
+            circuit_breaker_reset_timeout_seconds: 60,
+        }
+    }
 }
 
 /// Autonomous executor that coordinates worker execution with tracking
@@ -37,6 +55,7 @@ pub struct AutonomousExecutor {
     validator: Arc<dyn CawsRuntimeValidator>,
     config: AutonomousExecutorConfig,
     event_sender: mpsc::UnboundedSender<ExecutionEvent>,
+    circuit_breaker: Arc<CircuitBreaker>,
 }
 
 impl AutonomousExecutor {
@@ -47,12 +66,25 @@ impl AutonomousExecutor {
     ) -> (Self, mpsc::UnboundedReceiver<ExecutionEvent>) {
         let (event_sender, event_receiver) = mpsc::unbounded_channel();
 
+        // Create circuit breaker for task execution protection
+        let circuit_breaker_config = CircuitBreakerConfig {
+            name: Some("autonomous-executor".to_string()),
+            failure_threshold: config.circuit_breaker_failure_threshold,
+            success_threshold: 3,
+            reset_timeout_ms: (config.circuit_breaker_reset_timeout_seconds * 1000) as u64,
+            operation_timeout_ms: (config.max_execution_time_seconds * 1000) as u64,
+            monitoring_window_ms: 60000, // 1 minute monitoring window
+        };
+
+        let circuit_breaker = Arc::new(CircuitBreaker::new(circuit_breaker_config));
+
         (
             Self {
                 worker_manager,
                 validator,
                 config,
                 event_sender,
+                circuit_breaker,
             },
             event_receiver,
         )
@@ -160,7 +192,7 @@ impl AutonomousExecutor {
 
         let assignment = self.worker_manager.execute_task(
             task_spec.clone(),
-            None, // TODO: Add circuit breaker integration
+            Some(&self.circuit_breaker),
         ).await?;
 
         self.send_event(ExecutionEvent::WorkerAssigned {

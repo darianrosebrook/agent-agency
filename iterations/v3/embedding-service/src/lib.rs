@@ -5,10 +5,12 @@
 
 pub mod cache;
 pub mod context;
+pub mod model_loading;
 pub mod multimodal_indexer;
 pub mod provider;
 pub mod service;
 pub mod similarity;
+pub mod tokenization;
 pub mod types;
 
 #[cfg(test)]

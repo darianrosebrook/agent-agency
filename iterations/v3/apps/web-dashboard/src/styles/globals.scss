@@ -78,22 +78,6 @@ body {
   margin-top: 0;
 }
 
-.section-placeholder {
-  @include card-base;
-  padding: var(--spacing-3xl);
-  text-align: center;
-
-  h1 {
-    margin-bottom: var(--spacing-lg);
-    color: var(--color-text-secondary);
-  }
-
-  p {
-    color: var(--color-text-tertiary);
-    font-size: var(--font-size-lg);
-  }
-}
-
 // Overview grid
 .overview-grid {
   display: grid;
@@ -238,6 +222,47 @@ body {
     font-size: var(--font-size-sm);
     color: var(--color-error-700);
   }
+}
+
+// Empty states
+.empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  padding: var(--spacing-2xl);
+}
+
+.empty-state-content {
+  max-width: 600px;
+  text-align: center;
+}
+
+.empty-state-icon {
+  font-size: var(--font-size-4xl);
+  margin-bottom: var(--spacing-lg);
+  opacity: 0.7;
+}
+
+.empty-state-title {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  margin-bottom: var(--spacing-md);
+  margin-top: 0;
+}
+
+.empty-state-description {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-relaxed);
+  margin-bottom: var(--spacing-2xl);
+}
+
+.empty-state-actions {
+  display: flex;
+  justify-content: center;
+  gap: var(--spacing-md);
 }
 
 // Utility classes

@@ -1,61 +1,69 @@
-'use client'
+"use client";
 
-import styles from './Navigation.module.scss'
+import styles from "./Navigation.module.scss";
 
-export type SectionType = 'overview' | 'chat' | 'tasks' | 'database' | 'analytics'
+export type SectionType =
+  | "overview"
+  | "chat"
+  | "tasks"
+  | "database"
+  | "analytics";
 
 interface NavigationProps {
-  activeSection: SectionType
-  onSectionChange: (section: SectionType) => void
+  activeSection: SectionType;
+  onSectionChange: (section: SectionType) => void;
 }
 
 interface NavItem {
-  id: SectionType
-  label: string
-  description: string
-  icon: string
-  available: boolean
+  id: SectionType;
+  label: string;
+  description: string;
+  icon: string;
+  available: boolean;
 }
 
 const navItems: NavItem[] = [
   {
-    id: 'overview',
-    label: 'Overview',
-    description: 'System health and quick actions',
-    icon: '📊',
-    available: true
+    id: "overview",
+    label: "Overview",
+    description: "System health and quick actions",
+    icon: "📊",
+    available: true,
   },
   {
-    id: 'chat',
-    label: 'Chat',
-    description: 'Conversational task guidance',
-    icon: '💬',
-    available: false
+    id: "chat",
+    label: "Chat",
+    description: "Conversational task guidance",
+    icon: "💬",
+    available: false,
   },
   {
-    id: 'tasks',
-    label: 'Tasks',
-    description: 'Monitor task execution',
-    icon: '📋',
-    available: false
+    id: "tasks",
+    label: "Tasks",
+    description: "Monitor task execution",
+    icon: "📋",
+    available: false,
   },
   {
-    id: 'database',
-    label: 'Database',
-    description: 'Inspect database state',
-    icon: '🗄️',
-    available: false
+    id: "database",
+    label: "Database",
+    description: "Inspect database state",
+    icon: "🗄️",
+    available: false,
   },
   {
-    id: 'analytics',
-    label: 'Analytics',
-    description: 'Trends and insights',
-    icon: '📈',
-    available: false
-  }
-]
+    id: "analytics",
+    label: "Analytics",
+    description: "Trends and insights",
+    icon: "📈",
+    available: false,
+  },
+];
 
-export default function Navigation({ activeSection, onSectionChange }: NavigationProps) {
+export default function Navigation({
+  activeSection,
+  onSectionChange,
+}: NavigationProps) {
   return (
     <nav className={styles.navigation} aria-label="Main navigation">
       <div className={styles.navContainer}>
@@ -64,14 +72,18 @@ export default function Navigation({ activeSection, onSectionChange }: Navigatio
             <li key={item.id} className={styles.navItem}>
               <button
                 className={`${styles.navButton} ${
-                  activeSection === item.id ? styles.active : ''
-                } ${!item.available ? styles.disabled : ''}`}
+                  activeSection === item.id ? styles.active : ""
+                } ${!item.available ? styles.disabled : ""}`}
                 onClick={() => item.available && onSectionChange(item.id)}
                 disabled={!item.available}
                 role="tab"
                 aria-selected={activeSection === item.id}
                 aria-controls={`${item.id}-panel`}
-                title={item.available ? item.description : `${item.description} (Coming soon)`}
+                title={
+                  item.available
+                    ? item.description
+                    : `${item.description} (Coming soon)`
+                }
               >
                 <span className={styles.icon} aria-hidden="true">
                   {item.icon}
@@ -88,5 +100,7 @@ export default function Navigation({ activeSection, onSectionChange }: Navigatio
         </ul>
       </div>
     </nav>
-  )
+  );
 }
+
+

@@ -1,9 +1,9 @@
-import '@testing-library/jest-dom'
+import "@testing-library/jest-dom";
 
 // Mock matchMedia
-Object.defineProperty(window, 'matchMedia', {
+Object.defineProperty(window, "matchMedia", {
   writable: true,
-  value: jest.fn().mockImplementation(query => ({
+  value: jest.fn().mockImplementation((query) => ({
     matches: false,
     media: query,
     onchange: null,
@@ -13,21 +13,21 @@ Object.defineProperty(window, 'matchMedia', {
     removeEventListener: jest.fn(),
     dispatchEvent: jest.fn(),
   })),
-})
+});
 
 // Mock ResizeObserver
 global.ResizeObserver = jest.fn().mockImplementation(() => ({
   observe: jest.fn(),
   unobserve: jest.fn(),
   disconnect: jest.fn(),
-}))
+}));
 
 // Mock IntersectionObserver
 global.IntersectionObserver = jest.fn().mockImplementation(() => ({
   observe: jest.fn(),
   unobserve: jest.fn(),
   disconnect: jest.fn(),
-}))
+}));
 
 // Mock WebSocket
 global.WebSocket = jest.fn().mockImplementation(() => ({
@@ -41,7 +41,7 @@ global.WebSocket = jest.fn().mockImplementation(() => ({
   OPEN: 1,
   CLOSING: 2,
   CLOSED: 3,
-}))
+}));
 
 // Mock EventSource for SSE
 global.EventSource = jest.fn().mockImplementation(() => ({
@@ -53,4 +53,6 @@ global.EventSource = jest.fn().mockImplementation(() => ({
   CONNECTING: 0,
   OPEN: 1,
   CLOSED: 2,
-}))
+}));
+
+

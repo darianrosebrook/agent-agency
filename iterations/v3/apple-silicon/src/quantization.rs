@@ -347,14 +347,15 @@ impl QuantizationManager {
         );
 
         // 2. Weight distribution analysis: Analyze weight distributions for quantization
-        // TODO: Implement weight distribution analysis
-        let weight_stats = WeightStats {
-            min: -1.0,
-            max: 1.0,
-            mean: 0.0,
-            std_dev: 0.5,
-            num_parameters: 1000, // Placeholder
-        };
+        let weight_stats = self.analyze_weight_distribution(&model_tensors)?;
+        tracing::debug!(
+            "Weight distribution analysis: min={:.6}, max={:.6}, mean={:.6}, std={:.6}, params={}",
+            weight_stats.min,
+            weight_stats.max,
+            weight_stats.mean,
+            weight_stats.std_dev,
+            weight_stats.num_parameters
+        );
         tracing::debug!(
             "Weight distribution analysis: min={:.6}, max={:.6}, mean={:.6}, std={:.6}",
             weight_stats.min,
@@ -863,6 +864,61 @@ async fn analyze_weight_distribution(model_size: u64) -> WeightStats {
     async fn estimate_quantized_parameters(&self, model_size: u64) -> u64 {
         // Estimate parameters based on model size (assuming ~4 bytes per float32)
         (model_size / 4) as u64
+    }
+}
+
+    /// Analyze weight distribution for quantization optimization
+    fn analyze_weight_distribution(&self, tensors: &safetensors::SafeTensors) -> Result<WeightStats> {
+        let mut all_weights = Vec::new();
+        let mut total_params = 0usize;
+
+        // Collect all weight data from tensors
+        for (_, tensor) in tensors.tensors() {
+            match tensor.dtype() {
+                safetensors::Dtype::F32 => {
+                    let data = tensor.data();
+                    let weights: &[f32] = bytemuck::cast_slice(data);
+                    all_weights.extend_from_slice(weights);
+                    total_params += weights.len();
+                }
+                safetensors::Dtype::F16 => {
+                    let data = tensor.data();
+                    let weights: &[half::f16] = bytemuck::cast_slice(data);
+                    // Convert to f32 for analysis
+                    let f32_weights: Vec<f32> = weights.iter().map(|&w| w.to_f32()).collect();
+                    all_weights.extend(f32_weights);
+                    total_params += weights.len();
+                }
+                _ => {
+                    // Skip non-floating point tensors
+                    continue;
+                }
+            }
+        }
+
+        if all_weights.is_empty() {
+            return Err(anyhow::anyhow!("No floating point weights found in model"));
+        }
+
+        // Calculate statistics
+        let min = all_weights.iter().fold(f32::INFINITY, |a, &b| a.min(b));
+        let max = all_weights.iter().fold(f32::NEG_INFINITY, |a, &b| a.max(b));
+        let sum: f32 = all_weights.iter().sum();
+        let mean = sum / all_weights.len() as f32;
+
+        // Calculate standard deviation
+        let variance: f32 = all_weights.iter()
+            .map(|&x| (x - mean).powi(2))
+            .sum::<f32>() / all_weights.len() as f32;
+        let std_dev = variance.sqrt();
+
+        Ok(WeightStats {
+            min,
+            max,
+            mean,
+            std_dev,
+            num_parameters: total_params as u32,
+        })
     }
 }
 

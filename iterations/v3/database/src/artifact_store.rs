@@ -13,10 +13,23 @@ use uuid::Uuid;
 use chrono;
 
 use crate::{DatabaseClient, DatabaseConfig};
-use agent_agency_contracts::execution_artifacts::{ExecutionArtifacts, ArtifactMetadata};
+use agent_agency_contracts::{ExecutionArtifacts, execution_artifacts::CodeChangeStats};
 
 /// Unique identifier for artifacts
 pub type ArtifactId = Uuid;
+
+/// Metadata for stored artifacts (storage layer)
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct ArtifactMetadata {
+    pub id: Uuid,
+    pub task_id: Uuid,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    pub size_bytes: u64,
+    pub checksum: String,
+    pub version: String,
+    pub compression_used: bool,
+    pub integrity_verified: bool,
+}
 
 /// Error type for artifact storage operations
 #[derive(Debug, thiserror::Error)]
@@ -211,83 +224,43 @@ impl DatabaseArtifactStorage {
     /// Reconstruct execution artifacts from database rows
     fn db_rows_to_artifacts(&self, rows: Vec<DbArtifactRow>, task_id: Uuid) -> Result<ExecutionArtifacts, ArtifactStorageError> {
         use agent_agency_contracts::*;
+        use std::collections::HashMap;
 
-        // For now, create a basic ExecutionArtifacts structure
-        // In a real implementation, we'd map the database rows to the contract structure
-        // This is a placeholder that creates a minimal valid ExecutionArtifacts
+        // Group rows by artifact type
+        let mut artifacts_by_type: HashMap<String, Vec<serde_json::Value>> = HashMap::new();
 
-        let code_changes = CodeChanges {
-            diffs: vec![], // TODO: Map from database rows
-            new_files: vec![],
-            deleted_files: vec![],
-            statistics: CodeChangeStats {
-                files_modified: 0,
-                lines_added: 0,
-                lines_removed: 0,
-                total_loc: 0,
-            },
-        };
+        for row in rows {
+            artifacts_by_type
+                .entry(row.artifact_type.clone())
+                .or_insert_with(Vec::new)
+                .push(row.artifact_data);
+        }
 
-        let tests = TestArtifacts {
-            unit_tests: TestSuiteResults {
-                total: 0,
-                passed: 0,
-                failed: 0,
-                skipped: 0,
-                duration_ms: 0,
-                results: vec![],
-            },
-            integration_tests: TestSuiteResults {
-                total: 0,
-                passed: 0,
-                failed: 0,
-                skipped: 0,
-                duration_ms: 0,
-                results: vec![],
-            },
-            e2e_tests: E2eTestResults {
-                total: 0,
-                passed: 0,
-                failed: 0,
-                skipped: 0,
-                duration_ms: 0,
-                scenarios: vec![],
-            },
-            test_files: vec![],
-        };
+        // Map code changes
+        let code_changes = self.map_code_changes(&artifacts_by_type);
 
-        let coverage = CoverageResults {
-            line_coverage: 0.0,
-            branch_coverage: 0.0,
-            function_coverage: 0.0,
-            mutation_score: 0.0,
-            coverage_report_path: None,
-            uncovered_lines: vec![],
-            uncovered_branches: vec![],
-        };
+        // Map test artifacts
+        let tests = self.map_test_artifacts(&artifacts_by_type);
 
-        let linting = LintingResults {
-            total_issues: 0,
-            errors: 0,
-            warnings: 0,
-            info: 0,
-            issues_by_file: std::collections::HashMap::new(),
-            linter_version: None,
-            config_used: None,
-        };
+        // Map coverage results
+        let coverage = self.map_coverage_results(&artifacts_by_type);
 
+        // Map linting results
+        let linting = self.map_linting_results(&artifacts_by_type);
+
+        // Create provenance (placeholder for now)
         let provenance = Provenance {
             execution_id: Uuid::new_v4(),
-            worker_id: None,
-            worker_version: None,
-            started_at: Utc::now(),
-            completed_at: Some(Utc::now()),
+            worker_id: Some("database-retrieval".to_string()),
+            worker_version: Some(env!("CARGO_PKG_VERSION").to_string()),
+            started_at: chrono::Utc::now(),
+            completed_at: Some(chrono::Utc::now()),
             duration_ms: 0,
             environment: ExecutionEnvironment {
-                os: "unknown".to_string(),
-                architecture: "unknown".to_string(),
-                rust_version: None,
-                dependencies: std::collections::HashMap::new(),
+                os: std::env::consts::OS.to_string(),
+                architecture: std::env::consts::ARCH.to_string(),
+                rust_version: Some(env!("CARGO_PKG_VERSION").to_string()),
+                dependencies: HashMap::new(),
             },
             git_info: GitInfo {
                 commit_hash: "unknown".to_string(),
@@ -296,27 +269,138 @@ impl DatabaseArtifactStorage {
                 uncommitted_changes: vec![],
             },
             seeds_used: ExecutionSeeds {
-                time_seed: "unknown".to_string(),
-                uuid_seed: "unknown".to_string(),
+                time_seed: "retrieved".to_string(),
+                uuid_seed: "retrieved".to_string(),
                 random_seed: 0,
             },
             audit_trail: vec![],
         };
 
-        // TODO: Map database rows to contract structure
-        // For now, return a placeholder that matches the contract
         Ok(ExecutionArtifacts {
-            version: "1.0.0".to_string(),
+            version: "1.0".to_string(),
             task_id,
-            working_spec_id: "unknown".to_string(),
-            iteration: 1,
+            working_spec_id: "retrieved".to_string(),
+            iteration: 0,
             code_changes,
             tests,
             coverage,
             linting,
             provenance,
-            metadata: None,
+            metadata: Some(ArtifactMetadata {
+                compression_applied: None,
+                storage_location: Some("database".to_string()),
+                retention_policy: Some("standard".to_string()),
+                tags: vec![],
+            }),
         })
+    }
+
+    /// Map database rows to test artifacts structure
+    fn map_test_artifacts(&self, artifacts_by_type: &std::collections::HashMap<String, Vec<serde_json::Value>>) -> execution_artifacts::TestArtifacts {
+        use execution_artifacts::*;
+
+        let unit_tests_data = artifacts_by_type.get("unit_tests");
+        let integration_tests_data = artifacts_by_type.get("integration_tests");
+        let e2e_tests_data = artifacts_by_type.get("e2e_tests");
+
+        TestArtifacts {
+            unit_tests: self.map_test_suite_results(unit_tests_data),
+            integration_tests: self.map_test_suite_results(integration_tests_data),
+            e2e_tests: self.map_e2e_test_results(e2e_tests_data),
+            test_files: vec![], // TODO: Map from database rows
+        }
+    }
+
+    /// Map database rows to test suite results
+    fn map_test_suite_results(&self, data: Option<&Vec<serde_json::Value>>) -> execution_artifacts::TestSuiteResults {
+        use execution_artifacts::*;
+
+        if let Some(values) = data {
+            if let Some(first) = values.first() {
+                if let Ok(results) = serde_json::from_value::<TestSuiteResults>(first.clone()) {
+                    return results;
+                }
+            }
+        }
+
+        TestSuiteResults {
+            total: 0,
+            passed: 0,
+            failed: 0,
+            skipped: 0,
+            duration_ms: 0,
+            results: vec![],
+        }
+    }
+
+    /// Map database rows to E2E test results
+    fn map_e2e_test_results(&self, data: Option<&Vec<serde_json::Value>>) -> execution_artifacts::E2eTestResults {
+        use execution_artifacts::*;
+
+        if let Some(values) = data {
+            if let Some(first) = values.first() {
+                if let Ok(results) = serde_json::from_value::<E2eTestResults>(first.clone()) {
+                    return results;
+                }
+            }
+        }
+
+        E2eTestResults {
+            total: 0,
+            passed: 0,
+            failed: 0,
+            skipped: 0,
+            duration_ms: 0,
+            scenarios: vec![],
+        }
+    }
+
+    /// Map database rows to coverage results
+    fn map_coverage_results(&self, artifacts_by_type: &std::collections::HashMap<String, Vec<serde_json::Value>>) -> execution_artifacts::CoverageResults {
+        use execution_artifacts::*;
+
+        let coverage_data = artifacts_by_type.get("coverage");
+        if let Some(values) = coverage_data {
+            if let Some(first) = values.first() {
+                if let Ok(results) = serde_json::from_value::<CoverageResults>(first.clone()) {
+                    return results;
+                }
+            }
+        }
+
+        CoverageResults {
+            line_coverage: 0.0,
+            branch_coverage: 0.0,
+            function_coverage: 0.0,
+            mutation_score: 0.0,
+            coverage_report_path: None,
+            uncovered_lines: vec![],
+            uncovered_branches: vec![],
+        }
+    }
+
+    /// Map database rows to linting results
+    fn map_linting_results(&self, artifacts_by_type: &std::collections::HashMap<String, Vec<serde_json::Value>>) -> execution_artifacts::LintingResults {
+        use execution_artifacts::*;
+
+        let linting_data = artifacts_by_type.get("linting");
+        if let Some(values) = linting_data {
+            if let Some(first) = values.first() {
+                if let Ok(results) = serde_json::from_value::<LintingResults>(first.clone()) {
+                    return results;
+                }
+            }
+        }
+
+        LintingResults {
+            total_issues: 0,
+            errors: 0,
+            warnings: 0,
+            info: 0,
+            issues_by_file: std::collections::HashMap::new(),
+            linter_version: None,
+            config_used: None,
+        }
     }
 }
 
@@ -434,7 +518,7 @@ impl ArtifactStorage for DatabaseArtifactStorage {
                 let metadata: serde_json::Value = row.get("metadata");
 
                 DbArtifactRow {
-                    task_id: metadata.task_id,
+                    task_id: row.get("task_id"),
                     session_id: None,
                     execution_id: None,
                     artifact_type,
@@ -620,3 +704,4 @@ mod tests {
         let _config = config;
     }
 }
+

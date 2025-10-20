@@ -20,6 +20,9 @@ tracing = "0.1"
 ndarray = "0.15"
 ndarray-stats = "0.5"
 
+# For ONNX tensor operations
+ndarray-linalg = "0.16"
+
 # For caching and performance
 dashmap = "5.0"
 lru = "0.12"
@@ -32,6 +35,10 @@ sqlx-cli = "0.7"
 # XML parsing dependencies for graph modality
 quick-xml = "0.31"
 roxmltree = "0.19"
+
+# ML model loading dependencies
+ort = { version = "2.0.0-rc.10", features = ["load-dynamic"] }
+tokenizers = "0.19"
 
 [dev-dependencies]
 tokio-test = "0.4"

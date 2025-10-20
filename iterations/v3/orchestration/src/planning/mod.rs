@@ -17,9 +17,12 @@ mod integration_test;
 
 // Re-export main types
 pub use agent::{
-    PlanningAgent, PlanningAgentConfig, WorkingSpec, TaskContext, RepositoryInfo,
+    PlanningAgent, PlanningAgentConfig, WorkingSpec, WorkingSpecResult, TaskContext, RepositoryInfo,
     Incident, TechStack, HistoricalData, TaskHistory, AcceptanceCriterion,
-    TestPlan, RollbackPlan, CriterionPriority, RollbackRisk
+    TestPlan, RollbackPlan, CriterionPriority, RollbackRisk,
+    // Clarification types
+    AmbiguityAssessment, AmbiguityType, ClarificationQuestion, QuestionType, QuestionPriority,
+    ClarificationResponse, ClarificationSession, SessionStatus,
 };
 pub use context_builder::{ContextBuilder, ContextBuilderConfig};
 pub use llm_client::{LLMClient, OpenAIClient, OllamaClient, LLMConfig, Message, MessageRole, GenerationRequest, GenerationResponse, TokenUsage, FinishReason};
