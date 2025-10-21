@@ -521,34 +521,6 @@ impl MultiModalVerificationEngine {
         false
     }
 
-        let mut total_matches = 0;
-        let mut relevant_matches = 0;
-
-        // Simulate reading file content
-        let simulated_content = self.simulate_source_content(file_path);
-
-        // Extract comments from the content
-        let comments = self.extract_comments_from_source(&simulated_content);
-
-        for comment in &comments {
-            for keyword in keywords {
-                let keyword_matches = comment
-                    .to_lowercase()
-                    .matches(&keyword.to_lowercase())
-                    .count();
-
-                total_matches += keyword_matches;
-
-                // Consider matches in comments highly relevant
-                if keyword_matches > 0 {
-                    relevant_matches += keyword_matches.min(2); // Cap per keyword per comment
-                }
-            }
-        }
-
-        Ok((total_matches, relevant_matches))
-    }
-
     /// Extract comments from source code content
 
     /// Simulate source file content for testing
@@ -1766,11 +1738,11 @@ impl MultiModalVerificationEngine {
         }
 
         // Strategy 2: Fuzzy matching with similar entities
-        let fuzzy_matches = self.find_fuzzy_matches(entity, context);
+        let fuzzy_matches = self.find_fuzzy_entity_matches(entity, context);
         candidates.extend(fuzzy_matches);
 
         // Strategy 3: Context-based disambiguation
-        let context_matches = self.find_context_matches(entity, context);
+        let context_matches = self.find_entity_context_matches(entity, context);
         candidates.extend(context_matches);
 
         // Select best match
@@ -1816,7 +1788,7 @@ impl MultiModalVerificationEngine {
     }
 
     /// Find fuzzy matches using string similarity
-    fn find_fuzzy_matches(&self, entity: &Entity, context: &str) -> Vec<EntityCandidate> {
+    fn find_fuzzy_entity_matches(&self, entity: &Entity, context: &str) -> Vec<EntityCandidate> {
         let mut candidates = Vec::new();
         let words: Vec<&str> = context.split_whitespace().collect();
 
@@ -1851,7 +1823,7 @@ impl MultiModalVerificationEngine {
     }
 
     /// Find context-based matches using semantic patterns
-    fn find_context_matches(&self, entity: &Entity, context: &str) -> Vec<EntityCandidate> {
+    fn find_entity_context_matches(&self, entity: &Entity, context: &str) -> Vec<EntityCandidate> {
         let mut candidates = Vec::new();
         let context_lower = context.to_lowercase();
 
@@ -2728,7 +2700,6 @@ impl MultiModalVerificationEngine {
         debug!("Database performance metrics: {:?}", metrics);
         Ok(())
     }
-
-
+}
 
 

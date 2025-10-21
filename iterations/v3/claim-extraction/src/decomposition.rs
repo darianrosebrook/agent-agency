@@ -5,6 +5,7 @@
 
 use crate::types::*;
 use anyhow::Result;
+use regex::Regex;
 use std::collections::{HashSet, VecDeque};
 use std::path::Path;
 use tracing::debug;

@@ -402,3 +402,193 @@ pub enum CouncilEnvironment {
     Staging,
     Production,
 }
+
+/// Programming languages supported for verification
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Language {
+    Rust,
+    TypeScript,
+    Python,
+    JavaScript,
+    Go,
+    Java,
+}
+
+/// Historical claim data structure
+#[derive(Debug, Clone)]
+pub struct HistoricalClaim {
+    pub id: String,
+    pub claim_text: String,
+    pub verification_status: VerificationStatus,
+    pub evidence: Vec<Evidence>,
+    pub confidence_score: f64,
+    pub timestamp: chrono::DateTime<chrono::Utc>,
+}
+
+/// Keyword match result
+#[derive(Debug, Clone)]
+pub struct KeywordMatch {
+    pub keyword: String,
+    pub position: usize,
+    pub context: String,
+    pub relevance_score: f64,
+    pub match_type: MatchType,
+}
+
+/// Type of keyword match
+#[derive(Debug, Clone)]
+pub enum MatchType {
+    Exact,
+    Fuzzy,
+    Context,
+}
+
+/// Named entity with type information
+#[derive(Debug, Clone)]
+pub struct NamedEntity {
+    pub text: String,
+    pub entity_type: EntityType,
+    pub start_position: usize,
+    pub end_position: usize,
+    pub confidence: f64,
+}
+
+/// Entity type classification
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum EntityType {
+    Person,
+    Organization,
+    Location,
+    Date,
+    TechnicalTerm,
+    Percent,
+}
+
+/// Validation outcome for historical claims
+#[derive(Debug, Clone)]
+pub enum ValidationOutcome {
+    Validated,
+    Invalidated,
+    Uncertain,
+}
+
+/// Entity in text with disambiguation information
+#[derive(Debug, Clone)]
+pub struct Entity {
+    pub text: String,
+    pub entity_type: EntityType,
+    pub start_position: usize,
+    pub end_position: usize,
+    pub confidence: f64,
+    pub disambiguation_candidates: Vec<EntityCandidate>,
+}
+
+/// Entity candidate for disambiguation
+#[derive(Debug, Clone)]
+pub struct EntityCandidate {
+    pub text: String,
+    pub confidence: f64,
+    pub source: String,
+    pub context: String,
+}
+
+/// Coreference resolution result
+#[derive(Debug, Clone)]
+pub struct CoreferenceResolution {
+    pub resolved_entities: Vec<NamedEntity>,
+    pub coreference_chains: Vec<Vec<usize>>, // Indices into resolved_entities
+    pub confidence_score: f64,
+}
+
+/// Historical entity analysis for pattern detection
+#[derive(Debug, Clone)]
+pub struct HistoricalEntityAnalysis {
+    pub total_entities: usize,
+    pub entity_frequency: std::collections::HashMap<String, usize>,
+    pub entity_relationships: Vec<EntityRelationship>,
+    pub entity_evolution: Vec<String>,
+}
+
+/// Entity relationship information
+#[derive(Debug, Clone)]
+pub struct EntityRelationship {
+    pub entity1: String,
+    pub entity2: String,
+    pub relationship_type: String,
+    pub confidence: f64,
+    pub evidence: Vec<String>,
+}
+
+/// Context-aware disambiguation result
+#[derive(Debug, Clone)]
+pub struct ContextAwareDisambiguation {
+    pub resolved_entities: Vec<ResolvedEntity>,
+    pub disambiguation_confidence: f64,
+    pub context_sources: Vec<String>,
+}
+
+/// Resolved entity with disambiguation
+#[derive(Debug, Clone)]
+pub struct ResolvedEntity {
+    pub original_text: String,
+    pub resolved_entity: Entity,
+    pub disambiguation_method: String,
+    pub confidence: f64,
+}
+
+/// Domain integration result
+#[derive(Debug, Clone)]
+pub struct DomainIntegration {
+    pub domain_hints: Vec<String>,
+    pub integrated_entities: Vec<Entity>,
+    pub domain_relevance_score: f64,
+}
+
+/// Subject-predicate-object triple for claim decomposition
+#[derive(Debug, Clone)]
+pub struct SubjectPredicateObject {
+    pub subject: String,
+    pub predicate: String,
+    pub object: String,
+    pub confidence: f64,
+}
+
+/// Verification requirement for claims
+#[derive(Debug, Clone)]
+pub struct VerificationRequirement {
+    pub requirement_type: String,
+    pub description: String,
+    pub priority: VerificationPriority,
+    pub evidence_needed: Vec<String>,
+}
+
+/// Verification priority levels
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum VerificationPriority {
+    High,
+    Medium,
+    Low,
+}
+
+/// Entity match result
+#[derive(Debug, Clone)]
+pub struct EntityMatch {
+    pub entity: Entity,
+    pub confidence: f64,
+    pub match_type: String,
+    pub source: String,
+}
+
+/// Embedding service trait (placeholder)
+pub trait EmbeddingService {
+    fn embed(&self, text: &str) -> Result<Vec<f32>>;
+    fn embed_batch(&self, texts: &[&str]) -> Result<Vec<Vec<f32>>>;
+}
+
+/// Embedding request structure
+#[derive(Debug, Clone)]
+pub struct EmbeddingRequest {
+    pub text: String,
+    pub context: Option<String>,
+    pub content_type: String,
+}

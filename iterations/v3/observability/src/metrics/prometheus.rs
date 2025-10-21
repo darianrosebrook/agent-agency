@@ -227,7 +227,7 @@ impl MetricsBackend for PrometheusMetrics {
         counter.inc_by(value as f64);
     }
 
-    async fn gauge(&self, name: &str, labels: &[(&str, &str)], value: f64) {
+    async fn gauge(&self, name: &str, labels: &[(&str, &str)], value: f64) -> Result<(), MetricsBackendError> {
         let instance_key = self.make_instance_key(name, labels);
 
         // Get or create the gauge instance
@@ -242,7 +242,7 @@ impl MetricsBackend for PrometheusMetrics {
 
                 let gauge = gauge_vec.with_label_values(&self.extract_label_values(labels));
                 gauge_instances.insert(instance_key, gauge.clone());
-                Ok(gauge)
+                gauge
             }
         };
 

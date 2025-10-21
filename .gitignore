@@ -69,7 +69,37 @@ playwright-report/
 # Wikidata files
 wikidata-20250924-lexemes.json.gz
 wn3.1.dict.tar.gz
-target/debug
-target/release
 libtorch-macos.zip
 libtorch
+
+# Rust build artifacts and cache
+target/
+**/*.rs.bk
+**/.rustc_info.json
+
+# Build directories (Xcode, Swift, general)
+.build/
+**/.build/
+DerivedData/
+
+# Swift Package Manager
+Package.resolved
+
+# Xcode
+*.pbxuser
+!default.pbxuser
+*.mode1v3
+!default.mode1v3
+*.mode2v3
+!default.mode2v3
+*.perspectivev3
+!default.perspectivev3
+xcuserdata/
+*.moved-aside
+*.xccheckout
+*.xcscmblueprint
+
+# Temporary files
+*.tmp
+*.temp
+.cache/

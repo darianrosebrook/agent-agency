@@ -317,7 +317,7 @@ impl VerifiabilityDetector {
 }
 
     /// Enhanced factual claims detection with context awareness (V2 port)
-    fn detect_factual_claims_v2(&self, sentence: &str, context: &ProcessingContext) -> Result<Vec<VerifiableContent>> {
+    fn detect_factual_claims_v2(sentence: &str, context: &ProcessingContext) -> Result<Vec<VerifiableContent>> {
         let mut claims = Vec::new();
 
         // Enhanced patterns with context awareness
@@ -331,7 +331,7 @@ impl VerifiabilityDetector {
             for mat in pattern.find_iter(sentence) {
                 let content = mat.as_str().to_string();
                 // Higher confidence for contextually relevant claims
-                let confidence = if self.is_contextually_relevant(&content, context) { 0.9 } else { 0.7 };
+                let confidence = if is_contextually_relevant(&content, context) { 0.9 } else { 0.7 };
 
                 claims.push(VerifiableContent {
                     position: (mat.start(), mat.end()),
@@ -354,7 +354,7 @@ impl VerifiabilityDetector {
     }
 
     /// Enhanced technical assertions with domain awareness (V2 port)
-    fn detect_technical_assertions_v2(&self, sentence: &str, context: &ProcessingContext) -> Result<Vec<VerifiableContent>> {
+    fn detect_technical_assertions_v2(sentence: &str, context: &ProcessingContext) -> Result<Vec<VerifiableContent>> {
         let mut assertions = Vec::new();
 
         // Domain-aware technical patterns
@@ -397,7 +397,7 @@ impl VerifiabilityDetector {
     }
 
     /// Measurable outcomes with quantitative indicators (V2 enhancement)
-    fn detect_measurable_outcomes_v2(&self, sentence: &str, context: &ProcessingContext) -> Result<Vec<VerifiableContent>> {
+    fn detect_measurable_outcomes_v2(sentence: &str, context: &ProcessingContext) -> Result<Vec<VerifiableContent>> {
         let mut outcomes = Vec::new();
 
         // Enhanced measurable patterns with units and thresholds
@@ -431,7 +431,7 @@ impl VerifiabilityDetector {
     }
 
     /// Detect causal relationships (V2 addition)
-    fn detect_causal_relationships(&self, sentence: &str) -> Result<Vec<VerifiableContent>> {
+    fn detect_causal_relationships(sentence: &str) -> Result<Vec<VerifiableContent>> {
         let mut relationships = Vec::new();
 
         let causal_patterns = vec![
@@ -463,7 +463,7 @@ impl VerifiabilityDetector {
     }
 
     /// Detect temporal assertions (V2 addition)
-    fn detect_temporal_assertions(&self, sentence: &str) -> Result<Vec<VerifiableContent>> {
+    fn detect_temporal_assertions(sentence: &str) -> Result<Vec<VerifiableContent>> {
         let mut assertions = Vec::new();
 
         let temporal_patterns = vec![
@@ -495,7 +495,7 @@ impl VerifiabilityDetector {
     }
 
     /// Check if content is contextually relevant (V2 enhancement)
-    fn is_contextually_relevant(&self, content: &str, context: &ProcessingContext) -> bool {
+    fn is_contextually_relevant(content: &str, context: &ProcessingContext) -> bool {
         // Check if the content relates to the document's domain hints
         for hint in &context.domain_hints {
             if content.to_lowercase().contains(&hint.to_lowercase()) {
@@ -516,6 +516,7 @@ impl VerifiabilityDetector {
         false
     }
 
+impl VerifiabilityDetector {
     /// Enhanced V2 qualification process with domain-aware verifiability detection
     pub async fn process_v2(
         &self,
@@ -619,6 +620,7 @@ impl VerifiabilityDetector {
             VerifiabilityLevel::Unverifiable
         }
     }
+}
 
 /// Rewrites content to make it verifiable
 #[derive(Debug)]

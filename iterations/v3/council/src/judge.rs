@@ -771,7 +771,6 @@ pub enum ChangeCategory {
 
 /// Change impact level
 #[derive(Debug, Clone, PartialEq)]
-#[derive(Clone)]
 pub enum ChangeImpact {
     Minor,
     Moderate,
