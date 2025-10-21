@@ -145,8 +145,7 @@ impl ClaimExtractionProcessor {
                         "Mathematical verification: claim validated with confidence {:.2}",
                         verified_claim.overall_confidence
                     ),
-                    source: EvidenceSource {
-                        source_type: SourceType::ResearchAgent,
+                    source: EvidenceSource::CodeAnalysis {
                         location: "MultiModalVerificationEngine".to_string(),
                         authority: "MathematicalValidator".to_string(),
                         freshness: chrono::Utc::now(),
@@ -171,8 +170,7 @@ impl ClaimExtractionProcessor {
                         "Code behavior analysis: claim validated with confidence {:.2}",
                         verified_claim.overall_confidence
                     ),
-                    source: EvidenceSource {
-                        source_type: SourceType::ResearchAgent,
+                    source: EvidenceSource::CodeAnalysis {
                         location: "MultiModalVerificationEngine".to_string(),
                         authority: "CodeBehaviorAnalyzer".to_string(),
                         freshness: verified_claim.verification_timestamp,
@@ -197,8 +195,7 @@ impl ClaimExtractionProcessor {
                         "Semantic analysis: claim validated with confidence {:.2}",
                         verified_claim.overall_confidence
                     ),
-                    source: EvidenceSource {
-                        source_type: SourceType::Analysis,
+                    source: EvidenceSource::CodeAnalysis {
                         location: "multi_modal_verification".to_string(),
                         authority: "Multi-Modal Verifier".to_string(),
                         freshness: chrono::Utc::now(),

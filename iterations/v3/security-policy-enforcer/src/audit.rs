@@ -700,21 +700,16 @@ impl SecurityAuditor {
 
         for entry in entries {
             // Count by event type
-            let type_key = format!("{:?}", entry.event_type);
+            let type_key = format!("{:?}", entry.event.event_type);
             *events_by_type.entry(type_key).or_insert(0) += 1;
 
             // Count by result
-            let result_key = format!("{:?}", entry.result);
+            let result_key = format!("{:?}", entry.event.result);
             *events_by_result.entry(result_key).or_insert(0) += 1;
 
-            // Count by actor (user_id or session_id)
-            let actor_key = entry
-                .user_id
-                .as_ref()
-                .or(entry.session_id.as_ref())
-                .unwrap_or(&"unknown".to_string())
-                .clone();
-            *events_by_actor.entry(actor_key).or_insert(0) += 1;
+            // Count by actor
+            let actor_key = &entry.event.actor;
+            *events_by_actor.entry(actor_key.clone()).or_insert(0) += 1;
         }
 
         Ok(AuditStats {
@@ -743,13 +738,13 @@ impl SecurityAuditor {
         let mut monthly_entries = Vec::new();
 
         for entry in entries {
-            if entry.timestamp >= one_day_ago {
+            if entry.event.timestamp >= one_day_ago {
                 recent_entries.push(entry);
             }
-            if entry.timestamp >= seven_days_ago {
+            if entry.event.timestamp >= seven_days_ago {
                 weekly_entries.push(entry);
             }
-            if entry.timestamp >= thirty_days_ago {
+            if entry.event.timestamp >= thirty_days_ago {
                 monthly_entries.push(entry);
             }
         }
@@ -791,11 +786,7 @@ impl SecurityAuditor {
         // Check for unusual actor activity
         let mut actor_frequencies: HashMap<String, u64> = HashMap::new();
         for entry in entries {
-            let actor = entry
-                .user_id
-                .as_ref()
-                .or(entry.session_id.as_ref())
-                .unwrap_or(&"unknown".to_string());
+            let actor = &entry.event.actor;
             *actor_frequencies.entry(actor.clone()).or_insert(0) += 1;
         }
 

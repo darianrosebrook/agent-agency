@@ -777,6 +777,9 @@ impl AutonomousExecutor {
         };
 
         // Run validation
+        // Implement determinism validation and verification
+        let is_deterministic = self.validate_code_determinism(&artifacts).await?;
+
         let result = self.validator.validate(
             &super::super::orchestration::caws_runtime::WorkingSpec {
                 risk_tier: working_spec.risk_tier as u8,
@@ -791,8 +794,7 @@ impl AutonomousExecutor {
             &[], // no patches
             &[], // no language hints
             artifacts.test_results.total > 0, // tests added if we have results
-            // Implement determinism validation and verification
-            let is_deterministic = self.validate_code_determinism(&artifacts).await?;
+            is_deterministic, // determinism validation result
             vec![], // no waivers
         ).await?;
 

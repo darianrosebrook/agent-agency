@@ -227,7 +227,7 @@ impl MetricsBackend for PrometheusMetrics {
         counter.inc_by(value as f64);
     }
 
-    async fn gauge(&self, name: &str, labels: &[(&str, &str)], value: f64) -> Result<(), MetricsBackendError> {
+    async fn gauge(&self, name: &str, labels: &[(&str, &str)], value: f64) {
         let instance_key = self.make_instance_key(name, labels);
 
         // Get or create the gauge instance
@@ -237,12 +237,18 @@ impl MetricsBackend for PrometheusMetrics {
                 existing.clone()
             } else {
                 // Create new gauge vec if needed
-                let gauge_vec = self.get_or_create_gauge(name, "Generic gauge").await
-                    .map_err(|e| MetricsBackendError::MetricCreationError(e.to_string()))?;
-
-                let gauge = gauge_vec.with_label_values(&self.extract_label_values(labels));
-                gauge_instances.insert(instance_key, gauge.clone());
-                gauge
+                match self.get_or_create_gauge(name, "Generic gauge").await {
+                    Ok(gauge_vec) => {
+                        let gauge = gauge_vec.with_label_values(&self.extract_label_values(labels));
+                        gauge_instances.insert(instance_key, gauge.clone());
+                        gauge
+                    },
+                    Err(e) => {
+                        // Log error but continue - gauge operations shouldn't fail the application
+                        eprintln!("Failed to create gauge '{}': {}", name, e);
+                        return;
+                    }
+                }
             }
         };
 

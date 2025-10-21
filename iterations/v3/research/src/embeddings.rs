@@ -1,6 +1,9 @@
 use anyhow::Result;
 use async_trait::async_trait;
 
+#[cfg(feature = "embeddings")]
+use agent_agency_embedding_service;
+
 #[derive(Debug, Clone)]
 pub struct EmbeddingConfig {
     pub dimension: usize,
@@ -18,17 +21,20 @@ pub trait EmbeddingProvider: Send + Sync {
     async fn embed(&self, inputs: &[String]) -> Result<Vec<EmbeddingVector>>;
 }
 
+#[cfg(feature = "embeddings")]
 /// Adapter to integrate embedding-service with research agent
 pub struct EmbeddingServiceAdapter {
-    service: Box<dyn embedding_service::EmbeddingService>,
+    service: Box<dyn agent_agency_embedding_service::EmbeddingService>,
 }
 
+#[cfg(feature = "embeddings")]
 impl EmbeddingServiceAdapter {
-    pub fn new(service: Box<dyn embedding_service::EmbeddingService>) -> Self {
+    pub fn new(service: Box<dyn agent_agency_embedding_service::EmbeddingService>) -> Self {
         Self { service }
     }
 }
 
+#[cfg(feature = "embeddings")]
 #[async_trait]
 impl EmbeddingProvider for EmbeddingServiceAdapter {
     fn dimension(&self) -> usize {
@@ -43,7 +49,7 @@ impl EmbeddingProvider for EmbeddingServiceAdapter {
                 .service
                 .generate_embedding(
                     input,
-                    embedding_service::ContentType::Knowledge,
+                    agent_agency_embedding_service::ContentType::Knowledge,
                     "research_agent",
                 )
                 .await?;

@@ -1782,25 +1782,25 @@ impl SelfPromptingLoop {
                     use std::process::Command;
                     match dir_path.to_str() {
                         Some(path_str) => {
-                            Command::new("chmod")
+                            match Command::new("chmod")
                                 .args(&["-R", "755", path_str])
                                 .current_dir(&workspace_root)
-                                .output()
+                                .output() {
+                                Ok(output) if output.status.success() => {
+                                    info!("Fixed permissions for directory: {}", dir);
+                                    any_success = true;
+                                }
+                                Ok(_) => {
+                                    debug!("Permission fix failed for {} (may not be needed)", dir);
+                                }
+                                Err(e) => {
+                                    debug!("Failed to run chmod for {}: {}", dir, e);
+                                }
+                            }
                         }
                         None => {
                             warn!("Skipping permission fix for directory with invalid UTF-8 path: {:?}", dir_path);
                             continue;
-                        }
-                    {
-                        Ok(output) if output.status.success() => {
-                            info!("Fixed permissions for directory: {}", dir);
-                            any_success = true;
-                        }
-                        Ok(_) => {
-                            debug!("Permission fix failed for {} (may not be needed)", dir);
-                        }
-                        Err(e) => {
-                            debug!("Failed to run chmod for {}: {}", dir, e);
                         }
                     }
                 }

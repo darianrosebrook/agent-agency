@@ -1,9 +1,0 @@
-/Users/darianrosebrook/Desktop/Projects/agent-agency/target/debug/deps/postgres_types-c804eeae00bb86d9.d: /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/postgres-types-0.2.11/src/lib.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/postgres-types-0.2.11/src/pg_lsn.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/postgres-types-0.2.11/src/private.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/postgres-types-0.2.11/src/special.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/postgres-types-0.2.11/src/type_gen.rs
-
-/Users/darianrosebrook/Desktop/Projects/agent-agency/target/debug/deps/libpostgres_types-c804eeae00bb86d9.rmeta: /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/postgres-types-0.2.11/src/lib.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/postgres-types-0.2.11/src/pg_lsn.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/postgres-types-0.2.11/src/private.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/postgres-types-0.2.11/src/special.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/postgres-types-0.2.11/src/type_gen.rs
-
-/Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/postgres-types-0.2.11/src/lib.rs:
-/Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/postgres-types-0.2.11/src/pg_lsn.rs:
-/Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/postgres-types-0.2.11/src/private.rs:
-/Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/postgres-types-0.2.11/src/special.rs:
-/Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/postgres-types-0.2.11/src/type_gen.rs:

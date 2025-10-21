@@ -392,7 +392,7 @@ impl VisionEnricher {
             // Create observation for each line of text
             let observation = VNRecognizedTextObservation {
                 text: line.to_string(),
-                // TODO: Implement granular confidence scoring for vision recognition
+                confidence: 0.8, // TODO: Implement granular confidence scoring for vision recognition
                 // - Calculate per-character and per-word confidence scores
                 // - Implement confidence score validation and normalization
                 // - Support confidence score aggregation across recognition pipeline

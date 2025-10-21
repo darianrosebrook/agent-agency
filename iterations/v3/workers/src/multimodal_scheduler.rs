@@ -518,7 +518,6 @@ impl MultimodalJobScheduler {
             error_rate: 0.0,
             quality_score: 0.94,
         })
-    }
 
     /// Process embedding generation job
     async fn process_embedding_job(&self, job: &MultimodalJob) -> Result<JobPerformanceMetrics> {

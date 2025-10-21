@@ -1,8 +1,0 @@
-/Users/darianrosebrook/Desktop/Projects/agent-agency/target/debug/deps/deadpool_postgres-0b8ba27620e95bdc.d: /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/deadpool-postgres-0.11.0/src/lib.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/deadpool-postgres-0.11.0/src/config.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/deadpool-postgres-0.11.0/src/generic_client.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/deadpool-postgres-0.11.0/src/../README.md
-
-/Users/darianrosebrook/Desktop/Projects/agent-agency/target/debug/deps/libdeadpool_postgres-0b8ba27620e95bdc.rmeta: /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/deadpool-postgres-0.11.0/src/lib.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/deadpool-postgres-0.11.0/src/config.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/deadpool-postgres-0.11.0/src/generic_client.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/deadpool-postgres-0.11.0/src/../README.md
-
-/Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/deadpool-postgres-0.11.0/src/lib.rs:
-/Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/deadpool-postgres-0.11.0/src/config.rs:
-/Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/deadpool-postgres-0.11.0/src/generic_client.rs:
-/Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/deadpool-postgres-0.11.0/src/../README.md:
