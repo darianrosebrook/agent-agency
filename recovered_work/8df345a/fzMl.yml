@@ -1,0 +1,117 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agent-agency-orchestrator
+  namespace: agent-agency
+  labels:
+    app: agent-agency-orchestrator
+    component: orchestrator
+    version: v3.0.0
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: agent-agency-orchestrator
+  template:
+    metadata:
+      labels:
+        app: agent-agency-orchestrator
+        component: orchestrator
+        version: v3.0.0
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: agent-agency-orchestrator
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: orchestrator
+          image: agent-agency/orchestrator:v3.0.0
+          ports:
+            - containerPort: 8080
+              name: http
+              protocol: TCP
+          env:
+            - name: RUST_LOG
+              valueFrom:
+                configMapKeyRef:
+                  name: agent-agency-config
+                  key: RUST_LOG
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: agent-agency-secrets
+                  key: database-url
+            - name: REDIS_URL
+              value: "redis://agent-agency-redis:6379"
+            - name: COUNCIL_URL
+              value: "http://agent-agency-council:8081"
+            - name: AUDIT_TRAIL_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: agent-agency-config
+                  key: AUDIT_TRAIL_ENABLED
+            - name: CIRCUIT_BREAKERS_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: agent-agency-config
+                  key: CIRCUIT_BREAKERS_ENABLED
+            - name: GRACEFUL_DEGRADATION_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: agent-agency-config
+                  key: GRACEFUL_DEGRADATION_ENABLED
+            - name: PROMETHEUS_ENDPOINT
+              value: "http://agent-agency-prometheus:9090"
+            - name: JAEGER_ENDPOINT
+              value: "http://agent-agency-jaeger:14268/api/traces"
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1Gi
+            limits:
+              cpu: 2
+              memory: 4Gi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          volumeMounts:
+            - name: logs
+              mountPath: /app/logs
+            - name: data
+              mountPath: /app/data
+      volumes:
+        - name: logs
+          emptyDir: {}
+        - name: data
+          emptyDir: {}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values:
+                        - agent-agency-orchestrator
+                topologyKey: kubernetes.io/hostname

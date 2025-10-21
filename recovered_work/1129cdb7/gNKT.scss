@@ -1,0 +1,153 @@
+.verdictPanel {
+  .statusBadge {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+
+    &.approved {
+      background-color: rgb(220 252 231);
+      color: rgb(22 101 52);
+      border: 1px solid rgb(187 247 208);
+    }
+
+    &.rejected {
+      background-color: rgb(254 226 226);
+      color: rgb(153 27 27);
+      border: 1px solid rgb(252 165 165);
+    }
+
+    &.waiverRequired {
+      background-color: rgb(254 243 199);
+      color: rgb(146 64 14);
+      border: 1px solid rgb(253 230 138);
+    }
+
+    &.needsClarification {
+      background-color: rgb(219 234 254);
+      color: rgb(30 64 175);
+      border: 1px solid rgb(191 219 254);
+    }
+
+    &.error {
+      background-color: rgb(243 244 246);
+      color: rgb(75 85 99);
+      border: 1px solid rgb(209 213 219);
+    }
+  }
+
+  .scoreCard {
+    @apply bg-gray-50 rounded-lg p-4;
+
+    .scoreLabel {
+      @apply text-sm font-medium text-gray-700 mb-2;
+    }
+
+    .scoreBar {
+      @apply w-full bg-gray-200 rounded-full h-2 mb-1;
+
+      .scoreFill {
+        @apply bg-blue-600 h-2 rounded-full transition-all duration-300;
+      }
+    }
+
+    .scoreValue {
+      @apply text-xs text-gray-600;
+    }
+  }
+
+  .violationsList {
+    .violationItem {
+      @apply border border-red-200 rounded-lg p-3 mb-2;
+
+      .violationIcon {
+        @apply text-red-500 w-4 h-4;
+      }
+
+      .violationText {
+        @apply text-sm text-red-800;
+      }
+    }
+  }
+
+  .claimsList {
+    max-height: 16rem;
+    overflow-y: auto;
+
+    .claimItem {
+      @apply border rounded-lg p-3 mb-2;
+
+      .claimHeader {
+        @apply flex items-center justify-between mb-2;
+
+        .claimText {
+          @apply font-medium text-sm flex-1;
+        }
+
+        .claimConfidence {
+          @apply text-xs px-2 py-1 rounded bg-gray-100 text-gray-700;
+        }
+      }
+
+      .claimDetails {
+        @apply text-xs text-gray-600;
+      }
+    }
+  }
+
+  .evidenceList {
+    max-height: 16rem;
+    overflow-y: auto;
+
+    .evidenceItem {
+      @apply border rounded-lg p-3 mb-2;
+
+      .evidenceHeader {
+        @apply flex items-center justify-between mb-2;
+
+        .evidenceStatus {
+          @apply text-xs px-2 py-1 rounded font-medium;
+
+          &.verified {
+            @apply bg-green-100 text-green-800;
+          }
+
+          &.unverified {
+            @apply bg-red-100 text-red-800;
+          }
+        }
+
+        .evidenceConfidence {
+          @apply text-xs text-gray-600;
+        }
+      }
+
+      .evidenceDetails {
+        @apply text-xs text-gray-600;
+      }
+    }
+  }
+
+  .actionButtons {
+    @apply flex gap-2 mt-4;
+  }
+
+  .provenanceInfo {
+    @apply text-xs text-gray-500 border-t pt-2 mt-4;
+
+    .provenanceRow {
+      @apply flex items-center gap-1 mb-1;
+
+      .provenanceIcon {
+        @apply w-3 h-3;
+      }
+
+      .provenanceText {
+        @apply truncate;
+      }
+    }
+  }
+}

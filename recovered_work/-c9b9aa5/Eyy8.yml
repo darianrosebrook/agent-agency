@@ -1,0 +1,249 @@
+# Production Docker Compose for Multimodal RAG System
+# Complete production deployment with all services
+
+version: '3.8'
+
+services:
+  # PostgreSQL with pgvector extension
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: multimodal-rag-postgres
+    environment:
+      POSTGRES_DB: multimodal_rag
+      POSTGRES_USER: multimodal_rag
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U multimodal_rag -d multimodal_rag"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - multimodal-rag-network
+
+  # Redis for caching and job queues
+  redis:
+    image: redis:7-alpine
+    container_name: multimodal-rag-redis
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - multimodal-rag-network
+
+  # PostgreSQL exporter for database metrics
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:latest
+    container_name: multimodal-rag-postgres-exporter
+    environment:
+      DATA_SOURCE_NAME: postgresql://multimodal_rag:${POSTGRES_PASSWORD}@postgres:5432/multimodal_rag?sslmode=disable
+    ports:
+      - "9187:9187"
+    depends_on:
+      - postgres
+    networks:
+      - multimodal-rag-network
+    restart: unless-stopped
+
+  # Redis exporter for cache metrics
+  redis-exporter:
+    image: oliver006/redis_exporter:latest
+    container_name: multimodal-rag-redis-exporter
+    environment:
+      REDIS_ADDR: redis:6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    ports:
+      - "9121:9121"
+    depends_on:
+      - redis
+    networks:
+      - multimodal-rag-network
+    restart: unless-stopped
+
+  # Node exporter for system metrics
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: multimodal-rag-node-exporter
+    ports:
+      - "9100:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    networks:
+      - multimodal-rag-network
+    restart: unless-stopped
+
+  # Nginx exporter for reverse proxy metrics
+  nginx-exporter:
+    image: nginx/nginx-prometheus-exporter:latest
+    container_name: multimodal-rag-nginx-exporter
+    ports:
+      - "9113:9113"
+    command:
+      - '-nginx.scrape-uri=http://nginx:80/stub_status'
+    depends_on:
+      - nginx
+    networks:
+      - multimodal-rag-network
+    restart: unless-stopped
+
+  # Multimodal RAG Service
+  multimodal-rag-service:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.multimodal-rag
+    container_name: multimodal-rag-service
+    environment:
+      # Database configuration
+      DATABASE_URL: postgresql://multimodal_rag:${POSTGRES_PASSWORD}@postgres:5432/multimodal_rag
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      
+      # Service configuration
+      RUST_LOG: info
+      RUST_BACKTRACE: 1
+      SERVICE_PORT: 8080
+      METRICS_PORT: 8081
+      
+      # Multimodal processing
+      EMBEDDING_MODEL: e5-small-v2
+      MAX_CONCURRENT_JOBS: 10
+      VECTOR_DIMENSION: 384
+      
+      # Security
+      JWT_SECRET: ${JWT_SECRET}
+      API_KEY: ${API_KEY}
+    ports:
+      - "8080:8080"
+      - "8081:8081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./data/uploads:/app/data/uploads
+      - ./data/models:/app/data/models
+      - ./logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - multimodal-rag-network
+    restart: unless-stopped
+
+  # Nginx reverse proxy
+  nginx:
+    image: nginx:alpine
+    container_name: multimodal-rag-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/ssl:/etc/nginx/ssl
+      - ./logs/nginx:/var/log/nginx
+    depends_on:
+      - multimodal-rag-service
+    networks:
+      - multimodal-rag-network
+    restart: unless-stopped
+
+  # Prometheus for metrics collection
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: multimodal-rag-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    networks:
+      - multimodal-rag-network
+    restart: unless-stopped
+
+  # Grafana for monitoring dashboards
+  grafana:
+    image: grafana/grafana:latest
+    container_name: multimodal-rag-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD}
+      GF_USERS_ALLOW_SIGN_UP: false
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources
+    depends_on:
+      - prometheus
+    networks:
+      - multimodal-rag-network
+    restart: unless-stopped
+
+  # Elasticsearch for log aggregation
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: multimodal-rag-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+    networks:
+      - multimodal-rag-network
+    restart: unless-stopped
+
+  # Kibana for log visualization
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.11.0
+    container_name: multimodal-rag-kibana
+    environment:
+      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+    depends_on:
+      - elasticsearch
+    networks:
+      - multimodal-rag-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+  prometheus_data:
+  grafana_data:
+  elasticsearch_data:
+
+networks:
+  multimodal-rag-network:
+    driver: bridge

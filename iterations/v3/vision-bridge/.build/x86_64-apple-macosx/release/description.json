@@ -1,0 +1,229 @@
+{
+  "builtTestProducts" : [
+
+  ],
+  "copyCommands" : {
+
+  },
+  "explicitTargetDependencyImportCheckingMode" : {
+    "none" : {
+
+    }
+  },
+  "generatedSourceTargetSet" : [
+
+  ],
+  "pluginDescriptions" : [
+
+  ],
+  "swiftCommands" : {
+    "C.VisionBridge-x86_64-apple-macosx15.0-release.module" : {
+      "executable" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "fileList" : "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/vision-bridge/.build/x86_64-apple-macosx/release/VisionBridge.build/sources",
+      "importPath" : "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/vision-bridge/.build/x86_64-apple-macosx/release/Modules",
+      "inputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/vision-bridge/Sources/VisionBridge/VisionBridge.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/vision-bridge/.build/x86_64-apple-macosx/release/swift-version--58304C5D6DBC2206.txt"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/vision-bridge/.build/x86_64-apple-macosx/release/VisionBridge.build/sources"
+        }
+      ],
+      "isLibrary" : true,
+      "moduleName" : "VisionBridge",
+      "moduleOutputPath" : "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/vision-bridge/.build/x86_64-apple-macosx/release/Modules/VisionBridge.swiftmodule",
+      "objects" : [
+        "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/vision-bridge/.build/x86_64-apple-macosx/release/VisionBridge.build/VisionBridge.swift.o"
+      ],
+      "otherArguments" : [
+        "-target",
+        "x86_64-apple-macosx13.0",
+        "-whole-module-optimization",
+        "-num-threads",
+        "10",
+        "-serialize-diagnostics",
+        "-O",
+        "-j10",
+        "-DSWIFT_PACKAGE",
+        "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+        "-module-cache-path",
+        "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/vision-bridge/.build/x86_64-apple-macosx/release/ModuleCache",
+        "-parseable-output",
+        "-parse-as-library",
+        "-emit-objc-header",
+        "-emit-objc-header-path",
+        "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/vision-bridge/.build/x86_64-apple-macosx/release/VisionBridge.build/include/VisionBridge-Swift.h",
+        "-swift-version",
+        "5",
+        "-plugin-path",
+        "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+        "-sdk",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk",
+        "-F",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-F",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks",
+        "-I",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-L",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-g",
+        "-Xcc",
+        "-isysroot",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk",
+        "-Xcc",
+        "-F",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-Xcc",
+        "-F",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks",
+        "-Xcc",
+        "-fPIC",
+        "-Xcc",
+        "-g",
+        "-package-name",
+        "vision_bridge"
+      ],
+      "outputFileMapPath" : "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/vision-bridge/.build/x86_64-apple-macosx/release/VisionBridge.build/output-file-map.json",
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/vision-bridge/.build/x86_64-apple-macosx/release/VisionBridge.build/VisionBridge.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/vision-bridge/.build/x86_64-apple-macosx/release/Modules/VisionBridge.swiftmodule"
+        }
+      ],
+      "prepareForIndexing" : false,
+      "sources" : [
+        "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/vision-bridge/Sources/VisionBridge/VisionBridge.swift"
+      ],
+      "tempsPath" : "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/vision-bridge/.build/x86_64-apple-macosx/release/VisionBridge.build",
+      "wholeModuleOptimization" : true
+    }
+  },
+  "swiftFrontendCommands" : {
+
+  },
+  "swiftTargetScanArgs" : {
+    "VisionBridge" : [
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "-module-name",
+      "VisionBridge",
+      "-package-name",
+      "vision_bridge",
+      "-c",
+      "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/vision-bridge/Sources/VisionBridge/VisionBridge.swift",
+      "-I",
+      "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/vision-bridge/.build/x86_64-apple-macosx/release/Modules",
+      "-target",
+      "x86_64-apple-macosx13.0",
+      "-whole-module-optimization",
+      "-num-threads",
+      "10",
+      "-serialize-diagnostics",
+      "-O",
+      "-j10",
+      "-DSWIFT_PACKAGE",
+      "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+      "-module-cache-path",
+      "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/vision-bridge/.build/x86_64-apple-macosx/release/ModuleCache",
+      "-parseable-output",
+      "-parse-as-library",
+      "-emit-objc-header",
+      "-emit-objc-header-path",
+      "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/vision-bridge/.build/x86_64-apple-macosx/release/VisionBridge.build/include/VisionBridge-Swift.h",
+      "-swift-version",
+      "5",
+      "-plugin-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+      "-sdk",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk",
+      "-F",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-F",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks",
+      "-I",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-L",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-g",
+      "-Xcc",
+      "-isysroot",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk",
+      "-Xcc",
+      "-F",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-Xcc",
+      "-F",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks",
+      "-Xcc",
+      "-fPIC",
+      "-Xcc",
+      "-g",
+      "-package-name",
+      "vision_bridge",
+      "-driver-use-frontend-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+    ]
+  },
+  "targetDependencyMap" : {
+    "VisionBridge" : [
+
+    ]
+  },
+  "testDiscoveryCommands" : {
+
+  },
+  "testEntryPointCommands" : {
+
+  },
+  "traitConfiguration" : {
+    "default" : {
+
+    }
+  },
+  "writeCommands" : {
+    "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/vision-bridge/.build/x86_64-apple-macosx/release/VisionBridge.build/sources" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<sources-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/vision-bridge/Sources/VisionBridge/VisionBridge.swift"
+        }
+      ],
+      "outputFilePath" : "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/vision-bridge/.build/x86_64-apple-macosx/release/VisionBridge.build/sources"
+    },
+    "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/vision-bridge/.build/x86_64-apple-macosx/release/swift-version--58304C5D6DBC2206.txt" : {
+      "alwaysOutOfDate" : true,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<swift-get-version>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+        }
+      ],
+      "outputFilePath" : "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/vision-bridge/.build/x86_64-apple-macosx/release/swift-version--58304C5D6DBC2206.txt"
+    }
+  }
+}

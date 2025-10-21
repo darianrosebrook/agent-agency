@@ -1,0 +1,254 @@
+@import "@/styles/variables.scss";
+@import "@/styles/mixins.scss";
+
+.container {
+  background: var(--card-background);
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-color);
+  height: fit-content;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+
+  h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+}
+
+.timestamp {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  font-weight: 400;
+}
+
+.metricsGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+
+  @media (min-width: 768px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.metric {
+  background: var(--background-secondary);
+  border-radius: 8px;
+  padding: 1rem;
+  border: 1px solid var(--border-color-light);
+}
+
+.metricHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.metricIcon {
+  font-size: 1.25rem;
+}
+
+.metricLabel {
+  flex: 1;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.metricValue {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.progressBar {
+  height: 6px;
+  background: var(--background-tertiary);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease, background-color 0.3s ease;
+}
+
+.taskStats {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.875rem;
+}
+
+.taskStat {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+
+  span:first-child {
+    color: var(--text-secondary);
+  }
+}
+
+.successText {
+  color: var(--success-color);
+  font-weight: 500;
+}
+
+.errorText {
+  color: var(--error-color);
+  font-weight: 500;
+}
+
+.responseTimeIndicator {
+  margin-top: 0.5rem;
+}
+
+.responseTimeBar {
+  height: 4px;
+  background: var(--background-tertiary);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.responseTimeFill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.3s ease, background-color 0.3s ease;
+}
+
+.statusSummary {
+  border-top: 1px solid var(--border-color-light);
+  padding-top: 1rem;
+}
+
+.statusItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.statusLabel {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.statusValue {
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.statusBadge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+
+  &.statusHealthy {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--success-color);
+  }
+
+  &.statusWarning {
+    background: rgba(245, 158, 11, 0.1);
+    color: var(--warning-color);
+  }
+
+  &.statusError {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--error-color);
+  }
+}
+
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  text-align: center;
+
+  p {
+    margin: 1rem 0 0 0;
+    color: var(--text-secondary);
+  }
+}
+
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--border-color);
+  border-top: 3px solid var(--primary-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.error {
+  padding: 2rem;
+  text-align: center;
+  color: var(--error-color);
+
+  p {
+    margin: 0;
+  }
+}
+
+.noData {
+  padding: 2rem;
+  text-align: center;
+  color: var(--text-secondary);
+
+  p {
+    margin: 0;
+  }
+}
+
+// Dark mode adjustments
+@media (prefers-color-scheme: dark) {
+  .container {
+    background: var(--card-background-dark);
+    border-color: var(--border-color-dark);
+  }
+
+  .metric {
+    background: var(--background-secondary-dark);
+    border-color: var(--border-color-light-dark);
+  }
+
+  .progressBar {
+    background: var(--background-tertiary-dark);
+  }
+
+  .responseTimeBar {
+    background: var(--background-tertiary-dark);
+  }
+
+  .statusSummary {
+    border-color: var(--border-color-light-dark);
+  }
+}

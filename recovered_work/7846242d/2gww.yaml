@@ -1,0 +1,214 @@
+# Production Configuration for Multimodal RAG System
+# Optimized for production deployment with security and performance settings
+
+# Database Configuration
+database:
+  host: "${DATABASE_HOST:postgres}"
+  port: "${DATABASE_PORT:5432}"
+  database: "${DATABASE_NAME:multimodal_rag}"
+  username: "${DATABASE_USER:multimodal_rag}"
+  password: "${DATABASE_PASSWORD}"
+  pool_max: 20
+  pool_min: 5
+  connection_timeout: 30
+  idle_timeout: 600
+  max_lifetime: 3600
+  ssl_mode: "prefer"
+
+# Redis Configuration
+redis:
+  host: "${REDIS_HOST:redis}"
+  port: "${REDIS_PORT:6379}"
+  password: "${REDIS_PASSWORD}"
+  database: 0
+  pool_size: 10
+  connection_timeout: 5
+  command_timeout: 3
+
+# Service Configuration
+service:
+  name: "multimodal-rag-service"
+  version: "1.0.0"
+  environment: "production"
+  port: "${SERVICE_PORT:8080}"
+  metrics_port: "${METRICS_PORT:8081}"
+  host: "0.0.0.0"
+  
+  # Security
+  jwt_secret: "${JWT_SECRET}"
+  api_key: "${API_KEY}"
+  cors_origins: ["https://yourdomain.com"]
+  
+  # Rate limiting
+  rate_limit:
+    requests_per_minute: 1000
+    burst_size: 100
+
+# Multimodal Processing Configuration
+multimodal:
+  # Embedding configuration
+  embedding:
+    model: "${EMBEDDING_MODEL:e5-small-v2}"
+    dimension: 384
+    batch_size: 32
+    timeout: 30
+    
+  # Vector storage
+  vector_store:
+    similarity_threshold: 0.7
+    max_results: 100
+    cache_ttl: 3600
+    
+  # Processing limits
+  max_file_size: 100MB
+  max_concurrent_jobs: "${MAX_CONCURRENT_JOBS:10}"
+  job_timeout: 300
+  
+  # Supported formats
+  supported_formats:
+    text: [".txt", ".md", ".json"]
+    image: [".jpg", ".jpeg", ".png", ".gif", ".webp"]
+    audio: [".mp3", ".wav", ".m4a", ".flac"]
+    video: [".mp4", ".avi", ".mov", ".mkv"]
+    documents: [".pdf", ".docx", ".pptx"]
+
+# Logging Configuration
+logging:
+  level: "${RUST_LOG:info}"
+  format: "json"
+  output: "stdout"
+  
+  # Structured logging fields
+  fields:
+    service: "multimodal-rag"
+    version: "1.0.0"
+    environment: "production"
+    
+  # Log rotation
+  rotation:
+    max_size: "100MB"
+    max_files: 10
+    compress: true
+
+# Monitoring Configuration
+monitoring:
+  # Metrics
+  metrics:
+    enabled: true
+    port: 8081
+    path: "/metrics"
+    interval: 15
+    
+  # Health checks
+  health:
+    enabled: true
+    path: "/health"
+    interval: 30
+    timeout: 10
+    
+  # Tracing
+  tracing:
+    enabled: true
+    jaeger_endpoint: "${JAEGER_ENDPOINT:}"
+    sample_rate: 0.1
+
+# Performance Configuration
+performance:
+  # Connection pooling
+  database_pool:
+    max_connections: 20
+    min_connections: 5
+    connection_timeout: 30
+    idle_timeout: 600
+    
+  # Caching
+  cache:
+    enabled: true
+    ttl: 3600
+    max_size: "1GB"
+    
+  # Compression
+  compression:
+    enabled: true
+    level: 6
+    threshold: 1024
+
+# Security Configuration
+security:
+  # Authentication
+  auth:
+    jwt_expiry: 3600
+    refresh_expiry: 86400
+    algorithm: "HS256"
+    
+  # Input validation
+  validation:
+    max_input_length: 10000
+    sanitize_inputs: true
+    block_malicious_patterns: true
+    
+  # Rate limiting
+  rate_limiting:
+    enabled: true
+    window_size: 60
+    max_requests: 1000
+    
+  # CORS
+  cors:
+    enabled: true
+    allow_credentials: true
+    max_age: 86400
+
+# Feature Flags
+features:
+  multimodal_processing: true
+  vector_search: true
+  real_time_indexing: true
+  batch_processing: true
+  cross_modal_validation: true
+  deduplication: true
+  fuzzy_matching: true
+  
+# External Services
+external_services:
+  # Embedding service
+  embedding_service:
+    url: "${EMBEDDING_SERVICE_URL:http://embedding-service:8080}"
+    timeout: 30
+    retry_attempts: 3
+    
+  # Vision service
+  vision_service:
+    url: "${VISION_SERVICE_URL:http://vision-service:8080}"
+    timeout: 60
+    retry_attempts: 2
+    
+  # ASR service
+  asr_service:
+    url: "${ASR_SERVICE_URL:http://asr-service:8080}"
+    timeout: 120
+    retry_attempts: 2
+
+# Backup Configuration
+backup:
+  enabled: true
+  schedule: "0 2 * * *"  # Daily at 2 AM
+  retention_days: 30
+  s3_bucket: "${BACKUP_S3_BUCKET:}"
+  s3_region: "${BACKUP_S3_REGION:us-east-1}"
+
+# Alerting Configuration
+alerting:
+  enabled: true
+  webhook_url: "${ALERT_WEBHOOK_URL:}"
+  channels:
+    - "slack"
+    - "email"
+  
+  # Alert thresholds
+  thresholds:
+    error_rate: 0.05  # 5%
+    response_time_p95: 5000  # 5 seconds
+    memory_usage: 0.8  # 80%
+    cpu_usage: 0.8  # 80%
+    disk_usage: 0.9  # 90%

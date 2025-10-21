@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Agency V3 - Real-time Dashboard</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f7;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .status-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .status-card h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        .events-section {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .events-list {
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 12px;
+            background: #f8f8f8;
+            padding: 10px;
+            border-radius: 6px;
+        }
+        .event-item {
+            padding: 5px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-active { background: #34c759; }
+        .status-inactive { background: #ff3b30; }
+        .status-warning { background: #ff9500; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 Agent Agency V3 - Real-time Dashboard</h1>
+            <p>Monitor autonomous task execution with live updates</p>
+        </div>
+
+        <div class="status-grid">
+            <div class="status-card">
+                <h3><span class="status-indicator status-active"></span>System Status</h3>
+                <p><strong>Status:</strong> <span id="system-status">Initializing...</span></p>
+                <p><strong>Connected Clients:</strong> <span id="client-count">0</span></p>
+                <p><strong>Uptime:</strong> <span id="uptime">00:00:00</span></p>
+            </div>
+
+            <div class="status-card">
+                <h3><span class="status-indicator status-warning"></span>Active Tasks</h3>
+                <p><strong>Running:</strong> <span id="running-tasks">0</span></p>
+                <p><strong>Queued:</strong> <span id="queued-tasks">0</span></p>
+                <p><strong>Completed Today:</strong> <span id="completed-tasks">0</span></p>
+            </div>
+
+            <div class="status-card">
+                <h3><span class="status-indicator status-active"></span>Worker Pool</h3>
+                <p><strong>Active Workers:</strong> <span id="active-workers">0</span></p>
+                <p><strong>Available Capacity:</strong> <span id="available-capacity">0%</span></p>
+                <p><strong>Average Response Time:</strong> <span id="avg-response-time">0ms</span></p>
+            </div>
+
+            <div class="status-card">
+                <h3><span class="status-indicator status-active"></span>Quality Metrics</h3>
+                <p><strong>Test Coverage:</strong> <span id="test-coverage">0%</span></p>
+                <p><strong>Mutation Score:</strong> <span id="mutation-score">0%</span></p>
+                <p><strong>Determinism Score:</strong> <span id="determinism-score">0%</span></p>
+            </div>
+        </div>
+
+        <div class="events-section">
+            <h3>📋 Live Execution Events</h3>
+            <div id="events-container" class="events-list">
+                <div class="event-item">Waiting for execution events...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let ws;
+        let reconnectAttempts = 0;
+        const maxReconnectAttempts = 5;
+
+        function connectWebSocket() {
+            ws = new WebSocket('ws://localhost:3001/ws');
+
+            ws.onopen = function(event) {
+                console.log('Connected to dashboard server');
+                reconnectAttempts = 0;
+                updateSystemStatus('Connected');
+                updateClientCount(1);
+            };
+
+            ws.onmessage = function(event) {
+                const eventData = event.data;
+                addEvent(eventData);
+                updateMetrics(eventData);
+            };
+
+            ws.onclose = function(event) {
+                console.log('Disconnected from dashboard server');
+                updateSystemStatus('Disconnected');
+                updateClientCount(0);
+
+                if (reconnectAttempts < maxReconnectAttempts) {
+                    reconnectAttempts++;
+                    setTimeout(connectWebSocket, 2000 * reconnectAttempts);
+                }
+            };
+
+            ws.onerror = function(error) {
+                console.error('WebSocket error:', error);
+            };
+        }
+
+        function addEvent(eventText) {
+            const container = document.getElementById('events-container');
+            const eventDiv = document.createElement('div');
+            eventDiv.className = 'event-item';
+            eventDiv.textContent = new Date().toLocaleTimeString() + ' - ' + eventText;
+            container.appendChild(eventDiv);
+
+            // Keep only last 50 events
+            while (container.children.length > 50) {
+                container.removeChild(container.firstChild);
+            }
+
+            // Auto-scroll to bottom
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function updateSystemStatus(status) {
+            document.getElementById('system-status').textContent = status;
+        }
+
+        function updateClientCount(count) {
+            document.getElementById('client-count').textContent = count;
+        }
+
+        function updateMetrics(eventData) {
+            // Parse event data and update metrics
+            // This would be expanded based on actual event types
+            try {
+                if (eventData.includes('WorkerOutputCollected')) {
+                    const current = parseInt(document.getElementById('completed-tasks').textContent);
+                    document.getElementById('completed-tasks').textContent = current + 1;
+                }
+            } catch (e) {
+                // Ignore parsing errors
+            }
+        }
+
+        // Initialize uptime counter
+        let startTime = Date.now();
+        setInterval(() => {
+            const elapsed = Date.now() - startTime;
+            const hours = Math.floor(elapsed / 3600000);
+            const minutes = Math.floor((elapsed % 3600000) / 60000);
+            const seconds = Math.floor((elapsed % 60000) / 1000);
+            document.getElementById('uptime').textContent =
+                `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }, 1000);
+
+        // Connect to WebSocket on page load
+        connectWebSocket();
+
+        // Fetch initial events
+        fetch('/api/events')
+            .then(response => response.json())
+            .then(events => {
+                events.forEach(event => addEvent(event));
+            })
+            .catch(error => console.error('Failed to fetch initial events:', error));
+    </script>
+</body>
+</html>

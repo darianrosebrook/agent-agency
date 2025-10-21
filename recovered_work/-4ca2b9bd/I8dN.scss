@@ -1,0 +1,79 @@
+@import "@/styles/variables.scss";
+@import "@/styles/mixins.scss";
+
+.connectionStatus {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.statusIndicator {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+
+  &.connected {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--success-color);
+  }
+
+  &.connecting {
+    background: rgba(245, 158, 11, 0.1);
+    color: var(--warning-color);
+  }
+
+  &.disconnected {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--error-color);
+  }
+
+  &.error {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--error-color);
+  }
+}
+
+.icon {
+  font-size: 1rem;
+}
+
+.text {
+  flex: 1;
+}
+
+.lastConnected {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin-left: 1.75rem;
+}
+
+.retryInfo {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin-left: 1.75rem;
+}
+
+// Dark mode adjustments
+@media (prefers-color-scheme: dark) {
+  .statusIndicator {
+    &.connected {
+      background: rgba(16, 185, 129, 0.15);
+    }
+
+    &.connecting {
+      background: rgba(245, 158, 11, 0.15);
+    }
+
+    &.disconnected {
+      background: rgba(239, 68, 68, 0.15);
+    }
+
+    &.error {
+      background: rgba(239, 68, 68, 0.15);
+    }
+  }
+}

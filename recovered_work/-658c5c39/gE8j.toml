@@ -1,0 +1,20 @@
+[package]
+name = "agent-agency-api-server"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+# Core async runtime
+tokio.workspace = true
+clap = { version = "4.0", features = ["derive"] }
+
+# Web framework
+axum.workspace = true
+tower-http.workspace = true
+
+# Local crates
+agent-agency-contracts.workspace = true
+interfaces = { path = "../interfaces" }
+orchestration = { path = "../orchestration" }

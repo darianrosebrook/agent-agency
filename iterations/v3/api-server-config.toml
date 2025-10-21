@@ -1,0 +1,8 @@
+# Test configuration for Agent Agency V3 API Server
+
+# API Keys for authentication (optional)
+api_keys = ["test-key-123", "dev-key-456"]
+
+# Rate limiting (disabled for testing)
+enable_rate_limiting = false
+rate_limit_per_minute = 100

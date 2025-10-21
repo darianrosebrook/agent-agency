@@ -1,0 +1,72 @@
+# Multimodal RAG Service Docker Container
+# Production-ready container for the integrated multimodal RAG system
+
+FROM rust:1.75-slim as builder
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    pkg-config \
+    libssl-dev \
+    libpq-dev \
+    python3 \
+    python3-pip \
+    python3-venv \
+    ffmpeg \
+    libavcodec-dev \
+    libavformat-dev \
+    libavutil-dev \
+    libswscale-dev \
+    libswresample-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set working directory
+WORKDIR /app
+
+# Copy workspace files
+COPY Cargo.toml Cargo.lock ./
+COPY iterations/v3/ ./iterations/v3/
+
+# Build the multimodal RAG service
+RUN cargo build --release --bin multimodal-rag-service
+
+# Production stage
+FROM debian:bookworm-slim
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y \
+    libpq5 \
+    python3 \
+    python3-pip \
+    ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user
+RUN useradd -r -s /bin/false multimodal-rag
+
+# Set working directory
+WORKDIR /app
+
+# Copy built binary
+COPY --from=builder /app/target/release/multimodal-rag-service /app/
+
+# Copy Python dependencies for multimodal processing
+COPY --from=builder /app/iterations/v3/python-requirements.txt /app/
+RUN pip3 install --no-cache-dir -r python-requirements.txt
+
+# Copy configuration files
+COPY iterations/v3/config/production.yaml /app/config/
+COPY iterations/v3/migrations/ /app/migrations/
+
+# Set permissions
+RUN chown -R multimodal-rag:multimodal-rag /app
+USER multimodal-rag
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8080/health || exit 1
+
+# Expose ports
+EXPOSE 8080 8081
+
+# Start the service
+CMD ["./multimodal-rag-service"]

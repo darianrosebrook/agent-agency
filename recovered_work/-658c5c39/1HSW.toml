@@ -1,0 +1,53 @@
+[package]
+name = "agent-agency-api-server"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+# Core async runtime
+tokio.workspace = true
+clap = { version = "4.0", features = ["derive"] }
+
+# Web framework
+axum = { workspace = true, features = ["macros"] }
+tower-http.workspace = true
+
+# Server-sent events
+axum-extra = { version = "0.9", features = ["typed-header"] }
+
+# JSON handling
+serde_json.workspace = true
+
+# Date/time
+chrono.workspace = true
+
+# HTTP client
+reqwest = { version = "0.11", features = ["json"] }
+
+# Async streams
+tokio-stream = "0.1"
+
+# Error handling
+thiserror.workspace = true
+
+# Input validation
+regex = "1.10"
+once_cell = "1.19"
+
+# Circuit breaker features already included in workspace tokio
+
+# WebSocket support built into Axum
+
+# Serialization
+serde.workspace = true
+
+# UUID handling
+uuid.workspace = true
+
+# Database client - enabled for core persistence
+agent-agency-database = { path = "../database" }
+
+# System health monitoring for real metrics (basic features only)
+agent-agency-system-health-monitor = { path = "../system-health-monitor", default-features = true }
