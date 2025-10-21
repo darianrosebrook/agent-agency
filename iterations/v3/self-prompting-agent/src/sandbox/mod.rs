@@ -20,7 +20,9 @@ use tokio::sync::RwLock;
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
 
-use crate::types::{UnifiedDiff, Artifact, ArtifactType};
+use crate::types::{Artifact, ArtifactType};
+use crate::sandbox::diff_generator::UnifiedDiff;
+use crate::sandbox::diff_applier::ApplyResult as DiffApplyResult;
 
 /// Safety modes for sandbox operations
 #[derive(Debug, Clone, PartialEq)]
@@ -90,7 +92,7 @@ impl SandboxEnvironment {
         };
 
         let file_guard = FileGuard::new(allowed_paths.clone());
-        let diff_applier = DiffApplier::new();
+        let diff_applier = DiffApplier::new(workspace_root.clone());
         let snapshot_manager = SnapshotManager::new(workspace_root.clone());
 
         Ok(Self {
@@ -112,7 +114,7 @@ impl SandboxEnvironment {
         // Check safety mode
         match self.safety_mode {
             SafetyMode::Strict => {
-                return Err(SandboxError::ApprovalRequired(diff.file_path.clone()));
+                return Err(SandboxError::ApprovalRequired(diff.file_path.to_string_lossy().to_string()));
             }
             SafetyMode::Sandbox | SafetyMode::Autonomous => {
                 // Proceed with application
@@ -120,7 +122,11 @@ impl SandboxEnvironment {
         }
 
         // Apply the diff
-        let modified_files = self.diff_applier.apply_diff(diff, &self.workspace_root).await?;
+        let apply_result = self.diff_applier.apply_diff(diff, false).await?;
+        let modified_files = match apply_result {
+            DiffApplyResult::Success => vec![diff.file_path.to_string_lossy().to_string()],
+            DiffApplyResult::Failed { .. } => return Err(SandboxError::DiffError("Diff application failed".to_string())),
+        };
 
         // Create git snapshot if enabled
         let snapshot_id = if let Some(ref git) = self.git_worktree {
@@ -151,7 +157,7 @@ impl SandboxEnvironment {
 
     /// Validate that a diff only touches allowed paths
     pub async fn validate_diff_scope(&self, diff: &UnifiedDiff) -> Result<(), SandboxError> {
-        self.file_guard.validate_path(&diff.file_path)?;
+        self.file_guard.validate_path(&diff.file_path.to_string_lossy())?;
         Ok(())
     }
 
@@ -189,4 +195,28 @@ pub enum SandboxError {
 
     #[error("Budget update failed: {0}")]
     BudgetUpdateFailed(String),
+}
+
+impl From<git_worktree::GitWorktreeError> for SandboxError {
+    fn from(err: git_worktree::GitWorktreeError) -> Self {
+        SandboxError::GitError(err.to_string())
+    }
+}
+
+impl From<diff_applier::DiffApplyError> for SandboxError {
+    fn from(err: diff_applier::DiffApplyError) -> Self {
+        SandboxError::DiffError(err.to_string())
+    }
+}
+
+impl From<snapshot::SnapshotError> for SandboxError {
+    fn from(err: snapshot::SnapshotError) -> Self {
+        SandboxError::SnapshotError(err.to_string())
+    }
+}
+
+impl From<file_guard::FileGuardError> for SandboxError {
+    fn from(err: file_guard::FileGuardError) -> Self {
+        SandboxError::PathNotAllowed(err.to_string())
+    }
 }

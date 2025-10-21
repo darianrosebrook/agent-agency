@@ -10,6 +10,7 @@ use std::collections::HashSet;
 use std::path::PathBuf;
 use thiserror::Error;
 use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 
 use crate::types::{ChangeSet, ChangeSetReceipt, ChangeOperation, FileChange};
 
@@ -31,7 +32,7 @@ pub struct BudgetState {
 }
 
 /// Budget limits for a task
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct BudgetLimits {
     pub max_files: usize,
     pub max_loc: usize,
@@ -46,6 +47,12 @@ pub struct BudgetChecker {
     limits: BudgetLimits,
     current: BudgetState,
     tracked_files: HashSet<PathBuf>,
+}
+
+impl Default for BudgetChecker {
+    fn default() -> Self {
+        Self::new(10, 1000) // Default limits
+    }
 }
 
 impl BudgetChecker {

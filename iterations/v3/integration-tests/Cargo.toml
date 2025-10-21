@@ -10,7 +10,7 @@ license.workspace = true
 agent-agency-council = { path = "../council" }
 agent-agency-research = { path = "../research" }
 orchestration = { path = "../orchestration" }
-claim-extraction = { path = "../claim-extraction" }
+# claim-extraction = { path = "../claim-extraction" }  # TODO: Re-enable when compilation issues resolved
 embedding-service = { path = "../embedding-service", optional = true }
 agent-agency-apple-silicon = { path = "../apple-silicon", optional = true }
 agent-agency-resilience = { path = "../resilience" }

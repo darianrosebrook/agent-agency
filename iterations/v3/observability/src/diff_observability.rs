@@ -100,13 +100,25 @@ pub struct FileNavigation {
 }
 
 /// Violation severity levels
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum ViolationSeverity {
     None,
     Low,
     Medium,
     High,
     Critical,
+}
+
+impl std::fmt::Display for ViolationSeverity {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ViolationSeverity::None => write!(f, "None"),
+            ViolationSeverity::Low => write!(f, "Low"),
+            ViolationSeverity::Medium => write!(f, "Medium"),
+            ViolationSeverity::High => write!(f, "High"),
+            ViolationSeverity::Critical => write!(f, "Critical"),
+        }
+    }
 }
 
 /// Diff generator configuration
@@ -868,7 +880,7 @@ mod tests {
             };
 
             let summary = DiffViewer::generate_violation_summary(&diff);
-            assert_eq!(summary.severity_assessment, expected_severity.to_string()   );
+            assert_eq!(summary.severity_assessment, expected_severity);
         }
     }
 }

@@ -460,7 +460,7 @@ pub struct VerifiedClaim {
 }
 
 /// Status of verification process
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum VerificationStatus {
     Verified,
     Refuted,
@@ -536,6 +536,7 @@ pub enum EntityType {
     Date,
     TechnicalTerm,
     Percent,
+    Money,
 }
 
 /// Validation outcome for historical claims

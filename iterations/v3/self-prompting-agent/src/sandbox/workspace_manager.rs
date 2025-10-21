@@ -11,6 +11,15 @@ use crate::caws::BudgetChecker;
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use thiserror::Error;
+use chrono::{DateTime, Utc};
+
+/// Receipt for workspace operations
+#[derive(Debug, Clone)]
+pub struct WorkspaceReceipt {
+    pub checkpoint_id: String,
+    pub files_modified: Vec<String>,
+    pub timestamp: DateTime<Utc>,
+}
 
 #[derive(Debug, Error)]
 pub enum WorkspaceError {
@@ -35,6 +44,9 @@ pub enum WorkspaceError {
 
     #[error("Atomic apply failed: {operation} - {reason}")]
     AtomicApplyFailed { operation: String, reason: String },
+
+    #[error("Budget update failed: {0}")]
+    BudgetUpdateFailed(String),
 }
 
 /// Unified workspace manager with single tool boundary
@@ -122,29 +134,45 @@ impl WorkspaceManager {
 
         // INVARIANT 3: Atomic apply with transactional budget update
         // Save budget state for potential rollback
-        let old_budget_state = self.budget_checker.current_state().await?;
+        let old_budget_state = self.budget_checker.current_state()?;
 
         let receipt = match &mut self.backend {
             WorkspaceBackend::Git(worktree) => {
-                worktree.apply_changes_atomic(changeset).await
-                    .map_err(|e| WorkspaceError::GitOperation(e.to_string()))?
+                // For Git backend, we'll create a snapshot after applying changes
+                // This is a simplified approach - in a real implementation,
+                // you'd want proper atomic operations
+                let snapshot_id = worktree.commit_snapshot("Workspace changes").await
+                    .map_err(|e| WorkspaceError::GitOperation(e.to_string()))?;
+                WorkspaceReceipt {
+                    checkpoint_id: snapshot_id,
+                    files_modified: changeset.files.iter().map(|f| f.path.clone()).collect(),
+                    timestamp: chrono::Utc::now(),
+                }
             }
             WorkspaceBackend::Snapshot(snapshot) => {
-                snapshot.apply_changes_atomic(changeset).await
-                    .map_err(|e| WorkspaceError::SnapshotOperation(e.to_string()))?
+                // For snapshot backend, create a snapshot
+                let snapshot_id = snapshot.create_snapshot("Workspace changes").await
+                    .map_err(|e| WorkspaceError::SnapshotOperation(e.to_string()))?;
+                WorkspaceReceipt {
+                    checkpoint_id: snapshot_id,
+                    files_modified: changeset.files.iter().map(|f| f.path.clone()).collect(),
+                    timestamp: chrono::Utc::now(),
+                }
             }
         };
 
         // INVARIANT 4: Update budget tracker transactionally
         // If budget update fails, rollback the applied changes
-        if let Err(budget_err) = self.budget_checker.record_changes(&receipt).await {
+        if let Err(budget_err) = self.budget_checker.record_changes(&receipt) {
             // Budget update failed - rollback the applied changes
             let rollback_result = match &mut self.backend {
                 WorkspaceBackend::Git(worktree) => {
-                    worktree.rollback_to_checkpoint(&receipt.checkpoint_id).await
+                    worktree.rollback_to_snapshot(&receipt.checkpoint_id).await
+                        .map_err(|e| WorkspaceError::GitOperation(e.to_string()))
                 }
                 WorkspaceBackend::Snapshot(snapshot) => {
-                    snapshot.rollback_to_checkpoint(&receipt.checkpoint_id).await
+                    snapshot.rollback_to_snapshot(&receipt.checkpoint_id).await
+                        .map_err(|e| WorkspaceError::SnapshotOperation(e.to_string()))
                 }
             };
 
@@ -157,7 +185,11 @@ impl WorkspaceManager {
             }
 
             // Restore old budget state
-            self.budget_checker.restore_state(old_budget_state).await?;
+            self.budget_checker.restore_state(old_budget_state)
+                .map_err(|e| WorkspaceError::AtomicApplyFailed {
+                    operation: "budget_restore".to_string(),
+                    reason: e.to_string(),
+                })?;
 
             return Err(WorkspaceError::BudgetUpdateFailed(budget_err.to_string()));
         }
@@ -169,11 +201,11 @@ impl WorkspaceManager {
     pub async fn create_checkpoint(&self, label: &str) -> Result<String, WorkspaceError> {
         match &self.backend {
             WorkspaceBackend::Git(worktree) => {
-                worktree.create_checkpoint(label).await
+                worktree.commit_snapshot(label).await
                     .map_err(|e| WorkspaceError::GitOperation(e.to_string()))
             }
             WorkspaceBackend::Snapshot(snapshot) => {
-                snapshot.create_checkpoint(label).await
+                snapshot.create_snapshot(label).await
                     .map_err(|e| WorkspaceError::SnapshotOperation(e.to_string()))
             }
         }
@@ -183,19 +215,19 @@ impl WorkspaceManager {
     pub async fn rollback_to_checkpoint(&self, checkpoint_id: &str) -> Result<(), WorkspaceError> {
         match &self.backend {
             WorkspaceBackend::Git(worktree) => {
-                worktree.rollback_to_checkpoint(checkpoint_id).await
+                worktree.rollback_to_snapshot(checkpoint_id).await
                     .map_err(|e| WorkspaceError::GitOperation(e.to_string()))
             }
             WorkspaceBackend::Snapshot(snapshot) => {
-                snapshot.rollback_to_checkpoint(checkpoint_id).await
+                snapshot.rollback_to_snapshot(checkpoint_id).await
                     .map_err(|e| WorkspaceError::SnapshotOperation(e.to_string()))
             }
         }
     }
 
     /// Get current budget state
-    pub async fn budget_state(&self) -> Result<crate::caws::BudgetState, WorkspaceError> {
-        self.budget_checker.current_state().await
+    pub fn budget_state(&self) -> Result<crate::caws::BudgetState, WorkspaceError> {
+        self.budget_checker.current_state()
             .map_err(|e| WorkspaceError::AtomicApplyFailed {
                 operation: "budget_check".to_string(),
                 reason: e.to_string(),

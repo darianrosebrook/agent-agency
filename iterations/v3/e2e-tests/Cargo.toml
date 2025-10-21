@@ -41,12 +41,8 @@ ordered-float = "4.0"  # Ordered floating point comparisons
 
 # Local crates
 agent-agency-contracts = { path = "../agent-agency-contracts" }
-# orchestration = { path = "../orchestration" } # Excluded due to council dependency (torch-sys)
-# agent-agency-council = { path = "../council" } # Excluded due to torch-sys
-# agent-agency-workers = { path = "../workers" } # Excluded due to potential torch-sys
-agent-agency-interfaces = { path = "../interfaces" }
-# agent-agency-planning-agent = { path = "../planning-agent" } # Excluded due to rust-bert (torch-sys)
-agent-agency-observability = { path = "../observability" } # Using observability for quality gates
+agent-agency-observability = { path = "../observability" }
+agent-agency-database = { path = "../database" }
 uuid.workspace = true
 rand.workspace = true
 

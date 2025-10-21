@@ -573,7 +573,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_slo_registration_and_measurement() {
-        let tracker = SLOTracker::new();
+        let tracker = SLOTracker::new(Arc::new(agent_agency_database::DatabaseClient::new(
+            agent_agency_database::DatabaseConfig::default()
+        ).await.unwrap()));
 
         let slo = SLODefinition {
             name: "test_slo".to_string(),

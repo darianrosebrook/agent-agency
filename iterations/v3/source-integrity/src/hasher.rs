@@ -5,10 +5,210 @@
 use anyhow::Result;
 use blake3;
 use hex;
-use sha2::{Digest, Sha256, Sha512};
+use sha2::{Digest as Sha2Digest, Sha256, Sha512};
 use std::time::Instant;
+use serde::{Deserialize, Serialize};
 
 use crate::types::{HashAlgorithm, TamperingIndicator};
+
+/// BLAKE3 digest wrapper for content addressing
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct Digest(pub [u8; 32]);
+
+impl Digest {
+    /// Create a new digest from BLAKE3 hash
+    pub fn from_blake3(hash: blake3::Hash) -> Self {
+        Self(*hash.as_bytes())
+    }
+
+    /// Create a digest from bytes
+    pub fn from_bytes(bytes: [u8; 32]) -> Self {
+        Self(bytes)
+    }
+
+    /// Get the digest as bytes
+    pub fn as_bytes(&self) -> &[u8; 32] {
+        &self.0
+    }
+
+    /// Convert to hex string
+    pub fn to_hex(&self) -> String {
+        hex::encode(self.0)
+    }
+
+    /// Create from hex string
+    pub fn from_hex(hex_str: &str) -> Result<Self> {
+        let bytes = hex::decode(hex_str)?;
+        if bytes.len() != 32 {
+            return Err(anyhow::anyhow!("Invalid digest length"));
+        }
+        let mut digest_bytes = [0u8; 32];
+        digest_bytes.copy_from_slice(&bytes);
+        Ok(Self(digest_bytes))
+    }
+}
+
+impl std::fmt::Display for Digest {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.to_hex())
+    }
+}
+
+/// Streaming BLAKE3 hasher for large content
+pub struct StreamingHasher {
+    hasher: blake3::Hasher,
+}
+
+impl StreamingHasher {
+    /// Create a new streaming hasher
+    pub fn new() -> Self {
+        Self {
+            hasher: blake3::Hasher::new(),
+        }
+    }
+
+    /// Update the hasher with more data
+    pub fn update(&mut self, data: &[u8]) {
+        self.hasher.update(data);
+    }
+
+    /// Finalize and get the digest
+    pub fn finalize(self) -> Digest {
+        Digest::from_blake3(self.hasher.finalize())
+    }
+}
+
+impl Default for StreamingHasher {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// Merkle tree node for content addressing
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct MerkleNode {
+    pub digest: Digest,
+    pub children: Vec<Digest>,
+}
+
+impl MerkleNode {
+    /// Create a leaf node from content digest
+    pub fn leaf(digest: Digest) -> Self {
+        Self {
+            digest,
+            children: Vec::new(),
+        }
+    }
+
+    /// Create an internal node from child digests
+    pub fn internal(children: Vec<Digest>) -> Self {
+        // Hash all children to create the internal node digest
+        let mut hasher = StreamingHasher::new();
+        for child in &children {
+            hasher.update(child.as_bytes());
+        }
+        let digest = hasher.finalize();
+
+        Self { digest, children }
+    }
+
+    /// Get the digest of this node
+    pub fn digest(&self) -> Digest {
+        self.digest
+    }
+
+    /// Get the children of this node
+    pub fn children(&self) -> &[Digest] {
+        &self.children
+    }
+}
+
+/// Merkle tree for content addressing
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct MerkleTree {
+    pub root: MerkleNode,
+    pub leaves: Vec<Digest>,
+}
+
+impl MerkleTree {
+    /// Create a Merkle tree from a list of content digests
+    pub fn from_digests(digests: Vec<Digest>) -> Self {
+        if digests.is_empty() {
+            // Empty tree with zero digest
+            let zero_digest = Digest::from_bytes([0u8; 32]);
+            return Self {
+                root: MerkleNode::leaf(zero_digest),
+                leaves: Vec::new(),
+            };
+        }
+
+        if digests.len() == 1 {
+            return Self {
+                root: MerkleNode::leaf(digests[0]),
+                leaves: digests,
+            };
+        }
+
+        let mut current_level = digests
+            .into_iter()
+            .map(MerkleNode::leaf)
+            .collect::<Vec<_>>();
+
+        while current_level.len() > 1 {
+            let mut next_level = Vec::new();
+            
+            for chunk in current_level.chunks(2) {
+                if chunk.len() == 2 {
+                    let children = vec![chunk[0].digest, chunk[1].digest];
+                    next_level.push(MerkleNode::internal(children));
+                } else {
+                    // Odd number of nodes, promote the last one
+                    next_level.push(chunk[0].clone());
+                }
+            }
+            
+            current_level = next_level;
+        }
+
+        let leaves = current_level.iter().map(|node| node.digest).collect();
+        Self {
+            root: current_level.into_iter().next().unwrap(),
+            leaves,
+        }
+    }
+
+    /// Get the root digest of the tree
+    pub fn root_digest(&self) -> Digest {
+        self.root.digest
+    }
+
+    /// Get all leaf digests
+    pub fn leaf_digests(&self) -> &[Digest] {
+        &self.leaves
+    }
+
+    /// Verify that a digest is in the tree
+    pub fn contains(&self, digest: &Digest) -> bool {
+        self.leaves.contains(digest)
+    }
+
+    /// Get a proof path for a digest (simplified - returns all sibling hashes)
+    pub fn proof_path(&self, digest: &Digest) -> Option<Vec<Digest>> {
+        if !self.contains(digest) {
+            return None;
+        }
+
+        // For simplicity, return all other leaf digests as proof
+        // In a full implementation, this would be the actual Merkle proof path
+        Some(
+            self.leaves
+                .iter()
+                .filter(|d| *d != digest)
+                .copied()
+                .collect(),
+        )
+    }
+}
 
 /// Content hasher for calculating integrity hashes
 pub struct ContentHasher {

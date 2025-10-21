@@ -1,0 +1,113 @@
+{
+  "name": "jest-runner",
+  "version": "1.0.0",
+  "description": "Run Jest tests for JavaScript/TypeScript projects",
+  "author": "caws",
+  "tool_type": "Testing",
+  "entry_point": "/usr/local/bin/jest",
+  "dependencies": [],
+  "capabilities": ["CommandExecution", "FileRead"],
+  "parameters": {
+    "required": [],
+    "optional": [
+      {
+        "name": "testPathPattern",
+        "parameter_type": "String",
+        "description": "Pattern to match test files",
+        "default_value": ".*\\.test\\.(js|ts|jsx|tsx)$"
+      },
+      {
+        "name": "testNamePattern",
+        "parameter_type": "String",
+        "description": "Pattern to match test names"
+      },
+      {
+        "name": "config",
+        "parameter_type": "File",
+        "description": "Path to Jest configuration file",
+        "default_value": "jest.config.js"
+      },
+      {
+        "name": "coverage",
+        "parameter_type": "Boolean",
+        "description": "Generate coverage report",
+        "default_value": true
+      },
+      {
+        "name": "watch",
+        "parameter_type": "Boolean",
+        "description": "Run tests in watch mode",
+        "default_value": false
+      },
+      {
+        "name": "verbose",
+        "parameter_type": "Boolean",
+        "description": "Run with verbose output",
+        "default_value": false
+      }
+    ],
+    "constraints": []
+  },
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "passed": {
+        "type": "boolean",
+        "description": "Whether all tests passed"
+      },
+      "testResults": {
+        "type": "object",
+        "properties": {
+          "numPassedTests": {"type": "integer"},
+          "numFailedTests": {"type": "integer"},
+          "numPendingTests": {"type": "integer"},
+          "testResults": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "testFilePath": {"type": "string"},
+                "testResults": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "title": {"type": "string"},
+                      "status": {"type": "string"},
+                      "duration": {"type": "integer"}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "coverage": {
+        "type": "object",
+        "description": "Coverage results if coverage was enabled"
+      },
+      "output": {
+        "type": "string",
+        "description": "Raw Jest output"
+      }
+    },
+    "required": ["passed", "testResults"]
+  },
+  "caws_compliance": {
+    "required_rules": ["testing", "code-quality"],
+    "strict_mode": true
+  },
+  "metadata": {
+    "language": "javascript",
+    "tags": ["testing", "unit-tests", "javascript", "typescript", "jest"],
+    "risk_tier": "Low",
+    "timeout_seconds": 300,
+    "sandboxed": true,
+    "allowed_paths": ["./src", "./lib", "./test", "./__tests__"],
+    "environment_requirements": {
+      "node_version": ">=14.0.0",
+      "npm_packages": ["jest"]
+    }
+  }
+}

@@ -151,6 +151,7 @@ impl ClaimExtractionProcessor {
                         freshness: chrono::Utc::now(),
                     },
                     confidence: verified_claim.overall_confidence,
+                    relevance: 0.9, // High relevance for mathematical verification
                     timestamp: chrono::Utc::now(),
                 })
             }
@@ -176,6 +177,7 @@ impl ClaimExtractionProcessor {
                         freshness: verified_claim.verification_timestamp,
                     },
                     confidence: verified_claim.overall_confidence,
+                    relevance: 0.8, // High relevance for code behavior analysis
                     timestamp: verified_claim.verification_timestamp,
                 })
             }
@@ -201,6 +203,7 @@ impl ClaimExtractionProcessor {
                         freshness: chrono::Utc::now(),
                     },
                     confidence: verified_claim.overall_confidence,
+                    relevance: 0.85, // High relevance for semantic analysis
                     timestamp: chrono::Utc::now(),
                 })
             }

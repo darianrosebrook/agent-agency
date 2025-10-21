@@ -172,7 +172,7 @@ impl TextEvaluator {
         let passive_indicators = ["was", "were", "is being", "are being"];
         let sentences: Vec<&str> = text.split(&['.', '!', '?'][..]).collect();
 
-        for sentence in sentences {
+        for sentence in &sentences {
             let sentence_lower = sentence.to_lowercase();
             for indicator in &passive_indicators {
                 if sentence_lower.contains(indicator) {

@@ -67,7 +67,7 @@ impl Task {
 }
 
 /// Task types supported by the agent
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum TaskType {
     CodeFix,
     CodeGeneration,
@@ -80,6 +80,7 @@ pub enum TaskType {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TaskResult {
     pub task_id: Uuid,
+    pub task_type: TaskType,
     pub final_report: EvalReport,
     pub iterations: usize,
     pub stop_reason: StopReason,
@@ -508,7 +509,7 @@ pub enum WorkspaceBackend {
 }
 
 /// Sandbox operation types for RL signals
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum SandboxOperation {
     ApplyDiff,
     Rollback,

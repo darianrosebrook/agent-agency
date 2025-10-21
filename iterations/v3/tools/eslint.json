@@ -1,0 +1,125 @@
+{
+  "name": "eslint-runner",
+  "version": "1.0.0",
+  "description": "Run ESLint on JavaScript/TypeScript files for code quality analysis",
+  "author": "caws",
+  "tool_type": "CodeAnalysis",
+  "entry_point": "/usr/local/bin/eslint",
+  "dependencies": [],
+  "capabilities": ["FileRead", "CommandExecution"],
+  "parameters": {
+    "required": [
+      {
+        "name": "files",
+        "parameter_type": "Array",
+        "description": "Array of file paths to lint",
+        "validation_rules": [
+          {
+            "rule_type": "NotEmpty",
+            "error_message": "At least one file must be specified"
+          }
+        ]
+      }
+    ],
+    "optional": [
+      {
+        "name": "config",
+        "parameter_type": "File",
+        "description": "Path to ESLint configuration file",
+        "default_value": ".eslintrc.js"
+      },
+      {
+        "name": "format",
+        "parameter_type": "String",
+        "description": "Output format",
+        "default_value": "compact",
+        "validation_rules": [
+          {
+            "rule_type": "RegexMatch",
+            "parameters": {
+              "pattern": "^(compact|unix|visualstudio|json)$"
+            },
+            "error_message": "Format must be one of: compact, unix, visualstudio, json"
+          }
+        ]
+      }
+    ],
+    "constraints": [
+      {
+        "parameter_name": "files",
+        "constraint_type": "Required",
+        "message": "Files parameter is required"
+      }
+    ]
+  },
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "passed": {
+        "type": "boolean",
+        "description": "Whether linting passed without errors"
+      },
+      "errorCount": {
+        "type": "integer",
+        "description": "Number of errors found"
+      },
+      "warningCount": {
+        "type": "integer",
+        "description": "Number of warnings found"
+      },
+      "output": {
+        "type": "string",
+        "description": "Raw ESLint output"
+      },
+      "results": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "filePath": {"type": "string"},
+            "messages": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "ruleId": {"type": "string"},
+                  "severity": {"type": "integer"},
+                  "message": {"type": "string"},
+                  "line": {"type": "integer"},
+                  "column": {"type": "integer"}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "required": ["passed", "errorCount", "warningCount"]
+  },
+  "caws_compliance": {
+    "required_rules": ["code-quality", "security"],
+    "strict_mode": true,
+    "custom_validations": [
+      {
+        "name": "no-dangerous-patterns",
+        "description": "Check for potentially dangerous code patterns",
+        "validation_function": "validate_no_dangerous_patterns",
+        "parameters": {
+          "patterns": ["eval\\(", "innerHTML", "document\\.write"]
+        }
+      }
+    ]
+  },
+  "metadata": {
+    "language": "javascript",
+    "tags": ["linting", "code-quality", "javascript", "typescript"],
+    "risk_tier": "Low",
+    "timeout_seconds": 60,
+    "sandboxed": true,
+    "allowed_paths": ["./src", "./lib", "./test"],
+    "environment_requirements": {
+      "node_version": ">=14.0.0",
+      "npm_packages": ["eslint"]
+    }
+  }
+}

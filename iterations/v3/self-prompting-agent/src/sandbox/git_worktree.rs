@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 use tokio::process::Command;
 
 /// Manages Git worktree for snapshot functionality
+#[derive(Debug)]
 pub struct GitWorktree {
     worktree_root: PathBuf,
     main_repo: PathBuf,

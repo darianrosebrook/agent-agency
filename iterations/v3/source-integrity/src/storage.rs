@@ -133,23 +133,23 @@ impl SourceIntegrityStorage for PostgresSourceIntegrityStorage {
             let tampering_indicators: Vec<TamperingIndicator> =
                 serde_json::from_value(row.try_get::<serde_json::Value, _>("tampering_indicators").unwrap_or(serde_json::Value::Array(vec![])))?;
             let verification_metadata: HashMap<String, serde_json::Value> =
-                serde_json::from_value(row.try_get::<serde_json::Value, _>("verification_metadata").cloned().unwrap_or(serde_json::Value::Object(serde_json::Map::new())))?;
+                serde_json::from_value(row.try_get::<serde_json::Value, _>("verification_metadata").unwrap_or(serde_json::Value::Object(serde_json::Map::new())))?;
 
             Ok(Some(SourceIntegrityRecord {
-                id: Uuid::parse_str(row.try_get::<String, _>("id").unwrap().as_str().unwrap())?,
-                source_id: row.get("source_id").unwrap().as_str().unwrap().to_string(),
-                source_type: SourceType::from_string(row.get("source_type").unwrap().as_str().unwrap()).map_err(|e| anyhow::anyhow!("Invalid source type: {}", e))?,
-                content_hash: row.get("content_hash").unwrap().as_str().unwrap().to_string(),
-                content_size: row.get("content_size").unwrap().as_i64().unwrap(),
-                hash_algorithm: HashAlgorithm::from_string(row.get("hash_algorithm").unwrap().as_str().unwrap()).map_err(|e| anyhow::anyhow!("Invalid hash algorithm: {}", e))?,
-                integrity_status: IntegrityStatus::from_string(row.get("integrity_status").unwrap().as_str().unwrap()).map_err(|e| anyhow::anyhow!("Invalid integrity status: {}", e))?,
+                id: Uuid::parse_str(&row.try_get::<String, _>("id").unwrap())?,
+                source_id: row.try_get::<String, _>("source_id")?,
+                source_type: SourceType::from_string(&row.try_get::<String, _>("source_type")?).map_err(|e| anyhow::anyhow!("Invalid source type: {}", e))?,
+                content_hash: row.try_get::<String, _>("content_hash")?,
+                content_size: row.try_get::<i64, _>("content_size")?,
+                hash_algorithm: HashAlgorithm::from_string(&row.try_get::<String, _>("hash_algorithm")?).map_err(|e| anyhow::anyhow!("Invalid hash algorithm: {}", e))?,
+                integrity_status: IntegrityStatus::from_string(&row.try_get::<String, _>("integrity_status")?).map_err(|e| anyhow::anyhow!("Invalid integrity status: {}", e))?,
                 tampering_indicators,
                 verification_metadata,
-                first_seen_at: chrono::DateTime::parse_from_rfc3339(row.get("first_seen_at").unwrap().as_str().unwrap())?.into(),
+                first_seen_at: chrono::DateTime::parse_from_rfc3339(row.get("first_seen_at").unwrap())?.into(),
                 last_verified_at: row.get("last_verified_at").and_then(|v| v.as_str()).map(|s| chrono::DateTime::parse_from_rfc3339(s).unwrap().into()),
                 verification_count: row.get("verification_count").unwrap().as_i64().unwrap() as i32,
-                created_at: chrono::DateTime::parse_from_rfc3339(row.get("created_at").unwrap().as_str().unwrap())?.into(),
-                updated_at: chrono::DateTime::parse_from_rfc3339(row.get("updated_at").unwrap().as_str().unwrap())?.into(),
+                created_at: chrono::DateTime::parse_from_rfc3339(row.get("created_at").unwrap())?.into(),
+                updated_at: chrono::DateTime::parse_from_rfc3339(row.get("updated_at").unwrap())?.into(),
             }))
         } else {
             Ok(None)
@@ -181,23 +181,23 @@ impl SourceIntegrityStorage for PostgresSourceIntegrityStorage {
             let tampering_indicators: Vec<TamperingIndicator> =
                 serde_json::from_value(row.try_get::<serde_json::Value, _>("tampering_indicators").unwrap_or(serde_json::Value::Array(vec![])))?;
             let verification_metadata: HashMap<String, serde_json::Value> =
-                serde_json::from_value(row.try_get::<serde_json::Value, _>("verification_metadata").cloned().unwrap_or(serde_json::Value::Object(serde_json::Map::new())))?;
+                serde_json::from_value(row.try_get::<serde_json::Value, _>("verification_metadata").unwrap_or(serde_json::Value::Object(serde_json::Map::new())))?;
 
             Ok(Some(SourceIntegrityRecord {
-                id: Uuid::parse_str(row.try_get::<String, _>("id").unwrap().as_str().unwrap())?,
-                source_id: row.get("source_id").unwrap().as_str().unwrap().to_string(),
-                source_type: SourceType::from_string(row.get("source_type").unwrap().as_str().unwrap()).map_err(|e| anyhow::anyhow!("Invalid source type: {}", e))?,
-                content_hash: row.get("content_hash").unwrap().as_str().unwrap().to_string(),
-                content_size: row.get("content_size").unwrap().as_i64().unwrap(),
-                hash_algorithm: HashAlgorithm::from_string(row.get("hash_algorithm").unwrap().as_str().unwrap()).map_err(|e| anyhow::anyhow!("Invalid hash algorithm: {}", e))?,
-                integrity_status: IntegrityStatus::from_string(row.get("integrity_status").unwrap().as_str().unwrap()).map_err(|e| anyhow::anyhow!("Invalid integrity status: {}", e))?,
+                id: Uuid::parse_str(&row.try_get::<String, _>("id").unwrap())?,
+                source_id: row.try_get::<String, _>("source_id")?,
+                source_type: SourceType::from_string(&row.try_get::<String, _>("source_type")?).map_err(|e| anyhow::anyhow!("Invalid source type: {}", e))?,
+                content_hash: row.try_get::<String, _>("content_hash")?,
+                content_size: row.try_get::<i64, _>("content_size")?,
+                hash_algorithm: HashAlgorithm::from_string(&row.try_get::<String, _>("hash_algorithm")?).map_err(|e| anyhow::anyhow!("Invalid hash algorithm: {}", e))?,
+                integrity_status: IntegrityStatus::from_string(&row.try_get::<String, _>("integrity_status")?).map_err(|e| anyhow::anyhow!("Invalid integrity status: {}", e))?,
                 tampering_indicators,
                 verification_metadata,
-                first_seen_at: chrono::DateTime::parse_from_rfc3339(row.get("first_seen_at").unwrap().as_str().unwrap())?.into(),
+                first_seen_at: chrono::DateTime::parse_from_rfc3339(row.get("first_seen_at").unwrap())?.into(),
                 last_verified_at: row.get("last_verified_at").and_then(|v| v.as_str()).map(|s| chrono::DateTime::parse_from_rfc3339(s).unwrap().into()),
                 verification_count: row.get("verification_count").unwrap().as_i64().unwrap() as i32,
-                created_at: chrono::DateTime::parse_from_rfc3339(row.get("created_at").unwrap().as_str().unwrap())?.into(),
-                updated_at: chrono::DateTime::parse_from_rfc3339(row.get("updated_at").unwrap().as_str().unwrap())?.into(),
+                created_at: chrono::DateTime::parse_from_rfc3339(row.get("created_at").unwrap())?.into(),
+                updated_at: chrono::DateTime::parse_from_rfc3339(row.get("updated_at").unwrap())?.into(),
             }))
         } else {
             Ok(None)
@@ -317,18 +317,18 @@ impl SourceIntegrityStorage for PostgresSourceIntegrityStorage {
                 serde_json::from_value(row.try_get::<serde_json::Value, _>("verification_details").unwrap_or(serde_json::Value::Object(serde_json::Map::new())))?;
 
             results.push(SourceIntegrityVerification {
-                id: Uuid::parse_str(row.try_get::<String, _>("id").unwrap().as_str().unwrap())?,
-                source_integrity_id: Uuid::parse_str(row.get("source_integrity_id").unwrap().as_str().unwrap())?,
-                verification_type: VerificationType::from_string(row.get("verification_type").unwrap().as_str().unwrap()).map_err(|e| anyhow::anyhow!("Invalid verification type: {}", e))?,
-                verification_result: VerificationResult::from_string(row.get("verification_result").unwrap().as_str().unwrap()).map_err(|e| anyhow::anyhow!("Invalid verification result: {}", e))?,
-                calculated_hash: row.get("calculated_hash").unwrap().as_str().unwrap().to_string(),
-                stored_hash: row.get("stored_hash").unwrap().as_str().unwrap().to_string(),
-                hash_match: row.get("hash_match").unwrap().as_bool().unwrap(),
+                id: Uuid::parse_str(&row.try_get::<String, _>("id").unwrap())?,
+                source_integrity_id: Uuid::parse_str(&row.try_get::<String, _>("source_integrity_id")?)?,
+                verification_type: VerificationType::from_string(&row.try_get::<String, _>("verification_type")?).map_err(|e| anyhow::anyhow!("Invalid verification type: {}", e))?,
+                verification_result: VerificationResult::from_string(&row.try_get::<String, _>("verification_result")?).map_err(|e| anyhow::anyhow!("Invalid verification result: {}", e))?,
+                calculated_hash: row.try_get::<String, _>("calculated_hash")?,
+                stored_hash: row.try_get::<String, _>("stored_hash")?,
+                hash_match: row.get::<bool, _>("hash_match").unwrap(),
                 tampering_detected: row.get("tampering_detected").unwrap().as_bool().unwrap(),
                 verification_details,
                 verified_by: row.get("verified_by").and_then(|v| v.as_str()).map(|s| s.to_string()),
                 verification_duration_ms: row.get("verification_duration_ms").and_then(|v| v.as_i64()).map(|i| i as i32),
-                created_at: chrono::DateTime::parse_from_rfc3339(row.get("created_at").unwrap().as_str().unwrap())?.into(),
+                created_at: chrono::DateTime::parse_from_rfc3339(row.get("created_at").unwrap())?.into(),
             });
         }
 
@@ -366,19 +366,19 @@ impl SourceIntegrityStorage for PostgresSourceIntegrityStorage {
                 serde_json::from_value(row.try_get::<serde_json::Value, _>("alert_data").unwrap_or(serde_json::Value::Object(serde_json::Map::new())))?;
 
             results.push(SourceIntegrityAlert {
-                id: Uuid::parse_str(row.try_get::<String, _>("id").unwrap().as_str().unwrap())?,
-                source_integrity_id: Uuid::parse_str(row.get("source_integrity_id").unwrap().as_str().unwrap())?,
-                alert_type: AlertType::from_string(row.get("alert_type").unwrap().as_str().unwrap()).map_err(|e| anyhow::anyhow!("Invalid alert type: {}", e))?,
-                severity: AlertSeverity::from_string(row.get("severity").unwrap().as_str().unwrap()).map_err(|e| anyhow::anyhow!("Invalid alert severity: {}", e))?,
-                alert_message: row.get("alert_message").unwrap().as_str().unwrap().to_string(),
+                id: Uuid::parse_str(&row.try_get::<String, _>("id").unwrap())?,
+                source_integrity_id: Uuid::parse_str(&row.try_get::<String, _>("source_integrity_id")?)?,
+                alert_type: AlertType::from_string(&row.try_get::<String, _>("alert_type")?).map_err(|e| anyhow::anyhow!("Invalid alert type: {}", e))?,
+                severity: AlertSeverity::from_string(&row.try_get::<String, _>("severity")?).map_err(|e| anyhow::anyhow!("Invalid alert severity: {}", e))?,
+                alert_message: row.try_get::<String, _>("alert_message")?,
                 alert_data,
-                acknowledged: row.get("acknowledged").unwrap().as_bool().unwrap(),
-                acknowledged_by: row.get("acknowledged_by").and_then(|v| v.as_str()).map(|s| s.to_string()),
+                acknowledged: row.try_get::<bool, _>("acknowledged")?,
+                acknowledged_by: row.get::<Option<String>, _>("acknowledged_by").unwrap(),
                 acknowledged_at: row.get("acknowledged_at").and_then(|v| v.as_str()).map(|s| chrono::DateTime::parse_from_rfc3339(s).unwrap().into()),
                 resolved: row.get("resolved").unwrap().as_bool().unwrap(),
                 resolved_by: row.get("resolved_by").and_then(|v| v.as_str()).map(|s| s.to_string()),
                 resolved_at: row.get("resolved_at").and_then(|v| v.as_str()).map(|s| chrono::DateTime::parse_from_rfc3339(s).unwrap().into()),
-                created_at: chrono::DateTime::parse_from_rfc3339(row.get("created_at").unwrap().as_str().unwrap())?.into(),
+                created_at: chrono::DateTime::parse_from_rfc3339(row.get("created_at").unwrap())?.into(),
             });
         }
 

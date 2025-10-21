@@ -1582,3 +1582,6 @@ mod tests {
         assert!(sla.as_millis() > 0);
     }
 }
+
+// Close the impl InferenceEngine for CandleBackend block
+}

@@ -230,7 +230,7 @@ impl LearningBridge {
         }));
 
         // Calculate satisficing effectiveness
-        let stopped_early = matches!(task_result.stop_reason, Some(crate::types::StopReason::Satisficed));
+        let stopped_early = matches!(task_result.stop_reason, crate::types::StopReason::Satisficed);
         let quality_delta = if eval_history.len() > 1 {
             self.calculate_quality_improvement(eval_history)?
         } else {

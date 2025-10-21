@@ -376,6 +376,7 @@ impl EvidenceCollector {
                 freshness: Utc::now(),
             },
             confidence,
+            relevance: 0.8, // Default relevance for code analysis
             timestamp: Utc::now(),
         })
     }
@@ -1168,6 +1169,7 @@ impl EvidenceCollector {
                                     freshness: Utc::now(),
                                 },
                                 confidence: relevance * 0.75,
+                                relevance: relevance,
                                 timestamp: Utc::now(),
                             });
                         }

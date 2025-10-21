@@ -5,9 +5,10 @@
 
 use std::collections::HashMap;
 use crate::error::{CouncilError, CouncilResult};
-use crate::judge::{JudgeVerdict, JudgeContribution, RequiredChange, CriticalIssue, ChangePriority};
+use crate::judge::{JudgeVerdict, JudgeContribution, RequiredChange, CriticalIssue, ChangePriority, IssueSeverity};
 use strsim::{jaro_winkler, levenshtein, normalized_damerau_levenshtein};
 use regex::Regex;
+use tracing::warn;
 use once_cell::sync::Lazy;
 
 /// Result of aggregating multiple judge verdicts
@@ -32,7 +33,7 @@ pub struct AggregationResult {
     pub aggregated_changes: Option<AggregatedChanges>,
 
     /// Critical issues summary
-    pub critical_issues_summary: Vec<IssueSummary>,
+    pub critical_issues_summary: Vec<String>,
 
     /// Metadata about the aggregation process
     pub aggregation_metadata: AggregationMetadata,
@@ -577,9 +578,9 @@ impl VerdictAggregator {
                         confidence: consensus_strength,
                         critical_issues: vec![CriticalIssue {
                             severity: IssueSeverity::High,
-                            category: IssueCategory::Implementation,
+                            category: "Implementation".to_string(),
                             description: format!("Change aggregation failed: {}", e),
-                            suggested_fixes: vec!["Retry with different judge configuration".to_string()],
+                            evidence: vec!["Retry with different judge configuration".to_string()],
                         }],
                         alternative_approaches: vec!["Manual review required".to_string()],
                     })
@@ -590,9 +591,9 @@ impl VerdictAggregator {
             let critical_issues = self.aggregate_critical_issues(contributions)
                 .into_iter()
                 .map(|summary| CriticalIssue {
-                    severity: summary.severity,
-                    category: summary.category,
-                    description: summary.descriptions.join("; "),
+                    severity: IssueSeverity::High,
+                    category: "Aggregated Issue".to_string(),
+                    description: summary,
                     evidence: vec![],
                 })
                 .collect();
@@ -779,28 +780,24 @@ impl VerdictAggregator {
         }
     }
 
-    fn aggregate_critical_issues(&self, contributions: &[WeightedContribution]) -> Vec<IssueSummary> {
-        let mut issue_map = HashMap::new();
+    fn aggregate_critical_issues(&self, contributions: &[WeightedContribution]) -> Vec<String> {
+        let mut issues = Vec::new();
 
         for contribution in contributions {
             if let JudgeVerdict::Reject { critical_issues, .. } = &contribution.verdict {
                 for issue in critical_issues {
-                    let key = format!("{}:{:?}", issue.category, issue.severity);
-                    let entry = issue_map.entry(key).or_insert_with(|| IssueSummary {
-                        category: issue.category.clone(),
-                        severity: issue.severity,
-                        frequency: 0,
-                        descriptions: Vec::new(),
-                    });
-                    entry.frequency += 1;
-                    if !entry.descriptions.contains(&issue.description) {
-                        entry.descriptions.push(issue.description.clone());
+                    let summary = format!("{:?} ({:?}): {}", 
+                        issue.category, 
+                        issue.severity, 
+                        issue.description);
+                    if !issues.contains(&summary) {
+                        issues.push(summary);
                     }
                 }
             }
         }
 
-        issue_map.into_values().collect()
+        issues
     }
 }
 
@@ -1214,7 +1211,7 @@ impl ChangeDeduplicationEngine {
             affected_components,
             change_intent,
             complexity_indicators,
-            impact: change.impact,
+            impact: change.impact.clone(),
         }
     }
 
@@ -1259,7 +1256,7 @@ impl ChangeDeduplicationEngine {
 
         let scope_similarity = self.compute_scope_similarity(&features1.affected_components, &features2.affected_components);
 
-        let priority_similarity = self.compute_impact_compatibility(features1.impact, features2.impact);
+        let priority_similarity = self.compute_impact_compatibility(features1.impact.clone(), features2.impact.clone());
 
         let overall_similarity = (category_similarity * config.category_weight) +
                                (description_similarity * config.description_weight) +
@@ -1449,12 +1446,14 @@ impl ChangeDeduplicationEngine {
         features: &[ChangeSemanticFeatures],
     ) -> CouncilResult<RequiredChange> {
         if indices.is_empty() {
-            return Err(CouncilError::InvalidInput("Cannot merge empty change group".to_string()));
+            return Err(CouncilError::InvalidInput {
+                message: "Cannot merge empty change group".to_string(),
+            });
         }
 
         let first_change = &all_changes[indices[0]];
         let mut merged_description = first_change.description.clone();
-        let mut max_impact = first_change.impact;
+        let mut max_impact = first_change.impact.clone();
         let mut all_categories = std::collections::HashSet::new();
 
         // Collect information from all changes in the group
@@ -1463,8 +1462,8 @@ impl ChangeDeduplicationEngine {
             all_categories.insert(change.category.clone());
 
             // Update max impact (use impact as priority equivalent)
-            if self.impact_value(change.impact) > self.impact_value(max_impact) {
-                max_impact = change.impact;
+            if self.impact_value(change.impact.clone()) > self.impact_value(max_impact.clone()) {
+                max_impact = change.impact.clone();
             }
 
             // Merge descriptions if they differ

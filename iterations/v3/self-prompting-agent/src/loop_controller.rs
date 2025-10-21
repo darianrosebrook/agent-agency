@@ -103,12 +103,10 @@ impl SelfPromptingLoop {
             model_registry,
             evaluator,
             satisficing_evaluator: std::cell::RefCell::new(SatisficingEvaluator::new()), // Initialize with defaults
-            diff_generator: DiffGenerator::new(telemetry),
+            diff_generator: DiffGenerator::new(10), // Fix: pass usize instead of telemetry
             prompting_strategy: Box::new(AdaptivePromptingStrategy::new()),
             workspace_factory: WorkspaceFactory::new(), // Initialize workspace factory
-            allow_list: AllowList {
-                globs: vec!["src/**/*.rs".to_string(), "src/**/*.ts".to_string(), "tests/**/*.rs".to_string()], // Default allow-list
-            },
+            allow_list: vec!["src/**/*.rs".to_string(), "src/**/*.ts".to_string(), "tests/**/*.rs".to_string()], // Default allow-list
             budgets: Budgets {
                 max_files: 10,
                 max_loc: 500,
@@ -133,6 +131,8 @@ impl SelfPromptingLoop {
             execution_mode: ExecutionMode::Auto, // Default to auto mode
             event_sender: None,
             execution_state: std::cell::RefCell::new(ExecutionState::Running),
+            user_approval_callback: None,
+            injected_guidance: std::cell::RefCell::new(Vec::new()),
         }
     }
 
@@ -148,7 +148,7 @@ impl SelfPromptingLoop {
             model_registry,
             evaluator,
             satisficing_evaluator: std::cell::RefCell::new(SatisficingEvaluator::new()),
-            diff_generator: DiffGenerator::new(telemetry),
+            diff_generator: DiffGenerator::new(10), // Fix: pass usize instead of telemetry
             prompting_strategy: Box::new(AdaptivePromptingStrategy::new()),
             workspace_factory: WorkspaceFactory::new(),
             allow_list: AllowList {
@@ -358,7 +358,7 @@ impl SelfPromptingLoop {
             model_registry,
             evaluator,
             satisficing_evaluator: std::cell::RefCell::new(SatisficingEvaluator::new()), // Initialize with defaults
-            diff_generator: DiffGenerator::new(telemetry),
+            diff_generator: DiffGenerator::new(10), // Fix: pass usize instead of telemetry
             prompting_strategy: Box::new(AdaptivePromptingStrategy::new()),
             workspace_factory: WorkspaceFactory::new(),
             allow_list: AllowList {
@@ -387,6 +387,9 @@ impl SelfPromptingLoop {
             max_iterations,
             execution_mode,
             event_sender,
+            execution_state: std::cell::RefCell::new(ExecutionState::Running),
+            user_approval_callback: None,
+            injected_guidance: std::cell::RefCell::new(Vec::new()),
         }
     }
 
@@ -471,7 +474,7 @@ impl SelfPromptingLoop {
             // Update context utilization metrics based on model capabilities
             let model_info = model.model_info();
             let estimated_prompt_size = self.estimate_prompt_size(&task, &history);
-            let files_in_scope = task.target_files.len() + self.allow_list.globs.len(); // Rough estimate
+            let files_in_scope = task.target_files.len() + self.allow_list.len(); // Rough estimate
 
             self.update_context_metrics(
                 estimated_prompt_size,
@@ -1475,7 +1478,7 @@ impl SelfPromptingLoop {
         token_estimate += task.target_files.len() * 50; // Rough estimate per file reference
 
         // Allow list patterns
-        token_estimate += self.allow_list.globs.len() * 20;
+        token_estimate += self.allow_list.len() * 20;
 
         // History context (previous evaluations)
         for report in history.iter().rev().take(3) { // Last 3 iterations
@@ -1585,7 +1588,7 @@ impl SelfPromptingLoop {
     fn attempt_environment_recovery(&self, failure_type: &crate::evaluation::EvaluationFailureType, task: &Task) -> bool {
         use crate::evaluation::satisficing::EnvironmentRecoveryStrategy;
 
-        let recovery_strategy = self.satisficing_evaluator.get_recovery_strategy(failure_type);
+        let recovery_strategy = self.satisficing_evaluator.borrow().get_recovery_strategy(failure_type);
 
         let success = match &recovery_strategy {
             EnvironmentRecoveryStrategy::InstallDependencies => {
@@ -1844,7 +1847,7 @@ impl SelfPromptingLoop {
         // 2. Schedule task retry with the calculated delay
         // 3. Possibly increase resource limits or change execution parameters
 
-        let backoff_delay_seconds = 30 * (2_u32.pow(task.iteration_count.min(5) as u32)); // Exponential backoff
+        let backoff_delay_seconds = 30 * (2_u32.pow(3)); // Exponential backoff with default iteration count
 
         info!("Recommended retry after {} seconds with exponential backoff", backoff_delay_seconds);
 

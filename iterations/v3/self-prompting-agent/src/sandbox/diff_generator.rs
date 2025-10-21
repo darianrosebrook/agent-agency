@@ -100,7 +100,7 @@ impl DiffGenerator {
     /// Format diff as unified diff with deterministic headers
     fn format_unified_diff(
         &self,
-        diff: &TextDiff,
+        diff: &TextDiff<str>,
         file_path: &Path,
     ) -> Result<String, DiffError> {
         let mut output = String::new();

@@ -40,6 +40,10 @@ pub trait PromptingStrategy {
     // - validate_prompt(&self, prompt: &Prompt) -> Result<bool>
 }
 
+impl PromptingStrategy for AdaptivePromptingStrategy {
+    // Empty implementation for now
+}
+
 /// Telemetry collector for agent performance tracking
 #[derive(Debug, Clone)]
 pub struct AgentTelemetryCollector {

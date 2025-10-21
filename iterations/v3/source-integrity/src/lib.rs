@@ -16,3 +16,4 @@ pub mod types;
 
 pub use service::SourceIntegrityService;
 pub use types::*;
+pub use hasher::{Digest, StreamingHasher, MerkleTree, MerkleNode};

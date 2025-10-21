@@ -1,0 +1,97 @@
+{
+  "name": "prettier-formatter",
+  "version": "1.0.0",
+  "description": "Format JavaScript/TypeScript/CSS/HTML files using Prettier",
+  "author": "caws",
+  "tool_type": "CodeAnalysis",
+  "entry_point": "/usr/local/bin/prettier",
+  "dependencies": [],
+  "capabilities": ["FileRead", "FileWrite"],
+  "parameters": {
+    "required": [
+      {
+        "name": "files",
+        "parameter_type": "Array",
+        "description": "Array of file paths to format",
+        "validation_rules": [
+          {
+            "rule_type": "NotEmpty",
+            "error_message": "At least one file must be specified"
+          }
+        ]
+      }
+    ],
+    "optional": [
+      {
+        "name": "config",
+        "parameter_type": "File",
+        "description": "Path to Prettier configuration file",
+        "default_value": ".prettierrc"
+      },
+      {
+        "name": "write",
+        "parameter_type": "Boolean",
+        "description": "Write formatted files to disk",
+        "default_value": true
+      },
+      {
+        "name": "check",
+        "parameter_type": "Boolean",
+        "description": "Check if files are already formatted",
+        "default_value": false
+      }
+    ],
+    "constraints": [
+      {
+        "parameter_name": "files",
+        "constraint_type": "Required",
+        "message": "Files parameter is required"
+      }
+    ]
+  },
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "formatted": {
+        "type": "boolean",
+        "description": "Whether files were successfully formatted"
+      },
+      "changedFiles": {
+        "type": "array",
+        "items": {"type": "string"},
+        "description": "List of files that were changed"
+      },
+      "unchangedFiles": {
+        "type": "array",
+        "items": {"type": "string"},
+        "description": "List of files that were already formatted"
+      },
+      "errors": {
+        "type": "array",
+        "items": {"type": "string"},
+        "description": "Any formatting errors encountered"
+      },
+      "output": {
+        "type": "string",
+        "description": "Raw Prettier output"
+      }
+    },
+    "required": ["formatted"]
+  },
+  "caws_compliance": {
+    "required_rules": ["code-quality"],
+    "strict_mode": false
+  },
+  "metadata": {
+    "language": "javascript",
+    "tags": ["formatting", "code-style", "javascript", "typescript", "css", "html"],
+    "risk_tier": "Low",
+    "timeout_seconds": 120,
+    "sandboxed": true,
+    "allowed_paths": ["./src", "./lib", "./test", "./public"],
+    "environment_requirements": {
+      "node_version": ">=12.0.0",
+      "npm_packages": ["prettier"]
+    }
+  }
+}

@@ -47,6 +47,8 @@ impl Default for OllamaConfig {
             base_url: "http://localhost:11434".to_string(),
             model_name: "gemma:3n".to_string(),
             timeout_seconds: 300,
+            max_context: 4096,
+            generation_params: GenerationParams::default(),
         }
     }
 }
@@ -109,8 +111,7 @@ impl OllamaProvider {
     pub fn with_config(config: OllamaConfig) -> Result<Self, ModelError> {
         let client = Client::builder()
             .timeout(std::time::Duration::from_secs(config.timeout_seconds))
-            .build()
-            .map_err(ModelError::ConfigError)?;
+            .build()?;
 
         let model_info = ModelInfo {
             id: format!("ollama:{}", config.model_name),

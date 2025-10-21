@@ -231,23 +231,30 @@ impl MetricsBackend for PrometheusMetrics {
         let instance_key = self.make_instance_key(name, labels);
 
         // Get or create the gauge instance
-        let gauge = {
+        let gauge_result = {
             let mut gauge_instances = self.gauge_instances.lock().await;
             if let Some(existing) = gauge_instances.get(&instance_key) {
-                existing.clone()
+                Ok(existing.clone())
             } else {
                 // Create new gauge vec if needed
-                let gauge_vec = self.get_or_create_gauge(name, "Generic gauge").await
-                    .map_err(|e| MetricsBackendError::MetricCreationError(e.to_string()))?;
-
-                let gauge = gauge_vec.with_label_values(&self.extract_label_values(labels));
-                gauge_instances.insert(instance_key, gauge.clone());
-                Ok(gauge)
+                match self.get_or_create_gauge(name, "Generic gauge").await {
+                    Ok(gauge_vec) => {
+                        let gauge = gauge_vec.with_label_values(&self.extract_label_values(labels));
+                        gauge_instances.insert(instance_key, gauge.clone());
+                        Ok(gauge)
+                    }
+                    Err(e) => {
+                        tracing::error!("Failed to create gauge '{}': {}", name, e);
+                        Err(e)
+                    }
+                }
             }
         };
 
-        // Update the gauge
-        gauge.set(value);
+        // Update the gauge if we got one successfully
+        if let Ok(gauge) = gauge_result {
+            gauge.set(value);
+        }
     }
 
     async fn histogram(&self, name: &str, labels: &[(&str, &str)], value: f64) {

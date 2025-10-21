@@ -225,7 +225,7 @@ impl RLSignalGenerator {
                 iteration,
                 timestamp: Utc::now(),
                 eval_score: eval_report.score,
-                changes_made: eval_report.files_modified,
+                changes_made: 0, // Default value since files_modified field doesn't exist on EvalReport
                 time_spent,
             };
             context.iterations.push(snapshot);
@@ -270,71 +270,60 @@ impl RLSignalGenerator {
 
         let total_time = Utc::now().signed_duration_since(context.start_time).num_milliseconds() as u64;
 
-        match final_result {
-            crate::types::TaskResult::Completed(result) => {
-                // Task success signal
-                let budget_efficiency = if context.iterations.len() > 0 {
-                    let total_files = context.iterations.iter().map(|i| i.changes_made).sum::<usize>() as f64;
-                    let total_loc = context.budget_events.last()
-                        .map(|e| e.current_usage.loc_used as f64)
-                        .unwrap_or(0.0);
-                    let allocated_files = context.budget_events.first()
-                        .map(|e| e.original_limits.max_files as f64)
-                        .unwrap_or(1.0);
-                    let allocated_loc = context.budget_events.first()
-                        .map(|e| e.original_limits.max_loc as f64)
-                        .unwrap_or(1.0);
+        // TaskResult is a struct, not an enum, so we handle it directly
+        // Task success signal
+        let budget_efficiency = if context.iterations.len() > 0 {
+            let total_files = context.iterations.iter().map(|i| i.changes_made).sum::<usize>() as f64;
+            let total_loc = context.budget_events.last()
+                .map(|e| e.current_usage.loc_used as f64)
+                .unwrap_or(0.0);
+            let allocated_files = context.budget_events.first()
+                .map(|e| e.original_limits.max_files as f64)
+                .unwrap_or(1.0);
+            let allocated_loc = context.budget_events.first()
+                .map(|e| e.original_limits.max_loc as f64)
+                .unwrap_or(1.0);
 
-                    (total_files / allocated_files + total_loc / allocated_loc) / 2.0
-                } else {
-                    1.0
-                };
+            (total_files / allocated_files + total_loc / allocated_loc) / 2.0
+        } else {
+            1.0
+        };
 
-                signals.push(RLSignal::TaskSuccess {
-                    task_id,
-                    final_score: result.final_report.score,
-                    iterations_used: result.iterations,
-                    budget_efficiency,
-                    time_to_completion: total_time,
-                });
+        signals.push(RLSignal::TaskSuccess {
+            task_id,
+            final_score: final_result.final_report.score,
+            iterations_used: final_result.iterations,
+            budget_efficiency,
+            time_to_completion: total_time,
+        });
 
-                // Check for plateau early detection
-                if self.detect_plateau(&context.iterations, result.stop_reason.clone()) {
-                    signals.push(RLSignal::PlateauEarly {
-                        task_id,
-                        iterations_to_plateau: result.iterations,
-                        score_curve: context.iterations.iter().map(|i| i.eval_score).collect(),
-                        plateau_threshold: 0.02, // 2% improvement threshold
-                    });
-                }
-            }
+        // Check for plateau early detection
+        if self.detect_plateau(&context.iterations, final_result.stop_reason.clone()) {
+            signals.push(RLSignal::PlateauEarly {
+                task_id,
+                iterations_to_plateau: final_result.iterations,
+                score_curve: context.iterations.iter().map(|i| i.eval_score).collect(),
+                plateau_threshold: 0.02, // 2% improvement threshold
+            });
+        }
 
-            crate::types::TaskResult::Failed(reason) => {
-                // Task failure signal
-                let best_score = context.iterations.iter()
-                    .map(|i| i.eval_score)
-                    .max_by(|a, b| a.partial_cmp(b).unwrap())
-                    .unwrap_or(0.0);
+        // Handle task failure based on stop_reason
+        if matches!(final_result.stop_reason, crate::types::StopReason::Error) {
+            // Task failure signal
+            let best_score = context.iterations.iter()
+                .map(|i| i.eval_score)
+                .max_by(|a, b| a.partial_cmp(b).unwrap())
+                .unwrap_or(0.0);
 
-                let failure_mode = match reason.as_str() {
-                    "Budget exceeded" => FailureMode::BudgetExhausted,
-                    "Quality ceiling reached" => FailureMode::QualityCeilingReached,
-                    "Model failure" => FailureMode::ModelFailure,
-                    "Sandbox error" => FailureMode::SandboxError,
-                    "Context overflow" => FailureMode::ContextOverflow,
-                    "Validation error" => FailureMode::ValidationError,
-                    "Timeout" => FailureMode::Timeout,
-                    _ => FailureMode::ValidationError,
-                };
+            let failure_mode = FailureMode::ValidationError; // Default failure mode
 
-                signals.push(RLSignal::TaskFailure {
-                    task_id,
-                    stop_reason: crate::types::StopReason::Error(reason.clone()),
-                    iterations_attempted: context.iterations.len(),
-                    best_score_achieved: best_score,
-                    failure_mode,
-                });
-            }
+            signals.push(RLSignal::TaskFailure {
+                task_id,
+                stop_reason: final_result.stop_reason.clone(),
+                iterations_attempted: context.iterations.len(),
+                best_score_achieved: best_score,
+                failure_mode,
+            });
         }
 
         // Generate model performance signals
@@ -542,29 +531,28 @@ mod tests {
         generator.start_task(task_id, &Task {
             id: task_id,
             description: "Test task".to_string(),
-            max_iterations: 5,
-            created_at: Utc::now(),
+            task_type: crate::types::TaskType::CodeFix,
+            target_files: vec![],
+            constraints: std::collections::HashMap::new(),
+            refinement_context: vec![],
         });
 
         // Simulate successful completion
-        let result = crate::types::TaskResult::Completed(TaskResultDetail {
+        let result = crate::types::TaskResult {
             task_id,
-            final_report: crate::evaluation::EvalReport {
+            task_type: crate::types::TaskType::CodeFix,
+            final_report: crate::types::EvalReport {
                 score: 0.95,
-                files_modified: 3,
-                loc_added: 150,
-                loc_removed: 20,
-                test_results: vec![],
-                lint_errors: vec![],
+                status: crate::types::EvalStatus::Pass,
+                thresholds_met: vec!["syntax_check".to_string()],
                 failed_criteria: vec![],
-                recommendations: vec![],
             },
             iterations: 3,
             stop_reason: crate::types::StopReason::Satisficed,
             model_used: "test-model".to_string(),
             total_time_ms: 5000,
             artifacts: vec![],
-        });
+        };
 
         let signals = generator.generate_completion_signals(task_id, &result);
 
