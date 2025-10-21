@@ -4,6 +4,7 @@
 //! routing, CAWS compliance checking, and performance tracking.
 
 pub mod autonomous_executor;
+pub mod caws;
 pub mod caws_checker;
 pub mod executor;
 pub mod manager;

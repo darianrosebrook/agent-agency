@@ -1,3 +1,10 @@
+// DEPRECATION NOTICE: CawsRuntimeValidator trait migrating to caws-runtime-validator
+// See: iterations/v3/caws/runtime-validator/src/integration.rs
+// TODO: Remove after migration complete (target: Phase 1.2)
+
+// Re-export from runtime-validator
+pub use caws_runtime_validator::integration::OrchestrationIntegration;
+
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
@@ -71,6 +78,7 @@ pub enum ValidatorError {
     InvalidSpec(String),
 }
 
+#[deprecated(note = "Use caws_runtime_validator::integration::OrchestrationIntegration")]
 #[async_trait::async_trait]
 pub trait CawsRuntimeValidator: Send + Sync {
     async fn validate(
@@ -93,6 +101,7 @@ pub struct DiffStats {
     pub touched_paths: Vec<String>,
 }
 
+#[deprecated(note = "Use caws_runtime_validator::integration::DefaultOrchestrationIntegration")]
 pub struct DefaultValidator;
 impl DefaultValidator {
     fn mde(&self) -> impl MinimalDiffEvaluator {
@@ -132,6 +141,7 @@ impl MinimalDiffEvaluator for NoopMde {
     }
 }
 
+#[deprecated(note = "Use caws_runtime_validator::integration::DefaultOrchestrationIntegration")]
 #[async_trait::async_trait]
 impl CawsRuntimeValidator for DefaultValidator {
     async fn validate(

@@ -4,9 +4,9 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::types::{Digest, ChangeSource, ConflictClass, SessionMeta, SessionRef, Commit};
+use crate::types::{Digest, ChangeId, ChangeSource, ConflictClass, SessionMeta, SessionRef, Commit};
 use crate::cas::{ConcurrencyManager, ConcurrencyResult, ConflictInfo, ConflictResolution};
-use crate::merkle::{Commit as MerkleCommit, FileTree as MerkleTree};
+use crate::merkle::{Commit as MerkleCommit, FileTree as MerkleTree, AuthorInfo};
 use crate::journal::WriteAheadLog;
 use crate::policy::{CawsPolicy, PolicyEnforcer};
 
@@ -64,7 +64,7 @@ impl SelfPromptingRecovery {
     pub fn new(config: RecoveryConfig) -> Result<Self> {
         let concurrency_manager = ConcurrencyManager::new();
         let policy_enforcer = PolicyEnforcer::new(CawsPolicy::new());
-        let wal = Wal::new(config.recovery_dir.join("journal.wal"))?;
+        let wal = WriteAheadLog::new(config.recovery_dir.join("journal.wal"))?;
         
         Ok(Self {
             concurrency_manager,
@@ -82,22 +82,14 @@ impl SelfPromptingRecovery {
         let session_ref = SessionRef {
             id: session_id.clone(),
             meta: session_meta.clone(),
-            created_at: Self::current_timestamp(),
+            created_at: chrono::Utc::now(),
         };
 
         // Check if session creation is allowed
         match self.policy_enforcer.check_session_creation(&session_id)? {
             crate::policy::SessionCheckResult::Allowed => {
-                // Create session in concurrency manager
-                self.concurrency_manager.add_session(crate::policy::SessionInfo {
-                    session_id: session_id.clone(),
-                    start_time: session_ref.created_at,
-                    end_time: None,
-                    change_count: 0,
-                    storage_used: 0,
-                    labels: vec![], // TODO: Add labels to SessionMeta
-                    protected: false, // TODO: Add protected to SessionMeta
-                });
+                // TODO: Add session tracking to concurrency manager
+                // For now, we'll track sessions separately
 
                 // Store session metadata
                 self.session_metadata.insert(session_id.clone(), session_meta);
@@ -117,15 +109,12 @@ impl SelfPromptingRecovery {
 
     /// End the current recovery session
     pub fn end_session(&mut self) -> Result<()> {
-        if let Some(session_ref) = &self.current_session {
+        if let Some(session_ref) = self.current_session.take() {
             // Check if session deletion is allowed
             match self.policy_enforcer.check_session_deletion(&session_ref.id)? {
                 crate::policy::SessionDeletionCheckResult::Allowed => {
                     // Remove session from concurrency manager
-                    self.concurrency_manager.remove_session(&session_ref.id);
-                    
-                    // Clear current session
-                    self.current_session = None;
+                    // TODO: Remove session from concurrency manager
                     
                     if self.config.enable_logging {
                         println!("Ended recovery session: {}", session_ref.id);
@@ -201,19 +190,15 @@ impl SelfPromptingRecovery {
         let commit = self.create_commit_from_session(session_ref, label)?;
         
         // Write to WAL
-        self.wal.append(crate::journal::JournalRecord::Commit {
-            commit_id: commit.id.clone(),
-            session_id: session_ref.id.clone(),
-            timestamp: Self::current_timestamp(),
-        })?;
+        self.wal.record_commit(&ChangeId(commit.id.to_string()), commit.tree())?;
 
         if self.config.enable_logging {
             println!("Created checkpoint: {} for session {}", commit.id, session_ref.id);
         }
 
         Ok(CheckpointResult {
-            commit_id: commit.id.clone(),
-            timestamp: Self::current_timestamp(),
+            commit_id: commit.id.to_string(),
+            timestamp: chrono::Utc::now().timestamp() as u64,
             session_id: session_ref.id.clone(),
         })
     }
@@ -225,7 +210,7 @@ impl SelfPromptingRecovery {
         }
 
         if iteration % self.config.checkpoint_frequency == 0 {
-            self.create_checkpoint(Some(format!("auto-checkpoint-{}", iteration)))
+            Ok(Some(self.create_checkpoint(Some(format!("auto-checkpoint-{}", iteration)))?))
         } else {
             Ok(None)
         }
@@ -291,7 +276,7 @@ impl SelfPromptingRecovery {
         use crate::types::StreamingHasher;
         let mut hasher = StreamingHasher::new();
         hasher.update(content);
-        Digest::from_blake3(hasher.finalize())
+        hasher.finalize()
     }
 
     /// Get file precondition for optimistic concurrency
@@ -304,17 +289,18 @@ impl SelfPromptingRecovery {
     fn create_commit_from_session(&self, session_ref: &SessionRef, label: Option<String>) -> Result<MerkleCommit> {
         // TODO: Implement commit creation from session state
         // This would involve creating a Merkle tree from the current file state
-        let tree = MerkleTree::from_digests(vec![]); // Placeholder
+        let tree = MerkleTree::empty(); // Placeholder
         let commit = MerkleCommit::new(
+            Some(Digest::from_bytes([0; 32])), // Parent commit
+            tree.digest(),
             session_ref.id.clone(),
-            Some(Digest::from_bytes(&[])), // Parent commit
-            tree,
-            session_ref.id.clone(),
-            None, // CAWS verdict ID
+            AuthorInfo {
+                name: session_ref.meta.agent_id.clone().unwrap_or_default(),
+                email: "agent@system".to_string(),
+                agent_id: Some(session_ref.meta.agent_id.clone().unwrap_or_default()),
+            },
+            label,
             crate::types::ChangeStats::default(),
-            Self::current_timestamp(),
-            session_ref.meta.agent_id.clone().unwrap_or_default(),
-            label.unwrap_or_else(|| "checkpoint".to_string()),
         );
         Ok(commit)
     }

@@ -134,7 +134,7 @@ impl PackFile {
                 version: 1,
                 object_count: 0,
                 total_size: 0,
-                checksum: Digest::from_bytes(&[]),
+                checksum: Digest::from_bytes([0; 32]),
                 created_at: 0,
                 modified_at: 0,
             },
@@ -179,7 +179,7 @@ impl PackFile {
 
         let mut checksum = [0u8; 32];
         file.read_exact(&mut checksum)?;
-        let checksum = Digest::from_bytes(&checksum);
+        let checksum = Digest::from_bytes(checksum);
 
         let mut created_at = [0u8; 8];
         file.read_exact(&mut created_at)?;
@@ -206,9 +206,21 @@ impl PackFile {
         file.write_all(&self.header.version.to_be_bytes())?;
         file.write_all(&self.header.object_count.to_be_bytes())?;
         file.write_all(&self.header.total_size.to_be_bytes())?;
-        file.write_all(&self.header.checksum.as_bytes())?;
+        file.write_all(self.header.checksum.as_bytes())?;
         file.write_all(&self.header.created_at.to_be_bytes())?;
         file.write_all(&self.header.modified_at.to_be_bytes())?;
+        Ok(())
+    }
+
+    /// Write pack file header (internal method)
+    fn write_header_internal(file: &mut File, header: &PackHeader) -> Result<()> {
+        file.write_all(&header.magic)?;
+        file.write_all(&header.version.to_be_bytes())?;
+        file.write_all(&header.object_count.to_be_bytes())?;
+        file.write_all(&header.total_size.to_be_bytes())?;
+        file.write_all(header.checksum.as_bytes())?;
+        file.write_all(&header.created_at.to_be_bytes())?;
+        file.write_all(&header.modified_at.to_be_bytes())?;
         Ok(())
     }
 
@@ -225,7 +237,7 @@ impl PackFile {
                 compressed: false, // TODO: Implement compression
             };
             
-            self.write_object_header(file, &object_header)?;
+            Self::write_object_header_internal(file, &object_header)?;
             
             // Write object data
             file.write_all(data)?;
@@ -251,7 +263,7 @@ impl PackFile {
                 file.seek(SeekFrom::Start(*offset))?;
                 
                 // Read object header
-                let header = self.read_object_header(file)?;
+                let header = Self::read_object_header_internal(file)?;
                 
                 // Read object data
                 let mut data = vec![0u8; header.size as usize];
@@ -266,16 +278,16 @@ impl PackFile {
         }
     }
 
-    /// Write object header
-    fn write_object_header(&self, file: &mut File, header: &ObjectHeader) -> Result<()> {
+    /// Write object header (internal method)
+    fn write_object_header_internal(file: &mut File, header: &ObjectHeader) -> Result<()> {
         // Write digest
-        file.write_all(&header.digest.as_bytes())?;
+        file.write_all(header.digest.as_bytes())?;
         
         // Write size (varint)
-        self.write_varint(file, header.size as u64)?;
+        Self::write_varint(file, header.size as u64)?;
         
         // Write object type
-        file.write_all(&[header.object_type as u8])?;
+        file.write_all(&[header.object_type.clone() as u8])?;
         
         // Write compressed flag
         file.write_all(&[if header.compressed { 1 } else { 0 }])?;
@@ -283,15 +295,15 @@ impl PackFile {
         Ok(())
     }
 
-    /// Read object header
-    fn read_object_header(&self, file: &mut File) -> Result<ObjectHeader> {
+    /// Read object header (internal method)
+    fn read_object_header_internal(file: &mut File) -> Result<ObjectHeader> {
         // Read digest
         let mut digest_bytes = [0u8; 32];
         file.read_exact(&mut digest_bytes)?;
-        let digest = Digest::from_bytes(&digest_bytes);
+        let digest = Digest::from_bytes(digest_bytes);
         
         // Read size (varint)
-        let size = self.read_varint(file)?;
+        let size = Self::read_varint(file)?;
         
         // Read object type
         let mut object_type_byte = [0u8; 1];
@@ -318,7 +330,7 @@ impl PackFile {
     }
 
     /// Write varint
-    fn write_varint(&self, file: &mut File, mut value: u64) -> Result<()> {
+    fn write_varint(file: &mut File, mut value: u64) -> Result<()> {
         while value >= 0x80 {
             file.write_all(&[((value & 0x7f) | 0x80) as u8])?;
             value >>= 7;
@@ -328,7 +340,7 @@ impl PackFile {
     }
 
     /// Read varint
-    fn read_varint(&self, file: &mut File) -> Result<u64> {
+    fn read_varint(file: &mut File) -> Result<u64> {
         let mut result = 0u64;
         let mut shift = 0;
         
@@ -364,7 +376,8 @@ impl PackFile {
     pub fn close(&mut self) -> Result<()> {
         if let Some(file) = &mut self.file {
             // Update header with final values
-            self.write_header(file)?;
+            let header = self.header.clone();
+            Self::write_header_internal(file, &header)?;
             file.sync_all()?;
         }
         self.file = None;
@@ -412,7 +425,7 @@ impl PackIndex {
         for _ in 0..entry_count {
             let mut digest_bytes = [0u8; 32];
             reader.read_exact(&mut digest_bytes)?;
-            let digest = Digest::from_bytes(&digest_bytes);
+            let digest = Digest::from_bytes(digest_bytes);
             
             let mut offset_bytes = [0u8; 8];
             reader.read_exact(&mut offset_bytes)?;
@@ -460,13 +473,14 @@ impl PackIndex {
         
         // Write entries
         for entry in &self.entries {
-            writer.write_all(&entry.digest.as_bytes())?;
+            writer.write_all(entry.digest.as_bytes())?;
             writer.write_all(&entry.offset.to_be_bytes())?;
             writer.write_all(&entry.size.to_be_bytes())?;
-            writer.write_all(&[entry.object_type as u8])?;
+            writer.write_all(&[entry.object_type.clone() as u8])?;
         }
         
         writer.flush()?;
+        drop(writer); // Ensure writer is dropped before sync
         file.sync_all()?;
         Ok(())
     }
@@ -503,9 +517,9 @@ impl PackManager {
     pub fn new(pack_dir: PathBuf, index_dir: PathBuf) -> Self {
         Self {
             pack_dir,
-            index_dir,
+            index_dir: index_dir.clone(),
             active_packs: HashMap::new(),
-            pack_index: PackIndex::new(index_dir.join("pack.idx")),
+            pack_index: PackIndex::new(index_dir.clone().join("pack.idx")),
             config: PackConfig::default(),
         }
     }
@@ -523,7 +537,7 @@ impl PackManager {
         pack_file.header.created_at = Self::current_timestamp();
         pack_file.header.modified_at = pack_file.header.created_at;
         
-        self.active_packs.insert(pack_id, pack_file);
+        self.active_packs.insert(pack_id.clone(), pack_file);
         Ok(self.active_packs.get_mut(&pack_id).unwrap())
     }
 

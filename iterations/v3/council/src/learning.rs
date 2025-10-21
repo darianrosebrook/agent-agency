@@ -2167,20 +2167,33 @@ impl LearningSignalStorage for InMemoryLearningSignalStorage {
             caws_spec: None,
         };
 
-         // TODO: Implement historical resource data retrieval
-         // - Create resource usage database schema
-         // - Implement data collection and storage pipeline
-         // - Add historical data aggregation and analysis
-         // - Support time-series queries and trend analysis
-         // - Implement data retention and cleanup policies
-         // - Add resource usage prediction algorithms
-         // PLACEHOLDER: Implement actual historical resource data retrieval
-        // - Connect to resource monitoring database
-        // - Query historical resource usage patterns
-        // - Implement data preprocessing and cleaning
-        // - Support different time windows and granularity
-        // - Add data validation and error handling
-        // - Implement data caching for performance
+        // Implement actual historical resource data retrieval
+        let historical_data = self.retrieve_historical_resource_data(&task_spec).await?;
+
+        // Validate retrieved data
+        if historical_data.entries.is_empty() {
+            tracing::warn!("No historical resource data found for task spec: {}", task_spec.id);
+            return Ok(historical_data);
+        }
+
+        // Perform trend analysis on the data
+        let trends = self.analyze_resource_usage_trends(&historical_data).await?;
+
+        // Generate resource usage predictions
+        let predictions = self.generate_resource_usage_predictions(&historical_data, &trends).await?;
+
+        // Log performance insights
+        tracing::info!(
+            "Historical resource data retrieved: {} entries, trends: {} predictions generated",
+            historical_data.entries.len(),
+            trends.len()
+        );
+
+        // Update the historical data with predictions
+        let mut enriched_data = historical_data;
+        enriched_data.predictions = predictions;
+
+        Ok(enriched_data)
 
         // Test that fallback simulation works
         let analyzer = LearningSignalAnalyzer::new();
@@ -2265,5 +2278,174 @@ impl LearningSignalStorage for InMemoryLearningSignalStorage {
         // assert_eq!(retrieved.id, signal.id);
 
         tracing::debug!("Learning signal structure validation completed");
+    }
+
+    /// Analyze resource usage trends from historical data
+    async fn analyze_resource_usage_trends(&self, data: &HistoricalResourceData) -> Result<Vec<ResourceTrend>> {
+        if data.entries.len() < 2 {
+            return Ok(vec![]);
+        }
+
+        let mut trends = Vec::new();
+
+        // Analyze CPU usage trends
+        if let Some(cpu_trend) = self.calculate_resource_trend(&data.entries, |entry| entry.resource_usage.cpu_percent) {
+            trends.push(ResourceTrend {
+                resource_type: "cpu".to_string(),
+                trend: cpu_trend.trend_type,
+                slope: cpu_trend.slope,
+                confidence: cpu_trend.confidence,
+                time_window: cpu_trend.time_window,
+            });
+        }
+
+        // Analyze memory usage trends
+        if let Some(memory_trend) = self.calculate_resource_trend(&data.entries, |entry| entry.resource_usage.memory_mb as f32) {
+            trends.push(ResourceTrend {
+                resource_type: "memory".to_string(),
+                trend: memory_trend.trend_type,
+                slope: memory_trend.slope,
+                confidence: memory_trend.confidence,
+                time_window: memory_trend.time_window,
+            });
+        }
+
+        // Analyze I/O trends
+        if let Some(io_trend) = self.calculate_resource_trend(&data.entries, |entry| entry.resource_usage.io_bytes_per_sec as f32) {
+            trends.push(ResourceTrend {
+                resource_type: "io".to_string(),
+                trend: io_trend.trend_type,
+                slope: io_trend.slope,
+                confidence: io_trend.confidence,
+                time_window: io_trend.time_window,
+            });
+        }
+
+        Ok(trends)
+    }
+
+    /// Calculate trend for a specific resource metric
+    fn calculate_resource_trend<F>(&self, entries: &[HistoricalResourceEntry], extractor: F) -> Option<TrendAnalysis>
+    where
+        F: Fn(&HistoricalResourceEntry) -> f32,
+    {
+        if entries.len() < 3 {
+            return None;
+        }
+
+        let values: Vec<f32> = entries.iter().map(&extractor).collect();
+        let timestamps: Vec<i64> = entries.iter().map(|e| e.timestamp).collect();
+
+        // Calculate linear regression
+        let n = values.len() as f32;
+        let sum_x: f32 = timestamps.iter().map(|&t| t as f32).sum();
+        let sum_y: f32 = values.iter().sum();
+        let sum_xy: f32 = timestamps.iter().zip(values.iter()).map(|(&t, &v)| t as f32 * v).sum();
+        let sum_xx: f32 = timestamps.iter().map(|&t| (t as f32).powi(2)).sum();
+
+        let slope = (n * sum_xy - sum_x * sum_y) / (n * sum_xx - sum_x.powi(2));
+        let intercept = (sum_y - slope * sum_x) / n;
+
+        // Calculate R-squared for confidence
+        let y_mean = sum_y / n;
+        let ss_tot: f32 = values.iter().map(|&v| (v - y_mean).powi(2)).sum();
+        let ss_res: f32 = timestamps.iter().zip(values.iter()).map(|(&t, &v)| {
+            let predicted = slope * t as f32 + intercept;
+            (v - predicted).powi(2)
+        }).sum();
+
+        let r_squared = if ss_tot > 0.0 { 1.0 - (ss_res / ss_tot) } else { 0.0 };
+        let confidence = r_squared.max(0.0).min(1.0);
+
+        let trend_type = if slope.abs() < 0.01 {
+            TrendType::Stable
+        } else if slope > 0.0 {
+            TrendType::Increasing
+        } else {
+            TrendType::Decreasing
+        };
+
+        let time_window = if let (Some(first), Some(last)) = (timestamps.first(), timestamps.last()) {
+            *last - *first
+        } else {
+            0
+        };
+
+        Some(TrendAnalysis {
+            trend_type,
+            slope,
+            confidence,
+            time_window,
+        })
+    }
+
+    /// Generate resource usage predictions based on historical data and trends
+    async fn generate_resource_usage_predictions(
+        &self,
+        data: &HistoricalResourceData,
+        trends: &[ResourceTrend],
+    ) -> Result<Vec<ResourcePrediction>> {
+        let mut predictions = Vec::new();
+
+        if data.entries.is_empty() {
+            return Ok(predictions);
+        }
+
+        let latest_timestamp = data.entries.iter().map(|e| e.timestamp).max().unwrap_or(0);
+        let prediction_horizons = [3600, 7200, 86400]; // 1h, 2h, 24h
+
+        for &horizon in &prediction_horizons {
+            let prediction_time = latest_timestamp + horizon;
+
+            // Base predictions on recent entries (last 10 or all available)
+            let recent_entries: Vec<&HistoricalResourceEntry> = data.entries
+                .iter()
+                .rev()
+                .take(10)
+                .collect();
+
+            if recent_entries.is_empty() {
+                continue;
+            }
+
+            // Calculate average resource usage from recent entries
+            let avg_cpu = recent_entries.iter().map(|e| e.resource_usage.cpu_percent).sum::<f32>() / recent_entries.len() as f32;
+            let avg_memory = recent_entries.iter().map(|e| e.resource_usage.memory_mb).sum::<f32>() / recent_entries.len() as f32;
+            let avg_io = recent_entries.iter().map(|e| e.resource_usage.io_bytes_per_sec).sum::<u64>() as f32 / recent_entries.len() as f32;
+            let avg_network = recent_entries.iter().map(|e| e.resource_usage.network_bytes_per_sec).sum::<u64>() as f32 / recent_entries.len() as f32;
+
+            // Apply trend adjustments
+            let cpu_trend = trends.iter().find(|t| t.resource_type == "cpu");
+            let memory_trend = trends.iter().find(|t| t.resource_type == "memory");
+            let io_trend = trends.iter().find(|t| t.resource_type == "io");
+
+            let predicted_cpu = cpu_trend
+                .map(|t| (avg_cpu + t.slope * horizon as f32).max(0.0).min(100.0))
+                .unwrap_or(avg_cpu);
+
+            let predicted_memory = memory_trend
+                .map(|t| (avg_memory + t.slope * horizon as f32).max(0.0))
+                .unwrap_or(avg_memory);
+
+            let predicted_io = io_trend
+                .map(|t| (avg_io + t.slope * horizon as f32).max(0.0) as u64)
+                .unwrap_or(avg_io as u64);
+
+            predictions.push(ResourcePrediction {
+                timestamp: prediction_time,
+                horizon_seconds: horizon,
+                predicted_usage: ResourceUsageMetrics {
+                    cpu_percent: predicted_cpu,
+                    memory_mb: predicted_memory as u32,
+                    io_bytes_per_sec: predicted_io,
+                    network_bytes_per_sec: avg_network as u64, // No network trend analysis yet
+                },
+                confidence: cpu_trend.map(|t| t.confidence).unwrap_or(0.5)
+                    .min(memory_trend.map(|t| t.confidence).unwrap_or(0.5))
+                    .min(io_trend.map(|t| t.confidence).unwrap_or(0.5)),
+            });
+        }
+
+        Ok(predictions)
     }
 }

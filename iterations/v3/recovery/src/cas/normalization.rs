@@ -2,7 +2,7 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use crate::types::{Eol, PayloadKind};
+use crate::types::Eol;
 
 /// Text normalization configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -134,31 +134,31 @@ impl TextNormalizer {
         }
 
         // Normalize content
-        let normalized_content = self.normalize_content(content, original_eol)?;
+        let normalized_content = self.normalize_content(content, original_eol.clone())?;
         let was_normalized = normalized_content != content;
 
         Ok(NormalizationResult {
-            normalized_content,
+            normalized_content: normalized_content.clone(),
             original_eol: if self.config.preserve_original_eol {
                 Some(original_eol)
             } else {
                 None
             },
-            target_eol: self.config.target_eol,
+            target_eol: self.config.target_eol.clone(),
             was_normalized,
-            line_count: self.count_lines(&normalized_content, self.config.target_eol),
+            line_count: self.count_lines(&normalized_content, self.config.target_eol.clone()),
         })
     }
 
     /// Detect the line ending style in content
     pub fn detect_eol(&self, content: &[u8]) -> Eol {
         // Check for CRLF first (Windows)
-        if content.contains(b"\r\n") {
+        if content.windows(2).any(|w| w == b"\r\n") {
             return Eol::Crlf;
         }
         
         // Check for CR (old Mac)
-        if content.contains(b"\r") {
+        if content.contains(&b'\r') {
             return Eol::Cr;
         }
         
@@ -279,6 +279,11 @@ impl TextNormalizer {
                         i += 1;
                     }
                 }
+                Eol::Mixed => {
+                    // Keep mixed line endings as-is
+                    normalized.push(content[i]);
+                    i += 1;
+                }
             }
         }
 
@@ -297,6 +302,23 @@ impl TextNormalizer {
                     if content[i] == b'\r' && content[i + 1] == b'\n' {
                         count += 1;
                         i += 2;
+                    } else {
+                        i += 1;
+                    }
+                }
+                count
+            }
+            Eol::Mixed => {
+                // Count all line endings (LF, CR, CRLF)
+                let mut count = 0;
+                let mut i = 0;
+                while i < content.len() {
+                    if i + 1 < content.len() && content[i] == b'\r' && content[i + 1] == b'\n' {
+                        count += 1;
+                        i += 2;
+                    } else if content[i] == b'\n' || content[i] == b'\r' {
+                        count += 1;
+                        i += 1;
                     } else {
                         i += 1;
                     }

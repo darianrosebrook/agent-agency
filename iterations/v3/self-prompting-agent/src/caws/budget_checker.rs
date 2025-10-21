@@ -1,10 +1,17 @@
 //! Budget Checker for CAWS Compliance
 //!
+//! DEPRECATION NOTICE: This implementation is being migrated to caws-runtime-validator
+//! See: iterations/v3/caws/runtime-validator/src/budget.rs
+//! TODO: Remove after migration complete (target: Phase 1.1)
+//!
 //! Enforces budget limits at the tool boundary. Computes budgets
 //! at apply time, not based on upstream estimates. Blocks operations
 //! that would exceed max_files/max_loc limits.
 //!
 //! @author @darianrosebrook
+
+// Re-export from runtime-validator (primary implementation)
+pub use caws_runtime_validator::{BudgetChecker as RuntimeValidatorBudgetChecker, BudgetLimits as RuntimeValidatorBudgetLimits, BudgetState as RuntimeValidatorBudgetState};
 
 use std::collections::HashSet;
 use std::path::PathBuf;
@@ -24,6 +31,7 @@ pub enum BudgetError {
 }
 
 /// Current budget state
+#[deprecated(note = "Migrating to caws_runtime_validator::BudgetState")]
 #[derive(Debug, Clone, PartialEq)]
 pub struct BudgetState {
     pub files_used: usize,
@@ -32,6 +40,7 @@ pub struct BudgetState {
 }
 
 /// Budget limits for a task
+#[deprecated(note = "Migrating to caws_runtime_validator::BudgetLimits")]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct BudgetLimits {
     pub max_files: usize,
@@ -40,9 +49,11 @@ pub struct BudgetLimits {
 
 /// Budget checker that enforces limits at apply time
 ///
+/// **DEPRECATED**: Use caws_runtime_validator::BudgetChecker instead
 /// **INVARIANT**: Only called from WorkspaceManager.apply_changes()
 /// **INVARIANT**: Budgets computed from actual changeset, not estimates
 /// **INVARIANT**: Blocks operations that would exceed limits
+#[deprecated(note = "Migrating to caws_runtime_validator::BudgetChecker")]
 pub struct BudgetChecker {
     limits: BudgetLimits,
     current: BudgetState,

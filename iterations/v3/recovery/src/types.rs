@@ -6,6 +6,9 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
+// Import AuthorInfo from merkle module
+use crate::merkle::AuthorInfo;
+
 /// BLAKE3 digest wrapper for content addressing
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Digest(pub [u8; 32]);
@@ -106,20 +109,23 @@ pub enum Codec {
 }
 
 /// End-of-line normalization
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Copy)]
 pub enum Eol {
     Lf,     // Unix
     Crlf,   // Windows
+    Cr,     // Legacy Mac
     Mixed,  // Mixed line endings
 }
 
 /// File mode for POSIX compatibility
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum FileMode {
+    #[default]
     Regular,    // 100644
     Executable, // 100755
     Symlink,    // 120000
 }
+
 
 impl FileMode {
     /// Get the POSIX mode bits
@@ -128,6 +134,15 @@ impl FileMode {
             FileMode::Regular => 0o100644,
             FileMode::Executable => 0o100755,
             FileMode::Symlink => 0o120000,
+        }
+    }
+
+    /// Get the mode bits for file permissions
+    pub fn to_mode_bits(&self) -> Option<u32> {
+        match self {
+            FileMode::Regular => Some(0o644),
+            FileMode::Executable => Some(0o755),
+            FileMode::Symlink => None, // Symlinks don't have mode bits
         }
     }
 
@@ -222,7 +237,7 @@ pub enum ChangeSource {
 }
 
 /// Commit object
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Commit {
     pub id: Digest,
     pub parent: Option<Digest>,
@@ -232,6 +247,7 @@ pub struct Commit {
     pub message: Option<String>,
     pub stats: ChangeStats,             // Observability
     pub timestamp: DateTime<Utc>,
+    pub author: AuthorInfo,             // Author information
 }
 
 /// Change statistics
@@ -263,8 +279,8 @@ pub struct SessionRef {
 }
 
 /// Change ID for tracking
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct ChangeId(String);
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct ChangeId(pub String);
 
 impl ChangeId {
     pub fn new() -> Self {
@@ -288,6 +304,12 @@ pub enum ConflictClass {
     Adjacent,
     Overlapping,
     Binary,
+    AgentVsAgent,
+    AgentVsSystem,
+    HumanVsAgent,
+    HumanVsSystem,
+    SystemVsSystem,
+    ValidationVsSystem,
 }
 
 /// Conflict object
@@ -308,18 +330,61 @@ pub enum FileRestoreAction {
         mode: FileMode,
         expected: Digest,
         source: ObjectRef,
+        size: u64,
     },
     WriteSymlink {
         path: PathBuf,
         target: String,
+        size: u64,
     },
     DeleteFile {
         path: PathBuf,
+        size: u64,
     },
     Chmod {
         path: PathBuf,
         mode: FileMode,
+        size: u64,
     },
+}
+
+impl FileRestoreAction {
+    /// Get the path for this action
+    pub fn path(&self) -> &PathBuf {
+        match self {
+            FileRestoreAction::WriteFile { path, .. } => path,
+            FileRestoreAction::WriteSymlink { path, .. } => path,
+            FileRestoreAction::DeleteFile { path, .. } => path,
+            FileRestoreAction::Chmod { path, .. } => path,
+        }
+    }
+
+    /// Get the size for this action
+    pub fn size(&self) -> u64 {
+        match self {
+            FileRestoreAction::WriteFile { size, .. } => *size,
+            FileRestoreAction::WriteSymlink { size, .. } => *size,
+            FileRestoreAction::DeleteFile { size, .. } => *size,
+            FileRestoreAction::Chmod { size, .. } => *size,
+        }
+    }
+
+    /// Get the expected digest for this action (if applicable)
+    pub fn expected_digest(&self) -> Option<&Digest> {
+        match self {
+            FileRestoreAction::WriteFile { expected, .. } => Some(expected),
+            _ => None,
+        }
+    }
+
+    /// Get the mode for this action (if applicable)
+    pub fn mode(&self) -> Option<&FileMode> {
+        match self {
+            FileRestoreAction::WriteFile { mode, .. } => Some(mode),
+            FileRestoreAction::Chmod { mode, .. } => Some(mode),
+            _ => None,
+        }
+    }
 }
 
 /// Object reference

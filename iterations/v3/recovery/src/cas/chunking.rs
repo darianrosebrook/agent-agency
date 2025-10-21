@@ -3,8 +3,7 @@ use fastcdc::v2020::{ChunkData, FastCDC};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use crate::types::Digest;
-use crate::types::{Digest as SourceDigest, StreamingHasher};
+use crate::types::{Digest, StreamingHasher, ChunkRef};
 
 /// Content-Defined Chunking configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -90,7 +89,7 @@ impl CdcChunker {
             return Ok(ChunkList {
                 chunks: Vec::new(),
                 total_length: 0,
-                file_digest: Digest::from_bytes(&[]),
+                file_digest: Digest::from_bytes([0; 32]),
             });
         }
 
@@ -100,9 +99,9 @@ impl CdcChunker {
         // Use FastCDC for chunking
         let fastcdc = FastCDC::new(
             content,
-            self.config.min_size,
-            self.config.avg_size,
-            self.config.max_size,
+            self.config.min_size.try_into().unwrap(),
+            self.config.avg_size.try_into().unwrap(),
+            self.config.max_size.try_into().unwrap(),
         );
 
         for chunk_data in fastcdc {
@@ -115,54 +114,53 @@ impl CdcChunker {
         let file_digest = self.compute_file_digest(&chunk_digests)?;
 
         Ok(ChunkList {
-            chunks,
+            chunks: chunks.into_iter().map(|chunk_ref| Chunk {
+                digest: chunk_ref.digest,
+                offset: chunk_ref.offset as usize,
+                length: chunk_ref.length as usize,
+                data: Vec::new(), // TODO: Store actual data if needed
+            }).collect(),
             total_length: content.len(),
             file_digest,
         })
     }
 
     /// Create a chunk from chunk data
-    fn create_chunk(&mut self, chunk_data: &ChunkData, content: &[u8]) -> Result<Chunk> {
-        let offset = chunk_data.offset;
-        let length = chunk_data.length;
+    fn create_chunk(&mut self, chunk_data: &fastcdc::v2020::Chunk, content: &[u8]) -> Result<ChunkRef> {
+        let offset = chunk_data.offset as usize;
+        let length = chunk_data.length as usize;
         let data = content[offset..offset + length].to_vec();
 
         // Compute chunk digest
         let digest = self.compute_chunk_digest(&data)?;
 
-        let chunk = Chunk {
+        let chunk_ref = ChunkRef {
             digest,
-            offset,
-            length,
-            data,
+            offset: chunk_data.offset as u64,
+            length: chunk_data.length as u32,
         };
 
-        // Cache the chunk
-        self.chunk_cache.insert(digest, chunk.clone());
-
-        Ok(chunk)
+        Ok(chunk_ref)
     }
 
     /// Compute digest for a chunk
     fn compute_chunk_digest(&self, data: &[u8]) -> Result<Digest> {
         let mut hasher = StreamingHasher::new();
         hasher.update(data);
-        let hash = hasher.finalize();
-        Ok(Digest::from_blake3(hash))
+        Ok(hasher.finalize())
     }
 
     /// Compute file digest from chunk digests
     fn compute_file_digest(&self, chunk_digests: &[Digest]) -> Result<Digest> {
         if chunk_digests.is_empty() {
-            return Ok(Digest::from_bytes(&[]));
+            return Ok(Digest::from_bytes([0; 32]));
         }
 
         let mut hasher = StreamingHasher::new();
         for digest in chunk_digests {
-            hasher.update(&digest.as_bytes());
+            hasher.update(digest.as_bytes());
         }
-        let hash = hasher.finalize();
-        Ok(Digest::from_blake3(hash))
+        Ok(hasher.finalize())
     }
 
     /// Reconstruct content from chunks

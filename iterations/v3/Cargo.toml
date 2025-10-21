@@ -2,13 +2,14 @@
 resolver = "2"
 members = [
     # "self-prompting-agent",  # TODO: Re-enable when compilation issues resolved
-    # "apple-silicon",  # TODO: Temporarily disabled due to syntax errors
+    "apple-silicon",  # Re-enabled - workspace structure fixed
+    "caws/runtime-validator",  # Consolidated CAWS validation service
     "workers",
     "research",
     "mcp-integration",  # MCP integration server
     "provenance",
     "claim-extraction",
-    # "reflexive-learning",  # TODO: Re-enable when compilation issues resolved
+    "reflexive-learning",  # Re-enabled - depends on council ✓
     # "model-benchmarking",  # TODO: Re-enable when compilation issues resolved
     # "security-policy-enforcer",  # TODO: Re-enable when compilation issues resolved
     # "minimal-diff-evaluator",  # TODO: Re-enable when compilation issues resolved
@@ -16,19 +17,17 @@ members = [
     # "embedding-service",  # TODO: Re-enable when compilation issues resolved
     # "system-health-monitor",  # TODO: Re-enable when compilation issues resolved
     # "workspace-state-manager",  # TODO: Re-enable when compilation issues resolved
-    # "resilience",  # TODO: Re-enable when compilation issues resolved
-    # "observability",  # TODO: Re-enable when compilation issues resolved
+    "resilience",  # Re-enabled - compiles successfully
+    "observability",  # Re-enabled - compiles successfully
     "interfaces",  # MCP interface implementation
-    # "source-integrity",  # TODO: Re-enable when compilation issues resolved
+    "source-integrity",  # Re-enabled - compiles successfully
     "config",
     "database",
     "recovery",
     # "integration-tests",  # TODO: Re-enable when compilation issues resolved
-    # "claim-extraction",  # TODO: Re-enable when compilation issues resolved
-    # "agent-agency-contracts",  # TODO: Re-enable when compilation issues resolved
-    # "caching",  # TODO: Re-enable when compilation issues resolved
+    "council",  # Re-enabled - compiles successfully
+    "caching",  # Re-enabled - compiles successfully
     # "planning-agent",  # TODO: Re-enable when compilation issues resolved
-    # "council",  # TODO: Re-enable when compilation issues resolved
     # "ingestors",  # TODO: Re-enable when compilation issues resolved
     # "enrichers",  # TODO: Re-enable when compilation issues resolved
     # "indexers",  # TODO: Re-enable when compilation issues resolved

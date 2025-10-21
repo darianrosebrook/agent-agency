@@ -3,9 +3,14 @@ use recovery::{
     api::RecoveryStore,
     cas::BlobStore,
     index::RecoveryIndex,
-    journal::Wal,
-    merkle::{Commit, Tree},
-    policy::{CawsPolicy, PolicyEnforcer},
+    journal::WriteAheadLog,
+    merkle::{Commit, FileTree},
+    policy::{
+        CawsPolicy, PolicyEnforcer, RetentionPolicy, 
+        CompressionPolicy, ChunkingPolicy, RedactionPolicy, RedactionRule,
+        ProvenancePolicy, RecoveryPolicy, StoragePolicy, ChunkingMode,
+        RedactionRuleType, CheckpointFrequency
+    },
     types::*,
 };
 use std::path::PathBuf;
@@ -180,55 +185,71 @@ async fn init_recovery_store(path: &PathBuf, budget_mb: u64) -> anyhow::Result<(
 
     // Initialize WAL
     let wal_path = path.join("journal.wal");
-    let _wal = Wal::new(&wal_path)?;
+    let _wal = WriteAheadLog::new(wal_path)?;
 
     // Initialize index
     let index_path = path.join("index.db");
-    let _index = RecoveryIndex::new(&index_path).await?;
+    let _index = RecoveryIndex::new(&index_path.to_string_lossy()).await?;
 
     // Create default CAWS policy
-    let policy_config = CawsPolicyConfig {
-        auto_checkpoint: true,
-        checkpoint_frequency: vec!["every-iteration".to_string()],
-        storage_budget_mb: budget_mb,
+    let policy = CawsPolicy {
+        storage: StoragePolicy {
+            max_size_bytes: budget_mb * 1024 * 1024,
+            soft_limit_ratio: 0.8,
+            hard_limit_ratio: 0.95,
+            auto_gc: true,
+            auto_pack: true,
+        },
         retention: RetentionPolicy {
             min_days: 30,
             max_sessions: 200,
+            protected_labels: vec!["release/*".to_string(), "postmortem/*".to_string()],
+            protected_patterns: vec!["prod/*".to_string()],
         },
-        protected_labels: vec!["release/*".to_string(), "postmortem/*".to_string()],
         compression: CompressionPolicy {
-            codec: "zstd".to_string(),
+            default_codec: Codec::Zstd,
             level: 4,
+            overrides: std::collections::HashMap::new(),
         },
         chunking: ChunkingPolicy {
-            mode: "cdc".to_string(),
-            target_kib: 16,
+            mode: ChunkingMode::Cdc,
+            target_size: 16 * 1024, // 16 KiB
+            min_size: 4 * 1024,    // 4 KiB
+            max_size: 64 * 1024,   // 64 KiB
+            enable_cdc: true,
         },
         redaction: RedactionPolicy {
-            rules: vec![
+            enable_secret_scanning: true,
+            enable_pii_scanning: true,
+            custom_rules: vec![
                 RedactionRule {
-                    rule_type: "secret".to_string(),
-                    patterns: vec![
-                        "BEGIN RSA PRIVATE KEY".to_string(),
-                        "AWS_".to_string(),
-                        "GH_TOKEN".to_string(),
-                    ],
+                    name: "RSA Keys".to_string(),
+                    rule_type: RedactionRuleType::Secret,
+                    pattern: "BEGIN RSA PRIVATE KEY".to_string(),
+                    case_sensitive: false,
+                    min_length: Some(10),
+                    max_length: None,
                 },
             ],
-        },
-        encryption: EncryptionPolicy {
-            at_rest: "aes-gcm-256".to_string(),
-            key_scope: "tenant".to_string(),
+            block_on_secrets: true,
+            log_redactions: true,
         },
         provenance: ProvenancePolicy {
-            file_tracking: "digest+chunkmap".to_string(),
-            change_attribution: true,
+            enable_file_tracking: true,
+            enable_change_attribution: true,
+            enable_recovery_capability: true,
+            require_verdict_on_restore: vec!["prod/*".to_string()],
+            track_agent_iterations: true,
+            track_human_edits: true,
         },
-        recovery_capability: true,
-        require_verdict_on_restore: vec!["prod/*".to_string()],
+        recovery: RecoveryPolicy {
+            auto_checkpoint: true,
+            checkpoint_frequency: vec![CheckpointFrequency::EveryIteration],
+            enable_restore_verification: true,
+            enable_conflict_resolution: true,
+            max_restore_size: Some(100 * 1024 * 1024), // 100 MB
+        },
     };
-
-    let policy = CawsPolicy::new(policy_config);
     let policy_path = path.join("policy.yaml");
     std::fs::write(&policy_path, serde_yaml::to_string(&policy)?)?;
 

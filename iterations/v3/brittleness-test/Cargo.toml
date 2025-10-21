@@ -6,6 +6,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+caws-runtime-validator = { path = "../caws/runtime-validator" }
 serde = { version = "1.0", features = ["derive"] }
 thiserror = "1.0"
 chrono = { version = "0.4", features = ["serde"] }

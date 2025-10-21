@@ -9,7 +9,7 @@ use std::fs::{File, OpenOptions};
 use std::io::{BufWriter, Write};
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
-use tracing::{debug, error, warn};
+use tracing::debug;
 
 use crate::types::*;
 use crate::types::Digest;
@@ -98,9 +98,8 @@ impl WriteAheadLog {
         writer.flush()?;
         
         // Force fsync on the journal file
-        if let Ok(file) = writer.get_ref() {
-            file.sync_all()?;
-        }
+        let file = writer.get_ref();
+        file.sync_all()?;
         
         debug!("Flushed WAL to disk");
         Ok(())

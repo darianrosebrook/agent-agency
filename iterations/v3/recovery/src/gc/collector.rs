@@ -208,24 +208,8 @@ impl GarbageCollector {
 
         // Start with protected references
         for obj_ref in protected_refs {
-            match obj_ref {
-                ObjectRef::Blob(digest) => {
-                    reachable.insert(*digest);
-                    to_process.push(*digest);
-                }
-                ObjectRef::Chunk(digest) => {
-                    reachable.insert(*digest);
-                    to_process.push(*digest);
-                }
-                ObjectRef::Tree(digest) => {
-                    reachable.insert(*digest);
-                    to_process.push(*digest);
-                }
-                ObjectRef::Commit(digest) => {
-                    reachable.insert(*digest);
-                    to_process.push(*digest);
-                }
-            }
+            reachable.insert(obj_ref.digest);
+            to_process.push(obj_ref.digest);
         }
 
         // Process objects in BFS order

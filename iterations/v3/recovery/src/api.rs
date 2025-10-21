@@ -109,7 +109,7 @@ pub struct GcReport {
 }
 
 /// Content policy for strategy decisions
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ContentPolicy {
     pub small_full_max: usize,      // 2 KiB default
     pub diff_ratio_max: f64,        // 0.45 default

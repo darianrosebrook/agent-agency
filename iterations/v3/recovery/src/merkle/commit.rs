@@ -8,10 +8,10 @@ use serde::{Deserialize, Serialize};
 use crate::types::{Digest, StreamingHasher};
 
 use crate::types::*;
-use super::tree::FileTree;
+// use super::tree::FileTree; // Unused
 
 /// Commit object with Merkle tree root
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Commit {
     pub id: Digest,
     pub parent: Option<Digest>,
@@ -265,7 +265,7 @@ impl Default for CommitBuilder {
 }
 
 /// Commit chain for tracking history
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CommitChain {
     pub commits: Vec<Commit>,
 }

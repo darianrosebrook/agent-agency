@@ -98,8 +98,8 @@ impl RecoveryIndex {
             "INSERT OR REPLACE INTO file_versions (path, commit_id, digest, mode, created_at) VALUES (?, ?, ?, ?, ?)",
         )
         .bind(path)
-        .bind(commit_id.as_bytes())
-        .bind(digest.as_bytes())
+        .bind(&commit_id.as_bytes()[..])
+        .bind(&digest.as_bytes()[..])
         .bind(mode.to_posix() as i64)
         .bind(now)
         .execute(&self.pool)
@@ -121,9 +121,9 @@ impl RecoveryIndex {
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             "#,
         )
-        .bind(commit.id.as_bytes())
+        .bind(&commit.id.as_bytes()[..])
         .bind(commit.parent.map(|p| p.as_bytes().to_vec()))
-        .bind(commit.tree.as_bytes())
+        .bind(&commit.tree.as_bytes()[..])
         .bind(&commit.session_id)
         .bind(&commit.caws_verdict_id)
         .bind(&commit.message)
@@ -223,7 +223,7 @@ impl RecoveryIndex {
         let row = sqlx::query(
             "SELECT * FROM commits WHERE id = ?",
         )
-        .bind(commit_id.as_bytes())
+        .bind(&commit_id.as_bytes()[..])
         .fetch_optional(&self.pool)
         .await?;
 
@@ -260,9 +260,9 @@ impl RecoveryIndex {
             let timestamp = DateTime::from_timestamp(timestamp, 0)
                 .ok_or_else(|| anyhow::anyhow!("Invalid timestamp"))?;
             let author = AuthorInfo {
-                name: author_name,
-                email: author_email,
-                agent_id: author_agent_id,
+                name: author_name.clone(),
+                email: author_email.clone(),
+                agent_id: author_agent_id.clone(),
             };
 
             Ok(Some(Commit {
@@ -274,7 +274,11 @@ impl RecoveryIndex {
                 message,
                 stats,
                 timestamp,
-                author,
+                author: AuthorInfo {
+                    name: author_name,
+                    email: author_email,
+                    agent_id: author_agent_id,
+                },
             }))
         } else {
             Ok(None)

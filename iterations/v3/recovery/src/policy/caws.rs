@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-use crate::types::{Codec, Eol};
+use crate::types::Codec;
 
 /// CAWS policy configuration for recovery system
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -353,6 +353,9 @@ impl CawsPolicy {
                     return Err(anyhow::anyhow!("Gzip compression level must be <= 9"));
                 }
             }
+            Codec::None => {
+                // No compression validation needed
+            }
         }
 
         Ok(())
@@ -374,13 +377,13 @@ impl CawsPolicy {
         for (pattern, override_config) in &self.compression.overrides {
             if let Ok(glob_pattern) = glob::Pattern::new(pattern) {
                 if glob_pattern.matches(path) {
-                    return (override_config.codec, override_config.level);
+                    return (override_config.codec.clone(), override_config.level);
                 }
             }
         }
 
         // Return default configuration
-        (self.compression.default_codec, self.compression.level)
+        (self.compression.default_codec.clone(), self.compression.level)
     }
 
     /// Check if storage is over soft limit

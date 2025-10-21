@@ -10,7 +10,7 @@ use tokio::sync::RwLock;
 use chrono::{DateTime, Utc};
 
 /// Recovery metrics collector that integrates with the v3 observability system
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct RecoveryMetricsCollector {
     metrics_backend: Arc<dyn MetricsBackend>,
     session_stats: Arc<RwLock<std::collections::HashMap<String, ChangeStats>>>,

@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 agent-agency-contracts = { path = "../agent-agency-contracts" }
+caws-runtime-validator = { path = "../caws/runtime-validator" }
 # orchestration = { path = "../orchestration" }  # TEMP: disabled - compilation issues
 # reflexive-learning = { path = "../reflexive-learning" }  # TEMP: disabled - torch issues
 # agent-agency-workers = { path = "../workers" }  # TEMP: disabled - compilation issues

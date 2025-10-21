@@ -1697,11 +1697,132 @@ impl VerificationStage {
             return Ok(None);
         }
 
-        debug!("Council verification not yet implemented - skipping for {} claims", high_risk_claims.len());
+        debug!("Submitting {} high-risk claims to council for verification", high_risk_claims.len());
 
-        // TODO: Implement council integration
-        // For now, return None to indicate no council verification was performed
-        Ok(None)
+        // Implement council integration
+        let council_verification = self.submit_to_council_for_verification(high_risk_claims).await?;
+        Ok(Some(council_verification))
+    }
+
+    /// Submit high-risk claims to council for verification
+    async fn submit_to_council_for_verification(&self, claims: Vec<VerifiedClaim>) -> Result<CouncilVerificationResult> {
+        use agent_agency_council::coordinator::ConsensusCoordinator;
+        use agent_agency_council::models::{TaskContext as CouncilTaskContext, TaskSpec as CouncilTaskSpec};
+        use agent_agency_council::types::FinalVerdict;
+
+        // Create council task context for claim verification
+        let task_context = CouncilTaskContext {
+            workspace_root: "/workspace".to_string(),
+            git_branch: "main".to_string(),
+            recent_changes: vec!["claim-verification".to_string()],
+            dependencies: std::collections::HashMap::new(),
+            environment: agent_agency_council::models::Environment::Production,
+        };
+
+        let task_spec = CouncilTaskSpec {
+            id: uuid::Uuid::new_v4(),
+            title: "High-Risk Claim Verification".to_string(),
+            description: format!("Verify {} high-risk claims for accuracy and safety", claims.len()),
+            risk_tier: agent_agency_council::models::RiskTier::Critical, // High-risk claims require Critical tier
+            scope: agent_agency_council::models::TaskScope {
+                files_affected: vec!["claim-extraction".to_string()],
+                max_files: Some(1),
+                max_loc: Some(100),
+                domains: vec!["verification".to_string()],
+            },
+            acceptance_criteria: vec![
+                agent_agency_council::models::AcceptanceCriterion {
+                    id: "AC-1".to_string(),
+                    description: "Claims are verified or rejected with justification".to_string(),
+                }
+            ],
+            context: task_context,
+            worker_output: agent_agency_council::models::WorkerOutput {
+                content: "Initial claim verification output".to_string(),
+                files_modified: vec![],
+                rationale: "High-risk claim verification requires council consensus".to_string(),
+                self_assessment: agent_agency_council::models::SelfAssessment {
+                    caws_compliance: 0.9,
+                    quality_score: 0.8,
+                    confidence: 0.8,
+                    risk_assessment: "High".to_string(),
+                },
+                metadata: std::collections::HashMap::new(),
+            },
+            caws_spec: None,
+        };
+
+        // Convert claims to council worker output format
+        let worker_outputs: Vec<agent_agency_council::models::WorkerOutput> = claims.iter()
+            .map(|claim| {
+                agent_agency_council::models::WorkerOutput {
+                    content: format!("Claim: {}\nConfidence: {:.2}\nEvidence: {:?}", 
+                        claim.claim_text, claim.confidence, claim.evidence),
+                    files_modified: vec![],
+                    rationale: format!("High-risk claim verification for: {}", claim.claim_text),
+                    self_assessment: agent_agency_council::models::SelfAssessment {
+                        caws_compliance: 0.9,
+                        quality_score: claim.confidence,
+                        confidence: claim.confidence,
+                        risk_assessment: "High".to_string(),
+                    },
+                    metadata: {
+                        let mut meta = std::collections::HashMap::new();
+                        meta.insert("claim_type".to_string(), serde_json::Value::String("high_risk".to_string()));
+                        meta.insert("verification_method".to_string(), serde_json::Value::String("multi_agent_consensus".to_string()));
+                        meta
+                    },
+                }
+            })
+            .collect();
+
+        // Initialize council coordinator
+        let coordinator = ConsensusCoordinator::new(agent_agency_council::coordinator::ConsensusConfig {
+            max_participants: 5,
+            consensus_threshold: 0.75,
+            timeout_seconds: 300,
+            enable_debate: true,
+            enable_learning: true,
+        });
+
+        // Submit to council for consensus
+        let consensus_result = coordinator.coordinate_consensus(&task_spec, &worker_outputs).await
+            .context("Failed to coordinate council consensus for claim verification")?;
+
+        // Convert council result to verification result
+        let (verdict_text, additional_evidence) = match consensus_result.final_verdict {
+            FinalVerdict::Approve { confidence, reasoning } => {
+                (format!("APPROVED with confidence {:.2}: {}", confidence, reasoning), vec![])
+            },
+            FinalVerdict::Reject { confidence, reasoning, required_changes } => {
+                let changes_text = required_changes.iter()
+                    .map(|change| format!("{}: {}", change.category, change.description))
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                (format!("REJECTED with confidence {:.2}: {}. Required changes: {}", 
+                    confidence, reasoning, changes_text), vec![])
+            },
+            FinalVerdict::RequireChanges { confidence, reasoning, required_changes } => {
+                let changes_text = required_changes.iter()
+                    .map(|change| format!("{}: {}", change.category, change.description))
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                (format!("APPROVED_WITH_CHANGES with confidence {:.2}: {}. Changes required: {}", 
+                    confidence, reasoning, changes_text), vec![])
+            },
+        };
+
+        let verification_result = CouncilVerificationResult {
+            submitted_claims: claims.iter().map(|_| uuid::Uuid::new_v4()).collect(),
+            council_verdict: verdict_text,
+            additional_evidence,
+            verification_timestamp: chrono::Utc::now(),
+        };
+
+        info!("Council verification completed: {} claims processed with verdict: {}", 
+            verification_result.submitted_claims.len(), verification_result.council_verdict);
+
+        Ok(verification_result)
     }
 
     /// Determine if claim needs council verification

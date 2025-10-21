@@ -38,6 +38,9 @@ agent-agency-database = { path = "../database" }
 # Knowledge graph integration
 knowledge-ingestor = { path = "../knowledge-ingestor" }
 
+# Council integration for high-risk claim verification
+agent-agency-council = { path = "../council" }
+
 [features]
 default = []
 embeddings = ["embedding-service"]

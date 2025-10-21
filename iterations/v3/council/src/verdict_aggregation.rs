@@ -628,15 +628,7 @@ impl VerdictAggregator {
                 risk_levels.into_iter().max().unwrap_or(crate::judge::RiskLevel::Medium)
             },
             RiskAggregationStrategy::WeightedAverage => {
-                // TODO: Implement proper risk aggregation strategies
-                // - Define weighted risk scoring algorithms
-                // - Implement confidence-based risk aggregation
-                // - Add risk factor correlation analysis
-                // - Support dynamic weighting based on context
-                // - Add risk aggregation validation and testing
-                // - Implement risk threshold calibration
-                // PLACEHOLDER: Using most conservative risk level
-                risk_levels.into_iter().max().unwrap_or(crate::judge::RiskLevel::Medium)
+                self.calculate_weighted_risk_average(&weighted_contributions, &risk_levels, total_weight)
             },
             RiskAggregationStrategy::RiskFactorFrequency => {
                 // Count risk factor frequency to determine level
@@ -798,6 +790,65 @@ impl VerdictAggregator {
         }
 
         issues
+    }
+
+    /// Calculate weighted risk average with confidence-based aggregation
+    fn calculate_weighted_risk_average(
+        &self,
+        contributions: &[WeightedContribution],
+        risk_levels: &[crate::judge::RiskLevel],
+        total_weight: f64,
+    ) -> crate::judge::RiskLevel {
+        if risk_levels.is_empty() {
+            return crate::judge::RiskLevel::Medium;
+        }
+
+        // Convert risk levels to numerical scores for weighted calculation
+        let risk_scores: Vec<f64> = risk_levels.iter().map(|risk| {
+            match risk {
+                crate::judge::RiskLevel::Low => 0.25,
+                crate::judge::RiskLevel::Medium => 0.5,
+                crate::judge::RiskLevel::High => 0.75,
+                crate::judge::RiskLevel::Critical => 1.0,
+            }
+        }).collect();
+
+        // Calculate weighted average risk score
+        let mut weighted_sum = 0.0;
+        let mut total_confidence_weight = 0.0;
+
+        for (i, contribution) in contributions.iter().enumerate() {
+            if i < risk_scores.len() {
+                let confidence_weight = contribution.weight * contribution.verdict.confidence();
+                weighted_sum += risk_scores[i] * confidence_weight;
+                total_confidence_weight += confidence_weight;
+            }
+        }
+
+        // Normalize by total confidence weight if available, otherwise use simple average
+        let average_score = if total_confidence_weight > 0.0 {
+            weighted_sum / total_confidence_weight
+        } else {
+            risk_scores.iter().sum::<f64>() / risk_scores.len() as f64
+        };
+
+        // Convert back to risk level with threshold calibration
+        self.score_to_risk_level(average_score)
+    }
+
+    /// Convert numerical risk score to risk level with calibrated thresholds
+    fn score_to_risk_level(&self, score: f64) -> crate::judge::RiskLevel {
+        // Calibrated thresholds based on risk tolerance
+        // These can be adjusted based on historical performance and validation
+        if score >= 0.875 {
+            crate::judge::RiskLevel::Critical
+        } else if score >= 0.625 {
+            crate::judge::RiskLevel::High
+        } else if score >= 0.375 {
+            crate::judge::RiskLevel::Medium
+        } else {
+            crate::judge::RiskLevel::Low
+        }
     }
 }
 

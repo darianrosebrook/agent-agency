@@ -4,10 +4,10 @@
 
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
-use std::fs::{File, OpenOptions};
-use std::io::{BufReader, BufWriter, Read, Write};
-use std::path::{Path, PathBuf};
-use tracing::{debug, error, warn};
+use std::fs::File;
+use std::io::{Read, Write};
+use std::path::PathBuf;
+use tracing::debug;
 
 use crate::types::*;
 use crate::types::{Digest, StreamingHasher};

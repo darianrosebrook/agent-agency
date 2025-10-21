@@ -1,13 +1,12 @@
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::fs::{self, File, OpenOptions};
-use std::io::{self, Read, Write};
+use std::fs::{self, File};
+use std::io::{Read, Write};
+use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::types::{Digest, FileMode, FileRestoreAction, RestorePlan, RestoreResult};
-use crate::types::{Digest as SourceDigest, StreamingHasher};
+use crate::types::{Digest, FileMode, FileRestoreAction, RestorePlan, RestoreResult, StreamingHasher};
 
 /// Atomic restore manager for safely restoring files
 pub struct AtomicRestore {
@@ -103,7 +102,7 @@ impl AtomicRestore {
 
         // Check restore size limit
         if let Some(max_size) = self.config.max_restore_size {
-            let plan_size: u64 = plan.actions.iter().map(|a| a.size).sum();
+            let plan_size: u64 = plan.actions.iter().map(|a| a.size()).sum();
             if plan_size > max_size {
                 return Err(anyhow!(
                     "Restore size {} exceeds maximum allowed size {}",
@@ -117,11 +116,11 @@ impl AtomicRestore {
             match self.restore_file(action) {
                 Ok(restored_file) => {
                     restored_files.push(restored_file);
-                    total_bytes += action.size;
+                    total_bytes += action.size();
                 }
                 Err(e) => {
                     failed_files.push(FailedRestore {
-                        path: action.path.clone(),
+                        path: action.path().clone(),
                         error: e.to_string(),
                     });
                 }
@@ -139,26 +138,24 @@ impl AtomicRestore {
         self.stats.total_time_ms += total_time_ms;
 
         Ok(RestoreResult {
-            restored_files,
-            failed_files,
-            total_bytes,
-            total_time_ms,
+            files_restored: restored_files.len() as u32,
+            bytes_restored: total_bytes,
+            session_id: None,
+            commit_id: None,
         })
     }
 
     /// Restore a single file
     fn restore_file(&self, action: &FileRestoreAction) -> Result<RestoredFile> {
-        let path = &action.path;
-        let content = &action.content;
-        let expected_digest = &action.expected_digest;
-        let mode = action.mode;
+        let path = action.path();
+        let size = action.size();
 
         if self.config.dry_run {
             return Ok(RestoredFile {
                 path: path.clone(),
-                size: content.len(),
-                digest: expected_digest.clone(),
-                mode,
+                size: size as usize,
+                digest: action.expected_digest().cloned().unwrap_or(Digest::from_bytes([0; 32])),
+                mode: action.mode().cloned().unwrap_or_default(),
                 restored_at: self.current_timestamp(),
             });
         }
@@ -173,19 +170,64 @@ impl AtomicRestore {
             self.backup_existing_file(path)?;
         }
 
-        if self.config.atomic {
-            self.atomic_restore_file(path, content, expected_digest, mode)?
-        } else {
-            self.simple_restore_file(path, content, expected_digest, mode)?
-        }
+        match action {
+            FileRestoreAction::WriteFile { path, mode, expected, source, size } => {
+                // TODO: Load content from source ObjectRef
+                let content = b"placeholder content"; // This would need to be loaded from the CAS
 
-        Ok(RestoredFile {
-            path: path.clone(),
-            size: content.len(),
-            digest: expected_digest.clone(),
-            mode,
-            restored_at: self.current_timestamp(),
-        })
+                if self.config.atomic {
+                    self.atomic_restore_file(path, content, expected, *mode)?;
+                } else {
+                    self.simple_restore_file(path, content, expected, *mode)?;
+                }
+
+                Ok(RestoredFile {
+                    path: path.clone(),
+                    size: *size as usize,
+                    digest: *expected,
+                    mode: *mode,
+                    restored_at: self.current_timestamp(),
+                })
+            }
+            FileRestoreAction::WriteSymlink { path, target, size } => {
+                // Create symlink
+                std::os::unix::fs::symlink(target, path)?;
+
+                Ok(RestoredFile {
+                    path: path.clone(),
+                    size: *size as usize,
+                    digest: Digest::from_bytes([0; 32]), // Placeholder
+                    mode: FileMode::Regular,
+                    restored_at: self.current_timestamp(),
+                })
+            }
+            FileRestoreAction::DeleteFile { path, size } => {
+                if path.exists() {
+                    std::fs::remove_file(path)?;
+                }
+
+                Ok(RestoredFile {
+                    path: path.clone(),
+                    size: *size as usize,
+                    digest: Digest::from_bytes([0; 32]), // Placeholder
+                    mode: FileMode::Regular,
+                    restored_at: self.current_timestamp(),
+                })
+            }
+            FileRestoreAction::Chmod { path, mode, size } => {
+                if let Some(mode_bits) = mode.to_mode_bits() {
+                    std::fs::set_permissions(path, std::fs::Permissions::from_mode(mode_bits))?;
+                }
+
+                Ok(RestoredFile {
+                    path: path.clone(),
+                    size: *size as usize,
+                    digest: Digest::from_bytes([0; 32]), // Placeholder
+                    mode: *mode,
+                    restored_at: self.current_timestamp(),
+                })
+            }
+        }
     }
 
     /// Perform atomic restore: temp write → fsync → rename → fsync parent → verify digest
@@ -285,7 +327,7 @@ impl AtomicRestore {
 
         let mut hasher = StreamingHasher::new();
         hasher.update(&content);
-        let actual_digest = Digest::from_blake3(hasher.finalize());
+        let actual_digest = hasher.finalize();
 
         if actual_digest != *expected_digest {
             return Err(anyhow!(

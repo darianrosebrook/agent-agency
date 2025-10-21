@@ -3,8 +3,7 @@ use serde::{Deserialize, Serialize};
 use similar::{ChangeTag, udiff::UnifiedDiff};
 use std::collections::HashMap;
 
-use crate::types::{Digest, PayloadKind};
-use crate::types::Digest as SourceDigest;
+use crate::types::Digest;
 
 /// Unified diff with explicit lineage information
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -139,11 +138,8 @@ impl DiffGenerator {
         let after_str = String::from_utf8_lossy(after_content);
 
         // Create unified diff
-        let diff = UnifiedDiff::from_strings(
-            &base_str,
-            &after_str,
-            self.config.context_lines,
-        );
+        let text_diff = similar::TextDiff::from_lines(&base_str, &after_str);
+        let diff = similar::udiff::UnifiedDiff::from_text_diff(&text_diff);
 
         // Convert to bytes
         let mut diff_bytes = Vec::new();
@@ -157,20 +153,9 @@ impl DiffGenerator {
             diff_bytes.extend_from_slice(b"\n");
         }
 
-        // Add diff hunks
-        for hunk in diff.hunks() {
-            diff_bytes.extend_from_slice(hunk.header().as_bytes());
-            diff_bytes.extend_from_slice(b"\n");
-            
-            for op in hunk.ops() {
-                let line = match op.tag() {
-                    ChangeTag::Equal => format!(" {}", op.value()),
-                    ChangeTag::Delete => format!("-{}", op.value()),
-                    ChangeTag::Insert => format!("+{}", op.value()),
-                };
-                diff_bytes.extend_from_slice(line.as_bytes());
-            }
-        }
+        // Add diff as unified format
+        let unified_diff = format!("{}", diff);
+        diff_bytes.extend_from_slice(unified_diff.as_bytes());
 
         Ok(diff_bytes)
     }

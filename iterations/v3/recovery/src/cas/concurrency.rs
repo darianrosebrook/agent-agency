@@ -4,7 +4,6 @@ use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::types::{Digest, ChangeSource, ConflictClass};
-use crate::types::Digest as SourceDigest;
 
 /// Optimistic concurrency control for file changes
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -138,7 +137,7 @@ impl ConcurrencyManager {
                 let conflict = ConflictInfo {
                     class: self.classify_conflict(&source, current_digest),
                     base_digest: precond,
-                    current_digest: current_digest.unwrap_or_else(|| Digest::from_bytes(&[])),
+                    current_digest: current_digest.unwrap_or_else(|| Digest::from_bytes([0; 32])),
                     timestamp: self.current_timestamp(),
                     conflicting_session: session_id.to_string(),
                     resolution_strategy: self.config.default_resolution.clone(),

@@ -6,6 +6,7 @@ authors.workspace = true
 license.workspace = true
 
 [dependencies]
+caws-runtime-validator = { path = "../caws/runtime-validator" }
 # Workspace dependencies
 tokio.workspace = true
 async-trait.workspace = true

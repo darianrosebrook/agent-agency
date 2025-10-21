@@ -1,4 +1,8 @@
 //! Test our brittleness fixes in isolation
+//!
+//! DEPRECATION NOTICE: BudgetChecker implementation is being migrated to caws-runtime-validator
+//! See: iterations/v3/caws/runtime-validator/src/budget.rs
+//! TODO: Remove after migration complete (target: Phase 1.1)
 
 use std::fs;
 use std::path::Path;
@@ -23,6 +27,7 @@ fn compute_sha256_bytes(content: &[u8]) -> String {
 }
 
 /// Budget limits for file changes
+#[deprecated(note = "Migrating to caws_runtime_validator::BudgetLimits")]
 #[derive(Debug, Clone)]
 pub struct BudgetLimits {
     pub max_files: usize,
@@ -30,6 +35,7 @@ pub struct BudgetLimits {
 }
 
 /// Current budget state
+#[deprecated(note = "Migrating to caws_runtime_validator::BudgetState")]
 #[derive(Debug, Clone)]
 pub struct BudgetState {
     pub files_used: usize,
@@ -38,6 +44,7 @@ pub struct BudgetState {
 }
 
 /// Budget checker that calculates LOC deltas correctly (brittleness fix #2)
+#[deprecated(note = "Migrating to caws_runtime_validator::BudgetChecker")]
 #[derive(Debug, Clone)]
 pub struct BudgetChecker {
     limits: BudgetLimits,

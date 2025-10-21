@@ -684,6 +684,42 @@ pub trait ClaimLearningSystem {
     ) -> Result<PatternUpdate, Box<dyn std::error::Error + Send + Sync>>;
 }
 
+/// Trend type for resource usage analysis
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum TrendType {
+    Increasing,
+    Decreasing,
+    Stable,
+}
+
+/// Resource usage trend analysis
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ResourceTrend {
+    pub resource_type: String,
+    pub trend: TrendType,
+    pub slope: f32,
+    pub confidence: f32,
+    pub time_window: i64,
+}
+
+/// Internal trend analysis structure
+#[derive(Debug, Clone)]
+pub struct TrendAnalysis {
+    pub trend_type: TrendType,
+    pub slope: f32,
+    pub confidence: f32,
+    pub time_window: i64,
+}
+
+/// Resource usage prediction
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ResourcePrediction {
+    pub timestamp: i64,
+    pub horizon_seconds: i64,
+    pub predicted_usage: ResourceUsageMetrics,
+    pub confidence: f32,
+}
+
 impl TaskSpec {
     /// Check if this task requires unanimous approval
     pub fn requires_unanimous_approval(&self) -> bool {

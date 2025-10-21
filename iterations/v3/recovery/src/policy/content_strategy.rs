@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::Path;
 
-use crate::types::{ChangePayload, Codec, Eol, PayloadKind};
+use crate::types::{Codec, Eol, PayloadKind};
 
 /// Content strategy configuration for determining how to store file changes
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -212,14 +212,14 @@ impl ContentStrategy {
         let mut decision = self.compute_strategy(thresholds, content, base_content)?;
 
         // Apply overrides
-        if let Some(force_kind) = override_config.force_kind {
-            decision.kind = force_kind;
+        if let Some(force_kind) = &override_config.force_kind {
+            decision.kind = force_kind.clone();
         }
-        if let Some(force_codec) = override_config.force_codec {
-            decision.codec = force_codec;
+        if let Some(force_codec) = &override_config.force_codec {
+            decision.codec = force_codec.clone();
         }
-        if let Some(force_eol) = override_config.force_eol {
-            decision.eol = Some(force_eol);
+        if let Some(force_eol) = &override_config.force_eol {
+            decision.eol = Some(*force_eol);
         }
 
         Ok(decision)
@@ -273,11 +273,12 @@ impl ContentStrategy {
             None
         };
 
+        let is_chunk_map = kind == PayloadKind::ChunkMap;
         Ok(ContentDecision {
-            kind,
+            kind: kind.clone(),
             codec,
             eol,
-            chunk_size: if kind == PayloadKind::ChunkMap {
+            chunk_size: if is_chunk_map {
                 Some(thresholds.target_chunk_size)
             } else {
                 None
@@ -337,10 +338,10 @@ impl ContentStrategy {
 
     /// Detect line ending style
     fn detect_eol(&self, content: &[u8]) -> Eol {
-        if content.contains(b"\r\n") {
+        if content.windows(2).any(|w| w == b"\r\n") {
             Eol::Crlf
-        } else if content.contains(b"\r") {
-            Eol::Cr
+        } else if content.contains(&b'\r') {
+            Eol::Lf  // Simplified - no Cr variant in our Eol enum
         } else {
             Eol::Lf
         }
