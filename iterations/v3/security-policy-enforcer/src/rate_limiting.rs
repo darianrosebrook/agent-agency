@@ -56,8 +56,8 @@ impl RateLimiter {
         let entry = counters
             .entry(key.clone())
             .or_insert_with(|| RateLimitEntry {
-                client_id: request.client_id.clone(),
-                operation: request.operation.clone(),
+                _client_id: request.client_id.clone(),
+                _operation: request.operation.clone(),
                 count: 0,
                 window_start: now,
                 last_request: now,
@@ -164,8 +164,8 @@ impl RateLimiter {
 /// Internal rate limit entry
 #[derive(Debug, Clone)]
 struct RateLimitEntry {
-    client_id: String,
-    operation: String,
+    _client_id: String,
+    _operation: String,
     count: u32,
     window_start: DateTime<Utc>,
     last_request: DateTime<Utc>,

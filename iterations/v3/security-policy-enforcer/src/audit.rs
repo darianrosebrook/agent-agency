@@ -1,6 +1,7 @@
 use crate::types::*;
 use anyhow::{Context, Result};
 use chrono::Utc;
+use flate2::read::GzDecoder;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs::OpenOptions;
@@ -460,7 +461,7 @@ impl SecurityAuditor {
         let source_file = File::open(source_path)?;
         let dest_file = File::create(dest_path)?;
 
-        let reader = BufReader::new(source_file);
+        let mut reader = BufReader::new(source_file);
         let writer = BufWriter::new(dest_file);
 
         // Create gzip encoder
@@ -544,7 +545,7 @@ impl SecurityAuditor {
 
                         // Remove files older than retention period
                         if modified_datetime < cutoff_date {
-                            if let Ok(size) = fs::remove_file(&path) {
+                            if let Ok(_size) = fs::remove_file(&path) {
                                 files_removed += 1;
                                 total_size_freed += metadata.len();
                                 debug!("Removed old archive: {}", path.display());
@@ -589,9 +590,7 @@ impl SecurityAuditor {
 
     /// Analyze current and archived log files for audit events
     async fn analyze_log_files(&self) -> Result<Vec<AuditLogEntry>> {
-        use flate2::read::GzDecoder;
         use std::fs;
-        use std::io::BufReader;
         use std::path::Path;
 
         let mut all_entries = Vec::new();
@@ -633,11 +632,12 @@ impl SecurityAuditor {
                     let path = entry.path();
                     match self.parse_log_file(path.to_str().unwrap(), true).await {
                         Ok(entries) => {
+                            let entry_count = entries.len();
                             all_entries.extend(entries);
                             debug!(
                                 "Analyzed archive file {}: {} entries",
                                 path.display(),
-                                entries.len()
+                                entry_count
                             );
                         }
                         Err(e) => {

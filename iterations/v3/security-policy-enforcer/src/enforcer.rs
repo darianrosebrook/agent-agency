@@ -8,7 +8,7 @@ use crate::types::*;
 
 use anyhow::Result;
 use chrono::Utc;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Instant;
 use tokio::sync::RwLock;
@@ -452,7 +452,7 @@ impl SecurityPolicyEnforcer {
 
     /// Check if a path is within allowed workspace with comprehensive security validation
     pub fn is_within_workspace(&self, path: &str, workspace_root: &str) -> bool {
-        use std::path::{Path, PathBuf};
+        // PathBuf is used in the function body
 
         // 1. Path resolution: Implement proper path resolution and validation
         let resolved_path = match self.resolve_path_safely(path) {
@@ -527,8 +527,7 @@ impl SecurityPolicyEnforcer {
     }
 
     /// Validate workspace boundary constraints
-    fn is_valid_workspace_boundary(&self, workspace_path: &Path) -> bool {
-        use std::path::Path;
+    fn is_valid_workspace_boundary(&self, workspace_path: &std::path::Path) -> bool {
 
         // Check if workspace path exists and is a directory
         if !workspace_path.exists() || !workspace_path.is_dir() {
@@ -563,8 +562,7 @@ impl SecurityPolicyEnforcer {
     }
 
     /// Perform security checks on path resolution
-    fn check_path_security(&self, resolved_path: &Path, workspace_root: &Path) -> bool {
-        use std::path::Path;
+    fn check_path_security(&self, resolved_path: &std::path::Path, workspace_root: &std::path::Path) -> bool {
 
         // Check for path traversal attacks (.. components)
         if let Some(path_str) = resolved_path.to_str() {
