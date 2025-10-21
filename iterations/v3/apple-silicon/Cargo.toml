@@ -46,7 +46,7 @@ protobuf = "3.4"
 
 # Quantization and optimization
 # candle-flash-attn = "0.9.1"  # Flash attention for efficiency - requires CUDA which isn't available
-tch = { version = "0.13", features = ["download-libtorch"] }  # PyTorch bindings for quantization - will download correct libtorch version
+tch = { version = "0.13", features = ["download-libtorch"], optional = true }  # PyTorch bindings for quantization
 half = "2.4"  # Half-precision floating point
 # candle-flash-attn-v3 = "0.9.1"  # Advanced attention mechanisms
 
@@ -102,3 +102,4 @@ tokio-test = "0.4"
 default = ["cpu"]
 cpu = []
 coreml = []
+with_torch = ["dep:tch"]

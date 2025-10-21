@@ -1,11 +1,36 @@
 //! Inference engine abstraction
 
-use crate::{ComputeUnits, DType, IoSchema, TensorMap, TensorSpec, ModelFmt, QuantizationConfig};
+use crate::ComputeUnit;
+use candle_core::DType;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::time::Duration;
+
+/// Data type enumeration
+pub type TensorMap = HashMap<String, Vec<f32>>;
+pub type TensorSpec = (String, Vec<usize>);
+
+/// Model format enumeration
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum ModelFmt {
+    /// SafeTensors format
+    SafeTensors,
+    /// ONNX format
+    Onnx,
+    /// PyTorch format
+    PyTorch,
+    /// TensorFlow format
+    TensorFlow,
+}
+
+/// I/O schema for model inputs and outputs
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct IoSchema {
+    pub inputs: Vec<TensorSpec>,
+    pub outputs: Vec<TensorSpec>,
+}
 
 /// Model artifact representation
 #[derive(Debug, Clone)]
@@ -25,14 +50,14 @@ pub enum ModelArtifact {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CompiledMetadata {
     pub format: ModelFmt,
-    pub compute_units: ComputeUnits,
+    pub compute_units: ComputeUnit,
     pub sha256: String,
 }
 
 /// Preparation options
 #[derive(Debug, Clone)]
 pub struct PrepareOptions {
-    pub compute_units: ComputeUnits,
+    pub compute_units: ComputeUnit,
     pub quantization: QuantizationConfig,
 }
 
@@ -136,8 +161,8 @@ pub struct CapabilityReport {
     pub supported_dtypes: Vec<DType>,
     pub max_batch_size: usize,
     pub ane_op_coverage_pct: u32, // % of model ops supported on ANE
-    pub compute_units_requested: ComputeUnits,
-    pub compute_units_actual: ComputeUnits, // reported by telemetry
+    pub compute_units_requested: ComputeUnit,
+    pub compute_units_actual: ComputeUnit, // reported by telemetry
     pub compile_p99_ms: u64,
     pub infer_p99_ms: u64,
 }

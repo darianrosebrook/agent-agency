@@ -110,3 +110,106 @@ impl DiffAnalyzer {
         }
     }
 }
+
+
+// Moved from caws_checker.rs: DiffAnalyzer struct
+#[derive(Debug)]
+pub struct DiffAnalyzer {
+    // Configuration for diff analysis
+    max_change_complexity: f32,
+    surgical_change_threshold: f32,
+}
+
+
+
+// Moved from caws_checker.rs: ChangeComplexity struct
+#[derive(Debug, Clone)]
+pub struct ChangeComplexity {
+    pub structural_changes: u32,
+    pub logical_changes: u32,
+    pub dependency_changes: u32,
+    pub complexity_score: f32,
+    pub is_surgical: bool,
+    /// Cyclomatic complexity score from AST analysis
+    pub cyclomatic_complexity: u32,
+    /// Diff scope analysis (lines changed, files affected)
+    pub diff_scope: DiffScope,
+}
+
+
+
+// Moved from caws_checker.rs: DiffScope struct
+#[derive(Debug, Clone)]
+pub struct DiffScope {
+    /// Number of lines changed in the diff
+    pub lines_changed: u32,
+    /// Number of files affected
+    pub files_affected: u32,
+    /// Estimated blast radius (how many modules/components affected)
+    pub blast_radius: u32,
+    /// Change type classification
+    pub change_type: ChangeType,
+}
+
+
+
+// Moved from caws_checker.rs: ChangeType enum
+#[derive(Debug, Clone)]
+pub enum ChangeType {
+    /// Simple variable or constant changes
+    Variable,
+    /// Function or method modifications
+    Function,
+    /// Class or interface changes
+    Structural,
+    /// Import/export dependency changes
+    Dependency,
+    /// Configuration or build system changes
+    Configuration,
+    /// Test-only changes
+    Test,
+    /// Documentation changes
+    Documentation,
+    /// Mixed or complex changes
+    Mixed,
+}
+
+
+
+// Moved from caws_checker.rs: DiffAnalysisResult struct
+#[derive(Debug, Clone)]
+pub struct DiffAnalysisResult {
+    pub change_complexity: ChangeComplexity,
+    pub language_violations: Vec<LanguageViolation>,
+    pub language_warnings: Vec<LanguageWarning>,
+    pub is_oversized: bool,
+    pub is_noisy: bool,
+    pub surgical_change_score: f32,
+    pub recommended_action: RecommendedAction,
+}
+
+
+
+// Moved from caws_checker.rs: RecommendedAction enum
+#[derive(Debug, Clone)]
+pub enum RecommendedAction {
+    Accept,
+    RequestSmallerChanges,
+    SplitIntoMultiplePRs,
+    AddMoreTests,
+    ImproveDocumentation,
+    RequestReview,
+}
+
+
+
+// Moved from caws_checker.rs: DiffAnalyzer impl block
+impl DiffAnalyzer {
+    pub fn new() -> Self {
+        Self {
+            max_change_complexity: 0.7,
+            surgical_change_threshold: 0.6,
+        }
+    }
+}
+

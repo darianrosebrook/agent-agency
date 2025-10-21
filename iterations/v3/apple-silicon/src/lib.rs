@@ -51,7 +51,7 @@ pub use enhanced_telemetry::{
     SLAConfig, TelemetryMetric,
 };
 pub use inference::{
-    CapabilityReport, ComputeUnits, DType, InferenceEngine, IoSchema, ModelArtifact, ModelFmt,
+    CapabilityReport, ComputeUnit, DType, InferenceEngine, IoSchema, ModelArtifact, ModelFmt,
     PrepareOptions, PreparedModel, TensorMap, TensorSpec,
 };
 pub use memory::MemoryManager;

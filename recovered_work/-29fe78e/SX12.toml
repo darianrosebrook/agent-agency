@@ -1,7 +1,0 @@
-[package]
-name = "ethical-reasoning-test"
-version = "1.0.0"
-edition = "2021"
-
-[dependencies]
-tokio = { version = "1", features = ["macros", "rt-multi-thread"] }

@@ -1,3 +1,56 @@
+//! CAWS Policy Configuration for Recovery System
+//!
+//! This module defines domain-specific CAWS policies for the recovery system.
+//! It is intentionally separate from the main `caws-runtime-validator` crate
+//! to maintain clear domain boundaries and avoid circular dependencies.
+//!
+//! ## Domain Separation Rationale
+//!
+//! **Why Separate from caws-runtime-validator?**
+//!
+//! 1. **Domain-Specific Concerns**: The recovery system has unique policy requirements
+//!    that don't overlap with the general CAWS validation used by orchestration,
+//!    workers, and MCP integration.
+//!
+//! 2. **Recovery-Specific Policies**: These policies focus on:
+//!    - Storage budget management (compression, chunking, retention)
+//!    - Recovery capability tracking and verification
+//!    - Provenance tracking for restoration operations
+//!    - Secret/PII redaction for stored data
+//!
+//! 3. **No Circular Dependencies**: The recovery system needs to operate independently
+//!    and cannot depend on the main CAWS runtime validator, which itself may need
+//!    recovery capabilities.
+//!
+//! 4. **Different Lifecycle**: Recovery policies are configured at the storage layer
+//!    and persist across system restarts, while runtime-validator policies are
+//!    more ephemeral and task-specific.
+//!
+//! ## Policy Categories
+//!
+//! - **StoragePolicy**: Budget limits, garbage collection, automatic packing
+//! - **RetentionPolicy**: Session/commit retention, protected labels/patterns
+//! - **CompressionPolicy**: Codec selection, compression levels, file-type overrides
+//! - **ChunkingPolicy**: Chunk sizing, content-defined chunking, hybrid modes
+//! - **RedactionPolicy**: Secret scanning, PII detection, custom redaction rules
+//! - **ProvenancePolicy**: Change tracking, agent iteration tracking, verdict requirements
+//! - **RecoveryPolicy**: Checkpointing, restore verification, conflict resolution
+//!
+//! ## Integration Points
+//!
+//! This recovery CAWS policy integrates with:
+//! - Storage backends (for budget enforcement)
+//! - Compression engines (for codec selection)
+//! - Secret scanners (for redaction enforcement)
+//! - Provenance tracking systems (for change attribution)
+//! - Recovery operations (for checkpoint and restore policies)
+//!
+//! It does NOT integrate with:
+//! - Task execution validation (handled by caws-runtime-validator)
+//! - MCP tool validation (handled by caws-runtime-validator)
+//! - Orchestration compliance (handled by caws-runtime-validator)
+//! - Worker output validation (handled by caws-runtime-validator)
+
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -6,6 +59,10 @@ use std::path::PathBuf;
 use crate::types::Codec;
 
 /// CAWS policy configuration for recovery system
+///
+/// This struct defines policies specific to the recovery domain and is separate
+/// from the general CAWS validation policies in `caws-runtime-validator`.
+/// See module documentation for rationale on domain separation.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CawsPolicy {
     /// Storage budget configuration
@@ -24,7 +81,12 @@ pub struct CawsPolicy {
     pub recovery: RecoveryPolicy,
 }
 
-/// Storage budget policy
+/// Storage budget policy for recovery system
+///
+/// This policy manages storage budgets, garbage collection, and automatic packing
+/// for the recovery system. It is separate from the general CAWS budget policies
+/// in `caws-runtime-validator` because it operates at the storage layer rather
+/// than the task execution layer.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StoragePolicy {
     /// Maximum storage size in bytes
@@ -39,7 +101,11 @@ pub struct StoragePolicy {
     pub auto_pack: bool,
 }
 
-/// Retention policy for sessions and commits
+/// Retention policy for sessions and commits in recovery system
+///
+/// This policy manages data retention for recovery operations, including protected
+/// labels and patterns. It is domain-specific to recovery and separate from
+/// general CAWS retention policies.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RetentionPolicy {
     /// Minimum retention period in days
@@ -52,7 +118,11 @@ pub struct RetentionPolicy {
     pub protected_patterns: Vec<String>,
 }
 
-/// Compression policy
+/// Compression policy for recovery system storage
+///
+/// This policy manages compression settings for stored recovery data, including
+/// codec selection and file-type specific overrides. It is separate from any
+/// compression policies in the main CAWS runtime validator.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CompressionPolicy {
     /// Default compression codec
@@ -100,7 +170,11 @@ pub enum ChunkingMode {
     Hybrid,
 }
 
-/// Redaction policy
+/// Redaction policy for recovery system data
+///
+/// This policy manages secret scanning, PII detection, and custom redaction rules
+/// for data stored in the recovery system. It is domain-specific to recovery
+/// operations and separate from general CAWS validation policies.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RedactionPolicy {
     /// Enable secret scanning
@@ -143,7 +217,12 @@ pub enum RedactionRuleType {
     Custom,
 }
 
-/// Provenance tracking policy
+/// Provenance tracking policy for recovery system
+///
+/// This policy manages provenance tracking for recovery operations, including
+/// change attribution and recovery capability tracking. It is separate from
+/// the general CAWS provenance policies in `caws-runtime-validator` because
+/// it focuses on recovery-specific provenance requirements.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProvenancePolicy {
     /// Enable file tracking
@@ -160,7 +239,11 @@ pub struct ProvenancePolicy {
     pub track_human_edits: bool,
 }
 
-/// Recovery policy
+/// Recovery policy for recovery system operations
+///
+/// This policy manages recovery-specific operations including checkpointing,
+/// restore verification, and conflict resolution. It is domain-specific to
+/// the recovery system and separate from general CAWS validation policies.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RecoveryPolicy {
     /// Enable automatic checkpointing
@@ -289,6 +372,10 @@ impl Default for CawsPolicy {
 
 impl CawsPolicy {
     /// Create a new CAWS policy with default configuration
+    ///
+    /// This creates a recovery-specific CAWS policy with sensible defaults
+    /// for recovery operations. It is separate from the main CAWS policy
+    /// in `caws-runtime-validator` to maintain domain separation.
     pub fn new() -> Self {
         Self::default()
     }
@@ -401,6 +488,12 @@ impl CawsPolicy {
 
 #[cfg(test)]
 mod tests {
+    //! Tests for recovery-specific CAWS policy
+    //!
+    //! These tests validate the recovery system's CAWS policy implementation.
+    //! They are separate from tests in `caws-runtime-validator` because they
+    //! test domain-specific recovery policies rather than general CAWS validation.
+    
     use super::*;
 
     #[test]

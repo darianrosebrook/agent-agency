@@ -4,6 +4,7 @@
 
 use crate::types::*;
 use crate::{CawsIntegration, ToolDiscovery, ToolRegistry};
+use caws_runtime_validator::integration::McpCawsIntegration;
 use anyhow::{anyhow, bail, Result};
 use jsonrpc_core::{Error as JsonRpcError, IoHandler, Params, Value};
 use jsonrpc_http_server::hyper::{Body, Response, StatusCode};
@@ -510,7 +511,10 @@ pub struct MCPServer {
     config: MCPConfig,
     tool_registry: Arc<ToolRegistry>,
     tool_discovery: Arc<ToolDiscovery>,
+    // DEPRECATED: Legacy wrapper for backward compatibility
     caws_integration: Arc<CawsIntegration>,
+    // NEW: Primary CAWS integration using runtime-validator
+    caws_runtime_validator: Arc<McpCawsIntegration>,
     status: Arc<RwLock<MCPServerStatus>>,
     connections: Arc<RwLock<Vec<MCPConnection>>>,
     http_handle: Arc<RwLock<Option<HttpServerHandle>>>,
@@ -574,7 +578,10 @@ impl MCPServer {
             config,
             tool_registry: Arc::new(ToolRegistry::new()),
             tool_discovery: Arc::new(ToolDiscovery::new()),
+            // DEPRECATED: Keep legacy integration for backward compatibility
             caws_integration: Arc::new(CawsIntegration::new()),
+            // NEW: Primary CAWS integration using runtime-validator
+            caws_runtime_validator: Arc::new(McpCawsIntegration::new()),
             status: Arc::new(RwLock::new(MCPServerStatus::Starting)),
             connections: Arc::new(RwLock::new(Vec::new())),
             http_handle: Arc::new(RwLock::new(None)),
@@ -678,7 +685,11 @@ impl MCPServer {
         // Initialize components
         self.tool_discovery.initialize().await?;
         self.tool_registry.initialize().await?;
+        // DEPRECATED: Initialize legacy CAWS integration for backward compatibility
         self.caws_integration.initialize().await?;
+        
+        // NEW: Runtime-validator CAWS integration is ready to use immediately
+        // No initialization needed as it's stateless
 
         // Start discovery process
         if self.config.tool_discovery.enable_auto_discovery {
@@ -714,7 +725,10 @@ impl MCPServer {
 
         let addr = format!("{}:{}", self.config.server.host, self.config.server.port);
         let registry = self.tool_registry.clone();
+        // DEPRECATED: Keep legacy CAWS integration for backward compatibility
         let caws = self.caws_integration.clone();
+        // NEW: Use runtime-validator for primary CAWS operations
+        let caws_runtime = self.caws_runtime_validator.clone();
         let registry_for_stats = self.tool_registry.clone();
         let version_payload = Arc::new(serde_json::json!({
             "name": self.config.server.server_name.clone(),
@@ -968,7 +982,10 @@ impl MCPServer {
         let addr: SocketAddr = format!("{}:{}", self.config.server.host, port).parse()?;
         let registry = self.tool_registry.clone();
         let registry_stats = self.tool_registry.clone();
+        // DEPRECATED: Keep legacy CAWS integration for backward compatibility
         let caws = self.caws_integration.clone();
+        // NEW: Use runtime-validator for primary CAWS operations
+        let caws_runtime = self.caws_runtime_validator.clone();
         let version_payload = Arc::new(serde_json::json!({
             "name": self.config.server.server_name.clone(),
             "version": self.config.server.version.clone(),
@@ -1110,7 +1127,10 @@ impl MCPServer {
         // Stop components
         self.tool_discovery.stop().await?;
         self.tool_registry.shutdown().await?;
+        // DEPRECATED: Shutdown legacy CAWS integration for backward compatibility
         self.caws_integration.shutdown().await?;
+        
+        // NEW: Runtime-validator CAWS integration is stateless, no shutdown needed
 
         if let Some(handle) = self.http_handle.write().await.take() {
             handle.shutdown().await?;
@@ -1182,11 +1202,18 @@ impl MCPServer {
 
         // Check CAWS compliance if enabled
         let _caws_result = if self.config.caws_integration.enable_caws_checking {
-            Some(
-                self.caws_integration
-                    .validate_tool_execution(&tool, &request)
-                    .await?,
-            )
+            // NEW: Use runtime-validator for primary CAWS validation
+            let runtime_result = self.caws_runtime_validator
+                .validate_tool_manifest(&tool.manifest, "2")
+                .await
+                .map_err(|e| anyhow::anyhow!("Runtime validator error: {}", e))?;
+            
+            // DEPRECATED: Also run legacy validation for comparison during migration
+            let _legacy_result = self.caws_integration
+                .validate_tool_execution(&tool, &request)
+                .await?;
+            
+            Some(runtime_result)
         } else {
             None
         };

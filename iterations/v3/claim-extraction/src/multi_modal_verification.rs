@@ -2297,15 +2297,511 @@ impl MultiModalVerificationEngine {
         }))
     }
 
-    // Placeholder implementations for parsing methods
-    fn parse_rust_code(&self, _content: &str, _functions: &mut Vec<FunctionDefinition>, _types: &mut Vec<TypeDefinition>, _implementations: &mut Vec<ImplementationBlock>) -> Result<()> {
-        // TODO: Implement Rust AST parsing
+    // Implement Rust AST parsing using regex-based analysis
+    // Note: For production use, consider integrating with `syn` crate for proper AST parsing
+    fn parse_rust_code(&self, content: &str, functions: &mut Vec<FunctionDefinition>, types: &mut Vec<TypeDefinition>, implementations: &mut Vec<ImplementationBlock>) -> Result<()> {
+        // Parse function definitions
+        self.parse_rust_functions(content, functions)?;
+
+        // Parse type definitions (structs, enums, traits)
+        self.parse_rust_types(content, types)?;
+
+        // Parse implementation blocks
+        self.parse_rust_implementations(content, implementations)?;
+
         Ok(())
     }
 
-    fn parse_typescript_code(&self, _content: &str, _functions: &mut Vec<FunctionDefinition>, _types: &mut Vec<TypeDefinition>, _implementations: &mut Vec<ImplementationBlock>) -> Result<()> {
-        // TODO: Implement TypeScript AST parsing
+    /// Parse Rust function definitions
+    fn parse_rust_functions(&self, content: &str, functions: &mut Vec<FunctionDefinition>) -> Result<()> {
+        // Regex pattern for function definitions: fn function_name(param: Type, ...) -> ReturnType {
+        let fn_pattern = r"fn\s+(\w+)\s*\(([^)]*)\)\s*(?:->\s*([^ {]+))?\s*\{";
+        let re = Regex::new(fn_pattern)?;
+
+        for line in content.lines() {
+            if let Some(captures) = re.captures(line.trim()) {
+                let name = captures.get(1).map_or("", |m| m.as_str()).to_string();
+                let params_str = captures.get(2).map_or("", |m| m.as_str());
+                let return_type = captures.get(3).map(|m| m.as_str().to_string());
+
+                // Parse parameters
+                let parameters: Vec<String> = if params_str.trim().is_empty() {
+                    vec![]
+                } else {
+                    params_str.split(',')
+                        .map(|p| p.trim().to_string())
+                        .filter(|p| !p.is_empty())
+                        .collect()
+                };
+
+                // Extract function body (simplified - just capture until closing brace)
+                let body = self.extract_function_body(content, &name)?;
+
+                functions.push(FunctionDefinition {
+                    name,
+                    parameters,
+                    return_type,
+                    body,
+                });
+            }
+        }
+
         Ok(())
+    }
+
+    /// Parse Rust type definitions
+    fn parse_rust_types(&self, content: &str, types: &mut Vec<TypeDefinition>) -> Result<()> {
+        // Parse structs
+        self.parse_rust_structs(content, types)?;
+
+        // Parse enums
+        self.parse_rust_enums(content, types)?;
+
+        // Parse traits
+        self.parse_rust_traits(content, types)?;
+
+        Ok(())
+    }
+
+    /// Parse Rust structs
+    fn parse_rust_structs(&self, content: &str, types: &mut Vec<TypeDefinition>) -> Result<()> {
+        let struct_pattern = r"struct\s+(\w+)\s*\{([^}]*)\}";
+        let re = Regex::new(struct_pattern)?;
+
+        for capture in re.captures_iter(content) {
+            let name = capture.get(1).map_or("", |m| m.as_str()).to_string();
+            let fields_str = capture.get(2).map_or("", |m| m.as_str());
+
+            // Parse fields
+            let fields: Vec<String> = fields_str.lines()
+                .map(|line| line.trim())
+                .filter(|line| !line.is_empty() && !line.starts_with("//"))
+                .map(|line| line.trim_end_matches(',').to_string())
+                .collect();
+
+            types.push(TypeDefinition {
+                name,
+                kind: "struct".to_string(),
+                fields,
+            });
+        }
+
+        Ok(())
+    }
+
+    /// Parse Rust enums
+    fn parse_rust_enums(&self, content: &str, types: &mut Vec<TypeDefinition>) -> Result<()> {
+        let enum_pattern = r"enum\s+(\w+)\s*\{([^}]*)\}";
+        let re = Regex::new(enum_pattern)?;
+
+        for capture in re.captures_iter(content) {
+            let name = capture.get(1).map_or("", |m| m.as_str()).to_string();
+            let variants_str = capture.get(2).map_or("", |m| m.as_str());
+
+            // Parse variants
+            let fields: Vec<String> = variants_str.lines()
+                .map(|line| line.trim())
+                .filter(|line| !line.is_empty() && !line.starts_with("//"))
+                .map(|line| line.trim_end_matches(',').to_string())
+                .collect();
+
+            types.push(TypeDefinition {
+                name,
+                kind: "enum".to_string(),
+                fields,
+            });
+        }
+
+        Ok(())
+    }
+
+    /// Parse Rust traits
+    fn parse_rust_traits(&self, content: &str, types: &mut Vec<TypeDefinition>) -> Result<()> {
+        let trait_pattern = r"trait\s+(\w+)\s*\{([^}]*)\}";
+        let re = Regex::new(trait_pattern)?;
+
+        for capture in re.captures_iter(content) {
+            let name = capture.get(1).map_or("", |m| m.as_str()).to_string();
+            let methods_str = capture.get(2).map_or("", |m| m.as_str());
+
+            // Parse method signatures (simplified)
+            let fields: Vec<String> = methods_str.lines()
+                .map(|line| line.trim())
+                .filter(|line| !line.is_empty() && !line.starts_with("//"))
+                .map(|line| line.trim_end_matches(';').to_string())
+                .collect();
+
+            types.push(TypeDefinition {
+                name,
+                kind: "trait".to_string(),
+                fields,
+            });
+        }
+
+        Ok(())
+    }
+
+    /// Parse Rust implementation blocks
+    fn parse_rust_implementations(&self, content: &str, implementations: &mut Vec<ImplementationBlock>) -> Result<()> {
+        let impl_pattern = r"impl\s+(?:<[^>]*>\s+)?(?:(\w+)::)?(\w+)\s*\{([^}]*)\}";
+        let re = Regex::new(impl_pattern)?;
+
+        for capture in re.captures_iter(content) {
+            let trait_name = capture.get(1).map(|m| m.as_str().to_string());
+            let struct_name = capture.get(2).map_or("", |m| m.as_str()).to_string();
+            let methods_str = capture.get(3).map_or("", |m| m.as_str());
+
+            // Determine target (struct or trait implementation)
+            let target = if let Some(trait_name) = trait_name {
+                format!("{} for {}", trait_name, struct_name)
+            } else {
+                struct_name
+            };
+
+            // Parse method names (simplified)
+            let methods: Vec<String> = methods_str.lines()
+                .filter_map(|line| {
+                    let trimmed = line.trim();
+                    if trimmed.starts_with("fn ") {
+                        // Extract function name
+                        let fn_pattern = r"fn\s+(\w+)";
+                        Regex::new(fn_pattern).ok()?
+                            .captures(trimmed)?
+                            .get(1)?
+                            .as_str()
+                            .to_string()
+                            .into()
+                    } else {
+                        None
+                    }
+                })
+                .collect();
+
+            implementations.push(ImplementationBlock {
+                target,
+                methods,
+            });
+        }
+
+        Ok(())
+    }
+
+    /// Extract function body (simplified implementation)
+    fn extract_function_body(&self, content: &str, function_name: &str) -> Result<String> {
+        // Find the function start
+        let fn_pattern = format!(r"fn\s+{}\s*\(", regex::escape(function_name));
+        let start_re = Regex::new(&fn_pattern)?;
+
+        if let Some(start_match) = start_re.find(content) {
+            let start_pos = start_match.start();
+
+            // Find the matching closing brace (simplified - doesn't handle nested braces properly)
+            let remaining = &content[start_pos..];
+            let mut brace_count = 0;
+            let mut end_pos = start_pos;
+
+            for (i, ch) in remaining.chars().enumerate() {
+                match ch {
+                    '{' => brace_count += 1,
+                    '}' => {
+                        brace_count -= 1;
+                        if brace_count == 0 {
+                            end_pos = start_pos + i + 1;
+                            break;
+                        }
+                    }
+                    _ => {}
+                }
+            }
+
+            if end_pos > start_pos {
+                Ok(content[start_pos..end_pos].to_string())
+            } else {
+                Ok("// Unable to extract function body".to_string())
+            }
+        } else {
+            Ok("// Function not found".to_string())
+        }
+    }
+
+    // Implement TypeScript AST parsing using regex-based analysis
+    // Note: For production use, consider integrating with `swc` or `typescript` crates for proper AST parsing
+    fn parse_typescript_code(&self, content: &str, functions: &mut Vec<FunctionDefinition>, types: &mut Vec<TypeDefinition>, implementations: &mut Vec<ImplementationBlock>) -> Result<()> {
+        // Parse function definitions (function declarations and arrow functions)
+        self.parse_typescript_functions(content, functions)?;
+
+        // Parse type definitions (interfaces, classes, types)
+        self.parse_typescript_types(content, types)?;
+
+        // Parse class implementations
+        self.parse_typescript_classes(content, implementations)?;
+
+        Ok(())
+    }
+
+    /// Parse TypeScript function definitions
+    fn parse_typescript_functions(&self, content: &str, functions: &mut Vec<FunctionDefinition>) -> Result<()> {
+        // Parse function declarations: function name(param: Type): ReturnType {
+        let fn_decl_pattern = r"function\s+(\w+)\s*\(([^)]*)\)\s*:\s*([^ {]+)\s*\{";
+        let fn_decl_re = Regex::new(fn_decl_pattern)?;
+
+        // Parse arrow functions: const name = (param: Type): ReturnType =>
+        let arrow_fn_pattern = r"const\s+(\w+)\s*=\s*\(([^)]*)\)\s*:\s*([^=]+)\s*=>\s*\{";
+        let arrow_fn_re = Regex::new(arrow_fn_pattern)?;
+
+        // Parse method definitions in classes: name(param: Type): ReturnType {
+        let method_pattern = r"(\w+)\s*\(([^)]*)\)\s*:\s*([^ {]+)\s*\{";
+        let method_re = Regex::new(method_pattern)?;
+
+        // Process function declarations
+        for capture in fn_decl_re.captures_iter(content) {
+            let name = capture.get(1).map_or("", |m| m.as_str()).to_string();
+            let params_str = capture.get(2).map_or("", |m| m.as_str());
+            let return_type = Some(capture.get(3).map_or("", |m| m.as_str()).to_string());
+
+            let parameters = self.parse_typescript_parameters(params_str);
+            let body = self.extract_typescript_function_body(content, &name)?;
+
+            functions.push(FunctionDefinition {
+                name,
+                parameters,
+                return_type,
+                body,
+            });
+        }
+
+        // Process arrow functions
+        for capture in arrow_fn_re.captures_iter(content) {
+            let name = capture.get(1).map_or("", |m| m.as_str()).to_string();
+            let params_str = capture.get(2).map_or("", |m| m.as_str());
+            let return_type = Some(capture.get(3).map_or("", |m| m.as_str()).to_string());
+
+            let parameters = self.parse_typescript_parameters(params_str);
+            let body = self.extract_typescript_function_body(content, &name)?;
+
+            functions.push(FunctionDefinition {
+                name,
+                parameters,
+                return_type,
+                body,
+            });
+        }
+
+        // Process methods (simplified - may capture non-method functions)
+        for capture in method_re.captures_iter(content) {
+            let name = capture.get(1).map_or("", |m| m.as_str()).to_string();
+            let params_str = capture.get(2).map_or("", |m| m.as_str());
+            let return_type = Some(capture.get(3).map_or("", |m| m.as_str()).to_string());
+
+            // Skip if this is already captured by function declarations
+            if functions.iter().any(|f| f.name == name) {
+                continue;
+            }
+
+            let parameters = self.parse_typescript_parameters(params_str);
+            let body = self.extract_typescript_function_body(content, &name)?;
+
+            functions.push(FunctionDefinition {
+                name,
+                parameters,
+                return_type,
+                body,
+            });
+        }
+
+        Ok(())
+    }
+
+    /// Parse TypeScript type definitions
+    fn parse_typescript_types(&self, content: &str, types: &mut Vec<TypeDefinition>) -> Result<()> {
+        // Parse interfaces
+        self.parse_typescript_interfaces(content, types)?;
+
+        // Parse classes
+        self.parse_typescript_classes_types(content, types)?;
+
+        // Parse type aliases
+        self.parse_typescript_type_aliases(content, types)?;
+
+        Ok(())
+    }
+
+    /// Parse TypeScript interfaces
+    fn parse_typescript_interfaces(&self, content: &str, types: &mut Vec<TypeDefinition>) -> Result<()> {
+        let interface_pattern = r"interface\s+(\w+)(?:\s+extends\s+[^ {]+)?\s*\{([^}]*)\}";
+        let re = Regex::new(interface_pattern)?;
+
+        for capture in re.captures_iter(content) {
+            let name = capture.get(1).map_or("", |m| m.as_str()).to_string();
+            let members_str = capture.get(2).map_or("", |m| m.as_str());
+
+            // Parse interface members
+            let fields: Vec<String> = members_str.lines()
+                .map(|line| line.trim())
+                .filter(|line| !line.is_empty() && !line.starts_with("//"))
+                .map(|line| line.trim_end_matches(';').to_string())
+                .collect();
+
+            types.push(TypeDefinition {
+                name,
+                kind: "interface".to_string(),
+                fields,
+            });
+        }
+
+        Ok(())
+    }
+
+    /// Parse TypeScript classes as types
+    fn parse_typescript_classes_types(&self, content: &str, types: &mut Vec<TypeDefinition>) -> Result<()> {
+        let class_pattern = r"class\s+(\w+)(?:\s+extends\s+[^ {]+)?(?:\s+implements\s+[^ {]+)?\s*\{([^}]*)\}";
+        let re = Regex::new(class_pattern)?;
+
+        for capture in re.captures_iter(content) {
+            let name = capture.get(1).map_or("", |m| m.as_str()).to_string();
+            let members_str = capture.get(2).map_or("", |m| m.as_str());
+
+            // Parse class members (properties and methods)
+            let fields: Vec<String> = members_str.lines()
+                .map(|line| line.trim())
+                .filter(|line| !line.is_empty() && !line.starts_with("//"))
+                .filter(|line| !line.starts_with("constructor"))
+                .map(|line| line.trim_end_matches(';').to_string())
+                .collect();
+
+            types.push(TypeDefinition {
+                name,
+                kind: "class".to_string(),
+                fields,
+            });
+        }
+
+        Ok(())
+    }
+
+    /// Parse TypeScript type aliases
+    fn parse_typescript_type_aliases(&self, content: &str, types: &mut Vec<TypeDefinition>) -> Result<()> {
+        let type_alias_pattern = r"type\s+(\w+)\s*=\s*([^;]+);";
+        let re = Regex::new(type_alias_pattern)?;
+
+        for capture in re.captures_iter(content) {
+            let name = capture.get(1).map_or("", |m| m.as_str()).to_string();
+            let type_definition = capture.get(2).map_or("", |m| m.as_str()).trim();
+
+            types.push(TypeDefinition {
+                name,
+                kind: "type_alias".to_string(),
+                fields: vec![type_definition.to_string()],
+            });
+        }
+
+        Ok(())
+    }
+
+    /// Parse TypeScript class implementations
+    fn parse_typescript_classes(&self, content: &str, implementations: &mut Vec<ImplementationBlock>) -> Result<()> {
+        let class_pattern = r"class\s+(\w+)(?:\s+extends\s+[^ {]+)?(?:\s+implements\s+[^ {]+)?\s*\{([^}]*)\}";
+        let re = Regex::new(class_pattern)?;
+
+        for capture in re.captures_iter(content) {
+            let class_name = capture.get(1).map_or("", |m| m.as_str()).to_string();
+            let members_str = capture.get(2).map_or("", |m| m.as_str());
+
+            // Extract method names
+            let methods: Vec<String> = members_str.lines()
+                .filter_map(|line| {
+                    let trimmed = line.trim();
+                    // Match method definitions (not properties)
+                    if trimmed.contains('(') && trimmed.contains(')') && !trimmed.starts_with("constructor") {
+                        // Extract method name (simplified)
+                        if let Some(open_paren) = trimmed.find('(') {
+                            let method_name = trimmed[..open_paren].trim();
+                            // Remove modifiers like public, private, etc.
+                            let clean_name = method_name
+                                .replace("public ", "")
+                                .replace("private ", "")
+                                .replace("protected ", "")
+                                .replace("static ", "")
+                                .replace("async ", "");
+                            Some(clean_name.to_string())
+                        } else {
+                            None
+                        }
+                    } else {
+                        None
+                    }
+                })
+                .collect();
+
+            if !methods.is_empty() {
+                implementations.push(ImplementationBlock {
+                    target: class_name,
+                    methods,
+                });
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Parse TypeScript function parameters
+    fn parse_typescript_parameters(&self, params_str: &str) -> Vec<String> {
+        if params_str.trim().is_empty() {
+            return vec![];
+        }
+
+        params_str.split(',')
+            .map(|p| p.trim().to_string())
+            .filter(|p| !p.is_empty())
+            .collect()
+    }
+
+    /// Extract TypeScript function body
+    fn extract_typescript_function_body(&self, content: &str, function_name: &str) -> Result<String> {
+        // Try different patterns for finding function start
+        let patterns = vec![
+            format!(r"function\s+{}\s*\(", regex::escape(function_name)),
+            format!(r"const\s+{}\s*=\s*\(", regex::escape(function_name)),
+            format!(r"(\w+)\s*\(", regex::escape(function_name)), // Method pattern
+        ];
+
+        for pattern in patterns {
+            let start_re = Regex::new(&pattern)?;
+            if let Some(start_match) = start_re.find(content) {
+                let start_pos = start_match.start();
+
+                // Find the opening brace after the function declaration
+                let remaining = &content[start_pos..];
+                if let Some(brace_pos) = remaining.find('{') {
+                    let actual_start = start_pos + brace_pos;
+
+                    // Find the matching closing brace
+                    let body_content = &content[actual_start..];
+                    let mut brace_count = 0;
+                    let mut end_pos = actual_start;
+
+                    for (i, ch) in body_content.chars().enumerate() {
+                        match ch {
+                            '{' => brace_count += 1,
+                            '}' => {
+                                brace_count -= 1;
+                                if brace_count == 0 {
+                                    end_pos = actual_start + i + 1;
+                                    break;
+                                }
+                            }
+                            _ => {}
+                        }
+                    }
+
+                    if end_pos > actual_start {
+                        return Ok(content[actual_start..end_pos].to_string());
+                    }
+                }
+            }
+        }
+
+        Ok("// Unable to extract function body".to_string())
     }
 
     fn parse_generic_code(&self, _content: &str, _functions: &mut Vec<FunctionDefinition>, _types: &mut Vec<TypeDefinition>, _implementations: &mut Vec<ImplementationBlock>) -> Result<()> {
@@ -2313,9 +2809,160 @@ impl MultiModalVerificationEngine {
         Ok(())
     }
 
-    fn parse_api_section(&self, _line: &str, _lines: &[&str]) -> Result<Option<ApiDocumentation>> {
-        // TODO: Implement API documentation parsing
-        Ok(None)
+    /// Parse API documentation sections from code comments or documentation
+    fn parse_api_section(&self, line: &str, lines: &[&str]) -> Result<Option<ApiDocumentation>> {
+        // Look for API documentation markers
+        if !self.is_api_documentation_start(line) {
+            return Ok(None);
+        }
+
+        let mut endpoints = Vec::new();
+        let mut parameters = std::collections::HashMap::new();
+        let mut responses = std::collections::HashMap::new();
+
+        // Parse the API documentation section
+        let mut i = 0;
+        while i < lines.len() {
+            let current_line = lines[i];
+
+            // Extract endpoints (e.g., "GET /api/users", "POST /api/users/{id}")
+            if let Some(endpoint) = self.extract_endpoint(current_line) {
+                endpoints.push(endpoint);
+            }
+
+            // Extract parameters (e.g., "id: string - User ID")
+            if let Some((param_name, param_desc)) = self.extract_parameter(current_line) {
+                parameters.entry(param_name).or_insert_with(Vec::new).push(param_desc);
+            }
+
+            // Extract responses (e.g., "200: User data", "404: User not found")
+            if let Some((status_code, response_desc)) = self.extract_response(current_line) {
+                responses.insert(status_code, response_desc);
+            }
+
+            // Check if we've reached the end of the API section
+            if self.is_api_documentation_end(current_line) {
+                break;
+            }
+
+            i += 1;
+        }
+
+        if endpoints.is_empty() && parameters.is_empty() && responses.is_empty() {
+            return Ok(None);
+        }
+
+        Ok(Some(ApiDocumentation {
+            endpoints,
+            parameters,
+            responses,
+        }))
+    }
+
+    /// Check if a line indicates the start of API documentation
+    fn is_api_documentation_start(&self, line: &str) -> bool {
+        let trimmed = line.trim();
+        trimmed.contains("# API") ||
+        trimmed.contains("## API") ||
+        trimmed.contains("### API") ||
+        trimmed.contains("API Endpoints") ||
+        trimmed.contains("REST API") ||
+        trimmed.contains("@api") ||
+        trimmed.contains("/**") && line.contains("api")
+    }
+
+    /// Check if a line indicates the end of API documentation
+    fn is_api_documentation_end(&self, line: &str) -> bool {
+        let trimmed = line.trim();
+        trimmed.starts_with("## ") && !trimmed.contains("API") ||
+        trimmed.starts_with("# ") && !trimmed.contains("API") ||
+        trimmed == "---" ||
+        trimmed.is_empty() && line.contains("\n\n")
+    }
+
+    /// Extract endpoint from a line (e.g., "GET /api/users")
+    fn extract_endpoint(&self, line: &str) -> Option<String> {
+        let trimmed = line.trim();
+
+        // Common HTTP methods
+        let methods = ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"];
+
+        for method in &methods {
+            if trimmed.starts_with(&format!("{} ", method)) ||
+               trimmed.starts_with(&format!("- {} ", method)) ||
+               trimmed.contains(&format!("{} /", method)) {
+
+                // Extract the endpoint path
+                let endpoint_pattern = format!(r"{}\s+([^\s]+)", method);
+                if let Ok(re) = Regex::new(&endpoint_pattern) {
+                    if let Some(captures) = re.captures(trimmed) {
+                        if let Some(endpoint) = captures.get(1) {
+                            return Some(format!("{} {}", method, endpoint.as_str()));
+                        }
+                    }
+                }
+
+                // Fallback: extract after method
+                if let Some(start) = trimmed.find(&format!("{} ", method)) {
+                    let endpoint_part = &trimmed[start + method.len() + 1..];
+                    if let Some(end) = endpoint_part.find(' ') {
+                        return Some(format!("{} {}", method, &endpoint_part[..end]));
+                    } else {
+                        return Some(format!("{} {}", method, endpoint_part));
+                    }
+                }
+            }
+        }
+
+        None
+    }
+
+    /// Extract parameter from a line (e.g., "id: string - User ID")
+    fn extract_parameter(&self, line: &str) -> Option<(String, String)> {
+        let trimmed = line.trim();
+
+        // Look for parameter patterns like "param: type - description"
+        let param_patterns = [
+            r"(\w+):\s*([^-\n]+)\s*-\s*(.+)",  // name: type - description
+            r"- (\w+):\s*([^-\n]+)\s*-\s*(.+)", // - name: type - description
+            r"@param\s+(\w+)\s+(.+)",             // @param name description
+        ];
+
+        for pattern in &param_patterns {
+            if let Ok(re) = Regex::new(pattern) {
+                if let Some(captures) = re.captures(trimmed) {
+                    let name = captures.get(1)?.as_str().to_string();
+                    let description = captures.get(captures.len() - 1)?.as_str().to_string();
+                    return Some((name, description));
+                }
+            }
+        }
+
+        None
+    }
+
+    /// Extract response from a line (e.g., "200: User data")
+    fn extract_response(&self, line: &str) -> Option<(String, String)> {
+        let trimmed = line.trim();
+
+        // Look for response patterns like "200: description" or "200 OK - description"
+        let response_patterns = [
+            r"(\d{3}):\s*(.+)",                    // 200: description
+            r"(\d{3})\s+\w+:\s*(.+)",             // 200 OK: description
+            r"- (\d{3}):\s*(.+)",                 // - 200: description
+        ];
+
+        for pattern in &response_patterns {
+            if let Ok(re) = Regex::new(pattern) {
+                if let Some(captures) = re.captures(trimmed) {
+                    let status_code = captures.get(1)?.as_str().to_string();
+                    let description = captures.get(2)?.as_str().to_string();
+                    return Some((status_code, description));
+                }
+            }
+        }
+
+        None
     }
 
     fn parse_example_section(&self, _line: &str, _lines: &[&str]) -> Result<Option<UsageExample>> {
@@ -2333,9 +2980,166 @@ impl MultiModalVerificationEngine {
         Ok(vec![])
     }
 
-    fn parse_pattern_output(&self, _content: &str) -> Result<Vec<PatternResult>> {
-        // TODO: Implement pattern output parsing
-        Ok(vec![])
+    /// Parse pattern analysis output from various analysis tools
+    fn parse_pattern_output(&self, content: &str) -> Result<Vec<PatternResult>> {
+        let mut patterns = Vec::new();
+
+        // Parse different pattern analysis output formats
+        self.parse_statistical_patterns(content, &mut patterns)?;
+        self.parse_machine_learning_patterns(content, &mut patterns)?;
+        self.parse_code_patterns(content, &mut patterns)?;
+        self.parse_text_patterns(content, &mut patterns)?;
+
+        // Filter and validate patterns
+        let valid_patterns = patterns.into_iter()
+            .filter(|p| p.confidence >= 0.1 && !p.pattern_type.is_empty())
+            .collect();
+
+        Ok(valid_patterns)
+    }
+
+    /// Parse statistical patterns from analysis output
+    fn parse_statistical_patterns(&self, content: &str, patterns: &mut Vec<PatternResult>) -> Result<()> {
+        // Look for statistical pattern indicators
+        let statistical_patterns = [
+            (r"seasonal.*pattern.*confidence[:\s]*([0-9.]+)", "seasonal_pattern", "Detected seasonal pattern in data"),
+            (r"trend.*pattern.*confidence[:\s]*([0-9.]+)", "trend_pattern", "Detected trend pattern in data"),
+            (r"cyclical.*pattern.*confidence[:\s]*([0-9.]+)", "cyclical_pattern", "Detected cyclical pattern in data"),
+            (r"outlier.*pattern.*confidence[:\s]*([0-9.]+)", "outlier_pattern", "Detected outlier pattern in data"),
+            (r"cluster.*pattern.*confidence[:\s]*([0-9.]+)", "cluster_pattern", "Detected clustering pattern in data"),
+        ];
+
+        for line in content.lines() {
+            for (pattern, pattern_type, description) in &statistical_patterns {
+                if let Ok(re) = Regex::new(pattern) {
+                    if let Some(captures) = re.captures(line) {
+                        if let Some(confidence_str) = captures.get(1) {
+                            if let Ok(confidence) = confidence_str.as_str().parse::<f64>() {
+                                if confidence > 0.0 {
+                                    patterns.push(PatternResult {
+                                        pattern_type: pattern_type.to_string(),
+                                        description: format!("{} (confidence: {:.2})", description, confidence),
+                                        confidence: confidence.min(1.0),
+                                    });
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Parse machine learning patterns from analysis output
+    fn parse_machine_learning_patterns(&self, content: &str, patterns: &mut Vec<PatternResult>) -> Result<()> {
+        // Look for ML pattern indicators
+        let ml_patterns = [
+            (r"classification.*accuracy[:\s]*([0-9.]+)", "classification_pattern", "Machine learning classification pattern detected"),
+            (r"regression.*r2[:\s]*([0-9.]+)", "regression_pattern", "Regression pattern with R² score"),
+            (r"clustering.*silhouette[:\s]*([0-9.]+)", "clustering_pattern", "Clustering pattern detected"),
+            (r"anomaly.*score[:\s]*([0-9.]+)", "anomaly_pattern", "Anomaly detection pattern"),
+            (r"feature.*importance.*top[:\s]*(\w+)", "feature_importance_pattern", "Key feature importance pattern"),
+        ];
+
+        for line in content.lines() {
+            for (pattern, pattern_type, description) in &ml_patterns {
+                if let Ok(re) = Regex::new(pattern) {
+                    if let Some(captures) = re.captures(line) {
+                        let confidence = if let Some(score_str) = captures.get(1) {
+                            score_str.as_str().parse::<f64>().unwrap_or(0.5)
+                        } else {
+                            0.5
+                        };
+
+                        patterns.push(PatternResult {
+                            pattern_type: pattern_type.to_string(),
+                            description: format!("{} (score: {:.2})", description, confidence),
+                            confidence: confidence.min(1.0),
+                        });
+                    }
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Parse code patterns from analysis output
+    fn parse_code_patterns(&self, content: &str, patterns: &mut Vec<PatternResult>) -> Result<()> {
+        // Look for code pattern indicators
+        let code_patterns = [
+            (r"code.*duplication.*([0-9.]+)%", "code_duplication", "Code duplication pattern detected"),
+            (r"complexity.*score[:\s]*([0-9.]+)", "complexity_pattern", "Code complexity pattern"),
+            (r"design.*pattern[:\s]*(\w+)", "design_pattern", "Design pattern detected"),
+            (r"anti.*pattern[:\s]*(\w+)", "anti_pattern", "Anti-pattern detected in code"),
+            (r"code.*smell[:\s]*(\w+)", "code_smell", "Code smell pattern identified"),
+        ];
+
+        for line in content.lines() {
+            for (pattern, pattern_type, description) in &code_patterns {
+                if let Ok(re) = Regex::new(pattern) {
+                    if let Some(captures) = re.captures(line) {
+                        let confidence = if let Some(score_str) = captures.get(1) {
+                            if let Ok(score) = score_str.as_str().parse::<f64>() {
+                                score / 100.0 // Normalize percentages
+                            } else {
+                                0.7
+                            }
+                        } else {
+                            0.7
+                        };
+
+                        patterns.push(PatternResult {
+                            pattern_type: pattern_type.to_string(),
+                            description: description.to_string(),
+                            confidence,
+                        });
+                    }
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Parse text patterns from analysis output
+    fn parse_text_patterns(&self, content: &str, patterns: &mut Vec<PatternResult>) -> Result<()> {
+        // Look for text analysis pattern indicators
+        let text_patterns = [
+            (r"sentiment.*score[:\s]*([0-9.\-]+)", "sentiment_pattern", "Sentiment analysis pattern"),
+            (r"topic.*modeling.*coherence[:\s]*([0-9.]+)", "topic_modeling", "Topic modeling pattern detected"),
+            (r"text.*similarity[:\s]*([0-9.]+)", "text_similarity", "Text similarity pattern"),
+            (r"named.*entity.*confidence[:\s]*([0-9.]+)", "named_entity", "Named entity recognition pattern"),
+            (r"language.*pattern[:\s]*(\w+)", "language_pattern", "Language pattern detected"),
+        ];
+
+        for line in content.lines() {
+            for (pattern, pattern_type, description) in &text_patterns {
+                if let Ok(re) = Regex::new(pattern) {
+                    if let Some(captures) = re.captures(line) {
+                        let confidence = if let Some(score_str) = captures.get(1) {
+                            if let Ok(score) = score_str.as_str().parse::<f64>() {
+                                score.abs() // Handle negative sentiment scores
+                            } else {
+                                0.6
+                            }
+                        } else {
+                            0.6
+                        };
+
+                        patterns.push(PatternResult {
+                            pattern_type: pattern_type.to_string(),
+                            description: format!("{} (confidence: {:.2})", description, confidence),
+                            confidence: confidence.min(1.0),
+                        });
+                    }
+                }
+            }
+        }
+
+        Ok(())
     }
 
     fn parse_correlation_output(&self, _content: &str) -> Result<Vec<CorrelationResult>> {
@@ -2363,9 +3167,183 @@ impl MultiModalVerificationEngine {
         Ok(None)
     }
 
-    fn extract_pattern_claim(&self, _pattern: &PatternResult, _schema: &DataSchema) -> Result<Option<AtomicClaim>> {
-        // TODO: Implement pattern claim extraction
-        Ok(None)
+    /// Extract atomic claims from pattern analysis results
+    fn extract_pattern_claim(&self, pattern: &PatternResult, schema: &DataSchema) -> Result<Option<AtomicClaim>> {
+        // Only extract claims from high-confidence patterns
+        if pattern.confidence < 0.6 {
+            return Ok(None);
+        }
+
+        // Generate claim based on pattern type
+        let (claim_text, claim_type, subject, predicate, object) = match pattern.pattern_type.as_str() {
+            "seasonal_pattern" => (
+                format!("Data exhibits seasonal patterns with {} confidence", pattern.description),
+                crate::types::ClaimType::Behavioral,
+                Some("data".to_string()),
+                Some("exhibits".to_string()),
+                Some("seasonal_patterns".to_string()),
+            ),
+            "trend_pattern" => (
+                format!("Data shows trend patterns: {}", pattern.description),
+                crate::types::ClaimType::Behavioral,
+                Some("data".to_string()),
+                Some("shows".to_string()),
+                Some("trend_patterns".to_string()),
+            ),
+            "classification_pattern" => (
+                format!("Classification model identifies patterns: {}", pattern.description),
+                crate::types::ClaimType::Functional,
+                Some("classification_model".to_string()),
+                Some("identifies".to_string()),
+                Some("patterns".to_string()),
+            ),
+            "code_duplication" => (
+                format!("Code contains duplication patterns: {}", pattern.description),
+                crate::types::ClaimType::Structural,
+                Some("code".to_string()),
+                Some("contains".to_string()),
+                Some("duplication_patterns".to_string()),
+            ),
+            "design_pattern" => (
+                format!("Code implements design patterns: {}", pattern.description),
+                crate::types::ClaimType::Structural,
+                Some("code".to_string()),
+                Some("implements".to_string()),
+                Some("design_patterns".to_string()),
+            ),
+            "sentiment_pattern" => (
+                format!("Text analysis reveals sentiment patterns: {}", pattern.description),
+                crate::types::ClaimType::Behavioral,
+                Some("text_analysis".to_string()),
+                Some("reveals".to_string()),
+                Some("sentiment_patterns".to_string()),
+            ),
+            "anomaly_pattern" => (
+                format!("Data contains anomalous patterns: {}", pattern.description),
+                crate::types::ClaimType::Behavioral,
+                Some("data".to_string()),
+                Some("contains".to_string()),
+                Some("anomalous_patterns".to_string()),
+            ),
+            _ => {
+                // Generic pattern claim
+                (
+                    format!("Analysis detected {} pattern: {}", pattern.pattern_type, pattern.description),
+                    crate::types::ClaimType::Informational,
+                    Some("analysis".to_string()),
+                    Some("detected".to_string()),
+                    Some(format!("{}_pattern", pattern.pattern_type)),
+                )
+            }
+        };
+
+        // Determine verifiability based on confidence and pattern type
+        let verifiability = if pattern.confidence > 0.8 {
+            crate::types::VerifiabilityLevel::High
+        } else if pattern.confidence > 0.7 {
+            crate::types::VerifiabilityLevel::Medium
+        } else {
+            crate::types::VerifiabilityLevel::Low
+        };
+
+        // Create verification requirements
+        let verification_requirements = vec![
+            crate::types::VerificationRequirement {
+                requirement_type: "pattern_analysis".to_string(),
+                description: format!("Verify {} pattern through statistical analysis", pattern.pattern_type),
+                required_evidence: vec!["statistical_analysis".to_string(), "data_samples".to_string()],
+                verification_method: "statistical_validation".to_string(),
+                expected_confidence: pattern.confidence,
+            },
+        ];
+
+        // Extract contextual information from schema
+        let contextual_brackets = self.extract_context_from_schema(schema)?;
+
+        let claim = AtomicClaim {
+            id: Uuid::new_v4(),
+            claim_text,
+            claim_type,
+            verifiability,
+            scope: crate::types::ClaimScope::System,
+            confidence: pattern.confidence,
+            contextual_brackets,
+            subject,
+            predicate,
+            object,
+            context_brackets: contextual_brackets.clone(),
+            verification_requirements,
+            position: (0, 0), // Pattern analysis doesn't have specific positions
+            sentence_fragment: pattern.description.clone(),
+            supporting_evidence: vec![
+                crate::types::Evidence {
+                    evidence_type: "pattern_analysis".to_string(),
+                    content: pattern.description.clone(),
+                    confidence: pattern.confidence,
+                    source: "automated_pattern_analysis".to_string(),
+                    timestamp: chrono::Utc::now(),
+                    metadata: std::collections::HashMap::from([
+                        ("pattern_type".to_string(), pattern.pattern_type.clone()),
+                        ("analysis_confidence".to_string(), pattern.confidence.to_string()),
+                    ]),
+                }
+            ],
+            extraction_metadata: crate::types::ExtractionMetadata {
+                extractor_version: "pattern_analysis_v1.0".to_string(),
+                extraction_timestamp: chrono::Utc::now(),
+                confidence_score: pattern.confidence,
+                extraction_method: "pattern_analysis".to_string(),
+                source_document: "pattern_analysis_output".to_string(),
+                processing_time_ms: 0, // Not tracked for pattern analysis
+            },
+            validation_history: vec![],
+            claim_status: crate::types::ClaimStatus::Extracted,
+            tags: vec![
+                "pattern_analysis".to_string(),
+                pattern.pattern_type.clone(),
+                format!("confidence_{:.0}", pattern.confidence * 100.0),
+            ],
+            relationships: vec![],
+            last_updated: chrono::Utc::now(),
+        };
+
+        Ok(Some(claim))
+    }
+
+    /// Extract contextual information from data schema
+    fn extract_context_from_schema(&self, schema: &DataSchema) -> Result<Vec<String>> {
+        let mut context = Vec::new();
+
+        // Add table/collection information
+        if let Some(ref tables) = schema.tables {
+            for table in tables {
+                context.push(format!("table:{}", table.name));
+                context.push(format!("columns:{}", table.columns.len()));
+
+                // Add column type information
+                for column in &table.columns {
+                    if let Some(ref col_type) = column.data_type {
+                        context.push(format!("column_type:{}:{}", column.name, col_type));
+                    }
+                }
+            }
+        }
+
+        // Add relationship information
+        if let Some(ref relationships) = schema.relationships {
+            for rel in relationships {
+                context.push(format!("relationship:{}->{}", rel.from_table, rel.to_table));
+            }
+        }
+
+        // Add constraints information
+        if let Some(ref constraints) = schema.constraints {
+            for constraint in constraints {
+                context.push(format!("constraint:{}:{}", constraint.constraint_type, constraint.table_name));
+            }
+        }
+
+        Ok(context)
     }
 
     fn extract_correlation_claim(&self, _correlation: &CorrelationResult, _schema: &DataSchema) -> Result<Option<AtomicClaim>> {

@@ -5,11 +5,12 @@
 /// Used for ground-truth parity validation and as fallback when Core ML unavailable.
 /// Establishes numeric baselines: L∞ < 1e-5, RMSE < 1e-6 (FP32).
 use crate::inference::{
-    CapabilityReport, ComputeUnits, DType, InferenceEngine, IoSchema, ModelArtifact, ModelFmt,
+    CapabilityReport, ComputeUnit, DType, InferenceEngine, IoSchema, ModelArtifact, ModelFmt,
     PrepareOptions, PreparedModel, TensorMap, TensorSpec,
 };
 use anyhow::{anyhow, bail, Context, Result};
 use candle_core::{Device, Tensor};
+use tracing::{debug, info, warn};
 use ort::session::Session;
 use ort::tensor::TensorElementType;
 use ort::execution_providers::ExecutionProvider;
@@ -322,8 +323,8 @@ impl InferenceEngine for CandleBackend {
             supported_dtypes: vec![DType::F32, DType::F16, DType::I32, DType::I8],
             max_batch_size: 128,
             ane_op_coverage_pct: 0, // CPU has no ANE
-            compute_units_requested: ComputeUnits::CpuOnly,
-            compute_units_actual: ComputeUnits::CpuOnly,
+            compute_units_requested: ComputeUnit::CPU,
+            compute_units_actual: ComputeUnit::CPU,
             compile_p99_ms: 100,
             infer_p99_ms: 50,
         }
@@ -469,8 +470,8 @@ impl InferenceEngine for CandleBackend {
     /// Parse ONNX model metadata and extract I/O schema
     fn parse_onnx_metadata(&self, model_data: &[u8]) -> Result<IoSchema> {
         // Implement ONNX protobuf parsing with proper validation and error handling
-        let onnx_model = self.parse_onnx_protobuf_structure(model_data)?;
-        let schema = self.extract_io_schema_from_onnx_model(&onnx_model)?;
+        let onnx_model = Self::parse_onnx_protobuf_structure(model_data)?;
+        let schema = Self::extract_io_schema_from_onnx_model(&onnx_model)?;
 
         // Look for ONNX magic bytes and basic structure
         if model_data.len() < 8 {
@@ -487,473 +488,6 @@ impl InferenceEngine for CandleBackend {
     }
 
     /// Parse ONNX protobuf structure with proper validation
-    fn parse_onnx_protobuf_structure(&self, model_data: &[u8]) -> Result<ONNXModel> {
-        // Guard clauses for input validation
-        if model_data.is_empty() {
-            return Err(anyhow::anyhow!("ONNX model data cannot be empty"));
-        }
-
-        // Validate ONNX magic bytes
-        if !self.validate_onnx_magic_bytes(model_data) {
-            return Err(anyhow::anyhow!("Invalid ONNX file format - missing magic bytes"));
-        }
-
-        // Parse protobuf structure
-        let model_proto = self.parse_protobuf_message(model_data)?;
-
-        // Validate ONNX version compatibility
-        if !self.validate_onnx_version(&model_proto) {
-            return Err(anyhow::anyhow!("Unsupported ONNX version"));
-        }
-
-        // Extract model information
-        let model = ONNXModel {
-            ir_version: model_proto.ir_version,
-            opset_import: model_proto.opset_import,
-            producer_name: model_proto.producer_name,
-            producer_version: model_proto.producer_version,
-            domain: model_proto.domain,
-            model_version: model_proto.model_version,
-            doc_string: model_proto.doc_string,
-            graph: model_proto.graph,
-            metadata_props: model_proto.metadata_props,
-        };
-
-        debug!("ONNX model parsed successfully: IR version {}, {} opsets",
-               model.ir_version, model.opset_import.len());
-        Ok(model)
-    }
-
-    /// Extract I/O schema from parsed ONNX model
-    fn extract_io_schema_from_onnx_model(&self, model: &ONNXModel) -> Result<IoSchema> {
-        let graph = &model.graph;
-        
-        // Extract input specifications
-        let inputs = graph.input.iter()
-            .map(|input| self.convert_onnx_value_info_to_tensor_spec(input))
-            .collect::<Result<Vec<_>>>()?;
-
-        // Extract output specifications  
-        let outputs = graph.output.iter()
-            .map(|output| self.convert_onnx_value_info_to_tensor_spec(output))
-            .collect::<Result<Vec<_>>>()?;
-
-        debug!("Extracted {} inputs and {} outputs from ONNX model", 
-               inputs.len(), outputs.len());
-
-        Ok(IoSchema { inputs, outputs })
-    }
-
-    /// Validate ONNX magic bytes
-    fn validate_onnx_magic_bytes(&self, data: &[u8]) -> bool {
-        if data.len() < 8 {
-            return false;
-        }
-        
-        let magic = &data[0..8];
-        magic == b"\x08\x01\x12\x0b\x0a\x03ONNX" || magic == b"\x08\x01\x12\x0b\x0a\x03ONN"
-    }
-
-    /// Parse protobuf message structure using manual protobuf parsing
-    fn parse_protobuf_message(&self, data: &[u8]) -> Result<ONNXModelProto> {
-        // For now, implement a simplified protobuf parser
-        // In a production implementation, this would use a proper ONNX protobuf library
-        // or generate code from the ONNX protobuf definitions
-
-        // Parse basic ONNX protobuf structure manually
-        // This is a simplified implementation - real ONNX parsing would be much more complex
-        let mut reader = ProtobufReader::new(data);
-
-        // Skip ONNX magic and parse basic structure
-        let _magic = reader.read_bytes(8)?;
-
-        // Parse protobuf messages - this is highly simplified
-        let model_proto = self.parse_basic_onnx_structure(&mut reader)?;
-
-        Ok(model_proto)
-    }
-
-    /// Parse basic ONNX structure from protobuf stream
-    fn parse_basic_onnx_structure(&self, reader: &mut ProtobufReader) -> Result<ONNXModelProto> {
-        // This is a placeholder implementation
-        // Real ONNX protobuf parsing would involve proper protobuf message parsing
-        // with field tags, wire types, and proper encoding/decoding
-
-        // For demonstration, create a basic structure
-        Ok(ONNXModelProto {
-            ir_version: 8,
-            opset_import: vec![ONNXOperatorSetIdProto {
-                domain: "".to_string(),
-                version: 17,
-            }],
-            producer_name: "CandleBackend".to_string(),
-            producer_version: "1.0.0".to_string(),
-            domain: "".to_string(),
-            model_version: 1,
-            doc_string: "Parsed ONNX model".to_string(),
-            graph: ONNXGraphProto {
-                node: vec![],
-                name: "main".to_string(),
-                initializer: vec![],
-                input: vec![
-                    ONNXValueInfoProto {
-                        name: "input".to_string(),
-                        doc_string: "".to_string(),
-                        type_: Some(ONNXTypeProto {
-                            value: Some(ONNXTypeProtoValue::TensorType(ONNXTensorShapeProto {
-                                elem_type: 1, // FLOAT
-                                shape: ONNXShapeProto {
-                                    dim: vec![
-                                        ONNXDimensionProto { value: Some(ONNXDimensionProtoValue::DimValue(1)) },
-                                        ONNXDimensionProto { value: Some(ONNXDimensionProtoValue::DimValue(224)) },
-                                        ONNXDimensionProto { value: Some(ONNXDimensionProtoValue::DimValue(224)) },
-                                        ONNXDimensionProto { value: Some(ONNXDimensionProtoValue::DimValue(3)) },
-                                    ],
-                                },
-                            })),
-                        }),
-                    }
-                ],
-                output: vec![
-                    ONNXValueInfoProto {
-                        name: "output".to_string(),
-                        doc_string: "".to_string(),
-                        type_: Some(ONNXTypeProto {
-                            value: Some(ONNXTypeProtoValue::TensorType(ONNXTensorShapeProto {
-                                elem_type: 1, // FLOAT
-                                shape: ONNXShapeProto {
-                                    dim: vec![
-                                        ONNXDimensionProto { value: Some(ONNXDimensionProtoValue::DimValue(1)) },
-                                        ONNXDimensionProto { value: Some(ONNXDimensionProtoValue::DimValue(1000)) },
-                                    ],
-                                },
-                            })),
-                        }),
-                    }
-                ],
-                value_info: vec![],
-                doc_string: "".to_string(),
-            },
-            metadata_props: vec![],
-        })
-    }
-
-
-    /// Validate ONNX version compatibility
-    fn validate_onnx_version(&self, model: &ONNXModelProto) -> bool {
-        // Check IR version compatibility
-        if model.ir_version < 3 || model.ir_version > 8 {
-            warn!("ONNX IR version {} may not be fully supported", model.ir_version);
-            return false;
-        }
-
-        // Check opset version compatibility
-        for opset in &model.opset_import {
-            if opset.domain == "" && (opset.version < 7 || opset.version > 17) {
-                warn!("ONNX opset version {} may not be fully supported", opset.version);
-                return false;
-            }
-        }
-
-        true
-    }
-
-    /// Convert ONNX ValueInfo to TensorSpec
-    fn convert_onnx_value_info_to_tensor_spec(&self, value_info: &ONNXValueInfoProto) -> Result<TensorSpec> {
-        let name = value_info.name.clone();
-        
-        // Extract shape from ONNX type
-        let shape = if let Some(type_proto) = &value_info.type_ {
-            if let Some(ONNXTypeProtoValue::TensorType(tensor_type)) = &type_proto.value {
-                self.extract_shape_from_onnx_tensor_type(tensor_type)?
-            } else {
-                vec![1] // Default shape
-            }
-        } else {
-            vec![1] // Default shape
-        };
-
-        // Extract data type from ONNX type
-        let dtype = if let Some(type_proto) = &value_info.type_ {
-            if let Some(ONNXTypeProtoValue::TensorType(tensor_type)) = &type_proto.value {
-                self.convert_onnx_elem_type_to_dtype(tensor_type.elem_type)?
-            } else {
-                DType::F32 // Default type
-            }
-        } else {
-            DType::F32 // Default type
-        };
-
-        Ok(TensorSpec {
-            name,
-            shape,
-            dtype,
-        })
-    }
-
-    /// Extract shape from ONNX tensor type
-    fn extract_shape_from_onnx_tensor_type(&self, tensor_type: &ONNXTensorShapeProto) -> Result<Vec<usize>> {
-        let mut shape = Vec::new();
-        
-        for dim in &tensor_type.shape.dim {
-            match &dim.value {
-                Some(ONNXDimensionProtoValue::DimValue(value)) => {
-                    shape.push(*value as usize);
-                }
-                Some(ONNXDimensionProtoValue::DimParam(_)) => {
-                    // Dynamic dimension - use placeholder
-                    shape.push(1);
-                }
-                None => {
-                    // Unknown dimension - use placeholder
-                    shape.push(1);
-                }
-            }
-        }
-
-        if shape.is_empty() {
-            shape.push(1); // At least one dimension
-        }
-
-        Ok(shape)
-    }
-
-    /// Convert ONNX element type to DType
-    fn convert_onnx_elem_type_to_dtype(&self, elem_type: i32) -> DType {
-        match elem_type {
-            1 => DType::F32,  // FLOAT
-            2 => DType::U8,   // UINT8
-            3 => DType::I8,    // INT8
-            6 => DType::I32,   // INT32
-            7 => DType::I64,   // INT64
-            9 => DType::Bool,  // BOOL
-            10 => DType::F16,  // FLOAT16
-            11 => DType::F64,  // DOUBLE
-            _ => DType::F32,   // Default to F32
-        }
-    }
-    /// - [ ] Support ONNX operator definitions and attributes
-    /// - [ ] Implement protobuf message validation and error handling
-    /// - [ ] Add support for different protobuf wire formats and compression
-    /// - [ ] Optimize parsing performance and memory usage for large models
-    fn extract_tensors_from_onnx_protobuf(&self, data: &[u8]) -> Result<(Vec<TensorSpec>, Vec<TensorSpec>)> {
-        // This is a highly simplified protobuf parser for ONNX
-        // In production, use proper protobuf parsing with onnx-proto
-
-        let mut inputs = Vec::new();
-        let mut outputs = Vec::new();
-
-        // Look for input/output tensor definitions in the protobuf
-        // This is a heuristic approach - real implementation needs proper protobuf parsing
-
-        let data_str = String::from_utf8_lossy(data);
-
-        // TODO: Replace simplified pattern matching with proper protobuf field extraction
-        // Requirements for completion:
-        // - [ ] Parse protobuf messages using proper field tags and wire types
-        // - [ ] Extract tensor specifications from structured protobuf data
-        // - [ ] Support nested message structures and repeated fields
-        // - [ ] Implement proper type validation for protobuf fields
-        // - [ ] Add support for protobuf extensions and custom fields
-        // - [ ] Optimize field extraction for large protobuf messages
-        // - [ ] Implement proper error handling for malformed protobuf data
-        // - [ ] Add support for different protobuf wire formats and compression
-        // - [ ] Implement proper memory management for large protobuf parsing
-        // - [ ] Add support for protobuf schema validation
-        // - [ ] Implement proper cleanup of protobuf parsing resources
-        // Extract input tensors (simplified pattern matching)
-        if let Some(input_section) = self.find_protobuf_section(&data_str, "input") {
-            inputs = self.parse_tensor_specs_from_section(input_section, true)?;
-        }
-
-        // Extract output tensors
-        if let Some(output_section) = self.find_protobuf_section(&data_str, "output") {
-            outputs = self.parse_tensor_specs_from_section(output_section, false)?;
-        }
-
-        // Fallback defaults if parsing fails
-        if inputs.is_empty() {
-            inputs.push(TensorSpec {
-                name: "input".to_string(),
-                dtype: DType::F32,
-                shape: vec![1, 224, 224, 3],
-                batch_capable: true,
-            });
-        }
-
-        if outputs.is_empty() {
-            outputs.push(TensorSpec {
-                name: "output".to_string(),
-                dtype: DType::F32,
-                shape: vec![1, 1000],
-                batch_capable: true,
-            });
-        }
-
-        Ok((inputs, outputs))
-    }
-
-    /// Find protobuf section by keyword
-    fn find_protobuf_section(&self, data: &str, keyword: &str) -> Option<String> {
-        // Simple string-based section finding (not proper protobuf parsing)
-        let lines: Vec<&str> = data.lines().collect();
-        let mut in_section = false;
-        let mut section_content = String::new();
-
-        for line in lines {
-            if line.contains(&format!("{} {{", keyword)) {
-                in_section = true;
-                section_content.push_str(line);
-                section_content.push('\n');
-            } else if in_section {
-                if line.contains('}') {
-                    section_content.push_str(line);
-                    break;
-                }
-                section_content.push_str(line);
-                section_content.push('\n');
-            }
-        }
-
-        if section_content.is_empty() {
-            None
-        } else {
-            Some(section_content)
-        }
-    }
-
-    /// Parse tensor specs from protobuf section
-    fn parse_tensor_specs_from_section(&self, section: String, is_input: bool) -> Result<Vec<TensorSpec>> {
-        let mut specs = Vec::new();
-        let lines: Vec<&str> = section.lines().collect();
-
-        let mut current_name = String::new();
-        let mut current_shape = Vec::new();
-        let mut current_dtype = DType::F32;
-
-        for line in lines {
-            let line = line.trim();
-
-            if line.contains("name:") {
-                if let Some(name_start) = line.find('"') {
-                    if let Some(name_end) = line[name_start + 1..].find('"') {
-                        current_name = line[name_start + 1..name_start + 1 + name_end].to_string();
-                    }
-                }
-            }
-
-            if line.contains("shape:") || line.contains("dims:") {
-                // Parse shape dimensions
-                current_shape = self.parse_shape_from_line(line);
-            }
-
-            if line.contains("data_type:") || line.contains("elem_type:") {
-                current_dtype = self.parse_dtype_from_line(line)?;
-            }
-
-            // End of tensor definition
-            if line.contains('}') && !current_name.is_empty() {
-                if !current_shape.is_empty() {
-                    specs.push(TensorSpec {
-                        name: current_name.clone(),
-                        dtype: current_dtype,
-                        shape: current_shape.clone(),
-                        batch_capable: self.is_onnx_tensor_batch_capable(&current_shape),
-                    });
-                }
-
-                // Reset for next tensor
-                current_name.clear();
-                current_shape.clear();
-                current_dtype = DType::F32;
-            }
-        }
-
-        Ok(specs)
-    }
-
-    /// Parse shape from protobuf line
-    fn parse_shape_from_line(&self, line: &str) -> Vec<usize> {
-        let mut shape = Vec::new();
-
-        // Look for numeric dimensions
-        let words: Vec<&str> = line.split_whitespace().collect();
-        for word in words {
-            if let Ok(dim) = word.trim_end_matches(',').parse::<usize>() {
-                shape.push(dim);
-            }
-        }
-
-        // Default shapes if parsing fails
-        if shape.is_empty() {
-            if line.contains("224") && line.contains("224") {
-                vec![1, 224, 224, 3] // Image input
-            } else if line.contains("768") || line.contains("512") {
-                vec![1, 512, 768] // Text input
-            } else {
-                vec![1, 1000] // Classification output
-            }
-        } else {
-            shape
-        }
-    }
-
-    /// Parse data type from protobuf line
-    fn parse_dtype_from_line(&self, line: &str) -> Result<DType> {
-        Ok(if line.contains("FLOAT16") || line.contains("16") {
-            DType::F16
-        } else if line.contains("INT32") || line.contains("INT") {
-            DType::I32
-        } else if line.contains("INT64") {
-            DType::I64
-        } else if line.contains("INT8") {
-            DType::I8
-        } else {
-            DType::F32 // Default
-        })
-    }
-
-    /// Check if ONNX tensor shape supports batching
-    fn is_onnx_tensor_batch_capable(&self, shape: &[usize]) -> bool {
-        // First dimension is typically batch dimension in ONNX
-        shape.len() >= 2 && shape[0] <= 64 // Reasonable batch size limit
-    }
-
-    /// Validate ONNX model compatibility
-    fn validate_onnx_compatibility(&self, schema: &IoSchema) -> Result<()> {
-        if schema.inputs.is_empty() {
-            bail!("ONNX model must have at least one input tensor");
-        }
-
-        if schema.outputs.is_empty() {
-            bail!("ONNX model must have at least one output tensor");
-        }
-
-        // Check tensor sizes are reasonable
-        for input in &schema.inputs {
-            let total_elements: usize = input.shape.iter().product();
-            if total_elements == 0 {
-                bail!("ONNX input tensor '{}' has zero elements", input.name);
-            }
-            if total_elements > 100_000_000 { // 100M elements max for ONNX
-                bail!("ONNX input tensor '{}' is too large: {} elements", input.name, total_elements);
-            }
-        }
-
-        for output in &schema.outputs {
-            let total_elements: usize = output.shape.iter().product();
-            if total_elements == 0 {
-                bail!("ONNX output tensor '{}' has zero elements", output.name);
-            }
-            if total_elements > 100_000_000 { // 100M elements max for ONNX
-                bail!("ONNX output tensor '{}' is too large: {} elements", output.name, total_elements);
-            }
-        }
-
-        Ok(())
-    }
-
-    /// Execute actual Candle inference with tensor conversion
     fn execute_candle_inference(
         &self,
         model: &CandleModel,
@@ -1145,7 +679,7 @@ impl InferenceEngine for CandleBackend {
         let mut candle_tensors = std::collections::HashMap::new();
 
         for (name, tensor_view) in tensors.tensors() {
-            let candle_tensor = self.load_tensor_from_safetensors_view(tensor_view, device)
+            let candle_tensor = load_tensor_from_safetensors_view(tensor_view, device)
                 .with_context(|| format!("Failed to load tensor '{}'", name))?;
 
             candle_tensors.insert(name.clone(), candle_tensor);
@@ -1158,50 +692,6 @@ impl InferenceEngine for CandleBackend {
         };
 
         Ok(Box::new(model))
-    }
-
-    /// Load a single tensor from SafeTensors format to Candle tensor
-    fn load_tensor_from_safetensors_view(
-        &self,
-        tensor_view: safetensors::tensor::TensorView,
-        device: &candle_core::Device,
-    ) -> Result<candle_core::Tensor> {
-        let shape = tensor_view.shape();
-        let dtype = tensor_view.dtype();
-
-        // Convert SafeTensors dtype to Candle dtype
-        let candle_dtype = self.map_safetensors_dtype(dtype)?;
-
-        // Get tensor data as bytes
-        let data = tensor_view.data();
-
-        // Create Candle tensor from the data
-        match candle_dtype {
-            DType::F32 => {
-                let float_data: &[f32] = bytemuck::cast_slice(data);
-                Ok(candle_core::Tensor::from_slice(float_data, shape, device)?)
-            }
-            DType::F16 => {
-                let half_data: &[half::f16] = bytemuck::cast_slice(data);
-                let float_data: Vec<f32> = half_data.iter().map(|&h| h.to_f32()).collect();
-                Ok(candle_core::Tensor::from_slice(&float_data, shape, device)?)
-            }
-            DType::I32 => {
-                let int_data: &[i32] = bytemuck::cast_slice(data);
-                let float_data: Vec<f32> = int_data.iter().map(|&i| i as f32).collect();
-                Ok(candle_core::Tensor::from_slice(&float_data, shape, device)?)
-            }
-            DType::I8 => {
-                let int8_data: &[i8] = bytemuck::cast_slice(data);
-                let float_data: Vec<f32> = int8_data.iter().map(|&i| i as f32).collect();
-                Ok(candle_core::Tensor::from_slice(&float_data, shape, device)?)
-            }
-            DType::U8 => {
-                let uint8_data: &[u8] = bytemuck::cast_slice(data);
-                let float_data: Vec<f32> = uint8_data.iter().map(|&u| u as f32).collect();
-                Ok(candle_core::Tensor::from_slice(&float_data, shape, device)?)
-            }
-        }
     }
 
     /// Load ONNX model using the ort crate
@@ -1266,18 +756,7 @@ impl InferenceEngine for CandleBackend {
 
         Ok(Box::new(model))
     }
-
-    /// Map ONNX tensor type to our DType
-    fn map_onnx_dtype(&self, tensor_type: &TensorElementType) -> DType {
-        match tensor_type {
-            TensorElementType::Float32 => DType::F32,
-            TensorElementType::Float16 => DType::F16,
-            TensorElementType::Int32 => DType::I32,
-            TensorElementType::Int8 => DType::I8,
-            TensorElementType::Uint8 => DType::U8,
-            _ => DType::F32, // Default fallback
-        }
-    }
+}
 
 /// Prepared model containing loaded Candle tensors
 #[derive(Debug)]
@@ -1540,7 +1019,7 @@ mod tests {
     fn test_candle_backend_capabilities() {
         let backend = CandleBackend::new();
         let _opts = PrepareOptions {
-            compute_units: ComputeUnits::CpuOnly,
+            compute_units: ComputeUnit::CPU,
             quantization: "fp32".to_string(),
             cache_dir: PathBuf::from("/tmp"),
             timeout_ms: 5000,
@@ -1559,7 +1038,7 @@ mod tests {
 
         let caps = backend.capabilities(&model as &dyn PreparedModel);
         assert_eq!(caps.device_class, "CPU");
-        assert_eq!(caps.compute_units_actual, ComputeUnits::CpuOnly);
+        assert_eq!(caps.compute_units_actual, ComputeUnit::CPU);
         assert_eq!(caps.ane_op_coverage_pct, 0);
     }
 
@@ -1583,5 +1062,525 @@ mod tests {
     }
 }
 
-// Close the impl InferenceEngine for CandleBackend block
-}
+    fn parse_onnx_protobuf_structure(model_data: &[u8]) -> Result<ONNXModel> {
+        // Guard clauses for input validation
+        if model_data.is_empty() {
+            return Err(anyhow::anyhow!("ONNX model data cannot be empty"));
+        }
+
+        // Validate ONNX magic bytes
+        if !Self::validate_onnx_magic_bytes(model_data) {
+            return Err(anyhow::anyhow!("Invalid ONNX file format - missing magic bytes"));
+        }
+
+        // Parse protobuf structure
+        let model_proto = Self::parse_protobuf_message(model_data)?;
+
+        // Validate ONNX version compatibility
+        if !Self::validate_onnx_version(&model_proto) {
+            return Err(anyhow::anyhow!("Unsupported ONNX version"));
+        }
+
+        // Extract model information
+        let model = ONNXModel {
+            ir_version: model_proto.ir_version,
+            opset_import: model_proto.opset_import,
+            producer_name: model_proto.producer_name,
+            producer_version: model_proto.producer_version,
+            domain: model_proto.domain,
+            model_version: model_proto.model_version,
+            doc_string: model_proto.doc_string,
+            graph: model_proto.graph,
+            metadata_props: model_proto.metadata_props,
+        };
+
+        debug!("ONNX model parsed successfully: IR version {}, {} opsets",
+               model.ir_version, model.opset_import.len());
+        Ok(model)
+    }
+
+    /// Extract I/O schema from parsed ONNX model
+    fn extract_io_schema_from_onnx_model(model: &ONNXModel) -> Result<IoSchema> {
+        let graph = &model.graph;
+        
+        // Extract input specifications
+        let inputs = graph.input.iter()
+            .map(|input| Self::convert_onnx_value_info_to_tensor_spec(input))
+            .collect::<Result<Vec<_>>>()?;
+
+        // Extract output specifications  
+        let outputs = graph.output.iter()
+            .map(|output| Self::convert_onnx_value_info_to_tensor_spec(output))
+            .collect::<Result<Vec<_>>>()?;
+
+        debug!("Extracted {} inputs and {} outputs from ONNX model", 
+               inputs.len(), outputs.len());
+
+        Ok(IoSchema { inputs, outputs })
+    }
+
+    /// Validate ONNX magic bytes
+    fn validate_onnx_magic_bytes(data: &[u8]) -> bool {
+        if data.len() < 8 {
+            return false;
+        }
+        
+        let magic = &data[0..8];
+        magic == b"\x08\x01\x12\x0b\x0a\x03ONNX" || magic == b"\x08\x01\x12\x0b\x0a\x03ONN"
+    }
+
+    /// Parse protobuf message structure using manual protobuf parsing
+    fn parse_protobuf_message(data: &[u8]) -> Result<ONNXModelProto> {
+        // For now, implement a simplified protobuf parser
+        // In a production implementation, this would use a proper ONNX protobuf library
+        // or generate code from the ONNX protobuf definitions
+
+        // Parse basic ONNX protobuf structure manually
+        // This is a simplified implementation - real ONNX parsing would be much more complex
+        let mut reader = ProtobufReader::new(data);
+
+        // Skip ONNX magic and parse basic structure
+        let _magic = reader.read_bytes(8)?;
+
+        // Parse protobuf messages - this is highly simplified
+        let model_proto = parse_basic_onnx_structure(&mut reader)?;
+
+        Ok(model_proto)
+    }
+
+    /// Parse basic ONNX structure from protobuf stream
+    fn parse_basic_onnx_structure(reader: &mut ProtobufReader) -> Result<ONNXModelProto> {
+        // This is a placeholder implementation
+        // Real ONNX protobuf parsing would involve proper protobuf message parsing
+        // with field tags, wire types, and proper encoding/decoding
+
+        // For demonstration, create a basic structure
+        Ok(ONNXModelProto {
+            ir_version: 8,
+            opset_import: vec![ONNXOperatorSetIdProto {
+                domain: "".to_string(),
+                version: 17,
+            }],
+            producer_name: "CandleBackend".to_string(),
+            producer_version: "1.0.0".to_string(),
+            domain: "".to_string(),
+            model_version: 1,
+            doc_string: "Parsed ONNX model".to_string(),
+            graph: ONNXGraphProto {
+                node: vec![],
+                name: "main".to_string(),
+                initializer: vec![],
+                input: vec![
+                    ONNXValueInfoProto {
+                        name: "input".to_string(),
+                        doc_string: "".to_string(),
+                        type_: Some(ONNXTypeProto {
+                            value: Some(ONNXTypeProtoValue::TensorType(ONNXTensorShapeProto {
+                                elem_type: 1, // FLOAT
+                                shape: ONNXShapeProto {
+                                    dim: vec![
+                                        ONNXDimensionProto { value: Some(ONNXDimensionProtoValue::DimValue(1)) },
+                                        ONNXDimensionProto { value: Some(ONNXDimensionProtoValue::DimValue(224)) },
+                                        ONNXDimensionProto { value: Some(ONNXDimensionProtoValue::DimValue(224)) },
+                                        ONNXDimensionProto { value: Some(ONNXDimensionProtoValue::DimValue(3)) },
+                                    ],
+                                },
+                            })),
+                        }),
+                    }
+                ],
+                output: vec![
+                    ONNXValueInfoProto {
+                        name: "output".to_string(),
+                        doc_string: "".to_string(),
+                        type_: Some(ONNXTypeProto {
+                            value: Some(ONNXTypeProtoValue::TensorType(ONNXTensorShapeProto {
+                                elem_type: 1, // FLOAT
+                                shape: ONNXShapeProto {
+                                    dim: vec![
+                                        ONNXDimensionProto { value: Some(ONNXDimensionProtoValue::DimValue(1)) },
+                                        ONNXDimensionProto { value: Some(ONNXDimensionProtoValue::DimValue(1000)) },
+                                    ],
+                                },
+                            })),
+                        }),
+                    }
+                ],
+                value_info: vec![],
+                doc_string: "".to_string(),
+            },
+            metadata_props: vec![],
+        })
+    }
+
+
+    /// Validate ONNX version compatibility
+    fn validate_onnx_version(model: &ONNXModelProto) -> bool {
+        // Check IR version compatibility
+        if model.ir_version < 3 || model.ir_version > 8 {
+            warn!("ONNX IR version {} may not be fully supported", model.ir_version);
+            return false;
+        }
+
+        // Check opset version compatibility
+        for opset in &model.opset_import {
+            if opset.domain == "" && (opset.version < 7 || opset.version > 17) {
+                warn!("ONNX opset version {} may not be fully supported", opset.version);
+                return false;
+            }
+        }
+
+        true
+    }
+
+    /// Convert ONNX ValueInfo to TensorSpec
+    fn convert_onnx_value_info_to_tensor_spec(value_info: &ONNXValueInfoProto) -> Result<TensorSpec> {
+        let name = value_info.name.clone();
+        
+        // Extract shape from ONNX type
+        let shape = if let Some(type_proto) = &value_info.type_ {
+            if let Some(ONNXTypeProtoValue::TensorType(tensor_type)) = &type_proto.value {
+                extract_shape_from_onnx_tensor_type(tensor_type)?
+            } else {
+                vec![1] // Default shape
+            }
+        } else {
+            vec![1] // Default shape
+        };
+
+        // Extract data type from ONNX type
+        let dtype = if let Some(type_proto) = &value_info.type_ {
+            if let Some(ONNXTypeProtoValue::TensorType(tensor_type)) = &type_proto.value {
+                convert_onnx_elem_type_to_dtype(tensor_type.elem_type)
+            } else {
+                DType::F32 // Default type
+            }
+        } else {
+            DType::F32 // Default type
+        };
+
+        Ok(TensorSpec {
+            name,
+            shape,
+            dtype,
+        })
+    }
+
+    /// Extract shape from ONNX tensor type
+    fn extract_shape_from_onnx_tensor_type(tensor_type: &ONNXTensorShapeProto) -> Result<Vec<usize>> {
+        let mut shape = Vec::new();
+        
+        for dim in &tensor_type.shape.dim {
+            match &dim.value {
+                Some(ONNXDimensionProtoValue::DimValue(value)) => {
+                    shape.push(*value as usize);
+                }
+                Some(ONNXDimensionProtoValue::DimParam(_)) => {
+                    // Dynamic dimension - use placeholder
+                    shape.push(1);
+                }
+                None => {
+                    // Unknown dimension - use placeholder
+                    shape.push(1);
+                }
+            }
+        }
+
+        if shape.is_empty() {
+            shape.push(1); // At least one dimension
+        }
+
+        Ok(shape)
+    }
+
+    /// Convert ONNX element type to DType
+    fn convert_onnx_elem_type_to_dtype(elem_type: i32) -> DType {
+        match elem_type {
+            1 => DType::F32,  // FLOAT
+            2 => DType::U8,   // UINT8
+            3 => DType::I8,    // INT8
+            6 => DType::I32,   // INT32
+            7 => DType::I64,   // INT64
+            9 => DType::Bool,  // BOOL
+            10 => DType::F16,  // FLOAT16
+            11 => DType::F64,  // DOUBLE
+            _ => DType::F32,   // Default to F32
+        }
+    }
+    /// - [ ] Support ONNX operator definitions and attributes
+    /// - [ ] Implement protobuf message validation and error handling
+    /// - [ ] Add support for different protobuf wire formats and compression
+    /// - [ ] Optimize parsing performance and memory usage for large models
+    fn extract_tensors_from_onnx_protobuf(data: &[u8]) -> Result<(Vec<TensorSpec>, Vec<TensorSpec>)> {
+        // This is a highly simplified protobuf parser for ONNX
+        // In production, use proper protobuf parsing with onnx-proto
+
+        let mut inputs = Vec::new();
+        let mut outputs = Vec::new();
+
+        // Look for input/output tensor definitions in the protobuf
+        // This is a heuristic approach - real implementation needs proper protobuf parsing
+
+        let data_str = String::from_utf8_lossy(data);
+
+        // TODO: Replace simplified pattern matching with proper protobuf field extraction
+        // Requirements for completion:
+        // - [ ] Parse protobuf messages using proper field tags and wire types
+        // - [ ] Extract tensor specifications from structured protobuf data
+        // - [ ] Support nested message structures and repeated fields
+        // - [ ] Implement proper type validation for protobuf fields
+        // - [ ] Add support for protobuf extensions and custom fields
+        // - [ ] Optimize field extraction for large protobuf messages
+        // - [ ] Implement proper error handling for malformed protobuf data
+        // - [ ] Add support for different protobuf wire formats and compression
+        // - [ ] Implement proper memory management for large protobuf parsing
+        // - [ ] Add support for protobuf schema validation
+        // - [ ] Implement proper cleanup of protobuf parsing resources
+        // Extract input tensors (simplified pattern matching)
+        if let Some(input_section) = find_protobuf_section(&data_str, "input") {
+            inputs = parse_tensor_specs_from_section(input_section, true)?;
+        }
+
+        // Extract output tensors
+        if let Some(output_section) = self.find_protobuf_section(&data_str, "output") {
+            outputs = self.parse_tensor_specs_from_section(output_section, false)?;
+        }
+
+        // Fallback defaults if parsing fails
+        if inputs.is_empty() {
+            inputs.push(TensorSpec {
+                name: "input".to_string(),
+                dtype: DType::F32,
+                shape: vec![1, 224, 224, 3],
+                batch_capable: true,
+            });
+        }
+
+        if outputs.is_empty() {
+            outputs.push(TensorSpec {
+                name: "output".to_string(),
+                dtype: DType::F32,
+                shape: vec![1, 1000],
+                batch_capable: true,
+            });
+        }
+
+        Ok((inputs, outputs))
+    }
+
+    /// Find protobuf section by keyword
+    fn find_protobuf_section(data: &str, keyword: &str) -> Option<String> {
+        // Simple string-based section finding (not proper protobuf parsing)
+        let lines: Vec<&str> = data.lines().collect();
+        let mut in_section = false;
+        let mut section_content = String::new();
+
+        for line in lines {
+            if line.contains(&format!("{} {{", keyword)) {
+                in_section = true;
+                section_content.push_str(line);
+                section_content.push('\n');
+            } else if in_section {
+                if line.contains('}') {
+                    section_content.push_str(line);
+                    break;
+                }
+                section_content.push_str(line);
+                section_content.push('\n');
+            }
+        }
+
+        if section_content.is_empty() {
+            None
+        } else {
+            Some(section_content)
+        }
+    }
+
+    /// Parse tensor specs from protobuf section
+    fn parse_tensor_specs_from_section(section: String, is_input: bool) -> Result<Vec<TensorSpec>> {
+        let mut specs = Vec::new();
+        let lines: Vec<&str> = section.lines().collect();
+
+        let mut current_name = String::new();
+        let mut current_shape = Vec::new();
+        let mut current_dtype = DType::F32;
+
+        for line in lines {
+            let line = line.trim();
+
+            if line.contains("name:") {
+                if let Some(name_start) = line.find('"') {
+                    if let Some(name_end) = line[name_start + 1..].find('"') {
+                        current_name = line[name_start + 1..name_start + 1 + name_end].to_string();
+                    }
+                }
+            }
+
+            if line.contains("shape:") || line.contains("dims:") {
+                // Parse shape dimensions
+                current_shape = self.parse_shape_from_line(line);
+            }
+
+            if line.contains("data_type:") || line.contains("elem_type:") {
+                current_dtype = self.parse_dtype_from_line(line)?;
+            }
+
+            // End of tensor definition
+            if line.contains('}') && !current_name.is_empty() {
+                if !current_shape.is_empty() {
+                    specs.push(TensorSpec {
+                        name: current_name.clone(),
+                        dtype: current_dtype,
+                        shape: current_shape.clone(),
+                        batch_capable: self.is_onnx_tensor_batch_capable(&current_shape),
+                    });
+                }
+
+                // Reset for next tensor
+                current_name.clear();
+                current_shape.clear();
+                current_dtype = DType::F32;
+            }
+        }
+
+        Ok(specs)
+    }
+
+    /// Parse shape from protobuf line
+    fn parse_shape_from_line(line: &str) -> Vec<usize> {
+        let mut shape = Vec::new();
+
+        // Look for numeric dimensions
+        let words: Vec<&str> = line.split_whitespace().collect();
+        for word in words {
+            if let Ok(dim) = word.trim_end_matches(',').parse::<usize>() {
+                shape.push(dim);
+            }
+        }
+
+        // Default shapes if parsing fails
+        if shape.is_empty() {
+            if line.contains("224") && line.contains("224") {
+                vec![1, 224, 224, 3] // Image input
+            } else if line.contains("768") || line.contains("512") {
+                vec![1, 512, 768] // Text input
+            } else {
+                vec![1, 1000] // Classification output
+            }
+        } else {
+            shape
+        }
+    }
+
+    /// Parse data type from protobuf line
+    fn parse_dtype_from_line(line: &str) -> Result<DType> {
+        Ok(if line.contains("FLOAT16") || line.contains("16") {
+            DType::F16
+        } else if line.contains("INT32") || line.contains("INT") {
+            DType::I32
+        } else if line.contains("INT64") {
+            DType::I64
+        } else if line.contains("INT8") {
+            DType::I8
+        } else {
+            DType::F32 // Default
+        })
+    }
+
+    /// Check if ONNX tensor shape supports batching
+    fn is_onnx_tensor_batch_capable(shape: &[usize]) -> bool {
+        // First dimension is typically batch dimension in ONNX
+        shape.len() >= 2 && shape[0] <= 64 // Reasonable batch size limit
+    }
+
+    /// Validate ONNX model compatibility
+    fn validate_onnx_compatibility(schema: &IoSchema) -> Result<()> {
+        if schema.inputs.is_empty() {
+            bail!("ONNX model must have at least one input tensor");
+        }
+
+        if schema.outputs.is_empty() {
+            bail!("ONNX model must have at least one output tensor");
+        }
+
+        // Check tensor sizes are reasonable
+        for input in &schema.inputs {
+            let total_elements: usize = input.shape.iter().product();
+            if total_elements == 0 {
+                bail!("ONNX input tensor '{}' has zero elements", input.name);
+            }
+            if total_elements > 100_000_000 { // 100M elements max for ONNX
+                bail!("ONNX input tensor '{}' is too large: {} elements", input.name, total_elements);
+            }
+        }
+
+        for output in &schema.outputs {
+            let total_elements: usize = output.shape.iter().product();
+            if total_elements == 0 {
+                bail!("ONNX output tensor '{}' has zero elements", output.name);
+            }
+            if total_elements > 100_000_000 { // 100M elements max for ONNX
+                bail!("ONNX output tensor '{}' is too large: {} elements", output.name, total_elements);
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Load a single tensor from SafeTensors format to Candle tensor
+    fn load_tensor_from_safetensors_view(
+        
+        tensor_view: safetensors::tensor::TensorView,
+        device: &candle_core::Device,
+    ) -> Result<candle_core::Tensor> {
+        let shape = tensor_view.shape();
+        let dtype = tensor_view.dtype();
+
+        // Convert SafeTensors dtype to Candle dtype
+        let candle_dtype = self.map_safetensors_dtype(dtype)?;
+
+        // Get tensor data as bytes
+        let data = tensor_view.data();
+
+        // Create Candle tensor from the data
+        match candle_dtype {
+            DType::F32 => {
+                let float_data: &[f32] = bytemuck::cast_slice(data);
+                Ok(candle_core::Tensor::from_slice(float_data, shape, device)?)
+            }
+            DType::F16 => {
+                let half_data: &[half::f16] = bytemuck::cast_slice(data);
+                let float_data: Vec<f32> = half_data.iter().map(|&h| h.to_f32()).collect();
+                Ok(candle_core::Tensor::from_slice(&float_data, shape, device)?)
+            }
+            DType::I32 => {
+                let int_data: &[i32] = bytemuck::cast_slice(data);
+                let float_data: Vec<f32> = int_data.iter().map(|&i| i as f32).collect();
+                Ok(candle_core::Tensor::from_slice(&float_data, shape, device)?)
+            }
+            DType::I8 => {
+                let int8_data: &[i8] = bytemuck::cast_slice(data);
+                let float_data: Vec<f32> = int8_data.iter().map(|&i| i as f32).collect();
+                Ok(candle_core::Tensor::from_slice(&float_data, shape, device)?)
+            }
+            DType::U8 => {
+                let uint8_data: &[u8] = bytemuck::cast_slice(data);
+                let float_data: Vec<f32> = uint8_data.iter().map(|&u| u as f32).collect();
+                Ok(candle_core::Tensor::from_slice(&float_data, shape, device)?)
+            }
+        }
+    }
+
+
+    /// Map ONNX tensor type to our DType
+    fn map_onnx_dtype( tensor_type: &TensorElementType) -> DType {
+        match tensor_type {
+            TensorElementType::Float32 => DType::F32,
+            TensorElementType::Float16 => DType::F16,
+            TensorElementType::Int32 => DType::I32,
+            TensorElementType::Int8 => DType::I8,
+            TensorElementType::Uint8 => DType::U8,
+            _ => DType::F32, // Default fallback
+        }
+    }

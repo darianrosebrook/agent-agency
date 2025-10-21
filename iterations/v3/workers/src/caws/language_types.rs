@@ -95,3 +95,60 @@ pub enum ViolationSeverity {
     Low,
     Info,
 }
+
+
+// Moved from caws_checker.rs: ProgrammingLanguage enum
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum ProgrammingLanguage {
+    Rust,
+    TypeScript,
+    JavaScript,
+    Python,
+    Go,
+    Java,
+    Cpp,
+    C,
+    Sql,
+    Markdown,
+    YAML,
+    JSON,
+    TOML,
+    Unknown,
+}
+
+
+
+// Moved from caws_checker.rs: LanguageAnalysisResult struct
+#[derive(Debug, Clone)]
+pub struct LanguageAnalysisResult {
+    pub violations: Vec<LanguageViolation>,
+    pub warnings: Vec<LanguageWarning>,
+    pub complexity_score: f32,
+    pub surgical_change_score: f32,
+    pub change_complexity: ChangeComplexity,
+}
+
+
+
+// Moved from caws_checker.rs: LanguageViolation struct
+#[derive(Debug, Clone)]
+pub struct LanguageViolation {
+    pub rule: String,
+    pub severity: ViolationSeverity,
+    pub description: String,
+    pub location: Option<SourceLocation>,
+    pub suggestion: Option<String>,
+    pub constitutional_ref: Option<ConstitutionalReference>,
+}
+
+
+
+// Moved from caws_checker.rs: SourceLocation struct
+#[derive(Debug, Clone)]
+pub struct SourceLocation {
+    pub line: u32,
+    pub column: u32,
+    pub end_line: Option<u32>,
+    pub end_column: Option<u32>,
+}
+

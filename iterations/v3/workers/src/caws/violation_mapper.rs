@@ -59,3 +59,55 @@ impl ViolationCodeMapper {
         format!("{}_{}_{}", rule_type, language, uuid::Uuid::new_v4().to_string()[..8].to_string())
     }
 }
+
+
+// Moved from caws_checker.rs: ViolationCodeMapper struct
+#[derive(Debug)]
+pub struct ViolationCodeMapper {
+    // Maps violation codes to constitutional sections
+    code_mappings: HashMap<String, ConstitutionalReference>,
+}
+
+
+
+// Moved from caws_checker.rs: ConstitutionalReference struct
+#[derive(Debug, Clone)]
+pub struct ConstitutionalReference {
+    pub section: String,
+    pub subsection: String,
+    pub description: String,
+    pub severity: ViolationSeverity,
+}
+
+
+
+// Moved from caws_checker.rs: ViolationCodeMapper impl block
+impl ViolationCodeMapper {
+    pub fn new() -> Self {
+        let mut code_mappings = HashMap::new();
+
+        // Add constitutional references for common violations
+        code_mappings.insert(
+            "CHANGE_SIZE_LIMIT".to_string(),
+            ConstitutionalReference {
+                section: "Change Management".to_string(),
+                subsection: "Size Limits".to_string(),
+                description: "Changes must be surgical and focused".to_string(),
+                severity: ViolationSeverity::High,
+            },
+        );
+
+        code_mappings.insert(
+            "SURGICAL_CHANGE_REQUIREMENT".to_string(),
+            ConstitutionalReference {
+                section: "Change Management".to_string(),
+                subsection: "Surgical Changes".to_string(),
+                description: "Changes should be precise and minimal".to_string(),
+                severity: ViolationSeverity::Medium,
+            },
+        );
+
+        Self { code_mappings }
+    }
+}
+

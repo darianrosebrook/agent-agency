@@ -11,9 +11,15 @@ pub mod validator;
 pub mod budget;
 pub mod waiver;
 pub mod integration;
+pub mod analyzers;
 
 pub use policy::{CawsPolicy, PolicyValidator};
 pub use validator::{CawsValidator, ValidationResult, Violation};
 pub use budget::{BudgetChecker, BudgetLimits, BudgetState};
 pub use waiver::{WaiverGenerator, WaiverManager};
 pub use integration::{McpIntegration, OrchestrationIntegration};
+pub use analyzers::{
+    LanguageAnalyzer, LanguageAnalyzerRegistry, LanguageAnalysisResult,
+    ProgrammingLanguage, LanguageViolation, LanguageWarning, SourceLocation, ViolationSeverity,
+    RustAnalyzer, TypeScriptAnalyzer, JavaScriptAnalyzer,
+};

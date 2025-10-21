@@ -1,6 +1,6 @@
 //! Adaptive resource management for Apple Silicon
 
-use crate::ComputeUnits;
+use crate::ComputeUnit;
 
 /// Allocation request
 #[derive(Debug, Clone)]
@@ -15,7 +15,7 @@ pub struct AllocationRequest {
 pub struct AllocationPlan {
     pub device: DeviceKind,
     pub memory_mb: u64,
-    pub compute_units: ComputeUnits,
+    pub compute_units: ComputeUnit,
 }
 
 /// Device sensors

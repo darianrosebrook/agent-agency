@@ -5,6 +5,9 @@ use std::collections::HashMap;
 use std::fmt::Display;
 use uuid::Uuid;
 
+/// Device identifier
+pub type DeviceId = String;
+
 /// Compute units available on Apple Silicon
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum ComputeUnit {

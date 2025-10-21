@@ -14,7 +14,14 @@ use crate::types::{TaskSpec, WorkerAssignment, TaskExecutionResult};
 use agent_agency_resilience::{CircuitBreaker, CircuitBreakerConfig};
 
 use super::super::orchestration::planning::types::{WorkingSpec, ExecutionArtifacts, ExecutionEvent};
+// DEPRECATED: Legacy CAWS runtime validator (being migrated to runtime-validator)
 use super::super::orchestration::caws_runtime::{CawsRuntimeValidator, DiffStats, TaskDescriptor};
+
+// NEW: Runtime-validator integration
+use caws_runtime_validator::{
+    CawsValidator,
+    integration::{OrchestrationIntegration, DefaultOrchestrationIntegration},
+};
 use super::super::orchestration::arbiter::{ArbiterOrchestrator, ArbiterVerdict, VerdictStatus, WorkerOutput};
 
 // Optional self-prompting agent integration
@@ -69,7 +76,13 @@ impl Default for AutonomousExecutorConfig {
 /// Autonomous executor that coordinates worker execution with tracking
 pub struct AutonomousExecutor {
     worker_manager: Arc<WorkerPoolManager>,
+    
+    // DEPRECATED: Legacy CAWS validator (being migrated to runtime-validator)
     validator: Arc<dyn CawsRuntimeValidator>,
+    
+    // NEW: Runtime-validator integration
+    runtime_validator: Arc<DefaultOrchestrationIntegration>,
+    
     arbiter: Option<Arc<ArbiterOrchestrator>>,
     config: AutonomousExecutorConfig,
     event_sender: mpsc::UnboundedSender<ExecutionEvent>,
@@ -85,6 +98,8 @@ impl AutonomousExecutor {
         arbiter: Option<Arc<ArbiterOrchestrator>>,
         config: AutonomousExecutorConfig,
     ) -> (Self, mpsc::UnboundedReceiver<ExecutionEvent>) {
+        // NEW: Initialize runtime-validator integration
+        let runtime_validator = Arc::new(DefaultOrchestrationIntegration::new());
         let (event_sender, event_receiver) = mpsc::unbounded_channel();
 
         // Create circuit breaker for task execution protection
@@ -109,7 +124,13 @@ impl AutonomousExecutor {
         (
             Self {
                 worker_manager,
+                
+                // DEPRECATED: Legacy validator (kept for backward compatibility)
                 validator,
+                
+                // NEW: Runtime-validator integration
+                runtime_validator,
+                
                 arbiter,
                 config: config.clone(),
                 event_sender,
@@ -742,7 +763,63 @@ impl AutonomousExecutor {
         })
     }
 
-    /// Validate execution at a checkpoint
+    /// NEW: Validate execution using runtime-validator
+    async fn validate_execution_checkpoint_runtime(
+        &self,
+        working_spec: &WorkingSpec,
+        artifacts: &ExecutionArtifacts,
+        task_id: Uuid,
+    ) -> Result<caws_runtime_validator::OrchestrationValidationResult, AutonomousExecutionError> {
+        // Create runtime-validator types
+        let runtime_spec = caws_runtime_validator::WorkingSpec {
+            risk_tier: working_spec.risk_tier as u8,
+            scope_in: working_spec.scope.as_ref()
+                .and_then(|s| s.included.clone())
+                .unwrap_or_default(),
+            change_budget_max_files: self.config.change_budget_max_files,
+            change_budget_max_loc: self.config.change_budget_max_loc,
+        };
+
+        let runtime_task_desc = caws_runtime_validator::TaskDescriptor {
+            task_id: format!("checkpoint-{}", task_id),
+            scope_in: working_spec.scope.as_ref()
+                .and_then(|s| s.included.clone())
+                .unwrap_or_default(),
+            risk_tier: working_spec.risk_tier as u8,
+            execution_mode: caws_runtime_validator::ExecutionMode::Auto,
+        };
+
+        let runtime_diff_stats = caws_runtime_validator::DiffStats {
+            files_changed: artifacts.code_changes.len() as u32,
+            lines_added: artifacts.code_changes.iter()
+                .map(|c| c.lines_added as i32)
+                .sum(),
+            lines_removed: artifacts.code_changes.iter()
+                .map(|c| c.lines_removed as i32)
+                .sum(),
+            lines_modified: 0, // Could be enhanced with more detailed tracking
+        };
+
+        // Implement determinism validation
+        let is_deterministic = self.validate_code_determinism(&artifacts).await?;
+
+        // Use runtime-validator for primary validation
+        let result = self.runtime_validator.validate_task_execution(
+            &runtime_spec,
+            &runtime_task_desc,
+            &runtime_diff_stats,
+            &[], // patches
+            &[], // language_hints
+            artifacts.test_results.total > 0, // tests_added
+            is_deterministic,
+            vec![], // waivers
+        ).await?;
+
+        Ok(result)
+    }
+
+    /// DEPRECATED: Legacy execution checkpoint validation (use validate_execution_checkpoint_runtime instead)
+    #[deprecated(note = "Use validate_execution_checkpoint_runtime with runtime-validator")]
     async fn validate_execution_checkpoint(
         &self,
         working_spec: &WorkingSpec,
@@ -776,8 +853,11 @@ impl AutonomousExecutor {
                 .collect(),
         };
 
-        // Run validation
-        let result = self.validator.validate(
+        // Implement determinism validation and verification
+        let is_deterministic = self.validate_code_determinism(&artifacts).await?;
+
+        // DEPRECATED: Legacy validation (kept for backward compatibility)
+        let _legacy_result = self.validator.validate(
             &super::super::orchestration::caws_runtime::WorkingSpec {
                 risk_tier: working_spec.risk_tier as u8,
                 scope_in: working_spec.scope.as_ref()
@@ -791,10 +871,75 @@ impl AutonomousExecutor {
             &[], // no patches
             &[], // no language hints
             artifacts.test_results.total > 0, // tests added if we have results
-            // Implement determinism validation and verification
-            let is_deterministic = self.validate_code_determinism(&artifacts).await?;
+            is_deterministic,
             vec![], // no waivers
         ).await?;
+
+        // NEW: Primary validation using runtime-validator
+        let runtime_spec = caws_runtime_validator::WorkingSpec {
+            risk_tier: working_spec.risk_tier as u8,
+            scope_in: working_spec.scope.as_ref()
+                .and_then(|s| s.included.clone())
+                .unwrap_or_default(),
+            change_budget_max_files: self.config.change_budget_max_files,
+            change_budget_max_loc: self.config.change_budget_max_loc,
+        };
+
+        let runtime_task_desc = caws_runtime_validator::TaskDescriptor {
+            task_id: task_desc.task_id,
+            scope_in: task_desc.scope_in,
+            risk_tier: task_desc.risk_tier,
+            execution_mode: caws_runtime_validator::ExecutionMode::Auto,
+        };
+
+        let runtime_diff_stats = caws_runtime_validator::DiffStats {
+            files_changed: diff_stats.files_changed,
+            lines_added: diff_stats.lines_changed as i32,
+            lines_removed: 0, // Simplified - could be enhanced
+            lines_modified: 0, // Simplified - could be enhanced
+        };
+
+        let runtime_result = self.runtime_validator.validate_task_execution(
+            &runtime_spec,
+            &runtime_task_desc,
+            &runtime_diff_stats,
+            &[], // patches
+            &[], // language_hints
+            artifacts.test_results.total > 0, // tests_added
+            is_deterministic,
+            vec![], // waivers
+        ).await?;
+
+        // Convert runtime result to legacy format for compatibility
+        let result = super::super::orchestration::caws_runtime::ValidationResult {
+            task_id: runtime_result.task_id,
+            snapshot: super::super::orchestration::caws_runtime::ComplianceSnapshot {
+                within_scope: runtime_result.snapshot.within_scope,
+                within_budget: runtime_result.snapshot.within_budget,
+                tests_added: runtime_result.snapshot.tests_added,
+                deterministic: runtime_result.snapshot.deterministic,
+            },
+            violations: runtime_result.violations.into_iter().map(|v| {
+                super::super::orchestration::caws_runtime::Violation {
+                    code: match v.code {
+                        caws_runtime_validator::ViolationCode::OutOfScope => 
+                            super::super::orchestration::caws_runtime::ViolationCode::OutOfScope,
+                        caws_runtime_validator::ViolationCode::BudgetExceeded => 
+                            super::super::orchestration::caws_runtime::ViolationCode::BudgetExceeded,
+                        caws_runtime_validator::ViolationCode::MissingTests => 
+                            super::super::orchestration::caws_runtime::ViolationCode::MissingTests,
+                        caws_runtime_validator::ViolationCode::NonDeterministic => 
+                            super::super::orchestration::caws_runtime::ViolationCode::NonDeterministic,
+                        caws_runtime_validator::ViolationCode::DisallowedTool => 
+                            super::super::orchestration::caws_runtime::ViolationCode::DisallowedTool,
+                    },
+                    message: v.message,
+                    remediation: v.remediation,
+                }
+            }).collect(),
+            waivers: runtime_result.waivers,
+            validated_at: runtime_result.validated_at,
+        };
 
         Ok(result)
     }
@@ -1569,7 +1714,12 @@ impl SelfPromptingModelRegistry {
 /// Self-prompting evaluator that uses CAWS validation
 #[cfg(feature = "self-prompting")]
 struct SelfPromptingEvaluator {
+    // DEPRECATED: Legacy CAWS validator (being migrated to runtime-validator)
     validator: Arc<dyn CawsRuntimeValidator>,
+    
+    // NEW: Runtime-validator integration
+    runtime_validator: Arc<DefaultOrchestrationIntegration>,
+    
     arbiter: Option<Arc<ArbiterOrchestrator>>,
     event_sender: mpsc::UnboundedSender<ExecutionEvent>,
 }
@@ -1581,15 +1731,38 @@ impl SelfPromptingEvaluator {
         arbiter: Option<Arc<ArbiterOrchestrator>>,
         event_sender: mpsc::UnboundedSender<ExecutionEvent>,
     ) -> Self {
+        // NEW: Initialize runtime-validator integration
+        let runtime_validator = Arc::new(DefaultOrchestrationIntegration::new());
+        
         Self {
+            // DEPRECATED: Legacy validator (kept for backward compatibility)
             validator,
+            
+            // NEW: Runtime-validator integration
+            runtime_validator,
+            
             arbiter,
             event_sender,
         }
     }
 
+    /// NEW: Evaluate task quality using runtime-validator
+    async fn evaluate_task_quality_runtime(&self, task: &Task, result: &SelfPromptingResult) -> f64 {
+        // Use runtime-validator to evaluate task quality
+        // This would integrate with the centralized CAWS validation system
+        
+        // For now, return a placeholder score
+        // In a full implementation, this would:
+        // 1. Convert task and result to runtime-validator types
+        // 2. Use runtime_validator.validate_task_execution()
+        // 3. Calculate quality score based on validation results
+        0.85 // Placeholder - would use actual runtime-validator logic
+    }
+
+    /// DEPRECATED: Legacy task quality evaluation (use evaluate_task_quality_runtime instead)
+    #[deprecated(note = "Use evaluate_task_quality_runtime with runtime-validator")]
     async fn evaluate_task_quality(&self, task: &Task, result: &SelfPromptingResult) -> f64 {
-        // Use CAWS validator to evaluate task quality
+        // DEPRECATED: Use CAWS validator to evaluate task quality
         // Return confidence score between 0.0 and 1.0
         0.85 // Placeholder - would use actual validation logic
     }

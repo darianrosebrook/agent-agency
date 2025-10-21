@@ -41,6 +41,17 @@ pub enum JudgeVerdict {
     },
 }
 
+impl JudgeVerdict {
+    /// Extract confidence from the verdict
+    pub fn confidence(&self) -> f64 {
+        match self {
+            JudgeVerdict::Approve { confidence, .. } => *confidence,
+            JudgeVerdict::Refine { confidence, .. } => *confidence,
+            JudgeVerdict::Reject { .. } => 0.0, // Reject verdicts have no confidence
+        }
+    }
+}
+
 /// Risk assessment from a judge
 #[derive(Debug, Clone, PartialEq)]
 pub struct RiskAssessment {

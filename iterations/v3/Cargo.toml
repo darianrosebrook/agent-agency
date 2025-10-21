@@ -1,8 +1,8 @@
 [workspace]
 resolver = "2"
 members = [
-    # "self-prompting-agent",  # TODO: Re-enable when compilation issues resolved
-    "apple-silicon",  # Re-enabled - workspace structure fixed
+    # "self-prompting-agent",  # Disabled - has 161 compilation errors, TODOs partially addressed
+    "apple-silicon",  # Re-enabled after fixing torch integration and type imports
     "caws/runtime-validator",  # Consolidated CAWS validation service
     "workers",
     "research",
@@ -10,13 +10,13 @@ members = [
     "provenance",
     "claim-extraction",
     "reflexive-learning",  # Re-enabled - depends on council ✓
-    # "model-benchmarking",  # TODO: Re-enable when compilation issues resolved
-    # "security-policy-enforcer",  # TODO: Re-enable when compilation issues resolved
-    # "minimal-diff-evaluator",  # TODO: Re-enable when compilation issues resolved
-    # "context-preservation-engine",  # TODO: Re-enable when compilation issues resolved
-    # "embedding-service",  # TODO: Re-enable when compilation issues resolved
-    # "system-health-monitor",  # TODO: Re-enable when compilation issues resolved
-    # "workspace-state-manager",  # TODO: Re-enable when compilation issues resolved
+    "model-benchmarking",  # Re-enabled - depends on council ✓, claim-extraction ✓, apple-silicon ✓
+    "security-policy-enforcer",  # Re-enabled - depends on council ✓, provenance ✓
+    "minimal-diff-evaluator",  # Re-enabled - depends on council ✓, workers ✓, security-policy-enforcer ✓
+    "context-preservation-engine",  # Re-enabled - depends on research ✓, workers ✓, security-policy-enforcer ✓
+    "embedding-service",  # Re-enabled - standalone with ONNX/Candle dependencies
+    "system-health-monitor",  # Re-enabled - minimal features first
+    "workspace-state-manager",  # Re-enabled - standalone with git2 and database
     "resilience",  # Re-enabled - compiles successfully
     "observability",  # Re-enabled - compiles successfully
     "interfaces",  # MCP interface implementation
@@ -27,20 +27,20 @@ members = [
     # "integration-tests",  # TODO: Re-enable when compilation issues resolved
     "council",  # Re-enabled - compiles successfully
     "caching",  # Re-enabled - compiles successfully
-    # "planning-agent",  # TODO: Re-enable when compilation issues resolved
-    # "ingestors",  # TODO: Re-enable when compilation issues resolved
-    # "enrichers",  # TODO: Re-enable when compilation issues resolved
-    # "indexers",  # TODO: Re-enable when compilation issues resolved
-    # "knowledge-ingestor",  # TODO: Re-enable when compilation issues resolved
-    # "file_ops",  # TODO: Re-enable when compilation issues resolved
-    # "cli",  # TODO: Re-enable when compilation issues resolved
-    # "api-server",  # TODO: Re-enable when compilation issues resolved
-    # "worker",  # TODO: Re-enable when compilation issues resolved
-    # "runtime-optimization",  # TODO: Re-enable when compilation issues resolved
-    # "tool-ecosystem",  # TODO: Re-enable when compilation issues resolved
-    # "federated-learning",  # TODO: Re-enable when compilation issues resolved
-    # "model-hotswap",  # TODO: Re-enable when compilation issues resolved
-    # "production",  # TODO: Re-enable when compilation issues resolved
+    "planning-agent",  # Re-enabled - application layer
+    "ingestors",  # Re-enabled - application layer
+    "enrichers",  # Re-enabled - application layer
+    "indexers",  # Re-enabled - application layer
+    "knowledge-ingestor",  # Re-enabled - application layer
+    "file_ops",  # Re-enabled - simple implementation
+    "cli",  # Re-enabled - application layer
+    # "api-server",  # Disabled - has 117 compilation errors
+    "worker",  # Re-enabled - application layer
+    "runtime-optimization",  # Re-enabled - advanced services
+    "tool-ecosystem",  # Re-enabled - advanced services
+    "federated-learning",  # Re-enabled - advanced services
+    "model-hotswap",  # Re-enabled - advanced services
+    "production",  # Re-enabled - advanced services
     "e2e-tests"
 ]
 

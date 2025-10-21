@@ -112,3 +112,28 @@ impl CawsValidationResult {
         self.is_compliant = self.compliance_score >= 0.8;
     }
 }
+
+
+// Moved from caws_checker.rs: CawsWaiver struct
+#[derive(Debug, Clone)]
+pub struct CawsWaiver {
+    pub id: String,
+    pub reason: String,
+    pub justification: String,
+    pub time_bounded: bool,
+    pub expires_at: Option<chrono::DateTime<chrono::Utc>>,
+}
+
+
+
+// Moved from caws_checker.rs: CawsValidationResult struct
+#[derive(Debug, Clone)]
+pub struct CawsValidationResult {
+    pub is_compliant: bool,
+    pub compliance_score: f32,
+    pub violations: Vec<CawsViolation>,
+    pub warnings: Vec<String>,
+    pub suggestions: Vec<String>,
+    pub validated_at: chrono::DateTime<chrono::Utc>,
+}
+

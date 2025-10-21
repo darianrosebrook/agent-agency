@@ -1,6 +1,19 @@
 //! Core ML bridge for model loading
 
 use anyhow::Result;
+use std::ffi::c_char;
+
+/// External Core ML prediction function
+/// This would be implemented in a native library
+extern "C" {
+    pub fn coreml_predict(
+        model_handle: *const std::ffi::c_void,
+        inputs_json: *const c_char,
+        outputs_json: *mut *mut c_char,
+        timeout_ms: i32,
+        error_msg: *mut *mut c_char,
+    ) -> i32;
+}
 
 /// Core ML model wrapper
 #[derive(Debug)]

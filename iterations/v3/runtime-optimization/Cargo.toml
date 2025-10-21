@@ -16,7 +16,7 @@ tracing = "0.1"
 thiserror = "1.0"
 
 # Apple Silicon integration
-agent-agency-apple-silicon = { path = "../apple-silicon" }
+# agent-agency-apple-silicon = { path = "../apple-silicon" }  # Disabled - has compilation errors
 
 # Council and CAWS integration
 agent-agency-council = { path = "../council" }

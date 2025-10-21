@@ -628,7 +628,7 @@ impl VerdictAggregator {
                 risk_levels.into_iter().max().unwrap_or(crate::judge::RiskLevel::Medium)
             },
             RiskAggregationStrategy::WeightedAverage => {
-                self.calculate_weighted_risk_average(&weighted_contributions, &risk_levels, total_weight)
+                self.calculate_weighted_risk_average(contributions, &risk_levels, total_weight)
             },
             RiskAggregationStrategy::RiskFactorFrequency => {
                 // Count risk factor frequency to determine level

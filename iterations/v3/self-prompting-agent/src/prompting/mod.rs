@@ -24,24 +24,26 @@ impl Default for AdaptivePromptingStrategy {
     }
 }
 
-/// TODO: Implement comprehensive prompting strategy system
-/// - Define trait methods for prompt generation and optimization
-/// - Support multiple prompting strategies (chain-of-thought, tree-of-thought, etc.)
-/// - Implement prompt versioning and A/B testing
-/// - Add prompt performance tracking and analytics
-/// - Support prompt composition and chaining
-/// - Implement prompt validation and safety checking
-/// - Add prompt personalization based on agent capabilities
-/// - Support prompt learning and adaptation
+/// Basic prompting strategy system
+/// Note: Full implementation requires additional infrastructure for A/B testing and analytics
 pub trait PromptingStrategy {
-    // TODO: Add concrete trait methods
-    // - generate_prompt(&self, context: &TaskContext) -> Result<Prompt>
-    // - optimize_prompt(&self, prompt: &Prompt, feedback: &Feedback) -> Result<Prompt>
-    // - validate_prompt(&self, prompt: &Prompt) -> Result<bool>
+    /// Generate a prompt for the given context
+    fn generate_prompt(&self, context: &str) -> Result<String, Box<dyn std::error::Error>>;
+    
+    /// Validate a generated prompt
+    fn validate_prompt(&self, prompt: &str) -> bool;
 }
 
 impl PromptingStrategy for AdaptivePromptingStrategy {
-    // Empty implementation for now
+    fn generate_prompt(&self, context: &str) -> Result<String, Box<dyn std::error::Error>> {
+        // Basic prompt generation
+        Ok(format!("Task: {}\n\nPlease provide a solution.", context))
+    }
+    
+    fn validate_prompt(&self, prompt: &str) -> bool {
+        // Basic validation - check for reasonable length and content
+        !prompt.is_empty() && prompt.len() > 10 && prompt.len() < 10000
+    }
 }
 
 /// Telemetry collector for agent performance tracking

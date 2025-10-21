@@ -31,7 +31,7 @@ chrono = { version = "0.4", features = ["serde"] }
 lazy_static = "1.4"
 
 # Local crates
-self-prompting-agent = { path = "../self-prompting-agent" }
+# self-prompting-agent = { path = "../self-prompting-agent" }  # Disabled - has compilation errors
 agent-agency-workers = { path = "../workers" }
 orchestration = { path = "../orchestration" }
 file_ops = { path = "../file_ops" }

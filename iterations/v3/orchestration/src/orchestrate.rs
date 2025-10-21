@@ -2,6 +2,12 @@ use crate::adapter::build_short_circuit_verdict;
 use crate::caws_runtime::{
     CawsRuntimeValidator, DefaultValidator, DiffStats, TaskDescriptor, WorkingSpec,
 };
+// NEW: Runtime-validator integration
+use caws_runtime_validator::integration::{
+    OrchestrationIntegration, DefaultOrchestrationIntegration,
+    OrchestrationValidationResult, ExecutionDecision, ExecutionMode,
+    Violation as RuntimeViolation, ViolationCode as RuntimeViolationCode,
+};
 use crate::persistence::VerdictWriter;
 use crate::provenance::OrchestrationProvenanceEmitter;
 use crate::planning::types::{ExecutionArtifacts, TestResults, CoverageReport, MutationReport, LintReport, TypeCheckReport, ProvenanceRecord};
@@ -158,8 +164,9 @@ pub async fn orchestrate_task(
         .orchestrate_enter(&desc.task_id, &desc.scope_in, deterministic)
         .await?;
 
-    let validator = DefaultValidator;
-    let validation = validator
+    // DEPRECATED: Legacy validation for backward compatibility
+    let _legacy_validator = DefaultValidator;
+    let _legacy_validation = _legacy_validator
         .validate(
             spec,
             desc,
@@ -171,7 +178,49 @@ pub async fn orchestrate_task(
             vec![],
         )
         .await
-        .context("CAWS runtime validation failed")?;
+        .context("Legacy CAWS runtime validation failed")?;
+
+    // NEW: Primary validation using runtime-validator
+    let runtime_validator = DefaultOrchestrationIntegration::new();
+    let runtime_validation = runtime_validator
+        .validate_task_execution(
+            spec,
+            desc,
+            diff,
+            &[], // patches
+            &[], // language_hints
+            tests_added,
+            deterministic,
+            vec![], // waivers
+        )
+        .await
+        .context("Runtime-validator CAWS validation failed")?;
+
+    // Convert runtime validation to legacy format for compatibility
+    let validation = crate::caws_runtime::ValidationResult {
+        task_id: runtime_validation.task_id,
+        snapshot: crate::caws_runtime::ComplianceSnapshot {
+            within_scope: runtime_validation.snapshot.within_scope,
+            within_budget: runtime_validation.snapshot.within_budget,
+            tests_added: runtime_validation.snapshot.tests_added,
+            deterministic: runtime_validation.snapshot.deterministic,
+        },
+        violations: runtime_validation.violations.into_iter().map(|v| {
+            crate::caws_runtime::Violation {
+                code: match v.code {
+                    RuntimeViolationCode::OutOfScope => crate::caws_runtime::ViolationCode::OutOfScope,
+                    RuntimeViolationCode::BudgetExceeded => crate::caws_runtime::ViolationCode::BudgetExceeded,
+                    RuntimeViolationCode::MissingTests => crate::caws_runtime::ViolationCode::MissingTests,
+                    RuntimeViolationCode::NonDeterministic => crate::caws_runtime::ViolationCode::NonDeterministic,
+                    RuntimeViolationCode::DisallowedTool => crate::caws_runtime::ViolationCode::DisallowedTool,
+                },
+                message: v.message,
+                remediation: v.remediation,
+            }
+        }).collect(),
+        waivers: runtime_validation.waivers,
+        validated_at: runtime_validation.validated_at,
+    };
 
     let short_circuit = build_short_circuit_verdict(&validation);
     orch_emitter

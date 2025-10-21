@@ -1,6 +1,16 @@
 //! CAWS Integration
 //!
+//! DEPRECATION NOTICE: CawsIntegration migrating to caws-runtime-validator
+//! See: iterations/v3/caws/runtime-validator/src/integration.rs
+//! TODO: Remove after migration complete (target: Phase 2.2)
+//!
 //! Integrates CAWS compliance checking with MCP tools and execution.
+
+// Re-export from runtime-validator (primary implementation)
+pub use caws_runtime_validator::integration::{
+    McpIntegration, DefaultMcpIntegration, McpValidationResult, 
+    ToolExecutionContext, ToolExecutionRecord, McpIntegrationError
+};
 
 use crate::types::*;
 use anyhow::Result;
@@ -12,8 +22,12 @@ use tracing::{debug, info};
 use uuid::Uuid;
 
 /// CAWS integration service
+#[deprecated(note = "Use caws_runtime_validator::integration::McpCawsIntegration")]
 #[derive(Debug)]
 pub struct CawsIntegration {
+    // DEPRECATED: Wrapper around runtime-validator implementation
+    inner: McpCawsIntegration,
+    // Keep config and cache for backward compatibility
     pub(crate) config: CawsIntegrationConfig,
     pub(crate) rulebook: Arc<RwLock<CawsRulebook>>,
     pub(crate) compliance_cache: Arc<RwLock<std::collections::HashMap<Uuid, CawsComplianceResult>>>,
@@ -51,6 +65,8 @@ impl CawsIntegration {
     /// Create a new CAWS integration service
     pub fn new() -> Self {
         Self {
+            // DEPRECATED: Use runtime-validator implementation
+            inner: McpCawsIntegration::new(),
             config: CawsIntegrationConfig::default(),
             rulebook: Arc::new(RwLock::new(CawsRulebook {
                 version: "1.0.0".to_string(),
@@ -132,82 +148,50 @@ impl CawsIntegration {
     }
 
     /// Validate tool for CAWS compliance
+    #[deprecated(note = "Use caws_runtime_validator::integration::McpCawsIntegration::validate_tool_manifest")]
     pub async fn validate_tool(&self, tool: &MCPTool) -> Result<CawsComplianceResult> {
         info!("Validating tool for CAWS compliance: {}", tool.name);
 
-        // Check cache first
-        {
-            let cache = self.compliance_cache.read().await;
-            if let Some(cached_result) = cache.get(&tool.id) {
-                debug!("CAWS validation cache hit for tool: {}", tool.id);
-                return Ok(cached_result.clone());
-            }
-        }
-
-        // Basic CAWS validation based on rulebook + tool manifest metadata
-        let rb = self.rulebook.read().await.clone();
-        let mut violations: Vec<crate::types::CawsViolation> = Vec::new();
-
-        // Simple static checks derived from CAWS invariants
-        if tool.name.trim().is_empty() {
-            violations.push(crate::types::CawsViolation {
-                rule_id: "NAMING-001".into(),
-                rule_name: "Tool must have non-empty name".into(),
-                severity: crate::types::ViolationSeverity::Error,
-                description: "Tool name is empty".into(),
-                suggestion: Some("Provide a descriptive name".into()),
+        // DEPRECATED: Delegate to runtime-validator implementation
+        let runtime_result = self.inner.validate_tool_manifest(&tool.manifest, "2").await
+            .map_err(|e| anyhow::anyhow!("Runtime validator error: {}", e))?;
+        
+        // Convert runtime-validator result to legacy format
+        let violations: Vec<crate::types::CawsViolation> = runtime_result.violations
+            .into_iter()
+            .map(|v| crate::types::CawsViolation {
+                rule_id: "RUNTIME-VALIDATOR".to_string(),
+                rule_name: "Runtime Validator Check".to_string(),
+                severity: if runtime_result.compliant { 
+                    crate::types::ViolationSeverity::Info 
+                } else { 
+                    crate::types::ViolationSeverity::Error 
+                },
+                description: v,
+                suggestion: None,
                 line_number: None,
                 column_number: None,
                 file_path: None,
-            });
-        }
-        if tool.version.trim().is_empty() {
-            violations.push(crate::types::CawsViolation {
-                rule_id: "VERSION-001".into(),
-                rule_name: "Tool must declare version".into(),
-                severity: crate::types::ViolationSeverity::Warning,
-                description: "Version is missing".into(),
-                suggestion: Some("Set semantic version like 1.0.0".into()),
-                line_number: None,
-                column_number: None,
-                file_path: None,
-            });
-        }
-        // Example governance: require output schema
-        if tool.output_schema.is_null() {
-            violations.push(crate::types::CawsViolation {
-                rule_id: "CONTRACT-001".into(),
-                rule_name: "Tool must declare output schema".into(),
-                severity: crate::types::ViolationSeverity::Error,
-                description: "Missing output schema".into(),
-                suggestion: Some("Provide JSON schema for outputs".into()),
-                line_number: None,
-                column_number: None,
-                file_path: None,
-            });
-        }
-
-        // Use shared scoring logic for consistency
-        let (compliance_score, is_compliant) = self.calculate_compliance_score(&violations, &rb);
-
+            })
+            .collect();
+        
+        let compliance_score = if runtime_result.compliant { 1.0 } else { 0.5 };
+        
         let result = CawsComplianceResult {
-            is_compliant,
-            violations,
+            tool_id: tool.id,
+            compliant: runtime_result.compliant,
             compliance_score,
-            checked_at: chrono::Utc::now(),
-            rulebook_version: rb.version,
+            violations,
+            recommendations: runtime_result.recommendations,
+            risk_assessment: runtime_result.risk_assessment,
+            validated_at: chrono::Utc::now(),
         };
 
-        // Cache result
+        // Cache the result
         {
             let mut cache = self.compliance_cache.write().await;
             cache.insert(tool.id, result.clone());
         }
-
-        info!(
-            "CAWS validation completed for tool: {} (compliant: {})",
-            tool.name, result.is_compliant
-        );
 
         Ok(result)
     }

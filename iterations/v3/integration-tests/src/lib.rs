@@ -12,6 +12,9 @@ pub mod mocks;
 pub mod test_utils;
 
 pub mod autonomous_pipeline_test;
+pub mod caws_end_to_end_tests;
+pub mod caws_migration_comparison_tests;
+pub mod caws_runtime_validator_tests;
 pub mod claim_extraction_tests;
 pub mod council_tests;
 pub mod multimodal_rag_e2e_tests;

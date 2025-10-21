@@ -99,7 +99,18 @@ let waiver = generator.create_budget_waiver(context);
 println!("Waiver ID: {}", waiver.id);
 ```
 
+## Documentation
+
+- **[CAWS Centralization Overview](docs/CAWS_CENTRALIZATION_OVERVIEW.md)**: Comprehensive overview of the centralization effort and its impact
+- **[Migration Guide](docs/MIGRATION_GUIDE.md)**: Step-by-step guide for migrating from legacy CAWS implementations
+- **[Integration Patterns](docs/INTEGRATION_PATTERNS.md)**: Detailed patterns and examples for integrating with the runtime-validator
+- **[API Reference](https://docs.rs/caws-runtime-validator)**: Complete API documentation (when published)
+
 ## Migration Guide
+
+### Quick Migration Overview
+
+For detailed migration instructions, see the [Migration Guide](docs/MIGRATION_GUIDE.md).
 
 ### From `self-prompting-agent/src/caws/`
 

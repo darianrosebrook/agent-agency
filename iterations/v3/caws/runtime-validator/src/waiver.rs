@@ -34,6 +34,15 @@ pub enum WaiverStatus {
     Expired,
 }
 
+/// Risk tier for waiver assessment
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum RiskTier {
+    Low,
+    Medium,
+    High,
+    Critical,
+}
+
 /// Waiver approval request
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WaiverApprovalRequest {

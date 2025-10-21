@@ -9,6 +9,7 @@ use tokio::sync::RwLock;
 use tracing::{debug, info, warn};
 use anyhow::Result;
 use chrono;
+#[cfg(feature = "with_torch")]
 use tch::{Tensor, Device, Kind, Cuda};
 use candle_core::{Tensor as CandleTensor, DType};
 use sysinfo::System;
@@ -184,11 +185,15 @@ impl MemoryManager {
     pub fn optimize_tensor_device(&self, tensor: &Tensor) -> Result<Tensor> {
         // For Apple Silicon, prefer MPS (Metal Performance Shaders) when available
         // Fall back to CPU for memory efficiency
+        #[cfg(feature = "with_torch")]
         let device = if tch::utils::has_mps() {
             Device::MPS
         } else {
             Device::Cpu
         };
+
+        #[cfg(not(feature = "with_torch"))]
+        let device = Device::Cpu;
 
         let optimized = tensor.to_device(device);
         info!("Optimized tensor device to {:?}", device);
@@ -236,11 +241,15 @@ impl MemoryManager {
         // Use contiguous memory layout for better performance
         let contiguous = tensor.contiguous();
         // Pin memory for faster GPU transfers if applicable
-        let optimized = if tch::utils::has_cuda() || tch::utils::has_mps() {
+        #[cfg(feature = "with_torch")]
+        let optimized = if Cuda::is_available() || tch::utils::has_mps() {
             contiguous.pin_memory()
         } else {
             contiguous
         };
+
+        #[cfg(not(feature = "with_torch"))]
+        let optimized = contiguous;
 
         Ok(optimized)
     }
@@ -273,6 +282,7 @@ impl MemoryManager {
         let mut stats = HashMap::new();
 
         // Get GPU memory if available
+        #[cfg(feature = "with_torch")]
         if tch::utils::has_cuda() {
             if let Ok(gpu_memory) = tch::Cuda::memory_summary() {
                 stats.insert("gpu_allocated".to_string(), gpu_memory.allocated);
@@ -281,6 +291,7 @@ impl MemoryManager {
         }
 
         // Get MPS memory if available
+        #[cfg(feature = "with_torch")]
         if tch::utils::has_mps() {
             // MPS memory stats would be queried differently
             // For now, placeholder

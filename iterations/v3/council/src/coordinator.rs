@@ -1503,7 +1503,6 @@ impl ExpertAuthorityManager {
     }
 }
 
-    Ok(None)
 }
 
 /// Main coordinator for council consensus building
@@ -1885,6 +1884,305 @@ impl ConsensusCoordinator {
         let mut manager = self.expert_authority_manager.write().await;
         manager.cleanup_expired_overrides()
     }
+
+    /// Query participant performance history from database
+    fn query_participant_performance_history(&self, participant_id: &str) -> Result<Vec<ParticipantPerformanceRecord>> {
+        if let Some(ref db_client) = &self.db_client {
+            let query = r#"
+                SELECT
+                    participant_id, decision_accuracy, response_time_ms,
+                    quality_score, domain, timestamp
+                FROM participant_performance_history
+                WHERE participant_id = $1
+                AND timestamp > NOW() - INTERVAL '90 days'
+                ORDER BY timestamp DESC
+                LIMIT 100
+            "#;
+
+            let rows = db_client.execute_parameterized_query(
+                query,
+                vec![serde_json::Value::String(participant_id.to_string())],
+            )?;
+
+            let mut records = Vec::new();
+            for row in rows {
+                records.push(ParticipantPerformanceRecord {
+                    participant_id: participant_id.to_string(),
+                    decision_accuracy: row.get("decision_accuracy").unwrap().as_f64().unwrap_or(0.0) as f32,
+                    response_time_ms: row.get("response_time_ms").unwrap().as_i64().unwrap_or(0) as u64,
+                    quality_score: row.get("quality_score").unwrap().as_f64().unwrap_or(0.0) as f32,
+                    domain: row.get("domain").unwrap().as_str().unwrap_or("").to_string(),
+                    timestamp: chrono::DateTime::parse_from_rfc3339(
+                        row.get("timestamp").unwrap().as_str().unwrap()
+                    )?.into(),
+                });
+            }
+
+            Ok(records)
+        } else {
+            Err(anyhow::anyhow!("Database client not available"))
+        }
+    }
+
+    /// Calculate participant reliability from performance data
+    fn calculate_participant_reliability(&self, performance_data: &[ParticipantPerformanceRecord]) -> f32 {
+        if performance_data.is_empty() {
+            return 0.5;
+        }
+
+        // Statistical analysis of participant reliability
+        let accuracies: Vec<f32> = performance_data.iter().map(|r| r.decision_accuracy).collect();
+        let mean_accuracy = accuracies.iter().sum::<f32>() / accuracies.len() as f32;
+
+        // Calculate standard deviation for consistency measure
+        let variance = accuracies.iter()
+            .map(|acc| (acc - mean_accuracy).powi(2))
+            .sum::<f32>() / accuracies.len() as f32;
+        let std_dev = variance.sqrt();
+
+        // Reliability score combines accuracy and consistency
+        let consistency_factor = 1.0 - (std_dev / mean_accuracy.max(0.1)).min(1.0);
+        let reliability_score = mean_accuracy * 0.7 + consistency_factor * 0.3;
+
+        reliability_score.max(0.0).min(1.0)
+    }
+
+    /// Apply time-weighted performance scoring (recent vs old performance)
+    fn apply_time_weighting(&self, performance_data: &[ParticipantPerformanceRecord]) -> f32 {
+        let now = chrono::Utc::now();
+        let mut weighted_sum = 0.0;
+        let mut total_weight = 0.0;
+
+        for record in performance_data {
+            let age_hours = now.signed_duration_since(record.timestamp).num_hours() as f32;
+
+            // Time decay: recent performance gets higher weight
+            let time_weight = if age_hours <= 24.0 {
+                1.0 // Full weight for last 24 hours
+            } else if age_hours <= 168.0 { // 1 week
+                0.8 // Good weight for last week
+            } else if age_hours <= 720.0 { // 30 days
+                0.6 // Moderate weight for last month
+            } else {
+                0.3 // Low weight for older data
+            };
+
+            let performance_score = (record.decision_accuracy + record.quality_score) / 2.0;
+            weighted_sum += performance_score * time_weight;
+            total_weight += time_weight;
+        }
+
+        if total_weight > 0.0 {
+            (weighted_sum / total_weight).max(0.0).min(1.0)
+        } else {
+            0.5
+        }
+    }
+
+    /// Analyze performance trends for alerting
+    fn analyze_performance_trends(&self, performance_data: &[ParticipantPerformanceRecord], participant_id: &str) {
+        if performance_data.len() < 5 {
+            return; // Need minimum data for trend analysis
+        }
+
+        // Simple trend analysis: compare recent vs older performance
+        let midpoint = performance_data.len() / 2;
+        let recent_avg = performance_data[..midpoint].iter()
+            .map(|r| r.decision_accuracy)
+            .sum::<f32>() / midpoint as f32;
+        let older_avg = performance_data[midpoint..].iter()
+            .map(|r| r.decision_accuracy)
+            .sum::<f32>() / (performance_data.len() - midpoint) as f32;
+
+        let trend = recent_avg - older_avg;
+
+        if trend < -0.1 {
+            tracing::warn!("Performance decline detected for participant {}: {:.3} → {:.3}",
+                participant_id, older_avg, recent_avg);
+        } else if trend > 0.1 {
+            tracing::info!("Performance improvement detected for participant {}: {:.3} → {:.3}",
+                participant_id, older_avg, recent_avg);
+        }
+    }
+
+    /// Query participant decision history for accuracy analysis
+    fn query_participant_decision_history(&self, participant_id: &str) -> Result<Vec<DecisionRecord>> {
+        if let Some(ref db_client) = &self.db_client {
+            let query = r#"
+                SELECT
+                    participant_id, task_id, decision_outcome, confidence_score,
+                    actual_outcome, domain, decision_quality, timestamp
+                FROM participant_decision_history
+                WHERE participant_id = $1
+                AND timestamp > NOW() - INTERVAL '90 days'
+                ORDER BY timestamp DESC
+                LIMIT 200
+            "#;
+
+            let rows = db_client.execute_parameterized_query(
+                query,
+                vec![serde_json::Value::String(participant_id.to_string())],
+            )?;
+
+            let mut records = Vec::new();
+            for row in rows {
+                records.push(DecisionRecord {
+                    participant_id: participant_id.to_string(),
+                    task_id: row.get("task_id").unwrap().as_str().unwrap().to_string(),
+                    decision_outcome: row.get("decision_outcome").unwrap().as_str().unwrap().to_string(),
+                    confidence_score: row.get("confidence_score").unwrap().as_f64().unwrap_or(0.0) as f32,
+                    actual_outcome: row.get("actual_outcome").unwrap().as_str().unwrap().to_string(),
+                    domain: row.get("domain").unwrap().as_str().unwrap_or("").to_string(),
+                    decision_quality: row.get("decision_quality").unwrap().as_f64().unwrap_or(0.0) as f32,
+                    timestamp: chrono::DateTime::parse_from_rfc3339(
+                        row.get("timestamp").unwrap().as_str().unwrap()
+                    )?.into(),
+                });
+            }
+
+            Ok(records)
+        } else {
+            Err(anyhow::anyhow!("Database client not available"))
+        }
+    }
+
+    /// Calculate decision reliability statistics with confidence intervals
+    fn calculate_decision_reliability_stats(&self, decision_history: &[DecisionRecord]) -> DecisionReliabilityStats {
+        if decision_history.is_empty() {
+            return DecisionReliabilityStats {
+                accuracy: 0.5,
+                confidence_interval: (0.4, 0.6),
+                sample_size: 0,
+                consistency_score: 0.5,
+            };
+        }
+
+        // Calculate accuracy: decisions that match actual outcomes
+        let correct_decisions = decision_history.iter()
+            .filter(|r| r.decision_outcome == r.actual_outcome)
+            .count();
+        let accuracy = correct_decisions as f32 / decision_history.len() as f32;
+
+        // Calculate confidence interval using standard error
+        let sample_size = decision_history.len() as f32;
+        let standard_error = (accuracy * (1.0 - accuracy) / sample_size).sqrt();
+        let margin_of_error = 1.96 * standard_error; // 95% confidence interval
+        let confidence_interval = (
+            (accuracy - margin_of_error).max(0.0),
+            (accuracy + margin_of_error).min(1.0)
+        );
+
+        // Calculate consistency score based on confidence score variation
+        let confidence_scores: Vec<f32> = decision_history.iter().map(|r| r.confidence_score).collect();
+        let mean_confidence = confidence_scores.iter().sum::<f32>() / confidence_scores.len() as f32;
+        let confidence_variance = confidence_scores.iter()
+            .map(|c| (c - mean_confidence).powi(2))
+            .sum::<f32>() / confidence_scores.len() as f32;
+        let consistency_score = 1.0 - (confidence_variance.sqrt() / mean_confidence.max(0.1)).min(1.0);
+
+        DecisionReliabilityStats {
+            accuracy,
+            confidence_interval,
+            sample_size: decision_history.len(),
+            consistency_score,
+        }
+    }
+
+    /// Analyze domain-specific performance tracking
+    fn analyze_domain_specific_performance(&self, decision_history: &[DecisionRecord]) -> HashMap<String, DomainPerformance> {
+        let mut domain_stats: HashMap<String, Vec<&DecisionRecord>> = HashMap::new();
+
+        // Group decisions by domain
+        for record in decision_history {
+            domain_stats.entry(record.domain.clone())
+                .or_insert_with(Vec::new)
+                .push(record);
+        }
+
+        let mut domain_performance = HashMap::new();
+
+        for (domain, records) in domain_stats {
+            let correct_decisions = records.iter()
+                .filter(|r| r.decision_outcome == r.actual_outcome)
+                .count();
+            let accuracy = correct_decisions as f32 / records.len() as f32;
+            let avg_quality = records.iter().map(|r| r.decision_quality).sum::<f32>() / records.len() as f32;
+
+            domain_performance.insert(domain, DomainPerformance {
+                accuracy,
+                average_quality: avg_quality,
+                decision_count: records.len(),
+                specialization_score: accuracy * avg_quality, // Combined metric
+            });
+        }
+
+        domain_performance
+    }
+
+    /// Assess decision quality for feedback loops
+    fn assess_decision_quality(&self, decision_history: &[DecisionRecord]) -> f32 {
+        if decision_history.is_empty() {
+            return 0.5;
+        }
+
+        let total_quality = decision_history.iter()
+            .map(|r| r.decision_quality)
+            .sum::<f32>();
+        let average_quality = total_quality / decision_history.len() as f32;
+
+        // Factor in confidence calibration (how well confidence matches accuracy)
+        let well_calibrated = decision_history.iter()
+            .filter(|r| {
+                let confidence_matches = if r.confidence_score > 0.8 {
+                    r.decision_outcome == r.actual_outcome // High confidence should be correct
+                } else {
+                    true // Low confidence can be wrong
+                };
+                confidence_matches
+            })
+            .count();
+        let calibration_score = well_calibrated as f32 / decision_history.len() as f32;
+
+        // Combine quality and calibration
+        (average_quality * 0.7 + calibration_score * 0.3).max(0.0).min(1.0)
+    }
+
+    /// Calculate performance-based participant ranking
+    fn calculate_performance_based_weight(
+        &self,
+        reliability_stats: &DecisionReliabilityStats,
+        domain_performance: &HashMap<String, DomainPerformance>,
+        quality_score: f32,
+    ) -> f32 {
+        // Base weight from reliability
+        let base_weight = reliability_stats.accuracy;
+
+        // Adjust for sample size (more decisions = more confidence)
+        let sample_confidence = if reliability_stats.sample_size > 50 {
+            1.0
+        } else if reliability_stats.sample_size > 20 {
+            0.9
+        } else if reliability_stats.sample_size > 10 {
+            0.8
+        } else {
+            0.7
+        };
+
+        // Factor in domain specialization
+        let specialization_bonus = if !domain_performance.is_empty() {
+            let avg_specialization = domain_performance.values()
+                .map(|dp| dp.specialization_score)
+                .sum::<f32>() / domain_performance.len() as f32;
+            avg_specialization * 0.1 // Small bonus for specialization
+        } else {
+            0.0
+        };
+
+        // Combine factors
+        let final_weight = (base_weight * sample_confidence) + specialization_bonus + (quality_score * 0.1);
+        final_weight.max(0.1).min(1.0)
+    }
+}
 
     // ============================================================================
     // MULTIMODAL RAG INTEGRATION METHODS
@@ -2462,26 +2760,97 @@ impl ConsensusCoordinator {
         variance
     }
 
-    /// Calculate participant expertise weight (mock implementation)
-    fn calculate_participant_expertise_weight(&self, _participant_id: &str) -> f32 {
-        // TODO: Implement historical performance data analysis for participant weighting
-        // - [ ] Query historical decision accuracy and performance metrics
-        // - [ ] Implement statistical analysis of participant reliability
-        // - [ ] Add time-weighted performance scoring (recent vs old performance)
-        // - [ ] Handle cold start problem for new participants
-        // - [ ] Implement performance trend analysis and alerting
-        1.0
+    /// Calculate participant expertise weight based on historical performance data
+    fn calculate_participant_expertise_weight(&self, participant_id: &str) -> f32 {
+        // Query historical decision accuracy and performance metrics
+        let start_time = std::time::Instant::now();
+
+        if let Some(ref db_client) = &self.db_client {
+            match self.query_participant_performance_history(participant_id) {
+                Ok(performance_data) => {
+                    let query_time = start_time.elapsed();
+                    tracing::debug!("Participant performance query completed in {:?} for {}", query_time, participant_id);
+
+                    if performance_data.is_empty() {
+                        // Cold start problem: new participants get neutral weight
+                        tracing::debug!("No historical data for participant {}, using cold start weight", participant_id);
+                        return 0.5; // Neutral weight for new participants
+                    }
+
+                    // Implement statistical analysis of participant reliability
+                    let reliability_score = self.calculate_participant_reliability(&performance_data);
+
+                    // Add time-weighted performance scoring (recent vs old performance)
+                    let time_weighted_score = self.apply_time_weighting(&performance_data);
+
+                    // Combine reliability and time-weighted scores
+                    let expertise_weight = (reliability_score * 0.7 + time_weighted_score * 0.3).max(0.1).min(1.0);
+
+                    // Implement performance trend analysis
+                    self.analyze_performance_trends(&performance_data, participant_id);
+
+                    tracing::debug!("Calculated expertise weight {:.3} for participant {} (reliability: {:.3}, time-weighted: {:.3})",
+                        expertise_weight, participant_id, reliability_score, time_weighted_score);
+
+                    expertise_weight
+                }
+                Err(e) => {
+                    tracing::warn!("Failed to query performance history for participant {}: {}", participant_id, e);
+                    0.5 // Fallback to neutral weight
+                }
+            }
+        } else {
+            tracing::debug!("No database client available, using default expertise weight for participant {}", participant_id);
+            0.5 // Default weight when no database
+        }
     }
 
-    /// Calculate historical performance weight (mock implementation)
-    fn calculate_historical_performance_weight(&self, _participant_id: &str) -> f32 {
-        // TODO: Implement past decision accuracy analysis for participant scoring
-        // - [ ] Track decision outcomes and accuracy over time
-        // - [ ] Implement confidence interval analysis for participant reliability
-        // - [ ] Add domain-specific performance tracking
-        // - [ ] Handle decision quality assessment and feedback loops
-        // - [ ] Implement performance-based participant ranking
-        1.0
+    /// Calculate historical performance weight based on past decision accuracy
+    fn calculate_historical_performance_weight(&self, participant_id: &str) -> f32 {
+        // Track decision outcomes and accuracy over time
+        let start_time = std::time::Instant::now();
+
+        if let Some(ref db_client) = &self.db_client {
+            match self.query_participant_decision_history(participant_id) {
+                Ok(decision_history) => {
+                    let query_time = start_time.elapsed();
+                    tracing::debug!("Participant decision history query completed in {:?} for {}", query_time, participant_id);
+
+                    if decision_history.is_empty() {
+                        tracing::debug!("No decision history for participant {}, using neutral performance weight", participant_id);
+                        return 0.5; // Neutral weight for new participants
+                    }
+
+                    // Implement confidence interval analysis for participant reliability
+                    let reliability_stats = self.calculate_decision_reliability_stats(&decision_history);
+
+                    // Add domain-specific performance tracking
+                    let domain_performance = self.analyze_domain_specific_performance(&decision_history);
+
+                    // Handle decision quality assessment and feedback loops
+                    let quality_score = self.assess_decision_quality(&decision_history);
+
+                    // Implement performance-based participant ranking
+                    let performance_weight = self.calculate_performance_based_weight(
+                        &reliability_stats,
+                        &domain_performance,
+                        quality_score
+                    );
+
+                    tracing::debug!("Calculated performance weight {:.3} for participant {} (reliability: {:.3}, quality: {:.3})",
+                        performance_weight, participant_id, reliability_stats.accuracy, quality_score);
+
+                    performance_weight
+                }
+                Err(e) => {
+                    tracing::warn!("Failed to query decision history for participant {}: {}", participant_id, e);
+                    0.5 // Fallback to neutral weight
+                }
+            }
+        } else {
+            tracing::debug!("No database client available, using default performance weight for participant {}", participant_id);
+            0.5 // Default weight when no database
+        }
     }
 
     /// Calculate recency weight based on contribution timestamp
@@ -3721,4 +4090,46 @@ struct DebateRoundResult {
     round: u32,
     consensus_reached: bool,
     should_terminate: bool,
+}
+
+/// Performance record for participant analysis
+#[derive(Debug, Clone)]
+struct ParticipantPerformanceRecord {
+    participant_id: String,
+    decision_accuracy: f32,
+    response_time_ms: u64,
+    quality_score: f32,
+    domain: String,
+    timestamp: chrono::DateTime<chrono::Utc>,
+}
+
+/// Decision record for accuracy analysis
+#[derive(Debug, Clone)]
+struct DecisionRecord {
+    participant_id: String,
+    task_id: String,
+    decision_outcome: String,
+    confidence_score: f32,
+    actual_outcome: String,
+    domain: String,
+    decision_quality: f32,
+    timestamp: chrono::DateTime<chrono::Utc>,
+}
+
+/// Decision reliability statistics
+#[derive(Debug, Clone)]
+struct DecisionReliabilityStats {
+    accuracy: f32,
+    confidence_interval: (f32, f32),
+    sample_size: usize,
+    consistency_score: f32,
+}
+
+/// Domain-specific performance metrics
+#[derive(Debug, Clone)]
+struct DomainPerformance {
+    accuracy: f32,
+    average_quality: f32,
+    decision_count: usize,
+    specialization_score: f32,
 }
