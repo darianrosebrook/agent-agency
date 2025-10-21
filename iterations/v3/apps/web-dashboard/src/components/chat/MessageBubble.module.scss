@@ -65,6 +65,65 @@
   font-size: var(--font-size-xs);
   color: var(--color-text-tertiary);
   font-family: var(--font-family-mono);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+
+  .ttsButton {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 2px 4px;
+    border-radius: var(--radius-sm);
+    font-size: var(--font-size-sm);
+    transition: all var(--transition-fast);
+    opacity: 0.7;
+
+    &:hover {
+      opacity: 1;
+      background-color: var(--color-gray-100);
+    }
+
+    &:focus {
+      outline: 2px solid var(--color-primary-500);
+      outline-offset: 1px;
+    }
+
+    &:disabled {
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+
+    &.playing {
+      color: var(--color-success-600);
+      background-color: var(--color-success-50);
+      animation: pulse 1s infinite;
+    }
+
+    &.generating {
+      color: var(--color-warning-600);
+      background-color: var(--color-warning-50);
+      animation: spin 1s linear infinite;
+    }
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .content {

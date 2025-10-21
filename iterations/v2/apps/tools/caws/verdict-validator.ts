@@ -367,8 +367,15 @@ export class VerdictValidator {
       const signature = Buffer.from(verdict.signature.signature, "base64");
       const publicKey = Buffer.from(verdict.signature.publicKey, "base64");
 
-      // Verify signature (simplified - would use actual ed25519 verification)
-      // For now, we'll do a basic hash verification
+      // TODO: Implement comprehensive cryptographic signature verification
+      // - Use proper Ed25519 signature verification libraries (tweetnacl, noble-ed25519)
+      // - Implement signature algorithm negotiation and validation
+      // - Support multiple cryptographic signature schemes (RSA, ECDSA, EdDSA)
+      // - Add signature timestamp validation and replay attack prevention
+      // - Implement certificate chain validation and trust anchors
+      // - Support signature format standards (JWS, CMS, PGP)
+      // - Add signature strength assessment and algorithm deprecation warnings
+      // - Implement signature batch verification and performance optimization
       const expectedSignature = crypto
         .createHmac("sha256", publicKey)
         .update(payloadHash)

@@ -325,6 +325,12 @@ impl ArbiterOrchestrator {
                 })),
             };
 
+            // Detect programming languages used in the changes
+            let language_hints = self.detect_languages_in_changes(&output.diff_stats.touched_paths);
+
+            // Analyze code changes for test requirements and validate tests
+            let test_analysis = self.analyze_test_requirements(&task_desc, &output.diff_stats, &working_spec).await?;
+
             // Run CAWS validation
             let result = self.caws_validator.validate(
                 &crate::caws_runtime::WorkingSpec {
@@ -342,17 +348,10 @@ impl ArbiterOrchestrator {
                 &task_desc,
                 &output.diff_stats,
                 &[], // patches - not needed for examination
-                &[], // language hints
-                // TODO: Implement comprehensive test detection and validation
-                // - Analyze code changes for test requirements
-                // - Implement test file discovery and parsing
-                // - Add test coverage analysis and reporting
-                // - Support multiple testing frameworks
-                // - Implement test result aggregation and validation
-                // - Add automated test generation suggestions
-                true, // PLACEHOLDER: Assuming tests added
-                true, // assume deterministic
-                vec![], // no waivers in examination
+                &language_hints,
+                test_analysis.tests_added,
+                test_analysis.deterministic,
+                test_analysis.waivers,
             ).await
             .map_err(|e| ArbiterError::CawsValidationError(e.to_string()))?;
 

@@ -221,7 +221,7 @@ export default function AnalyticsDashboard({
                   },
                 };
                 const selectedRange = Object.entries(ranges).find(([label]) =>
-                  e.target.value.includes(label.split(" ")[1])
+                  (e.target.value || "").includes(label.split(" ")[1])
                 );
                 if (selectedRange) {
                   handleFiltersChange({

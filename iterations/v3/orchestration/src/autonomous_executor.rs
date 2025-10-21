@@ -68,6 +68,7 @@ pub struct AutonomousExecutor {
     provenance_emitter: Arc<OrchestrationProvenanceEmitter>,
     cache: Option<Arc<dyn CacheBackend>>,
     metrics: Option<Arc<dyn MetricsBackend>>,
+    task_executor: Arc<agent_agency_workers::TaskExecutor>,
     active_tasks: Arc<RwLock<HashMap<Uuid, TaskExecutionState>>>,
     task_queue: mpsc::UnboundedSender<TaskDescriptor>,
     task_receiver: Arc<RwLock<mpsc::UnboundedReceiver<TaskDescriptor>>>,

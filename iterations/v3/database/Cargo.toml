@@ -28,7 +28,7 @@ regex = "1.10"  # For migration parsing
 
 # Multimodal RAG integration dependencies
 indexers = { path = "../indexers" }
-embedding-service = { path = "../embedding-service" }
+embedding-service = { path = "../embedding-service", optional = true }
 
 # Contract types
 agent-agency-contracts = { path = "../agent-agency-contracts" }

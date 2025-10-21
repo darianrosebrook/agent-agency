@@ -183,11 +183,11 @@ impl DiffGenerator {
 
         let generation_duration = start_time.elapsed().as_millis() as u64;
 
-        // Record telemetry
-        self.telemetry.record_metric(
-            "diff_generation_duration_ms",
-            crate::metrics::MetricValue::Gauge(generation_duration as f64),
-        );
+        // TODO: Record telemetry - method not implemented yet
+        // self.telemetry.record_metric(
+        //     "diff_generation_duration_ms",
+        //     crate::metrics::MetricValue::Gauge(generation_duration as f64),
+        // );
 
         Ok(UnifiedDiff {
             header: DiffHeader {

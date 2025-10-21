@@ -163,4 +163,52 @@ impl DatabaseConfig {
 
         Ok(())
     }
+
+    /// Create a PostgreSQL connection pool from config
+    /// 
+    /// # Arguments
+    /// * `config` - Database configuration
+    /// 
+    /// # Returns
+    /// PostgreSQL connection pool or error
+    /// 
+    /// # Example
+    /// ```ignore
+    /// let config = DatabaseConfig::default();
+    /// let pool = create_pool(&config).await?;
+    /// ```
+    pub async fn create_pool(&self) -> Result<sqlx::PgPool, sqlx::Error> {
+        use sqlx::postgres::PgPoolOptions;
+        use std::time::Duration;
+
+        PgPoolOptions::new()
+            .min_connections(self.pool_min)
+            .max_connections(self.pool_max)
+            .connect_timeout(Duration::from_secs(self.connection_timeout_seconds))
+            .idle_timeout(Some(Duration::from_secs(self.idle_timeout_seconds)))
+            .max_lifetime(Some(Duration::from_secs(self.max_lifetime_seconds)))
+            .connect(&self.database_url())
+            .await
+    }
 }
+
+/// Convenient shorthand to create a pool from environment or config
+/// 
+/// # Errors
+/// Returns error if database connection fails
+/// 
+/// # Example
+/// ```ignore
+/// let pool = create_default_pool().await?;
+/// ```
+pub async fn create_default_pool() -> Result<sqlx::PgPool, sqlx::Error> {
+    let config = DatabaseConfig::from_env()
+        .unwrap_or_default();
+    config.create_pool().await
+}
+
+// Re-export commonly used types
+pub use sqlx::PgPool;
+pub use sqlx::Row;
+pub use sqlx::Transaction;
+pub use sqlx::Postgres;

@@ -18,6 +18,7 @@ pub use agent_agency_database::models::*;
 use agent_agency_database as database;
 use anyhow::Result;
 use database::DatabaseClient;
+#[cfg(feature = "embeddings")]
 use embedding_service::EmbeddingService;
 use std::sync::Arc;
 

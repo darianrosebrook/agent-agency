@@ -472,15 +472,36 @@ impl InferenceRouter {
     fn calculate_priority_score(
         &self,
         target: &OptimizationTarget,
-        _request: &InferenceRequest,
+        request: &InferenceRequest,
     ) -> f32 {
-        // Simple priority policy: ANE > GPU > CPU
-        // This implements the requirement to prefer ANE, then GPU, then CPU
-        match target {
-            OptimizationTarget::ANE => 1.0,    // Highest priority
-            OptimizationTarget::GPU => 0.8,    // Second priority
-            OptimizationTarget::CPU => 0.6,    // Lowest priority
-            OptimizationTarget::Auto => 0.9,   // Auto can choose optimally
+        // High priority requests prefer faster targets
+        match request.priority {
+            InferencePriority::Critical => match target {
+                OptimizationTarget::ANE => 1.0,
+                OptimizationTarget::GPU => 0.9,
+                OptimizationTarget::CPU => 0.7,
+                OptimizationTarget::Auto => 0.8,
+            },
+            InferencePriority::High => match target {
+                OptimizationTarget::ANE => 0.9,
+                OptimizationTarget::GPU => 1.0,
+                OptimizationTarget::CPU => 0.6,
+                OptimizationTarget::Auto => 0.7,
+            },
+            InferencePriority::Normal => match target {
+                OptimizationTarget::ANE => 0.8,
+                OptimizationTarget::GPU => 0.9,
+                OptimizationTarget::CPU => 0.8,
+                OptimizationTarget::Auto => 0.8,
+            },
+            InferencePriority::Low => {
+                match target {
+                    OptimizationTarget::ANE => 0.6,
+                    OptimizationTarget::GPU => 0.7,
+                    OptimizationTarget::CPU => 1.0, // CPU is fine for low priority
+                    OptimizationTarget::Auto => 0.7,
+                }
+            }
         }
     }
 
@@ -766,6 +787,23 @@ impl Default for ResourceUsage {
     }
 }
 
+impl Default for SystemCapabilities {
+    fn default() -> Self {
+        Self {
+            ane_available: true,
+            ane_compute_units: 16,
+            ane_memory_mb: 2048,
+            metal_available: true,
+            metal_device_name: Some("Apple GPU".to_string()),
+            metal_memory_mb: 8192,
+            cpu_cores: 12,
+            cpu_frequency_mhz: 3200,
+            total_memory_mb: 32768,
+            thermal_management: true,
+            power_management: true,
+        }
+    }
+}
 
 #[cfg(test)]
 mod tests {

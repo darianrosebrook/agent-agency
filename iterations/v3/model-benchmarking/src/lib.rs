@@ -437,6 +437,7 @@ impl ModelBenchmarkingSystem {
         // - [ ] Support dynamic resource allocation based on runtime profiling
         // - [ ] Add resource prediction validation against actual measurements
         let base_memory = model.parameters.size / 1024; // Convert to MB
+        let base_cpu = 2; // Default CPU cores requirement
 
         let complexity_multiplier = match task_context.complexity {
             TaskComplexity::Simple => 1.0,

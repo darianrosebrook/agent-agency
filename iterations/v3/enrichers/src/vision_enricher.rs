@@ -98,7 +98,7 @@ impl VisionEnricher {
         }
 
         let timeout = timeout_ms.unwrap_or(self.config.vision_timeout_ms);
-        let start = Instant::now();
+        let _start = Instant::now();
 
         // Integrate with Swift bridge - Implementation ready for production integration
         // This would call:

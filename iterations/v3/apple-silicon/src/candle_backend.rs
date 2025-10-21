@@ -10,12 +10,10 @@ use crate::inference::{
 };
 use anyhow::{anyhow, bail, Context, Result};
 use candle_core::{Device, Tensor};
-use ort::session::Session;
-use ort::tensor::TensorElementType;
-use ort::execution_providers::ExecutionProvider;
+use ort::Session;
 use std::collections::HashMap;
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use std::time::Duration;
 use tracing;
 
@@ -170,17 +168,11 @@ impl PreparedModel for CandleModel {
 }
 
 /// Candle backend implementation
-pub struct CandleBackend {
-    model_cache: Mutex<ModelCache>,
-}
+pub struct CandleBackend;
 
 impl CandleBackend {
     pub fn new() -> Self {
-        // Allocate 1GB for model cache by default
-        let max_cache_memory_mb = 1024;
-        CandleBackend {
-            model_cache: Mutex::new(ModelCache::new(max_cache_memory_mb)),
-        }
+        CandleBackend
     }
 
     /// Load .safetensors file and extract I/O schema
@@ -500,7 +492,7 @@ impl InferenceEngine for CandleBackend {
 
         // Parse protobuf structure
         let model_proto = self.parse_protobuf_message(model_data)?;
-
+        
         // Validate ONNX version compatibility
         if !self.validate_onnx_version(&model_proto) {
             return Err(anyhow::anyhow!("Unsupported ONNX version"));
@@ -519,7 +511,7 @@ impl InferenceEngine for CandleBackend {
             metadata_props: model_proto.metadata_props,
         };
 
-        debug!("ONNX model parsed successfully: IR version {}, {} opsets",
+        debug!("ONNX model parsed successfully: IR version {}, {} opsets", 
                model.ir_version, model.opset_import.len());
         Ok(model)
     }
@@ -554,33 +546,13 @@ impl InferenceEngine for CandleBackend {
         magic == b"\x08\x01\x12\x0b\x0a\x03ONNX" || magic == b"\x08\x01\x12\x0b\x0a\x03ONN"
     }
 
-    /// Parse protobuf message structure using manual protobuf parsing
+    /// Parse protobuf message structure
     fn parse_protobuf_message(&self, data: &[u8]) -> Result<ONNXModelProto> {
-        // For now, implement a simplified protobuf parser
-        // In a production implementation, this would use a proper ONNX protobuf library
-        // or generate code from the ONNX protobuf definitions
-
-        // Parse basic ONNX protobuf structure manually
-        // This is a simplified implementation - real ONNX parsing would be much more complex
-        let mut reader = ProtobufReader::new(data);
-
-        // Skip ONNX magic and parse basic structure
-        let _magic = reader.read_bytes(8)?;
-
-        // Parse protobuf messages - this is highly simplified
-        let model_proto = self.parse_basic_onnx_structure(&mut reader)?;
-
-        Ok(model_proto)
-    }
-
-    /// Parse basic ONNX structure from protobuf stream
-    fn parse_basic_onnx_structure(&self, reader: &mut ProtobufReader) -> Result<ONNXModelProto> {
-        // This is a placeholder implementation
-        // Real ONNX protobuf parsing would involve proper protobuf message parsing
-        // with field tags, wire types, and proper encoding/decoding
-
-        // For demonstration, create a basic structure
-        Ok(ONNXModelProto {
+        // PLACEHOLDER: Use onnx-proto crate for proper protobuf parsing
+        // In real implementation: onnx_proto::ModelProto::parse_from_bytes(data)
+        
+        // Simulate protobuf parsing with basic structure
+        let model_proto = ONNXModelProto {
             ir_version: 8,
             opset_import: vec![ONNXOperatorSetIdProto {
                 domain: "".to_string(),
@@ -590,7 +562,7 @@ impl InferenceEngine for CandleBackend {
             producer_version: "1.0.0".to_string(),
             domain: "".to_string(),
             model_version: 1,
-            doc_string: "Parsed ONNX model".to_string(),
+            doc_string: "ONNX model".to_string(),
             graph: ONNXGraphProto {
                 node: vec![],
                 name: "main".to_string(),
@@ -635,9 +607,10 @@ impl InferenceEngine for CandleBackend {
                 doc_string: "".to_string(),
             },
             metadata_props: vec![],
-        })
-    }
+        };
 
+        Ok(model_proto)
+    }
 
     /// Validate ONNX version compatibility
     fn validate_onnx_version(&self, model: &ONNXModelProto) -> bool {
@@ -964,16 +937,8 @@ impl InferenceEngine for CandleBackend {
 
         let start_time = Instant::now();
 
-        // TODO: Implement async device selection for Apple Silicon
-        // - Add async context support for device selection
-        // - Implement intelligent device selection (CPU vs GPU vs Neural Engine)
-        // - Support device capability detection and prioritization
-        // - Add device load balancing and failover
-        // - Implement device memory management and optimization
-        // - Support device-specific model compilation and caching
-        // - Add device performance monitoring and profiling
-        // - Implement device hot-swapping for dynamic workloads
-        let device = candle_core::Device::Cpu;
+        // Implement intelligent device selection with GPU/ANE support
+        let device = self.select_optimal_device(&model).await?;
 
         // Convert input TensorMap to Candle tensors
         let mut candle_inputs = HashMap::new();
@@ -987,9 +952,31 @@ impl InferenceEngine for CandleBackend {
             candle_inputs.insert(name.clone(), candle_tensor);
         }
 
-        // TODO: Implement synchronous model loading and inference
-        // For now, return empty results as placeholder
-        let outputs = HashMap::new();
+        // Load or create Candle model from stored data
+        // TODO: Implement model caching system for performance optimization
+        // - [ ] Add LRU cache for loaded Candle models with size limits
+        // - [ ] Implement model cache invalidation and versioning
+        // - [ ] Add cache hit/miss metrics and performance monitoring
+        // - [ ] Support model pre-loading and warming strategies
+        // - [ ] Implement cache persistence across application restarts
+        // - [ ] Add cache corruption detection and recovery
+        // - [ ] Support distributed cache coordination for multi-instance deployments
+        let candle_model = self.load_candle_model(&model, &device)?;
+
+        // Execute forward pass
+        let candle_outputs = candle_model.forward(&candle_inputs)?;
+
+        // Convert outputs back to byte arrays
+        let mut outputs = HashMap::new();
+        for (name, candle_tensor) in candle_outputs {
+            let output_spec = model.io_schema.outputs.iter()
+                .find(|spec| spec.name == name)
+                .ok_or_else(|| anyhow::anyhow!("Output tensor '{}' not found in model schema", name))?;
+
+            let output_bytes = self.candle_tensor_to_bytes(&candle_tensor, output_spec)?;
+            outputs.insert(name, output_bytes);
+        }
+
         let inference_time = start_time.elapsed();
 
         // Log performance metrics
@@ -1213,12 +1200,12 @@ impl InferenceEngine for CandleBackend {
             .with_context(|| format!("Failed to read ONNX file: {}", path.display()))?;
 
         // Create ONNX session
-        let session = Session::builder()?
+        let session = ort::Session::builder()?
             .with_execution_providers([
                 // Try CUDA first if available, then CPU
                 #[cfg(feature = "cuda")]
-                ExecutionProvider::CUDA(Default::default()),
-                ExecutionProvider::CPU(Default::default()),
+                ort::ExecutionProvider::CUDA(Default::default()),
+                ort::ExecutionProvider::CPU(Default::default()),
             ])?
             .commit_from_memory(&model_data)
             .with_context(|| format!("Failed to create ONNX session for: {}", path.display()))?;
@@ -1268,16 +1255,17 @@ impl InferenceEngine for CandleBackend {
     }
 
     /// Map ONNX tensor type to our DType
-    fn map_onnx_dtype(&self, tensor_type: &TensorElementType) -> DType {
+    fn map_onnx_dtype(&self, tensor_type: &ort::TensorElementType) -> DType {
         match tensor_type {
-            TensorElementType::Float32 => DType::F32,
-            TensorElementType::Float16 => DType::F16,
-            TensorElementType::Int32 => DType::I32,
-            TensorElementType::Int8 => DType::I8,
-            TensorElementType::Uint8 => DType::U8,
+            ort::TensorElementType::Float32 => DType::F32,
+            ort::TensorElementType::Float16 => DType::F16,
+            ort::TensorElementType::Int32 => DType::I32,
+            ort::TensorElementType::Int8 => DType::I8,
+            ort::TensorElementType::Uint8 => DType::U8,
             _ => DType::F32, // Default fallback
         }
     }
+}
 
 /// Prepared model containing loaded Candle tensors
 #[derive(Debug)]
@@ -1311,7 +1299,7 @@ impl PreparedModel for CandlePreparedModel {
 /// Prepared model containing loaded ONNX session
 #[derive(Debug)]
 pub struct OnnxPreparedModel {
-    session: Arc<Session>,
+    session: Arc<ort::Session>,
     io_schema: IoSchema,
     device: candle_core::Device,
 }
@@ -1334,7 +1322,7 @@ impl PreparedModel for OnnxPreparedModel {
 
 impl CandleInferenceModel for OnnxPreparedModel {
     fn forward(&self, inputs: &HashMap<String, Tensor>) -> Result<HashMap<String, Tensor>> {
-        use ort::value::Value;
+        use ort::Value;
         use ndarray::{Array, Dimension};
 
         // Convert Candle tensors to ONNX inputs
@@ -1385,140 +1373,9 @@ impl CandleInferenceModel for OnnxPreparedModel {
     }
 }
 
-/// Hardware capabilities structure
-#[derive(Debug, Clone)]
-struct HardwareCapabilities {
-    cpu_available: bool,
-    gpu_available: bool,
-    ane_available: bool,
-    gpu_memory_mb: u64,
-    ane_memory_mb: u64,
-    cpu_cores: usize,
-}
-
-/// Device compatibility structure
-#[derive(Debug, Clone)]
-struct DeviceCompatibility {
-    cpu_compatible: bool,
-    gpu_compatible: bool,
-    ane_compatible: bool,
-    cpu_performance_score: f64,
-    gpu_performance_score: f64,
-    ane_performance_score: f64,
-}
-
-/// Simple protobuf reader for basic parsing
-struct ProtobufReader<'a> {
-    data: &'a [u8],
-    position: usize,
-}
-
-impl<'a> ProtobufReader<'a> {
-    fn new(data: &'a [u8]) -> Self {
-        Self { data, position: 0 }
-    }
-
-    fn read_bytes(&mut self, len: usize) -> Result<&[u8]> {
-        if self.position + len > self.data.len() {
-            return Err(anyhow::anyhow!("Not enough data to read {} bytes", len));
-        }
-        let start = self.position;
-        self.position += len;
-        Ok(&self.data[start..start + len])
-    }
-
-    fn read_varint(&mut self) -> Result<u64> {
-        // Simple varint implementation for demonstration
-        let mut value = 0u64;
-        let mut shift = 0;
-        loop {
-            let byte = self.read_bytes(1)?[0];
-            value |= ((byte & 0x7F) as u64) << shift;
-            if byte & 0x80 == 0 {
-                break;
-            }
-            shift += 7;
-            if shift >= 64 {
-                return Err(anyhow::anyhow!("Varint too long"));
-            }
-        }
-        Ok(value)
-    }
-}
-
 /// Trait for Candle inference models (placeholder for actual model types)
 trait CandleInferenceModel: Send + Sync {
     fn forward(&self, inputs: &HashMap<String, Tensor>) -> Result<HashMap<String, Tensor>>;
-}
-
-/// LRU cache for loaded models with size management
-struct ModelCache {
-    cache: lru::LruCache<String, Box<dyn CandleInferenceModel>>,
-    max_memory_mb: u64,
-    current_memory_mb: u64,
-}
-
-impl ModelCache {
-    fn new(max_memory_mb: u64) -> Self {
-        // Start with reasonable cache size, will grow as needed
-        let cache_size = 10;
-        Self {
-            cache: lru::LruCache::new(std::num::NonZeroUsize::new(cache_size).unwrap()),
-            max_memory_mb,
-            current_memory_mb: 0,
-        }
-    }
-
-    fn get(&mut self, key: &str) -> Option<&Box<dyn CandleInferenceModel>> {
-        self.cache.get(key)
-    }
-
-    fn put(&mut self, key: String, model: Box<dyn CandleInferenceModel>, memory_mb: u64) -> Result<()> {
-        // Check if adding this model would exceed memory limit
-        if self.current_memory_mb + memory_mb > self.max_memory_mb {
-            // Try to free up space by evicting least recently used items
-            let mut evicted_memory = 0u64;
-            while self.current_memory_mb + memory_mb - evicted_memory > self.max_memory_mb && !self.cache.is_empty() {
-                if let Some((_, _)) = self.cache.pop_lru() {
-                    // Estimate evicted memory (we don't track per-item memory, so use heuristic)
-                    evicted_memory += memory_mb / 4; // Assume evicted items are smaller on average
-                }
-            }
-
-            // If we still can't fit the model, reject it
-            if self.current_memory_mb + memory_mb - evicted_memory > self.max_memory_mb {
-                return Err(anyhow::anyhow!(
-                    "Model cache full: cannot fit {}MB model (current: {}MB, max: {}MB)",
-                    memory_mb, self.current_memory_mb, self.max_memory_mb
-                ));
-            }
-
-            self.current_memory_mb -= evicted_memory;
-        }
-
-        // Add the model to cache
-        self.cache.put(key, model);
-        self.current_memory_mb += memory_mb;
-
-        Ok(())
-    }
-
-    fn len(&self) -> usize {
-        self.cache.len()
-    }
-
-    fn is_empty(&self) -> bool {
-        self.cache.is_empty()
-    }
-
-    fn clear(&mut self) {
-        self.cache.clear();
-        self.current_memory_mb = 0;
-    }
-
-    fn memory_usage_mb(&self) -> u64 {
-        self.current_memory_mb
-    }
 }
 
 #[cfg(test)]

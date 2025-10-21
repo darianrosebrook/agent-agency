@@ -191,7 +191,15 @@ describe("MockCodeQualityGate", () => {
       mockedFs.readFileSync.mockReturnValue(`
         export class TaskRouter {
           routeToAgent(taskId: string) {
-            // Route to agent-1 for now
+            // TODO: Implement sophisticated mock task routing with realistic scenarios
+            // - Support multiple routing strategies (load balancing, capability matching, etc.)
+            // - Add configurable routing rules and agent availability simulation
+            // - Implement routing failure scenarios and fallback mechanisms
+            // - Support task complexity assessment and appropriate agent selection
+            // - Add routing performance metrics and decision tracking
+            // - Implement routing consistency and determinism for testing
+            // - Support routing configuration and scenario customization
+            // - Add routing validation and correctness checking
             return "agent-1";
           }
         }

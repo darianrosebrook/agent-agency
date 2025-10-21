@@ -1,152 +1,102 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
-import { TaskListProps, Task, TaskFilters } from "@/types/tasks";
-import { taskApiClient, TaskApiError } from "@/lib/task-api";
-import TaskCard from "./TaskCard";
-import TaskFiltersBar from "./TaskFiltersBar";
+import React from "react";
+import Link from "next/link";
+import { Task } from "@/types/tasks";
 import styles from "./TaskList.module.scss";
 
-interface TaskListState {
+interface TaskListProps {
   tasks: Task[];
-  isLoading: boolean;
-  error: string | null;
-  filters: TaskFilters;
-  pagination: {
-    page: number;
-    pageSize: number;
-    totalCount: number;
-    filteredCount: number;
-  };
+  onTaskAction: (taskId: string, action: string) => void;
+  loading?: boolean;
 }
 
-export default function TaskList({
-  tasks,
-  isLoading: externalLoading,
-  onTaskSelect,
-  onTaskFilter,
-  selectedTaskId,
-}: TaskListProps) {
-  const [state, setState] = useState<TaskListState>({
-    tasks: tasks ?? [],
-    isLoading: externalLoading ?? !tasks,
-    error: null,
-    filters: {},
-    pagination: {
-      page: 1,
-      pageSize: 20,
-      totalCount: 0,
-      filteredCount: 0,
-    },
-  });
+export default function TaskList({ tasks, onTaskAction, loading = false }: TaskListProps) {
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
 
-  // Load tasks from API if not provided externally
-  const loadTasks = useCallback(
-    async (filters: TaskFilters = {}, page: number = 1) => {
-      if (tasks) return; // Use external tasks if provided
-
-      try {
-        setState((prev) => ({ ...prev, isLoading: true, error: null }));
-
-        const response = await taskApiClient.getTasks(
-          filters,
-          page,
-          state.pagination.pageSize
-        );
-
-        setState((prev) => ({
-          ...prev,
-          tasks: response.tasks,
-          isLoading: false,
-          filters,
-          pagination: {
-            ...prev.pagination,
-            page,
-            totalCount: response.total_count,
-            filteredCount: response.filtered_count,
-          },
-        }));
-
-        onTaskFilter?.(filters);
-      } catch (error) {
-        const errorMessage =
-          error instanceof TaskApiError
-            ? error.message
-            : "Failed to load tasks";
-
-        setState((prev) => ({
-          ...prev,
-          isLoading: false,
-          error: errorMessage,
-        }));
-
-        console.error("Failed to load tasks:", error);
-      }
-    },
-    [tasks, state.pagination.pageSize, onTaskFilter]
-  );
-
-  // Initial load
-  useEffect(() => {
-    if (!tasks) {
-      loadTasks();
-    } else {
-      setState((prev) => ({
-        ...prev,
-        tasks: tasks,
-        isLoading: false,
-      }));
+  const getStatusColor = (status: Task["status"]) => {
+    switch (status) {
+      case "completed":
+        return styles.success;
+      case "running":
+        return styles.primary;
+      case "pending":
+        return styles.warning;
+      case "paused":
+        return styles.secondary;
+      case "failed":
+        return styles.error;
+      case "cancelled":
+        return styles.neutral;
+      default:
+        return styles.neutral;
     }
-  }, [tasks, loadTasks]);
+  };
 
-  // Handle filter changes
-  const handleFiltersChange = useCallback(
-    (newFilters: TaskFilters) => {
-      setState((prev) => ({ ...prev, filters: newFilters }));
-      loadTasks(newFilters, 1); // Reset to first page
-    },
-    [loadTasks]
-  );
+  const getPhaseIcon = (phase: Task["phase"]) => {
+    switch (phase) {
+      case "planning":
+        return "🧠";
+      case "analysis":
+        return "🔍";
+      case "execution":
+        return "⚡";
+      case "validation":
+        return "✅";
+      case "refinement":
+        return "🔧";
+      case "qa":
+        return "🧪";
+      case "finalization":
+        return "🎯";
+      default:
+        return "📋";
+    }
+  };
 
-  // Handle page changes
-  const handlePageChange = useCallback(
-    (newPage: number) => {
-      loadTasks(state.filters, newPage);
-    },
-    [loadTasks, state.filters]
-  );
+  const getPriorityColor = (priority: Task["priority"]) => {
+    switch (priority) {
+      case "critical":
+        return styles.critical;
+      case "high":
+        return styles.high;
+      case "medium":
+        return styles.medium;
+      case "low":
+        return styles.low;
+      default:
+        return styles.medium;
+    }
+  };
 
-  // Handle task selection
-  const handleTaskSelect = useCallback(
-    (task: Task) => {
-      onTaskSelect?.(task);
-    },
-    [onTaskSelect]
-  );
+  const canPause = (status: Task["status"]) => status === "running";
+  const canResume = (status: Task["status"]) => status === "paused";
+  const canCancel = (status: Task["status"]) => ["running", "pending", "paused"].includes(status);
+  const canRetry = (status: Task["status"]) => status === "failed";
 
-  if (state.isLoading && !tasks) {
+  if (loading) {
     return (
-      <div className={styles.taskList}>
-        <div className={styles.loading}>
-          <div className={styles.spinner}></div>
-          <p>Loading tasks...</p>
-        </div>
+      <div className={styles.loading}>
+        <div className={styles.spinner}></div>
+        <p>Loading tasks...</p>
       </div>
     );
   }
 
-  if (state.error) {
+  if (tasks.length === 0) {
     return (
-      <div className={styles.taskList}>
-        <div className={styles.error}>
-          <h3>Failed to load tasks</h3>
-          <p>{state.error}</p>
-          <button
-            onClick={() => loadTasks(state.filters, state.pagination.page)}
-          >
-            Retry
-          </button>
-        </div>
+      <div className={styles.emptyState}>
+        <div className={styles.emptyIcon}>📋</div>
+        <h3>No Tasks Found</h3>
+        <p>No tasks match your current filters.</p>
       </div>
     );
   }
@@ -154,75 +104,107 @@ export default function TaskList({
   return (
     <div className={styles.taskList}>
       <div className={styles.header}>
-        <h2>Task Monitoring</h2>
-        <div className={styles.stats}>
-          <span className={styles.stat}>
-            {state.pagination.filteredCount} of {state.pagination.totalCount}{" "}
-            tasks
-          </span>
-        </div>
+        <div className={styles.headerCell}>Task</div>
+        <div className={styles.headerCell}>Status</div>
+        <div className={styles.headerCell}>Phase</div>
+        <div className={styles.headerCell}>Priority</div>
+        <div className={styles.headerCell}>Created</div>
+        <div className={styles.headerCell}>Actions</div>
       </div>
 
-      <TaskFiltersBar
-        filters={state.filters}
-        onFiltersChange={handleFiltersChange}
-      />
+      <div className={styles.body}>
+        {tasks.map((task) => (
+          <div key={task.id} className={styles.taskRow}>
+            <div className={styles.taskCell}>
+              <div className={styles.taskInfo}>
+                <Link href={`/tasks/${task.id}`} className={styles.taskTitle}>
+                  {task.title}
+                </Link>
+                {task.description && (
+                  <p className={styles.taskDescription}>
+                    {task.description.length > 100
+                      ? `${task.description.substring(0, 100)}...`
+                      : task.description}
+                  </p>
+                )}
+                <div className={styles.taskMeta}>
+                  <span className={styles.taskId}>ID: {task.id}</span>
+                  {task.retry_count > 0 && (
+                    <span className={styles.retryCount}>
+                      Retries: {task.retry_count}/{task.max_retries}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
 
-      <div className={styles.taskGrid}>
-        {state.tasks.length === 0 ? (
-          <div className={styles.emptyState}>
-            <div className={styles.emptyIcon}>📋</div>
-            <h3>No tasks found</h3>
-            <p>
-              {Object.keys(state.filters).length > 0
-                ? "Try adjusting your filters to see more tasks."
-                : "No tasks are currently running or available."}
-            </p>
+            <div className={styles.statusCell}>
+              <span className={`${styles.status} ${getStatusColor(task.status)}`}>
+                {task.status}
+              </span>
+            </div>
+
+            <div className={styles.phaseCell}>
+              <span className={styles.phase}>
+                {getPhaseIcon(task.phase)} {task.phase}
+              </span>
+            </div>
+
+            <div className={styles.priorityCell}>
+              <span className={`${styles.priority} ${getPriorityColor(task.priority)}`}>
+                {task.priority}
+              </span>
+            </div>
+
+            <div className={styles.dateCell}>
+              <span className={styles.date}>
+                {formatDate(task.created_at)}
+              </span>
+            </div>
+
+            <div className={styles.actionsCell}>
+              <div className={styles.actions}>
+                {canPause(task.status) && (
+                  <button
+                    onClick={() => onTaskAction(task.id, "pause")}
+                    className={styles.actionButton}
+                    title="Pause task"
+                  >
+                    ⏸️
+                  </button>
+                )}
+                {canResume(task.status) && (
+                  <button
+                    onClick={() => onTaskAction(task.id, "resume")}
+                    className={styles.actionButton}
+                    title="Resume task"
+                  >
+                    ▶️
+                  </button>
+                )}
+                {canCancel(task.status) && (
+                  <button
+                    onClick={() => onTaskAction(task.id, "cancel")}
+                    className={styles.actionButton}
+                    title="Cancel task"
+                  >
+                    🛑
+                  </button>
+                )}
+                {canRetry(task.status) && (
+                  <button
+                    onClick={() => onTaskAction(task.id, "retry")}
+                    className={styles.actionButton}
+                    title="Retry task"
+                  >
+                    🔄
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
-        ) : (
-          state.tasks.map((task) => (
-            <TaskCard
-              key={task.id}
-              task={task}
-              isSelected={selectedTaskId === task.id}
-              onClick={() => handleTaskSelect(task)}
-            />
-          ))
-        )}
+        ))}
       </div>
-
-      {/* Pagination */}
-      {state.pagination.totalCount > state.pagination.pageSize && (
-        <div className={styles.pagination}>
-          <button
-            className={styles.pageButton}
-            disabled={state.pagination.page <= 1}
-            onClick={() => handlePageChange(state.pagination.page - 1)}
-          >
-            Previous
-          </button>
-
-          <span className={styles.pageInfo}>
-            Page {state.pagination.page} of{" "}
-            {Math.ceil(
-              state.pagination.filteredCount / state.pagination.pageSize
-            )}
-          </span>
-
-          <button
-            className={styles.pageButton}
-            disabled={
-              state.pagination.page >=
-              Math.ceil(
-                state.pagination.filteredCount / state.pagination.pageSize
-              )
-            }
-            onClick={() => handlePageChange(state.pagination.page + 1)}
-          >
-            Next
-          </button>
-        </div>
-      )}
     </div>
   );
 }

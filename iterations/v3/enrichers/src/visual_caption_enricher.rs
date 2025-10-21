@@ -136,7 +136,7 @@ impl VisualCaptionEnricher {
         
         // Remove common artifacts
         cleaned = cleaned.replace("a image", "an image");
-        cleaned = cleaned.replace("a person", "a person");
+        // No-op replacement - placeholder for future cleanup rules
         cleaned = cleaned.replace("a man", "a man");
         cleaned = cleaned.replace("a woman", "a woman");
         

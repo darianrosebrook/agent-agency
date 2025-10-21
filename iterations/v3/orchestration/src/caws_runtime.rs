@@ -50,10 +50,18 @@ pub struct WorkingSpec {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq)]
+pub enum ExecutionMode {
+    Strict,
+    Auto,
+    DryRun,
+}
+
 pub struct TaskDescriptor {
     pub task_id: String,
     pub scope_in: Vec<String>,
     pub risk_tier: u8,
+    pub execution_mode: ExecutionMode,
     pub acceptance: Option<Vec<String>>, // acceptance criteria text
     pub metadata: Option<std::collections::BTreeMap<String, String>>, // arbitrary metadata
 }

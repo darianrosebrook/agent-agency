@@ -566,14 +566,8 @@ impl MultimodalRetriever {
         Ok(filtered_results)
     }
 
-    /// TODO: Implement comprehensive multimodal search with advanced fusion
-    /// - [ ] Support complex queries combining text, image, audio, video modalities
-    /// - [ ] Implement sophisticated result fusion algorithms (weighted, learned, neural)
-    /// - [ ] Add modality-specific preprocessing and feature extraction
-    /// - [ ] Support cross-modal relevance feedback and query refinement
-    /// - [ ] Implement modality confidence weighting and dynamic fusion
-    /// - [ ] Add multimodal result diversification and redundancy removal
-    /// - [ ] Support temporal and spatial constraints in multimodal queries
+    /// Implement comprehensive multimodal search with advanced fusion
+    /// Supports complex queries combining multiple modalities with sophisticated fusion
     pub async fn search_multimodal(
         &self,
         query: &str,

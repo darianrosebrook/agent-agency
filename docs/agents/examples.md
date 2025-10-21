@@ -1,96 +1,401 @@
-# CAWS Examples - Real Working Specs
+# Agent Agency V3 - Usage Examples
 
-**Example working specifications from real projects**
+**Real examples of using the Constitutional AI System**
 
 ---
 
-## 📱 VS Code Extension - Theme Switcher
+## 🚀 Basic Task Execution
 
-**Project**: VS Code extension adding theme switching capabilities  
-**Risk Tier**: 2 (high user impact)  
-**Files Changed**: 12  
-**Lines Changed**: 450
+**Example**: Implement a simple user greeting feature
 
-```yaml
-id: EXT-002
-title: "Add Theme Switcher Extension"
-risk_tier: 2
-mode: feature
-change_budget:
-  max_files: 15
-  max_loc: 500
-blast_radius:
-  modules: ["extension", "webview", "commands"]
-  data_migration: false
-operational_rollback_slo: "5m"
-threats:
-  - "Webview CSP violations"
-  - "Extension activation performance"
-  - "Theme persistence failures"
-scope:
-  in: ["src/", "webview/", "package.json"]
-  out: ["node_modules/", "out/", "*.vsix"]
-invariants:
-  - "Webview only accesses workspace files via VS Code API"
-  - "Extension activates in <1s on typical machine"
-  - "All commands have keyboard shortcuts"
-  - "Theme changes persist across sessions"
-acceptance:
-  - id: "A1"
-    given: "User clicks theme switcher button"
-    when: "Theme is selected"
-    then: "VS Code theme changes immediately"
-  - id: "A2"
-    given: "Extension is activated"
-    when: "Webview loads"
-    then: "No CSP violations occur"
-  - id: "A3"
-    given: "User restarts VS Code"
-    when: "Extension reactivates"
-    then: "Previous theme selection is restored"
-non_functional:
-  a11y:
-    - "keyboard navigation"
-    - "screen reader support"
-    - "high contrast theme support"
-  perf:
-    api_p95_ms: 100
-  security:
-    - "CSP enforcement for webviews"
-    - "No arbitrary filesystem access"
-    - "Safe theme name validation"
-contracts:
-  - type: "vscode-api"
-    path: "src/contracts/vscode.d.ts"
-observability:
-  logs:
-    - "extension.activated"
-    - "theme.changed"
-    - "webview.loaded"
-  metrics:
-    - "activation_duration"
-    - "theme_change_count"
-  traces:
-    - "theme_switch_flow"
-    - "webview_initialization"
-migrations: []
-rollback:
-  - "Disable extension"
-  - "Remove webview HTML/CSS/JS files"
-  - "Revert package.json contributions"
-human_override:
-  enabled: false
-experimental_mode:
-  enabled: false
-ai_assessment:
-  confidence_level: 8
-  uncertainty_areas:
-    - "VS Code API compatibility across versions"
-  complexity_factors:
-    - "Webview security model"
-    - "Theme API integration"
-  risk_factors: []
+### CLI Execution
+```bash
+# Execute in auto mode with quality gates
+cargo run --bin agent-agency-cli execute \
+  "Create a simple greeting function that takes a name parameter and returns a personalized greeting message" \
+  --mode auto \
+  --risk-tier 3 \
+  --watch
 ```
+
+### API Execution
+```bash
+# Submit via REST API
+curl -X POST http://localhost:8080/api/v1/tasks \
+  -H "Content-Type: application/json" \
+  -d '{
+    "description": "Create a simple greeting function that takes a name parameter and returns a personalized greeting message",
+    "execution_mode": "auto",
+    "max_iterations": 3,
+    "risk_tier": 3
+  }'
+```
+
+**Expected Output**:
+```
+🚀 Agent Agency V3 - Autonomous Execution
+═══════════════════════════════════════════
+
+🎯 Task: Create a simple greeting function...
+🔢 Task ID: 550e8400-e29b-41d4-a716-446655440000
+⚡ Mode: AUTO (Quality Gates Enabled)
+🎚️  Risk Tier: 3
+
+📋 Phase: Planning and validation
+   ✅ Council review passed
+   ✅ CAWS compliance validated
+
+📋 Phase: Worker execution
+   🔧 Executing implementation...
+   📊 Progress: 100%
+   ✅ Code generation completed
+   ✅ Tests written and passing
+
+🎉 Task completed successfully!
+⏱️  Total time: 15s
+```
+
+---
+
+## 🛡️ Strict Mode with Manual Approval
+
+**Example**: Implement user authentication (high-risk feature)
+
+### CLI Execution
+```bash
+cargo run --bin agent-agency-cli execute \
+  "Implement user authentication with secure password hashing, JWT tokens, and proper error handling" \
+  --mode strict \
+  --risk-tier 1 \
+  --watch
+```
+
+**Expected Interaction**:
+```
+📋 Phase: Planning and validation
+   ⏳ Analyzing requirements...
+   ✅ Council review passed
+
+🔒 STRICT MODE: Manual approval required
+   📋 Phase: Planning complete - awaiting approval
+   Apply planning phase? (y/n): y
+   ✅ Approved by user
+
+📋 Phase: Worker execution
+   🔧 Executing implementation...
+   📊 Progress: 75%
+   🔒 STRICT MODE: Manual approval required
+   📋 Phase: Code generation complete - awaiting approval
+   Apply code changes? (y/n): y
+   ✅ Approved by user
+
+🎉 Task completed successfully!
+```
+
+---
+
+## 👁️ Dry-Run Mode for Safe Testing
+
+**Example**: Test deployment preparation without making changes
+
+### CLI Execution
+```bash
+cargo run --bin agent-agency-cli execute \
+  "Prepare deployment configuration for production environment with proper environment variables and security settings" \
+  --mode dry-run
+```
+
+**Expected Output**:
+```
+👁️ DRY-RUN MODE: All artifacts generated, no filesystem changes
+
+📋 Phase: Planning and validation
+   ✅ Analysis completed
+   ✅ Artifacts generated
+
+📋 Phase: Worker execution (simulated)
+   🔧 Simulating implementation...
+   📊 Progress: 100%
+   ✅ Code generation simulated
+   ✅ Tests simulated
+
+💡 No actual filesystem changes were made
+🎉 Dry-run completed successfully!
+```
+
+---
+
+## 🎛️ Real-time Intervention
+
+**Example**: Monitor and control a running task
+
+### Start a Long-Running Task
+```bash
+# Submit a complex task
+TASK_ID=$(curl -X POST http://localhost:8080/api/v1/tasks \
+  -H "Content-Type: application/json" \
+  -d '{
+    "description": "Implement comprehensive user management system with roles, permissions, and audit logging",
+    "execution_mode": "auto",
+    "max_iterations": 10,
+    "risk_tier": 2
+  }' | jq -r '.task_id')
+```
+
+### Monitor Progress
+```bash
+# Check status
+curl http://localhost:8080/api/v1/tasks/$TASK_ID
+
+# Pause execution
+curl -X POST http://localhost:8080/api/v1/tasks/$TASK_ID/pause
+
+# Resume execution
+curl -X POST http://localhost:8080/api/v1/tasks/$TASK_ID/resume
+
+# Cancel if needed
+curl -X POST http://localhost:8080/api/v1/tasks/$TASK_ID/cancel
+```
+
+---
+
+## 🛠️ CLI Intervention Commands
+
+**Example**: Override council decisions
+
+```bash
+# Override verdict in strict mode
+cargo run --bin agent-agency-cli intervene override $TASK_ID \
+  --verdict accept \
+  --reason "Approved by security review"
+
+# Modify task parameters
+cargo run --bin agent-agency-cli intervene parameters $TASK_ID \
+  --param "security_level=high" \
+  --param "audit_required=true"
+
+# Inject guidance
+cargo run --bin agent-agency-cli intervene guidance $TASK_ID \
+  --guidance "Use bcrypt for password hashing with minimum cost of 12"
+```
+
+---
+
+## 📊 Monitoring & SLO Tracking
+
+**Example**: Check system health and metrics
+
+### Health Checks
+```bash
+# API health
+curl http://localhost:8080/health
+
+# System metrics
+curl http://localhost:8080/metrics
+```
+
+### SLO Monitoring
+```bash
+# List SLOs
+curl http://localhost:8080/api/v1/slos
+
+# Check specific SLO status
+curl http://localhost:8080/api/v1/slos/task_completion_rate/status
+
+# View SLO measurements
+curl http://localhost:8080/api/v1/slos/task_completion_rate/measurements
+```
+
+### Alert Management
+```bash
+# List active alerts
+curl http://localhost:8080/api/v1/slo-alerts
+
+# Acknowledge alert
+curl -X POST http://localhost:8080/api/v1/slo-alerts/$ALERT_ID/acknowledge \
+  -H "Content-Type: application/json" \
+  -d '{"acknowledged_by": "admin", "notes": "Investigating root cause"}'
+```
+
+---
+
+## 🛡️ Waiver Management
+
+**Example**: Handle quality gate exceptions
+
+### Create Waiver
+```bash
+curl -X POST http://localhost:8080/api/v1/waivers \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Emergency security patch",
+    "reason": "security_patch",
+    "description": "Deploying critical security fix without full test coverage",
+    "gates": ["test-coverage"],
+    "approved_by": "security-team",
+    "impact_level": "high",
+    "mitigation_plan": "Security review completed, monitoring in place"
+  }'
+```
+
+### Approve Waiver
+```bash
+# Get waiver ID from previous response
+WAIVER_ID="your-waiver-id"
+
+curl -X POST http://localhost:8080/api/v1/waivers/$WAIVER_ID/approve
+```
+
+---
+
+## 📚 Database Exploration
+
+**Example**: Query saved queries and explore data
+
+### List Saved Queries
+```bash
+curl http://localhost:8080/api/v1/queries
+```
+
+### Execute Saved Query
+```bash
+# First, save a query
+curl -X POST http://localhost:8080/api/v1/queries \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Active Tasks",
+    "query_text": "SELECT id, status, created_at FROM tasks WHERE status != '\''completed'\'' ORDER BY created_at DESC"
+  }'
+
+# Then execute it via the web dashboard
+# Open http://localhost:3000 and use the database explorer
+```
+
+---
+
+## 🔍 Provenance Tracking
+
+**Example**: Verify and audit task provenance
+
+### Check Provenance Records
+```bash
+# List all provenance records
+curl http://localhost:8080/api/v1/provenance
+
+# Get provenance for specific commit
+curl http://localhost:8080/api/v1/provenance/verify/$(git rev-parse HEAD)
+
+# Link provenance to commit
+curl -X POST http://localhost:8080/api/v1/provenance/link \
+  -H "Content-Type: application/json" \
+  -d '{
+    "verdict_id": "task-verdict-id",
+    "commit_hash": "'$(git rev-parse HEAD)'"
+  }'
+```
+
+---
+
+## 🌐 Web Dashboard Usage
+
+**Example**: Use the web interface for monitoring
+
+### Start Dashboard
+```bash
+cd iterations/v3/apps/web-dashboard
+npm install
+npm run dev
+# Open http://localhost:3000
+```
+
+### Dashboard Features
+- **Task Monitoring**: Live task progress and status
+- **System Metrics**: Real-time performance data
+- **Database Explorer**: Query and explore saved data
+- **Alert Dashboard**: SLO alerts and acknowledgments
+- **Provenance Viewer**: Audit trails and verification
+
+---
+
+## 🔧 Advanced Configuration
+
+**Example**: Configure execution modes and risk tiers
+
+### Environment Variables
+```bash
+# Set API server configuration
+export AGENT_AGENCY_API_URL=http://localhost:8080
+export DATABASE_URL=postgresql://localhost/agent_agency_v3
+
+# Worker configuration
+export AGENT_AGENCY_WORKER_ENDPOINT=http://localhost:8081
+
+# Security
+export API_KEYS="key1,key2,key3"
+```
+
+### Risk Tier Guidelines
+- **Tier 1**: Critical infrastructure, auth systems, data migration
+- **Tier 2**: User-facing features, API changes, data writes
+- **Tier 3**: Internal tools, read-only features, documentation
+
+---
+
+## 🚨 Error Handling Examples
+
+**Example**: Handle common errors and recovery
+
+### Worker Unavailable
+```bash
+# Check worker status
+ps aux | grep agent-agency-worker
+
+# Restart worker
+cargo run --bin agent-agency-worker &
+```
+
+### Database Connection Issues
+```bash
+# Check database
+docker ps | grep postgres
+
+# Reset connection
+docker restart agent-agency-db
+```
+
+### Task Stuck in Pending
+```bash
+# Check API server logs
+curl http://localhost:8080/health
+
+# Restart API server
+cargo run --bin api-server &
+```
+
+---
+
+## 📈 Performance Optimization
+
+**Example**: Monitor and optimize system performance
+
+### Performance Monitoring
+```bash
+# Check response times
+curl -w "@curl-format.txt" -o /dev/null -s http://localhost:8080/health
+
+# Monitor system metrics
+curl http://localhost:8080/metrics | grep task_execution_time
+```
+
+### Scaling Considerations
+- **Concurrent Tasks**: 50+ simultaneous executions supported
+- **API Throughput**: 1000+ requests/minute sustained
+- **Database Performance**: <10ms average query time
+- **Memory Usage**: Monitor with system health checks
+
+---
+
+**These examples demonstrate the full capabilities of Agent Agency V3 for autonomous task execution with constitutional governance, real-time control, and comprehensive monitoring.**
 
 ---
 

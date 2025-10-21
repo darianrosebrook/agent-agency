@@ -113,9 +113,9 @@ export default function QueryBuilder({
   const handleLoadQuery = useCallback((savedQuery: SavedQuery) => {
     setState((prev) => ({
       ...prev,
-      sqlQuery: savedQuery.query.sql,
-      parameters: savedQuery.query.parameters ?? [],
-      isReadOnly: savedQuery.query.read_only,
+      sqlQuery: savedQuery.query_text,
+      parameters: [],
+      isReadOnly: true, // Default to read-only for saved queries
     }));
   }, []);
 

@@ -330,8 +330,11 @@ pub struct AgentHealthMetrics {
     pub success_rate: f64,
     /// Error rate (errors per minute)
     pub error_rate: f64,
-    /// Response time P95 (milliseconds)
+    /// Response time P95 (milliseconds) - computed from tracker
     pub response_time_p95: u64,
+    /// Response time percentiles (P50, P90, P95, P99)
+    #[serde(skip)]
+    pub response_time_percentiles: Option<crate::ResponseTimePercentiles>,
     /// Last activity timestamp
     pub last_activity: DateTime<Utc>,
     /// Tasks completed in last hour

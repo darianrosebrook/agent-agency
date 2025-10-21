@@ -836,24 +836,38 @@ impl MCPServer {
         });
 
         // SLO endpoints
-        io.add_sync_method("slo/status", |_| {
-            // TODO: Integrate with SLO tracker for real-time status reporting
-            // - [ ] Connect to SLO tracker service or database
-            // - [ ] Implement SLO status queries with current metrics
-            // - [ ] Add SLO violation detection and alerting
-            // - [ ] Handle SLO tracker connection failures gracefully
-            // - [ ] Implement SLO status caching for performance
-            Ok(serde_json::to_value(observability::slo::create_default_slos()).unwrap())
+        io.add_sync_method("slo/status", |_| async {
+            // Create SLO tracker and get current status
+            let tracker = Arc::new(observability::slo::SLOTracker::new());
+
+            // Register default SLOs
+            for slo_def in observability::slo::create_default_slos() {
+                let _ = tracker.register_slo(slo_def).await;
+            }
+
+            // Get current SLO statuses
+            match tracker.get_all_slo_statuses().await {
+                Ok(statuses) => Ok(serde_json::to_value(statuses).unwrap()),
+                Err(e) => {
+                    tracing::warn!("Failed to get SLO statuses: {}", e);
+                    // Fallback to default SLO definitions
+                    Ok(serde_json::to_value(observability::slo::create_default_slos()).unwrap())
+                }
+            }
         });
 
-        io.add_sync_method("slo/alerts", |_| {
-            // TODO: Implement SLO alerts retrieval from tracker
-            // - [ ] Query SLO tracker for recent alerts and violations
-            // - [ ] Implement alert filtering by time range and severity
-            // - [ ] Add alert acknowledgment and resolution tracking
-            // - [ ] Handle alert pagination for large result sets
-            // - [ ] Implement real-time alert streaming via WebSocket
-            Ok(serde_json::to_value(Vec::<observability::slo::SLOAlert>::new()).unwrap())
+        io.add_sync_method("slo/alerts", |_| async {
+            // Create SLO tracker and get recent alerts
+            let tracker = Arc::new(observability::slo::SLOTracker::new());
+
+            // Register default SLOs
+            for slo_def in observability::slo::create_default_slos() {
+                let _ = tracker.register_slo(slo_def).await;
+            }
+
+            // Get recent alerts (last 50)
+            let alerts = tracker.get_recent_alerts(50).await;
+            Ok(serde_json::to_value(alerts).unwrap())
         });
 
         io

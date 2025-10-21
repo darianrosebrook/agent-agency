@@ -131,27 +131,50 @@ impl DatabaseTestUtils {
     pub async fn setup_test_database(&self) -> Result<()> {
         info!("Setting up test database: {}", self.connection_string);
 
-        // 1. Database initialization: Initialize test database for integration tests
+        // Try to connect to real database first
+        if let Ok(client) = agent_agency_database::client::DatabaseClient::new(&self.connection_string).await {
+            info!("✅ Connected to real database - using production setup");
+
+            // 1. Database initialization: Initialize test database for integration tests
+            self.create_real_test_schema(&client).await?;
+            self.setup_real_test_tables(&client).await?;
+            self.configure_real_database_connection(&client).await?;
+
+            // 2. Test data preparation: Prepare test data for integration tests
+            self.seed_real_test_data(&client).await?;
+            self.setup_real_test_scenarios(&client).await?;
+            self.validate_real_test_data(&client).await?;
+
+            // 3. Database configuration: Configure test database settings
+            self.configure_real_connection_parameters(&client).await?;
+            self.optimize_real_database_performance(&client).await?;
+            self.validate_real_database_configuration(&client).await?;
+
+            // 4. Database monitoring: Monitor test database health
+            self.track_real_database_performance(&client).await?;
+            self.monitor_real_resource_usage(&client).await?;
+            self.report_real_database_status(&client).await?;
+
+            info!("✅ Real database integration test setup completed successfully");
+            return Ok(());
+        }
+
+        warn!("⚠️ Real database not available - falling back to mock setup");
+        // Fallback to mock simulation
         self.create_test_schema().await?;
         self.setup_test_tables().await?;
         self.configure_database_connection().await?;
-
-        // 2. Test data preparation: Prepare test data for integration tests
         self.seed_test_data().await?;
         self.setup_test_scenarios().await?;
         self.validate_test_data().await?;
-
-        // 3. Database configuration: Configure test database settings
         self.configure_connection_parameters().await?;
         self.optimize_database_performance().await?;
         self.validate_database_configuration().await?;
-
-        // 4. Database monitoring: Monitor test database health
         self.track_database_performance().await?;
         self.monitor_resource_usage().await?;
         self.report_database_status().await?;
 
-        info!("Test database setup completed successfully");
+        info!("Test database mock setup completed successfully");
         Ok(())
     }
 

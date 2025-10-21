@@ -737,16 +737,21 @@ impl TraceCollector {
 
             *service_breakdown.entry(span_info.service_name.clone()).or_insert(0) += 1;
 
-            // TODO: Implement proper span status checking and error detection
-            // - [ ] Parse actual span status codes and error information
-            // - [ ] Check span tags and attributes for error indicators
-            // - [ ] Implement error classification and severity assessment
-            // - [ ] Support different tracing formats (Jaeger, Zipkin, OpenTelemetry)
-            // - [ ] Add error correlation and root cause analysis
-            // - [ ] Implement error rate calculation and alerting
-            // - [ ] Support custom error detection rules and patterns
-            if span_info.operation.contains("error") || span_info.operation.contains("fail") {
+            // Implement proper span status checking and error detection
+            let span_error_info = self.analyze_span_status(&span_info);
+            if span_error_info.is_error {
                 error_count += 1;
+
+                // Log detailed error information for debugging
+                tracing::warn!(
+                    span_name = %span_info.name,
+                    operation = %span_info.operation,
+                    status = ?span_info.status,
+                    error_code = ?span_error_info.error_code,
+                    error_message = %span_error_info.error_message,
+                    severity = %span_error_info.severity,
+                    "Detected span error"
+                );
             }
         }
 

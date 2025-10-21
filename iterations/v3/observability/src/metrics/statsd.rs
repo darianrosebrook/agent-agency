@@ -22,7 +22,7 @@ impl StatsDMetrics {
         let socket = UdpSocket::bind("0.0.0.0:0")
             .map_err(|e| MetricsBackendError::ConnectionError(e.to_string()))?;
 
-        let sink = UdpMetricSink::from((host, port))
+        let sink = UdpMetricSink::from((host, port), socket)
             .map_err(|e| MetricsBackendError::ConnectionError(e.to_string()))?;
 
         let client = StatsdClient::from_sink(prefix, sink);

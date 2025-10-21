@@ -181,7 +181,15 @@ export class FileStatePersistence implements IStatePersistence {
       throw new Error(`Snapshot not found: ${!fromSnapshot ? fromId : toId}`);
     }
 
-    // Calculate changes (simplified - in real implementation, this would be more sophisticated)
+    // TODO: Implement sophisticated diff and change detection algorithms
+    // - Use proper diff algorithms (Myers, Patience, or semantic diffing)
+    // - Implement content-based change detection and deduplication
+    // - Support binary file change detection and metadata comparison
+    // - Add change conflict resolution and merging capabilities
+    // - Implement change compression and efficient storage
+    // - Support change filtering and relevance scoring
+    // - Add change attribution and authorship tracking
+    // - Implement change validation and integrity checking
     const changes: FileChange[] = [];
 
     const fromFiles = new Map(fromSnapshot.files.map((f) => [f.path, f]));

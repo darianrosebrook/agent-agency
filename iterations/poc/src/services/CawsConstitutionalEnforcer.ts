@@ -861,6 +861,14 @@ export class CawsConstitutionalEnforcer extends EventEmitter {
    * Update waiver in memory
    */
   private async updateWaiverInMemory(waiver: WaiverRequest): Promise<void> {
-    await this.storeWaiverInMemory(waiver); // Just overwrite for now
+    // TODO: Implement proper waiver update logic
+    // - Implement waiver versioning and change tracking
+    // - Validate waiver update permissions and authorization
+    // - Support partial waiver updates (not full replacement)
+    // - Add waiver update audit logging and notifications
+    // - Implement waiver conflict resolution for concurrent updates
+    // - Add waiver update validation against business rules
+    // - Support waiver update rollback and history
+    await this.storeWaiverInMemory(waiver);
   }
 }

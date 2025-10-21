@@ -1,5 +1,6 @@
 //! Orchestration core for V3
 pub mod adapter;
+pub mod api;
 pub mod arbiter;
 pub mod artifacts;
 pub mod autonomous_executor;
@@ -52,4 +53,10 @@ pub use frontier::{
 pub use arbiter::{
     ArbiterOrchestrator, ArbiterConfig, ArbiterVerdict, VerdictStatus,
     WorkerOutput, EvidenceManifest, DebateResult, ArbiterError,
+};
+
+// Re-export API functions
+pub use api::{
+    get_tasks, get_task_detail, get_task_events, cancel_task,
+    TaskResponse, TaskDetail, TaskEvent, TaskApiError,
 };

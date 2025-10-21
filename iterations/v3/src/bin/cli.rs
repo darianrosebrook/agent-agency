@@ -12,7 +12,7 @@ use uuid::Uuid;
 use agent_agency_v3::{
     self_prompting_agent::{SelfPromptingLoop, SelfPromptingConfig, Task, TaskBuilder},
     workers::{WorkerPoolManager, AutonomousExecutor, AutonomousExecutorConfig},
-    orchestration::arbiter::ArbiterOrchestrator,
+    orchestration::{arbiter::ArbiterOrchestrator, caws_runtime::DefaultValidator},
     file_ops::{WorkspaceFactory, AllowList, Budgets},
     config::AppConfig,
 };

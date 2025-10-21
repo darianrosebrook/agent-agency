@@ -372,14 +372,6 @@ class AnalyticsApiClient {
    * @returns A promise that resolves when acknowledgment is complete.
    */
   async acknowledgeAnomaly(anomalyId: string, userId?: string): Promise<void> {
-    console.warn(
-      "acknowledgeAnomaly not implemented - requires V3 anomaly management API"
-    );
-    // TODO: Milestone 5 - Anomaly Management API Implementation
-    // - [ ] Implement V3 POST /api/v1/analytics/anomalies/{id}/acknowledge endpoint
-    // - [ ] Add user attribution and audit logging
-    // - [ ] Include acknowledgment timestamps
-    // - [ ] Add anomaly resolution tracking
     try {
       const payload = userId ? { acknowledged_by: userId } : {};
       await apiClient.request(`/analytics/anomalies/${anomalyId}/acknowledge`, {

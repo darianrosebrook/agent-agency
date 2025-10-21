@@ -212,10 +212,9 @@ export interface QueryBuilderProps {
 export interface SavedQuery {
   id: string;
   name: string;
-  query: QueryRequest;
+  query_text: string;
   created_at: string;
-  last_used?: string;
-  use_count: number;
+  updated_at: string;
 }
 
 export interface DataQualityDashboardProps {

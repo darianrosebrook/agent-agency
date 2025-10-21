@@ -32,6 +32,37 @@ pub struct EvalCriterion {
     pub notes: Option<String>,
 }
 
+/// Types of evaluation failures (addresses environment vs logic failure distinction)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum EvaluationFailureType {
+    /// Logic errors in code generation or reasoning
+    LogicFailure { category: LogicFailureCategory },
+    /// Environment issues (dependencies, build, config)
+    EnvironmentFailure { category: EnvironmentFailureCategory },
+}
+
+/// Categories of logic failures
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum LogicFailureCategory {
+    SyntaxError,
+    TypeError,
+    LogicError,
+    TestFailure,
+    CodeQualityIssue,
+    ReasoningError,
+}
+
+/// Categories of environment failures
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum EnvironmentFailureCategory {
+    DependencyMissing,
+    BuildFailure,
+    ConfigurationError,
+    PermissionError,
+    ResourceExhaustion,
+    ExternalServiceFailure,
+}
+
 /// Evaluation report
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EvalReport {
@@ -52,6 +83,8 @@ pub struct EvalReport {
     pub seed: Option<u64>,
     pub tool_versions: HashMap<String, String>,
     pub timestamp: DateTime<Utc>,
+    /// Failure type classification (if evaluation failed)
+    pub failure_type: Option<EvaluationFailureType>,
 }
 
 /// Context for evaluation

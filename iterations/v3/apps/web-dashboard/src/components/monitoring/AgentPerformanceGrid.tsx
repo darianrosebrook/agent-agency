@@ -46,11 +46,14 @@ export default function AgentPerformanceGrid({
 
   // Initial load and external prop updates
   useEffect(() => {
+    console.log("AgentPerformanceGrid useEffect:", { externalAgents: !!externalAgents, isLoading, agents: agents?.length });
     if (externalAgents) {
+      console.log("Using external agents:", externalAgents.length);
       setAgents(externalAgents);
       setIsLoading(false);
       setError(null);
     } else if (!externalAgents && !isLoading) {
+      console.log("Loading agent performance from API");
       loadAgentPerformance();
     }
   }, [externalAgents]);

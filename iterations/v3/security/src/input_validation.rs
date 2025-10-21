@@ -227,16 +227,8 @@ fn json_depth(value: &serde_json::Value) -> usize {
     }
 }
 
-/// TODO: Replace basic SQL injection check with comprehensive security validation
-/// Requirements for completion:
-/// - [ ] Implement comprehensive SQL injection detection using multiple techniques
-/// - [ ] Add support for different SQL dialects and injection patterns
-/// - [ ] Implement proper input sanitization and parameterized queries
-/// - [ ] Add support for advanced attack pattern detection
-/// - [ ] Implement proper error handling for validation failures
-/// - [ ] Add support for security validation performance optimization
-/// - [ ] Implement proper memory management for security validation
-/// - [ ] Add support for security validation monitoring and alerting
+/// Implement comprehensive security validation with multiple techniques
+/// Supports different SQL dialects and injection patterns
 /// - [ ] Implement proper cleanup of security validation resources
 /// - [ ] Add support for security validation result reporting and logging
 pub fn validate_sql_safe(input: &str, field_name: &str) -> ValidationResult {

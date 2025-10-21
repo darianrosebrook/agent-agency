@@ -354,7 +354,15 @@ export class GoogleSearchProvider extends BaseSearchProvider {
       // Emit search execution event
       events.emit({
         id: `event-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-        type: EventTypes.TASK_ASSIGNMENT_ACKNOWLEDGED, // Using existing event type for now
+        // TODO: Implement comprehensive event system for knowledge operations
+        // - Define specific event types for search operations (initiated, completed, failed)
+        // - Add event payload schemas for different knowledge provider types
+        // - Implement event correlation and chaining for complex operations
+        // - Support event filtering and subscription patterns
+        // - Add event persistence and replay capabilities
+        // - Implement event-driven workflows and automation
+        // - Support event aggregation and analytics
+        // - Add event validation and schema enforcement
         timestamp: new Date(),
         severity: "info" as any,
         source: "KnowledgeSeeker",

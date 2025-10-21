@@ -344,8 +344,15 @@ function calculateQualityScore(analysis) {
     QUALITY_CRITERIA.EDGE_CASE_COVERAGE.thresholds
   );
 
-  // Descriptive naming score (simplified)
-  const namingScore = analysis.descriptiveNames > 0 ? 1 : 0.5;
+  // TODO: Implement proper descriptive naming analysis for test functions
+  // - [ ] Parse test function names using AST analysis
+  // - [ ] Implement natural language processing to evaluate descriptiveness
+  // - [ ] Check for meaningful keywords (should, when, given, etc.)
+  // - [ ] Analyze name length and complexity appropriateness
+  // - [ ] Score based on clarity, specificity, and test intent communication
+  // - [ ] Add configurable naming conventions and patterns
+  // - [ ] Provide suggestions for improving poorly named tests
+  const namingScore = analysis.descriptiveNames > 0 ? 1 : 0.5; // PLACEHOLDER: Replace with proper naming analysis
   scores.descriptiveNaming = normalizeScore(
     namingScore,
     QUALITY_CRITERIA.DESCRIPTIVE_NAMING.thresholds

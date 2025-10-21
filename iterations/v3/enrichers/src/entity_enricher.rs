@@ -1524,17 +1524,52 @@ impl EntityEnricher {
     /// - [ ] Implement proper cleanup of email validation resources
     /// - [ ] Add support for email validation result monitoring and alerting
     fn detect_email_patterns(&self, text: &str, entities: &mut Vec<ExtractedEntity>) {
-        for (i, word) in text.split_whitespace().enumerate() {
-            if word.contains('@') && word.contains('.') {
+        // RFC 5322 compliant email regex (simplified but comprehensive)
+        // This pattern validates most common email formats while being performant
+        let email_regex = regex::Regex::new(r"(?i)^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$").unwrap();
+
+        // Find all potential email matches in the text
+        for cap in email_regex.find_iter(text) {
+            let email = cap.as_str();
+
+            // Additional validation for length and structure
+            if email.len() > 254 { // RFC 5321 limit for email length
+                continue;
+            }
+
+            // Check for consecutive dots (invalid)
+            if email.contains("..") {
+                continue;
+            }
+
+            // Extract local and domain parts
+            if let Some(at_pos) = email.find('@') {
+                let local = &email[..at_pos];
+                let domain = &email[at_pos + 1..];
+
+                // Validate local part length (RFC 5321)
+                if local.is_empty() || local.len() > 64 {
+                    continue;
+                }
+
+                // Validate domain part
+                if domain.is_empty() || domain.len() > 253 {
+                    continue;
+                }
+
+                // Find position in original text
+                let start_pos = cap.start();
+                let end_pos = cap.end();
+
                 entities.push(ExtractedEntity {
                     id: Uuid::new_v4(),
                     entity_type: "email".to_string(),
-                    text: word.to_string(),
-                    normalized: word.to_lowercase(),
-                    confidence: 0.85,
+                    text: email.to_string(),
+                    normalized: email.to_lowercase(),
+                    confidence: 0.95, // Higher confidence with proper validation
                     pii: true,
-                    span_start: text.find(word).unwrap_or(0),
-                    span_end: text.find(word).unwrap_or(0) + word.len(),
+                    span_start: start_pos,
+                    span_end: end_pos,
                 });
             }
         }

@@ -189,7 +189,15 @@ export class ModelRegistryLLMProvider extends LLMProvider {
       return this.providerCache.get(model.id)!;
     }
 
-    // Create new provider (assume Ollama for now - can extend to other types)
+    // TODO: Implement comprehensive LLM provider factory and management
+    // - Support multiple provider types (OpenAI, Anthropic, Hugging Face, etc.)
+    // - Implement provider capability detection and feature negotiation
+    // - Add provider performance profiling and selection optimization
+    // - Support provider failover and load balancing
+    // - Implement provider cost tracking and budget management
+    // - Add provider configuration validation and compatibility checking
+    // - Support provider-specific parameter tuning and optimization
+    // - Implement provider health monitoring and automatic switching
     const provider = new OllamaProvider(model as OllamaModelConfig);
     this.providerCache.set(model.id, provider);
     this.activeProvider = provider;

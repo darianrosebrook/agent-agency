@@ -1134,8 +1134,15 @@ export class IterativeGuidance extends EventEmitter {
   }
 
   private calculateStepProgress(step: NextStep): number {
-    // Simple heuristic based on prerequisites met
-    const prereqsMet = step.prerequisites.length; // Assume all are met for now
+    // TODO: Implement proper prerequisite validation and progress calculation
+    // - Check actual prerequisite completion status from task state
+    // - Implement prerequisite dependency resolution and ordering
+    // - Add progress weighting based on prerequisite complexity
+    // - Support partial prerequisite completion (progress tracking)
+    // - Implement prerequisite validation with error handling
+    // - Add progress recalculation when prerequisites change
+    // - Support dynamic prerequisite addition/removal during execution
+    const prereqsMet = step.prerequisites.length;
     return Math.min(50, prereqsMet * 10); // Up to 50% based on prerequisites
   }
 

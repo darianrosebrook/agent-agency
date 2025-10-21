@@ -265,6 +265,18 @@ body {
   gap: var(--spacing-md);
 }
 
+// Form elements
+select {
+  background: var(--input-bg-dark, #374151);
+  border-color: var(--border-color-dark, #4b5563);
+  color: var(--text-primary-dark, #f9fafb);
+
+  &:disabled {
+    background: var(--disabled-bg-dark, #1f2937);
+    color: var(--disabled-text-dark, #6b7280);
+  }
+}
+
 // Utility classes
 .sr-only {
   @include sr-only;

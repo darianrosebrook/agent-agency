@@ -1,7 +1,7 @@
 # Agent Agency Documentation
 
-**Last Reorganized**: 2025-10-13  
-**Last Updated**: January 8, 2025  
+**Last Reorganized**: 2025-10-13
+**Last Updated**: October 20, 2025
 **Maintainer**: @darianrosebrook
 
 ---

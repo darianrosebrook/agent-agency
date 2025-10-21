@@ -10,14 +10,14 @@ use tokio::sync::RwLock;
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
 
-use crate::orchestration::orchestrate::Orchestrator;
-use crate::orchestration::tracking::{ProgressTracker, EventBus};
-use crate::orchestration::quality::{QualityGateOrchestrator, QualityGateOrchestratorConfig};
-use crate::orchestration::refinement::RefinementCoordinator;
-use crate::orchestration::artifacts::{ArtifactManager, ArtifactManagerConfig};
-use crate::council::plan_review::PlanReviewService;
-use crate::workers::autonomous_executor::{AutonomousExecutor, AutonomousExecutorConfig};
-use crate::interfaces::{RestApi, CliInterface, McpServer, WebSocketApi};
+use orchestration::orchestrate::Orchestrator;
+use orchestration::tracking::{ProgressTracker, EventBus};
+use orchestration::quality::{QualityGateOrchestrator, QualityGateOrchestratorConfig};
+use orchestration::refinement::RefinementCoordinator;
+use orchestration::artifacts::{ArtifactManager, ArtifactManagerConfig};
+use council::plan_review::PlanReviewService;
+use workers::autonomous_executor::{AutonomousExecutor, AutonomousExecutorConfig};
+use interfaces::{RestApi, CliInterface, McpServer, WebSocketApi};
 
 /// Test environment configuration
 #[derive(Debug, Clone)]

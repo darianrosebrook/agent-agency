@@ -12,12 +12,34 @@ export default function ForecastingChart({
   isLoading,
   error,
 }: ForecastingChartProps) {
-  // TODO: Milestone 5 - Implement time range controls for forecasting
-  // Use onTimeRangeChange for interactive date range selection
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const _handleTimeRangeChange = (_start: string, _end: string) => {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    onTimeRangeChange?.(_start, _end);
+  // Time range state management
+  const [timeRange, setTimeRange] = React.useState({
+    start: "",
+    end: "",
+  });
+
+  // Initialize time range from available data
+  React.useEffect(() => {
+    if (historicalData?.data && historicalData.data.length > 0) {
+      const timestamps = historicalData.data.map(d => new Date(d.timestamp));
+      const earliest = new Date(Math.min(...timestamps.map(d => d.getTime())));
+      const latest = new Date(Math.max(...timestamps.map(d => d.getTime())));
+
+      // Default to last 30 days
+      const thirtyDaysAgo = new Date(latest);
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      setTimeRange({
+        start: thirtyDaysAgo.toISOString().split('T')[0], // YYYY-MM-DD format
+        end: latest.toISOString().split('T')[0],
+      });
+    }
+  }, [historicalData]);
+
+  // Handle time range changes
+  const handleTimeRangeChange = (start: string, end: string) => {
+    setTimeRange({ start, end });
+    onTimeRangeChange?.(start, end);
   };
 
   // Generate mock chart data for demonstration

@@ -40,6 +40,9 @@ pub enum CouncilError {
 
     #[error("Judge dissent unresolved: {judge_count} dissenting judges")]
     UnresolvedDissent { judge_count: usize },
+
+    #[error("Invalid input: {message}")]
+    InvalidInput { message: String },
 }
 
 impl CouncilError {

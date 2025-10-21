@@ -210,7 +210,15 @@ export class InformationProcessor implements IInformationProcessor {
         break;
     }
 
-    // Domain reputation (simplified)
+    // TODO: Implement comprehensive domain reputation and trustworthiness assessment
+    // - Integrate with domain reputation services (Alexa, Moz, Majestic)
+    // - Implement domain age and registration analysis
+    // - Add SSL certificate validation and security assessment
+    // - Support content quality and authority scoring
+    // - Implement domain relationship and network analysis
+    // - Add domain traffic and popularity metrics
+    // - Support custom domain whitelisting and blacklisting
+    // - Implement domain reputation monitoring and alerting
     const trustedDomains = [
       "edu",
       "gov",

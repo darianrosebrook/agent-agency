@@ -3,6 +3,7 @@
 //! Provides AI-assisted generation of CAWS-compliant working specifications
 //! from natural language task descriptions.
 
+pub mod acceptance_criteria_extractor;
 pub mod agent;
 pub mod context_builder;
 pub mod llm_client;

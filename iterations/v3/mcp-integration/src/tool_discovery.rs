@@ -726,15 +726,90 @@ impl ToolDiscovery {
     }
 
     /// Validate WebSocket handshake response
-    fn validate_websocket_handshake(&self, _response: &tokio_tungstenite::tungstenite::handshake::client::Response) -> bool {
-        // TODO: Implement proper WebSocket handshake validation
-        /// - [ ] Validate WebSocket protocol version and extension negotiation
-        /// - [ ] Check response headers for proper Sec-WebSocket-Accept
-        /// - [ ] Verify subprotocol negotiation and custom headers
-        /// - [ ] Implement handshake timeout and retry logic
-        /// - [ ] Add TLS certificate validation for WSS connections
-        /// - [ ] Support custom handshake headers and authentication
-        /// - [ ] Implement handshake failure diagnostics and error reporting
+    fn validate_websocket_handshake(&self, response: &tokio_tungstenite::tungstenite::handshake::client::Response) -> bool {
+        // Check HTTP status code - must be 101 Switching Protocols
+        if response.status() != 101 {
+            tracing::warn!("WebSocket handshake failed: invalid status code {}", response.status());
+            return false;
+        }
+
+        // Check for required WebSocket headers
+        let headers = response.headers();
+
+        // Verify Sec-WebSocket-Accept header exists and is properly formatted
+        if let Some(sec_websocket_accept) = headers.get("sec-websocket-accept") {
+            let accept_value = match sec_websocket_accept.to_str() {
+                Ok(val) => val,
+                Err(_) => {
+                    tracing::warn!("WebSocket handshake failed: invalid Sec-WebSocket-Accept header encoding");
+                    return false;
+                }
+            };
+
+            // Sec-WebSocket-Accept should be base64 encoded (24 characters for SHA-1 hash)
+            if accept_value.len() != 28 {
+                tracing::warn!("WebSocket handshake failed: Sec-WebSocket-Accept header has invalid length");
+                return false;
+            }
+
+            // Check for valid base64 characters
+            if !accept_value.chars().all(|c| c.is_ascii_alphanumeric() || c == '+' || c == '/' || c == '=') {
+                tracing::warn!("WebSocket handshake failed: Sec-WebSocket-Accept contains invalid base64 characters");
+                return false;
+            }
+        } else {
+            tracing::warn!("WebSocket handshake failed: missing Sec-WebSocket-Accept header");
+            return false;
+        }
+
+        // Check Upgrade header
+        if let Some(upgrade) = headers.get("upgrade") {
+            if upgrade.to_str().unwrap_or("").to_lowercase() != "websocket" {
+                tracing::warn!("WebSocket handshake failed: invalid Upgrade header");
+                return false;
+            }
+        } else {
+            tracing::warn!("WebSocket handshake failed: missing Upgrade header");
+            return false;
+        }
+
+        // Check Connection header
+        if let Some(connection) = headers.get("connection") {
+            if connection.to_str().unwrap_or("").to_lowercase() != "upgrade" {
+                tracing::warn!("WebSocket handshake failed: invalid Connection header");
+                return false;
+            }
+        } else {
+            tracing::warn!("WebSocket handshake failed: missing Connection header");
+            return false;
+        }
+
+        // Optional: Check for Sec-WebSocket-Protocol if subprotocols were requested
+        // Optional: Check for Sec-WebSocket-Extensions if extensions were negotiated
+
+        // Check for suspicious or malformed headers
+        for (name, value) in headers.iter() {
+            // Check for header name validity
+            if !name.as_str().chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_') {
+                if !matches!(name.as_str(), "sec-websocket-accept" | "sec-websocket-protocol" | "sec-websocket-extensions") {
+                    tracing::warn!("WebSocket handshake contains suspicious header: {}", name);
+                    return false;
+                }
+            }
+
+            // Check for reasonable header value length
+            if let Ok(value_str) = value.to_str() {
+                if value_str.len() > 4096 {
+                    tracing::warn!("WebSocket handshake header value too long: {}", name);
+                    return false;
+                }
+            } else {
+                tracing::warn!("WebSocket handshake header contains invalid UTF-8: {}", name);
+                return false;
+            }
+        }
+
+        tracing::debug!("WebSocket handshake validation successful");
         true
     }
 

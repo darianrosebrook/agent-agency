@@ -6,6 +6,7 @@ use uuid::Uuid;
 use chrono::{DateTime, Utc};
 
 /// Manages snapshots for rollback functionality
+#[derive(Debug)]
 pub struct SnapshotManager {
     workspace_root: PathBuf,
     snapshots_dir: PathBuf,

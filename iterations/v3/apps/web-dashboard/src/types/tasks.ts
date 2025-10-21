@@ -20,6 +20,7 @@ export interface Task {
   error_message?: string;
   retry_count: number;
   max_retries: number;
+  audit_trail?: AuditLogEntry[];
 }
 
 export type TaskStatus =

@@ -1,51 +1,61 @@
-# Prometheus configuration for Multimodal RAG System
 global:
   scrape_interval: 15s
   evaluation_interval: 15s
 
 rule_files:
-  - "multimodal_rag_rules.yml"
+  - "alert_rules.yml"
 
 alerting:
   alertmanagers:
     - static_configs:
         - targets:
-          - alertmanager:9093
+          # - alertmanager:9093
 
 scrape_configs:
-  # Multimodal RAG Service metrics
-  - job_name: 'multimodal-rag-service'
+  # Agent Agency Services
+  - job_name: 'agent-agency-runtime-optimization'
     static_configs:
-      - targets: ['multimodal-rag-service:8081']
+      - targets: ['runtime-optimization:8080']
+    scrape_interval: 10s
     metrics_path: '/metrics'
-    scrape_interval: 15s
-    scrape_timeout: 10s
 
-  # PostgreSQL metrics
+  - job_name: 'agent-agency-tool-ecosystem'
+    static_configs:
+      - targets: ['tool-ecosystem:8081']
+    scrape_interval: 10s
+    metrics_path: '/metrics'
+
+  - job_name: 'agent-agency-federated-learning'
+    static_configs:
+      - targets: ['federated-learning:8082']
+    scrape_interval: 10s
+    metrics_path: '/metrics'
+
+  - job_name: 'agent-agency-model-hotswap'
+    static_configs:
+      - targets: ['model-hotswap:8083']
+    scrape_interval: 10s
+    metrics_path: '/metrics'
+
+  - job_name: 'agent-agency-demo'
+    static_configs:
+      - targets: ['demo-app:3000']
+    scrape_interval: 10s
+    metrics_path: '/metrics'
+
+  # Infrastructure
   - job_name: 'postgres'
     static_configs:
-      - targets: ['postgres-exporter:9187']
+      - targets: ['postgres:5432']
     scrape_interval: 30s
 
-  # Redis metrics
   - job_name: 'redis'
     static_configs:
-      - targets: ['redis-exporter:9121']
+      - targets: ['redis:6379']
     scrape_interval: 30s
 
-  # Node exporter for system metrics
+  # Node Exporter (if running on host)
   - job_name: 'node'
     static_configs:
-      - targets: ['node-exporter:9100']
+      - targets: ['host.docker.internal:9100']
     scrape_interval: 30s
-
-  # Nginx metrics
-  - job_name: 'nginx'
-    static_configs:
-      - targets: ['nginx-exporter:9113']
-    scrape_interval: 30s
-
-  # Prometheus self-monitoring
-  - job_name: 'prometheus'
-    static_configs:
-      - targets: ['localhost:9090']

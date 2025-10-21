@@ -10,6 +10,8 @@ import MetricsDashboard from "@/components/metrics/MetricsDashboard";
 import RealTimeMetricsStream from "@/components/monitoring/RealTimeMetricsStream";
 import DatabaseExplorer from "@/components/database/DatabaseExplorer";
 import AnalyticsDashboard from "@/components/analytics/AnalyticsDashboard";
+import TTSSettingsPanel from "@/components/shared/TTSSettings";
+import { useTTS } from "@/hooks/useTTS";
 
 interface HealthStatus {
   status: "healthy" | "degraded" | "unhealthy" | "unknown";

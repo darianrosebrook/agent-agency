@@ -1065,7 +1065,15 @@ export class MultiTenantMemoryManager {
         // Create tenant config for federated learning registration
         const tenantConfig = {
           tenantId,
-          projectId: tenantId, // Use tenantId as projectId for now
+          // TODO: Implement proper project-tenant mapping
+          // - Create separate project registry with tenant relationships
+          // - Support multiple tenants per project with access controls
+          // - Implement project lifecycle management (creation, updates, deletion)
+          // - Add project metadata (description, owner, creation date)
+          // - Support project hierarchies and inheritance
+          // - Implement project-based resource quotas and limits
+          // - Add project audit logging and compliance tracking
+          projectId: tenantId,
           isolationLevel: "federated" as const,
           accessPolicies: [],
           sharingRules: [],

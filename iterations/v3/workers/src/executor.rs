@@ -786,12 +786,7 @@ impl TaskExecutor {
 
     /// Resolve worker endpoint from service registry
     async fn resolve_worker_endpoint(&self, worker_id: Uuid) -> Result<String> {
-        // Implement service discovery and worker registry lookup
-        // 1. Worker registry: Query registered workers by ID
-        // 2. Service discovery: Resolve endpoint URL from worker configuration
-        // 3. Endpoint validation: Verify endpoint is healthy before use
-        // 4. Registry optimization: Return cached endpoint or discover via service mesh
-        
+        // For MVP: Use a simple worker service running on localhost:8081
         // TODO: Implement service registry integration for worker discovery
         // - [ ] Integrate with service registries (Consul, Eureka, Kubernetes DNS, etcd)
         // - [ ] Implement service discovery with health checking and load balancing
@@ -800,7 +795,9 @@ impl TaskExecutor {
         // - [ ] Implement endpoint caching and connection pooling
         // - [ ] Add service versioning and compatibility checking
         // - [ ] Support multi-region and multi-zone service discovery
-        Ok(format!("http://worker-{}.internal/execute", worker_id))
+
+        // For now, route all workers to the same worker service instance
+        Ok("http://localhost:8081/execute".to_string())
     }
 }
 

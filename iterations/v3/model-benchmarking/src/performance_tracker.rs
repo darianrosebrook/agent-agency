@@ -292,7 +292,7 @@ impl PerformanceTracker {
 
         Ok(PerformanceSummary {
             overall_performance,
-            performance_trend: trend,
+            performance_trend: PerformanceTrend::Stable, // TODO: Implement trend analysis
             top_performers,
             improvement_areas,
         })

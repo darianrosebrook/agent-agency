@@ -53,7 +53,7 @@ pub struct GitTrailerManager {
     repository: Mutex<Repository>,
     branch: String,
     auto_commit: bool,
-    commit_message_template: String,
+    _commit_message_template: String,
 }
 
 impl GitTrailerManager {

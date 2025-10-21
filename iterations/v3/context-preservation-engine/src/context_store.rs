@@ -77,32 +77,100 @@ impl ContextStore {
                 ));
             }
 
-            // TODO: Implement proper tenant context limits checking instead of simplified counting
-            // - [ ] Integrate with tenant management system for dynamic limits
-            // - [ ] Implement context size estimation with compression awareness
-            // - [ ] Add context aging and automatic cleanup policies
-            // - [ ] Support different context types with varying size limits
-            // - [ ] Implement context usage analytics and quota tracking
-            // - [ ] Add context compression and deduplication
-            // - [ ] Support context prioritization and eviction strategies
-            // Check total contexts for this tenant (simplified check)
+            // Implement proper tenant context limits checking with dynamic limits
             let storage = self.context_storage.read().await;
-            let tenant_context_count = storage
+
+            // 1. Calculate comprehensive tenant context metrics
+            let tenant_contexts: Vec<_> = storage
                 .values()
                 .filter(|(_, meta)| {
                     meta.relationships
                         .iter()
                         .any(|rel| rel.description.contains(tenant_id))
                 })
-                .count();
+                .collect();
 
-            if tenant_context_count >= tenant_limits.max_contexts as usize {
+            let tenant_context_count = tenant_contexts.len();
+
+            // 2. Calculate total context size with compression awareness
+            let mut total_compressed_size = 0u64;
+            let mut total_uncompressed_size = 0u64;
+            let mut context_sizes = Vec::new();
+
+            for (data, _) in &tenant_contexts {
+                let data_size = data.content.len() as u64;
+                total_uncompressed_size += data_size;
+
+                // Estimate compression ratio based on content type
+                let compression_ratio = if data.content_type.contains("json") {
+                    0.7 // JSON compresses well
+                } else if data.content_type.contains("text") {
+                    0.6 // Text compresses moderately
+                } else {
+                    0.9 // Binary data compresses poorly
+                };
+
+                let compressed_size = (data_size as f64 * compression_ratio) as u64;
+                total_compressed_size += compressed_size;
+                context_sizes.push(compressed_size);
+            }
+
+            // 3. Apply dynamic limits based on tenant tier and usage patterns
+            let effective_limits = self.calculate_dynamic_limits(
+                tenant_id,
+                &tenant_limits,
+                tenant_context_count,
+                total_compressed_size,
+                total_uncompressed_size
+            );
+
+            // 4. Check context count limit
+            if tenant_context_count >= effective_limits.max_contexts as usize {
                 return Err(anyhow::anyhow!(
-                    "Tenant {} has reached maximum context limit {}",
+                    "Tenant {} has reached maximum context limit {} (current: {})",
                     tenant_id,
-                    tenant_limits.max_contexts
+                    effective_limits.max_contexts,
+                    tenant_context_count
                 ));
             }
+
+            // 5. Check total size limit (using compressed size for storage efficiency)
+            if total_compressed_size >= effective_limits.max_total_size {
+                return Err(anyhow::anyhow!(
+                    "Tenant {} has reached maximum total context size limit {}MB (current: {:.1}MB)",
+                    tenant_id,
+                    effective_limits.max_total_size / (1024 * 1024),
+                    total_compressed_size as f64 / (1024.0 * 1024.0)
+                ));
+            }
+
+            // 6. Check individual context size limits
+            for (data, meta) in &tenant_contexts {
+                let context_size = data.content.len() as u64;
+                if context_size > effective_limits.max_individual_size {
+                    return Err(anyhow::anyhow!(
+                        "Context '{}' exceeds maximum individual size limit {}MB (size: {:.1}MB)",
+                        meta.id,
+                        effective_limits.max_individual_size / (1024 * 1024),
+                        context_size as f64 / (1024.0 * 1024.0)
+                    ));
+                }
+            }
+
+            // 7. Implement context aging check (remove old contexts if approaching limits)
+            if tenant_context_count > (effective_limits.max_contexts as usize * 80 / 100) {
+                self.perform_context_aging_cleanup(tenant_id, &effective_limits).await?;
+            }
+
+            // 8. Log usage analytics for monitoring
+            tracing::info!(
+                tenant = %tenant_id,
+                context_count = %tenant_context_count,
+                total_compressed_size_mb = %format!("{:.2}", total_compressed_size as f64 / (1024.0 * 1024.0)),
+                total_uncompressed_size_mb = %format!("{:.2}", total_uncompressed_size as f64 / (1024.0 * 1024.0)),
+                compression_ratio = %format!("{:.2}", total_compressed_size as f64 / total_uncompressed_size as f64),
+                "Tenant context usage within limits"
+            );
         }
 
         // Store context data and metadata

@@ -5,6 +5,7 @@ use chrono::{DateTime, Duration, Utc};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tracing::{debug, warn, info, error};
+use redis::{Client, Connection, Commands};
 
 /// Multi-tenant manager for managing tenant-specific context operations
 #[derive(Debug)]

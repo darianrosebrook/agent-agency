@@ -703,4 +703,5 @@ mod tests {
         let final_count = *counter.lock().await;
         assert_eq!(final_count, 10);
     }
+    */
 }

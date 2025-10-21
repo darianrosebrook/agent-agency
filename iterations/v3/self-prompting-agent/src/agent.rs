@@ -73,6 +73,13 @@ impl SelfPromptingAgent {
                 // - Support path-based access control lists
                 // - Implement path traversal attack prevention
                 // - Add security audit logging for path access
+                // PLACEHOLDER: Implement proper path allowlist
+                // - Define specific allowed directories and file patterns
+                // - Implement path validation against security policies
+                // - Add path-based access control with user permissions
+                // - Support path traversal protection and canonicalization
+                // - Implement path audit logging and monitoring
+                // - Add configurable path restrictions per agent type
                 vec![], // PLACEHOLDER: Allowing all paths for now
                 crate::sandbox::SafetyMode::Sandbox,
                 config.enable_git_snapshots,

@@ -1,0 +1,79 @@
+# Agent Agency V3 Demo Configuration
+# This file demonstrates configuration options for the complete system
+
+system:
+  name: "Agent Agency V3 Demo"
+  version: "1.0.0"
+  environment: "development"
+
+runtime_optimization:
+  enabled: true
+  kokoro_tuning:
+    max_iterations: 100
+    convergence_threshold: 0.01
+    thermal_safety_margin: 0.8
+  quality_guardrails:
+    min_accuracy: 0.9
+    max_error_rate: 0.05
+    performance_budget_ms: 1000
+
+tool_ecosystem:
+  enabled: true
+  max_concurrent_tools: 10
+  default_timeout_seconds: 300
+  security_level: "high"
+  mcp_integration:
+    enabled: true
+    protocol_version: "1.0"
+    max_message_size_mb: 100
+
+federated_learning:
+  enabled: true
+  federation:
+    min_participants: 3
+    max_participants: 100
+    round_timeout_seconds: 300
+  privacy:
+    epsilon: 1.0
+    delta: 0.00001
+    mechanism: "gaussian"
+  security:
+    require_zero_knowledge_proofs: true
+    min_encryption_bits: 128
+    max_information_leakage: 0.01
+
+model_hotswap:
+  enabled: true
+  load_balancing:
+    strategy: "weighted"
+    canary_max_percentage: 0.2
+    health_check_interval_seconds: 30
+  traffic_splitting:
+    enable_gradual_rollout: true
+    rollout_step_percentage: 0.1
+    monitoring_window_seconds: 300
+
+monitoring:
+  enabled: true
+  metrics:
+    collection_interval_seconds: 60
+    retention_days: 30
+  alerting:
+    enabled: true
+    notification_channels: ["console", "file"]
+  logging:
+    level: "info"
+    format: "json"
+
+deployment:
+  environment: "demo"
+  scaling:
+    min_instances: 1
+    max_instances: 10
+    cpu_threshold_scale_up: 0.8
+    cpu_threshold_scale_down: 0.3
+  health_checks:
+    enabled: true
+    interval_seconds: 30
+    timeout_seconds: 10
+    unhealthy_threshold: 3

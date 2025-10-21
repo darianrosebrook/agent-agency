@@ -454,7 +454,15 @@ function gatherProjectMetrics(dashboard, projectDir) {
     dashboard.metrics.TEST_QUALITY.current = 60; // Default
   }
 
-  // Calculate flake rate (simplified)
+  // TODO: Implement comprehensive test reliability and flake detection
+  // - Analyze test execution patterns across multiple runs
+  // - Implement statistical flake detection algorithms (chi-square, z-score)
+  // - Track test-to-test dependencies and interaction effects
+  // - Support environment-specific flake rate calculations
+  // - Implement flake root cause analysis (timing, resource contention)
+  // - Add flake prediction and prevention strategies
+  // - Support test quarantine and stabilization workflows
+  // - Implement flake rate trending and alerting
   dashboard.metrics.FLAKE_RATE.current = 2; // 2% default
 
   // Calculate compliance metrics

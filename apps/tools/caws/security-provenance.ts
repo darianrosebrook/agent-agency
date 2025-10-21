@@ -265,8 +265,14 @@ export class SecurityProvenanceManager extends CawsBaseTool {
     version: string
   ): Promise<boolean> {
     // TODO: Implement model checksum verification
+    // - [ ] Research and implement appropriate checksum algorithm (SHA-256, BLAKE3)
+    // - [ ] Add checksum calculation for model files during loading
+    // - [ ] Store expected checksums in model metadata or separate integrity file
+    // - [ ] Implement checksum validation with proper error handling
+    // - [ ] Add fallback behavior when checksum validation fails
+    // - [ ] Update model loading pipeline to include integrity checks
     console.warn("Model checksum verification not implemented");
-    return true; // Placeholder - assume valid for now
+    return true; // PLACEHOLDER: Remove when checksum verification is implemented
   }
 
   private getTrainingCutoff(modelId: string): string | undefined {

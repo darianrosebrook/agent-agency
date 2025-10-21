@@ -1,11 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { useClaimVerificationData } from "@/hooks/useArbiter";
-import { Card, CardHeader, CardTitle, CardContent } from "../shared/Card";
-import { Badge } from "../shared/Badge";
-import { Button } from "../shared/Button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../shared/Tabs";
-import { Progress } from "../shared/Progress";
-import { Alert, AlertDescription } from "../shared/Alert";
 import {
   CheckCircle,
   XCircle,

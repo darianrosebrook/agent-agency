@@ -5,8 +5,6 @@
 //!
 //! @author @darianrosebrook
 
-use anyhow::Result;
-
 /// Core vocabulary list (high-frequency English terms)
 /// This is a curated list of ~100 most common technical and general terms
 /// In production, this would be expanded to ~10K based on frequency analysis

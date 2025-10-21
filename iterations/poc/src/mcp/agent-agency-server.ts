@@ -1214,8 +1214,15 @@ Provide specific, actionable implementation for this step.`;
                     stepResult.includes("write_file") ||
                     stepResult.includes("edit_file")
                   ) {
-                    // Parse and execute file operations from the response
-                    // This is a simplified implementation
+                    // TODO: Implement robust file operation parsing and execution
+                    // - Use formal parsing for operation specifications (JSON schema, DSL)
+                    // - Implement operation validation and safety checks
+                    // - Add transaction-like semantics for multi-file operations
+                    // - Support operation rollback and recovery mechanisms
+                    // - Implement operation concurrency control and locking
+                    // - Add operation audit logging and change tracking
+                    // - Support operation batching and optimization
+                    // - Implement operation conflict resolution and merging
                     const fileOperations =
                       this.extractFileOperations(stepResult);
                     for (const op of fileOperations) {

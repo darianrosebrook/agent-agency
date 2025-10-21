@@ -547,10 +547,26 @@ export class ChaosTestingHarness extends EventEmitter {
     this.metrics.activeScenarios = this.activeEvents.size;
 
     if (this.metrics.eventsTriggered > 0) {
-      // Calculate average recovery time (simplified)
+      // TODO: Implement comprehensive chaos testing metrics and analysis
+      // - Calculate actual recovery time from event timestamps and system monitoring
+      // - Implement statistical analysis of recovery time distributions
+      // - Add recovery time trend analysis and anomaly detection
+      // - Support recovery time correlation with system load and configuration
+      // - Implement recovery time forecasting and optimization
+      // - Add recovery time comparison across different failure scenarios
+      // - Support recovery time-based system resilience scoring
+      // - Implement recovery time alerting and threshold management
       this.metrics.averageRecoveryTime = this.prng.nextInt(5000) + 1000;
 
-      // Calculate failure rate (simplified)
+      // TODO: Implement comprehensive failure rate analysis and monitoring
+      // - Calculate actual failure rates from system monitoring and logs
+      // - Implement failure rate trend analysis and prediction
+      // - Support failure rate correlation with system conditions and load
+      // - Add failure rate anomaly detection and alerting
+      // - Implement failure rate-based system health scoring
+      // - Support failure rate comparison across different scenarios and time periods
+      // - Add failure rate root cause analysis and classification
+      // - Implement failure rate-based system reliability assessment
       this.metrics.failureRate = Math.min(
         this.metrics.eventsTriggered / 100,
         1

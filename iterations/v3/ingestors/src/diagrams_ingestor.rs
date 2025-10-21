@@ -196,7 +196,7 @@ impl DiagramsIngestor {
     /// Create an edge from an SVG line element
     fn create_edge_from_svg_element(
         &self,
-        node: &roxmltree::Node,
+        _node: &roxmltree::Node,
         entities: &[DiagramEntity],
     ) -> Result<Option<DiagramEdge>> {
         // TODO: Implement proper edge analysis from line coordinates and entity connections

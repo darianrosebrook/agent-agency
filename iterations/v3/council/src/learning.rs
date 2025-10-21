@@ -367,23 +367,36 @@ impl LearningSignalAnalyzer {
         &self,
         task_spec: &crate::types::TaskSpec,
     ) -> Result<Vec<LearningSignal>> {
-        // TODO: Replace simple hash with proper task similarity analysis
-        /// Requirements for completion:
-        /// - [ ] Implement proper task similarity analysis using semantic embeddings
-        /// - [ ] Add support for different similarity metrics (cosine, euclidean, jaccard)
-        /// - [ ] Implement proper task feature extraction and vectorization
-        /// - [ ] Add support for task similarity clustering and classification
-        /// - [ ] Implement proper error handling for similarity analysis failures
-        /// - [ ] Add support for similarity threshold tuning and optimization
-        /// - [ ] Implement proper memory management for similarity analysis models
-        /// - [ ] Add support for similarity analysis performance optimization
-        /// - [ ] Implement proper cleanup of similarity analysis resources
-        /// - [ ] Add support for similarity analysis result validation and quality assessment
-        // Calculate a simple hash for task similarity based on task content
-        let task_hash = (task_spec.id.as_u128() as u64).wrapping_mul(2654435761) % 2^32;
+        // Implement basic task similarity analysis using task characteristics
+        // Extract features from task specification for similarity comparison
+        let task_features = self.extract_task_features(task_spec)?;
 
-        // Get similar signals from storage (up to 10 most relevant)
-        self.storage.get_similar_signals(task_hash, 10).await
+        // Find similar tasks from learning history
+        let similar_tasks = self.find_similar_tasks(&task_features)?;
+
+        // Generate learning signals based on similar task outcomes
+        let mut signals = Vec::new();
+
+        for similar_task in similar_tasks {
+            let similarity_score = self.calculate_similarity(&task_features, &similar_task.features);
+
+            if similarity_score > 0.7 { // High similarity threshold
+                signals.push(LearningSignal {
+                    signal_type: LearningSignalType::TaskSimilarity,
+                    confidence: similarity_score,
+                    data: serde_json::json!({
+                        "similar_task_id": similar_task.task_id,
+                        "similarity_score": similarity_score,
+                        "outcome": similar_task.outcome,
+                        "learning_points": similar_task.learning_points
+                    }),
+                    timestamp: chrono::Utc::now(),
+                    source: "task_similarity_analysis".to_string(),
+                });
+            }
+        }
+
+        Ok(signals)
     }
 
     /// Analyze judge performance for task type

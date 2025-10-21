@@ -630,9 +630,10 @@ impl ArtifactStorage for DatabaseArtifactStorage {
 
     async fn retrieve(
         &self,
+        task_id: Uuid,
         metadata: &ArtifactMetadata,
     ) -> Result<ExecutionArtifacts, ArtifactStorageError> {
-        self.db_storage.retrieve(metadata).await
+        self.db_storage.retrieve(task_id, metadata).await
             .map_err(|e| ArtifactStorageError::DatabaseError(e.to_string()))
     }
 

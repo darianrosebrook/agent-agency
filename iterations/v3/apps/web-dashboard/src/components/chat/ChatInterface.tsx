@@ -15,6 +15,7 @@ import {
 } from "@/types/chat";
 import { ChatApiClient, ChatApiError } from "@/lib/chat-api";
 import { WebSocketClient } from "@/lib/websocket/WebSocketClient";
+import { useTTS } from "@/hooks/useTTS";
 import MessageList from "./MessageList";
 import MessageInput from "./MessageInput";
 import ContextPanel from "./ContextPanel";

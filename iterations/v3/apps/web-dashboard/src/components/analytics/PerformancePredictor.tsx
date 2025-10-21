@@ -92,7 +92,7 @@ export default function PerformancePredictor({
         metrics: [], // Will be populated from available metrics
         horizon_days: 7,
         time_range: state.filters.time_range,
-        models: ["linear", "arima"] as const,
+        models: ["linear", "arima"],
       };
 
       const response = await analyticsApiClient.generateForecasting(

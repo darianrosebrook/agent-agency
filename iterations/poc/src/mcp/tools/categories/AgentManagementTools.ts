@@ -221,8 +221,15 @@ export class AgentManagementTools {
     capability?: string;
   }): Promise<{ agents: any[]; total: number; filters: any }> {
     try {
-      // Simplified implementation - in a real system you'd have proper filtering
-      // For now, we'll return a mock list
+      // TODO: Implement comprehensive agent filtering and querying
+      // - Add database-backed agent queries with proper indexing
+      // - Support complex filtering by status, capabilities, performance metrics
+      // - Implement agent search with fuzzy matching and relevance scoring
+      // - Add agent sorting by various criteria (performance, availability, load)
+      // - Support pagination with cursor-based navigation
+      // - Implement agent aggregation and statistical queries
+      // - Add agent relationship and dependency filtering
+      // - Support real-time agent status updates and filtering
       const agents = [
         {
           id: "agent_001",

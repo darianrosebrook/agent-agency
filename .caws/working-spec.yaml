@@ -1,24 +1,33 @@
-id: IMPL-001
-title: "Implement Metal GPU, quantization, and web dashboard TODO items"
+id: IMPL-002
+title: "Implement worker system TODO items and autonomous execution"
 risk_tier: 2
 mode: feature
 change_budget:
-  max_files: 35
-  max_loc: 2000
+  max_files: 40
+  max_loc: 2500
 blast_radius:
-  modules: ["apple-silicon", "web-dashboard"]
+  modules: ["workers", "autonomous-executor", "caws-checker", "multimodal-scheduler"]
   data_migration: false
-operational_rollback_slo: "15m"
+operational_rollback_slo: "20m"
 scope:
-  in: ["iterations/v3/apple-silicon/src/metal_gpu.rs", "iterations/v3/apple-silicon/src/quantization.rs", "iterations/v3/apps/web-dashboard/"]
+  in: ["iterations/v3/workers/"]
   out: ["node_modules/", "target/", "dist/"]
 invariants:
-  - "Metal GPU computations use actual pipeline state instead of simulation"
-  - "MPS result data is properly parsed and processed"
-  - "GPU memory utilization is tracked and monitored"
-  - "GPU temperature data is parsed from system_profiler"
-  - "ONNX models support proper quantization"
-  - "Web dashboard UI components are functional"
+  - "Self-prompting agent initializes with proper dependencies"
+  - "Worker output collection system establishes communication channels"
+  - "Verdict execution system parses and validates specifications"
+  - "Determinism validation analyzes code changes for deterministic behavior"
+  - "Code complexity analysis evaluates cyclomatic complexity metrics"
+  - "Surgical change analysis evaluates diff size and impact radius"
+  - "CAWS waiver system includes governance and approval workflows"
+  - "CAWS validation testing includes real spec parsing"
+  - "Worker registry implements discovery and capability matching"
+  - "Worker execution includes circuit breaker and retry logic"
+  - "CAWS spec conversion maps all fields between formats"
+  - "Worker execution uses real HTTP APIs instead of simulation"
+  - "Service registry integration supports multiple discovery mechanisms"
+  - "Video processing pipeline includes codec support"
+  - "Cross-modal validation checks consistency between modalities"
 acceptance:
   - id: "A1"
     given: "Metal GPU computation request"

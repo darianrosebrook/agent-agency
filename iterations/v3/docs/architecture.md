@@ -1,10 +1,10 @@
-# V3 System Architecture
+# V3 Constitutional AI System Architecture
 
 ## Overview
 
-Agent Agency V3 implements a **constitutional council system** where specialized judge models work together to audit, evaluate, and accept worker outputs through **constitutional concurrency** - a framework where multiple agents coordinate within agreed-upon bounds rather than competing through traditional parallelism.
+Agent Agency V3 implements a **production-ready constitutional AI system** with complete task execution pipelines, real-time governance oversight, and comprehensive monitoring capabilities. The system provides three execution modes (Strict, Auto, Dry-Run) for different risk levels, with constitutional council oversight ensuring ethical compliance and quality standards.
 
-The architecture coordinates specialized judges, a research agent, and a worker pool via a Rust orchestration core optimized for Apple Silicon, with built-in CAWS compliance and provenance tracking.
+The architecture consists of Rust-based services communicating via HTTP APIs, with PostgreSQL persistence, comprehensive provenance tracking, and a web dashboard for monitoring and control.
 
 ## Core Problems Solved
 

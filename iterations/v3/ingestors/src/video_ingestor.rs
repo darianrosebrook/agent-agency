@@ -265,7 +265,7 @@ impl VideoIngestor {
     }
 
     /// Extract a single frame at the specified timestamp
-    async fn extract_frame_at_timestamp(&self, asset_reader: &AVAssetReader, timestamp: f32) -> Result<VideoFrame> {
+    async fn extract_frame_at_timestamp(&self, _asset_reader: &AVAssetReader, timestamp: f32) -> Result<VideoFrame> {
         // Simulate frame extraction
         // In real implementation, this would:
         // 1. Seek AVAssetReader to timestamp

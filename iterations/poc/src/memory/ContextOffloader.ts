@@ -303,7 +303,15 @@ export class ContextOffloader {
     const content = JSON.stringify(context);
     const size = content.length;
 
-    // Extract entities and relationships (simplified analysis)
+    // TODO: Implement comprehensive entity and relationship extraction
+    // - Use NLP libraries for named entity recognition (spaCy, Stanford NER)
+    // - Implement relationship extraction algorithms (OpenIE, dependency parsing)
+    // - Add entity disambiguation and coreference resolution
+    // - Support multiple entity types (persons, organizations, locations, concepts)
+    // - Implement confidence scoring for extracted entities and relationships
+    // - Add entity linking to knowledge bases (Wikidata, DBPedia)
+    // - Support multi-language entity extraction
+    // - Implement entity relationship graph construction and analysis
     const entities = this.extractEntities(context);
     const relationships = this.extractRelationships(context);
 

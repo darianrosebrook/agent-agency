@@ -3,9 +3,8 @@
 use crate::types::*;
 use anyhow::Result;
 
-pub struct ModelEvaluator {
-    /// Future hook for configuration or data sources.
-}
+/// Model evaluator for assessing new models
+pub struct ModelEvaluator {}
 
 impl ModelEvaluator {
     pub fn new() -> Self {

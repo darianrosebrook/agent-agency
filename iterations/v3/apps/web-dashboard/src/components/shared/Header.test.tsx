@@ -78,8 +78,75 @@ describe("Header", () => {
     });
   });
 
-  // Modal tests skipped for now due to DOM complexity
-  // TODO: Add modal interaction tests when DOM mocking is properly configured
+  describe("Health Details Toggle", () => {
+    it("shows health details when status button is clicked", () => {
+      const mockHealthStatus = {
+        status: "healthy" as const,
+        timestamp: "2025-01-01T00:00:00Z",
+        version: "1.0.0",
+        uptime: 3600,
+      };
+
+      render(<Header {...defaultProps} healthStatus={mockHealthStatus} />);
+
+      // Initially, health details should not be visible
+      expect(screen.queryByText("Dashboard:")).not.toBeInTheDocument();
+
+      // Click the status button to show details
+      const statusButton = screen.getByRole("button", {
+        name: /system healthy/i,
+      });
+      fireEvent.click(statusButton);
+
+      // Now health details should be visible
+      expect(screen.getByText("Dashboard:")).toBeInTheDocument();
+      expect(screen.getByText("v1.0.0")).toBeInTheDocument();
+      expect(screen.getByText("Uptime:")).toBeInTheDocument();
+    });
+
+    it("hides health details when status button is clicked again", () => {
+      const mockHealthStatus = {
+        status: "healthy" as const,
+        timestamp: "2025-01-01T00:00:00Z",
+        version: "1.0.0",
+        uptime: 3600,
+      };
+
+      render(<Header {...defaultProps} healthStatus={mockHealthStatus} />);
+
+      const statusButton = screen.getByRole("button", {
+        name: /system healthy/i,
+      });
+
+      // Click to show
+      fireEvent.click(statusButton);
+      expect(screen.getByText("Dashboard:")).toBeInTheDocument();
+
+      // Click again to hide
+      fireEvent.click(statusButton);
+      expect(screen.queryByText("Dashboard:")).not.toBeInTheDocument();
+    });
+
+    it("shows error state in health details when there is an error", () => {
+      render(
+        <Header
+          {...defaultProps}
+          error="Connection failed"
+          healthStatus={null}
+        />
+      );
+
+      // Click to show details
+      const statusButton = screen.getByRole("button", {
+        name: /status unknown/i,
+      });
+      fireEvent.click(statusButton);
+
+      // Should show error state
+      expect(screen.getByText("Connection Error")).toBeInTheDocument();
+      expect(screen.getByText("Connection failed")).toBeInTheDocument();
+    });
+  });
 
   describe("Retry Functionality", () => {
     it("calls onRetryHealthCheck when retry button is clicked", () => {

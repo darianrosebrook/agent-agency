@@ -6,6 +6,9 @@
 use std::collections::HashMap;
 use crate::error::{CouncilError, CouncilResult};
 use crate::judge::{JudgeVerdict, JudgeContribution, RequiredChange, CriticalIssue, ChangePriority};
+use strsim::{jaro_winkler, levenshtein, normalized_damerau_levenshtein};
+use regex::Regex;
+use once_cell::sync::Lazy;
 
 /// Result of aggregating multiple judge verdicts
 #[derive(Debug, Clone)]

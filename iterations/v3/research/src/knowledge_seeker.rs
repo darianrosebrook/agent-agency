@@ -7,7 +7,8 @@ use crate::types::*;
 use crate::ContentProcessingConfig;
 use crate::{
     ConfigurationUpdate, ContentProcessor, ContextBuilder, MultimodalContext,
-    MultimodalContextProvider, MultimodalRetriever, MultimodalRetrieverConfig, VectorSearchEngine, WebScraper,
+    MultimodalContextProvider, VectorSearchEngine, WebScraper,
+    // MultimodalRetriever, MultimodalRetrieverConfig, // Temporarily disabled
 };
 use agent_agency_database::DatabaseClient;
 use anyhow::{Context, Result};

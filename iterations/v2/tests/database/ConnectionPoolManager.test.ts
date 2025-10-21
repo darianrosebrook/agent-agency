@@ -170,7 +170,14 @@ describe("ConnectionPoolManager", () => {
       const manager = ConnectionPoolManager.getInstance();
 
       // Insert test data for different tenants (requires RLS policies to exist)
-      // This is a simplified test - real test would verify actual data isolation
+      // TODO: Implement comprehensive tenant isolation testing
+      // - Set up proper RLS (Row Level Security) policies in test database
+      // - Create test data for multiple tenants with overlapping records
+      // - Verify that queries from different tenants return only their data
+      // - Test tenant context switching and isolation guarantees
+      // - Implement tenant data leakage detection and validation
+      // - Add performance testing for tenant isolation overhead
+      // - Support testing with different isolation levels and configurations
 
       const tenant1Result = await manager.queryWithTenantContext(
         "tenant-1",

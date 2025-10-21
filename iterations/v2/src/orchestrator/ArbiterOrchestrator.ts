@@ -85,32 +85,42 @@ export interface SecurityAuditEvent {
 }
 
 /**
- * Arbiter Orchestrator Configuration
+ * TODO: Define comprehensive configuration interfaces for Arbiter Orchestrator
+ * - Create TaskQueueConfig interface with queue sizing, persistence, and retry policies
+ * - Define TaskAssignmentConfig for routing algorithms, load balancing, and assignment rules
+ * - Implement AgentRegistryConfig for agent discovery, registration, and health checking
+ * - Build HealthMonitorConfig for monitoring thresholds, alerting, and health checks
+ * - Design RecoveryManagerConfig for failure recovery, circuit breakers, and resilience
+ * - Create KnowledgeSeekerConfig for knowledge sources, search strategies, and caching
+ * - Define WorkspaceStateConfig for workspace management, persistence, and synchronization
+ * - Add configuration validation, defaults, and environment variable support
+ * - Implement configuration hot-reloading and validation
+ * - Add configuration documentation and examples
  */
 export interface ArbiterOrchestratorConfig {
   /** Task queue configuration */
-  taskQueue: any; // Using any for now, should be TaskQueueConfig
+  taskQueue: any; // TODO: Replace with TaskQueueConfig
 
   /** Task assignment configuration */
-  taskAssignment: any; // Using any for now, should be TaskAssignmentConfig
+  taskAssignment: any; // TODO: Replace with TaskAssignmentConfig
 
   /** Agent registry configuration */
-  agentRegistry: any; // Using any for now, should be AgentRegistryConfig
+  agentRegistry: any; // TODO: Replace with AgentRegistryConfig
 
   /** Security configuration */
   // Removed duplicate security property
 
   /** Health monitoring configuration */
-  healthMonitor: any; // Using any for now, should be HealthMonitorConfig
+  healthMonitor: any; // TODO: Replace with HealthMonitorConfig
 
   /** Recovery management configuration */
-  recoveryManager: any; // Using any for now, should be RecoveryManagerConfig
+  recoveryManager: any; // TODO: Replace with RecoveryManagerConfig
 
   /** Knowledge seeker configuration */
-  knowledgeSeeker: any; // Using any for now, should be KnowledgeSeekerConfig
+  knowledgeSeeker: any; // TODO: Replace with KnowledgeSeekerConfig
 
   /** Workspace state manager configuration */
-  workspaceManager?: any; // Using any for now, should be WorkspaceStateConfig
+  workspaceManager?: any; // TODO: Replace with WorkspaceStateConfig
 
   /** Database configuration (optional - graceful degradation if not provided) */
   database?: {

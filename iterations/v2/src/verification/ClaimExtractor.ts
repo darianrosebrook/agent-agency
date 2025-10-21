@@ -1178,7 +1178,15 @@ export class ClaimExtractor
         // Add the bracket at the end if it contains the term
         if (contextualizedClaim.toLowerCase().includes(term.toLowerCase())) {
           contextualizedClaim = `${contextualizedClaim} [${context}]`;
-          break; // Only add one bracket for now
+          // TODO: Implement sophisticated contextual annotation system
+          // - Support multiple contextual brackets and nested annotations
+          // - Implement context priority and conflict resolution
+          // - Add context relevance scoring and filtering
+          // - Support contextual metadata enrichment and tagging
+          // - Implement context hierarchy and inheritance
+          // - Add context validation and consistency checking
+          // - Support context-based claim classification and routing
+          // - Implement context evolution and update mechanisms
         }
       }
     }

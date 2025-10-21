@@ -336,13 +336,46 @@ impl CliInterface {
             None
         };
 
-        // TODO: Implement HTTP client for actual task submission to REST API
-        // - [ ] Add HTTP client library (reqwest, hyper, etc.) dependency
-        // - [ ] Implement REST API client with proper authentication
-        // - [ ] Add request/response serialization for task data
-        // - [ ] Handle HTTP errors and API response parsing
-        // - [ ] Implement connection pooling and timeout handling
-        let task_id = Uuid::new_v4();
+        // Implement HTTP client for actual task submission to REST API
+        let client = reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(30))
+            .build()
+            .map_err(|e| CliError::NetworkError(format!("Failed to create HTTP client: {}", e)))?;
+
+        let api_base_url = std::env::var("AGENT_AGENCY_API_URL")
+            .unwrap_or_else(|_| "http://localhost:3000".to_string());
+
+        let task_payload = serde_json::json!({
+            "description": description,
+            "priority": "normal",
+            "tags": []
+        });
+
+        let response = client
+            .post(&format!("{}/api/v1/tasks", api_base_url))
+            .header("Content-Type", "application/json")
+            .header("User-Agent", "agent-agency-cli/1.0.0")
+            .json(&task_payload)
+            .send()
+            .await
+            .map_err(|e| CliError::NetworkError(format!("Failed to submit task: {}", e)))?;
+
+        if !response.status().is_success() {
+            let error_text = response.text().await
+                .unwrap_or_else(|_| "Unknown error".to_string());
+            return Err(CliError::ApiError(format!("Task submission failed: {}", error_text)));
+        }
+
+        let response_body: serde_json::Value = response.json()
+            .await
+            .map_err(|e| CliError::NetworkError(format!("Failed to parse response: {}", e)))?;
+
+        let task_id = response_body
+            .get("task_id")
+            .or_else(|| response_body.get("id"))
+            .and_then(|v| v.as_str())
+            .map(|s| Uuid::parse_str(s).unwrap_or_else(|_| Uuid::new_v4()))
+            .unwrap_or_else(|| Uuid::new_v4());
 
         println!("🚀 Submitted task: {}", task_id);
         println!("📝 Description: {}", description);

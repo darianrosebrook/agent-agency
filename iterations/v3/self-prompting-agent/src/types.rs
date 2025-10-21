@@ -139,6 +139,7 @@ pub enum StopReason {
     NoProgress,  // Added for hysteresis and no-progress guards
     PatchFailure, // Added for patch application failures (addresses 75% of agent failures)
     ProgressStalled, // Added for quantitative progress plateau detection (addresses unproductive loops)
+    Aborted, // Added for user-initiated task abortion
     Unknown,
 }
 

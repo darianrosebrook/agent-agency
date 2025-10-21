@@ -9,15 +9,26 @@ export async function GET() {
 
     console.log(`Checking V3 backend health at: ${healthUrl}`);
 
-    // Warn if V3 backend is not configured or reachable
+    // Fail fast if V3 backend is not configured
     if (!process.env.V3_BACKEND_HOST) {
-      console.warn(
-        "V3_BACKEND_HOST not configured - using default localhost:8080"
+      return NextResponse.json(
+        {
+          status: "unhealthy",
+          timestamp: new Date().toISOString(),
+          error: "Backend host not configured",
+          backend: {
+            status: "unconfigured",
+            url: "",
+          },
+          dashboard: {
+            status: "healthy",
+            version: process.env.npm_package_version ?? "0.1.0",
+            uptime: Math.floor(process.uptime()),
+            node_version: process.version,
+          },
+        },
+        { status: 500 }
       );
-      // TODO: Milestone 0 - V3 Backend Integration
-      // - [ ] Configure V3_BACKEND_HOST environment variable
-      // - [ ] Ensure V3 backend is running and accessible
-      // - [ ] Test health check endpoint connectivity
     }
 
     const response = await fetch(healthUrl, {

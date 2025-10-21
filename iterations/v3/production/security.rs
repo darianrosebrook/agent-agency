@@ -43,7 +43,7 @@ pub struct User {
 }
 
 /// User roles
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum UserRole {
     Admin,
     Developer,

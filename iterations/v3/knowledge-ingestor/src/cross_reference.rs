@@ -6,7 +6,9 @@
 //! @author @darianrosebrook
 
 use crate::types::*;
-use crate::{IngestionStats, KnowledgeIngestor};
+use crate::IngestionStats;
+#[cfg(feature = "embeddings")]
+use crate::KnowledgeIngestor;
 use agent_agency_database::models::*;
 use anyhow::Result;
 use tracing::{debug, info};

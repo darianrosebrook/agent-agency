@@ -20,6 +20,7 @@ use crate::orchestrate::{Orchestrator, OrchestratorConfig, OrchestrationResult, 
 use crate::planning::agent::PlanningAgent;
 use crate::frontier::{Frontier, FrontierConfig, FrontierError};
 use file_ops::{validate_changeset_with_waiver, WaiverRequest, apply_waiver};
+use agent_agency_database::DatabaseClient;
 
 /// Audited orchestrator that wraps all operations with comprehensive audit logging
 #[derive(Debug)]

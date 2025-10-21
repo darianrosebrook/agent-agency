@@ -45,14 +45,40 @@ export default function AnomalyDetector({
   const loadAnomalies = useCallback(async () => {
     if (externalAnomalies) return;
 
-    // TODO: Milestone 5 - Integrate timeSeriesData for advanced anomaly detection
-    // Use timeSeriesData for real-time anomaly analysis when available
+    // Integrate timeSeriesData for advanced anomaly detection
     if (timeSeriesData && timeSeriesData.length > 0) {
       console.log(
         "Time series data available for anomaly detection:",
         timeSeriesData.length,
         "series"
       );
+
+      // Use time series data to enhance anomaly detection parameters
+      const latestSeries = timeSeriesData[timeSeriesData.length - 1];
+      if (latestSeries?.data && latestSeries.data.length > 0) {
+        // Calculate statistical properties from recent data
+        const recentData = latestSeries.data.slice(-50); // Last 50 points
+        const values = recentData.map(d => d.value);
+
+        const mean = values.reduce((a, b) => a + b, 0) / values.length;
+        const variance = values.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / values.length;
+        const stdDev = Math.sqrt(variance);
+
+        // Adjust sensitivity based on data volatility
+        const volatilityFactor = stdDev / Math.abs(mean);
+        const adjustedSensitivity = Math.max(0.1, Math.min(0.9, volatilityFactor));
+
+        // Update detection parameters with time series insights
+        setState(prev => ({
+          ...prev,
+          detectionParams: {
+            ...prev.detectionParams,
+            sensitivity: adjustedSensitivity,
+            min_anomaly_score: stdDev * 2, // 2-sigma threshold
+            time_window_hours: Math.max(1, Math.min(24, recentData.length / 4)), // Adaptive window
+          }
+        }));
+      }
     }
 
     try {

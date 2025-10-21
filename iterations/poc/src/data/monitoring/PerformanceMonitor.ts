@@ -247,7 +247,15 @@ export class PerformanceMonitor extends EventEmitter {
     const overallStats =
       recentMetrics.find((m) => m.level === "overall") || null;
 
-    // Calculate trends (simplified - compare first half vs second half)
+    // TODO: Implement comprehensive performance trend analysis
+    // - Use statistical trend analysis (linear regression, moving averages)
+    // - Implement seasonal decomposition for time-series data
+    // - Add anomaly detection algorithms (isolation forests, z-score analysis)
+    // - Support multiple trend detection methods (Mann-Kendall test, etc.)
+    // - Implement trend confidence intervals and significance testing
+    // - Add performance forecasting and prediction capabilities
+    // - Support multi-dimensional trend analysis (latency, throughput, errors)
+    // - Implement automated alerting for trend changes and anomalies
     const midpoint = cutoff + timeRangeMs / 2;
     const firstHalf = recentMetrics.filter(
       (m) => m.timestamp < midpoint && m.level === "overall"

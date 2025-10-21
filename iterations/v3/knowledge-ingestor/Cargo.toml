@@ -21,7 +21,7 @@ uuid = { version = "1.6", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
 
 # Embedding service
-embedding-service = { path = "../embedding-service" }
+embedding-service = { path = "../embedding-service", optional = true }
 
 # Compression and parsing
 flate2 = "1.0"

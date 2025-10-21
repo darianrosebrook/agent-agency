@@ -29,3 +29,4 @@ linfa = "0.7"  # Machine learning framework for response time prediction
 linfa-linear = "0.7"  # Linear regression for time estimation
 statrs = "0.16"  # Statistical analysis for confidence intervals
 lru = "0.12"  # LRU cache for reputation data
+strsim = "0.11"  # String similarity algorithms for semantic analysis

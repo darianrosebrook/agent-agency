@@ -46,6 +46,7 @@ pub enum ExecutionStatus {
     Pending,
     Starting,
     Running,
+    AwaitingApproval,
     Paused,
     Completed,
     Failed,

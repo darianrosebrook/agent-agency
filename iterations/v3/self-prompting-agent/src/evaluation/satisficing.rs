@@ -494,6 +494,42 @@ impl SatisficingEvaluator {
 
         None
     }
+
+    /// Check if context overload should trigger termination (addresses large codebase failures)
+    pub fn check_context_overload_termination(&self, context_metrics: &crate::types::ContextMetrics, overload_threshold: f64, max_files: usize) -> Option<SatisficingDecision> {
+        let context_overloaded = context_metrics.context_window_utilization >= overload_threshold;
+        let files_overloaded = context_metrics.files_in_scope >= max_files;
+
+        if context_overloaded || files_overloaded {
+            let reasons = vec![
+                if context_overloaded {
+                    format!("Context window utilization {:.1}% exceeds threshold {:.1}%",
+                           context_metrics.context_window_utilization * 100.0, overload_threshold * 100.0)
+                } else {
+                    String::new()
+                },
+                if files_overloaded {
+                    format!("Files in scope {} exceeds maximum {}", context_metrics.files_in_scope, max_files)
+                } else {
+                    String::new()
+                }
+            ].into_iter().filter(|s| !s.is_empty()).collect::<Vec<_>>();
+
+            return Some(SatisficingDecision {
+                should_continue: false,
+                reason: StopReason::Error, // Could add a new StopReason::ContextOverload if desired
+                confidence: 0.95,
+                recommendations: vec![
+                    format!("Context overload detected: {}", reasons.join(", ")),
+                    "Consider breaking task into smaller subtasks".to_string(),
+                    "Reduce scope to focus on fewer files".to_string(),
+                    "Use different model with larger context window".to_string(),
+                ],
+            });
+        }
+
+        None
+    }
 }
 
 /// Feedback for updating satisficing parameters

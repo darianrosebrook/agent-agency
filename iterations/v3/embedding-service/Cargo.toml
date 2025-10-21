@@ -37,6 +37,10 @@ sqlx-cli = "0.7"
 quick-xml = "0.31"
 roxmltree = "0.19"
 
+# DOT format parsing dependencies
+petgraph = "0.6"
+dot = "0.1"
+
 # ML model loading dependencies
 ort = { version = "2.0.0-rc.10", features = ["load-dynamic"] }
 tokenizers = "0.19"

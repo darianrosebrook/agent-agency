@@ -123,7 +123,8 @@ async fn main() -> Result<()> {
     
     let mut total_stats = IngestionStats::new();
     
-    // Ingest Wikidata
+    // Ingest Wikidata (requires embeddings feature)
+    #[cfg(feature = "embeddings")]
     if !args.skip_wikidata {
         info!("\n=== Ingesting Wikidata Lexemes ===");
         match wikidata::parse_wikidata_dump(&ingestor, &args.wikidata_path).await {

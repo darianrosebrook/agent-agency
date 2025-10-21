@@ -4,16 +4,11 @@ use crate::caws_runtime::{
 };
 use crate::persistence::VerdictWriter;
 use crate::provenance::OrchestrationProvenanceEmitter;
-use crate::planning::types::ExecutionArtifacts;
-use crate::tracking::ProgressTracker;
 use agent_agency_apple_silicon::{
     adaptive_resource_manager::{
         AppleModelRegistry, AppleModelRegistryConfig, SimplePlanner, SystemSensors,
     },
     AllocationPlanner,
-};
-use agent_agency_contracts::working_spec::{
-    TaskMode, TaskScope, ChangeBudget, BlastRadius, WorkingSpecMetadata,
 };
 use agent_agency_council::coordinator::{ConsensusCoordinator, ProvenanceEmitter};
 use agent_agency_council::models::{
@@ -23,8 +18,6 @@ use agent_agency_council::models::{
     WorkerOutput as CouncilWorkerOutput,
 };
 use agent_agency_council::types::{CawsWaiver, ConsensusResult, FinalVerdict};
-use agent_agency_resilience::{CircuitBreaker, CircuitBreakerConfig, retry_with_backoff, RetryConfig};
-use agent_agency_database::DatabaseClient;
 use anyhow::{Context, Result};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -236,46 +229,11 @@ pub async fn orchestrate_task(
     Ok(result.final_verdict)
 }
 
-/// Worker registry trait for service discovery (P0 requirement)
-#[async_trait::async_trait]
-pub trait WorkerRegistry: Send + Sync {
-    /// Get worker endpoint for a given worker ID
-    async fn get_worker_endpoint(&self, worker_id: &str) -> Result<String>;
-    /// Report worker health status
-    async fn report_worker_health(&self, worker_id: &str, healthy: bool) -> Result<()>;
-}
-
-/// Simple static worker registry implementation
-pub struct StaticWorkerRegistry {
-    default_endpoint: String,
-}
-
-impl StaticWorkerRegistry {
-    pub fn new(default_endpoint: String) -> Self {
-        Self { default_endpoint }
-    }
-}
-
-#[async_trait::async_trait]
-impl WorkerRegistry for StaticWorkerRegistry {
-    async fn get_worker_endpoint(&self, _worker_id: &str) -> Result<String> {
-        Ok(self.default_endpoint.clone())
-    }
-
-    async fn report_worker_health(&self, _worker_id: &str, _healthy: bool) -> Result<()> {
-        // Static registry doesn't track health
-        Ok(())
-    }
-}
-
-/// Orchestrator that routes tasks to workers (P0: real worker execution path)
+/// Orchestrator that routes tasks to workers
 pub struct Orchestrator {
     client: reqwest::Client,
-    worker_registry: Arc<dyn WorkerRegistry>,
-    circuit_breakers: Arc<std::sync::RwLock<HashMap<String, Arc<CircuitBreaker>>>>,
-    retry_config: RetryConfig,
+    worker_endpoint: String,
     progress_tracker: Arc<ProgressTracker>,
-    db_client: Option<Arc<DatabaseClient>>, // Optional for backward compatibility
 }
 
 impl Orchestrator {
@@ -283,157 +241,85 @@ impl Orchestrator {
         config: OrchestratorConfig,
         progress_tracker: Arc<ProgressTracker>,
     ) -> Self {
-        Self::new_with_dependencies(
-            config,
-            progress_tracker,
-            None, // Use default worker registry
-            None, // Use default circuit breaker config
-            None, // Use default retry config
-            None, // Use default DB client
-        )
-    }
-
-    /// Create orchestrator with explicit dependencies (P0: real worker execution path)
-    pub fn new_with_dependencies(
-        _config: OrchestratorConfig,
-        progress_tracker: Arc<ProgressTracker>,
-        worker_registry: Option<Arc<dyn WorkerRegistry>>,
-        _circuit_breaker_config: Option<CircuitBreakerConfig>,
-        retry_config: Option<RetryConfig>,
-        db_client: Option<Arc<DatabaseClient>>,
-    ) -> Self {
         let client = reqwest::Client::builder()
             .timeout(std::time::Duration::from_secs(30))
             .build()
             .expect("Failed to create HTTP client");
 
-        let worker_registry = worker_registry.unwrap_or_else(|| {
-            let default_endpoint = std::env::var("AGENT_AGENCY_WORKER_ENDPOINT")
-                .unwrap_or_else(|_| "http://localhost:8081".to_string());
-            Arc::new(StaticWorkerRegistry::new(default_endpoint))
-        });
-
-        let circuit_breakers = Arc::new(std::sync::RwLock::new(HashMap::new()));
-
-        let retry_config = retry_config.unwrap_or_else(|| RetryConfig {
-            max_attempts: 3,
-            base_delay_ms: 1000,
-            max_delay_ms: 30000,
-            backoff_multiplier: 2.0,
-            jitter: true,
-        });
+        let worker_endpoint = std::env::var("AGENT_AGENCY_WORKER_ENDPOINT")
+            .unwrap_or_else(|_| "http://localhost:8081".to_string());
 
         Self {
             client,
-            worker_registry,
-            circuit_breakers,
-            retry_config,
+            worker_endpoint,
             progress_tracker,
-            db_client,
         }
     }
 
-    /// Route a task description to a worker for execution (P0: real worker execution path)
+    /// Route a task description to a worker for execution
     pub async fn orchestrate_task(
         &self,
         description: &str,
-        execution_mode: Option<&str>,
     ) -> Result<TaskExecutionResult, Box<dyn std::error::Error + Send + Sync>> {
         let task_id = uuid::Uuid::new_v4();
 
         // Start progress tracking
         self.progress_tracker.start_execution(task_id, "api-submitted".to_string()).await?;
 
-        // P0: Audit trail - Task enqueued
-        if let Some(ref db_client) = self.db_client {
-            db_client.create_task_audit_event(
-                task_id,
-                "orchestration",
-                "system",
-                "enqueued",
-                serde_json::json!({
-                    "description": description,
-                    "execution_mode": execution_mode,
-                    "stage": "worker_routing"
-                }),
-            ).await.map_err(|e| format!("Failed to audit task enqueue: {}", e))?;
-        }
-
-        // Get worker endpoint (MVP: static discovery)
-        let worker_id = "default-worker"; // In future, this could be selected based on task requirements
-        let worker_endpoint = self.worker_registry.get_worker_endpoint(worker_id).await
-            .map_err(|e| format!("Failed to get worker endpoint: {}", e))?;
-
         // Create task execution request
-        let mut request = serde_json::json!({
+        let request = serde_json::json!({
             "task_id": task_id,
-            "prompt": description,
+            "description": description,
             "timestamp": chrono::Utc::now().to_rfc3339(),
         });
 
-        // Add execution mode if provided
-        if let Some(mode) = execution_mode {
-            request["execution_mode"] = serde_json::Value::String(mode.to_string());
+        let execute_url = format!("{}/execute", self.worker_endpoint.trim_end_matches('/'));
+
+        // Send task to worker
+        let response = self.client
+            .post(&execute_url)
+            .json(&request)
+            .send()
+            .await?;
+
+        if !response.status().is_success() {
+            let error_text = response.text().await.unwrap_or_default();
+            return Err(format!("Worker execution failed: {} - {}", response.status(), error_text).into());
         }
 
-        let execute_url = format!("{}/execute", worker_endpoint.trim_end_matches('/'));
+        // Parse worker response
+        let worker_result: serde_json::Value = response.json().await?;
 
-        // P0: Get or create circuit breaker for this worker
-        let circuit_breaker = self.get_or_create_circuit_breaker(worker_id).await;
-
-        // P0: Execute with retry/backoff + circuit breaker
-        let worker_result = self.execute_with_resilience(
-            task_id,
-            worker_id,
-            &execute_url,
-            &request,
-            &circuit_breaker,
-        ).await?;
-
-        // Extract execution details from worker response
+        // Extract execution details
         let execution_time_ms = worker_result
             .get("execution_time_ms")
             .and_then(|v| v.as_u64())
             .unwrap_or(0);
 
         let success = worker_result
-            .get("exit_code")
-            .and_then(|v| v.as_i64())
-            .map(|code| code == 0)
+            .get("success")
+            .and_then(|v| v.as_bool())
             .unwrap_or(false);
-
-        let execution_output = worker_result
-            .get("stdout")
-            .and_then(|v| v.as_str())
-            .unwrap_or("")
-            .to_string();
-
-        let worker_id_response = worker_result
-            .get("worker_id")
-            .and_then(|v| v.as_str())
-            .unwrap_or(worker_id)
-            .to_string();
 
         // Create execution artifacts
         let artifacts = ExecutionArtifacts {
             files_created: vec![],
             files_modified: vec![],
             files_deleted: vec![],
-            execution_output,
+            execution_output: worker_result
+                .get("output")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string(),
             execution_time_ms,
-            worker_id: worker_id_response,
+            worker_id: worker_result
+                .get("worker_id")
+                .and_then(|v| v.as_str())
+                .unwrap_or("unknown")
+                .to_string(),
         };
 
-        // TODO: Implement comprehensive working specification generation
-        // - Parse task requirements and generate detailed acceptance criteria
-        // - Analyze codebase structure and determine appropriate scope boundaries
-        // - Identify risk tier based on impact analysis and dependencies
-        // - Generate specific test requirements and quality gates
-        // - Create performance budgets and monitoring requirements
-        // - Identify security and compliance requirements
-        // - Generate deployment and rollback specifications
-        // - Create documentation and maintenance requirements
-        // - Establish success metrics and completion criteria
+        // Create working spec (minimal for now)
         let working_spec = WorkingSpec {
             id: task_id.to_string(),
             title: format!("Task {}", task_id),
@@ -471,174 +357,6 @@ impl Orchestrator {
             artifacts,
             quality_report: None,
         })
-    }
-
-    /// Get or create circuit breaker for a worker (P0: real worker execution path)
-    async fn get_or_create_circuit_breaker(&self, worker_id: &str) -> Arc<CircuitBreaker> {
-        // Check if we already have a circuit breaker for this worker
-        {
-            let breakers = self.circuit_breakers.read().unwrap();
-            if let Some(breaker) = breakers.get(worker_id) {
-                return breaker.clone();
-            }
-        }
-
-        // Create new circuit breaker for this worker
-        let config = CircuitBreakerConfig {
-            failure_threshold: 3,
-            recovery_timeout_ms: 30000, // 30 seconds
-            expected_exceptions: vec![],
-            monitoring_enabled: true,
-        };
-
-        let breaker = Arc::new(CircuitBreaker::new(config));
-        self.circuit_breakers.write().unwrap().insert(worker_id.to_string(), breaker.clone());
-        breaker
-    }
-
-    /// Execute worker request with resilience (retry/backoff + circuit breaker) (P0 requirement)
-    async fn execute_with_resilience(
-        &self,
-        task_id: Uuid,
-        worker_id: &str,
-        url: &str,
-        request_body: &serde_json::Value,
-        circuit_breaker: &Arc<CircuitBreaker>,
-    ) -> Result<serde_json::Value, Box<dyn std::error::Error + Send + Sync>> {
-        // P0: Audit trail - Execution attempt started
-        if let Some(ref db_client) = self.db_client {
-            db_client.create_task_audit_event(
-                task_id,
-                "worker",
-                worker_id,
-                "exec_attempt",
-                serde_json::json!({
-                    "worker_endpoint": url,
-                    "stage": "execution_attempt"
-                }),
-            ).await.ok(); // Don't fail if audit fails
-        }
-
-        let mut attempt = 0;
-        let result = retry_with_backoff(
-            &self.retry_config,
-            || async {
-                attempt += 1;
-
-                // Check circuit breaker
-                if let Err(_) = circuit_breaker.call(|| async { Ok(()) }).await {
-                    // P0: Audit trail - Circuit breaker open
-                    if let Some(ref db_client) = self.db_client {
-                        db_client.create_task_audit_event(
-                            task_id,
-                            "worker",
-                            worker_id,
-                            "circuit_breaker_open",
-                            serde_json::json!({
-                                "attempt": attempt,
-                                "stage": "circuit_breaker_open"
-                            }),
-                        ).await.ok();
-                    }
-                    return Err("Circuit breaker is open".into());
-                }
-
-                // Make HTTP request
-                match self.client
-                    .post(url)
-                    .json(request_body)
-                    .send()
-                    .await
-                {
-                    Ok(response) => {
-                        if response.status().is_success() {
-                            // P0: Audit trail - Successful execution
-                            if let Some(ref db_client) = self.db_client {
-                                db_client.create_task_audit_event(
-                                    task_id,
-                                    "worker",
-                                    worker_id,
-                                    "exec_success",
-                                    serde_json::json!({
-                                        "attempt": attempt,
-                                        "response_status": response.status().as_u16(),
-                                        "stage": "execution_success"
-                                    }),
-                                ).await.ok();
-                            }
-
-                            // Report worker health
-                            self.worker_registry.report_worker_health(worker_id, true).await.ok();
-
-                            // Parse and return response
-                            response.json().await.map_err(|e| e.into())
-                        } else {
-                            // P0: Audit trail - Execution failed
-                            if let Some(ref db_client) = self.db_client {
-                                db_client.create_task_audit_event(
-                                    task_id,
-                                    "worker",
-                                    worker_id,
-                                    "exec_failure",
-                                    serde_json::json!({
-                                        "attempt": attempt,
-                                        "response_status": response.status().as_u16(),
-                                        "stage": "execution_failure"
-                                    }),
-                                ).await.ok();
-                            }
-
-                            // Report worker unhealthy
-                            self.worker_registry.report_worker_health(worker_id, false).await.ok();
-
-                            Err(format!("Worker returned error: {}", response.status()).into())
-                        }
-                    }
-                    Err(e) => {
-                        // P0: Audit trail - Network/timeout error
-                        if let Some(ref db_client) = self.db_client {
-                            db_client.create_task_audit_event(
-                                task_id,
-                                "worker",
-                                worker_id,
-                                "exec_timeout",
-                                serde_json::json!({
-                                    "attempt": attempt,
-                                    "error": e.to_string(),
-                                    "stage": "execution_timeout"
-                                }),
-                            ).await.ok();
-                        }
-
-                        // Report worker unhealthy
-                        self.worker_registry.report_worker_health(worker_id, false).await.ok();
-
-                        Err(e.into())
-                    }
-                }
-            }
-        ).await;
-
-        match result {
-            Ok(response) => Ok(response),
-            Err(e) => {
-                // P0: Audit trail - Final execution failure
-                if let Some(ref db_client) = self.db_client {
-                    db_client.create_task_audit_event(
-                        task_id,
-                        "worker",
-                        worker_id,
-                        "exec_final_failure",
-                        serde_json::json!({
-                            "attempts": attempt,
-                            "final_error": e.to_string(),
-                            "stage": "execution_final_failure"
-                        }),
-                    ).await.ok();
-                }
-                Err(e)
-            }
-        }
     }
 }
 

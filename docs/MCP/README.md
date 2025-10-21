@@ -153,29 +153,38 @@ graph TB
 
 ## MCP Tool Categories
 
-### Agent Management Tools
-- **register_agent**: Register new agent with capabilities and metadata
-- **update_agent**: Update agent status, capabilities, or metadata
-- **get_agent**: Retrieve detailed agent information
-- **list_agents**: Get all registered agents with filtering options
+### Policy Tools (3 Tools)
+- **`caws_policy_validator`**: Validates task compliance with CAWS policies, risk tier assessment, and scope boundaries
+- **`waiver_auditor`**: Audits waiver requests for exceptional circumstances with risk assessment and justification validation
+- **`budget_verifier`**: Verifies change budget compliance based on file count, lines changed, and risk factors
 
-### Task Management Tools
-- **submit_task**: Submit new task for execution
-- **get_task**: Retrieve task details and status
-- **cancel_task**: Cancel pending or running task
-- **retry_task**: Retry failed task with new parameters
+### Conflict Resolution Tools (3 Tools)
+- **`debate_orchestrator`**: Orchestrates multi-model conflict resolution with council arbitration and quality-weighted consensus
+- **`consensus_builder`**: Builds consensus through learning integration, multi-model arbitration, and evidence correlation
+- **`evidence_synthesizer`**: Synthesizes evidence across multiple sources with cross-reference validation and conflict resolution
 
-### Evaluation Tools
-- **evaluate_text**: Evaluate text transformation quality
-- **evaluate_code**: Run code tests and linting
-- **evaluate_design**: Validate design token compliance
-- **run_evaluation_loop**: Execute complete evaluation cycle
+### Evidence Collection Tools (3 Tools)
+- **`claim_extractor`**: Extracts verifiable atomic claims from content with linguistic analysis and confidence scoring
+- **`fact_verifier`**: Performs multi-modal verification using claim extraction pipeline and council arbitration
+- **`source_validator`**: Validates source credibility with evidence collection system and temporal freshness assessment
 
-### System Tools
-- **get_metrics**: Retrieve current system metrics
-- **health_check**: Perform system health assessment
-- **clear_cache**: Clear system caches and temporary data
-- **backup_data**: Create system data backup
+### Governance Tools (3 Tools)
+- **`audit_logger`**: Comprehensive audit logging with provenance service, git integration, and cryptographic signing
+- **`provenance_tracker`**: Tracks data lineage and integrity with CAWS compliance and change attribution
+- **`compliance_reporter`**: Reports CAWS compliance status with domain breakdown and risk assessment
+
+### Quality Gate Tools (3 Tools)
+- **`code_analyzer`**: Comprehensive code analysis including linting, type checking, complexity metrics, security scanning, and performance insights
+- **`test_executor`**: Multi-type test execution (unit, integration, e2e, performance) with coverage analysis and quality metrics
+- **`performance_validator`**: Load testing, bottleneck analysis, and optimization recommendations with SLA compliance checking
+
+### Reasoning Tools (2 Tools)
+- **`logic_validator`**: Logical reasoning validation with fallacy detection, consistency assessment, and soundness evaluation
+- **`inference_engine`**: Probabilistic inference with multiple methods (forward/backward/probabilistic), uncertainty assessment, and alternative hypothesis generation
+
+### Workflow Tools (2 Tools)
+- **`progress_tracker`**: Workflow progress monitoring, milestone tracking, bottleneck analysis, and completion predictions
+- **`resource_allocator`**: Adaptive resource allocation with optimization criteria, constraint satisfaction, and performance prediction
 
 ## Autonomous Operation Flow
 

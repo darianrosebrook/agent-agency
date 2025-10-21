@@ -7,12 +7,12 @@ license.workspace = true
 
 [dependencies]
 # Core V3 crates
-agent-agency-council = { path = "../council" }
+agent-agency-agent-agency-council = { path = "../council" }
 agent-agency-research = { path = "../research" }
 orchestration = { path = "../orchestration" }
 claim-extraction = { path = "../claim-extraction" }
-embedding-service = { path = "../embedding-service" }
-agent-agency-apple-silicon = { path = "../apple-silicon" }
+embedding-service = { path = "../embedding-service", optional = true }
+agent-agency-apple-silicon = { path = "../apple-silicon", optional = true }
 agent-agency-resilience = { path = "../resilience" }
 agent-agency-config = { path = "../config" }
 agent-agency-database = { path = "../database" }

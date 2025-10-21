@@ -47,9 +47,7 @@ export function useVoiceRecording({
     } catch (err) {
       console.error("Microphone permission denied:", err);
       setHasPermission(false);
-      setError(
-        "Microphone access denied. Please check your browser permissions."
-      );
+      setError("Microphone access denied. Please check your browser permissions.");
       return false;
     }
   }, []);
@@ -65,15 +63,7 @@ export function useVoiceRecording({
     const checkLevel = () => {
       analyser.getByteFrequencyData(dataArray);
 
-      // TODO: Implement comprehensive audio level analysis and processing
-      // - Use proper RMS calculation with windowing and overlapping frames
-      // - Implement frequency-weighted audio level measurement
-      // - Add audio level smoothing and noise gate functionality
-      // - Support multiple audio analysis algorithms (RMS, Peak, VU metering)
-      // - Implement audio quality assessment and distortion detection
-      // - Add audio normalization and dynamic range compression
-      // - Support real-time audio spectrum analysis and visualization
-      // - Implement audio level calibration and device compensation
+      // Calculate average level (simplified RMS)
       let sum = 0;
       for (let i = 0; i < bufferLength; i++) {
         sum += dataArray[i] * dataArray[i];
@@ -180,12 +170,9 @@ export function useVoiceRecording({
   }, [isRecording]);
 
   // Voice activity detection
-  const detectVoiceActivity = useCallback(
-    (audioLevel: number): boolean => {
-      return audioLevel > settings.audioThreshold;
-    },
-    [settings.audioThreshold]
-  );
+  const detectVoiceActivity = useCallback((audioLevel: number): boolean => {
+    return audioLevel > settings.audioThreshold;
+  }, [settings.audioThreshold]);
 
   // Auto-stop recording after silence (if voice activity detection enabled)
   useEffect(() => {
@@ -194,8 +181,7 @@ export function useVoiceRecording({
     let silenceTimeout: NodeJS.Timeout;
 
     const checkSilence = () => {
-      if (audioLevel < settings.audioThreshold * 0.3) {
-        // Lower threshold for silence
+      if (audioLevel < settings.audioThreshold * 0.3) { // Lower threshold for silence
         silenceTimeout = setTimeout(() => {
           if (isRecording) {
             console.log("Auto-stopping recording due to silence");
@@ -216,19 +202,13 @@ export function useVoiceRecording({
         clearTimeout(silenceTimeout);
       }
     };
-  }, [
-    audioLevel,
-    settings.voiceActivityDetection,
-    settings.audioThreshold,
-    isRecording,
-    stopRecording,
-  ]);
+  }, [audioLevel, settings.voiceActivityDetection, settings.audioThreshold, isRecording, stopRecording]);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (streamRef.current) {
-        streamRef.current.getTracks().forEach((track) => track.stop());
+        streamRef.current.getTracks().forEach(track => track.stop());
       }
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
@@ -251,5 +231,3 @@ export function useVoiceRecording({
     requestPermission,
   };
 }
-
-

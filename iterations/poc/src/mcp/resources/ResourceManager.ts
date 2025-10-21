@@ -355,8 +355,14 @@ export class MCPResourceManager {
   // Resource implementation methods
 
   private async getAgentList(): Promise<ResourceReadResult> {
-    // This is a simplified implementation - in a real system you'd want to
-    // get all agents from the orchestrator or database
+    // TODO: Implement comprehensive agent registry integration
+    // - Query agent registry from orchestrator or database
+    // - Support real-time agent status and availability
+    // - Add agent capability filtering and discovery
+    // - Implement agent metadata and configuration retrieval
+    // - Support agent versioning and compatibility checking
+    // - Add agent health status and performance metrics
+    // - Implement agent authentication and authorization
     const agents = [
       {
         id: "agent_001",

@@ -1,10 +1,8 @@
 //! Model abstraction layer for hot-swappable AI providers
 
-pub mod coreml;
 pub mod ollama;
 pub mod selection;
 
-pub use coreml::CoreMLProvider;
 pub use ollama::OllamaProvider;
 pub use selection::{ModelRegistry, ModelSelectionPolicy};
 

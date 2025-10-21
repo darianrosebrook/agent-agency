@@ -8,7 +8,8 @@ export type SectionType =
   | "chat"
   | "tasks"
   | "database"
-  | "analytics";
+  | "analytics"
+  | "settings";
 
 interface NavigationProps {
   activeSection: SectionType;

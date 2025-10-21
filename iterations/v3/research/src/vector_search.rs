@@ -168,7 +168,7 @@ impl VectorSearchEngine {
         // Check cache first
         {
             let cache = self.cache.read().await;
-            if let Some(cached_results) = cache.get(&cache_key) {
+            if let Some(cached_results) = cache.peek(&cache_key) {
                 debug!("Cache hit for vector search");
                 self.update_metrics(
                     true,

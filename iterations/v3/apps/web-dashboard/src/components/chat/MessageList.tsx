@@ -9,6 +9,8 @@ export default function MessageList({
   messages,
   isLoading,
   onMessageSelect,
+  enableTTS = true,
+  onTTSGenerated,
 }: Omit<MessageListProps, "sessionId">) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);

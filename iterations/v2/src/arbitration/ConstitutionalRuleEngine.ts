@@ -502,7 +502,15 @@ export class ConstitutionalRuleEngine {
   }
 
   /**
-   * Evaluate rule logic (simplified)
+   * TODO: Implement comprehensive constitutional rule evaluation engine
+   * - Parse and evaluate complex rule conditions with logical operators
+   * - Implement rule engine with support for variables, functions, and expressions
+   * - Add rule evaluation context with access to system state and metadata
+   * - Support rule chaining and dependency resolution
+   * - Implement rule evaluation performance optimization and caching
+   * - Add rule evaluation audit logging and decision traceability
+   * - Support rule evaluation testing and validation frameworks
+   * - Implement rule evaluation error handling and recovery mechanisms
    */
   private evaluateRuleLogic(
     rule: ConstitutionalRule,

@@ -300,7 +300,15 @@ export class SystemHealthMonitor extends EventEmitter {
       return;
     }
 
-    // Increment error rate (simplified - would use time-based window in production)
+    // TODO: Implement time-based error rate tracking and analysis
+    // - Use sliding time windows for error rate calculation (1m, 5m, 15m, 1h)
+    // - Implement exponential decay for historical error weighting
+    // - Add error rate trend analysis and anomaly detection
+    // - Support error rate forecasting and predictive alerting
+    // - Implement error rate correlation with system load and performance
+    // - Add error categorization and severity-weighted error rates
+    // - Support error rate comparison across different time periods
+    // - Implement error rate-based circuit breaker activation
     metrics.errorRate += 1;
     metrics.lastActivity = new Date();
 

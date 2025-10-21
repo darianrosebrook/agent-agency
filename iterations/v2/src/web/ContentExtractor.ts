@@ -203,7 +203,15 @@ export class ContentExtractor {
         return true;
       }
 
-      // Parse robots.txt (simplified)
+      // TODO: Implement comprehensive robots.txt parsing and compliance
+      // - Use proper robots.txt parsing libraries (robots-parser, robotstxt-js)
+      // - Support all robots.txt directives (Allow, Disallow, Crawl-delay, Sitemap)
+      // - Implement user-agent matching and precedence rules
+      // - Add robots.txt caching with proper expiration handling
+      // - Support robots.txt wildcards and pattern matching
+      // - Implement robots.txt validation and error handling
+      // - Add robots.txt compliance monitoring and reporting
+      // - Support internationalized domain names and Unicode handling
       const robotsTxt = response.data;
       const allowed = this.parseRobotsTxt(
         robotsTxt,

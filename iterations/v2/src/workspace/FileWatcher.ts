@@ -365,7 +365,15 @@ export class FileWatcher extends EventEmitter {
     // Check against ignore patterns
     for (const pattern of this.config.ignorePatterns) {
       if (typeof pattern === "string") {
-        // Simple glob matching (simplified)
+        // TODO: Implement proper glob pattern matching and file filtering
+        // - Use dedicated glob libraries (minimatch, picomatch, or micromatch)
+        // - Support full glob syntax (**/*, ?, [abc], {a,b,c})
+        // - Implement pattern caching for performance optimization
+        // - Support negated patterns and precedence rules
+        // - Add case-insensitive matching options
+        // - Implement pattern normalization and validation
+        // - Support relative and absolute path matching
+        // - Add pattern performance profiling and optimization
         if (
           relativePath.includes(pattern.replace("**/", "").replace("/*", ""))
         ) {

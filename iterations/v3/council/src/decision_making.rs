@@ -366,14 +366,7 @@ impl AlgorithmicDecisionEngine {
                             category: change.category.clone(),
                             description: change.description.clone(),
                             rationale: change.rationale.clone(),
-                             // TODO: Implement proper acceptance criteria extraction
-                             // - Define structured acceptance criteria format
-                             // - Extract criteria from requirements and specifications
-                             // - Validate criteria against change impact analysis
-                             // - Support automated criteria verification
-                             // - Add criteria versioning and traceability
-                             // - Integrate with testing frameworks
-                             acceptance_criteria: change.rationale.clone(), // PLACEHOLDER: Using rationale as criteria
+                             acceptance_criteria: Self::extract_acceptance_criteria(&change.description, &change.rationale),
                         }).collect(),
                             change_priority: priority.clone(),
                             estimated_effort: estimated_effort.clone(),

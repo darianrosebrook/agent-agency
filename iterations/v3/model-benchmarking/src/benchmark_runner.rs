@@ -94,14 +94,15 @@ impl ExecutionTelemetry {
         }
     }
 
-    /// TODO: Implement actual system memory usage monitoring
-    /// - [ ] Use system monitoring libraries to get real memory usage
-    /// - [ ] Support different memory metrics (RSS, VSZ, PSS, etc.)
-    /// - [ ] Add memory usage trend analysis and prediction
-    /// - [ ] Implement memory leak detection during benchmarks
-    /// - [ ] Support cross-platform memory monitoring (Linux, macOS, Windows)
-    /// - [ ] Add memory usage alerting and threshold monitoring
-    /// - [ ] Implement memory usage profiling and heap analysis
+    async fn get_current_memory_usage(&self) -> Result<u64> {
+        // TODO: Implement actual system memory usage monitoring
+        // - [ ] Use system monitoring libraries to get real memory usage
+        // - [ ] Support different memory metrics (RSS, VSZ, PSS, etc.)
+        // - [ ] Add memory usage trend analysis and prediction
+        // - [ ] Implement memory leak detection during benchmarks
+        // - [ ] Support cross-platform memory monitoring (Linux, macOS, Windows)
+        // - [ ] Add memory usage alerting and threshold monitoring
+        // - [ ] Implement memory usage profiling and heap analysis
         Ok(256 + (self.execution_id.as_u128() % 512) as u64)
     }
 

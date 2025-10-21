@@ -57,14 +57,28 @@ impl ModelRegistry {
     }
 
     /// Select the best model for a task
-    pub fn select_model(&self, task: &crate::types::Task) -> Result<&dyn ModelProvider, ModelRegistryError> {
-        let available_ids: Vec<&String> = self.providers.keys().collect();
+    pub async fn select_model(&self, task: &crate::types::Task) -> Result<&dyn ModelProvider, ModelRegistryError> {
+        // Filter for healthy providers only
+        let mut healthy_providers = Vec::new();
+        for (id, provider) in &self.providers {
+            match provider.health_check().await {
+                Ok(status) if status.healthy => {
+                    healthy_providers.push(id);
+                }
+                Ok(status) => {
+                    tracing::warn!("Model {} is unhealthy: {:?}", id, status.error_message);
+                }
+                Err(e) => {
+                    tracing::warn!("Failed to check health of model {}: {}", id, e);
+                }
+            }
+        }
 
-        if available_ids.is_empty() {
+        if healthy_providers.is_empty() {
             return Err(ModelRegistryError::NoProvidersAvailable);
         }
 
-        let selected_id = self.selection_policy.select_model(task.task_type, &available_ids)?;
+        let selected_id = self.selection_policy.select_model(task.task_type, &healthy_providers)?;
 
         self.providers.get(selected_id)
             .map(|p| p.as_ref())

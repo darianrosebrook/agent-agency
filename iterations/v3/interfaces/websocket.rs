@@ -17,6 +17,7 @@ use uuid::Uuid;
 
 use crate::orchestration::tracking::{EventBus, ProgressTracker};
 use crate::orchestration::planning::types::ExecutionEvent;
+use agent_agency_database::DatabaseClient;
 
 /// WebSocket API configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]

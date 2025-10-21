@@ -24,6 +24,11 @@ rand = "0.8"
 regex = "1.10"
 tokenizers = "0.15"  # HuggingFace tokenizers for proper text tokenization
 
+# Action request parsing
+pest = "2.7"  # PEG parser for formal grammars
+pest_derive = "2.7"  # Derive macros for pest
+nom = "7.1"  # Parser combinators for robust parsing
+
 [[example]]
 name = "playground_test"
 path = "examples/playground_test.rs"

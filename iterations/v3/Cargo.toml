@@ -30,7 +30,11 @@ members = [
     "indexers",
     "knowledge-ingestor",
     "file_ops",
-    "cli"
+    "cli",
+    "runtime-optimization",
+    "tool-ecosystem",
+    "federated-learning",
+    "model-hotswap"
 ]
 
 [workspace.package]

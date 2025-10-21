@@ -9,6 +9,7 @@ use enrichers::{VisionEnricher, AsrEnricher, EntityEnricher, VisualCaptionEnrich
 use indexers::{Bm25Indexer, HnswIndexer, JobScheduler};
 use agent_agency_research::KnowledgeSeeker;
 use agent_agency_council::coordinator::ConsensusCoordinator;
+use crate::audit_trail::AuditTrailManager;
 use std::path::Path;
 use std::sync::Arc;
 use tracing::{debug, error, info, warn};

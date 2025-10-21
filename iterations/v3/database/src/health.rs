@@ -252,6 +252,7 @@ impl DatabaseHealthChecker {
     }
 
     /// Execute a query that returns a single row
+    /// TODO: Remove if not needed, or implement usage for health checks
     async fn execute_query_one(&self, query: &str) -> Result<sqlx::postgres::PgRow> {
         let query = query.to_string();
         let pool = self.client.pool().clone();

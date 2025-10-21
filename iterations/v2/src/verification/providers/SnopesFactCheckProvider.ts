@@ -154,8 +154,16 @@ export class SnopesFactCheckProvider {
   ): SnopesSearchResponse["results"] {
     const results: SnopesSearchResponse["results"] = [];
 
-    // Basic HTML parsing for Snopes search results
-    // This is a simplified implementation - production would use proper HTML parsing
+    // TODO: Implement comprehensive HTML parsing and content extraction
+    // - Use proper HTML parsing libraries (Cheerio, JSDOM, or puppeteer)
+    // - Implement CSS selector-based content extraction
+    // - Support JavaScript-rendered content parsing
+    // - Add HTML sanitization and security validation
+    // - Implement structured data extraction (JSON-LD, microdata)
+    // - Support responsive content parsing across different devices
+    // - Add HTML validation and well-formedness checking
+    // - Implement content fingerprinting and change detection
+    // - Support multi-page content aggregation and linking
 
     // Look for article links in search results
     const articleRegex =

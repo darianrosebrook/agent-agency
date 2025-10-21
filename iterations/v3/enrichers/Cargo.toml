@@ -18,6 +18,8 @@ lru = "0.12"
 regex = "1.10"
 sha2 = "0.10"
 tempfile = "3.8"
+email_address = "0.2"
+url = "2.4"
 
 [features]
 default = []

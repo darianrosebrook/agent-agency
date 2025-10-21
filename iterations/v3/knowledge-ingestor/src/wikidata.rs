@@ -316,6 +316,7 @@ fn normalize_text(text: &str) -> String {
 }
 
 /// Generate embedding for parsed entity
+#[cfg(feature = "embeddings")]
 async fn generate_embedding(
     ingestor: &KnowledgeIngestor,
     parsed: &ParsedEntity,

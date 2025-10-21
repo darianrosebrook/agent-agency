@@ -77,9 +77,7 @@ pub enum AlertSeverity {
 
 #[derive(Debug)]
 pub struct SLOTracker {
-    definitions: Arc<RwLock<HashMap<String, SLODefinition>>>,
-    measurements: Arc<RwLock<HashMap<String, Vec<SLOMeasurement>>>>,
-    alerts: Arc<RwLock<Vec<SLOAlert>>>,
+    db_client: Arc<DatabaseClient>,
     alert_thresholds: SLOAlertThresholds,
 }
 

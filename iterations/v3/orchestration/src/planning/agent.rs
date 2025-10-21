@@ -8,6 +8,7 @@ use crate::planning::context_builder::ContextBuilder;
 use crate::planning::llm_client::{LLMClient, Message, MessageRole, GenerationRequest};
 use crate::planning::spec_generator::SpecGenerator;
 use crate::planning::validation_loop::ValidationLoop;
+use crate::planning::acceptance_criteria_extractor::AcceptanceCriteriaExtractor;
 
 /// LLM Response Cache for API optimization
 #[derive(Debug, Clone)]

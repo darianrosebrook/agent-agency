@@ -250,7 +250,15 @@ export class TaskQueuePersistence {
       }
     });
 
-    // Calculate average wait time (simplified)
+    // TODO: Implement comprehensive queue performance analytics
+    // - Calculate percentiles (P50, P95, P99) for wait times and processing times
+    // - Implement time-weighted averages for recent performance trends
+    // - Add queue throughput and utilization metrics
+    // - Support per-task-type and per-agent performance analysis
+    // - Implement queue congestion detection and alerting
+    // - Add historical performance trending and forecasting
+    // - Support SLA compliance monitoring and reporting
+    // - Implement performance regression detection and root cause analysis
     const waitTimeSql = `
       SELECT
         AVG(EXTRACT(EPOCH FROM (COALESCE(completed_at, NOW()) - created_at))) * 1000 as avg_wait_ms

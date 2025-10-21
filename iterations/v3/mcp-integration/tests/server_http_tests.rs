@@ -3,10 +3,12 @@ use agent_agency_mcp::types::{
     ServerConfig as SConfig, ToolDiscoveryConfig as TDConfig, ValidationStrictness,
 };
 use agent_agency_mcp::MCPServer;
+use agent_agency_database::DatabaseClient;
 use chrono::Utc;
 use futures_util::{SinkExt, StreamExt};
 use reqwest::StatusCode;
 use std::collections::HashMap;
+use std::sync::Arc;
 use tokio_tungstenite::{
     connect_async, tungstenite::client::IntoClientRequest, tungstenite::http::HeaderValue,
     tungstenite::Message,

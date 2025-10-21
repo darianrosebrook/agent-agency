@@ -23,6 +23,11 @@ async-trait = "0.1"
 parking_lot = "0.12"
 lru = "0.12"
 
+# HNSW implementation
+rand = "0.8"  # Random number generation for HNSW
+priority-queue = "2.0"  # Priority queue for nearest neighbor search
+dashmap = "5.5"  # Concurrent hashmap for parallel operations
+
 # Search and indexing
 # TODO: Implement full-text search with Tantivy and HNSW
 # - Integrate Tantivy for BM25 full-text search capabilities

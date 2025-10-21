@@ -282,6 +282,7 @@ fn build_embedding_text(canonical_name: &str, definition: &str, examples: &[Stri
 }
 
 /// Generate embedding for parsed entity
+#[cfg(feature = "embeddings")]
 async fn generate_embedding(
     ingestor: &KnowledgeIngestor,
     parsed: &ParsedEntity,

@@ -131,7 +131,16 @@ export class CredibilityScorer {
       sources.push(match[1]);
     }
 
-    // Extract domain references (simplified)
+    // TODO: Implement comprehensive domain reference extraction and analysis
+    // - Use proper URL parsing libraries (url-parse, whatwg-url)
+    // - Implement domain normalization and canonicalization
+    // - Support international domain names (IDN) and Unicode domains
+    // - Add domain reputation checking and blacklisting
+    // - Implement domain relationship analysis and clustering
+    // - Support domain authority scoring and ranking
+    // - Add domain traffic and popularity analysis
+    // - Implement domain age and registration verification
+    // - Support domain content quality assessment
     const domainRegex = /\b([a-zA-Z0-9-]+\.[a-zA-Z]{2,})(?:\.[a-zA-Z]{2,})?\b/g;
     while ((match = domainRegex.exec(content)) !== null) {
       const domain = match[1];

@@ -716,40 +716,20 @@ impl EvidenceCollector {
         let test_times_path = std::path::Path::new("target/debug/deps/test_times.json");
 
         let content = if test_times_path.exists() {
-            if let Ok(_timing_data) = std::fs::read_to_string(test_times_path) {
-                // TODO: Implement proper test timing data parsing and validation
-                // - Add structured schema for test timing data
-                // - Implement comprehensive parsing with error handling
-                // - Support multiple timing data formats and sources
-                // - Add timing data validation and statistical analysis
-                // - Implement timing data aggregation and reporting
-                // - Add timing data performance optimization
-                // PLACEHOLDER: Using simplified parsing
-                /// Requirements for completion:
-                /// - [ ] Parse JSON timing data with proper schema validation
-                /// - [ ] Extract individual test execution times and metadata
-                /// - [ ] Calculate statistical metrics (mean, median, percentiles)
-                /// - [ ] Identify performance regressions and improvements
-                /// - [ ] Implement proper error handling for malformed timing data
-                /// - [ ] Add support for different test timing formats and versions
-                /// - [ ] Implement proper data validation and sanitization
-                /// - [ ] Add support for timing data aggregation and analysis
-                /// - [ ] Implement proper memory management for large timing datasets
-                /// - [ ] Add support for timing data export and reporting
-                // - [ ] Support different test timing formats and sources
-                // - [ ] Implement timing data aggregation and reporting
-                // - [ ] Add historical timing trend analysis
-                // TODO: Implement comprehensive test timing data analysis and visualization
-                // - [ ] Parse JSON timing data with proper schema validation and error handling
-                // - [ ] Extract individual test execution times, setup times, and teardown times
-                // - [ ] Calculate statistical measures (mean, median, percentiles, standard deviation)
-                // - [ ] Implement timing data aggregation across test runs and suites
-                // - [ ] Add historical timing trend analysis and performance regression detection
-                // - [ ] Support timing data export and integration with CI/CD dashboards
-                // - [ ] Implement timing-based test prioritization and optimization recommendations
-                "Test performance data available - detailed timing analysis would be implemented here".to_string()
-            } else {
-                "Test timing data exists but could not be read".to_string()
+            match self.parse_test_timing_data(test_times_path) {
+                Ok(analysis) => {
+                    format!(
+                        "Test performance analysis: {} tests analyzed, avg: {:.2}ms, p95: {:.2}ms, regressions: {}",
+                        analysis.test_count,
+                        analysis.average_time_ms,
+                        analysis.p95_time_ms,
+                        analysis.regressions_detected
+                    )
+                }
+                Err(e) => {
+                    warn!("Failed to parse test timing data: {}", e);
+                    "Test timing data exists but parsing failed".to_string()
+                }
             }
         } else {
             "No detailed test performance data available".to_string()

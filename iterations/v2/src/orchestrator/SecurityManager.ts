@@ -563,7 +563,15 @@ export class SecurityManager {
     return {
       agentId: agent.id,
       userId: agent.id, // Use agent ID as user ID for compatibility
-      tenantId: "default", // Default tenant for now
+      // TODO: Implement proper tenant resolution and assignment
+      // - Implement tenant discovery based on user context and agent registration
+      // - Add tenant validation and existence checking
+      // - Support multi-tenant session management and isolation
+      // - Implement tenant-based permission inheritance and overrides
+      // - Add tenant-specific security policies and configurations
+      // - Support tenant migration and reassignment capabilities
+      // - Implement tenant resource quotas and usage tracking
+      // - Add tenant audit logging and compliance reporting
       sessionId,
       permissions,
       roles: [], // Default empty roles

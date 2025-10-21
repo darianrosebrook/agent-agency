@@ -757,7 +757,7 @@ pub struct RequiredChange {
 }
 
 /// Change category
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ChangeCategory {
     Quality,
     Security,

@@ -687,3 +687,33 @@ pub struct KnowledgeStats {
     pub avg_usage_count: f64,
     pub last_updated: DateTime<Utc>,
 }
+
+/// Waiver model from database
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct Waiver {
+    pub id: Uuid,
+    pub title: String,
+    pub reason: String,
+    pub description: String,
+    pub gates: Vec<String>,
+    pub approved_by: String,
+    pub impact_level: String,
+    pub mitigation_plan: String,
+    pub expires_at: DateTime<Utc>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    pub status: String,
+    pub metadata: serde_json::Value,
+}
+
+/// Audit log model from database
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct AuditLog {
+    pub id: Uuid,
+    pub action: String,
+    pub actor: Option<String>,
+    pub resource_id: Option<Uuid>,
+    pub resource_type: Option<String>,
+    pub change_summary: serde_json::Value,
+    pub created_at: DateTime<Utc>,
+}

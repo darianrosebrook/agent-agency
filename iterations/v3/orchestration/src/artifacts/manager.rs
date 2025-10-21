@@ -91,11 +91,11 @@ impl ArtifactManager {
         let artifacts = if let Some(version) = version {
             // Get specific version
             let metadata = self.version_control.get_version(task_id, &version).await?;
-            self.storage.retrieve(&metadata).await?
+            self.storage.retrieve(task_id, &metadata).await?
         } else {
             // Get latest version
             let metadata = self.get_latest_metadata(task_id).await?;
-            self.storage.retrieve(&metadata).await?
+            self.storage.retrieve(task_id, &metadata).await?
         };
 
         Ok(artifacts)

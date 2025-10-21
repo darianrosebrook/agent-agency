@@ -267,6 +267,47 @@ export default function TaskCard({
               <p>{task.error_message}</p>
             </div>
           )}
+
+          {/* Audit Trail Section */}
+          {task.audit_trail && task.audit_trail.length > 0 && (
+            <div className={styles.auditTrail}>
+              <h4>Audit Trail</h4>
+              <div className={styles.timeline}>
+                {task.audit_trail.slice(0, 5).map((entry, index) => (
+                  <div key={index} className={styles.timelineItem}>
+                    <div className={styles.timelineMarker}>
+                      <span className={styles.timelineIcon}>
+                        {getAuditIcon(entry.action)}
+                      </span>
+                    </div>
+                    <div className={styles.timelineContent}>
+                      <div className={styles.timelineHeader}>
+                        <span className={styles.action}>{entry.action}</span>
+                        <span className={styles.timestamp}>
+                          {formatDate(entry.created_at)}
+                        </span>
+                      </div>
+                      {entry.actor && (
+                        <div className={styles.actor}>
+                          by {entry.actor}
+                        </div>
+                      )}
+                      {entry.change_summary && (
+                        <div className={styles.changeSummary}>
+                          {JSON.stringify(entry.change_summary, null, 2)}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                {task.audit_trail.length > 5 && (
+                  <div className={styles.moreEntries}>
+                    +{task.audit_trail.length - 5} more entries
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

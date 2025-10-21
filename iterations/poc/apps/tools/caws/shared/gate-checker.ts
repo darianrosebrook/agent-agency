@@ -77,7 +77,15 @@ export class CawsGateChecker extends CawsBaseTool {
         return { waived: false };
       }
 
-      // Check if any waiver applies (for now, return the first active one)
+      // TODO: Implement sophisticated waiver evaluation and conflict resolution
+      // - Implement waiver priority and precedence rules
+      // - Add waiver scope validation against gate requirements
+      // - Support partial waivers for specific gate criteria
+      // - Implement waiver expiration and renewal workflows
+      // - Add waiver audit logging and approval tracking
+      // - Support waiver dependencies and conditional logic
+      // - Implement waiver conflict detection and resolution
+      // - Add waiver performance impact assessment
       for (const waiver of waivers) {
         const status = await this.waiversManager.checkWaiverStatus(waiver.created_at);
         if (status.active) {

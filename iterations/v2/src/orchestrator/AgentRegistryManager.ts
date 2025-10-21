@@ -137,7 +137,13 @@ export class AgentRegistryManager {
     if (!this.dbClient) return;
 
     try {
-      // Query all agents (simplified query for loading)
+      // TODO: Implement comprehensive agent loading query
+      // - Support loading agents by multiple task types, not just file_editing
+      // - Add filtering by agent capabilities and specializations
+      // - Include agent performance metrics for selection
+      // - Support pagination for large agent registries
+      // - Add agent availability status filtering
+      // - Implement agent load balancing considerations
       const result = await this.dbClient.queryAgents({
         taskType: "file_editing", // Required field
       });

@@ -69,7 +69,15 @@ export class ContractTestFramework {
         return result;
       }
 
-      // Extract interface properties (simplified)
+      // TODO: Implement comprehensive interface property extraction and validation
+      // - Use TypeScript compiler API for accurate AST parsing and analysis
+      // - Support complex property types (unions, intersections, generics)
+      // - Handle interface inheritance and property merging
+      // - Extract method signatures with parameter and return types
+      // - Support decorator and metadata extraction
+      // - Implement property visibility and access modifier checking
+      // - Add interface evolution tracking and compatibility validation
+      // - Support multiple interface languages (TypeScript, Protocol Buffers, etc.)
       const interfaceProps = interfaceMatches[1]
         .split("\n")
         .map((line) => line.trim())

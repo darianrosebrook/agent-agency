@@ -268,8 +268,15 @@ export class TaskManagementTools {
     limit?: number;
   }): Promise<{ tasks: any[]; total: number; filters: any }> {
     try {
-      // Simplified implementation - in a real system you'd have proper querying
-      // For now, we'll return mock data
+      // TODO: Implement comprehensive task querying and management
+      // - Add database-backed task queries with proper indexing and filtering
+      // - Support complex query operations (AND/OR, date ranges, status combinations)
+      // - Implement task search with full-text search capabilities
+      // - Add task aggregation and analytics (completion rates, performance metrics)
+      // - Support task relationship queries (dependencies, hierarchies)
+      // - Implement task pagination with efficient cursor-based navigation
+      // - Add real-time task status updates and change notifications
+      // - Support task archiving and historical data management
       const allTasks = [
         {
           id: "task_001",

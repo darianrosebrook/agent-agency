@@ -34,7 +34,7 @@ pub struct FileWatcher {
 }
 
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
+
 struct FileWatcherEvent {
     path: PathBuf,
     last_seen: Instant,

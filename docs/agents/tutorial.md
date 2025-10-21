@@ -1,31 +1,31 @@
-# CAWS Tutorial - Step-by-Step Guide
+# Agent Agency V3 Tutorial - Getting Started
 
-**Hands-on tutorial for implementing CAWS in your project**
+**Step-by-step guide to using the Constitutional AI System**
 
 ---
 
 ## 🎯 Tutorial Overview
 
-This tutorial walks you through implementing CAWS for a simple feature. We'll build a "user preferences" feature with proper planning, testing, and quality gates.
+This tutorial walks you through using Agent Agency V3 to execute autonomous tasks with constitutional governance. You'll learn how to submit tasks, monitor progress, and intervene when needed.
 
-**Time**: ~45 minutes  
-**Level**: Beginner to Intermediate  
-**Prerequisites**: Node.js project with basic testing setup
+**Time**: ~30 minutes  
+**Level**: Beginner  
+**Prerequisites**: Docker, Rust, Node.js
 
 ---
 
 ## 📋 Tutorial Scenario
 
-**Feature**: Add user preferences storage to a web application
+**Task**: Implement a user authentication system with JWT tokens
 
 **Requirements**:
-- Store user preferences in localStorage
-- Support dark/light theme preference
-- Validate preference values
-- Handle storage errors gracefully
-- Include proper TypeScript types
+- User registration and login endpoints
+- JWT token generation and validation
+- Password hashing and secure storage
+- Proper error handling and validation
+- Database persistence for users
 
-**Risk Level**: Tier 2 (standard feature with data persistence)
+**Risk Level**: Tier 2 (authentication system with data persistence)
 
 ---
 

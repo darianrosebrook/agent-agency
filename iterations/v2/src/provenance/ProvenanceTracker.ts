@@ -257,7 +257,15 @@ export class ProvenanceTracker extends EventEmitter {
       .sort((a, b) => b.count - a.count)
       .slice(0, 5);
 
-    // Calculate trends (simplified - would need more complex date bucketing)
+    // TODO: Implement sophisticated temporal trend analysis for provenance
+    // - Implement proper date bucketing with timezone handling and daylight saving
+    // - Support multiple time granularities (hourly, daily, weekly, monthly, yearly)
+    // - Add trend calculation with statistical significance testing
+    // - Implement seasonal decomposition and pattern recognition
+    // - Support trend forecasting and anomaly detection
+    // - Add trend comparison across different provenance sources
+    // - Implement trend visualization and reporting capabilities
+    // - Support trend-based alerting and automated insights
     const trends = {
       daily: [] as Array<{ date: string; count: number }>,
       weekly: [] as Array<{ week: string; count: number }>,

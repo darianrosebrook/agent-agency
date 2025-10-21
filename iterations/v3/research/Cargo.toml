@@ -27,7 +27,7 @@ parking_lot = "0.12"
 # Vector search and embeddings
 qdrant-client = "1.10"
 fxhash = "0.2"
-embedding-service = { path = "../embedding-service" }
+embedding-service = { path = "../embedding-service", optional = true }
 lru = "0.12"
 
 # Database integration

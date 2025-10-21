@@ -5,8 +5,13 @@
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::collections::HashMap;
+use std::sync::Arc;
 use tokio::fs;
+use tokio::sync::RwLock;
 use uuid::Uuid;
+use chrono::{DateTime, Utc};
+use sha2::{Digest, Sha256};
 use crate::{Workspace, ChangeSet, AllowList, Budgets, ChangeSetId, FileOpsError, Result, validate_changeset};
 
 /// Temp directory mirror workspace for safe file operations

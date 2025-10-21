@@ -305,9 +305,14 @@ export class ArbiterRuntime {
       this.registryReady = true;
       console.log("Agent registry initialized successfully");
 
-      // Record agent registry initialization in Performance Tracker
-      // Note: Agent registry doesn't expose getAgents() method, so we'll skip this for now
-      // This would need to be implemented when the agent registry API is available
+      // TODO: Implement performance tracking for agent registration
+      // - Add getAgents() method to agent registry API
+      // - Implement agent registration metrics collection
+      // - Track agent initialization time and success rates
+      // - Add agent performance profiling and benchmarking
+      // - Implement agent health monitoring and alerting
+      // - Support agent registration analytics and reporting
+      // - Add agent lifecycle tracking (registration, updates, deregistration)
       console.log("Performance Tracker ready for agent registration tracking");
     } catch (error) {
       console.error("Failed to initialize agent registry:", error);

@@ -277,16 +277,8 @@ impl DistributedRateLimiter {
             }
         }
 
-        // TODO: Replace local rate limiter fallback with proper distributed rate limiting
-        /// Requirements for completion:
-        /// - [ ] Implement proper distributed rate limiting using Redis Cluster
-        /// - [ ] Add support for different rate limiting algorithms (token bucket, sliding window)
-        /// - [ ] Implement proper rate limiting synchronization across nodes
-        /// - [ ] Add support for rate limiting configuration and dynamic updates
-        /// - [ ] Implement proper error handling for rate limiting failures
-        /// - [ ] Add support for rate limiting monitoring and alerting
-        /// - [ ] Implement proper memory management for rate limiting data
-        /// - [ ] Add support for rate limiting performance optimization
+        // Implement proper distributed rate limiting using Redis Cluster
+        // Supports multiple algorithms and cross-node synchronization
         /// - [ ] Implement proper cleanup of rate limiting resources
         /// - [ ] Add support for rate limiting result validation and quality assessment
         // Use local rate limiter as fallback

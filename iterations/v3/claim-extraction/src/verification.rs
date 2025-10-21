@@ -6,6 +6,7 @@
 use crate::types::*;
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
+use regex::Regex;
 use serde::{Deserialize, Serialize};
 use tracing::debug;
 use uuid::Uuid;

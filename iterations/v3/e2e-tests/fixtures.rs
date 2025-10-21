@@ -6,8 +6,8 @@ use std::collections::HashMap;
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
 
-use crate::orchestration::planning::types::{WorkingSpec, ExecutionArtifacts, CodeChange, ChangeType};
-use crate::orchestration::quality::QualityReport;
+use orchestration::planning::types::{WorkingSpec, ExecutionArtifacts, CodeChange, ChangeType};
+use orchestration::quality::QualityReport;
 
 /// Test fixtures for E2E scenarios
 pub struct TestFixtures;

@@ -7,6 +7,160 @@ import {
   MetricsStreamEvent,
 } from "@/types/metrics";
 
+// Mock agent definitions with realistic data
+const MOCK_AGENTS = [
+  {
+    id: "agent_1",
+    name: "CodeAnalyzer",
+    capabilities: {
+      languages: ["rust", "typescript", "python"],
+      domains: ["code-analysis", "security", "performance"],
+      frameworks: ["tokio", "react", "django"],
+    },
+    performance: {
+      task_completion_rate: 0.92,
+      average_response_time_ms: 1200,
+      error_rate: 0.034,
+      active_tasks: 2,
+    },
+  },
+  {
+    id: "agent_2",
+    name: "TaskCoordinator",
+    capabilities: {
+      languages: ["typescript", "go"],
+      domains: ["orchestration", "task-management"],
+      frameworks: ["node", "express", "kubernetes"],
+    },
+    performance: {
+      task_completion_rate: 0.89,
+      average_response_time_ms: 950,
+      error_rate: 0.021,
+      active_tasks: 0,
+    },
+  },
+  {
+    id: "agent_3",
+    name: "SecurityAuditor",
+    capabilities: {
+      languages: ["rust", "python"],
+      domains: ["security", "compliance", "audit"],
+      frameworks: ["openssl", "cryptography"],
+    },
+    performance: {
+      task_completion_rate: 0.95,
+      average_response_time_ms: 1800,
+      error_rate: 0.012,
+      active_tasks: 1,
+    },
+  },
+  {
+    id: "agent_4",
+    name: "DataProcessor",
+    capabilities: {
+      languages: ["python", "sql"],
+      domains: ["data-processing", "analytics"],
+      frameworks: ["pandas", "numpy", "postgresql"],
+    },
+    performance: {
+      task_completion_rate: 0.87,
+      average_response_time_ms: 2100,
+      error_rate: 0.045,
+      active_tasks: 3,
+    },
+  },
+  {
+    id: "agent_5",
+    name: "APIDesigner",
+    capabilities: {
+      languages: ["typescript", "rust"],
+      domains: ["api-design", "microservices"],
+      frameworks: ["graphql", "rest", "axum"],
+    },
+    performance: {
+      task_completion_rate: 0.91,
+      average_response_time_ms: 1350,
+      error_rate: 0.028,
+      active_tasks: 0,
+    },
+  },
+  {
+    id: "agent_6",
+    name: "FrontendArchitect",
+    capabilities: {
+      languages: ["typescript", "javascript"],
+      domains: ["frontend", "ui-ux", "accessibility"],
+      frameworks: ["react", "nextjs", "tailwind"],
+    },
+    performance: {
+      task_completion_rate: 0.88,
+      average_response_time_ms: 1600,
+      error_rate: 0.039,
+      active_tasks: 1,
+    },
+  },
+  {
+    id: "agent_7",
+    name: "DatabaseExpert",
+    capabilities: {
+      languages: ["sql", "python"],
+      domains: ["database-design", "optimization"],
+      frameworks: ["postgresql", "mongodb", "redis"],
+    },
+    performance: {
+      task_completion_rate: 0.94,
+      average_response_time_ms: 1100,
+      error_rate: 0.018,
+      active_tasks: 0,
+    },
+  },
+  {
+    id: "agent_8",
+    name: "TestAutomation",
+    capabilities: {
+      languages: ["typescript", "python"],
+      domains: ["testing", "qa", "automation"],
+      frameworks: ["jest", "cypress", "pytest"],
+    },
+    performance: {
+      task_completion_rate: 0.85,
+      average_response_time_ms: 1900,
+      error_rate: 0.062,
+      active_tasks: 2,
+    },
+  },
+  {
+    id: "agent_9",
+    name: "DevOpsEngineer",
+    capabilities: {
+      languages: ["yaml", "bash", "python"],
+      domains: ["infrastructure", "deployment", "monitoring"],
+      frameworks: ["docker", "kubernetes", "terraform"],
+    },
+    performance: {
+      task_completion_rate: 0.90,
+      average_response_time_ms: 1450,
+      error_rate: 0.031,
+      active_tasks: 1,
+    },
+  },
+  {
+    id: "agent_10",
+    name: "ResearchAnalyst",
+    capabilities: {
+      languages: ["python", "r"],
+      domains: ["research", "analysis", "machine-learning"],
+      frameworks: ["scikit-learn", "tensorflow", "pandas"],
+    },
+    performance: {
+      task_completion_rate: 0.82,
+      average_response_time_ms: 2800,
+      error_rate: 0.078,
+      active_tasks: 1,
+    },
+  },
+];
+
 export default function RealTimeMetricsStream({
   onMetricsUpdate,
   onError,

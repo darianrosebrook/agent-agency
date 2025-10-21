@@ -6,7 +6,7 @@ pydantic==2.5.0
 python-multipart==0.0.6
 
 # AI/ML dependencies
-torch==2.1.1
+torch==2.0.1
 transformers==4.35.2
 tokenizers==0.15.0
 accelerate==0.24.1

@@ -474,28 +474,34 @@ export default function DatabaseExplorer({
                     }));
                   }
                 }}
-                onQuerySave={(name, query) => {
-                  // TODO: Implement query saving functionality
-                  console.log("Save query:", name, query);
-                  // TODO: Implement proper query persistence system
-                  // - Add database schema for saved queries
-                  // - Implement user authentication and authorization
-                  // - Add query sharing and collaboration features
-                  // - Implement query versioning and history
-                  // - Add query performance analytics
-                  // - Support query templates and favorites
-                  if (typeof window !== "undefined") {
-                    // eslint-disable-next-line no-undef
-                    const savedQueries = JSON.parse(
-                      // eslint-disable-next-line no-undef
-                      localStorage.getItem("savedQueries") ?? "{}"
-                    );
-                    savedQueries[name] = query;
-                    // eslint-disable-next-line no-undef
-                    localStorage.setItem(
-                      "savedQueries",
-                      JSON.stringify(savedQueries)
-                    );
+                onQuerySave={async (name, query) => {
+                  try {
+                    const response = await fetch("/api/v1/queries", {
+                      method: "POST",
+                      headers: {
+                        "Content-Type": "application/json",
+                      },
+                      body: JSON.stringify({
+                        name,
+                        query_text: query,
+                      }),
+                    });
+
+                    if (!response.ok) {
+                      throw new Error(`Failed to save query: ${response.statusText}`);
+                    }
+
+                    const savedQuery = await response.json();
+                    console.log("Query saved successfully:", savedQuery);
+
+                    // Refresh the query list by triggering a re-render
+                    // This could be improved with proper state management
+                    if (typeof window !== "undefined") {
+                      window.location.reload();
+                    }
+                  } catch (error) {
+                    console.error("Failed to save query:", error);
+                    alert("Failed to save query. Please try again.");
                   }
                 }}
                 isExecuting={state.isExecutingQuery ?? false}

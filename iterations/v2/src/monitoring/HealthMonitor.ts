@@ -353,14 +353,30 @@ export class HealthMonitor extends EventEmitter {
       console.warn("[HEALTH] Failed to get database connection stats:", error);
     }
 
-    // Calculate error rate (simplified - would need actual error tracking)
+    // TODO: Implement comprehensive error rate tracking and analysis
+    // - Track errors over time windows with proper aggregation
+    // - Implement error rate calculation with statistical significance
+    // - Support error categorization and severity weighting
+    // - Add error rate trend analysis and anomaly detection
+    // - Implement error rate correlation with system performance
+    // - Support error rate forecasting and predictive alerting
+    // - Add error rate comparison across different time periods
+    // - Implement error rate-based health scoring and recommendations
     const recentErrors = this.alerts.size; // Simplified - actual implementation would track errors over time
     const errorRate =
       recentErrors > 0
         ? (recentErrors / Math.max(1, this.checkCount)) * 100
         : 0;
 
-    // Calculate throughput (simplified - would need task completion tracking)
+    // TODO: Implement comprehensive throughput monitoring and optimization
+    // - Track actual task completion rates and processing volumes
+    // - Implement throughput trend analysis and performance forecasting
+    // - Support throughput benchmarking against service level objectives
+    // - Add throughput correlation with system resource utilization
+    // - Implement throughput bottleneck identification and optimization
+    // - Support throughput comparison across different time periods
+    // - Add throughput-based capacity planning and scaling recommendations
+    // - Implement throughput monitoring with alerting and anomaly detection
     const uptimeMinutes = (Date.now() - this.startTime) / 60000;
     const throughput = uptimeMinutes > 0 ? this.checkCount / uptimeMinutes : 0;
 

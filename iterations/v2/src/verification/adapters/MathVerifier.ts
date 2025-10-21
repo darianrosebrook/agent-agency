@@ -191,7 +191,16 @@ export class MathVerifier {
       let solutions: number[] = [];
 
       try {
-        // This is a simplified solver - in practice, you'd use a more robust symbolic math library
+        // TODO: Implement comprehensive symbolic mathematics verification
+        // - Integrate with symbolic math libraries (SymPy, MathJS, or Wolfram Engine)
+        // - Implement equation parsing and normalization
+        // - Support symbolic differentiation and integration verification
+        // - Add algebraic manipulation and simplification capabilities
+        // - Implement proof verification and mathematical reasoning
+        // - Support geometric and trigonometric verification
+        // - Add numerical verification with precision controls
+        // - Implement mathematical expression canonicalization
+        // - Support multi-step mathematical proof validation
         if (equation.includes("=")) {
           const [left, right] = equation.split("=").map((s) => s.trim());
           const leftExpr = parse(left);

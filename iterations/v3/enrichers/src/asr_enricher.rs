@@ -11,7 +11,6 @@ use crate::types::{AsrResult, EnricherConfig, Speaker, SpeechSegment, WordTiming
 use anyhow::{anyhow, Result};
 use std::path::PathBuf;
 use std::time::Instant;
-use tokio::io::AsyncWriteExt;
 
 /// Swift Speech Recognizer bridge for Apple Speech Framework
 #[derive(Debug, Clone)]

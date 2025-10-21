@@ -15,6 +15,30 @@ pub struct OllamaConfig {
     pub base_url: String,
     pub model_name: String,
     pub timeout_seconds: u64,
+    pub max_context: usize,
+    pub generation_params: GenerationParams,
+}
+
+/// Generation parameters for Ollama
+#[derive(Debug, Clone)]
+pub struct GenerationParams {
+    pub temperature: f32,
+    pub top_p: f32,
+    pub top_k: i32,
+    pub max_tokens: usize,
+    pub repetition_penalty: f32,
+}
+
+impl Default for GenerationParams {
+    fn default() -> Self {
+        Self {
+            temperature: 0.7,
+            top_p: 0.9,
+            top_k: 40,
+            max_tokens: 2048,
+            repetition_penalty: 1.1,
+        }
+    }
 }
 
 impl Default for OllamaConfig {

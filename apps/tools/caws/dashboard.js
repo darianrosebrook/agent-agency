@@ -820,8 +820,15 @@ function gatherProjectMetrics(dashboard, projectDir) {
     dashboard.metrics.TEST_QUALITY.current = 60; // Default
   }
 
-  // Calculate flake rate (simplified)
-  dashboard.metrics.FLAKE_RATE.current = 2; // 2% default
+  // TODO: Implement proper flake rate calculation based on historical test data
+  // - [ ] Collect test execution results over multiple CI runs
+  // - [ ] Identify tests that pass/fail inconsistently across runs
+  // - [ ] Calculate flake rate as percentage of tests showing intermittent behavior
+  // - [ ] Implement statistical analysis to distinguish true flakes from environment issues
+  // - [ ] Add configurable thresholds for acceptable flake rates by test type
+  // - [ ] Store historical flake data for trend analysis
+  // - [ ] Integrate with test result storage and reporting systems
+  dashboard.metrics.FLAKE_RATE.current = 2; // PLACEHOLDER: Remove when proper flake rate calculation is implemented
 
   // Calculate compliance metrics
   dashboard.metrics.RISK_TIER_COMPLIANCE.current = 95; // Default

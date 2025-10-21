@@ -344,7 +344,15 @@ function calculateQualityScore(analysis) {
     QUALITY_CRITERIA.EDGE_CASE_COVERAGE.thresholds
   );
 
-  // Descriptive naming score (simplified)
+  // TODO: Implement sophisticated code naming quality analysis
+  // - Use NLP techniques for semantic naming quality assessment
+  // - Implement naming convention validation and scoring
+  // - Support multiple programming languages and naming standards
+  // - Add context-aware naming appropriateness evaluation
+  // - Implement naming consistency analysis across codebase
+  // - Support custom naming rules and domain-specific terminology
+  // - Add naming evolution tracking and improvement suggestions
+  // - Implement automated naming refactoring recommendations
   const namingScore = analysis.descriptiveNames > 0 ? 1 : 0.5;
   scores.descriptiveNaming = normalizeScore(
     namingScore,

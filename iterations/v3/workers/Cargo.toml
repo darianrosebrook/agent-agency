@@ -21,8 +21,13 @@ thiserror.workspace = true
 tracing.workspace = true
 config.workspace = true
 
+# Code analysis and complexity metrics
+syn = { version = "2.0", features = ["full", "extra-traits"] }
+quote = "1.0"
+proc-macro2 = "1.0"
+
 # Internal crate dependencies
-agent-agency-council = { path = "../council" }
+agent-agency-agent-agency-council = { path = "../council" }
 agent-agency-resilience = { path = "../resilience" }
 agent-agency-contracts = { path = "../agent-agency-contracts" }
 agent-agency-database = { path = "../database" }

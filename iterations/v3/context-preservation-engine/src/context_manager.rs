@@ -107,17 +107,46 @@ impl ContextManager {
     
     /// Generate or load master key
     fn generate_or_load_master_key(&self) -> Result<Vec<u8>> {
-        // TODO: Implement secure key store integration for master key management
-        // - [ ] Integrate with secure key storage system (AWS KMS, HashiCorp Vault, etc.)
-        // - [ ] Implement key rotation and lifecycle management
-        // - [ ] Add key backup and recovery procedures
-        // - [ ] Implement proper key access controls and audit logging
-        // - [ ] Handle key store connection failures and fallbacks
-        let mut master_key = vec![0u8; 32]; // 256-bit key
-        rand::RngCore::fill(&mut rand::thread_rng(), &mut master_key);
-        
-        debug!("Generated new master key for encryption system");
-        Ok(master_key)
+        // Use keystore abstraction for secure key management
+        match &self.keystore {
+            Some(keystore) => {
+                match keystore.get_key("master_key") {
+                    Ok(key) => {
+                        debug!("Loaded existing master key from keystore");
+                        Ok(key)
+                    }
+                    Err(_) => {
+                        // Generate new key and store it
+                        let mut master_key = vec![0u8; 32]; // 256-bit key
+                        rand::RngCore::fill(&mut rand::thread_rng(), &mut master_key);
+
+                        keystore.set_key("master_key", &master_key)
+                            .map_err(|e| anyhow!("Failed to store master key: {}", e))?;
+
+                        debug!("Generated and stored new master key");
+                        Ok(master_key)
+                    }
+                }
+            }
+            None => {
+                // Fallback to environment variable (for development)
+                if let Ok(env_key) = std::env::var("AGENT_AGENCY_MASTER_KEY") {
+                    if let Ok(key_bytes) = base64::decode(&env_key) {
+                        if key_bytes.len() == 32 {
+                            debug!("Loaded master key from environment variable");
+                            return Ok(key_bytes);
+                        }
+                    }
+                    warn!("Invalid master key in AGENT_AGENCY_MASTER_KEY environment variable");
+                }
+
+                // Final fallback: generate ephemeral key (not secure!)
+                warn!("No keystore configured and no valid env key - using ephemeral key (INSECURE!)");
+                let mut master_key = vec![0u8; 32];
+                rand::RngCore::fill(&mut rand::thread_rng(), &mut master_key);
+                Ok(master_key)
+            }
+        }
     }
 
     /// Process context data with comprehensive validation, compression, and security

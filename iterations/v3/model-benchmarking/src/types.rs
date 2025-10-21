@@ -26,6 +26,34 @@ pub enum ModelType {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum MicroTaskType {
+    CodeGeneration,
+    CodeReview,
+    Testing,
+    Documentation,
+    Research,
+    Analysis,
+}
+
+#[derive(Debug, Clone)]
+pub struct MicroTask {
+    pub id: uuid::Uuid,
+    pub task_type: MicroTaskType,
+    pub input: String,
+    pub expected_output: String,
+    pub complexity: TaskComplexity,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ExecutionMetrics {
+    pub tokens_processed: u64,
+    pub memory_usage: u64,
+    pub cpu_usage: f32,
+    pub quality_score: f32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ModelParameters {
     pub size: u64,
     pub context_length: u32,

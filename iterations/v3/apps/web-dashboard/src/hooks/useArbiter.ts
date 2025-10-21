@@ -11,6 +11,8 @@ export interface ArbiterVerdict {
   debateRounds: number;
   evidenceCount: number;
   timestamp: string;
+  violations: string[];
+  recommendedActions: string[];
 }
 
 export interface ClaimVerificationData {

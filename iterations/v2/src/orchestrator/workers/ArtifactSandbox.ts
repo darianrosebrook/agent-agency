@@ -410,7 +410,15 @@ export class ArtifactSandbox {
    * @throws ArtifactQuotaExceeded if quota would be exceeded
    */
   private checkQuota(additionalBytes: number): void {
-    // Check total size quota (simplified - in production you'd track more precisely)
+    // TODO: Implement comprehensive artifact quota management
+    // - Track per-user, per-project, and global storage quotas
+    // - Implement quota allocation and deallocation tracking
+    // - Add quota soft and hard limits with warnings and enforcement
+    // - Support quota inheritance and hierarchical management
+    // - Implement quota monitoring and alerting
+    // - Add quota usage analytics and forecasting
+    // - Support dynamic quota adjustments based on usage patterns
+    // - Implement quota cleanup and optimization strategies
     const newTotalSize = this.totalSize + additionalBytes;
     const maxTotalSize =
       this.config.maxFileSizeBytes * this.config.maxTotalFiles; // Rough estimate

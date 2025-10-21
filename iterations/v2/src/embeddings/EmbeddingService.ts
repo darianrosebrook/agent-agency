@@ -335,7 +335,15 @@ export class EmbeddingService implements IEmbeddingService {
   }
 
   /**
-   * Call the Ollama API for batch embeddings (sequential for now)
+   * TODO: Implement parallel batch embedding processing
+   * - Support concurrent API calls with configurable batch sizes
+   * - Implement request batching and aggregation strategies
+   * - Add rate limiting and backpressure handling
+   * - Support different embedding models with model-specific batching
+   * - Implement batch request prioritization and scheduling
+   * - Add batch processing metrics and performance monitoring
+   * - Support partial batch failures with retry strategies
+   * - Implement batch result caching and deduplication
    */
   private async callBatchEmbeddingAPI(
     request: BatchEmbeddingRequest

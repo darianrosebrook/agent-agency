@@ -524,7 +524,15 @@ export class HealthMonitor implements IHealthMonitor {
     const metrics: Record<string, any> = {};
 
     try {
-      // CPU utilization (simplified - would integrate with system monitoring)
+      // TODO: Implement comprehensive system resource monitoring
+      // - Integrate with OS-specific monitoring APIs (procfs, Windows Performance Counters, etc.)
+      // - Monitor CPU usage per core and overall system load
+      // - Track memory usage including virtual memory and swap
+      // - Add disk I/O and network I/O monitoring
+      // - Implement resource usage trending and forecasting
+      // - Add resource utilization thresholds and alerting
+      // - Support container and orchestration platform metrics
+      // - Implement resource usage profiling and bottleneck analysis
       metrics.cpuUtilization = Math.random() * 100; // Placeholder
 
       // Memory utilization

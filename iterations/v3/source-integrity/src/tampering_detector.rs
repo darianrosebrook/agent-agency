@@ -217,6 +217,64 @@ impl TamperingDetector {
     }
 
     /// Detect size changes in content
+    /// Detect obfuscated code patterns
+    fn detect_obfuscated_code(&self, content: &str) -> bool {
+        // Check for common obfuscation patterns
+        let obfuscation_patterns = [
+            r#"\b[a-zA-Z_][a-zA-Z0-9_]*\s*=\s*["']([^"']{100,})["']"#, // Very long string assignments
+            r#"\beval\s*\("#, // eval usage
+            r#"\bFunction\s*\("#, // Function constructor
+            r#"\bsetTimeout\s*\(\s*["']([^"']+)["']\s*,"#, // string-based setTimeout
+            r#"\bsetInterval\s*\(\s*["']([^"']+)["']\s*,"#, // string-based setInterval
+            r#"\batob\s*\("#, // base64 decode
+            r#"\bbtoa\s*\("#, // base64 encode
+            r#"\bescape\s*\("#, // escape function
+            r#"\bunescape\s*\("#, // unescape function
+        ];
+
+        for pattern in &obfuscation_patterns {
+            if let Ok(regex) = regex::Regex::new(pattern) {
+                if regex.is_match(content) {
+                    return true;
+                }
+            }
+        }
+
+        // Check for excessive minification (very long lines)
+        let lines: Vec<&str> = content.lines().collect();
+        let long_lines = lines.iter().filter(|line| line.len() > 1000).count();
+        if long_lines > lines.len() / 10 { // More than 10% of lines are very long
+            return true;
+        }
+
+        false
+    }
+
+    /// Detect unexpected markup changes
+    fn detect_unexpected_markup_changes(&self, content: &str) -> bool {
+        // Check for suspicious HTML/script injection patterns
+        let markup_patterns = [
+            r#"<script[^>]*>[\s\S]*?</script>"#, // inline scripts
+            r#"<iframe[^>]*>"#, // iframes
+            r#"<object[^>]*>"#, // object tags
+            r#"<embed[^>]*>"#, // embed tags
+            r#"javascript:"#, // javascript: URLs
+            r#"data:text/html"#, // data URLs with HTML
+            r#"vbscript:"#, // vbscript
+            r#"on\w+\s*="#, // event handlers
+        ];
+
+        for pattern in &markup_patterns {
+            if let Ok(regex) = regex::Regex::new(pattern) {
+                if regex.is_match(content) {
+                    return true;
+                }
+            }
+        }
+
+        false
+    }
+
     async fn detect_size_change(
         &self,
         content: &str,

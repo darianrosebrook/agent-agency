@@ -18,6 +18,11 @@ use std::time::{Duration, Instant, SystemTime};
 use tokio::sync::RwLock;
 use tracing::{error, info, warn};
 
+// Type aliases for complex types
+type FallbackFn<T> = Box<dyn Fn() -> Result<T, Box<dyn std::error::Error + Send + Sync>> + Send + Sync>;
+type OperationFn<T> = Box<dyn FnOnce() -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<T, Box<dyn std::error::Error + Send + Sync>>> + Send>> + Send>;
+type ErrorType = Box<dyn std::error::Error + Send + Sync>;
+
 /// Error thrown when circuit breaker is open
 #[derive(Debug, thiserror::Error)]
 #[error("Circuit breaker is open: {message}")]

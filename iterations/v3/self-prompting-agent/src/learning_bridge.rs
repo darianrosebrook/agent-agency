@@ -4,7 +4,8 @@ use std::sync::Arc;
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
-use crate::evaluation::{EvalReport, EvalStatus};
+use crate::evaluation::{EvalReport};
+use crate::types::EvalStatus;
 use crate::types::{TaskResult, StopReason};
 
 /// Learning bridge that converts self-prompting execution to reflexive learning signals

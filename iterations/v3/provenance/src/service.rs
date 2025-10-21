@@ -392,7 +392,7 @@ impl ProvenanceService {
     }
 
     /// Determine filter operator from value type
-    fn determine_operator(&self, value: &serde_json::Value) -> Result<FilterOperator> {
+    fn _determine_operator(&self, value: &serde_json::Value) -> Result<FilterOperator> {
         match value {
             serde_json::Value::Array(_) => Ok(FilterOperator::In),
             serde_json::Value::Object(obj) => {

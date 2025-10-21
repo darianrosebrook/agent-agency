@@ -20,7 +20,7 @@ impl RedisMetrics {
     /// Create a new Redis metrics backend
     pub fn new(redis_url: &str, prefix: &str, ttl_seconds: i64) -> Result<Self, RedisMetricsError> {
         let client = Client::open(redis_url)
-            .map_err(|e| MetricsBackendError::ConnectionError(e.to_string()))?;
+            .map_err(|e| RedisMetricsError::ConnectionError(e.to_string()))?;
 
         Ok(Self {
             client,

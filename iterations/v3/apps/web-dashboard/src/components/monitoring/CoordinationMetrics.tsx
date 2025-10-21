@@ -10,7 +10,10 @@ export default function CoordinationMetricsComponent({
   metrics: externalMetrics,
   isLoading: externalLoading,
   error: externalError,
-}: CoordinationMetricsProps) {
+  onMetricsUpdate,
+}: CoordinationMetricsProps & {
+  onMetricsUpdate?: (event: any) => void;
+}) {
   const [metrics, setMetrics] = useState<CoordinationMetrics | null>(
     externalMetrics ?? null
   );

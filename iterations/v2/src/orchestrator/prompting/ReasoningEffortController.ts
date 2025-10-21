@@ -479,8 +479,15 @@ export class ReasoningEffortController {
   private getComplexityMetrics(
     complexity: TaskComplexity
   ): EffortPerformanceMetrics | null {
-    // Aggregate metrics across effort levels for this complexity
-    // This is a simplified implementation
+    // TODO: Implement sophisticated performance metrics aggregation
+    // - Use statistical methods for robust metric aggregation (median, trimmed mean)
+    // - Implement time-weighted metrics for recent performance emphasis
+    // - Add confidence intervals and statistical significance testing
+    // - Support multi-dimensional performance analysis (latency, accuracy, cost)
+    // - Implement performance trend analysis and anomaly detection
+    // - Add performance forecasting and predictive modeling
+    // - Support A/B testing and comparative performance analysis
+    // - Implement performance baseline establishment and drift detection
     const relevantEfforts = this.getEffortsForComplexity(complexity);
     const metrics = relevantEfforts
       .map((effort) => this.performanceMetrics.get(effort))

@@ -14,6 +14,7 @@ use crate::orchestration::provenance::OrchestrationProvenanceEmitter;
 use crate::interfaces::cli::{Cli, CliConfig, Commands};
 use agent_agency_observability::cache::CacheBackend;
 use agent_agency_observability::metrics::MetricsBackend;
+use agent_agency_workers::TaskExecutor;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {

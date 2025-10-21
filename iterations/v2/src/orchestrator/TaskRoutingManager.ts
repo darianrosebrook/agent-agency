@@ -328,7 +328,14 @@ export class TaskRoutingManager {
 
         agentMetrics[candidate.agent.id] = {
           overallScore: performanceScore,
-          confidence: 0.5, // Low confidence for now
+          // TODO: Implement dynamic confidence scoring for task routing
+          // - Calculate confidence based on historical success rates and agent performance
+          // - Implement statistical confidence intervals for routing decisions
+          // - Add confidence decay over time for stale performance data
+          // - Support multi-factor confidence calculation (task complexity, agent expertise)
+          // - Implement confidence threshold tuning based on task criticality
+          // - Add confidence validation against actual task completion rates
+          // - Support confidence-based fallback routing strategies
           recentMetrics: [], // Would be populated with actual historical data
         };
       }

@@ -514,7 +514,14 @@ export class MultiLevelCache implements CacheProvider {
   }
 
   private evictL1Entries(spaceNeeded: number): void {
-    // Simple LRU eviction - in a real implementation, you'd use a more sophisticated algorithm
+    // TODO: Implement sophisticated cache eviction algorithms
+    // - Implement W-TinyLFU or Adaptive Replacement Cache (ARC) algorithms
+    // - Add frequency-based eviction with access pattern analysis
+    // - Support size-aware eviction (consider entry sizes)
+    // - Implement time-based decay for access frequencies
+    // - Add configurable eviction policies per cache level
+    // - Support hybrid eviction strategies (LFU + LRU combinations)
+    // - Add eviction performance monitoring and optimization
     const entries = Array.from(this.l1Cache.entries());
 
     // Sort by last accessed (oldest first)

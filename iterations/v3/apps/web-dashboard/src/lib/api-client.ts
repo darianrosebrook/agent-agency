@@ -231,7 +231,7 @@ export class ApiClient {
   // Placeholder methods for future V3 API endpoints
   // These will be implemented as the backend endpoints become available
   /* eslint-disable no-unused-vars */
-  async getTasks(_filters?: Record<string, unknown>): Promise<{
+  async getTasks(filters?: Record<string, unknown>): Promise<{
     tasks: Array<{
       id: string;
       title: string;
@@ -244,48 +244,35 @@ export class ApiClient {
     page: number;
     limit: number;
   }> {
-    console.warn(
-      "getTasks using mock implementation - V3 task API not available"
-    );
-    // TODO: Milestone 2 - Task API Implementation
-    // - [ ] Implement V3 GET /api/v1/tasks endpoint with filtering
-    // - [ ] Add pagination and sorting support
-    // - [ ] Test with various filter combinations
+    try {
+      const params = new URLSearchParams();
+      if (filters) {
+        Object.entries(filters).forEach(([key, value]) => {
+          if (value !== undefined && value !== null) {
+            params.append(key, String(value));
+          }
+        });
+      }
 
-    // Mock implementation for development
-    const mockTasks = [
-      {
-        id: "task_001",
-        title: "Implement user authentication flow",
-        status: "completed",
-        priority: "high",
-        createdAt: "2025-01-15T10:00:00Z",
-        updatedAt: "2025-01-20T14:30:00Z",
-      },
-      {
-        id: "task_002",
-        title: "Add database connection management",
-        status: "in_progress",
-        priority: "medium",
-        createdAt: "2025-01-18T09:15:00Z",
-        updatedAt: "2025-01-22T11:45:00Z",
-      },
-      {
-        id: "task_003",
-        title: "Set up monitoring dashboard",
-        status: "pending",
-        priority: "low",
-        createdAt: "2025-01-20T16:20:00Z",
-        updatedAt: "2025-01-20T16:20:00Z",
-      },
-    ];
+      const response = await this.request<{
+        tasks: Array<{
+          id: string;
+          title: string;
+          status: string;
+          priority: string;
+          createdAt: string;
+          updatedAt: string;
+        }>;
+        total: number;
+        page: number;
+        limit: number;
+      }>(`/api/v1/tasks?${params}`);
 
-    return {
-      tasks: mockTasks,
-      total: mockTasks.length,
-      page: 1,
-      limit: 10,
-    };
+      return response;
+    } catch (error) {
+      console.error("Failed to get tasks:", error);
+      throw error;
+    }
   }
 
   async getTask(_taskId: string): Promise<{

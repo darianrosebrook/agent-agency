@@ -27,6 +27,11 @@ export interface MessageMetadata {
   processing_time_ms?: number;
   task_id?: string;
   working_spec_id?: string;
+  // TTS-related metadata
+  tts_audio_url?: string;
+  tts_audio_duration?: number;
+  tts_voice_used?: string;
+  tts_auto_generated?: boolean;
 }
 
 export interface ChatContext {

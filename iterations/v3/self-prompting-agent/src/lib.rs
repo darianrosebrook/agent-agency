@@ -2,6 +2,14 @@
 //!
 //! A self-governing agent that continuously prompts itself, evaluates outputs,
 //! and refines tasks until quality standards are met.
+//!
+//! # Integration Points
+//!
+//! This module connects:
+//! - Model providers (Ollama, CoreML) via `models/`
+//! - Evaluation framework via `evaluation/`
+//! - Sandbox file operations via `sandbox/`
+//! - Loop controller orchestrating generate → evaluate → refine cycles
 
 pub mod agent;
 pub mod evaluation;

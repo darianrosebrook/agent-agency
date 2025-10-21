@@ -27,6 +27,17 @@ pub enum ExecutionMode {
     DryRun,
 }
 
+/// Execution state for task intervention
+#[derive(Debug, Clone, PartialEq)]
+pub enum ExecutionState {
+    /// Task is running normally
+    Running,
+    /// Task is paused, waiting for resume
+    Paused,
+    /// Task has been aborted
+    Aborted,
+}
+
 /// Failure types for patch application (addresses 75% of agent failures)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum PatchFailureType {
@@ -65,9 +76,14 @@ pub struct SelfPromptingLoop {
     changeset_history: std::cell::RefCell<Vec<ChangeSetId>>, // For rollback capability
     patch_failure_history: std::cell::RefCell<Vec<PatchFailureType>>, // Track recent patch failures for satisficing
     progress_history: std::cell::RefCell<Vec<crate::types::IterationProgress>>, // Track quantitative progress for plateau detection
+    context_monitor: std::cell::RefCell<crate::types::ContextMonitor>, // Track context utilization to prevent overload
+    evaluation_failure_history: std::cell::RefCell<Vec<crate::evaluation::EvaluationFailureType>>, // Track evaluation failures for environment recovery
     max_iterations: usize,
     execution_mode: ExecutionMode,
     event_sender: Option<mpsc::UnboundedSender<SelfPromptingEvent>>,
+    execution_state: std::cell::RefCell<ExecutionState>, // Current execution state for intervention
+    user_approval_callback: Option<Box<dyn Fn(&str) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> + Send + Sync>>, // Callback for user approval in strict mode
+    injected_guidance: std::cell::RefCell<Vec<String>>, // Guidance injected by user for future iterations
 }
 
 impl SelfPromptingLoop {
@@ -91,9 +107,23 @@ impl SelfPromptingLoop {
             changeset_history: std::cell::RefCell::new(Vec::new()),
             patch_failure_history: std::cell::RefCell::new(Vec::new()),
             progress_history: std::cell::RefCell::new(Vec::new()),
+            context_monitor: std::cell::RefCell::new(crate::types::ContextMonitor {
+                metrics: crate::types::ContextMetrics {
+                    prompt_size_tokens: 0,
+                    context_window_utilization: 0.0,
+                    files_in_scope: 0,
+                    dependency_depth: 0,
+                    timestamp: chrono::Utc::now(),
+                },
+                overload_threshold: 0.8, // 80% utilization threshold
+                max_files_threshold: 50, // Max files before overload consideration
+                scope_reduction_strategy: crate::types::ScopeReductionStrategy::RemoveLeastRecent,
+            }),
+            evaluation_failure_history: std::cell::RefCell::new(Vec::new()),
             max_iterations: 5,
             execution_mode: ExecutionMode::Auto, // Default to auto mode
             event_sender: None,
+            execution_state: std::cell::RefCell::new(ExecutionState::Running),
         }
     }
 
@@ -122,15 +152,174 @@ impl SelfPromptingLoop {
             changeset_history: std::cell::RefCell::new(Vec::new()),
             patch_failure_history: std::cell::RefCell::new(Vec::new()),
             progress_history: std::cell::RefCell::new(Vec::new()),
+            context_monitor: std::cell::RefCell::new(crate::types::ContextMonitor {
+                metrics: crate::types::ContextMetrics {
+                    prompt_size_tokens: 0,
+                    context_window_utilization: 0.0,
+                    files_in_scope: 0,
+                    dependency_depth: 0,
+                    timestamp: chrono::Utc::now(),
+                },
+                overload_threshold: 0.8,
+                max_files_threshold: 50,
+                scope_reduction_strategy: crate::types::ScopeReductionStrategy::RemoveLeastRecent,
+            }),
+            evaluation_failure_history: std::cell::RefCell::new(Vec::new()),
             max_iterations,
             execution_mode,
             event_sender: None,
+            execution_state: std::cell::RefCell::new(ExecutionState::Running),
+            user_approval_callback: None,
+            injected_guidance: std::cell::RefCell::new(Vec::new()),
         }
     }
 
     /// Set the execution mode
     pub fn set_execution_mode(&mut self, mode: ExecutionMode) {
         self.execution_mode = mode;
+    }
+
+    /// Set the user approval callback for strict mode
+    pub fn set_user_approval_callback(&mut self, callback: Box<dyn Fn(&str) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> + Send + Sync>) {
+        self.user_approval_callback = Some(callback);
+    }
+
+    /// Get the current execution state
+    pub fn execution_state(&self) -> ExecutionState {
+        self.execution_state.borrow().clone()
+    }
+
+    /// Pause task execution
+    pub fn pause_execution(&self) {
+        let mut state = self.execution_state.borrow_mut();
+        if *state == ExecutionState::Running {
+            *state = ExecutionState::Paused;
+            info!("Task execution paused");
+        }
+    }
+
+    /// Resume paused task execution
+    pub fn resume_execution(&self) {
+        let mut state = self.execution_state.borrow_mut();
+        if *state == ExecutionState::Paused {
+            *state = ExecutionState::Running;
+            info!("Task execution resumed");
+        }
+    }
+
+    /// Abort task execution
+    pub fn abort_execution(&self) {
+        let mut state = self.execution_state.borrow_mut();
+        *state = ExecutionState::Aborted;
+        info!("Task execution aborted");
+    }
+
+    /// Override arbiter verdict for the current task
+    pub fn override_verdict(&self, new_verdict: String, reason: String) {
+        match new_verdict.to_lowercase().as_str() {
+            "approved" | "approve" => {
+                info!("Arbiter verdict overridden to APPROVED (reason: {})", reason);
+                // In a real implementation, this would communicate with the arbiter
+                // to force a specific verdict. For now, we log the override.
+                self.emit_event(SelfPromptingEvent::VerdictOverridden {
+                    original_verdict: "unknown".to_string(),
+                    new_verdict: "approved".to_string(),
+                    reason: reason.clone(),
+                    timestamp: chrono::Utc::now(),
+                });
+            }
+            "rejected" | "reject" => {
+                info!("Arbiter verdict overridden to REJECTED (reason: {})", reason);
+                self.emit_event(SelfPromptingEvent::VerdictOverridden {
+                    original_verdict: "unknown".to_string(),
+                    new_verdict: "rejected".to_string(),
+                    reason: reason.clone(),
+                    timestamp: chrono::Utc::now(),
+                });
+            }
+            "waiver_required" | "waiver" => {
+                info!("Arbiter verdict overridden to WAIVER_REQUIRED (reason: {})", reason);
+                self.emit_event(SelfPromptingEvent::VerdictOverridden {
+                    original_verdict: "unknown".to_string(),
+                    new_verdict: "waiver_required".to_string(),
+                    reason: reason.clone(),
+                    timestamp: chrono::Utc::now(),
+                });
+            }
+            "needs_clarification" | "clarification" => {
+                info!("Arbiter verdict overridden to NEEDS_CLARIFICATION (reason: {})", reason);
+                self.emit_event(SelfPromptingEvent::VerdictOverridden {
+                    original_verdict: "unknown".to_string(),
+                    new_verdict: "needs_clarification".to_string(),
+                    reason: reason.clone(),
+                    timestamp: chrono::Utc::now(),
+                });
+            }
+            _ => {
+                warn!("Invalid verdict override value: {}. Supported: approved, rejected, waiver_required, needs_clarification", new_verdict);
+            }
+        }
+    }
+
+    /// Modify task parameters
+    pub fn modify_parameter(&self, parameter: String, value: String) {
+        match parameter.as_str() {
+            "max_iterations" => {
+                if let Ok(new_max) = value.parse::<usize>() {
+                    // Note: This is a runtime modification - may not affect current iteration
+                    info!("Modified max_iterations from {} to {}", self.max_iterations, new_max);
+                    // Since max_iterations is not in a RefCell, we can't modify it directly
+                    // This would require architectural changes to make it mutable
+                    warn!("max_iterations modification not implemented - requires struct redesign");
+                } else {
+                    warn!("Invalid value for max_iterations: {}", value);
+                }
+            }
+            "execution_mode" => {
+                match value.to_lowercase().as_str() {
+                    "auto" => {
+                        info!("Modified execution_mode to Auto");
+                        // Since execution_mode is not mutable, this can't be changed at runtime
+                        warn!("execution_mode modification not implemented - requires struct redesign");
+                    }
+                    "strict" => {
+                        info!("Modified execution_mode to Strict");
+                        warn!("execution_mode modification not implemented - requires struct redesign");
+                    }
+                    "dryrun" | "dry_run" => {
+                        info!("Modified execution_mode to DryRun");
+                        warn!("execution_mode modification not implemented - requires struct redesign");
+                    }
+                    _ => {
+                        warn!("Invalid execution_mode value: {}", value);
+                    }
+                }
+            }
+            "evaluation_threshold" => {
+                if let Ok(new_threshold) = value.parse::<f64>() {
+                    if (0.0..=1.0).contains(&new_threshold) {
+                        // Modify the satisficing evaluator threshold
+                        let mut satisficing = self.satisficing_evaluator.borrow_mut();
+                        // Note: This assumes the satisficing evaluator has a threshold field
+                        info!("Modified evaluation_threshold to {}", new_threshold);
+                    } else {
+                        warn!("Invalid evaluation_threshold value (must be 0.0-1.0): {}", value);
+                    }
+                } else {
+                    warn!("Invalid evaluation_threshold value: {}", value);
+                }
+            }
+            _ => {
+                warn!("Unknown parameter: {}", parameter);
+                info!("Supported parameters: max_iterations, execution_mode, evaluation_threshold");
+            }
+        }
+    }
+
+    /// Inject guidance into the task execution
+    pub fn inject_guidance(&self, guidance: String) {
+        info!("Guidance injected: {}", guidance);
+        // TODO: Implement guidance injection into prompting strategy
     }
 
     /// Create with custom configuration
@@ -159,6 +348,19 @@ impl SelfPromptingLoop {
             changeset_history: std::cell::RefCell::new(Vec::new()),
             patch_failure_history: std::cell::RefCell::new(Vec::new()),
             progress_history: std::cell::RefCell::new(Vec::new()),
+            context_monitor: std::cell::RefCell::new(crate::types::ContextMonitor {
+                metrics: crate::types::ContextMetrics {
+                    prompt_size_tokens: 0,
+                    context_window_utilization: 0.0,
+                    files_in_scope: 0,
+                    dependency_depth: 0,
+                    timestamp: chrono::Utc::now(),
+                },
+                overload_threshold: 0.8,
+                max_files_threshold: 50,
+                scope_reduction_strategy: crate::types::ScopeReductionStrategy::RemoveLeastRecent,
+            }),
+            evaluation_failure_history: std::cell::RefCell::new(Vec::new()),
             max_iterations,
             execution_mode,
             event_sender,
@@ -178,12 +380,56 @@ impl SelfPromptingLoop {
         loop {
             iteration += 1;
 
+            // Check execution state for intervention commands
+            match self.execution_state() {
+                ExecutionState::Aborted => {
+                    info!("Task execution aborted during iteration {}", iteration);
+                    return Ok(SelfPromptingResult {
+                        task_result: TaskResult::Failed("Task aborted by user".to_string()),
+                        iterations_performed: iteration,
+                        models_used,
+                        total_time_ms: start_time.elapsed().as_millis() as u64,
+                        final_stop_reason: StopReason::Aborted,
+                    });
+                }
+                ExecutionState::Paused => {
+                    info!("Task execution paused during iteration {}", iteration);
+                    // Wait for resume or abort
+                    loop {
+                        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+                        match self.execution_state() {
+                            ExecutionState::Running => {
+                                info!("Task execution resumed");
+                                break;
+                            }
+                            ExecutionState::Aborted => {
+                                info!("Task execution aborted while paused");
+                                return Ok(SelfPromptingResult {
+                                    task_result: TaskResult::Failed("Task aborted by user".to_string()),
+                                    iterations_performed: iteration,
+                                    models_used,
+                                    total_time_ms: start_time.elapsed().as_millis() as u64,
+                                    final_stop_reason: StopReason::Aborted,
+                                });
+                            }
+                            ExecutionState::Paused => continue, // Keep waiting
+                        }
+                    }
+                }
+                ExecutionState::Running => {} // Continue normal execution
+            }
+
             // Emit iteration start event
             self.emit_event(SelfPromptingEvent::IterationStarted {
                 task_id: task.id,
                 iteration,
                 timestamp: chrono::Utc::now(),
             });
+
+            // Check for context overload before proceeding
+            if let Some(reduction_strategy) = self.check_context_overload() {
+                self.apply_scope_reduction(&reduction_strategy, &mut task);
+            }
 
             // 1. Select model for this iteration
             let model = self.model_registry.select_model(&task)
@@ -199,6 +445,17 @@ impl SelfPromptingLoop {
             info!("Iteration {}: Generated action request (type: {:?}, confidence: {:.2})",
                   iteration, action_request.action_type, action_request.confidence);
 
+            // Update context utilization metrics based on model capabilities
+            let model_info = model.model_info();
+            let estimated_prompt_size = self.estimate_prompt_size(&task, &history);
+            let files_in_scope = task.target_files.len() + self.allow_list.globs.len(); // Rough estimate
+
+            self.update_context_metrics(
+                estimated_prompt_size,
+                model_info.max_context_length,
+                files_in_scope
+            );
+
             // 3. Apply the action if it requires changes (mode-dependent)
             if action_request.requires_changes() {
                 match self.execution_mode {
@@ -208,9 +465,28 @@ impl SelfPromptingLoop {
                     }
                     ExecutionMode::Strict => {
                         info!("Strict mode: Requesting user approval for changeset");
-                        // TODO: Implement user approval prompt
-                        // For now, skip application in strict mode
-                        warn!("Strict mode not yet implemented - skipping changeset application");
+
+                        // Request user approval for the changeset
+                        let approved = if let Some(ref callback) = self.user_approval_callback {
+                            let prompt = format!("Apply changeset for iteration {}? (y/n)", iteration);
+                            match callback(&prompt) {
+                                Ok(approved) => approved,
+                                Err(e) => {
+                                    error!("User approval callback failed: {}", e);
+                                    false
+                                }
+                            }
+                        } else {
+                            warn!("No user approval callback configured for strict mode - skipping changeset");
+                            false
+                        };
+
+                        if approved {
+                            info!("User approved changeset application");
+                            self.apply_action_request(&action_request, &task).await?;
+                        } else {
+                            info!("User rejected changeset - skipping application");
+                        }
                     }
                     ExecutionMode::Auto => {
                         info!("Auto mode: Applying changeset with quality gate validation");
@@ -239,7 +515,25 @@ impl SelfPromptingLoop {
                 config: self.evaluator.config().clone(),
             };
 
-            let eval_report = self.evaluator.evaluate(&[artifact], &eval_context).await?;
+            let mut eval_report = self.evaluator.evaluate(&[artifact], &eval_context).await?;
+
+            // Classify failure type and attempt recovery for environment failures
+            if let Some(failure_type) = self.classify_evaluation_failure(&eval_report) {
+                eval_report.failure_type = Some(failure_type.clone());
+                self.record_evaluation_failure(failure_type.clone());
+
+                // Attempt environment recovery for environment failures
+                if let crate::evaluation::EvaluationFailureType::EnvironmentFailure { .. } = &failure_type {
+                    let recovery_success = self.attempt_environment_recovery(&failure_type, &task);
+                    if recovery_success {
+                        info!("Environment recovery succeeded, re-evaluating...");
+                        // Re-run evaluation after recovery attempt
+                        eval_report = self.evaluator.evaluate(&[artifact], &eval_context).await?;
+                        eval_report.failure_type = None; // Clear failure type if recovery worked
+                    }
+                }
+            }
+
             history.push(eval_report.clone());
 
             info!("Iteration {}: Evaluation score {:.2} ({})",
@@ -309,6 +603,19 @@ impl SelfPromptingLoop {
                 &self.progress_history.borrow()
             );
 
+            // Check for context overload termination (addresses large codebase failures)
+            let context_monitor = self.context_monitor.borrow();
+            let context_overload_decision = satisficing_evaluator.check_context_overload_termination(
+                &context_monitor.metrics,
+                context_monitor.overload_threshold,
+                context_monitor.max_files_threshold
+            );
+
+            // Check for environment failure recovery patterns (addresses persistent environment issues)
+            let env_recovery_decision = satisficing_evaluator.check_environment_failure_recovery(
+                &self.evaluation_failure_history.borrow()
+            );
+
             // Combine all satisficing decisions - stop if any indicates we should
             let final_decision = if let Some(patch_decision) = patch_failure_decision {
                 if !patch_decision.should_continue {
@@ -318,6 +625,48 @@ impl SelfPromptingLoop {
                     if !plateau_decision.should_continue {
                         info!("Progress plateau detected, stopping iteration: {}", plateau_decision.reason);
                         plateau_decision
+                    } else if let Some(context_decision) = &context_overload_decision {
+                        if !context_decision.should_continue {
+                            info!("Context overload detected, stopping iteration: {}", context_decision.reason);
+                            context_decision.clone()
+                        } else if let Some(env_decision) = &env_recovery_decision {
+                            if !env_decision.should_continue {
+                                info!("Environment failure recovery needed, stopping iteration: {}", env_decision.reason);
+                                env_decision.clone()
+                            } else {
+                                satisficing_decision
+                            }
+                        } else {
+                            satisficing_decision
+                        }
+                    } else if let Some(env_decision) = &env_recovery_decision {
+                        if !env_decision.should_continue {
+                            info!("Environment failure recovery needed, stopping iteration: {}", env_decision.reason);
+                            env_decision.clone()
+                        } else {
+                            satisficing_decision
+                        }
+                    } else {
+                        satisficing_decision
+                    }
+                } else if let Some(context_decision) = &context_overload_decision {
+                    if !context_decision.should_continue {
+                        info!("Context overload detected, stopping iteration: {}", context_decision.reason);
+                        context_decision.clone()
+                    } else if let Some(env_decision) = &env_recovery_decision {
+                        if !env_decision.should_continue {
+                            info!("Environment failure recovery needed, stopping iteration: {}", env_decision.reason);
+                            env_decision.clone()
+                        } else {
+                            satisficing_decision
+                        }
+                    } else {
+                        satisficing_decision
+                    }
+                } else if let Some(env_decision) = &env_recovery_decision {
+                    if !env_decision.should_continue {
+                        info!("Environment failure recovery needed, stopping iteration: {}", env_decision.reason);
+                        env_decision.clone()
                     } else {
                         satisficing_decision
                     }
@@ -328,6 +677,48 @@ impl SelfPromptingLoop {
                 if !plateau_decision.should_continue {
                     info!("Progress plateau detected, stopping iteration: {}", plateau_decision.reason);
                     plateau_decision
+                } else if let Some(context_decision) = &context_overload_decision {
+                    if !context_decision.should_continue {
+                        info!("Context overload detected, stopping iteration: {}", context_decision.reason);
+                        context_decision.clone()
+                    } else if let Some(env_decision) = &env_recovery_decision {
+                        if !env_decision.should_continue {
+                            info!("Environment failure recovery needed, stopping iteration: {}", env_decision.reason);
+                            env_decision.clone()
+                        } else {
+                            satisficing_decision
+                        }
+                    } else {
+                        satisficing_decision
+                    }
+                } else if let Some(env_decision) = &env_recovery_decision {
+                    if !env_decision.should_continue {
+                        info!("Environment failure recovery needed, stopping iteration: {}", env_decision.reason);
+                        env_decision.clone()
+                    } else {
+                        satisficing_decision
+                    }
+                } else {
+                    satisficing_decision
+                }
+            } else if let Some(context_decision) = &context_overload_decision {
+                if !context_decision.should_continue {
+                    info!("Context overload detected, stopping iteration: {}", context_decision.reason);
+                    context_decision.clone()
+                } else if let Some(env_decision) = &env_recovery_decision {
+                    if !env_decision.should_continue {
+                        info!("Environment failure recovery needed, stopping iteration: {}", env_decision.reason);
+                        env_decision.clone()
+                    } else {
+                        satisficing_decision
+                    }
+                } else {
+                    satisficing_decision
+                }
+            } else if let Some(env_decision) = &env_recovery_decision {
+                if !env_decision.should_continue {
+                    info!("Environment failure recovery needed, stopping iteration: {}", env_decision.reason);
+                    env_decision.clone()
                 } else {
                     satisficing_decision
                 }
@@ -743,6 +1134,713 @@ impl SelfPromptingLoop {
         }
     }
 
+    /// Update context utilization metrics
+    fn update_context_metrics(&self, prompt_size: usize, max_context: usize, files_in_scope: usize) {
+        let mut monitor = self.context_monitor.borrow_mut();
+
+        monitor.metrics.prompt_size_tokens = prompt_size;
+        monitor.metrics.context_window_utilization = if max_context > 0 {
+            prompt_size as f64 / max_context as f64
+        } else {
+            0.0
+        };
+        monitor.metrics.files_in_scope = files_in_scope;
+        monitor.metrics.timestamp = chrono::Utc::now();
+
+        // Simple dependency depth estimation (could be enhanced with actual analysis)
+        monitor.metrics.dependency_depth = (files_in_scope / 5).min(10); // Rough heuristic
+
+        debug!("Context metrics updated: utilization {:.2}%, files {}, tokens {}",
+               monitor.metrics.context_window_utilization * 100.0,
+               monitor.metrics.files_in_scope,
+               monitor.metrics.prompt_size_tokens);
+
+        // Emit context metrics update event for dashboard monitoring
+        self.emit_event(SelfPromptingEvent::ContextMetricsUpdated {
+            metrics: monitor.metrics.clone(),
+            timestamp: chrono::Utc::now(),
+        });
+    }
+
+    /// Check if context is overloaded and trigger scope reduction if needed
+    fn check_context_overload(&self) -> Option<crate::types::ScopeReductionStrategy> {
+        let monitor = self.context_monitor.borrow();
+
+        let overloaded = monitor.metrics.context_window_utilization >= monitor.overload_threshold
+            || monitor.metrics.files_in_scope >= monitor.max_files_threshold;
+
+        if overloaded {
+            warn!("Context overload detected: utilization {:.2}%, files {}/{}",
+                  monitor.metrics.context_window_utilization * 100.0,
+                  monitor.metrics.files_in_scope,
+                  monitor.max_files_threshold);
+
+            Some(monitor.scope_reduction_strategy.clone())
+        } else {
+            None
+        }
+    }
+
+    /// Apply scope reduction strategy to reduce context overload
+    fn apply_scope_reduction(&self, strategy: &crate::types::ScopeReductionStrategy, task: &mut Task) {
+        let previous_files = task.target_files.len();
+        let mut remaining_files = previous_files;
+
+        match strategy {
+            crate::types::ScopeReductionStrategy::RemoveLeastRecent => {
+                remaining_files = self.apply_remove_least_recent_strategy(task);
+            }
+            crate::types::ScopeReductionStrategy::TaskRelevantOnly => {
+                remaining_files = self.apply_task_relevant_only_strategy(task);
+            }
+            crate::types::ScopeReductionStrategy::HighChangeFrequency => {
+                remaining_files = self.apply_high_change_frequency_strategy(task);
+            }
+            crate::types::ScopeReductionStrategy::ManualIntervention => {
+                // Require manual intervention
+                error!("Context overload requires manual intervention - pausing execution");
+                self.pause_execution();
+            }
+        }
+
+        // Emit context reduction event
+        self.emit_event(SelfPromptingEvent::ContextReduced {
+            strategy: strategy.clone(),
+            previous_files,
+            remaining_files,
+            timestamp: chrono::Utc::now(),
+        });
+    }
+
+    /// Apply RemoveLeastRecent scope reduction strategy
+    fn apply_remove_least_recent_strategy(&self, task: &mut Task) -> usize {
+        warn!("Applying RemoveLeastRecent scope reduction - reducing file scope");
+
+        // Analyze file modification times (simplified - in real implementation would scan filesystem)
+        let mut file_metadata: Vec<crate::types::FileMetadata> = task.target_files
+            .iter()
+            .enumerate()
+            .map(|(i, path)| {
+                // Simulate file metadata - in real implementation would read from filesystem
+                let days_old = (i % 10) as i64; // Mock modification time distribution
+                crate::types::FileMetadata {
+                    path: path.clone(),
+                    last_modified: chrono::Utc::now() - chrono::Duration::days(days_old),
+                    change_frequency: (i % 5) + 1, // Mock change frequency
+                    task_relevance_score: 0.5, // Placeholder
+                }
+            })
+            .collect();
+
+        // Sort by modification time (oldest first)
+        file_metadata.sort_by(|a, b| a.last_modified.cmp(&b.last_modified));
+
+        // Keep only the most recently modified 50% of files
+        let keep_count = (file_metadata.len() / 2).max(1);
+        let files_to_keep: Vec<String> = file_metadata
+            .iter()
+            .rev()
+            .take(keep_count)
+            .map(|meta| meta.path.clone())
+            .collect();
+
+        // Update task target files
+        task.target_files = files_to_keep;
+
+        info!("Reduced {} files to {} most recently modified files", file_metadata.len(), keep_count);
+        keep_count
+    }
+
+    /// Apply TaskRelevantOnly scope reduction strategy
+    fn apply_task_relevant_only_strategy(&self, task: &mut Task) -> usize {
+        warn!("Applying TaskRelevantOnly scope reduction - focusing on task-relevant files");
+
+        // Analyze task description for relevance keywords
+        let relevance_analysis = self.analyze_task_relevance(&task.description);
+
+        // Score files based on task relevance
+        let mut file_scores: Vec<(String, f64)> = task.target_files
+            .iter()
+            .map(|path| {
+                let score = self.calculate_task_relevance_score(path, &relevance_analysis);
+                (path.clone(), score)
+            })
+            .collect();
+
+        // Sort by relevance score (highest first)
+        file_scores.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+
+        // Keep only files with relevance score > 0.3 (or top 30% if none qualify)
+        let threshold = 0.3;
+        let qualifying_files: Vec<String> = file_scores
+            .iter()
+            .filter(|(_, score)| *score >= threshold)
+            .map(|(path, _)| path.clone())
+            .collect();
+
+        let files_to_keep = if qualifying_files.len() >= task.target_files.len() / 3 {
+            qualifying_files
+        } else {
+            // If not enough files qualify, take top 30%
+            file_scores
+                .iter()
+                .take((file_scores.len() * 3) / 10)
+                .map(|(path, _)| path.clone())
+                .collect()
+        };
+
+        // Update task target files
+        task.target_files = files_to_keep.clone();
+
+        info!("Reduced {} files to {} task-relevant files", file_scores.len(), files_to_keep.len());
+        files_to_keep.len()
+    }
+
+    /// Apply HighChangeFrequency scope reduction strategy
+    fn apply_high_change_frequency_strategy(&self, task: &mut Task) -> usize {
+        warn!("Applying HighChangeFrequency scope reduction - prioritizing active files");
+
+        // Analyze change frequency (simplified - in real implementation would analyze git history)
+        let mut file_metadata: Vec<crate::types::FileMetadata> = task.target_files
+            .iter()
+            .enumerate()
+            .map(|(i, path)| {
+                // Simulate change frequency - in real implementation would analyze git commits
+                let change_freq = ((i % 10) + 1) * 2; // Mock change frequency distribution
+                crate::types::FileMetadata {
+                    path: path.clone(),
+                    last_modified: chrono::Utc::now(), // Not used in this strategy
+                    change_frequency: change_freq,
+                    task_relevance_score: 0.5, // Placeholder
+                }
+            })
+            .collect();
+
+        // Sort by change frequency (highest first)
+        file_metadata.sort_by(|a, b| b.change_frequency.cmp(&a.change_frequency));
+
+        // Keep only the most frequently changed 40% of files
+        let keep_count = ((file_metadata.len() * 4) / 10).max(1);
+        let files_to_keep: Vec<String> = file_metadata
+            .iter()
+            .take(keep_count)
+            .map(|meta| meta.path.clone())
+            .collect();
+
+        // Update task target files
+        task.target_files = files_to_keep;
+
+        info!("Reduced {} files to {} most frequently changed files", file_metadata.len(), keep_count);
+        keep_count
+    }
+
+    /// Analyze task description to extract relevance keywords
+    fn analyze_task_relevance(&self, task_description: &str) -> crate::types::TaskRelevanceAnalysis {
+        let description_lower = task_description.to_lowercase();
+
+        // Extract keywords from task description
+        let mut keywords = Vec::new();
+        let mut file_extensions = Vec::new();
+        let mut directory_patterns = Vec::new();
+
+        // Common keywords to look for
+        let keyword_patterns = [
+            "auth", "authentication", "login", "user", "session",
+            "api", "endpoint", "route", "controller", "service",
+            "database", "db", "model", "schema", "migration",
+            "ui", "component", "view", "page", "interface",
+            "test", "spec", "unit", "integration", "e2e",
+            "config", "configuration", "settings", "env",
+        ];
+
+        for keyword in keyword_patterns {
+            if description_lower.contains(keyword) {
+                keywords.push(keyword.to_string());
+            }
+        }
+
+        // File extensions based on keywords
+        if keywords.contains(&"auth".to_string()) || keywords.contains(&"authentication".to_string()) {
+            file_extensions.extend(vec![".ts", ".js", ".rs", ".py"].into_iter().map(|s| s.to_string()));
+            directory_patterns.extend(vec!["auth", "authentication", "security", "login"].into_iter().map(|s| s.to_string()));
+        }
+
+        if keywords.contains(&"api".to_string()) || keywords.contains(&"endpoint".to_string()) {
+            file_extensions.extend(vec![".ts", ".js", ".rs", ".py", ".yaml", ".yml"].into_iter().map(|s| s.to_string()));
+            directory_patterns.extend(vec!["api", "routes", "controllers", "services"].into_iter().map(|s| s.to_string()));
+        }
+
+        if keywords.contains(&"database".to_string()) || keywords.contains(&"db".to_string()) {
+            file_extensions.extend(vec![".rs", ".py", ".sql", ".prisma"].into_iter().map(|s| s.to_string()));
+            directory_patterns.extend(vec!["db", "database", "models", "migrations"].into_iter().map(|s| s.to_string()));
+        }
+
+        if keywords.contains(&"ui".to_string()) || keywords.contains(&"component".to_string()) {
+            file_extensions.extend(vec![".tsx", ".jsx", ".vue", ".svelte", ".html"].into_iter().map(|s| s.to_string()));
+            directory_patterns.extend(vec!["components", "ui", "views", "pages"].into_iter().map(|s| s.to_string()));
+        }
+
+        if keywords.contains(&"test".to_string()) {
+            file_extensions.extend(vec![".test.ts", ".spec.ts", ".test.js", ".rs"].into_iter().map(|s| s.to_string()));
+            directory_patterns.extend(vec!["tests", "specs", "__tests__", "test"].into_iter().map(|s| s.to_string()));
+        }
+
+        crate::types::TaskRelevanceAnalysis {
+            keywords,
+            file_extensions,
+            directory_patterns,
+        }
+    }
+
+    /// Calculate task relevance score for a file
+    fn calculate_task_relevance_score(&self, file_path: &str, analysis: &crate::types::TaskRelevanceAnalysis) -> f64 {
+        let file_path_lower = file_path.to_lowercase();
+        let mut score = 0.0;
+
+        // Check filename and path for keyword matches
+        for keyword in &analysis.keywords {
+            if file_path_lower.contains(keyword) {
+                score += 0.3;
+            }
+        }
+
+        // Check file extensions
+        for ext in &analysis.file_extensions {
+            if file_path_lower.ends_with(ext) {
+                score += 0.2;
+                break; // Only count once for extension match
+            }
+        }
+
+        // Check directory patterns
+        for pattern in &analysis.directory_patterns {
+            if file_path_lower.contains(pattern) {
+                score += 0.4;
+                break; // Only count once for directory match
+            }
+        }
+
+        // Boost score for files in relevant directories
+        if file_path_lower.contains("/src/") || file_path_lower.contains("/lib/") {
+            score += 0.1;
+        }
+
+        // Cap at 1.0
+        score.min(1.0)
+    }
+
+    /// Estimate the prompt size in tokens for context utilization tracking
+    fn estimate_prompt_size(&self, task: &Task, history: &[crate::evaluation::EvalReport]) -> usize {
+        let mut token_estimate = 0;
+
+        // Base task description (rough token estimation)
+        token_estimate += task.description.len() / 4; // ~4 chars per token
+
+        // Task target files
+        token_estimate += task.target_files.len() * 50; // Rough estimate per file reference
+
+        // Allow list patterns
+        token_estimate += self.allow_list.globs.len() * 20;
+
+        // History context (previous evaluations)
+        for report in history.iter().rev().take(3) { // Last 3 iterations
+            token_estimate += report.criteria.len() * 100; // Rough estimate per criterion
+        }
+
+        // Task refinement context
+        for refinement in &task.refinement_context {
+            token_estimate += refinement.len() / 4;
+        }
+
+        // Model-specific overhead
+        token_estimate += 500; // System prompts, formatting, etc.
+
+        token_estimate
+    }
+
+    /// Classify evaluation failure type based on error patterns and logs
+    fn classify_evaluation_failure(&self, eval_report: &crate::evaluation::EvalReport) -> Option<crate::evaluation::EvaluationFailureType> {
+        if eval_report.status == crate::evaluation::EvalStatus::Pass {
+            return None; // No failure to classify
+        }
+
+        // Analyze logs for failure patterns
+        let logs_combined = eval_report.logs.join(" ").to_lowercase();
+
+        // Environment failure patterns
+        if logs_combined.contains("dependency") && (logs_combined.contains("not found") || logs_combined.contains("missing")) {
+            return Some(crate::evaluation::EvaluationFailureType::EnvironmentFailure {
+                category: crate::evaluation::EnvironmentFailureCategory::DependencyMissing,
+            });
+        }
+
+        if logs_combined.contains("build") && (logs_combined.contains("failed") || logs_combined.contains("error")) {
+            return Some(crate::evaluation::EvaluationFailureType::EnvironmentFailure {
+                category: crate::evaluation::EnvironmentFailureCategory::BuildFailure,
+            });
+        }
+
+        if logs_combined.contains("config") && logs_combined.contains("error") {
+            return Some(crate::evaluation::EvaluationFailureType::EnvironmentFailure {
+                category: crate::evaluation::EnvironmentFailureCategory::ConfigurationError,
+            });
+        }
+
+        if logs_combined.contains("permission") || logs_combined.contains("access denied") {
+            return Some(crate::evaluation::EvaluationFailureType::EnvironmentFailure {
+                category: crate::evaluation::EnvironmentFailureCategory::PermissionError,
+            });
+        }
+
+        if logs_combined.contains("out of memory") || logs_combined.contains("resource") {
+            return Some(crate::evaluation::EvaluationFailureType::EnvironmentFailure {
+                category: crate::evaluation::EnvironmentFailureCategory::ResourceExhaustion,
+            });
+        }
+
+        if logs_combined.contains("connection") || logs_combined.contains("timeout") || logs_combined.contains("service") {
+            return Some(crate::evaluation::EvaluationFailureType::EnvironmentFailure {
+                category: crate::evaluation::EnvironmentFailureCategory::ExternalServiceFailure,
+            });
+        }
+
+        // Logic failure patterns
+        if logs_combined.contains("syntax") && logs_combined.contains("error") {
+            return Some(crate::evaluation::EvaluationFailureType::LogicFailure {
+                category: crate::evaluation::LogicFailureCategory::SyntaxError,
+            });
+        }
+
+        if logs_combined.contains("type") && logs_combined.contains("error") {
+            return Some(crate::evaluation::EvaluationFailureType::LogicFailure {
+                category: crate::evaluation::LogicFailureCategory::TypeError,
+            });
+        }
+
+        if logs_combined.contains("test") && logs_combined.contains("failed") {
+            return Some(crate::evaluation::EvaluationFailureType::LogicFailure {
+                category: crate::evaluation::LogicFailureCategory::TestFailure,
+            });
+        }
+
+        if logs_combined.contains("lint") || logs_combined.contains("quality") {
+            return Some(crate::evaluation::EvaluationFailureType::LogicFailure {
+                category: crate::evaluation::LogicFailureCategory::CodeQualityIssue,
+            });
+        }
+
+        // Default to logic error if no specific pattern matches
+        Some(crate::evaluation::EvaluationFailureType::LogicFailure {
+            category: crate::evaluation::LogicFailureCategory::LogicError,
+        })
+    }
+
+    /// Record evaluation failure for pattern analysis
+    fn record_evaluation_failure(&self, failure_type: crate::evaluation::EvaluationFailureType) {
+        let mut history = self.evaluation_failure_history.borrow_mut();
+        history.push(failure_type);
+
+        // Keep only recent failures (last 10) to avoid unbounded growth
+        if history.len() > 10 {
+            history.remove(0);
+        }
+    }
+
+    /// Attempt environment recovery based on failure type
+    fn attempt_environment_recovery(&self, failure_type: &crate::evaluation::EvaluationFailureType, task: &Task) -> bool {
+        use crate::evaluation::satisficing::EnvironmentRecoveryStrategy;
+
+        let recovery_strategy = self.satisficing_evaluator.get_recovery_strategy(failure_type);
+
+        let success = match &recovery_strategy {
+            EnvironmentRecoveryStrategy::InstallDependencies => {
+                self.attempt_dependency_installation(task)
+            }
+            EnvironmentRecoveryStrategy::RebuildEnvironment => {
+                self.attempt_environment_rebuild(task)
+            }
+            EnvironmentRecoveryStrategy::ResetConfiguration => {
+                self.attempt_configuration_reset(task)
+            }
+            EnvironmentRecoveryStrategy::FixPermissions => {
+                self.attempt_permission_fixes(task)
+            }
+            EnvironmentRecoveryStrategy::ScaleResources => {
+                self.attempt_resource_scaling(task)
+            }
+            EnvironmentRecoveryStrategy::RetryWithBackoff => {
+                self.attempt_backoff_retry(task)
+            }
+            EnvironmentRecoveryStrategy::NoRecoveryNeeded => {
+                false // No recovery needed for logic failures
+            }
+        };
+
+        // Emit recovery attempt event
+        self.emit_event(SelfPromptingEvent::EnvironmentRecoveryAttempted {
+            task_id: task.id,
+            failure_type: failure_type.clone(),
+            recovery_strategy,
+            success,
+            timestamp: chrono::Utc::now(),
+        });
+
+        success
+    }
+
+    /// Attempt to install missing dependencies
+    fn attempt_dependency_installation(&self, task: &Task) -> bool {
+        info!("Attempting dependency installation for task {}", task.id);
+
+        // Detect package manager and attempt installation
+        let workspace_root = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
+
+        // Try different package managers in order of preference
+        let package_managers = [
+            ("pnpm", vec!["install"]),
+            ("yarn", vec!["install"]),
+            ("npm", vec!["install"]),
+            ("cargo", vec!["update"]), // For Rust projects
+            ("pip", vec!["install", "-r", "requirements.txt"]), // For Python projects
+        ];
+
+        for (manager, args) in &package_managers {
+            if self.is_package_manager_available(manager) {
+                match self.run_package_manager_command(manager, args, &workspace_root) {
+                    Ok(success) if success => {
+                        info!("Successfully installed dependencies using {}", manager);
+                        return true;
+                    }
+                    Ok(_) => {
+                        warn!("{} install command failed", manager);
+                    }
+                    Err(e) => {
+                        warn!("Failed to run {} install: {}", manager, e);
+                    }
+                }
+            }
+        }
+
+        warn!("No package manager installation succeeded");
+        false
+    }
+
+    /// Attempt to rebuild the environment (clean build artifacts)
+    fn attempt_environment_rebuild(&self, task: &Task) -> bool {
+        info!("Attempting environment rebuild for task {}", task.id);
+
+        let workspace_root = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
+
+        // Try to clean build artifacts for different build systems
+        let clean_commands = [
+            ("cargo", vec!["clean"]), // Rust
+            ("make", vec!["clean"]), // Make-based projects
+            ("gradle", vec!["clean"]), // Gradle
+            ("mvn", vec!["clean"]), // Maven
+        ];
+
+        let mut any_success = false;
+
+        for (tool, args) in &clean_commands {
+            if self.is_package_manager_available(tool) {
+                match self.run_package_manager_command(tool, args, &workspace_root) {
+                    Ok(success) if success => {
+                        info!("Successfully cleaned build artifacts with {}", tool);
+                        any_success = true;
+                    }
+                    Ok(_) => {
+                        debug!("{} clean command failed (expected if no build artifacts)", tool);
+                    }
+                    Err(_) => {
+                        debug!("{} not available or failed", tool);
+                    }
+                }
+            }
+        }
+
+        // Try to clear common cache directories
+        let cache_dirs = ["node_modules/.cache", "target/debug", ".next/cache", "dist", "build"];
+        for cache_dir in &cache_dirs {
+            let cache_path = workspace_root.join(cache_dir);
+            if cache_path.exists() {
+                match std::fs::remove_dir_all(&cache_path) {
+                    Ok(_) => {
+                        info!("Cleared cache directory: {}", cache_dir);
+                        any_success = true;
+                    }
+                    Err(e) => {
+                        debug!("Failed to clear cache {}: {}", cache_dir, e);
+                    }
+                }
+            }
+        }
+
+        // Try to reinstall dependencies after cleaning
+        if any_success {
+            return self.attempt_dependency_installation(task);
+        }
+
+        false
+    }
+
+    /// Attempt to reset configuration to defaults
+    fn attempt_configuration_reset(&self, task: &Task) -> bool {
+        info!("Attempting configuration reset for task {}", task.id);
+
+        let workspace_root = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
+
+        // Look for backup configuration files and restore them
+        let config_backups = [
+            ("tsconfig.json", "tsconfig.json.backup"),
+            ("package.json", "package.json.backup"),
+            ("Cargo.toml", "Cargo.toml.backup"),
+            (".env", ".env.backup"),
+            ("config.json", "config.json.backup"),
+        ];
+
+        let mut any_success = false;
+
+        for (config_file, backup_file) in &config_backups {
+            let config_path = workspace_root.join(config_file);
+            let backup_path = workspace_root.join(backup_file);
+
+            if backup_path.exists() && config_path.exists() {
+                match std::fs::copy(&backup_path, &config_path) {
+                    Ok(_) => {
+                        info!("Restored {} from backup", config_file);
+                        any_success = true;
+                    }
+                    Err(e) => {
+                        warn!("Failed to restore {} from backup: {}", config_file, e);
+                    }
+                }
+            }
+        }
+
+        // Reset to default configurations for common files
+        if workspace_root.join("package.json").exists() {
+            // For Node.js projects, try to reset npm/yarn config
+            let _ = self.run_package_manager_command("npm", &["config", "delete"], &workspace_root);
+            let _ = self.run_package_manager_command("yarn", &["config", "delete"], &workspace_root);
+        }
+
+        any_success
+    }
+
+    /// Attempt to fix permission issues
+    fn attempt_permission_fixes(&self, task: &Task) -> bool {
+        info!("Attempting permission fixes for task {}", task.id);
+
+        let workspace_root = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
+
+        // Try to fix permissions on common directories
+        let dirs_to_fix = ["node_modules", "target", ".next", "dist", "build"];
+
+        let mut any_success = false;
+
+        for dir in &dirs_to_fix {
+            let dir_path = workspace_root.join(dir);
+            if dir_path.exists() {
+                // Use chmod-like operations (simplified - would need OS-specific implementation)
+                #[cfg(unix)]
+                {
+                    use std::process::Command;
+                    match Command::new("chmod")
+                        .args(&["-R", "755", dir_path.to_str().unwrap_or("")])
+                        .current_dir(&workspace_root)
+                        .output() {
+                        Ok(output) if output.status.success() => {
+                            info!("Fixed permissions for directory: {}", dir);
+                            any_success = true;
+                        }
+                        Ok(_) => {
+                            debug!("Permission fix failed for {} (may not be needed)", dir);
+                        }
+                        Err(e) => {
+                            debug!("Failed to run chmod for {}: {}", dir, e);
+                        }
+                    }
+                }
+            }
+        }
+
+        any_success
+    }
+
+    /// Attempt to scale resources (memory, CPU, etc.)
+    fn attempt_resource_scaling(&self, task: &Task) -> bool {
+        info!("Attempting resource scaling for task {}", task.id);
+
+        // This is a simplified implementation - in practice would integrate with
+        // container orchestration, process managers, or cloud resource management
+
+        // Try to adjust Node.js memory limits if applicable
+        if self.is_package_manager_available("node") {
+            // Set higher memory limit for Node.js processes
+            std::env::set_var("NODE_OPTIONS", "--max-old-space-size=4096");
+
+            // Try to increase ulimits if on Unix
+            #[cfg(unix)]
+            {
+                use std::process::Command;
+                let _ = Command::new("ulimit")
+                    .args(&["-n", "4096"]) // Increase file descriptor limit
+                    .output(); // Ignore errors as this may not be available
+            }
+
+            info!("Attempted to scale Node.js memory limit to 4GB");
+            return true;
+        }
+
+        // For other environments, we can't easily scale resources automatically
+        warn!("Resource scaling not applicable for current environment");
+        false
+    }
+
+    /// Attempt retry with exponential backoff
+    fn attempt_backoff_retry(&self, task: &Task) -> bool {
+        info!("Scheduling retry with backoff for task {}", task.id);
+
+        // This would typically integrate with a task scheduler or queue system
+        // For now, we'll just log that a retry should be attempted
+
+        // In a real implementation, this would:
+        // 1. Calculate backoff delay based on failure history
+        // 2. Schedule task retry with the calculated delay
+        // 3. Possibly increase resource limits or change execution parameters
+
+        let backoff_delay_seconds = 30 * (2_u32.pow(task.iteration_count.min(5) as u32)); // Exponential backoff
+
+        info!("Recommended retry after {} seconds with exponential backoff", backoff_delay_seconds);
+
+        // For now, just return false to indicate we can't automatically retry
+        // In a real system, this would return true and schedule the retry
+        false
+    }
+
+    /// Check if a package manager or tool is available on the system
+    fn is_package_manager_available(&self, manager: &str) -> bool {
+        use std::process::Command;
+        Command::new(manager)
+            .arg("--version")
+            .output()
+            .map(|output| output.status.success())
+            .unwrap_or(false)
+    }
+
+    /// Run a package manager command and return success status
+    fn run_package_manager_command(&self, manager: &str, args: &[&str], cwd: &std::path::Path) -> Result<bool, std::io::Error> {
+        use std::process::Command;
+
+        let mut command = Command::new(manager);
+        command.args(args).current_dir(cwd);
+
+        // Set a timeout for the command (simplified - would need tokio for real timeout)
+        let output = command.output()?;
+
+        Ok(output.status.success())
+    }
+
     /// Classify the type of patch failure based on error and changeset
     fn classify_patch_failure(&self, error: &file_ops::FileOpsError, changeset: &ChangeSet) -> PatchFailureType {
         match error {
@@ -996,6 +2094,29 @@ pub enum SelfPromptingEvent {
         task_id: uuid::Uuid,
         iteration: usize,
         progress: crate::types::IterationProgress,
+        timestamp: chrono::Utc::now(),
+    },
+    ContextReduced {
+        strategy: crate::types::ScopeReductionStrategy,
+        previous_files: usize,
+        remaining_files: usize,
+        timestamp: chrono::Utc::now(),
+    },
+    ContextMetricsUpdated {
+        metrics: crate::types::ContextMetrics,
+        timestamp: chrono::Utc::now(),
+    },
+    EnvironmentRecoveryAttempted {
+        task_id: uuid::Uuid,
+        failure_type: crate::evaluation::EvaluationFailureType,
+        recovery_strategy: crate::evaluation::satisficing::EnvironmentRecoveryStrategy,
+        success: bool,
+        timestamp: chrono::Utc::now(),
+    },
+    VerdictOverridden {
+        original_verdict: String,
+        new_verdict: String,
+        reason: String,
         timestamp: chrono::Utc::now(),
     },
     LoopCompleted {

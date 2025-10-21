@@ -123,10 +123,11 @@ impl Default for ContextBudget {
 }
 
 /// Multimodal context provider for Council
-pub struct MultimodalContextProvider {
-    retriever: crate::multimodal_retriever::MultimodalRetriever,
-    dedup_cache: HashMap<String, Uuid>,
-}
+// Temporarily disabled due to MultimodalRetriever dependency
+// pub struct MultimodalContextProvider {
+//     retriever: crate::multimodal_retriever::MultimodalRetriever,
+//     dedup_cache: HashMap<String, Uuid>,
+// }
 
 impl MultimodalContextProvider {
     /// Create new multimodal context provider

@@ -116,13 +116,34 @@ impl AutonomousExecutor {
                 circuit_breaker,
                 #[cfg(feature = "self-prompting")]
                 self_prompting_agent: if config.enable_self_prompting {
-                    // TODO: Initialize self-prompting agent with proper dependencies
-                    // This would need model registry, evaluator, etc.
+                    // Initialize self-prompting agent with proper dependencies
+                    let agent_config = self_prompting_agent::SelfPromptingAgentConfig {
+                        max_iterations: config.max_execution_time_seconds / 30, // Convert to iterations
+                        confidence_threshold: 0.8,
+                        enable_learning: true,
+                        model_temperature: 0.7,
+                        max_prompt_length: 4096,
+                        enable_context_awareness: true,
+                        evaluation_interval_seconds: 60,
+                    };
+
+                    // Create model registry from worker manager capabilities
+                    let model_registry = Arc::new(SelfPromptingModelRegistry::new(
+                        worker_manager.clone(),
+                        validator.clone(),
+                    ));
+
+                    // Create evaluator using the CAWS runtime validator
+                    let evaluator = Arc::new(SelfPromptingEvaluator::new(
+                        validator.clone(),
+                        arbiter.clone(),
+                        event_sender.clone(),
+                    ));
+
                     Some(Arc::new(SelfPromptingAgent::new(
-                        self_prompting_agent::SelfPromptingAgentConfig::default(),
-                        // TODO: Pass proper model registry and evaluator
-                        todo!("Initialize with proper dependencies"),
-                        todo!("Initialize with proper evaluator"),
+                        agent_config,
+                        model_registry,
+                        evaluator,
                     ).await.unwrap()))
                 } else {
                     None

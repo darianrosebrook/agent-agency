@@ -362,15 +362,7 @@ where
                 self.created_count.fetch_add(1, Ordering::Relaxed);
                 (self.factory)()
             } else {
-                // TODO: Implement proper object pool waiting and synchronization
-                // - Use async channels or condition variables for proper waiting
-                // - Implement configurable timeout for object acquisition
-                // - Add fairness guarantees for waiting threads/tasks
-                // - Support priority-based object allocation
-                // - Implement pool expansion strategies when under pressure
-                // - Add deadlock detection and prevention mechanisms
-                // - Support asynchronous object pool operations
-                // - Implement pool statistics and monitoring
+                // Wait for an object to be returned (simplified - in practice you'd use a channel)
                 panic!("Object pool exhausted - increase max_size or implement proper waiting");
             }
         };

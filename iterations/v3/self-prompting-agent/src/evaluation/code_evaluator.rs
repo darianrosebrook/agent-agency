@@ -224,20 +224,56 @@ impl CodeEvaluator {
 
         for path in &coverage_paths {
             if project_root.join(path).exists() {
-                // TODO: Implement proper coverage analysis and validation
-                // - [ ] Parse actual coverage numbers from coverage reports
-                // - [ ] Implement coverage threshold validation
-                // - [ ] Add coverage trend analysis and improvement tracking
-                // - [ ] Implement coverage gap identification and recommendations
-                // - [ ] Add support for different coverage report formats
-                return Ok(EvalCriterion {
-                    id: "coverage-adequate".to_string(),
-                    description: format!("Code coverage meets {}% threshold", (self.config.coverage_threshold * 100.0) as u32),
-                    weight: 0.1,
-                    passed: true,
-                    score: 1.0,
-                    notes: Some(format!("Coverage report found at: {}", path)),
-                });
+                // Parse the coverage report and validate against thresholds
+                match self.parse_coverage_report(&project_root.join(path)).await {
+                    Ok(coverage_data) => {
+                        let line_coverage = coverage_data.line_coverage;
+                        let branch_coverage = coverage_data.branch_coverage;
+                        let function_coverage = coverage_data.function_coverage;
+
+                        // Check if coverage meets minimum thresholds
+                        let line_passed = line_coverage >= self.config.coverage_threshold;
+                        let branch_passed = branch_coverage >= self.config.coverage_threshold;
+                        let function_passed = function_coverage >= self.config.coverage_threshold;
+
+                        let overall_passed = line_passed && branch_passed && function_passed;
+                        let overall_score = if overall_passed { 1.0 } else {
+                            // Partial credit based on best coverage metric
+                            let max_coverage = line_coverage.max(branch_coverage).max(function_coverage);
+                            (max_coverage / self.config.coverage_threshold).min(1.0)
+                        };
+
+                        let threshold_pct = (self.config.coverage_threshold * 100.0) as u32;
+                        let notes = format!(
+                            "Coverage report: {} | Line: {:.1}%, Branch: {:.1}%, Function: {:.1}% | Threshold: {}%",
+                            path,
+                            line_coverage * 100.0,
+                            branch_coverage * 100.0,
+                            function_coverage * 100.0,
+                            threshold_pct
+                        );
+
+                        return Ok(EvalCriterion {
+                            id: "coverage-adequate".to_string(),
+                            description: format!("Code coverage meets {}% threshold", threshold_pct),
+                            weight: 0.1,
+                            passed: overall_passed,
+                            score: overall_score,
+                            notes: Some(notes),
+                        });
+                    }
+                    Err(e) => {
+                        // Report exists but couldn't be parsed
+                        return Ok(EvalCriterion {
+                            id: "coverage-adequate".to_string(),
+                            description: "Coverage report parsing failed".to_string(),
+                            weight: 0.0,
+                            passed: false,
+                            score: 0.0,
+                            notes: Some(format!("Found coverage report at {} but failed to parse: {}", path, e)),
+                        });
+                    }
+                }
             }
         }
 

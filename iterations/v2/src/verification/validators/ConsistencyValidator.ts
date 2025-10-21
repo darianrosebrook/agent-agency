@@ -740,7 +740,15 @@ export class ConsistencyValidator {
   }
 
   /**
-   * Extract time from text (simplified - just looks for hour patterns)
+   * TODO: Implement comprehensive temporal information extraction
+   * - Use NLP libraries for advanced date/time parsing (chrono, dateutil)
+   * - Support multiple time formats and cultural variations
+   * - Implement relative time parsing (yesterday, last week, in 2 hours)
+   * - Add timezone detection and normalization
+   * - Support temporal range and duration extraction
+   * - Implement temporal consistency validation across documents
+   * - Add temporal reasoning and conflict detection
+   * - Support temporal metadata extraction and indexing
    */
   private extractTimeFromText(
     text: string,

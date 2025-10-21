@@ -41,7 +41,15 @@ export class MetricsCollector {
     // Memory usage
     const memInfo = this.getMemoryInfo();
 
-    // Disk usage (simplified - focuses on main filesystem)
+    // TODO: Implement comprehensive disk monitoring and analytics
+    // - Monitor all mounted filesystems with detailed usage statistics
+    // - Implement disk I/O performance metrics (read/write throughput, latency)
+    // - Add disk health monitoring (SMART attributes, error rates)
+    // - Support disk space forecasting and alerting
+    // - Implement disk usage trend analysis and anomaly detection
+    // - Add disk partitioning and volume management monitoring
+    // - Support RAID and storage array monitoring
+    // - Implement disk performance benchmarking and optimization
     const diskInfo = await this.getDiskInfo();
 
     // Network I/O

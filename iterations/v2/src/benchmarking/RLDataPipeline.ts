@@ -425,7 +425,15 @@ export class RLDataPipeline extends EventEmitter {
     state: PipelineState,
     agentProfile: AgentPerformanceProfile
   ): Promise<RLTrainingSample | null> {
-    // Only process task completion events for now
+    // TODO: Implement comprehensive event-driven RL training data collection
+    // - Support multiple event types (task_start, task_progress, task_failure, agent_feedback)
+    // - Implement temporal event sequences and state transitions
+    // - Add event context enrichment and metadata correlation
+    // - Support event filtering and sampling strategies
+    // - Implement event replay and simulation capabilities
+    // - Add event quality assessment and noise filtering
+    // - Support multi-agent event correlation and coordination
+    // - Implement event-driven reward signal generation
     if (event.type !== "task_execution_complete") {
       return null;
     }

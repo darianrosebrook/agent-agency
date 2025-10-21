@@ -115,11 +115,10 @@ export default function MetricsDashboard() {
 
       {/* Agent Performance Section */}
       <div className={styles.section}>
-        <AgentPerformanceGrid
-          onAgentSelect={(agentId) => {
-            console.log("Selected agent:", agentId);
-          }}
-        />
+        <div style={{ padding: '20px', border: '1px solid red', background: 'yellow' }}>
+          <h3>Agent Performance Section</h3>
+          <p>This section should show the AgentPerformanceGrid component.</p>
+        </div>
       </div>
 
       {/* Coordination Metrics Section */}

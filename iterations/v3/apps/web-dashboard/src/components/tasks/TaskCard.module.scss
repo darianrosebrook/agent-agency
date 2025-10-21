@@ -45,6 +45,121 @@
   }
 }
 
+// Audit Trail Styles
+.auditTrail {
+  margin-top: var(--spacing-md);
+  padding: var(--spacing-md);
+  background: var(--color-gray-50);
+  border-radius: var(--border-radius-md);
+  border: 1px solid var(--color-gray-200);
+
+  h4 {
+    margin: 0 0 var(--spacing-sm) 0;
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-gray-700);
+  }
+}
+
+.timeline {
+  position: relative;
+  padding-left: var(--spacing-lg);
+}
+
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 12px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--color-gray-300);
+}
+
+.timelineItem {
+  position: relative;
+  margin-bottom: var(--spacing-md);
+  
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.timelineMarker {
+  position: absolute;
+  left: -20px;
+  top: 2px;
+  width: 24px;
+  height: 24px;
+  background: var(--color-white);
+  border: 2px solid var(--color-gray-300);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+}
+
+.timelineIcon {
+  font-size: 12px;
+  line-height: 1;
+}
+
+.timelineContent {
+  background: var(--color-white);
+  padding: var(--spacing-sm);
+  border-radius: var(--border-radius-sm);
+  border: 1px solid var(--color-gray-200);
+  box-shadow: var(--shadow-sm);
+}
+
+.timelineHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-xs);
+}
+
+.action {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-gray-800);
+}
+
+.timestamp {
+  font-size: var(--font-size-xs);
+  color: var(--color-gray-500);
+}
+
+.actor {
+  font-size: var(--font-size-xs);
+  color: var(--color-gray-600);
+  margin-bottom: var(--spacing-xs);
+}
+
+.changeSummary {
+  font-size: var(--font-size-xs);
+  color: var(--color-gray-600);
+  background: var(--color-gray-50);
+  padding: var(--spacing-xs);
+  border-radius: var(--border-radius-sm);
+  font-family: var(--font-family-mono);
+  white-space: pre-wrap;
+  max-height: 100px;
+  overflow-y: auto;
+}
+
+.moreEntries {
+  text-align: center;
+  font-size: var(--font-size-xs);
+  color: var(--color-gray-500);
+  font-style: italic;
+  margin-top: var(--spacing-sm);
+  padding: var(--spacing-xs);
+  background: var(--color-gray-100);
+  border-radius: var(--border-radius-sm);
+}
+
 .cardHeader {
   @include flex-between;
   align-items: flex-start;

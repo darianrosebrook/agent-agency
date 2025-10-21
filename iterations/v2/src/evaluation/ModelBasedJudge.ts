@@ -252,7 +252,15 @@ export class ModelBasedJudge {
         return new AnthropicProvider(this.config.llm);
       case "model-registry":
         // Use Ollama as local-first provider for model registry
-        // ModelRegistryLLMProvider provides additional orchestration but Ollama is sufficient for now
+        // TODO: Implement intelligent LLM provider selection and orchestration
+        // - Add provider capability matching based on task requirements
+        // - Implement cost-benefit analysis for provider selection
+        // - Support provider ensemble and voting mechanisms
+        // - Add provider performance history and adaptive selection
+        // - Implement provider fallback and degradation strategies
+        // - Support multi-provider orchestration for complex tasks
+        // - Add provider-specific parameter optimization
+        // - Implement provider usage analytics and optimization
         console.info(
           "Using Ollama provider for model registry (local-first approach)"
         );

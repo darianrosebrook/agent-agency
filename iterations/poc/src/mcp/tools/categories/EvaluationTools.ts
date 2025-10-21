@@ -426,7 +426,15 @@ export class EvaluationTools {
 
         evaluations.push(evaluation);
 
-        // Check if we should stop (simplified satisficing logic)
+        // TODO: Implement sophisticated evaluation stopping criteria
+        // - Use statistical significance testing for score improvements
+        // - Implement diminishing returns analysis and convergence detection
+        // - Add multi-objective optimization with Pareto front analysis
+        // - Support time-based and resource-based stopping criteria
+        // - Implement adaptive thresholds based on evaluation history
+        // - Add confidence intervals for evaluation score stability
+        // - Support early stopping with validation set performance
+        // - Implement evaluation budget management and cost optimization
         if (evaluation.score >= 0.85) {
           this.context.logger.info(
             `Satisficing threshold reached at iteration ${i}`

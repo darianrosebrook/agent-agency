@@ -18,10 +18,11 @@ pub trait EmbeddingProvider: Send + Sync {
     async fn embed(&self, inputs: &[String]) -> Result<Vec<EmbeddingVector>>;
 }
 
-/// Adapter to integrate embedding-service with research agent
-pub struct EmbeddingServiceAdapter {
-    service: Box<dyn embedding_service::EmbeddingService>,
-}
+// Temporarily disabled - embedding-service dependency commented out
+// /// Adapter to integrate embedding-service with research agent
+// pub struct EmbeddingServiceAdapter {
+//     service: Box<dyn embedding_service::EmbeddingService>,
+// }
 
 impl EmbeddingServiceAdapter {
     pub fn new(service: Box<dyn embedding_service::EmbeddingService>) -> Self {

@@ -660,15 +660,6 @@ impl ModelCacheStats {
     fn record_manual_removal(&mut self) {
         self.total_manual_removals += 1;
     }
-
-    fn calculate_hit_rate(&self) -> f32 {
-        let total = self.total_hits + self.total_misses;
-        if total == 0 {
-            0.0
-        } else {
-            self.total_hits as f32 / total as f32
-        }
-    }
 }
 
 /// Errors that can occur during model caching operations

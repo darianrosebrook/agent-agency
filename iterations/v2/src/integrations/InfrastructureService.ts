@@ -1041,7 +1041,15 @@ export class AWSInfrastructureService extends BaseServiceIntegration {
       }
 
       const result = await response.text();
-      // Parse XML response (simplified)
+      // TODO: Implement comprehensive XML/JSON response parsing and validation
+      // - Use proper XML parsing libraries (xml2js, fast-xml-parser)
+      // - Implement response schema validation and error handling
+      // - Support different response formats (XML, JSON, plain text)
+      // - Add response caching and deduplication
+      // - Implement retry logic for failed responses
+      // - Support response compression and streaming
+      // - Add response metrics and performance monitoring
+      // - Implement response sanitization and security validation
       const isHealthy = result.includes("ok") || result.includes("running");
 
       return this.createResult(

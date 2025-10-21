@@ -2,9 +2,9 @@
 
 ## Overview
 
-**Agent Agency** is a comprehensive research framework that has evolved from constitutional AI agent governance into a full-featured **Multimodal Retrieval-Augmented Generation (RAG) system** with integrated constitutional governance capabilities. The project now provides production-ready multimodal AI processing with real-time governance and decision-making.
+**Agent Agency** is a comprehensive research framework investigating constitutional AI agent governance and autonomous agent systems. The project explores multimodal AI processing, agent orchestration, and self-governing AI workflows through progressive research iterations.
 
-This mono-repo structure supports progressive research through multiple iterations, with the latest V3 iteration featuring a complete multimodal RAG system that can process text, images, audio, video, and documents while maintaining constitutional governance principles.
+This mono-repo structure supports research through multiple iterations, with the latest V3 iteration providing advanced infrastructure components for autonomous agent systems, though core autonomous capabilities remain under development.
 
 This mono-repo contains multiple iterations examining different approaches to AI agent systems:
 

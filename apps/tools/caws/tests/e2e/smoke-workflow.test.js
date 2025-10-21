@@ -135,8 +135,14 @@ describe("CAWS E2E Smoke Tests", () => {
       process.chdir(testProjectPath);
 
       try {
+        // TODO: Fix scaffold functionality and implement proper project creation testing
+        // - [ ] Identify and fix known issues in scaffold command
+        // - [ ] Implement comprehensive scaffold testing with error handling
+        // - [ ] Test scaffold with different project templates and configurations
+        // - [ ] Add validation for scaffolded project structure completeness
+        // - [ ] Test scaffold rollback/cleanup on failure scenarios
+        // - [ ] Add integration tests for scaffold + build pipeline
         // Test that we can create basic project structure
-        // This is a simplified version since scaffold has known issues
 
         const projectStructure = [
           ".caws",

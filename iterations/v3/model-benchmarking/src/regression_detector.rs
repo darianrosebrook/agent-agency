@@ -5,9 +5,8 @@ use anyhow::Result;
 use chrono::Utc;
 use std::collections::HashMap;
 
-pub struct RegressionDetector {
-    /// Placeholder for future configuration options.
-}
+/// Regression detector for performance monitoring
+pub struct RegressionDetector {}
 
 impl RegressionDetector {
     pub fn new() -> Self {

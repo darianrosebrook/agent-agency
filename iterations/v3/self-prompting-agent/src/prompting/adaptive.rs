@@ -4,6 +4,20 @@ use async_trait::async_trait;
 use crate::evaluation::{EvalReport, FailureBucket};
 use crate::types::{Task, ActionRequest};
 use super::PromptingStrategy;
+use pest::Parser;
+use pest_derive::Parser;
+use nom::{
+    IResult,
+    bytes::complete::{tag, take_while1, take_until},
+    character::complete::{char, digit1, space0, space1},
+    combinator::{opt, recognize},
+    multi::{many0, separated_list1},
+    sequence::{delimited, preceded, tuple},
+    branch::alt,
+};
+use std::collections::HashMap;
+use regex::Regex;
+use serde::{Deserialize, Serialize};
 
 /// Adaptive prompting strategy that uses evaluation results to refine prompts
 pub struct AdaptivePromptingStrategy;

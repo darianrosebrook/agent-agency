@@ -30,7 +30,7 @@ export class TaskApiClient {
   private baseUrl: string;
 
   constructor(baseUrl?: string) {
-    this.baseUrl = baseUrl ?? "/api/tasks";
+    this.baseUrl = baseUrl ?? "/api/v1/tasks";
   }
 
   // Get list of tasks with optional filtering

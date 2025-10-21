@@ -97,7 +97,15 @@ export class SpecValidator {
     if (this.performanceTracker) {
       try {
         const startTime = Date.now();
-        // Simulate processing time for now (would be measured in real implementation)
+        // TODO: Implement comprehensive performance measurement and profiling
+        // - Add detailed timing for different validation phases
+        // - Implement performance baseline establishment and regression detection
+        // - Support distributed tracing for validation operations
+        // - Add resource usage tracking (CPU, memory, I/O)
+        // - Implement performance bottleneck identification and optimization
+        // - Support performance comparison across different spec types
+        // - Add performance alerting and anomaly detection
+        // - Implement performance trend analysis and forecasting
         const processingTimeMs = Date.now() - startTime;
 
         await this.performanceTracker.recordConstitutionalValidation({

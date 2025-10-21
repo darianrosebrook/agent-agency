@@ -4,10 +4,15 @@
 use crate::types::{HnswMetadata, VectorQuery, VectorSearchResult};
 use anyhow::{Context, Result};
 use parking_lot::Mutex;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet, BinaryHeap, BTreeMap};
 use std::sync::Arc;
-use tracing::debug;
+use std::cmp::Reverse;
+use tracing::{debug, warn, info};
 use uuid::Uuid;
+use rand::prelude::*;
+use priority_queue::PriorityQueue;
+use dashmap::DashMap;
+use serde::{Deserialize, Serialize};
 
 /// Simplified HNSW index for vector search
 struct SimpleHnswIndex {

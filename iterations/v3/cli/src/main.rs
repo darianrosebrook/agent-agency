@@ -5,6 +5,7 @@
 
 use std::io::{self, Write};
 use clap::{Parser, Subcommand};
+use reqwest::Client;
 
 /// Execution modes with different intervention levels
 #[derive(Debug, Clone, clap::ValueEnum)]

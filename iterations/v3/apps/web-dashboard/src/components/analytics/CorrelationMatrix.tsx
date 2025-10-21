@@ -277,7 +277,7 @@ export default function CorrelationMatrix({
                       <span className={styles.metricLabel}>{metricA}</span>
                     </div>
                     {allMetrics.map((metricB, colIndex) => {
-                      const cellData = correlationMatrix[rowIndex][colIndex];
+                      const cellData = correlationMatrix[rowIndex]?.[colIndex];
 
                       if (rowIndex === colIndex) {
                         // Diagonal - perfect correlation

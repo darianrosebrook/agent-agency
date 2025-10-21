@@ -1,12 +1,15 @@
-'use client'
+"use client";
 
-import React from 'react';
-import { ChatMessage } from '@/types/chat';
-import styles from './MessageBubble.module.scss';
+import React, { useState, useEffect } from "react";
+import { ChatMessage } from "@/types/chat";
+import { useTTS, useAudioPlayback } from "@/hooks/useTTS";
+import styles from "./MessageBubble.module.scss";
 
 interface MessageBubbleProps {
   message: ChatMessage;
   onClick?: () => void;
+  enableTTS?: boolean;
+  onTTSGenerated?: (audioUrl: string) => void;
 }
 
 export default function MessageBubble({ message, onClick }: MessageBubbleProps) {

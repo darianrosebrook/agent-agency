@@ -1,8 +1,30 @@
-# CAWS v1.0 — Engineering-Grade Operating System for Coding Agents
+# Agent Agency V3 - Constitutional AI System Implementation Guide
 
-## Purpose
+## Overview
 
-Our "engineering-grade" operating system for coding agents that (1) forces planning before code, (2) bakes in tests as first-class artifacts, (3) creates explainable provenance, and (4) enforces quality via automated CI gates. It's expressed as a Working Spec + Ruleset the agent must follow, with schemas, templates, scripts, and verification hooks that enable better collaboration between agent and our human in the loop.
+Agent Agency V3 delivers a complete, production-ready constitutional AI system with real-time governance oversight. This guide covers the implementation of constitutional concurrency, execution modes, intervention capabilities, and comprehensive monitoring systems.
+
+## System Architecture
+
+### Core Components
+
+#### Constitutional Council System
+Four specialized AI judges provide governance:
+- **Constitutional Judge**: Ethical compliance and CAWS validation
+- **Technical Auditor**: Code quality and security standards
+- **Quality Evaluator**: Requirements satisfaction verification
+- **Integration Validator**: System coherence and compatibility
+
+#### Execution Modes
+- **Strict Mode**: Manual approval required for each execution phase
+- **Auto Mode**: Automatic execution with quality gate validation
+- **Dry-Run Mode**: Safe testing without filesystem modifications
+
+#### Real-time Intervention
+- **Pause/Resume**: Suspend and restart task execution
+- **Cancel**: Terminate running tasks gracefully
+- **Override**: Modify task parameters and verdicts
+- **Guidance Injection**: Provide additional context during execution
 
 ## 1) Core Framework
 

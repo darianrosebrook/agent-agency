@@ -16,9 +16,9 @@ pub struct GitWorktreeWorkspace {
     /// Path to the worktree directory
     worktree_path: PathBuf,
     /// Task ID for this workspace
-    task_id: String,
+    _task_id: String,
     /// Original branch we branched from
-    original_branch: String,
+    _original_branch: String,
     /// Worktree branch name
     worktree_branch: String,
 }

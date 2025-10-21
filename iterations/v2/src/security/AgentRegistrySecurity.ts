@@ -777,7 +777,15 @@ export class AgentRegistrySecurity {
       (e) => e.eventType === AuditEventType.AUTHORIZATION_FAILURE
     ).length;
 
-    // Count rate limit hits from cache (simplified)
+    // TODO: Implement comprehensive rate limiting analytics and monitoring
+    // - Query rate limit data from persistent storage with time-based aggregation
+    // - Implement sliding window rate limit analysis and trend detection
+    // - Add rate limit effectiveness metrics and false positive analysis
+    // - Support per-client, per-endpoint, and global rate limit monitoring
+    // - Implement rate limit policy optimization and auto-tuning
+    // - Add rate limit violation pattern analysis and threat detection
+    // - Support rate limit quota management and usage forecasting
+    // - Implement rate limit compliance reporting and audit trails
     let rateLimitHits = 0;
     for (const [, data] of this.rateLimitCache) {
       if (data.count >= this.config.rateLimitMaxRequests) {

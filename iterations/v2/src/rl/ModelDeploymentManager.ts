@@ -383,7 +383,15 @@ export class ModelDeploymentManager extends EventEmitter {
       errorRate: 1 - treatmentStats.overallSuccessRate,
     };
 
-    // Calculate statistical significance (simplified)
+    // TODO: Implement comprehensive statistical significance analysis
+    // - Use proper statistical tests (t-test, z-test, chi-square, ANOVA)
+    // - Implement confidence intervals and p-value calculations
+    // - Support multiple comparison corrections (Bonferroni, Holm-Bonferroni)
+    // - Add statistical power analysis and sample size determination
+    // - Implement effect size calculations (Cohen's d, odds ratio, etc.)
+    // - Support non-parametric statistical tests for non-normal data
+    // - Add statistical test validation and assumption checking
+    // - Implement statistical analysis reporting and visualization
     const statisticalSignificance = this.calculateSignificance(
       controlMetrics,
       treatmentMetrics,

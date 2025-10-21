@@ -1,9 +1,11 @@
 //! Sandbox environment for safe file editing with Git snapshots
 
 pub mod diff_applier;
+pub mod diff_generator;
 pub mod file_guard;
 pub mod git_worktree;
 pub mod snapshot;
+pub mod workspace_manager;
 
 pub use diff_applier::DiffApplier;
 pub use file_guard::FileGuard;

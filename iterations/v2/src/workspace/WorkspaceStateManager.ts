@@ -693,12 +693,26 @@ export class WorkspaceStateManager extends EventEmitter {
    * Scan workspace for files
    */
   private async scanWorkspace(): Promise<FileMetadata[]> {
-    // This is a simplified implementation
-    // In a real system, you'd use a proper file scanning library
+    // TODO: Implement comprehensive workspace file scanning and indexing
+    // - Use robust file system traversal libraries (fs-extra, glob, fast-glob)
+    // - Implement efficient file discovery with caching and incremental updates
+    // - Support multiple file types with appropriate metadata extraction
+    // - Add file filtering and inclusion/exclusion patterns
+    // - Implement file change detection and real-time monitoring
+    // - Support large workspace scanning with memory-efficient strategies
+    // - Add file integrity checking and corruption detection
+    // - Implement file indexing and search capabilities
     const files: FileMetadata[] = [];
 
-    // For now, return empty array - in production this would scan the actual filesystem
-    // This is a placeholder to avoid implementing full file scanning in this initial version
+    // TODO: Replace placeholder with actual filesystem scanning
+    // - Implement recursive directory traversal with depth limits
+    // - Add file type detection and MIME type classification
+    // - Support symbolic link handling and loop detection
+    // - Implement file permission and access control checking
+    // - Add file size and modification time tracking
+    // - Support compressed and archived file content scanning
+    // - Implement file content hashing and deduplication
+    // - Add file metadata extraction (EXIF, ID3, etc.)
 
     return files;
   }

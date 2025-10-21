@@ -287,8 +287,15 @@ export class DesignEvaluator extends BaseEvaluator {
   private checkColorContrast(content: string): string[] {
     const issues: string[] = [];
 
-    // Basic heuristics for potential contrast issues
-    // This is a simplified check - real contrast analysis would need more context
+    // TODO: Implement comprehensive color contrast analysis
+    // - Parse CSS color values and compute actual contrast ratios
+    // - Implement WCAG 2.1 compliance checking (AA/AAA levels)
+    // - Add support for different color spaces (RGB, HSL, Lab)
+    // - Implement text/background contrast analysis
+    // - Support gradient and transparent color contrast evaluation
+    // - Add color blindness simulation (protanopia, deuteranopia, tritanopia)
+    // - Implement automated color accessibility recommendations
+    // - Support large text vs small text contrast requirements
     const lightColors = content.match(/#(f{3,8}|e[0-9a-f]{2,7})/gi) || [];
     const darkColors = content.match(/#(0{3,8}|1[0-9a-f]{2,7})/gi) || [];
 

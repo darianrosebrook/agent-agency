@@ -363,7 +363,7 @@ pub enum NormalizationMethod {
     Robust,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PerformanceMetrics {
     pub accuracy: f64,
     pub speed: f64,

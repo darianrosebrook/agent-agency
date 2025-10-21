@@ -26,6 +26,7 @@ imageproc = "0.23"
 # PDF processing
 pdfium-render = { version = "0.7", optional = true }
 pdf = "0.8"
+lopdf = "0.32"
 zip = "0.6"
 
 # SVG/GraphML parsing

@@ -23,8 +23,7 @@ core-foundation = "0.9"
 objc = "0.2"
 metal = "0.29"
 dispatch = "0.2"
-once_cell = "~1.19"
-num_cpus = "1.16"
+once_cell = "1.19"
 
 # Core ML integration
 objc2 = "0.5"
@@ -32,9 +31,6 @@ objc2-core-ml = "0.3"
 objc2-foundation = "0.3"
 objc2-metal-performance-shaders = "0.3"
 objc2-metal-performance-shaders-graph = "0.3"
-
-# IOKit integration for hardware monitoring
-# Note: IOKit bindings not available in crates.io, would need custom bindings
 
 # ML/AI integration
 candle-core = "0.9.1"
@@ -44,12 +40,6 @@ safetensors = "0.4"
 ort = "2.0.0-rc.10"
 protobuf = "3.4"
 
-# Quantization and optimization
-# candle-flash-attn = "0.9.1"  # Flash attention for efficiency - requires CUDA which isn't available
-tch = { version = "0.17", optional = true }  # PyTorch bindings for quantization - requires libtorch system library
-half = "2.4"  # Half-precision floating point
-# candle-flash-attn-v3 = "0.9.1"  # Advanced attention mechanisms
-
 # System monitoring
 sysinfo = "0.30"
 
@@ -57,32 +47,19 @@ sysinfo = "0.30"
 regex = "1.10"
 tokenizers = "0.19"
 
-# Image processing
-image = { version = "0.24", features = ["jpeg", "png", "webp", "tiff", "bmp", "gif"] }
-imageproc = "0.23"
-# exif = "0.0.1"  # EXIF metadata extraction - uses deprecated features
-imgref = "1.10"  # Image reference types
-rgb = "0.8"  # RGB color types
-
 # Concurrent data structures
 dashmap = "5.5"
-parking_lot = "0.12"
-ndarray = "0.15"
 
-# Observability and caching - temporarily disabled due to compilation issues
-# agent-agency-observability = { path = "../observability" }
+# Observability and caching
+agent-agency-observability = { path = "../observability" }
 
 # Metrics and monitoring
 prometheus = "0.13"
 warp = "0.3"
 cadence = "0.29"
 
-# Half-precision floating point support already included above
-
-# Compression algorithms
-flate2 = "1.0"  # Gzip/zlib compression
-zstd = "0.13"   # Zstandard compression
-brotli = "6.0"  # Brotli compression
+# Half-precision floating point support
+half = "2.4"
 
 # Byte manipulation utilities
 bytemuck = "1.14"
@@ -102,4 +79,3 @@ tokio-test = "0.4"
 default = ["cpu"]
 cpu = []
 coreml = []
-torch = ["tch"]

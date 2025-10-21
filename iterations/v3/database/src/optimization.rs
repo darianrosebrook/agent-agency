@@ -3,8 +3,8 @@
 //! Provides query optimization, index management, read/write splitting,
 //! and comprehensive performance monitoring for production databases.
 
-use crate::{DatabaseClient, DatabaseConfig};
-use anyhow::{Context, Result};
+use crate::DatabaseClient;
+use anyhow::Result;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::Row;
