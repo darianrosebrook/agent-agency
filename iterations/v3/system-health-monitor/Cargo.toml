@@ -31,22 +31,41 @@ regex = "1.10"
 tdigest = "0.2"
 hdrhistogram = "7.5"
 
+# Redis integration
+redis = { version = "0.24", features = ["tokio-comp", "connection-manager"] }
+
 # macOS system calls
 [target.'cfg(target_os = "macos")'.dependencies]
 libc = "0.2"
 mach2 = "0.4"
 core-foundation = "0.9"
 
+# Windows system monitoring
+[target.'cfg(target_os = "windows")'.dependencies]
+winapi = { version = "0.3", features = ["pdh", "winbase", "handleapi", "processthreadsapi"] }
+windows = { version = "0.52", features = ["Win32_System_Performance", "Win32_System_Wmi", "Win32_Storage_FileSystem"] }
+
 # Database integration
 sqlx = { workspace = true, features = ["postgres", "chrono", "uuid"] }
 
-# Integration with existing V3 components
-agent-agency-council = { path = "../council" }
-agent-agency-research = { path = "../research" }
-agent-agency-workers = { path = "../workers" }
-agent-agency-context-preservation-engine = { path = "../context-preservation-engine" }
-agent-agency-database = { path = "../database" }
-agent-agency-observability = { path = "../observability" }
+# Integration with existing V3 components (optional for basic functionality)
+agent-agency-council = { path = "../council", optional = true }
+agent-agency-research = { path = "../research", optional = true }
+agent-agency-workers = { path = "../workers", optional = true }
+agent-agency-context-preservation-engine = { path = "../context-preservation-engine", optional = true }
+agent-agency-database = { path = "../database", optional = true }
+agent-agency-observability = { path = "../observability", optional = true }
+
+[features]
+default = []
+full = [
+    "agent-agency-council",
+    "agent-agency-research",
+    "agent-agency-workers",
+    "agent-agency-context-preservation-engine",
+    "agent-agency-database",
+    "agent-agency-observability"
+]
 
 [dev-dependencies]
 tokio-test = "0.4"

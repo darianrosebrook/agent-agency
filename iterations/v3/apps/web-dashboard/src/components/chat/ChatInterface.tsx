@@ -12,12 +12,14 @@ import {
   ChatContext,
   ConnectionState,
   ChatMessagePayload,
+  VoiceChatSettings,
 } from "@/types/chat";
 import { ChatApiClient, ChatApiError } from "@/lib/chat-api";
 import { WebSocketClient } from "@/lib/websocket/WebSocketClient";
-import { useTTS } from "@/hooks/useTTS";
+import { useTTS, useAudioPlayback } from "@/hooks/useTTS";
 import MessageList from "./MessageList";
 import MessageInput from "./MessageInput";
+import VoiceChatInterface from "./VoiceChatInterface";
 import ContextPanel from "./ContextPanel";
 import ConnectionStatus from "./ConnectionStatus";
 import styles from "./ChatInterface.module.scss";
@@ -29,6 +31,7 @@ interface ChatInterfaceState {
   isLoading: boolean;
   error: string | null;
   connectionState: ConnectionState;
+  voiceSettings: VoiceChatSettings;
 }
 
 export default function ChatInterface({
@@ -38,6 +41,9 @@ export default function ChatInterface({
   onSessionUpdate,
   onError,
 }: ChatInterfaceProps) {
+  const { settings: ttsSettings, generateSpeech } = useTTS();
+  const { playAudio } = useAudioPlayback();
+
   const [state, setState] = useState<ChatInterfaceState>({
     session: null,
     messages: [],
@@ -45,10 +51,129 @@ export default function ChatInterface({
     isLoading: true,
     error: null,
     connectionState: "disconnected",
+    voiceSettings: {
+      mode: "text_only",
+      autoStart: false,
+      voiceActivityDetection: true,
+      interruptEnabled: true,
+      turnTimeoutMs: 5000,
+      audioThreshold: 0.1,
+      showWaveform: true,
+    },
   });
 
   const chatApiRef = useRef<ChatApiClient>(new ChatApiClient());
   const wsClientRef = useRef<WebSocketClient | null>(null);
+
+  // Handle voice chat agent responses
+  const handleVoiceAgentResponse = useCallback(
+    (text: string, audioUrl?: string) => {
+      // Create a new agent message
+      const agentMessage: ChatMessage = {
+        id: `msg-${Date.now()}`,
+        session_id: state.session?.id || "",
+        role: "assistant",
+        content: text,
+        timestamp: new Date().toISOString(),
+        metadata: audioUrl ? { tts_audio_url: audioUrl } : undefined,
+      };
+
+      setState((prev) => ({
+        ...prev,
+        messages: [...prev.messages, agentMessage],
+      }));
+
+      // Auto-play TTS if enabled
+      if (audioUrl && ttsSettings.autoPlayAgentResponses) {
+        playAudio(audioUrl);
+      }
+    },
+    [state.session?.id, ttsSettings.autoPlayAgentResponses, playAudio]
+  );
+
+  // Handle voice chat errors
+  const handleVoiceError = useCallback((error: string) => {
+    console.error("Voice chat error:", error);
+    setState((prev) => ({
+      ...prev,
+      error: `Voice chat error: ${error}`,
+    }));
+  }, []);
+
+  // Handle TTS generation for messages
+  const handleTTSGenerated = useCallback(
+    (messageId: string, audioUrl: string) => {
+      // Update message metadata with TTS audio URL
+      setState((prev) => ({
+        ...prev,
+        messages: prev.messages.map((msg) =>
+          msg.id === messageId
+            ? {
+                ...msg,
+                metadata: {
+                  ...msg.metadata,
+                  tts_audio_url: audioUrl,
+                  tts_auto_generated: true,
+                },
+              }
+            : msg
+        ),
+      }));
+    },
+    []
+  );
+
+  // Auto-play TTS for new agent messages
+  useEffect(() => {
+    const autoPlayLatestAgentMessage = async () => {
+      if (
+        !ttsSettings.enabled ||
+        !ttsSettings.autoPlayAgentResponses ||
+        state.messages.length === 0
+      ) {
+        return;
+      }
+
+      // Get the latest message
+      const latestMessage = state.messages[state.messages.length - 1];
+
+      // Only auto-play assistant messages that don't already have TTS audio
+      if (
+        latestMessage.role === "assistant" &&
+        !latestMessage.metadata?.tts_audio_url &&
+        latestMessage.content.trim().length > 0
+      ) {
+        try {
+          console.log("Auto-playing TTS for agent response:", latestMessage.id);
+          const audioResponse = await generateSpeech(
+            latestMessage.content,
+            "af_heart"
+          );
+
+          if (audioResponse?.audioUrl) {
+            // Update message metadata
+            handleTTSGenerated(latestMessage.id, audioResponse.audioUrl);
+
+            // Small delay before playing to avoid overwhelming the user
+            setTimeout(() => {
+              playAudio(audioResponse.audioUrl);
+            }, 500);
+          }
+        } catch (error) {
+          console.warn("Auto-playback failed:", error);
+        }
+      }
+    };
+
+    autoPlayLatestAgentMessage();
+  }, [
+    state.messages,
+    ttsSettings.enabled,
+    ttsSettings.autoPlayAgentResponses,
+    generateSpeech,
+    playAudio,
+    handleTTSGenerated,
+  ]);
 
   // Initialize session
   useEffect(() => {
@@ -124,7 +249,10 @@ export default function ChatInterface({
                 : `ws://localhost:8080/chat/ws/${id}`;
           }
         } catch (configError) {
-          console.warn("Failed to get WebSocket config, using fallback:", configError);
+          console.warn(
+            "Failed to get WebSocket config, using fallback:",
+            configError
+          );
           // Fallback to proxy URL
           wsUrl =
             typeof window !== "undefined"
@@ -346,15 +474,27 @@ export default function ChatInterface({
           {state.session?.title ??
             `Chat Session ${state.session?.id.slice(-8)}`}
         </h2>
-        <ConnectionStatus
-          state={state.connectionState}
-          onRetry={handleRetryConnection}
-        />
+        <div className={styles.headerControls}>
+          <VoiceChatInterface
+            settings={state.voiceSettings}
+            onAgentResponse={handleVoiceAgentResponse}
+            onError={handleVoiceError}
+          />
+          <ConnectionStatus
+            state={state.connectionState}
+            onRetry={handleRetryConnection}
+          />
+        </div>
       </div>
 
       <div className={styles.chatContainer}>
         <div className={styles.messagesArea}>
-          <MessageList messages={state.messages} isLoading={state.isLoading} />
+          <MessageList
+            messages={state.messages}
+            isLoading={state.isLoading}
+            enableTTS={ttsSettings.enabled}
+            onTTSGenerated={handleTTSGenerated}
+          />
           <MessageInput
             onSendMessage={handleSendMessage}
             disabled={state.connectionState !== "connected"}

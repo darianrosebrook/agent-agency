@@ -5,7 +5,10 @@
 
 pub mod artifact_store;
 pub mod backup;
+pub mod backup_recovery;
+pub mod backup_validator;
 pub mod client;
+pub mod data_consistency;
 pub mod health;
 pub mod knowledge_queries;
 pub mod migrations;
@@ -16,7 +19,10 @@ pub mod optimization;
 
 pub use artifact_store::{DatabaseArtifactStorage, VersionMetadata, VersionDiff};
 pub use backup::{BackupManager, BackupResult};
+pub use backup_recovery::{DisasterRecoveryManager, BackupConfig, RecoveryConfig, BackupMetadata, RecoveryStatus, RtoRpoStatus};
+pub use backup_validator::{BackupValidator, BackupValidationConfig, ValidationResult, BackupHealthMetrics};
 pub use client::{DatabaseClient, DatabaseHealthStatus};
+pub use data_consistency::{DataConsistencyManager, ConsistencyLevel, DistributedTransaction, ConsistencyCheckResult};
 pub use health::{DatabaseHealthChecker, HealthCheckResult};
 pub use optimization::{
     DatabaseOptimizationManager, DatabaseOptimizationConfig, ReadWriteSplitClient,
@@ -76,17 +82,9 @@ impl Default for DatabaseConfig {
 }
 
 impl DatabaseConfig {
-    /// Create database URL for connection
-    pub fn database_url(&self) -> String {
-        format!(
-            "postgres://{}:{}@{}:{}/{}",
-            self.username, self.password, self.host, self.port, self.database
-        )
-    }
-
-    /// Create configuration from environment variables
-    pub fn from_env() -> Result<Self, std::env::VarError> {
-        Ok(Self {
+    /// Create DatabaseConfig from environment variables
+    pub fn from_env() -> Option<Self> {
+        Some(Self {
             host: std::env::var("DATABASE_HOST").unwrap_or_else(|_| "localhost".to_string()),
             port: std::env::var("DATABASE_PORT")
                 .ok()
@@ -94,7 +92,7 @@ impl DatabaseConfig {
                 .unwrap_or(5432),
             database: std::env::var("DATABASE_NAME").unwrap_or_else(|_| "agent_agency_v3".to_string()),
             username: std::env::var("DATABASE_USER").unwrap_or_else(|_| "postgres".to_string()),
-            password: std::env::var("DATABASE_PASSWORD").unwrap_or_else(|_| "".to_string()),
+            password: std::env::var("DATABASE_PASSWORD").ok()?,
             pool_min: std::env::var("DATABASE_POOL_MIN")
                 .ok()
                 .and_then(|s| s.parse().ok())
@@ -115,12 +113,17 @@ impl DatabaseConfig {
                 .ok()
                 .and_then(|s| s.parse().ok())
                 .unwrap_or(3600),
-            enable_read_write_splitting: std::env::var("DATABASE_ENABLE_RW_SPLITTING")
-                .ok()
-                .and_then(|s| s.parse().ok())
-                .unwrap_or(false),
-            read_replicas: Vec::new(), // TODO: Implement parsing from env if needed
+            enable_read_write_splitting: false,
+            read_replicas: Vec::new(),
         })
+    }
+
+    /// Create database URL for connection
+    pub fn database_url(&self) -> String {
+        format!(
+            "postgres://{}:{}@{}:{}/{}",
+            self.username, self.password, self.host, self.port, self.database
+        )
     }
 
     /// Create database URL without database name (for creating database)
@@ -223,7 +226,6 @@ impl DatabaseConfig {
         PgPoolOptions::new()
             .min_connections(self.pool_min)
             .max_connections(self.pool_max)
-            .acquire_timeout(Duration::from_secs(self.connection_timeout_seconds))
             .idle_timeout(Some(Duration::from_secs(self.idle_timeout_seconds)))
             .max_lifetime(Some(Duration::from_secs(self.max_lifetime_seconds)))
             .connect(&self.database_url())
@@ -242,7 +244,7 @@ impl DatabaseConfig {
 /// ```
 pub async fn create_default_pool() -> Result<sqlx::PgPool, sqlx::Error> {
     let config = DatabaseConfig::from_env()
-        .unwrap_or_else(|_| DatabaseConfig::default());
+        .unwrap_or_default();
     config.create_pool().await
 }
 

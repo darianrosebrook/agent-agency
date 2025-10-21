@@ -1,8 +1,8 @@
-'use client'
+"use client";
 
-import React from 'react';
-import { TTSVoice, TTSSettings } from '@/types/tts';
-import styles from './TTSSettings.module.scss';
+import React from "react";
+import { TTSVoice, TTSSettings } from "@/types/tts";
+import styles from "./TTSSettings.module.scss";
 
 interface TTSSettingsPanelProps {
   settings: TTSSettings;
@@ -10,6 +10,12 @@ interface TTSSettingsPanelProps {
   isServiceAvailable: boolean;
   onSettingsChange: (settings: TTSSettings) => void;
   onTestVoice?: (voice: string) => void;
+  cacheStats?: { size: number; maxSize: number };
+  onClearCache?: () => void;
+  voiceChatSettings?: import("@/types/chat").VoiceChatSettings;
+  onVoiceChatSettingsChange?: (
+    settings: import("@/types/chat").VoiceChatSettings
+  ) => void;
   className?: string;
 }
 
@@ -19,9 +25,12 @@ export default function TTSSettingsPanel({
   isServiceAvailable,
   onSettingsChange,
   onTestVoice,
-  className = '',
+  cacheStats,
+  onClearCache,
+  voiceChatSettings,
+  onVoiceChatSettingsChange,
+  className = "",
 }: TTSSettingsPanelProps) {
-
   const updateSetting = <K extends keyof TTSSettings>(
     key: K,
     value: TTSSettings[K]
@@ -38,14 +47,15 @@ export default function TTSSettingsPanel({
         <div className={styles.unavailable}>
           <h3>Text-to-Speech Settings</h3>
           <p className={styles.warning}>
-            ⚠️ TTS service is currently unavailable. Audio features will be disabled.
+            ⚠️ TTS service is currently unavailable. Audio features will be
+            disabled.
           </p>
           <div className={styles.serviceCheck}>
             <label>
               <input
                 type="checkbox"
                 checked={settings.enabled}
-                onChange={(e) => updateSetting('enabled', e.target.checked)}
+                onChange={(e) => updateSetting("enabled", e.target.checked)}
                 disabled={!isServiceAvailable}
               />
               Enable TTS when service becomes available
@@ -66,7 +76,7 @@ export default function TTSSettingsPanel({
           <input
             type="checkbox"
             checked={settings.enabled}
-            onChange={(e) => updateSetting('enabled', e.target.checked)}
+            onChange={(e) => updateSetting("enabled", e.target.checked)}
           />
           Enable Text-to-Speech
         </label>
@@ -80,7 +90,7 @@ export default function TTSSettingsPanel({
             <select
               id="voice-select"
               value={settings.voice}
-              onChange={(e) => updateSetting('voice', e.target.value)}
+              onChange={(e) => updateSetting("voice", e.target.value)}
               disabled={!settings.enabled}
             >
               {voices.map((voice) => (
@@ -114,7 +124,7 @@ export default function TTSSettingsPanel({
             max="4.0"
             step="0.1"
             value={settings.speed}
-            onChange={(e) => updateSetting('speed', parseFloat(e.target.value))}
+            onChange={(e) => updateSetting("speed", parseFloat(e.target.value))}
             disabled={!settings.enabled}
             className={styles.slider}
           />
@@ -136,7 +146,9 @@ export default function TTSSettingsPanel({
             max="1"
             step="0.1"
             value={settings.volume}
-            onChange={(e) => updateSetting('volume', parseFloat(e.target.value))}
+            onChange={(e) =>
+              updateSetting("volume", parseFloat(e.target.value))
+            }
             disabled={!settings.enabled}
             className={styles.slider}
           />
@@ -156,7 +168,9 @@ export default function TTSSettingsPanel({
             <input
               type="checkbox"
               checked={settings.autoPlayAgentResponses}
-              onChange={(e) => updateSetting('autoPlayAgentResponses', e.target.checked)}
+              onChange={(e) =>
+                updateSetting("autoPlayAgentResponses", e.target.checked)
+              }
               disabled={!settings.enabled}
             />
             Auto-play agent responses
@@ -166,7 +180,9 @@ export default function TTSSettingsPanel({
             <input
               type="checkbox"
               checked={settings.autoPlayNotifications}
-              onChange={(e) => updateSetting('autoPlayNotifications', e.target.checked)}
+              onChange={(e) =>
+                updateSetting("autoPlayNotifications", e.target.checked)
+              }
               disabled={!settings.enabled}
             />
             Auto-play notification alerts
@@ -176,7 +192,9 @@ export default function TTSSettingsPanel({
             <input
               type="checkbox"
               checked={settings.attentionAlerts}
-              onChange={(e) => updateSetting('attentionAlerts', e.target.checked)}
+              onChange={(e) =>
+                updateSetting("attentionAlerts", e.target.checked)
+              }
               disabled={!settings.enabled}
             />
             Enable attention-getting alerts
@@ -186,7 +204,9 @@ export default function TTSSettingsPanel({
             <input
               type="checkbox"
               checked={settings.notificationSound}
-              onChange={(e) => updateSetting('notificationSound', e.target.checked)}
+              onChange={(e) =>
+                updateSetting("notificationSound", e.target.checked)
+              }
               disabled={!settings.enabled}
             />
             Play notification sound with TTS
@@ -207,6 +227,182 @@ export default function TTSSettingsPanel({
           <p className={styles.testText}>
             "Hey there! This is how your TTS will sound."
           </p>
+        </div>
+      )}
+
+      {/* Cache Statistics & Management */}
+      {settings.enabled && cacheStats && (
+        <div className={styles.section}>
+          <h4>Performance & Cache</h4>
+          <div className={styles.cacheStats}>
+            <div className={styles.stat}>
+              <span className={styles.statLabel}>Cached Audio:</span>
+              <span className={styles.statValue}>
+                {cacheStats.size} / {cacheStats.maxSize}
+              </span>
+            </div>
+            <div className={styles.progressBar}>
+              <div
+                className={styles.progressFill}
+                style={{
+                  width: `${(cacheStats.size / cacheStats.maxSize) * 100}%`,
+                }}
+              />
+            </div>
+            <p className={styles.cacheDescription}>
+              Audio cache prevents re-generating the same speech. Cache expires
+              after 1 hour.
+            </p>
+            {onClearCache && (
+              <button
+                className={styles.clearCacheButton}
+                onClick={onClearCache}
+                disabled={cacheStats.size === 0}
+              >
+                🗑️ Clear Cache ({cacheStats.size} items)
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Voice Chat Settings */}
+      {voiceChatSettings && onVoiceChatSettingsChange && (
+        <div className={styles.section}>
+          <h4>Voice Chat Settings</h4>
+          <div className={styles.voiceChatSettings}>
+            <div className={styles.settingGroup}>
+              <label className={styles.label}>
+                Voice Chat Mode
+                <select
+                  value={voiceChatSettings.mode}
+                  onChange={(e) =>
+                    onVoiceChatSettingsChange({
+                      ...voiceChatSettings,
+                      mode: e.target.value as typeof voiceChatSettings.mode,
+                    })
+                  }
+                  className={styles.select}
+                >
+                  <option value="text_only">Text Only</option>
+                  <option value="voice_input">
+                    Voice Input → Text Response
+                  </option>
+                  <option value="voice_output">
+                    Text Input → Voice Response
+                  </option>
+                  <option value="full_voice">Full Voice Conversation</option>
+                  <option value="hybrid">Hybrid Mode</option>
+                </select>
+              </label>
+            </div>
+
+            <div className={styles.settingGroup}>
+              <label className={styles.checkboxLabel}>
+                <input
+                  type="checkbox"
+                  checked={voiceChatSettings.voiceActivityDetection}
+                  onChange={(e) =>
+                    onVoiceChatSettingsChange({
+                      ...voiceChatSettings,
+                      voiceActivityDetection: e.target.checked,
+                    })
+                  }
+                />
+                Voice Activity Detection
+              </label>
+              <p className={styles.helpText}>
+                Automatically stop recording when you stop speaking
+              </p>
+            </div>
+
+            <div className={styles.settingGroup}>
+              <label className={styles.checkboxLabel}>
+                <input
+                  type="checkbox"
+                  checked={voiceChatSettings.interruptEnabled}
+                  onChange={(e) =>
+                    onVoiceChatSettingsChange({
+                      ...voiceChatSettings,
+                      interruptEnabled: e.target.checked,
+                    })
+                  }
+                />
+                Allow Interrupting Agent
+              </label>
+              <p className={styles.helpText}>
+                Stop agent speech and take your turn immediately
+              </p>
+            </div>
+
+            <div className={styles.settingGroup}>
+              <label className={styles.checkboxLabel}>
+                <input
+                  type="checkbox"
+                  checked={voiceChatSettings.showWaveform}
+                  onChange={(e) =>
+                    onVoiceChatSettingsChange({
+                      ...voiceChatSettings,
+                      showWaveform: e.target.checked,
+                    })
+                  }
+                />
+                Show Audio Waveform
+              </label>
+              <p className={styles.helpText}>
+                Display real-time audio visualization during recording
+              </p>
+            </div>
+
+            <div className={styles.settingGroup}>
+              <label className={styles.label}>
+                Turn Timeout (seconds)
+                <input
+                  type="number"
+                  min="1"
+                  max="30"
+                  value={voiceChatSettings.turnTimeoutMs / 1000}
+                  onChange={(e) =>
+                    onVoiceChatSettingsChange({
+                      ...voiceChatSettings,
+                      turnTimeoutMs: parseInt(e.target.value) * 1000,
+                    })
+                  }
+                  className={styles.numberInput}
+                />
+              </label>
+              <p className={styles.helpText}>
+                Auto-advance to next speaker after silence
+              </p>
+            </div>
+
+            <div className={styles.settingGroup}>
+              <label className={styles.label}>
+                Audio Threshold
+                <input
+                  type="range"
+                  min="0.01"
+                  max="0.5"
+                  step="0.01"
+                  value={voiceChatSettings.audioThreshold}
+                  onChange={(e) =>
+                    onVoiceChatSettingsChange({
+                      ...voiceChatSettings,
+                      audioThreshold: parseFloat(e.target.value),
+                    })
+                  }
+                  className={styles.slider}
+                />
+                <span className={styles.sliderValue}>
+                  {voiceChatSettings.audioThreshold.toFixed(2)}
+                </span>
+              </label>
+              <p className={styles.helpText}>
+                Sensitivity for voice activity detection (lower = more
+                sensitive)
+              </p>
+            </div>
+          </div>
         </div>
       )}
     </div>

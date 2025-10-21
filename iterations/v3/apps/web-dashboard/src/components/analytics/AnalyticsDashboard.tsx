@@ -220,8 +220,9 @@ export default function AnalyticsDashboard({
                     end: new Date().toISOString(),
                   },
                 };
+                const value = (e.target as HTMLSelectElement).value;
                 const selectedRange = Object.entries(ranges).find(([label]) =>
-                  (e.target.value || "").includes(label.split(" ")[1])
+                  value.includes(label.split(" ")[1] || "")
                 );
                 if (selectedRange) {
                   handleFiltersChange({

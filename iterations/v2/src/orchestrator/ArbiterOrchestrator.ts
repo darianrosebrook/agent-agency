@@ -452,7 +452,15 @@ export class ArbiterOrchestrator {
     try {
       console.log("Initializing Arbiter Orchestrator...");
 
-      // Initialize core components (simplified for now)
+      // TODO: Implement comprehensive component initialization and lifecycle management
+      // - Add component dependency resolution and initialization ordering
+      // - Implement component health checks and startup validation
+      // - Add component configuration validation and schema checking
+      // - Support component hot-swapping and dynamic reconfiguration
+      // - Implement component graceful shutdown and cleanup procedures
+      // - Add component monitoring and performance tracking
+      // - Support component versioning and compatibility management
+      // - Implement component failure recovery and restart capabilities
       this.components.taskQueue = {}; // Would initialize actual TaskQueue
       this.components.taskAssignment = {}; // Would initialize actual TaskAssignmentManager
       this.components.agentRegistry = {}; // Would initialize actual AgentRegistryManager
@@ -985,7 +993,15 @@ export class ArbiterOrchestrator {
   }
 
   /**
-   * Get task status (simplified for testing)
+   * TODO: Implement comprehensive task status tracking and reporting
+   * - Query actual task status from orchestrator database
+   * - Support real-time task progress and state transitions
+   * - Implement task execution metrics and performance tracking
+   * - Add task failure analysis and error reporting
+   * - Support task dependency status and blocking conditions
+   * - Implement task status change notifications and subscriptions
+   * - Add task archival and historical status tracking
+   * - Support task status aggregation and dashboard reporting
    */
   async getTaskStatus(taskId: string): Promise<any> {
     return {
@@ -997,7 +1013,15 @@ export class ArbiterOrchestrator {
   }
 
   /**
-   * Process knowledge query (simplified for testing)
+   * TODO: Implement comprehensive knowledge query processing and orchestration
+   * - Parse and validate knowledge queries with proper schema
+   * - Route queries to appropriate knowledge sources and providers
+   * - Implement query optimization and execution planning
+   * - Support complex query operations (joins, aggregations, filtering)
+   * - Add query result ranking and relevance scoring
+   * - Implement query caching and result deduplication
+   * - Support query federation across multiple knowledge systems
+   * - Add query performance monitoring and optimization
    */
   async processKnowledgeQuery(_query: any): Promise<any> {
     return {
@@ -1009,7 +1033,15 @@ export class ArbiterOrchestrator {
   }
 
   /**
-   * Get knowledge status (simplified for testing)
+   * TODO: Implement comprehensive knowledge system status and health monitoring
+   * - Query actual knowledge system metrics from database
+   * - Monitor knowledge source availability and performance
+   * - Track query success rates and error patterns
+   * - Implement knowledge system capacity and load monitoring
+   * - Add knowledge freshness and update status tracking
+   * - Support knowledge system alerting and incident detection
+   * - Implement knowledge system performance analytics
+   * - Add knowledge system configuration and tuning insights
    */
   async getKnowledgeStatus(): Promise<any> {
     return {
@@ -1022,7 +1054,15 @@ export class ArbiterOrchestrator {
   }
 
   /**
-   * Verify information (simplified for testing)
+   * TODO: Implement comprehensive information verification and validation system
+   * - Integrate with fact-checking APIs and knowledge bases
+   * - Implement multi-source verification and consensus algorithms
+   * - Support temporal verification for time-sensitive claims
+   * - Add source credibility assessment and weighting
+   * - Implement verification result caching and optimization
+   * - Support verification workflow orchestration and delegation
+   * - Add verification quality metrics and confidence calibration
+   * - Implement verification audit trails and explainability
    */
   async verifyInformation(_request: any): Promise<any> {
     return {
@@ -1035,7 +1075,15 @@ export class ArbiterOrchestrator {
   }
 
   /**
-   * Get verification method statistics (simplified for testing)
+   * TODO: Implement comprehensive verification method analytics
+   * - Query actual verification method performance from database
+   * - Calculate real success rates and response times across methods
+   * - Support method comparison and effectiveness analysis
+   * - Add verification method usage patterns and trends
+   * - Implement method-specific error analysis and diagnostics
+   * - Support verification method load balancing insights
+   * - Add method performance forecasting and optimization
+   * - Implement method reliability scoring and recommendations
    */
   async getVerificationMethodStats(): Promise<any> {
     return {
@@ -1608,8 +1656,15 @@ export class ArbiterOrchestrator {
     agent: AgentProfile,
     relevantFiles: any[]
   ): number {
-    // This is a simplified scoring - in practice, this would be based on
-    // agent's historical interactions with these files
+    // TODO: Implement comprehensive agent-file familiarity scoring
+    // - Query agent's historical file interaction patterns from database
+    // - Calculate familiarity based on edit frequency, success rates, and file types
+    // - Implement file complexity assessment and agent capability matching
+    // - Support familiarity decay over time and recency weighting
+    // - Add collaborative filtering for similar agents' file experiences
+    // - Implement familiarity prediction for new files based on patterns
+    // - Support familiarity-based routing optimization and recommendations
+    // - Add familiarity analytics and agent skill development tracking
     if (!relevantFiles.length) return 0.5;
 
     // For now, assume agents have some baseline familiarity

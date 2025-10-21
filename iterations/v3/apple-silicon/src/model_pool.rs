@@ -1,6 +1,6 @@
 //! Model pool management
 
-use crate::types::*;
+use anyhow::Result;
 
 /// Model pool configuration
 #[derive(Debug, Clone)]

@@ -331,7 +331,7 @@ impl ErrorLogger {
     /// Create error details from an error
     pub fn create_error_details(error: &dyn std::error::Error) -> ErrorDetails {
         ErrorDetails {
-            error_type: std::any::type_name::<dyn std::error::Error>().to_string(),
+            error_type: "std::error::Error".to_string(),
             error_message: error.to_string(),
             stack_trace: None, // Stack traces are not easily available in Rust
             error_code: None,
@@ -345,7 +345,7 @@ impl ErrorLogger {
         context: HashMap<String, serde_json::Value>,
     ) -> ErrorDetails {
         ErrorDetails {
-            error_type: std::any::type_name::<dyn std::error::Error>().to_string(),
+            error_type: "std::error::Error".to_string(),
             error_message: error.to_string(),
             stack_trace: None,
             error_code: None,

@@ -24,6 +24,21 @@ pub struct ConflictResolutionTool {
     pub evidence_synthesizer: Arc<EvidenceSynthesizer>,
 }
 
+impl ConflictResolutionTool {
+    /// Create a new conflict resolution tool
+    pub async fn new() -> Result<Self> {
+        let debate_orchestrator = Arc::new(DebateOrchestrator::new(10, 0.7));
+        let consensus_builder = Arc::new(ConsensusBuilder::new());
+        let evidence_synthesizer = Arc::new(EvidenceSynthesizer::new());
+
+        Ok(Self {
+            debate_orchestrator,
+            consensus_builder,
+            evidence_synthesizer,
+        })
+    }
+}
+
 /// Debate orchestrator for structured multi-party debates
 #[derive(Debug)]
 pub struct DebateOrchestrator {
@@ -802,3 +817,5 @@ pub struct SynthesizedClaim {
     pub confidence: f64,
     pub resolution_method: String,
 }
+
+

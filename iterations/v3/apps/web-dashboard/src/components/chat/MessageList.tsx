@@ -41,6 +41,10 @@ export default function MessageList({
               key={message.id}
               message={message}
               onClick={() => handleMessageClick(message)}
+              enableTTS={enableTTS}
+              onTTSGenerated={(audioUrl) =>
+                onTTSGenerated?.(message.id, audioUrl)
+              }
             />
           ))
         )}

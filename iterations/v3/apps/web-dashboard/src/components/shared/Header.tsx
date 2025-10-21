@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import ConnectionStatus from "./ConnectionStatus";
 import styles from "./Header.module.scss";
 
 export default function Header() {
@@ -32,6 +33,10 @@ export default function Header() {
             Settings
           </Link>
         </nav>
+
+        <div className={styles.connectionStatus}>
+          <ConnectionStatus />
+        </div>
 
         <div className={styles.actions}>
           <button className={styles.actionButton} title="Notifications">

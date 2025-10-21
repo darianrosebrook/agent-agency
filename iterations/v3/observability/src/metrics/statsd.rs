@@ -22,7 +22,10 @@ impl StatsDMetrics {
         let socket = UdpSocket::bind("0.0.0.0:0")
             .map_err(|e| MetricsBackendError::ConnectionError(e.to_string()))?;
 
-        let sink = UdpMetricSink::from((host, port), socket)
+        let sink_socket = UdpSocket::bind("0.0.0.0:0")
+            .map_err(|e| MetricsBackendError::ConnectionError(e.to_string()))?;
+
+        let sink = UdpMetricSink::from((host, port), sink_socket)
             .map_err(|e| MetricsBackendError::ConnectionError(e.to_string()))?;
 
         let client = StatsdClient::from_sink(prefix, sink);
@@ -48,46 +51,58 @@ impl StatsDMetrics {
 #[async_trait]
 impl MetricsBackend for StatsDMetrics {
     async fn counter(&self, name: &str, labels: &[(&str, &str)], value: u64) {
-        // Convert labels to StatsD tags format
+        // Convert labels to StatsD tags format (influxdb style)
         let tags = labels.iter()
-            .map(|(k, v)| format!("{}:{}", k, v))
+            .map(|(k, v)| format!("{}={}", k, v))
             .collect::<Vec<_>>()
             .join(",");
 
-        let metric_name = format!("{}.{}", self.prefix, name);
+        let metric_name = if tags.is_empty() {
+            format!("{}.{}", self.prefix, name)
+        } else {
+            format!("{}.{},{}", self.prefix, name, tags)
+        };
 
         // StatsD counters are incremental
-        if let Err(e) = self.client.count_with_tags(&metric_name, value as i64).with_tags(&[&tags]) {
+        if let Err(e) = self.client.count(&metric_name, value as i64) {
             tracing::warn!("Failed to send StatsD counter: {}", e);
         }
     }
 
     async fn gauge(&self, name: &str, labels: &[(&str, &str)], value: f64) {
-        // Convert labels to StatsD tags format
+        // Convert labels to StatsD tags format (influxdb style)
         let tags = labels.iter()
-            .map(|(k, v)| format!("{}:{}", k, v))
+            .map(|(k, v)| format!("{}={}", k, v))
             .collect::<Vec<_>>()
             .join(",");
 
-        let metric_name = format!("{}.{}", self.prefix, name);
+        let metric_name = if tags.is_empty() {
+            format!("{}.{}", self.prefix, name)
+        } else {
+            format!("{}.{},{}", self.prefix, name, tags)
+        };
 
         // StatsD gauges set absolute values
-        if let Err(e) = self.client.gauge_with_tags(&metric_name, value).with_tags(&[&tags]) {
+        if let Err(e) = self.client.gauge(&metric_name, value) {
             tracing::warn!("Failed to send StatsD gauge: {}", e);
         }
     }
 
     async fn histogram(&self, name: &str, labels: &[(&str, &str)], value: f64) {
-        // Convert labels to StatsD tags format
+        // Convert labels to StatsD tags format (influxdb style)
         let tags = labels.iter()
-            .map(|(k, v)| format!("{}:{}", k, v))
+            .map(|(k, v)| format!("{}={}", k, v))
             .collect::<Vec<_>>()
             .join(",");
 
-        let metric_name = format!("{}.{}", self.prefix, name);
+        let metric_name = if tags.is_empty() {
+            format!("{}.{}", self.prefix, name)
+        } else {
+            format!("{}.{},{}", self.prefix, name, tags)
+        };
 
         // StatsD histograms/timers
-        if let Err(e) = self.client.histogram_with_tags(&metric_name, value).with_tags(&[&tags]) {
+        if let Err(e) = self.client.histogram(&metric_name, value) {
             tracing::warn!("Failed to send StatsD histogram: {}", e);
         }
     }

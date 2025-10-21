@@ -1,6 +1,8 @@
 //! Model routing and load balancing
 
-use crate::types::*;
+use crate::adaptive_resource_manager::{DeviceKind, Precision};
+use crate::types::DeviceId;
+use anyhow::Result;
 
 /// Model router
 #[derive(Debug)]

@@ -152,7 +152,7 @@ impl PolicyManager {
                     AdjustmentResult::Applied
                 } else {
                     // Add new model weights
-                    policy.model_weights.insert(model_id.clone(), crate::models::selection::ModelWeights {
+                    policy.model_weights.insert(model_id.clone(), crate::types::ModelWeights {
                         performance_score: *performance_weight,
                         reliability_score: *reliability_weight,
                         usage_count: 0,
@@ -198,7 +198,7 @@ impl PolicyManager {
     /// Create policy snapshot for rollback
     pub async fn create_snapshot(&self) -> PolicySnapshot {
         PolicySnapshot {
-            timestamp: Utc::now(),
+            timestamp: chrono::Utc::now(),
             satisficing_config: self.satisficing_config.read().await.clone(),
             model_policy: self.model_policy.read().await.clone(),
             budget_defaults: BudgetDefaults {
@@ -285,7 +285,6 @@ impl PolicyManager {
         PolicyAdjustmentNeeded::None
     }
 }
-
 /// Policy performance metrics
 #[derive(Debug, Clone)]
 pub struct PolicyMetrics {

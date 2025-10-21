@@ -71,4 +71,5 @@ wikidata-20250924-lexemes.json.gz
 wn3.1.dict.tar.gz
 target/debug
 target/release
-libtorch-macos*
+libtorch-macos.zip
+libtorch

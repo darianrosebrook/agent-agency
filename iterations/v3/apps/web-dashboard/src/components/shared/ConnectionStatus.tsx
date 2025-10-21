@@ -17,7 +17,7 @@ export default function ConnectionStatus({ className }: ConnectionStatusProps) {
   useEffect(() => {
     const checkConnection = async () => {
       try {
-        const v3Host = process.env.V3_BACKEND_HOST || 'http://localhost:8080';
+        const v3Host = process.env.V3_BACKEND_HOST ?? 'http://localhost:8080';
         const response = await fetch(`${v3Host}/health`, {
           method: 'GET',
           signal: AbortSignal.timeout(5000), // 5 second timeout
@@ -77,7 +77,7 @@ export default function ConnectionStatus({ className }: ConnectionStatusProps) {
   };
 
   return (
-    <div className={`${styles.connectionStatus} ${className || ""}`}>
+    <div className={`${styles.connectionStatus} ${className ?? ""}`}>
       <div className={`${styles.statusIndicator} ${styles[connectionState]}`}>
         <span className={styles.icon}>{getStatusIcon()}</span>
         <span className={styles.text}>{getStatusText()}</span>

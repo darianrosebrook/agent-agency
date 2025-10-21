@@ -1,9 +1,9 @@
 [workspace]
 resolver = "2"
 members = [
-    "self-prompting-agent",
+    # "self-prompting-agent",  # TODO: Re-enable when torch deps resolved
+    # "apple-silicon",  # TODO: Re-enable when torch deps resolved
     "workers",
-    "apple-silicon",
     "research",
     "mcp-integration",
     "provenance",
@@ -18,23 +18,29 @@ members = [
     "workspace-state-manager",
     "resilience",
     "observability",
+    "interfaces",
     "source-integrity",
     "config",
     "database",
     "integration-tests",
     "agent-agency-contracts",
+    "caching",
     "planning-agent",
-    "council",
+    # "council",  # TODO: Re-enable when torch deps resolved
     "ingestors",
     "enrichers",
     "indexers",
     "knowledge-ingestor",
     "file_ops",
     "cli",
+    "api-server",
+    "worker",
     "runtime-optimization",
     "tool-ecosystem",
     "federated-learning",
-    "model-hotswap"
+    "model-hotswap",
+    "production",
+    "e2e-tests"
 ]
 
 [workspace.package]
@@ -47,6 +53,7 @@ license = "MIT"
 # Core async runtime
 tokio = { version = "1.0", features = ["full"] }
 async-trait = "0.1.74"
+futures = "0.3"
 
 # Serialization
 serde = { version = "1.0", features = ["derive"] }
@@ -86,6 +93,13 @@ objc = "0.2"
 
 # Vector operations for embeddings
 ndarray = "0.15"
+
+# Random number generation
+rand = { version = "0.8", features = ["std"] }
+
+# Force compatible versions to resolve indicatif/console conflicts
+indicatif = "0.17"
+console = { version = "0.15", features = ["std"] }
 
 # CAWS integration (using Node.js tools, not Rust crate)
 # caws-core = { path = "../../apps/tools/caws" }

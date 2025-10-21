@@ -1,104 +1,49 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { AuditLogEntry } from "@/types/tasks";
 import styles from "./AuditTrailViewer.module.scss";
 
 interface AuditTrailViewerProps {
   auditTrail: AuditLogEntry[];
   taskId: string;
-  onEntryClick?: (entry: AuditLogEntry) => void;
   showFullTrail?: boolean;
+  maxHeight?: string;
 }
 
 export default function AuditTrailViewer({
   auditTrail,
   taskId,
-  onEntryClick,
   showFullTrail = false,
+  maxHeight = "400px",
 }: AuditTrailViewerProps) {
   const [expandedEntries, setExpandedEntries] = useState<Set<string>>(new Set());
+  const [filteredTrail, setFilteredTrail] = useState<AuditLogEntry[]>(auditTrail);
   const [filter, setFilter] = useState<string>("all");
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const [searchTerm, setSearchTerm] = useState<string>("");
 
-  const getAuditIcon = (action: string) => {
-    switch (action.toLowerCase()) {
-      case "task_created":
-        return "🆕";
-      case "task_started":
-        return "▶️";
-      case "task_paused":
-        return "⏸️";
-      case "task_resumed":
-        return "▶️";
-      case "task_completed":
-        return "✅";
-      case "task_failed":
-        return "❌";
-      case "task_cancelled":
-        return "🛑";
-      case "task_state_change":
-        return "🔄";
-      case "waiver_created":
-        return "📋";
-      case "waiver_approved":
-        return "✅";
-      case "waiver_expired":
-        return "⏰";
-      case "quality_gate_passed":
-        return "✅";
-      case "quality_gate_failed":
-        return "❌";
-      case "quality_gate_waived":
-        return "⚠️";
-      case "worker_assigned":
-        return "👷";
-      case "worker_completed":
-        return "🏁";
-      case "model_switched":
-        return "🔄";
-      case "iteration_started":
-        return "🔄";
-      case "iteration_completed":
-        return "✅";
-      default:
-        return "📝";
+  useEffect(() => {
+    let filtered = auditTrail;
+
+    // Apply filter
+    if (filter !== "all") {
+      filtered = filtered.filter(entry => entry.action === filter);
     }
-  };
 
-  const getActionColor = (action: string) => {
-    switch (action.toLowerCase()) {
-      case "task_completed":
-      case "quality_gate_passed":
-      case "waiver_approved":
-        return styles.success;
-      case "task_failed":
-      case "quality_gate_failed":
-        return styles.error;
-      case "task_paused":
-      case "waiver_expired":
-        return styles.warning;
-      case "task_state_change":
-      case "model_switched":
-      case "iteration_started":
-        return styles.info;
-      default:
-        return styles.neutral;
+    // Apply search
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      filtered = filtered.filter(entry =>
+        entry.action.toLowerCase().includes(term) ||
+        entry.actor?.toLowerCase().includes(term) ||
+        entry.change_summary?.toLowerCase().includes(term)
+      );
     }
-  };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleString("en-US", {
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-    });
-  };
+    setFilteredTrail(filtered);
+  }, [auditTrail, filter, searchTerm]);
 
-  const toggleEntryExpansion = (entryId: string) => {
+  const toggleExpanded = (entryId: string) => {
     const newExpanded = new Set(expandedEntries);
     if (newExpanded.has(entryId)) {
       newExpanded.delete(entryId);
@@ -108,112 +53,186 @@ export default function AuditTrailViewer({
     setExpandedEntries(newExpanded);
   };
 
-  const filteredAndSortedTrail = auditTrail
-    .filter((entry) => {
-      if (filter === "all") return true;
-      return entry.action.toLowerCase().includes(filter.toLowerCase());
-    })
-    .sort((a, b) => {
-      const dateA = new Date(a.created_at).getTime();
-      const dateB = new Date(b.created_at).getTime();
-      return sortOrder === "asc" ? dateA - dateB : dateB - dateA;
+  const formatTimestamp = (timestamp: string) => {
+    const date = new Date(timestamp);
+    return date.toLocaleString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
     });
+  };
 
-  const displayedTrail = showFullTrail 
-    ? filteredAndSortedTrail 
-    : filteredAndSortedTrail.slice(0, 10);
+  const getActionIcon = (action: string) => {
+    switch (action.toLowerCase()) {
+      case "task_created":
+        return "📝";
+      case "task_started":
+        return "▶️";
+      case "task_completed":
+        return "✅";
+      case "task_failed":
+        return "❌";
+      case "task_paused":
+        return "⏸️";
+      case "task_cancelled":
+        return "🛑";
+      case "task_retried":
+        return "🔄";
+      case "state_change":
+        return "🔄";
+      case "quality_check":
+        return "🔍";
+      case "validation":
+        return "✅";
+      case "error_occurred":
+        return "⚠️";
+      case "user_action":
+        return "👤";
+      case "system_action":
+        return "🤖";
+      default:
+        return "📋";
+    }
+  };
+
+  const getActionColor = (action: string) => {
+    switch (action.toLowerCase()) {
+      case "task_created":
+      case "task_started":
+        return styles.primary;
+      case "task_completed":
+      case "validation":
+        return styles.success;
+      case "task_failed":
+      case "error_occurred":
+        return styles.error;
+      case "task_paused":
+      case "task_cancelled":
+        return styles.warning;
+      case "task_retried":
+      case "state_change":
+        return styles.info;
+      default:
+        return styles.neutral;
+    }
+  };
+
+  const getUniqueActions = () => {
+    const actions = new Set(auditTrail.map(entry => entry.action));
+    return Array.from(actions).sort();
+  };
+
+  const renderChangeSummary = (changeSummary: any) => {
+    if (!changeSummary) return null;
+
+    if (typeof changeSummary === "string") {
+      return <span className={styles.changeSummary}>{changeSummary}</span>;
+    }
+
+    if (typeof changeSummary === "object") {
+      return (
+        <div className={styles.changeSummary}>
+          <pre>{JSON.stringify(changeSummary, null, 2)}</pre>
+        </div>
+      );
+    }
+
+    return <span className={styles.changeSummary}>{String(changeSummary)}</span>;
+  };
+
+  if (auditTrail.length === 0) {
+    return (
+      <div className={styles.emptyState}>
+        <div className={styles.emptyIcon}>📋</div>
+        <h3>No Audit Trail</h3>
+        <p>No audit entries found for this task.</p>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.auditTrailViewer}>
       <div className={styles.header}>
         <h3>Audit Trail</h3>
         <div className={styles.controls}>
+          <div className={styles.searchBox}>
+            <input
+              type="text"
+              placeholder="Search audit trail..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className={styles.searchInput}
+            />
+          </div>
           <select
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
             className={styles.filterSelect}
           >
             <option value="all">All Actions</option>
-            <option value="task">Task Actions</option>
-            <option value="quality">Quality Gates</option>
-            <option value="waiver">Waivers</option>
-            <option value="worker">Worker Actions</option>
-            <option value="model">Model Actions</option>
+            {getUniqueActions().map(action => (
+              <option key={action} value={action}>
+                {action.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase())}
+              </option>
+            ))}
           </select>
-          <button
-            onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
-            className={styles.sortButton}
-            title={`Sort ${sortOrder === "asc" ? "newest first" : "oldest first"}`}
-          >
-            {sortOrder === "asc" ? "⬆️" : "⬇️"}
-          </button>
         </div>
       </div>
 
-      <div className={styles.timeline}>
-        {displayedTrail.map((entry, index) => {
+      <div 
+        className={styles.timeline}
+        style={{ maxHeight: showFullTrail ? "none" : maxHeight }}
+      >
+        {filteredTrail.map((entry, index) => {
           const isExpanded = expandedEntries.has(entry.id);
-          const hasChangeSummary = entry.change_summary && 
-            Object.keys(entry.change_summary).length > 0;
+          const hasDetails = entry.change_summary && 
+            (typeof entry.change_summary === "object" || 
+             (typeof entry.change_summary === "string" && entry.change_summary.length > 100));
 
           return (
-            <div
-              key={entry.id}
-              className={`${styles.timelineItem} ${getActionColor(entry.action)}`}
-              onClick={() => onEntryClick?.(entry)}
-            >
+            <div key={entry.id} className={styles.timelineItem}>
               <div className={styles.timelineMarker}>
-                <span className={styles.timelineIcon}>
-                  {getAuditIcon(entry.action)}
-                </span>
+                <div className={`${styles.actionIcon} ${getActionColor(entry.action)}`}>
+                  {getActionIcon(entry.action)}
+                </div>
+                {index < filteredTrail.length - 1 && (
+                  <div className={styles.timelineLine}></div>
+                )}
               </div>
-              
+
               <div className={styles.timelineContent}>
-                <div className={styles.timelineHeader}>
-                  <div className={styles.actionInfo}>
-                    <span className={styles.action}>{entry.action}</span>
-                    {entry.actor && (
-                      <span className={styles.actor}>by {entry.actor}</span>
-                    )}
+                <div className={styles.entryHeader}>
+                  <div className={styles.entryInfo}>
+                    <h4 className={styles.actionTitle}>
+                      {entry.action.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase())}
+                    </h4>
+                    <div className={styles.entryMeta}>
+                      <span className={styles.timestamp}>
+                        {formatTimestamp(entry.timestamp)}
+                      </span>
+                      {entry.actor && (
+                        <span className={styles.actor}>
+                          by {entry.actor}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <div className={styles.timelineMeta}>
-                    <span className={styles.timestamp}>
-                      {formatDate(entry.created_at)}
-                    </span>
-                    {hasChangeSummary && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleEntryExpansion(entry.id);
-                        }}
-                        className={styles.expandButton}
-                        title={isExpanded ? "Collapse details" : "Expand details"}
-                      >
-                        {isExpanded ? "▼" : "▶"}
-                      </button>
-                    )}
-                  </div>
+                  {hasDetails && (
+                    <button
+                      onClick={() => toggleExpanded(entry.id)}
+                      className={styles.expandButton}
+                    >
+                      {isExpanded ? "▼" : "▶"}
+                    </button>
+                  )}
                 </div>
 
-                {entry.resource_type && (
-                  <div className={styles.resourceInfo}>
-                    <span className={styles.resourceType}>
-                      {entry.resource_type}
-                    </span>
-                    {entry.resource_id && (
-                      <span className={styles.resourceId}>
-                        {entry.resource_id}
-                      </span>
-                    )}
-                  </div>
-                )}
-
-                {isExpanded && hasChangeSummary && (
-                  <div className={styles.changeSummary}>
-                    <h5>Change Details:</h5>
-                    <pre className={styles.changeDetails}>
-                      {JSON.stringify(entry.change_summary, null, 2)}
-                    </pre>
+                {entry.change_summary && (
+                  <div className={`${styles.entryDetails} ${isExpanded ? styles.expanded : ""}`}>
+                    {renderChangeSummary(entry.change_summary)}
                   </div>
                 )}
               </div>
@@ -222,17 +241,13 @@ export default function AuditTrailViewer({
         })}
       </div>
 
-      {!showFullTrail && auditTrail.length > 10 && (
-        <div className={styles.moreEntries}>
-          <button className={styles.showMoreButton}>
-            Show {auditTrail.length - 10} more entries
-          </button>
-        </div>
-      )}
-
-      {auditTrail.length === 0 && (
-        <div className={styles.emptyState}>
-          <p>No audit trail entries found for this task.</p>
+      {!showFullTrail && filteredTrail.length > 0 && (
+        <div className={styles.footer}>
+          <p className={styles.summary}>
+            Showing {filteredTrail.length} of {auditTrail.length} audit entries
+            {filter !== "all" && ` (filtered by ${filter})`}
+            {searchTerm && ` (search: "${searchTerm}")`}
+          </p>
         </div>
       )}
     </div>

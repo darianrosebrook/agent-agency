@@ -369,12 +369,15 @@ impl PdfContentStreamParser {
         let start_time = std::time::Instant::now();
 
         // Get the page
-        let page_id = doc.get_pages().get(&page_num)
+        let pages = doc.get_pages();
+        let page_id = pages.get(&page_num)
             .ok_or_else(|| PdfParsingError::InvalidStructure {
                 message: format!("Page {} not found", page_num),
             })?;
 
-        let page_obj = doc.get_object(*page_id)?;
+        let page_obj = doc.get_object(*page_id).map_err(|e| PdfParsingError::InvalidStructure {
+            message: format!("Failed to get page object: {}", e),
+        })?;
         let page = match page_obj {
             Object::Dictionary(dict) => dict,
             _ => return Err(PdfParsingError::InvalidStructure {
@@ -384,18 +387,20 @@ impl PdfContentStreamParser {
 
         // Get content streams
         let contents = page.get(b"Contents")
-            .ok_or_else(|| PdfParsingError::InvalidStructure {
-                message: "Page has no Contents".to_string(),
+            .map_err(|e| PdfParsingError::InvalidStructure {
+                message: format!("Failed to get Contents: {}", e),
             })?;
 
-        let content_streams = match contents {
+        let content_streams: Vec<lopdf::Stream> = match contents {
             Object::Stream(ref stream) => vec![stream.clone()],
             Object::Array(ref array) => {
                 let mut streams = Vec::new();
                 for obj in array {
                     if let Object::Reference(id) = obj {
-                        if let Ok(Object::Stream(stream)) = doc.get_object(*id) {
-                            streams.push(stream);
+                        match doc.get_object(*id) {
+                            Ok(Object::Stream(stream)) => streams.push(stream.clone()),
+                            Ok(_) => {} // Not a stream, skip
+                            Err(_) => {} // Error getting object, skip
                         }
                     }
                 }
@@ -438,10 +443,10 @@ impl PdfContentStreamParser {
 
     /// Parse PDF resources (fonts, etc.)
     fn parse_resources(&mut self, doc: &Document, page: &lopdf::Dictionary) -> Result<(), PdfParsingError> {
-        if let Some(Object::Reference(res_ref)) = page.get(b"Resources").ok().flatten() {
+        if let Ok(Object::Reference(res_ref)) = page.get(b"Resources") {
             if let Ok(Object::Dictionary(resources)) = doc.get_object(*res_ref) {
                 // Parse fonts
-                if let Some(Object::Dictionary(font_dict)) = resources.get(b"Font").ok().flatten() {
+                if let Ok(Object::Dictionary(font_dict)) = resources.get(b"Font") {
                     for (font_name_bytes, font_ref) in font_dict {
                         let font_name = String::from_utf8_lossy(font_name_bytes);
                         if let Object::Reference(id) = font_ref {
@@ -480,7 +485,7 @@ impl PdfContentStreamParser {
             .unwrap_or_else(|_| "Unknown".to_string());
 
         // Parse font descriptor
-        let descriptor = if let Some(Object::Reference(desc_ref)) = font_dict.get(b"FontDescriptor").ok().flatten() {
+        let descriptor = if let Ok(Object::Reference(desc_ref)) = font_dict.get(b"FontDescriptor") {
             if let Ok(Object::Dictionary(desc_dict)) = doc.get_object(*desc_ref) {
                 Some(self.parse_font_descriptor(&desc_dict)?)
             } else {
@@ -492,20 +497,22 @@ impl PdfContentStreamParser {
 
         // Parse widths array
         let mut widths = Vec::new();
-        if let Some(Object::Array(widths_array)) = font_dict.get(b"Widths").ok().flatten() {
+        if let Ok(Object::Array(widths_array)) = font_dict.get(b"Widths") {
             for width_obj in widths_array {
                 if let Ok(width) = width_obj.as_i64() {
-                    widths.push(width);
+                    widths.push(width as f64);
                 }
             }
         }
 
         let first_char = font_dict.get(b"FirstChar")
-            .and_then(|obj| Ok(obj.as_i64().ok()))
+            .ok()
+            .and_then(|obj| obj.as_i64().ok())
             .unwrap_or(0) as u32;
 
         let last_char = font_dict.get(b"LastChar")
-            .and_then(|obj| Ok(obj.as_i64().ok()))
+            .ok()
+            .and_then(|obj| obj.as_i64().ok())
             .unwrap_or(255) as u32;
 
         Ok(FontInfo {
@@ -515,7 +522,8 @@ impl PdfContentStreamParser {
             descriptor,
             to_unicode: None, // Would require parsing ToUnicode stream
             encoding: font_dict.get(b"Encoding")
-                .and_then(|obj| Ok(obj.as_name().ok()))
+                .ok()
+                .and_then(|obj| obj.as_name().ok())
                 .map(|name| String::from_utf8_lossy(name).to_string()),
             widths,
             first_char,
@@ -526,8 +534,9 @@ impl PdfContentStreamParser {
     /// Parse font descriptor
     fn parse_font_descriptor(&self, desc_dict: &lopdf::Dictionary) -> Result<FontDescriptor, PdfParsingError> {
         let bbox_array = desc_dict.get(b"FontBBox")
-            .and_then(|obj| obj.as_array())
-            .ok_or_else(|_| PdfParsingError::FontError {
+            .ok()
+            .and_then(|obj| obj.as_array().ok())
+            .ok_or(PdfParsingError::FontError {
                 message: "Font descriptor missing FontBBox".to_string(),
             })?;
 
@@ -537,10 +546,10 @@ impl PdfContentStreamParser {
             });
         }
 
-        let x1 = bbox_array[0].as_f64().unwrap_or(0.0);
-        let y1 = bbox_array[1].as_f64().unwrap_or(0.0);
-        let x2 = bbox_array[2].as_f64().unwrap_or(0.0);
-        let y2 = bbox_array[3].as_f64().unwrap_or(0.0);
+        let x1 = bbox_array[0].as_i64().ok().unwrap_or(0) as f64;
+        let y1 = bbox_array[1].as_i64().ok().unwrap_or(0) as f64;
+        let x2 = bbox_array[2].as_i64().ok().unwrap_or(0) as f64;
+        let y2 = bbox_array[3].as_i64().ok().unwrap_or(0) as f64;
 
         let bbox = BoundingBox {
             x: x1 as f32,
@@ -551,51 +560,66 @@ impl PdfContentStreamParser {
 
         Ok(FontDescriptor {
             family: desc_dict.get(b"FontFamily")
-                .and_then(|obj| Ok(obj.as_string().ok()))
-                .map(|s| String::from_utf8_lossy(&s).to_string()),
+                .ok()
+                .and_then(|obj| obj.as_string().ok())
+                .map(|s| s.to_string()),
             stretch: desc_dict.get(b"FontStretch")
-                .and_then(|obj| Ok(obj.as_name().ok()))
+                .ok()
+                .and_then(|obj| obj.as_name().ok())
                 .map(|name| String::from_utf8_lossy(name).to_string()),
             weight: desc_dict.get(b"FontWeight")
-                .and_then(|obj| Ok(obj.as_i64().ok()))
+                .ok()
+                .and_then(|obj| obj.as_i64().ok())
                 .map(|w| w as i32),
             flags: desc_dict.get(b"Flags")
-                .and_then(|obj| Ok(obj.as_i64().ok()))
+                .ok()
+                .and_then(|obj| obj.as_i64().ok())
                 .unwrap_or(0) as u32,
             bbox,
             italic_angle: desc_dict.get(b"ItalicAngle")
-                .and_then(|obj| Ok(obj.as_i64().ok()))
-                .unwrap_or(0.0),
+                .ok()
+                .and_then(|obj| obj.as_i64().ok())
+                .unwrap_or(0) as f64,
             ascent: desc_dict.get(b"Ascent")
-                .and_then(|obj| Ok(obj.as_i64().ok()))
-                .unwrap_or(0.0),
+                .ok()
+                .and_then(|obj| obj.as_i64().ok())
+                .unwrap_or(0) as f64,
             descent: desc_dict.get(b"Descent")
-                .and_then(|obj| Ok(obj.as_i64().ok()))
-                .unwrap_or(0.0),
+                .ok()
+                .and_then(|obj| obj.as_i64().ok())
+                .unwrap_or(0) as f64,
             leading: desc_dict.get(b"Leading")
-                .and_then(|obj| Ok(obj.as_i64().ok()))
-                .unwrap_or(0.0),
+                .ok()
+                .and_then(|obj| obj.as_i64().ok())
+                .unwrap_or(0) as f64,
             cap_height: desc_dict.get(b"CapHeight")
-                .and_then(|obj| Ok(obj.as_i64().ok()))
-                .unwrap_or(0.0),
+                .ok()
+                .and_then(|obj| obj.as_i64().ok())
+                .unwrap_or(0) as f64,
             x_height: desc_dict.get(b"XHeight")
-                .and_then(|obj| Ok(obj.as_i64().ok()))
-                .unwrap_or(0.0),
+                .ok()
+                .and_then(|obj| obj.as_i64().ok())
+                .unwrap_or(0) as f64,
             stem_v: desc_dict.get(b"StemV")
-                .and_then(|obj| Ok(obj.as_i64().ok()))
-                .unwrap_or(0.0),
+                .ok()
+                .and_then(|obj| obj.as_i64().ok())
+                .unwrap_or(0) as f64,
             stem_h: desc_dict.get(b"StemH")
-                .and_then(|obj| Ok(obj.as_i64().ok()))
-                .unwrap_or(0.0),
+                .ok()
+                .and_then(|obj| obj.as_i64().ok())
+                .unwrap_or(0) as f64,
             avg_width: desc_dict.get(b"AvgWidth")
-                .and_then(|obj| Ok(obj.as_i64().ok()))
-                .unwrap_or(0.0),
+                .ok()
+                .and_then(|obj| obj.as_i64().ok())
+                .unwrap_or(0) as f64,
             max_width: desc_dict.get(b"MaxWidth")
-                .and_then(|obj| Ok(obj.as_i64().ok()))
-                .unwrap_or(0.0),
+                .ok()
+                .and_then(|obj| obj.as_i64().ok())
+                .unwrap_or(0) as f64,
             missing_width: desc_dict.get(b"MissingWidth")
-                .and_then(|obj| Ok(obj.as_i64().ok()))
-                .unwrap_or(0.0),
+                .ok()
+                .and_then(|obj| obj.as_i64().ok())
+                .unwrap_or(0) as f64,
         })
     }
 
@@ -644,7 +668,7 @@ impl PdfContentStreamParser {
         // Very basic tokenization - a full implementation would properly handle
         // PDF syntax including strings, arrays, etc.
         let mut operators = Vec::new();
-        let mut tokens: Vec<String> = content
+        let tokens: Vec<String> = content
             .split_whitespace()
             .map(|s| s.to_string())
             .collect();
@@ -1065,10 +1089,10 @@ impl SlidesIngestor {
     }
 
     /// Extract text content from slide elements
-    fn extract_text_content(&self, slide_element: roxmltree::Node, slide_index: usize) -> Result<Vec<Segment>> {
+    fn extract_text_content(&self, slide_element: roxmltree::Node, _slide_index: usize) -> Result<Vec<Segment>> {
         let mut segments = Vec::new();
 
-        for (text_index, text_element) in slide_element
+        for (_text_index, text_element) in slide_element
             .descendants()
             .filter(|node| {
                 let tag_name = node.tag_name().name();
@@ -1105,10 +1129,10 @@ impl SlidesIngestor {
     }
 
     /// Extract media content references
-    fn extract_media_content(&self, slide_element: roxmltree::Node, slide_index: usize) -> Result<Vec<Segment>> {
+    fn extract_media_content(&self, slide_element: roxmltree::Node, _slide_index: usize) -> Result<Vec<Segment>> {
         let mut segments = Vec::new();
 
-        for (media_index, media_element) in slide_element
+        for (_media_index, media_element) in slide_element
             .descendants()
             .filter(|node| {
                 let tag_name = node.tag_name().name();
@@ -1119,7 +1143,7 @@ impl SlidesIngestor {
             .enumerate()
         {
             let media_type = media_element.tag_name().name().replace("key:", "");
-            let description = format!("{} element on slide {}", media_type, slide_index + 1);
+            let description = format!("{} element on slide {}", media_type, _slide_index + 1);
 
             segments.push(Segment {
                 id: Uuid::new_v4(),
@@ -1145,10 +1169,10 @@ impl SlidesIngestor {
     }
 
     /// Extract shape and drawing content
-    fn extract_shape_content(&self, slide_element: roxmltree::Node, slide_index: usize) -> Result<Vec<Segment>> {
+    fn extract_shape_content(&self, slide_element: roxmltree::Node, _slide_index: usize) -> Result<Vec<Segment>> {
         let mut segments = Vec::new();
 
-        for (shape_index, shape_element) in slide_element
+        for (_shape_index, shape_element) in slide_element
             .descendants()
             .filter(|node| {
                 let tag_name = node.tag_name().name();
@@ -1158,7 +1182,7 @@ impl SlidesIngestor {
             .enumerate()
         {
             let shape_type = shape_element.tag_name().name().replace("key:", "");
-            let description = format!("{} element on slide {}", shape_type, slide_index + 1);
+            let description = format!("{} element on slide {}", shape_type, _slide_index + 1);
 
             segments.push(Segment {
                 id: Uuid::new_v4(),
@@ -1213,8 +1237,8 @@ impl SlidesIngestor {
         let mut blocks = Vec::new();
         
         // Get page contents
-        if let Some(contents) = &page.contents {
-            let text_objects = Vec::new(); // TODO: Implement PDF text extraction
+        if let Some(_contents) = &page.contents {
+            let _text_objects: Vec<String> = Vec::new(); // TODO: Implement PDF text extraction
             
             // Group text objects into blocks based on position and content
             let grouped_blocks = Vec::new(); // TODO: Implement text grouping

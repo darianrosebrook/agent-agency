@@ -12,26 +12,79 @@ use anyhow::{anyhow, Result};
 use std::io::Write;
 use std::path::PathBuf;
 use std::time::Instant;
-use tokio::io::AsyncWriteExt;
 use uuid::Uuid;
 
 /// Vision Framework bridge structures for Swift/Objective-C integration
 /// VNRecognizeTextRequest for optical character recognition
 #[derive(Debug, Clone)]
 struct VNRecognizeTextRequest {
-    recognition_level: String, // "accurate" or "fast"
-    uses_language_correction: bool,
-    custom_words: Vec<String>,
-    minimum_text_height: f32,
-    recognition_languages: Vec<String>,
-    automatically_detects_language: bool,
+    _recognition_level: String, // "accurate" or "fast"
+    _uses_language_correction: bool,
+    _custom_words: Vec<String>,
+    _minimum_text_height: f32,
+    _recognition_languages: Vec<String>,
+    _automatically_detects_language: bool,
 }
+
+/// FFI declarations for Vision Bridge
+#[cfg(target_os = "macos")]
+#[link(name = "VisionBridge", kind = "static")]
+extern "C" {
+    fn vision_extract_text(
+        imagePath: *const std::ffi::c_char,
+        outText: *mut *mut std::ffi::c_char,
+        outConfidence: *mut f32,
+        outError: *mut *mut std::ffi::c_char,
+    ) -> std::ffi::c_int;
+
+    fn vision_free_string(ptr: *mut std::ffi::c_char);
+}
+
+/// Stub implementations for non-macOS platforms
+#[cfg(not(target_os = "macos"))]
+mod stubs {
+    #[no_mangle]
+    pub extern "C" fn vision_extract_text(
+        _image_path: *const std::ffi::c_char,
+        _out_text: *mut *mut std::ffi::c_char,
+        _out_confidence: *mut f32,
+        out_error: *mut *mut std::ffi::c_char,
+    ) -> std::ffi::c_int {
+        if !out_error.is_null() {
+            let error_msg = std::ffi::CString::new("Vision OCR not available on this platform").unwrap();
+            unsafe {
+                *out_error = error_msg.into_raw();
+            }
+        }
+        1 // Error
+    }
+
+    #[no_mangle]
+    pub extern "C" fn vision_free_string(ptr: *mut std::ffi::c_char) {
+        if !ptr.is_null() {
+            unsafe {
+                let _ = std::ffi::CString::from_raw(ptr);
+            }
+        }
+    }
+}
+
+/// Re-export FFI functions for cross-platform compatibility
+#[cfg(target_os = "macos")]
+use self::vision_extract_text as vision_extract_text_impl;
+#[cfg(target_os = "macos")]
+use self::vision_free_string as vision_free_string_impl;
+
+#[cfg(not(target_os = "macos"))]
+use self::stubs::vision_extract_text as vision_extract_text_impl;
+#[cfg(not(target_os = "macos"))]
+use self::stubs::vision_free_string as vision_free_string_impl;
 
 /// VNImageRequestHandler for processing image data
 #[derive(Debug, Clone)]
 struct VNImageRequestHandler {
-    image_url: PathBuf,
-    orientation: String,
+    _image_url: PathBuf,
+    _orientation: String,
 }
 
 /// VNRecognizedTextObservation for text recognition results
@@ -40,7 +93,7 @@ struct VNRecognizedTextObservation {
     text: String,
     confidence: f32,
     bounding_box: VNRectangleObservation,
-    character_boxes: Vec<VNRectangleObservation>,
+    _character_boxes: Vec<VNRectangleObservation>,
 }
 
 /// VNRectangleObservation for bounding box coordinates
@@ -49,12 +102,12 @@ struct VNRectangleObservation {
     top_left: (f32, f32),
     top_right: (f32, f32),
     bottom_left: (f32, f32),
-    bottom_right: (f32, f32),
+    _bottom_right: (f32, f32),
 }
 
 pub struct VisionEnricher {
     circuit_breaker: CircuitBreaker,
-    config: EnricherConfig,
+    _config: EnricherConfig,
 }
 
 impl VisionEnricher {
@@ -67,7 +120,7 @@ impl VisionEnricher {
 
         Self {
             circuit_breaker: CircuitBreaker::new(cb_config),
-            config,
+            _config: config,
         }
     }
 
@@ -97,7 +150,7 @@ impl VisionEnricher {
             ));
         }
 
-        let timeout = timeout_ms.unwrap_or(self.config.vision_timeout_ms);
+        let timeout = timeout_ms.unwrap_or(self._config.vision_timeout_ms);
         let _start = Instant::now();
 
         // Integrate with Swift bridge - Implementation ready for production integration
@@ -209,7 +262,6 @@ impl VisionEnricher {
     /// Create temporary image file for Vision processing
     async fn create_temp_image_file(&self, image_data: &[u8]) -> Result<std::path::PathBuf> {
         use tempfile::NamedTempFile;
-        use tokio::io::AsyncWriteExt;
 
         let mut temp_file = NamedTempFile::with_suffix(".png")?;
         temp_file.write_all(image_data)?;
@@ -233,20 +285,15 @@ impl VisionEnricher {
     /// - [ ] Add support for minimum text height configuration
     /// - [ ] Support automatic language detection configuration
     async fn create_text_recognition_request(&self) -> Result<VNRecognizeTextRequest> {
-        // TODO: Implement Swift/Objective-C bridge for vision processing requests
-        // - [ ] Set up Swift/Objective-C bridge for macOS vision APIs
-        // - [ ] Implement VNImageRequestHandler creation and configuration
-        // - [ ] Add proper image buffer handling through FFI
-        // - [ ] Handle vision framework permissions and entitlements
-        // - [ ] Implement error handling for vision request failures
-
+        // Using Vision Bridge for actual OCR functionality
+        // The bridge handles the Swift/Objective-C integration
         Ok(VNRecognizeTextRequest {
-            recognition_level: "accurate".to_string(), // or "fast"
-            uses_language_correction: true,
-            custom_words: Vec::new(),
-            minimum_text_height: 0.0,
-            recognition_languages: vec!["en-US".to_string()],
-            automatically_detects_language: true,
+            _recognition_level: "accurate".to_string(),
+            _uses_language_correction: true,
+            _custom_words: Vec::new(),
+            _minimum_text_height: 0.0,
+            _recognition_languages: vec!["en-US".to_string()],
+            _automatically_detects_language: true,
         })
     }
 
@@ -270,95 +317,103 @@ impl VisionEnricher {
         // - [ ] Handle memory management for large images
         // - [ ] Implement concurrent request processing
 
-        Ok(VNImageRequestHandler {
-            image_url: image_path.to_path_buf(),
-            orientation: "up".to_string(),
-        })
+        Ok(            VNImageRequestHandler {
+                _image_url: image_path.to_path_buf(),
+                _orientation: "up".to_string(),
+            })
     }
 
-    /// TODO: Replace simulated text recognition with actual Vision Framework execution
-    /// Requirements for completion:
-    /// - [ ] Implement Swift/Objective-C bridge for Vision Framework execution
-    /// - [ ] Support proper text recognition request processing
-    /// - [ ] Implement proper error handling for recognition failures
-    /// - [ ] Add support for confidence scoring and result validation
-    /// - [ ] Implement proper bounding box calculation and positioning
-    /// - [ ] Add support for multiple text regions and hierarchical results
-    /// - [ ] Implement proper memory management for recognition results
-    /// - [ ] Add support for different text recognition algorithms
-    /// - [ ] Implement proper cleanup of recognition resources
-    /// - [ ] Add support for result post-processing and filtering
-    /// - [ ] Support proper error reporting for recognition failures
     async fn execute_text_recognition(
         &self,
         handler: &VNImageRequestHandler,
-        request: &VNRecognizeTextRequest,
+        _request: &VNRecognizeTextRequest,
     ) -> Result<Vec<VNRecognizedTextObservation>> {
-        // TODO: Implement Swift/Objective-C bridge for text recognition execution
-        // - [ ] Execute VNRecognizeTextRequest through Swift bridge
-        // - [ ] Handle asynchronous vision request processing
-        // - [ ] Parse VNRecognizedTextObservation results
-        // - [ ] Implement confidence scoring and result filtering
-        // - [ ] Add support for multiple text recognition results
+        // Use Vision Bridge for actual OCR
+        let image_path_c = std::ffi::CString::new(handler._image_url.to_string_lossy().as_ref())?;
 
-        // Simulate realistic text detection results
-        Ok(vec![
-            VNRecognizedTextObservation {
-                text: "Document Title".to_string(),
-                confidence: 0.95,
+        let mut out_text: *mut std::ffi::c_char = std::ptr::null_mut();
+        let mut out_confidence: f32 = 0.0;
+        let mut out_error: *mut std::ffi::c_char = std::ptr::null_mut();
+
+        let result = unsafe {
+            vision_extract_text_impl(
+                image_path_c.as_ptr(),
+                &mut out_text,
+                &mut out_confidence,
+                &mut out_error,
+            )
+        };
+
+        if result != 0 {
+            // Error occurred
+            let error_msg = if !out_error.is_null() {
+                unsafe {
+                    let error_str = std::ffi::CStr::from_ptr(out_error).to_string_lossy().to_string();
+                    vision_free_string_impl(out_error);
+                    error_str
+                }
+            } else {
+                "Unknown OCR error".to_string()
+            };
+
+            if !out_text.is_null() {
+                unsafe { vision_free_string_impl(out_text); }
+            }
+
+            return Err(anyhow::anyhow!("OCR failed: {}", error_msg));
+        }
+
+        // Success - extract text and create observation
+        let extracted_text = if !out_text.is_null() {
+            unsafe {
+                let text_str = std::ffi::CStr::from_ptr(out_text).to_string_lossy().to_string();
+                vision_free_string_impl(out_text);
+                text_str
+            }
+        } else {
+            String::new()
+        };
+
+        // If no text was found, return empty results
+        if extracted_text.trim().is_empty() {
+            return Ok(vec![]);
+        }
+
+        // Split text into lines and create observations for each line
+        let mut observations = Vec::new();
+        let lines: Vec<&str> = extracted_text.split('\n').collect();
+
+        for (i, line) in lines.iter().enumerate() {
+            let line = line.trim();
+            if line.is_empty() {
+                continue;
+            }
+
+            // Create observation for each line of text
+            let observation = VNRecognizedTextObservation {
+                text: line.to_string(),
+                // TODO: Implement granular confidence scoring for vision recognition
+                // - Calculate per-character and per-word confidence scores
+                // - Implement confidence score validation and normalization
+                // - Support confidence score aggregation across recognition pipeline
+                // - Add confidence score calibration based on ground truth data
+                // - Implement confidence thresholding and quality filtering
+                // - Support confidence score evolution during post-processing
+                // - Add confidence score analytics and model improvement insights
+                // - Implement confidence-based recognition result ranking
                 bounding_box: VNRectangleObservation {
-                    top_left: (0.1, 0.05),
-                    top_right: (0.9, 0.05),
-                    bottom_left: (0.1, 0.13),
-                    bottom_right: (0.9, 0.13),
+                    top_left: (0.0, i as f32 * 0.1), // Placeholder positioning
+                    top_right: (1.0, i as f32 * 0.1),
+                    bottom_left: (0.0, (i + 1) as f32 * 0.1),
+                    _bottom_right: (1.0, (i + 1) as f32 * 0.1),
                 },
-                character_boxes: Vec::new(),
-            },
-            VNRecognizedTextObservation {
-                text: "This is a sample paragraph with multiple sentences. It contains important information about the document structure and content.".to_string(),
-                confidence: 0.88,
-                bounding_box: VNRectangleObservation {
-                    top_left: (0.1, 0.2),
-                    top_right: (0.9, 0.2),
-                    bottom_left: (0.1, 0.35),
-                    bottom_right: (0.9, 0.35),
-                },
-                character_boxes: Vec::new(),
-            },
-            VNRecognizedTextObservation {
-                text: "• First bullet point".to_string(),
-                confidence: 0.92,
-                bounding_box: VNRectangleObservation {
-                    top_left: (0.15, 0.4),
-                    top_right: (0.85, 0.4),
-                    bottom_left: (0.15, 0.45),
-                    bottom_right: (0.85, 0.45),
-                },
-                character_boxes: Vec::new(),
-            },
-            VNRecognizedTextObservation {
-                text: "• Second bullet point".to_string(),
-                confidence: 0.90,
-                bounding_box: VNRectangleObservation {
-                    top_left: (0.15, 0.47),
-                    top_right: (0.85, 0.47),
-                    bottom_left: (0.15, 0.52),
-                    bottom_right: (0.85, 0.52),
-                },
-                character_boxes: Vec::new(),
-            },
-            VNRecognizedTextObservation {
-                text: "Conclusion: This document demonstrates enhanced OCR capabilities.".to_string(),
-                confidence: 0.85,
-                bounding_box: VNRectangleObservation {
-                    top_left: (0.1, 0.6),
-                    top_right: (0.9, 0.6),
-                    bottom_left: (0.1, 0.68),
-                    bottom_right: (0.9, 0.68),
-                },
-                character_boxes: Vec::new(),
-            },
-        ])
+                _character_boxes: vec![], // Placeholder - Vision bridge doesn't provide character boxes
+            };
+
+            observations.push(observation);
+        }
+
+        Ok(observations)
     }
 
     /// Convert Vision results to normalized image coordinates
@@ -368,7 +423,7 @@ impl VisionEnricher {
         image_data: &[u8],
     ) -> Result<Vec<(String, BoundingBox, f32)>> {
         // Get image dimensions for coordinate conversion
-        let image_size = self.get_image_dimensions(image_data).await?;
+        let _image_size = self.get_image_dimensions(image_data).await?;
 
         let mut results = Vec::new();
 
@@ -404,7 +459,7 @@ impl VisionEnricher {
     }
 
     /// Get image dimensions from image data
-    async fn get_image_dimensions(&self, image_data: &[u8]) -> Result<(u32, u32)> {
+    async fn get_image_dimensions(&self, _image_data: &[u8]) -> Result<(u32, u32)> {
         // TODO: Implement proper image header parsing for dimensions
         // - [ ] Parse image file headers (JPEG, PNG, TIFF) for actual dimensions
         // - [ ] Handle different image formats and compression types
@@ -419,7 +474,7 @@ impl VisionEnricher {
         let text_lower = text.to_lowercase();
         
         // Check for title patterns
-        if text.len() < 50 && (text.chars().next().map_or(false, |c| c.is_uppercase()) || 
+        if text.len() < 50 && (text.chars().next().is_some_and(|c| c.is_uppercase()) || 
                                text_lower.contains("title") || 
                                text_lower.contains("chapter") ||
                                text_lower.contains("section")) {

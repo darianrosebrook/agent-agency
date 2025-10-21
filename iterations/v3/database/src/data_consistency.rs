@@ -3,15 +3,15 @@
 //! Ensures data integrity across distributed systems during failures,
 //! failovers, and recovery operations.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
-use tracing::{info, warn, error};
+use tracing::{info, warn};
 
-use crate::{DatabaseClient, DatabaseConfig};
+use crate::DatabaseClient;
 
 /// Transaction state
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
@@ -81,7 +81,7 @@ pub enum InconsistencySeverity {
 }
 
 /// Recovery action
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum RecoveryAction {
     /// Repair data by copying from primary
     RepairFromPrimary { record_ids: Vec<String> },
@@ -258,16 +258,25 @@ impl DataConsistencyManager {
                 metadata = EXCLUDED.metadata
         "#;
 
+        let participants_json = serde_json::to_string(&transaction.participants)
+            .map_err(|e| e.to_string())?;
+        let state_json = serde_json::to_string(&transaction.state)
+            .map_err(|e| e.to_string())?;
+        let metadata_json = serde_json::to_string(&transaction.metadata)
+            .map_err(|e| e.to_string())?;
+        let created_at_str = transaction.created_at.to_rfc3339();
+        let timeout_at_str = transaction.timeout_at.to_rfc3339();
+
         self.db_client.execute(
             query,
             &[
                 &transaction.id,
                 &transaction.coordinator_id,
-                &transaction.participants,
-                &serde_json::to_string(&transaction.state).map_err(|e| e.to_string())?,
-                &transaction.created_at,
-                &transaction.timeout_at,
-                &transaction.metadata,
+                &participants_json,
+                &state_json,
+                &created_at_str,
+                &timeout_at_str,
+                &metadata_json,
             ],
         ).await
         .map_err(|e| format!("Failed to persist transaction: {}", e))?;
@@ -286,7 +295,7 @@ impl DataConsistencyManager {
         let state_str = serde_json::to_string(&new_state)
             .map_err(|e| e.to_string())?;
 
-        self.db_client.execute(query, &[&state_str, &transaction_id]).await
+        self.db_client.execute(query, &[&state_str, &transaction_id.to_string()]).await
             .map_err(|e| format!("Failed to update transaction state: {}", e))?;
 
         Ok(())
@@ -371,8 +380,14 @@ impl DataConsistencyManager {
         replica: &DatabaseClient,
         table_name: &str,
     ) -> Result<Vec<Inconsistency>, String> {
-        // This is a simplified implementation
-        // In a real system, this would compare actual data records
+        // TODO: Implement comprehensive data consistency checking
+        // - Compare actual data records between primary and replica
+        // - Implement checksum-based validation for large tables
+        // - Add support for comparing specific columns or computed values
+        // - Handle different data types and serialization formats
+        // - Add configurable tolerance for floating-point comparisons
+        // - Implement sampling strategies for very large tables
+        // - Add detailed inconsistency reporting with row-level details
 
         let query = format!("SELECT id FROM {} LIMIT 100", table_name);
 

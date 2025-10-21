@@ -88,6 +88,8 @@ async fn main() -> Result<()> {
         connection_timeout_seconds: 30,
         idle_timeout_seconds: 300,
         max_lifetime_seconds: 3600,
+        enable_read_write_splitting: false,
+        read_replicas: Vec::new(),
     };
     let db_client = Arc::new(
         database::DatabaseClient::new(db_config).await?
@@ -138,8 +140,14 @@ async fn main() -> Result<()> {
             }
         }
     }
-    
-    // Ingest WordNet
+
+    #[cfg(not(feature = "embeddings"))]
+    if !args.skip_wikidata {
+        info!("Skipping Wikidata ingestion - embeddings feature not enabled");
+    }
+
+    // Ingest WordNet (requires embeddings feature)
+    #[cfg(feature = "embeddings")]
     if !args.skip_wordnet {
         info!("\n=== Ingesting WordNet Synsets ===");
         match wordnet::parse_wordnet_dump(&ingestor, &args.wordnet_path).await {
@@ -153,8 +161,14 @@ async fn main() -> Result<()> {
             }
         }
     }
-    
-    // Generate cross-references
+
+    #[cfg(not(feature = "embeddings"))]
+    if !args.skip_wordnet {
+        info!("Skipping WordNet ingestion - embeddings feature not enabled");
+    }
+
+    // Generate cross-references (requires embeddings feature)
+    #[cfg(feature = "embeddings")]
     if !args.skip_cross_ref {
         info!("\n=== Generating Cross-References ===");
         match cross_reference::generate_cross_references(&ingestor).await {
@@ -168,7 +182,12 @@ async fn main() -> Result<()> {
             }
         }
     }
-    
+
+    #[cfg(not(feature = "embeddings"))]
+    if !args.skip_cross_ref {
+        info!("Skipping cross-reference generation - embeddings feature not enabled");
+    }
+
     // Print final summary
     info!("\n=== Final Summary ===");
     total_stats.print_summary();

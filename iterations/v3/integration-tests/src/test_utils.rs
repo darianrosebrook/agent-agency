@@ -181,27 +181,50 @@ impl DatabaseTestUtils {
     pub async fn cleanup_test_database(&self) -> Result<()> {
         info!("Cleaning up test database");
 
-        // 1. Database cleanup: Clean up test database after integration tests
+        // Try to connect to real database first for cleanup
+        if let Ok(client) = agent_agency_database::client::DatabaseClient::new(&self.connection_string).await {
+            info!("✅ Connected to real database for cleanup - using production cleanup");
+
+            // 1. Database cleanup: Clean up test database after integration tests
+            self.remove_real_test_data(&client).await?;
+            self.cleanup_real_test_schema(&client).await?;
+            self.handle_real_cleanup_errors(&client).await?;
+
+            // 2. Test data cleanup: Clean up test data and resources
+            self.remove_real_temporary_files(&client).await?;
+            self.cleanup_real_test_scenarios(&client).await?;
+            self.validate_real_data_cleanup(&client).await?;
+
+            // 3. Database resource cleanup: Clean up database resources
+            self.close_real_database_connections(&client).await?;
+            self.cleanup_real_database_resources(&client).await?;
+            self.validate_real_resource_cleanup(&client).await?;
+
+            // 4. Database monitoring cleanup: Clean up database monitoring
+            self.stop_real_database_monitoring(&client).await?;
+            self.cleanup_real_monitoring_resources(&client).await?;
+            self.report_real_monitoring_cleanup(&client).await?;
+
+            info!("✅ Real database cleanup completed successfully");
+            return Ok(());
+        }
+
+        warn!("⚠️ Real database not available for cleanup - using mock cleanup");
+        // Fallback to mock simulation
         self.remove_test_data().await?;
         self.cleanup_test_schema().await?;
         self.handle_cleanup_errors().await?;
-
-        // 2. Test data cleanup: Clean up test data and resources
         self.remove_temporary_files().await?;
         self.cleanup_test_scenarios().await?;
         self.validate_data_cleanup().await?;
-
-        // 3. Database resource cleanup: Clean up database resources
         self.close_database_connections().await?;
         self.cleanup_database_resources().await?;
         self.validate_resource_cleanup().await?;
-
-        // 4. Database monitoring cleanup: Clean up database monitoring
         self.stop_database_monitoring().await?;
         self.cleanup_monitoring_resources().await?;
         self.report_monitoring_cleanup().await?;
 
-        info!("Test database cleanup completed successfully");
+        info!("Test database mock cleanup completed successfully");
         Ok(())
     }
 
@@ -379,6 +402,543 @@ impl DatabaseTestUtils {
         info!("Reporting monitoring cleanup");
         // Simulate cleanup reporting
         tokio::time::sleep(tokio::time::Duration::from_millis(15)).await;
+        Ok(())
+    }
+
+    // Real database implementation methods
+    async fn create_real_test_schema(&self, client: &agent_agency_database::client::DatabaseClient) -> Result<(), anyhow::Error> {
+        info!("Creating real test database schema");
+
+        // Create test schema if it doesn't exist
+        client.execute(
+            "CREATE SCHEMA IF NOT EXISTS test_schema",
+            &[],
+        ).await?;
+
+        // Create test tables
+        let create_tables = vec![
+            r#"
+            CREATE TABLE IF NOT EXISTS test_schema.users (
+                id SERIAL PRIMARY KEY,
+                username VARCHAR(255) UNIQUE NOT NULL,
+                email VARCHAR(255) UNIQUE NOT NULL,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+            )
+            "#,
+            r#"
+            CREATE TABLE IF NOT EXISTS test_schema.tasks (
+                id SERIAL PRIMARY KEY,
+                title VARCHAR(500) NOT NULL,
+                description TEXT,
+                status VARCHAR(50) DEFAULT 'pending',
+                user_id INTEGER REFERENCES test_schema.users(id),
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+            )
+            "#,
+            r#"
+            CREATE TABLE IF NOT EXISTS test_schema.execution_artifacts (
+                id SERIAL PRIMARY KEY,
+                task_id INTEGER REFERENCES test_schema.tasks(id),
+                artifact_type VARCHAR(100) NOT NULL,
+                artifact_data JSONB,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+            )
+            "#,
+        ];
+
+        for create_sql in create_tables {
+            client.execute(create_sql, &[]).await?;
+        }
+
+        info!("✅ Real test database schema created successfully");
+        Ok(())
+    }
+
+    async fn setup_real_test_tables(&self, client: &agent_agency_database::client::DatabaseClient) -> Result<(), anyhow::Error> {
+        info!("Setting up real test database tables");
+
+        // Create indexes for performance
+        let index_sqls = vec![
+            "CREATE INDEX IF NOT EXISTS idx_test_users_username ON test_schema.users(username)",
+            "CREATE INDEX IF NOT EXISTS idx_test_users_email ON test_schema.users(email)",
+            "CREATE INDEX IF NOT EXISTS idx_test_tasks_user_id ON test_schema.tasks(user_id)",
+            "CREATE INDEX IF NOT EXISTS idx_test_tasks_status ON test_schema.tasks(status)",
+            "CREATE INDEX IF NOT EXISTS idx_test_artifacts_task_id ON test_schema.execution_artifacts(task_id)",
+            "CREATE INDEX IF NOT EXISTS idx_test_artifacts_type ON test_schema.execution_artifacts(artifact_type)",
+        ];
+
+        for index_sql in index_sqls {
+            client.execute(index_sql, &[]).await?;
+        }
+
+        info!("✅ Real test database tables and indexes created successfully");
+        Ok(())
+    }
+
+    async fn configure_real_database_connection(&self, client: &agent_agency_database::client::DatabaseClient) -> Result<(), anyhow::Error> {
+        info!("Configuring real database connection");
+
+        // Test basic connectivity
+        let rows = client.query("SELECT version()", &[]).await?;
+        let version: String = rows[0].try_get("version")?;
+        info!("Connected to PostgreSQL: {}", version);
+
+        // Configure connection settings
+        client.execute("SET timezone = 'UTC'", &[]).await?;
+        client.execute("SET work_mem = '64MB'", &[]).await?;
+        client.execute("SET maintenance_work_mem = '128MB'", &[]).await?;
+
+        info!("✅ Real database connection configured successfully");
+        Ok(())
+    }
+
+    async fn seed_real_test_data(&self, client: &agent_agency_database::client::DatabaseClient) -> Result<(), anyhow::Error> {
+        info!("Seeding real test database with data");
+
+        // Insert test users
+        let user_inserts = vec![
+            ("testuser1", "testuser1@example.com"),
+            ("testuser2", "testuser2@example.com"),
+            ("testuser3", "testuser3@example.com"),
+        ];
+
+        for (username, email) in user_inserts {
+            client.execute(
+                "INSERT INTO test_schema.users (username, email) VALUES ($1, $2) ON CONFLICT (username) DO NOTHING",
+                &[&username, &email],
+            ).await?;
+        }
+
+        // Insert test tasks
+        let task_inserts = vec![
+            ("Test Task 1", "Description for test task 1", 1),
+            ("Test Task 2", "Description for test task 2", 2),
+            ("Test Task 3", "Description for test task 3", 1),
+        ];
+
+        for (title, description, user_id) in task_inserts {
+            client.execute(
+                r#"
+                INSERT INTO test_schema.tasks (title, description, user_id)
+                VALUES ($1, $2, $3)
+                ON CONFLICT DO NOTHING
+                "#,
+                &[&title, &description, &user_id],
+            ).await?;
+        }
+
+        info!("✅ Real test database seeded with test data successfully");
+        Ok(())
+    }
+
+    async fn setup_real_test_scenarios(&self, client: &agent_agency_database::client::DatabaseClient) -> Result<(), anyhow::Error> {
+        info!("Setting up real test scenarios");
+
+        // Create test scenario data
+        let scenario_data = vec![
+            (1, "code_changes", r#"{"files_modified": 5, "lines_added": 100, "lines_removed": 20}"#),
+            (2, "test_results", r#"{"total": 10, "passed": 8, "failed": 2}"#),
+            (1, "coverage", r#"{"line_coverage": 85.0, "branch_coverage": 80.0}"#),
+        ];
+
+        for (task_id, artifact_type, data) in scenario_data {
+            client.execute(
+                r#"
+                INSERT INTO test_schema.execution_artifacts (task_id, artifact_type, artifact_data)
+                VALUES ($1, $2, $3)
+                ON CONFLICT DO NOTHING
+                "#,
+                &[&task_id, &artifact_type, &serde_json::from_str::<serde_json::Value>(data)?],
+            ).await?;
+        }
+
+        info!("✅ Real test scenarios set up successfully");
+        Ok(())
+    }
+
+    async fn validate_real_test_data(&self, client: &agent_agency_database::client::DatabaseClient) -> Result<(), anyhow::Error> {
+        info!("Validating real test data");
+
+        // Validate user count
+        let user_rows = client.query("SELECT COUNT(*) as count FROM test_schema.users", &[]).await?;
+        let user_count: i64 = user_rows[0].try_get("count")?;
+        assert!(user_count >= 3, "Should have at least 3 test users, found {}", user_count);
+
+        // Validate task count
+        let task_rows = client.query("SELECT COUNT(*) as count FROM test_schema.tasks", &[]).await?;
+        let task_count: i64 = task_rows[0].try_get("count")?;
+        assert!(task_count >= 3, "Should have at least 3 test tasks, found {}", task_count);
+
+        // Validate artifact count
+        let artifact_rows = client.query("SELECT COUNT(*) as count FROM test_schema.execution_artifacts", &[]).await?;
+        let artifact_count: i64 = artifact_rows[0].try_get("count")?;
+        assert!(artifact_count >= 3, "Should have at least 3 test artifacts, found {}", artifact_count);
+
+        info!("✅ Real test data validation completed successfully");
+        Ok(())
+    }
+
+    async fn configure_real_connection_parameters(&self, client: &agent_agency_database::client::DatabaseClient) -> Result<(), anyhow::Error> {
+        info!("Configuring real connection parameters");
+
+        // Configure session parameters for testing
+        client.execute("SET statement_timeout = '30000'", &[]).await?; // 30 seconds
+        client.execute("SET lock_timeout = '15000'", &[]).await?; // 15 seconds
+        client.execute("SET idle_in_transaction_session_timeout = '60000'", &[]).await?; // 1 minute
+
+        info!("✅ Real connection parameters configured successfully");
+        Ok(())
+    }
+
+    async fn optimize_real_database_performance(&self, client: &agent_agency_database::client::DatabaseClient) -> Result<(), anyhow::Error> {
+        info!("Optimizing real database performance");
+
+        // Analyze tables for query optimization
+        client.execute("ANALYZE test_schema.users", &[]).await?;
+        client.execute("ANALYZE test_schema.tasks", &[]).await?;
+        client.execute("ANALYZE test_schema.execution_artifacts", &[]).await?;
+
+        // Vacuum tables to reclaim space
+        client.execute("VACUUM ANALYZE test_schema.users", &[]).await?;
+        client.execute("VACUUM ANALYZE test_schema.tasks", &[]).await?;
+        client.execute("VACUUM ANALYZE test_schema.execution_artifacts", &[]).await?;
+
+        info!("✅ Real database performance optimized successfully");
+        Ok(())
+    }
+
+    async fn validate_real_database_configuration(&self, client: &agent_agency_database::client::DatabaseClient) -> Result<(), anyhow::Error> {
+        info!("Validating real database configuration");
+
+        // Check if required extensions are available
+        let extensions = client.query(
+            "SELECT name FROM pg_available_extensions WHERE name IN ('uuid-ossp', 'pg_stat_statements')",
+            &[],
+        ).await?;
+
+        let available_extensions: Vec<String> = extensions
+            .iter()
+            .map(|row| row.try_get::<_, String>("name").unwrap_or_default())
+            .collect();
+
+        info!("Available extensions: {:?}", available_extensions);
+
+        // Validate connection settings
+        let settings = client.query(
+            "SELECT name, setting FROM pg_settings WHERE name IN ('work_mem', 'maintenance_work_mem', 'statement_timeout')",
+            &[],
+        ).await?;
+
+        for row in settings {
+            let name: String = row.try_get("name")?;
+            let setting: String = row.try_get("setting")?;
+            info!("Setting {} = {}", name, setting);
+        }
+
+        info!("✅ Real database configuration validated successfully");
+        Ok(())
+    }
+
+    async fn track_real_database_performance(&self, client: &agent_agency_database::client::DatabaseClient) -> Result<(), anyhow::Error> {
+        info!("Tracking real database performance");
+
+        // Get database statistics
+        let stats = client.query(
+            r#"
+            SELECT
+                schemaname,
+                tablename,
+                n_tup_ins,
+                n_tup_upd,
+                n_tup_del,
+                n_live_tup,
+                n_dead_tup
+            FROM pg_stat_user_tables
+            WHERE schemaname = 'test_schema'
+            "#,
+            &[],
+        ).await?;
+
+        for row in stats {
+            let table_name: String = row.try_get("tablename")?;
+            let live_tuples: i64 = row.try_get("n_live_tup")?;
+            let dead_tuples: i64 = row.try_get("n_dead_tup")?;
+            info!("Table {}: {} live tuples, {} dead tuples", table_name, live_tuples, dead_tuples);
+        }
+
+        info!("✅ Real database performance tracked successfully");
+        Ok(())
+    }
+
+    async fn monitor_real_resource_usage(&self, client: &agent_agency_database::client::DatabaseClient) -> Result<(), anyhow::Error> {
+        info!("Monitoring real resource usage");
+
+        // Get connection information
+        let connections = client.query(
+            "SELECT count(*) as active_connections FROM pg_stat_activity WHERE state = 'active'",
+            &[],
+        ).await?;
+
+        let active_connections: i64 = connections[0].try_get("active_connections")?;
+        info!("Active database connections: {}", active_connections);
+
+        // Get database size information
+        let sizes = client.query(
+            r#"
+            SELECT
+                schemaname,
+                tablename,
+                pg_total_relation_size(schemaname||'.'||tablename) as total_size,
+                pg_relation_size(schemaname||'.'||tablename) as table_size,
+                pg_total_relation_size(schemaname||'.'||tablename) - pg_relation_size(schemaname||'.'||tablename) as index_size
+            FROM pg_tables
+            WHERE schemaname = 'test_schema'
+            ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC
+            "#,
+            &[],
+        ).await?;
+
+        for row in sizes {
+            let table_name: String = row.try_get("tablename")?;
+            let total_size: i64 = row.try_get("total_size")?;
+            info!("Table {} total size: {} bytes", table_name, total_size);
+        }
+
+        info!("✅ Real resource usage monitored successfully");
+        Ok(())
+    }
+
+    async fn report_real_database_status(&self, client: &agent_agency_database::client::DatabaseClient) -> Result<(), anyhow::Error> {
+        info!("Reporting real database status");
+
+        let status = client.query(
+            r#"
+            SELECT
+                (SELECT COUNT(*) FROM test_schema.users) as user_count,
+                (SELECT COUNT(*) FROM test_schema.tasks) as task_count,
+                (SELECT COUNT(*) FROM test_schema.execution_artifacts) as artifact_count,
+                (SELECT pg_database_size(current_database())) as database_size
+            "#,
+            &[],
+        ).await?;
+
+        if let Some(row) = status.first() {
+            let user_count: i64 = row.try_get("user_count")?;
+            let task_count: i64 = row.try_get("task_count")?;
+            let artifact_count: i64 = row.try_get("artifact_count")?;
+            let database_size: i64 = row.try_get("database_size")?;
+
+            info!("Database Status Report:");
+            info!("  Users: {}", user_count);
+            info!("  Tasks: {}", task_count);
+            info!("  Artifacts: {}", artifact_count);
+            info!("  Database Size: {} bytes ({:.2} MB)", database_size, database_size as f64 / (1024.0 * 1024.0));
+        }
+
+        info!("✅ Real database status reported successfully");
+        Ok(())
+    }
+
+    // Real database cleanup implementation methods
+    async fn remove_real_test_data(&self, client: &agent_agency_database::client::DatabaseClient) -> Result<(), anyhow::Error> {
+        info!("Removing real test data");
+
+        // Remove test data in correct order (respecting foreign keys)
+        client.execute("DELETE FROM test_schema.execution_artifacts", &[]).await?;
+        client.execute("DELETE FROM test_schema.tasks", &[]).await?;
+        client.execute("DELETE FROM test_schema.users", &[]).await?;
+
+        info!("✅ Real test data removed successfully");
+        Ok(())
+    }
+
+    async fn cleanup_real_test_schema(&self, client: &agent_agency_database::client::DatabaseClient) -> Result<(), anyhow::Error> {
+        info!("Cleaning up real test schema");
+
+        // Drop test tables in reverse order of creation
+        client.execute("DROP TABLE IF EXISTS test_schema.execution_artifacts CASCADE", &[]).await?;
+        client.execute("DROP TABLE IF EXISTS test_schema.tasks CASCADE", &[]).await?;
+        client.execute("DROP TABLE IF EXISTS test_schema.users CASCADE", &[]).await?;
+
+        // Drop the schema itself
+        client.execute("DROP SCHEMA IF EXISTS test_schema CASCADE", &[]).await?;
+
+        info!("✅ Real test schema cleaned up successfully");
+        Ok(())
+    }
+
+    async fn handle_real_cleanup_errors(&self, client: &agent_agency_database::client::DatabaseClient) -> Result<(), anyhow::Error> {
+        info!("Handling real cleanup errors");
+
+        // Check for any remaining test data that might indicate cleanup issues
+        let remaining_data = client.query(
+            r#"
+            SELECT
+                (SELECT COUNT(*) FROM information_schema.schemata WHERE schema_name = 'test_schema') as schema_exists,
+                (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'test_schema') as tables_count
+            "#,
+            &[],
+        ).await?;
+
+        if let Some(row) = remaining_data.first() {
+            let schema_exists: i64 = row.try_get("schema_exists")?;
+            let tables_count: i64 = row.try_get("tables_count")?;
+
+            if schema_exists > 0 {
+                warn!("Test schema still exists after cleanup");
+            }
+            if tables_count > 0 {
+                warn!("{} test tables still exist after cleanup", tables_count);
+            }
+        }
+
+        info!("✅ Real cleanup error handling completed");
+        Ok(())
+    }
+
+    async fn remove_real_temporary_files(&self, client: &agent_agency_database::client::DatabaseClient) -> Result<(), anyhow::Error> {
+        info!("Removing real temporary files");
+
+        // In a real implementation, this might involve cleaning up file system artifacts
+        // For database testing, we might clean up any temporary tables or data
+        client.execute("DROP TABLE IF EXISTS test_schema.temp_data CASCADE", &[]).await?;
+
+        info!("✅ Real temporary files removed successfully");
+        Ok(())
+    }
+
+    async fn cleanup_real_test_scenarios(&self, client: &agent_agency_database::client::DatabaseClient) -> Result<(), anyhow::Error> {
+        info!("Cleaning up real test scenarios");
+
+        // Clean up any scenario-specific data
+        client.execute("DELETE FROM test_schema.execution_artifacts WHERE artifact_type LIKE 'test_scenario_%'", &[]).await?;
+
+        info!("✅ Real test scenarios cleaned up successfully");
+        Ok(())
+    }
+
+    async fn validate_real_data_cleanup(&self, client: &agent_agency_database::client::DatabaseClient) -> Result<(), anyhow::Error> {
+        info!("Validating real data cleanup");
+
+        // Verify that all test data has been removed
+        let counts = client.query(
+            r#"
+            SELECT
+                (SELECT COUNT(*) FROM test_schema.users) as user_count,
+                (SELECT COUNT(*) FROM test_schema.tasks) as task_count,
+                (SELECT COUNT(*) FROM test_schema.execution_artifacts) as artifact_count
+            "#,
+            &[],
+        ).await?;
+
+        if let Some(row) = counts.first() {
+            let user_count: i64 = row.try_get("user_count")?;
+            let task_count: i64 = row.try_get("task_count")?;
+            let artifact_count: i64 = row.try_get("artifact_count")?;
+
+            if user_count > 0 || task_count > 0 || artifact_count > 0 {
+                warn!("Test data cleanup incomplete: {} users, {} tasks, {} artifacts remaining",
+                      user_count, task_count, artifact_count);
+            } else {
+                info!("✅ All test data successfully cleaned up");
+            }
+        }
+
+        info!("✅ Real data cleanup validation completed");
+        Ok(())
+    }
+
+    async fn close_real_database_connections(&self, client: &agent_agency_database::client::DatabaseClient) -> Result<(), anyhow::Error> {
+        info!("Closing real database connections");
+
+        // The client handles connection management, but we can verify connection state
+        let metrics = client.get_metrics().await?;
+        info!("Connection pool status - Total: {}, Active: {}, Idle: {}",
+              metrics.total_connections,
+              metrics.active_connections,
+              metrics.idle_connections);
+
+        info!("✅ Real database connections verified");
+        Ok(())
+    }
+
+    async fn cleanup_real_database_resources(&self, client: &agent_agency_database::client::DatabaseClient) -> Result<(), anyhow::Error> {
+        info!("Cleaning up real database resources");
+
+        // Reset any session-specific settings that might have been changed
+        client.execute("RESET ALL", &[]).await?;
+
+        // Vacuum to reclaim space
+        client.execute("VACUUM", &[]).await?;
+
+        info!("✅ Real database resources cleaned up successfully");
+        Ok(())
+    }
+
+    async fn validate_real_resource_cleanup(&self, client: &agent_agency_database::client::DatabaseClient) -> Result<(), anyhow::Error> {
+        info!("Validating real resource cleanup");
+
+        // Check that session settings are back to defaults
+        let settings = client.query(
+            "SELECT name, setting FROM pg_settings WHERE name IN ('work_mem', 'maintenance_work_mem')",
+            &[],
+        ).await?;
+
+        for row in settings {
+            let name: String = row.try_get("name")?;
+            let setting: String = row.try_get("setting")?;
+            debug!("Post-cleanup setting {} = {}", name, setting);
+        }
+
+        info!("✅ Real resource cleanup validated successfully");
+        Ok(())
+    }
+
+    async fn stop_real_database_monitoring(&self, client: &agent_agency_database::client::DatabaseClient) -> Result<(), anyhow::Error> {
+        info!("Stopping real database monitoring");
+
+        // In a real implementation, this might disable monitoring extensions or services
+        // For PostgreSQL, we might reset monitoring-related settings
+        client.execute("SELECT pg_stat_reset()", &[]).await?;
+
+        info!("✅ Real database monitoring stopped successfully");
+        Ok(())
+    }
+
+    async fn cleanup_real_monitoring_resources(&self, client: &agent_agency_database::client::DatabaseClient) -> Result<(), anyhow::Error> {
+        info!("Cleaning up real monitoring resources");
+
+        // Clean up any monitoring-related temporary data
+        client.execute("DROP TABLE IF EXISTS test_schema.monitoring_data CASCADE", &[]).await?;
+
+        info!("✅ Real monitoring resources cleaned up successfully");
+        Ok(())
+    }
+
+    async fn report_real_monitoring_cleanup(&self, client: &agent_agency_database::client::DatabaseClient) -> Result<(), anyhow::Error> {
+        info!("Reporting real monitoring cleanup");
+
+        let stats = client.query(
+            r#"
+            SELECT
+                (SELECT COUNT(*) FROM pg_stat_activity WHERE state = 'active') as active_connections,
+                pg_database_size(current_database()) as database_size
+            "#,
+            &[],
+        ).await?;
+
+        if let Some(row) = stats.first() {
+            let active_connections: i64 = row.try_get("active_connections")?;
+            let database_size: i64 = row.try_get("database_size")?;
+
+            info!("Post-cleanup monitoring report:");
+            info!("  Active connections: {}", active_connections);
+            info!("  Database size: {} bytes ({:.2} MB)",
+                  database_size, database_size as f64 / (1024.0 * 1024.0));
+        }
+
+        info!("✅ Real monitoring cleanup reported successfully");
         Ok(())
     }
 }

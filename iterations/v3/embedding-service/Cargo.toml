@@ -29,6 +29,10 @@ lru = "0.12"
 futures = "0.3"
 chrono = { version = "0.4", features = ["serde"] }
 
+# For tokenization and model loading
+hf-hub = "0.3"
+safetensors = "0.4"
+
 # Database dependencies
 sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "chrono", "uuid"] }
 sqlx-cli = "0.7"
@@ -43,8 +47,13 @@ dot = "0.1"
 
 # ML model loading dependencies
 ort = { version = "2.0.0-rc.10", features = ["load-dynamic"] }
-tokenizers = "0.19"
+tokenizers = "0.15"
 num_cpus = "1.16"
+
+# CLIP model support using Candle
+candle-core = "0.9.1"
+candle-nn = "0.9.1"
+candle-transformers = "0.9.1"
 
 [dev-dependencies]
 tokio-test = "0.4"

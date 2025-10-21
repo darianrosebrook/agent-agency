@@ -5,6 +5,10 @@ edition.workspace = true
 authors.workspace = true
 license.workspace = true
 
+[lib]
+name = "agent_agency_production"
+path = "mod.rs"
+
 [dependencies]
 # Workspace dependencies
 serde.workspace = true
@@ -12,16 +16,20 @@ serde_json.workspace = true
 tokio.workspace = true
 async-trait.workspace = true
 tracing.workspace = true
+thiserror.workspace = true
+uuid.workspace = true
 chrono.workspace = true
+
+# Local crates
+agent-agency-contracts = { path = "../agent-agency-contracts" }
 
 # Additional dependencies
 anyhow = "1.0"
-regex = "1.10"
+statrs = "0.16"
+quantiles = "0.7"
+ordered-float = "4.2"
 rand = "0.8"
-
-# Statistical libraries for quantile estimation
-statrs = "0.16"  # Statistical analysis and distributions
-streaming-stats = "0.2"  # Streaming statistical algorithms
-quantiles = "0.7"  # Quantile estimation algorithms
-sampling = "1.0"  # Statistical sampling
-ordered-float = "4.0"  # Ordered floating point comparisons
+sampling = "0.1"
+jsonwebtoken = "9.2"
+sha2 = "0.10"
+reqwest = { version = "0.11", features = ["json"] }

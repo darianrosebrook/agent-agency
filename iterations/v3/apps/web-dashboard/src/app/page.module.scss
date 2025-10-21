@@ -251,6 +251,14 @@
   }
 }
 
+.sloSection {
+  margin-bottom: 2rem;
+}
+
+.alertsSection {
+  margin-bottom: 2rem;
+}
+
 // Dark mode support
 @media (prefers-color-scheme: dark) {
   .card {

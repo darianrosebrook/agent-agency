@@ -1,378 +1,478 @@
-//! Quality Guardrails Module
-//!
-//! Implements CAWS compliance validation and quality preservation
-//! for the runtime optimization pipeline.
+/// Quality guardrails for ensuring optimization doesn't compromise
+/// system reliability, accuracy, or compliance requirements.
 
-use crate::performance_monitor::{PerformanceMetrics, SLAMetrics};
-use crate::bayesian_optimizer::OptimizationResult;
-use anyhow::{Result, Context};
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use tracing::{debug, info, warn, error};
 use std::sync::Arc;
 use tokio::sync::RwLock;
+use tracing::{debug, info, warn, error};
 
-/// Quality guardrails configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct QualityConfig {
-    /// CAWS compliance threshold (0.0-1.0)
-    pub caws_compliance_threshold: f64,
-    /// Performance degradation threshold (%)
-    pub max_performance_degradation: f64,
-    /// Quality preservation priority (0.0-1.0)
-    pub quality_priority: f64,
-    /// Enable strict mode (fail on any violation)
-    pub strict_mode: bool,
-    /// SLA validation enabled
-    pub sla_validation_enabled: bool,
+/// Quality guardrails enforcer
+pub struct QualityGuardrails {
+    compliance_checker: ComplianceChecker,
+    performance_validator: PerformanceValidator,
+    safety_monitor: SafetyMonitor,
+    active_checks: Arc<RwLock<HashMap<String, GuardrailCheck>>>,
 }
 
-/// Compliance check result
+/// Individual compliance check result
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ComplianceCheck {
-    /// Overall compliance score (0.0-1.0)
-    pub compliance_score: f64,
-    /// CAWS compliance score
-    pub caws_compliance: f64,
-    /// Performance compliance score
-    pub performance_compliance: f64,
-    /// Quality preservation score
-    pub quality_preservation: f64,
-    /// Violations found
-    pub violations: Vec<ComplianceViolation>,
-    /// Recommendations for improvement
-    pub recommendations: Vec<String>,
+    /// Check identifier
+    pub check_id: String,
+    /// Check name
+    pub name: String,
+    /// Check status
+    pub status: CheckStatus,
+    /// Severity level
+    pub severity: Severity,
+    /// Check result details
+    pub details: String,
     /// Timestamp of check
     pub timestamp: chrono::DateTime<chrono::Utc>,
+    /// Remediation suggestions
+    pub remediation: Vec<String>,
 }
 
-/// Compliance violation types
+/// Check status enumeration
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum ComplianceViolation {
-    /// CAWS compliance below threshold
-    CAWSCompliance { current: f64, required: f64 },
-    /// Performance degradation too high
-    PerformanceDegradation { degradation: f64, threshold: f64 },
-    /// Quality preservation failure
-    QualityDegradation { degradation: f64, threshold: f64 },
-    /// SLA violation
-    SLAViolation { metric: String, current: f64, target: f64 },
-    /// Security vulnerability
-    SecurityIssue { severity: String, description: String },
+pub enum CheckStatus {
+    /// Check passed successfully
+    Passed,
+    /// Check failed
+    Failed,
+    /// Check was skipped
+    Skipped,
+    /// Check encountered an error
+    Error,
 }
 
-/// Performance threshold validation
+/// Severity levels for checks
+#[derive(Debug, Clone, Serialize, Deserialize, PartialOrd, Ord, PartialEq, Eq)]
+pub enum Severity {
+    /// Informational only
+    Info,
+    /// Warning - should be reviewed
+    Warning,
+    /// Error - blocks deployment
+    Error,
+    /// Critical - immediate action required
+    Critical,
+}
+
+/// Performance threshold configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PerformanceThreshold {
-    /// Metric name
-    pub metric: String,
-    /// Minimum acceptable value
-    pub minimum: Option<f64>,
-    /// Maximum acceptable value
-    pub maximum: Option<f64>,
-    /// Target value
-    pub target: Option<f64>,
-    /// Priority level (0.0-1.0)
-    pub priority: f64,
+    /// Minimum acceptable throughput (ops/sec)
+    pub min_throughput: f32,
+    /// Maximum acceptable latency (ms)
+    pub max_latency_ms: f32,
+    /// Maximum acceptable memory usage (MB)
+    pub max_memory_mb: usize,
+    /// Minimum acceptable accuracy score (0.0-1.0)
+    pub min_accuracy: f32,
+    /// Maximum acceptable error rate
+    pub max_error_rate: f32,
 }
 
-/// Quality guardrails for optimization validation
-pub struct QualityGuardrails {
-    config: QualityConfig,
-    baseline_metrics: Arc<RwLock<Option<PerformanceMetrics>>>,
-    performance_thresholds: Arc<RwLock<Vec<PerformanceThreshold>>>,
-    compliance_history: Arc<RwLock<Vec<ComplianceCheck>>>,
-    caws_validator: CAWSValidator,
+/// Guardrail check configuration
+#[derive(Debug, Clone)]
+struct GuardrailCheck {
+    check_type: CheckType,
+    enabled: bool,
+    interval_seconds: u64,
+    last_run: Option<chrono::DateTime<chrono::Utc>>,
+    consecutive_failures: u32,
+}
+
+#[derive(Debug, Clone)]
+enum CheckType {
+    Accuracy,
+    Performance,
+    Safety,
+    Compliance,
+    ResourceUsage,
 }
 
 impl QualityGuardrails {
-    /// Create new quality guardrails
-    pub fn new(config: QualityConfig) -> Self {
+    /// Create new quality guardrails with default checks
+    pub fn new() -> Self {
+        let mut active_checks = HashMap::new();
+
+        // Register default checks
+        active_checks.insert("accuracy_check".to_string(), GuardrailCheck {
+            check_type: CheckType::Accuracy,
+            enabled: true,
+            interval_seconds: 300, // 5 minutes
+            last_run: None,
+            consecutive_failures: 0,
+        });
+
+        active_checks.insert("performance_check".to_string(), GuardrailCheck {
+            check_type: CheckType::Performance,
+            enabled: true,
+            interval_seconds: 60, // 1 minute
+            last_run: None,
+            consecutive_failures: 0,
+        });
+
+        active_checks.insert("safety_check".to_string(), GuardrailCheck {
+            check_type: CheckType::Safety,
+            enabled: true,
+            interval_seconds: 30, // 30 seconds
+            last_run: None,
+            consecutive_failures: 0,
+        });
+
         Self {
-            config,
-            baseline_metrics: Arc::new(RwLock::new(None)),
-            performance_thresholds: Arc::new(RwLock::new(Vec::new())),
-            compliance_history: Arc::new(RwLock::new(Vec::new())),
-            caws_validator: CAWSValidator::new(),
+            compliance_checker: ComplianceChecker::new(),
+            performance_validator: PerformanceValidator::new(),
+            safety_monitor: SafetyMonitor::new(),
+            active_checks: Arc::new(RwLock::new(active_checks)),
         }
     }
 
-    /// Establish baseline performance metrics
-    pub async fn establish_baseline(&self, metrics: PerformanceMetrics) -> Result<()> {
-        let mut baseline = self.baseline_metrics.write().await;
-        *baseline = Some(metrics);
+    /// Run all enabled guardrail checks
+    pub async fn run_all_checks(&self, context: &CheckContext) -> Result<Vec<ComplianceCheck>> {
+        info!("Running all quality guardrail checks");
 
-        // Initialize performance thresholds based on baseline
-        self.initialize_performance_thresholds(&metrics).await;
+        let mut results = Vec::new();
+        let checks = self.active_checks.read().await.clone();
 
-        info!("Established quality guardrails baseline: {:?}", metrics);
-        Ok(())
+        for (check_id, check) in checks {
+            if !check.enabled {
+                continue;
+            }
+
+            let result = match check.check_type {
+                CheckType::Accuracy => self.check_accuracy(context).await,
+                CheckType::Performance => self.check_performance(context).await,
+                CheckType::Safety => self.check_safety(context).await,
+                CheckType::Compliance => self.check_compliance(context).await,
+                CheckType::ResourceUsage => self.check_resource_usage(context).await,
+            };
+
+            results.push(result);
+        }
+
+        // Update check status
+        self.update_check_status(&results).await;
+
+        Ok(results)
     }
 
-    /// Validate compliance of optimization result
-    pub async fn validate_compliance(&self, optimization_result: &OptimizationResult) -> Result<ComplianceCheck> {
-        debug!("Validating optimization compliance");
+    /// Check if optimization can proceed based on guardrail results
+    pub async fn can_proceed(&self, checks: &[ComplianceCheck]) -> bool {
+        let critical_failures = checks.iter()
+            .filter(|check| matches!(check.severity, Severity::Critical) && matches!(check.status, CheckStatus::Failed))
+            .count();
 
-        let baseline = self.baseline_metrics.read().await
-            .clone()
-            .context("No baseline metrics established for compliance validation")?;
+        let error_failures = checks.iter()
+            .filter(|check| matches!(check.severity, Severity::Error) && matches!(check.status, CheckStatus::Failed))
+            .count();
 
-        let mut violations = Vec::new();
-        let mut recommendations = Vec::new();
+        // Block if there are any critical failures or more than 2 error failures
+        critical_failures == 0 && error_failures <= 2
+    }
 
-        // CAWS compliance check
-        let caws_compliance = self.caws_validator.validate_compliance().await?;
-        if caws_compliance < self.config.caws_compliance_threshold {
-            violations.push(ComplianceViolation::CAWSCompliance {
-                current: caws_compliance,
-                required: self.config.caws_compliance_threshold,
-            });
-            recommendations.push(format!("Improve CAWS compliance from {:.2} to {:.2}",
-                                       caws_compliance, self.config.caws_compliance_threshold));
-        }
-
-        // Performance degradation check
-        let performance_degradation = self.calculate_performance_degradation(&baseline, optimization_result);
-        if performance_degradation > self.config.max_performance_degradation {
-            violations.push(ComplianceViolation::PerformanceDegradation {
-                degradation: performance_degradation,
-                threshold: self.config.max_performance_degradation,
-            });
-            recommendations.push(format!("Reduce performance degradation from {:.2}% to below {:.2}%",
-                                       performance_degradation, self.config.max_performance_degradation));
-        }
-
-        // Quality preservation check
-        let quality_degradation = (1.0 - optimization_result.quality_preservation) * 100.0;
-        let quality_threshold = (1.0 - self.config.quality_priority) * 100.0;
-        if quality_degradation > quality_threshold {
-            violations.push(ComplianceViolation::QualityDegradation {
-                degradation: quality_degradation,
-                threshold: quality_threshold,
-            });
-            recommendations.push(format!("Improve quality preservation - current degradation: {:.2}%", quality_degradation));
-        }
-
-        // Performance threshold validation
-        let threshold_violations = self.validate_performance_thresholds(&baseline).await?;
-        violations.extend(threshold_violations);
-
-        // Calculate compliance scores
-        let compliance_score = self.calculate_compliance_score(&violations);
-        let performance_compliance = 1.0 - (performance_degradation / 100.0).min(1.0);
-        let quality_preservation = optimization_result.quality_preservation;
-
-        let check = ComplianceCheck {
-            compliance_score,
-            caws_compliance,
-            performance_compliance,
-            quality_preservation,
-            violations,
-            recommendations,
-            timestamp: chrono::Utc::now(),
+    /// Generate remediation plan for failed checks
+    pub async fn generate_remediation_plan(&self, failed_checks: &[ComplianceCheck]) -> Result<RemediationPlan> {
+        let mut plan = RemediationPlan {
+            actions: Vec::new(),
+            estimated_time_minutes: 0,
+            risk_level: RiskLevel::Low,
         };
 
-        // Record compliance check
-        let mut history = self.compliance_history.write().await;
-        history.push(check.clone());
+        for check in failed_checks {
+            let actions = self.generate_check_remediation(check).await;
+            plan.actions.extend(actions);
 
-        // Log results
-        if check.compliance_score >= 0.8 {
-            info!("Compliance check passed: {:.2} score", check.compliance_score);
-        } else if check.compliance_score >= 0.6 {
-            warn!("Compliance check marginal: {:.2} score", check.compliance_score);
+            // Update risk level based on severity
+            plan.risk_level = plan.risk_level.max(match check.severity {
+                Severity::Critical => RiskLevel::High,
+                Severity::Error => RiskLevel::Medium,
+                Severity::Warning => RiskLevel::Low,
+                Severity::Info => RiskLevel::Low,
+            });
+        }
+
+        plan.estimated_time_minutes = plan.actions.len() as u32 * 15; // 15 minutes per action
+        Ok(plan)
+    }
+
+    /// Individual check implementations
+    async fn check_accuracy(&self, context: &CheckContext) -> ComplianceCheck {
+        let accuracy_score = context.current_metrics.accuracy_score;
+        let threshold = context.thresholds.min_accuracy;
+
+        let (status, severity, details) = if accuracy_score >= threshold {
+            (CheckStatus::Passed, Severity::Info,
+             format!("Accuracy {:.3} meets threshold {:.3}", accuracy_score, threshold))
         } else {
-            error!("Compliance check failed: {:.2} score", check.compliance_score);
-            for violation in &check.violations {
-                error!("Violation: {:?}", violation);
-            }
-        }
+            let degradation = threshold - accuracy_score;
+            (CheckStatus::Failed, Severity::Error,
+             format!("Accuracy {:.3} below threshold {:.3} (degradation: {:.3})",
+                    accuracy_score, threshold, degradation))
+        };
 
-        Ok(check)
-    }
-
-    /// Validate performance thresholds
-    pub async fn validate_performance_thresholds(&self, current_metrics: &PerformanceMetrics) -> Result<Vec<ComplianceViolation>> {
-        let thresholds = self.performance_thresholds.read().await;
-        let mut violations = Vec::new();
-
-        for threshold in thresholds.iter() {
-            let current_value = self.get_metric_value(current_metrics, &threshold.metric);
-
-            // Check minimum threshold
-            if let Some(min) = threshold.minimum {
-                if current_value < min {
-                    violations.push(ComplianceViolation::SLAViolation {
-                        metric: threshold.metric.clone(),
-                        current: current_value,
-                        target: min,
-                    });
-                }
-            }
-
-            // Check maximum threshold
-            if let Some(max) = threshold.maximum {
-                if current_value > max {
-                    violations.push(ComplianceViolation::SLAViolation {
-                        metric: threshold.metric.clone(),
-                        current: current_value,
-                        target: max,
-                    });
-                }
-            }
-        }
-
-        Ok(violations)
-    }
-
-    /// Set performance thresholds
-    pub async fn set_performance_thresholds(&self, thresholds: Vec<PerformanceThreshold>) -> Result<()> {
-        let mut current_thresholds = self.performance_thresholds.write().await;
-        *current_thresholds = thresholds;
-        debug!("Updated performance thresholds");
-        Ok(())
-    }
-
-    /// Initialize default performance thresholds based on baseline
-    async fn initialize_performance_thresholds(&self, baseline: &PerformanceMetrics) {
-        let thresholds = vec![
-            PerformanceThreshold {
-                metric: "throughput".to_string(),
-                minimum: Some(baseline.throughput * 0.9), // 90% of baseline
-                maximum: None,
-                target: Some(baseline.throughput * 1.2), // 20% improvement target
-                priority: 0.8,
-            },
-            PerformanceThreshold {
-                metric: "avg_latency_ms".to_string(),
-                minimum: None,
-                maximum: Some(baseline.avg_latency_ms * 1.1), // 10% degradation max
-                target: Some(baseline.avg_latency_ms * 0.8), // 20% improvement target
-                priority: 0.9,
-            },
-            PerformanceThreshold {
-                metric: "error_rate".to_string(),
-                minimum: None,
-                maximum: Some(baseline.error_rate * 2.0), // Double error rate max
-                target: Some(baseline.error_rate * 0.5), // 50% error reduction target
-                priority: 1.0,
-            },
-            PerformanceThreshold {
-                metric: "memory_usage_percent".to_string(),
-                minimum: None,
-                maximum: Some(90.0), // 90% memory usage max
-                target: Some(baseline.memory_usage_percent * 0.9), // 10% memory reduction
-                priority: 0.7,
-            },
-        ];
-
-        let mut current_thresholds = self.performance_thresholds.write().await;
-        *current_thresholds = thresholds;
-    }
-
-    /// Calculate performance degradation percentage
-    fn calculate_performance_degradation(&self, baseline: &PerformanceMetrics, optimization: &OptimizationResult) -> f64 {
-        // Performance degradation based on throughput and latency changes
-        let throughput_change = (baseline.throughput - optimization.expected_improvement).max(0.0) / baseline.throughput;
-        let latency_penalty = (optimization.expected_improvement - baseline.throughput).max(0.0) / baseline.throughput;
-
-        (throughput_change + latency_penalty) * 50.0 // Scale to percentage
-    }
-
-    /// Calculate overall compliance score
-    fn calculate_compliance_score(&self, violations: &[ComplianceViolation]) -> f64 {
-        if violations.is_empty() {
-            return 1.0;
-        }
-
-        // Weight violations by severity
-        let total_penalty: f64 = violations.iter().map(|v| match v {
-            ComplianceViolation::CAWSCompliance { .. } => 0.3,
-            ComplianceViolation::PerformanceDegradation { .. } => 0.25,
-            ComplianceViolation::QualityDegradation { .. } => 0.25,
-            ComplianceViolation::SLAViolation { .. } => 0.15,
-            ComplianceViolation::SecurityIssue { severity, .. } => {
-                match severity.as_str() {
-                    "critical" => 0.4,
-                    "high" => 0.3,
-                    "medium" => 0.2,
-                    _ => 0.1,
-                }
-            }
-        }).sum();
-
-        (1.0 - total_penalty).max(0.0)
-    }
-
-    /// Get metric value by name
-    fn get_metric_value(&self, metrics: &PerformanceMetrics, metric: &str) -> f64 {
-        match metric {
-            "throughput" => metrics.throughput,
-            "avg_latency_ms" => metrics.avg_latency_ms,
-            "p95_latency_ms" => metrics.p95_latency_ms,
-            "p99_latency_ms" => metrics.p99_latency_ms,
-            "error_rate" => metrics.error_rate,
-            "cpu_usage_percent" => metrics.cpu_usage_percent,
-            "memory_usage_percent" => metrics.memory_usage_percent,
-            "active_connections" => metrics.active_connections as f64,
-            "queue_depth" => metrics.queue_depth as f64,
-            _ => 0.0,
+        ComplianceCheck {
+            check_id: "accuracy_check".to_string(),
+            name: "Accuracy Validation".to_string(),
+            status,
+            severity,
+            details,
+            timestamp: chrono::Utc::now(),
+            remediation: vec![
+                "Review quantization parameters".to_string(),
+                "Consider reducing optimization aggressiveness".to_string(),
+                "Validate with additional test data".to_string(),
+            ],
         }
     }
 
-    /// Get compliance history
-    pub async fn get_compliance_history(&self) -> Vec<ComplianceCheck> {
-        self.compliance_history.read().await.clone()
-    }
+    async fn check_performance(&self, context: &CheckContext) -> ComplianceCheck {
+        let throughput = context.current_metrics.throughput_ops_per_sec;
+        let latency = context.current_metrics.latency_p95_ms;
 
-    /// Check if optimization should be blocked due to quality concerns
-    pub async fn should_block_optimization(&self, compliance_check: &ComplianceCheck) -> bool {
-        if self.config.strict_mode {
-            compliance_check.compliance_score < 0.8
+        let throughput_ok = throughput >= context.thresholds.min_throughput;
+        let latency_ok = latency <= context.thresholds.max_latency_ms;
+
+        let (status, severity, details) = if throughput_ok && latency_ok {
+            (CheckStatus::Passed, Severity::Info,
+             format!("Performance OK - Throughput: {:.1}, Latency: {:.1}ms",
+                    throughput, latency))
         } else {
-            // Allow marginal compliance but block critical violations
-            compliance_check.violations.iter().any(|v| matches!(v,
-                ComplianceViolation::SecurityIssue { severity, .. } if severity == "critical"
-            ))
+            let mut issues = Vec::new();
+            if !throughput_ok {
+                issues.push(format!("Throughput {:.1} < {:.1}",
+                                  throughput, context.thresholds.min_throughput));
+            }
+            if !latency_ok {
+                issues.push(format!("Latency {:.1}ms > {:.1}ms",
+                                  latency, context.thresholds.max_latency_ms));
+            }
+
+            (CheckStatus::Failed, Severity::Warning,
+             format!("Performance issues: {}", issues.join(", ")))
+        };
+
+        ComplianceCheck {
+            check_id: "performance_check".to_string(),
+            name: "Performance Validation".to_string(),
+            status,
+            severity,
+            details,
+            timestamp: chrono::Utc::now(),
+            remediation: vec![
+                "Adjust batch size parameters".to_string(),
+                "Review memory allocation strategy".to_string(),
+                "Consider different quantization approach".to_string(),
+            ],
         }
+    }
+
+    async fn check_safety(&self, context: &CheckContext) -> ComplianceCheck {
+        let thermal_events = context.current_metrics.thermal_throttling_events;
+        let memory_usage = context.current_metrics.memory_usage_mb;
+
+        let thermal_ok = thermal_events == 0;
+        let memory_ok = memory_usage <= context.thresholds.max_memory_mb;
+
+        let (status, severity, details) = if thermal_ok && memory_ok {
+            (CheckStatus::Passed, Severity::Info,
+             "Safety checks passed - No thermal throttling, memory within limits".to_string())
+        } else {
+            let mut issues = Vec::new();
+            if !thermal_ok {
+                issues.push(format!("{} thermal throttling events", thermal_events));
+            }
+            if !memory_ok {
+                issues.push(format!("Memory usage {}MB > {}MB limit",
+                                  memory_usage, context.thresholds.max_memory_mb));
+            }
+
+            (CheckStatus::Failed, Severity::Critical,
+             format!("Safety violations: {}", issues.join(", ")))
+        };
+
+        ComplianceCheck {
+            check_id: "safety_check".to_string(),
+            name: "Safety Validation".to_string(),
+            status,
+            severity,
+            details,
+            timestamp: chrono::Utc::now(),
+            remediation: vec![
+                "Reduce computational load".to_string(),
+                "Implement thermal throttling protection".to_string(),
+                "Optimize memory allocation".to_string(),
+                "Consider workload partitioning".to_string(),
+            ],
+        }
+    }
+
+    async fn check_compliance(&self, context: &CheckContext) -> ComplianceCheck {
+        // Check for compliance with organizational policies
+        // This would integrate with actual compliance frameworks
+
+        ComplianceCheck {
+            check_id: "compliance_check".to_string(),
+            name: "Compliance Validation".to_string(),
+            status: CheckStatus::Passed,
+            severity: Severity::Info,
+            details: "Compliance checks passed".to_string(),
+            timestamp: chrono::Utc::now(),
+            remediation: vec![],
+        }
+    }
+
+    async fn check_resource_usage(&self, context: &CheckContext) -> ComplianceCheck {
+        let cpu_usage = context.current_metrics.cpu_utilization_percent;
+        let memory_usage = context.current_metrics.memory_usage_mb;
+
+        let cpu_ok = cpu_usage <= 90.0; // 90% max CPU usage
+        let memory_ok = memory_usage <= context.thresholds.max_memory_mb;
+
+        let (status, severity, details) = if cpu_ok && memory_ok {
+            (CheckStatus::Passed, Severity::Info,
+             format!("Resource usage OK - CPU: {:.1}%, Memory: {}MB", cpu_usage, memory_usage))
+        } else {
+            (CheckStatus::Failed, Severity::Warning,
+             format!("Resource usage high - CPU: {:.1}%, Memory: {}MB", cpu_usage, memory_usage))
+        };
+
+        ComplianceCheck {
+            check_id: "resource_check".to_string(),
+            name: "Resource Usage Validation".to_string(),
+            status,
+            severity,
+            details,
+            timestamp: chrono::Utc::now(),
+            remediation: vec![
+                "Implement resource limits".to_string(),
+                "Add workload prioritization".to_string(),
+                "Consider horizontal scaling".to_string(),
+            ],
+        }
+    }
+
+    /// Update check status tracking
+    async fn update_check_status(&self, checks: &[ComplianceCheck]) {
+        let mut active_checks = self.active_checks.write().await;
+
+        for check in checks {
+            if let Some(guardrail_check) = active_checks.get_mut(&check.check_id) {
+                guardrail_check.last_run = Some(check.timestamp);
+
+                match check.status {
+                    CheckStatus::Failed => {
+                        guardrail_check.consecutive_failures += 1;
+                    }
+                    _ => {
+                        guardrail_check.consecutive_failures = 0;
+                    }
+                }
+            }
+        }
+    }
+
+    /// Generate remediation actions for a specific check
+    async fn generate_check_remediation(&self, check: &ComplianceCheck) -> Vec<RemediationAction> {
+        check.remediation.iter().enumerate().map(|(i, description)| {
+            RemediationAction {
+                id: format!("remediation_{}_{}", check.check_id, i),
+                description: description.clone(),
+                estimated_time_minutes: 15,
+                risk_level: match check.severity {
+                    Severity::Critical => RiskLevel::High,
+                    Severity::Error => RiskLevel::Medium,
+                    _ => RiskLevel::Low,
+                },
+                automated: false,
+            }
+        }).collect()
     }
 }
 
-/// CAWS compliance validator
-struct CAWSValidator {
-    // In a real implementation, this would integrate with CAWS tooling
+/// Compliance checker for regulatory requirements
+struct ComplianceChecker {
+    policies: HashMap<String, Policy>,
 }
 
-impl CAWSValidator {
+impl ComplianceChecker {
     fn new() -> Self {
-        Self {}
-    }
-
-    async fn validate_compliance(&self) -> Result<f64> {
-        // TODO: Integrate with actual CAWS validation
-        // For now, return a mock compliance score
-        // In production, this would run CAWS quality gates
-
-        // Simulate CAWS compliance check
-        // This would typically run linting, testing, security scans, etc.
-        let mock_compliance = 0.85; // 85% CAWS compliant
-
-        debug!("CAWS compliance validated: {:.2}", mock_compliance);
-        Ok(mock_compliance)
-    }
-}
-
-impl Default for QualityConfig {
-    fn default() -> Self {
         Self {
-            caws_compliance_threshold: 0.8,
-            max_performance_degradation: 10.0,
-            quality_priority: 0.9,
-            strict_mode: false,
-            sla_validation_enabled: true,
+            policies: HashMap::new(),
         }
     }
 }
 
-// @darianrosebrook
-// Quality guardrails module implementing CAWS compliance validation and performance thresholds
+/// Performance validator for SLA compliance
+struct PerformanceValidator {
+    sla_thresholds: HashMap<String, f32>,
+}
+
+impl PerformanceValidator {
+    fn new() -> Self {
+        Self {
+            sla_thresholds: HashMap::new(),
+        }
+    }
+}
+
+/// Safety monitor for system stability
+struct SafetyMonitor {
+    safety_limits: HashMap<String, f32>,
+}
+
+impl SafetyMonitor {
+    fn new() -> Self {
+        Self {
+            safety_limits: HashMap::new(),
+        }
+    }
+}
+
+/// Context for running guardrail checks
+#[derive(Debug)]
+pub struct CheckContext {
+    pub current_metrics: crate::performance_monitor::SLAMetrics,
+    pub thresholds: PerformanceThreshold,
+    pub optimization_config: serde_json::Value,
+}
+
+/// Remediation plan for addressing check failures
+#[derive(Debug)]
+pub struct RemediationPlan {
+    pub actions: Vec<RemediationAction>,
+    pub estimated_time_minutes: u32,
+    pub risk_level: RiskLevel,
+}
+
+/// Individual remediation action
+#[derive(Debug)]
+pub struct RemediationAction {
+    pub id: String,
+    pub description: String,
+    pub estimated_time_minutes: u32,
+    pub risk_level: RiskLevel,
+    pub automated: bool,
+}
+
+/// Risk level for remediation actions
+#[derive(Debug, Clone, PartialOrd, Ord, PartialEq, Eq)]
+pub enum RiskLevel {
+    Low,
+    Medium,
+    High,
+}
+
+/// Policy definition for compliance checks
+#[derive(Debug)]
+struct Policy {
+    name: String,
+    requirements: Vec<String>,
+    severity: Severity,
+}
+

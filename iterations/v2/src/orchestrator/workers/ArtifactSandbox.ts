@@ -109,7 +109,7 @@ export interface ArtifactManifest {
  */
 export class ArtifactQuotaExceeded extends Error {
   public readonly quotaType: "size" | "files";
-  
+
   constructor(message: string, quotaType: "size" | "files") {
     super(message);
     this.name = "ArtifactQuotaExceeded";
@@ -122,7 +122,7 @@ export class ArtifactQuotaExceeded extends Error {
  */
 export class InvalidArtifactPath extends Error {
   public readonly path: string;
-  
+
   constructor(message: string, path: string) {
     super(message);
     this.name = "InvalidArtifactPath";

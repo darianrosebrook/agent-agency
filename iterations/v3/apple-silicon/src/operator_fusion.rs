@@ -1,7 +1,5 @@
 //! Operator fusion for optimized computation graphs
 
-use crate::types::*;
-
 /// Operator fusion decision
 #[derive(Debug, Clone)]
 pub enum FusionDecision {

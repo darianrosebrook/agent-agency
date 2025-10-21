@@ -496,7 +496,16 @@ export class ArXivSearchProvider extends BaseSearchProvider {
       const response = await fetch(url);
       const xmlText = await response.text();
 
-      // Parse XML response (simplified)
+      // TODO: Implement comprehensive XML parsing and processing
+      // - Use proper XML parsing libraries (xml2js, fast-xml-parser, or native DOM)
+      // - Implement XML schema validation and error handling
+      // - Support XML namespace handling and prefix resolution
+      // - Add XML transformation and normalization capabilities
+      // - Implement XML streaming parsing for large documents
+      // - Support XML query languages (XPath, XQuery) for data extraction
+      // - Add XML validation against schemas (DTD, XSD)
+      // - Implement XML canonicalization and comparison
+      // - Support XML compression and efficient storage
       const results = this.parseArXivResponse(xmlText, query.id);
 
       // Emit search execution event

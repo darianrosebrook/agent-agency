@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 // SLO status API proxy
 
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: { sloName: string } }
 ) {
   try {

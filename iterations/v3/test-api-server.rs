@@ -9,15 +9,102 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use tokio::net::TcpListener;
+use tokio::sync::RwLock;
 use uuid::Uuid;
+use std::collections::HashMap;
 
-use agent_agency_database::client::DatabaseClient;
+// Simple in-memory database simulation for testing
+
+#[derive(Clone)]
+struct MockDatabase {
+    tasks: Arc<RwLock<HashMap<Uuid, serde_json::Value>>>,
+    audit_logs: Arc<RwLock<Vec<serde_json::Value>>>,
+    waivers: Arc<RwLock<Vec<serde_json::Value>>>,
+}
+
+impl MockDatabase {
+    fn new() -> Self {
+        Self {
+            tasks: Arc::new(RwLock::new(HashMap::new())),
+            audit_logs: Arc::new(RwLock::new(Vec::new())),
+            waivers: Arc::new(RwLock::new(Vec::new())),
+        }
+    }
+
+    async fn create_task(&self, task_id: Uuid, spec: &serde_json::Value, description: &str) -> Result<(), String> {
+        let mut tasks = self.tasks.write().await;
+        let task = json!({
+            "id": task_id,
+            "spec": spec,
+            "state": "pending",
+            "created_at": chrono::Utc::now().to_rfc3339(),
+            "updated_at": chrono::Utc::now().to_rfc3339(),
+            "created_by": "test-user",
+            "metadata": {},
+            "acceptance_criteria": []
+        });
+        tasks.insert(task_id, task);
+
+        // Log audit event
+        let mut audit_logs = self.audit_logs.write().await;
+        let audit_event = json!({
+            "id": Uuid::new_v4(),
+            "action": "task_created",
+            "actor": "test-user",
+            "resource_id": task_id,
+            "resource_type": "task",
+            "change_summary": {
+                "description": description,
+                "spec": spec
+            },
+            "created_at": chrono::Utc::now().to_rfc3339()
+        });
+        audit_logs.push(audit_event);
+
+        println!("✅ Mock DB: Created task {}", task_id);
+        Ok(())
+    }
+
+    async fn get_task(&self, task_id: &Uuid) -> Option<serde_json::Value> {
+        let tasks = self.tasks.read().await;
+        tasks.get(task_id).cloned()
+    }
+
+    async fn list_tasks(&self) -> Vec<serde_json::Value> {
+        let tasks = self.tasks.read().await;
+        tasks.values().cloned().collect()
+    }
+
+    async fn get_task_events(&self, task_id: &Uuid) -> Vec<serde_json::Value> {
+        let audit_logs = self.audit_logs.read().await;
+        audit_logs.iter()
+            .filter(|event| event.get("resource_id") == Some(&json!(task_id)))
+            .cloned()
+            .collect()
+    }
+
+    async fn create_waiver(&self, waiver: serde_json::Value) -> Result<serde_json::Value, String> {
+        let waiver_id = Uuid::new_v4();
+        let mut waiver_with_id = waiver.clone();
+        if let Some(obj) = waiver_with_id.as_object_mut() {
+            obj.insert("id".to_string(), json!(waiver_id));
+            obj.insert("status".to_string(), json!("active"));
+            obj.insert("created_at".to_string(), json!(chrono::Utc::now().to_rfc3339()));
+        }
+
+        let mut waivers = self.waivers.write().await;
+        waivers.push(waiver_with_id.clone());
+
+        println!("✅ Mock DB: Created waiver {}", waiver_id);
+        Ok(waiver_with_id)
+    }
+}
 
 // Simple test API server for validating core database functionality
 
 #[derive(Clone)]
 struct AppState {
-    db_client: Arc<DatabaseClient>,
+    db: Arc<MockDatabase>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -44,32 +131,12 @@ async fn create_task(
 ) -> Result<Json<TaskResponse>, StatusCode> {
     println!("📝 Creating task: {}", payload.description);
 
-    // Create task in database
+    // Create task in mock database
     let task_id = Uuid::new_v4();
     let spec = payload.spec.clone();
 
-    // Insert task
-    let insert_query = r#"
-        INSERT INTO tasks (id, spec, state, created_by, metadata)
-        VALUES ($1, $2, 'pending', 'test-user', '{}')
-    "#;
-
-    match state.db_client.execute(insert_query, &[&task_id, &spec]).await {
+    match state.db.create_task(task_id, &spec, &payload.description).await {
         Ok(_) => {
-            // Log audit event
-            let audit_query = r#"
-                INSERT INTO audit_logs (action, actor, resource_id, resource_type, change_summary)
-                VALUES ('task_created', 'test-user', $1, 'task', $2)
-            "#;
-            let change_summary = json!({
-                "description": payload.description,
-                "spec": spec
-            });
-
-            if let Err(e) = state.db_client.execute(audit_query, &[&task_id, &change_summary]).await {
-                println!("⚠️  Failed to log audit event: {}", e);
-            }
-
             let response = TaskResponse {
                 id: task_id,
                 description: payload.description,
@@ -98,61 +165,31 @@ async fn get_task(
         Err(_) => return Err(StatusCode::BAD_REQUEST),
     };
 
-    // Get task
-    let task_query = r#"
-        SELECT id, spec, state, created_at, updated_at, acceptance_criteria
-        FROM tasks WHERE id = $1
-    "#;
-
-    match state.db_client.query_one(task_query, &[&uuid]).await {
-        Ok(row) => {
-            let task_id: Uuid = row.get("id");
-            let spec: serde_json::Value = row.get("spec");
-            let state: String = row.get("state");
-            let created_at: chrono::DateTime<chrono::Utc> = row.get("created_at");
-            let updated_at: chrono::DateTime<chrono::Utc> = row.get("updated_at");
-            let acceptance_criteria: Vec<String> = row.get("acceptance_criteria");
+    // Get task from mock database
+    match state.db.get_task(&uuid).await {
+        Some(task) => {
+            let task_id: Uuid = task.get("id").and_then(|v| v.as_str()).and_then(|s| Uuid::parse_str(s).ok()).unwrap_or(uuid);
+            let spec: serde_json::Value = task.get("spec").cloned().unwrap_or(json!({}));
+            let state_val: String = task.get("state").and_then(|v| v.as_str()).unwrap_or("unknown").to_string();
+            let created_at: String = task.get("created_at").and_then(|v| v.as_str()).unwrap_or("").to_string();
+            let updated_at: String = task.get("updated_at").and_then(|v| v.as_str()).unwrap_or("").to_string();
+            let acceptance_criteria: Vec<String> = task.get("acceptance_criteria")
+                .and_then(|v| v.as_array())
+                .unwrap_or(&vec![])
+                .iter()
+                .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                .collect();
 
             // Get audit events
-            let events_query = r#"
-                SELECT id, action, actor, change_summary, created_at
-                FROM audit_logs
-                WHERE resource_id = $1 AND resource_type = 'task'
-                ORDER BY created_at DESC
-                LIMIT 10
-            "#;
-
-            let events = match state.db_client.query(events_query, &[&uuid]).await {
-                Ok(rows) => {
-                    rows.iter().map(|row| {
-                        let event_id: Uuid = row.get("id");
-                        let action: String = row.get("action");
-                        let actor: Option<String> = row.get("actor");
-                        let change_summary: serde_json::Value = row.get("change_summary");
-                        let created_at: chrono::DateTime<chrono::Utc> = row.get("created_at");
-
-                        json!({
-                            "id": event_id,
-                            "action": action,
-                            "actor": actor,
-                            "details": change_summary,
-                            "timestamp": created_at.to_rfc3339()
-                        })
-                    }).collect::<Vec<_>>()
-                }
-                Err(e) => {
-                    println!("⚠️  Failed to get events: {}", e);
-                    Vec::new()
-                }
-            };
+            let events = state.db.get_task_events(&uuid).await;
 
             let response = json!({
                 "id": task_id,
                 "title": spec.get("description").and_then(|d| d.as_str()).unwrap_or("Untitled Task"),
                 "description": spec.get("context").and_then(|c| c.as_str()).unwrap_or(""),
-                "status": state,
-                "createdAt": created_at.to_rfc3339(),
-                "updatedAt": updated_at.to_rfc3339(),
+                "status": state_val,
+                "createdAt": created_at,
+                "updatedAt": updated_at,
                 "acceptanceCriteria": acceptance_criteria,
                 "events": events
             });
@@ -160,8 +197,8 @@ async fn get_task(
             println!("✅ Task retrieved with {} events", events.len());
             Ok(Json(response))
         }
-        Err(e) => {
-            println!("❌ Task not found: {}", e);
+        None => {
+            println!("❌ Task not found: {}", task_id);
             Err(StatusCode::NOT_FOUND)
         }
     }
@@ -170,37 +207,23 @@ async fn get_task(
 async fn list_tasks(State(state): State<AppState>) -> Result<Json<Vec<TaskResponse>>, StatusCode> {
     println!("📋 Listing tasks");
 
-    let query = r#"
-        SELECT id, spec, state, created_at
-        FROM tasks
-        ORDER BY created_at DESC
-        LIMIT 20
-    "#;
+    let tasks_data = state.db.list_tasks().await;
+    let tasks = tasks_data.iter().map(|task| {
+        let id: Uuid = task.get("id").and_then(|v| v.as_str()).and_then(|s| Uuid::parse_str(s).ok()).unwrap_or(Uuid::new_v4());
+        let spec: serde_json::Value = task.get("spec").cloned().unwrap_or(json!({}));
+        let state_val: String = task.get("state").and_then(|v| v.as_str()).unwrap_or("unknown").to_string();
+        let created_at: String = task.get("created_at").and_then(|v| v.as_str()).unwrap_or("").to_string();
 
-    match state.db_client.query(query, &[]).await {
-        Ok(rows) => {
-            let tasks = rows.iter().map(|row| {
-                let id: Uuid = row.get("id");
-                let spec: serde_json::Value = row.get("spec");
-                let state: String = row.get("state");
-                let created_at: chrono::DateTime<chrono::Utc> = row.get("created_at");
-
-                TaskResponse {
-                    id,
-                    description: spec.get("description").and_then(|d| d.as_str()).unwrap_or("Untitled").to_string(),
-                    status: state,
-                    created_at: created_at.to_rfc3339(),
-                }
-            }).collect::<Vec<_>>();
-
-            println!("✅ Found {} tasks", tasks.len());
-            Ok(Json(tasks))
+        TaskResponse {
+            id,
+            description: spec.get("description").and_then(|d| d.as_str()).unwrap_or("Untitled").to_string(),
+            status: state_val,
+            created_at,
         }
-        Err(e) => {
-            println!("❌ Failed to list tasks: {}", e);
-            Err(StatusCode::INTERNAL_SERVER_ERROR)
-        }
-    }
+    }).collect::<Vec<_>>();
+
+    println!("✅ Found {} tasks", tasks.len());
+    Ok(Json(tasks))
 }
 
 async fn create_waiver(
@@ -209,50 +232,11 @@ async fn create_waiver(
 ) -> Result<Json<serde_json::Value>, StatusCode> {
     println!("📋 Creating waiver");
 
-    let title = payload.get("title").and_then(|t| t.as_str()).unwrap_or("Test Waiver");
-    let reason = payload.get("reason").and_then(|r| r.as_str()).unwrap_or("emergency_hotfix");
-    let description = payload.get("description").and_then(|d| d.as_str()).unwrap_or("Test waiver");
-    let gates: Vec<String> = payload.get("gates")
-        .and_then(|g| g.as_array())
-        .unwrap_or(&vec![])
-        .iter()
-        .filter_map(|v| v.as_str().map(|s| s.to_string()))
-        .collect();
-    let approved_by = payload.get("approved_by").and_then(|a| a.as_str()).unwrap_or("test-user");
-    let impact_level = payload.get("impact_level").and_then(|i| i.as_str()).unwrap_or("low");
-    let mitigation_plan = payload.get("mitigation_plan").and_then(|m| m.as_str()).unwrap_or("Test mitigation");
-    let expires_at = payload.get("expires_at")
-        .and_then(|e| e.as_str())
-        .unwrap_or(&(chrono::Utc::now() + chrono::Duration::days(30)).to_rfc3339());
-
-    let waiver_id = Uuid::new_v4();
-    let expires_at_dt = chrono::DateTime::parse_from_rfc3339(&expires_at)
-        .map(|dt| dt.with_timezone(&chrono::Utc))
-        .unwrap_or_else(|_| chrono::Utc::now() + chrono::Duration::days(30));
-
-    let query = r#"
-        INSERT INTO waivers (id, title, reason, description, gates, approved_by, impact_level, mitigation_plan, expires_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-    "#;
-
-    match state.db_client.execute(query, &[
-        &waiver_id,
-        &title,
-        &reason,
-        &description,
-        &gates,
-        &approved_by,
-        &impact_level,
-        &mitigation_plan,
-        &expires_at_dt,
-    ]).await {
-        Ok(_) => {
+    match state.db.create_waiver(payload).await {
+        Ok(waiver) => {
+            let waiver_id = waiver.get("id").and_then(|v| v.as_str()).unwrap_or("unknown");
             println!("✅ Waiver created: {}", waiver_id);
-            Ok(Json(json!({
-                "id": waiver_id,
-                "title": title,
-                "status": "active"
-            })))
+            Ok(Json(waiver))
         }
         Err(e) => {
             println!("❌ Failed to create waiver: {}", e);
@@ -265,13 +249,11 @@ async fn create_waiver(
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("🚀 Starting Test API Server");
 
-    // Initialize database connection
-    // For testing, we'll use a simple in-memory or file-based approach
-    // In a real environment, this would connect to PostgreSQL
-    println!("⚠️  Using mock database client for testing (no real database connection)");
-    let db_client = Arc::new(DatabaseClient::new_mock());
+    // Initialize mock database for testing
+    println!("⚠️  Using in-memory mock database for testing");
+    let db = Arc::new(MockDatabase::new());
 
-    let app_state = AppState { db_client };
+    let app_state = AppState { db };
 
     // Create router
     let app = Router::new()

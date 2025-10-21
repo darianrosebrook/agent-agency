@@ -5,6 +5,7 @@ import {
   PerformancePredictorProps,
   PerformancePrediction,
   AnalyticsFilters,
+  ForecastingRequest,
 } from "@/types/analytics";
 import { analyticsApiClient, AnalyticsApiError } from "@/lib/analytics-api";
 import ForecastingChart from "./ForecastingChart";
@@ -88,11 +89,11 @@ export default function PerformancePredictor({
     try {
       setState((prev) => ({ ...prev, isPredicting: true, error: null }));
 
-      const forecastingRequest = {
-        metrics: [], // Will be populated from available metrics
+      const forecastingRequest: ForecastingRequest = {
+        metrics: ["cpu_usage", "memory_usage", "response_time"], // Default metrics
         horizon_days: 7,
         time_range: state.filters.time_range,
-        models: ["linear", "arima"],
+        models: ["linear", "arima"] as Array<"linear" | "exponential" | "arima" | "prophet">,
       };
 
       const response = await analyticsApiClient.generateForecasting(
@@ -221,12 +222,16 @@ export default function PerformancePredictor({
             </button>
           </div>
           <div className={styles.modalContent}>
-            <ForecastingChart
-              prediction={state.selectedPrediction}
-              historicalData={timeSeriesData?.find(
-                (d) => d.name === state.selectedPrediction.metric
-              )}
-            />
+            {(() => {
+              const historicalData = state.selectedPrediction ?
+                timeSeriesData?.find((d) => d.name === state.selectedPrediction!.metric) : undefined;
+              return state.selectedPrediction && historicalData ? (
+                <ForecastingChart
+                  prediction={state.selectedPrediction}
+                  historicalData={historicalData}
+                />
+              ) : null;
+            })()}
           </div>
         </div>
       )}

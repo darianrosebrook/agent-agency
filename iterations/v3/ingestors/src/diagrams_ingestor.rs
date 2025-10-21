@@ -12,8 +12,8 @@ use std::path::Path;
 use uuid::Uuid;
 
 pub struct DiagramsIngestor {
-    svg_parser: SvgParser,
-    graphml_parser: GraphMLParser,
+    _svg_parser: SvgParser,
+    _graphml_parser: GraphMLParser,
 }
 
 pub struct SvgParser;
@@ -22,8 +22,8 @@ pub struct GraphMLParser;
 impl DiagramsIngestor {
     pub fn new() -> Self {
         Self {
-            svg_parser: SvgParser,
-            graphml_parser: GraphMLParser,
+            _svg_parser: SvgParser,
+            _graphml_parser: GraphMLParser,
         }
     }
 

@@ -480,7 +480,15 @@ export class SystemHealthMonitor extends EventEmitter {
    * Get estimated queue depth
    */
   private getEstimatedQueueDepth(): number {
-    // Estimate based on agent load (simplified)
+    // TODO: Implement comprehensive queue depth monitoring and forecasting
+    // - Query actual task queue lengths from orchestrator database
+    // - Implement queue depth trend analysis and growth prediction
+    // - Support per-agent queue monitoring and load balancing
+    // - Add queue depth-based autoscaling triggers
+    // - Implement queue congestion detection and alerting
+    // - Support queue depth correlation with system performance metrics
+    // - Add queue depth forecasting based on historical patterns
+    // - Implement queue depth optimization and bottleneck identification
     let totalLoad = 0;
     let totalCapacity = 0;
 

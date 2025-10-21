@@ -443,3 +443,4 @@ A: No. Critical TODOs fail CI, period. Documentary TODOs lower score by ~15% (ac
 
 **Q: When should I use waiver system?**  
 A: When you have a critical TODO but can justify it (e.g., "Core ML integration deferred to Q2, using CPU fallback for now with clear latency impact"). Requires approver signature.
+

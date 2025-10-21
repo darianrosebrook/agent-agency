@@ -1,6 +1,7 @@
 use regex::Regex;
 use std::collections::HashMap;
 use once_cell::sync::Lazy;
+use uuid;
 
 use super::types::{AcceptanceCriterion, CriterionPriority};
 

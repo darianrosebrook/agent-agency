@@ -39,6 +39,7 @@ pub use agent::{
     // Resource constraint validation types
     ResourceConstraintValidation, ResourceValidationLevel,
 };
+pub use acceptance_criteria_extractor::{AcceptanceCriteriaExtractor, ValidationResult, CriterionComparison};
 pub use context_builder::{ContextBuilder, ContextBuilderConfig};
 pub use llm_client::{LLMClient, OpenAIClient, OllamaClient, LLMConfig, Message, MessageRole, GenerationRequest, GenerationResponse, TokenUsage, FinishReason};
 pub use spec_generator::{SpecGenerator, SpecGeneratorConfig};

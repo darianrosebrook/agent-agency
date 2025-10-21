@@ -18,6 +18,7 @@ use unicode_normalization::UnicodeNormalization;
 const MIN_SIMILARITY_THRESHOLD: f32 = 0.7;
 
 /// Generate cross-references between Wikidata and WordNet entities
+#[cfg(feature = "embeddings")]
 pub async fn generate_cross_references(
     ingestor: &KnowledgeIngestor,
 ) -> Result<IngestionStats> {
@@ -98,6 +99,7 @@ pub async fn generate_cross_references(
 }
 
 /// Find matching WordNet synsets for a Wikidata entity
+#[cfg(feature = "embeddings")]
 async fn find_wordnet_matches(
     wikidata_entity: &ExternalKnowledgeEntity,
     wordnet_by_name: &std::collections::HashMap<String, Vec<&ExternalKnowledgeEntity>>,
@@ -213,6 +215,7 @@ fn check_pos_agreement(
 }
 
 /// Calculate semantic similarity between entities using embeddings
+#[cfg(feature = "embeddings")]
 async fn calculate_semantic_similarity(
     wikidata_entity: &ExternalKnowledgeEntity,
     wordnet_entity: &ExternalKnowledgeEntity,
@@ -259,6 +262,7 @@ fn cosine_similarity(a: &[f32], b: &[f32]) -> f32 {
 }
 
 /// Create a cross-reference relationship in the database
+#[cfg(feature = "embeddings")]
 async fn create_cross_reference(
     ingestor: &KnowledgeIngestor,
     match_result: &CrossReferenceMatch,

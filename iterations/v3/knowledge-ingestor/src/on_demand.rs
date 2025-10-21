@@ -19,6 +19,7 @@ use tokio::sync::RwLock;
 use tracing::{debug, warn};
 
 /// On-demand ingestor with caching and rate limiting
+#[cfg(feature = "embeddings")]
 pub struct OnDemandIngestor {
     ingestor: Arc<KnowledgeIngestor>,
     cache: Arc<RwLock<LruCache<String, CacheEntry>>>,
@@ -39,6 +40,7 @@ impl CacheEntry {
     }
 }
 
+#[cfg(feature = "embeddings")]
 impl OnDemandIngestor {
     /// Create a new on-demand ingestor
     pub fn new(ingestor: Arc<KnowledgeIngestor>) -> Self {

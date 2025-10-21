@@ -13,6 +13,7 @@ pub struct ModelSpecification {
     pub parameters: ModelParameters,
     pub capabilities: Vec<Capability>,
     pub constraints: Vec<ModelConstraint>,
+    pub performance_metrics: Option<crate::scoring_system::PerformanceMetrics>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -51,6 +52,42 @@ pub struct ExecutionMetrics {
     pub memory_usage: u64,
     pub cpu_usage: f32,
     pub quality_score: f32,
+}
+
+#[derive(Debug, Clone)]
+pub struct ModelExecutionResult {
+    pub task_id: uuid::Uuid,
+    pub model_id: uuid::Uuid,
+    pub output: String,
+    pub execution_time: std::time::Duration,
+    pub success: bool,
+    pub error_message: Option<String>,
+    pub metrics: ExecutionMetrics,
+}
+
+#[derive(Debug, Clone)]
+pub struct ProcessedTaskResult {
+    pub execution_result: ModelExecutionResult,
+    pub quality_score: f32,
+    pub accuracy_score: f32,
+    pub processing_time: std::time::Duration,
+    pub validation_passed: bool,
+}
+
+#[derive(Debug, Clone)]
+pub struct ValidationCheck {
+    pub check_type: String,
+    pub passed: bool,
+    pub score: f32,
+    pub message: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct ValidatedTaskResult {
+    pub processed_result: ProcessedTaskResult,
+    pub validation_checks: Vec<ValidationCheck>,
+    pub overall_quality: f32,
+    pub validation_passed: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -120,6 +157,7 @@ pub struct BenchmarkResult {
     pub metrics: BenchmarkMetrics,
     pub score: f64,
     pub ranking: u32,
+    pub timestamp: chrono::DateTime<chrono::Utc>,
     /// SLA validation results for this benchmark
     pub sla_validation: Option<SlaValidationReport>,
 }

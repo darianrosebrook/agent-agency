@@ -1211,10 +1211,26 @@ export class PerformanceTracker {
       // Get memory utilization
       const memoryUsage = this.getMemoryUsage();
 
-      // Get network I/O (simplified)
+      // TODO: Implement comprehensive network I/O monitoring
+      // - Integrate with system monitoring tools (netstat, iproute2, or platform-specific APIs)
+      // - Use network interface statistics from /proc/net/dev or GetIfTable
+      // - Support both incoming and outgoing traffic monitoring
+      // - Add network latency and packet loss measurement
+      // - Implement network utilization thresholds and alerting
+      // - Support per-interface and aggregate network monitoring
+      // - Add network I/O historical trending and anomaly detection
+      // - Implement network performance profiling and bottleneck identification
       const networkIo = await this.getNetworkIo();
 
-      // Get disk I/O (simplified)
+      // TODO: Implement comprehensive disk I/O monitoring
+      // - Use system monitoring tools (iostat, iotop, or platform-specific APIs)
+      // - Monitor disk read/write operations and throughput
+      // - Track disk latency and queue depth metrics
+      // - Support per-disk and aggregate I/O monitoring
+      // - Add disk utilization thresholds and performance alerts
+      // - Implement disk I/O historical analysis and trending
+      // - Support SSD vs HDD specific monitoring and optimization
+      // - Add disk health monitoring and failure prediction
       const diskIo = await this.getDiskIo();
 
       return {
@@ -1293,7 +1309,15 @@ export class PerformanceTracker {
         if (interfaces) {
           interfaces.forEach((iface) => {
             if (!iface.internal) {
-              // Estimate based on interface activity (simplified)
+              // TODO: Implement accurate network interface monitoring
+              // - Query actual network interface statistics from OS APIs
+              // - Calculate real network throughput based on packet counters
+              // - Support per-interface network utilization tracking
+              // - Implement network interface health monitoring
+              // - Add network latency and error rate tracking
+              // - Support network protocol-specific monitoring (TCP, UDP)
+              // - Implement network usage attribution by process
+              // - Add network performance benchmarking and optimization
               totalBytes += Math.random() * 1024 * 10; // Random estimation
             }
           });
@@ -1307,11 +1331,15 @@ export class PerformanceTracker {
   }
 
   /**
-   * Get disk I/O in KB/s (simplified estimation).
-   */
-  private async getDiskIo(): Promise<number> {
-    try {
-      // This is a simplified approach - in a real implementation,
+   * TODO: Implement comprehensive disk I/O monitoring
+   * - Use system monitoring tools (iostat, iotop, or platform-specific APIs)
+   * - Monitor disk read/write operations and throughput
+   * - Track disk latency and queue depth metrics
+   * - Support per-disk and aggregate I/O monitoring
+   * - Add disk utilization thresholds and performance alerts
+   * - Implement disk I/O historical analysis and trending
+   * - Support SSD vs HDD specific monitoring and optimization
+   * - Add disk health monitoring and failure prediction
       // you might use system monitoring tools or file system stats
       const tempDir = os.tmpdir();
 
@@ -1384,7 +1412,15 @@ export class PerformanceTracker {
       clauseCitationRate: success ? 0.8 : 0.2,
     };
 
-    // Cost metrics (simplified)
+    // TODO: Implement comprehensive cost modeling and optimization
+    // - Integrate with cloud provider cost APIs (AWS Cost Explorer, GCP Billing)
+    // - Implement resource usage tracking and cost allocation
+    // - Add cost forecasting and budget management
+    // - Support multi-cloud cost optimization and arbitrage
+    // - Implement cost-benefit analysis for performance improvements
+    // - Add cost anomaly detection and alerting
+    // - Support cost allocation by project, team, and service
+    // - Implement cost optimization recommendations and automation
     const costMetrics: Partial<CostMetrics> = {
       costPerTask: durationMs / 1000, // Rough proxy: longer tasks cost more
       efficiencyScore: qualityScore,

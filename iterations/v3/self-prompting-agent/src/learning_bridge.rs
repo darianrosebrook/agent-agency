@@ -152,7 +152,7 @@ impl LearningBridge {
                 iterations: eval_history.len(),
                 converged: matches!(task_result.final_report.status, EvalStatus::Pass),
                 task_type: format!("{:?}", task_result.task_type),
-                timestamp: Utc::now(),
+                timestamp: chrono::Utc::now(),
             });
         }
 
@@ -165,7 +165,7 @@ impl LearningBridge {
             iterations: task_result.iterations,
             execution_time_ms: task_result.total_time_ms,
             stop_reason: task_result.stop_reason.unwrap_or(StopReason::Unknown),
-            timestamp: Utc::now(),
+            timestamp: chrono::Utc::now(),
         });
 
         // 3. Iteration efficiency signal
@@ -179,7 +179,7 @@ impl LearningBridge {
                 quality: task_result.final_report.score,
                 time_per_iteration,
                 converged_quickly,
-                timestamp: Utc::now(),
+                timestamp: chrono::Utc::now(),
             });
         }
 
@@ -200,7 +200,7 @@ impl LearningBridge {
                 quality_delta,
                 iterations_saved,
                 task_type: format!("{:?}", task_result.task_type),
-                timestamp: Utc::now(),
+                timestamp: chrono::Utc::now(),
             });
         }
 
@@ -213,7 +213,7 @@ impl LearningBridge {
             common_failures,
             average_score,
             evaluation_count: eval_history.len(),
-            timestamp: Utc::now(),
+            timestamp: chrono::Utc::now(),
         });
 
         // 6. Self-prompting signals for reflexive learning system

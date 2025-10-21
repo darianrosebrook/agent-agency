@@ -2,74 +2,106 @@
 
 ## Overview
 
-**Agent Agency V3** provides sophisticated infrastructure components for autonomous agent systems. Built in Rust for memory safety and performance, it delivers advanced orchestration, optimization, and security capabilities that form the foundation for autonomous agent development.
+**Agent Agency V3** provides functional infrastructure for autonomous agent systems with a working constitutional AI framework. Built in Rust for memory safety and performance, it delivers core orchestration and governance capabilities, with many advanced features remaining as TODO implementations.
 
-This system represents a significant infrastructure investment, featuring modular architecture, comprehensive testing, and enterprise-grade security components, with autonomous capabilities under active development.
+This system has an operational core execution loop with constitutional oversight, featuring modular architecture and basic monitoring, though comprehensive enterprise features are still under development.
 
-## System Capabilities
+## Core Operational Components
 
-V3 provides comprehensive multimodal RAG capabilities with constitutional governance:
+V3 provides functional infrastructure with operational core components:
 
-### Multimodal Processing
-- **Text Processing**: Document analysis, entity extraction, and semantic understanding
-- **Image Processing**: Visual content analysis with Apple Vision framework integration
-- **Audio Processing**: Speech-to-text with WhisperX and native Speech framework
-- **Video Processing**: Frame extraction, scene detection, and temporal analysis
-- **Document Processing**: PDF, slides, and diagram parsing with layout understanding
+### Task Execution Pipeline ✅ Operational
+- **Orchestrator**: HTTP-based task routing with circuit breaker patterns
+- **Worker Services**: Task execution with configurable timeouts and retries
+- **Progress Tracking**: Real-time task status and intervention capabilities
+- **Execution Modes**: Strict, Auto, and Dry-Run modes for different risk levels
 
-### Vector-Based Knowledge System
-- **High-Performance Search**: PostgreSQL with pgvector extension and HNSW indexing
-- **Semantic Retrieval**: Cross-modal similarity search with multiple embedding models
-- **Context Synthesis**: Intelligent context assembly from multiple modalities
-- **Deduplication**: Advanced content deduplication and redundancy removal
+### Governance Framework ✅ Core Implemented
+- **Constitutional Council**: Four-judge oversight framework (logic partially implemented)
+- **CAWS Compliance**: Runtime validation with waiver system for exceptions
+- **Provenance Tracking**: Basic Git integration with cryptographic signing
+- **Quality Gates**: Automated testing and validation pipelines
 
-### Constitutional Governance
-- **Real-Time Decision Making**: Evidence-based verdict generation with multimodal validation
-- **Cross-Modal Validation**: Ensuring consistency across different content types
-- **Audit Trails**: Comprehensive logging and provenance tracking
-- **Compliance Enforcement**: Runtime constraint verification and governance
+### Monitoring & Control 🟡 Partially Implemented
+- **API Server**: RESTful endpoints with authentication and basic monitoring
+- **CLI Tools**: Command-line interface with intervention commands
+- **Web Dashboard**: Basic metrics display and database exploration
+- **Real-time Metrics**: Task progress and system health monitoring
 
-### Autonomous Development Agent
-- **Self-Prompting Loops**: Iterative generate-evaluate-refine cycles for autonomous coding
-- **Tool-Call Envelopes**: JSON-schema validated action requests preventing hallucinated edits
-- **Isolated Workspaces**: Safe file editing with Git worktree or temp directory isolation
-- **Evaluation-Based Safety**: Tests, linting, and type-checking before promoting changes
-- **Model Health Monitoring**: Automatic fallback and reliability tracking for robust operation
-- **Execution Modes**: Strict (manual approval), Auto (quality gates), Dry-run (artifacts only)
+### Advanced Components 📋 Planned/Incomplete
+
+#### Runtime Optimization (Framework exists, many TODOs)
+- **Bayesian Optimization**: Framework for ML-based hyper-parameter tuning
+- **Thermal Management**: Apple Silicon temperature monitoring (basic implementation)
+- **Performance Monitoring**: Real-time metrics collection (basic)
+- **Resource Management**: Workload distribution (framework only)
+
+#### Tool Ecosystem (Basic framework, many TODOs)
+- **MCP Integration**: Model Context Protocol framework (basic)
+- **Conflict Resolution**: AI-mediated dispute resolution (framework)
+- **Security Validation**: Tool execution audit trails (basic)
+- **Dynamic Discovery**: Capability detection (framework)
+
+#### Federated Learning (Infrastructure scaffolding, many TODOs)
+- **Privacy Preservation**: Differential privacy framework (basic)
+- **Secure Aggregation**: Encryption framework (basic)
+- **Cross-Tenant Learning**: Communication protocols (framework)
+- **Participant Management**: Agent lifecycle handling (basic)
+- **Compliance Enforcement**: Constraint verification (framework)
+
+#### Model Hot-Swapping (Framework exists, many TODOs)
+- **Version Management**: Model lifecycle tracking (basic)
+- **Traffic Control**: Load balancing framework (basic)
+- **Performance Routing**: Metrics-based selection (framework)
+- **Zero-Downtime Updates**: Deployment framework (basic)
 
 ## System Architecture
 
 ### Core Modules
 
-#### Database Layer (`agent-agency-database`)
-- **Vector Storage**: PostgreSQL with pgvector extension for high-performance similarity search
-- **Connection Pooling**: Deadpool-based connection management with health monitoring
-- **Migration System**: Automated database schema management and versioning
-- **Audit Logging**: Comprehensive search and operation tracking
+#### Task Execution Pipeline ✅ Operational
+- **Orchestrator (`orchestration`)**: HTTP-based task routing with circuit breaker patterns
+- **Worker Services (`workers`)**: Task execution with configurable timeouts and retries
+- **Progress Tracking (`orchestration/tracking`)**: Real-time status updates and intervention
+- **CLI Interface (`cli`)**: Command-line task submission and monitoring
 
-#### Research Module (`agent-agency-research`)
-- **Knowledge Seeking**: Intelligent context gathering and synthesis
-- **Multimodal Retrieval**: Cross-modal search with fuzzy matching and relevance scoring
-- **Context Providers**: Specialized providers for different decision contexts
-- **Evidence Synthesis**: Multi-source evidence aggregation and validation
+#### Governance Framework ✅ Core Implemented
+- **Council System (`council`)**: Four-judge constitutional oversight framework
+- **CAWS Integration (`caws`)**: Runtime compliance validation with waivers
+- **Provenance System (`provenance`)**: Git-backed audit trails with JWS signing
+- **Planning Agent (`planning-agent`)**: Working specification generation
 
-#### Council System (`agent-agency-council`)
-- **Consensus Coordination**: Multi-agent decision-making with constitutional oversight
-- **Evidence Enrichment**: Multimodal evidence collection and validation
-- **Verdict Generation**: Evidence-based decision making with audit trails
-- **Constitutional Compliance**: Runtime constraint enforcement and governance
+#### Monitoring & Infrastructure 🟡 Partially Implemented
+- **API Server (`interfaces/api`)**: RESTful endpoints with authentication
+- **Database Layer (`database`)**: PostgreSQL persistence with core task storage
+- **Web Dashboard (`apps/web-dashboard`)**: Basic metrics and database exploration
+- **Observability (`observability`)**: Metrics collection and SLO framework
 
-#### Orchestration (`orchestration`)
-- **Multimodal Orchestrator**: End-to-end processing pipeline coordination
-- **Ingestion Management**: File processing and content extraction
-- **Enrichment Pipeline**: Multi-stage content enhancement and analysis
-- **Indexing Coordination**: Vector storage and search index management
+#### Advanced Components 📋 Framework/Incomplete
 
-#### Workers System (`agent-agency-workers`)
-- **Job Scheduling**: Scalable multimodal job processing with backpressure
-- **Concurrency Control**: Resource management and load balancing
-- **Retry Logic**: Fault-tolerant processing with exponential backoff
-- **Performance Monitoring**: Real-time job metrics and SLA tracking
+##### Runtime Optimization (`runtime-optimization`) - Framework exists, many TODOs
+- **Kokoro Tuner**: Bayesian optimization framework (basic)
+- **Thermal Scheduler**: Apple Silicon temperature monitoring (basic implementation)
+- **Performance Monitor**: Metrics collection (basic)
+- **Resource Manager**: Workload distribution (framework only)
+
+##### Tool Ecosystem (`tool-ecosystem`) - Basic framework, many TODOs
+- **Tool Coordinator**: Dynamic discovery framework (basic)
+- **Conflict Resolution**: AI-mediated resolution (framework)
+- **Security Validator**: Audit trails (basic)
+- **MCP Integration**: Model Context Protocol (basic framework)
+
+##### Federated Learning (`federated-learning`) - Infrastructure scaffolding, many TODOs
+- **Federation Coordinator**: Cross-tenant orchestration (framework)
+- **Secure Aggregator**: Encryption framework (basic)
+- **Differential Privacy**: Privacy guarantees (framework)
+- **Participant Manager**: Agent lifecycle (basic)
+
+##### Model Hot-Swapping (`model-hotswap`) - Framework exists, many TODOs
+- **Load Balancer**: Traffic distribution (basic)
+- **Model Registry**: Version management (basic)
+- **Canary Deployer**: Gradual deployment (framework)
+- **Performance Router**: Metrics-based routing (framework)
 
 #### Observability (`agent-agency-observability`)
 - **Metrics Collection**: Comprehensive system and business metrics
@@ -209,37 +241,40 @@ chmod +x scripts/deploy-production.sh
 # - Kibana: http://localhost:5601
 ```
 
-### Autonomous Development Agent
+### Task Execution System
 
-Agent Agency V3 includes an autonomous self-editing development agent that can iteratively improve code through self-prompting loops. The agent provides multiple execution modes for different safety levels:
+Agent Agency V3 includes a functional task execution system with constitutional oversight. The system provides multiple execution modes for different safety levels:
 
 #### Execution Modes
-- **Auto Mode** (default): Automatic execution with quality gate validation
-- **Strict Mode**: Manual approval required for each changeset
-- **Dry-run Mode**: Generate artifacts without modifying files
+- **Dry-Run Mode**: Safe testing without filesystem changes (✅ implemented)
+- **Auto Mode**: Automatic execution with basic quality validation (✅ implemented)
+- **Strict Mode**: Manual approval required for execution phases (✅ implemented)
 
 #### Usage Examples
 
 ```bash
-# Run autonomous development with quality gates (recommended)
-cargo run --bin self-prompting-cli -- execute "Add error handling to user service" --mode auto
+# Test the execution pipeline safely (recommended for exploration)
+cargo run --bin agent-agency-cli execute "Test execution pipeline" --mode dry-run
+
+# Execute with basic quality gates
+cargo run --bin agent-agency-cli execute "Implement basic feature" --mode auto
 
 # Require manual approval for changes
-cargo run --bin self-prompting-cli -- execute "Refactor authentication logic" --mode strict
+cargo run --bin agent-agency-cli execute "Make system changes" --mode strict --watch
 
-# Preview changes without applying them
-cargo run --bin self-prompting-cli -- execute "Optimize database queries" --mode dry-run --dashboard
-
-# Watch real-time progress with dashboard
-cargo run --bin self-prompting-cli -- execute "Implement user registration" --watch --dashboard
+# Monitor and intervene in running tasks
+cargo run --bin agent-agency-cli intervene pause <task-id>
+cargo run --bin agent-agency-cli intervene resume <task-id>
+cargo run --bin agent-agency-cli intervene cancel <task-id>
 ```
 
-#### Safety Features
-- **Isolated Workspaces**: Changes applied to sandbox before promotion
-- **Evaluation Gates**: Tests, linting, and type-checking required before promotion
-- **Rollback Capability**: Failed evaluations automatically rollback changes
-- **AllowList Enforcement**: Only permitted files can be modified
-- **Model Health Monitoring**: Automatic fallback on model failures
+#### Current Capabilities
+- **Task Submission**: CLI and REST API interfaces (✅ implemented)
+- **Worker Orchestration**: HTTP-based task execution (✅ implemented)
+- **Progress Monitoring**: Real-time task status updates (✅ implemented)
+- **Intervention API**: Pause, resume, cancel operations (✅ implemented)
+- **Basic Governance**: Constitutional council framework (🟡 partial)
+- **Provenance Tracking**: Git integration for audit trails (✅ basic)
 
 ### Development Setup
 
@@ -308,30 +343,31 @@ k6 run k6-multimodal-rag-test.js
 
 ## Integration Status
 
-### ✅ Completed (Production Ready)
-- **Database Integration**: Full PostgreSQL integration across 5 core components with persistence, migrations, and performance monitoring
-- **CAWS Checker Database**: Validation results storage with compliance history and trend analysis
-- **Source Integrity Database**: Complete integrity record management with verification tracking
-- **Council Learning Database**: Historical resource data queries with performance analytics
-- **Claim Extraction Database**: Knowledge base integration with semantic search and embedding services
-- **Analytics Dashboard Database**: Persistent caching with LRU eviction and real-time metrics
-- **Research Integration**: Multimodal retrieval and context synthesis
-- **Council Integration**: Constitutional decision-making with multimodal evidence
-- **Orchestration Integration**: End-to-end multimodal processing pipeline
-- **Workers Integration**: Scalable job processing with backpressure handling
-- **Observability Integration**: Comprehensive monitoring and alerting
-- **Self-Prompting Agent**: Autonomous code editing with tool-call envelopes and evaluation safety
-- **File Operations Integration**: Isolated workspace management with atomic changesets and rollbacks
-- **Model Health Monitoring**: Automatic fallback and reliability tracking for robust operation
-- **Execution Modes**: Strict/auto/dry-run modes with safety guardrails and dashboard observability
-- **Production Deployment**: Complete Docker-based deployment infrastructure
-- **Load Testing**: K6-based performance testing with custom metrics
-- **Performance Benchmarks**: Database operation SLAs verified (p95 < 100ms) with comprehensive test coverage
+### ✅ Core System Operational
+- **Task Execution Pipeline**: End-to-end task submission, orchestration, and worker execution
+- **Constitutional Governance**: Four-judge council framework with basic oversight logic
+- **Execution Modes**: Dry-run, auto, and strict modes with appropriate safety controls
+- **Intervention API**: Pause, resume, cancel operations for running tasks
+- **Progress Tracking**: Real-time task status updates and monitoring
+- **CLI Interface**: Command-line task submission and intervention commands
+- **API Server**: RESTful endpoints with basic authentication and task management
+- **Database Layer**: Core task persistence and basic provenance storage
+- **Web Dashboard**: Basic metrics display and database exploration interface
+- **Provenance Tracking**: Git integration for basic audit trails
 
-### 🔄 In Development
-- **Apple Silicon Optimization**: Native framework integration for Vision and Speech
-- **Advanced Enrichment**: Enhanced multimodal content analysis
-- **Performance Tuning**: Optimization for high-throughput scenarios
+### 🟡 Partially Implemented (Framework exists, many TODOs)
+- **CAWS Compliance**: Runtime validation with waiver system for exceptions
+- **Multimodal Processing**: Framework exists, enrichers are mostly TODO placeholders
+- **Observability**: Basic metrics collection, comprehensive SLO monitoring TODO
+- **Apple Silicon Features**: Some thermal monitoring, most Core ML features TODO
+- **Advanced Analytics**: Basic metrics, comprehensive analytics framework TODO
+
+### 📋 Planned/Incomplete (Framework scaffolding, major TODOs)
+- **Federated Learning**: Infrastructure exists, implementation largely TODO
+- **Model Hot-Swapping**: Framework exists, advanced features TODO
+- **Tool Ecosystem**: Basic MCP integration, advanced features TODO
+- **Runtime Optimization**: Some thermal monitoring, most optimization TODO
+- **Distributed Processing**: Single-node only, distributed features TODO
 
 ## Author
 

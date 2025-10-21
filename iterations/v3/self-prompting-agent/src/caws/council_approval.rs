@@ -142,7 +142,7 @@ pub enum CouncilError {
 impl Default for CouncilApprovalWorkflow {
     fn default() -> Self {
         Self {
-            council: Arc::new(NoOpCouncil), // Default to no-op for testing
+            council: Arc::new(NoOpCouncil), // Use no-op until torch deps resolved
             default_timeout: Duration::from_secs(30),
             waiver_persistence_path: std::path::PathBuf::from(".caws/waivers"),
         }
@@ -316,6 +316,9 @@ impl CouncilApprovalWorkflow {
         }
     }
 }
+
+// TODO: Real council integration when torch deps are resolved
+// For now, we use NoOpCouncil for all council operations
 
 /// No-op council for testing/fallback
 pub struct NoOpCouncil;

@@ -29,15 +29,7 @@ priority-queue = "2.0"  # Priority queue for nearest neighbor search
 dashmap = "5.5"  # Concurrent hashmap for parallel operations
 
 # Search and indexing
-# TODO: Implement full-text search with Tantivy and HNSW
-# - Integrate Tantivy for BM25 full-text search capabilities
-# - Implement HNSW (Hierarchical Navigable Small World) indexing
-# - Add search query parsing and optimization
-# - Support fuzzy search and relevance scoring
-# - Implement index persistence and loading
-# - Add search result highlighting and snippets
-# - Optimize memory usage and search performance
-# PLACEHOLDER: Disabled due to compilation issues
+# PLACEHOLDER: Full-text search with Tantivy and HNSW - disabled due to compilation issues
 
 [features]
 default = ["postgres"]

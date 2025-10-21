@@ -1,5 +1,7 @@
 //! Core ML bridge for model loading
 
+use anyhow::Result;
+
 /// Core ML model wrapper
 #[derive(Debug)]
 pub struct CoreMLModel;

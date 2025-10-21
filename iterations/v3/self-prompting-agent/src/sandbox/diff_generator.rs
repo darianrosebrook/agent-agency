@@ -21,6 +21,7 @@ pub enum DiffError {
     InvalidPath(String),
 }
 
+
 /// Unified diff representation with deterministic formatting
 #[derive(Debug, Clone, PartialEq)]
 pub struct UnifiedDiff {

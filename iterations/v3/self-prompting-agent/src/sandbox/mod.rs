@@ -8,9 +8,11 @@ pub mod snapshot;
 pub mod workspace_manager;
 
 pub use diff_applier::DiffApplier;
+pub use diff_generator::DiffGenerator;
 pub use file_guard::FileGuard;
 pub use git_worktree::GitWorktree;
 pub use snapshot::SnapshotManager;
+pub use workspace_manager::WorkspaceManager;
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -20,16 +22,33 @@ use chrono::{DateTime, Utc};
 
 use crate::types::{UnifiedDiff, Artifact, ArtifactType};
 
-/// Safety modes for file editing
-#[derive(Debug, Clone, PartialEq, Eq)]
+/// Safety modes for sandbox operations
+#[derive(Debug, Clone, PartialEq)]
 pub enum SafetyMode {
-    /// Require approval for all edits
-    Strict,
-    /// Auto-approve within sandbox
-    Sandbox,
-    /// Full autonomy within allowed paths
-    Autonomous,
+    Strict,      // No file operations allowed
+    Sandbox,     // Limited operations within workspace
+    Autonomous,  // Full autonomous operations
 }
+
+/// Backend types for workspace management
+#[derive(Debug)]
+pub enum WorkspaceBackend {
+    Git(GitWorktree),
+    Snapshot(SnapshotManager),
+}
+
+/// Operations that can be performed in the sandbox
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SandboxOperation {
+    ReadFile,
+    WriteFile,
+    CreateFile,
+    DeleteFile,
+    ApplyDiff,
+    CreateSnapshot,
+    Rollback,
+}
+
 
 /// Result of applying a diff
 #[derive(Debug, Clone)]
@@ -167,4 +186,7 @@ pub enum SandboxError {
 
     #[error("Snapshot error: {0}")]
     SnapshotError(String),
+
+    #[error("Budget update failed: {0}")]
+    BudgetUpdateFailed(String),
 }

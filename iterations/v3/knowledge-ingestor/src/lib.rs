@@ -53,12 +53,14 @@ impl Default for IngestionConfig {
 }
 
 /// Main knowledge ingestor orchestrator
+#[cfg(feature = "embeddings")]
 pub struct KnowledgeIngestor {
     db_client: Arc<DatabaseClient>,
     embedding_service: Arc<dyn EmbeddingService>,
     config: IngestionConfig,
 }
 
+#[cfg(feature = "embeddings")]
 impl KnowledgeIngestor {
     /// Create a new knowledge ingestor
     pub fn new(

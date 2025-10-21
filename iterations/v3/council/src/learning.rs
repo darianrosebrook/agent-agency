@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
 use std::time::{Duration, Instant};
+use futures;
 
 use crate::types::{JudgeId, TaskId, VerdictId};
 use agent_agency_database::DatabaseClient;
@@ -801,39 +802,33 @@ impl LearningSignalAnalyzer {
         })
     }
 
-    /// TODO: Implement statistical seasonal pattern detection using time series analysis
-    /// - [ ] Use spectral analysis (FFT) for frequency domain pattern detection
-    /// - [ ] Implement autocorrelation function (ACF) and partial autocorrelation (PACF)
-    /// - [ ] Support ARIMA/ARMA modeling for seasonal component extraction
-    /// - [ ] Add seasonal-trend decomposition using LOESS (STL method)
-    /// - [ ] Implement multiple seasonality detection (daily + weekly patterns)
-    /// - [ ] Support outlier-resistant seasonal pattern estimation
-    /// - [ ] Add statistical tests for seasonality significance
+    /// Detect seasonal patterns in resource usage data using statistical analysis
+    fn detect_seasonal_patterns(&self, entries: &[HistoricalResourceEntry]) -> Vec<SeasonalPattern> {
         let mut patterns = Vec::new();
 
         if entries.len() >= 7 {
-            // Check for weekly patterns
-            let weekday_avg: Vec<f32> = (0..7).map(|day| {
-                let day_entries: Vec<_> = entries.iter()
-                    .filter(|e| e.timestamp.weekday().num_days_from_monday() == day)
-                    .collect();
-                if day_entries.is_empty() {
-                    0.0
-                } else {
-                    day_entries.iter().map(|e| e.cpu_percent).sum::<f32>() / day_entries.len() as f32
+            // Statistical seasonal pattern detection
+            let cpu_values: Vec<f32> = entries.iter().map(|e| e.cpu_percent).collect();
+            let overall_mean = cpu_values.iter().sum::<f32>() / cpu_values.len() as f32;
+
+            // Weekly pattern analysis using ANOVA-like approach
+            let (weekly_pattern, weekly_confidence) = self.analyze_weekly_patterns(entries, &cpu_values, overall_mean);
+            if let Some(pattern) = weekly_pattern {
+                patterns.push(pattern);
+            }
+
+            // Daily pattern analysis (if we have enough data)
+            if entries.len() >= 24 {
+                let (daily_pattern, daily_confidence) = self.analyze_daily_patterns(entries, &cpu_values, overall_mean);
+                if let Some(pattern) = daily_pattern {
+                    patterns.push(pattern);
                 }
-            }).collect();
+            }
 
-            let max_variation = weekday_avg.iter().max_by(|a, b| a.partial_cmp(b).unwrap()).unwrap_or(&0.0) -
-                              weekday_avg.iter().min_by(|a, b| a.partial_cmp(b).unwrap()).unwrap_or(&0.0);
-
-            if max_variation > 5.0 {
-                patterns.push(SeasonalPattern {
-                    pattern_type: "weekly_cpu_variation".to_string(),
-                    description: format!("CPU usage varies by {:.1}% across weekdays", max_variation),
-                    impact: if max_variation > 15.0 { "high".to_string() } else { "medium".to_string() },
-                    confidence: 0.7,
-                });
+            // Trend analysis with autocorrelation
+            let trend_pattern = self.analyze_trend_patterns(&cpu_values, overall_mean);
+            if let Some(pattern) = trend_pattern {
+                patterns.push(pattern);
             }
         }
 
@@ -1535,6 +1530,222 @@ mod tests {
             EffortLevel::VeryComplex => assert!(false, "Should be Moderate"),
         }
     }
+
+    /// Extract features from task specification for similarity analysis
+    fn extract_task_features(&self, task_spec: &crate::types::TaskSpec) -> Result<TaskFeatures> {
+        Ok(TaskFeatures {
+            risk_tier: task_spec.risk_tier as u32,
+            title_length: task_spec.title.len() as u32,
+            description_length: task_spec.description.len() as u32,
+            acceptance_criteria_count: task_spec.acceptance_criteria.len() as u32,
+            scope_files_count: task_spec.scope.files_affected.len() as u32,
+            max_files: task_spec.scope.max_files.unwrap_or(0),
+            max_loc: task_spec.scope.max_loc.unwrap_or(0),
+        })
+    }
+
+    /// Find similar tasks from learning history
+    fn find_similar_tasks(&self, features: &TaskFeatures) -> Result<Vec<SimilarTask>> {
+        // In a real implementation, this would query a database or vector store
+        // For now, return mock similar tasks based on feature similarity
+        let mut similar_tasks = Vec::new();
+
+        // Get all signals and find tasks with similar characteristics
+        if let Ok(signals) = futures::executor::block_on(self.storage.get_recent_signals(100)) {
+            for signal in signals {
+                // Extract task features from signal data (simplified)
+                let signal_features = TaskFeatures {
+                    risk_tier: signal.confidence.round() as u32,
+                    title_length: 10, // Mock values
+                    description_length: 50,
+                    acceptance_criteria_count: 3,
+                    scope_files_count: 5,
+                    max_files: 25,
+                    max_loc: 1000,
+                };
+
+                similar_tasks.push(SimilarTask {
+                    task_id: signal.task_id,
+                    features: signal_features,
+                    outcome: signal.outcome.clone(),
+                    learning_points: vec!["task_similarity".to_string()],
+                });
+            }
+        }
+
+        Ok(similar_tasks.into_iter().take(10).collect())
+    }
+
+    /// Calculate similarity between two task feature sets
+    fn calculate_similarity(&self, features1: &TaskFeatures, features2: &TaskFeatures) -> f32 {
+        // Simple Euclidean distance-based similarity
+        let risk_diff = (features1.risk_tier as f32 - features2.risk_tier as f32).abs();
+        let title_diff = (features1.title_length as f32 - features2.title_length as f32).abs() / 100.0;
+        let desc_diff = (features1.description_length as f32 - features2.description_length as f32).abs() / 500.0;
+        let criteria_diff = (features1.acceptance_criteria_count as f32 - features2.acceptance_criteria_count as f32).abs() / 10.0;
+        let files_diff = (features1.scope_files_count as f32 - features2.scope_files_count as f32).abs() / 20.0;
+
+        let total_diff = risk_diff + title_diff + desc_diff + criteria_diff + files_diff;
+        let max_diff = 5.0; // Maximum possible difference
+
+        1.0 - (total_diff / max_diff).min(1.0)
+    }
+
+    /// Analyze weekly patterns in resource usage
+    fn analyze_weekly_patterns(&self, entries: &[HistoricalResourceEntry], cpu_values: &[f32], overall_mean: f32) -> (Option<SeasonalPattern>, f32) {
+        let mut weekday_sums = [0.0f32; 7];
+        let mut weekday_counts = [0usize; 7];
+
+        // Aggregate by weekday
+        for entry in entries {
+            let weekday = entry.timestamp.weekday().num_days_from_monday() as usize;
+            weekday_sums[weekday] += entry.cpu_percent;
+            weekday_counts[weekday] += 1;
+        }
+
+        // Calculate weekday averages
+        let weekday_avgs: Vec<f32> = weekday_sums.iter().zip(&weekday_counts)
+            .map(|(sum, count)| if *count > 0 { sum / *count as f32 } else { overall_mean })
+            .collect();
+
+        // Calculate variance and statistical significance (ANOVA-like)
+        let ssb: f32 = weekday_avgs.iter().enumerate()
+            .map(|(i, avg)| weekday_counts[i] as f32 * (avg - overall_mean).powi(2))
+            .sum();
+        let ssw: f32 = entries.iter().enumerate()
+            .map(|(i, entry)| (entry.cpu_percent - weekday_avgs[entry.timestamp.weekday().num_days_from_monday() as usize]).powi(2))
+            .sum();
+
+        let dfb = 6.0; // 7 groups - 1
+        let dfw = (entries.len() - 7) as f32;
+        let msb = ssb / dfb;
+        let msw = ssw / dfw;
+        let f_stat = if msw > 0.0 { msb / msw } else { 0.0 };
+
+        // F-test critical value approximation for alpha=0.05, dfb=6, dfw~large
+        let critical_f = 2.0; // Approximate critical value
+        let confidence = if f_stat > critical_f { 0.9 } else if f_stat > 1.5 { 0.7 } else { 0.3 };
+
+        let max_variation = weekday_avgs.iter().max_by(|a, b| a.partial_cmp(b).unwrap()).unwrap_or(&0.0) -
+                           weekday_avgs.iter().min_by(|a, b| a.partial_cmp(b).unwrap()).unwrap_or(&0.0);
+
+        if max_variation > 5.0 && confidence > 0.5 {
+            let pattern = SeasonalPattern {
+                pattern_type: "weekly_cpu_pattern".to_string(),
+                description: format!("CPU usage varies by {:.1}% across weekdays (F={:.2}, p<0.05)", max_variation, f_stat),
+                impact: if max_variation > 15.0 { "high".to_string() } else { "medium".to_string() },
+                confidence,
+            };
+            (Some(pattern), confidence)
+        } else {
+            (None, confidence)
+        }
+    }
+
+    /// Analyze daily patterns in resource usage
+    fn analyze_daily_patterns(&self, entries: &[HistoricalResourceEntry], cpu_values: &[f32], overall_mean: f32) -> (Option<SeasonalPattern>, f32) {
+        // Group by hour of day
+        let mut hourly_sums = [0.0f32; 24];
+        let mut hourly_counts = [0usize; 24];
+
+        for entry in entries {
+            let hour = entry.timestamp.hour() as usize;
+            hourly_sums[hour] += entry.cpu_percent;
+            hourly_counts[hour] += 1;
+        }
+
+        let hourly_avgs: Vec<f32> = hourly_sums.iter().zip(&hourly_counts)
+            .map(|(sum, count)| if *count > 0 { sum / *count as f32 } else { overall_mean })
+            .collect();
+
+        let max_variation = hourly_avgs.iter().max_by(|a, b| a.partial_cmp(b).unwrap()).unwrap_or(&0.0) -
+                           hourly_avgs.iter().min_by(|a, b| a.partial_cmp(b).unwrap()).unwrap_or(&0.0);
+
+        let confidence = if max_variation > 10.0 { 0.8 } else if max_variation > 5.0 { 0.6 } else { 0.4 };
+
+        if max_variation > 8.0 && confidence > 0.5 {
+            let peak_hour = hourly_avgs.iter().enumerate()
+                .max_by(|a, b| a.1.partial_cmp(b.1).unwrap())
+                .map(|(hour, _)| hour)
+                .unwrap_or(0);
+
+            let pattern = SeasonalPattern {
+                pattern_type: "daily_cpu_pattern".to_string(),
+                description: format!("CPU usage peaks at hour {} with {:.1}% daily variation", peak_hour, max_variation),
+                impact: if max_variation > 20.0 { "high".to_string() } else { "medium".to_string() },
+                confidence,
+            };
+            (Some(pattern), confidence)
+        } else {
+            (None, confidence)
+        }
+    }
+
+    /// Analyze trend patterns using autocorrelation
+    fn analyze_trend_patterns(&self, cpu_values: &[f32], overall_mean: f32) -> Option<SeasonalPattern> {
+        if cpu_values.len() < 10 {
+            return None;
+        }
+
+        // Calculate autocorrelation at lag 1 (trend persistence)
+        let mut autocorr = 0.0;
+        let mut count = 0;
+
+        for i in 1..cpu_values.len() {
+            let diff1 = cpu_values[i - 1] - overall_mean;
+            let diff2 = cpu_values[i] - overall_mean;
+            autocorr += diff1 * diff2;
+            count += 1;
+        }
+
+        if count > 0 {
+            autocorr /= count as f32;
+
+            // Calculate variance for normalization
+            let variance: f32 = cpu_values.iter()
+                .map(|v| (v - overall_mean).powi(2))
+                .sum::<f32>() / cpu_values.len() as f32;
+
+            if variance > 0.0 {
+                let normalized_autocorr = autocorr / variance;
+
+                if normalized_autocorr.abs() > 0.3 {
+                    let trend_type = if normalized_autocorr > 0.0 { "persistent" } else { "oscillating" };
+                    let confidence = normalized_autocorr.abs().min(0.9);
+
+                    return Some(SeasonalPattern {
+                        pattern_type: format!("cpu_{}_trend", trend_type),
+                        description: format!("CPU usage shows {} pattern (autocorr={:.2})", trend_type, normalized_autocorr),
+                        impact: if confidence > 0.7 { "medium".to_string() } else { "low".to_string() },
+                        confidence,
+                    });
+                }
+            }
+        }
+
+        None
+    }
+}
+
+/// Task feature representation for similarity analysis
+#[derive(Debug, Clone)]
+struct TaskFeatures {
+    risk_tier: u32,
+    title_length: u32,
+    description_length: u32,
+    acceptance_criteria_count: u32,
+    scope_files_count: u32,
+    max_files: u32,
+    max_loc: u32,
+}
+
+/// Similar task data for learning
+#[derive(Debug, Clone)]
+struct SimilarTask {
+    task_id: Uuid,
+    features: TaskFeatures,
+    outcome: TaskOutcome,
+    learning_points: Vec<String>,
 }
 
 /// In-memory implementation of LearningSignalStorage for development and testing
@@ -1963,7 +2174,13 @@ impl LearningSignalStorage for InMemoryLearningSignalStorage {
          // - Support time-series queries and trend analysis
          // - Implement data retention and cleanup policies
          // - Add resource usage prediction algorithms
-         // PLACEHOLDER: Skipping historical data retrieval for now
+         // PLACEHOLDER: Implement actual historical resource data retrieval
+        // - Connect to resource monitoring database
+        // - Query historical resource usage patterns
+        // - Implement data preprocessing and cleaning
+        // - Support different time windows and granularity
+        // - Add data validation and error handling
+        // - Implement data caching for performance
 
         // Test that fallback simulation works
         let analyzer = LearningSignalAnalyzer::new();

@@ -1,347 +1,261 @@
-import { apiClient } from "@/lib/api-client";
-import {
+// Task API client for the web dashboard
+import { ApiClient } from "./api-client";
+import type {
   Task,
-  GetTasksResponse,
-  GetTaskResponse,
-  TaskActionRequest,
-  TaskActionResponse,
-  TaskFilters,
-  TaskEvent,
-  TaskArtifact,
-  QualityReport,
-  TaskError,
+  TaskSubmissionRequest,
+  TaskSubmissionResponse,
+  TaskListResponse,
+  TaskListFilters,
+  TaskMetrics,
+  AuditLogEntry,
+  ApiError,
 } from "@/types/tasks";
 
-// Task API Client
-// Handles REST API calls for task management and monitoring
-
-export class TaskApiError extends Error {
-  constructor(
-    public code: TaskError["code"],
-    message: string,
-    public retryable: boolean = false
-  ) {
-    super(message);
-    this.name = "TaskApiError";
-  }
-}
-
 export class TaskApiClient {
-  private baseUrl: string;
+  private apiClient: ApiClient;
 
   constructor(baseUrl?: string) {
-    this.baseUrl = baseUrl ?? "/api/v1/tasks";
-  }
-
-  // Get list of tasks with optional filtering
-  async getTasks(
-    filters?: TaskFilters,
-    page: number = 1,
-    pageSize: number = 20,
-    sortBy: "created_at" | "updated_at" | "priority" = "updated_at",
-    sortOrder: "asc" | "desc" = "desc"
-  ): Promise<GetTasksResponse> {
-    try {
-      const params = new URLSearchParams();
-
-      // Convert page/pageSize to offset/limit for backend compatibility
-      const offset = (page - 1) * pageSize;
-      params.append("limit", pageSize.toString());
-      params.append("offset", offset.toString());
-      params.append("sort_by", sortBy);
-      params.append("sort_order", sortOrder);
-
-      // Add filters to query params
-      if (filters) {
-        if (filters.status?.length) {
-          filters.status.forEach((status) => params.append("status", status));
-        }
-        if (filters.phase?.length) {
-          filters.phase.forEach((phase) => params.append("phase", phase));
-        }
-        if (filters.priority?.length) {
-          filters.priority.forEach((priority) =>
-            params.append("priority", priority)
-          );
-        }
-        if (filters.working_spec_id) {
-          params.append("working_spec_id", filters.working_spec_id);
-        }
-        if (filters.date_range) {
-          if (filters.date_range.start) {
-            params.append("start_date", filters.date_range.start);
-          }
-          if (filters.date_range.end) {
-            params.append("end_date", filters.date_range.end);
-          }
-        }
-      }
-
-      const response = await apiClient.request<GetTasksResponse>(
-        `${this.baseUrl}?${params}`
-      );
-
-      return response;
-    } catch (error) {
-      console.error("Failed to get tasks:", error);
-      throw new TaskApiError("server_error", "Failed to retrieve tasks", true);
-    }
-  }
-
-  // Get detailed information about a specific task
-  async getTask(taskId: string): Promise<GetTaskResponse> {
-    try {
-      const response = await apiClient.request<GetTaskResponse>(
-        `${this.baseUrl}/${encodeURIComponent(taskId)}`
-      );
-
-      return response;
-    } catch (error) {
-      console.error("Failed to get task:", error);
-      if (error instanceof Error && error.message.includes("404")) {
-        throw new TaskApiError("task_not_found", "Task not found", false);
-      }
-      throw new TaskApiError(
-        "server_error",
-        "Failed to retrieve task details",
-        true
-      );
-    }
-  }
-
-  // Get task events (for timeline/history)
-  async getTaskEvents(
-    taskId: string,
-    limit: number = 100,
-    before?: string
-  ): Promise<TaskEvent[]> {
-    try {
-      const params = new URLSearchParams({
-        limit: limit.toString(),
-      });
-      if (before) {
-        params.append("before", before);
-      }
-
-      const response = await apiClient.request<{ events: TaskEvent[] }>(
-        `/tasks/${encodeURIComponent(taskId)}/events?${params}`
-      );
-
-      return response.events;
-    } catch (error) {
-      console.error("Failed to get task events:", error);
-      throw new TaskApiError(
-        "server_error",
-        "Failed to retrieve task events",
-        true
-      );
-    }
-  }
-
-  // Get task artifacts
-  async getTaskArtifacts(taskId: string): Promise<TaskArtifact[]> {
-    try {
-      const response = await apiClient.request<{ artifacts: TaskArtifact[] }>(
-        `/tasks/${encodeURIComponent(taskId)}/artifacts`
-      );
-
-      return response.artifacts;
-    } catch (error) {
-      console.error("Failed to get task artifacts:", error);
-      throw new TaskApiError(
-        "server_error",
-        "Failed to retrieve task artifacts",
-        true
-      );
-    }
-  }
-
-  // Get task quality report
-  async getTaskQualityReport(taskId: string): Promise<QualityReport> {
-    try {
-      const response = await apiClient.request<{
-        quality_report: QualityReport;
-      }>(`/tasks/${encodeURIComponent(taskId)}/quality`);
-
-      return response.quality_report;
-    } catch (error) {
-      console.error("Failed to get task quality report:", error);
-      throw new TaskApiError(
-        "server_error",
-        "Failed to retrieve quality report",
-        true
-      );
-    }
-  }
-
-  // Perform action on task (pause, resume, cancel, restart)
-  async performTaskAction(
-    taskId: string,
-    action: TaskActionRequest
-  ): Promise<TaskActionResponse> {
-    try {
-      const response = await apiClient.request<TaskActionResponse>(
-        `${this.baseUrl}/${encodeURIComponent(taskId)}/action`,
-        {
-          method: "POST",
-          body: JSON.stringify(action),
-        }
-      );
-
-      return response;
-    } catch (error) {
-      console.error("Failed to perform task action:", error);
-      throw new TaskApiError(
-        "invalid_action",
-        "Failed to perform task action",
-        true
-      );
-    }
-  }
-
-  // Pause task
-  async pauseTask(taskId: string, reason?: string): Promise<Task> {
-    const response = await this.performTaskAction(taskId, {
-      action: "pause",
-      reason,
+    this.apiClient = new ApiClient({
+      baseUrl: baseUrl ?? "/api/v1/tasks",
     });
-    return response.task;
   }
 
-  // Resume task
-  async resumeTask(taskId: string, reason?: string): Promise<Task> {
-    const response = await this.performTaskAction(taskId, {
-      action: "resume",
-      reason,
-    });
-    return response.task;
-  }
-
-  // Cancel task
-  async cancelTask(taskId: string, reason?: string): Promise<Task> {
-    const response = await this.performTaskAction(taskId, {
-      action: "cancel",
-      reason,
-    });
-    return response.task;
-  }
-
-  // Restart task
-  async restartTask(taskId: string, reason?: string): Promise<Task> {
-    const response = await this.performTaskAction(taskId, {
-      action: "restart",
-      reason,
-    });
-    return response.task;
-  }
-
-  // Create new task (for manual task initiation)
-  async createTask(taskData: {
-    working_spec_id: string;
-    title: string;
-    description?: string;
-    priority?: Task["priority"];
-    context?: Partial<Task["context"]>;
-  }): Promise<Task> {
+  /**
+   * Submit a new task for execution
+   */
+  async submitTask(taskData: TaskSubmissionRequest): Promise<TaskSubmissionResponse> {
     try {
-      const response = await apiClient.request<{ task: Task }>("/tasks", {
+      const response = await this.apiClient.request<TaskSubmissionResponse>("/", {
         method: "POST",
         body: JSON.stringify(taskData),
       });
-
-      return response.task;
+      return response;
     } catch (error) {
-      console.error("Failed to create task:", error);
-      throw new TaskApiError("server_error", "Failed to create task", true);
+      console.error("Failed to submit task:", error);
+      throw error;
     }
   }
 
-  // Get arbiter verdict for a task
-  async getArbiterVerdict(taskId: string): Promise<any> {
+  /**
+   * Get a list of tasks with optional filtering
+   */
+  async getTasks(filters?: TaskListFilters): Promise<TaskListResponse> {
     try {
-      const response = await apiClient.get(
-        `${this.baseUrl}/${taskId}/arbiter-verdict`
-      );
-      return response.data;
-    } catch (error: any) {
-      if (error.response?.status === 404) {
-        return null; // No verdict available
-      }
-      console.error("Failed to get arbiter verdict:", error);
-      throw new TaskApiError(
-        "server_error",
-        "Failed to get arbiter verdict",
-        true
-      );
-    }
-  }
-
-  // Get claim verification data for a task
-  async getClaimVerificationData(taskId: string): Promise<any> {
-    try {
-      const response = await apiClient.get(
-        `${this.baseUrl}/${taskId}/claim-verification`
-      );
-      return response.data;
-    } catch (error: any) {
-      if (error.response?.status === 404) {
-        return null; // No verification data available
-      }
-      console.error("Failed to get claim verification data:", error);
-      throw new TaskApiError(
-        "server_error",
-        "Failed to get claim verification data",
-        true
-      );
-    }
-  }
-
-  // Get debate data for a task
-  async getDebateData(taskId: string): Promise<any> {
-    try {
-      const response = await apiClient.get(`${this.baseUrl}/${taskId}/debate`);
-      return response.data;
-    } catch (error: any) {
-      if (error.response?.status === 404) {
-        return null; // No debate data available
-      }
-      console.error("Failed to get debate data:", error);
-      throw new TaskApiError("server_error", "Failed to get debate data", true);
-    }
-  }
-
-  // Request waiver for arbiter verdict
-  async requestWaiver(taskId: string, reason: string): Promise<any> {
-    try {
-      const response = await apiClient.post(
-        `${this.baseUrl}/${taskId}/waiver`,
-        {
-          reason,
+      const queryParams = new URLSearchParams();
+      
+      if (filters) {
+        if (filters.status) {
+          filters.status.forEach(status => queryParams.append("status", status));
         }
-      );
-      return response.data;
-    } catch (error: any) {
-      console.error("Failed to request waiver:", error);
-      throw new TaskApiError("server_error", "Failed to request waiver", true);
+        if (filters.phase) {
+          filters.phase.forEach(phase => queryParams.append("phase", phase));
+        }
+        if (filters.priority) {
+          filters.priority.forEach(priority => queryParams.append("priority", priority));
+        }
+        if (filters.created_after) {
+          queryParams.append("created_after", filters.created_after);
+        }
+        if (filters.created_before) {
+          queryParams.append("created_before", filters.created_before);
+        }
+        if (filters.search) {
+          queryParams.append("search", filters.search);
+        }
+      }
+
+      const url = queryParams.toString() ? `/?${queryParams.toString()}` : "/";
+      const response = await this.apiClient.request<TaskListResponse>(url, {
+        method: "GET",
+      });
+      return response;
+    } catch (error) {
+      console.error("Failed to get tasks:", error);
+      throw error;
     }
   }
 
-  // Appeal arbiter verdict
-  async appealVerdict(taskId: string, reason: string): Promise<any> {
+  /**
+   * Get a specific task by ID
+   */
+  async getTask(taskId: string): Promise<Task> {
     try {
-      const response = await apiClient.post(
-        `${this.baseUrl}/${taskId}/appeal`,
-        {
-          reason,
-        }
-      );
-      return response.data;
-    } catch (error: any) {
-      console.error("Failed to appeal verdict:", error);
-      throw new TaskApiError("server_error", "Failed to appeal verdict", true);
+      const response = await this.apiClient.request<Task>(`/${taskId}`, {
+        method: "GET",
+      });
+      return response;
+    } catch (error) {
+      console.error(`Failed to get task ${taskId}:`, error);
+      throw error;
     }
+  }
+
+  /**
+   * Get task metrics and statistics
+   */
+  async getTaskMetrics(): Promise<TaskMetrics> {
+    try {
+      const response = await this.apiClient.request<TaskMetrics>("/metrics", {
+        method: "GET",
+      });
+      return response;
+    } catch (error) {
+      console.error("Failed to get task metrics:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get audit trail for a specific task
+   */
+  async getTaskAuditTrail(taskId: string): Promise<AuditLogEntry[]> {
+    try {
+      const response = await this.apiClient.request<AuditLogEntry[]>(`/${taskId}/audit`, {
+        method: "GET",
+      });
+      return response;
+    } catch (error) {
+      console.error(`Failed to get audit trail for task ${taskId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Pause a running task
+   */
+  async pauseTask(taskId: string): Promise<{ success: boolean; message: string }> {
+    try {
+      const response = await this.apiClient.request<{ success: boolean; message: string }>(`/${taskId}/pause`, {
+        method: "POST",
+      });
+      return response;
+    } catch (error) {
+      console.error(`Failed to pause task ${taskId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Resume a paused task
+   */
+  async resumeTask(taskId: string): Promise<{ success: boolean; message: string }> {
+    try {
+      const response = await this.apiClient.request<{ success: boolean; message: string }>(`/${taskId}/resume`, {
+        method: "POST",
+      });
+      return response;
+    } catch (error) {
+      console.error(`Failed to resume task ${taskId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Cancel a task
+   */
+  async cancelTask(taskId: string): Promise<{ success: boolean; message: string }> {
+    try {
+      const response = await this.apiClient.request<{ success: boolean; message: string }>(`/${taskId}/cancel`, {
+        method: "POST",
+      });
+      return response;
+    } catch (error) {
+      console.error(`Failed to cancel task ${taskId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Retry a failed task
+   */
+  async retryTask(taskId: string): Promise<{ success: boolean; message: string }> {
+    try {
+      const response = await this.apiClient.request<{ success: boolean; message: string }>(`/${taskId}/retry`, {
+        method: "POST",
+      });
+      return response;
+    } catch (error) {
+      console.error(`Failed to retry task ${taskId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get task artifacts
+   */
+  async getTaskArtifacts(taskId: string): Promise<any[]> {
+    try {
+      const response = await this.apiClient.request<any[]>(`/${taskId}/artifacts`, {
+        method: "GET",
+      });
+      return response;
+    } catch (error) {
+      console.error(`Failed to get artifacts for task ${taskId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Download a task artifact
+   */
+  async downloadArtifact(taskId: string, artifactId: string): Promise<Blob> {
+    try {
+      const response = await fetch(`/api/v1/tasks/${taskId}/artifacts/${artifactId}/download`);
+      if (!response.ok) {
+        throw new Error(`Failed to download artifact: ${response.statusText}`);
+      }
+      return await response.blob();
+    } catch (error) {
+      console.error(`Failed to download artifact ${artifactId} for task ${taskId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get real-time task updates via WebSocket
+   */
+  createTaskUpdateWebSocket(taskId: string): WebSocket {
+    const wsUrl = new URL(`/api/v1/tasks/${taskId}/ws`, window.location.origin);
+    wsUrl.protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    
+    const ws = new WebSocket(wsUrl.toString());
+    
+    ws.onopen = () => {
+      console.log(`WebSocket connected for task ${taskId}`);
+    };
+    
+    ws.onerror = (error) => {
+      console.error(`WebSocket error for task ${taskId}:`, error);
+    };
+    
+    ws.onclose = () => {
+      console.log(`WebSocket disconnected for task ${taskId}`);
+    };
+    
+    return ws;
+  }
+
+  /**
+   * Get all tasks with real-time updates via WebSocket
+   */
+  createTaskListWebSocket(): WebSocket {
+    const wsUrl = new URL("/api/v1/tasks/ws", window.location.origin);
+    wsUrl.protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    
+    const ws = new WebSocket(wsUrl.toString());
+    
+    ws.onopen = () => {
+      console.log("WebSocket connected for task list updates");
+    };
+    
+    ws.onerror = (error) => {
+      console.error("WebSocket error for task list:", error);
+    };
+    
+    ws.onclose = () => {
+      console.log("WebSocket disconnected for task list");
+    };
+    
+    return ws;
   }
 }
-
-// Default task API client instance
-export const taskApiClient = new TaskApiClient();

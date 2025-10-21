@@ -6,6 +6,7 @@ export interface ArbiterVerdict {
   status: "approved" | "rejected" | "waiver_required";
   confidence: number;
   waiverRequired: boolean;
+  waiverReason?: string;
   cawsCompliance: number;
   factualAccuracy: number;
   debateRounds: number;
@@ -13,6 +14,7 @@ export interface ArbiterVerdict {
   timestamp: string;
   violations: string[];
   recommendedActions: string[];
+  provenanceId: string;
 }
 
 export interface ClaimVerificationData {

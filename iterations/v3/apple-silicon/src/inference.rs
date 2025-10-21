@@ -1,8 +1,9 @@
 //! Inference engine abstraction
 
-use crate::types::*;
+use crate::{ComputeUnits, DType, IoSchema, TensorMap, TensorSpec, ModelFmt, QuantizationConfig};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::fmt::Debug;
 use std::time::Duration;
 

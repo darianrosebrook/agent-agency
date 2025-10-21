@@ -17,10 +17,10 @@ thiserror = "1.0"
 
 # Model management
 model-benchmarking = { path = "../model-benchmarking" }
-agent-agency-apple-silicon = { path = "../apple-silicon" }
+# agent-agency-apple-silicon = { path = "../apple-silicon" } # PLACEHOLDER: temp disabled to avoid libtorch
 
-# Performance monitoring
-agent-agency-observability = { path = "../observability" }
+# Performance monitoring - temporarily excluded due to database dependency
+# agent-agency-observability = { path = "../observability" }
 
 # Time utilities
 chrono = { version = "0.4", features = ["serde"] }
@@ -33,6 +33,12 @@ lru = "0.12"
 
 # Math operations for performance modeling
 nalgebra = "0.32"
+
+# Random number generation
+rand = "0.8"
+
+# Semantic versioning
+semver = "1.0"
 
 [dev-dependencies]
 tokio-test = "0.4"

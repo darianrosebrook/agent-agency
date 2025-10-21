@@ -19,15 +19,15 @@ impl TestFixtures {
             id: "test-spec-001".to_string(),
             title: "User Authentication System".to_string(),
             description: "Implement a complete user authentication system with JWT tokens".to_string(),
-            risk_tier: crate::planning::types::RiskTier::High,
+            risk_tier: planning_agent::types::RiskTier::High,
             acceptance_criteria: vec![
-                crate::planning::types::AcceptanceCriterion {
+                planning_agent::types::AcceptanceCriterion {
                     id: "A1".to_string(),
                     given: "User is not authenticated".to_string(),
                     when: "User provides valid credentials".to_string(),
                     then: "User is authenticated and receives JWT token".to_string(),
                 },
-                crate::planning::types::AcceptanceCriterion {
+                planning_agent::types::AcceptanceCriterion {
                     id: "A2".to_string(),
                     given: "User has valid JWT token".to_string(),
                     when: "User accesses protected resource".to_string(),
@@ -73,14 +73,14 @@ impl TestFixtures {
                     lines_removed: 0,
                 },
             ],
-            test_results: crate::planning::types::TestResults {
+            test_results: planning_agent::types::TestResults {
                 total: 12,
                 passed: 10,
                 failed: 2,
                 skipped: 0,
                 duration_ms: 1250,
             },
-            coverage: crate::planning::types::CoverageReport {
+            coverage: planning_agent::types::CoverageReport {
                 lines_total: 150,
                 lines_covered: 127,
                 branches_total: 45,
@@ -89,17 +89,17 @@ impl TestFixtures {
                 functions_covered: 20,
                 coverage_percentage: 84.7,
             },
-            mutation: crate::planning::types::MutationReport {
+            mutation: planning_agent::types::MutationReport {
                 mutants_generated: 45,
                 mutants_killed: 38,
                 mutants_survived: 7,
                 mutation_score: 84.4,
             },
-            lint: crate::planning::types::LintReport {
+            lint: planning_agent::types::LintReport {
                 errors: 0,
                 warnings: 3,
                 issues: vec![
-                    crate::planning::types::LintIssue {
+                    planning_agent::types::LintIssue {
                         file: "src/auth/jwt.rs".to_string(),
                         line: 25,
                         column: 12,
@@ -109,11 +109,11 @@ impl TestFixtures {
                     },
                 ],
             },
-            types: crate::planning::types::TypeCheckReport {
+            types: planning_agent::types::TypeCheckReport {
                 errors: 0,
                 warnings: 1,
                 issues: vec![
-                    crate::planning::types::TypeIssue {
+                    planning_agent::types::TypeIssue {
                         file: "src/auth/user.rs".to_string(),
                         line: 18,
                         message: "Type annotation needed".to_string(),
@@ -121,7 +121,7 @@ impl TestFixtures {
                     },
                 ],
             },
-            provenance: crate::planning::types::ProvenanceData {
+            provenance: planning_agent::types::ProvenanceData {
                 commit_hash: "abc123def".to_string(),
                 author: "test-agent".to_string(),
                 timestamp: Utc::now(),
@@ -136,8 +136,8 @@ impl TestFixtures {
     pub fn sample_quality_report(task_id: Uuid) -> QualityReport {
         QualityReport {
             task_id,
-            risk_tier: crate::planning::types::RiskTier::High,
-            overall_status: crate::quality::gates::GateStatus::Passed,
+            risk_tier: planning_agent::types::RiskTier::High,
+            overall_status: quality_assurance::gates::GateStatus::Passed,
             overall_score: 87.5,
             gates_executed: 6,
             gates_passed: 5,
@@ -147,27 +147,27 @@ impl TestFixtures {
             total_duration_ms: 4520,
             executed_at: Utc::now(),
             gate_results: vec![
-                crate::quality::QualityGateResult {
+                quality_assurance::QualityGateResult {
                     name: "caws_compliance".to_string(),
-                    status: crate::quality::gates::GateStatus::Passed,
+                    status: quality_assurance::gates::GateStatus::Passed,
                     score: 1.0,
                     threshold: 0.0,
                     duration_ms: 250,
                     details: serde_json::json!({"violations": 0}),
                     errors: vec![],
                 },
-                crate::quality::QualityGateResult {
+                quality_assurance::QualityGateResult {
                     name: "linting".to_string(),
-                    status: crate::quality::gates::GateStatus::Warning,
+                    status: quality_assurance::gates::GateStatus::Warning,
                     score: 0.85,
                     threshold: 5.0,
                     duration_ms: 1200,
                     details: serde_json::json!({"warnings": 3, "errors": 0}),
                     errors: vec![],
                 },
-                crate::quality::QualityGateResult {
+                quality_assurance::QualityGateResult {
                     name: "testing".to_string(),
-                    status: crate::quality::gates::GateStatus::Passed,
+                    status: quality_assurance::gates::GateStatus::Passed,
                     score: 1.0,
                     threshold: 0.0,
                     duration_ms: 1800,

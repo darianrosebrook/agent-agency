@@ -6,7 +6,7 @@
 //! @author @darianrosebrook
 
 use crate::sandbox::{GitWorktree, SnapshotManager, WorkspaceBackend};
-use crate::types::{ChangeSet, ChangeSetReceipt, Task};
+use crate::types::{ChangeSet, ChangeSetReceipt, FileChange, ChangeOperation};
 use crate::caws::BudgetChecker;
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
@@ -120,7 +120,10 @@ impl WorkspaceManager {
             });
         }
 
-        // INVARIANT 3: Atomic apply (temp + fsync + rename)
+        // INVARIANT 3: Atomic apply with transactional budget update
+        // Save budget state for potential rollback
+        let old_budget_state = self.budget_checker.current_state().await?;
+
         let receipt = match &mut self.backend {
             WorkspaceBackend::Git(worktree) => {
                 worktree.apply_changes_atomic(changeset).await
@@ -132,8 +135,32 @@ impl WorkspaceManager {
             }
         };
 
-        // INVARIANT 4: Update budget tracker after successful apply
-        self.budget_checker.record_changes(&receipt).await?;
+        // INVARIANT 4: Update budget tracker transactionally
+        // If budget update fails, rollback the applied changes
+        if let Err(budget_err) = self.budget_checker.record_changes(&receipt).await {
+            // Budget update failed - rollback the applied changes
+            let rollback_result = match &mut self.backend {
+                WorkspaceBackend::Git(worktree) => {
+                    worktree.rollback_to_checkpoint(&receipt.checkpoint_id).await
+                }
+                WorkspaceBackend::Snapshot(snapshot) => {
+                    snapshot.rollback_to_checkpoint(&receipt.checkpoint_id).await
+                }
+            };
+
+            if let Err(rollback_err) = rollback_result {
+                // Both budget update and rollback failed - we're in a bad state
+                return Err(WorkspaceError::AtomicApplyFailed {
+                    operation: "budget_update_and_rollback".to_string(),
+                    reason: format!("Budget update failed: {}, rollback also failed: {}", budget_err, rollback_err),
+                });
+            }
+
+            // Restore old budget state
+            self.budget_checker.restore_state(old_budget_state).await?;
+
+            return Err(WorkspaceError::BudgetUpdateFailed(budget_err.to_string()));
+        }
 
         Ok(receipt)
     }
@@ -234,9 +261,9 @@ mod tests {
         fs::write(&test_file, "content").await.unwrap();
 
         let changeset = ChangeSet {
-            changes: vec![crate::types::FileChange {
+            changes: vec![FileChange {
                 path: test_file.clone(),
-                operation: crate::types::ChangeOperation::Modify {
+                operation: ChangeOperation::Modify {
                     expected_content: "content".to_string(),
                     new_content: "modified".to_string(),
                 },
@@ -251,9 +278,9 @@ mod tests {
         manager.set_allow_list(vec![PathBuf::from("test.txt")]);
 
         let changeset = ChangeSet {
-            changes: vec![crate::types::FileChange {
+            changes: vec![FileChange {
                 path: test_file,
-                operation: crate::types::ChangeOperation::Modify {
+                operation: ChangeOperation::Modify {
                     expected_content: "content".to_string(),
                     new_content: "modified".to_string(),
                 },
@@ -280,9 +307,9 @@ mod tests {
         fs::write(&test_file, "line1\nline2\nline3\nline4\nline5\nline6\nline7\nline8\nline9\nline10\nline11").await.unwrap();
 
         let changeset = ChangeSet {
-            changes: vec![crate::types::FileChange {
+            changes: vec![FileChange {
                 path: test_file,
-                operation: crate::types::ChangeOperation::Create {
+                operation: ChangeOperation::Create {
                     content: "line1\nline2\nline3\nline4\nline5\nline6\nline7\nline8\nline9\nline10\nline11".to_string(),
                 },
             }],

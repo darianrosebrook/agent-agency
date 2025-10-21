@@ -6,7 +6,9 @@
 //! @author @darianrosebrook
 
 use crate::types::*;
-use crate::{IngestionConfig, IngestionStats, KnowledgeIngestor};
+use crate::{IngestionConfig, IngestionStats};
+#[cfg(feature = "embeddings")]
+use crate::KnowledgeIngestor;
 use agent_agency_database::models::*;
 use anyhow::{Context, Result};
 use std::collections::HashMap;
@@ -17,6 +19,7 @@ use tar::Archive;
 use tracing::{debug, info, warn};
 
 /// Parse WordNet synsets from tar.gz archive
+#[cfg(feature = "embeddings")]
 pub async fn parse_wordnet_dump<P: AsRef<Path>>(
     ingestor: &KnowledgeIngestor,
     path: P,
@@ -71,6 +74,7 @@ pub async fn parse_wordnet_dump<P: AsRef<Path>>(
 }
 
 /// Parse a single WordNet data file
+#[cfg(feature = "embeddings")]
 async fn parse_wordnet_data_file<R: BufRead>(
     ingestor: &KnowledgeIngestor,
     reader: R,
@@ -300,6 +304,7 @@ async fn generate_embedding(
 }
 
 /// Insert entity and vector into database
+#[cfg(feature = "embeddings")]
 async fn insert_entity(
     ingestor: &KnowledgeIngestor,
     parsed: ParsedEntity,

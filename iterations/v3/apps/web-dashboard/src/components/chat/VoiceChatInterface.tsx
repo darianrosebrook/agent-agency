@@ -62,7 +62,13 @@ export default function VoiceChatInterface({
       stopVoiceChat();
       setIsExpanded(false);
     }
-  }, [session.isActive, settings.mode, startVoiceChat, stopVoiceChat, recording]);
+  }, [
+    session.isActive,
+    settings.mode,
+    startVoiceChat,
+    stopVoiceChat,
+    recording,
+  ]);
 
   // Handle recording button
   const handleRecordingToggle = useCallback(async () => {
@@ -117,23 +123,21 @@ export default function VoiceChatInterface({
       );
     });
 
-    return (
-      <div className={styles.waveform}>
-        {bars}
-      </div>
-    );
+    return <div className={styles.waveform}>{bars}</div>;
   };
 
   return (
     <div className={`${styles.container} ${className}`}>
       {/* Main Voice Chat Button */}
       <button
-        className={`${styles.mainButton} ${session.isActive ? styles.active : ""} ${
-          !ttsAvailable ? styles.disabled : ""
-        }`}
+        className={`${styles.mainButton} ${
+          session.isActive ? styles.active : ""
+        } ${!ttsAvailable ? styles.disabled : ""}`}
         onClick={handleVoiceToggle}
         disabled={!ttsAvailable}
-        title={ttsAvailable ? "Toggle voice chat mode" : "TTS service unavailable"}
+        title={
+          ttsAvailable ? "Toggle voice chat mode" : "TTS service unavailable"
+        }
       >
         {session.isActive ? "🎙️" : "🎤"}
         <span className={styles.buttonText}>
@@ -143,22 +147,31 @@ export default function VoiceChatInterface({
 
       {/* Expanded Voice Chat Controls */}
       {session.isActive && (
-        <div className={`${styles.expandedPanel} ${isExpanded ? styles.expanded : ""}`}>
+        <div
+          className={`${styles.expandedPanel} ${
+            isExpanded ? styles.expanded : ""
+          }`}
+        >
           {/* Status Indicator */}
-          <div className={`${styles.statusIndicator} ${styles[getStatusColor()]}`}>
+          <div
+            className={`${styles.statusIndicator} ${styles[getStatusColor()]}`}
+          >
             <div className={styles.statusText}>{getStatusText()}</div>
             {renderAudioWaveform()}
           </div>
 
           {/* Recording Controls */}
-          {(settings.mode === "voice_input" || settings.mode === "full_voice") && (
+          {(settings.mode === "voice_input" ||
+            settings.mode === "full_voice") && (
             <div className={styles.recordingControls}>
               <button
                 className={`${styles.recordButton} ${
                   recording.isRecording ? styles.recording : ""
                 }`}
                 onClick={handleRecordingToggle}
-                disabled={session.isProcessing || recording.hasPermission === false}
+                disabled={
+                  session.isProcessing || recording.hasPermission === false
+                }
                 title={
                   recording.hasPermission === false
                     ? "Microphone permission required"
@@ -209,7 +222,10 @@ export default function VoiceChatInterface({
           {/* Voice Activity Detection Status */}
           {settings.voiceActivityDetection && (
             <div className={styles.vadStatus}>
-              🎧 Voice Detection: {recording.detectVoiceActivity(session.audioLevel) ? "Active" : "Silent"}
+              🎧 Voice Detection:{" "}
+              {recording.detectVoiceActivity(session.audioLevel)
+                ? "Active"
+                : "Silent"}
             </div>
           )}
 
@@ -238,7 +254,9 @@ export default function VoiceChatInterface({
         <button
           className={styles.expandToggle}
           onClick={() => setIsExpanded(!isExpanded)}
-          title={isExpanded ? "Collapse voice controls" : "Expand voice controls"}
+          title={
+            isExpanded ? "Collapse voice controls" : "Expand voice controls"
+          }
         >
           {isExpanded ? "⬆️" : "⬇️"}
         </button>
@@ -246,3 +264,5 @@ export default function VoiceChatInterface({
     </div>
   );
 }
+
+

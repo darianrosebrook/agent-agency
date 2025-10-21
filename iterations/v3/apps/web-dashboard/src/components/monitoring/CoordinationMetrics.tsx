@@ -10,10 +10,7 @@ export default function CoordinationMetricsComponent({
   metrics: externalMetrics,
   isLoading: externalLoading,
   error: externalError,
-  onMetricsUpdate,
-}: CoordinationMetricsProps & {
-  onMetricsUpdate?: (event: any) => void;
-}) {
+}: CoordinationMetricsProps) {
   const [metrics, setMetrics] = useState<CoordinationMetrics | null>(
     externalMetrics ?? null
   );
@@ -55,6 +52,7 @@ export default function CoordinationMetricsComponent({
       loadCoordinationMetrics();
     }
   }, [externalMetrics]);
+
 
   // Format duration (for future use)
   // const formatDuration = (ms: number): string => {

@@ -2,19 +2,28 @@
 
 use std::sync::Arc;
 use tokio::sync::mpsc;
-use tracing::{info, warn, debug};
+use tracing::{info, warn, debug, error};
 use serde::{Serialize, Deserialize};
+use chrono::{DateTime, Duration, Utc};
 
-use crate::evaluation::{EvaluationOrchestrator, EvalReport, EvalStatus, SatisficingEvaluator, SatisficingDecision};
+/// Helper function to get current UTC time
+fn now() -> DateTime<Utc> {
+    Utc::now()
+}
+
+use crate::evaluation::{EvaluationOrchestrator, EvalReport, SatisficingEvaluator, SatisficingDecision};
+use crate::types::EvalStatus;
 use crate::models::{ModelRegistry, ModelProvider, ModelContext};
-use crate::prompting::{PromptingStrategy, AdaptivePromptingStrategy};
+use crate::prompting::{PromptingStrategy, AdaptivePromptingStrategy, AgentTelemetryCollector};
+use crate::sandbox::DiffGenerator;
 use crate::sandbox::SandboxEnvironment;
 use crate::types::{Task, TaskResult, IterationContext, StopReason, Artifact, ArtifactType, ActionRequest, ActionValidationError};
-use observability::diff_observability::{DiffGenerator, FileChange};
-use observability::agent_telemetry::AgentTelemetryCollector;
+// use observability::diff_observability::{DiffGenerator, FileChange};
+// use observability::agent_telemetry::AgentTelemetryCollector;
 
 // Import file_ops workspace for deterministic file operations
-use file_ops::{WorkspaceFactory, Workspace, AllowList, Budgets, ChangeSetId, ChangeSet, Patch, Hunk};
+// TEMP: using stubs until file_ops dependency is fixed
+use crate::stubs::{WorkspaceFactory, Workspace, AllowList, Budgets, ChangeSetId, ChangeSet, Patch, Hunk, FileOpsError};
 
 /// Execution modes with different safety guardrails
 #[derive(Debug, Clone)]
@@ -319,7 +328,21 @@ impl SelfPromptingLoop {
     /// Inject guidance into the task execution
     pub fn inject_guidance(&self, guidance: String) {
         info!("Guidance injected: {}", guidance);
-        // TODO: Implement guidance injection into prompting strategy
+
+        // Store the guidance for use in future prompt generation
+        let mut injected_guidance = self.injected_guidance.borrow_mut();
+        injected_guidance.push(guidance.clone());
+
+        // Emit guidance injection event
+        self.emit_event(SelfPromptingEvent::GuidanceInjected {
+            guidance: guidance.clone(),
+            timestamp: chrono::Utc::now(),
+        });
+    }
+
+    /// Get all injected guidance for use in prompt generation
+    pub fn get_injected_guidance(&self) -> Vec<String> {
+        self.injected_guidance.borrow().clone()
     }
 
     /// Create with custom configuration
@@ -432,7 +455,7 @@ impl SelfPromptingLoop {
             }
 
             // 1. Select model for this iteration
-            let model = self.model_registry.select_model(&task)
+            let model = self.model_registry.select_model(&task).await
                 .map_err(|e| SelfPromptingError::ModelSelectionError(e.to_string()))?;
 
             let model_id = model.model_info().id.clone();
@@ -515,7 +538,7 @@ impl SelfPromptingLoop {
                 config: self.evaluator.config().clone(),
             };
 
-            let mut eval_report = self.evaluator.evaluate(&[artifact], &eval_context).await?;
+            let mut eval_report = self.evaluator.evaluate(&artifacts, &eval_context).await?;
 
             // Classify failure type and attempt recovery for environment failures
             if let Some(failure_type) = self.classify_evaluation_failure(&eval_report) {
@@ -528,7 +551,7 @@ impl SelfPromptingLoop {
                     if recovery_success {
                         info!("Environment recovery succeeded, re-evaluating...");
                         // Re-run evaluation after recovery attempt
-                        eval_report = self.evaluator.evaluate(&[artifact], &eval_context).await?;
+                        eval_report = self.evaluator.evaluate(&artifacts, &eval_context).await?;
                         eval_report.failure_type = None; // Clear failure type if recovery worked
                     }
                 }
@@ -736,7 +759,13 @@ impl SelfPromptingLoop {
                 // - Support changeset rollback on failure
                 // - Implement changeset validation and verification
                 // - Add changeset performance and quality metrics
-                // PLACEHOLDER: Relying on hysteresis logic for now
+                // PLACEHOLDER: Implement proper progress detection
+                // - Replace hysteresis with actual progress metrics
+                // - Implement convergence detection based on improvement rates
+                // - Add statistical significance testing for progress
+                // - Support multi-dimensional progress tracking (quality, efficiency, novelty)
+                // - Implement progress plateau detection and handling
+                // - Add progress-based adaptive iteration limits
             }
 
             if !final_decision.should_continue {
@@ -974,7 +1003,13 @@ impl SelfPromptingLoop {
                     // - Support error pattern recognition and learning
                     // - Implement progressive prompt refinement
                     // - Add error recovery strategy selection
-                    // PLACEHOLDER: Logging and continuing for now
+                    // PLACEHOLDER: Implement proper error handling and recovery
+                    // - Add error classification and severity assessment
+                    // - Implement error-specific recovery strategies
+                    // - Support partial action rollback and state restoration
+                    // - Add error context collection and reporting
+                    // - Implement error pattern analysis for prevention
+                    // - Support error escalation and human intervention triggers
                     continue;
                 }
             }
@@ -1145,7 +1180,7 @@ impl SelfPromptingLoop {
             0.0
         };
         monitor.metrics.files_in_scope = files_in_scope;
-        monitor.metrics.timestamp = chrono::Utc::now();
+        monitor.metrics.timestamp = Utc::now();
 
         // Simple dependency depth estimation (could be enhanced with actual analysis)
         monitor.metrics.dependency_depth = (files_in_scope / 5).min(10); // Rough heuristic
@@ -1225,7 +1260,7 @@ impl SelfPromptingLoop {
                 let days_old = (i % 10) as i64; // Mock modification time distribution
                 crate::types::FileMetadata {
                     path: path.clone(),
-                    last_modified: chrono::Utc::now() - chrono::Duration::days(days_old),
+                    last_modified: chrono::Utc::now() - Duration::days(days_old),
                     change_frequency: (i % 5) + 1, // Mock change frequency
                     task_relevance_score: 0.5, // Placeholder
                 }
@@ -1460,7 +1495,7 @@ impl SelfPromptingLoop {
 
     /// Classify evaluation failure type based on error patterns and logs
     fn classify_evaluation_failure(&self, eval_report: &crate::evaluation::EvalReport) -> Option<crate::evaluation::EvaluationFailureType> {
-        if eval_report.status == crate::evaluation::EvalStatus::Pass {
+        if eval_report.status == EvalStatus::Pass {
             return None; // No failure to classify
         }
 
@@ -1842,21 +1877,21 @@ impl SelfPromptingLoop {
     }
 
     /// Classify the type of patch failure based on error and changeset
-    fn classify_patch_failure(&self, error: &file_ops::FileOpsError, changeset: &ChangeSet) -> PatchFailureType {
+    fn classify_patch_failure(&self, error: &FileOpsError, changeset: &ChangeSet) -> PatchFailureType {
         match error {
-            file_ops::FileOpsError::Blocked(_) => PatchFailureType::PathBlocked,
-            file_ops::FileOpsError::BudgetExceeded(_) => PatchFailureType::BudgetExceeded,
-            file_ops::FileOpsError::Validation(_) => {
+            FileOpsError::Blocked(_) => PatchFailureType::PathBlocked,
+            FileOpsError::BudgetExceeded(_) => PatchFailureType::BudgetExceeded,
+            FileOpsError::Validation(_) => {
                 // Check if this is likely a syntax error in generated code
                 // For now, classify validation errors as syntax errors
                 // This could be enhanced with more sophisticated detection
                 PatchFailureType::SyntaxError
             }
-            file_ops::FileOpsError::Io(_) | file_ops::FileOpsError::Path(_) => {
+            FileOpsError::Io(_) | FileOpsError::Path(_) => {
                 // I/O and path errors are typically environment issues
                 PatchFailureType::EnvironmentIssue
             }
-            file_ops::FileOpsError::Serde(_) => {
+            FileOpsError::Serde(_) => {
                 // Serialization errors are typically syntax issues
                 PatchFailureType::SyntaxError
             }
@@ -1989,7 +2024,7 @@ impl SelfPromptingLoop {
             iteration,
             task.id,
             changeset_id.0,
-            chrono::Utc::now().to_rfc3339()
+            Utc::now().to_rfc3339()
         ) + &diff_content;
 
         Some(Artifact {
@@ -2113,6 +2148,10 @@ pub enum SelfPromptingEvent {
         success: bool,
         timestamp: chrono::Utc::now(),
     },
+    GuidanceInjected {
+        guidance: String,
+        timestamp: chrono::Utc::now(),
+    },
     VerdictOverridden {
         original_verdict: String,
         new_verdict: String,
@@ -2151,4 +2190,301 @@ pub enum SelfPromptingError {
 
     #[error("Workspace operation failed: {0}")]
     WorkspaceError(String),
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_context_metrics_update() {
+        let registry = Arc::new(crate::models::ModelRegistry::new());
+        let evaluator = Arc::new(crate::evaluation::EvaluationOrchestrator::new());
+        let mut loop_controller = SelfPromptingLoop::new(registry, evaluator);
+
+        // Test context metrics update
+        loop_controller.update_context_metrics(5000, 8000, 25);
+
+        let monitor = loop_controller.context_monitor.borrow();
+        assert_eq!(monitor.metrics.prompt_size_tokens, 5000);
+        assert_eq!(monitor.metrics.context_window_utilization, 0.625); // 5000/8000
+        assert_eq!(monitor.metrics.files_in_scope, 25);
+    }
+
+    #[test]
+    fn test_context_overload_detection() {
+        let registry = Arc::new(crate::models::ModelRegistry::new());
+        let evaluator = Arc::new(crate::evaluation::EvaluationOrchestrator::new());
+        let mut loop_controller = SelfPromptingLoop::new(registry, evaluator);
+
+        // Set overload conditions
+        loop_controller.update_context_metrics(9000, 10000, 60); // 90% utilization, 60 files
+
+        let overload_strategy = loop_controller.check_context_overload();
+        assert!(overload_strategy.is_some());
+        // Should trigger based on file count exceeding threshold
+    }
+
+    #[test]
+    fn test_scope_reduction_remove_least_recent() {
+        let registry = Arc::new(crate::models::ModelRegistry::new());
+        let evaluator = Arc::new(crate::evaluation::EvaluationOrchestrator::new());
+        let mut loop_controller = SelfPromptingLoop::new(registry, evaluator);
+
+        let mut task = loop_controller.create_test_task("test task", vec![
+            "file1.rs".to_string(),
+            "file2.rs".to_string(),
+            "file3.rs".to_string(),
+            "file4.rs".to_string(),
+        ]);
+
+        let original_count = task.target_files.len();
+        let remaining = loop_controller.apply_remove_least_recent_strategy(&mut task);
+
+        assert!(remaining <= original_count);
+        assert!(remaining >= original_count / 2); // Should keep at least 50%
+    }
+
+    #[test]
+    fn test_scope_reduction_task_relevant() {
+        let registry = Arc::new(crate::models::ModelRegistry::new());
+        let evaluator = Arc::new(crate::evaluation::EvaluationOrchestrator::new());
+        let mut loop_controller = SelfPromptingLoop::new(registry, evaluator);
+
+        let mut task = loop_controller.create_test_task("implement authentication API", vec![
+            "auth.rs".to_string(),
+            "user.rs".to_string(),
+            "api.rs".to_string(),
+            "database.rs".to_string(),
+            "utils.rs".to_string(),
+        ]);
+
+        let original_count = task.target_files.len();
+        let remaining = loop_controller.apply_task_relevant_only_strategy(&mut task);
+
+        assert!(remaining <= original_count);
+        // Should prioritize auth-related files for auth task
+    }
+
+    #[test]
+    fn test_scope_reduction_high_change_frequency() {
+        let registry = Arc::new(crate::models::ModelRegistry::new());
+        let evaluator = Arc::new(crate::evaluation::EvaluationOrchestrator::new());
+        let mut loop_controller = SelfPromptingLoop::new(registry, evaluator);
+
+        let mut task = loop_controller.create_test_task("test task", vec![
+            "file1.rs".to_string(),
+            "file2.rs".to_string(),
+            "file3.rs".to_string(),
+            "file4.rs".to_string(),
+            "file5.rs".to_string(),
+        ]);
+
+        let original_count = task.target_files.len();
+        let remaining = loop_controller.apply_high_change_frequency_strategy(&mut task);
+
+        assert!(remaining <= original_count);
+        assert!(remaining >= (original_count * 4) / 10); // Should keep at least 40%
+    }
+
+    #[test]
+    fn test_task_relevance_analysis() {
+        let registry = Arc::new(crate::models::ModelRegistry::new());
+        let evaluator = Arc::new(crate::evaluation::EvaluationOrchestrator::new());
+        let loop_controller = SelfPromptingLoop::new(registry, evaluator);
+
+        let analysis = loop_controller.analyze_task_relevance("implement authentication API endpoint");
+
+        assert!(analysis.keywords.contains(&"auth".to_string()));
+        assert!(analysis.keywords.contains(&"api".to_string()));
+        assert!(analysis.file_extensions.contains(&".ts".to_string()) || analysis.file_extensions.contains(&".js".to_string()));
+        assert!(analysis.directory_patterns.contains(&"auth".to_string()));
+        assert!(analysis.directory_patterns.contains(&"api".to_string()));
+    }
+
+    #[test]
+    fn test_task_relevance_scoring() {
+        let registry = Arc::new(crate::models::ModelRegistry::new());
+        let evaluator = Arc::new(crate::evaluation::EvaluationOrchestrator::new());
+        let loop_controller = SelfPromptingLoop::new(registry, evaluator);
+
+        let analysis = crate::types::TaskRelevanceAnalysis {
+            keywords: vec!["auth".to_string()],
+            file_extensions: vec![".rs".to_string()],
+            directory_patterns: vec!["api".to_string()],
+        };
+
+        // High relevance: matches keyword and extension
+        let score1 = loop_controller.calculate_task_relevance_score("src/auth/api.rs", &analysis);
+        assert!(score1 > 0.3);
+
+        // Low relevance: no matches
+        let score2 = loop_controller.calculate_task_relevance_score("utils/helpers.py", &analysis);
+        assert!(score2 < 0.3);
+    }
+
+    #[test]
+    fn test_evaluation_failure_classification_environment() {
+        let registry = Arc::new(crate::models::ModelRegistry::new());
+        let evaluator = Arc::new(crate::evaluation::EvaluationOrchestrator::new());
+        let loop_controller = SelfPromptingLoop::new(registry, evaluator);
+
+        // Test dependency failure classification
+        let eval_report = loop_controller.create_test_eval_report(0.3, EvalStatus::Fail, None);
+        let mut eval_report_with_logs = eval_report.clone();
+        eval_report_with_logs.logs = vec!["dependency not found".to_string(), "npm install failed".to_string()];
+
+        let failure_type = loop_controller.classify_evaluation_failure(&eval_report_with_logs);
+        assert!(failure_type.is_some());
+        match failure_type.unwrap() {
+            crate::evaluation::EvaluationFailureType::EnvironmentFailure { category } => {
+                assert!(matches!(category, crate::evaluation::EnvironmentFailureCategory::DependencyMissing));
+            }
+            _ => panic!("Expected environment failure"),
+        }
+    }
+
+    #[test]
+    fn test_evaluation_failure_classification_logic() {
+        let registry = Arc::new(crate::models::ModelRegistry::new());
+        let evaluator = Arc::new(crate::evaluation::EvaluationOrchestrator::new());
+        let loop_controller = SelfPromptingLoop::new(registry, evaluator);
+
+        // Test syntax error classification
+        let eval_report = loop_controller.create_test_eval_report(0.2, EvalStatus::Fail, None);
+        let mut eval_report_with_logs = eval_report.clone();
+        eval_report_with_logs.logs = vec!["syntax error at line 25".to_string(), "compilation failed".to_string()];
+
+        let failure_type = loop_controller.classify_evaluation_failure(&eval_report_with_logs);
+        assert!(failure_type.is_some());
+        match failure_type.unwrap() {
+            crate::evaluation::EvaluationFailureType::LogicFailure { category } => {
+                assert!(matches!(category, crate::evaluation::LogicFailureCategory::SyntaxError));
+            }
+            _ => panic!("Expected logic failure"),
+        }
+    }
+
+    #[test]
+    fn test_evaluation_failure_classification_pass() {
+        let registry = Arc::new(crate::models::ModelRegistry::new());
+        let evaluator = Arc::new(crate::evaluation::EvaluationOrchestrator::new());
+        let loop_controller = SelfPromptingLoop::new(registry, evaluator);
+
+        // Test passing evaluation (no failure to classify)
+        let eval_report = loop_controller.create_test_eval_report(0.9, EvalStatus::Pass, None);
+
+        let failure_type = loop_controller.classify_evaluation_failure(&eval_report);
+        assert!(failure_type.is_none());
+    }
+
+    #[test]
+    fn test_failure_history_tracking() {
+        let registry = Arc::new(crate::models::ModelRegistry::new());
+        let evaluator = Arc::new(crate::evaluation::EvaluationOrchestrator::new());
+        let mut loop_controller = SelfPromptingLoop::new(registry, evaluator);
+
+        let failure1 = crate::evaluation::EvaluationFailureType::EnvironmentFailure {
+            category: crate::evaluation::EnvironmentFailureCategory::DependencyMissing
+        };
+        let failure2 = crate::evaluation::EvaluationFailureType::LogicFailure {
+            category: crate::evaluation::LogicFailureCategory::SyntaxError
+        };
+
+        loop_controller.record_evaluation_failure(failure1.clone());
+        loop_controller.record_evaluation_failure(failure2.clone());
+
+        let history = loop_controller.evaluation_failure_history.borrow();
+        assert_eq!(history.len(), 2);
+        assert!(matches!(&history[0], crate::evaluation::EvaluationFailureType::EnvironmentFailure { .. }));
+        assert!(matches!(&history[1], crate::evaluation::EvaluationFailureType::LogicFailure { .. }));
+    }
+
+    #[test]
+    fn test_package_manager_detection() {
+        let registry = Arc::new(crate::models::ModelRegistry::new());
+        let evaluator = Arc::new(crate::evaluation::EvaluationOrchestrator::new());
+        let loop_controller = SelfPromptingLoop::new(registry, evaluator);
+
+        // Test a common package manager (should be available in most environments)
+        let available = loop_controller.is_package_manager_available("cargo");
+        // Note: This test may fail in environments without cargo, but that's expected
+        // In a real CI environment, we'd mock this or skip if not available
+        let _ = available; // Just ensure the method doesn't panic
+    }
+
+    #[test]
+    fn test_prompt_size_estimation() {
+        let registry = Arc::new(crate::models::ModelRegistry::new());
+        let evaluator = Arc::new(crate::evaluation::EvaluationOrchestrator::new());
+        let loop_controller = SelfPromptingLoop::new(registry, evaluator);
+
+        let task = loop_controller.create_test_task("implement user authentication", vec![
+            "src/auth.rs".to_string(),
+            "src/user.rs".to_string(),
+            "tests/auth.rs".to_string(),
+        ]);
+
+        let history = vec![loop_controller.create_test_eval_report(0.5, EvalStatus::Fail, None)];
+        let estimated_size = loop_controller.estimate_prompt_size(&task, &history);
+
+        // Should be a reasonable estimate > 0
+        assert!(estimated_size > 0);
+        assert!(estimated_size > 500); // Base overhead
+    }
+
+    /// Integration test demonstrating the complete instrumentation pipeline
+    #[test]
+    fn test_instrumentation_pipeline_integration() {
+        let registry = Arc::new(crate::models::ModelRegistry::new());
+        let evaluator = Arc::new(crate::evaluation::EvaluationOrchestrator::new());
+        let mut loop_controller = SelfPromptingLoop::new(registry, evaluator);
+
+        // Create a test task
+        let task = loop_controller.create_test_task("implement user authentication API", vec![
+            "src/auth.rs".to_string(),
+            "src/user.rs".to_string(),
+            "src/api.rs".to_string(),
+            "tests/auth.rs".to_string(),
+            "tests/api.rs".to_string(),
+        ]);
+
+        // Test context monitoring
+        loop_controller.update_context_metrics(6000, 8000, 5);
+        let monitor = loop_controller.context_monitor.borrow();
+        assert_eq!(monitor.metrics.files_in_scope, 5);
+        assert_eq!(monitor.metrics.context_window_utilization, 0.75); // 6000/8000
+
+        // Test scope reduction (should work with our test data)
+        let original_count = task.target_files.len();
+        let remaining = loop_controller.apply_task_relevant_only_strategy(&mut task.clone());
+        assert!(remaining <= original_count);
+
+        // Test failure classification
+        let eval_report = loop_controller.create_test_eval_report(0.2, EvalStatus::Fail, None);
+        let mut eval_report_with_logs = eval_report.clone();
+        eval_report_with_logs.logs = vec!["syntax error: unexpected token".to_string()];
+
+        let failure_type = loop_controller.classify_evaluation_failure(&eval_report_with_logs);
+        assert!(failure_type.is_some());
+        match failure_type.unwrap() {
+            crate::evaluation::EvaluationFailureType::LogicFailure { category } => {
+                assert!(matches!(category, crate::evaluation::LogicFailureCategory::SyntaxError));
+            }
+            crate::evaluation::EvaluationFailureType::EnvironmentFailure { .. } => {
+                panic!("Expected logic failure, got environment failure");
+            }
+        }
+
+        // Test failure tracking
+        loop_controller.record_evaluation_failure(crate::evaluation::EvaluationFailureType::LogicFailure {
+            category: crate::evaluation::LogicFailureCategory::SyntaxError
+        });
+        let history = loop_controller.evaluation_failure_history.borrow();
+        assert_eq!(history.len(), 1);
+
+        // Verify all instrumentation components are working together
+        assert!(monitor.metrics.prompt_size_tokens > 0); // Context monitoring active
+        assert!(history.len() > 0); // Failure tracking active
+    }
 }

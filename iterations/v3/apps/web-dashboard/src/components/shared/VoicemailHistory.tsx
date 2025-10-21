@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect } from "react";
 import { NotificationAlert } from "@/types/tts";
 import { useNotificationAlerts, triggerGlobalAlert } from "@/hooks/useTTS";
 import styles from "./VoicemailHistory.module.scss";
@@ -25,7 +25,8 @@ export default function VoicemailHistory({
       const timer1 = setTimeout(() => {
         triggerGlobalAlert({
           type: "voicemail",
-          message: "Security scan completed. Found 2 low-risk issues that have been auto-resolved.",
+          message:
+            "Security scan completed. Found 2 low-risk issues that have been auto-resolved.",
           priority: "medium",
         });
       }, 5000);
@@ -33,7 +34,8 @@ export default function VoicemailHistory({
       const timer2 = setTimeout(() => {
         triggerGlobalAlert({
           type: "voicemail",
-          message: "Database optimization finished. Performance improved by 15%.",
+          message:
+            "Database optimization finished. Performance improved by 15%.",
           priority: "low",
         });
       }, 15000);
@@ -41,7 +43,8 @@ export default function VoicemailHistory({
       const timer3 = setTimeout(() => {
         triggerGlobalAlert({
           type: "voicemail",
-          message: "Code review completed. All critical issues resolved. Ready for deployment.",
+          message:
+            "Code review completed. All critical issues resolved. Ready for deployment.",
           priority: "high",
         });
       }, 25000);
@@ -98,8 +101,8 @@ export default function VoicemailHistory({
           <div className={styles.emptyIcon}>📭</div>
           <h4>No voicemails yet</h4>
           <p>
-            System notifications and task completion messages will appear here as
-            voicemails.
+            System notifications and task completion messages will appear here
+            as voicemails.
           </p>
         </div>
       </div>
@@ -142,9 +145,7 @@ export default function VoicemailHistory({
                   </span>
                 </div>
 
-                <div className={styles.message}>
-                  {voicemail.message}
-                </div>
+                <div className={styles.message}>{voicemail.message}</div>
 
                 <div className={styles.playbackStatus}>
                   {voicemail.played ? (
@@ -192,7 +193,8 @@ export default function VoicemailHistory({
               onClick={() =>
                 triggerGlobalAlert({
                   type: "voicemail",
-                  message: "System backup completed successfully. All data is now secure.",
+                  message:
+                    "System backup completed successfully. All data is now secure.",
                   priority: "low",
                 })
               }
@@ -203,7 +205,8 @@ export default function VoicemailHistory({
               onClick={() =>
                 triggerGlobalAlert({
                   type: "voicemail",
-                  message: "Performance optimization finished. Response time improved by 25%.",
+                  message:
+                    "Performance optimization finished. Response time improved by 25%.",
                   priority: "medium",
                 })
               }
@@ -214,7 +217,8 @@ export default function VoicemailHistory({
               onClick={() =>
                 triggerGlobalAlert({
                   type: "voicemail",
-                  message: "Critical security update applied. System is now protected against recent threats.",
+                  message:
+                    "Critical security update applied. System is now protected against recent threats.",
                   priority: "high",
                 })
               }

@@ -209,8 +209,18 @@ export class ApiClient {
   async health(): Promise<{
     status: string;
     timestamp: string;
-    dashboard: any;
-    backend: any;
+    dashboard: {
+      status: string;
+      version: string;
+      uptime: number;
+      node_version: string;
+    };
+    backend: {
+      status: string;
+      url: string;
+      response_time_ms: number;
+      error?: string;
+    };
   }> {
     // Use direct API call for health check (not proxied)
     const response = await fetch("/api/health", {
@@ -275,7 +285,7 @@ export class ApiClient {
     }
   }
 
-  async getTask(_taskId: string): Promise<{
+  async getTask(taskId: string): Promise<{
     id: string;
     title: string;
     description: string;
@@ -307,146 +317,198 @@ export class ApiClient {
       typeErrors: number;
     };
   }> {
-    console.warn(
-      "getTask using mock implementation - V3 task detail API not available"
-    );
-    // TODO: Milestone 2 - Task Detail API Implementation
-    // - [ ] Implement V3 GET /api/v1/tasks/:id endpoint
-    // - [ ] Include working spec, artifacts, quality report
-    // - [ ] Test with various task states
+    try {
+      const response = await this.request<{
+        id: string;
+        title: string;
+        description: string;
+        status: string;
+        priority: string;
+        createdAt: string;
+        updatedAt: string;
+        workingSpec?: {
+          id: string;
+          title: string;
+          riskTier: number;
+          acceptance: Array<{
+            id: string;
+            given: string;
+            when: string;
+            then: string;
+          }>;
+        };
+        artifacts?: Array<{
+          id: string;
+          type: string;
+          size: number;
+          createdAt: string;
+        }>;
+        qualityReport?: {
+          coverage: number;
+          mutationScore: number;
+          lintErrors: number;
+          typeErrors: number;
+        };
+      }>(`/api/v1/tasks/${taskId}`);
 
-    // Mock implementation for development
-    return {
-      id: _taskId,
-      title: "Implement user authentication flow",
-      description:
-        "Create a secure user authentication system with JWT tokens, password hashing, and session management.",
-      status: "in_progress",
-      priority: "high",
-      createdAt: "2025-01-15T10:00:00Z",
-      updatedAt: "2025-01-22T11:45:00Z",
-      workingSpec: {
-        id: "AUTH-001",
-        title: "User Authentication Implementation",
-        riskTier: 1,
-        acceptance: [
-          {
-            id: "A1",
-            given: "User is not logged in",
-            when: "User submits valid credentials",
-            then: "User is authenticated and redirected to dashboard",
-          },
-        ],
-      },
-      artifacts: [
-        {
-          id: "artifact_001",
-          type: "unit_tests",
-          size: 245760,
-          createdAt: "2025-01-20T14:30:00Z",
-        },
-        {
-          id: "artifact_002",
-          type: "linting",
-          size: 15360,
-          createdAt: "2025-01-20T14:35:00Z",
-        },
-      ],
-      qualityReport: {
-        coverage: 85.5,
-        mutationScore: 72.3,
-        lintErrors: 0,
-        typeErrors: 0,
-      },
-    };
+      return response;
+    } catch (error) {
+      console.error("Failed to get task:", error);
+      throw error;
+    }
   }
 
   async createChatSession(): Promise<{ sessionId: string; createdAt: string }> {
-    console.warn(
-      "createChatSession using mock implementation - V3 backend not available"
-    );
-    // TODO: Milestone 1 - Chat Session Management
-    // - [ ] Implement V3 POST /api/v1/chat/session endpoint
-    // - [ ] Add session persistence and cleanup
-    // - [ ] Test session creation and retrieval
-
-    // Mock implementation for development
-    return {
-      sessionId: `session_${Date.now()}_${Math.random()
-        .toString(36)
-        .substr(2, 9)}`,
-      createdAt: new Date().toISOString(),
-    };
+    try {
+      const response = await this.request<{
+        sessionId: string;
+        createdAt: string;
+      }>("/api/v1/chat/session", {
+        method: "POST",
+        body: JSON.stringify({}),
+      });
+      return response;
+    } catch (error) {
+      console.error("Failed to create chat session:", error);
+      throw error;
+    }
   }
 
   async sendChatMessage(
-    _sessionId: string,
-    _message: string
+    sessionId: string,
+    message: string
   ): Promise<{ messageId: string; response: string; timestamp: string }> {
-    console.warn(
-      "sendChatMessage using mock implementation - V3 WebSocket API not available"
-    );
-    // TODO: Milestone 1 - Chat Message Handling
-    // - [ ] Implement V3 WebSocket /api/v1/chat/ws/:session_id
-    // - [ ] Add message routing and intent parsing
-    // - [ ] Integrate with planning agent and orchestrator
-    // - [ ] Test real-time message exchange
-
-    // Mock implementation for development
-    // Simulate processing delay
-    await new Promise((resolve) =>
-      setTimeout(resolve, 1000 + Math.random() * 2000)
-    );
-
-    const responses = [
-      "I understand your request. Let me help you with that.",
-      "That's an interesting point. Here's what I can tell you...",
-      "Based on the current system state, I recommend the following approach:",
-      "I've analyzed your query and here's the most relevant information:",
-      "Let me break this down for you step by step:",
-    ];
-
-    return {
-      messageId: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      response: responses[Math.floor(Math.random() * responses.length)],
-      timestamp: new Date().toISOString(),
-    };
+    try {
+      // For now, use HTTP POST instead of WebSocket for simplicity
+      // TODO: Upgrade to WebSocket when real-time messaging is needed
+      const response = await this.request<{
+        messageId: string;
+        response: string;
+        timestamp: string;
+      }>(`/api/v1/chat/ws/${sessionId}`, {
+        method: "POST",
+        body: JSON.stringify({ message }),
+      });
+      return response;
+    } catch (error) {
+      console.error("Failed to send chat message:", error);
+      throw error;
+    }
   }
 
-  async getDatabaseTables(): Promise<unknown> {
-    console.warn(
-      "getDatabaseTables not implemented - requires V3 database API"
-    );
-    // TODO: Milestone 4 - Database API Implementation
-    // - [ ] Implement V3 GET /api/v1/database/tables endpoint
-    // - [ ] Add table schema and metadata endpoints
-    // - [ ] Test with all target tables
-    throw new Error("Database tables API not yet implemented");
+  async getDatabaseTables(): Promise<{
+    tables: Array<{
+      name: string;
+      schema: string;
+      rowCount: number;
+      columns: Array<{
+        name: string;
+        type: string;
+        nullable: boolean;
+        primaryKey: boolean;
+      }>;
+    }>;
+  }> {
+    try {
+      const response = await this.request<{
+        tables: Array<{
+          name: string;
+          schema: string;
+          rowCount: number;
+          columns: Array<{
+            name: string;
+            type: string;
+            nullable: boolean;
+            primaryKey: boolean;
+          }>;
+        }>;
+      }>("/api/v1/database/tables");
+      return response;
+    } catch (error) {
+      console.error("Failed to get database tables:", error);
+      throw error;
+    }
   }
 
   async queryDatabase(
-    _table: string,
-    _filters: Record<string, unknown>
-  ): Promise<unknown> {
-    console.warn(
-      "queryDatabase not implemented - requires V3 database query service"
-    );
-    // TODO: Milestone 4 - Database Query Service
-    // - [ ] Implement V3 query_service.rs with read-only queries
-    // - [ ] Add POST /api/v1/database/tables/:table/query endpoint
-    // - [ ] Enforce safety constraints and rate limiting
-    // - [ ] Test with various query patterns
-    throw new Error("Database query API not yet implemented");
+    table: string,
+    filters: Record<string, unknown>
+  ): Promise<{
+    data: Array<Record<string, unknown>>;
+    total: number;
+    columns: Array<{
+      name: string;
+      type: string;
+    }>;
+  }> {
+    try {
+      const response = await this.request<{
+        data: Array<Record<string, unknown>>;
+        total: number;
+        columns: Array<{
+          name: string;
+          type: string;
+        }>;
+      }>(`/api/v1/database/tables/${table}/query`, {
+        method: "POST",
+        body: JSON.stringify({ filters }),
+      });
+      return response;
+    } catch (error) {
+      console.error("Failed to query database:", error);
+      throw error;
+    }
   }
   /* eslint-enable no-unused-vars */
 
-  async getMetrics(): Promise<unknown> {
-    console.warn("getMetrics not implemented - requires V3 metrics streaming");
-    // TODO: Milestone 3 - Metrics Streaming Implementation
-    // - [ ] Implement V3 GET /metrics/stream SSE endpoint
-    // - [ ] Add REST aggregation endpoints for agents, coordination, business
-    // - [ ] Test real-time metrics updates
-    throw new Error("Metrics API not yet implemented");
+  async getMetrics(): Promise<{
+    agents: Array<{
+      id: string;
+      status: string;
+      activeTasks: number;
+      completedTasks: number;
+      errorRate: number;
+    }>;
+    coordination: {
+      totalTasks: number;
+      activeTasks: number;
+      completedTasks: number;
+      failedTasks: number;
+    };
+    business: {
+      totalUsers: number;
+      activeUsers: number;
+      systemHealth: number;
+      responseTime: number;
+    };
+  }> {
+    try {
+      const response = await this.request<{
+        agents: Array<{
+          id: string;
+          status: string;
+          activeTasks: number;
+          completedTasks: number;
+          errorRate: number;
+        }>;
+        coordination: {
+          totalTasks: number;
+          activeTasks: number;
+          completedTasks: number;
+          failedTasks: number;
+        };
+        business: {
+          totalUsers: number;
+          activeUsers: number;
+          systemHealth: number;
+          responseTime: number;
+        };
+      }>("/metrics/stream");
+      return response;
+    } catch (error) {
+      console.error("Failed to get metrics:", error);
+      throw error;
+    }
   }
 }
 

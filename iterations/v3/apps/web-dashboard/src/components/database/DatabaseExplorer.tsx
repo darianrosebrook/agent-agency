@@ -45,6 +45,10 @@ interface DatabaseExplorerState {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   metrics?: any;
   metricsError?: string | null;
+  // Saved queries state
+  savedQueries?: any[];
+  isLoadingSavedQueries?: boolean;
+  savedQueriesError?: string | null;
 }
 
 export default function DatabaseExplorer({
@@ -62,6 +66,9 @@ export default function DatabaseExplorer({
     activeTab: "tables",
     isLoading: !externalConnections,
     error: null,
+    savedQueries: [],
+    isLoadingSavedQueries: false,
+    savedQueriesError: null,
   });
 
   // Load connections if not provided externally
@@ -121,6 +128,40 @@ export default function DatabaseExplorer({
     },
     [state.selectedConnection]
   );
+
+  // Load saved queries
+  const loadSavedQueries = useCallback(async () => {
+    try {
+      setState((prev) => ({
+        ...prev,
+        isLoadingSavedQueries: true,
+        savedQueriesError: null,
+      }));
+
+      const response = await fetch("/api/v1/queries");
+      if (!response.ok) {
+        throw new Error(`Failed to load saved queries: ${response.statusText}`);
+      }
+
+      const savedQueries = await response.json();
+      setState((prev) => ({
+        ...prev,
+        savedQueries,
+        isLoadingSavedQueries: false,
+      }));
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Failed to load saved queries";
+      setState((prev) => ({
+        ...prev,
+        isLoadingSavedQueries: false,
+        savedQueriesError: errorMessage,
+      }));
+      console.error("Failed to load saved queries:", error);
+    }
+  }, []);
 
   // Handle connection selection
   const handleConnectionSelect = useCallback(
@@ -197,7 +238,7 @@ export default function DatabaseExplorer({
     });
   }, [state.tables, state.filters]);
 
-  // Initialize connections on mount
+  // Initialize connections and saved queries on mount
   useEffect(() => {
     if (!externalConnections) {
       loadConnections();
@@ -208,7 +249,9 @@ export default function DatabaseExplorer({
         isLoading: false,
       }));
     }
-  }, [externalConnections, loadConnections]);
+    // Always load saved queries
+    loadSavedQueries();
+  }, [externalConnections, loadConnections, loadSavedQueries]);
 
   // Auto-select connection if specified
   useEffect(() => {
@@ -494,16 +537,14 @@ export default function DatabaseExplorer({
                     const savedQuery = await response.json();
                     console.log("Query saved successfully:", savedQuery);
 
-                    // Refresh the query list by triggering a re-render
-                    // This could be improved with proper state management
-                    if (typeof window !== "undefined") {
-                      window.location.reload();
-                    }
+                    // Refresh the saved queries list
+                    await loadSavedQueries();
                   } catch (error) {
                     console.error("Failed to save query:", error);
                     alert("Failed to save query. Please try again.");
                   }
                 }}
+                savedQueries={state.savedQueries ?? []}
                 isExecuting={state.isExecutingQuery ?? false}
                 error={state.queryError ?? null}
               />

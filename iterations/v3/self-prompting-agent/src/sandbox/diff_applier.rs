@@ -150,8 +150,13 @@ impl DiffApplier {
         Ok(ApplyResult::Success)
     }
 
-    /// Parse unified diff content into hunks
+    /// Parse unified diff content into hunks with validation
     fn parse_unified_diff(&self, diff_content: &str) -> Result<Vec<DiffHunk>, DiffApplyError> {
+        // Basic validation: ensure we have content
+        if diff_content.trim().is_empty() {
+            return Err(DiffApplyError::PatchError("Empty diff content".to_string()));
+        }
+
         let mut hunks = Vec::new();
         let lines: Vec<&str> = diff_content.lines().collect();
 
@@ -161,9 +166,26 @@ impl DiffApplier {
             if lines[i].starts_with("@@") && lines[i].ends_with("@@") {
                 let hunk = self.parse_hunk(&lines, &mut i)?;
                 hunks.push(hunk);
-            } else {
+            } else if lines[i].trim().is_empty() {
+                // Skip empty lines
                 i += 1;
+            } else if lines[i].starts_with("diff --git") ||
+                      lines[i].starts_with("index ") ||
+                      lines[i].starts_with("---") ||
+                      lines[i].starts_with("+++") {
+                // Skip standard diff metadata lines
+                i += 1;
+            } else {
+                // Unexpected line - could be corrupted diff
+                return Err(DiffApplyError::PatchError(
+                    format!("Unexpected line in diff at position {}: {}", i, lines[i])
+                ));
             }
+        }
+
+        // Validate that we found at least one hunk
+        if hunks.is_empty() {
+            return Err(DiffApplyError::PatchError("No valid hunks found in diff".to_string()));
         }
 
         Ok(hunks)
@@ -179,16 +201,43 @@ impl DiffApplier {
         }
 
         let ranges = header_parts[1];
-        let range_parts: Vec<&str> = ranges.split(',').collect();
-        if range_parts.len() != 2 {
-            return Err(DiffApplyError::PatchError(format!("Invalid hunk ranges: {}", ranges)));
+        if !ranges.starts_with('-') {
+            return Err(DiffApplyError::PatchError(format!("Invalid range format, expected '-' prefix: {}", ranges)));
         }
 
-        let old_start: usize = range_parts[0][1..].parse().map_err(|_| {
-            DiffApplyError::PatchError(format!("Invalid old start: {}", range_parts[0]))
+        let range_parts: Vec<&str> = ranges[1..].split(',').collect(); // Skip the '-' prefix
+        if range_parts.len() != 2 {
+            return Err(DiffApplyError::PatchError(format!("Invalid hunk ranges format: {}", ranges)));
+        }
+
+        // Validate and parse old range
+        let old_range = range_parts[0];
+        let old_start: usize = old_range.parse().map_err(|_| {
+            DiffApplyError::PatchError(format!("Invalid old start line number: {}", old_range))
         })?;
+
+        // Validate and parse old count (can be 0 for new files)
         let old_count: usize = range_parts[1].parse().map_err(|_| {
-            DiffApplyError::PatchError(format!("Invalid old count: {}", range_parts[1]))
+            DiffApplyError::PatchError(format!("Invalid old line count: {}", range_parts[1]))
+        })?;
+
+        // Look for new range (should start with '+')
+        let new_ranges = header_parts[2].trim_end_matches("@@");
+        if !new_ranges.starts_with('+') {
+            return Err(DiffApplyError::PatchError(format!("Invalid new range format, expected '+' prefix: {}", new_ranges)));
+        }
+
+        let new_range_parts: Vec<&str> = new_ranges[1..].split(',').collect(); // Skip the '+' prefix
+        if new_range_parts.len() != 2 {
+            return Err(DiffApplyError::PatchError(format!("Invalid new hunk ranges: {}", new_ranges)));
+        }
+
+        // We don't actually use new_start and new_count for application, just validate they're present
+        let _: usize = new_range_parts[0].parse().map_err(|_| {
+            DiffApplyError::PatchError(format!("Invalid new start line number: {}", new_range_parts[0]))
+        })?;
+        let _: usize = new_range_parts[1].parse().map_err(|_| {
+            DiffApplyError::PatchError(format!("Invalid new line count: {}", new_range_parts[1]))
         })?;
 
         // Skip to hunk content
@@ -265,11 +314,12 @@ impl DiffApplier {
     /// Compute SHA256 of file content
     async fn compute_file_sha256(&self, file_path: &Path) -> Result<String, DiffApplyError> {
         if !file_path.exists() {
-            return Ok(compute_sha256("")); // Empty file SHA256
+            return Ok(compute_sha256_bytes(&[])); // Empty file SHA256
         }
 
-        let content = fs::read_to_string(file_path).await?;
-        Ok(compute_sha256(&content))
+        // Read as raw bytes to handle binary files, symlinks, and invalid UTF-8
+        let content = fs::read(file_path).await?;
+        Ok(compute_sha256_bytes(&content))
     }
 }
 
@@ -281,12 +331,17 @@ struct DiffHunk {
     new_lines: Vec<String>,
 }
 
-/// Compute SHA256 hash of content
-fn compute_sha256(content: &str) -> String {
+/// Compute SHA256 hash of content bytes
+fn compute_sha256_bytes(content: &[u8]) -> String {
     use sha2::{Sha256, Digest};
     let mut hasher = Sha256::new();
-    hasher.update(content.as_bytes());
+    hasher.update(content);
     format!("{:x}", hasher.finalize())
+}
+
+/// Compute SHA256 hash of content (legacy function for string inputs)
+fn compute_sha256(content: &str) -> String {
+    compute_sha256_bytes(content.as_bytes())
 }
 
 #[cfg(test)]

@@ -37,3 +37,6 @@ rand = "0.8"
 # ONNX protobuf parsing
 protobuf = "3.4"
 lru = "0.12"  # LRU cache for metadata
+
+# System metrics collection
+sysinfo = "0.30"

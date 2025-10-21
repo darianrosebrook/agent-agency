@@ -1,3 +1,16 @@
+---
+description: Prevent documentation bloat by enforcing proper organization of temporary files, session reports, and implementation tracking documents. Maintain clean project structure by ensuring documentation follows established patterns.
+globs: [
+  "docs/**/*.md",
+  "docs/**/*.txt",
+  "docs/**/*.json",
+  "docs/**/*.yaml",
+  "docs/**/*.yml",
+  "docs/**/*.xml",
+  "docs/**/*.csv",
+]
+alwaysApply: true
+---
 # Documentation Organization & Summary Bloat Prevention
 
 ## Purpose

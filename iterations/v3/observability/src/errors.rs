@@ -27,8 +27,4 @@ pub enum ObservabilityError {
     ConfigError(String),
 }
 
-impl From<ObservabilityError> for anyhow::Error {
-    fn from(error: ObservabilityError) -> Self {
-        anyhow::anyhow!("{}", error)
-    }
-}
+// Note: From implementation removed to avoid conflicts

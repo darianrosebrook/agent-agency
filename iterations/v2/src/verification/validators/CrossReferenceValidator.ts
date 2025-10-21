@@ -709,7 +709,15 @@ export class CrossReferenceValidator {
     // Factor in snippet length and detail
     if (snippet.length > 100) quality += 0.1;
 
-    // Factor in domain authority (simplified)
+    // TODO: Implement comprehensive domain authority assessment
+    // - Integrate with domain authority services (Moz DA, Ahrefs DR, Majestic TF)
+    // - Implement domain reputation scoring and classification
+    // - Support domain age and historical performance analysis
+    // - Add domain content quality and expertise assessment
+    // - Implement domain relationship and network analysis
+    // - Support custom domain authority scoring algorithms
+    // - Add domain authority trend analysis and monitoring
+    // - Implement domain authority-based content validation
     const domain = title.toLowerCase();
     if (
       domain.includes("wikipedia") ||

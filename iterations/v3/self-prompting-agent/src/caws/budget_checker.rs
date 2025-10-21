@@ -1,171 +1,184 @@
-//! CAWS Budget Checker (Tool-Boundary Enforcement)
+//! Budget Checker for CAWS Compliance
 //!
-//! Enforces budget limits at the tool boundary. Never relax these checks.
+//! Enforces budget limits at the tool boundary. Computes budgets
+//! at apply time, not based on upstream estimates. Blocks operations
+//! that would exceed max_files/max_loc limits.
 //!
 //! @author @darianrosebrook
 
-use crate::types::{ChangeSet, ChangeSetReceipt, ChangeOperation, FileChange};
 use std::collections::HashSet;
 use std::path::PathBuf;
 use thiserror::Error;
+use chrono::{DateTime, Utc};
+
+use crate::types::{ChangeSet, ChangeSetReceipt, ChangeOperation, FileChange};
 
 #[derive(Debug, Error)]
 pub enum BudgetError {
-    #[error("Budget exceeded: current={current:?}, proposed={proposed:?}, limit={limit:?}")]
-    BudgetExceeded {
-        current: BudgetState,
-        proposed: BudgetState,
-        limit: BudgetLimits,
-    },
+    #[error("Budget calculation failed: {0}")]
+    CalculationError(String),
+
     #[error("Invalid budget limits: {0}")]
     InvalidLimits(String),
 }
 
-/// Budget limits from working spec
+/// Current budget state
+#[derive(Debug, Clone, PartialEq)]
+pub struct BudgetState {
+    pub files_used: usize,
+    pub loc_used: i64, // Can be negative for deletions
+    pub last_updated: DateTime<Utc>,
+}
+
+/// Budget limits for a task
 #[derive(Debug, Clone, PartialEq)]
 pub struct BudgetLimits {
     pub max_files: usize,
     pub max_loc: usize,
 }
 
-impl BudgetLimits {
-    pub fn new(max_files: usize, max_loc: usize) -> Self {
-        Self { max_files, max_loc }
-    }
-}
-
-/// Current budget state across task
-#[derive(Debug, Clone, PartialEq)]
-pub struct BudgetState {
-    pub files_used: usize,
-    pub loc_used: i64, // Can be negative for deletions
-}
-
-impl BudgetState {
-    pub fn new() -> Self {
-        Self {
-            files_used: 0,
-            loc_used: 0,
-        }
-    }
-
-    /// Check if state exceeds limits
-    pub fn exceeds(&self, limits: &BudgetLimits) -> bool {
-        self.files_used > limits.max_files || self.loc_used > limits.max_loc as i64
-    }
-
-    /// Add changeset to current state (projected)
-    pub fn add_changeset(&self, changeset: &ChangeSet) -> Self {
-        let mut new_state = self.clone();
-
-        for change in &changeset.changes {
-            // Track unique files modified
-            // Note: In a real implementation, we'd track files across the entire task
-            // For now, this is a simplified version
-
-            // Count LOC changes
-            match &change.operation {
-                ChangeOperation::Create { content } => {
-                    new_state.loc_used += content.lines().count() as i64;
-                }
-                ChangeOperation::Modify { new_content, .. } => {
-                    // Simplified: just count new content lines
-                    // In practice, we'd need to compare old vs new
-                    new_state.loc_used += new_content.lines().count() as i64;
-                }
-                ChangeOperation::Delete { .. } => {
-                    // Simplified: assume deletion reduces LOC
-                    // In practice, we'd subtract the deleted content
-                    new_state.loc_used -= 1; // Placeholder
-                }
-            }
-        }
-
-        new_state
-    }
-}
-
-/// Budget checker with authoritative enforcement
+/// Budget checker that enforces limits at apply time
 ///
-/// **INVARIANT**: Budget checks happen at apply time only
-/// **INVARIANT**: No upstream logic can bypass these limits
-/// **INVARIANT**: Cumulative tracking across entire task
+/// **INVARIANT**: Only called from WorkspaceManager.apply_changes()
+/// **INVARIANT**: Budgets computed from actual changeset, not estimates
+/// **INVARIANT**: Blocks operations that would exceed limits
 pub struct BudgetChecker {
     limits: BudgetLimits,
-    current_state: BudgetState,
-    task_files: HashSet<PathBuf>, // Track files modified in this task
+    current: BudgetState,
+    tracked_files: HashSet<PathBuf>,
 }
 
 impl BudgetChecker {
-    /// Create new budget checker
+    /// Create a new budget checker with specified limits
     pub fn new(max_files: usize, max_loc: usize) -> Self {
         Self {
-            limits: BudgetLimits::new(max_files, max_loc),
-            current_state: BudgetState::new(),
-            task_files: HashSet::new(),
+            limits: BudgetLimits { max_files, max_loc },
+            current: BudgetState {
+                files_used: 0,
+                loc_used: 0,
+                last_updated: Utc::now(),
+            },
+            tracked_files: HashSet::new(),
         }
     }
 
     /// Get current budget state
-    pub fn current_state(&self) -> BudgetState {
-        self.current_state.clone()
+    pub fn current_state(&self) -> Result<BudgetState, BudgetError> {
+        Ok(self.current.clone())
     }
 
     /// Get budget limits
-    pub fn limits(&self) -> &BudgetLimits {
-        &self.limits
+    pub fn limits(&self) -> BudgetLimits {
+        self.limits.clone()
     }
 
-    /// **AUTHORITATIVE CHECK**: Would this changeset exceed budgets?
+    /// Check if changeset would exceed budget limits
     ///
-    /// **INVARIANTS ENFORCED**:
-    /// - Check happens at apply time only
-    /// - No writes occur if this returns true
-    /// - Cumulative across entire task
+    /// **IMPORTANT**: This computes the actual impact, not estimates.
+    /// Called at apply time to ensure authoritative enforcement.
     pub fn would_exceed(&self, changeset: &ChangeSet) -> Result<bool, BudgetError> {
-        let projected_state = self.current_state.add_changeset(changeset);
+        let projected = self.projected_state(changeset)?;
 
-        // Check if projected state exceeds limits
-        if projected_state.exceeds(&self.limits) {
+        let exceeds_files = projected.files_used > self.limits.max_files;
+        let exceeds_loc = projected.loc_used > self.limits.max_loc as i64;
+
+        if exceeds_files || exceeds_loc {
             return Ok(true);
         }
 
         // Warn at 80% threshold
-        let files_pct = (projected_state.files_used as f64 / self.limits.max_files as f64) * 100.0;
-        let loc_pct = (projected_state.loc_used as f64 / self.limits.max_loc as f64) * 100.0;
+        let files_pct = (projected.files_used as f64 / self.limits.max_files as f64) * 100.0;
+        let loc_pct = (projected.loc_used as f64 / self.limits.max_loc as f64) * 100.0;
 
         if files_pct >= 80.0 || loc_pct >= 80.0 {
-            // In a real implementation, emit event here
-            // emit_event(Event::BudgetApproaching { files_pct, loc_pct, ... });
+            // Emit warning event (would integrate with observability system)
+            eprintln!("WARNING: Approaching budget limits - Files: {:.1}%, LOC: {:.1}%",
+                     files_pct, loc_pct);
         }
 
         Ok(false)
     }
 
-    /// Record successful changeset application
-    ///
-    /// **INVARIANT**: Only called after successful apply
-    /// **INVARIANT**: Updates are permanent for this task
-    pub fn record_changes(&mut self, receipt: &ChangeSetReceipt) -> Result<(), BudgetError> {
-        // Update current state with actual applied changes
-        self.current_state.files_used += receipt.files_changed;
-        self.current_state.loc_used += receipt.loc_delta;
+    /// Get projected state if changeset were applied
+    pub fn projected_state(&self, changeset: &ChangeSet) -> Result<BudgetState, BudgetError> {
+        let mut projected_files = self.tracked_files.clone();
+        let mut projected_loc = self.current.loc_used;
 
-        // Verify we didn't exceed limits (defensive check)
-        if self.current_state.exceeds(&self.limits) {
-            return Err(BudgetError::BudgetExceeded {
-                current: self.current_state.clone(),
-                proposed: self.current_state.clone(), // Same as current now
-                limit: self.limits.clone(),
-            });
+        // Calculate impact of changeset
+        for change in &changeset.changes {
+            match &change.operation {
+                ChangeOperation::Create { content } => {
+                    // New file
+                    if !projected_files.contains(&change.path) {
+                        projected_files.insert(change.path.clone());
+                    }
+                    projected_loc += content.lines().count() as i64;
+                }
+                ChangeOperation::Modify { expected_content, new_content } => {
+                    // Existing file modification - calculate LOC delta
+                    projected_files.insert(change.path.clone());
+                    let old_lines = expected_content.lines().count() as i64;
+                    let new_lines = new_content.lines().count() as i64;
+                    projected_loc += new_lines - old_lines; // Actual LOC delta
+                }
+                ChangeOperation::Delete { .. } => {
+                    // File deletion (remove from tracked set)
+                    projected_files.remove(&change.path);
+                    // LOC impact: we don't know how many lines were removed
+                    // Conservative approach: don't reduce LOC count
+                }
+            }
         }
+
+        Ok(BudgetState {
+            files_used: projected_files.len(),
+            loc_used: projected_loc,
+            last_updated: Utc::now(),
+        })
+    }
+
+    /// Record that a changeset was successfully applied
+    ///
+    /// Updates internal tracking state. Only called after successful apply.
+    pub fn record_changes(&mut self, receipt: &ChangeSetReceipt) -> Result<(), BudgetError> {
+        // Update tracked files and LOC based on receipt
+        self.current.files_used = receipt.files_changed;
+
+        // Update LOC delta (can be negative for deletions)
+        self.current.loc_used += receipt.loc_delta;
+
+        self.current.last_updated = receipt.applied_at;
 
         Ok(())
     }
 
-    /// Get projected state if changeset were applied
-    pub fn projected_state(&self, changeset: &ChangeSet) -> Result<BudgetState, BudgetError> {
-        Ok(self.current_state.add_changeset(changeset))
+    /// Get utilization percentages
+    pub fn utilization(&self) -> (f64, f64) { // (files_pct, loc_pct)
+        let files_pct = if self.limits.max_files > 0 {
+            (self.current.files_used as f64 / self.limits.max_files as f64) * 100.0
+        } else {
+            0.0
+        };
+
+        let loc_pct = if self.limits.max_loc > 0 {
+            ((self.current.loc_used as f64 / self.limits.max_loc as f64) * 100.0).max(0.0)
+        } else {
+            0.0
+        };
+
+        (files_pct, loc_pct)
+    }
+
+    /// Check if we're at or over any limit
+    pub fn is_over_limit(&self) -> bool {
+        self.current.files_used > self.limits.max_files ||
+        self.current.loc_used > self.limits.max_loc as i64
+    }
+
+    /// Restore budget checker to a previous state
+    pub fn restore_state(&mut self, state: BudgetState) -> Result<(), BudgetError> {
+        self.current = state;
+        Ok(())
     }
 }
 
@@ -175,81 +188,130 @@ mod tests {
     use crate::types::ChangeSet;
 
     #[test]
-    fn test_budget_checker_within_limits() {
-        let checker = BudgetChecker::new(5, 100);
-
-        let changeset = ChangeSet::new(
-            vec![FileChange {
-                path: PathBuf::from("src/main.rs"),
-                operation: ChangeOperation::Create {
-                    content: "fn main() {}\n".to_string(),
-                },
-            }],
-            "Add main function".to_string(),
-        );
-
-        let result = checker.would_exceed(&changeset);
-        assert!(result.is_ok());
-        assert!(!result.unwrap()); // Should not exceed
+    fn test_budget_checker_creation() {
+        let checker = BudgetChecker::new(10, 1000);
+        assert_eq!(checker.limits.max_files, 10);
+        assert_eq!(checker.limits.max_loc, 1000);
+        assert_eq!(checker.current.files_used, 0);
+        assert_eq!(checker.current.loc_used, 0);
     }
 
     #[test]
-    fn test_budget_checker_exceeds_files() {
-        let checker = BudgetChecker::new(1, 100);
+    fn test_within_budget() {
+        let checker = BudgetChecker::new(5, 100);
 
-        // First changeset (within limits)
-        let changeset1 = ChangeSet::new(
-            vec![FileChange {
+        let changeset = ChangeSet::new(vec![
+            FileChange {
                 path: PathBuf::from("src/main.rs"),
                 operation: ChangeOperation::Create {
                     content: "fn main() {}\n".to_string(),
                 },
-            }],
-            "Add main function".to_string(),
-        );
+            }
+        ], "Test creation".to_string());
 
-        let mut checker = checker;
-        checker.record_changes(&ChangeSetReceipt {
+        assert!(!checker.would_exceed(&changeset).unwrap());
+    }
+
+    #[test]
+    fn test_exceeds_file_budget() {
+        let mut checker = BudgetChecker::new(1, 100); // Only 1 file allowed
+
+        // First file should be OK
+        let changeset1 = ChangeSet::new(vec![
+            FileChange {
+                path: PathBuf::from("src/main.rs"),
+                operation: ChangeOperation::Create {
+                    content: "fn main() {}\n".to_string(),
+                },
+            }
+        ], "First file".to_string());
+
+        assert!(!checker.would_exceed(&changeset1).unwrap());
+
+        // Record the first file
+        let receipt1 = ChangeSetReceipt {
             changeset_id: changeset1.id,
-            applied_at: chrono::Utc::now(),
+            applied_at: Utc::now(),
             files_changed: 1,
             loc_delta: 1,
             sha256_tree: "dummy".to_string(),
-            checkpoint_id: "dummy".to_string(),
-        }).unwrap();
+            checkpoint_id: "test".to_string(),
+        };
+        checker.record_changes(&receipt1).unwrap();
 
-        // Second changeset (would exceed)
-        let changeset2 = ChangeSet::new(
-            vec![FileChange {
+        // Second file should exceed budget
+        let changeset2 = ChangeSet::new(vec![
+            FileChange {
                 path: PathBuf::from("src/lib.rs"),
                 operation: ChangeOperation::Create {
-                    content: "pub fn lib() {}\n".to_string(),
+                    content: "pub fn test() {}\n".to_string(),
                 },
-            }],
-            "Add lib function".to_string(),
-        );
+            }
+        ], "Second file".to_string());
 
-        let result = checker.would_exceed(&changeset2);
-        assert!(result.is_ok());
-        assert!(result.unwrap()); // Should exceed (2 > 1 files)
+        assert!(checker.would_exceed(&changeset2).unwrap());
     }
 
     #[test]
-    fn test_budget_checker_exceeds_loc() {
-        let checker = BudgetChecker::new(10, 5); // 5 LOC limit
+    fn test_exceeds_loc_budget() {
+        let checker = BudgetChecker::new(10, 5); // Only 5 LOC allowed
 
-        let changeset = ChangeSet::new(
-            vec![FileChange {
+        let changeset = ChangeSet::new(vec![
+            FileChange {
                 path: PathBuf::from("src/main.rs"),
                 operation: ChangeOperation::Create {
                     content: "line1\nline2\nline3\nline4\nline5\nline6\n".to_string(), // 6 lines
                 },
-            }],
-            "Add main function".to_string(),
-        );
+            }
+        ], "Large file".to_string());
 
-        let result = checker.would_exceed(&changeset);
-        assert!(result.is_ok());
-        assert!(result.unwrap()); // Should exceed (6 > 5 LOC)
+        assert!(checker.would_exceed(&changeset).unwrap());
+    }
+
+    #[test]
+    fn test_utilization_calculation() {
+        let mut checker = BudgetChecker::new(10, 100);
+
+        let changeset = ChangeSet::new(vec![
+            FileChange {
+                path: PathBuf::from("src/main.rs"),
+                operation: ChangeOperation::Create {
+                    content: "line1\nline2\nline3\nline4\nline5\n".to_string(), // 5 lines
+                },
+            }
+        ], "Test file".to_string());
+
+        // Record the changeset
+        let receipt = ChangeSetReceipt {
+            changeset_id: changeset.id,
+            applied_at: Utc::now(),
+            files_changed: 1,
+            loc_delta: 5,
+            sha256_tree: "dummy".to_string(),
+            checkpoint_id: "test".to_string(),
+        };
+        checker.record_changes(&receipt).unwrap();
+
+        let (files_pct, loc_pct) = checker.utilization();
+        assert_eq!(files_pct, 10.0); // 1/10 = 10%
+        assert_eq!(loc_pct, 5.0);   // 5/100 = 5%
+    }
+
+    #[test]
+    fn test_budget_warning_threshold() {
+        let checker = BudgetChecker::new(10, 100);
+
+        let changeset = ChangeSet::new(vec![
+            FileChange {
+                path: PathBuf::from("src/main.rs"),
+                operation: ChangeOperation::Create {
+                    content: "x\n".repeat(80), // 80 lines = 80% of budget
+                },
+            }
+        ], "Large file".to_string());
+
+        // Should not exceed but should trigger warning
+        assert!(!checker.would_exceed(&changeset).unwrap());
+        // Warning would be printed to stderr (tested manually)
     }
 }

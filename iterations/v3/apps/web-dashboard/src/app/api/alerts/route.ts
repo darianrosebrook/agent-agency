@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 // Alerts API proxy - forwards requests to V3 backend alert endpoints
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     const v3BackendHost = process.env.V3_BACKEND_HOST ?? "http://localhost:8080";
 

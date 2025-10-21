@@ -10,14 +10,14 @@ use tokio::sync::RwLock;
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
 
-use orchestration::orchestrate::Orchestrator;
-use orchestration::tracking::{ProgressTracker, EventBus};
-use orchestration::quality::{QualityGateOrchestrator, QualityGateOrchestratorConfig};
-use orchestration::refinement::RefinementCoordinator;
-use orchestration::artifacts::{ArtifactManager, ArtifactManagerConfig};
-use council::plan_review::PlanReviewService;
-use workers::autonomous_executor::{AutonomousExecutor, AutonomousExecutorConfig};
-use interfaces::{RestApi, CliInterface, McpServer, WebSocketApi};
+// use orchestration::orchestrate::Orchestrator; // Excluded due to council dependency (torch-sys)
+// use orchestration::tracking::{ProgressTracker, EventBus}; // Excluded due to council dependency (torch-sys)
+// use orchestration::quality::{QualityGateOrchestrator, QualityGateOrchestratorConfig}; // Excluded due to council dependency (torch-sys)
+// use orchestration::refinement::RefinementCoordinator; // Excluded due to council dependency (torch-sys)
+// use orchestration::artifacts::{ArtifactManager, ArtifactManagerConfig}; // Excluded due to council dependency (torch-sys)
+// use agent_agency_council::plan_review::PlanReviewService; // Excluded due to torch-sys
+// use agent_agency_workers::autonomous_executor::{AutonomousExecutor, AutonomousExecutorConfig}; // Excluded due to torch-sys
+use agent_agency_interfaces::{RestApi, CliInterface, McpServer, WebSocketApi};
 
 /// Test environment configuration
 #[derive(Debug, Clone)]
@@ -67,13 +67,13 @@ pub struct E2eTestHarness {
     state: Arc<RwLock<TestEnvironmentState>>,
 
     // Core components
-    orchestrator: Option<Arc<Orchestrator>>,
-    progress_tracker: Option<Arc<ProgressTracker>>,
-    event_bus: Option<Arc<EventBus>>,
-    quality_orchestrator: Option<Arc<QualityGateOrchestrator>>,
-    refinement_coordinator: Option<Arc<RefinementCoordinator>>,
-    artifact_manager: Option<Arc<ArtifactManager>>,
-    autonomous_executor: Option<Arc<AutonomousExecutor>>,
+    // orchestrator: Option<Arc<Orchestrator>>, // Excluded due to council dependency (torch-sys)
+    // progress_tracker: Option<Arc<ProgressTracker>>, // Excluded due to council dependency (torch-sys)
+    // event_bus: Option<Arc<EventBus>>, // Excluded due to council dependency (torch-sys)
+    // quality_orchestrator: Option<Arc<QualityGateOrchestrator>>, // Excluded due to council dependency (torch-sys)
+    // refinement_coordinator: Option<Arc<RefinementCoordinator>>, // Excluded due to council dependency (torch-sys)
+    // artifact_manager: Option<Arc<ArtifactManager>>, // Excluded due to council dependency (torch-sys)
+    // autonomous_executor: Option<Arc<AutonomousExecutor>>, // Excluded due to torch-sys
 
     // Interface components
     rest_api: Option<Arc<RestApi>>,
@@ -92,13 +92,13 @@ impl E2eTestHarness {
                 start_time: Utc::now(),
                 healthy: true,
             })),
-            orchestrator: None,
-            progress_tracker: None,
-            event_bus: None,
-            quality_orchestrator: None,
-            refinement_coordinator: None,
-            artifact_manager: None,
-            autonomous_executor: None,
+            // orchestrator: None, // Excluded due to council dependency (torch-sys)
+            // progress_tracker: None, // Excluded due to council dependency (torch-sys)
+            // event_bus: None, // Excluded due to council dependency (torch-sys)
+            // quality_orchestrator: None, // Excluded due to council dependency (torch-sys)
+            // refinement_coordinator: None, // Excluded due to council dependency (torch-sys)
+            // artifact_manager: None, // Excluded due to council dependency (torch-sys)
+            // autonomous_executor: None, // Excluded due to torch-sys
             rest_api: None,
             cli_interface: None,
             mcp_server: None,
@@ -130,14 +130,14 @@ impl E2eTestHarness {
         // In practice, these would be real component instances
 
         // Initialize progress tracker and event bus
-        let event_bus = Arc::new(EventBus::new(crate::orchestration::tracking::EventBusConfig {
+        let event_bus = Arc::new(EventBus::new(orchestration::tracking::EventBusConfig {
             buffer_size: 1000,
             max_subscribers_per_task: 10,
             retention_seconds: 3600,
         }));
 
         let progress_tracker = Arc::new(ProgressTracker::new(
-            crate::orchestration::tracking::ProgressTrackerConfig {
+            orchestration::tracking::ProgressTrackerConfig {
                 enabled: true,
                 max_events_per_task: 100,
                 event_retention_seconds: 3600,
@@ -169,12 +169,12 @@ impl E2eTestHarness {
             enable_integrity_checks: true,
         };
 
-        let storage = Arc::new(crate::orchestration::artifacts::FileSystemStorage::new(
+        let storage = Arc::new(orchestration::artifacts::FileSystemStorage::new(
             std::path::PathBuf::from(&artifact_config.base_path),
             artifact_config.enable_compression,
         ));
 
-        let versioning = Arc::new(crate::orchestration::artifacts::GitVersionControl::new(
+        let versioning = Arc::new(orchestration::artifacts::GitVersionControl::new(
             self.config.working_directory.clone(),
             "artifacts".to_string(),
         ));
@@ -198,7 +198,7 @@ impl E2eTestHarness {
     async fn initialize_interfaces(&mut self) -> Result<(), TestHarnessError> {
         // Initialize REST API
         if let (Some(orchestrator), Some(progress_tracker)) = (&self.orchestrator, &self.progress_tracker) {
-            let api_config = crate::interfaces::ApiConfig {
+            let api_config = interfaces::ApiConfig {
                 host: "localhost".to_string(),
                 port: 0, // Use random port for tests
                 enable_cors: false,
@@ -218,11 +218,11 @@ impl E2eTestHarness {
         }
 
         // Initialize CLI interface
-        let cli_config = crate::interfaces::CliConfig {
+        let cli_config = interfaces::CliConfig {
             host: "localhost".to_string(),
             port: 3000,
             api_key: None,
-            format: crate::interfaces::cli::OutputFormat::Json,
+            format: interfaces::cli::OutputFormat::Json,
             verbose: false,
             no_interactive: true,
         };
@@ -267,7 +267,7 @@ impl E2eTestHarness {
 
     /// Simulate task execution for testing
     async fn simulate_task_execution(&self, task_id: Uuid, duration: Duration) -> Result<(), TestHarnessError> {
-        use crate::orchestration::planning::types::ExecutionEvent;
+        use orchestration::planning::types::ExecutionEvent;
 
         let event_bus = self.event_bus.as_ref().ok_or_else(|| TestHarnessError::ComponentNotInitialized("event_bus"))?;
 

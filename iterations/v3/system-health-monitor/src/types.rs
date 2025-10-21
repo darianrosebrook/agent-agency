@@ -21,6 +21,51 @@ pub struct SystemHealthMonitorConfig {
     pub thresholds: HealthThresholds,
     /// Embedding service configuration
     pub embedding_service: EmbeddingServiceConfig,
+    /// Redis configuration for metrics storage
+    pub redis: Option<RedisConfig>,
+    /// Filesystem monitoring configuration
+    pub filesystem: FilesystemConfig,
+}
+
+/// Filesystem monitoring configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FilesystemConfig {
+    /// Enable filesystem monitoring
+    pub enabled: bool,
+    /// Critical disk usage threshold (percentage)
+    pub critical_threshold_percent: f64,
+    /// Warning disk usage threshold (percentage)
+    pub warning_threshold_percent: f64,
+    /// Disk I/O monitoring enabled
+    pub disk_io_enabled: bool,
+}
+
+impl Default for FilesystemConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true, // Filesystem monitoring enabled by default
+            critical_threshold_percent: 90.0,
+            warning_threshold_percent: 75.0,
+            disk_io_enabled: true,
+        }
+    }
+}
+
+impl Default for SystemHealthMonitorConfig {
+    fn default() -> Self {
+        Self {
+            collection_interval_ms: 30000, // 30 seconds
+            health_check_interval_ms: 60000, // 1 minute
+            retention_period_ms: 3600000, // 1 hour
+            enable_circuit_breaker: true,
+            circuit_breaker_failure_threshold: 5,
+            circuit_breaker_recovery_timeout_ms: 60000, // 1 minute
+            thresholds: HealthThresholds::default(),
+            embedding_service: EmbeddingServiceConfig::default(),
+            redis: None, // Redis disabled by default
+            filesystem: FilesystemConfig::default(),
+        }
+    }
 }
 
 /// Embedding service configuration
@@ -36,6 +81,39 @@ pub struct EmbeddingServiceConfig {
     pub retry_backoff_multiplier: f64,
     /// Enable embedding service monitoring
     pub enabled: bool,
+}
+
+/// Redis configuration for metrics storage and caching
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RedisConfig {
+    /// Redis server URL (e.g., "redis://127.0.0.1:6379")
+    pub url: String,
+    /// Connection pool size
+    pub pool_size: usize,
+    /// Connection timeout in milliseconds
+    pub connection_timeout_ms: u64,
+    /// Key prefix for metrics storage
+    pub key_prefix: String,
+    /// Enable Redis metrics storage
+    pub enabled: bool,
+    /// Metrics TTL in seconds (0 = no expiration)
+    pub metrics_ttl_seconds: u64,
+    /// Cache TTL in seconds for frequently accessed data
+    pub cache_ttl_seconds: u64,
+}
+
+impl Default for RedisConfig {
+    fn default() -> Self {
+        Self {
+            url: "redis://127.0.0.1:6379".to_string(),
+            pool_size: 10,
+            connection_timeout_ms: 5000,
+            key_prefix: "agent_agency:metrics".to_string(),
+            enabled: false,
+            metrics_ttl_seconds: 3600, // 1 hour
+            cache_ttl_seconds: 300,     // 5 minutes
+        }
+    }
 }
 
 impl Default for EmbeddingServiceConfig {
@@ -73,6 +151,23 @@ pub struct HealthThresholds {
     pub agent_error_rate_threshold: f64,
     /// Agent response time threshold (ms)
     pub agent_response_time_threshold: u64,
+}
+
+impl Default for HealthThresholds {
+    fn default() -> Self {
+        Self {
+            cpu_warning_threshold: 70.0,
+            cpu_critical_threshold: 90.0,
+            memory_warning_threshold: 80.0,
+            memory_critical_threshold: 95.0,
+            disk_warning_threshold: 80.0,
+            disk_critical_threshold: 95.0,
+            system_error_rate_threshold: 0.05,
+            queue_depth_threshold: 100,
+            agent_error_rate_threshold: 0.1,
+            agent_response_time_threshold: 5000,
+        }
+    }
 }
 
 /// System metrics
@@ -204,20 +299,24 @@ pub struct FilesystemUsage {
 /// Disk usage trends and predictions
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DiskUsageTrends {
-    /// Historical usage data points
-    pub historical_usage: Vec<DiskUsageDataPoint>,
-    /// Predicted usage in 24 hours
-    pub predicted_usage_24h: f64,
-    /// Predicted usage in 7 days
-    pub predicted_usage_7d: f64,
-    /// Predicted usage in 30 days
-    pub predicted_usage_30d: f64,
-    /// Days until 90% capacity
-    pub days_until_90_percent: Option<u32>,
-    /// Days until 95% capacity
-    pub days_until_95_percent: Option<u32>,
-    /// Growth rate (bytes per day)
+    /// Current usage percentage
+    pub current_usage_percentage: f64,
+    /// Growth rate in bytes per day
     pub growth_rate_bytes_per_day: f64,
+    /// Predicted usage percentage in 7 days
+    pub predicted_usage_7_days: f64,
+    /// Predicted usage percentage in 30 days
+    pub predicted_usage_30_days: f64,
+    /// Days until 90% usage
+    pub days_until_90_percent: Option<u32>,
+    /// Days until 95% usage
+    pub days_until_95_percent: Option<u32>,
+    /// Days until 100% usage
+    pub days_until_100_percent: Option<u32>,
+    /// Trend analysis confidence (0.0 to 1.0)
+    pub confidence: f64,
+    /// Historical data points used for analysis
+    pub historical_data_points: u32,
 }
 
 /// Historical disk usage data point
@@ -353,6 +452,7 @@ pub struct DatabaseHealthMetrics {
     /// Database response time (milliseconds)
     pub response_time_ms: u64,
     /// Database diagnostics
+    #[cfg(feature = "agent-agency-database")]
     pub diagnostics: Option<agent_agency_database::health::DatabaseDiagnostics>,
     /// Last database health check timestamp
     pub last_check: chrono::DateTime<chrono::Utc>,
@@ -371,6 +471,8 @@ pub struct HealthAlert {
     pub message: String,
     /// Target (system or agent ID)
     pub target: String,
+    /// Component that generated the alert
+    pub component: String,
     /// Timestamp
     pub timestamp: DateTime<Utc>,
     /// Acknowledged flag
@@ -386,6 +488,10 @@ pub struct HealthAlert {
 /// Alert severity levels
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum AlertSeverity {
+    /// Informational
+    Info,
+    /// Warning
+    Warning,
     /// Low priority
     Low,
     /// Medium priority
@@ -407,8 +513,12 @@ pub enum AlertType {
     CircuitBreaker,
     /// Performance degradation alert
     PerformanceDegradation,
+    /// Performance alert
+    Performance,
     /// Error rate alert
     ErrorRate,
+    /// System health alert
+    SystemHealth,
     /// Custom alert
     Custom,
 }
@@ -588,6 +698,19 @@ pub struct HealthMonitorStats {
     pub last_collection_timestamp: DateTime<Utc>,
 }
 
+impl Default for HealthMonitorStats {
+    fn default() -> Self {
+        Self {
+            uptime_seconds: 0,
+            total_metrics_collected: 0,
+            total_alerts_generated: 0,
+            active_alerts_count: 0,
+            circuit_breaker_trips: 0,
+            last_collection_timestamp: chrono::Utc::now(),
+        }
+    }
+}
+
 /// Component health status
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum ComponentHealthStatus {
@@ -617,3 +740,4 @@ pub struct ComponentHealthReport {
     /// Additional details
     pub details: HashMap<String, String>,
 }
+

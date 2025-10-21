@@ -11,6 +11,7 @@
 //! 4. **Load Balancing**: Intelligent request routing based on model performance
 //! 5. **A/B Testing**: Parallel model evaluation with traffic splitting
 
+pub mod hotswap_manager;
 pub mod load_balancer;
 pub mod model_registry;
 pub mod performance_router;
@@ -21,7 +22,7 @@ pub mod version_manager;
 pub use load_balancer::{LoadBalancer, BalancingStrategy};
 pub use model_registry::{ModelRegistry, ModelEntry, ModelStatus};
 pub use performance_router::{PerformanceRouter, RoutingDecision};
-pub use rollback_manager::{RollbackManager, RollbackStrategy};
+pub use rollback_manager::{RollbackManager, RollbackStrategy, RollbackConfig};
 pub use traffic_splitter::{TrafficSplitter, SplitConfig};
 pub use version_manager::{VersionManager, VersionInfo};
 
@@ -216,12 +217,20 @@ impl ModelHotSwapOrchestrator {
     pub async fn new(config: HotSwapConfig) -> Result<Self> {
         info!("Initializing model hot-swap orchestrator");
 
-        let model_registry = Arc::new(ModelRegistry::new().await?);
-        let performance_router = Arc::new(PerformanceRouter::new(config.enable_performance_routing).await?);
-        let load_balancer = Arc::new(LoadBalancer::new(BalancingStrategy::PerformanceWeighted).await?);
-        let traffic_splitter = Arc::new(TrafficSplitter::new().await?);
-        let rollback_manager = Arc::new(RollbackManager::new().await?);
-        let version_manager = Arc::new(VersionManager::new().await?);
+        let model_registry = Arc::new(ModelRegistry::new());
+        let performance_router = Arc::new(PerformanceRouter::new(config.enable_performance_routing));
+        let load_balancer = Arc::new(LoadBalancer::new(BalancingStrategy::PerformanceWeighted));
+        let traffic_splitter = Arc::new(TrafficSplitter::new(SplitConfig {
+            model_weights: HashMap::new(),
+            sticky_sessions: false,
+            session_timeout_secs: 3600,
+        }));
+        let rollback_manager = Arc::new(RollbackManager::new(RollbackConfig {
+            strategy: RollbackStrategy::Immediate,
+            traffic_shift_percentage: 0.1,
+            performance_threshold: 0.8,
+        }));
+        let version_manager = Arc::new(VersionManager::new());
 
         let active_deployments = Arc::new(RwLock::new(HashMap::new()));
 
@@ -823,3 +832,6 @@ impl Default for HotSwapConfig {
 /// @darianrosebrook
 /// Model-agnostic hot-swapping system for seamless runtime model replacement
 /// with performance tracking, routing optimization, and zero-downtime updates
+pub use crate::hotswap_manager::HotswapManager;
+
+

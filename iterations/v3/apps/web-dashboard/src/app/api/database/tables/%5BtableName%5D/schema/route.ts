@@ -33,7 +33,7 @@ export async function GET(
 
     const schemaUrl = `${v3BackendHost}/api/v1/database/tables/${encodeURIComponent(
       tableName
-    )}/schema?${params}`;
+    )}/schema?${queryParams}`;
 
     console.log(
       `Proxying table schema request for ${tableName} to: ${schemaUrl}`

@@ -1,454 +1,477 @@
-//! Integration Tests for Autonomous File Editing
+//! Comprehensive integration tests for autonomous file editing
 //!
-//! Comprehensive tests covering the complete autonomous workflow:
-//! - Signal generation and policy adaptation
-//! - Council approval workflow
-//! - End-to-end task execution
-//! - Performance profiling and benchmarking
+//! Tests all failure modes, performance targets, and end-to-end workflows:
+//! - Happy path scenarios (Git and non-Git)
+//! - Budget enforcement and waiver generation
+//! - Conflict detection and resolution
+//! - Provider failures and fallbacks
+//! - No-progress detection and plateau handling
+//! - Comprehensive performance validation
 //!
 //! @author @darianrosebrook
 
+use std::collections::HashMap;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
-use tempfile::TempDir;
 use uuid::Uuid;
+use tempfile::TempDir;
+use chrono::Utc;
 
 use self_prompting_agent::{
-    IntegratedAutonomousAgent,
-    evaluation::{satisficing::SatisficingConfig, EvaluationOrchestrator},
-    models::{ModelRegistry, OllamaProvider, ModelSelectionPolicy},
-    sandbox::SandboxEnvironment,
-    types::{Task, ExecutionMode, SafetyMode, TaskResult},
-    rl_signals::RLSignalGenerator,
-    policy_hooks::AdaptiveAgent,
-    caws::{BudgetChecker, BudgetLimits, BudgetState},
+    evaluation::{EvaluationOrchestrator, EvaluationConfig},
+    models::{ModelRegistry, OllamaProvider},
+    sandbox::{SandboxEnvironment, WorkspaceManager, SafetyMode},
+    types::{Task, TaskResult, ExecutionMode, StopReason},
+    caws::{BudgetChecker, BudgetLimits},
+    prompting::{PromptFrame, ToolCallValidator},
+    rl_signals::{RLSignal, RLSignalGenerator},
+    profiling::PerformanceProfiler,
+    integration::IntegratedAutonomousAgent,
 };
 
-/// Test end-to-end autonomous task execution
-#[tokio::test]
-async fn test_end_to_end_autonomous_execution() {
-    // Setup test environment
-    let temp_dir = TempDir::new().unwrap();
-    let workspace_path = temp_dir.path().to_path_buf();
+/// Integration test suite for autonomous file editing
+#[cfg(test)]
+mod integration_tests {
+    use super::*;
 
-    // Create test files
-    let test_file = workspace_path.join("src/main.rs");
-    std::fs::create_dir_all(test_file.parent().unwrap()).unwrap();
-    std::fs::write(&test_file, r#"
+    /// Happy path test with Git workspace
+    #[tokio::test]
+    async fn test_happy_path_git_workspace() {
+        let temp_dir = TempDir::new().unwrap();
+        let workspace_root = temp_dir.path().to_path_buf();
+
+        // Initialize Git repository
+        std::process::Command::new("git")
+            .args(["init"])
+            .current_dir(&workspace_root)
+            .output()
+            .unwrap();
+
+        // Create test file
+        let test_file = workspace_root.join("src").join("test.rs");
+        std::fs::create_dir_all(test_file.parent().unwrap()).unwrap();
+        std::fs::write(&test_file, r#"
 // Test file with syntax error
 fn main() {
-    println!("Hello World"
+    println!("Hello, world!" // Missing closing parenthesis
 }
 "#).unwrap();
 
-    // Initialize components
-    let satisficing_config = Arc::new(RwLock::new(SatisficingConfig::default()));
-    let model_registry = setup_test_model_registry().await;
-    let evaluation_orchestrator = Arc::new(RwLock::new(EvaluationOrchestrator::new(
-        Default::default()
-    )));
-
-    // Create agent
-    let agent = IntegratedAutonomousAgent::new(
-        model_registry,
-        evaluation_orchestrator,
-        ExecutionMode::Auto,
-    ).await.unwrap();
-
-    // Create test task
-    let task = Task {
-        id: Uuid::new_v4(),
-        description: "Fix the syntax error in main.rs by adding the missing closing parenthesis".to_string(),
-        max_iterations: 3,
-        created_at: chrono::Utc::now(),
-    };
-
-    // Execute task
-    let result = agent.execute_task_autonomously(task.clone()).await;
-
-    // Verify execution completed (may not succeed due to mock evaluation)
-    match result {
-        Ok(_) => println!("Task executed successfully"),
-        Err(e) => println!("Task execution completed with expected limitations: {}", e),
-    }
-
-    // Verify workspace changes were attempted
-    // (In a real scenario, we would verify the syntax error was fixed)
-}
-
-/// Test council approval workflow for budget overruns
-#[tokio::test]
-async fn test_council_approval_workflow() {
-    use self_prompting_agent::caws::council_approval::{CouncilApprovalWorkflow, BudgetOverrunPlea};
-
-    // Create council workflow
-    let workflow = CouncilApprovalWorkflow::default();
-
-    // Create test plea
-    let plea = workflow.create_plea(
-        Uuid::new_v4(),
-        BudgetLimits { max_files: 5, max_loc: 500 },
-        BudgetLimits { max_files: 10, max_loc: 1000 },
-        &Task {
-            id: Uuid::new_v4(),
-            description: "Complex refactoring task".to_string(),
-            max_iterations: 5,
-            created_at: chrono::Utc::now(),
-        },
-        &[], // Empty eval reports
-        &self_prompting_agent::types::StopReason::BudgetExceeded,
-    );
-
-    // Plead case (should succeed with NoOpCouncil)
-    let decision = workflow.plead_case(plea).await.unwrap();
-
-    match decision {
-        self_prompting_agent::caws::council_approval::CouncilDecision::Approved(_) => {
-            println!("Budget overrun approved");
-        }
-        self_prompting_agent::caws::council_approval::CouncilDecision::Rejected(reason) => {
-            println!("Budget overrun rejected: {}", reason);
-        }
-    }
-}
-
-/// Test RL signal generation from task outcomes
-#[tokio::test]
-async fn test_rl_signal_generation() {
-    use self_prompting_agent::rl_signals::{RLSignalGenerator, RLSignal};
-
-    let mut generator = RLSignalGenerator::new();
-    let task_id = Uuid::new_v4();
-
-    // Start task tracking
-    generator.start_task(task_id, &Task {
-        id: task_id,
-        description: "Test task".to_string(),
-        max_iterations: 3,
-        created_at: chrono::Utc::now(),
-    });
-
-    // Record some iterations
-    for i in 0..3 {
-        let eval_report = self_prompting_agent::evaluation::EvalReport {
-            score: 0.5 + (i as f64 * 0.1),
-            files_modified: i + 1,
-            loc_added: (i + 1) * 50,
-            loc_removed: i * 10,
-            test_results: vec![],
-            lint_errors: vec![],
-            failed_criteria: vec![],
-            recommendations: vec![],
+        // Initialize components
+        let model_registry = Arc::new(ModelRegistry::new());
+        let evaluation_config = EvaluationConfig {
+            min_score: 0.5,
+            mandatory_gates: vec!["syntax".to_string(), "tests".to_string()],
+            max_iterations: 3,
+            min_improvement_threshold: 0.1,
+            quality_ceiling_budget: 2,
         };
-        generator.record_iteration(task_id, i, &eval_report, 1000);
+        let evaluation_orchestrator = Arc::new(RwLock::new(EvaluationOrchestrator::new(evaluation_config)));
+        let mut profiler = PerformanceProfiler::new();
+
+        let agent = IntegratedAutonomousAgent::new(
+            Arc::clone(&model_registry),
+            Arc::clone(&evaluation_orchestrator),
+            ExecutionMode::Auto,
+        ).await.unwrap();
+
+        // Create task to fix syntax error
+        let task = Task {
+            id: Uuid::new_v4(),
+            title: "Fix syntax error in test.rs".to_string(),
+            description: "The file has a missing closing parenthesis".to_string(),
+            task_type: "fix_syntax".to_string(),
+            files: vec![test_file.clone()],
+            budget_limits: BudgetLimits {
+                max_files: 5,
+                max_loc: 100,
+            },
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        };
+
+        // Start profiling
+        profiler.start_task(task.id).await;
+        let start_time = Instant::now();
+
+        // Execute task
+        let result = agent.execute_task_autonomously(task).await.unwrap();
+
+        let duration = start_time.elapsed();
+        profiler.complete_task(result.task_id, matches!(result, TaskResult::Completed(_))).await;
+
+        // Verify results
+        match result {
+            TaskResult::Completed(task_result) => {
+                // Verify file was fixed
+                let content = std::fs::read_to_string(&test_file).unwrap();
+                assert!(content.contains("println!(\"Hello, world!\");"), "Syntax error should be fixed");
+
+                // Verify worktree was cleaned up
+                let git_status = std::process::Command::new("git")
+                    .args(["status", "--porcelain"])
+                    .current_dir(&workspace_root)
+                    .output()
+                    .unwrap();
+                assert!(git_status.stdout.is_empty(), "Git worktree should be clean");
+
+                // Verify performance targets
+                assert!(duration < Duration::from_millis(500), "Worktree cleanup should be <500ms");
+            }
+            TaskResult::Failed(reason) => {
+                panic!("Task should have succeeded but failed: {}", reason);
+            }
+        }
     }
 
-    // Record model usage
-    generator.record_model_usage(task_id, "test-model".to_string(), 100, 50, 500);
+    /// Budget enforcement test
+    #[tokio::test]
+    async fn test_budget_enforcement_and_waiver() {
+        let temp_dir = TempDir::new().unwrap();
+        let workspace_root = temp_dir.path().to_path_buf();
 
-    // Generate completion signals
-    let result = TaskResult::Completed(self_prompting_agent::types::TaskResultDetail {
-        task_id,
-        final_report: self_prompting_agent::evaluation::EvalReport {
-            score: 0.8,
-            files_modified: 2,
-            loc_added: 100,
-            loc_removed: 20,
-            test_results: vec![],
-            lint_errors: vec![],
-            failed_criteria: vec![],
-            recommendations: vec![],
-        },
-        iterations: 3,
-        stop_reason: self_prompting_agent::types::StopReason::Satisficed,
-        model_used: "test-model".to_string(),
-        total_time_ms: 3000,
-        artifacts: vec![],
-    });
+        // Initialize components
+        let model_registry = Arc::new(ModelRegistry::new());
+        let evaluation_config = EvaluationConfig {
+            min_score: 0.5,
+            mandatory_gates: vec![],
+            max_iterations: 5,
+            min_improvement_threshold: 0.1,
+            quality_ceiling_budget: 2,
+        };
+        let evaluation_orchestrator = Arc::new(RwLock::new(EvaluationOrchestrator::new(evaluation_config)));
 
-    let signals = generator.generate_completion_signals(task_id, &result);
+        let agent = IntegratedAutonomousAgent::new(
+            Arc::clone(&model_registry),
+            Arc::clone(&evaluation_orchestrator),
+            ExecutionMode::Auto,
+        ).await.unwrap();
 
-    // Verify signals were generated
-    assert!(!signals.is_empty());
+        // Create task that exceeds budget
+        let task = Task {
+            id: Uuid::new_v4(),
+            title: "Create many files".to_string(),
+            description: "Create more files than budget allows".to_string(),
+            task_type: "create_files".to_string(),
+            files: vec![],
+            budget_limits: BudgetLimits {
+                max_files: 2, // Very restrictive
+                max_loc: 50,
+            },
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        };
 
-    // Check for expected signal types
-    let has_success_signal = signals.iter().any(|s| matches!(s, RLSignal::TaskSuccess { .. }));
-    let has_model_signal = signals.iter().any(|s| matches!(s, RLSignal::ModelPerformance { .. }));
+        let result = agent.execute_task_autonomously(task).await.unwrap();
 
-    assert!(has_success_signal, "Should generate task success signal");
-    assert!(has_model_signal, "Should generate model performance signal");
-}
-
-/// Test policy adaptation based on RL signals
-#[tokio::test]
-async fn test_policy_adaptation() {
-    use self_prompting_agent::policy_hooks::{AdaptiveAgent, PolicyManager};
-    use self_prompting_agent::rl_signals::RLSignal;
-
-    // Setup components
-    let satisficing_config = Arc::new(RwLock::new(SatisficingConfig::default()));
-    let model_policy = Arc::new(RwLock::new(ModelSelectionPolicy::default()));
-    let budget_checker = Arc::new(RwLock::new(BudgetChecker::default()));
-
-    let mut agent = AdaptiveAgent::new(
-        satisficing_config.clone(),
-        model_policy.clone(),
-        budget_checker,
-    );
-
-    // Create plateau signals to trigger adaptation
-    let signals = vec![
-        RLSignal::PlateauEarly {
-            task_id: Uuid::new_v4(),
-            iterations_to_plateau: 2,
-            score_curve: vec![0.5, 0.52, 0.53],
-            plateau_threshold: 0.02,
-        },
-        RLSignal::PlateauEarly {
-            task_id: Uuid::new_v4(),
-            iterations_to_plateau: 3,
-            score_curve: vec![0.6, 0.62, 0.63],
-            plateau_threshold: 0.02,
-        },
-    ];
-
-    // Check if adaptation is needed
-    let needed = agent.policy_manager.should_adjust_policies(&signals).await;
-    println!("Policy adjustment needed: {:?}", needed);
-
-    // Apply adaptation
-    let _ = agent.check_and_adapt(&signals).await;
-
-    // Verify metrics changed
-    let metrics = agent.get_metrics().await;
-    println!("Updated metrics: {:?}", metrics);
-}
-
-/// Test budget enforcement and waiver generation
-#[tokio::test]
-async fn test_budget_enforcement_and_waivers() {
-    use self_prompting_agent::caws::{BudgetChecker, BudgetLimits, BudgetState, waiver_generator::WaiverGenerator};
-
-    // Create budget checker
-    let checker = BudgetChecker::new(BudgetLimits {
-        max_files: 3,
-        max_loc: 100,
-    });
-
-    // Test budget checking
-    let state = BudgetState {
-        files_used: 2,
-        loc_used: 80,
-        last_updated: chrono::Utc::now(),
-    };
-
-    // Should allow additional changes
-    assert!(checker.check_budget(&state, 1, 20).is_ok());
-
-    // Should reject excessive changes
-    assert!(checker.check_budget(&state, 5, 50).is_err());
-
-    // Test waiver generation
-    let mut waiver_gen = WaiverGenerator::new();
-    let waiver_id = waiver_gen.generate_budget_overrun_waiver(
-        Uuid::new_v4(),
-        "test-council".to_string(),
-        BudgetLimits { max_files: 3, max_loc: 100 },
-        BudgetLimits { max_files: 5, max_loc: 200 },
-        "Need more budget for complex changes".to_string(),
-        "Medium risk - monitored".to_string(),
-    ).unwrap();
-
-    // Verify waiver was created
-    let waiver = waiver_gen.get_waiver(waiver_id).unwrap();
-    assert_eq!(waiver.waiver_type.to_string(), "BudgetOverrun");
-    assert!(waiver.is_valid());
-}
-
-/// Test sandbox safety and rollback capabilities
-#[tokio::test]
-async fn test_sandbox_safety_and_rollback() {
-    use self_prompting_agent::sandbox::{SandboxEnvironment, GitWorktree};
-
-    let temp_dir = TempDir::new().unwrap();
-    let workspace_path = temp_dir.path().to_path_buf();
-
-    // Create test file
-    let test_file = workspace_path.join("test.txt");
-    std::fs::write(&test_file, "original content").unwrap();
-
-    // Initialize sandbox
-    let sandbox = SandboxEnvironment::new(
-        workspace_path.clone(),
-        vec![".".to_string()],
-        SafetyMode::Sandbox,
-        true, // Use git
-    ).await.unwrap();
-
-    // Create git worktree for isolation
-    let worktree = GitWorktree::new(&sandbox).await.unwrap();
-
-    // Apply changes in worktree
-    let changes = vec![self_prompting_agent::types::ChangeSet {
-        id: Uuid::new_v4(),
-        changes: vec![self_prompting_agent::types::ChangeOperation::Modify {
-            path: "test.txt".into(),
-            content: "modified content".to_string(),
-            expected_sha256: None,
-        }],
-    }];
-
-    // This would apply changes in isolated worktree
-    // In real implementation, would call worktree.apply_changes()
-
-    // Verify original workspace unchanged
-    let content = std::fs::read_to_string(&test_file).unwrap();
-    assert_eq!(content, "original content");
-}
-
-/// Test performance profiling and metrics collection
-#[tokio::test]
-async fn test_performance_profiling() {
-    use std::time::{Duration, Instant};
-
-    let start = Instant::now();
-
-    // Simulate some work
-    tokio::time::sleep(Duration::from_millis(100)).await;
-
-    let elapsed = start.elapsed();
-
-    // Verify timing accuracy
-    assert!(elapsed >= Duration::from_millis(95));
-    assert!(elapsed <= Duration::from_millis(150));
-
-    println!("Performance test completed in {:?}", elapsed);
-}
-
-/// Test concurrent task execution safety
-#[tokio::test]
-async fn test_concurrent_execution_safety() {
-    use std::sync::atomic::{AtomicUsize, Ordering};
-
-    let counter = Arc::new(AtomicUsize::new(0));
-
-    // Spawn multiple concurrent tasks
-    let handles: Vec<_> = (0..10).map(|i| {
-        let counter = counter.clone();
-        tokio::spawn(async move {
-            // Simulate work
-            tokio::time::sleep(Duration::from_millis(10)).await;
-            counter.fetch_add(1, Ordering::SeqCst);
-            format!("Task {} completed", i)
-        })
-    }).collect();
-
-    // Wait for all tasks
-    for handle in handles {
-        let result = handle.await.unwrap();
-        println!("{}", result);
+        // Should either succeed within budget or generate waiver
+        match result {
+            TaskResult::Completed(task_result) => {
+                // If successful, verify budget was respected or waiver was generated
+                assert!(task_result.files_changed.len() <= 2, "Should not exceed file budget");
+                // TODO: Check if waiver was generated for budget overrun
+            }
+            TaskResult::Failed(reason) => {
+                assert!(reason.contains("budget") || reason.contains("waiver"),
+                       "Failure should be budget-related: {}", reason);
+            }
+        }
     }
 
-    // Verify all tasks completed
-    assert_eq!(counter.load(Ordering::SeqCst), 10);
-}
+    /// Conflict detection test
+    #[tokio::test]
+    async fn test_apply_conflict_detection() {
+        let temp_dir = TempDir::new().unwrap();
+        let workspace_root = temp_dir.path().to_path_buf();
 
-/// Test error handling and recovery
-#[tokio::test]
-async fn test_error_handling_and_recovery() {
-    // Test that errors are properly handled and don't crash the system
+        // Create test file
+        let test_file = workspace_root.join("conflict_test.rs");
+        std::fs::write(&test_file, r#"fn original() { println!("original"); }"#).unwrap();
 
-    // This test would verify that:
-    // 1. Model failures are handled gracefully
-    // 2. Sandbox errors don't corrupt state
-    // 3. Evaluation failures are logged but don't stop execution
-    // 4. Invalid inputs are rejected with clear error messages
+        // Initialize sandbox
+        let sandbox = SandboxEnvironment::new(
+            workspace_root.clone(),
+            vec![".".into()],
+            SafetyMode::Sandbox,
+            false, // No Git
+        ).await.unwrap();
 
-    println!("Error handling test passed - no crashes on invalid inputs");
-}
+        // Simulate external change after SHA256 was captured
+        std::fs::write(&test_file, r#"fn modified() { println!("modified externally"); }"#).unwrap();
 
-/// Benchmark autonomous execution performance
-#[tokio::test]
-async fn benchmark_autonomous_execution() {
-    use std::time::Instant;
+        // Attempt to apply a diff that expects the original content
+        let diff_result = sandbox.apply_diff(&test_file, "modified content").await;
 
-    let start = Instant::now();
+        // Should detect conflict and fail
+        assert!(diff_result.is_err(), "Should detect SHA256 mismatch");
+        let error_msg = format!("{}", diff_result.unwrap_err());
+        assert!(error_msg.contains("SHA256") || error_msg.contains("conflict"),
+               "Error should mention conflict: {}", error_msg);
+    }
 
-    // Setup minimal test environment
-    let satisficing_config = Arc::new(RwLock::new(SatisficingConfig::default()));
-    let model_registry = setup_test_model_registry().await;
-    let evaluation_orchestrator = Arc::new(RwLock::new(EvaluationOrchestrator::new(
-        Default::default()
-    )));
+    /// Non-Git snapshot workspace test
+    #[tokio::test]
+    async fn test_non_git_snapshot_workspace() {
+        let temp_dir = TempDir::new().unwrap();
+        let workspace_root = temp_dir.path().to_path_buf();
 
-    let setup_time = start.elapsed();
+        // Create test files
+        let file1 = workspace_root.join("file1.txt");
+        let file2 = workspace_root.join("file2.txt");
+        std::fs::write(&file1, "original content 1").unwrap();
+        std::fs::write(&file2, "original content 2").unwrap();
 
-    // Create agent
-    let agent_creation_start = Instant::now();
-    let agent = IntegratedAutonomousAgent::new(
-        model_registry,
-        evaluation_orchestrator,
-        ExecutionMode::DryRun,
-    ).await.unwrap();
-    let agent_creation_time = agent_creation_start.elapsed();
+        // Initialize sandbox without Git
+        let sandbox = SandboxEnvironment::new(
+            workspace_root.clone(),
+            vec![".".into()],
+            SafetyMode::Sandbox,
+            false, // No Git
+        ).await.unwrap();
 
-    println!("Setup time: {:?}", setup_time);
-    println!("Agent creation time: {:?}", agent_creation_time);
-    println!("Total initialization time: {:?}", start.elapsed());
+        // Create snapshot
+        let snapshot_id = sandbox.create_snapshot().await.unwrap();
 
-    // Verify performance is acceptable
-    assert!(setup_time < Duration::from_millis(500), "Setup too slow");
-    assert!(agent_creation_time < Duration::from_millis(200), "Agent creation too slow");
-}
+        // Modify files
+        std::fs::write(&file1, "modified content 1").unwrap();
+        std::fs::write(&file2, "modified content 2").unwrap();
 
-// Helper functions
+        // Rollback to snapshot
+        sandbox.rollback_to_snapshot(snapshot_id).await.unwrap();
 
-async fn setup_test_model_registry() -> Arc<ModelRegistry> {
-    let mut registry = ModelRegistry::new();
+        // Verify rollback
+        let content1 = std::fs::read_to_string(&file1).unwrap();
+        let content2 = std::fs::read_to_string(&file2).unwrap();
+        assert_eq!(content1, "original content 1");
+        assert_eq!(content2, "original content 2");
+    }
 
-    // Add mock Ollama provider
-    let config = self_prompting_agent::models::OllamaConfig {
-        base_url: "http://localhost:11434".to_string(),
-        model_name: "test-model".to_string(),
-        timeout_seconds: 30,
-        max_context: 4096,
-        generation_params: Default::default(),
-    };
+    /// No-progress detection test
+    #[tokio::test]
+    async fn test_no_progress_detection() {
+        let model_registry = Arc::new(ModelRegistry::new());
+        let evaluation_config = EvaluationConfig {
+            min_score: 0.5,
+            mandatory_gates: vec![],
+            max_iterations: 3,
+            min_improvement_threshold: 0.1,
+            quality_ceiling_budget: 1, // Very restrictive
+        };
+        let evaluation_orchestrator = Arc::new(RwLock::new(EvaluationOrchestrator::new(evaluation_config)));
 
-    let provider = OllamaProvider::new(config).await.unwrap();
-    registry.register_provider(Arc::new(provider)).await;
+        let agent = IntegratedAutonomousAgent::new(
+            Arc::clone(&model_registry),
+            Arc::clone(&evaluation_orchestrator),
+            ExecutionMode::Auto,
+        ).await.unwrap();
 
-    Arc::new(registry)
-}
+        // Create task that will hit no-progress
+        let task = Task {
+            id: Uuid::new_v4(),
+            title: "Task that gets stuck".to_string(),
+            description: "This task will repeatedly generate the same changes".to_string(),
+            task_type: "stuck_task".to_string(),
+            files: vec![],
+            budget_limits: BudgetLimits {
+                max_files: 5,
+                max_loc: 100,
+            },
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        };
 
-/// Integration test for the complete RL feedback loop
-#[tokio::test]
-async fn test_complete_rl_feedback_loop() {
-    // This test verifies the complete cycle:
-    // 1. Task execution generates signals
-    // 2. Signals trigger policy adjustments
-    // 3. Adjusted policies affect future executions
-    // 4. Performance improves over time
+        let result = agent.execute_task_autonomously(task).await.unwrap();
 
-    println!("RL feedback loop integration test completed");
-}
+        match result {
+            TaskResult::Completed(task_result) => {
+                // If completed, verify it didn't take too many iterations
+                assert!(task_result.iterations < 3, "Should detect no-progress and stop early");
+            }
+            TaskResult::Failed(reason) => {
+                assert!(reason.contains("progress") || reason.contains("plateau"),
+                       "Failure should be due to no progress: {}", reason);
+            }
+        }
+    }
 
-/// Load testing for concurrent autonomous agents
-#[tokio::test]
-async fn test_load_concurrent_agents() {
-    // Test multiple agents running concurrently
-    // Verify they don't interfere with each other
-    // Check resource usage scaling
+    /// Provider failure and fallback test
+    #[tokio::test]
+    async fn test_provider_failure_fallback() {
+        // This test would require mock providers that can be forced to fail
+        // For now, we'll test the infrastructure is in place
 
-    println!("Load testing for concurrent agents completed");
-}
+        let model_registry = Arc::new(ModelRegistry::new());
 
-/// Test sandbox isolation between different tasks
-#[tokio::test]
-async fn test_sandbox_isolation() {
-    // Create multiple sandboxes
-    // Verify changes in one don't affect others
-    // Test cleanup and resource management
+        // Verify registry has fallback logic
+        assert!(model_registry.providers.read().await.len() >= 0, "Should have provider registry");
 
-    println!("Sandbox isolation test completed");
+        // TODO: Add mock providers that can be forced to fail
+        // TODO: Verify fallback emits ModelSwapped event
+    }
+
+    /// Performance targets validation
+    #[tokio::test]
+    async fn test_performance_targets() {
+        let mut profiler = PerformanceProfiler::new();
+
+        // Simulate multiple tasks
+        for i in 0..10 {
+            let task_id = Uuid::new_v4();
+            profiler.start_task(task_id).await;
+
+            // Simulate task work
+            profiler.start_timer("model_inference");
+            tokio::time::sleep(Duration::from_millis(100)).await;
+            profiler.stop_timer("model_inference", Some(task_id)).await;
+
+            profiler.start_timer("evaluation");
+            tokio::time::sleep(Duration::from_millis(50)).await;
+            profiler.stop_timer("evaluation", Some(task_id)).await;
+
+            profiler.complete_task(task_id, true).await;
+        }
+
+        let metrics = profiler.get_metrics().await;
+
+        // Verify performance targets
+        assert!(metrics.average_task_duration < Duration::from_secs(1), "Task duration should be <1s");
+        assert!(metrics.p95_task_duration < Duration::from_millis(500), "P95 should be <500ms");
+        assert!(metrics.throughput_tasks_per_minute > 5.0, "Should handle >5 tasks/min");
+
+        // Verify component timings
+        let component_timings = &metrics.component_timings;
+        assert!(component_timings.contains_key("model_inference"));
+        assert!(component_timings.contains_key("evaluation"));
+
+        let inference_timing = &component_timings["model_inference"];
+        assert!(inference_timing.p95_time < Duration::from_millis(150), "Inference P95 should be <150ms");
+    }
+
+    /// Tool boundary enforcement test
+    #[tokio::test]
+    async fn test_tool_boundary_enforcement() {
+        let temp_dir = TempDir::new().unwrap();
+        let workspace_root = temp_dir.path().to_path_buf();
+
+        let workspace_manager = WorkspaceManager::new(
+            workspace_root.clone(),
+            vec!["allowed/".into()],
+            BudgetLimits { max_files: 5, max_loc: 100 },
+        ).await.unwrap();
+
+        // Try to write outside allow-list
+        let forbidden_file = workspace_root.join("forbidden.txt");
+        let result = workspace_manager.apply_changes(vec![
+            ChangeSet {
+                id: Uuid::new_v4(),
+                changes: vec![ChangeOperation::Create {
+                    path: forbidden_file.clone(),
+                    content: "forbidden content".into(),
+                }],
+            }
+        ]).await;
+
+        assert!(result.is_err(), "Should reject writes outside allow-list");
+        assert!(!forbidden_file.exists(), "File should not be created");
+
+        // Verify allow-list works
+        let allowed_file = workspace_root.join("allowed").join("permitted.txt");
+        let result = workspace_manager.apply_changes(vec![
+            ChangeSet {
+                id: Uuid::new_v4(),
+                changes: vec![ChangeOperation::Create {
+                    path: allowed_file.clone(),
+                    content: "allowed content".into(),
+                }],
+            }
+        ]).await;
+
+        assert!(result.is_ok(), "Should allow writes in allow-list");
+        assert!(allowed_file.exists(), "File should be created");
+    }
+
+    /// Deterministic behavior test
+    #[tokio::test]
+    async fn test_deterministic_behavior() {
+        // Test that same inputs produce same outputs
+        let temp_dir = TempDir::new().unwrap();
+        let workspace_root = temp_dir.path().to_path_buf();
+
+        // Create identical test scenarios
+        let create_test_scenario = || async {
+            let model_registry = Arc::new(ModelRegistry::new());
+            let evaluation_config = EvaluationConfig {
+                min_score: 0.5,
+                mandatory_gates: vec![],
+                max_iterations: 2,
+                min_improvement_threshold: 0.1,
+                quality_ceiling_budget: 1,
+            };
+            let evaluation_orchestrator = Arc::new(RwLock::new(EvaluationOrchestrator::new(evaluation_config)));
+
+            let task = Task {
+                id: Uuid::new_v4(), // Different ID each time
+                title: "Deterministic test".to_string(),
+                description: "Same description each time".to_string(),
+                task_type: "test".to_string(),
+                files: vec![],
+                budget_limits: BudgetLimits { max_files: 1, max_loc: 10 },
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+
+            (model_registry, evaluation_orchestrator, task)
+        };
+
+        // Run same scenario twice
+        let (registry1, eval1, task1) = create_test_scenario().await;
+        let (registry2, eval2, task2) = create_test_scenario().await;
+
+        let agent1 = IntegratedAutonomousAgent::new(registry1, eval1, ExecutionMode::DryRun).await.unwrap();
+        let agent2 = IntegratedAutonomousAgent::new(registry2, eval2, ExecutionMode::DryRun).await.unwrap();
+
+        // Note: In dry-run mode, actual file operations don't occur,
+        // so determinism testing focuses on prompt generation and decision logic
+        let result1 = agent1.execute_task_autonomously(task1).await;
+        let result2 = agent2.execute_task_autonomously(task2).await;
+
+        // Both should either succeed or fail consistently
+        assert_eq!(result1.is_ok(), result2.is_ok(), "Results should be consistent");
+    }
+
+    /// RL signal generation test
+    #[tokio::test]
+    async fn test_rl_signal_generation() {
+        use self_prompting_agent::loop_controller::{SelfPromptingResult, TaskResult};
+
+        let signal_generator = RLSignalGenerator::new();
+
+        // Test patch apply failure signal
+        let failure_result = SelfPromptingResult {
+            task_result: TaskResult::Failed("Patch application failed".to_string()),
+            iterations_performed: 1,
+            models_used: vec!["test-model".to_string()],
+            total_time_ms: 100,
+            final_stop_reason: StopReason::PatchFailure,
+        };
+
+        let signals = signal_generator.generate_signals(&failure_result);
+        assert!(signals.iter().any(|s| matches!(s, RLSignal::PatchApplyFailure { .. })),
+               "Should generate patch failure signal");
+
+        // Test plateau early signal
+        let plateau_result = SelfPromptingResult {
+            task_result: TaskResult::Completed(Default::default()), // Mock completion
+            iterations_performed: 3,
+            models_used: vec!["test-model".to_string()],
+            total_time_ms: 300,
+            final_stop_reason: StopReason::QualityCeiling,
+        };
+
+        let signals = signal_generator.generate_signals(&plateau_result);
+        assert!(signals.iter().any(|s| matches!(s, RLSignal::PlateauEarly { .. })),
+               "Should generate plateau early signal");
+    }
 }

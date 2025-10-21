@@ -8,21 +8,21 @@
 
 ### Prerequisites
 
-- Node.js 18+ with ES modules support
-- Local AI model (Gemma 3N recommended)
-- Ollama for model hosting (optional)
+- Rust 1.75+
+- Local AI model (Gemma, LM Studio, Ollama)
+- Agent Agency V3 iteration built and running
 
 ### Installation
 
 ```bash
-# Install dependencies
-npm install
+# From the project root
+cd iterations/v3
 
-# Build the project
-npm run build
+# Build the MCP server
+cargo build --release
 
-# Start the MCP server
-npm run mcp:start
+# Start the MCP server (stdio mode for local AI models)
+cargo run --bin mcp-server
 ```
 
 ### Basic Usage with Local AI
@@ -30,660 +30,385 @@ npm run mcp:start
 1. **Start the MCP Server:**
 
    ```bash
-   npm run mcp:start
+   cd iterations/v3
+   cargo run --bin mcp-server
    ```
 
 2. **Connect with Local AI Model:**
-   Configure your local AI model (e.g., Gemma via Ollama) to connect to the MCP server using stdio transport.
-
-3. **Available Resources:**
-
-   - `agents://list` - List all registered agents
-   - `tasks://queue` - View current task queue
-   - `system://metrics` - System performance metrics
-   - `memory://experiences/{agentId}` - Agent experience history
-
-4. **Available Tools:**
-   - `register_agent` - Register new agents
-   - `submit_task` - Submit tasks for execution
-   - `evaluate_code` - Evaluate code quality
-   - `run_evaluation_loop` - Execute autonomous evaluation cycles
-
-## MCP Resources
-
-### Agent Resources
-
-#### `agents://list`
-
-Lists all registered agents with their status and capabilities.
-
-```javascript
-// Response format
-{
-  'agents': [
-    {
-      'id': 'agent_001',
-      'name': 'Data Processor',
-      'type': 'worker',
-      'status': 'active',
-      'capabilities': ['process', 'analyze']
-    }
-  ],
-  'total': 1
-}
-```
-
-#### `agent://{agentId}`
-
-Retrieves detailed information about a specific agent.
-
-#### `agents://capabilities/{agentId}`
-
-Shows agent capabilities and proficiency levels.
-
-#### `agents://relationships/{agentId}`
-
-Displays collaboration history and relationships with other agents.
-
-### Task Resources
-
-#### `tasks://queue`
-
-Shows current task queue with pending and running tasks.
-
-#### `tasks://history/{agentId}`
-
-Provides task execution history for a specific agent.
-
-#### `task://{taskId}`
-
-Detailed information about a specific task including status, payload, and results.
-
-#### `tasks://metrics`
-
-Task performance and success metrics across the system.
-
-### System Resources
-
-#### `system://metrics`
-
-Real-time system health and performance metrics.
-
-```javascript
-{
-  'totalAgents': 5,
-  'activeAgents': 3,
-  'totalTasks': 42,
-  'completedTasks': 38,
-  'failedTasks': 2,
-  'averageTaskDuration': 1250,
-  'systemUptime': 3600
-}
-```
-
-#### `system://config`
-
-Current system configuration settings.
-
-#### `system://health`
-
-Comprehensive system health assessment with component status.
-
-#### `system://logs`
-
-Recent system activity and error logs.
-
-## MCP Tools
-
-### Agent Management Tools
-
-#### `register_agent`
-
-Register a new agent with the system.
-
-**Parameters:**
-
-```javascript
-{
-  'name': 'Data Processor',
-  'type': 'worker',
-  'capabilities': ['process', 'analyze'],
-  'metadata': {
-    'version': '1.0.0',
-    'description': 'Processes and analyzes data'
-  }
-}
-```
-
-**Response:**
-
-```javascript
-{
-  'agentId': 'agent_001',
-  'agent': {
-    'id': 'agent_001',
-    'name': 'Data Processor',
-    // ... full agent object
-  }
-}
-```
-
-#### `update_agent`
-
-Update an existing agent's information.
-
-#### `get_agent`
-
-Retrieve detailed agent information.
-
-#### `list_agents`
-
-List agents with optional filtering.
-
-### Task Management Tools
-
-#### `submit_task`
-
-Submit a new task for execution.
-
-**Parameters:**
-
-```javascript
-{
-  'agentId': 'agent_001',
-  'type': 'process',
-  'payload': {
-    'data': 'sample input',
-    'options': { 'priority': 'high' }
-  }
-}
-```
-
-**Response:**
-
-```javascript
-{
-  'taskId': 'task_001',
-  'task': {
-    'id': 'task_001',
-    'agentId': 'agent_001',
-    'status': 'pending',
-    // ... full task object
-  }
-}
-```
-
-#### `get_task`
-
-Retrieve task details.
-
-#### `cancel_task`
-
-Cancel a pending or running task.
-
-#### `list_tasks`
-
-List tasks with filtering options.
-
-#### `retry_task`
-
-Retry a failed task.
-
-### Evaluation Tools
-
-#### `evaluate_code`
-
-Evaluate code quality with automated testing and linting.
-
-**Parameters:**
-
-```javascript
-{
-  'taskId': 'task_001',
-  'projectDir': './project',
-  'scripts': {
-    'test': 'npm run test',
-    'lint': 'npm run lint',
-    'typecheck': 'npm run typecheck'
-  },
-  'iteration': 1
-}
-```
-
-**Response:**
-
-```javascript
-{
-  'taskId': 'task_001',
-  'type': 'code',
-  'iteration': 1,
-  'status': 'pass',
-  'score': 0.92,
-  'criteria': [
-    {
-      'id': 'tests-pass',
-      'description': 'Unit tests pass',
-      'weight': 0.4,
-      'passed': true,
-      'score': 1.0
-    }
-    // ... more criteria
-  ],
-  'nextActions': [],
-  'timestamp': '2024-01-01T12:00:00.000Z'
-}
-```
-
-#### `evaluate_text`
-
-Evaluate text quality and adherence to requirements.
-
-#### `evaluate_design`
-
-Evaluate design token compliance and consistency.
-
-#### `run_evaluation_loop`
-
-Execute a complete autonomous evaluation loop.
-
-### System Tools
-
-#### `get_system_metrics`
-
-Retrieve current system performance metrics.
-
-#### `perform_health_check`
-
-Execute comprehensive system health assessment.
-
-#### `clear_system_cache`
-
-Clear system caches and temporary data.
-
-#### `backup_system_data`
-
-Create backup of system data and configuration.
-
-#### `get_system_config`
-
-Retrieve current system configuration.
-
-#### `update_system_config`
-
-Update system configuration parameters.
-
-## Autonomous Operation Examples
-
-### Basic Agent Registration and Task Submission
-
-```javascript
-// 1. Register an agent
-const registerResult = await mcp.callTool('register_agent', {
-  name: 'Code Reviewer',
-  type: 'worker',
-  capabilities: ['review', 'analyze'],
-  metadata: { version: '1.0.0' },
-});
-
-// 2. Submit a task
-const taskResult = await mcp.callTool('submit_task', {
-  agentId: registerResult.agentId,
-  type: 'review',
-  payload: {
-    code: 'function example() { return true; }',
-    criteria: ['readability', 'best-practices'],
-  },
-});
-
-// 3. Monitor task progress
-const taskStatus = await mcp.readResource(`task://${taskResult.taskId}`);
-```
-
-### Autonomous Code Improvement Loop
-
-```javascript
-async function improveCode(code, requirements) {
-  let iteration = 1;
-  let bestScore = 0;
-  let bestCode = code;
-
-  while (iteration <= 3) {
-    // Submit improvement task
-    const taskResult = await mcp.callTool('submit_task', {
-      agentId: 'code-improver-agent',
-      type: 'improve',
-      payload: { code: bestCode, requirements, iteration },
-    });
-
-    // Wait for completion (simplified)
-    let task = await mcp.readResource(`task://${taskResult.taskId}`);
-    while (task.status !== 'completed') {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      task = await mcp.readResource(`task://${taskResult.taskId}`);
-    }
-
-    // Evaluate the result
-    const evaluation = await mcp.callTool('evaluate_code', {
-      taskId: task.id,
-      iteration,
-    });
-
-    if (evaluation.score > bestScore) {
-      bestScore = evaluation.score;
-      bestCode = task.result.improvedCode;
-    }
-
-    // Check satisficing condition
-    if (evaluation.score >= 0.85) {
-      break;
-    }
-
-    iteration++;
-  }
-
-  return { finalCode: bestCode, finalScore: bestScore };
-}
-```
-
-### Self-Monitoring Agent System
-
-```javascript
-class SelfMonitoringAgent {
-  constructor(agentId) {
-    this.agentId = agentId;
-    this.performanceHistory = [];
-  }
-
-  async executeTask(taskType, payload) {
-    // Submit task
-    const taskResult = await mcp.callTool('submit_task', {
-      agentId: this.agentId,
-      type: taskType,
-      payload,
-    });
-
-    // Monitor execution
-    const startTime = Date.now();
-    let task = await mcp.readResource(`task://${taskResult.taskId}`);
-
-    while (task.status === 'pending' || task.status === 'running') {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      task = await mcp.readResource(`task://${taskResult.taskId}`);
-    }
-
-    const executionTime = Date.now() - startTime;
-
-    // Record performance
-    this.performanceHistory.push({
-      taskId: task.id,
-      taskType,
-      success: task.status === 'completed',
-      executionTime,
-      timestamp: new Date().toISOString(),
-    });
-
-    // Analyze performance trends
-    if (this.performanceHistory.length >= 10) {
-      await this.analyzePerformanceTrends();
-    }
-
-    return task;
-  }
-
-  async analyzePerformanceTrends() {
-    const recentTasks = this.performanceHistory.slice(-10);
-    const successRate =
-      recentTasks.filter((t) => t.success).length / recentTasks.length;
-    const avgExecutionTime =
-      recentTasks.reduce((sum, t) => sum + t.executionTime, 0) /
-      recentTasks.length;
-
-    // Trigger self-improvement if performance is declining
-    if (successRate < 0.8) {
-      await this.triggerSelfImprovement();
-    }
-  }
-
-  async triggerSelfImprovement() {
-    // Submit self-improvement task
-    await mcp.callTool('submit_task', {
-      agentId: this.agentId,
-      type: 'self-improve',
-      payload: {
-        analysis: 'Performance declining',
-        performanceHistory: this.performanceHistory,
-      },
-    });
-  }
-}
-```
-
-## Configuration
-
-### MCP Server Configuration
+   Configure your local AI model to connect to the MCP server using stdio transport.
+
+3. **Tool Discovery:**
+   ```json
+   // Available tools (13 total)
+   {
+     "tools": [
+       {"name": "caws_policy_validator", "description": "Validate CAWS compliance"},
+       {"name": "logic_validator", "description": "Validate logical reasoning"},
+       {"name": "progress_tracker", "description": "Track workflow progress"},
+       // ... all 13 tools
+     ]
+   }
+   ```
+
+4. **Available Tool Categories:**
+   - **Policy Tools (3)**: `caws_policy_validator`, `waiver_auditor`, `budget_verifier`
+   - **Conflict Resolution Tools (3)**: `debate_orchestrator`, `consensus_builder`, `evidence_synthesizer`
+   - **Evidence Collection Tools (3)**: `claim_extractor`, `fact_verifier`, `source_validator`
+   - **Governance Tools (3)**: `audit_logger`, `provenance_tracker`, `compliance_reporter`
+   - **Quality Gate Tools (3)**: `code_analyzer`, `test_executor`, `performance_validator`
+   - **Reasoning Tools (2)**: `logic_validator`, `inference_engine`
+   - **Workflow Tools (2)**: `progress_tracker`, `resource_allocator`
+
+## Tool Usage Examples
+
+### Policy & Governance Tools
+
+#### `caws_policy_validator`
+
+Validates task compliance with CAWS governance rules.
 
 ```typescript
-interface MCPServerConfig {
-  orchestrator: AgentOrchestrator;
-  evaluationConfig?: {
-    minScore: number; // Minimum acceptable score (0.85)
-    mandatoryGates: string[]; // Required quality gates
-    iterationPolicy: {
-      maxIterations: number; // Maximum refinement cycles (3)
-      minDeltaToContinue: number; // Minimum improvement needed (0.02)
-      noChangeBudget: number; // Plateau tolerance (1)
-    };
+// Validate CAWS compliance
+const result = await mcp.callTool('caws_policy_validator', {
+  task_description: "Implement user authentication with JWT tokens",
+  risk_tier: "tier_2",
+  scope_boundaries: ["authentication", "security", "api"]
+});
+
+console.log(result);
+// {
+//   "validation_id": "val_abc123",
+//   "compliance_score": 0.92,
+//   "risk_assessment": {...},
+//   "policy_violations": [],
+//   "recommendations": [...]
+// }
+```
+
+#### `waiver_auditor`
+
+Audits waiver requests for governance exceptions.
+
+```typescript
+const result = await mcp.callTool('waiver_auditor', {
+  waiver_request: {
+    justification: "Performance optimization requires direct DB access",
+    risk_level: "medium",
+    impact_scope: ["database", "performance"]
+  },
+  risk_assessment: { severity: "medium", probability: 0.3 },
+  justification_criteria: ["business_necessity", "performance_critical"]
+});
+```
+
+### Evidence Collection Tools
+
+#### `fact_verifier`
+
+Performs multi-modal fact verification with council arbitration.
+
+```typescript
+const result = await mcp.callTool('fact_verifier', {
+  claims: [
+    "The Earth orbits the Sun",
+    "Water boils at 100°C at sea level"
+  ],
+  verification_sources: ["scientific_databases", "peer_reviewed_sources"],
+  council_tier: "tier_2",
+  confidence_threshold: 0.85
+});
+```
+
+#### `source_validator`
+
+Assesses credibility and security of information sources.
+
+```typescript
+const result = await mcp.callTool('source_validator', {
+  source_url: "https://example.com/article",
+  content_type: "news_article",
+  validation_criteria: ["credibility", "timeliness", "security"],
+  security_checks: ["malware_scan", "phishing_detection"]
+});
+```
+
+### Reasoning Tools
+
+#### `logic_validator`
+
+Validates logical consistency and detects reasoning fallacies.
+
+```typescript
+const result = await mcp.callTool('logic_validator', {
+  reasoning_content: "All men are mortal. Socrates is a man. Therefore, Socrates is mortal.",
+  validation_criteria: ["consistency", "soundness", "completeness"],
+  strictness_level: "moderate",
+  domain_context: "philosophical_logic"
+});
+```
+
+#### `inference_engine`
+
+Performs probabilistic reasoning across multiple inference methods.
+
+```typescript
+const result = await mcp.callTool('inference_engine', {
+  premises: [
+    "Most software projects exceed their budget",
+    "This project is similar to typical software projects"
+  ],
+  inference_goal: "This project will exceed its budget",
+  inference_method: "probabilistic",
+  domain_knowledge: {
+    expert_rules: ["Software projects often face scope creep"],
+    historical_data: [/* project statistics */]
+  },
+  uncertainty_threshold: 0.7
+});
+```
+
+### Quality Assurance Tools
+
+#### `code_analyzer`
+
+Performs comprehensive code analysis across multiple dimensions.
+
+```typescript
+const result = await mcp.callTool('code_analyzer', {
+  code_path: "./src/main.rs",
+  analysis_types: ["lint", "type_check", "complexity", "security"],
+  include_security_scan: true,
+  performance_benchmarks: ["memory_usage", "cpu_efficiency"],
+  quality_thresholds: {
+    complexity_score: 0.8,
+    security_score: 0.9,
+    maintainability_index: 0.75
+  }
+});
+```
+
+#### `test_executor`
+
+Executes comprehensive test suites with coverage analysis.
+
+```typescript
+const result = await mcp.callTool('test_executor', {
+  test_path: "./tests/",
+  test_types: ["unit", "integration", "e2e", "performance"],
+  include_coverage: true,
+  coverage_thresholds: {
+    line_coverage: 0.8,
+    branch_coverage: 0.9,
+    function_coverage: 0.85
+  },
+  timeout_seconds: 300,
+  parallel_execution: true
+});
+```
+
+### Workflow Management Tools
+
+#### `progress_tracker`
+
+Tracks workflow progress with milestone analysis and predictions.
+
+```typescript
+const result = await mcp.callTool('progress_tracker', {
+  workflow_id: "feature_development_sprint",
+  workflow_type: "code_development",
+  include_milestones: true,
+  include_predictions: true,
+  current_metrics: {
+    completed_tasks: 8,
+    total_tasks: 12,
+    time_elapsed_ms: 7200000, // 2 hours
+    current_phase: "implementation"
+  }
+});
+```
+
+#### `resource_allocator`
+
+Performs adaptive resource allocation with optimization.
+
+```typescript
+const result = await mcp.callTool('resource_allocator', {
+  task_id: "ml_training_job",
+  task_requirements: {
+    cpu_cores: 8,
+    memory_gb: 32.0,
+    gpu_memory_gb: 16.0,
+    estimated_duration_hours: 24.0
+  },
+  optimization_criteria: ["performance", "cost_efficiency"],
+  priority_level: "high",
+  allocation_constraints: {
+    max_concurrent_tasks: 5,
+    available_gpu_memory: 48.0
+  }
+});
+```
+
+## Integration with AI Models
+
+### Connecting to Local AI Models
+
+#### LM Studio Integration
+
+```typescript
+// Connect MCP server to LM Studio
+import { MCPClient } from '@modelcontextprotocol/sdk';
+
+const client = new MCPClient({
+  transport: {
+    type: 'stdio',
+    command: 'cargo',
+    args: ['run', '--bin', 'mcp-server'],
+    cwd: '/path/to/agent-agency/iterations/v3'
+  }
+});
+
+// Initialize connection
+await client.connect();
+
+// Discover tools
+const tools = await client.listTools();
+console.log(`Available tools: ${tools.tools.length}`); // 13 tools
+
+// Use tools in your LM Studio workflows
+const result = await client.callTool('logic_validator', {
+  reasoning_content: userReasoning,
+  validation_criteria: ['consistency', 'soundness']
+});
+```
+
+#### Ollama Integration
+
+```bash
+# Start MCP server
+cd iterations/v3
+cargo run --bin mcp-server &
+
+# Configure Ollama to use MCP tools
+# In your Ollama configuration or custom integration
+```
+
+### Autonomous Agent Workflows
+
+#### Policy-Governed Development
+
+```typescript
+async function autonomousDevelopment(taskDescription: string) {
+  // 1. Validate CAWS compliance first
+  const policyCheck = await mcp.callTool('caws_policy_validator', {
+    task_description: taskDescription,
+    risk_tier: "tier_2"
+  });
+
+  if (policyCheck.compliance_score < 0.8) {
+    throw new Error("Task violates CAWS policies");
+  }
+
+  // 2. Implement solution
+  const implementation = await generateCode(taskDescription);
+
+  // 3. Analyze code quality
+  const analysis = await mcp.callTool('code_analyzer', {
+    code_path: implementation.filePath,
+    analysis_types: ["lint", "security", "complexity"]
+  });
+
+  // 4. Run tests
+  const testResults = await mcp.callTool('test_executor', {
+    test_path: "./tests/",
+    test_types: ["unit", "integration"]
+  });
+
+  // 5. Validate performance
+  const performance = await mcp.callTool('performance_validator', {
+    test_scenario: "production_load",
+    duration_minutes: 30
+  });
+
+  return {
+    implementation,
+    quality: analysis,
+    tests: testResults,
+    performance
   };
 }
 ```
 
-### Environment Variables
-
-```bash
-# MCP Server Configuration
-MCP_PORT=3001
-MCP_HOST=localhost
-
-# Evaluation Configuration
-MCP_MIN_SCORE=0.85
-MCP_MAX_ITERATIONS=3
-
-# System Configuration
-MCP_CACHE_TTL=300
-MCP_MAX_CONCURRENT_TASKS=10
-```
-
-## Troubleshooting
-
-### Common Issues
-
-#### MCP Server Won't Start
-
-```bash
-# Check Node.js version
-node --version  # Should be 18+
-
-# Verify dependencies
-npm ls @modelcontextprotocol/sdk
-
-# Check for port conflicts
-lsof -i :3001
-```
-
-#### Tool Execution Fails
-
-```bash
-# Verify agent capabilities
-const agent = await mcp.readResource(`agent://${agentId}`);
-console.log('Agent capabilities:', agent.capabilities);
-
-# Check task payload format
-const taskSchema = await mcp.listTools();
-const tool = taskSchema.tools.find(t => t.name === 'submit_task');
-console.log('Task schema:', tool.inputSchema);
-```
-
-#### Evaluation Not Working
-
-```bash
-# Check evaluation configuration
-const config = await mcp.readResource('system://config');
-console.log('Evaluation config:', config.evaluation);
-
-# Verify file permissions
-ls -la /path/to/artifact
-```
-
-### Debug Mode
-
-Enable debug logging for troubleshooting:
-
-```bash
-# Set environment variable
-export DEBUG=mcp:*
-
-# Or configure in code
-const logger = new Logger('MCP', 'debug');
-```
-
-### Performance Monitoring
-
-Monitor MCP server performance:
-
-```bash
-# Get system metrics
-const metrics = await mcp.readResource('system://metrics');
-
-# Monitor evaluation performance
-const health = await mcp.readResource('system://health');
-
-# Check tool execution times
-const logs = await mcp.readResource('system://logs');
-```
-
-## Advanced Usage
-
-### Custom Evaluation Criteria
-
-Extend the evaluation system with custom criteria:
+#### Evidence-Based Reasoning
 
 ```typescript
-class CustomEvaluator extends BaseEvaluator {
-  async evaluate(params: EvaluationParams): Promise<EvaluationReport> {
-    // Implement custom evaluation logic
-    const customCriteria = [
-      {
-        id: 'custom-metric',
-        description: 'Custom quality metric',
-        weight: 0.3,
-        passed: await this.checkCustomMetric(params.artifactPath),
-        score: await this.scoreCustomMetric(params.artifactPath),
-      },
-    ];
+async function evidenceBasedDecision(query: string) {
+  // 1. Extract claims from query
+  const claims = await mcp.callTool('claim_extractor', {
+    content: query,
+    content_type: "user_query"
+  });
 
-    return {
-      taskId: params.taskId,
-      artifactPaths: [params.artifactPath],
-      status: 'completed',
-      score: customCriteria.reduce((s, c) => s + c.score * c.weight, 0),
-      criteria: customCriteria,
-      iterations: params.iterations,
-      timestamp: new Date().toISOString(),
-    };
-  }
+  // 2. Verify facts
+  const factCheck = await mcp.callTool('fact_verifier', {
+    claims: claims.claims,
+    verification_sources: ["web_search", "academic_databases"]
+  });
+
+  // 3. Validate source credibility
+  const sourceValidation = await mcp.callTool('source_validator', {
+    source_url: factCheck.primary_source,
+    validation_criteria: ["credibility", "timeliness"]
+  });
+
+  // 4. Perform logical inference
+  const inference = await mcp.callTool('inference_engine', {
+    premises: factCheck.verified_claims,
+    inference_goal: "evidence_based_conclusion",
+    inference_method: "probabilistic"
+  });
+
+  return {
+    claims: claims.claims,
+    verification: factCheck,
+    source_credibility: sourceValidation,
+    conclusion: inference
+  };
 }
 ```
 
-### Multi-Agent Coordination
+## Summary
 
-Coordinate multiple agents for complex workflows:
+### Tool Categories Overview
 
-```typescript
-class MultiAgentCoordinator {
-  async executeWorkflow(workflow) {
-    const results = [];
+| Category | Purpose | Key Capabilities | Enterprise Integration |
+|----------|---------|------------------|----------------------|
+| **Policy** | Governance & Compliance | CAWS validation, waiver audit, budget verification | Claim extraction pipeline |
+| **Conflict Resolution** | Decision Making | Multi-model arbitration, consensus building, evidence synthesis | Council arbitration system |
+| **Evidence Collection** | Verification & Validation | Fact verification, source validation, claim extraction | Multi-modal verification |
+| **Governance** | Audit & Provenance | Audit logging, provenance tracking, compliance reporting | Provenance service |
+| **Quality Gate** | Code Quality & Testing | Code analysis, test execution, performance validation | Quality gates, testing infrastructure |
+| **Reasoning** | Logic & Inference | Logic validation, probabilistic inference | Reflexive learning algorithms |
+| **Workflow** | Project Management | Progress tracking, resource allocation | Progress tracking, resource management |
 
-    for (const step of workflow.steps) {
-      // Find suitable agent
-      const agents = await mcp.callTool('list_agents', {
-        capability: step.requiredCapability,
-      });
+### Production Deployment
 
-      const agent = this.selectBestAgent(agents.agents, step);
+```bash
+# Build and deploy MCP server
+cd iterations/v3
+cargo build --release
 
-      // Submit task to selected agent
-      const taskResult = await mcp.callTool('submit_task', {
-        agentId: agent.id,
-        type: step.type,
-        payload: { ...step.payload, previousResults: results },
-      });
+# Start in production mode
+./target/release/mcp-server --config production.yaml
 
-      results.push(await this.waitForTaskCompletion(taskResult.taskId));
-    }
-
-    return results;
-  }
-
-  selectBestAgent(agents, step) {
-    // Implement agent selection logic based on
-    // performance history, current load, capabilities, etc.
-    return agents[0]; // Simplified
-  }
-}
+# Monitor with built-in metrics
+curl http://localhost:9090/metrics
 ```
 
-## Security Considerations
+### Enterprise Integration Benefits
 
-### Access Control
-
-- MCP tools validate agent permissions before execution
-- Resource access is filtered based on agent capabilities
-- Sensitive operations require explicit authorization
-
-### Input Validation
-
-- All tool parameters are validated against schemas
-- File paths are sanitized to prevent directory traversal
-- Payload size limits prevent resource exhaustion
-
-### Audit Logging
-
-- All tool executions are logged with timestamps
-- Resource access is tracked for compliance
-- Failed operations include error details for debugging
-
-## Contributing
-
-### Adding New Tools
-
-1. Implement tool logic in appropriate category class
-2. Add tool schema with proper validation
-3. Update documentation with usage examples
-4. Add unit tests for tool functionality
-
-### Adding New Resources
-
-1. Implement resource handler in ResourceManager
-2. Add resource URI pattern and schema
-3. Update access control and filtering
-4. Document resource format and usage
-
-### Extending Evaluation
-
-1. Create new evaluator extending BaseEvaluator
-2. Implement evaluation logic and criteria
-3. Add configuration options
-4. Update satisficing logic if needed
-
-## Support
-
-For issues and questions:
-
-- Check the troubleshooting section above
-- Review the integration test examples
-- Examine system logs for error details
-- Refer to the technical architecture documentation
-
-## License
-
-This MCP integration is part of the Agent Agency project and follows the same MIT license.
+- **Robust Systems**: All tools leverage battle-tested enterprise components
+- **Comprehensive Coverage**: 13 tools across 7 categories for complete workflow support
+- **External AI Access**: Standardized MCP protocol for seamless AI model integration
+- **Governance Compliance**: Built-in CAWS compliance and provenance tracking
+- **Performance Optimized**: Efficient async processing for high-throughput operations

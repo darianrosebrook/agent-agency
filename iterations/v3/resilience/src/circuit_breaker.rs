@@ -20,7 +20,6 @@ use tracing::{error, info, warn};
 
 // Type aliases for complex types
 type FallbackFn<T> = Box<dyn Fn() -> Result<T, Box<dyn std::error::Error + Send + Sync>> + Send + Sync>;
-type OperationFn<T> = Box<dyn FnOnce() -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<T, Box<dyn std::error::Error + Send + Sync>>> + Send>> + Send>;
 type ErrorType = Box<dyn std::error::Error + Send + Sync>;
 
 /// Error thrown when circuit breaker is open
@@ -122,13 +121,12 @@ impl CircuitBreaker {
     ///
     /// # Returns
     /// Result of operation or fallback
+    #[allow(clippy::type_complexity)]
     pub async fn execute<F, T>(
         &self,
         operation: F,
-        fallback: Option<
-            Box<dyn Fn() -> Result<T, Box<dyn std::error::Error + Send + Sync>> + Send + Sync>,
-        >,
-    ) -> Result<T, Box<dyn std::error::Error + Send + Sync>>
+        fallback: Option<FallbackFn<T>>,
+    ) -> Result<T, ErrorType>
     where
         F: FnOnce() -> std::pin::Pin<
             Box<

@@ -70,13 +70,13 @@ impl GitTrailerManager {
             repository: Mutex::new(repository),
             branch,
             auto_commit,
-            commit_message_template,
+            _commit_message_template: commit_message_template,
         })
     }
 
     /// Generate commit message from template
-    fn generate_commit_message(&self, provenance_record: &ProvenanceRecord) -> String {
-        self.commit_message_template
+    fn _generate_commit_message(&self, provenance_record: &ProvenanceRecord) -> String {
+        self._commit_message_template
             .replace("{verdict_id}", &provenance_record.verdict_id.to_string())
             .replace("{decision}", &provenance_record.decision.decision_type())
             .replace(
@@ -87,7 +87,7 @@ impl GitTrailerManager {
     }
 
     /// Create signature for commits
-    fn create_signature(&self) -> Result<Signature> {
+    fn create_signature(&self) -> Result<Signature<'_>> {
         let repo = self.repository.lock().unwrap();
         let config = repo.config()?;
         let name = config
@@ -101,7 +101,7 @@ impl GitTrailerManager {
     }
 
     /// Get current branch reference with proper reference handling
-    fn get_branch_ref(&self) -> Result<()> {
+    fn _get_branch_ref(&self) -> Result<()> {
         let refname = format!("refs/heads/{}", self.branch);
 
         // Check if reference exists first
@@ -117,12 +117,12 @@ impl GitTrailerManager {
         } else {
             // Reference doesn't exist, create it
             let repo = self.repository.lock().unwrap();
-            self.create_branch_reference(&repo, &refname)
+            self._create_branch_reference(&repo, &refname)
         }
     }
 
     /// Create a new branch reference
-    fn create_branch_reference(&self, repo: &git2::Repository, refname: &str) -> Result<()> {
+    fn _create_branch_reference(&self, repo: &git2::Repository, refname: &str) -> Result<()> {
         // Get the current HEAD commit
         let head = repo.head()?;
         let head_commit = head.peel_to_commit()?;
@@ -140,7 +140,7 @@ impl GitTrailerManager {
     }
 
     /// Get the current HEAD commit with proper commit handling
-    fn get_head_commit(&self) -> Result<()> {
+    fn _get_head_commit(&self) -> Result<()> {
         // Check if HEAD exists first
         let head_exists = {
             let repo = self.repository.lock().unwrap();
@@ -154,12 +154,12 @@ impl GitTrailerManager {
         } else {
             // HEAD doesn't exist, create initial commit
             let repo = self.repository.lock().unwrap();
-            self.create_initial_commit(&repo)
+            self._create_initial_commit(&repo)
         }
     }
 
     /// Create initial commit if repository is empty
-    fn create_initial_commit(&self, repo: &git2::Repository) -> Result<()> {
+    fn _create_initial_commit(&self, repo: &git2::Repository) -> Result<()> {
         // Check if repository is empty
         if repo.is_empty()? {
             // Create initial commit

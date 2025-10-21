@@ -5,6 +5,7 @@ import {
   CoordinationMetrics,
   GetBusinessMetricsResponse,
   GetAlertsResponse,
+  GetAgentPerformanceResponse,
   MetricsError,
 } from "@/types/metrics";
 
@@ -68,18 +69,9 @@ export class MetricsApiClient {
 
   // Get agent performance metrics
   async getAgentPerformance(): Promise<AgentPerformance[]> {
-    try {
-      const response = await apiClient.request<GetAgentPerformanceResponse>(
-        `${this.baseUrl}?metric_type=agent_performance`
-      );
-      return response.metrics.filter(
-        (m: any) => m.type === "agent_performance"
-      ) as AgentPerformance[];
-    } catch (error) {
-      console.warn("Backend agent performance metrics not available, using mock data");
-      // Return mock agent performance data based on our defined agents
-      return this.getMockAgentPerformance();
-    }
+    // For now, always return mock data to test the UI
+    console.log("Returning mock agent performance data");
+    return this.getMockAgentPerformance();
   }
 
   // Mock agent performance data for development
@@ -214,7 +206,7 @@ export class MetricsApiClient {
           frameworks: ["docker", "kubernetes", "terraform"],
         },
         performance: {
-          task_completion_rate: 0.90,
+          task_completion_rate: 0.9,
           average_response_time_ms: 1450,
           error_rate: 0.031,
           active_tasks: 1,
@@ -238,22 +230,43 @@ export class MetricsApiClient {
     ];
 
     // Add slight variations to make it more realistic and match streaming data
-    return mockAgents.map(agent => ({
-      id: agent.id,
-      name: agent.name,
-      capabilities: agent.capabilities,
-      status: agent.performance.active_tasks > 0 ? "busy" : "available",
-      current_load: agent.performance.active_tasks / 5, // Normalize to 0-1 scale
-      total_tasks_completed: Math.floor(Math.random() * 1000) + 100,
-      average_completion_time_ms: agent.performance.average_response_time_ms,
-      success_rate: agent.performance.task_completion_rate,
-      error_rate: agent.performance.error_rate,
-      specialization_score: Math.random() * 0.3 + 0.7, // 0.7-1.0 range
-      last_active: new Date(Date.now() - Math.random() * 3600000).toISOString(), // Within last hour
-      uptime_percentage: Math.random() * 0.2 + 0.8, // 80-100%
-      memory_usage: Math.random() * 0.3 + 0.2, // 20-50%
-      cpu_usage: Math.random() * 0.4 + 0.1, // 10-50%
-    })) as AgentPerformance[];
+    return mockAgents.map((agent) => {
+      const baseTasks = Math.floor(Math.random() * 1000) + 100;
+      const failedTasks = Math.floor(Math.random() * baseTasks * 0.1); // 0-10% failure rate
+      const successRate = agent.performance.task_completion_rate;
+      const throughputPerHour = Math.floor(Math.random() * 20) + 5; // 5-25 tasks/hour
+
+      return {
+        agent_id: agent.id,
+        name: agent.name,
+        type: [
+          "planning",
+          "execution",
+          "coordination",
+          "validation",
+          "specialized",
+        ][Math.floor(Math.random() * 5)] as AgentPerformance["type"],
+        status: agent.performance.active_tasks > 0 ? "active" : "idle",
+        tasks_completed: baseTasks,
+        tasks_failed: failedTasks,
+        success_rate: successRate,
+        average_response_time_ms: agent.performance.average_response_time_ms,
+        throughput_per_hour: throughputPerHour,
+        cpu_usage_percent: Math.random() * 40 + 10, // 10-50%
+        memory_usage_mb: Math.random() * 500 + 100, // 100-600MB
+        active_connections: Math.floor(Math.random() * 10),
+        error_count: failedTasks,
+        error_rate_per_hour: failedTasks / 24, // Approximate hourly rate
+        cost_per_task: Math.random() * 0.1 + 0.01, // $0.01-$0.11 per task
+        uptime_percentage: Math.random() * 0.2 + 0.8, // 80-100%
+        last_active: new Date(
+          Date.now() - Math.random() * 3600000
+        ).toISOString(),
+        specialization_score: Math.random() * 0.3 + 0.7,
+        current_load: agent.performance.active_tasks / 5,
+        capabilities: agent.capabilities,
+      };
+    }) as AgentPerformance[];
   }
 
   // Get specific agent performance
@@ -410,17 +423,10 @@ export class MetricsApiClient {
   // Acknowledge an alert
   async acknowledgeAlert(alertId: string): Promise<void> {
     try {
-      // TODO: Implement dedicated alert management API
-      // - Create separate alert management endpoints
-      // - Add alert creation, update, and deletion
-      // - Implement alert escalation policies
-      // - Add alert acknowledgment system
-      // - Support alert templates and rules
-      // - Integrate with notification systems
-      // PLACEHOLDER: Using unified metrics endpoint for now
-      console.warn(
-        `Alert acknowledgment for ${alertId} not implemented - requires V3 alert management API`
-      );
+      await apiClient.request(`/metrics/alerts/${alertId}/acknowledge`, {
+        method: "POST",
+        body: JSON.stringify({}),
+      });
     } catch (error) {
       console.error("Failed to acknowledge alert:", error);
       throw new MetricsApiError(
@@ -434,10 +440,10 @@ export class MetricsApiClient {
   // Resolve an alert
   async resolveAlert(alertId: string): Promise<void> {
     try {
-      // PLACEHOLDER: Using unified metrics endpoint for now
-      console.warn(
-        `Alert resolution for ${alertId} not implemented - requires V3 alert management API`
-      );
+      await apiClient.request(`/metrics/alerts/${alertId}/resolve`, {
+        method: "POST",
+        body: JSON.stringify({}),
+      });
     } catch (error) {
       console.error("Failed to resolve alert:", error);
       throw new MetricsApiError(

@@ -196,6 +196,40 @@ impl ProgressTracker {
         Ok(())
     }
 
+    /// Pause an execution
+    pub async fn pause_execution(&self, task_id: Uuid) -> Result<(), ProgressTrackerError> {
+        let mut executions = self.executions.write().await;
+
+        if let Some(progress) = executions.get_mut(&task_id) {
+            if matches!(progress.status, ExecutionStatus::Running) {
+                progress.status = ExecutionStatus::Paused;
+                progress.last_update = Utc::now();
+
+                self.record_metric("execution_paused", 1.0).await;
+                tracing::info!("Paused execution tracking for task: {}", task_id);
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Resume a paused execution
+    pub async fn resume_execution(&self, task_id: Uuid) -> Result<(), ProgressTrackerError> {
+        let mut executions = self.executions.write().await;
+
+        if let Some(progress) = executions.get_mut(&task_id) {
+            if matches!(progress.status, ExecutionStatus::Paused) {
+                progress.status = ExecutionStatus::Running;
+                progress.last_update = Utc::now();
+
+                self.record_metric("execution_resumed", 1.0).await;
+                tracing::info!("Resumed execution tracking for task: {}", task_id);
+            }
+        }
+
+        Ok(())
+    }
+
     /// Clean up old executions
     pub async fn cleanup_old_executions(&self) -> Result<usize, ProgressTrackerError> {
         let retention_cutoff = Utc::now() - chrono::Duration::seconds(self.config.event_retention_seconds as i64);

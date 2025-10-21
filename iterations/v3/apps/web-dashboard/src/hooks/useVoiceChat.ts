@@ -41,7 +41,7 @@ export function useVoiceChat({
 
   // Handle voice recording events
   const handleRecordingStart = useCallback(() => {
-    setSession(prev => ({
+    setSession((prev) => ({
       ...prev,
       isRecording: true,
       currentSpeaker: "user",
@@ -59,7 +59,7 @@ export function useVoiceChat({
     async (recording: VoiceRecording) => {
       console.log(`Voice recording completed: ${recording.duration}ms`);
 
-      setSession(prev => ({
+      setSession((prev) => ({
         ...prev,
         isRecording: false,
         isProcessing: true,
@@ -70,7 +70,9 @@ export function useVoiceChat({
       // For now, we'll simulate processing and provide a mock response
       try {
         // Simulate processing delay
-        await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
+        await new Promise((resolve) =>
+          setTimeout(resolve, 1000 + Math.random() * 2000)
+        );
 
         // Mock agent response based on voice input
         const mockResponses = [
@@ -84,7 +86,7 @@ export function useVoiceChat({
         const responseText =
           mockResponses[Math.floor(Math.random() * mockResponses.length)];
 
-        setSession(prev => ({
+        setSession((prev) => ({
           ...prev,
           isProcessing: false,
           currentSpeaker: "agent",
@@ -95,7 +97,10 @@ export function useVoiceChat({
 
         // Generate TTS for the response
         let audioUrl: string | undefined;
-        if (settings.mode === "full_voice" || settings.mode === "voice_output") {
+        if (
+          settings.mode === "full_voice" ||
+          settings.mode === "voice_output"
+        ) {
           try {
             const audioResponse = await generateSpeech(responseText);
             audioUrl = audioResponse.audioUrl;
@@ -109,19 +114,18 @@ export function useVoiceChat({
 
         // Set up turn timeout for auto-advancing to user turn
         turnTimeoutRef.current = setTimeout(() => {
-          setSession(prev => ({
+          setSession((prev) => ({
             ...prev,
             currentSpeaker: "none",
             lastActivity: new Date(),
           }));
           onTurnChange?.("none");
         }, settings.turnTimeoutMs);
-
       } catch (error) {
         console.error("Voice processing failed:", error);
         onError?.("Failed to process voice input");
 
-        setSession(prev => ({
+        setSession((prev) => ({
           ...prev,
           isProcessing: false,
           currentSpeaker: "none",
@@ -129,11 +133,18 @@ export function useVoiceChat({
         onTurnChange?.("none");
       }
     },
-    [settings.mode, settings.turnTimeoutMs, generateSpeech, onAgentResponse, onError, onTurnChange]
+    [
+      settings.mode,
+      settings.turnTimeoutMs,
+      generateSpeech,
+      onAgentResponse,
+      onError,
+      onTurnChange,
+    ]
   );
 
   const handleAudioLevelChange = useCallback((level: number) => {
-    setSession(prev => ({
+    setSession((prev) => ({
       ...prev,
       audioLevel: level,
       lastActivity: new Date(),
@@ -150,7 +161,7 @@ export function useVoiceChat({
 
   // Start voice chat session
   const startVoiceChat = useCallback(() => {
-    setSession(prev => ({
+    setSession((prev) => ({
       ...prev,
       isActive: true,
       currentSpeaker: "none",
@@ -160,7 +171,7 @@ export function useVoiceChat({
 
   // Stop voice chat session
   const stopVoiceChat = useCallback(() => {
-    setSession(prev => ({
+    setSession((prev) => ({
       ...prev,
       isActive: false,
       currentSpeaker: "none",
@@ -187,7 +198,7 @@ export function useVoiceChat({
     if (session.canInterrupt && session.currentSpeaker === "agent") {
       // In a real implementation, this would stop the current TTS playback
       // For now, we'll just advance the turn
-      setSession(prev => ({
+      setSession((prev) => ({
         ...prev,
         currentSpeaker: "none",
         lastActivity: new Date(),
@@ -203,7 +214,7 @@ export function useVoiceChat({
 
   // Update session when settings change
   useEffect(() => {
-    setSession(prev => ({
+    setSession((prev) => ({
       ...prev,
       mode: settings.mode,
       canInterrupt: settings.interruptEnabled,
@@ -229,3 +240,5 @@ export function useVoiceChat({
     ttsAvailable,
   };
 }
+
+

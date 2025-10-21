@@ -1590,153 +1590,154 @@ impl KnowledgeSeeker {
     // MULTIMODAL RAG INTEGRATION METHODS
     // ============================================================================
 
-    /// Seek multimodal knowledge using the multimodal RAG system
-    ///
-    /// # Arguments
-    /// * `query` - Search query text
-    /// * `context` - Search context with project scope
-    ///
-    /// # Returns
-    /// Multimodal context with evidence from multiple modalities
-    pub async fn seek_multimodal_knowledge(
-        &self,
-        query: &str,
-        context: &SearchContext,
-    ) -> Result<MultimodalContext> {
-        info!("Seeking multimodal knowledge for query: {}", query);
+    // Seek multimodal knowledge using the multimodal RAG system
+    //
+    // Arguments:
+    // * `query` - Search query text
+    // * `context` - Search context with project scope
+    //
+    // Returns: Multimodal context with evidence from multiple modalities
+    // Temporarily disabled due to MultimodalRetriever dependency
+    // pub async fn seek_multimodal_knowledge(
+    //     &self,
+    //     query: &str,
+    //     context: &SearchContext,
+    // ) -> Result<MultimodalContext> {
+    //     info!("Seeking multimodal knowledge for query: {}", query);
+    //
+    //     // Create multimodal retriever with database pool integration for concurrent retrieval operations
+    //     let retriever = MultimodalRetriever::new_with_database_pool(
+    //         self.database_pool.clone(),
+    //         Some(MultimodalRetrieverConfig {
+    //             k_per_modality: 10,
+    //             fusion_method: crate::types::FusionMethod::RRF,
+    //             project_scope: None,
+    //             enable_deduplication: true,
+    //         }),
+    //     ).await?;
+    //
+    //     // Search multimodal content
+    //     let results = retriever
+    //         .search_multimodal(query, 10, context.project_scope.as_deref())
+    //         .await
+    //         .context("Multimodal search failed")?;
+    //
+    //     // Create multimodal context provider
+    //     let mut context_provider = MultimodalContextProvider::new(retriever);
+    //
+    //     // Get context with budget
+    //     let budget = crate::ContextBudget {
+    //         max_tokens: 8000,
+    //         max_items: 50,
+    //         min_confidence: 0.5,
+    //         prefer_global: false,
+    //     };
+    //
+    //     let multimodal_context = context_provider
+    //         .provide_context(query, Some(budget), context.project_scope.as_deref())
+    //         .await
+    //         .context("Failed to provide multimodal context")?;
+    //
+    //     info!(
+    //         "Retrieved multimodal context: {} evidence items, {:.2} budget utilization",
+    //         multimodal_context.evidence_items.len(),
+    //         multimodal_context.budget_utilization
+    //     );
+    //
+    //     Ok(multimodal_context)
+    // }
 
-        // Create multimodal retriever with database pool integration for concurrent retrieval operations
-        let retriever = MultimodalRetriever::new_with_database_pool(
-            self.database_pool.clone(),
-            Some(MultimodalRetrieverConfig {
-                k_per_modality: 10,
-                fusion_method: crate::types::FusionMethod::RRF,
-                project_scope: None,
-                enable_deduplication: true,
-            }),
-        ).await?;
+    // Get multimodal context for decision-making
+    //
+    // Arguments:
+    // * `decision_point` - Decision point description
+    // * `project_scope` - Optional project scope
+    //
+    // Returns: Multimodal context optimized for decision-making
+    // Temporarily disabled due to MultimodalRetriever dependency
+    // pub async fn get_decision_context(
+    //     &self,
+    //     decision_point: &str,
+    //     project_scope: Option<&str>,
+    // ) -> Result<MultimodalContext> {
+    //     info!("Getting decision context for: {}", decision_point);
+    //
+    //     // Create multimodal retriever with database pool integration for decision context
+    //     let retriever = MultimodalRetriever::new_with_database_pool(
+    //         self.database_pool.clone(),
+    //         Some(MultimodalRetrieverConfig {
+    //             k_per_modality: 100,
+    //             fusion_method: crate::types::FusionMethod::RRF,
+    //             project_scope: None,
+    //             enable_deduplication: true,
+    //         }),
+    //     ).await?;
+    //
+    //     let mut context_provider = MultimodalContextProvider::new(retriever);
+    //
+    //     // Use decision-optimized budget
+    //     let budget = crate::ContextBudget {
+    //         max_tokens: 12000, // Larger budget for decisions
+    //         max_items: 100,
+    //         min_confidence: 0.4, // Lower threshold for decisions
+    //         prefer_global: false,
+    //     };
+    //
+    //     let context = context_provider
+    //         .get_decision_context(decision_point, project_scope)
+    //         .await
+    //         .context("Failed to get decision context")?;
+    //
+    //     info!(
+    //         "Retrieved decision context: {} evidence items",
+    //         context.evidence_items.len()
+    //     );
+    //
+    //     Ok(context)
+    // }
 
-        // Search multimodal content
-        let results = retriever
-            .search_multimodal(query, 10, context.project_scope.as_deref())
-            .await
-            .context("Multimodal search failed")?;
-
-        // Create multimodal context provider
-        let mut context_provider = MultimodalContextProvider::new(retriever);
-
-        // Get context with budget
-        let budget = crate::ContextBudget {
-            max_tokens: 8000,
-            max_items: 50,
-            min_confidence: 0.5,
-            prefer_global: false,
-        };
-
-        let multimodal_context = context_provider
-            .provide_context(query, Some(budget), context.project_scope.as_deref())
-            .await
-            .context("Failed to provide multimodal context")?;
-
-        info!(
-            "Retrieved multimodal context: {} evidence items, {:.2} budget utilization",
-            multimodal_context.evidence_items.len(),
-            multimodal_context.budget_utilization
-        );
-
-        Ok(multimodal_context)
-    }
-
-    /// Get multimodal context for decision-making
-    ///
-    /// # Arguments
-    /// * `decision_point` - Decision point description
-    /// * `project_scope` - Optional project scope
-    ///
-    /// # Returns
-    /// Multimodal context optimized for decision-making
-    pub async fn get_decision_context(
-        &self,
-        decision_point: &str,
-        project_scope: Option<&str>,
-    ) -> Result<MultimodalContext> {
-        info!("Getting decision context for: {}", decision_point);
-
-        // Create multimodal retriever with database pool integration for decision context
-        let retriever = MultimodalRetriever::new_with_database_pool(
-            self.database_pool.clone(),
-            Some(MultimodalRetrieverConfig {
-                k_per_modality: 100,
-                fusion_method: crate::types::FusionMethod::RRF,
-                project_scope: None,
-                enable_deduplication: true,
-            }),
-        ).await?;
-
-        let mut context_provider = MultimodalContextProvider::new(retriever);
-
-        // Use decision-optimized budget
-        let budget = crate::ContextBudget {
-            max_tokens: 12000, // Larger budget for decisions
-            max_items: 100,
-            min_confidence: 0.4, // Lower threshold for decisions
-            prefer_global: false,
-        };
-
-        let context = context_provider
-            .get_decision_context(decision_point, project_scope)
-            .await
-            .context("Failed to get decision context")?;
-
-        info!(
-            "Retrieved decision context: {} evidence items",
-            context.evidence_items.len()
-        );
-
-        Ok(context)
-    }
-
-    /// Get evidence context for claim enrichment
-    ///
-    /// # Arguments
-    /// * `claim` - Claim statement
-    /// * `context_type` - Type of evidence needed ("citation", "support", "refutation")
-    ///
-    /// # Returns
-    /// Multimodal context for claim enrichment
-    pub async fn get_evidence_context(
-        &self,
-        claim: &str,
-        context_type: &str,
-    ) -> Result<MultimodalContext> {
-        info!(
-            "Getting evidence context for claim: {} (type: {})",
-            claim, context_type
-        );
-
-        // Create multimodal retriever
-        let retriever = MultimodalRetriever::new(Some(MultimodalRetrieverConfig {
-            k_per_modality: 20,
-            fusion_method: crate::types::FusionMethod::RRF,
-            project_scope: None,
-            enable_deduplication: true,
-        }));
-
-        let mut context_provider = MultimodalContextProvider::new(retriever);
-
-        // Get evidence context
-        let context = context_provider
-            .get_evidence_context(claim, context_type)
-            .await
-            .context("Failed to get evidence context")?;
-
-        info!(
-            "Retrieved evidence context: {} evidence items",
-            context.evidence_items.len()
-        );
-
-        Ok(context)
-    }
+    // /// Get evidence context for claim enrichment
+    // ///
+    // /// # Arguments
+    // /// * `claim` - Claim statement
+    // /// * `context_type` - Type of evidence needed ("citation", "support", "refutation")
+    // ///
+    // /// # Returns
+    // /// Multimodal context for claim enrichment
+    // Temporarily disabled due to MultimodalRetriever dependency
+    // pub async fn get_evidence_context(
+    //     &self,
+    //     claim: &str,
+    //     context_type: &str,
+    // ) -> Result<MultimodalContext> {
+    //     info!(
+    //         "Getting evidence context for claim: {} (type: {})",
+    //         claim, context_type
+    //     );
+    //
+    //     // Create multimodal retriever
+    //     let retriever = MultimodalRetriever::new(Some(MultimodalRetrieverConfig {
+    //         k_per_modality: 20,
+    //         fusion_method: crate::types::FusionMethod::RRF,
+    //         project_scope: None,
+    //         enable_deduplication: true,
+    //     }));
+    //
+    //     let mut context_provider = MultimodalContextProvider::new(retriever);
+    //
+    //     // Get evidence context
+    //     let context = context_provider
+    //         .get_evidence_context(claim, context_type)
+    //         .await
+    //         .context("Failed to get evidence context")?;
+    //
+    //     info!(
+    //         "Retrieved evidence context: {} evidence items",
+    //         context.evidence_items.len()
+    //     );
+    //
+    //     Ok(context)
+    // }
 }
 
 #[async_trait]

@@ -68,6 +68,9 @@ pub enum ModelError {
     #[error("Configuration error: {0}")]
     ConfigError(String),
 
+    #[error("Context overflow: requested {requested} tokens, max {max}")]
+    ContextOverflow { requested: usize, max: usize },
+
     #[error("IO error: {0}")]
     IoError(#[from] std::io::Error),
 

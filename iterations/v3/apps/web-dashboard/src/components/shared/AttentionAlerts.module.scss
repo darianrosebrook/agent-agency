@@ -112,6 +112,14 @@
   .message {
     flex: 1;
 
+    .title {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: inherit;
+      margin-bottom: 0.25rem;
+      opacity: 0.9;
+    }
+
     .text {
       font-size: 0.9rem;
       line-height: 1.4;

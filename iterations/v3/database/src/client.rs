@@ -1,3 +1,11 @@
+// [refactor candidate]: split connection pooling into database/pooling.rs (DeadpoolSqlxBridge, DeadpoolSqlxConnection)
+// [refactor candidate]: split circuit breaker into database/circuit_breaker.rs (CircuitBreaker, CircuitState)
+// [refactor candidate]: split metrics into database/metrics.rs (DatabaseMetrics)
+// [refactor candidate]: split operations into database/operations.rs (DatabaseOperations trait implementation)
+// [refactor candidate]: split health monitoring into database/health.rs (DatabaseHealthStatus, DatabaseStats)
+// [refactor candidate]: split audit logging into database/audit.rs (TaskAuditEvent)
+// [refactor candidate]: split main client into database/client/orchestrator.rs (DatabaseClient)
+// [refactor candidate]: create database/client/mod.rs for module re-exports
 //! Database client implementation with connection pooling and query methods
 //!
 //! Production-hardened database client with:
@@ -14,7 +22,7 @@ use chrono::{Duration, Utc};
 use deadpool_postgres::{Config, ManagerConfig, RecyclingMethod, Runtime, Pool as DeadpoolPool};
 use serde_json;
 use sqlx::Row;
-use sqlx::{PgPool, Postgres, Acquire, Connection, Executor};
+use sqlx::{PgPool, Postgres};
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
@@ -121,6 +129,21 @@ pub struct DeadpoolSqlxConnection {
     metrics: Arc<DatabaseMetrics>,
 }
 
+impl DeadpoolSqlxBridge {
+    /// Execute a query and return rows
+    pub async fn query(&self, query: &str, params: &[&(dyn tokio_postgres::types::ToSql + Sync)]) -> Result<Vec<tokio_postgres::Row>> {
+        let mut conn = self.acquire().await?;
+        conn.execute_query(query, params).await
+    }
+
+    /// Execute a query and return affected row count
+    pub async fn execute(&self, query: &str, params: &[&(dyn tokio_postgres::types::ToSql + Sync)]) -> Result<u64> {
+        let conn = self.acquire().await?;
+        let result = conn.connection.execute(query, params).await?;
+        Ok(result)
+    }
+}
+
 impl DeadpoolSqlxConnection {
     /// Perform health check on the connection
     pub async fn health_check(&mut self) -> Result<()> {
@@ -222,6 +245,7 @@ pub enum CircuitState {
 
 /// Database execution metrics
 #[derive(Debug)]
+
 pub struct DatabaseMetrics {
     /// Total queries executed
     total_queries: AtomicU64,
@@ -911,6 +935,19 @@ pub struct DatabaseStats {
     pub uptime: Option<Duration>,
 }
 
+/// Task audit event structure (matches task_audit_logs table)
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, sqlx::FromRow)]
+pub struct TaskAuditEvent {
+    pub id: Uuid,
+    pub task_id: Uuid,
+    pub ts: chrono::DateTime<chrono::Utc>,
+    pub category: String,
+    pub actor: String,
+    pub action: String,
+    pub payload: serde_json::Value,
+    pub idx: i64,
+}
+
 /// Database operations trait for type-safe queries
 #[async_trait]
 pub trait DatabaseOperations {
@@ -1027,6 +1064,29 @@ pub trait DatabaseOperations {
         entity_type: &str,
         entity_id: Uuid,
     ) -> Result<Vec<AuditTrailEntry>, Self::Error>;
+
+    // Task audit log operations (P0 requirement: persist audit trail + surface it on tasks)
+    async fn create_task_audit_event(
+        &self,
+        task_id: Uuid,
+        category: &str,
+        actor: &str,
+        action: &str,
+        payload: serde_json::Value,
+    ) -> Result<Uuid, Self::Error>;
+    async fn get_task_audit_events(
+        &self,
+        task_id: Uuid,
+        since: Option<chrono::DateTime<chrono::Utc>>,
+        limit: Option<i64>,
+    ) -> Result<Vec<TaskAuditEvent>, Self::Error>;
+    async fn get_task_events_paginated(
+        &self,
+        task_id: Uuid,
+        since: Option<chrono::DateTime<chrono::Utc>>,
+        limit: Option<i64>,
+        offset: Option<i64>,
+    ) -> Result<Vec<TaskAuditEvent>, Self::Error>;
 
     // Analytics and statistics
     async fn get_council_metrics(&self) -> Result<Vec<CouncilMetrics>, Self::Error>;
@@ -1537,7 +1597,7 @@ impl DatabaseOperations for DatabaseClient {
         }
 
         // Apply pagination if provided
-        if let Some(ref pagination) = pagination {
+        if let Some(pagination) = pagination {
             let offset = (pagination.page - 1) * pagination.page_size;
             query.push_str(&format!(
                 " LIMIT {} OFFSET {}",
@@ -1786,27 +1846,27 @@ impl DatabaseOperations for DatabaseClient {
         let mut param_count = 0;
 
         // Build dynamic query based on provided fields
-        if let Some(status) = &update.status {
+        if let Some(_status) = &update.status {
             param_count += 1;
             query.push_str(&format!(", status = ${}", param_count));
         }
 
-        if let Some(completed_at) = &update.completed_at {
+        if let Some(_completed_at) = &update.completed_at {
             param_count += 1;
             query.push_str(&format!(", completed_at = ${}", param_count));
         }
 
-        if let Some(error_message) = &update.error_message {
+        if let Some(_error_message) = &update.error_message {
             param_count += 1;
             query.push_str(&format!(", error_message = ${}", param_count));
         }
 
-        if let Some(result_data) = &update.result_data {
+        if let Some(_result_data) = &update.result_data {
             param_count += 1;
             query.push_str(&format!(", result_data = ${}", param_count));
         }
 
-        if let Some(execution_metadata) = &update.execution_metadata {
+        if let Some(_execution_metadata) = &update.execution_metadata {
             param_count += 1;
             query.push_str(&format!(", execution_metadata = ${}", param_count));
         }
@@ -2029,7 +2089,7 @@ impl DatabaseOperations for DatabaseClient {
         query.push_str(" ORDER BY created_at DESC");
 
         // Apply pagination
-        if let Some(ref pagination) = pagination {
+        if let Some(ref _pagination) = pagination {
             param_count += 1;
             query.push_str(&format!(" LIMIT ${}", param_count));
             param_count += 1;
@@ -2063,7 +2123,7 @@ impl DatabaseOperations for DatabaseClient {
             }
         }
 
-        if let Some(ref pagination) = pagination {
+        if let Some(pagination) = pagination {
             let page_size = i64::from(pagination.page_size);
             let limit = pagination.limit.unwrap_or(page_size);
             let page_index = i64::from(pagination.page.saturating_sub(1));
@@ -2274,15 +2334,15 @@ impl DatabaseOperations for DatabaseClient {
 
         // Apply filters if provided
         if let Some(ref filters) = filters {
-            if let Some(content_type) = &filters.content_type {
+            if let Some(_content_type) = &filters.content_type {
                 param_count += 1;
                 conditions.push(format!("content_type = ${}", param_count));
             }
-            if let Some(source) = &filters.source {
+            if let Some(_source) = &filters.source {
                 param_count += 1;
                 conditions.push(format!("source = ${}", param_count));
             }
-            if let Some(access_level) = &filters.access_level {
+            if let Some(_access_level) = &filters.access_level {
                 param_count += 1;
                 conditions.push(format!("access_level = ${}", param_count));
             }
@@ -2292,15 +2352,15 @@ impl DatabaseOperations for DatabaseClient {
                     conditions.push(format!("tags @> ${}", param_count));
                 }
             }
-            if let Some(created_after) = &filters.created_after {
+            if let Some(_created_after) = &filters.created_after {
                 param_count += 1;
                 conditions.push(format!("created_at >= ${}", param_count));
             }
-            if let Some(created_before) = &filters.created_before {
+            if let Some(_created_before) = &filters.created_before {
                 param_count += 1;
                 conditions.push(format!("created_at <= ${}", param_count));
             }
-            if let Some(parent_id) = &filters.parent_id {
+            if let Some(_parent_id) = &filters.parent_id {
                 param_count += 1;
                 conditions.push(format!("parent_id = ${}", param_count));
             }
@@ -2314,7 +2374,7 @@ impl DatabaseOperations for DatabaseClient {
         query.push_str(" ORDER BY created_at DESC");
 
         // Apply pagination
-        if let Some(ref pagination) = pagination {
+        if let Some(ref _pagination) = pagination {
             param_count += 1;
             query.push_str(&format!(" LIMIT ${}", param_count));
             param_count += 1;
@@ -2351,7 +2411,7 @@ impl DatabaseOperations for DatabaseClient {
             }
         }
 
-        if let Some(ref pagination) = pagination {
+        if let Some(pagination) = pagination {
             let page_size = i64::from(pagination.page_size);
             let limit = pagination.limit.unwrap_or(page_size);
             let page_index = i64::from(pagination.page.saturating_sub(1));
@@ -2920,6 +2980,127 @@ impl DatabaseOperations for DatabaseClient {
             Ok(None)
         }
     }
+
+    // Task audit log operations implementation (P0 requirement)
+    async fn create_task_audit_event(
+        &self,
+        task_id: Uuid,
+        category: &str,
+        actor: &str,
+        action: &str,
+        payload: serde_json::Value,
+    ) -> Result<Uuid, Self::Error> {
+        let event_id = Uuid::new_v4();
+        sqlx::query(
+            r#"
+            INSERT INTO task_audit_logs (id, task_id, category, actor, action, payload)
+            VALUES ($1, $2, $3, $4, $5, $6)
+            "#,
+        )
+        .bind(event_id)
+        .bind(task_id)
+        .bind(category)
+        .bind(actor)
+        .bind(action)
+        .bind(payload)
+        .execute(&self.pool)
+        .await
+        .context("Failed to create task audit event")?;
+
+        debug!("Created task audit event: {} for task {}", action, task_id);
+        Ok(event_id)
+    }
+
+    async fn get_task_audit_events(
+        &self,
+        task_id: Uuid,
+        since: Option<chrono::DateTime<chrono::Utc>>,
+        limit: Option<i64>,
+    ) -> Result<Vec<TaskAuditEvent>, Self::Error> {
+        let limit_val = limit.unwrap_or(100);
+
+        let events = if let Some(since_ts) = since {
+            sqlx::query_as::<_, TaskAuditEvent>(
+                r#"
+                SELECT id, task_id, ts, category, actor, action, payload, idx
+                FROM task_audit_logs
+                WHERE task_id = $1 AND ts >= $2
+                ORDER BY idx DESC
+                LIMIT $3
+                "#,
+            )
+            .bind(task_id)
+            .bind(since_ts)
+            .bind(limit_val)
+        } else {
+            sqlx::query_as::<_, TaskAuditEvent>(
+                r#"
+                SELECT id, task_id, ts, category, actor, action, payload, idx
+                FROM task_audit_logs
+                WHERE task_id = $1
+                ORDER BY idx DESC
+                LIMIT $2
+                "#,
+            )
+            .bind(task_id)
+            .bind(limit_val)
+        }
+        .fetch_all(&self.pool)
+        .await
+        .context("Failed to fetch task audit events")?;
+
+        debug!("Retrieved {} audit events for task {}", events.len(), task_id);
+        Ok(events)
+    }
+
+    async fn get_task_events_paginated(
+        &self,
+        task_id: Uuid,
+        since: Option<chrono::DateTime<chrono::Utc>>,
+        limit: Option<i64>,
+        offset: Option<i64>,
+    ) -> Result<Vec<TaskAuditEvent>, Self::Error> {
+        // Use the stored function for efficient pagination
+        let limit_val = limit.unwrap_or(50);
+        let offset_val = offset.unwrap_or(0);
+
+        let events = if let Some(since_ts) = since {
+            sqlx::query_as::<_, TaskAuditEvent>(
+                "SELECT * FROM get_task_events_paginated($1, $2, $3, $4)",
+            )
+            .bind(task_id)
+            .bind(since_ts)
+            .bind(limit_val)
+            .bind(offset_val)
+        } else {
+            sqlx::query_as::<_, TaskAuditEvent>(
+                "SELECT * FROM get_task_events_paginated($1, NULL, $2, $3)",
+            )
+            .bind(task_id)
+            .bind(limit_val)
+            .bind(offset_val)
+        }
+        .fetch_all(&self.pool)
+        .await
+        .context("Failed to fetch paginated task events")?;
+
+        debug!("Retrieved {} paginated events for task {} (limit: {}, offset: {})",
+               events.len(), task_id, limit_val, offset_val);
+        Ok(events)
+    }
+
+}
+
+impl DatabaseClient {
+    /// Simple query wrapper for compatibility with existing code
+    pub async fn query(&self, query: &str, params: &[&(dyn tokio_postgres::types::ToSql + Sync)]) -> Result<Vec<tokio_postgres::Row>> {
+        self.bridge.query(query, params).await
+    }
+
+    /// Simple execute wrapper for compatibility with existing code
+    pub async fn execute(&self, query: &str, params: &[&(dyn tokio_postgres::types::ToSql + Sync)]) -> Result<u64> {
+        self.bridge.execute(query, params).await
+    }
 }
 
 impl DatabaseClient {
@@ -3222,12 +3403,25 @@ mod tests {
 
     impl DatabaseClient for MockDatabaseClient {
         async fn query(&self, _query: &str, _params: &[&(dyn sqlx::Type<sqlx::Postgres> + Sync)]) -> Result<Vec<sqlx::postgres::PgRow>, sqlx::Error> {
-            // Mock implementation - return empty results for now
+            // TODO: Implement proper mock database client
+            // - Parse SQL queries to determine expected result structure
+            // - Return mock data that matches query expectations
+            // - Support different query types (SELECT, INSERT, UPDATE, DELETE)
+            // - Implement parameterized query handling
+            // - Add configurable mock data fixtures
+            // - Support transaction simulation
+            // - Add connection state management
             Ok(Vec::new())
         }
 
         async fn query_one(&self, _query: &str, _params: &[&(dyn sqlx::Type<sqlx::Postgres> + Sync)]) -> Result<sqlx::postgres::PgRow, sqlx::Error> {
-            // Mock implementation - return error for now
+            // TODO: Implement proper mock database client for single-row queries
+            // - Parse query to determine if it should return a row or error
+            // - Return mock row data with proper column types
+            // - Handle different query patterns (by ID, by condition, etc.)
+            // - Support aggregate queries that return single values
+            // - Add error simulation capabilities
+            // - Implement proper row construction with metadata
             Err(sqlx::Error::RowNotFound)
         }
 

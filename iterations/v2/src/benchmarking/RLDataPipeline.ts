@@ -445,7 +445,15 @@ export class RLDataPipeline extends EventEmitter {
       agentProfile
     );
 
-    // Create action representation (simplified: agent selection decision)
+    // TODO: Implement comprehensive action representation for RL training
+    // - Create rich action representations capturing decision context
+    // - Include action confidence scores and uncertainty measures
+    // - Add alternative action exploration and evaluation
+    // - Support action sequence modeling and temporal dependencies
+    // - Implement action space discretization and encoding
+    // - Add action cost and resource consumption tracking
+    // - Support multi-agent action coordination and representation
+    // - Implement action quality assessment and feedback integration
     const action = {
       selectedAgent: event.agentId,
       confidence: 0.8, // Would come from routing decision context
@@ -455,7 +463,15 @@ export class RLDataPipeline extends EventEmitter {
     // Calculate reward
     const reward = this.calculateReward(event, agentProfile);
 
-    // Create next state (simplified: state after action)
+    // TODO: Implement comprehensive state representation for RL training
+    // - Create detailed state representations capturing system status
+    // - Include temporal state evolution and transition modeling
+    // - Support partial observability and state estimation
+    // - Add state abstraction and dimensionality reduction
+    // - Implement state space exploration and coverage analysis
+    // - Support multi-agent state coordination and representation
+    // - Add state quality assessment and validation
+    // - Implement state compression and efficient storage
     const nextState = { ...stateRepresentation };
     // Would update based on action outcome
 

@@ -1129,8 +1129,14 @@ export class MultiTenantMemoryManager {
     _queryContext: TaskContext,
     _options: any
   ): Promise<ContextualMemory[]> {
-    // Placeholder - would integrate with actual storage layer
-    // Return empty array for now
+    // TODO: Implement tenant memory retrieval system
+    // - Integrate with persistent storage layer (database/cache)
+    // - Implement memory indexing and search capabilities
+    // - Add tenant-specific memory isolation and access controls
+    // - Support memory versioning and temporal queries
+    // - Implement memory compression and optimization
+    // - Add memory retrieval performance monitoring
+    // - Support memory deduplication and consolidation
     return [];
   }
 
@@ -1153,8 +1159,14 @@ export class MultiTenantMemoryManager {
     _tenantId: string,
     _context: TaskContext
   ): Promise<ContextualMemory[]> {
-    // Placeholder - would get anonymized insights from tenant
-    // Return empty array for now
+    // TODO: Implement anonymized insights retrieval
+    // - Implement data anonymization algorithms (k-anonymity, differential privacy)
+    // - Create insights extraction from tenant data without compromising privacy
+    // - Add configurable anonymization levels and policies
+    // - Implement insights aggregation across multiple tenants
+    // - Add privacy-preserving insight validation and quality checks
+    // - Support insights versioning and temporal analysis
+    // - Implement insights caching and performance optimization
     return [];
   }
 

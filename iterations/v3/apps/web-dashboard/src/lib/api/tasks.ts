@@ -165,5 +165,45 @@ export class TaskApiClient {
   }
 }
 
+// Arbiter verdict related interfaces
+export interface ArbiterVerdict {
+  verdict_id: string;
+  task_id: string;
+  decision: any;
+  confidence: number;
+  evidence_manifest?: any;
+  waiver_reason?: string;
+}
+
+export interface ClaimVerificationData {
+  task_id: string;
+  claims: any[];
+  verification_results: any[];
+}
+
+// Mock functions for arbiter operations
+export async function getArbiterVerdict(taskId: string): Promise<ArbiterVerdict> {
+  // This would proxy to the V3 backend
+  return {
+    verdict_id: `verdict_${taskId}`,
+    task_id: taskId,
+    decision: { approved: true },
+    confidence: 0.85,
+    evidence_manifest: {
+      claims: [],
+      verification_results: []
+    }
+  };
+}
+
+export async function getClaimVerificationData(taskId: string): Promise<ClaimVerificationData> {
+  // This would proxy to the V3 backend
+  return {
+    task_id: taskId,
+    claims: [],
+    verification_results: []
+  };
+}
+
 // Export singleton instance
 export const taskApiClient = new TaskApiClient();

@@ -5,6 +5,7 @@ import {
   AnomalyDetectorProps,
   Anomaly,
   AnalyticsFilters,
+  AnomalyDetectionRequest,
 } from "@/types/analytics";
 import { analyticsApiClient, AnalyticsApiError } from "@/lib/analytics-api";
 import styles from "./AnomalyDetector.module.scss";
@@ -15,6 +16,11 @@ interface AnomalyDetectorState {
   isDetecting: boolean;
   error: string | null;
   filters: AnalyticsFilters;
+  detectionParams: {
+    sensitivity: string;
+    min_anomaly_score: number;
+    time_window_hours: number;
+  };
 }
 
 export default function AnomalyDetector({
@@ -39,6 +45,11 @@ export default function AnomalyDetector({
       granularity: "1h",
       anomaly_severity: ["high", "critical"],
     },
+    detectionParams: {
+      sensitivity: "medium",
+      min_anomaly_score: 2.0,
+      time_window_hours: 24,
+    },
   });
 
   // Load anomalies if not provided externally
@@ -58,25 +69,29 @@ export default function AnomalyDetector({
       if (latestSeries?.data && latestSeries.data.length > 0) {
         // Calculate statistical properties from recent data
         const recentData = latestSeries.data.slice(-50); // Last 50 points
-        const values = recentData.map(d => d.value);
+        const values = recentData.map((d) => d.value);
 
         const mean = values.reduce((a, b) => a + b, 0) / values.length;
-        const variance = values.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / values.length;
+        const variance =
+          values.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / values.length;
         const stdDev = Math.sqrt(variance);
 
         // Adjust sensitivity based on data volatility
         const volatilityFactor = stdDev / Math.abs(mean);
-        const adjustedSensitivity = Math.max(0.1, Math.min(0.9, volatilityFactor));
+        const adjustedSensitivity = Math.max(
+          0.1,
+          Math.min(0.9, volatilityFactor)
+        );
 
         // Update detection parameters with time series insights
-        setState(prev => ({
+        setState((prev) => ({
           ...prev,
           detectionParams: {
             ...prev.detectionParams,
-            sensitivity: adjustedSensitivity,
+            sensitivity: adjustedSensitivity < 0.3 ? "low" : adjustedSensitivity < 0.7 ? "medium" : "high",
             min_anomaly_score: stdDev * 2, // 2-sigma threshold
             time_window_hours: Math.max(1, Math.min(24, recentData.length / 4)), // Adaptive window
-          }
+          },
         }));
       }
     }
@@ -154,11 +169,11 @@ export default function AnomalyDetector({
     try {
       setState((prev) => ({ ...prev, isDetecting: true, error: null }));
 
-      const detectionRequest = {
-        metrics: [], // Will be populated from available metrics
+      const detectionRequest: AnomalyDetectionRequest = {
+        metrics: ["cpu_usage", "memory_usage", "response_time"], // Default metrics
         time_range: state.filters.time_range,
-        sensitivity: "medium" as const,
-        algorithms: ["zscore", "isolation_forest"] as const,
+        sensitivity: "medium",
+        algorithms: ["zscore", "isolation_forest"] as Array<"zscore" | "isolation_forest" | "prophet" | "autoencoder">,
       };
 
       const response = await analyticsApiClient.detectAnomalies(

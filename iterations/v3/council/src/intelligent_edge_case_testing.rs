@@ -1,4 +1,14 @@
 // [refactor candidate]: split into council/intelligent_testing/mod.rs - main module file only
+// [refactor candidate]: split core types into council/intelligent_testing/types.rs
+// [refactor candidate]: split test generation into council/intelligent_testing/generation.rs
+// [refactor candidate]: split analysis logic into council/intelligent_testing/analysis.rs
+// [refactor candidate]: split optimization into council/intelligent_testing/optimization.rs
+// [refactor candidate]: split requirements management into council/intelligent_testing/requirements.rs
+// [refactor candidate]: split version management into council/intelligent_testing/versioning.rs
+// [refactor candidate]: split performance analysis into council/intelligent_testing/performance.rs
+// [refactor candidate]: split NLP components into council/intelligent_testing/nlp.rs
+// [refactor candidate]: split error handling into council/intelligent_testing/errors.rs
+// [refactor candidate]: split main orchestrator into council/intelligent_testing/orchestrator.rs
 //! Intelligent Edge Case Testing for V3
 //!
 //! This module implements V3's superior testing capabilities that surpass V2's

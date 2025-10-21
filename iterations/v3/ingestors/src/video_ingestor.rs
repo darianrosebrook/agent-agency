@@ -321,7 +321,7 @@ impl VideoIngestor {
     fn create_segment_from_frame_range(
         &self,
         frames: &[VideoFrame],
-        start_idx: usize,
+        _start_idx: usize,
         content_hash: &str,
     ) -> Result<Segment> {
         if frames.is_empty() {
@@ -526,13 +526,13 @@ impl FrameSampler {
         }
         
         // Find the frame with the highest quality score
-        let mut best_idx = 0;
+        let mut _best_idx = 0;
         let mut best_score = quality_scores[0];
         
         for (i, &score) in quality_scores.iter().enumerate() {
             if score > best_score {
                 best_score = score;
-                best_idx = i;
+                _best_idx = i;
             }
         }
         

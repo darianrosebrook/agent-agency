@@ -409,7 +409,7 @@ impl ProvenanceService {
     }
 
     /// Describe filter value for documentation
-    fn describe_filter_value(&self, value: &serde_json::Value) -> Result<String> {
+    fn _describe_filter_value(&self, value: &serde_json::Value) -> Result<String> {
         match value {
             serde_json::Value::String(s) => Ok(format!("= '{}'", s)),
             serde_json::Value::Number(n) => Ok(format!("= {}", n)),

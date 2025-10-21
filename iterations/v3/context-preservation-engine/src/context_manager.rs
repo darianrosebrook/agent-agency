@@ -8,6 +8,88 @@ use parking_lot::RwLock;
 use chrono::Utc;
 use uuid::Uuid;
 
+/// Secure key storage trait
+pub trait KeyStore: Send + Sync {
+    /// Get a key by name
+    fn get_key(&self, key_name: &str) -> Result<Vec<u8>>;
+    /// Set a key by name
+    fn set_key(&self, key_name: &str, key_data: &[u8]) -> Result<()>;
+    /// Check if a key exists
+    fn has_key(&self, key_name: &str) -> bool;
+}
+
+/// Environment variable keystore (for development)
+pub struct EnvKeyStore;
+
+impl EnvKeyStore {
+    pub fn new() -> Self {
+        Self
+    }
+}
+
+impl KeyStore for EnvKeyStore {
+    fn get_key(&self, key_name: &str) -> Result<Vec<u8>> {
+        let env_var = format!("AGENT_AGENCY_KEY_{}", key_name.to_uppercase());
+        let encoded_key = std::env::var(&env_var)
+            .map_err(|_| anyhow!("Key '{}' not found in environment", key_name))?;
+
+        base64::decode(&encoded_key)
+            .map_err(|e| anyhow!("Failed to decode base64 key '{}': {}", key_name, e))
+    }
+
+    fn set_key(&self, _key_name: &str, _key_data: &[u8]) -> Result<()> {
+        // Environment variables are read-only
+        Err(anyhow!("Cannot set keys in environment keystore"))
+    }
+
+    fn has_key(&self, key_name: &str) -> bool {
+        let env_var = format!("AGENT_AGENCY_KEY_{}", key_name.to_uppercase());
+        std::env::var(&env_var).is_ok()
+    }
+}
+
+/// File-based keystore
+pub struct FileKeyStore {
+    base_path: std::path::PathBuf,
+}
+
+impl FileKeyStore {
+    pub fn new(base_path: std::path::PathBuf) -> Result<Self> {
+        std::fs::create_dir_all(&base_path)?;
+        Ok(Self { base_path })
+    }
+}
+
+impl KeyStore for FileKeyStore {
+    fn get_key(&self, key_name: &str) -> Result<Vec<u8>> {
+        let key_path = self.base_path.join(format!("{}.key", key_name));
+        std::fs::read(&key_path)
+            .map_err(|e| anyhow!("Failed to read key '{}' from {}: {}", key_name, key_path.display(), e))
+    }
+
+    fn set_key(&self, key_name: &str, key_data: &[u8]) -> Result<()> {
+        let key_path = self.base_path.join(format!("{}.key", key_name));
+        std::fs::write(&key_path, key_data)
+            .map_err(|e| anyhow!("Failed to write key '{}' to {}: {}", key_name, key_path.display(), e))?;
+
+        // Set restrictive permissions on Unix systems
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mut perms = std::fs::metadata(&key_path)?.permissions();
+            perms.set_mode(0o600); // Owner read/write only
+            std::fs::set_permissions(&key_path, perms)?;
+        }
+
+        Ok(())
+    }
+
+    fn has_key(&self, key_name: &str) -> bool {
+        let key_path = self.base_path.join(format!("{}.key", key_name));
+        key_path.exists()
+    }
+}
+
 /// Internal structure for transformed data
 #[derive(Debug)]
 struct TransformedData {
@@ -35,6 +117,8 @@ pub struct ContextManager {
     key_cache: Arc<RwLock<HashMap<String, KeyCacheEntry>>>,
     /// Audit log for encryption operations
     audit_log: Arc<RwLock<Vec<EncryptionAuditLog>>>,
+    /// Secure key storage
+    keystore: Option<Box<dyn KeyStore>>,
 }
 
 /// Key management system
@@ -67,6 +151,7 @@ impl ContextManager {
             key_manager,
             key_cache,
             audit_log,
+            keystore: None,
         };
         
         // Initialize encryption system if enabled

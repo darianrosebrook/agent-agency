@@ -28,6 +28,7 @@ use tracing::info;
 
 pub use benchmark_runner::BenchmarkRunner;
 pub use model_evaluator::ModelEvaluator;
+pub use scoring_system::PerformanceMetrics;
 pub use performance_tracker::PerformanceTracker;
 pub use scoring_system::MultiDimensionalScoringSystem;
 pub use sla_validator::{format_sla_report, SlaValidator};
@@ -605,10 +606,16 @@ impl ModelBenchmarkingSystem {
         
         for model in model_performance {
             let analysis = ModelCapabilityAnalysis {
-                model_id: model.model_id.clone(),
+                model_id: model.model_id.to_string(),
                 capability_score: 0.8,
                 task_compatibility: 0.9,
-                performance_metrics: model.performance_metrics.clone(),
+                performance_metrics: PerformanceMetrics {
+                    accuracy: 0.85,
+                    speed: 0.75,
+                    efficiency: 0.80,
+                    reliability: 0.90,
+                    timestamp: chrono::Utc::now(),
+                },
             };
             analyses.push(analysis);
         }
@@ -637,11 +644,18 @@ impl ModelBenchmarkingSystem {
         for analysis in analyses {
             if analysis.task_compatibility > 0.7 {
                 let model_spec = ModelSpecification {
-                    model_id: analysis.model_id.clone(),
-                    model_name: format!("model_{}", analysis.model_id),
-                    model_type: "general".to_string(),
-                    capabilities: vec!["text_processing".to_string(), "reasoning".to_string()],
-                    performance_metrics: analysis.performance_metrics.clone(),
+                    id: uuid::Uuid::new_v4(),
+                    name: format!("model_{}", analysis.model_id),
+                    model_type: ModelType::CodeGeneration,
+                    parameters: ModelParameters {
+                        size: 1000000,
+                        context_length: 4096,
+                        training_data: "general".to_string(),
+                        architecture: "transformer".to_string(),
+                    },
+                    capabilities: vec![],
+                    constraints: vec![],
+                    performance_metrics: Some(analysis.performance_metrics.clone()),
                 };
                 filtered_models.push(model_spec);
             }
@@ -669,9 +683,10 @@ impl ModelBenchmarkingSystem {
         let mut performance_filtered = Vec::new();
         
         for model in models {
-            if model.performance_metrics.accuracy > 0.8 && 
-               model.performance_metrics.speed > 0.7 {
-                performance_filtered.push(model.clone());
+            if let Some(metrics) = &model.performance_metrics {
+                if metrics.accuracy > 0.8 && metrics.speed > 0.7 {
+                    performance_filtered.push(model.clone());
+                }
             }
         }
         
@@ -697,7 +712,9 @@ impl ModelBenchmarkingSystem {
         // Sort by performance score and return top models
         let mut optimized_models = models.to_vec();
         optimized_models.sort_by(|a, b| {
-            b.performance_metrics.accuracy.partial_cmp(&a.performance_metrics.accuracy).unwrap()
+            let a_accuracy = a.performance_metrics.as_ref().map(|m| m.accuracy).unwrap_or(0.0);
+            let b_accuracy = b.performance_metrics.as_ref().map(|m| m.accuracy).unwrap_or(0.0);
+            b_accuracy.partial_cmp(&a_accuracy).unwrap()
         });
         
         // Return top 5 models

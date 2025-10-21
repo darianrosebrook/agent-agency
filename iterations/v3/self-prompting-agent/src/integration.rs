@@ -8,18 +8,15 @@
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-use crate::agent::SelfPromptingAgent;
-use crate::evaluation::{EvaluationOrchestrator, EvalReport};
+use crate::evaluation::EvaluationOrchestrator;
 use crate::loop_controller::SelfPromptingLoop;
-use crate::models::{ModelRegistry, ModelProvider};
+use crate::models::{ModelRegistry, OllamaProvider};
 use crate::sandbox::SandboxEnvironment;
 use crate::types::{Task, TaskResult, ExecutionMode, SafetyMode};
 
 /// Integrated autonomous agent that connects all components
 pub struct IntegratedAutonomousAgent {
-    agent: SelfPromptingAgent,
-    evaluation_orchestrator: Arc<RwLock<EvaluationOrchestrator>>,
-    model_registry: Arc<ModelRegistry>,
+    loop_controller: SelfPromptingLoop,
     sandbox: Arc<RwLock<SandboxEnvironment>>,
     execution_mode: ExecutionMode,
 }
@@ -45,15 +42,16 @@ impl IntegratedAutonomousAgent {
             true, // Use git
         ).await?;
 
-        let agent = SelfPromptingAgent::new(
+        // Configure loop controller with execution mode
+        let loop_controller = SelfPromptingLoop::with_config(
             Arc::clone(&model_registry),
             Arc::clone(&evaluation_orchestrator),
+            execution_mode.clone(),
+            5, // max iterations
         );
 
         Ok(Self {
-            agent,
-            evaluation_orchestrator,
-            model_registry,
+            loop_controller,
             sandbox: Arc::new(RwLock::new(sandbox)),
             execution_mode,
         })
@@ -61,140 +59,24 @@ impl IntegratedAutonomousAgent {
 
     /// Execute a task autonomously end-to-end
     pub async fn execute_task_autonomously(
-        &mut self,
+        &self,
         task: Task,
     ) -> Result<TaskResult, IntegrationError> {
-        // 1. Initialize loop with task
-        let mut loop_controller = SelfPromptingLoop::new(
-            task.clone(),
-            self.execution_mode.clone(),
-        );
+        // Use the existing SelfPromptingLoop.execute_task method
+        let result = self.loop_controller.execute_task(task).await
+            .map_err(|e| IntegrationError::LoopControllerError(e.to_string()))?;
 
-        // 2. Run the autonomous loop
-        loop {
-            // Generate/refine with model
-            let artifacts = self.agent.generate_artifacts(&loop_controller).await?;
-
-            // Apply changes to sandbox if not dry run
-            if !matches!(self.execution_mode, ExecutionMode::DryRun) {
-                let mut sandbox = self.sandbox.write().await;
-                for artifact in &artifacts {
-                    if let Some(diff) = &artifact.unified_diff {
-                        sandbox.apply_diff(diff, loop_controller.iteration()).await?;
-                    }
-                }
+        // Convert the SelfPromptingResult to our TaskResult format
+        match result.task_result {
+            crate::TaskResult::Completed(task_result) => {
+                Ok(task_result)
             }
-
-            // Evaluate results
-            let eval_result = {
-                let mut orchestrator = self.evaluation_orchestrator.write().await;
-                orchestrator.evaluate(&artifacts, &loop_controller.context()).await?
-            };
-
-            // Check if we should continue
-            if self.should_stop(&eval_result, &loop_controller)? {
-                return self.create_final_result(&eval_result, &loop_controller);
-            }
-
-            // Generate refinement prompt and continue
-            let refinement_prompt = self.generate_refinement_prompt(&eval_result);
-            loop_controller.add_refinement_context(refinement_prompt);
-        }
-    }
-
-    /// Check if the loop should stop based on evaluation and satisficing logic
-    fn should_stop(
-        &self,
-        eval_result: &EvalReport,
-        loop_controller: &SelfPromptingLoop,
-    ) -> Result<bool, IntegrationError> {
-        // Check satisficing criteria
-        if eval_result.status == crate::evaluation::EvalStatus::Pass {
-            return Ok(true);
-        }
-
-        // Check iteration limits
-        if loop_controller.iteration() >= loop_controller.max_iterations() {
-            return Ok(true);
-        }
-
-        // Check for quality ceiling (no improvement)
-        if self.detect_quality_ceiling(eval_result, loop_controller) {
-            return Ok(true);
-        }
-
-        Ok(false)
-    }
-
-    /// Detect if we've hit a quality ceiling (no meaningful improvement)
-    fn detect_quality_ceiling(
-        &self,
-        current_eval: &EvalReport,
-        loop_controller: &SelfPromptingLoop,
-    ) -> bool {
-        const CEILING_THRESHOLD: f64 = 0.02; // 2% improvement threshold
-        const CEILING_STREAK: usize = 2; // Consecutive evaluations without improvement
-
-        if loop_controller.iteration() < CEILING_STREAK {
-            return false;
-        }
-
-        let recent_scores: Vec<f64> = loop_controller
-            .history()
-            .iter()
-            .rev()
-            .take(CEILING_STREAK)
-            .map(|r| r.score)
-            .collect();
-
-        let max_recent = recent_scores.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
-        (current_eval.score - max_recent).abs() < CEILING_THRESHOLD
-    }
-
-    /// Generate refinement prompt based on evaluation results
-    fn generate_refinement_prompt(&self, eval_result: &EvalReport) -> String {
-        let mut prompt = "Based on the evaluation results, please refine your approach:\n\n".to_string();
-
-        // Add specific feedback based on failed criteria
-        for criterion in &eval_result.criteria {
-            if !criterion.passed {
-                prompt.push_str(&format!(
-                    "- {}: {}\n",
-                    criterion.id,
-                    criterion.notes.as_deref().unwrap_or("Needs improvement")
-                ));
+            crate::TaskResult::Failed(reason) => {
+                Err(IntegrationError::AgentError(format!("Task failed: {}", reason)))
             }
         }
-
-        prompt.push_str(&format!(
-            "\nCurrent quality score: {:.2}%. Target: {:.2}%.\n",
-            eval_result.score * 100.0,
-            85.0 // From acceptance criteria
-        ));
-
-        prompt.push_str("Please improve the implementation to address these issues.");
-
-        prompt
     }
 
-    /// Create the final task result
-    fn create_final_result(
-        &self,
-        final_eval: &EvalReport,
-        loop_controller: &SelfPromptingLoop,
-    ) -> Result<TaskResult, IntegrationError> {
-        let sandbox = self.sandbox.try_read()?;
-
-        Ok(TaskResult {
-            task_id: loop_controller.task().id.clone(),
-            success: final_eval.status == crate::evaluation::EvalStatus::Pass,
-            iterations: loop_controller.iteration(),
-            final_quality_score: final_eval.score,
-            artifacts: sandbox.get_final_artifacts()?, // Get artifacts from sandbox
-            evaluation_report: final_eval.clone(),
-            execution_mode: self.execution_mode.clone(),
-        })
-    }
 }
 
 /// Errors that can occur during integration

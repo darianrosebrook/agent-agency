@@ -665,6 +665,8 @@ pub struct PlanningAgent {
     spec_generator: SpecGenerator,
     context_builder: ContextBuilder,
     validator: Arc<dyn CawsRuntimeValidator>,
+    /// Automated acceptance criteria extractor
+    criteria_extractor: AcceptanceCriteriaExtractor,
     config: PlanningAgentConfig,
     /// Performance insights collected during operation
     performance_insights: Arc<tokio::sync::RwLock<Vec<String>>>,
@@ -687,6 +689,7 @@ impl PlanningAgent {
             spec_generator,
             context_builder,
             validator,
+            criteria_extractor: AcceptanceCriteriaExtractor::new(),
             config,
             performance_insights: Arc::new(tokio::sync::RwLock::new(Vec::new())),
         }
@@ -695,6 +698,20 @@ impl PlanningAgent {
     /// Get performance optimization insights collected during operation
     pub async fn get_performance_insights(&self) -> Vec<String> {
         self.performance_insights.read().await.clone()
+    }
+
+    /// Extract acceptance criteria from natural language task description
+    pub fn extract_acceptance_criteria(&self, description: &str) -> Vec<AcceptanceCriterion> {
+        self.criteria_extractor.extract_criteria(description)
+    }
+
+    /// Validate extracted criteria against existing criteria
+    pub fn validate_acceptance_criteria(
+        &self,
+        extracted: &[AcceptanceCriterion],
+        existing: &[AcceptanceCriterion],
+    ) -> Vec<crate::planning::acceptance_criteria_extractor::ValidationResult> {
+        self.criteria_extractor.validate_against_existing(extracted, existing)
     }
 
     /// Clear performance insights (useful for testing)
@@ -2149,6 +2166,14 @@ impl PlanningAgent {
             .validate_and_repair(initial_spec, task_description, &enriched_context)
             .await?;
 
+        // Extract and enhance acceptance criteria from natural language
+        let extracted_criteria = self.criteria_extractor.extract_criteria(task_description);
+        let enhanced_criteria = self.enhance_acceptance_criteria(
+            validated_spec.acceptance_criteria,
+            extracted_criteria,
+            task_description,
+        );
+
         // Add metadata and provenance
         let final_spec = WorkingSpec {
             id: format!("SPEC-{}", Uuid::new_v4().simple()),
@@ -2156,7 +2181,7 @@ impl PlanningAgent {
             description: task_description.to_string(),
             risk_tier: self.infer_risk_tier(&validated_spec, &enriched_context),
             scope: validated_spec.scope,
-            acceptance_criteria: validated_spec.acceptance_criteria,
+            acceptance_criteria: enhanced_criteria,
             test_plan: validated_spec.test_plan,
             rollback_plan: validated_spec.rollback_plan,
             constraints: validated_spec.constraints,
@@ -2167,6 +2192,98 @@ impl PlanningAgent {
 
         tracing::info!("Generated working spec: {} (risk tier: {})", final_spec.id, final_spec.risk_tier);
         Ok(WorkingSpecResult::Success(final_spec))
+    }
+
+    /// Enhance acceptance criteria by combining LLM-generated and extracted criteria
+    fn enhance_acceptance_criteria(
+        &self,
+        llm_criteria: Vec<AcceptanceCriterion>,
+        extracted_criteria: Vec<AcceptanceCriterion>,
+        task_description: &str,
+    ) -> Vec<AcceptanceCriterion> {
+        let mut enhanced = llm_criteria;
+
+        // Validate extracted criteria against existing ones
+        let validation_results = self.criteria_extractor.validate_against_existing(
+            &extracted_criteria,
+            &llm_criteria,
+        );
+
+        // Add valid extracted criteria that don't conflict
+        for (i, extracted) in extracted_criteria.into_iter().enumerate() {
+            if let Some(result) = validation_results.get(i) {
+                if result.is_valid && result.conflicts.is_empty() {
+                    // Mark as automatically extracted
+                    let mut criterion = extracted;
+                    criterion.id = format!("AUTO-{}", criterion.id);
+                    enhanced.push(criterion);
+                } else if !result.overlaps.is_empty() {
+                    // Log overlaps for manual review
+                    tracing::info!(
+                        "Extracted criterion '{}' overlaps with existing criteria {:?}",
+                        extracted.id,
+                        result.overlaps
+                    );
+                }
+            }
+        }
+
+        // Ensure we have reasonable coverage (at least 3 criteria)
+        if enhanced.len() < 3 {
+            let fallback_criteria = self.generate_fallback_criteria(task_description);
+            enhanced.extend(fallback_criteria);
+        }
+
+        // Deduplicate final criteria
+        self.deduplicate_criteria(enhanced)
+    }
+
+    /// Generate fallback acceptance criteria if extraction yields too few
+    fn generate_fallback_criteria(&self, task_description: &str) -> Vec<AcceptanceCriterion> {
+        vec![
+            AcceptanceCriterion {
+                id: "FALLBACK-1".to_string(),
+                given: "System is operational".to_string(),
+                when: format!("User initiates the described functionality: {}", task_description),
+                then: "Functionality executes without errors".to_string(),
+                priority: CriterionPriority::MustHave,
+            },
+            AcceptanceCriterion {
+                id: "FALLBACK-2".to_string(),
+                given: "Invalid input is provided".to_string(),
+                when: "User attempts the described functionality".to_string(),
+                then: "System provides appropriate error feedback".to_string(),
+                priority: CriterionPriority::ShouldHave,
+            },
+            AcceptanceCriterion {
+                id: "FALLBACK-3".to_string(),
+                given: "System resources are constrained".to_string(),
+                when: "Functionality is executed".to_string(),
+                then: "System handles resource constraints gracefully".to_string(),
+                priority: CriterionPriority::CouldHave,
+            },
+        ]
+    }
+
+    /// Deduplicate acceptance criteria based on semantic similarity
+    fn deduplicate_criteria(&self, criteria: Vec<AcceptanceCriterion>) -> Vec<AcceptanceCriterion> {
+        let mut result = Vec::new();
+        let mut seen_signatures = std::collections::HashSet::new();
+
+        for criterion in criteria {
+            let signature = format!(
+                "{}|{}|{}",
+                criterion.given.to_lowercase(),
+                criterion.when.to_lowercase(),
+                criterion.then.to_lowercase()
+            );
+
+            if seen_signatures.insert(signature) {
+                result.push(criterion);
+            }
+        }
+
+        result
     }
 
     /// Extract a concise title from the task description

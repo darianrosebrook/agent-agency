@@ -26,6 +26,7 @@ pub trait ArtifactStorage: Send + Sync {
     /// Retrieve execution artifacts
     async fn retrieve(
         &self,
+        task_id: Uuid,
         metadata: &ArtifactMetadata,
     ) -> Result<ExecutionArtifacts, ArtifactStorageError>;
 
@@ -85,6 +86,7 @@ impl ArtifactStorage for InMemoryStorage {
 
     async fn retrieve(
         &self,
+        _task_id: Uuid,
         metadata: &ArtifactMetadata,
     ) -> Result<ExecutionArtifacts, ArtifactStorageError> {
         let artifacts_store = self.artifacts.read().await;
@@ -221,6 +223,7 @@ impl ArtifactStorage for FileSystemStorage {
 
     async fn retrieve(
         &self,
+        _task_id: Uuid,
         metadata: &ArtifactMetadata,
     ) -> Result<ExecutionArtifacts, ArtifactStorageError> {
         use tokio::fs;
@@ -466,6 +469,7 @@ impl ArtifactStorage for DatabaseStorage {
 
     async fn retrieve(
         &self,
+        task_id: Uuid,
         metadata: &ArtifactMetadata,
     ) -> Result<ExecutionArtifacts, ArtifactStorageError> {
         // Query the database for the artifact

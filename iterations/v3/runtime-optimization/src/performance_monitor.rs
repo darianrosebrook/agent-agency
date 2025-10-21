@@ -312,6 +312,34 @@ impl PerformanceMonitor {
         }
     }
 
+    /// Measure current performance metrics
+    pub async fn measure_current_performance(&self) -> Result<PerformanceMetrics> {
+        // In a real implementation, this would collect actual system metrics
+        // For now, simulate measurement with some variance
+        use rand::prelude::*;
+
+        let mut rng = rand::thread_rng();
+        let base_metrics = self.measure_baseline().await?;
+
+        // Add some realistic variance to simulate current conditions
+        let variance_factor = 0.1; // ±10% variance
+        let throughput_variance = (rng.gen::<f64>() - 0.5) * 2.0 * variance_factor;
+        let latency_variance = (rng.gen::<f64>() - 0.5) * 2.0 * variance_factor;
+
+        Ok(PerformanceMetrics {
+            throughput: base_metrics.throughput * (1.0 + throughput_variance),
+            avg_latency_ms: base_metrics.avg_latency_ms * (1.0 + latency_variance),
+            p95_latency_ms: base_metrics.p95_latency_ms * (1.0 + latency_variance * 1.2),
+            p99_latency_ms: base_metrics.p99_latency_ms * (1.0 + latency_variance * 1.5),
+            error_rate: base_metrics.error_rate * (1.0 + (rng.gen::<f64>() - 0.5) * 0.5).max(0.0),
+            cpu_usage_percent: base_metrics.cpu_usage_percent + (rng.gen::<f64>() - 0.5) * 20.0,
+            memory_usage_percent: base_metrics.memory_usage_percent + (rng.gen::<f64>() - 0.5) * 10.0,
+            active_connections: base_metrics.active_connections,
+            queue_depth: base_metrics.queue_depth,
+            timestamp: chrono::Utc::now(),
+        })
+    }
+
     /// Detect performance regressions
     pub async fn detect_regressions(&self) -> Result<Vec<PerformanceRegression>> {
         let history = self.get_metrics_history().await;
@@ -422,3 +450,5 @@ impl Default for MonitorConfig {
         }
     }
 }
+
+

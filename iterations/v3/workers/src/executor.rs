@@ -16,23 +16,40 @@ use uuid::Uuid;
 pub struct TaskExecutor {
     // HTTP client for model communication with robust error handling and performance optimization
     client: reqwest::Client,
+    execution_timeout: std::time::Duration,
+    cancel_timeout: std::time::Duration,
     clock: Box<dyn Clock + Send + Sync>,
     id_gen: Box<dyn IdGenerator + Send + Sync>,
 }
 
 impl TaskExecutor {
-    /// Create a new task executor
+    /// Create a new task executor with default configuration
     pub fn new() -> Self {
+        Self::with_timeouts(
+            std::time::Duration::from_secs(30), // execution timeout
+            std::time::Duration::from_secs(10), // connect timeout
+            std::time::Duration::from_secs(5),  // cancel timeout
+        )
+    }
+
+    /// Create a new task executor with custom timeouts
+    pub fn with_timeouts(
+        execution_timeout: std::time::Duration,
+        connect_timeout: std::time::Duration,
+        cancel_timeout: std::time::Duration,
+    ) -> Self {
         // Create HTTP client with proper configuration
         let client = reqwest::Client::builder()
-            .timeout(std::time::Duration::from_secs(30))
-            .connect_timeout(std::time::Duration::from_secs(10))
+            .timeout(execution_timeout)
+            .connect_timeout(connect_timeout)
             .pool_max_idle_per_host(10)
             .build()
             .expect("Failed to create HTTP client");
 
         Self {
             client,
+            execution_timeout,
+            cancel_timeout,
             clock: Box::new(SystemClock),
             id_gen: Box::new(SequentialId::default()),
         }
@@ -260,28 +277,135 @@ impl TaskExecutor {
         }
     }
 
+    /// Parse rule criteria from a council rule string
+    fn parse_rule_criteria(rule: &str) -> Vec<String> {
+        // Simple parsing: split on common delimiters and extract key requirements
+        let rule_lower = rule.to_lowercase();
+
+        let mut criteria = Vec::new();
+
+        // Extract specific criteria based on rule content
+        if rule_lower.contains("coverage") {
+            if rule_lower.contains("80%") || rule_lower.contains("90%") {
+                criteria.push("Achieve minimum code coverage threshold".to_string());
+            } else {
+                criteria.push("Maintain adequate test coverage".to_string());
+            }
+        }
+
+        if rule_lower.contains("security") || rule_lower.contains("vulnerability") {
+            criteria.push("Pass security scanning requirements".to_string());
+        }
+
+        if rule_lower.contains("performance") || rule_lower.contains("latency") {
+            criteria.push("Meet performance benchmarks".to_string());
+        }
+
+        if rule_lower.contains("quality") || rule_lower.contains("lint") {
+            criteria.push("Pass code quality checks".to_string());
+        }
+
+        if rule_lower.contains("documentation") {
+            criteria.push("Maintain documentation standards".to_string());
+        }
+
+        // If no specific criteria found, use the rule as-is
+        if criteria.is_empty() {
+            criteria.push(format!("Satisfy requirement: {}", rule));
+        }
+
+        criteria
+    }
+
+    /// Determine severity level for a council rule
+    fn determine_rule_severity(rule: &str) -> GateSeverity {
+        let rule_lower = rule.to_lowercase();
+
+        // Critical rules
+        if rule_lower.contains("security") || rule_lower.contains("safety") ||
+           rule_lower.contains("critical") || rule_lower.contains("blocking") {
+            GateSeverity::Critical
+        }
+        // High impact rules
+        else if rule_lower.contains("performance") || rule_lower.contains("reliability") ||
+                rule_lower.contains("compliance") || rule_lower.contains("audit") {
+            GateSeverity::High
+        }
+        // Medium rules (default)
+        else {
+            GateSeverity::Medium
+        }
+    }
+
+    /// Convert council validation rules to worker validation rules
+    fn convert_validation_rules(council_spec: &agent_agency_council::models::CawsSpec) -> Vec<ValidationRule> {
+        // For now, create basic validation rules from waivers
+        council_spec.waivers.iter().enumerate().map(|(i, waiver)| {
+            ValidationRule {
+                id: format!("validation-{}", i),
+                name: format!("Waiver Validation {}", i),
+                description: format!("Validate waiver: {}", waiver.reason),
+                rule_type: ValidationRuleType::Custom,
+                config: serde_json::json!({
+                    "waiver_id": waiver.id,
+                    "reason": waiver.reason
+                }),
+                severity: SeverityLevel::Medium,
+                file_patterns: vec!["**/*".to_string()],
+            }
+        }).collect()
+    }
+
     /// Convert council CawsSpec to workers CawsSpec
     fn convert_caws_spec(
         &self,
-        _council_spec: &agent_agency_council::models::CawsSpec,
+        council_spec: &agent_agency_council::models::CawsSpec,
     ) -> CawsSpec {
-        // TODO: Implement proper CAWS spec conversion between council and worker formats
-        // - [ ] Map all council CawsSpec fields to worker CawsSpec equivalents
-        // - [ ] Handle field type conversions and validation
-        // - [ ] Support CAWS spec versioning and compatibility
-        // - [ ] Add field mapping configuration and customization
-        // - [ ] Implement conversion error handling and recovery
-        // - [ ] Support bidirectional conversion (council ↔ worker)
-        // - [ ] Add conversion performance optimization and caching
+        // Map council CawsSpec rules to worker quality gates
+        let quality_gates = council_spec.rules.iter()
+            .enumerate()
+            .map(|(i, rule)| {
+                // Parse rule string into criteria
+                let criteria = Self::parse_rule_criteria(rule);
+                QualityGate {
+                    id: format!("gate-{}", i),
+                    name: format!("Rule {}", i),
+                    description: rule.clone(),
+                    criteria,
+                    severity: Self::determine_rule_severity(rule),
+                    enabled: true,
+                    timeout_ms: Some(30000), // 30 second timeout
+                }
+            })
+            .collect();
+
+        // Map council waivers to worker compliance requirements
+        let compliance_requirements = if council_spec.waivers.is_empty() {
+            ComplianceRequirements::default()
+        } else {
+            ComplianceRequirements {
+                standards: vec!["ISO27001".to_string()], // Placeholder
+                certifications: council_spec.waivers.iter()
+                    .map(|w| w.id.clone())
+                    .collect(),
+                audit_requirements: vec![],
+                reporting_frequency: "monthly".to_string(),
+            }
+        };
+
         CawsSpec {
-            // Placeholder - actual field mapping needed
-            id: _council_spec.id.clone(),
-            name: _council_spec.name.clone(),
-            description: _council_spec.description.clone(),
-            priority: _council_spec.priority,
-            retry_count: 0,
-            max_retries: 3,
-            metadata: std::collections::HashMap::new(),
+            version: "1.0".to_string(),
+            metadata: CawsMetadata {
+                created_at: chrono::Utc::now(),
+                created_by: "orchestrator".to_string(),
+                description: council_spec.description.clone(),
+                tags: vec!["converted".to_string()],
+            },
+            quality_gates,
+            compliance: compliance_requirements,
+            validation_rules: Self::convert_validation_rules(council_spec),
+            benchmarks: None, // TODO: Add performance benchmarks
+            security: SecurityRequirements::default(),
         }
     }
 
@@ -325,12 +449,14 @@ impl TaskExecutor {
         // 2. Service discovery: Look up worker capabilities and health status
         // 3. Endpoint management: Validate endpoint is reachable and healthy
         // 4. Registry optimization: Cache resolved endpoints for performance
-        let worker_endpoint = self.resolve_worker_endpoint(worker_id).await
-            .unwrap_or_else(|_| format!("http://worker-{}/execute", worker_id));
+        let worker_base_url = self.resolve_worker_endpoint(worker_id).await
+            .unwrap_or_else(|_| format!("http://worker-{}", worker_id));
+
+        let execute_url = format!("{}/execute", worker_base_url.trim_end_matches('/'));
 
         let response = self
             .client
-            .post(&worker_endpoint)
+            .post(&execute_url)
             .header("Content-Type", "application/json")
             .header("User-Agent", "Agent-Agency-Executor/1.0")
             .json(&request_body)
@@ -340,7 +466,21 @@ impl TaskExecutor {
 
         let status = response.status();
         if !status.is_success() {
-            return Err(anyhow::anyhow!("Worker returned error status: {}", status));
+            let error_msg = match status {
+                reqwest::StatusCode::REQUEST_TIMEOUT | reqwest::StatusCode::GATEWAY_TIMEOUT => {
+                    format!("Worker request timed out (status: {})", status)
+                },
+                reqwest::StatusCode::TOO_MANY_REQUESTS => {
+                    format!("Worker rate limited (status: {})", status)
+                },
+                reqwest::StatusCode::SERVICE_UNAVAILABLE | reqwest::StatusCode::BAD_GATEWAY => {
+                    format!("Worker service unavailable (status: {})", status)
+                },
+                _ => {
+                    format!("Worker returned error status: {}", status)
+                }
+            };
+            return Err(anyhow::anyhow!(error_msg));
         }
 
         let response_text = response
@@ -786,6 +926,11 @@ impl TaskExecutor {
 
     /// Resolve worker endpoint from service registry
     async fn resolve_worker_endpoint(&self, worker_id: Uuid) -> Result<String> {
+        // Check for configured worker endpoint via environment variable
+        if let Ok(endpoint) = std::env::var("AGENT_AGENCY_WORKER_ENDPOINT") {
+            return Ok(endpoint);
+        }
+
         // For MVP: Use a simple worker service running on localhost:8081
         // TODO: Implement service registry integration for worker discovery
         // - [ ] Integrate with service registries (Consul, Eureka, Kubernetes DNS, etcd)
@@ -797,7 +942,45 @@ impl TaskExecutor {
         // - [ ] Support multi-region and multi-zone service discovery
 
         // For now, route all workers to the same worker service instance
-        Ok("http://localhost:8081/execute".to_string())
+        Ok("http://localhost:8081".to_string())
+    }
+
+    /// Cancel a task execution on a worker
+    pub async fn cancel_task_execution(
+        &self,
+        task_id: Uuid,
+        worker_id: Uuid,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        info!("Cancelling task {} execution on worker {}", task_id, worker_id);
+
+        let worker_base_url = self.resolve_worker_endpoint(worker_id).await
+            .unwrap_or_else(|_| format!("http://worker-{}", worker_id));
+
+        let cancel_endpoint = format!("{}/cancel", worker_base_url.trim_end_matches('/'));
+
+        let request_body = serde_json::json!({
+            "task_id": task_id,
+            "reason": "User requested cancellation"
+        });
+
+        let response = self
+            .client
+            .post(&cancel_endpoint)
+            .header("Content-Type", "application/json")
+            .header("User-Agent", "Agent-Agency-Executor/1.0")
+            .json(&request_body)
+            .timeout(self.cancel_timeout)
+            .send()
+            .await
+            .context("Failed to send cancel request to worker")?;
+
+        let status = response.status();
+        if !status.is_success() {
+            return Err(anyhow::anyhow!("Worker cancel returned error status: {}", status).into());
+        }
+
+        info!("Successfully cancelled task {} on worker {}", task_id, worker_id);
+        Ok(())
     }
 }
 
@@ -864,6 +1047,19 @@ pub struct CawsMetadata {
     pub tags: Vec<String>,
 }
 
+/// Quality gate severity levels
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum GateSeverity {
+    /// Low impact, informational
+    Low,
+    /// Medium impact, should fix
+    Medium,
+    /// High impact, blocking
+    High,
+    /// Critical, must fix
+    Critical,
+}
+
 /// Quality gate definition
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct QualityGate {
@@ -873,14 +1069,14 @@ pub struct QualityGate {
     pub name: String,
     /// Gate description
     pub description: String,
-    /// Gate type
-    pub gate_type: QualityGateType,
-    /// Threshold values
-    pub thresholds: ThresholdConfig,
-    /// Required for passing
-    pub required: bool,
-    /// Weight in overall scoring
-    pub weight: f32,
+    /// Evaluation criteria
+    pub criteria: Vec<String>,
+    /// Gate severity level
+    pub severity: GateSeverity,
+    /// Whether the gate is enabled
+    pub enabled: bool,
+    /// Timeout for gate evaluation (ms)
+    pub timeout_ms: Option<u32>,
 }
 
 /// Quality gate types

@@ -69,13 +69,19 @@ async function handleProxyRequest(
     const targetHost = process.env.V3_BACKEND_HOST ?? "http://localhost:8080";
     const targetUrl = new URL(targetHost);
 
-    // Warn if V3 backend is not configured
+    // Fail fast if V3 backend is not configured and default host isn't explicitly allowed
     if (!process.env.V3_BACKEND_HOST) {
-      console.warn("V3_BACKEND_HOST not configured - proxy requests will fail");
-      // TODO: Milestone 0 - V3 Backend Proxy Configuration
-      // - [ ] Set V3_BACKEND_HOST environment variable
-      // - [ ] Ensure V3 backend is running on specified host
-      // - [ ] Test proxy connectivity with V3 backend
+      console.error(
+        "V3_BACKEND_HOST is not configured. Set this env var to the V3 backend base URL (e.g., http://agent-agency-v3:8080)."
+      );
+      return new NextResponse(
+        JSON.stringify({
+          error: "Backend host not configured",
+          message:
+            "Set V3_BACKEND_HOST in the environment to enable proxying to the V3 backend.",
+        }),
+        { status: 500, headers: { "Content-Type": "application/json" } }
+      );
     }
 
     // Validate target host is in allowlist
@@ -145,7 +151,7 @@ async function handleProxyRequest(
       body:
         method !== "GET" && method !== "HEAD"
           ? await request.text()
-          : undefined,
+          : null,
       // Set reasonable timeout
       signal: AbortSignal.timeout(30000), // 30 seconds
     });

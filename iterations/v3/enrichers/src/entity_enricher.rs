@@ -12,6 +12,8 @@ use anyhow::{Context, Result};
 use std::collections::HashMap;
 use uuid::Uuid;
 use sha2::{Sha256, Digest};
+use email_address::EmailAddress;
+use url::Url;
 
 /// Apple DataDetection bridge for entity extraction
 #[derive(Debug)]
@@ -118,7 +120,7 @@ impl DataDetectionBridge {
             confidence -= 0.2;
         }
         
-        confidence.min(0.99f32).max(0.1)
+        confidence.clamp(0.1, 0.99f32)
     }
     
     /// Calculate confidence score for URL detection
@@ -140,7 +142,7 @@ impl DataDetectionBridge {
             confidence -= 0.1;
         }
         
-        confidence.min(0.99f32).max(0.1)
+        confidence.clamp(0.1, 0.99f32)
     }
     
     /// Calculate confidence score for phone number detection
@@ -163,7 +165,7 @@ impl DataDetectionBridge {
             confidence -= 0.2;
         }
         
-        confidence.min(0.99f32).max(0.1)
+        confidence.clamp(0.1, 0.99f32)
     }
     
     /// Calculate confidence score for date detection
@@ -185,7 +187,7 @@ impl DataDetectionBridge {
             confidence -= 0.1;
         }
         
-        confidence.min(0.99f32).max(0.1)
+        confidence.clamp(0.1, 0.99f32)
     }
     
     /// Calculate confidence score for address detection
@@ -193,7 +195,7 @@ impl DataDetectionBridge {
         let mut confidence: f32 = 0.5;
         
         // Boost confidence for numbers at the beginning
-        if address.chars().next().map_or(false, |c| c.is_ascii_digit()) {
+        if address.chars().next().is_some_and(|c| c.is_ascii_digit()) {
             confidence += 0.2;
         }
         
@@ -207,7 +209,7 @@ impl DataDetectionBridge {
             confidence -= 0.2;
         }
         
-        confidence.min(0.99f32).max(0.1)
+        confidence.clamp(0.1, 0.99f32)
     }
 }
 
@@ -407,7 +409,7 @@ impl NERBridge {
         }
         
         // Boost confidence for proper capitalization
-        if name.chars().next().map_or(false, |c| c.is_uppercase()) {
+        if name.chars().next().is_some_and(|c| c.is_uppercase()) {
             confidence += 0.1;
         }
         
@@ -416,7 +418,7 @@ impl NERBridge {
             confidence += 0.2;
         }
         
-        confidence.min(0.99f32).max(0.1)
+        confidence.clamp(0.1, 0.99f32)
     }
     
     /// Calculate confidence for organization entities
@@ -435,11 +437,11 @@ impl NERBridge {
         }
         
         // Boost confidence for proper capitalization
-        if org.chars().next().map_or(false, |c| c.is_uppercase()) {
+        if org.chars().next().is_some_and(|c| c.is_uppercase()) {
             confidence += 0.1;
         }
         
-        confidence.min(0.99f32).max(0.1)
+        confidence.clamp(0.1, 0.99f32)
     }
     
     /// Calculate confidence for location entities
@@ -465,7 +467,7 @@ impl NERBridge {
             confidence += 0.25;
         }
         
-        confidence.min(0.99f32).max(0.1)
+        confidence.clamp(0.1, 0.99f32)
     }
     
     /// Find person context around a detected name
@@ -475,12 +477,12 @@ impl NERBridge {
         for (i, w) in words.iter().enumerate() {
             if w.to_lowercase() == word.to_lowercase() {
                 // Try to find adjacent capitalized words
-                let mut full_name = Vec::new();
+                let mut full_name: Vec<&str> = Vec::new();
                 
                 // Look backward
-                for j in (0..i).rev() {
-                    if words[j].chars().next().map_or(false, |c| c.is_uppercase()) {
-                        full_name.insert(0, words[j]);
+                for word in words[..i].iter().rev() {
+                    if word.chars().next().is_some_and(|c| c.is_uppercase()) {
+                        full_name.insert(0, *word);
                     } else {
                         break;
                     }
@@ -490,9 +492,9 @@ impl NERBridge {
                 full_name.push(word);
                 
                 // Look forward
-                for j in (i+1)..words.len() {
-                    if words[j].chars().next().map_or(false, |c| c.is_uppercase()) {
-                        full_name.push(words[j]);
+                for word in &words[i+1..] {
+                    if word.chars().next().is_some_and(|c| c.is_uppercase()) {
+                        full_name.push(*word);
                     } else {
                         break;
                     }
@@ -520,12 +522,14 @@ impl NERBridge {
         let words: Vec<&str> = text.split_whitespace().collect();
         for (i, w) in words.iter().enumerate() {
             if w.to_lowercase() == word.to_lowercase() {
-                let mut org_parts = Vec::new();
+                let mut org_parts: Vec<&str> = Vec::new();
                 
                 // Look for surrounding capitalized words
-                for j in (i.saturating_sub(2))..=(i+2).min(words.len()-1) {
-                    if words[j].chars().next().map_or(false, |c| c.is_uppercase()) {
-                        org_parts.push(words[j]);
+                let start = i.saturating_sub(2);
+                let end = (i + 2).min(words.len() - 1);
+                for word in &words[start..=end] {
+                    if word.chars().next().is_some_and(|c| c.is_uppercase()) {
+                        org_parts.push(*word);
                     }
                 }
                 
@@ -551,16 +555,18 @@ impl NERBridge {
         let words: Vec<&str> = text.split_whitespace().collect();
         for (i, w) in words.iter().enumerate() {
             if w.to_lowercase() == word.to_lowercase() {
-                let mut loc_parts = Vec::new();
+                let mut loc_parts: Vec<&str> = Vec::new();
                 
                 // Look for surrounding capitalized words
-                for j in (i.saturating_sub(1))..=(i+1).min(words.len()-1) {
-                    if words[j].chars().next().map_or(false, |c| c.is_uppercase()) {
-                        loc_parts.push(words[j]);
+                let start = i.saturating_sub(1);
+                let end = (i + 1).min(words.len() - 1);
+                for word in &words[start..=end] {
+                    if word.chars().next().is_some_and(|c| c.is_uppercase()) {
+                        loc_parts.push(*word);
                     }
                 }
                 
-                if loc_parts.len() >= 1 {
+                if !loc_parts.is_empty() {
                     let loc_str = loc_parts.join(" ");
                     if let Some(start) = text.find(&loc_str) {
                         return Some(NERResult {
@@ -813,7 +819,7 @@ impl TopicExtractionBridge {
         for (word, count) in &word_counts {
             if *count >= 2 { // Only consider words that appear at least twice
                 let topic = self.categorize_word(word);
-                topic_groups.entry(topic).or_insert_with(Vec::new).push(word.clone());
+                topic_groups.entry(topic).or_default().push(word.clone());
             }
         }
         
@@ -891,13 +897,13 @@ impl TopicExtractionBridge {
         let base_confidence = matches as f32 / total_keywords as f32;
         
         // Boost confidence for more matches
-        if matches >= 5 {
+        (if matches >= 5 {
             base_confidence + 0.2
         } else if matches >= 3 {
             base_confidence + 0.1
         } else {
             base_confidence
-        }.min(0.99).max(0.1)
+        }).clamp(0.1, 0.99)
     }
     
     /// Calculate confidence for keyphrase extraction
@@ -919,7 +925,7 @@ impl TopicExtractionBridge {
             confidence += 0.1;
         }
         
-        confidence.min(0.99f32).max(0.1)
+        confidence.clamp(0.1, 0.99f32)
     }
     
     /// Calculate confidence for frequency-based topics
@@ -942,7 +948,7 @@ impl TopicExtractionBridge {
             confidence += 0.1;
         }
         
-        confidence.min(0.99f32).max(0.1)
+        confidence.clamp(0.1, 0.99f32)
     }
     
     /// Tokenize text and filter out stopwords
@@ -1508,65 +1514,29 @@ impl EntityEnricher {
         Ok(entities)
     }
 
-    /// TODO: Replace simple email pattern detection with proper email validation
-    /// Requirements for completion:
-    /// - [ ] Implement proper email address validation using regex or email parsing library
-    /// - [ ] Support international email addresses (UTF-8, IDNA)
-    /// - [ ] Handle different email formats and edge cases (subdomains, plus addressing)
-    /// - [ ] Implement proper email syntax validation (RFC 5322 compliance)
-    /// - [ ] Add support for email domain validation and MX record checking
-    /// - [ ] Implement proper error handling for malformed email addresses
-    /// - [ ] Add support for email address normalization and canonicalization
-    /// - [ ] Implement proper confidence scoring based on validation strength
-    /// - [ ] Add support for email address deduplication and merging
-    /// - [ ] Implement proper memory management for email validation
-    /// - [ ] Add support for email validation performance optimization
-    /// - [ ] Implement proper cleanup of email validation resources
-    /// - [ ] Add support for email validation result monitoring and alerting
     fn detect_email_patterns(&self, text: &str, entities: &mut Vec<ExtractedEntity>) {
-        // RFC 5322 compliant email regex (simplified but comprehensive)
-        // This pattern validates most common email formats while being performant
-        let email_regex = regex::Regex::new(r"(?i)^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$").unwrap();
+        // Use regex to find potential email patterns in text
+        let email_regex = regex::Regex::new(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b").unwrap();
 
         // Find all potential email matches in the text
         for cap in email_regex.find_iter(text) {
-            let email = cap.as_str();
+            let email_candidate = cap.as_str();
 
-            // Additional validation for length and structure
-            if email.len() > 254 { // RFC 5321 limit for email length
-                continue;
-            }
+            // Use proper email validation library for accurate RFC 5322 compliance
+            if EmailAddress::is_valid(email_candidate) {
+                let confidence = 0.95; // High confidence for RFC-compliant validation
 
-            // Check for consecutive dots (invalid)
-            if email.contains("..") {
-                continue;
-            }
-
-            // Extract local and domain parts
-            if let Some(at_pos) = email.find('@') {
-                let local = &email[..at_pos];
-                let domain = &email[at_pos + 1..];
-
-                // Validate local part length (RFC 5321)
-                if local.is_empty() || local.len() > 64 {
-                    continue;
-                }
-
-                // Validate domain part
-                if domain.is_empty() || domain.len() > 253 {
-                    continue;
-                }
-
-                // Find position in original text
+                // Extract position information
                 let start_pos = cap.start();
                 let end_pos = cap.end();
 
+                // Create extracted entity with detailed metadata
                 entities.push(ExtractedEntity {
                     id: Uuid::new_v4(),
                     entity_type: "email".to_string(),
-                    text: email.to_string(),
-                    normalized: email.to_lowercase(),
-                    confidence: 0.95, // Higher confidence with proper validation
+                    text: email_candidate.to_string(),
+                    normalized: email_candidate.to_lowercase(),
+                    confidence,
                     pii: true,
                     span_start: start_pos,
                     span_end: end_pos,
@@ -1575,33 +1545,32 @@ impl EntityEnricher {
         }
     }
 
-    /// TODO: Replace simple URL pattern detection with proper URL validation
-    /// Requirements for completion:
-    /// - [ ] Implement proper URL parsing and validation using URL parsing library
-    /// - [ ] Support different URL schemes (http, https, ftp, file, etc.)
-    /// - [ ] Handle international URLs (UTF-8, IRI encoding)
-    /// - [ ] Implement proper URL syntax validation (RFC 3986 compliance)
-    /// - [ ] Add support for URL normalization and canonicalization
-    /// - [ ] Implement proper error handling for malformed URLs
-    /// - [ ] Add support for URL reachability checking and validation
-    /// - [ ] Implement proper confidence scoring based on URL structure
-    /// - [ ] Add support for URL deduplication and merging
-    /// - [ ] Implement proper memory management for URL validation
-    /// - [ ] Add support for URL validation performance optimization
-    /// - [ ] Implement proper cleanup of URL validation resources
-    /// - [ ] Add support for URL validation result monitoring and alerting
     fn detect_url_patterns(&self, text: &str, entities: &mut Vec<ExtractedEntity>) {
-        for word in text.split_whitespace() {
-            if word.starts_with("http://") || word.starts_with("https://") {
+        // Use regex to find potential URL patterns in text
+        let url_regex = regex::Regex::new(r"https?://(?:[-\w.])+(?:[:\d]+)?(?:/(?:[\w/_.])*(?:\?(?:[\w&=%.])*)?(?:#(?:[\w.])*)?)?").unwrap();
+
+        // Find all potential URL matches in the text
+        for cap in url_regex.find_iter(text) {
+            let url_candidate = cap.as_str();
+
+            // Use proper URL parsing library for accurate RFC 3986 compliance
+            if let Ok(parsed_url) = Url::parse(url_candidate) {
+                let confidence = 0.98; // High confidence for RFC-compliant URL parsing
+
+                // Extract position information
+                let start_pos = cap.start();
+                let end_pos = cap.end();
+
+                // Create extracted entity with detailed metadata
                 entities.push(ExtractedEntity {
                     id: Uuid::new_v4(),
                     entity_type: "url".to_string(),
-                    text: word.to_string(),
-                    normalized: word.to_string(),
-                    confidence: 0.95,
+                    text: url_candidate.to_string(),
+                    normalized: parsed_url.to_string(),
+                    confidence,
                     pii: false,
-                    span_start: text.find(word).unwrap_or(0),
-                    span_end: text.find(word).unwrap_or(0) + word.len(),
+                    span_start: start_pos,
+                    span_end: end_pos,
                 });
             }
         }

@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 // Resolve alert API proxy
 
 export async function POST(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: { alertId: string } }
 ) {
   try {

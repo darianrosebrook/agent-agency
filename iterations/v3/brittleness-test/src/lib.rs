@@ -164,7 +164,7 @@ impl DiffApplier {
         let header = lines[*i];
         let header_parts: Vec<&str> = header.split_whitespace().collect();
 
-        if header_parts.len() != 3 || !header_parts[2].ends_with("@@") {
+        if header_parts.len() != 4 || !header_parts[3].ends_with("@@") {
             return Err(DiffError::Validation(format!("Invalid hunk header: {}", header)));
         }
 
@@ -188,7 +188,7 @@ impl DiffApplier {
         })?;
 
         // Parse new ranges
-        let new_ranges = header_parts[2].trim_end_matches("@@");
+        let new_ranges = header_parts[2];
         if !new_ranges.starts_with('+') {
             return Err(DiffError::Validation(format!("Invalid new range format, expected '+' prefix: {}", new_ranges)));
         }

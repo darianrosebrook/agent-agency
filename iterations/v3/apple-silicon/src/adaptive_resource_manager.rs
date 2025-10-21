@@ -1,6 +1,6 @@
 //! Adaptive resource management for Apple Silicon
 
-use crate::types::*;
+use crate::ComputeUnits;
 
 /// Allocation request
 #[derive(Debug, Clone)]

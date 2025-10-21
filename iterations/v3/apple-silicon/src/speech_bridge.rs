@@ -1,5 +1,7 @@
 //! Speech processing bridge for macOS frameworks
 
+use anyhow::Result;
+
 /// Speaker identification
 #[derive(Debug, Clone)]
 pub struct Speaker {

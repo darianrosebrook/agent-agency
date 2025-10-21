@@ -5,6 +5,119 @@ All notable changes to the Agent Agency project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.0] - 2025-10-21
+
+### Added
+
+#### MCP Tool Ecosystem - Complete Implementation
+
+**✅ COMPREHENSIVE MCP SERVER**: Implemented full Model Context Protocol (MCP) server with 13 specialized tools across 7 categories, enabling external AI models to leverage Agent Agency's enterprise-grade capabilities.
+
+##### Policy & Governance Tools (3/3)
+- **`caws_policy_validator`**: Validates task compliance with CAWS governance rules using claim extraction pipeline
+- **`waiver_auditor`**: Audits waiver requests with risk assessment and justification validation
+- **`budget_verifier`**: Verifies change budgets against file count and risk factors
+
+##### Conflict Resolution Tools (3/3)
+- **`debate_orchestrator`**: Multi-model conflict resolution with predictive pleading using council arbitration system
+- **`consensus_builder`**: Quality-weighted consensus building with learning integration
+- **`evidence_synthesizer`**: Cross-reference validation and conflict resolution
+
+##### Evidence Collection Tools (3/3)
+- **`claim_extractor`**: Extracts verifiable claims with confidence scoring
+- **`fact_verifier`**: Multi-modal fact verification with council arbitration using claim-extraction verification pipeline
+- **`source_validator`**: Credibility assessment with security and temporal analysis
+
+##### Governance Tools (3/3)
+- **`audit_logger`**: Comprehensive audit logging with cryptographic signing using provenance service
+- **`provenance_tracker`**: Data lineage tracking with chain of custody
+- **`compliance_reporter`**: CAWS compliance reporting with risk assessment
+
+##### Quality Gate Tools (3/3)
+- **`code_analyzer`**: Multi-dimensional code analysis (linting, types, complexity, security) using quality gates system
+- **`test_executor`**: Multi-type test execution with coverage and performance metrics
+- **`performance_validator`**: Load testing, bottleneck analysis, and optimization recommendations
+
+##### Reasoning Tools (2/2)
+- **`logic_validator`**: Comprehensive logical validation, fallacy detection, and reasoning quality assessment using reflexive learning
+- **`inference_engine`**: Probabilistic reasoning with multiple inference methods and uncertainty assessment
+
+##### Workflow Tools (2/2)
+- **`progress_tracker`**: Workflow monitoring with milestone tracking and completion predictions
+- **`resource_allocator`**: Adaptive resource allocation with optimization criteria using resource management system
+
+##### Enterprise Integration Features
+- **External AI Compatibility**: Seamless integration with Gemma, LM Studio, Ollama via standardized MCP protocol
+- **Production Architecture**: All tools leverage existing battle-tested enterprise systems
+- **Comprehensive Validation**: Input validation, error handling, and detailed response structures
+- **Performance Optimized**: Efficient async processing for high-throughput autonomous operations
+- **Security Compliant**: Built-in CAWS compliance, provenance tracking, and audit trails
+
+### Changed
+
+#### Documentation Updates
+- **README.md**: Added MCP Tool Ecosystem section describing the 13 implemented tools
+- **docs/MCP/README.md**: Complete rewrite reflecting actual implementation status
+- **docs/MCP/USAGE.md**: Updated with real usage examples and integration guides
+
+## [3.1.0] - 2025-10-20
+
+### Added
+
+#### Core Execution Infrastructure Completion
+
+- **API State Synchronization**: Replaced local state updates with real orchestrator calls in REST API
+  - Pause/resume operations now properly coordinate with progress tracker
+  - Task state changes are now persisted and synchronized across interfaces
+  - Added `pause_execution()` and `resume_execution()` methods to ProgressTracker
+
+- **Council Rule Parsing**: Implemented structured quality gate generation from CAWS specifications
+  - Automatic parsing of council rules into executable quality gates
+  - Severity classification and criteria extraction from rule strings
+  - Validation rule conversion from council waivers to worker compliance requirements
+
+- **MCP Status Enhancement**: Real-time task status queries with filtering and pagination
+  - Replaced mock data with actual progress tracker queries
+  - Added status filtering and result limiting capabilities
+  - Proper error handling for task status retrieval
+
+- **Multimodal Audit Trail**: Comprehensive document processing event logging
+  - Audit events for all document processing operations (start, finish, error)
+  - Performance metrics recording for multimodal operations
+  - Integration with existing audit trail infrastructure
+
+#### Enricher System Completion
+
+- **Entity Enricher**: Production-ready entity extraction with standards compliance
+  - RFC 5322 compliant email validation using `email_address` crate
+  - RFC 3986 compliant URL parsing using `url` crate
+  - Proper PII handling and confidence scoring
+
+- **ASR Enricher**: SFSpeechRecognizer integration for speech-to-text
+  - Swift bridge with Apple's Speech Framework
+  - Cross-platform compatibility with stub implementations
+  - Real-time speech recognition with confidence scoring
+  - Automatic Swift library building and linking
+
+- **Vision Enricher**: Vision Framework text detection and OCR
+  - Swift bridge with Apple's Vision Framework
+  - High-accuracy OCR with bounding box support
+  - Multi-line text recognition and confidence scoring
+  - Automatic Vision bridge compilation and integration
+
+### Changed
+
+- **Infrastructure Maturity**: All core execution components now use real implementations instead of placeholders
+- **Build System**: Enhanced build.rs for automatic Swift bridge compilation
+- **Cross-Platform**: Improved compatibility with conditional compilation for macOS-specific features
+
+### Technical Details
+
+- **Swift Bridge Integration**: Added build system support for ASR and Vision Framework bridges
+- **FFI Improvements**: Cross-platform FFI with stub implementations for non-macOS platforms
+- **Audit Trail Enhancement**: Extended audit system to cover multimodal document processing
+- **Progress Tracking**: Enhanced progress tracker with pause/resume operations
+
 ## [3.0.0] - 2025-10-20
 
 ### Added

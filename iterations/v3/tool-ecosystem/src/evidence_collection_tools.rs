@@ -6,6 +6,7 @@
 use anyhow::{Result, Context};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::sync::Arc;
 use tracing::{info, debug, warn};
 
 use crate::tool_registry::{Tool, ToolMetadata, ToolCategory};
@@ -19,6 +20,21 @@ pub struct EvidenceCollectionTool {
     pub fact_verifier: Arc<FactVerifier>,
     /// Source validator for evidence credibility assessment
     pub source_validator: Arc<SourceValidator>,
+}
+
+impl EvidenceCollectionTool {
+    /// Create a new evidence collection tool
+    pub async fn new() -> Result<Self> {
+        let claim_extractor = Arc::new(ClaimExtractor::new());
+        let fact_verifier = Arc::new(FactVerifier::new());
+        let source_validator = Arc::new(SourceValidator::new());
+
+        Ok(Self {
+            claim_extractor,
+            fact_verifier,
+            source_validator,
+        })
+    }
 }
 
 /// Claim extractor for breaking down complex statements into verifiable claims
@@ -1026,3 +1042,5 @@ pub enum VerificationMethod {
     StandardsCheck,
     CodeVerification,
 }
+
+

@@ -2,16 +2,113 @@
 
 use std::collections::HashMap;
 use rand::prelude::*;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Utc, Duration};
+use std::time::{Instant, Duration as StdDuration};
 
 use super::{ModelProvider, ModelPerformanceStats};
 use crate::types::TaskType;
 
-/// Model registry with hot-swapping and performance tracking
+/// Circuit breaker states
+#[derive(Debug, Clone, PartialEq)]
+pub enum CircuitState {
+    Closed,      // Normal operation
+    Open,        // Failing, requests blocked
+    HalfOpen,    // Testing if service recovered
+}
+
+/// Circuit breaker configuration
+#[derive(Debug, Clone)]
+pub struct CircuitBreakerConfig {
+    pub failure_threshold: u32,     // Failures before opening
+    pub recovery_timeout_secs: u64, // Seconds to wait before half-open
+    pub success_threshold: u32,     // Successes needed to close
+}
+
+impl Default for CircuitBreakerConfig {
+    fn default() -> Self {
+        Self {
+            failure_threshold: 3,
+            recovery_timeout_secs: 60,
+            success_threshold: 2,
+        }
+    }
+}
+
+/// Circuit breaker state for a provider
+#[derive(Debug, Clone)]
+pub struct CircuitBreakerState {
+    pub state: CircuitState,
+    pub failure_count: u32,
+    pub success_count: u32,
+    pub last_failure_time: Option<Instant>,
+    pub next_attempt_time: Option<Instant>,
+    pub config: CircuitBreakerConfig,
+}
+
+impl CircuitBreakerState {
+    pub fn new(config: CircuitBreakerConfig) -> Self {
+        Self {
+            state: CircuitState::Closed,
+            failure_count: 0,
+            success_count: 0,
+            last_failure_time: None,
+            next_attempt_time: None,
+            config,
+        }
+    }
+
+    /// Record a successful request
+    pub fn record_success(&mut self) {
+        self.success_count += 1;
+        self.failure_count = 0;
+
+        // If in half-open and success threshold met, close the circuit
+        if self.state == CircuitState::HalfOpen && self.success_count >= self.config.success_threshold {
+            self.state = CircuitState::Closed;
+            self.success_count = 0;
+        }
+    }
+
+    /// Record a failed request
+    pub fn record_failure(&mut self) {
+        self.failure_count += 1;
+        self.last_failure_time = Some(Instant::now());
+        self.success_count = 0;
+
+        // Open circuit if failure threshold exceeded
+        if self.failure_count >= self.config.failure_threshold {
+            self.state = CircuitState::Open;
+            self.next_attempt_time = Some(Instant::now() + StdDuration::from_secs(self.config.recovery_timeout_secs));
+        }
+    }
+
+    /// Check if request should be allowed
+    pub fn should_attempt(&mut self) -> bool {
+        match self.state {
+            CircuitState::Closed => true,
+            CircuitState::Open => {
+                // Check if recovery timeout has passed
+                if let Some(next_attempt) = self.next_attempt_time {
+                    if Instant::now() >= next_attempt {
+                        self.state = CircuitState::HalfOpen;
+                        self.success_count = 0;
+                        return true;
+                    }
+                }
+                false
+            }
+            CircuitState::HalfOpen => true,
+        }
+    }
+}
+
+/// Model registry with hot-swapping, performance tracking, and circuit breakers
 pub struct ModelRegistry {
     providers: HashMap<String, Box<dyn ModelProvider>>,
     performance_stats: HashMap<String, ModelPerformanceStats>,
+    circuit_breakers: HashMap<String, CircuitBreakerState>,
     selection_policy: ModelSelectionPolicy,
+    default_circuit_config: CircuitBreakerConfig,
 }
 
 impl ModelRegistry {
@@ -20,7 +117,9 @@ impl ModelRegistry {
         Self {
             providers: HashMap::new(),
             performance_stats: HashMap::new(),
+            circuit_breakers: HashMap::new(),
             selection_policy: ModelSelectionPolicy::default(),
+            default_circuit_config: CircuitBreakerConfig::default(),
         }
     }
 
@@ -35,7 +134,8 @@ impl ModelRegistry {
         }
 
         self.providers.insert(id.clone(), provider);
-        self.performance_stats.insert(id, ModelPerformanceStats::default());
+        self.performance_stats.insert(id.clone(), ModelPerformanceStats::default());
+        self.circuit_breakers.insert(id, CircuitBreakerState::new(self.default_circuit_config.clone()));
 
         Ok(())
     }
@@ -93,6 +193,7 @@ impl ModelRegistry {
         latency_ms: u64,
         tokens_used: usize,
     ) {
+        // Update performance stats
         if let Some(stats) = self.performance_stats.get_mut(model_id) {
             stats.total_requests += 1;
             if success {
@@ -102,11 +203,56 @@ impl ModelRegistry {
             stats.error_rate = 1.0 - (stats.successful_requests as f64 / stats.total_requests as f64);
             stats.last_used = Utc::now();
         }
+
+        // Update circuit breaker state
+        if let Some(circuit_breaker) = self.circuit_breakers.get_mut(model_id) {
+            if success {
+                circuit_breaker.record_success();
+            } else {
+                circuit_breaker.record_failure();
+            }
+        }
+    }
+
+    /// Select the best healthy model for a task (circuit breaker aware)
+    pub fn select_healthy_model(&mut self, task: &crate::types::Task) -> Result<&dyn ModelProvider, ModelRegistryError> {
+        let all_ids: Vec<&String> = self.providers.keys().collect();
+
+        if all_ids.is_empty() {
+            return Err(ModelRegistryError::NoProvidersAvailable);
+        }
+
+        // Filter out providers that are circuit-broken
+        let healthy_ids: Vec<&String> = all_ids.into_iter()
+            .filter(|id| {
+                self.circuit_breakers.get(*id)
+                    .map(|cb| {
+                        let mut cb_clone = cb.clone();
+                        cb_clone.should_attempt()
+                    })
+                    .unwrap_or(true) // If no circuit breaker, assume healthy
+            })
+            .collect();
+
+        if healthy_ids.is_empty() {
+            return Err(ModelRegistryError::NoProvidersAvailable);
+        }
+
+        let selected_id = self.selection_policy.select_model(task.task_type, &healthy_ids)?;
+
+        self.providers.get(selected_id)
+            .map(|p| p.as_ref())
+            .ok_or_else(|| ModelRegistryError::ProviderNotFound(selected_id.to_string()))
     }
 
     /// Get performance stats for a model
     pub fn get_performance_stats(&self, model_id: &str) -> Option<&ModelPerformanceStats> {
         self.performance_stats.get(model_id)
+    }
+
+    /// Get circuit breaker state for a model
+    pub fn get_circuit_breaker_state(&self, model_id: &str) -> Option<&CircuitBreakerState> {
+        self.circuit_breakers.get(model_id)
     }
 
     /// List all registered providers

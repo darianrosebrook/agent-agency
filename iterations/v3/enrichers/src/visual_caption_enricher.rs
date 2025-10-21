@@ -12,7 +12,7 @@ use anyhow::Result;
 
 pub struct VisualCaptionEnricher {
     circuit_breaker: CircuitBreaker,
-    config: EnricherConfig,
+    _config: EnricherConfig,
 }
 
 impl VisualCaptionEnricher {
@@ -25,7 +25,7 @@ impl VisualCaptionEnricher {
 
         Self {
             circuit_breaker: CircuitBreaker::new(cb_config),
-            config,
+            _config: config,
         }
     }
 
@@ -137,8 +137,7 @@ impl VisualCaptionEnricher {
         // Remove common artifacts
         cleaned = cleaned.replace("a image", "an image");
         // No-op replacement - placeholder for future cleanup rules
-        cleaned = cleaned.replace("a man", "a man");
-        cleaned = cleaned.replace("a woman", "a woman");
+        // Additional cleanup rules can be added here
         
         // Ensure proper capitalization
         if !cleaned.is_empty() {
@@ -289,18 +288,18 @@ impl VisualCaptionEnricher {
         }
         
         // Boost confidence for captions that start with proper capitalization
-        if result.caption.chars().next().map_or(false, |c| c.is_uppercase()) {
+        if result.caption.chars().next().is_some_and(|c| c.is_uppercase()) {
             confidence += 0.05;
         }
         
         // Ensure confidence is within valid range
-        result.confidence = confidence.min(1.0).max(0.0);
+        result.confidence = confidence.clamp(0.0, 1.0);
         
         Ok(())
     }
 
     /// Extract tags from image (visual concepts)
-    fn extract_tags(&self, _caption: &str) -> Vec<String> {
+    fn _extract_tags(&self, _caption: &str) -> Vec<String> {
         // Tag extraction - Implementation ready for production integration
         // Could use simple regex, NER on caption, or secondary classifier
 

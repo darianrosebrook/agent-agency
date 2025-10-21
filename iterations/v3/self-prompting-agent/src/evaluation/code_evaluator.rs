@@ -1,6 +1,6 @@
 //! Code evaluator that runs tests, linting, and type checking
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use tokio::process::Command;
 use tokio::fs;
@@ -53,13 +53,13 @@ impl CodeEvaluator {
     }
 
     /// Run test command with flakiness hardening
-    async fn run_tests(&self, project_root: &Path) -> Result<EvalCriterion, EvaluationError> {
+    async fn run_tests(&self, project_root: PathBuf) -> Result<EvalCriterion, EvaluationError> {
         // Use flakiness hardener to run tests with retries
         let hardened_result = self.flakiness_hardener.harden_evaluation(|| async {
             let output = Command::new("sh")
                 .arg("-c")
                 .arg(&self.config.test_command)
-                .current_dir(project_root)
+                .current_dir(&project_root)
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped())
                 .output()
@@ -122,12 +122,12 @@ impl CodeEvaluator {
     }
 
     /// Run linting command
-    async fn run_lint(&self, project_root: &Path) -> Result<EvalCriterion, EvaluationError> {
+    async fn run_lint(&self, project_root: PathBuf) -> Result<EvalCriterion, EvaluationError> {
         if let Some(lint_cmd) = &self.config.lint_command {
             let output = Command::new("sh")
                 .arg("-c")
                 .arg(lint_cmd)
-                .current_dir(project_root)
+                .current_dir(&project_root)
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped())
                 .output()
@@ -168,12 +168,12 @@ impl CodeEvaluator {
     }
 
     /// Run type checking
-    async fn run_type_check(&self, project_root: &Path) -> Result<EvalCriterion, EvaluationError> {
+    async fn run_type_check(&self, project_root: PathBuf) -> Result<EvalCriterion, EvaluationError> {
         if let Some(type_cmd) = &self.config.type_check_command {
             let output = Command::new("sh")
                 .arg("-c")
                 .arg(type_cmd)
-                .current_dir(project_root)
+                .current_dir(&project_root)
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped())
                 .output()
@@ -295,13 +295,15 @@ impl Evaluator for CodeEvaluator {
         let mut criteria = Vec::new();
 
         // Find the project root (assume it's the parent of the first artifact's directory)
+        // Convert to PathBuf to make it Send for async operations
         let project_root = if let Some(artifact) = artifacts.first() {
             Path::new(&artifact.file_path)
                 .parent()
                 .and_then(|p| p.parent())
                 .unwrap_or(Path::new("."))
+                .to_path_buf()
         } else {
-            Path::new(".")
+            PathBuf::from(".")
         };
 
         // Run all code quality checks
@@ -320,4 +322,122 @@ impl Evaluator for CodeEvaluator {
     fn evaluator_type(&self) -> &'static str {
         "code"
     }
+}
+
+impl CodeEvaluator {
+    /// Parse coverage report data
+    async fn parse_coverage_report(&self, report_path: &Path) -> Result<CoverageData, EvaluationError> {
+        let extension = report_path.extension()
+            .and_then(|ext| ext.to_str())
+            .unwrap_or("");
+
+        match extension {
+            "json" => self.parse_json_coverage(report_path).await,
+            "html" => {
+                // For HTML reports, we can't easily parse them, so return default values
+                // In a real implementation, you might want to extract data from the HTML
+                Ok(CoverageData {
+                    line_coverage: 0.0,
+                    branch_coverage: 0.0,
+                    function_coverage: 0.0,
+                })
+            }
+            _ => {
+                // Try to parse as JSON anyway
+                self.parse_json_coverage(report_path).await
+            }
+        }
+    }
+
+    /// Parse JSON coverage report (Istanbul format)
+    async fn parse_json_coverage(&self, report_path: &Path) -> Result<CoverageData, EvaluationError> {
+        let content = tokio::fs::read_to_string(report_path)
+            .await
+            .map_err(|e| EvaluationError::IoError(e))?;
+
+        // Parse Istanbul JSON coverage format
+        let json: serde_json::Value = serde_json::from_str(&content)
+            .map_err(|e| EvaluationError::ParseError(format!("Failed to parse JSON coverage: {}", e)))?;
+
+        let mut total_lines = 0u64;
+        let mut covered_lines = 0u64;
+        let mut total_branches = 0u64;
+        let mut covered_branches = 0u64;
+        let mut total_functions = 0u64;
+        let mut covered_functions = 0u64;
+
+        if let Some(files) = json.as_object() {
+            for (_file_path, file_data) in files {
+                if let Some(file_obj) = file_data.as_object() {
+                    // Parse line coverage
+                    if let Some(lines) = file_obj.get("l") {
+                        Self::parse_coverage_map(lines, &mut total_lines, &mut covered_lines);
+                    }
+
+                    // Parse branch coverage
+                    if let Some(branches) = file_obj.get("b") {
+                        Self::parse_coverage_map(branches, &mut total_branches, &mut covered_branches);
+                    }
+
+                    // Parse function coverage
+                    if let Some(functions) = file_obj.get("f") {
+                        Self::parse_coverage_map(functions, &mut total_functions, &mut covered_functions);
+                    }
+                }
+            }
+        }
+
+        // Calculate percentages
+        let line_coverage = if total_lines > 0 {
+            covered_lines as f64 / total_lines as f64
+        } else {
+            0.0
+        };
+
+        let branch_coverage = if total_branches > 0 {
+            covered_branches as f64 / total_branches as f64
+        } else {
+            0.0
+        };
+
+        let function_coverage = if total_functions > 0 {
+            covered_functions as f64 / total_functions as f64
+        } else {
+            0.0
+        };
+
+        Ok(CoverageData {
+            line_coverage,
+            branch_coverage,
+            function_coverage,
+        })
+    }
+
+    /// Parse coverage map data from JSON
+    fn parse_coverage_map(data: &serde_json::Value, total: &mut u64, covered: &mut u64) {
+        if let Some(obj) = data.as_object() {
+            for (_key, value) in obj {
+                if let Some(count) = value.as_u64() {
+                    *total += 1;
+                    if count > 0 {
+                        *covered += 1;
+                    }
+                } else if let Some(array) = value.as_array() {
+                    // Handle branch coverage arrays
+                    *total += 1;
+                    if array.iter().any(|&ref v| v.as_u64().unwrap_or(0) > 0) {
+                        *covered += 1;
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// Coverage data structure
+#[derive(Debug, Clone)]
+struct CoverageData {
+    line_coverage: f64,
+    branch_coverage: f64,
+    function_coverage: f64,
 }

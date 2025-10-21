@@ -44,6 +44,40 @@ pub enum SpanStatus {
     Unset,
 }
 
+/// Detailed error information from span analysis
+#[derive(Debug, Clone)]
+pub struct SpanErrorInfo {
+    pub is_error: bool,
+    pub error_code: Option<String>,
+    pub error_message: String,
+    pub severity: String,
+    pub error_type: String,
+    pub error_source: String,
+}
+
+/// Error severity levels
+#[derive(Debug, Clone)]
+pub enum ErrorSeverity {
+    Low,
+    Medium,
+    High,
+    Critical,
+}
+
+/// Error types for classification
+#[derive(Debug, Clone)]
+pub enum ErrorType {
+    Network,
+    Database,
+    Authentication,
+    Authorization,
+    Validation,
+    Timeout,
+    Resource,
+    Configuration,
+    Unknown,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TraceHierarchy {
     pub trace_id: String,
@@ -1232,22 +1266,47 @@ impl TraceCollector {
         }
     }
 
-    /// TODO: Implement actual system metrics collection from OS APIs
-    /// - [ ] Integrate with system monitoring libraries (heim, sysinfo, etc.)
-    /// - [ ] Collect real CPU, memory, disk, and network usage metrics
-    /// - [ ] Support cross-platform metrics collection (Linux, macOS, Windows)
-    /// - [ ] Implement metrics aggregation and time-series storage
-    /// - [ ] Add metrics validation and outlier detection
-    /// - [ ] Support configurable metric polling intervals
-    /// - [ ] Implement metrics caching and efficient retrieval
+    /// Collect actual system metrics using sysinfo
+    async fn collect_system_metrics(&self) -> SystemMetrics {
+        use sysinfo::{System, SystemExt, CpuExt, ProcessExt, PidExt};
+
+        let mut sys = System::new_all();
+
+        // Refresh system information
+        sys.refresh_all();
+
+        // Collect CPU usage
+        let cpu_usage_percent = sys.cpus().iter()
+            .map(|cpu| cpu.cpu_usage())
+            .sum::<f32>() / sys.cpus().len() as f32;
+
+        // Collect memory usage
+        let total_memory = sys.total_memory() as f64;
+        let used_memory = sys.used_memory() as f64;
+        let memory_usage_percent = if total_memory > 0.0 {
+            (used_memory / total_memory * 100.0) as f32
+        } else {
+            0.0
+        };
+
+        // For active connections and queue depth, we'll use placeholder values
+        // since sysinfo doesn't directly provide network connection counts
+        // In a real implementation, these would come from application-specific metrics
+        let active_connections = 0; // Placeholder - would need custom collection
+        let queue_depth = 0; // Placeholder - would need custom collection
+
+        // For error rate and response time, these are application-specific
+        // and would need to be collected from the metrics pipeline
+        let error_rate_percent = 0.0; // Placeholder
+        let average_response_time_ms = 0.0; // Placeholder
 
         SystemMetrics {
-            memory_usage_percent: 65.0 + (chrono::Utc::now().timestamp_millis() % 20) as f32,
-            cpu_usage_percent: 45.0 + (chrono::Utc::now().timestamp_millis() % 30) as f32,
-            active_connections: 150 + (chrono::Utc::now().timestamp_millis() % 50) as u32,
-            queue_depth: 25 + (chrono::Utc::now().timestamp_millis() % 25) as u32,
-            error_rate_percent: 1.2 + (chrono::Utc::now().timestamp_millis() % 10) as f32,
-            average_response_time_ms: 125.0 + (chrono::Utc::now().timestamp_millis() % 50) as f64,
+            memory_usage_percent,
+            cpu_usage_percent,
+            active_connections,
+            queue_depth,
+            error_rate_percent,
+            average_response_time_ms,
         }
     }
 
@@ -1353,6 +1412,228 @@ where
     collector.end_span(&span_id, status).await?;
 
     result
+}
+
+/// Analyze span status and extract detailed error information
+fn analyze_span_status(&self, span_info: &SpanInfo) -> SpanErrorInfo {
+    // 1. Check explicit span status
+    if matches!(span_info.status, SpanStatus::Error) {
+        return SpanErrorInfo {
+            is_error: true,
+            error_code: self.extract_error_code(&span_info.attributes),
+            error_message: self.extract_error_message(&span_info.attributes, &span_info.events),
+            severity: self.determine_error_severity(&span_info.attributes, &span_info.events),
+            error_type: self.classify_error_type(&span_info.attributes, &span_info.events),
+            error_source: self.determine_error_source(&span_info.attributes),
+        };
+    }
+
+    // 2. Check for error indicators in attributes
+    let error_attributes = [
+        "error", "error.message", "error.code", "exception", "exception.message",
+        "http.status_code", "db.error", "grpc.status_code", "otel.status_code"
+    ];
+
+    for attr in &error_attributes {
+        if span_info.attributes.contains_key(*attr) {
+            return SpanErrorInfo {
+                is_error: true,
+                error_code: self.extract_error_code(&span_info.attributes),
+                error_message: self.extract_error_message(&span_info.attributes, &span_info.events),
+                severity: self.determine_error_severity(&span_info.attributes, &span_info.events),
+                error_type: self.classify_error_type(&span_info.attributes, &span_info.events),
+                error_source: self.determine_error_source(&span_info.attributes),
+            };
+        }
+    }
+
+    // 3. Check for error events
+    for event in &span_info.events {
+        if event.name.contains("error") || event.name.contains("exception") || event.name.contains("fail") {
+            return SpanErrorInfo {
+                is_error: true,
+                error_code: self.extract_error_code(&span_info.attributes),
+                error_message: self.extract_error_message(&span_info.attributes, &span_info.events),
+                severity: self.determine_error_severity(&span_info.attributes, &span_info.events),
+                error_type: self.classify_error_type(&span_info.attributes, &span_info.events),
+                error_source: self.determine_error_source(&span_info.attributes),
+            };
+        }
+    }
+
+    // 4. Check for error patterns in operation name
+    if span_info.name.to_lowercase().contains("error") ||
+       span_info.name.to_lowercase().contains("fail") ||
+       span_info.name.to_lowercase().contains("exception") {
+        return SpanErrorInfo {
+            is_error: true,
+            error_code: None,
+            error_message: format!("Operation name indicates error: {}", span_info.name),
+            severity: "medium".to_string(),
+            error_type: "operation".to_string(),
+            error_source: "operation_name".to_string(),
+        };
+    }
+
+    // 5. Check HTTP status codes
+    if let Some(status_code) = span_info.attributes.get("http.status_code") {
+        if let Some(code) = status_code.as_u64() {
+            if code >= 400 {
+                return SpanErrorInfo {
+                    is_error: true,
+                    error_code: Some(format!("HTTP_{}", code)),
+                    error_message: format!("HTTP error status: {}", code),
+                    severity: if code >= 500 { "high".to_string() } else { "medium".to_string() },
+                    error_type: "http".to_string(),
+                    error_source: "http_status".to_string(),
+                };
+            }
+        }
+    }
+
+    // No errors detected
+    SpanErrorInfo {
+        is_error: false,
+        error_code: None,
+        error_message: "No errors detected".to_string(),
+        severity: "none".to_string(),
+        error_type: "none".to_string(),
+        error_source: "none".to_string(),
+    }
+}
+
+/// Extract error code from span attributes
+fn extract_error_code(&self, attributes: &HashMap<String, serde_json::Value>) -> Option<String> {
+    let code_keys = ["error.code", "error", "exception.code", "grpc.status_code", "otel.status_code"];
+
+    for key in &code_keys {
+        if let Some(value) = attributes.get(*key) {
+            return Some(value.to_string().trim_matches('"').to_string());
+        }
+    }
+    None
+}
+
+/// Extract error message from span attributes and events
+fn extract_error_message(&self, attributes: &HashMap<String, serde_json::Value>, events: &[SpanEvent]) -> String {
+    // Check attributes first
+    let message_keys = ["error.message", "error", "exception.message", "message"];
+
+    for key in &message_keys {
+        if let Some(value) = attributes.get(*key) {
+            if let Some(msg) = value.as_str() {
+                return msg.to_string();
+            }
+        }
+    }
+
+    // Check events for error messages
+    for event in events {
+        if event.name.contains("error") || event.name.contains("exception") {
+            if let Some(msg) = event.attributes.get("message") {
+                if let Some(msg_str) = msg.as_str() {
+                    return msg_str.to_string();
+                }
+            }
+        }
+    }
+
+    "Unknown error".to_string()
+}
+
+/// Determine error severity based on attributes and events
+fn determine_error_severity(&self, attributes: &HashMap<String, serde_json::Value>, events: &[SpanEvent]) -> String {
+    // Check for explicit severity indicators
+    if let Some(severity) = attributes.get("error.severity") {
+        if let Some(sev) = severity.as_str() {
+            return sev.to_lowercase();
+        }
+    }
+
+    // Check HTTP status codes for severity
+    if let Some(status_code) = attributes.get("http.status_code") {
+        if let Some(code) = status_code.as_u64() {
+            if code >= 500 {
+                return "high".to_string();
+            } else if code >= 400 {
+                return "medium".to_string();
+            }
+        }
+    }
+
+    // Check for critical error types
+    for event in events {
+        if event.name.contains("panic") || event.name.contains("critical") {
+            return "critical".to_string();
+        }
+    }
+
+    // Default severity
+    "medium".to_string()
+}
+
+/// Classify error type based on attributes and events
+fn classify_error_type(&self, attributes: &HashMap<String, serde_json::Value>, events: &[SpanEvent]) -> String {
+    // Check for specific error types in attributes
+    if attributes.contains_key("db.error") || attributes.contains_key("db.operation") {
+        return "database".to_string();
+    }
+    if attributes.contains_key("http.status_code") || attributes.contains_key("http.method") {
+        return "network".to_string();
+    }
+    if attributes.contains_key("auth.error") || attributes.contains_key("authorization") {
+        return "authentication".to_string();
+    }
+    if attributes.contains_key("validation.error") || attributes.contains_key("input.error") {
+        return "validation".to_string();
+    }
+    if attributes.contains_key("timeout") || attributes.contains_key("deadline") {
+        return "timeout".to_string();
+    }
+
+    // Check events for error type indicators
+    for event in events {
+        let name = event.name.to_lowercase();
+        if name.contains("db") || name.contains("database") {
+            return "database".to_string();
+        }
+        if name.contains("http") || name.contains("network") {
+            return "network".to_string();
+        }
+        if name.contains("auth") || name.contains("permission") {
+            return "authentication".to_string();
+        }
+        if name.contains("timeout") || name.contains("deadline") {
+            return "timeout".to_string();
+        }
+    }
+
+    "unknown".to_string()
+}
+
+/// Determine error source from span attributes
+fn determine_error_source(&self, attributes: &HashMap<String, serde_json::Value>) -> String {
+    // Check for explicit source indicators
+    if let Some(source) = attributes.get("error.source") {
+        if let Some(src) = source.as_str() {
+            return src.to_string();
+        }
+    }
+
+    // Check component/service indicators
+    if let Some(component) = attributes.get("component") {
+        if let Some(comp) = component.as_str() {
+            return comp.to_string();
+        }
+    }
+
+    if let Some(service) = attributes.get("service.name") {
+        if let Some(svc) = service.as_str() {
+            return svc.to_string();
+        }
+    }
+
+    "unknown".to_string()
 }
 
 #[cfg(test)]

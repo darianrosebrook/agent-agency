@@ -2,6 +2,7 @@
 
 import React from "react";
 import { TaskCardProps, Task } from "@/types/tasks";
+import AuditTrailViewer from "./AuditTrailViewer";
 import styles from "./TaskCard.module.scss";
 
 export default function TaskCard({
@@ -50,6 +51,51 @@ export default function TaskCard({
         return "🎯";
       default:
         return "📋";
+    }
+  };
+
+  const getAuditIcon = (action: string) => {
+    switch (action.toLowerCase()) {
+      case "task_created":
+        return "🆕";
+      case "task_started":
+        return "▶️";
+      case "task_paused":
+        return "⏸️";
+      case "task_resumed":
+        return "▶️";
+      case "task_completed":
+        return "✅";
+      case "task_failed":
+        return "❌";
+      case "task_cancelled":
+        return "🛑";
+      case "task_state_change":
+        return "🔄";
+      case "waiver_created":
+        return "📋";
+      case "waiver_approved":
+        return "✅";
+      case "waiver_expired":
+        return "⏰";
+      case "quality_gate_passed":
+        return "✅";
+      case "quality_gate_failed":
+        return "❌";
+      case "quality_gate_waived":
+        return "⚠️";
+      case "worker_assigned":
+        return "👷";
+      case "worker_completed":
+        return "🏁";
+      case "model_switched":
+        return "🔄";
+      case "iteration_started":
+        return "🔄";
+      case "iteration_completed":
+        return "✅";
+      default:
+        return "📝";
     }
   };
 
@@ -270,42 +316,12 @@ export default function TaskCard({
 
           {/* Audit Trail Section */}
           {task.audit_trail && task.audit_trail.length > 0 && (
-            <div className={styles.auditTrail}>
-              <h4>Audit Trail</h4>
-              <div className={styles.timeline}>
-                {task.audit_trail.slice(0, 5).map((entry, index) => (
-                  <div key={index} className={styles.timelineItem}>
-                    <div className={styles.timelineMarker}>
-                      <span className={styles.timelineIcon}>
-                        {getAuditIcon(entry.action)}
-                      </span>
-                    </div>
-                    <div className={styles.timelineContent}>
-                      <div className={styles.timelineHeader}>
-                        <span className={styles.action}>{entry.action}</span>
-                        <span className={styles.timestamp}>
-                          {formatDate(entry.created_at)}
-                        </span>
-                      </div>
-                      {entry.actor && (
-                        <div className={styles.actor}>
-                          by {entry.actor}
-                        </div>
-                      )}
-                      {entry.change_summary && (
-                        <div className={styles.changeSummary}>
-                          {JSON.stringify(entry.change_summary, null, 2)}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-                {task.audit_trail.length > 5 && (
-                  <div className={styles.moreEntries}>
-                    +{task.audit_trail.length - 5} more entries
-                  </div>
-                )}
-              </div>
+            <div className={styles.auditTrailSection}>
+              <AuditTrailViewer
+                auditTrail={task.audit_trail}
+                taskId={task.id}
+                showFullTrail={false}
+              />
             </div>
           )}
         </div>

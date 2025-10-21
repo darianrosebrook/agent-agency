@@ -11,6 +11,11 @@ interface TrendAnalyzerState {
   isAnalyzing: boolean;
   error: string | null;
   filters: AnalyticsFilters;
+  analysisParams: {
+    window_size: number;
+    min_trend_strength: number;
+    seasonality_detection: boolean;
+  };
 }
 
 export default function TrendAnalyzer({
@@ -32,6 +37,11 @@ export default function TrendAnalyzer({
         end: new Date().toISOString(),
       },
       granularity: "1h",
+    },
+    analysisParams: {
+      window_size: 7,
+      min_trend_strength: 0.5,
+      seasonality_detection: true,
     },
   });
 
@@ -59,7 +69,10 @@ export default function TrendAnalyzer({
           const n = recentData.length;
           const sumX = (n * (n - 1)) / 2; // Sum of indices 0 to n-1
           const sumY = recentData.reduce((sum, point) => sum + point.value, 0);
-          const sumXY = recentData.reduce((sum, point, index) => sum + index * point.value, 0);
+          const sumXY = recentData.reduce(
+            (sum, point, index) => sum + index * point.value,
+            0
+          );
           const sumXX = (n * (n - 1) * (2 * n - 1)) / 6; // Sum of squares of indices
 
           const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
@@ -74,20 +87,27 @@ export default function TrendAnalyzer({
           const ssTot = recentData.reduce((sum, point) => {
             return sum + Math.pow(point.value - yMean, 2);
           }, 0);
-          const rSquared = 1 - (ssRes / ssTot);
+          const rSquared = 1 - ssRes / ssTot;
 
           // Update analysis parameters with trend insights
-          setState(prev => ({
+          setState((prev) => ({
             ...prev,
             analysisParams: {
               ...prev.analysisParams,
               min_trend_strength: Math.max(0.1, rSquared * 0.8), // Adaptive threshold
-              analysis_window_days: Math.max(7, Math.min(90, Math.floor(n / 3))), // Adaptive window
-              trend_sensitivity: Math.abs(slope) > 0.01 ? 'high' : 'medium', // Adjust based on slope magnitude
-            }
+              analysis_window_days: Math.max(
+                7,
+                Math.min(90, Math.floor(n / 3))
+              ), // Adaptive window
+              trend_sensitivity: Math.abs(slope) > 0.01 ? "high" : "medium", // Adjust based on slope magnitude
+            },
           }));
 
-          console.log(`Trend analysis enhanced: slope=${slope.toFixed(4)}, r²=${rSquared.toFixed(3)}`);
+          console.log(
+            `Trend analysis enhanced: slope=${slope.toFixed(
+              4
+            )}, r²=${rSquared.toFixed(3)}`
+          );
         }
       }
     }

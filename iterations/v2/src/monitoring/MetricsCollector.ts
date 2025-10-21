@@ -112,12 +112,24 @@ export class MetricsCollector {
       const _idle = totalIdle / cpus.length;
       const _total = totalTick / cpus.length;
 
-      // This is a simplified calculation - in production you'd track previous values
-      // For now, return a mock value based on load average
+      // TODO: Implement accurate CPU usage tracking with historical data
+      // - Track CPU ticks across collection intervals for precise usage calculation
+      // - Implement per-core CPU usage monitoring and aggregation
+      // - Add CPU usage trend analysis and forecasting
+      // - Support CPU usage anomaly detection and alerting
+      // - Implement CPU performance profiling and bottleneck identification
+      // - Add CPU usage correlation with application performance metrics
+      // - Support CPU usage attribution by process and thread
+      // - Implement CPU usage optimization recommendations
       const loadAvg = loadavg()[0];
       const cpuCount = cpus.length;
 
-      // Estimate CPU usage from load average (simplified)
+      // TODO: Replace load average estimation with actual CPU usage calculation
+      // - Use CPU tick differences between collection intervals
+      // - Implement proper CPU time accounting (user, system, idle, iowait)
+      // - Support CPU usage breakdown by core and NUMA node
+      // - Add CPU frequency and temperature monitoring
+      // - Implement CPU usage normalization and comparison
       const estimatedUsage = Math.min(100, (loadAvg / cpuCount) * 100);
 
       return Math.round(estimatedUsage * 100) / 100;
@@ -156,12 +168,23 @@ export class MetricsCollector {
   }
 
   /**
-   * Get disk usage information (simplified)
+   * TODO: Implement comprehensive disk usage monitoring
+   * - Use cross-platform disk usage libraries (diskusage, df, GetDiskFreeSpaceEx)
+   * - Monitor all mounted filesystems with detailed capacity and usage
+   * - Implement disk space forecasting and low-space alerting
+   * - Support disk I/O performance metrics and throughput monitoring
+   * - Add disk health monitoring (bad sectors, reallocation counts)
+   * - Implement disk usage trend analysis and growth prediction
+   * - Support disk quota monitoring and enforcement
+   * - Add disk usage visualization and reporting capabilities
    */
   private async getDiskInfo(): Promise<{ usage: number; availableGB: number }> {
     try {
-      // This is a simplified implementation
-      // In production, you'd use system-specific APIs or libraries like 'diskusage'
+      // TODO: Replace mock disk monitoring with actual filesystem queries
+      // - Use Node.js fs.statvfs() or cross-platform disk libraries
+      // - Implement proper disk space calculation for all mounted volumes
+      // - Support disk usage monitoring for different filesystem types
+      // - Add disk space allocation tracking and fragmentation analysis
       // For now, return mock values based on available memory (as a proxy)
       const memUsage = this.getMemoryInfo();
 
@@ -186,8 +209,15 @@ export class MetricsCollector {
     _timeDiff: number
   ): Promise<{ bytesInPerSecond: number; bytesOutPerSecond: number }> {
     try {
-      // This is a simplified implementation
-      // In production, you'd use system-specific APIs or libraries like 'systeminformation'
+      // TODO: Implement comprehensive network I/O monitoring
+      // - Use system-specific network monitoring APIs (GetIfTable, netstat, /proc/net/dev)
+      // - Monitor all network interfaces with detailed traffic statistics
+      // - Implement network latency and packet loss measurement
+      // - Add network utilization thresholds and alerting
+      // - Support network I/O trend analysis and forecasting
+      // - Implement network interface health monitoring
+      // - Add network protocol breakdown (TCP, UDP, ICMP)
+      // - Support network usage attribution by process and connection
       // For now, return mock values
 
       // Mock network activity based on system load

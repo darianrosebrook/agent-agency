@@ -12,11 +12,12 @@ BEGIN;
 CREATE TABLE IF NOT EXISTS tasks (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     spec JSONB NOT NULL,
-    state VARCHAR(50) NOT NULL DEFAULT 'pending' CHECK (state IN ('pending', 'executing', 'completed', 'failed', 'canceled')),
+    state VARCHAR(50) NOT NULL DEFAULT 'pending' CHECK (state IN ('pending', 'executing', 'completed', 'failed', 'canceled', 'canceling', 'paused')),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     created_by VARCHAR(255),
-    metadata JSONB DEFAULT '{}'::jsonb
+    metadata JSONB DEFAULT '{}'::jsonb,
+    acceptance_criteria TEXT[] DEFAULT ARRAY[]::TEXT[]
 );
 
 CREATE INDEX idx_tasks_state ON tasks(state);
@@ -94,6 +95,37 @@ CREATE INDEX idx_saved_queries_user_id ON saved_queries(user_id);
 CREATE INDEX idx_saved_queries_name ON saved_queries(name);
 CREATE INDEX idx_saved_queries_created_at ON saved_queries(created_at DESC);
 COMMENT ON TABLE saved_queries IS 'Saved database queries for dashboard exploration';
+
+-- ============================================================================
+-- WAIVERS TABLE - Quality gate bypass approvals
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS waivers (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    title VARCHAR(255) NOT NULL,
+    reason VARCHAR(100) NOT NULL CHECK (reason IN (
+        'emergency_hotfix', 'legacy_integration', 'experimental_feature',
+        'third_party_constraint', 'performance_critical', 'security_patch',
+        'infrastructure_limitation', 'other'
+    )),
+    description TEXT NOT NULL,
+    gates TEXT[] NOT NULL, -- Array of quality gates being waived
+    approved_by VARCHAR(255) NOT NULL,
+    impact_level VARCHAR(20) NOT NULL CHECK (impact_level IN ('low', 'medium', 'high', 'critical')),
+    mitigation_plan TEXT NOT NULL,
+    expires_at TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    status VARCHAR(20) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'expired', 'revoked')),
+    metadata JSONB DEFAULT '{}'::jsonb
+);
+
+CREATE INDEX idx_waivers_status ON waivers(status);
+CREATE INDEX idx_waivers_expires_at ON waivers(expires_at);
+CREATE INDEX idx_waivers_approved_by ON waivers(approved_by);
+CREATE INDEX idx_waivers_impact_level ON waivers(impact_level);
+CREATE INDEX idx_waivers_reason ON waivers(reason);
+COMMENT ON TABLE waivers IS 'Quality gate waivers with approval workflow and expiration';
 
 -- ============================================================================
 -- HELPER FUNCTIONS
@@ -238,6 +270,95 @@ COMMENT ON FUNCTION get_audit_trail(UUID, INTEGER) IS
 COMMENT ON FUNCTION get_chat_history(UUID, INTEGER) IS
 'Retrieve chat message history for a session in chronological order';
 
+-- Function to create a waiver with validation
+CREATE OR REPLACE FUNCTION create_waiver(
+    p_title VARCHAR(255),
+    p_reason VARCHAR(100),
+    p_description TEXT,
+    p_gates TEXT[],
+    p_approved_by VARCHAR(255),
+    p_impact_level VARCHAR(20),
+    p_mitigation_plan TEXT,
+    p_expires_at TIMESTAMPTZ,
+    p_metadata JSONB DEFAULT '{}'::jsonb
+)
+RETURNS UUID AS $$
+DECLARE
+    v_waiver_id UUID;
+BEGIN
+    -- Validate reason
+    IF p_reason NOT IN (
+        'emergency_hotfix', 'legacy_integration', 'experimental_feature',
+        'third_party_constraint', 'performance_critical', 'security_patch',
+        'infrastructure_limitation', 'other'
+    ) THEN
+        RAISE EXCEPTION 'Invalid waiver reason: %', p_reason;
+    END IF;
+    
+    -- Validate impact level
+    IF p_impact_level NOT IN ('low', 'medium', 'high', 'critical') THEN
+        RAISE EXCEPTION 'Invalid impact level: %', p_impact_level;
+    END IF;
+    
+    -- Validate expiration is in the future
+    IF p_expires_at <= NOW() THEN
+        RAISE EXCEPTION 'Waiver expiration must be in the future';
+    END IF;
+    
+    INSERT INTO waivers (
+        title, reason, description, gates, approved_by, impact_level,
+        mitigation_plan, expires_at, metadata
+    )
+    VALUES (
+        p_title, p_reason, p_description, p_gates, p_approved_by, p_impact_level,
+        p_mitigation_plan, p_expires_at, p_metadata
+    )
+    RETURNING id INTO v_waiver_id;
+    
+    -- Log the waiver creation
+    PERFORM log_audit_event(
+        'waiver_created',
+        p_approved_by,
+        v_waiver_id,
+        'waiver',
+        jsonb_build_object(
+            'title', p_title,
+            'reason', p_reason,
+            'impact_level', p_impact_level,
+            'expires_at', p_expires_at
+        )
+    );
+    
+    RETURN v_waiver_id;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to check if a waiver is active for specific gates
+CREATE OR REPLACE FUNCTION is_waiver_active(
+    p_gates TEXT[],
+    p_check_time TIMESTAMPTZ DEFAULT NOW()
+)
+RETURNS BOOLEAN AS $$
+DECLARE
+    v_active_count INTEGER;
+BEGIN
+    SELECT COUNT(*)
+    INTO v_active_count
+    FROM waivers
+    WHERE status = 'active'
+      AND expires_at > p_check_time
+      AND gates && p_gates; -- Array overlap operator
+    
+    RETURN v_active_count > 0;
+END;
+$$ LANGUAGE plpgsql;
+
+COMMENT ON FUNCTION create_waiver(VARCHAR(255), VARCHAR(100), TEXT, TEXT[], VARCHAR(255), VARCHAR(20), TEXT, TIMESTAMPTZ, JSONB) IS
+'Create a new waiver with validation and automatic audit logging';
+
+COMMENT ON FUNCTION is_waiver_active(TEXT[], TIMESTAMPTZ) IS
+'Check if any active waivers exist for the specified gates';
+
 -- ============================================================================
 -- USAGE EXAMPLES
 -- ============================================================================
@@ -262,6 +383,21 @@ COMMENT ON FUNCTION get_chat_history(UUID, INTEGER) IS
 
 -- Example 7: Save a query
 -- INSERT INTO saved_queries (user_id, name, query_text) VALUES ('user-uuid', 'My Query', 'SELECT * FROM tasks WHERE state = ''completed''');
+
+-- Example 8: Create a waiver for emergency hotfix
+-- SELECT create_waiver(
+--     'Emergency Security Patch',
+--     'emergency_hotfix',
+--     'Critical security vulnerability requires immediate deployment',
+--     ARRAY['test_coverage', 'mutation_testing'],
+--     'security-team@company.com',
+--     'critical',
+--     'Deploy with enhanced monitoring and immediate rollback plan',
+--     NOW() + INTERVAL '24 hours'
+-- );
+
+-- Example 9: Check if waiver is active for specific gates
+-- SELECT is_waiver_active(ARRAY['test_coverage', 'mutation_testing']);
 
 COMMIT;
 

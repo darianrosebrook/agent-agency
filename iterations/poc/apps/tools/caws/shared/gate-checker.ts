@@ -5,8 +5,8 @@
  * @author @darianrosebrook
  */
 
-import * as path from 'path';
-import { CawsBaseTool } from './base-tool.js';
+import * as path from "path";
+import { CawsBaseTool } from "./base-tool.js";
 import {
   GateResult,
   GateCheckOptions,
@@ -16,8 +16,8 @@ import {
   WaiverConfig,
   HumanOverride,
   AIAssessment,
-} from './types.js';
-import { WaiversManager } from './waivers-manager.js';
+} from "./types.js";
+import { WaiversManager } from "./waivers-manager.js";
 
 export class CawsGateChecker extends CawsBaseTool {
   private tierPolicies: Record<number, TierPolicy> = {
@@ -87,7 +87,9 @@ export class CawsGateChecker extends CawsBaseTool {
       // - Implement waiver conflict detection and resolution
       // - Add waiver performance impact assessment
       for (const waiver of waivers) {
-        const status = await this.waiversManager.checkWaiverStatus(waiver.created_at);
+        const status = await this.waiversManager.checkWaiverStatus(
+          waiver.created_at
+        );
         if (status.active) {
           return { waived: true, waiver };
         }
@@ -112,16 +114,16 @@ export class CawsGateChecker extends CawsBaseTool {
     try {
       const specPath = path.join(
         workingDirectory || this.getWorkingDirectory(),
-        '.caws/working-spec.yml'
+        ".caws/working-spec.yml"
       );
 
       if (!this.pathExists(specPath)) {
-        return { errors: ['Working spec not found at .caws/working-spec.yml'] };
+        return { errors: ["Working spec not found at .caws/working-spec.yml"] };
       }
 
       const spec = await this.readYamlFile(specPath);
       if (!spec) {
-        return { errors: ['Failed to parse working spec'] };
+        return { errors: ["Failed to parse working spec"] };
       }
 
       return {
@@ -184,7 +186,10 @@ export class CawsGateChecker extends CawsBaseTool {
   async checkCoverage(options: GateCheckOptions): Promise<GateResult> {
     try {
       // Check waivers and overrides first
-      const waiverCheck = await this.checkWaiver('coverage', options.workingDirectory);
+      const waiverCheck = await this.checkWaiver(
+        "coverage",
+        options.workingDirectory
+      );
       if (waiverCheck.waived) {
         return {
           passed: true,
@@ -202,7 +207,10 @@ export class CawsGateChecker extends CawsBaseTool {
       const specData = await this.loadWorkingSpec(options.workingDirectory);
 
       // Check human override
-      const overrideCheck = this.checkHumanOverride(specData.human_override, 'coverage');
+      const overrideCheck = this.checkHumanOverride(
+        specData.human_override,
+        "coverage"
+      );
       if (overrideCheck.waived) {
         return {
           passed: true,
@@ -216,10 +224,15 @@ export class CawsGateChecker extends CawsBaseTool {
       }
 
       // Check experiment mode
-      const experimentCheck = this.checkExperimentMode(specData.experiment_mode);
+      const experimentCheck = this.checkExperimentMode(
+        specData.experiment_mode
+      );
 
       let effectiveTier = options.tier;
-      if (experimentCheck.reduced && experimentCheck.adjustments?.reduced_coverage) {
+      if (
+        experimentCheck.reduced &&
+        experimentCheck.adjustments?.reduced_coverage
+      ) {
         // For experiments, use reduced coverage requirement
         effectiveTier = 4; // Special experiment tier
         this.tierPolicies[4] = {
@@ -233,7 +246,7 @@ export class CawsGateChecker extends CawsBaseTool {
 
       const coveragePath = path.join(
         options.workingDirectory || this.getWorkingDirectory(),
-        'coverage/coverage-final.json'
+        "coverage/coverage-final.json"
       );
 
       if (!this.pathExists(coveragePath)) {
@@ -241,9 +254,9 @@ export class CawsGateChecker extends CawsBaseTool {
           passed: false,
           score: 0,
           details: {
-            error: 'Coverage report not found. Run tests with coverage first.',
+            error: "Coverage report not found. Run tests with coverage first.",
           },
-          errors: ['Coverage report not found'],
+          errors: ["Coverage report not found"],
         };
       }
 
@@ -252,8 +265,8 @@ export class CawsGateChecker extends CawsBaseTool {
         return {
           passed: false,
           score: 0,
-          details: { error: 'Failed to parse coverage data' },
-          errors: ['Failed to parse coverage data'],
+          details: { error: "Failed to parse coverage data" },
+          errors: ["Failed to parse coverage data"],
         };
       }
 
@@ -269,7 +282,9 @@ export class CawsGateChecker extends CawsBaseTool {
         const fileData = file as any;
         if (fileData.s) {
           totalStatements += Object.keys(fileData.s).length;
-          coveredStatements += Object.values(fileData.s).filter((s: any) => s > 0).length;
+          coveredStatements += Object.values(fileData.s).filter(
+            (s: any) => s > 0
+          ).length;
         }
         if (fileData.b) {
           for (const branches of Object.values(fileData.b) as number[][]) {
@@ -279,14 +294,19 @@ export class CawsGateChecker extends CawsBaseTool {
         }
         if (fileData.f) {
           totalFunctions += Object.keys(fileData.f).length;
-          coveredFunctions += Object.values(fileData.f).filter((f: any) => f > 0).length;
+          coveredFunctions += Object.values(fileData.f).filter(
+            (f: any) => f > 0
+          ).length;
         }
       }
 
       // Calculate percentages
-      const statementsPct = totalStatements > 0 ? (coveredStatements / totalStatements) * 100 : 0;
-      const branchesPct = totalBranches > 0 ? (coveredBranches / totalBranches) * 100 : 0;
-      const functionsPct = totalFunctions > 0 ? (coveredFunctions / totalFunctions) * 100 : 0;
+      const statementsPct =
+        totalStatements > 0 ? (coveredStatements / totalStatements) * 100 : 0;
+      const branchesPct =
+        totalBranches > 0 ? (coveredBranches / totalBranches) * 100 : 0;
+      const functionsPct =
+        totalFunctions > 0 ? (coveredFunctions / totalFunctions) * 100 : 0;
 
       const branchCoverage = branchesPct / 100;
       const policy = this.tierPolicies[effectiveTier];
@@ -319,7 +339,10 @@ export class CawsGateChecker extends CawsBaseTool {
   async checkMutation(options: GateCheckOptions): Promise<GateResult> {
     try {
       // Check waivers and overrides first
-      const waiverCheck = await this.checkWaiver('mutation', options.workingDirectory);
+      const waiverCheck = await this.checkWaiver(
+        "mutation",
+        options.workingDirectory
+      );
       if (waiverCheck.waived) {
         return {
           passed: true,
@@ -337,7 +360,10 @@ export class CawsGateChecker extends CawsBaseTool {
       const specData = await this.loadWorkingSpec(options.workingDirectory);
 
       // Check human override
-      const overrideCheck = this.checkHumanOverride(specData.human_override, 'mutation_testing');
+      const overrideCheck = this.checkHumanOverride(
+        specData.human_override,
+        "mutation_testing"
+      );
       if (overrideCheck.waived) {
         return {
           passed: true,
@@ -351,8 +377,13 @@ export class CawsGateChecker extends CawsBaseTool {
       }
 
       // Check experiment mode
-      const experimentCheck = this.checkExperimentMode(specData.experiment_mode);
-      if (experimentCheck.reduced && experimentCheck.adjustments?.skip_mutation) {
+      const experimentCheck = this.checkExperimentMode(
+        specData.experiment_mode
+      );
+      if (
+        experimentCheck.reduced &&
+        experimentCheck.adjustments?.skip_mutation
+      ) {
         return {
           passed: true,
           score: 1.0,
@@ -366,7 +397,7 @@ export class CawsGateChecker extends CawsBaseTool {
 
       const mutationPath = path.join(
         options.workingDirectory || this.getWorkingDirectory(),
-        'reports/mutation/mutation.json'
+        "reports/mutation/mutation.json"
       );
 
       if (!this.pathExists(mutationPath)) {
@@ -374,9 +405,9 @@ export class CawsGateChecker extends CawsBaseTool {
           passed: false,
           score: 0,
           details: {
-            error: 'Mutation report not found. Run mutation tests first.',
+            error: "Mutation report not found. Run mutation tests first.",
           },
-          errors: ['Mutation report not found'],
+          errors: ["Mutation report not found"],
         };
       }
 
@@ -385,8 +416,8 @@ export class CawsGateChecker extends CawsBaseTool {
         return {
           passed: false,
           score: 0,
-          details: { error: 'Failed to parse mutation data' },
-          errors: ['Failed to parse mutation data'],
+          details: { error: "Failed to parse mutation data" },
+          errors: ["Failed to parse mutation data"],
         };
       }
 
@@ -423,7 +454,10 @@ export class CawsGateChecker extends CawsBaseTool {
   async checkContracts(options: GateCheckOptions): Promise<GateResult> {
     try {
       // Check waivers and overrides first
-      const waiverCheck = await this.checkWaiver('contracts', options.workingDirectory);
+      const waiverCheck = await this.checkWaiver(
+        "contracts",
+        options.workingDirectory
+      );
       if (waiverCheck.waived) {
         return {
           passed: true,
@@ -449,29 +483,31 @@ export class CawsGateChecker extends CawsBaseTool {
 
       const contractResultsPath = path.join(
         options.workingDirectory || this.getWorkingDirectory(),
-        'test-results/contract-results.json'
+        "test-results/contract-results.json"
       );
 
       if (!this.pathExists(contractResultsPath)) {
         return {
           passed: false,
           score: 0,
-          details: { error: 'Contract test results not found' },
-          errors: ['Contract tests not run or results not found'],
+          details: { error: "Contract test results not found" },
+          errors: ["Contract tests not run or results not found"],
         };
       }
 
-      const results = this.readJsonFile<ContractTestResults>(contractResultsPath);
+      const results =
+        this.readJsonFile<ContractTestResults>(contractResultsPath);
       if (!results) {
         return {
           passed: false,
           score: 0,
-          details: { error: 'Failed to parse contract test results' },
-          errors: ['Failed to parse contract test results'],
+          details: { error: "Failed to parse contract test results" },
+          errors: ["Failed to parse contract test results"],
         };
       }
 
-      const passed = results.numPassed === results.numTotal && results.numTotal > 0;
+      const passed =
+        results.numPassed === results.numTotal && results.numTotal > 0;
 
       return {
         passed,
@@ -499,18 +535,19 @@ export class CawsGateChecker extends CawsBaseTool {
   async calculateTrustScore(options: GateCheckOptions): Promise<GateResult> {
     try {
       // Run all gate checks
-      const [coverageResult, mutationResult, contractResult] = await Promise.all([
-        this.checkCoverage(options),
-        this.checkMutation(options),
-        this.checkContracts(options),
-      ]);
+      const [coverageResult, mutationResult, contractResult] =
+        await Promise.all([
+          this.checkCoverage(options),
+          this.checkMutation(options),
+          this.checkContracts(options),
+        ]);
 
       // Load provenance if available
       let provenance = null;
       try {
         const provenancePath = path.join(
           options.workingDirectory || this.getWorkingDirectory(),
-          '.agent/provenance.json'
+          ".agent/provenance.json"
         );
         if (this.pathExists(provenancePath)) {
           provenance = this.readJsonFile(provenancePath);
@@ -545,7 +582,7 @@ export class CawsGateChecker extends CawsBaseTool {
       totalWeight += weights.contracts;
 
       // A11y component (placeholder - would check axe results)
-      const a11yScore = provenance?.results?.a11y === 'pass' ? 1.0 : 0.5;
+      const a11yScore = provenance?.results?.a11y === "pass" ? 1.0 : 0.5;
       totalScore += a11yScore * weights.a11y;
       totalWeight += weights.a11y;
 

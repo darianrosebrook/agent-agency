@@ -280,7 +280,15 @@ export class ProvenanceTracker extends EventEmitter {
         0
       ) / attributions.length;
 
-    // Calculate code coverage (simplified)
+    // TODO: Implement comprehensive code coverage analysis for provenance
+    // - Integrate with actual code coverage tools (Istanbul, JaCoCo, coverage.py)
+    // - Calculate line, branch, and function coverage metrics
+    // - Support differential coverage analysis (what changed vs what was tested)
+    // - Implement coverage quality assessment and risk analysis
+    // - Add coverage trend analysis and regression detection
+    // - Support coverage gap identification and prioritization
+    // - Implement coverage-based test effectiveness scoring
+    // - Add coverage visualization and reporting capabilities
     const attributedLines = attributions.reduce(
       (sum, attr) => sum + (attr.codeRegions?.length || 0),
       0

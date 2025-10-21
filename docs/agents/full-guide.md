@@ -26,6 +26,78 @@ Four specialized AI judges provide governance:
 - **Override**: Modify task parameters and verdicts
 - **Guidance Injection**: Provide additional context during execution
 
+## System Implementation
+
+### API Endpoints
+
+#### Task Management
+```http
+POST /api/v1/tasks
+Content-Type: application/json
+
+{
+  "description": "Implement user authentication",
+  "execution_mode": "auto",
+  "max_iterations": 10,
+  "risk_tier": 2
+}
+```
+
+#### Real-time Control
+```http
+POST /api/v1/tasks/{task_id}/pause
+POST /api/v1/tasks/{task_id}/resume
+POST /api/v1/tasks/{task_id}/cancel
+POST /api/v1/tasks/{task_id}/override
+POST /api/v1/tasks/{task_id}/parameters
+POST /api/v1/tasks/{task_id}/guidance
+```
+
+#### Monitoring & Governance
+```http
+GET /api/v1/slos
+GET /api/v1/slo-alerts
+POST /api/v1/slo-alerts/{alert_id}/acknowledge
+GET /api/v1/waivers
+POST /api/v1/waivers
+```
+
+#### Provenance & Audit
+```http
+GET /api/v1/provenance
+POST /api/v1/provenance/link
+GET /api/v1/provenance/verify/{commit_hash}
+GET /api/v1/provenance/commit/{commit_hash}
+```
+
+### CLI Commands
+
+#### Task Execution
+```bash
+# Execute with different safety modes
+cargo run --bin agent-agency-cli execute "Implement user auth" --mode strict --watch
+cargo run --bin agent-agency-cli execute "Add payment system" --mode auto --risk-tier 1
+cargo run --bin agent-agency-cli execute "Test deployment" --mode dry-run
+
+# Real-time intervention
+cargo run --bin agent-agency-cli intervene pause task-123
+cargo run --bin agent-agency-cli intervene resume task-123
+cargo run --bin agent-agency-cli intervene cancel task-123
+cargo run --bin agent-agency-cli intervene override task-123 --verdict accept
+```
+
+#### System Management
+```bash
+# Waiver management for quality gate exceptions
+cargo run --bin agent-agency-cli waiver create --title "Emergency fix" --reason emergency_hotfix --gates "test-coverage" --approved-by "admin"
+cargo run --bin agent-agency-cli waiver approve waiver-uuid
+
+# Provenance tracking
+cargo run --bin agent-agency-cli provenance install-hooks
+cargo run --bin agent-agency-cli provenance generate
+cargo run --bin agent-agency-cli provenance verify abc123
+```
+
 ## 1) Core Framework
 
 ### Risk Tiering → Drives Rigor
@@ -84,6 +156,108 @@ If any are missing, agent must generate a draft and request confirmation inside 
 • **Unit focus**: pure logic isolated; mocks only at boundaries you own (clock, fs, network).
 • **State seams**: inject time/uuid/random; ensure determinism; guard for idempotency where relevant.
 • **Migration discipline**: forwards-compatible; provide up/down, dry-run, and backfill strategy.
+
+### Practical Implementation Examples
+
+#### Example: Task Submission and Monitoring
+
+```bash
+# 1. Start the system
+cd iterations/v3
+
+# Start database
+docker run -d --name postgres-v3 -e POSTGRES_PASSWORD=password -p 5432:5432 postgres:15
+
+# Run migrations
+cargo run --bin migrate
+
+# Start API server
+cargo run --bin api-server &
+API_PID=$!
+
+# Start worker
+cargo run --bin agent-agency-worker &
+WORKER_PID=$!
+
+# 2. Submit a task
+TASK_RESPONSE=$(curl -X POST http://localhost:8080/api/v1/tasks \
+  -H "Content-Type: application/json" \
+  -d '{
+    "description": "Implement user authentication with JWT tokens",
+    "execution_mode": "auto",
+    "max_iterations": 5,
+    "risk_tier": 2
+  }')
+
+TASK_ID=$(echo $TASK_RESPONSE | jq -r '.task_id')
+
+# 3. Monitor progress
+while true; do
+  STATUS=$(curl -s http://localhost:8080/api/v1/tasks/$TASK_ID)
+  PHASE=$(echo $STATUS | jq -r '.progress.current_phase // "unknown"')
+  echo "Phase: $PHASE"
+
+  if [[ $(echo $STATUS | jq -r '.status') == "completed" ]]; then
+    echo "Task completed!"
+    break
+  fi
+
+  sleep 2
+done
+
+# 4. Get results
+curl http://localhost:8080/api/v1/tasks/$TASK_ID/result
+
+# Cleanup
+kill $API_PID $WORKER_PID
+```
+
+#### Example: Real-time Intervention
+
+```bash
+# Submit task
+TASK_ID=$(curl -X POST http://localhost:8080/api/v1/tasks \
+  -H "Content-Type: application/json" \
+  -d '{"description": "Deploy to production", "execution_mode": "strict"}' \
+  | jq -r '.task_id')
+
+# Wait for approval phase
+sleep 5
+
+# Pause execution
+curl -X POST http://localhost:8080/api/v1/tasks/$TASK_ID/pause
+
+# Resume execution
+curl -X POST http://localhost:8080/api/v1/tasks/$TASK_ID/resume
+
+# Override verdict if needed
+curl -X POST http://localhost:8080/api/v1/tasks/$TASK_ID/override \
+  -H "Content-Type: application/json" \
+  -d '{"verdict": "accept", "reason": "Approved by human operator"}'
+```
+
+#### Example: Waiver Management
+
+```bash
+# Create waiver for exceptional circumstances
+curl -X POST http://localhost:8080/api/v1/waivers \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Emergency security patch",
+    "reason": "security_patch",
+    "description": "Deploying critical security fix without full test coverage",
+    "gates": ["test-coverage"],
+    "approved_by": "security-team",
+    "impact_level": "high",
+    "mitigation_plan": "Security review completed, monitoring in place"
+  }'
+
+# List active waivers
+curl http://localhost:8080/api/v1/waivers
+
+# Approve waiver
+curl -X POST http://localhost:8080/api/v1/waivers/$WAIVER_ID/approve
+```
 
 ### Mode Matrix
 

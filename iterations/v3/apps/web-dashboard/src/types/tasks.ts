@@ -1,398 +1,234 @@
-// Task System Types and Interfaces
-// Defines the data structures for autonomous task execution and monitoring
+// Task-related type definitions for the web dashboard
 
 export interface Task {
   id: string;
+  title: string;
+  description?: string;
+  status: "pending" | "running" | "completed" | "failed" | "paused" | "cancelled";
+  phase: "planning" | "analysis" | "execution" | "validation" | "refinement" | "qa" | "finalization";
+  priority: "low" | "medium" | "high" | "critical";
   working_spec_id: string;
-  status: TaskStatus;
-  phase: TaskPhase;
-  priority: TaskPriority;
   created_at: string;
   updated_at: string;
   started_at?: string;
   completed_at?: string;
-  title: string;
-  description?: string;
-  context?: TaskContext;
-  progress: TaskProgress;
-  artifacts: TaskArtifact[];
-  quality_report?: QualityReport;
-  error_message?: string;
   retry_count: number;
   max_retries: number;
-  audit_trail?: AuditLogEntry[];
+  context?: TaskContext;
+  progress?: TaskProgress;
+  quality_report?: QualityReport;
+  error_message?: string;
+  artifacts: TaskArtifact[];
 }
-
-export type TaskStatus =
-  | "pending"
-  | "running"
-  | "paused"
-  | "completed"
-  | "failed"
-  | "cancelled";
-
-export type TaskPhase =
-  | "planning"
-  | "analysis"
-  | "execution"
-  | "validation"
-  | "refinement"
-  | "qa"
-  | "finalization";
-
-export type TaskPriority = "low" | "medium" | "high" | "critical";
 
 export interface TaskContext {
   goals: string[];
   constraints: string[];
-  resources: TaskResource[];
-  working_spec: WorkingSpec;
-  repository_context?: RepositoryContext;
-  agent_assignments: AgentAssignment[];
-}
-
-export interface TaskResource {
-  type: "file" | "url" | "data" | "tool";
-  id: string;
-  name: string;
-  path?: string;
-  url?: string;
-  size_bytes?: number;
-  content_type?: string;
-  checksum?: string;
-}
-
-export interface WorkingSpec {
-  id: string;
-  title: string;
-  description: string;
-  acceptance_criteria: string[];
-  deliverables: string[];
-  risk_tier: 1 | 2 | 3;
-  mode: "feature" | "fix" | "refactor" | "chore";
-}
-
-export interface RepositoryContext {
-  branch: string;
-  commit_hash?: string;
-  files_modified: string[];
-  working_directory: string;
-}
-
-export interface AgentAssignment {
-  agent_id: string;
-  role: "primary" | "secondary" | "reviewer" | "validator";
-  capabilities: string[];
-  assigned_at: string;
-  status: "assigned" | "working" | "completed" | "failed";
+  requirements?: string[];
+  environment?: string;
+  dependencies?: string[];
 }
 
 export interface TaskProgress {
-  percentage: number; // 0-100
-  current_step?: string;
-  total_steps?: number;
-  current_step_index?: number;
+  percentage: number;
+  current_step: string;
+  steps_completed: number;
+  total_steps: number;
   estimated_completion?: string;
-  time_elapsed_ms: number;
-  time_remaining_ms?: number;
+}
+
+export interface QualityReport {
+  overall_score: number;
+  passed: boolean;
+  details?: Record<string, any>;
+  checks_performed: string[];
+  recommendations?: string[];
 }
 
 export interface TaskArtifact {
   id: string;
-  type: ArtifactType;
   name: string;
+  type: string;
   description?: string;
+  size: number;
   created_at: string;
-  size_bytes?: number;
-  content_type?: string;
   url?: string;
-  data?: any;
-  metadata: Record<string, any>;
+  metadata?: Record<string, any>;
 }
 
-export type ArtifactType =
-  | "code"
-  | "test"
-  | "documentation"
-  | "design"
-  | "data"
-  | "log"
-  | "report"
-  | "binary";
-
-export interface QualityReport {
+export interface AuditLogEntry {
   id: string;
-  task_id: string;
-  generated_at: string;
-  overall_score: number; // 0-100
-  criteria: QualityCriterion[];
-  recommendations: string[];
-  passed: boolean;
-  review_required: boolean;
-}
-
-export interface QualityCriterion {
-  name: string;
-  description: string;
-  score: number; // 0-100
-  weight: number; // 0-1
-  status: "passed" | "failed" | "warning" | "pending";
-  details?: string;
-  evidence?: any;
-}
-
-// SSE Event Types for Task Monitoring
-export interface TaskEvent {
-  type:
-    | "task_created"
-    | "task_updated"
-    | "task_completed"
-    | "task_failed"
-    | "phase_changed"
-    | "artifact_added"
-    | "quality_checked";
-  task_id: string;
-  data: any;
+  action: string;
+  actor?: string;
   timestamp: string;
-  event_id: string;
-  sequence_number: number;
+  change_summary?: any;
+  resource_id?: string;
+  resource_type?: string;
 }
 
-export interface TaskCreatedEvent {
-  task: Task;
+export interface TaskSubmissionRequest {
+  title: string;
+  description?: string;
+  working_spec_id: string;
+  priority?: "low" | "medium" | "high" | "critical";
+  context?: TaskContext;
+  max_retries?: number;
 }
 
-export interface TaskUpdatedEvent {
+export interface TaskSubmissionResponse {
   task_id: string;
-  changes: Partial<Task>;
-  previous_values: Partial<Task>;
+  status: string;
+  message: string;
 }
 
-export interface TaskPhaseChangedEvent {
+export interface TaskListResponse {
+  tasks: Task[];
+  total: number;
+  page: number;
+  page_size: number;
+  has_more: boolean;
+}
+
+export interface TaskListFilters {
+  status?: string[];
+  phase?: string[];
+  priority?: string[];
+  created_after?: string;
+  created_before?: string;
+  search?: string;
+}
+
+export interface TaskMetrics {
+  total_tasks: number;
+  active_tasks: number;
+  completed_tasks: number;
+  failed_tasks: number;
+  average_completion_time: number;
+  success_rate: number;
+}
+
+// API Error types
+export interface ApiError {
+  error: string;
+  message: string;
+  details?: any;
+  timestamp: string;
+}
+
+// WebSocket message types for real-time updates
+export interface TaskUpdateMessage {
+  type: "task_update";
   task_id: string;
-  previous_phase: TaskPhase;
-  new_phase: TaskPhase;
-  reason?: string;
+  status: Task["status"];
+  phase: Task["phase"];
+  progress?: TaskProgress;
+  timestamp: string;
 }
 
-export interface TaskArtifactAddedEvent {
+export interface TaskCompletionMessage {
+  type: "task_completion";
   task_id: string;
-  artifact: TaskArtifact;
+  status: "completed" | "failed";
+  quality_report?: QualityReport;
+  error_message?: string;
+  timestamp: string;
 }
 
-export interface TaskQualityCheckedEvent {
+export interface TaskProgressMessage {
+  type: "task_progress";
   task_id: string;
-  quality_report: QualityReport;
+  progress: TaskProgress;
+  current_step: string;
+  timestamp: string;
 }
 
-// Component Props Types
-export interface TaskListProps {
-  tasks?: Task[];
-  isLoading?: boolean;
-  onTaskSelect?: (task: Task) => void;
-  onTaskFilter?: (filters: TaskFilters) => void;
-  selectedTaskId?: string;
+export type WebSocketMessage = 
+  | TaskUpdateMessage 
+  | TaskCompletionMessage 
+  | TaskProgressMessage;
+
+// Dashboard-specific types
+export interface TaskDashboardStats {
+  total_tasks: number;
+  active_tasks: number;
+  completed_today: number;
+  failed_today: number;
+  average_completion_time: number;
+  success_rate: number;
+  top_phases: Array<{
+    phase: Task["phase"];
+    count: number;
+    percentage: number;
+  }>;
+  recent_activity: Array<{
+    task_id: string;
+    action: string;
+    timestamp: string;
+    actor?: string;
+  }>;
 }
 
-export interface TaskCardProps {
-  task: Task;
-  isSelected?: boolean;
-  showDetails?: boolean;
-  onClick?: () => void;
-  onPause?: () => void;
-  onResume?: () => void;
-  onCancel?: () => void;
+export interface TaskTimelineEvent {
+  id: string;
+  type: "task_created" | "task_started" | "task_completed" | "task_failed" | "task_paused" | "task_cancelled";
+  task_id: string;
+  timestamp: string;
+  actor?: string;
+  details?: any;
 }
 
-export interface TaskTimelineProps {
-  task: Task;
-  showArtifacts?: boolean;
-  onArtifactClick?: (artifact: TaskArtifact) => void;
-  onPhaseClick?: (phase: TaskPhase) => void;
+// Form types for task creation and editing
+export interface TaskFormData {
+  title: string;
+  description: string;
+  working_spec_id: string;
+  priority: Task["priority"];
+  context: {
+    goals: string[];
+    constraints: string[];
+    requirements: string[];
+    environment: string;
+    dependencies: string[];
+  };
+  max_retries: number;
 }
 
-export interface ExecutionPhaseViewerProps {
-  task: Task;
-  currentPhase?: TaskPhase;
-  onPhaseSelect?: (phase: TaskPhase) => void;
-}
-
-export interface WorkingSpecViewerProps {
-  spec: WorkingSpec;
-  task?: Task;
-  onEdit?: () => void;
-}
-
-export interface TaskFilters {
-  status?: TaskStatus[];
-  phase?: TaskPhase[];
-  priority?: TaskPriority[];
-  agent_id?: string;
-  working_spec_id?: string;
+// Filter and search types
+export interface TaskSearchParams {
+  query?: string;
+  status?: Task["status"][];
+  phase?: Task["phase"][];
+  priority?: Task["priority"][];
   date_range?: {
     start: string;
     end: string;
   };
+  sort_by?: "created_at" | "updated_at" | "priority" | "status";
+  sort_order?: "asc" | "desc";
+  page?: number;
+  page_size?: number;
 }
 
-// API Response Types
-export interface GetTasksResponse {
-  tasks: Task[];
-  total_count: number;
-  filtered_count: number;
-  page: number;
-  page_size: number;
-  filters_applied: TaskFilters;
-}
-
-export interface GetTaskResponse {
-  task: Task;
-  events?: TaskEvent[];
-  artifacts?: TaskArtifact[];
-  quality_report?: QualityReport;
-}
-
-export interface TaskActionRequest {
-  action: "pause" | "resume" | "cancel" | "restart";
-  reason?: string;
-}
-
-export interface TaskActionResponse {
-  task: Task;
-  action_performed: string;
-  timestamp: string;
-}
-
-// Self-Prompting Task Types
-export interface SelfPromptingTask extends Task {
-  self_prompting_config: SelfPromptingConfig;
-  current_iteration: number;
-  max_iterations: number;
-  model_history: ModelUsage[];
-  satisficing_metrics: SatisficingMetrics;
-}
-
-export interface SelfPromptingConfig {
-  enabled: boolean;
-  max_iterations: number;
-  min_improvement_threshold: number;
-  quality_ceiling_budget: number;
-  cost_benefit_ratio_threshold: number;
-  mandatory_gates: string[];
-  models: ModelConfig[];
-  current_model: string;
-}
-
-export interface ModelConfig {
-  id: string;
-  name: string;
-  provider: string;
-  capabilities: ModelCapabilities;
-  performance_stats: ModelPerformanceStats;
-}
-
-export interface ModelCapabilities {
-  max_context: number;
-  supports_streaming: boolean;
-  supports_function_calling: boolean;
-  supports_vision: boolean;
-}
-
-export interface ModelPerformanceStats {
-  total_requests: number;
-  successful_requests: number;
-  average_latency_ms: number;
-  error_rate: number;
-  last_used: string;
-}
-
-export interface ModelUsage {
-  iteration: number;
-  model_id: string;
-  prompt_tokens: number;
-  completion_tokens: number;
-  latency_ms: number;
-  success: boolean;
-}
-
-export interface SatisficingMetrics {
-  stopped_early: boolean;
-  quality_delta: number;
-  iterations_saved: number;
-  cost_benefit_ratio: number;
-  ceiling_detected: boolean;
-}
-
-// Self-Prompting Event Types
-export interface SelfPromptingIterationEvent {
-  type:
-    | "iteration_started"
-    | "evaluation_completed"
-    | "model_swapped"
-    | "loop_completed";
-  task_id: string;
-  iteration: number;
-  data: SelfPromptingIterationData;
-  timestamp: string;
-  event_id: string;
-  sequence_number: number;
-}
-
-export interface SelfPromptingIterationData {
-  model_id?: string;
-  score?: number;
-  status?: string;
-  should_continue?: boolean;
-  old_model?: string;
-  new_model?: string;
-  reason?: string;
-  total_iterations?: number;
-  final_score?: number;
-  stop_reason?: string;
-}
-
-// Self-Prompting Component Props
-export interface SelfPromptingMonitorProps {
-  task: SelfPromptingTask;
-  events?: SelfPromptingIterationEvent[];
-  onModelSwitch?: (modelId: string) => void;
-  onIterationSelect?: (iteration: number) => void;
-  onPause?: () => void;
-  onResume?: () => void;
-  onStop?: () => void;
-}
-
-export interface IterationTimelineProps {
-  task: SelfPromptingTask;
-  selectedIteration?: number;
-  onIterationClick?: (iteration: number) => void;
-  showDetails?: boolean;
-}
-
-export interface ModelPerformanceChartProps {
-  models: ModelConfig[];
-  timeRange?: "1h" | "24h" | "7d" | "30d";
-  onModelSelect?: (modelId: string) => void;
-}
-
-export interface SatisficingDashboardProps {
-  metrics: SatisficingMetrics;
-  thresholds: {
-    min_improvement: number;
-    quality_ceiling_budget: number;
-    cost_benefit_ratio: number;
-  };
-  recommendations: string[];
-}
-
-// Error Types
-export interface TaskError {
-  code:
-    | "task_not_found"
-    | "invalid_action"
-    | "permission_denied"
-    | "server_error";
-  message: string;
-  task_id?: string;
-  retryable: boolean;
-}
+// Export all types for easy importing
+export type {
+  Task,
+  TaskContext,
+  TaskProgress,
+  QualityReport,
+  TaskArtifact,
+  AuditLogEntry,
+  TaskSubmissionRequest,
+  TaskSubmissionResponse,
+  TaskListResponse,
+  TaskListFilters,
+  TaskMetrics,
+  ApiError,
+  TaskUpdateMessage,
+  TaskCompletionMessage,
+  TaskProgressMessage,
+  WebSocketMessage,
+  TaskDashboardStats,
+  TaskTimelineEvent,
+  TaskFormData,
+  TaskSearchParams,
+};

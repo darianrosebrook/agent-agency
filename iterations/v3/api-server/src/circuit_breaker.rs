@@ -236,6 +236,11 @@ impl ResilientHttpClient {
     pub async fn reset_circuit(&self) {
         self.circuit_breaker.reset().await;
     }
+
+    /// Get a request builder (for building requests before calling request())
+    pub fn post(&self, url: &str) -> reqwest::RequestBuilder {
+        self.client.post(url)
+    }
 }
 
 /// Errors from resilient HTTP client

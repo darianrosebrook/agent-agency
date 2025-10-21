@@ -35,7 +35,26 @@ pub struct AuditedOrchestrator {
     frontier: Option<std::sync::RwLock<Frontier>>,
     /// Circuit breakers for external services
     circuit_breakers: HashMap<String, Arc<crate::audit_trail::CircuitBreaker>>,
+    /// Database client for persistence
+    db_client: Arc<DatabaseClient>,
 }
+
+impl AuditedOrchestrator {
+    /// Create a task audit event (P0 requirement: persist audit trail + surface it on tasks)
+    async fn create_task_audit_event(
+        &self,
+        task_id: Uuid,
+        category: &str,
+        actor: &str,
+        action: &str,
+        payload: serde_json::Value,
+    ) -> Result<(), AuditError> {
+        self.db_client
+            .create_task_audit_event(task_id, category, actor, action, payload)
+            .await
+            .map_err(|e| AuditError::Config(format!("Failed to create task audit event: {}", e)))?;
+        Ok(())
+    }
 
 /// Context for tracking active operations
 #[derive(Debug, Clone)]
@@ -65,13 +84,22 @@ pub struct AuditedOrchestratorConfig {
     pub track_nested_operations: bool,
     /// Frontier configuration (optional)
     pub frontier_config: Option<FrontierConfig>,
+    /// Database client for persistence
+    pub db_client: Arc<DatabaseClient>,
 }
 
 impl AuditedOrchestrator {
     /// Create a new audited orchestrator
     pub fn new(config: AuditedOrchestratorConfig) -> Self {
         let audit_manager = Arc::new(AuditTrailManager::new(config.audit_config));
-        let orchestrator = Arc::new(Orchestrator::new(config.orchestrator_config));
+        let orchestrator = Arc::new(Orchestrator::new_with_dependencies(
+            config.orchestrator_config,
+            progress_tracker,
+            None, // Use default worker registry
+            None, // Use default circuit breaker config
+            None, // Use default retry config
+            Some(db_client.clone()), // Pass database client for audit logging
+        ));
 
         let frontier = config.frontier_config
             .map(|fc| std::sync::RwLock::new(Frontier::with_config(fc)));
@@ -82,6 +110,7 @@ impl AuditedOrchestrator {
             active_contexts: Arc::new(RwLock::new(HashMap::new())),
             frontier,
             circuit_breakers: HashMap::new(),
+            db_client: config.db_client,
         }
     }
 
@@ -217,48 +246,103 @@ impl AuditedOrchestrator {
         approver: &str,
         justification: Option<String>,
     ) -> Result<(), AuditError> {
-        // TODO: Implement waiver persistence and retrieval system
-        // - Create waiver database schema and storage
-        // - Implement waiver CRUD operations
-        // - Add waiver versioning and audit trail
-        // - Support waiver expiration and renewal
-        // - Implement waiver approval workflow
-        // - Add waiver validation and integrity checks
-        // PLACEHOLDER: Creating mock waiver for demonstration
-        let mut waiver = WaiverRequest {
-            id: waiver_id.to_string(),
-            timestamp: chrono::Utc::now(),
-            changeset_fingerprint: "mock".to_string(),
-            budget_violations: vec![],
-            justification_required: true,
-            risk_assessment: file_ops::RiskLevel::Medium,
-            auto_approved: false,
-            approved_by: None,
-            approval_timestamp: None,
-            justification: None,
+        // Update waiver status in database
+        let update_query = r#"
+            UPDATE waivers
+            SET status = 'active',
+                updated_at = NOW(),
+                metadata = metadata || $1::jsonb
+            WHERE id = $2::uuid
+            RETURNING id, title, gates, expires_at
+        "#;
+
+        let metadata = serde_json::json!({
+            "approved_at": chrono::Utc::now(),
+            "approved_by": approver,
+            "justification": justification
+        });
+
+        let waiver_uuid = match Uuid::parse_str(waiver_id) {
+            Ok(uuid) => uuid,
+            Err(_) => return Err(AuditError::InvalidInput(format!("Invalid waiver ID format: {}", waiver_id))),
         };
 
-        apply_waiver(&mut waiver, approver, justification)
-            .map_err(|e| AuditError::ValidationError(e))?;
+        let row = match self.db_client.query_one(update_query, &[&metadata, &waiver_uuid]).await {
+            Ok(row) => row,
+            Err(e) => return Err(AuditError::Database(format!("Failed to approve waiver: {}", e))),
+        };
 
-        let waiver_json = serde_json::to_string(&waiver)
-            .map_err(|e| AuditError::SerializationError(e.to_string()))?;
+        let title: String = row.get("title");
+        let gates: Vec<String> = row.get("gates");
+        let expires_at: chrono::DateTime<chrono::Utc> = row.get("expires_at");
 
-        let mut approval_params = std::collections::HashMap::new();
-        approval_params.insert("waiver_id".to_string(), serde_json::Value::String(waiver_id.to_string()));
-        approval_params.insert("approver".to_string(), serde_json::Value::String(approver.to_string()));
-
-        self.audit_manager.file_operations_auditor()
-            .record_operation(
-                "waiver_approval",
-                Some(waiver_id),
-                approval_params,
-                crate::audit_trail::AuditResult::Success { data: Some(waiver_json) },
-                None,
-                crate::audit_trail::AuditSeverity::Info,
-            ).await?;
+        // Log the approval in audit trail
+        self.audit_manager.log_event(AuditEvent {
+            category: AuditCategory::Waiver,
+            severity: AuditSeverity::Info,
+            message: format!("Waiver '{}' approved by {}", title, approver),
+            operation_id: Some("waiver-approval".to_string()),
+            correlation_id: None,
+            metadata: serde_json::json!({
+                "waiver_id": waiver_id,
+                "title": title,
+                "approver": approver,
+                "justification": justification,
+                "gates": gates,
+                "expires_at": expires_at
+            }),
+            timestamp: chrono::Utc::now(),
+        }).await?;
 
         Ok(())
+    }
+
+    /// Check if active waivers exist for specific gates
+    pub async fn check_waiver_active(&self, gates: &[String]) -> Result<bool, AuditError> {
+        let query = r#"SELECT is_waiver_active($1::text[], NOW())"#;
+
+        let row = match self.db_client.query_one(query, &[&gates]).await {
+            Ok(row) => row,
+            Err(e) => return Err(AuditError::Database(format!("Failed to check waiver status: {}", e))),
+        };
+
+        let is_active: bool = row.get(0);
+        Ok(is_active)
+    }
+
+    /// List all active waivers
+    pub async fn list_active_waivers(&self) -> Result<Vec<serde_json::Value>, AuditError> {
+        let query = r#"
+            SELECT id, title, reason, description, gates, approved_by,
+                   impact_level, expires_at, created_at, metadata
+            FROM waivers
+            WHERE status = 'active' AND expires_at > NOW()
+            ORDER BY created_at DESC
+        "#;
+
+        let rows = match self.db_client.query(query, &[]).await {
+            Ok(rows) => rows,
+            Err(e) => return Err(AuditError::Database(format!("Failed to list waivers: {}", e))),
+        };
+
+        let mut waivers = Vec::new();
+        for row in rows {
+            let waiver = serde_json::json!({
+                "id": row.get::<_, Uuid>("id"),
+                "title": row.get::<_, String>("title"),
+                "reason": row.get::<_, String>("reason"),
+                "description": row.get::<_, String>("description"),
+                "gates": row.get::<_, Vec<String>>("gates"),
+                "approved_by": row.get::<_, String>("approved_by"),
+                "impact_level": row.get::<_, String>("impact_level"),
+                "expires_at": row.get::<_, chrono::DateTime<chrono::Utc>>("expires_at"),
+                "created_at": row.get::<_, chrono::DateTime<chrono::Utc>>("created_at"),
+                "metadata": row.get::<_, serde_json::Value>("metadata")
+            });
+            waivers.push(waiver);
+        }
+
+        Ok(waivers)
     }
 
     /// Execute a planning operation with full audit trail
@@ -484,6 +568,7 @@ impl AuditedOrchestrator {
     ) -> Result<OrchestrationResult, AuditError> {
         let pipeline_id = Uuid::new_v4().to_string();
         let correlation_id = Some(pipeline_id.clone());
+        let task_id = Uuid::new_v4(); // Generate task ID for audit trail
 
         // Record pipeline start
         let pipeline_start = Instant::now();
@@ -492,6 +577,19 @@ impl AuditedOrchestrator {
             &pipeline_id,
             Some(format!("Full pipeline for: {}", task_description)),
             correlation_id.clone(),
+        ).await?;
+
+        // P0: Audit trail - Task enqueued
+        self.create_task_audit_event(
+            task_id,
+            "orchestration",
+            "system",
+            "enqueued",
+            serde_json::json!({
+                "description": task_description,
+                "pipeline_id": pipeline_id,
+                "stage": "planning"
+            }),
         ).await?;
 
         // Phase 1: Planning
@@ -518,24 +616,101 @@ impl AuditedOrchestrator {
         let review_result = match self.execute_council_review(working_spec).await {
             Ok(result) => result,
             Err(e) => {
+                // P0: Audit trail - Task failed during council review
+                self.create_task_audit_event(
+                    task_id,
+                    "orchestration",
+                    "council",
+                    "error",
+                    serde_json::json!({
+                        "error_type": "council_review_failed",
+                        "error_message": e.to_string(),
+                        "stage": "council_review"
+                    }),
+                ).await?;
                 self.record_pipeline_failure(&pipeline_id, "council_review", &e).await?;
                 return Err(e);
             }
         };
 
+        // P0: Audit trail - Task approved/denied by council
+        self.create_task_audit_event(
+            task_id,
+            "council",
+            "council",
+            if review_result.decision.as_deref() == Some("approved") { "approved" } else { "denied" },
+            serde_json::json!({
+                "decision": review_result.decision,
+                "confidence": review_result.confidence,
+                "reasoning": review_result.reasoning,
+                "stage": "council_review"
+            }),
+        ).await?;
+
         // Phase 3: Execution (if approved)
         let final_result = if review_result.decision.as_deref() == Some("approved") {
+            // P0: Audit trail - Task started execution
+            self.create_task_audit_event(
+                task_id,
+                "orchestration",
+                "system",
+                "started",
+                serde_json::json!({
+                    "stage": "execution",
+                    "execution_mode": "worker"
+                }),
+            ).await?;
+
             println!("⚡ Starting execution phase...");
             match self.orchestrator.execute_operation(review_result.clone()).await {
                 Ok(result) => result,
                 Err(e) => {
+                    // P0: Audit trail - Task failed during execution
+                    self.create_task_audit_event(
+                        task_id,
+                        "orchestration",
+                        "worker",
+                        "error",
+                        serde_json::json!({
+                            "error_type": "execution_failed",
+                            "error_message": e.to_string(),
+                            "stage": "execution"
+                        }),
+                    ).await?;
                     self.record_pipeline_failure(&pipeline_id, "execution", &AuditError::Config(e.to_string())).await?;
                     return Err(AuditError::Config(e.to_string()));
                 }
             }
         } else {
+            // P0: Audit trail - Task denied (not executed)
+            self.create_task_audit_event(
+                task_id,
+                "orchestration",
+                "council",
+                "completed",
+                serde_json::json!({
+                    "outcome": "denied",
+                    "reason": "council_denial",
+                    "stage": "final"
+                }),
+            ).await?;
             review_result
         };
+
+        // P0: Audit trail - Task completed successfully (if executed)
+        if review_result.decision.as_deref() == Some("approved") {
+            self.create_task_audit_event(
+                task_id,
+                "orchestration",
+                "system",
+                "completed",
+                serde_json::json!({
+                    "outcome": "success",
+                    "execution_duration_ms": pipeline_start.elapsed().as_millis(),
+                    "stage": "final"
+                }),
+            ).await?;
+        }
 
         // Record pipeline completion
         self.record_operation_complete(

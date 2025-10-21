@@ -2,6 +2,7 @@
 
 use std::collections::{HashMap, VecDeque};
 use chrono::{DateTime, Utc};
+use serde::{Serialize, Deserialize};
 
 use super::{EvalReport, EvalStatus, StopReason};
 use crate::types::ActionRequest;
@@ -354,7 +355,7 @@ impl SatisficingEvaluator {
     }
 
     /// Check for no progress conditions
-    pub fn check_no_progress(&self, changeset: Option<&file_ops::ChangeSet>) -> Option<StopReason> {
+    pub fn check_no_progress(&self, changeset: Option<&crate::stubs::ChangeSet>) -> Option<StopReason> {
         // Check for zero LOC changes
         if let Some(changeset) = changeset {
             let total_loc: usize = changeset.patches.iter()
@@ -530,6 +531,111 @@ impl SatisficingEvaluator {
 
         None
     }
+
+    /// Check if environment failure should trigger recovery instead of termination
+    pub fn check_environment_failure_recovery(
+        &self,
+        recent_failures: &[super::EvaluationFailureType],
+    ) -> Option<SatisficingDecision> {
+        if recent_failures.is_empty() {
+            return None;
+        }
+
+        // Count environment vs logic failures in recent history
+        let mut env_failures = 0;
+        let mut logic_failures = 0;
+
+        for failure in recent_failures.iter().rev().take(5) { // Last 5 failures
+            match failure {
+                super::EvaluationFailureType::EnvironmentFailure { .. } => env_failures += 1,
+                super::EvaluationFailureType::LogicFailure { .. } => logic_failures += 1,
+            }
+        }
+
+        // If we have 3+ environment failures in recent history, suggest recovery
+        if env_failures >= 3 {
+            return Some(SatisficingDecision {
+                should_continue: false,
+                reason: StopReason::Error, // Could use a new StopReason::EnvironmentFailure if added
+                confidence: 0.9,
+                recommendations: vec![
+                    format!("{} environment failures detected in recent iterations", env_failures),
+                    "Environment issues persist across iterations - requires intervention".to_string(),
+                    "Possible solutions: dependency installation, environment reset, configuration fixes".to_string(),
+                    "Consider pausing execution and investigating environment setup".to_string(),
+                ],
+            });
+        }
+
+        // If mixed failures but environment dominates recent ones, still flag for attention
+        if env_failures >= 2 && env_failures > logic_failures {
+            return Some(SatisficingDecision {
+                should_continue: true, // Continue but with warnings
+                reason: StopReason::Unknown, // Not stopping, just flagging
+                confidence: 0.7,
+                recommendations: vec![
+                    format!("Environment failures ({}) outpacing logic failures ({})", env_failures, logic_failures),
+                    "Monitor environment stability - may need intervention soon".to_string(),
+                ],
+            });
+        }
+
+        None
+    }
+
+    /// Get recommended recovery strategy based on failure patterns
+    pub fn get_recovery_strategy(
+        &self,
+        failure_type: &super::EvaluationFailureType,
+    ) -> EnvironmentRecoveryStrategy {
+        match failure_type {
+            super::EvaluationFailureType::EnvironmentFailure { category } => {
+                match category {
+                    super::EnvironmentFailureCategory::DependencyMissing => {
+                        EnvironmentRecoveryStrategy::InstallDependencies
+                    }
+                    super::EnvironmentFailureCategory::BuildFailure => {
+                        EnvironmentRecoveryStrategy::RebuildEnvironment
+                    }
+                    super::EnvironmentFailureCategory::ConfigurationError => {
+                        EnvironmentRecoveryStrategy::ResetConfiguration
+                    }
+                    super::EnvironmentFailureCategory::PermissionError => {
+                        EnvironmentRecoveryStrategy::FixPermissions
+                    }
+                    super::EnvironmentFailureCategory::ResourceExhaustion => {
+                        EnvironmentRecoveryStrategy::ScaleResources
+                    }
+                    super::EnvironmentFailureCategory::ExternalServiceFailure => {
+                        EnvironmentRecoveryStrategy::RetryWithBackoff
+                    }
+                }
+            }
+            super::EvaluationFailureType::LogicFailure { .. } => {
+                // Logic failures don't have environment recovery strategies
+                EnvironmentRecoveryStrategy::NoRecoveryNeeded
+            }
+        }
+    }
+}
+
+/// Recovery strategies for environment failures
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum EnvironmentRecoveryStrategy {
+    /// Install missing dependencies
+    InstallDependencies,
+    /// Rebuild the environment/clean build artifacts
+    RebuildEnvironment,
+    /// Reset configuration to defaults
+    ResetConfiguration,
+    /// Fix permission issues
+    FixPermissions,
+    /// Scale up resources (memory, CPU, disk)
+    ScaleResources,
+    /// Retry with exponential backoff for external services
+    RetryWithBackoff,
+    /// No environment recovery needed (logic failure)
+    NoRecoveryNeeded,
 }
 
 /// Feedback for updating satisficing parameters
@@ -544,7 +650,8 @@ pub enum SatisficingFeedback {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::{EvalReport, EvalStatus, EvalCriterion};
+    use crate::types::{EvalReport, EvalStatus, EvalCriterion, IterationProgress, ContextMetrics};
+    use crate::evaluation::{EvaluationFailureType, EnvironmentFailureCategory, LogicFailureCategory};
 
     fn create_test_report(score: f64, status: EvalStatus) -> EvalReport {
         EvalReport {
@@ -601,10 +708,10 @@ mod tests {
         let evaluator = SatisficingEvaluator::new();
 
         // Create a changeset with very few changes
-        let small_changeset = file_ops::ChangeSet {
-            patches: vec![file_ops::Patch {
+        let small_changeset = crate::stubs::ChangeSet {
+            patches: vec![crate::stubs::Patch {
                 path: "test.rs".to_string(),
-                hunks: vec![file_ops::Hunk {
+                hunks: vec![crate::stubs::Hunk {
                     old_start: 1,
                     old_lines: 1,
                     new_start: 1,
@@ -625,7 +732,7 @@ mod tests {
 
         // Record the same action multiple times
         let action = crate::types::ActionRequest::patch(
-            file_ops::ChangeSet { patches: vec![] },
+            crate::stubs::ChangeSet { patches: vec![] },
             "test action".to_string(),
             0.8
         );
@@ -651,5 +758,207 @@ mod tests {
 
         // Should only maintain the last hysteresis_window scores
         assert!(evaluator.score_history.len() <= evaluator.config.hysteresis_window);
+    }
+
+    // ===== NEW INSTRUMENTATION TESTS =====
+
+    #[test]
+    fn test_patch_failure_pattern_detection() {
+        let evaluator = SatisficingEvaluator::new();
+        let mut patch_failures = Vec::new();
+
+        // Add 3 syntax errors (should trigger)
+        for _ in 0..3 {
+            patch_failures.push(PatchFailureType::SyntaxError);
+        }
+
+        let decision = evaluator.check_patch_failure_patterns(&patch_failures);
+        assert!(decision.is_some());
+        assert!(!decision.unwrap().should_continue);
+        assert_eq!(decision.unwrap().reason, StopReason::PatchFailure);
+    }
+
+    #[test]
+    fn test_patch_failure_no_trigger_with_mixed_types() {
+        let evaluator = SatisficingEvaluator::new();
+        let patch_failures = vec![
+            PatchFailureType::SyntaxError,
+            PatchFailureType::MergeConflict,
+            PatchFailureType::PathBlocked, // Different type, should not trigger
+        ];
+
+        let decision = evaluator.check_patch_failure_patterns(&patch_failures);
+        assert!(decision.is_none()); // Should not trigger with mixed types
+    }
+
+    #[test]
+    fn test_progress_plateau_detection() {
+        let evaluator = SatisficingEvaluator::new();
+        let progress_history = vec![
+            IterationProgress { files_touched: 2, loc_changed: 15, test_pass_rate_delta: 0.01, lint_errors_delta: 0, score_improvement: 0.02, timestamp: chrono::Utc::now() },
+            IterationProgress { files_touched: 1, loc_changed: 8, test_pass_rate_delta: -0.005, lint_errors_delta: 1, score_improvement: 0.01, timestamp: chrono::Utc::now() },
+            IterationProgress { files_touched: 1, loc_changed: 5, test_pass_rate_delta: 0.0, lint_errors_delta: 0, score_improvement: 0.008, timestamp: chrono::Utc::now() },
+            IterationProgress { files_touched: 0, loc_changed: 2, test_pass_rate_delta: 0.0, lint_errors_delta: 0, score_improvement: 0.005, timestamp: chrono::Utc::now() }, // Plateau conditions met
+        ];
+
+        let decision = evaluator.check_progress_plateau(&progress_history);
+        assert!(decision.is_some());
+        assert!(!decision.unwrap().should_continue);
+        assert_eq!(decision.unwrap().reason, StopReason::ProgressStalled);
+    }
+
+    #[test]
+    fn test_progress_plateau_no_trigger_with_good_progress() {
+        let evaluator = SatisficingEvaluator::new();
+        let progress_history = vec![
+            IterationProgress { files_touched: 5, loc_changed: 50, test_pass_rate_delta: 0.1, lint_errors_delta: -2, score_improvement: 0.15, timestamp: chrono::Utc::now() },
+            IterationProgress { files_touched: 3, loc_changed: 30, test_pass_rate_delta: 0.05, lint_errors_delta: -1, score_improvement: 0.12, timestamp: chrono::Utc::now() },
+        ];
+
+        let decision = evaluator.check_progress_plateau(&progress_history);
+        assert!(decision.is_none()); // Should not trigger with good progress
+    }
+
+    #[test]
+    fn test_context_overload_detection() {
+        let evaluator = SatisficingEvaluator::new();
+        let context_metrics = ContextMetrics {
+            prompt_size_tokens: 9000,
+            context_window_utilization: 0.95, // Over 80% threshold
+            files_in_scope: 45, // Under 50 file threshold
+            dependency_depth: 5,
+            timestamp: chrono::Utc::now(),
+        };
+
+        let decision = evaluator.check_context_overload_termination(&context_metrics, 0.8, 50);
+        assert!(decision.is_some());
+        assert!(!decision.unwrap().should_continue);
+        assert!(decision.unwrap().recommendations.iter().any(|r| r.contains("Context window utilization")));
+    }
+
+    #[test]
+    fn test_context_overload_files_exceeded() {
+        let evaluator = SatisficingEvaluator::new();
+        let context_metrics = ContextMetrics {
+            prompt_size_tokens: 5000,
+            context_window_utilization: 0.6, // Under threshold
+            files_in_scope: 55, // Over 50 file threshold
+            dependency_depth: 5,
+            timestamp: chrono::Utc::now(),
+        };
+
+        let decision = evaluator.check_context_overload_termination(&context_metrics, 0.8, 50);
+        assert!(decision.is_some());
+        assert!(!decision.unwrap().should_continue);
+        assert!(decision.unwrap().recommendations.iter().any(|r| r.contains("files in scope")));
+    }
+
+    #[test]
+    fn test_context_overload_no_trigger_under_thresholds() {
+        let evaluator = SatisficingEvaluator::new();
+        let context_metrics = ContextMetrics {
+            prompt_size_tokens: 5000,
+            context_window_utilization: 0.6, // Under threshold
+            files_in_scope: 30, // Under threshold
+            dependency_depth: 5,
+            timestamp: chrono::Utc::now(),
+        };
+
+        let decision = evaluator.check_context_overload_termination(&context_metrics, 0.8, 50);
+        assert!(decision.is_none()); // Should not trigger
+    }
+
+    #[test]
+    fn test_environment_failure_recovery_three_failures() {
+        let evaluator = SatisficingEvaluator::new();
+        let failures = vec![
+            EvaluationFailureType::EnvironmentFailure {
+                category: EnvironmentFailureCategory::DependencyMissing
+            },
+            EvaluationFailureType::EnvironmentFailure {
+                category: EnvironmentFailureCategory::BuildFailure
+            },
+            EvaluationFailureType::EnvironmentFailure {
+                category: EnvironmentFailureCategory::ConfigurationError
+            },
+        ];
+
+        let decision = evaluator.check_environment_failure_recovery(&failures);
+        assert!(decision.is_some());
+        assert!(!decision.unwrap().should_continue);
+        assert!(decision.unwrap().recommendations.iter().any(|r| r.contains("3 environment failures")));
+    }
+
+    #[test]
+    fn test_environment_failure_recovery_mixed_but_environment_dominant() {
+        let evaluator = SatisficingEvaluator::new();
+        let failures = vec![
+            EvaluationFailureType::EnvironmentFailure {
+                category: EnvironmentFailureCategory::DependencyMissing
+            },
+            EvaluationFailureType::LogicFailure {
+                category: LogicFailureCategory::SyntaxError
+            },
+            EvaluationFailureType::EnvironmentFailure {
+                category: EnvironmentFailureCategory::BuildFailure
+            },
+        ];
+
+        let decision = evaluator.check_environment_failure_recovery(&failures);
+        assert!(decision.is_some());
+        assert!(decision.unwrap().should_continue); // Continue but with warnings
+        assert!(decision.unwrap().recommendations.iter().any(|r| r.contains("Environment failures")));
+    }
+
+    #[test]
+    fn test_environment_failure_recovery_no_trigger_logic_dominant() {
+        let evaluator = SatisficingEvaluator::new();
+        let failures = vec![
+            EvaluationFailureType::LogicFailure {
+                category: LogicFailureCategory::SyntaxError
+            },
+            EvaluationFailureType::LogicFailure {
+                category: LogicFailureCategory::TypeError
+            },
+            EvaluationFailureType::EnvironmentFailure {
+                category: EnvironmentFailureCategory::DependencyMissing
+            },
+        ];
+
+        let decision = evaluator.check_environment_failure_recovery(&failures);
+        assert!(decision.is_none()); // Should not trigger when logic failures dominate
+    }
+
+    #[test]
+    fn test_recovery_strategy_selection_dependency_missing() {
+        let evaluator = SatisficingEvaluator::new();
+        let failure = EvaluationFailureType::EnvironmentFailure {
+            category: EnvironmentFailureCategory::DependencyMissing
+        };
+
+        let strategy = evaluator.get_recovery_strategy(&failure);
+        assert!(matches!(strategy, EnvironmentRecoveryStrategy::InstallDependencies));
+    }
+
+    #[test]
+    fn test_recovery_strategy_selection_build_failure() {
+        let evaluator = SatisficingEvaluator::new();
+        let failure = EvaluationFailureType::EnvironmentFailure {
+            category: EnvironmentFailureCategory::BuildFailure
+        };
+
+        let strategy = evaluator.get_recovery_strategy(&failure);
+        assert!(matches!(strategy, EnvironmentRecoveryStrategy::RebuildEnvironment));
+    }
+
+    #[test]
+    fn test_recovery_strategy_selection_logic_failure() {
+        let evaluator = SatisficingEvaluator::new();
+        let failure = EvaluationFailureType::LogicFailure {
+            category: LogicFailureCategory::SyntaxError
+        };
+
+        let strategy = evaluator.get_recovery_strategy(&failure);
+        assert!(matches!(strategy, EnvironmentRecoveryStrategy::NoRecoveryNeeded));
     }
 }

@@ -30,11 +30,15 @@ md5 = "0.7"  # MD5 hashing for cache keys
 
 
 # Embedding service integration
-embedding-service = { path = "../embedding-service" }
+embedding-service = { path = "../embedding-service", optional = true }
 
 # Database integration
 agent-agency-database = { path = "../database" }
 
 # Knowledge graph integration
 knowledge-ingestor = { path = "../knowledge-ingestor" }
+
+[features]
+default = []
+embeddings = ["embedding-service"]
 

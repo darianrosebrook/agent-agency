@@ -316,7 +316,15 @@ impl BayesianOptimizer {
         // Simplified compliance check
         // In practice, this would validate against CAWS runtime validator
 
-        // Assume compliance for now - in real implementation this would be more sophisticated
+        // TODO: Implement comprehensive compliance validation for optimization parameters
+        // - Integrate with CAWS runtime validator for parameter validation
+        // - Implement constraint validation for optimization parameter bounds
+        // - Add compliance checking for business rules and safety constraints
+        // - Support compliance validation for different optimization contexts
+        // - Implement compliance score calculation and reporting
+        // - Add compliance violation detection and handling
+        // - Support compliance-based optimization guidance and constraints
+        // - Implement compliance validation caching and performance optimization
         Ok(true)
     }
 
@@ -445,3 +453,5 @@ impl Default for OptimizationConfig {
         }
     }
 }
+
+

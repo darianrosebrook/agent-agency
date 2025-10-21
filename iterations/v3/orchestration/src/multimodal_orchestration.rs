@@ -14,6 +14,7 @@ use std::path::Path;
 use std::sync::Arc;
 use tracing::{debug, error, info, warn};
 use uuid::Uuid;
+use serde_json;
 
 /// Multimodal document processing orchestrator
 #[derive(Debug)]
@@ -41,6 +42,8 @@ pub struct MultimodalOrchestrator {
     knowledge_seeker: Option<Arc<KnowledgeSeeker>>,
     /// Council coordinator for decision-making
     council_coordinator: Option<Arc<ConsensusCoordinator>>,
+    /// Audit trail manager for recording processing events
+    audit_trail: Option<Arc<AuditTrailManager>>,
 }
 
 /// Processing result for document pipeline
@@ -94,12 +97,18 @@ impl MultimodalOrchestrator {
             circuit_breaker: CircuitBreaker::new(),
             knowledge_seeker: None,
             council_coordinator: None,
+            audit_trail: None,
         }
     }
 
     /// Set knowledge seeker for research integration
     pub fn set_knowledge_seeker(&mut self, knowledge_seeker: Arc<KnowledgeSeeker>) {
         self.knowledge_seeker = Some(knowledge_seeker);
+    }
+
+    /// Set audit trail manager for event recording
+    pub fn set_audit_trail(&mut self, audit_trail: Arc<AuditTrailManager>) {
+        self.audit_trail = Some(audit_trail);
     }
 
     /// Set council coordinator for decision-making
@@ -242,27 +251,78 @@ impl MultimodalOrchestrator {
 
         for file_path in file_paths {
             let semaphore = semaphore.clone();
-            let orchestrator = self; // This would need to be Arc<Self> in real implementation
-            
+            let file_path_str = file_path.to_string_lossy().to_string();
+            let audit_trail = self.audit_trail.clone();
+
             let task = tokio::spawn(async move {
                 let _permit = semaphore.acquire().await.unwrap();
-                // TODO: Implement actual document processing orchestration
-                // - [ ] Integrate with document ingestion pipeline for file parsing
-                // - [ ] Implement block-level processing with multimodal enrichment
-                // - [ ] Add document structure analysis and content extraction
-                // - [ ] Support different document formats (PDF, DOCX, PPTX, images, etc.)
-                // - [ ] Implement processing progress tracking and resumability
-                // - [ ] Add error handling and recovery for failed processing
-                // - [ ] Support parallel processing of document sections
-                Ok(ProcessingResult {
-                    document_id: Uuid::new_v4(),
-                    status: ProcessingStatus::Completed,
-                    blocks_processed: 10,
-                    blocks_enriched: 8,
-                    blocks_indexed: 8,
-                    processing_time_ms: 1000,
-                    error_message: None,
-                })
+
+                // Record document processing started
+                if let Some(audit) = &audit_trail {
+                    let mut metadata = std::collections::HashMap::new();
+                    metadata.insert("file_path".to_string(), serde_json::Value::String(file_path_str.clone()));
+                    metadata.insert("event_type".to_string(), serde_json::Value::String("started".to_string()));
+                    let _ = audit.record_operation_performance(
+                        "document_processing",
+                        std::time::Duration::from_millis(0),
+                        true,
+                        metadata
+                    ).await;
+                }
+
+                let start_time = std::time::Instant::now();
+                let result = async move {
+                    // TODO: Implement actual document processing orchestration
+                    // - [ ] Integrate with document ingestion pipeline for file parsing
+                    // - [ ] Implement block-level processing with multimodal enrichment
+                    // - [ ] Add document structure analysis and content extraction
+                    // - [ ] Support different document formats (PDF, DOCX, PPTX, images, etc.)
+                    // - [ ] Implement processing progress tracking and resumability
+                    // - [ ] Add error handling and recovery for failed processing
+                    // - [ ] Support parallel processing of document sections
+                    Ok(ProcessingResult {
+                        document_id: Uuid::new_v4(),
+                        status: ProcessingStatus::Completed,
+                        blocks_processed: 10,
+                        blocks_enriched: 8,
+                        blocks_indexed: 8,
+                        processing_time_ms: start_time.elapsed().as_millis() as u64,
+                        error_message: None,
+                    })
+                }.await;
+
+                // Record document processing finished or error
+                if let Some(audit) = &audit_trail {
+                    let success = result.is_ok();
+                    let event_type = if success { "finished" } else { "error" };
+                    let processing_time = start_time.elapsed();
+
+                    let mut metadata = std::collections::HashMap::new();
+                    metadata.insert("file_path".to_string(), serde_json::Value::String(file_path_str.clone()));
+                    metadata.insert("event_type".to_string(), serde_json::Value::String(event_type.to_string()));
+
+                    match &result {
+                        Ok(result) => {
+                            metadata.insert("document_id".to_string(), serde_json::Value::String(result.document_id.to_string()));
+                            metadata.insert("blocks_processed".to_string(), serde_json::Value::Number(result.blocks_processed.into()));
+                            metadata.insert("blocks_enriched".to_string(), serde_json::Value::Number(result.blocks_enriched.into()));
+                            metadata.insert("blocks_indexed".to_string(), serde_json::Value::Number(result.blocks_indexed.into()));
+                            metadata.insert("processing_time_ms".to_string(), serde_json::Value::Number(result.processing_time_ms.into()));
+                        }
+                        Err(e) => {
+                            metadata.insert("error".to_string(), serde_json::Value::String(e.to_string()));
+                        }
+                    }
+
+                    let _ = audit.record_operation_performance(
+                        "document_processing",
+                        processing_time,
+                        success,
+                        metadata
+                    ).await;
+                }
+
+                result
             });
             
             tasks.push(task);

@@ -1,13 +1,25 @@
 //! Performance Profiling and Benchmarking
 //!
 //! Comprehensive performance monitoring for autonomous file editing:
-//! - Execution time tracking per component
-//! - Memory usage profiling
+//! - Execution time tracking per component with HDR histograms
+//! - Memory usage profiling and CPU time measurement
 //! - Model inference latency measurements
 //! - End-to-end task performance metrics
 //! - Bottleneck identification and optimization insights
+//! - Prometheus metrics export for monitoring
 //!
 //! @author @darianrosebrook
+
+/// Agent telemetry collector stub
+pub struct AgentTelemetryCollector {
+    name: String,
+}
+
+impl AgentTelemetryCollector {
+    pub fn new(name: String) -> Self {
+        Self { name }
+    }
+}
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -16,12 +28,22 @@ use tokio::sync::RwLock;
 use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
+use hdrhistogram::Histogram;
+use metrics::{counter, histogram, gauge};
+use cpu_time::ProcessTime;
+use memory_stats::memory_stats;
 
 /// Performance profiler for autonomous agent operations
 pub struct PerformanceProfiler {
     metrics: Arc<RwLock<PerformanceMetrics>>,
     active_timers: HashMap<String, Instant>,
     task_profiles: HashMap<Uuid, TaskProfile>,
+    max_history: usize,
+    // Advanced profiling
+    task_duration_histogram: Histogram<u64>, // In nanoseconds
+    component_histograms: HashMap<String, Histogram<u64>>,
+    process_start_time: ProcessTime,
+    prometheus_enabled: bool,
 }
 
 /// Comprehensive performance metrics
@@ -39,6 +61,14 @@ pub struct PerformanceMetrics {
     pub average_iterations_per_task: f64,
     pub bottlenecks: Vec<Bottleneck>,
     pub component_timings: HashMap<String, ComponentTiming>,
+    // Advanced metrics
+    pub p50_task_duration: Duration,
+    pub p95_task_duration: Duration,
+    pub p99_task_duration: Duration,
+    pub total_cpu_time: Duration,
+    pub average_cpu_time_per_task: Duration,
+    pub memory_usage_histogram: Vec<(Duration, usize)>, // Time series
+    pub throughput_tasks_per_minute: f64,
 }
 
 /// Task-specific performance profile
@@ -124,9 +154,23 @@ impl Default for PerformanceProfiler {
                 average_iterations_per_task: 0.0,
                 bottlenecks: Vec::new(),
                 component_timings: HashMap::new(),
+                // Advanced metrics
+                p50_task_duration: Duration::ZERO,
+                p95_task_duration: Duration::ZERO,
+                p99_task_duration: Duration::ZERO,
+                total_cpu_time: Duration::ZERO,
+                average_cpu_time_per_task: Duration::ZERO,
+                memory_usage_histogram: Vec::new(),
+                throughput_tasks_per_minute: 0.0,
             })),
             active_timers: HashMap::new(),
             task_profiles: HashMap::new(),
+            max_history: 100,
+            // Advanced profiling
+            task_duration_histogram: Histogram::new_with_bounds(1, 86_400_000_000_000, 3).unwrap(), // 1ns to 1 day
+            component_histograms: HashMap::new(),
+            process_start_time: ProcessTime::now(),
+            prometheus_enabled: false,
         }
     }
 }
@@ -138,7 +182,7 @@ impl PerformanceProfiler {
     }
 
     /// Start profiling a task
-    pub fn start_task(&mut self, task_id: Uuid) {
+    pub async fn start_task(&mut self, task_id: Uuid) {
         let profile = TaskProfile {
             task_id,
             start_time: Utc::now(),
@@ -152,9 +196,20 @@ impl PerformanceProfiler {
 
         self.task_profiles.insert(task_id, profile);
 
+        // Record initial memory usage
+        if let Some(usage) = memory_stats() {
+            self.record_memory_usage(task_id, usage.physical_mem).await;
+        }
+
         // Update global metrics
         let mut metrics = self.metrics.write().await;
         metrics.total_tasks += 1;
+
+        // Prometheus metrics
+        if self.prometheus_enabled {
+            counter!("agent_tasks_total", 1);
+            gauge!("agent_active_tasks", metrics.total_tasks as f64);
+        }
     }
 
     /// Start timing a component operation
@@ -166,6 +221,13 @@ impl PerformanceProfiler {
     pub async fn stop_timer(&mut self, operation: &str, task_id: Option<Uuid>) {
         if let Some(start_time) = self.active_timers.remove(operation) {
             let duration = start_time.elapsed();
+
+            // Record in HDR histogram for this component
+            let duration_ns = duration.as_nanos() as u64;
+            let histogram = self.component_histograms
+                .entry(operation.to_string())
+                .or_insert(Histogram::new_with_bounds(1, 86_400_000_000_000, 3).unwrap());
+            histogram.record(duration_ns).unwrap();
 
             // Record in global component timings
             let mut metrics = self.metrics.write().await;
@@ -188,17 +250,27 @@ impl PerformanceProfiler {
             timing.min_time = timing.min_time.min(duration);
             timing.max_time = timing.max_time.max(duration);
 
+            // Update percentiles from histogram
+            timing.p50_time = Duration::from_nanos(histogram.value_at_percentile(50.0));
+            timing.p95_time = Duration::from_nanos(histogram.value_at_percentile(95.0));
+            timing.p99_time = Duration::from_nanos(histogram.value_at_percentile(99.0));
+
             // Record in task profile if task_id provided
             if let Some(task_id) = task_id {
                 if let Some(profile) = self.task_profiles.get_mut(&task_id) {
                     *profile.component_breakdown.entry(operation.to_string()).or_insert(Duration::ZERO) += duration;
                 }
             }
+
+            // Prometheus metrics
+            if self.prometheus_enabled {
+                histogram!("agent_component_duration_seconds", duration.as_secs_f64());
+            }
         }
     }
 
     /// Record iteration completion
-    pub fn record_iteration(&mut self, task_id: Uuid, iteration_profile: IterationProfile) {
+    pub async fn record_iteration(&mut self, task_id: Uuid, iteration_profile: IterationProfile) {
         if let Some(profile) = self.task_profiles.get_mut(&task_id) {
             profile.iterations.push(iteration_profile);
 
@@ -210,7 +282,7 @@ impl PerformanceProfiler {
     }
 
     /// Record memory usage
-    pub fn record_memory_usage(&mut self, task_id: Uuid, memory_bytes: usize) {
+    pub async fn record_memory_usage(&mut self, task_id: Uuid, memory_bytes: usize) {
         if let Some(profile) = self.task_profiles.get_mut(&task_id) {
             profile.memory_peaks.push((Utc::now(), memory_bytes));
 
@@ -223,8 +295,17 @@ impl PerformanceProfiler {
     /// Complete task profiling
     pub async fn complete_task(&mut self, task_id: Uuid, success: bool) {
         if let Some(profile) = self.task_profiles.get_mut(&task_id) {
-            profile.end_time = Some(Utc::now());
-            profile.total_duration = Some(Utc::now().signed_duration_since(profile.start_time).to_std().unwrap());
+            let end_time = Utc::now();
+            profile.end_time = Some(end_time);
+            profile.total_duration = Some(end_time.signed_duration_since(profile.start_time).to_std().unwrap());
+
+            // Record final memory usage
+            if let Some(usage) = memory_stats() {
+                self.record_memory_usage(task_id, usage.physical_mem).await;
+            }
+
+            // Calculate CPU time for this task
+            let cpu_time = self.process_start_time.elapsed();
 
             // Analyze bottlenecks for this task
             profile.bottlenecks = self.analyze_task_bottlenecks(profile);
@@ -237,11 +318,42 @@ impl PerformanceProfiler {
                 metrics.failed_tasks += 1;
             }
 
-            // Update averages
             let total_completed = metrics.completed_tasks + metrics.failed_tasks;
+
+            // Update averages
             if let Some(duration) = profile.total_duration {
                 let total_duration_sum = metrics.average_task_duration * (total_completed - 1) as u32 + duration;
                 metrics.average_task_duration = total_duration_sum / total_completed as u32;
+
+                // Update HDR histogram
+                let duration_ns = duration.as_nanos() as u64;
+                self.task_duration_histogram.record(duration_ns).unwrap();
+
+                // Calculate percentiles from histogram
+                metrics.p50_task_duration = Duration::from_nanos(self.task_duration_histogram.value_at_percentile(50.0));
+                metrics.p95_task_duration = Duration::from_nanos(self.task_duration_histogram.value_at_percentile(95.0));
+                metrics.p99_task_duration = Duration::from_nanos(self.task_duration_histogram.value_at_percentile(99.0));
+
+                // Update CPU time tracking
+                metrics.total_cpu_time += cpu_time;
+                metrics.average_cpu_time_per_task = metrics.total_cpu_time / total_completed as u32;
+
+                // Calculate throughput
+                let total_runtime = Utc::now().signed_duration_since(metrics.memory_usage_histogram.first()
+                    .map(|(t, _)| *t)
+                    .unwrap_or_else(|| Utc::now())).to_std().unwrap_or(Duration::from_secs(1));
+                metrics.throughput_tasks_per_minute = (total_completed as f64 / total_runtime.as_secs_f64()) * 60.0;
+            }
+
+            // Prometheus metrics
+            if self.prometheus_enabled {
+                counter!("agent_tasks_completed_total", 1);
+                if success {
+                    counter!("agent_tasks_success_total", 1);
+                } else {
+                    counter!("agent_tasks_failed_total", 1);
+                }
+                histogram!("agent_task_duration_seconds", profile.total_duration.unwrap().as_secs_f64());
             }
         }
     }

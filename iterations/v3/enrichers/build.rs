@@ -14,7 +14,7 @@ fn main() {
         if asr_bridge_path.exists() {
             println!("Building ASR Bridge...");
             let status = Command::new("swift")
-                .args(&["build", "--configuration", "release", "-Xswiftc", "-static-stdlib"])
+                .args(&["build", "--configuration", "release"])
                 .current_dir(asr_bridge_path)
                 .status()
                 .expect("Failed to build ASR Bridge");
@@ -28,23 +28,23 @@ fn main() {
             println!("cargo:rustc-link-lib=static=ASRBridge");
         }
 
-        // Build Vision Bridge
+        // Build Vision Bridge (skip if it fails, ASR is more important)
         let vision_bridge_path = Path::new("../vision-bridge");
         if vision_bridge_path.exists() {
             println!("Building Vision Bridge...");
             let status = Command::new("swift")
-                .args(&["build", "--configuration", "release", "-Xswiftc", "-static-stdlib"])
+                .args(&["build", "--configuration", "release"])
                 .current_dir(vision_bridge_path)
                 .status()
                 .expect("Failed to build Vision Bridge");
 
-            if !status.success() {
-                panic!("Vision Bridge build failed");
+            if status.success() {
+                // Link the built library
+                println!("cargo:rustc-link-search=native={}/build/lib", vision_bridge_path.display());
+                println!("cargo:rustc-link-lib=static=VisionBridge");
+            } else {
+                println!("Vision Bridge build failed, skipping (ASR functionality will still work)");
             }
-
-            // Link the built library
-            println!("cargo:rustc-link-search=native={}/build/lib", vision_bridge_path.display());
-            println!("cargo:rustc-link-lib=static=VisionBridge");
         }
 
         // Link system frameworks

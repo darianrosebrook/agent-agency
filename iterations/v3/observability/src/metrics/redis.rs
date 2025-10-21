@@ -81,7 +81,7 @@ impl MetricsBackend for RedisMetrics {
         }
 
         let key = self.make_key(name, labels);
-        let result: Result<(), MetricsBackendError> = self.execute_command(|mut conn| {
+        let result: Result<(), RedisMetricsError> = self.execute_command(|mut conn| {
             // Use INCRBY for atomic increment
             let _: () = conn.incr(&key, value)?;
             // Set TTL if not already set
@@ -101,7 +101,7 @@ impl MetricsBackend for RedisMetrics {
         }
 
         let key = self.make_key(name, labels);
-        let result: Result<(), MetricsBackendError> = self.execute_command(|mut conn| {
+        let result: Result<(), RedisMetricsError> = self.execute_command(|mut conn| {
             // Store as string since Redis doesn't have native float support
             let _: () = conn.set(&key, value.to_string())?;
             // Set TTL
@@ -121,7 +121,7 @@ impl MetricsBackend for RedisMetrics {
         }
 
         let key = self.make_key(name, labels);
-        let result: Result<(), MetricsBackendError> = self.execute_command(|mut conn| {
+        let result: Result<(), RedisMetricsError> = self.execute_command(|mut conn| {
             // Use RPUSH to append to list (simulating histogram buckets)
             let _: () = conn.rpush(&key, value.to_string())?;
             // Keep only last 1000 values

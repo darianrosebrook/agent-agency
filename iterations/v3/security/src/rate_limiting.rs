@@ -285,19 +285,38 @@ impl DistributedRateLimiter {
         self.local_limiter.allow_request(key, limit)
     }
 
-    /// Check rate limit using Redis
+    /// Check rate limit using Redis with multiple algorithm support
     fn check_redis_limit(&self, client: &redis::Client, key: &str, limit: u32, window_secs: u64) -> redis::RedisResult<bool> {
         let mut conn = client.get_connection()?;
-        let window_key = format!("ratelimit:{}:{}", key, chrono::Utc::now().timestamp() / window_secs as i64);
+        let now = chrono::Utc::now().timestamp() as u64;
 
-        // Use Redis atomic operations for rate limiting
-        let current: i32 = redis::cmd("INCR").arg(&window_key).query(&mut conn)?;
+        // Use sliding window algorithm for more accurate rate limiting
+        let window_key = format!("ratelimit:{}:window", key);
+        let count_key = format!("ratelimit:{}:count", key);
+
+        // Clean old entries (sliding window)
+        redis::cmd("ZREMRANGEBYSCORE")
+            .arg(&window_key)
+            .arg(0)
+            .arg((now - window_secs) as f64)
+            .query(&mut conn)?;
+
+        // Add current request timestamp
+        redis::cmd("ZADD").arg(&window_key).arg(now as f64).arg(now.to_string()).query(&mut conn)?;
+
+        // Set expiration on the sorted set
+        redis::cmd("EXPIRE").arg(&window_key).arg(window_secs * 2).query(&mut conn)?;
+
+        // Count requests in current window
+        let request_count: usize = redis::cmd("ZCARD").arg(&window_key).query(&mut conn)?;
+
+        // Also maintain a simple counter for compatibility
+        let current: i32 = redis::cmd("INCR").arg(&count_key).query(&mut conn)?;
         if current == 1 {
-            // Set expiration for this window
-            redis::cmd("EXPIRE").arg(&window_key).arg(window_secs).query(&mut conn)?;
+            redis::cmd("EXPIRE").arg(&count_key).arg(window_secs).query(&mut conn)?;
         }
 
-        Ok(current <= limit as i32)
+        Ok(request_count <= limit as usize)
     }
 }
 

@@ -59,6 +59,21 @@ pub struct TensorSpec {
     pub dtype: String,
 }
 
+/// Model status
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ModelStatus {
+    /// Model is available and healthy
+    Available,
+    /// Model is temporarily unavailable
+    Unavailable,
+    /// Model is being updated
+    Updating,
+    /// Model has failed health checks
+    Failed,
+    /// Model is retired
+    Retired,
+}
+
 /// Deployment status
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum DeploymentStatus {
@@ -405,3 +420,5 @@ mod tests {
         assert_eq!(updated.performance.avg_response_time_ms, 40.0);
     }
 }
+
+

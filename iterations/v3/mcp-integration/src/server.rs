@@ -12,6 +12,8 @@ use jsonrpc_ws_server::ws;
 use jsonrpc_ws_server::ServerBuilder as WsServerBuilder;
 // Using council package for security functionality
 use agent_agency_council::error_handling::{CircuitBreaker, CircuitBreakerConfig, CircuitBreakerStats};
+use agent_agency_observability as observability;
+use std::sync::Arc;
 
 // Simple stub implementations for security functions
 fn validate_api_input(_input: &serde_json::Value, _field: &str) -> Result<(), String> {
@@ -46,6 +48,7 @@ fn get_audit_logger() -> Option<String> {
     None // Stub
 }
 use observability::slo::{SLOTracker, create_default_slos};
+use agent_agency_database::DatabaseClient;
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::{Arc, Mutex};
@@ -379,11 +382,12 @@ pub struct MCPServer {
     auth_rate_limiter: Option<Arc<AuthRateLimiter>>,
     api_rate_limiter: Option<Arc<RateLimitMiddleware>>,
     slo_tracker: Arc<SLOTracker>,
+    db_client: Arc<DatabaseClient>,
 }
 
 impl MCPServer {
     /// Create a new MCP server
-    pub fn new(config: MCPConfig) -> Self {
+    pub fn new(config: MCPConfig, db_client: Arc<DatabaseClient>) -> Self {
         let rate_limiter = config
             .server
             .requests_per_minute
@@ -424,9 +428,9 @@ impl MCPServer {
         ];
         let api_rate_limiter = Some(Arc::new(RateLimitMiddleware::new(None, api_rate_configs)));
 
-        // Initialize SLO tracker with default SLOs
+        // Initialize SLO tracker with database client
         let slo_tracker = Arc::new({
-            let mut tracker = SLOTracker::new();
+            let tracker = SLOTracker::new(db_client.clone());
             // Register default SLOs for the multimodal RAG system
             let default_slos = create_default_slos();
             for slo in default_slos {
@@ -450,6 +454,7 @@ impl MCPServer {
             auth_rate_limiter,
             api_rate_limiter,
             slo_tracker,
+            db_client,
         }
     }
 
@@ -835,39 +840,31 @@ impl MCPServer {
             }
         });
 
-        // SLO endpoints
-        io.add_sync_method("slo/status", |_| async {
-            // Create SLO tracker and get current status
-            let tracker = Arc::new(observability::slo::SLOTracker::new());
-
-            // Register default SLOs
-            for slo_def in observability::slo::create_default_slos() {
-                let _ = tracker.register_slo(slo_def).await;
-            }
-
-            // Get current SLO statuses
-            match tracker.get_all_slo_statuses().await {
-                Ok(statuses) => Ok(serde_json::to_value(statuses).unwrap()),
-                Err(e) => {
-                    tracing::warn!("Failed to get SLO statuses: {}", e);
-                    // Fallback to default SLO definitions
-                    Ok(serde_json::to_value(observability::slo::create_default_slos()).unwrap())
+        // SLO endpoints - use server's SLO tracker
+        let slo_tracker_for_status = self.slo_tracker.clone();
+        io.add_method("slo/status", move |_| {
+            let tracker = slo_tracker_for_status.clone();
+            async move {
+                // Get current SLO statuses
+                match tracker.get_all_slo_statuses().await {
+                    Ok(statuses) => Ok(serde_json::to_value(statuses).unwrap()),
+                    Err(e) => {
+                        tracing::warn!("Failed to get SLO statuses: {}", e);
+                        // Fallback to default SLO definitions
+                        Ok(serde_json::to_value(observability::slo::create_default_slos()).unwrap())
+                    }
                 }
             }
         });
 
-        io.add_sync_method("slo/alerts", |_| async {
-            // Create SLO tracker and get recent alerts
-            let tracker = Arc::new(observability::slo::SLOTracker::new());
-
-            // Register default SLOs
-            for slo_def in observability::slo::create_default_slos() {
-                let _ = tracker.register_slo(slo_def).await;
+        let slo_tracker_for_alerts = self.slo_tracker.clone();
+        io.add_sync_method("slo/alerts", move |_| {
+            let tracker = slo_tracker_for_alerts.clone();
+            async move {
+                // Get recent alerts (last 50)
+                let alerts = tracker.get_recent_alerts(50).await;
+                Ok(serde_json::to_value(alerts).unwrap())
             }
-
-            // Get recent alerts (last 50)
-            let alerts = tracker.get_recent_alerts(50).await;
-            Ok(serde_json::to_value(alerts).unwrap())
         });
 
         io

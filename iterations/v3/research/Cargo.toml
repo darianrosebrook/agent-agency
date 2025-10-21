@@ -27,7 +27,7 @@ parking_lot = "0.12"
 # Vector search and embeddings
 qdrant-client = "1.10"
 fxhash = "0.2"
-embedding-service = { path = "../embedding-service", optional = true }
+# embedding-service = { path = "../embedding-service", optional = true } # Temporarily disabled
 lru = "0.12"
 
 # Database integration
@@ -46,6 +46,13 @@ pulldown-cmark = "0.10"
 ammonia = "3.3"
 regex = "1.10"
 strsim = "0.10"
+
+# Image processing for CLIP preprocessing
+image = { version = "0.24", features = ["jpeg", "png", "webp", "tiff", "bmp", "gif"] }
+
+[features]
+default = []
+# embeddings = ["embedding-service"] # Temporarily disabled
 
 [dev-dependencies]
 tokio-test = "0.4"

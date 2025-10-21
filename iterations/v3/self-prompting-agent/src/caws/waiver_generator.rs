@@ -149,7 +149,8 @@ impl WaiverGenerator {
         };
 
         self.waiver_store.store_waiver(waiver)?;
-        Ok(self.waiver_store.get_waiver_id(task_id).unwrap())
+        self.waiver_store.get_waiver_id(task_id)
+            .map_err(|e| WaiverError::Storage(format!("Failed to retrieve waiver ID after storage: {}", e)))?
     }
 
     /// Generate budget overrun waiver (convenience method)

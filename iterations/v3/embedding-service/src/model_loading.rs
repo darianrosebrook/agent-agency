@@ -15,7 +15,7 @@ pub trait EmbeddingModel: Send + Sync {
 
 /// SafeTensors model implementation
 pub struct SafeTensorsModel {
-    tensors: HashMap<String, safetensors::tensor::TensorView>,
+    data: Vec<u8>,
     dimension: usize,
     vocab_size: usize,
 }
@@ -25,6 +25,8 @@ impl SafeTensorsModel {
     pub async fn load_from_path(model_path: &Path) -> Result<Self> {
         // Load the SafeTensors file
         let data = tokio::fs::read(model_path).await?;
+
+        // Deserialize temporarily to get metadata
         let tensors = safetensors::SafeTensors::deserialize(&data)?;
 
         // Infer dimension from embeddings tensor
@@ -41,7 +43,7 @@ impl SafeTensorsModel {
         let dimension = shape[1];
 
         Ok(Self {
-            tensors: tensors.tensors().clone(),
+            data,
             dimension: dimension as usize,
             vocab_size: vocab_size as usize,
         })
@@ -60,12 +62,15 @@ impl SafeTensorsModel {
 #[async_trait]
 impl EmbeddingModel for SafeTensorsModel {
     async fn forward(&self, tokens: &[u32]) -> Result<EmbeddingVector> {
+        // Deserialize SafeTensors from stored data
+        let tensors = safetensors::SafeTensors::deserialize(&self.data)?;
+
         // Simple mean pooling of token embeddings
         // In a real implementation, this would run the full transformer model
-        let embeddings_tensor = self.tensors.get("embeddings")
-            .or_else(|| self.tensors.get("embed_tokens"))
-            .or_else(|| self.tensors.get("model.embed_tokens"))
-            .ok_or_else(|| anyhow::anyhow!("No embeddings tensor found"))?;
+        let embeddings_tensor = tensors.tensor("embeddings")
+            .or_else(|_| tensors.tensor("embed_tokens"))
+            .or_else(|_| tensors.tensor("model.embed_tokens"))
+            .map_err(|_| anyhow::anyhow!("No embeddings tensor found"))?;
 
         let data = embeddings_tensor.data();
         let shape = embeddings_tensor.shape();
@@ -109,6 +114,7 @@ impl EmbeddingModel for SafeTensorsModel {
         Ok(result)
     }
 }
+
 
 /// Placeholder model implementation for fallback
 pub struct PlaceholderModel {

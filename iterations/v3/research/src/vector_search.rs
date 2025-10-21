@@ -420,28 +420,6 @@ impl VectorSearchEngine {
         info!("Vector search cache cleared");
     }
 
-    /// Create cache key for search parameters
-    fn create_cache_key(
-        &self,
-        query_vector: &[f32],
-        limit: u32,
-        filter: &Option<HashMap<String, serde_json::Value>>,
-    ) -> String {
-        let vector_hash = query_vector
-            .iter()
-            .fold(0u32, |acc, &x| acc.wrapping_add(x.to_bits()));
-
-        let filter_hash = if let Some(filter) = filter {
-            serde_json::to_string(filter).unwrap_or_default().len() as u32
-        } else {
-            0
-        };
-
-        format!(
-            "{}_{}_{}_{}",
-            vector_hash, limit, filter_hash, self.similarity_threshold
-        )
-    }
 
     /// Extract string value from Qdrant Value
     fn extract_string_value(&self, value: &qdrant_client::qdrant::Value) -> Option<String> {
@@ -987,7 +965,7 @@ impl VectorSearchEngine {
     async fn get_cached_embedding(&self, text: &str) -> Result<Option<Vec<f32>>> {
         {
             let cache = self.embedding_cache.read().await;
-            if let Some(embedding) = cache.get(text) {
+            if let Some(embedding) = cache.peek(text) {
                 return Ok(Some(embedding.clone()));
             }
         }

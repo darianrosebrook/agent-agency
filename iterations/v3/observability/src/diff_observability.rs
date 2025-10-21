@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
 
 use crate::agent_telemetry::AgentTelemetryCollector;
+use crate::agent_telemetry::TelemetryConfig;
 
 /// Unified diff representation
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -727,7 +728,8 @@ mod tests {
     use super::*;
 
     fn create_test_collector() -> AgentTelemetryCollector {
-        AgentTelemetryCollector::new("test-agent".to_string())
+        let config = TelemetryConfig::default();
+        AgentTelemetryCollector::new(config)
     }
 
     #[test]
@@ -866,7 +868,7 @@ mod tests {
             };
 
             let summary = DiffViewer::generate_violation_summary(&diff);
-            assert_eq!(summary.severity_assessment, expected_severity);
+            assert_eq!(summary.severity_assessment, expected_severity.to_string()   );
         }
     }
 }

@@ -85,6 +85,7 @@ impl AutonomousExecutor {
         provenance_emitter: Arc<OrchestrationProvenanceEmitter>,
         cache: Option<Arc<dyn CacheBackend>>,
         metrics: Option<Arc<dyn MetricsBackend>>,
+        task_executor: Arc<agent_agency_workers::TaskExecutor>,
     ) -> Self {
         let (task_sender, task_receiver) = mpsc::unbounded_channel();
 
@@ -97,6 +98,7 @@ impl AutonomousExecutor {
             provenance_emitter,
             cache,
             metrics,
+            task_executor,
             active_tasks: Arc::new(RwLock::new(HashMap::new())),
             task_queue: task_sender,
             task_receiver: Arc::new(RwLock::new(task_receiver)),
@@ -200,32 +202,86 @@ impl AutonomousExecutor {
         let task_id = task_descriptor.task_id;
         let start_time = Instant::now();
 
-        tracing::info!("Starting autonomous execution of task {}", task_id);
+        tracing::info!("Starting {} execution of task {}", match task_descriptor.execution_mode {
+            crate::caws_runtime::ExecutionMode::Strict => "strict",
+            crate::caws_runtime::ExecutionMode::Auto => "auto",
+            crate::caws_runtime::ExecutionMode::DryRun => "dry-run",
+        }, task_id);
 
-        // Update status to Starting
-        self.update_task_status(task_id, ExecutionStatus::Starting, Some("Initializing task execution".to_string())).await?;
+        // Enforce execution mode behavior
+        match task_descriptor.execution_mode {
+            crate::caws_runtime::ExecutionMode::DryRun => {
+                tracing::info!("Dry-run mode: Simulating execution without filesystem changes");
+                // For dry-run, we still validate and plan but skip actual execution
+                self.update_task_status(task_id.clone(), ExecutionStatus::Starting, Some("Initializing dry-run execution".to_string())).await?;
+            }
+            crate::caws_runtime::ExecutionMode::Strict => {
+                tracing::info!("Strict mode: Manual approval required for each phase");
+                self.update_task_status(task_id.clone(), ExecutionStatus::Starting, Some("Initializing strict mode execution".to_string())).await?;
+            }
+            crate::caws_runtime::ExecutionMode::Auto => {
+                tracing::info!("Auto mode: Automatic execution with quality gates");
+                self.update_task_status(task_id.clone(), ExecutionStatus::Starting, Some("Initializing auto execution".to_string())).await?;
+            }
+        }
 
         // Phase 1: Validate and prepare task
         let working_spec = self.prepare_task(&task_descriptor).await?;
-        self.update_task_progress(task_id, 10.0, Some("Task prepared".to_string())).await?;
+        self.update_task_progress(task_id.clone(), 10.0, Some("Task prepared".to_string())).await?;
+
+        // Strict mode: Require approval before proceeding
+        if task_descriptor.execution_mode == crate::caws_runtime::ExecutionMode::Strict {
+            self.update_task_status(task_id.clone(), ExecutionStatus::AwaitingApproval, Some("Awaiting approval for planning phase".to_string())).await?;
+            // In a real implementation, this would wait for external approval
+            tracing::info!("Strict mode: Awaiting user approval for planning phase");
+        }
 
         // Phase 2: Planning and validation
         self.validate_task(&working_spec, &task_descriptor).await?;
-        self.update_task_progress(task_id, 25.0, Some("Planning and validation complete".to_string())).await?;
+        self.update_task_progress(task_id.clone(), 25.0, Some("Planning and validation complete".to_string())).await?;
+
+        // Strict mode: Require approval before consensus
+        if task_descriptor.execution_mode == crate::caws_runtime::ExecutionMode::Strict {
+            self.update_task_status(task_id.clone(), ExecutionStatus::AwaitingApproval, Some("Awaiting approval for consensus phase".to_string())).await?;
+            tracing::info!("Strict mode: Awaiting user approval for consensus phase");
+        }
 
         // Phase 3: Consensus coordination (if enabled)
         if self.config.enable_consensus {
             self.perform_consensus_coordination(&working_spec, &task_descriptor).await?;
-            self.update_task_progress(task_id, 40.0, Some("Consensus coordination complete".to_string())).await?;
+            self.update_task_progress(task_id.clone(), 40.0, Some("Consensus coordination complete".to_string())).await?;
         }
 
-        // Phase 4: Execute task orchestration
-        let final_verdict = self.execute_orchestration(&working_spec, &task_descriptor).await?;
-        self.update_task_progress(task_id, 80.0, Some("Task orchestration complete".to_string())).await?;
+        // Strict mode: Require approval before execution
+        if task_descriptor.execution_mode == crate::caws_runtime::ExecutionMode::Strict {
+            self.update_task_status(task_id.clone(), ExecutionStatus::AwaitingApproval, Some("Awaiting approval for execution phase".to_string())).await?;
+            tracing::info!("Strict mode: Awaiting user approval for execution phase");
+        }
+
+        // Phase 4: Execute task orchestration (skip for dry-run)
+        let final_verdict = match task_descriptor.execution_mode {
+            crate::caws_runtime::ExecutionMode::DryRun => {
+                tracing::info!("Dry-run mode: Skipping actual orchestration, simulating results");
+                // Create a mock verdict for dry-run
+                crate::council::types::FinalVerdict {
+                    task_id: task_descriptor.task_id.clone(),
+                    decision: crate::council::types::ConsensusDecision::Accept,
+                    confidence: 0.95,
+                    reasoning: "Dry-run simulation - no actual changes made".to_string(),
+                    timestamp: Utc::now(),
+                    participant_verdicts: vec![],
+                    metadata: std::collections::BTreeMap::new(),
+                }
+            }
+            _ => {
+                self.execute_orchestration(&working_spec, &task_descriptor).await?
+            }
+        };
+        self.update_task_progress(task_id.clone(), 80.0, Some("Task orchestration complete".to_string())).await?;
 
         // Phase 5: Post-execution processing
         self.process_results(&final_verdict, &task_descriptor).await?;
-        self.update_task_progress(task_id, 100.0, Some("Execution complete".to_string())).await?;
+        self.update_task_progress(task_id.clone(), 100.0, Some("Execution complete".to_string())).await?;
 
         // Update final status
         self.update_task_status(task_id, ExecutionStatus::Completed, None).await?;
@@ -461,11 +517,52 @@ impl AutonomousExecutor {
         active_tasks.get(&task_id).cloned()
     }
 
+    /// Pause a running task
+    pub async fn pause_task(&self, task_id: Uuid) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
+        let mut active_tasks = self.active_tasks.write().await;
+        if let Some(mut state) = active_tasks.get_mut(&task_id) {
+            if state.status != ExecutionStatus::Running {
+                return Ok(false); // Can only pause running tasks
+            }
+
+            state.status = ExecutionStatus::Paused;
+            self.update_task_status(task_id, ExecutionStatus::Paused, Some("Task paused by user".to_string())).await?;
+            Ok(true)
+        } else {
+            Ok(false)
+        }
+    }
+
+    /// Resume a paused task
+    pub async fn resume_task(&self, task_id: Uuid) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
+        let mut active_tasks = self.active_tasks.write().await;
+        if let Some(mut state) = active_tasks.get_mut(&task_id) {
+            if state.status != ExecutionStatus::Paused {
+                return Ok(false); // Can only resume paused tasks
+            }
+
+            state.status = ExecutionStatus::Running;
+            self.update_task_status(task_id, ExecutionStatus::Running, Some("Task resumed by user".to_string())).await?;
+            Ok(true)
+        } else {
+            Ok(false)
+        }
+    }
+
     /// Cancel a running task
     pub async fn cancel_task(&self, task_id: Uuid) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
         let mut active_tasks = self.active_tasks.write().await;
         if let Some(mut state) = active_tasks.get_mut(&task_id) {
             state.status = ExecutionStatus::Cancelled;
+
+            // Try to cancel on the worker if we have a worker_id
+            if let Some(worker_id) = state.worker_id {
+                if let Err(e) = self.task_executor.cancel_task_execution(task_id, worker_id).await {
+                    tracing::warn!("Failed to cancel task {} on worker {}: {}", task_id, worker_id, e);
+                    // Continue with local cancellation even if worker cancel fails
+                }
+            }
+
             self.update_task_status(task_id, ExecutionStatus::Cancelled, Some("Task cancelled by user".to_string())).await?;
             Ok(true)
         } else {

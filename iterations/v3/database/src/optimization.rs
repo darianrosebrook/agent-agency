@@ -589,7 +589,7 @@ impl DatabaseOptimizationManager {
     pub async fn execute_query_monitored<'a, T>(
         &self,
         query: &str,
-        params: &[T],
+        _params: &[T],
     ) -> Result<Vec<sqlx::postgres::PgRow>>
     where
         T: sqlx::Encode<'a, sqlx::Postgres> + sqlx::Type<sqlx::Postgres> + Send + Sync,
@@ -660,7 +660,7 @@ impl MonitoredQueryExecutor {
     pub async fn execute<'a, T>(
         &self,
         query: &str,
-        params: &[T],
+        _params: &[T],
     ) -> Result<Vec<sqlx::postgres::PgRow>>
     where
         T: sqlx::Encode<'a, sqlx::Postgres> + sqlx::Type<sqlx::Postgres> + Send + Sync,

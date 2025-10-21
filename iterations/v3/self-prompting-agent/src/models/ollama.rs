@@ -159,11 +159,28 @@ impl OllamaProvider {
 
         full_prompt
     }
+
+    /// Estimate tokens in a text string (rough approximation)
+    fn estimate_tokens(&self, text: &str) -> usize {
+        // Rough approximation: ~4 characters per token for English text
+        (text.len() + 3) / 4
+    }
 }
 
 #[async_trait]
 impl ModelProvider for OllamaProvider {
     async fn generate(&self, prompt: &str, context: &ModelContext) -> Result<ModelResponse, ModelError> {
+        // Check context length before building prompt
+        let estimated_tokens = self.estimate_tokens(prompt) +
+                               context.task_history.iter().map(|h| self.estimate_tokens(&h.previous_output)).sum::<usize>();
+
+        if estimated_tokens > self.config.max_context {
+            return Err(ModelError::ContextOverflow {
+                requested: estimated_tokens,
+                max: self.config.max_context,
+            });
+        }
+
         let full_prompt = self.build_prompt(prompt, context);
 
         let request = OllamaRequest {
@@ -186,10 +203,14 @@ impl ModelProvider for OllamaProvider {
             .await?;
 
         if !response.status().is_success() {
+            let error_text = match response.text().await {
+                Ok(text) => text,
+                Err(e) => format!("Failed to read error response: {}", e),
+            };
             return Err(ModelError::ModelUnavailable(format!(
                 "HTTP {}: {}",
                 response.status(),
-                response.text().await.unwrap_or_default()
+                error_text
             )));
         }
 
@@ -197,8 +218,9 @@ impl ModelProvider for OllamaProvider {
         let latency_ms = start_time.elapsed().as_millis() as u64;
 
         // Calculate tokens used (approximate)
-        let tokens_used = ollama_response.prompt_eval_count.unwrap_or(0) as usize
-            + ollama_response.eval_count.unwrap_or(0) as usize;
+        let prompt_tokens = ollama_response.prompt_eval_count.unwrap_or(0) as usize;
+        let completion_tokens = ollama_response.eval_count.unwrap_or(0) as usize;
+        let tokens_used = prompt_tokens + completion_tokens;
 
         Ok(ModelResponse {
             text: ollama_response.response,

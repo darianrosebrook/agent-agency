@@ -1,7 +1,5 @@
 //! Enhanced telemetry and monitoring
 
-use crate::types::*;
-
 /// Alert level
 #[derive(Debug, Clone)]
 pub enum AlertLevel {

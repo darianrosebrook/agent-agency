@@ -409,3 +409,5 @@ mod tests {
         assert!(result.issues.iter().any(|issue| issue.issue_type == "insufficient_training_data"));
     }
 }
+
+

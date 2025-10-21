@@ -67,14 +67,17 @@ pub struct TaskDetail {
     pub metadata: serde_json::Value,
 }
 
-/// Task event entry
+/// Task event entry - matches task_audit_logs table structure
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TaskEvent {
     pub id: Uuid,
+    pub task_id: Uuid,
+    pub ts: String,
+    pub category: String,
+    pub actor: String,
     pub action: String,
-    pub actor: Option<String>,
-    pub change_summary: serde_json::Value,
-    pub created_at: String,
+    pub payload: serde_json::Value,
+    pub idx: i64,
 }
 
 /// Query parameters for task listing
@@ -185,29 +188,301 @@ pub async fn get_task_events(
     Extension(pool): Extension<PgPool>,
     Path(task_id): Path<Uuid>,
 ) -> Result<Json<Vec<TaskEvent>>, TaskApiError> {
-    let rows = sqlx::query(
-        "SELECT id, action, actor, change_summary, created_at FROM audit_logs WHERE resource_id = $1 AND resource_type = 'task' ORDER BY created_at DESC LIMIT 100"
+    // Use the new task audit logs table (P0 requirement: persist audit trail + surface it on tasks)
+    let events = sqlx::query_as::<_, TaskEvent>(
+        r#"
+        SELECT id, task_id, ts, category, actor, action, payload, idx
+        FROM task_audit_logs
+        WHERE task_id = $1
+        ORDER BY idx DESC
+        LIMIT 100
+        "#,
     )
     .bind(&task_id)
     .fetch_all(&pool)
     .await
     .map_err(|e| TaskApiError::DatabaseError(e.to_string()))?;
 
-    let events = rows
-        .into_iter()
-        .map(|row| TaskEvent {
-            id: row.get::<Uuid, _>("id"),
-            action: row.get::<String, _>("action"),
-            actor: row.get::<Option<String>, _>("actor"),
-            change_summary: row.get::<serde_json::Value, _>("change_summary"),
-            created_at: row.get::<chrono::DateTime<chrono::Utc>, _>("created_at").to_rfc3339(),
-        })
-        .collect();
-
     Ok(Json(events))
 }
 
-/// Cancel a task
+/// Pause a task (P0 requirement: wire pause/resume real, not just update local state)
+///
+/// # Arguments
+/// * `pool` - Database connection pool
+/// * `task_id` - UUID of task to pause
+///
+/// # Returns
+/// Updated task state
+pub async fn pause_task(
+    Extension(pool): Extension<PgPool>,
+    Path(task_id): Path<Uuid>,
+) -> Result<Json<TaskResponse>, TaskApiError> {
+    // P0: Wire pause/resume real - call worker control endpoint
+    let worker_endpoint = std::env::var("AGENT_AGENCY_WORKER_ENDPOINT")
+        .unwrap_or_else(|_| "http://localhost:8081".to_string());
+
+    // Call worker control endpoint to pause
+    let control_url = format!("{}/tasks/{}/control", worker_endpoint.trim_end_matches('/'), task_id);
+    let client = reqwest::Client::new();
+
+    let control_request = client
+        .post(&control_url)
+        .json(&serde_json::json!({
+            "task_id": task_id,
+            "action": "pause",
+            "timestamp": chrono::Utc::now().to_rfc3339()
+        }))
+        .send();
+
+    // Update task state to paused
+    sqlx::query("UPDATE tasks SET state = 'paused', updated_at = NOW() WHERE id = $1 AND state = 'executing'")
+        .bind(&task_id)
+        .execute(&pool)
+        .await
+        .map_err(|e| TaskApiError::DatabaseError(e.to_string()))?;
+
+    // P0: Write to task_audit_logs
+    sqlx::query(
+        r#"
+        INSERT INTO task_audit_logs (task_id, category, actor, action, payload)
+        VALUES ($1, 'orchestration', 'api', 'paused', $2)
+        "#,
+    )
+    .bind(&task_id)
+    .bind(serde_json::json!({
+        "reason": "User paused task via API",
+        "worker_endpoint": control_url,
+        "stage": "pause_initiated"
+    }))
+    .execute(&pool)
+    .await
+    .map_err(|e| TaskApiError::DatabaseError(e.to_string()))?;
+
+    // Wait for worker response with timeout
+    match tokio::time::timeout(
+        std::time::Duration::from_secs(5),
+        control_request
+    ).await {
+        Ok(Ok(response)) => {
+            if response.status().is_success() {
+                // Audit successful pause
+                sqlx::query(
+                    r#"
+                    INSERT INTO task_audit_logs (task_id, category, actor, action, payload)
+                    VALUES ($1, 'orchestration', 'worker', 'pause_confirmed', $2)
+                    "#,
+                )
+                .bind(&task_id)
+                .bind(serde_json::json!({
+                    "outcome": "success",
+                    "worker_response": response.status().as_u16(),
+                    "stage": "pause_complete"
+                }))
+                .execute(&pool)
+                .await
+                .map_err(|e| TaskApiError::DatabaseError(e.to_string()))?;
+            } else {
+                // Worker returned error, but task is still marked as paused
+                sqlx::query(
+                    r#"
+                    INSERT INTO task_audit_logs (task_id, category, actor, action, payload)
+                    VALUES ($1, 'orchestration', 'worker', 'pause_error', $2)
+                    "#,
+                )
+                .bind(&task_id)
+                .bind(serde_json::json!({
+                    "outcome": "worker_error",
+                    "worker_response": response.status().as_u16(),
+                    "stage": "pause_with_error"
+                }))
+                .execute(&pool)
+                .await
+                .map_err(|e| TaskApiError::DatabaseError(e.to_string()))?;
+            }
+        }
+        Ok(Err(e)) | Err(_) => {
+            // Timeout or network error, but task is still marked as paused
+            sqlx::query(
+                r#"
+                INSERT INTO task_audit_logs (task_id, category, actor, action, payload)
+                VALUES ($1, 'orchestration', 'system', 'pause_timeout', $2)
+                "#,
+            )
+            .bind(&task_id)
+            .bind(serde_json::json!({
+                "stage": "pause_timeout",
+                "note": "Task marked as paused, worker may still process pause"
+            }))
+            .execute(&pool)
+            .await
+            .map_err(|e| TaskApiError::DatabaseError(e.to_string()))?;
+        }
+    }
+
+    // Fetch updated task
+    let row = sqlx::query(
+        "SELECT id, state, created_at, updated_at, created_by FROM tasks WHERE id = $1"
+    )
+    .bind(&task_id)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|e| TaskApiError::DatabaseError(e.to_string()))?;
+
+    match row {
+        Some(row) => {
+            let task = TaskResponse {
+                id: row.get("id"),
+                state: row.get("state"),
+                created_at: row.get::<_, chrono::DateTime<chrono::Utc>>("created_at").to_rfc3339(),
+                updated_at: row.get::<_, chrono::DateTime<chrono::Utc>>("updated_at").to_rfc3339(),
+                created_by: row.get("created_by"),
+            };
+            Ok(Json(task))
+        }
+        None => Err(TaskApiError::TaskNotFound(task_id)),
+    }
+}
+
+/// Resume a task (P0 requirement: wire pause/resume real, not just update local state)
+///
+/// # Arguments
+/// * `pool` - Database connection pool
+/// * `task_id` - UUID of task to resume
+///
+/// # Returns
+/// Updated task state
+pub async fn resume_task(
+    Extension(pool): Extension<PgPool>,
+    Path(task_id): Path<Uuid>,
+) -> Result<Json<TaskResponse>, TaskApiError> {
+    // P0: Wire pause/resume real - call worker control endpoint
+    let worker_endpoint = std::env::var("AGENT_AGENCY_WORKER_ENDPOINT")
+        .unwrap_or_else(|_| "http://localhost:8081".to_string());
+
+    // Call worker control endpoint to resume
+    let control_url = format!("{}/tasks/{}/control", worker_endpoint.trim_end_matches('/'), task_id);
+    let client = reqwest::Client::new();
+
+    let control_request = client
+        .post(&control_url)
+        .json(&serde_json::json!({
+            "task_id": task_id,
+            "action": "resume",
+            "timestamp": chrono::Utc::now().to_rfc3339()
+        }))
+        .send();
+
+    // Update task state to executing (resumed)
+    sqlx::query("UPDATE tasks SET state = 'executing', updated_at = NOW() WHERE id = $1 AND state = 'paused'")
+        .bind(&task_id)
+        .execute(&pool)
+        .await
+        .map_err(|e| TaskApiError::DatabaseError(e.to_string()))?;
+
+    // P0: Write to task_audit_logs
+    sqlx::query(
+        r#"
+        INSERT INTO task_audit_logs (task_id, category, actor, action, payload)
+        VALUES ($1, 'orchestration', 'api', 'resumed', $2)
+        "#,
+    )
+    .bind(&task_id)
+    .bind(serde_json::json!({
+        "reason": "User resumed task via API",
+        "worker_endpoint": control_url,
+        "stage": "resume_initiated"
+    }))
+    .execute(&pool)
+    .await
+    .map_err(|e| TaskApiError::DatabaseError(e.to_string()))?;
+
+    // Wait for worker response with timeout
+    match tokio::time::timeout(
+        std::time::Duration::from_secs(5),
+        control_request
+    ).await {
+        Ok(Ok(response)) => {
+            if response.status().is_success() {
+                // Audit successful resume
+                sqlx::query(
+                    r#"
+                    INSERT INTO task_audit_logs (task_id, category, actor, action, payload)
+                    VALUES ($1, 'orchestration', 'worker', 'resume_confirmed', $2)
+                    "#,
+                )
+                .bind(&task_id)
+                .bind(serde_json::json!({
+                    "outcome": "success",
+                    "worker_response": response.status().as_u16(),
+                    "stage": "resume_complete"
+                }))
+                .execute(&pool)
+                .await
+                .map_err(|e| TaskApiError::DatabaseError(e.to_string()))?;
+            } else {
+                // Worker returned error, but task is still marked as executing
+                sqlx::query(
+                    r#"
+                    INSERT INTO task_audit_logs (task_id, category, actor, action, payload)
+                    VALUES ($1, 'orchestration', 'worker', 'resume_error', $2)
+                    "#,
+                )
+                .bind(&task_id)
+                .bind(serde_json::json!({
+                    "outcome": "worker_error",
+                    "worker_response": response.status().as_u16(),
+                    "stage": "resume_with_error"
+                }))
+                .execute(&pool)
+                .await
+                .map_err(|e| TaskApiError::DatabaseError(e.to_string()))?;
+            }
+        }
+        Ok(Err(e)) | Err(_) => {
+            // Timeout or network error, but task is still marked as executing
+            sqlx::query(
+                r#"
+                INSERT INTO task_audit_logs (task_id, category, actor, action, payload)
+                VALUES ($1, 'orchestration', 'system', 'resume_timeout', $2)
+                "#,
+            )
+            .bind(&task_id)
+            .bind(serde_json::json!({
+                "stage": "resume_timeout",
+                "note": "Task marked as executing, worker may still process resume"
+            }))
+            .execute(&pool)
+            .await
+            .map_err(|e| TaskApiError::DatabaseError(e.to_string()))?;
+        }
+    }
+
+    // Fetch updated task
+    let row = sqlx::query(
+        "SELECT id, state, created_at, updated_at, created_by FROM tasks WHERE id = $1"
+    )
+    .bind(&task_id)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|e| TaskApiError::DatabaseError(e.to_string()))?;
+
+    match row {
+        Some(row) => {
+            let task = TaskResponse {
+                id: row.get("id"),
+                state: row.get("state"),
+                created_at: row.get::<_, chrono::DateTime<chrono::Utc>>("created_at").to_rfc3339(),
+                updated_at: row.get::<_, chrono::DateTime<chrono::Utc>>("updated_at").to_rfc3339(),
+                created_by: row.get("created_by"),
+            };
+            Ok(Json(task))
+        }
+        None => Err(TaskApiError::TaskNotFound(task_id)),
+    }
+}
+
+/// Cancel a task (P0 requirement: implement cancel end-to-end)
 ///
 /// # Arguments
 /// * `pool` - Database connection pool
@@ -219,20 +494,141 @@ pub async fn cancel_task(
     Extension(pool): Extension<PgPool>,
     Path(task_id): Path<Uuid>,
 ) -> Result<Json<TaskResponse>, TaskApiError> {
-    // Update task state
-    sqlx::query("UPDATE tasks SET state = 'canceled', updated_at = NOW() WHERE id = $1")
+    // P0: Implement cancel end-to-end - call worker HTTP endpoint
+    // For now, use the configured worker endpoint from environment
+    let worker_endpoint = std::env::var("AGENT_AGENCY_WORKER_ENDPOINT")
+        .unwrap_or_else(|_| "http://localhost:8081".to_string());
+
+    // Call worker cancel endpoint (idempotent)
+    let cancel_url = format!("{}/tasks/{}/cancel", worker_endpoint.trim_end_matches('/'), task_id);
+    let client = reqwest::Client::new();
+
+    // Fire cancel request but don't wait for completion (async)
+    let cancel_request = client
+        .post(&cancel_url)
+        .json(&serde_json::json!({
+            "task_id": task_id,
+            "reason": "User canceled task via API",
+            "timestamp": chrono::Utc::now().to_rfc3339()
+        }))
+        .send();
+
+    // Update task state to canceling (intermediate state)
+    sqlx::query("UPDATE tasks SET state = 'canceling', updated_at = NOW() WHERE id = $1")
         .bind(&task_id)
         .execute(&pool)
         .await
         .map_err(|e| TaskApiError::DatabaseError(e.to_string()))?;
 
-    // Log audit event
-    let _ = sqlx::query(
-        "INSERT INTO audit_logs (action, actor, resource_id, resource_type, change_summary) VALUES ('task_canceled', 'api', $1, 'task', jsonb_build_object('reason', 'User canceled task via API'))"
+    // P0: Write to task_audit_logs instead of general audit_logs
+    sqlx::query(
+        r#"
+        INSERT INTO task_audit_logs (task_id, category, actor, action, payload)
+        VALUES ($1, 'orchestration', 'api', 'cancel_requested', $2)
+        "#,
     )
     .bind(&task_id)
+    .bind(serde_json::json!({
+        "reason": "User canceled task via API",
+        "worker_endpoint": cancel_url,
+        "stage": "cancellation_initiated"
+    }))
     .execute(&pool)
-    .await;
+    .await
+    .map_err(|e| TaskApiError::DatabaseError(e.to_string()))?;
+
+    // Wait for worker cancel response with timeout
+    match tokio::time::timeout(
+        std::time::Duration::from_secs(5),
+        cancel_request
+    ).await {
+        Ok(Ok(response)) => {
+            if response.status().is_success() {
+                // Update to fully canceled
+                sqlx::query("UPDATE tasks SET state = 'canceled', updated_at = NOW() WHERE id = $1")
+                    .bind(&task_id)
+                    .execute(&pool)
+                    .await
+                    .map_err(|e| TaskApiError::DatabaseError(e.to_string()))?;
+
+                // P0: Audit successful cancellation
+                sqlx::query(
+                    r#"
+                    INSERT INTO task_audit_logs (task_id, category, actor, action, payload)
+                    VALUES ($1, 'orchestration', 'worker', 'canceled', $2)
+                    "#,
+                )
+                .bind(&task_id)
+                .bind(serde_json::json!({
+                    "outcome": "success",
+                    "worker_response": response.status().as_u16(),
+                    "stage": "cancellation_complete"
+                }))
+                .execute(&pool)
+                .await
+                .map_err(|e| TaskApiError::DatabaseError(e.to_string()))?;
+            } else {
+                // Worker returned error, still mark as canceled but log the issue
+                sqlx::query("UPDATE tasks SET state = 'canceled', updated_at = NOW() WHERE id = $1")
+                    .bind(&task_id)
+                    .execute(&pool)
+                    .await
+                    .map_err(|e| TaskApiError::DatabaseError(e.to_string()))?;
+
+                sqlx::query(
+                    r#"
+                    INSERT INTO task_audit_logs (task_id, category, actor, action, payload)
+                    VALUES ($1, 'orchestration', 'worker', 'canceled', $2)
+                    "#,
+                )
+                .bind(&task_id)
+                .bind(serde_json::json!({
+                    "outcome": "worker_error",
+                    "worker_response": response.status().as_u16(),
+                    "stage": "cancellation_with_error"
+                }))
+                .execute(&pool)
+                .await
+                .map_err(|e| TaskApiError::DatabaseError(e.to_string()))?;
+            }
+        }
+        Ok(Err(e)) => {
+            // Network error, but task is still marked as canceling
+            // This is acceptable - the worker might still process the cancel
+            sqlx::query(
+                r#"
+                INSERT INTO task_audit_logs (task_id, category, actor, action, payload)
+                VALUES ($1, 'orchestration', 'system', 'cancel_timeout', $2)
+                "#,
+            )
+            .bind(&task_id)
+            .bind(serde_json::json!({
+                "error": e.to_string(),
+                "stage": "cancellation_timeout",
+                "note": "Task marked as canceling, worker may still process cancel"
+            }))
+            .execute(&pool)
+            .await
+            .map_err(|e| TaskApiError::DatabaseError(e.to_string()))?;
+        }
+        Err(_) => {
+            // Timeout, but task is still marked as canceling
+            sqlx::query(
+                r#"
+                INSERT INTO task_audit_logs (task_id, category, actor, action, payload)
+                VALUES ($1, 'orchestration', 'system', 'cancel_timeout', $2)
+                "#,
+            )
+            .bind(&task_id)
+            .bind(serde_json::json!({
+                "stage": "cancellation_timeout",
+                "note": "Task marked as canceling, worker may still process cancel"
+            }))
+            .execute(&pool)
+            .await
+            .map_err(|e| TaskApiError::DatabaseError(e.to_string()))?;
+        }
+    }
 
     // Fetch updated task
     let row = sqlx::query(

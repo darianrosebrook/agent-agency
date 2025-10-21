@@ -1,5 +1,7 @@
 //! Vision processing bridge for macOS frameworks
 
+use anyhow::Result;
+
 /// Bounding box for object detection
 #[derive(Debug, Clone)]
 pub struct BoundingBox {

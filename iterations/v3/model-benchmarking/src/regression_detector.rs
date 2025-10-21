@@ -4,6 +4,7 @@ use crate::types::*;
 use anyhow::Result;
 use chrono::Utc;
 use std::collections::HashMap;
+use uuid::Uuid;
 
 /// Regression detector for performance monitoring
 pub struct RegressionDetector {}
@@ -48,15 +49,17 @@ impl RegressionDetector {
             }
 
             let metrics = &result.metrics;
-            for (metric_name, current, baseline_entry) in [
-                ("accuracy", metrics.accuracy, &mut metric_baselines),
-                ("speed", metrics.speed, &mut metric_baselines),
-                ("efficiency", metrics.efficiency, &mut metric_baselines),
-                ("quality", metrics.quality, &mut metric_baselines),
-                ("compliance", metrics.compliance, &mut metric_baselines),
-            ] {
+            let metric_data = [
+                ("accuracy", metrics.accuracy),
+                ("speed", metrics.speed),
+                ("efficiency", metrics.efficiency),
+                ("quality", metrics.quality),
+                ("compliance", metrics.compliance),
+            ];
+
+            for (metric_name, current) in metric_data {
                 let metric_key = (result.model_id, benchmark_key.clone(), metric_name);
-                if let Some(previous_metric) = baseline_entry.get(&metric_key) {
+                if let Some(previous_metric) = metric_baselines.get(&metric_key) {
                     let drop = previous_metric - current;
                     if drop > METRIC_THRESHOLD && previous_metric.abs() > f64::EPSILON {
                         alerts.push(Self::build_alert(
@@ -68,9 +71,9 @@ impl RegressionDetector {
                         ));
                     }
                     let updated = (*previous_metric * 0.65) + (current * 0.35);
-                    baseline_entry.insert(metric_key, updated);
+                    metric_baselines.insert(metric_key, updated);
                 } else {
-                    baseline_entry.insert(metric_key, current);
+                    metric_baselines.insert(metric_key, current);
                 }
             }
         }

@@ -3,16 +3,17 @@
 //! Comprehensive system for validating backup integrity, testing restore procedures,
 //! and ensuring backups are actually usable in disaster scenarios.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use sha2::Digest;
 use tokio::sync::RwLock;
-use tracing::{info, warn, error};
+use tracing::info;
 
-use crate::{DatabaseClient, DatabaseConfig};
+use crate::DatabaseClient;
 
 /// Backup validation configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -82,7 +83,7 @@ pub struct RestoreTestResults {
     pub errors_encountered: Vec<String>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum RiskLevel {
     Low,      // Backup is highly reliable
     Medium,   // Backup has some issues but generally usable
@@ -91,6 +92,7 @@ pub enum RiskLevel {
 }
 
 /// Backup validator
+
 pub struct BackupValidator {
     db_client: Arc<DatabaseClient>,
     config: BackupValidationConfig,
@@ -370,9 +372,14 @@ impl BackupValidator {
     }
 
     /// Validate SQL content structure
-    fn validate_sql_content(&self, content: &str, table_name: &str) -> bool {
-        // Basic validation - check for expected SQL patterns
-        // This is a simplified check; real implementation would be more thorough
+    fn validate_sql_content(&self, content: &str, _table_name: &str) -> bool {
+        // TODO: Implement comprehensive SQL validation
+        // - Parse SQL statements using sqlparser crate
+        // - Validate table references against schema
+        // - Check for potentially dangerous operations (DROP, TRUNCATE, etc.)
+        // - Validate syntax correctness
+        // - Ensure data types match expected schema
+        // - Add unit tests for various SQL injection attempts
 
         if content.trim().is_empty() {
             return false;
@@ -409,13 +416,13 @@ impl BackupValidator {
     /// Perform restore testing
     async fn perform_restore_testing(
         &self,
-        backup_path: &Path,
+        _backup_path: &Path,
         metadata: &crate::backup_recovery::BackupMetadata,
     ) -> Result<RestoreTestResults, Box<dyn std::error::Error + Send + Sync>> {
         let restore_start = Instant::now();
 
         // Create test database if configured
-        let test_db_url = self.config.test_database_url.as_ref()
+        let _test_db_url = self.config.test_database_url.as_ref()
             .ok_or("Test database URL not configured for restore testing")?;
 
         // In a real implementation, this would:
@@ -608,7 +615,7 @@ impl BackupValidator {
         let average_score = total_score as f64 / total_validations as f64;
 
         let mut risk_distribution = HashMap::new();
-        for validation in history {
+        for validation in &*history {
             *risk_distribution.entry(validation.risk_assessment).or_insert(0) += 1;
         }
 

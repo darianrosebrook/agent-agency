@@ -269,7 +269,15 @@ export class SecurityManager {
       return this.createSecurityContext(agent, credentials);
     }
 
-    // Validate credentials (simplified - in production use proper auth)
+    // TODO: Implement comprehensive authentication and authorization
+    // - Integrate with identity providers (OAuth, SAML, LDAP, etc.)
+    // - Implement multi-factor authentication and risk-based auth
+    // - Add credential validation with secure password policies
+    // - Support token-based authentication (JWT, API keys, certificates)
+    // - Implement role-based and attribute-based access control
+    // - Add authentication session management and timeouts
+    // - Support federated authentication and single sign-on
+    // - Implement authentication auditing and anomaly detection
     const agent = this.agentRegistry.get(credentials.agentId);
     if (!agent) {
       this.logSecurityEvent({
@@ -284,7 +292,15 @@ export class SecurityManager {
       return null;
     }
 
-    // Basic token validation (simplified)
+    // TODO: Implement robust token validation and management
+    // - Support multiple token types (bearer, refresh, API keys, certificates)
+    // - Implement token signing and verification with multiple algorithms
+    // - Add token expiration, renewal, and revocation capabilities
+    // - Support token scope and permission validation
+    // - Implement token rate limiting and abuse detection
+    // - Add token audit logging and compliance tracking
+    // - Support token rotation and key management
+    // - Implement token introspection and metadata validation
     if (!this.validateToken(credentials.token)) {
       this.logSecurityEvent({
         type: SecurityEventType.AUTH_FAILURE,
@@ -599,7 +615,15 @@ export class SecurityManager {
         return false;
       }
 
-      // Decode JWT header and payload (without verification for now)
+      // TODO: Implement comprehensive JWT verification and validation
+      // - Verify JWT signature using appropriate algorithms (RS256, HS256, etc.)
+      // - Validate token expiration and not-before claims
+      // - Implement issuer and audience validation
+      // - Add JWT revocation checking and blacklisting
+      // - Support multiple key sources (JWKS, static keys, key rotation)
+      // - Implement token refresh and renewal mechanisms
+      // - Add JWT claims validation and custom claim handling
+      // - Support encrypted JWT (JWE) in addition to signed JWT (JWS)
       try {
         const header = JSON.parse(
           Buffer.from(parts[0], "base64url").toString()

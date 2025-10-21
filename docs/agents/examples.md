@@ -396,23 +396,6 @@ curl http://localhost:8080/metrics | grep task_execution_time
 ---
 
 **These examples demonstrate the full capabilities of Agent Agency V3 for autonomous task execution with constitutional governance, real-time control, and comprehensive monitoring.**
-
----
-
-## 📚 React Component Library - Button Component
-
-**Project**: Add accessible button component to design system  
-**Risk Tier**: 2 (API stability required)  
-**Files Changed**: 8  
-**Lines Changed**: 320
-
-```yaml
-id: LIB-003
-title: "Add Accessible Button Component"
-risk_tier: 2
-mode: feature
-change_budget:
-  max_files: 10
   max_loc: 400
 blast_radius:
   modules: ["components", "types", "stories"]

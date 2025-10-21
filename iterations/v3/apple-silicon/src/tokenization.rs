@@ -1,6 +1,5 @@
 //! Tokenization utilities
 
-use crate::types::*;
 use anyhow::Result;
 
 /// Tokenizer configuration

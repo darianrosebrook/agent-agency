@@ -181,7 +181,15 @@ export class AgentManagementTools {
         throw new Error(`Agent not found: ${args.agentId}`);
       }
 
-      // Create updated agent (simplified - in real implementation would update in orchestrator)
+      // TODO: Implement comprehensive agent lifecycle management through orchestrator
+      // - Integrate with orchestrator agent registry for real-time updates
+      // - Implement agent update validation and business rule enforcement
+      // - Support partial agent updates with conflict resolution
+      // - Add agent update audit logging and change tracking
+      // - Implement agent update notifications and event broadcasting
+      // - Support agent configuration versioning and rollback
+      // - Add agent update authorization and permission checking
+      // - Implement agent update batch operations and transactions
       const updatedAgent = {
         ...existingAgent,
         ...args.updates,
@@ -244,7 +252,15 @@ export class AgentManagementTools {
 
       let filteredAgents = agents;
 
-      // Apply filters (simplified)
+      // TODO: Implement advanced agent filtering and search capabilities
+      // - Support complex query expressions (AND/OR/NOT operators)
+      // - Implement fuzzy matching and relevance scoring for agent search
+      // - Add agent ranking based on performance metrics and availability
+      // - Support multi-dimensional filtering (performance, capabilities, location)
+      // - Implement agent recommendation engine based on task requirements
+      // - Add agent compatibility checking and conflict detection
+      // - Support agent grouping and hierarchical filtering
+      // - Implement agent search analytics and usage patterns
       if (args.type) {
         filteredAgents = filteredAgents.filter((a) => a.type === args.type);
       }

@@ -15,6 +15,18 @@ use tokio_tungstenite::{
 };
 use uuid::Uuid;
 
+fn create_test_db_client() -> Arc<DatabaseClient> {
+    // For tests, use a test database URL or create a mock
+    let test_db_url = std::env::var("TEST_DATABASE_URL")
+        .unwrap_or_else(|_| "postgresql://localhost/agent_agency_test".to_string());
+
+    Arc::new(DatabaseClient::new(&test_db_url).unwrap_or_else(|_| {
+        // If database connection fails, create a mock client that doesn't fail basic operations
+        // This allows tests to run without a real database
+        panic!("Test database not available. Set TEST_DATABASE_URL or ensure test database exists.");
+    }))
+}
+
 fn test_config(port: u16) -> MCPConfig {
     MCPConfig {
         server: SConfig {
@@ -52,7 +64,8 @@ fn test_config(port: u16) -> MCPConfig {
 #[tokio::test]
 async fn http_health_endpoint_works() {
     let port = 18090;
-    let srv = std::sync::Arc::new(MCPServer::new(test_config(port)));
+    let db_client = create_test_db_client();
+    let srv = std::sync::Arc::new(MCPServer::new(test_config(port), db_client));
     // Start HTTP with readiness for deterministic test
     let (ready, handle) = srv.start_http_with_readiness().await.unwrap();
     ready.await.expect("server readiness");
@@ -103,7 +116,8 @@ async fn http_health_endpoint_works() {
 #[tokio::test]
 async fn http_tools_and_validate_methods_work() {
     let port = 18091;
-    let srv = std::sync::Arc::new(MCPServer::new(test_config(port)));
+    let db_client = create_test_db_client();
+    let srv = std::sync::Arc::new(MCPServer::new(test_config(port), db_client));
     let tool = agent_agency_mcp::types::MCPTool {
         id: uuid::Uuid::new_v4(),
         name: "validator".into(),
@@ -177,7 +191,8 @@ async fn http_tools_and_validate_methods_work() {
 #[tokio::test]
 async fn websocket_health_roundtrip() {
     let port = 18105;
-    let srv = std::sync::Arc::new(MCPServer::new(test_config(port)));
+    let db_client = create_test_db_client();
+    let srv = std::sync::Arc::new(MCPServer::new(test_config(port), db_client));
 
     let (ready, handle) = srv.start_ws_with_readiness().await.unwrap();
     ready.await.expect("ws readiness");
@@ -224,7 +239,8 @@ async fn http_rate_limit_enforced() {
     let port = 18110;
     let mut config = test_config(port);
     config.server.requests_per_minute = Some(1);
-    let srv = std::sync::Arc::new(MCPServer::new(config));
+    let db_client = create_test_db_client();
+    let srv = std::sync::Arc::new(MCPServer::new(config, db_client));
 
     let (ready, handle) = srv.start_http_with_readiness().await.unwrap();
     ready.await.expect("server readiness");
@@ -260,7 +276,8 @@ async fn http_rate_limit_enforced() {
 #[tokio::test]
 async fn http_requires_api_key() {
     let port = 18120;
-    let srv = std::sync::Arc::new(MCPServer::new(test_config(port)));
+    let db_client = create_test_db_client();
+    let srv = std::sync::Arc::new(MCPServer::new(test_config(port), db_client));
 
     let (ready, handle) = srv.start_http_with_readiness().await.unwrap();
     ready.await.expect("http readiness");
@@ -284,7 +301,8 @@ async fn http_requires_api_key() {
 #[tokio::test]
 async fn websocket_requires_api_key() {
     let port = 18130;
-    let srv = std::sync::Arc::new(MCPServer::new(test_config(port)));
+    let db_client = create_test_db_client();
+    let srv = std::sync::Arc::new(MCPServer::new(test_config(port), db_client));
 
     let (ready, handle) = srv.start_ws_with_readiness().await.unwrap();
     ready.await.expect("ws readiness");
@@ -303,7 +321,8 @@ async fn websocket_requires_api_key() {
 #[tokio::test]
 async fn server_start_stop_lifecycle() {
     let port = 18140;
-    let srv = std::sync::Arc::new(MCPServer::new(test_config(port)));
+    let db_client = create_test_db_client();
+    let srv = std::sync::Arc::new(MCPServer::new(test_config(port), db_client));
 
     srv.start().await.unwrap();
 

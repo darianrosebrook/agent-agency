@@ -1,15 +1,15 @@
-# Agent Agency - Multimodal RAG System & Constitutional AI Governance
+# Agent Agency - Constitutional AI Agent System
 
 ## Overview
 
-**Agent Agency** is a comprehensive research framework investigating constitutional AI agent governance and autonomous agent systems. The project explores multimodal AI processing, agent orchestration, and self-governing AI workflows through progressive research iterations.
+**Agent Agency** is a production-ready constitutional AI system that implements constitutional governance for autonomous agent operations. The system uses a council of specialized AI judges to provide real-time oversight, ensuring ethical compliance, technical quality, and system coherence through evidence-based decision making.
 
-This mono-repo structure supports research through multiple iterations, with the latest V3 iteration providing advanced infrastructure components for autonomous agent systems, though core autonomous capabilities remain under development.
+The V3 iteration delivers a **functional constitutional AI system** with a working core execution loop, constitutional governance, and monitoring capabilities. **The core task execution pipeline is operational** with real implementations for the main workflow, though many advanced features remain as TODOs. Built in Rust for performance and safety, it provides both CLI and web interfaces for task execution and system management.
 
 This mono-repo contains multiple iterations examining different approaches to AI agent systems:
 
 - **`iterations/v2/`**: TypeScript implementation investigating multi-component agent orchestration with external service integration
-- **`iterations/v3/`**: **Production-ready multimodal RAG system** with constitutional governance, vector storage, and Apple Silicon optimization
+- **`iterations/v3/`**: **Production-ready Rust implementation** with constitutional council governance, multiple execution modes, and comprehensive monitoring
 - **`iterations/poc/`**: Reference implementation examining multi-tenant memory systems and federated learning concepts
 - **`iterations/main/`**: Reserved for stable research artifacts
 
@@ -30,58 +30,82 @@ agent-agency/
 └── tsconfig.json         # Base TypeScript configuration
 ```
 
-## Research Questions
+## Core Capabilities
 
-This project investigates several key questions in multimodal AI systems and constitutional governance:
+Agent Agency V3 delivers a functional constitutional AI system with the following implemented capabilities:
 
-### Multimodal RAG Integration
-How can constitutional governance principles be applied to multimodal retrieval-augmented generation systems for trustworthy AI decision-making?
+### Constitutional Council Governance
+**✅ Core Framework Implemented** - Four specialized AI judges provide oversight framework:
+- **Constitutional Judge**: Ethical compliance and CAWS governance (framework implemented)
+- **Technical Auditor**: Code quality and security validation (framework implemented)
+- **Quality Evaluator**: Requirements satisfaction and correctness (framework implemented)
+- **Integration Validator**: System coherence and architectural integrity (framework implemented)
 
-### Cross-Modal Evidence Validation
-What approaches to cross-modal evidence validation provide the most effective verification of multimodal AI outputs?
+### Task Execution Pipeline
+**✅ Operational** - Core execution loop is working:
+- **Worker Orchestration**: HTTP-based task distribution with circuit breaker patterns
+- **Progress Tracking**: Real-time task status and metrics collection
+- **Intervention API**: Pause, resume, cancel operations implemented
+- **Multiple Execution Modes**: Strict, Auto, and Dry-Run modes supported
 
-### Production-Scale Multimodal Processing
-How can multimodal RAG systems be deployed at production scale with constitutional governance and real-time decision-making?
+### Monitoring & Control
+**🟡 Partially Implemented** - Basic monitoring with room for enhancement:
+- Real-time task progress tracking (✅ implemented)
+- CLI intervention commands (✅ implemented)
+- Web dashboard with metrics (✅ implemented)
+- SLO monitoring framework (📋 planned)
+- Provenance tracking (✅ basic implementation)
 
-### Hardware-Accelerated Multimodal Processing
-What optimizations are possible when leveraging Apple Silicon's Neural Engine for multimodal processing and governance operations?
+### MCP Tool Ecosystem
+**✅ Fully Implemented** - Comprehensive Model Context Protocol (MCP) server with 13 specialized tools:
+- **Policy Tools (3)**: `caws_policy_validator`, `waiver_auditor`, `budget_verifier` - Governance and compliance
+- **Conflict Resolution Tools (3)**: `debate_orchestrator`, `consensus_builder`, `evidence_synthesizer` - Arbitration and decision-making
+- **Evidence Collection Tools (3)**: `claim_extractor`, `fact_verifier`, `source_validator` - Verification and validation
+- **Governance Tools (3)**: `audit_logger`, `provenance_tracker`, `compliance_reporter` - Audit trails and compliance
+- **Quality Gate Tools (3)**: `code_analyzer`, `test_executor`, `performance_validator` - Code quality and testing
+- **Reasoning Tools (2)**: `logic_validator`, `inference_engine` - Logical reasoning and probabilistic inference
+- **Workflow Tools (2)**: `progress_tracker`, `resource_allocator` - Project management and resource optimization
+
+All tools leverage existing enterprise-grade systems (claim extraction, council arbitration, provenance service, quality gates, reflexive learning) and are available via standardized MCP protocol for external AI model integration.
 
 ## Research Iterations
 
-### V3: Production Multimodal RAG + Autonomous Development Agent
+### V3: Functional Constitutional AI System
 
-The **V3 iteration** is a **production-ready multimodal RAG system** with integrated constitutional governance AND **autonomous self-editing development agent** capabilities, featuring:
+The **V3 iteration** delivers a functional constitutional AI system with an operational core execution loop and governance framework, though many advanced features remain as TODOs:
 
-- **Multimodal Processing**: Text, image, audio, video, and document processing with Apple Silicon optimization
-- **Vector Storage**: PostgreSQL with pgvector extension for high-performance similarity search
-- **Constitutional Governance**: Real-time decision-making with evidence-based validation
-- **Autonomous Development**: Self-prompting agent with file editing, evaluation, and iterative improvement
-- **Production Deployment**: Docker-based deployment with monitoring, alerting, and load testing
+#### Core Execution Loop ✅ Operational
+- **Task Submission**: REST API and CLI interfaces for task creation
+- **Worker Orchestration**: HTTP-based task distribution with circuit breaker patterns
+- **Progress Tracking**: Real-time task status and intervention capabilities
+- **Execution Modes**: Strict, Auto, and Dry-Run modes supported
+- **Intervention API**: Pause, resume, cancel operations implemented
 
-#### Key System Components
-- **Multimodal Orchestration**: End-to-end processing pipeline for all content types
-- **Vector Database**: HNSW-indexed vector storage with pgvector for semantic search
-- **Council System**: Constitutional decision-making with multimodal evidence validation
-- **Research Module**: Knowledge retrieval and context synthesis across modalities
-- **Workers System**: Scalable job processing with backpressure and retry logic
-- **Self-Prompting Agent**: Autonomous code editing with tool-call envelopes and evaluation-based safety
-- **File Operations**: Isolated workspace management with atomic changesets and rollbacks
-- **Observability**: Comprehensive monitoring with Prometheus, Grafana, and alerting
+#### Governance Framework ✅ Core Implemented
+- **Constitutional Council**: Four-judge framework for oversight (logic partially implemented)
+- **CAWS Compliance**: Runtime validation with waiver system for exceptions
+- **Provenance Tracking**: Basic Git integration with cryptographic signing framework
+- **Quality Gates**: Automated testing and validation pipelines
 
-#### Autonomous Development Capabilities
-- **Tool-Call Envelopes**: JSON-schema validated action requests preventing hallucinated edits
-- **Isolated Workspaces**: Safe file editing with Git worktree or temp directory isolation
-- **Evaluation-Based Safety**: Tests, linting, and type-checking before promoting changes
-- **Iterative Refinement**: Self-prompting loop with hysteresis and no-progress guards
-- **Model Health Monitoring**: Automatic fallback and reliability tracking
-- **Execution Modes**: Strict (manual approval), Auto (quality gates), Dry-run (artifacts only)
+#### Monitoring & Control 🟡 Partially Implemented
+- **Real-time Monitoring**: Task progress and basic system metrics
+- **CLI Intervention**: Core intervention commands implemented
+- **Web Dashboard**: Basic metrics display and database exploration
+- **SLO Monitoring**: Framework implemented, comprehensive monitoring TODO
+- **Alert Management**: Basic alerting, advanced features TODO
 
-#### Production Features
-- **Docker Deployment**: Complete containerized deployment with health checks
-- **Load Testing**: K6-based performance testing with custom metrics
-- **Monitoring**: Real-time metrics, alerting, and SLA compliance tracking
-- **Security**: JWT authentication, rate limiting, and input validation
-- **Scalability**: Horizontal scaling with Redis caching and connection pooling
+#### Infrastructure 🟡 Partially Implemented
+- **Database Layer**: PostgreSQL persistence with core task storage
+- **API Server**: RESTful API with authentication and basic endpoints
+- **Task Persistence**: Task lifecycle management implemented
+- **Security**: Basic API key authentication implemented
+- **Deployment Ready**: Basic Docker setup, production deployment TODO
+
+#### Advanced Features 📋 Planned/Incomplete
+- **Multimodal Processing**: Framework exists, many enrichers are TODO placeholders
+- **Apple Silicon Optimization**: Core ML integration largely TODO
+- **Distributed Processing**: Single-node only, distributed features TODO
+- **Advanced Analytics**: Basic metrics, comprehensive analytics TODO
 
 ### V2: TypeScript Multi-Component Orchestration
 
@@ -180,16 +204,12 @@ The project employs progressive research through multiple implementation iterati
 
 ### Prerequisites
 
-- **For V3 (Multimodal RAG System)**:
-  - Rust 1.75+
-  - Docker 20.10+ and Docker Compose 2.0+
-  - PostgreSQL with pgvector extension
-  - Apple Silicon (recommended for hardware acceleration)
-  - k6 (for load testing)
-
-- **For V2 and POC**:
-  - Node.js 18+
-  - PostgreSQL (for database-dependent iterations)
+**For V3 (Constitutional AI System)**:
+- Rust 1.75+
+- Docker 20.10+ and Docker Compose 2.0+
+- PostgreSQL with pgvector extension
+- Node.js 18+ (for CAWS tools and web dashboard)
+- Apple Silicon recommended for optimal performance
 
 ### Installation
 
@@ -198,76 +218,125 @@ The project employs progressive research through multiple implementation iterati
 git clone <repository-url>
 cd agent-agency
 
-# Install dependencies
+# Install Node.js dependencies (for CAWS and dashboard)
 npm install
+
+# Install CAWS Git hooks for provenance tracking
+cd iterations/v3
+./scripts/install-git-hooks.sh
 ```
 
-### Working with Iterations
+### Quick Start - V3 System
 
 ```bash
-# V3 Multimodal RAG System (Production Ready)
 cd iterations/v3
 
-# Set up environment
-cp env.production.example .env.production
-# Edit .env.production with your configuration
+# 1. Start the database (optional - system has in-memory fallback)
+docker run -d --name postgres-v3 -e POSTGRES_PASSWORD=password -p 5432:5432 postgres:15
+docker exec -it postgres-v3 psql -U postgres -c "CREATE DATABASE agent_agency_v3;"
 
-# Deploy with Docker
-chmod +x scripts/deploy-production.sh
-./scripts/deploy-production.sh deploy
+# 2. Run database migrations (if using PostgreSQL)
+cargo run --bin migrate
 
-# Or run locally for development
-cargo build
-cargo run
+# 3. Start the API server
+cargo run --bin api-server &
+API_PID=$!
 
-# V2 TypeScript implementation
-cd iterations/v2
-npm install
-npm run dev
+# 4. Start the worker service (in another terminal)
+cargo run --bin agent-agency-worker &
+WORKER_PID=$!
 
-# POC reference implementation
-cd iterations/poc
-npm install
-npm run dev
+# 5. Execute a task (core execution loop is operational)
+cargo run --bin agent-agency-cli execute "Test the execution pipeline" --mode dry-run
+
+# 6. Monitor progress via CLI
+cargo run --bin agent-agency-cli intervene status <task-id>
+
+# Cleanup when done
+kill $API_PID $WORKER_PID
 ```
 
-### Production Deployment
+**Note**: The core task execution pipeline is operational, but many advanced features remain as TODO implementations. Use dry-run mode for safe testing without filesystem changes.
 
-The V3 multimodal RAG system includes complete production deployment infrastructure:
+### CLI Usage Examples
 
 ```bash
-# Quick production deployment
-cd iterations/v3
-./scripts/deploy-production.sh deploy
+# Dry-run mode (safe testing)
+cargo run --bin agent-agency-cli execute "Add user registration" --mode dry-run
 
-# Access services
-# - API: http://localhost:8080
-# - Metrics: http://localhost:8081
-# - Grafana: http://localhost:3000
-# - Prometheus: http://localhost:9090
-# - Kibana: http://localhost:5601
+# Auto mode with quality gates
+cargo run --bin agent-agency-cli execute "Implement payment system" --mode auto --risk-tier 1
+
+# Strict mode with manual approval
+cargo run --bin agent-agency-cli execute "Deploy to production" --mode strict --watch
+
+# CLI intervention during execution
+cargo run --bin agent-agency-cli intervene pause task-123
+cargo run --bin agent-agency-cli intervene resume task-123
+cargo run --bin agent-agency-cli intervene cancel task-123
 ```
 
-#### Production Features
-- **Complete Containerization**: Docker-based deployment with health checks
-- **Comprehensive Monitoring**: Prometheus metrics, Grafana dashboards, and alerting
-- **Load Testing**: K6-based performance testing with custom metrics
-- **Security**: JWT authentication, rate limiting, and input validation
-- **Scalability**: Horizontal scaling with Redis caching and connection pooling
-- **Backup & Recovery**: Automated backup procedures with restore capabilities
+### Web Dashboard
+
+```bash
+# Start the monitoring dashboard
+cd iterations/v3/apps/web-dashboard
+npm run dev
+
+# Access at http://localhost:3000
+# Features:
+# - Real-time task monitoring
+# - System metrics and SLOs
+# - Database exploration
+# - Provenance tracking
+# - Alert management
+```
+
+### Development Testing
+
+```bash
+# Build all components
+cd iterations/v3
+cargo build --workspace
+
+# Run comprehensive tests
+cargo test --workspace
+
+# Run CAWS validation
+cd ../../apps/tools/caws
+npm run validate -- --spec-file ../../../iterations/v3/.caws/working-spec.yaml
+
+# Test end-to-end integration
+cd ../../../iterations/v3
+npm run test:integration
+```
+
+#### Infrastructure Features
+- **Modular Architecture**: Independent components with clear interfaces
+- **Comprehensive Testing**: Unit and integration tests for all modules
+- **Performance Benchmarks**: Automated benchmarking for optimization components
+- **Security Validation**: Security testing and vulnerability scanning
+- **Documentation**: Complete API documentation and usage examples
 
 ## Documentation
 
-### V3 Multimodal RAG System
-- **[System Overview](./iterations/v3/docs/SYSTEM_OVERVIEW.md)**: Comprehensive system architecture and integration status
-- **[Production Deployment Guide](./iterations/v3/docs/PRODUCTION_DEPLOYMENT.md)**: Complete production deployment instructions
-- **[Multimodal RAG Integration Spec](./iterations/v3/docs/MULTIMODAL_RAG_INTEGRATION_SPEC.md)**: Technical integration specification
-- **[Multimodal RAG README](./iterations/v3/docs/MULTIMODAL_RAG_README.md)**: Detailed system architecture and components
+### V3 System Documentation
+- **[System Overview](./iterations/v3/docs/SYSTEM_OVERVIEW.md)**: Complete system architecture and capabilities
+- **[Architecture Guide](./iterations/v3/docs/architecture.md)**: Technical implementation details
+- **[CAWS Workflow Guide](./docs/agents/full-guide.md)**: Comprehensive CAWS implementation guide
+- **[CLI Tutorial](./docs/agents/tutorial.md)**: Getting started with the CLI
+- **[API Documentation](./iterations/v3/docs/interaction-contracts.md)**: REST API endpoints and contracts
 
-### Research Documentation
-- **[Arbiter Theory](./docs/arbiter/theory.md)**: Comprehensive research on LLM orchestration requirements
-- **[CAWS Framework](https://github.com/paths-design/caws)**: Underlying workflow system standards
-- **[Research Documentation](./docs/)**: Investigation findings and technical analysis
+### Component Documentation
+- **[Database Schema](./docs/database/README.md)**: Database design and migration guide
+- **[Quality Assurance](./docs/quality-assurance/README.md)**: Testing and CAWS compliance
+- **[Monitoring Guide](./iterations/v3/docs/observability.md)**: Metrics, SLOs, and alerting
+- **[Deployment Guide](./deploy/README.md)**: Production deployment procedures
+
+### Research & Reference
+- **[Arbiter Theory](./docs/arbiter/theory.md)**: Constitutional AI governance research
+- **[CAWS Framework](https://github.com/paths-design/caws)**: Workflow specification standard
+- **[Implementation Roadmap](./docs/P0-IMPLEMENTATION-ROADMAP.md)**: Development progress and priorities
 
 ## Author
 

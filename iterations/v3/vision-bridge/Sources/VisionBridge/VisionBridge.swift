@@ -6,6 +6,7 @@
 
 import Foundation
 import Vision
+import CoreImage
 
 /// Result structure for OCR operations
 public struct OCRResult {

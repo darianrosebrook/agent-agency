@@ -3,28 +3,28 @@ import { NextRequest, NextResponse } from "next/server";
 // SLO measurements API proxy
 
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: { sloName: string } }
 ) {
   try {
     const { sloName } = params;
-    const { searchParams } = new URL(request.url);
+    const { searchParams } = new URL(_request.url);
     const v3BackendHost = process.env.V3_BACKEND_HOST ?? "http://localhost:8080";
 
     // Build query parameters for measurements filtering
-    const params = new URLSearchParams();
+    const queryParams = new URLSearchParams();
 
     const startTime = searchParams.get("start_time");
-    if (startTime) params.append("start_time", startTime);
+    if (startTime) queryParams.append("start_time", startTime);
 
     const endTime = searchParams.get("end_time");
-    if (endTime) params.append("end_time", endTime);
+    if (endTime) queryParams.append("end_time", endTime);
 
     const limit = searchParams.get("limit");
-    if (limit) params.append("limit", limit);
+    if (limit) queryParams.append("limit", limit);
 
     const measurementsUrl = `${v3BackendHost}/api/v1/slos/${sloName}/measurements${
-      params.toString() ? `?${params}` : ""
+      queryParams.toString() ? `?${queryParams}` : ""
     }`;
 
     console.log(`Proxying SLO measurements request to: ${measurementsUrl}`);

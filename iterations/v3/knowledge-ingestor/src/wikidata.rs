@@ -6,7 +6,9 @@
 //! @author @darianrosebrook
 
 use crate::types::*;
-use crate::{IngestionConfig, IngestionStats, KnowledgeIngestor};
+use crate::{IngestionConfig, IngestionStats};
+#[cfg(feature = "embeddings")]
+use crate::KnowledgeIngestor;
 use agent_agency_database::models::*;
 use agent_agency_database as database;
 use anyhow::{Context, Result};
@@ -20,6 +22,7 @@ use tracing::{debug, info, warn};
 use unicode_normalization::UnicodeNormalization;
 
 /// Parse Wikidata lexemes from gzipped JSON dump
+#[cfg(feature = "embeddings")]
 pub async fn parse_wikidata_dump<P: AsRef<Path>>(
     ingestor: &KnowledgeIngestor,
     path: P,
@@ -334,6 +337,7 @@ async fn generate_embedding(
 }
 
 /// Insert entity and vector into database
+#[cfg(feature = "embeddings")]
 async fn insert_entity(
     ingestor: &KnowledgeIngestor,
     parsed: ParsedEntity,

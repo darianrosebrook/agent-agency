@@ -38,11 +38,16 @@ pub enum LoadBalancingStrategy {
     RoundRobin,
     /// Weighted distribution based on performance
     Weighted,
+    /// Performance-weighted distribution
+    PerformanceWeighted,
     /// Least-loaded model gets more traffic
     LeastLoaded,
     /// Canarying - small percentage to new model
     Canarying,
 }
+
+/// Alias for backward compatibility
+pub type BalancingStrategy = LoadBalancingStrategy;
 
 /// Health status of a model instance
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -102,13 +107,19 @@ impl LoadBalancer {
         // Check circuit breaker
         if self.circuit_breaker.is_open(&selected_model).await {
             // Try alternative model
-            let alternative = healthy_models.iter()
-                .find(|&&model| model != &selected_model && !self.circuit_breaker.is_open(model).await)
-                .ok_or_else(|| anyhow::anyhow!("No alternative healthy models available"))?;
+            let mut alternative = None;
+            for &model in &healthy_models {
+                if model != &selected_model && !self.circuit_breaker.is_open(model).await {
+                    alternative = Some(model);
+                    break;
+                }
+            }
+
+            let alternative = alternative.ok_or_else(|| anyhow::anyhow!("No alternative healthy models available"))?;
 
             warn!("Circuit breaker open for {}, using alternative {}", selected_model, alternative);
             Ok(ModelRoute {
-                model_id: (*alternative).to_string(),
+                model_id: alternative.to_string(),
                 strategy_used: "circuit_breaker_fallback".to_string(),
                 confidence: 0.5,
             })
@@ -205,11 +216,24 @@ impl LoadBalancer {
         Ok(())
     }
 
-    /// Select model based on current strategy
+    /// TODO: Implement sophisticated model selection and load balancing algorithms
+    /// - Support multiple load balancing strategies (round-robin, least-loaded, response-time-weighted)
+    /// - Implement request-aware routing based on input characteristics
+    /// - Add model performance history and adaptive weighting
+    /// - Support A/B testing and canary deployment routing
+    /// - Implement geographic and latency-aware routing
+    /// - Add model health scoring and degradation handling
+    /// - Support session affinity and sticky routing
+    /// - Implement predictive load balancing with forecasting
+    /// - Add routing decision auditing and explainability
     async fn select_model(&self, healthy_models: &[&String], distribution: &HashMap<String, f32>, request: &InferenceRequest) -> Result<String> {
-        // Simple weighted random selection for now
-        let mut rng = rand::thread_rng();
-        let random_value: f32 = rng.gen();
+        // TODO: Replace simple random selection with intelligent routing
+        // - Implement weighted selection based on model performance metrics
+        // - Add request classification and model capability matching
+        // - Support load balancing with health and capacity awareness
+        // - Implement adaptive routing based on real-time performance
+        // - Add routing decision caching and optimization
+        let random_value: f32 = rand::random::<f32>();
 
         let mut cumulative = 0.0;
         for model_id in healthy_models {
@@ -309,3 +333,5 @@ pub struct LoadBalancerStatistics {
     pub total_traffic: f32,
     pub last_updated: chrono::DateTime<chrono::Utc>,
 }
+
+

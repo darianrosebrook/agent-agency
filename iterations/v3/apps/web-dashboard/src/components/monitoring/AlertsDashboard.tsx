@@ -118,16 +118,6 @@ export default function AlertsDashboard({ refreshInterval = 30000 }: AlertsDashb
     return true;
   });
 
-  // Get severity color
-  const getSeverityColor = (severity: string) => {
-    switch (severity) {
-      case "critical": return "#ef4444";
-      case "error": return "#f97316";
-      case "warning": return "#eab308";
-      case "info": return "#3b82f6";
-      default: return "#6b7280";
-    }
-  };
 
   // Get severity icon
   const getSeverityIcon = (severity: string) => {

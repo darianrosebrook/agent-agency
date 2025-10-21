@@ -1,6 +1,6 @@
 //! Buffer pool management for efficient memory allocation
 
-use crate::types::*;
+use crate::adaptive_resource_manager::DeviceKind;
 use anyhow::Result;
 
 /// Buffer pool configuration

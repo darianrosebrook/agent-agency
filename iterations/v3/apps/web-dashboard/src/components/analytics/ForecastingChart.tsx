@@ -21,18 +21,19 @@ export default function ForecastingChart({
   // Initialize time range from available data
   React.useEffect(() => {
     if (historicalData?.data && historicalData.data.length > 0) {
-      const timestamps = historicalData.data.map(d => new Date(d.timestamp));
-      const earliest = new Date(Math.min(...timestamps.map(d => d.getTime())));
-      const latest = new Date(Math.max(...timestamps.map(d => d.getTime())));
+      const timestamps = historicalData.data.map((d) => new Date(d.timestamp));
+      if (timestamps.length > 0) {
+        const latest = new Date(Math.max(...timestamps.map((d) => d.getTime())));
 
-      // Default to last 30 days
-      const thirtyDaysAgo = new Date(latest);
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        // Default to last 30 days
+        const thirtyDaysAgo = new Date(latest);
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-      setTimeRange({
-        start: thirtyDaysAgo.toISOString().split('T')[0], // YYYY-MM-DD format
-        end: latest.toISOString().split('T')[0],
-      });
+        setTimeRange({
+          start: thirtyDaysAgo.toISOString().split("T")[0] || "",
+          end: latest.toISOString().split("T")[0] || "",
+        });
+      }
     }
   }, [historicalData]);
 
@@ -144,14 +145,93 @@ export default function ForecastingChart({
   return (
     <div className={styles.forecastingChart}>
       <div className={styles.chartHeader}>
-        <h3>Forecast: {prediction.metric}</h3>
-        <div className={styles.chartMeta}>
-          <span>
-            Model Accuracy: {(prediction.model_accuracy * 100).toFixed(1)}%
-          </span>
-          <span>
-            Forecast Horizon: {prediction.predicted_values.length} periods
-          </span>
+        <div className={styles.headerLeft}>
+          <h3>Forecast: {prediction.metric}</h3>
+          <div className={styles.chartMeta}>
+            <span>
+              Model Accuracy: {(prediction.model_accuracy * 100).toFixed(1)}%
+            </span>
+            <span>
+              Forecast Horizon: {prediction.predicted_values.length} periods
+            </span>
+          </div>
+        </div>
+
+        {/* Time Range Controls */}
+        <div className={styles.timeRangeControls}>
+          <label className={styles.timeRangeLabel}>
+            Time Range:
+            <div className={styles.dateInputs}>
+              <input
+                type="date"
+                value={timeRange.start}
+                onChange={(e) =>
+                  handleTimeRangeChange(e.target.value, timeRange.end)
+                }
+                className={styles.dateInput}
+                title="Start date"
+              />
+              <span className={styles.dateSeparator}>to</span>
+              <input
+                type="date"
+                value={timeRange.end}
+                onChange={(e) =>
+                  handleTimeRangeChange(timeRange.start, e.target.value)
+                }
+                className={styles.dateInput}
+                title="End date"
+              />
+            </div>
+          </label>
+
+          {/* Quick range buttons */}
+          <div className={styles.quickRanges}>
+            <button
+              type="button"
+              onClick={() => {
+                const end = new Date();
+                const start = new Date();
+                start.setDate(end.getDate() - 7);
+                handleTimeRangeChange(
+                  start.toISOString().split("T")[0] || "",
+                  end.toISOString().split("T")[0] || ""
+                );
+              }}
+              className={styles.quickRangeBtn}
+            >
+              7d
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const end = new Date();
+                const start = new Date();
+                start.setDate(end.getDate() - 30);
+                handleTimeRangeChange(
+                  start.toISOString().split("T")[0] || "",
+                  end.toISOString().split("T")[0] || ""
+                );
+              }}
+              className={styles.quickRangeBtn}
+            >
+              30d
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const end = new Date();
+                const start = new Date();
+                start.setDate(end.getDate() - 90);
+                handleTimeRangeChange(
+                  start.toISOString().split("T")[0] || "",
+                  end.toISOString().split("T")[0] || ""
+                );
+              }}
+              className={styles.quickRangeBtn}
+            >
+              90d
+            </button>
+          </div>
         </div>
       </div>
 

@@ -25,9 +25,9 @@ anyhow = "1.0"
 futures = "0.3"
 regex = "1.10"
 
-# Advanced goal extraction and analysis
-rust-bert = "0.21"  # BERT models for semantic understanding
-tokenizers = "0.19"  # HuggingFace tokenizers
+# Advanced goal extraction and analysis - temporarily disabled due to torch-sys
+# rust-bert = "0.21"  # BERT models for semantic understanding
+# tokenizers = "0.19"  # HuggingFace tokenizers
 lingua = "1.6"  # Language detection
 whatlang = "0.18"  # Fast language detection
 comrak = "0.18"  # CommonMark markdown parser

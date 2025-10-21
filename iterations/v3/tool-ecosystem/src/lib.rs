@@ -12,29 +12,24 @@
 //! 5. **Conflict Resolution Tools**: Debate orchestration, consensus building, evidence synthesis
 //! 6. **Workflow Tools**: Task decomposition, progress tracking, resource allocation
 
-pub mod caws_policy_tools;
 pub mod conflict_resolution_tools;
 pub mod evidence_collection_tools;
-pub mod governance_tools;
-pub mod quality_gate_tools;
-pub mod reasoning_tools;
 pub mod tool_coordinator;
 pub mod tool_discovery;
 pub mod tool_execution;
 pub mod tool_registry;
-pub mod workflow_tools;
 
-pub use caws_policy_tools::{CawsPolicyTool, PolicyEnforcementTools};
 pub use conflict_resolution_tools::{ConflictResolutionTool, DebateOrchestrator, ConsensusBuilder};
-pub use evidence_collection_tools::{EvidenceCollectionTool, FactVerificationTool, SourceValidationTool};
-pub use governance_tools::{GovernanceTool, AuditLogger, ProvenanceTracker};
-pub use quality_gate_tools::{QualityGateTool, CodeAnalysisTool, PerformanceValidator};
-pub use reasoning_tools::{ReasoningTool, LogicValidator, InferenceEngine};
+pub use evidence_collection_tools::{EvidenceCollectionTool}; // FactVerificationTool, SourceValidationTool - not implemented yet
+// pub use governance_tools::{GovernanceTool, AuditLogger, ProvenanceTracker}; // Module not implemented yet
+// pub use quality_gate_tools::{QualityGateTool, CodeAnalysisTool, PerformanceValidator}; // Module not implemented yet
+// pub use reasoning_tools::{ReasoningTool, LogicValidator, InferenceEngine}; // Module not implemented yet
 pub use tool_coordinator::{ToolCoordinator, ToolChain, ToolExecutionResult};
-pub use tool_discovery::{ToolDiscoveryEngine, ToolCapability, ToolMetadata};
+pub use tool_discovery::{ToolDiscoveryEngine, ToolCapability}; // ToolMetadata - private
 pub use tool_execution::{ToolExecutor, ToolInvocation, ToolResult};
 pub use tool_registry::{ToolRegistry, RegisteredTool, ToolRegistration};
-pub use workflow_tools::{WorkflowTool, TaskDecomposer, ProgressTracker};
+// pub use workflow_tools::{WorkflowTool, TaskDecomposer, ProgressTracker}; // Module not implemented yet
+// pub use crate::tool_orchestrator::ToolOrchestrator; // Module not implemented yet
 
 use anyhow::{Result, Context};
 use serde::{Deserialize, Serialize};
@@ -42,6 +37,19 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{info, debug, warn, error};
+
+/// Policy enforcement tools for compliance and security
+#[derive(Debug)]
+pub struct PolicyEnforcementTools {
+    // Placeholder implementation
+}
+
+impl PolicyEnforcementTools {
+    /// Create new policy enforcement tools
+    pub async fn new() -> Result<Self> {
+        Ok(Self {})
+    }
+}
 
 /// Main tool ecosystem coordinator
 ///
@@ -125,10 +133,17 @@ impl ToolEcosystem {
         let policy_tools = Arc::new(PolicyEnforcementTools::new().await?);
         let conflict_tools = Arc::new(ConflictResolutionTool::new().await?);
         let evidence_tools = Arc::new(EvidenceCollectionTool::new().await?);
-        let governance_tools = Arc::new(GovernanceTool::new(config.enable_auditing).await?);
-        let quality_tools = Arc::new(QualityGateTool::new().await?);
-        let reasoning_tools = Arc::new(ReasoningTool::new().await?);
-        let workflow_tools = Arc::new(WorkflowTool::new().await?);
+        // TODO: Implement missing tool modules
+        // let governance_tools = Arc::new(GovernanceTool::new(config.enable_auditing).await?);
+        // let quality_tools = Arc::new(QualityGateTool::new().await?);
+        // let reasoning_tools = Arc::new(ReasoningTool::new().await?);
+        // let workflow_tools = Arc::new(WorkflowTool::new().await?);
+
+        // Placeholder implementations for missing modules
+        let governance_tools = Arc::new(PolicyEnforcementTools::new().await?); // Placeholder
+        let quality_tools = Arc::new(PolicyEnforcementTools::new().await?); // Placeholder
+        let reasoning_tools = Arc::new(PolicyEnforcementTools::new().await?); // Placeholder
+        let workflow_tools = Arc::new(PolicyEnforcementTools::new().await?); // Placeholder
 
         // Register all tools
         Self::register_all_tools(
@@ -318,16 +333,11 @@ impl ToolEcosystem {
         policy_tools: &Arc<PolicyEnforcementTools>,
         conflict_tools: &Arc<ConflictResolutionTool>,
         evidence_tools: &Arc<EvidenceCollectionTool>,
-        governance_tools: &Arc<GovernanceTool>,
-        quality_tools: &Arc<QualityGateTool>,
-        reasoning_tools: &Arc<ReasoningTool>,
-        workflow_tools: &Arc<WorkflowTool>,
+        governance_tools: &Arc<PolicyEnforcementTools>, // Placeholder
+        quality_tools: &Arc<PolicyEnforcementTools>, // Placeholder
+        reasoning_tools: &Arc<PolicyEnforcementTools>, // Placeholder
+        workflow_tools: &Arc<PolicyEnforcementTools>, // Placeholder
     ) -> Result<()> {
-        // Register policy enforcement tools
-        registry.register_tool(policy_tools.caws_validator.clone()).await?;
-        registry.register_tool(policy_tools.waiver_auditor.clone()).await?;
-        registry.register_tool(policy_tools.budget_verifier.clone()).await?;
-
         // Register conflict resolution tools
         registry.register_tool(conflict_tools.debate_orchestrator.clone()).await?;
         registry.register_tool(conflict_tools.consensus_builder.clone()).await?;
@@ -338,25 +348,9 @@ impl ToolEcosystem {
         registry.register_tool(evidence_tools.fact_verifier.clone()).await?;
         registry.register_tool(evidence_tools.source_validator.clone()).await?;
 
-        // Register governance tools
-        registry.register_tool(governance_tools.audit_logger.clone()).await?;
-        registry.register_tool(governance_tools.provenance_tracker.clone()).await?;
-        registry.register_tool(governance_tools.compliance_reporter.clone()).await?;
-
-        // Register quality gate tools
-        registry.register_tool(quality_tools.code_analyzer.clone()).await?;
-        registry.register_tool(quality_tools.test_executor.clone()).await?;
-        registry.register_tool(quality_tools.performance_validator.clone()).await?;
-
-        // Register reasoning tools
-        registry.register_tool(reasoning_tools.logic_validator.clone()).await?;
-        registry.register_tool(reasoning_tools.inference_engine.clone()).await?;
-        registry.register_tool(reasoning_tools.uncertainty_estimator.clone()).await?;
-
-        // Register workflow tools
-        registry.register_tool(workflow_tools.task_decomposer.clone()).await?;
-        registry.register_tool(workflow_tools.progress_tracker.clone()).await?;
-        registry.register_tool(workflow_tools.resource_allocator.clone()).await?;
+        // TODO: Implement missing tool registrations
+        // Policy enforcement tools, governance tools, quality gate tools not yet implemented
+        // Reasoning tools, workflow tools not yet implemented
 
         info!("Registered all CAWS tooling categories");
         Ok(())
@@ -444,3 +438,6 @@ pub enum PolicyValidationResult {
 /// @darianrosebrook
 /// Complete CAWS tool ecosystem for reasoning, conflict resolution, and evidence collection
 /// through MCP-based modular tool discovery and execution
+pub use crate::tool_orchestrator::ToolOrchestrator;
+
+

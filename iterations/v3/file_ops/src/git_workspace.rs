@@ -52,8 +52,8 @@ impl GitWorktreeWorkspace {
         Ok(Self {
             repo_root,
             worktree_path,
-            task_id: task_id.to_string(),
-            original_branch,
+            _task_id: task_id.to_string(),
+            _original_branch: original_branch,
             worktree_branch,
         })
     }
@@ -336,7 +336,13 @@ mod tests {
       // - Add async test timeouts and cancellation handling
       // - Support concurrent test execution
       // - Add async test debugging and profiling tools
-      // PLACEHOLDER: Relying on integration tests for now
+      // PLACEHOLDER: Implement comprehensive unit tests
+      // - Add isolated unit tests for core git operations
+      // - Implement mock repositories for testing
+      // - Add unit tests for error conditions and edge cases
+      // - Support test fixtures and deterministic test data
+      // - Add performance testing for git operations
+      // - Implement test coverage analysis and improvement
 
     #[test]
     fn test_git_workspace_types() {

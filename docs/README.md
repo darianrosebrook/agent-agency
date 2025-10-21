@@ -34,6 +34,8 @@ docs/
 ├── type-system/                        # Type system documentation
 │   └── README.md                       # Type definitions and usage
 │
+├── monitoring-alerting.md              # Monitoring & alerting system guide
+│
 ├── {component}/                        # Component-specific docs
 │   └── README.md                       # ⚠️ With disclaimer headers
 │
@@ -76,7 +78,8 @@ docs/
 
 - `end-to-end/POC.md` - **UPDATED** V3 E2E implementation status
 - V3 components: Council, Research, Orchestration, Security, Context Preservation
-- Current progress: ~75% complete with core systems operational
+- Current progress: Core execution loop operational, many advanced features remain as TODO implementations
+- **NEW**: `monitoring-alerting.md` - Basic monitoring and alerting system documentation
 
 **Status Documents** (in `iterations/v2/`):
 
@@ -140,6 +143,15 @@ docs/
 - Master index of all 25 components
 - Honest status: Production-ready, Partial, Spec-only, Missing
 - Test coverage metrics and evidence
+
+### "How do I monitor the system?"
+
+**Go To**: `monitoring-alerting.md`
+
+- Complete monitoring and alerting system guide
+- Real-time metrics dashboard setup
+- Alert configuration and management
+- Production monitoring best practices
 
 ### "How do I use the CAWS framework?"
 
@@ -341,6 +353,6 @@ docs/
 
 ---
 
-**Last Updated**: January 8, 2025  
-**Next Review**: February 8, 2025 (Monthly during V3 development)  
+**Last Updated**: October 20, 2025  
+**Next Review**: November 20, 2025 (Monthly during V3 development)  
 **Review Frequency**: Monthly during active development, quarterly for stable releases

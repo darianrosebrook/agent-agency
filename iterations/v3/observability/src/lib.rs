@@ -15,6 +15,7 @@ pub mod analytics_dashboard;
 pub mod cache;
 pub mod dashboard;
 pub mod diff_observability;
+pub mod errors;
 pub mod logging;
 pub mod metrics;
 pub mod multimodal_metrics;
@@ -23,7 +24,7 @@ pub mod slo;
 // Re-export specific types to avoid conflicts
 pub use agent_telemetry::{
     AgentPerformanceMetrics, AgentPerformanceTracker, AgentTelemetryCollector, AgentType,
-    BusinessMetrics, CoordinationMetrics, SystemDashboard,
+    BusinessMetrics, CoordinationMetrics, SystemDashboard, SystemAlert,
 };
 pub use alerts::{
     Alert, AlertCondition, AlertManager, AlertRule, AlertSeverity as AlertSeverityType,
@@ -64,3 +65,4 @@ pub use diff_observability::{
     SideBySideConfig, SideBySideView, ViolationSummary, FileNavigation, ViolationSeverity,
     DiffGeneratorConfig, FileChange, DiffError,
 };
+pub use errors::ObservabilityError;

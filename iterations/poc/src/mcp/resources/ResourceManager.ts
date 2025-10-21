@@ -95,8 +95,15 @@ export class MCPResourceManager {
     const resources: Resource[] = [];
 
     try {
-      // Get all agents (this is a simplified approach - in production you'd want pagination)
-      // For now, we'll create static resource templates
+      // TODO: Implement paginated agent registry with dynamic resource discovery
+      // - Implement cursor-based pagination for large agent lists
+      // - Add agent filtering by capabilities, status, and metadata
+      // - Support real-time agent discovery and registration notifications
+      // - Implement agent resource caching with invalidation strategies
+      // - Add agent health status and availability indicators
+      // - Support agent grouping and hierarchical organization
+      // - Implement agent search and discovery APIs
+      // - Add agent resource versioning and change tracking
       resources.push({
         uri: "agents://list",
         name: "Agent List",

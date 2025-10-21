@@ -104,6 +104,21 @@ pub struct EvaluationConfig {
     pub max_iterations: usize,
     pub min_improvement_threshold: f64,
     pub quality_ceiling_budget: usize,
+    /// Timeout for individual evaluation steps (seconds)
+    pub evaluation_timeout_seconds: u64,
+}
+
+impl Default for EvaluationConfig {
+    fn default() -> Self {
+        Self {
+            min_score: 0.7,
+            mandatory_gates: vec!["syntax".to_string(), "types".to_string()],
+            max_iterations: 5,
+            min_improvement_threshold: 0.05,
+            quality_ceiling_budget: 10,
+            evaluation_timeout_seconds: 30, // 30 second default timeout
+        }
+    }
 }
 
 /// Evaluation orchestrator
@@ -130,8 +145,34 @@ impl EvaluationOrchestrator {
         }
     }
 
-    /// Run evaluation on artifacts
+    /// Run evaluation on artifacts with timeout protection
     pub async fn evaluate(&mut self, artifacts: &[Artifact], context: &EvalContext) -> Result<EvalReport, EvaluationError> {
+        let start_time = std::time::Instant::now();
+        let timeout_duration = std::time::Duration::from_secs(self.config.evaluation_timeout_seconds);
+
+        // Wrap evaluation in timeout
+        let evaluation_result = tokio::time::timeout(timeout_duration, self.evaluate_internal(artifacts, context)).await;
+
+        match evaluation_result {
+            Ok(result) => result,
+            Err(_) => {
+                // Evaluation timed out
+                let duration = start_time.elapsed();
+                let report = EvalReport {
+                    score: 0.0,
+                    criteria: vec![],
+                    logs: vec![format!("Evaluation timed out after {}ms", duration.as_millis())],
+                    timestamp: chrono::Utc::now(),
+                    failure_type: Some(EvaluationFailureType::Timeout),
+                };
+                self.history.push(report.clone());
+                Ok(report)
+            }
+        }
+    }
+
+    /// Internal evaluation logic (without timeout wrapper)
+    async fn evaluate_internal(&mut self, artifacts: &[Artifact], context: &EvalContext) -> Result<EvalReport, EvaluationError> {
         let start_time = std::time::Instant::now();
         let mut all_criteria = Vec::new();
         let mut logs = Vec::new();
@@ -179,7 +220,8 @@ impl EvaluationOrchestrator {
             logs,
             seed: None,
             tool_versions: HashMap::new(), // TODO: populate
-            timestamp: Utc::now(),
+            timestamp: chrono::Utc::now(),
+            failure_type: None, // Success case
         };
 
         // Add to history
@@ -264,9 +306,70 @@ impl EvaluationOrchestrator {
     }
 
     /// Generate next actions based on evaluation results
-    fn generate_next_actions(&self, _context: &EvalContext) -> Vec<String> {
-        // TODO: Implement based on failed criteria
-        vec!["Address failed evaluation criteria".to_string()]
+    fn generate_next_actions(&self, context: &EvalContext) -> Vec<String> {
+        let mut actions = Vec::new();
+
+        // Check recent evaluation history for patterns
+        if let Some(latest_report) = context.previous_reports.last() {
+            // If score is consistently low, suggest fundamental improvements
+            if latest_report.score < 0.5 {
+                actions.push("Review and improve core implementation quality".to_string());
+                actions.push("Address critical evaluation criteria failures".to_string());
+            }
+
+            // If score is improving but still below threshold, suggest incremental improvements
+            if latest_report.score >= 0.5 && latest_report.score < context.config.min_score {
+                actions.push("Address remaining evaluation criteria to reach minimum threshold".to_string());
+            }
+
+            // If we have multiple iterations with similar issues, suggest broader changes
+            if context.previous_reports.len() > 2 {
+                let recent_scores: Vec<f64> = context.previous_reports.iter()
+                    .rev()
+                    .take(3)
+                    .map(|r| r.score)
+                    .collect();
+
+                let avg_recent_score = recent_scores.iter().sum::<f64>() / recent_scores.len() as f64;
+                if avg_recent_score < context.config.min_score {
+                    actions.push("Consider fundamental approach changes based on evaluation patterns".to_string());
+                }
+            }
+
+            // Check for specific failed criteria
+            for criterion in &latest_report.criteria {
+                if !criterion.passed {
+                    match criterion.description.as_str() {
+                        desc if desc.contains("TODO") => {
+                            actions.push("Remove TODO comments and implement placeholder functionality".to_string());
+                        }
+                        desc if desc.contains("lint") => {
+                            actions.push("Fix code linting errors and warnings".to_string());
+                        }
+                        desc if desc.contains("test") => {
+                            actions.push("Improve test coverage and fix failing tests".to_string());
+                        }
+                        desc if desc.contains("type") => {
+                            actions.push("Fix TypeScript type errors".to_string());
+                        }
+                        _ => {
+                            actions.push(format!("Address: {}", criterion.description));
+                        }
+                    }
+                }
+            }
+        } else {
+            // First evaluation - provide general guidance
+            actions.push("Complete initial implementation based on requirements".to_string());
+            actions.push("Ensure all evaluation criteria are met".to_string());
+        }
+
+        // Default fallback if no specific actions generated
+        if actions.is_empty() {
+            actions.push("Continue improving implementation based on evaluation feedback".to_string());
+        }
+
+        actions
     }
 }
 

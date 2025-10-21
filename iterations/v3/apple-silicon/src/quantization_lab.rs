@@ -1,6 +1,6 @@
 //! Quantization experimentation lab
 
-use crate::types::*;
+use anyhow::Result;
 
 /// Quantization lab for testing different quantization strategies
 #[derive(Debug)]

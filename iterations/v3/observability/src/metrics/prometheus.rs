@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use async_trait::async_trait;
 use tokio::sync::Mutex;
-use prometheus::{Encoder, TextEncoder, Registry, CounterVec, GaugeVec, HistogramVec, Counter, Gauge, Histogram};
+use prometheus::{Encoder, TextEncoder, Registry, CounterVec, GaugeVec, HistogramVec};
 use crate::metrics::MetricsBackend;
 
 /// Prometheus metrics backend
@@ -216,11 +216,7 @@ impl MetricsBackend for PrometheusMetrics {
                         panic!("Counter vec creation failed");
                     });
 
-                let counter = counter_vec.with_label_values(&self.extract_label_values(labels))
-                    .unwrap_or_else(|e| {
-                        tracing::error!("Failed to create counter instance: {}", e);
-                        panic!("Counter creation failed");
-                    });
+                let counter = counter_vec.with_label_values(&self.extract_label_values(labels));
 
                 counter_instances.insert(instance_key, counter.clone());
                 counter
@@ -242,19 +238,11 @@ impl MetricsBackend for PrometheusMetrics {
             } else {
                 // Create new gauge vec if needed
                 let gauge_vec = self.get_or_create_gauge(name, "Generic gauge").await
-                    .unwrap_or_else(|e| {
-                        tracing::error!("Failed to create gauge vec: {}", e);
-                        panic!("Gauge vec creation failed");
-                    });
+                    .map_err(|e| MetricsBackendError::MetricCreationError(e.to_string()))?;
 
-                let gauge = gauge_vec.with_label_values(&self.extract_label_values(labels))
-                    .unwrap_or_else(|e| {
-                        tracing::error!("Failed to create gauge instance: {}", e);
-                        panic!("Gauge creation failed");
-                    });
-
+                let gauge = gauge_vec.with_label_values(&self.extract_label_values(labels));
                 gauge_instances.insert(instance_key, gauge.clone());
-                gauge
+                Ok(gauge)
             }
         };
 
@@ -273,16 +261,8 @@ impl MetricsBackend for PrometheusMetrics {
             } else {
                 // Create new histogram vec if needed
                 let histogram_vec = self.get_or_create_histogram(name, "Generic histogram").await
-                    .unwrap_or_else(|e| {
-                        tracing::error!("Failed to create histogram vec: {}", e);
-                        panic!("Histogram vec creation failed");
-                    });
-
-                let histogram = histogram_vec.with_label_values(&self.extract_label_values(labels))
-                    .unwrap_or_else(|e| {
-                        tracing::error!("Failed to create histogram instance: {}", e);
-                        panic!("Histogram creation failed");
-                    });
+                    .expect("Failed to create histogram vec");
+                let histogram = histogram_vec.with_label_values(&self.extract_label_values(labels));
 
                 histogram_instances.insert(instance_key, histogram.clone());
                 histogram

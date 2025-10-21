@@ -17,6 +17,7 @@ use uuid::Uuid;
 
 use crate::orchestration::tracking::{EventBus, ProgressTracker};
 use crate::orchestration::planning::types::ExecutionEvent;
+use crate::orchestration::api::TaskEvent;
 use agent_agency_database::DatabaseClient;
 
 /// WebSocket API configuration
@@ -43,7 +44,12 @@ pub struct WebSocketApiConfig {
 #[serde(tag = "type", content = "data")]
 pub enum WebSocketMessage {
     /// Subscribe to task events
-    Subscribe { task_id: Uuid },
+    Subscribe {
+        task_id: Uuid,
+        include_history: Option<bool>,
+        since: Option<String>,
+        limit: Option<i64>
+    },
 
     /// Unsubscribe from task events
     Unsubscribe { task_id: Uuid },
@@ -84,6 +90,9 @@ pub enum WebSocketResponse {
     /// Execution event
     ExecutionEvent(ExecutionEvent),
 
+    /// Task audit event (P0-5: Progress replay from audit logs)
+    TaskEvent(TaskEvent),
+
     /// Task cancelled confirmation
     TaskCancelled { task_id: Uuid },
 
@@ -120,6 +129,7 @@ pub struct WebSocketApi {
     config: WebSocketApiConfig,
     event_bus: Arc<EventBus>,
     progress_tracker: Arc<ProgressTracker>,
+    db_client: DatabaseClient,
     connections: Arc<RwLock<HashMap<Uuid, ConnectionInfo>>>,
 }
 
@@ -137,11 +147,13 @@ impl WebSocketApi {
         config: WebSocketApiConfig,
         event_bus: Arc<EventBus>,
         progress_tracker: Arc<ProgressTracker>,
+        db_client: DatabaseClient,
     ) -> Self {
         Self {
             config,
             event_bus,
             progress_tracker,
+            db_client,
             connections: Arc::new(RwLock::new(HashMap::new())),
         }
     }
@@ -301,8 +313,10 @@ impl WebSocketApi {
         }
 
         match message {
-            WebSocketMessage::Subscribe { task_id } => {
-                self.subscribe_to_task(connection_id, task_id, false).await?;
+            WebSocketMessage::Subscribe { task_id, include_history, since, limit } => {
+                let include_history = include_history.unwrap_or(false);
+                let limit = limit.unwrap_or(50);
+                self.subscribe_to_task(connection_id, task_id, include_history, since, limit).await?;
             }
             WebSocketMessage::Unsubscribe { task_id } => {
                 self.unsubscribe_from_task(connection_id, task_id).await?;
@@ -334,6 +348,8 @@ impl WebSocketApi {
         connection_id: Uuid,
         task_id: Uuid,
         include_history: bool,
+        since: Option<String>,
+        limit: i64,
     ) -> Result<(), WebSocketError> {
         // Subscribe to event bus
         let subscription = self.event_bus.subscribe(task_id).await
@@ -353,14 +369,42 @@ impl WebSocketApi {
         // Send current status
         self.send_task_status(connection_id, task_id).await?;
 
-        // Send historical events if requested
+        // Send historical events if requested (P0-5: Progress replay on reconnect)
         if include_history {
-            // TODO: Implement historical event retrieval from progress tracker
-            // - [ ] Connect to progress tracker for historical event queries
-            // - [ ] Implement event pagination and filtering by time range
-            // - [ ] Add event serialization for WebSocket transmission
-            // - [ ] Handle large event histories efficiently
-            // - [ ] Implement event replay for disconnected clients
+            // Parse since timestamp if provided
+            let since_ts = if let Some(since_str) = since {
+                match chrono::DateTime::parse_from_rfc3339(&since_str) {
+                    Ok(dt) => Some(dt.with_timezone(&chrono::Utc)),
+                    Err(_) => {
+                        // If invalid timestamp, ignore and get all history
+                        None
+                    }
+                }
+            } else {
+                None
+            };
+
+            // Retrieve historical events from task audit logs
+            match self.get_historical_events(task_id, since_ts, limit).await {
+                Ok(events) => {
+                    // Send historical events to client
+                    for event in events {
+                        let _ = sender.send(WebSocketResponse::TaskEvent(event)).await;
+                    }
+
+                    // Send history replay marker
+                    let _ = sender.send(WebSocketResponse::Info {
+                        message: format!("Replayed {} historical events", events.len()),
+                    }).await;
+                }
+                Err(e) => {
+                    tracing::warn!("Failed to retrieve historical events for task {}: {}", task_id, e);
+                    let _ = sender.send(WebSocketResponse::Error {
+                        message: "Failed to retrieve historical events".to_string(),
+                        code: "HISTORY_RETRIEVAL_FAILED".to_string(),
+                    }).await;
+                }
+            }
         }
 
         // Forward events to connection
@@ -435,19 +479,64 @@ impl WebSocketApi {
         Ok(())
     }
 
-    /// Cancel a task
+    /// Cancel a task (P0 requirement: implement cancel end-to-end)
     async fn cancel_task(&self, connection_id: Uuid, task_id: Uuid) -> Result<(), WebSocketError> {
-        // TODO: Implement proper task cancellation through orchestrator
-        // - [ ] Connect to orchestrator service for task cancellation
-        // - [ ] Implement graceful task shutdown and resource cleanup
-        // - [ ] Add cancellation reason tracking and logging
-        // - [ ] Handle partial cancellation and rollback scenarios
-        // - [ ] Implement cancellation timeout and force termination
-        self.progress_tracker.cancel_execution(task_id).await
-            .map_err(|e| WebSocketError::CancellationError(e.to_string()))?;
+        // P0: Call orchestrator cancel endpoint instead of just progress tracker
+        let orchestrator_endpoint = std::env::var("AGENT_AGENCY_ORCHESTRATOR_ENDPOINT")
+            .unwrap_or_else(|_| "http://localhost:3000".to_string());
+
+        let cancel_url = format!("{}/api/tasks/{}/cancel", orchestrator_endpoint.trim_end_matches('/'), task_id);
+        let client = reqwest::Client::new();
+
+        // Call orchestrator cancel endpoint
+        let response = client
+            .post(&cancel_url)
+            .send()
+            .await
+            .map_err(|e| WebSocketError::CancellationError(format!("Failed to call orchestrator: {}", e)))?;
+
+        if !response.status().is_success() {
+            return Err(WebSocketError::CancellationError(format!(
+                "Orchestrator returned error: {}",
+                response.status()
+            )));
+        }
+
+        // Also update progress tracker for local state consistency
+        let _ = self.progress_tracker.cancel_execution(task_id).await;
 
         self.send_response(connection_id, WebSocketResponse::TaskCancelled { task_id }).await;
         Ok(())
+    }
+
+    /// Retrieve historical events for a task from audit logs (P0-5: Progress replay)
+    async fn get_historical_events(
+        &self,
+        task_id: Uuid,
+        since: Option<chrono::DateTime<chrono::Utc>>,
+        limit: i64
+    ) -> Result<Vec<TaskEvent>, WebSocketError> {
+        // Use the new task_audit_logs table with pagination support (P0-5)
+        let events = self.db_client.get_task_audit_events(task_id, since, Some(limit))
+            .await
+            .map_err(|e| WebSocketError::DatabaseError(format!("Failed to query task audit logs: {}", e)))?;
+
+        // Convert TaskAuditEvent to TaskEvent for WebSocket response
+        let events = events.into_iter().map(|audit_event| TaskEvent {
+            id: audit_event.id,
+            task_id: audit_event.task_id,
+            ts: audit_event.ts.to_rfc3339(),
+            category: audit_event.category,
+            actor: audit_event.actor,
+            action: audit_event.action,
+            payload: audit_event.payload,
+            idx: audit_event.idx,
+        }).collect();
+
+        // Events come back in reverse chronological order (newest first), reverse for chronological replay
+        let mut events = events;
+        events.reverse();
+        Ok(events)
     }
 
     /// Send pong response

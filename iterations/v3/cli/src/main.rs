@@ -86,6 +86,18 @@ pub enum Commands {
         #[command(subcommand)]
         intervention: InterventionCommand,
     },
+
+    /// Waiver management commands
+    Waiver {
+        #[command(subcommand)]
+        command: WaiverCommand,
+    },
+
+    /// Provenance trailer management
+    Provenance {
+        #[command(subcommand)]
+        command: ProvenanceCommand,
+    },
 }
 
 /// Intervention commands for active tasks
@@ -118,6 +130,94 @@ pub enum InterventionCommand {
     },
 }
 
+/// Waiver management commands
+#[derive(Debug, Subcommand)]
+pub enum WaiverCommand {
+    /// List all active waivers
+    List,
+    /// Create a new waiver
+    Create {
+        /// Waiver title
+        #[arg(help = "Human-readable title for the waiver")]
+        title: String,
+
+        /// Reason for waiver (emergency_hotfix, legacy_integration, experimental_feature, third_party_constraint, performance_critical, security_patch, infrastructure_limitation, other)
+        #[arg(help = "Reason category for the waiver")]
+        reason: String,
+
+        /// Waiver description
+        #[arg(help = "Detailed explanation of why the waiver is needed")]
+        description: String,
+
+        /// Quality gates to waive (comma-separated)
+        #[arg(help = "Comma-separated list of quality gates to waive (e.g., 'test-coverage,security-scan')")]
+        gates: String,
+
+        /// Impact level (low, medium, high, critical)
+        #[arg(help = "Impact level of the waiver")]
+        impact_level: String,
+
+        /// Mitigation plan
+        #[arg(help = "Plan to mitigate the risks introduced by this waiver")]
+        mitigation_plan: String,
+
+        /// Expiration date (ISO 8601 format: YYYY-MM-DDTHH:MM:SSZ)
+        #[arg(help = "When this waiver expires (ISO 8601 format)")]
+        expires_at: String,
+
+        /// Approver name
+        #[arg(help = "Name of the person approving this waiver")]
+        approved_by: String,
+    },
+    /// Approve a waiver
+    Approve {
+        /// Waiver ID to approve
+        waiver_id: String,
+
+        /// Approver name
+        #[arg(help = "Name of the person approving the waiver")]
+        approver: String,
+
+        /// Optional justification
+        #[arg(help = "Additional justification for approval")]
+        justification: Option<String>,
+    },
+}
+
+/// Provenance trailer management commands
+#[derive(Debug, Subcommand)]
+pub enum ProvenanceCommand {
+    /// Install git hooks for provenance enforcement
+    InstallHooks,
+
+    /// Generate provenance record for current CAWS project
+    Generate,
+
+    /// List provenance records
+    List,
+
+    /// Link provenance to git commit
+    Link {
+        /// Provenance record ID
+        provenance_id: String,
+
+        /// Git commit hash
+        commit_hash: String,
+    },
+
+    /// Verify provenance trailer in commit
+    Verify {
+        /// Git commit hash to verify
+        commit_hash: String,
+    },
+
+    /// Show provenance for a commit
+    Show {
+        /// Git commit hash
+        commit_hash: String,
+    },
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
@@ -147,6 +247,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         Commands::Intervene { task_id, intervention } => {
             intervene_task(task_id, intervention).await
+        }
+
+        Commands::Waiver { command } => {
+            handle_waiver_command(command).await
+        }
+
+        Commands::Provenance { command } => {
+            handle_provenance_command(command).await
         }
     }
 }
@@ -197,19 +305,60 @@ async fn execute_task(
     println!("🎯 Risk Tier: {}", risk_tier.unwrap_or_else(|| "auto".to_string()));
     println!("🔄 Max iterations: {}\n", max_iterations);
 
-    // For now, simulate execution based on mode
+    // Execute task via API with specified mode
+    let api_base_url = std::env::var("AGENT_AGENCY_API_URL")
+        .unwrap_or_else(|_| "http://localhost:8080".to_string());
+    let client = Client::new();
+
+    // Prepare task submission request
+    let mut request_body = serde_json::json!({
+        "description": description,
+        "execution_mode": match mode {
+            ExecutionMode::Strict => "strict",
+            ExecutionMode::Auto => "auto",
+            ExecutionMode::DryRun => "dry_run",
+        },
+        "enable_arbiter": enable_arbiter,
+        "max_iterations": max_iterations,
+        "risk_tier": risk_tier,
+        "project_path": project_path,
+        "watch": watch,
+        "dashboard": dashboard
+    });
+
+    // Submit task
+    println!("🚀 Submitting task to Agent Agency API...");
+    let submit_url = format!("{}/api/v1/tasks", api_base_url);
+    let response = client
+        .post(&submit_url)
+        .header("Content-Type", "application/json")
+        .json(&request_body)
+        .send()
+        .await?;
+
+    if !response.status().is_success() {
+        let error_text = response.text().await.unwrap_or_default();
+        return Err(format!("Task submission failed: {} - {}", response.status(), error_text).into());
+    }
+
+    let task_response: serde_json::Value = response.json().await?;
+    let task_id = task_response["task_id"].as_str()
+        .ok_or("Invalid task response: missing task_id")?;
+
+    println!("✅ Task submitted successfully!");
+    println!("📋 Task ID: {}", task_id);
+    println!("🔗 Status URL: {}/api/v1/tasks/{}", api_base_url, task_id);
+
+    // Monitor task progress based on mode
     match mode {
         ExecutionMode::DryRun => {
-            println!("👁️  Starting dry-run execution...\n");
-            simulate_dry_run().await?;
+            monitor_dry_run_task(&client, &api_base_url, task_id).await?;
         }
         ExecutionMode::Auto => {
-            println!("🤖 Starting autonomous execution...\n");
-            simulate_auto_execution(enable_arbiter).await?;
+            monitor_auto_task(&client, &api_base_url, task_id, watch).await?;
         }
         ExecutionMode::Strict => {
-            println!("🔒 Starting strict mode execution...\n");
-            simulate_strict_execution(watch).await?;
+            monitor_strict_task(&client, &api_base_url, task_id, watch).await?;
         }
     }
 
@@ -222,100 +371,263 @@ async fn execute_task(
 }
 
 /// Simulate dry-run execution (no changes applied)
-async fn simulate_dry_run() -> Result<(), Box<dyn std::error::Error>> {
-    println!("📝 Generating execution plan...");
+/// Monitor dry-run task execution
+async fn monitor_dry_run_task(
+    client: &Client,
+    api_base_url: &str,
+    task_id: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    println!("👁️  DRY-RUN MODE: Monitoring execution without applying changes\n");
 
-    // Simulate dry-run phases
-    let phases = vec![
-        ("Planning", "Generated working specification"),
-        ("Review", "Constitutional review completed"),
-        ("Implementation", "Code artifacts generated"),
-        ("Testing", "Test artifacts prepared"),
-        ("Quality", "Quality checks simulated"),
-    ];
+    // Poll task status until completion
+    loop {
+        let status_url = format!("{}/api/v1/tasks/{}", api_base_url, task_id);
+        let response = client.get(&status_url).send().await?;
 
-    for (phase_name, message) in phases {
-        println!("📋 Phase: {}", phase_name);
-        println!("   ✅ {}", message);
-        tokio::time::sleep(tokio::time::Duration::from_millis(300)).await;
-    }
-
-    println!("\n📊 Artifacts that would be created:");
-    println!("   • Working specification (.caws/working-spec.yaml)");
-    println!("   • Implementation code (dry-run only)");
-    println!("   • Test files (dry-run only)");
-    println!("   • Documentation updates (dry-run only)");
-
-    Ok(())
-}
-
-/// Simulate auto execution with gates
-async fn simulate_auto_execution(enable_arbiter: bool) -> Result<(), Box<dyn std::error::Error>> {
-    if enable_arbiter {
-        println!("⚖️  Constitutional AI Arbiter: ENABLED");
-        println!("   Task will be adjudicated before execution\n");
-    }
-
-    // Simulate phases with gate checking
-    let phases = vec![
-        ("Planning", "Generated working specification", true),
-        ("Review", "Constitutional review passed", true),
-        ("Implementation", "Code generated successfully", true),
-        ("Testing", "All tests passed", true),
-        ("Quality", "Quality gates passed", true),
-    ];
-
-    for (phase_name, message, passed) in phases {
-        print!("📋 Phase: {}... ", phase_name);
-        io::stdout().flush().unwrap();
-
-        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
-
-        if passed {
-            println!("✅ {}", message);
-        } else {
-            println!("❌ {}", message);
-            return Err("Quality gate failed".into());
+        if !response.status().is_success() {
+            return Err(format!("Failed to get task status: {}", response.status()).into());
         }
-    }
 
-    Ok(())
-}
+        let task_data: serde_json::Value = response.json().await?;
+        let status = task_data["status"].as_str().unwrap_or("unknown");
 
-/// Simulate strict mode with user prompts
-async fn simulate_strict_execution(watch: bool) -> Result<(), Box<dyn std::error::Error>> {
-    println!("🔒 Strict mode: Manual approval required for each changeset\n");
+        match status {
+            "completed" => {
+                println!("\n🎯 Dry-run completed successfully!");
+                println!("💡 No actual changes were applied to the filesystem");
 
-    // Simulate phases with user prompts
-    let phases = vec![
-        ("Planning", "Generated working specification. Apply? (y/n)"),
-        ("Review", "Constitutional review completed. Proceed? (y/n)"),
-        ("Implementation", "Code generated. Apply changes? (y/n)"),
-        ("Testing", "Tests written. Run them? (y/n)"),
-        ("Quality", "All gates passed. Finalize? (y/n)"),
-    ];
+                // Show results summary
+                if let Some(result) = task_data.get("result") {
+                    if let Some(artifacts) = result.get("artifacts") {
+                        if let Some(files_created) = artifacts.get("files_created").as_array() {
+                            if !files_created.is_empty() {
+                                println!("📄 Files that would be created:");
+                                for file in files_created {
+                                    if let Some(name) = file.as_str() {
+                                        println!("   + {}", name);
+                                    }
+                                }
+                            }
+                        }
+                        if let Some(files_modified) = artifacts.get("files_modified").as_array() {
+                            if !files_modified.is_empty() {
+                                println!("📝 Files that would be modified:");
+                                for file in files_modified {
+                                    if let Some(name) = file.as_str() {
+                                        println!("   ~ {}", name);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
 
-    for (phase_name, prompt) in phases {
-        println!("📋 Phase: {}", phase_name);
-        println!("   {}", prompt);
+                println!("\n💡 Review results above and run with --mode auto to apply changes");
+                break;
+            }
+            "failed" => {
+                let error_msg = task_data["error_message"].as_str().unwrap_or("Unknown error");
+                return Err(format!("Task failed: {}", error_msg).into());
+            }
+            "cancelled" => {
+                println!("\n🛑 Task was cancelled");
+                break;
+            }
+            _ => {
+                // Show progress
+                if let Some(progress) = task_data.get("progress") {
+                    if let Some(percentage) = progress.get("percentage").as_f64() {
+                        if let Some(phase) = progress.get("current_phase").as_str() {
+                            println!("📋 {}: {:.1}%", phase, percentage);
+                        }
+                    }
+                }
 
-        if !watch {
-            // In non-watch mode, assume approval
-            println!("   ✅ Approved (auto-approved for demo)");
-        } else {
-            // In watch mode, wait for user input
-            let mut input = String::new();
-            io::stdin().read_line(&mut input)?;
-            let input = input.trim().to_lowercase();
-
-            if input != "y" && input != "yes" {
-                println!("   ❌ Execution cancelled by user");
-                return Ok(());
+                tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
             }
         }
+    }
 
-        // Simulate work
-        tokio::time::sleep(tokio::time::Duration::from_millis(300)).await;
+    Ok(())
+}
+
+/// Monitor auto task execution
+async fn monitor_auto_task(
+    client: &Client,
+    api_base_url: &str,
+    task_id: &str,
+    watch: bool,
+) -> Result<(), Box<dyn std::error::Error>> {
+    println!("🤖 AUTO MODE: Monitoring execution with automatic quality gate validation\n");
+
+    // Poll task status until completion
+    loop {
+        let status_url = format!("{}/api/v1/tasks/{}", api_base_url, task_id);
+        let response = client.get(&status_url).send().await?;
+
+        if !response.status().is_success() {
+            return Err(format!("Failed to get task status: {}", response.status()).into());
+        }
+
+        let task_data: serde_json::Value = response.json().await?;
+        let status = task_data["status"].as_str().unwrap_or("unknown");
+
+        match status {
+            "completed" => {
+                println!("\n🎯 Task completed successfully!");
+                println!("✅ All quality gates passed automatically");
+
+                // Show results summary
+                if let Some(result) = task_data.get("result") {
+                    if let Some(artifacts) = result.get("artifacts") {
+                        let files_created = artifacts.get("files_created").as_array().unwrap_or(&vec![]).len();
+                        let files_modified = artifacts.get("files_modified").as_array().unwrap_or(&vec![]).len();
+                        println!("📊 Execution summary:");
+                        println!("   • Files created: {}", files_created);
+                        println!("   • Files modified: {}", files_modified);
+                    }
+                }
+                break;
+            }
+            "failed" => {
+                let error_msg = task_data["error_message"].as_str().unwrap_or("Unknown error");
+                println!("\n❌ Task failed: {}", error_msg);
+                return Err(format!("Task failed: {}", error_msg).into());
+            }
+            "cancelled" => {
+                println!("\n🛑 Task was cancelled");
+                break;
+            }
+            _ => {
+                // Show progress with quality gate status
+                if let Some(progress) = task_data.get("progress") {
+                    if let Some(percentage) = progress.get("percentage").as_f64() {
+                        if let Some(phase) = progress.get("current_phase").as_str() {
+                            let gate_status = match phase {
+                                "Planning" | "Review" => "⏳",
+                                "Implementation" | "Testing" => "🔍",
+                                "Quality" => "🚪",
+                                _ => "📋"
+                            };
+                            println!("{} {}: {:.1}%", gate_status, phase, percentage);
+                        }
+                    }
+                }
+
+                tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+            }
+        }
+    }
+
+    Ok(())
+}
+
+/// Monitor strict task execution with user approval
+async fn monitor_strict_task(
+    client: &Client,
+    api_base_url: &str,
+    task_id: &str,
+    watch: bool,
+) -> Result<(), Box<dyn std::error::Error>> {
+    println!("🔒 STRICT MODE: Manual approval required for each phase\n");
+
+    let mut last_phase = String::new();
+
+    // Poll task status and require approval for each phase
+    loop {
+        let status_url = format!("{}/api/v1/tasks/{}", api_base_url, task_id);
+        let response = client.get(&status_url).send().await?;
+
+        if !response.status().is_success() {
+            return Err(format!("Failed to get task status: {}", response.status()).into());
+        }
+
+        let task_data: serde_json::Value = response.json().await?;
+        let status = task_data["status"].as_str().unwrap_or("unknown");
+
+        match status {
+            "completed" => {
+                println!("\n🎯 Task completed successfully!");
+                println!("✅ All phases approved and executed");
+
+                // Show results summary
+                if let Some(result) = task_data.get("result") {
+                    if let Some(artifacts) = result.get("artifacts") {
+                        let files_created = artifacts.get("files_created").as_array().unwrap_or(&vec![]).len();
+                        let files_modified = artifacts.get("files_modified").as_array().unwrap_or(&vec![]).len();
+                        println!("📊 Execution summary:");
+                        println!("   • Files created: {}", files_created);
+                        println!("   • Files modified: {}", files_modified);
+                    }
+                }
+                break;
+            }
+            "failed" => {
+                let error_msg = task_data["error_message"].as_str().unwrap_or("Unknown error");
+                println!("\n❌ Task failed: {}", error_msg);
+                return Err(format!("Task failed: {}", error_msg).into());
+            }
+            "cancelled" => {
+                println!("\n🛑 Task was cancelled");
+                break;
+            }
+            "awaiting_approval" => {
+                // Check if phase changed and require approval
+                if let Some(progress) = task_data.get("progress") {
+                    if let Some(current_phase) = progress.get("current_phase").as_str() {
+                        if current_phase != last_phase {
+                            last_phase = current_phase.to_string();
+
+                            println!("\n📋 Phase: {}", current_phase);
+                            println!("   🔒 Manual approval required");
+
+                            if !watch {
+                                // In non-watch mode, automatically approve for CI/testing
+                                println!("   ✅ Auto-approved (non-interactive mode)");
+                            } else {
+                                // In watch mode, wait for user input
+                                println!("   Apply changes for this phase? (y/n): ");
+
+                                let mut input = String::new();
+                                io::stdin().read_line(&mut input)?;
+                                let input = input.trim().to_lowercase();
+
+                                if input != "y" && input != "yes" {
+                                    println!("   ❌ Execution cancelled by user");
+
+                                    // Cancel the task via API
+                                    let cancel_url = format!("{}/api/v1/tasks/{}/cancel", api_base_url, task_id);
+                                    let _ = client.post(&cancel_url)
+                                        .header("Content-Type", "application/json")
+                                        .json(&serde_json::json!({
+                                            "reason": "User cancelled during approval"
+                                        }))
+                                        .send()
+                                        .await?;
+                                    return Ok(());
+                                }
+
+                                println!("   ✅ Approved by user");
+                            }
+                        }
+                    }
+                }
+
+                tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+            }
+            _ => {
+                // Show current progress
+                if let Some(progress) = task_data.get("progress") {
+                    if let Some(percentage) = progress.get("percentage").as_f64() {
+                        if let Some(phase) = progress.get("current_phase").as_str() {
+                            println!("📋 {}: {:.1}%", phase, percentage);
+                        }
+                    }
+                }
+
+                tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+            }
+        }
     }
 
     Ok(())
@@ -326,22 +638,39 @@ async fn intervene_task(
     task_id_str: String,
     intervention: InterventionCommand,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let _task_id = uuid::Uuid::parse_str(&task_id_str)
+    let task_id = uuid::Uuid::parse_str(&task_id_str)
         .map_err(|_| format!("Invalid task ID: {}", task_id_str))?;
 
     println!("🎛️  Intervening in task: {}", task_id_str);
 
+    // Get API server URL from environment or default
+    let api_base_url = std::env::var("AGENT_AGENCY_API_URL")
+        .unwrap_or_else(|_| "http://localhost:8080".to_string());
+
+    // Create HTTP client
+    let client = Client::new();
+
     match intervention {
         InterventionCommand::Pause => {
             println!("⏸️  Pausing task execution...");
-            // TODO: Implement pause functionality
-            println!("✅ Task paused successfully");
+            let url = format!("{}/api/v1/tasks/{}/pause", api_base_url, task_id);
+            let response = client.post(&url).send().await?;
+            if response.status().is_success() {
+                println!("✅ Task paused successfully");
+            } else {
+                println!("❌ Failed to pause task: {}", response.status());
+            }
         }
 
         InterventionCommand::Resume => {
             println!("▶️  Resuming task execution...");
-            // TODO: Implement resume functionality
-            println!("✅ Task resumed successfully");
+            let url = format!("{}/api/v1/tasks/{}/resume", api_base_url, task_id);
+            let response = client.post(&url).send().await?;
+            if response.status().is_success() {
+                println!("✅ Task resumed successfully");
+            } else {
+                println!("❌ Failed to resume task: {}", response.status());
+            }
         }
 
         InterventionCommand::Abort => {
@@ -354,8 +683,13 @@ async fn intervene_task(
             let input = input.trim().to_lowercase();
 
             if input == "y" || input == "yes" {
-                // TODO: Implement abort functionality
-                println!("✅ Task aborted successfully");
+                let url = format!("{}/api/v1/tasks/{}/cancel", api_base_url, task_id);
+                let response = client.post(&url).send().await?;
+                if response.status().is_success() {
+                    println!("✅ Task aborted successfully");
+                } else {
+                    println!("❌ Failed to abort task: {}", response.status());
+                }
             } else {
                 println!("   ❌ Abort cancelled");
             }
@@ -365,23 +699,345 @@ async fn intervene_task(
             println!("⚖️  Overriding arbiter verdict...");
             println!("   New verdict: {}", verdict);
             println!("   Reason: {}", reason);
-            // TODO: Implement verdict override
-            println!("✅ Verdict override applied");
+            let url = format!("{}/api/v1/tasks/{}/override", api_base_url, task_id);
+            let response = client
+                .post(&url)
+                .json(&serde_json::json!({
+                    "verdict": verdict,
+                    "reason": reason
+                }))
+                .send()
+                .await?;
+            if response.status().is_success() {
+                println!("✅ Verdict override applied");
+            } else {
+                println!("❌ Failed to override verdict: {}", response.status());
+            }
         }
 
         InterventionCommand::Modify { parameter, value } => {
             println!("⚙️  Modifying task parameter...");
             println!("   Parameter: {}", parameter);
             println!("   New value: {}", value);
-            // TODO: Implement parameter modification
-            println!("✅ Parameter modified successfully");
+            let url = format!("{}/api/v1/tasks/{}/parameters", api_base_url, task_id);
+            let response = client
+                .post(&url)
+                .json(&serde_json::json!({
+                    "parameter": parameter,
+                    "value": value
+                }))
+                .send()
+                .await?;
+            if response.status().is_success() {
+                println!("✅ Parameter modified successfully");
+            } else {
+                println!("❌ Failed to modify parameter: {}", response.status());
+            }
         }
 
         InterventionCommand::Guide { guidance } => {
             println!("💬 Injecting guidance into execution...");
             println!("   Guidance: {}", guidance);
-            // TODO: Implement guidance injection
-            println!("✅ Guidance injected successfully");
+            let url = format!("{}/api/v1/tasks/{}/guidance", api_base_url, task_id);
+            let response = client
+                .post(&url)
+                .json(&serde_json::json!({
+                    "guidance": guidance
+                }))
+                .send()
+                .await?;
+            if response.status().is_success() {
+                println!("✅ Guidance injected successfully");
+            } else {
+                println!("❌ Failed to inject guidance: {}", response.status());
+            }
+        }
+    }
+
+    Ok(())
+}
+
+/// Handle waiver management commands
+async fn handle_waiver_command(command: WaiverCommand) -> Result<(), Box<dyn std::error::Error>> {
+    let api_base_url = std::env::var("AGENT_AGENCY_API_URL")
+        .unwrap_or_else(|_| "http://localhost:8080".to_string());
+    let client = Client::new();
+
+    match command {
+        WaiverCommand::List => {
+            println!("📋 Listing all waivers...");
+            let url = format!("{}/api/v1/waivers", api_base_url);
+            let response = client.get(&url).send().await?;
+            if response.status().is_success() {
+                let waivers: serde_json::Value = response.json().await?;
+                println!("✅ Active waivers:");
+                if let Some(waivers_array) = waivers.as_array() {
+                    if waivers_array.is_empty() {
+                        println!("   No active waivers found");
+                    } else {
+                        for waiver in waivers_array {
+                            if let (Some(id), Some(title), Some(reason), Some(status)) = (
+                                waiver.get("id").and_then(|v| v.as_str()),
+                                waiver.get("title").and_then(|v| v.as_str()),
+                                waiver.get("reason").and_then(|v| v.as_str()),
+                                waiver.get("status").and_then(|v| v.as_str()),
+                            ) {
+                                println!("   - {}: {} ({}) [{}]", id, title, reason, status);
+                            }
+                        }
+                    }
+                }
+            } else {
+                println!("❌ Failed to list waivers: {}", response.status());
+            }
+        }
+
+        WaiverCommand::Create {
+            title,
+            reason,
+            description,
+            gates,
+            impact_level,
+            mitigation_plan,
+            expires_at,
+            approved_by,
+        } => {
+            println!("📝 Creating waiver...");
+            println!("   Title: {}", title);
+            println!("   Reason: {}", reason);
+
+            // Parse gates from comma-separated string
+            let gates_vec: Vec<String> = gates.split(',').map(|s| s.trim().to_string()).collect();
+
+            // Parse expiration date
+            let expires_at_dt = chrono::DateTime::parse_from_rfc3339(&expires_at)
+                .map_err(|_| format!("Invalid expiration date format. Use ISO 8601 format (e.g., 2024-12-31T23:59:59Z)"))?
+                .with_timezone(&chrono::Utc);
+
+            let waiver_request = serde_json::json!({
+                "title": title,
+                "reason": reason,
+                "description": description,
+                "gates": gates_vec,
+                "impact_level": impact_level,
+                "mitigation_plan": mitigation_plan,
+                "expires_at": expires_at_dt,
+                "approved_by": approved_by
+            });
+
+            let url = format!("{}/api/v1/waivers", api_base_url);
+            let response = client
+                .post(&url)
+                .header("Content-Type", "application/json")
+                .json(&waiver_request)
+                .send()
+                .await?;
+
+            if response.status().is_success() {
+                let created_waiver: serde_json::Value = response.json().await?;
+                println!("✅ Waiver created successfully");
+                if let Some(id) = created_waiver.get("id").and_then(|v| v.as_str()) {
+                    println!("   Waiver ID: {}", id);
+                }
+            } else {
+                let error_text = response.text().await.unwrap_or_default();
+                println!("❌ Failed to create waiver: {} - {}", response.status(), error_text);
+            }
+        }
+
+        WaiverCommand::Approve {
+            waiver_id,
+            approver,
+            justification,
+        } => {
+            println!("✅ Approving waiver {}...", waiver_id);
+            println!("   Approver: {}", approver);
+
+            let approval_request = serde_json::json!({
+                "approver": approver,
+                "justification": justification
+            });
+
+            let url = format!("{}/api/v1/waivers/{}/approve", api_base_url, waiver_id);
+            let response = client
+                .post(&url)
+                .header("Content-Type", "application/json")
+                .json(&approval_request)
+                .send()
+                .await?;
+
+            if response.status().is_success() {
+                println!("✅ Waiver approved successfully");
+            } else {
+                let error_text = response.text().await.unwrap_or_default();
+                println!("❌ Failed to approve waiver: {} - {}", response.status(), error_text);
+            }
+        }
+    }
+
+    Ok(())
+}
+
+/// Handle provenance trailer management commands
+async fn handle_provenance_command(command: ProvenanceCommand) -> Result<(), Box<dyn std::error::Error>> {
+    let api_base_url = std::env::var("AGENT_AGENCY_API_URL")
+        .unwrap_or_else(|_| "http://localhost:8080".to_string());
+    let client = Client::new();
+
+    match command {
+        ProvenanceCommand::InstallHooks => {
+            println!("🔧 Installing CAWS Git hooks for provenance enforcement...");
+            let script_path = std::env::current_dir()?
+                .join("scripts")
+                .join("install-git-hooks.sh");
+
+            if !script_path.exists() {
+                println!("❌ Git hooks installation script not found at: {}", script_path.display());
+                println!("   Please ensure you're in the project root directory.");
+                return Ok(());
+            }
+
+            let status = std::process::Command::new("bash")
+                .arg(script_path)
+                .status()?;
+
+            if status.success() {
+                println!("✅ Git hooks installed successfully!");
+                println!("");
+                println!("🎯 Hooks installed:");
+                println!("  - pre-commit: Validates AI-assisted changes");
+                println!("  - commit-msg: Enforces provenance trailers");
+                println!("  - post-commit: Links commits to provenance records");
+            } else {
+                println!("❌ Failed to install git hooks");
+            }
+        }
+
+        ProvenanceCommand::Generate => {
+            println!("🔄 Generating provenance record...");
+
+            // Check if we're in a CAWS project
+            let caws_dir = std::env::current_dir()?.join(".caws");
+            if !caws_dir.exists() {
+                println!("❌ Not in a CAWS project directory (.caws not found)");
+                println!("   Run 'agent-agency provenance install-hooks' first");
+                return Ok(());
+            }
+
+            // Call the CAWS provenance generation
+            let status = std::process::Command::new("node")
+                .args(&["apps/tools/caws/provenance.js", "generate"])
+                .status()?;
+
+            if status.success() {
+                println!("✅ Provenance record generated successfully!");
+                println!("   Check .caws/provenance.json for details");
+            } else {
+                println!("❌ Failed to generate provenance record");
+            }
+        }
+
+        ProvenanceCommand::List => {
+            println!("📋 Listing provenance records...");
+            let url = format!("{}/api/v1/provenance", api_base_url);
+            let response = client.get(&url).send().await?;
+            if response.status().is_success() {
+                let records: serde_json::Value = response.json().await?;
+                println!("✅ Provenance records:");
+                if let Some(records_array) = records.as_array() {
+                    if records_array.is_empty() {
+                        println!("   No provenance records found");
+                    } else {
+                        for record in records_array {
+                            if let (Some(id), Some(timestamp), Some(decision)) = (
+                                record.get("verdict_id").and_then(|v| v.as_str()),
+                                record.get("timestamp").and_then(|v| v.as_str()),
+                                record.get("decision").and_then(|v| v.get("decision_type")).and_then(|v| v.as_str()),
+                            ) {
+                                println!("   - {}: {} ({})", id, decision, timestamp);
+                            }
+                        }
+                    }
+                }
+            } else {
+                println!("❌ Failed to list provenance records: {}", response.status());
+            }
+        }
+
+        ProvenanceCommand::Link { provenance_id, commit_hash } => {
+            println!("🔗 Linking provenance {} to commit {}...", provenance_id, commit_hash);
+
+            let link_request = serde_json::json!({
+                "provenance_id": provenance_id,
+                "commit_hash": commit_hash
+            });
+
+            let url = format!("{}/api/v1/provenance/link", api_base_url);
+            let response = client
+                .post(&url)
+                .header("Content-Type", "application/json")
+                .json(&link_request)
+                .send()
+                .await?;
+
+            if response.status().is_success() {
+                println!("✅ Provenance linked to commit successfully!");
+            } else {
+                let error_text = response.text().await.unwrap_or_default();
+                println!("❌ Failed to link provenance: {} - {}", response.status(), error_text);
+            }
+        }
+
+        ProvenanceCommand::Verify { commit_hash } => {
+            println!("🔍 Verifying provenance trailer in commit {}...", commit_hash);
+
+            let url = format!("{}/api/v1/provenance/verify/{}", api_base_url, commit_hash);
+            let response = client.get(&url).send().await?;
+
+            if response.status().is_success() {
+                let result: serde_json::Value = response.json().await?;
+                if let Some(has_trailer) = result.get("has_trailer").and_then(|v| v.as_bool()) {
+                    if has_trailer {
+                        if let Some(trailer) = result.get("trailer").and_then(|v| v.as_str()) {
+                            println!("✅ Provenance trailer found: {}", trailer);
+                        } else {
+                            println!("✅ Provenance trailer present but details unavailable");
+                        }
+                    } else {
+                        println!("❌ No provenance trailer found in commit");
+                    }
+                }
+            } else {
+                println!("❌ Failed to verify commit: {}", response.status());
+            }
+        }
+
+        ProvenanceCommand::Show { commit_hash } => {
+            println!("📊 Showing provenance for commit {}...", commit_hash);
+
+            let url = format!("{}/api/v1/provenance/commit/{}", api_base_url, commit_hash);
+            let response = client.get(&url).send().await?;
+
+            if response.status().is_success() {
+                let record: serde_json::Value = response.json().await?;
+                println!("✅ Provenance record found:");
+                if let Some(verdict_id) = record.get("verdict_id").and_then(|v| v.as_str()) {
+                    println!("   Verdict ID: {}", verdict_id);
+                }
+                if let Some(decision) = record.get("decision").and_then(|v| v.get("decision_type")).and_then(|v| v.as_str()) {
+                    println!("   Decision: {}", decision);
+                }
+                if let Some(timestamp) = record.get("timestamp").and_then(|v| v.as_str()) {
+                    println!("   Timestamp: {}", timestamp);
+                }
+                if let Some(trailer) = record.get("git_trailer").and_then(|v| v.as_str()) {
+                    println!("   Trailer: {}", trailer);
+                }
+            } else if response.status().as_u16() == 404 {
+                println!("❌ No provenance record found for this commit");
+            } else {
+                println!("❌ Failed to retrieve provenance: {}", response.status());
+            }
         }
     }
 

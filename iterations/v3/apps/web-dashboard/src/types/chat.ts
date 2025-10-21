@@ -5,7 +5,7 @@ export interface ChatSession {
   id: string;
   created_at: string;
   updated_at: string;
-  status: 'active' | 'paused' | 'completed' | 'error';
+  status: "active" | "paused" | "completed" | "error";
   title?: string;
   context?: ChatContext;
   message_count: number;
@@ -14,7 +14,7 @@ export interface ChatSession {
 export interface ChatMessage {
   id: string;
   session_id: string;
-  role: 'user' | 'assistant' | 'system';
+  role: "user" | "assistant" | "system";
   content: string;
   timestamp: string;
   metadata?: MessageMetadata;
@@ -51,21 +51,21 @@ export interface RepositoryContext {
 
 // Chat Intent Types
 export type ChatIntent =
-  | 'task_initiate'
-  | 'task_status'
-  | 'task_pause'
-  | 'task_resume'
-  | 'task_cancel'
-  | 'code_explain'
-  | 'code_review'
-  | 'debug_help'
-  | 'documentation_request'
-  | 'system_status'
-  | 'general_chat';
+  | "task_initiate"
+  | "task_status"
+  | "task_pause"
+  | "task_resume"
+  | "task_cancel"
+  | "code_explain"
+  | "code_review"
+  | "debug_help"
+  | "documentation_request"
+  | "system_status"
+  | "general_chat";
 
 // WebSocket Message Types
 export interface WebSocketMessage {
-  type: 'message' | 'session_update' | 'typing' | 'error' | 'heartbeat';
+  type: "message" | "session_update" | "typing" | "error" | "heartbeat";
   session_id: string;
   data: any;
   timestamp: string;
@@ -78,13 +78,55 @@ export interface ChatMessagePayload {
 }
 
 export interface SessionUpdatePayload {
-  status: ChatSession['status'];
+  status: ChatSession["status"];
   context?: Partial<ChatContext>;
   title?: string;
 }
 
 // WebSocket Connection States
-export type ConnectionState = 'connecting' | 'connected' | 'disconnected' | 'reconnecting' | 'error';
+export type ConnectionState =
+  | "connecting"
+  | "connected"
+  | "disconnected"
+  | "reconnecting"
+  | "error";
+
+// Voice Chat Types
+export interface VoiceChatSession {
+  id: string;
+  mode: VoiceChatMode;
+  isActive: boolean;
+  currentSpeaker: "user" | "agent" | "none";
+  isRecording: boolean;
+  isProcessing: boolean;
+  canInterrupt: boolean;
+  turnTimeoutMs: number;
+  audioLevel: number; // 0-1 for visual feedback
+  lastActivity: Date;
+}
+
+export type VoiceChatMode =
+  | "text_only"
+  | "voice_input" // Voice → Agent → Text Response
+  | "voice_output" // Text → Agent → Voice Response
+  | "full_voice" // Voice ↔ Voice conversation
+  | "hybrid"; // Mixed input methods
+
+export interface VoiceRecording {
+  blob: Blob;
+  duration: number;
+  audioUrl: string;
+}
+
+export interface VoiceChatSettings {
+  mode: VoiceChatMode;
+  autoStart: boolean;
+  voiceActivityDetection: boolean;
+  interruptEnabled: boolean;
+  turnTimeoutMs: number;
+  audioThreshold: number; // For voice activity detection
+  showWaveform: boolean;
+}
 
 // Component Props Types
 export interface ChatInterfaceProps {
@@ -100,6 +142,8 @@ export interface MessageListProps {
   isLoading?: boolean;
   sessionId: string;
   onMessageSelect?: (message: ChatMessage) => void;
+  enableTTS?: boolean;
+  onTTSGenerated?: (messageId: string, audioUrl: string) => void;
 }
 
 export interface MessageInputProps {
@@ -141,7 +185,12 @@ export interface SendMessageResponse {
 
 // Error Types
 export interface ChatError {
-  code: 'session_not_found' | 'websocket_error' | 'message_too_long' | 'rate_limited' | 'server_error';
+  code:
+    | "session_not_found"
+    | "websocket_error"
+    | "message_too_long"
+    | "rate_limited"
+    | "server_error";
   message: string;
   session_id?: string;
   retryable: boolean;
@@ -156,7 +205,7 @@ export interface IntentParseResult {
 }
 
 export interface ChatAction {
-  type: 'task_create' | 'task_update' | 'context_update' | 'system_query';
+  type: "task_create" | "task_update" | "context_update" | "system_query";
   payload: Record<string, any>;
   description: string;
 }
@@ -172,5 +221,3 @@ export interface WebSocketClientOptions {
   onStateChange: (state: ConnectionState) => void;
   onError: (error: Error) => void;
 }
-
-

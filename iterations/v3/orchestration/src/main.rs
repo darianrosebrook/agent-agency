@@ -51,6 +51,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         agent_agency_observability::metrics::prometheus::PrometheusMetrics::new()?
     ));
 
+    // Initialize task executor for worker communication
+    let task_executor = Arc::new(TaskExecutor::new());
+
     // Initialize consensus coordinator (simplified for demo)
     let consensus_coordinator = Some(Arc::new(agent_agency_council::coordinator::ConsensusCoordinator::new(
         agent_agency_council::coordinator::ConsensusConfig {
@@ -70,6 +73,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         provenance_emitter,
         cache,
         metrics,
+        task_executor,
     ));
 
     // Start the autonomous execution loop

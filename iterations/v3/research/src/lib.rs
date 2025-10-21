@@ -26,10 +26,10 @@ pub use information_processor::{
     IInformationProcessor, InformationProcessor, InformationProcessorConfig,
 };
 pub use knowledge_seeker::KnowledgeSeeker;
-pub use multimodal_context_provider::{
-    Citation, ContextBudget, EvidenceItem, MultimodalContext, MultimodalContextProvider,
-};
-pub use multimodal_retriever::{MultimodalQuery, MultimodalRetriever, MultimodalRetrieverConfig};
+// pub use multimodal_context_provider::{
+//     Citation, ContextBudget, EvidenceItem, MultimodalContext, MultimodalContextProvider,
+// }; // Temporarily disabled
+// pub use multimodal_retriever::{MultimodalQuery, MultimodalRetriever, MultimodalRetrieverConfig}; // Temporarily disabled
 pub use types::*;
 pub use vector_search::VectorSearchEngine;
 pub use web_scraper::WebScraper;

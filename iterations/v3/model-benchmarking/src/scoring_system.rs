@@ -2,6 +2,7 @@
 
 use crate::types::*;
 use anyhow::Result;
+use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use uuid::Uuid;

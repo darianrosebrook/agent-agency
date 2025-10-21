@@ -38,6 +38,7 @@ struct Args {
 struct TaskExecutionRequest {
     task_id: Uuid,
     prompt: String,
+    execution_mode: Option<String>,
     context: Option<String>,
     requirements: Option<String>,
     caws_spec: Option<serde_json::Value>,
@@ -56,13 +57,32 @@ struct TaskExecutionResponse {
     completed_at: String,
 }
 
+#[derive(Debug, Deserialize)]
+struct TaskCancelRequest {
+    task_id: Uuid,
+    reason: String,
+}
+
+#[derive(Debug, Serialize)]
+struct TaskCancelResponse {
+    task_id: Uuid,
+    worker_id: String,
+    status: String,
+    cancelled: bool,
+    reason: String,
+}
+
 async fn execute_task(
     Json(request): Json<TaskExecutionRequest>,
 ) -> Json<TaskExecutionResponse> {
     let started_at = chrono::Utc::now();
     let worker_id = format!("worker-{}", request.task_id.simple());
 
-    println!("🔧 Worker {} executing task {}", worker_id, request.task_id);
+    // Check execution mode
+    let is_dry_run = request.execution_mode.as_deref() == Some("dry_run");
+    let mode_indicator = if is_dry_run { "👁️  DRY-RUN" } else { "🔧" };
+
+    println!("{} Worker {} executing task {}", mode_indicator, worker_id, request.task_id);
 
     // Simulate task execution with realistic timing
     let execution_time = std::time::Duration::from_millis(500 + (request.task_id.as_u128() % 1000) as u64);
@@ -70,13 +90,25 @@ async fn execute_task(
 
     let completed_at = chrono::Utc::now();
 
-    // Simulate different outcomes based on task_id for testing
-    let (stdout, stderr, exit_code) = if request.task_id.as_u128() % 10 == 0 {
-        // 10% failure rate
-        ("".to_string(), "Simulated task failure".to_string(), 1)
+    // Handle execution based on mode
+    let (stdout, stderr, exit_code) = if is_dry_run {
+        // Dry-run: simulate but indicate no changes made
+        if request.task_id.as_u128() % 10 == 0 {
+            // 10% failure rate (simulated)
+            ("".to_string(), "Simulated task failure (dry-run)".to_string(), 1)
+        } else {
+            // Successful simulation
+            (format!("DRY-RUN: Task {} would complete successfully\nSimulated output: {}\n\n💡 No actual filesystem changes were made", request.task_id, request.prompt), "".to_string(), 0)
+        }
     } else {
-        // Successful execution
-        (format!("Task {} completed successfully\nOutput: {}", request.task_id, request.prompt), "".to_string(), 0)
+        // Normal execution
+        if request.task_id.as_u128() % 10 == 0 {
+            // 10% failure rate
+            ("".to_string(), "Simulated task failure".to_string(), 1)
+        } else {
+            // Successful execution
+            (format!("Task {} completed successfully\nOutput: {}", request.task_id, request.prompt), "".to_string(), 0)
+        }
     };
 
     let response = TaskExecutionResponse {
@@ -96,6 +128,30 @@ async fn execute_task(
     Json(response)
 }
 
+async fn cancel_task(
+    Json(request): Json<TaskCancelRequest>,
+) -> Json<TaskCancelResponse> {
+    let worker_id = format!("worker-{}", request.task_id.simple());
+
+    println!("🛑 Worker {} cancelling task {}: {}", worker_id, request.task_id, request.reason);
+
+    // In a real implementation, this would signal the task execution to stop
+    // For now, we simulate successful cancellation
+    let cancelled = true;
+
+    let response = TaskCancelResponse {
+        task_id: request.task_id,
+        worker_id,
+        status: "cancelled".to_string(),
+        cancelled,
+        reason: request.reason.clone(),
+    };
+
+    println!("✅ Worker cancelled task {}", request.task_id);
+
+    Json(response)
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
@@ -108,7 +164,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Create router
     let app = Router::new()
-        .route("/execute", post(execute_task));
+        .route("/execute", post(execute_task))
+        .route("/cancel", post(cancel_task));
 
     // Add CORS if enabled
     let app = if args.enable_cors {
@@ -123,9 +180,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("✅ Worker ready at http://{}", addr);
     println!("🔧 Execution endpoint: http://{}/execute", addr);
+    println!("🛑 Cancel endpoint: http://{}/cancel", addr);
 
     // Serve requests
     axum::serve(listener, app).await?;
 
     Ok(())
 }
+

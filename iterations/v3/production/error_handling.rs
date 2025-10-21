@@ -192,7 +192,7 @@ impl ErrorHandler {
     }
 
     /// Handle a production error with recovery logic
-    pub async fn handle_error(&self, error: ProductionError) -> Result<(), ProductionError> {
+    pub async fn handle_error(&self, error: ProductionError) -> std::result::Result<(), ProductionError> {
         // Log the error
         self.log_error(&error).await;
 
@@ -250,6 +250,7 @@ impl ErrorHandler {
             }
         });
 
+        let timestamp = context.timestamp;
         ProductionError {
             message,
             code,
@@ -259,8 +260,8 @@ impl ErrorHandler {
             cause: None,
             stack_trace: None,
             occurrences: 1,
-            first_seen: context.timestamp,
-            last_seen: context.timestamp,
+            first_seen: timestamp,
+            last_seen: timestamp,
         }
     }
 
@@ -318,7 +319,7 @@ impl ErrorHandler {
     }
 
     /// Clear error history
-    pub async fn clear_history(&self) -> Result<(), ProductionError> {
+    pub async fn clear_history(&self) -> std::result::Result<(), ProductionError> {
         let mut history = self.error_history.write().await;
         history.clear();
 
@@ -338,15 +339,6 @@ impl ErrorHandler {
 
     /// Log error with structured logging
     async fn log_error(&self, error: &ProductionError) {
-        let log_level = match error.severity {
-            ErrorSeverity::Debug => tracing::Level::DEBUG,
-            ErrorSeverity::Info => tracing::Level::INFO,
-            ErrorSeverity::Warning => tracing::Level::WARN,
-            ErrorSeverity::Error => tracing::Level::ERROR,
-            ErrorSeverity::Critical => tracing::Level::ERROR,
-            ErrorSeverity::Fatal => tracing::Level::ERROR,
-        };
-
         let fields = serde_json::json!({
             "error_code": error.code,
             "severity": error.severity,
@@ -359,7 +351,15 @@ impl ErrorHandler {
             "occurrences": error.occurrences,
         });
 
-        tracing::event!(log_level, %error.message, fields = %fields);
+        // Use appropriate logging level based on severity
+        match error.severity {
+            ErrorSeverity::Debug => tracing::debug!(%error.message, fields = %fields),
+            ErrorSeverity::Info => tracing::info!(%error.message, fields = %fields),
+            ErrorSeverity::Warning => tracing::warn!(%error.message, fields = %fields),
+            ErrorSeverity::Error | ErrorSeverity::Critical | ErrorSeverity::Fatal => {
+                tracing::error!(%error.message, fields = %fields)
+            }
+        }
 
         // Additional logging for critical/fatal errors
         if matches!(error.severity, ErrorSeverity::Critical | ErrorSeverity::Fatal) {
@@ -394,7 +394,7 @@ impl ErrorHandler {
         if let Some(threshold) = self.config.alert_thresholds.get(&error.severity) {
             let stats = self.error_stats.read().await;
             if let Some(count) = stats.errors_by_severity.get(&error.severity) {
-                if *count >= *threshold {
+                if *count >= *threshold as u64 {
                     self.trigger_alert(error, *count).await;
                 }
             }
@@ -435,7 +435,7 @@ impl ErrorHandler {
     }
 
     /// Attempt automatic error recovery
-    async fn attempt_recovery(&self, error: &ProductionError) -> Result<(), ProductionError> {
+    async fn attempt_recovery(&self, error: &ProductionError) -> std::result::Result<(), ProductionError> {
         let mut stats = self.error_stats.write().await;
         stats.recovery_attempts += 1;
 
@@ -498,7 +498,7 @@ impl ErrorHandler {
     }
 
     /// Cleanup old errors based on retention policy
-    pub async fn cleanup_old_errors(&self) -> Result<usize, ProductionError> {
+    pub async fn cleanup_old_errors(&self) -> std::result::Result<usize, ProductionError> {
         let cutoff = Utc::now() - chrono::Duration::hours(self.config.error_retention_hours as i64);
 
         let mut history = self.error_history.write().await;

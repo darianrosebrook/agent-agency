@@ -44,7 +44,7 @@ impl GitWorktree {
         }
 
         // Commit with timestamp
-        let commit_msg = format!("{} - {}", message, Utc::now().to_rfc3339());
+        let commit_msg = format!("{} - {}", message, chrono::Utc::now().to_rfc3339());
         self.run_git_command(&["commit", "-m", &commit_msg]).await?;
 
         // Get the commit hash
