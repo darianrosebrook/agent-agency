@@ -84,6 +84,45 @@ impl DatabaseConfig {
         )
     }
 
+    /// Create configuration from environment variables
+    pub fn from_env() -> Result<Self, std::env::VarError> {
+        Ok(Self {
+            host: std::env::var("DATABASE_HOST").unwrap_or_else(|_| "localhost".to_string()),
+            port: std::env::var("DATABASE_PORT")
+                .ok()
+                .and_then(|s| s.parse().ok())
+                .unwrap_or(5432),
+            database: std::env::var("DATABASE_NAME").unwrap_or_else(|_| "agent_agency_v3".to_string()),
+            username: std::env::var("DATABASE_USER").unwrap_or_else(|_| "postgres".to_string()),
+            password: std::env::var("DATABASE_PASSWORD").unwrap_or_else(|_| "".to_string()),
+            pool_min: std::env::var("DATABASE_POOL_MIN")
+                .ok()
+                .and_then(|s| s.parse().ok())
+                .unwrap_or(2),
+            pool_max: std::env::var("DATABASE_POOL_MAX")
+                .ok()
+                .and_then(|s| s.parse().ok())
+                .unwrap_or(20),
+            connection_timeout_seconds: std::env::var("DATABASE_CONNECTION_TIMEOUT")
+                .ok()
+                .and_then(|s| s.parse().ok())
+                .unwrap_or(30),
+            idle_timeout_seconds: std::env::var("DATABASE_IDLE_TIMEOUT")
+                .ok()
+                .and_then(|s| s.parse().ok())
+                .unwrap_or(600),
+            max_lifetime_seconds: std::env::var("DATABASE_MAX_LIFETIME")
+                .ok()
+                .and_then(|s| s.parse().ok())
+                .unwrap_or(3600),
+            enable_read_write_splitting: std::env::var("DATABASE_ENABLE_RW_SPLITTING")
+                .ok()
+                .and_then(|s| s.parse().ok())
+                .unwrap_or(false),
+            read_replicas: Vec::new(), // TODO: Implement parsing from env if needed
+        })
+    }
+
     /// Create database URL without database name (for creating database)
     pub fn server_url(&self) -> String {
         format!(
@@ -184,7 +223,7 @@ impl DatabaseConfig {
         PgPoolOptions::new()
             .min_connections(self.pool_min)
             .max_connections(self.pool_max)
-            .connect_timeout(Duration::from_secs(self.connection_timeout_seconds))
+            .acquire_timeout(Duration::from_secs(self.connection_timeout_seconds))
             .idle_timeout(Some(Duration::from_secs(self.idle_timeout_seconds)))
             .max_lifetime(Some(Duration::from_secs(self.max_lifetime_seconds)))
             .connect(&self.database_url())
@@ -203,7 +242,7 @@ impl DatabaseConfig {
 /// ```
 pub async fn create_default_pool() -> Result<sqlx::PgPool, sqlx::Error> {
     let config = DatabaseConfig::from_env()
-        .unwrap_or_default();
+        .unwrap_or_else(|_| DatabaseConfig::default());
     config.create_pool().await
 }
 

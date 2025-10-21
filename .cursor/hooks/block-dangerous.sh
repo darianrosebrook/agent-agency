@@ -22,6 +22,10 @@ HARD_BLOCKS=(
   "rm -rf ~"
   "rm -rf $HOME"
   "> /dev/sda"
+  "git init"
+  "git commit --amend --no-edit"
+  "git reset --hard"
+  "git push --force"
   "dd if="
   "mkfs"
   "format c:"
@@ -40,8 +44,6 @@ done
 # Ask permission for risky operations
 ASK_PERMISSION=(
   "rm -rf"
-  "git push --force"
-  "git reset --hard"
   "npm publish"
   "docker rmi"
   "docker system prune"

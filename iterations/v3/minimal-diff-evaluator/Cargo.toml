@@ -32,6 +32,6 @@ proc-macro2 = "1.0"
 petgraph = "0.6"
 
 # Integration with existing V3 components
-agent-agency-agent-agency-council = { path = "../council" }
+agent-agency-council = { path = "../council" }
 agent-agency-workers = { path = "../workers" }
 agent-agency-security-policy-enforcer = { path = "../security-policy-enforcer" }

@@ -24,7 +24,7 @@ rayon = "1.8"     # For parallel learning computations
 rand = "0.8"      # For random number generation in algorithms
 
 # Council integration
-agent-agency-agent-agency-council = { path = "../council" }
+agent-agency-council = { path = "../council" }
 
 # Database for learning persistence
 sqlx.workspace = true

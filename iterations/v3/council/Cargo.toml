@@ -25,6 +25,7 @@ agent-agency-database = { path = "../database" }
 anyhow = "1.0"
 regex = "1.10"
 rand = "0.8"
+once_cell = "1.19"
 linfa = "0.7"  # Machine learning framework for response time prediction
 linfa-linear = "0.7"  # Linear regression for time estimation
 statrs = "0.16"  # Statistical analysis for confidence intervals

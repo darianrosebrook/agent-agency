@@ -16,7 +16,7 @@ thiserror.workspace = true
 tracing.workspace = true
 
 # Council package provides security functionality
-agent-agency-agent-agency-council = { path = "../council" }
+agent-agency-council = { path = "../council" }
 
 # MCP-specific dependencies
 jsonrpc-core = "18.0"

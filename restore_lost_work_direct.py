@@ -45,8 +45,13 @@ def scan_cursor_history() -> List[Tuple[str, Dict]]:
                 data = json.load(f)
 
             # Check if this is for our agent-agency project
-            if "resource" in data and "agent-agency" in data["resource"]:
-                entries_data.append((str(history_dir), data))
+            # Be more permissive - include any file that might be related to agent-agency
+            if "resource" in data:
+                resource = data["resource"]
+                # Include if it contains agent-agency OR if it's a file path that could be project-related
+                if ("agent-agency" in resource or
+                    ("file://" in resource and "/Projects/agent-agency/" in resource)):
+                    entries_data.append((str(history_dir), data))
 
         except (json.JSONDecodeError, FileNotFoundError):
             continue
@@ -68,10 +73,23 @@ def find_lost_work_entries(entries_data: List[Tuple[str, Dict]]) -> Dict[str, Tu
         resource = data["resource"]
 
         # Extract the relative path within our project
+        # Be more flexible about path extraction
+        relative_path = None
         if "agent-agency/" in resource:
             relative_path = resource.split("agent-agency/")[-1]
-        else:
+        elif "/Projects/agent-agency/" in resource:
+            # Handle file:// URLs
+            path_part = resource.split("/Projects/agent-agency/")[-1]
+            relative_path = path_part
+        elif "iterations/v3/" in resource:
+            # Handle relative paths within iterations/v3
+            relative_path = resource.split("iterations/v3/")[-1]
+
+        if not relative_path:
             continue
+
+        # Clean up the path
+        relative_path = relative_path.lstrip("/")
 
         # Find entries in our lost work period
         lost_entries = []
@@ -85,8 +103,11 @@ def find_lost_work_entries(entries_data: List[Tuple[str, Dict]]) -> Dict[str, Tu
             oldest_entry = min(lost_entries, key=lambda x: x["timestamp"])
             oldest_timestamp = oldest_entry["timestamp"]
 
-            lost_work[relative_path] = (history_dir, oldest_entry, oldest_timestamp)
-            print(f"  📄 Found lost work: {relative_path} (oldest: {datetime.fromtimestamp(oldest_timestamp/1000)})")
+            # Only add if we haven't seen this file before, or if this is older
+            if (relative_path not in lost_work or
+                oldest_timestamp < lost_work[relative_path][2]):
+                lost_work[relative_path] = (history_dir, oldest_entry, oldest_timestamp)
+                print(f"  📄 Found lost work: {relative_path} (oldest: {datetime.fromtimestamp(oldest_timestamp/1000)})")
 
     return lost_work
 

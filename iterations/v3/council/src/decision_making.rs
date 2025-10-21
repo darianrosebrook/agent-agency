@@ -334,6 +334,39 @@ impl DecisionEngine for AlgorithmicDecisionEngine {
 }
 
 impl AlgorithmicDecisionEngine {
+    /// Extract acceptance criteria from change description and rationale
+    fn extract_acceptance_criteria(description: &str, rationale: &str) -> String {
+        // Simple extraction based on common patterns
+        let mut criteria = Vec::new();
+
+        // Extract from description
+        if description.contains("test") || description.contains("testing") {
+            criteria.push("All tests pass".to_string());
+        }
+        if description.contains("performance") || description.contains("speed") {
+            criteria.push("Performance meets requirements".to_string());
+        }
+        if description.contains("security") || description.contains("auth") {
+            criteria.push("Security requirements satisfied".to_string());
+        }
+
+        // Extract from rationale
+        if rationale.contains("bug") || rationale.contains("fix") {
+            criteria.push("Bug is resolved".to_string());
+        }
+        if rationale.contains("feature") || rationale.contains("functionality") {
+            criteria.push("Feature works as specified".to_string());
+        }
+
+        // Default criteria if none extracted
+        if criteria.is_empty() {
+            criteria.push("Changes implemented correctly".to_string());
+        }
+
+        // Join multiple criteria with semicolons
+        criteria.join("; ")
+    }
+
     async fn make_majority_decision(
         &self,
         aggregation_result: &AggregationResult,

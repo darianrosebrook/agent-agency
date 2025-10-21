@@ -80,6 +80,7 @@ impl CouncilError {
             CouncilError::Serialization(_) => "serialization",
             CouncilError::QuorumFailure { .. } => "quorum",
             CouncilError::UnresolvedDissent { .. } => "dissent",
+            CouncilError::InvalidInput { .. } => "input",
         }
     }
 }

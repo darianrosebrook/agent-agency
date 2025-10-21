@@ -27,7 +27,7 @@ quote = "1.0"
 proc-macro2 = "1.0"
 
 # Internal crate dependencies
-agent-agency-agent-agency-council = { path = "../council" }
+agent-agency-council = { path = "../council" }
 agent-agency-resilience = { path = "../resilience" }
 agent-agency-contracts = { path = "../agent-agency-contracts" }
 agent-agency-database = { path = "../database" }

@@ -16,15 +16,15 @@ tracing = "0.1"
 thiserror = "1.0"
 
 # MCP integration
-mcp-integration = { path = "../mcp-integration" }
+agent-agency-mcp = { path = "../mcp-integration" }
 
 # CAWS integration
-caws-runtime-validator = { path = "../caws/runtime-validator" }
-council = { path = "../council" }
+# caws-runtime-validator = { path = "../caws/runtime-validator" } # PLACEHOLDER: crate not implemented yet
+agent-agency-council = { path = "../council" }
 claim-extraction = { path = "../claim-extraction" }
 
 # Tool execution
-observability = { path = "../observability" }
+agent-agency-observability = { path = "../observability" }
 
 # Model integration for tool reasoning
 model-benchmarking = { path = "../model-benchmarking" }

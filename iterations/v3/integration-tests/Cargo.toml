@@ -7,7 +7,7 @@ license.workspace = true
 
 [dependencies]
 # Core V3 crates
-agent-agency-agent-agency-council = { path = "../council" }
+agent-agency-council = { path = "../council" }
 agent-agency-research = { path = "../research" }
 orchestration = { path = "../orchestration" }
 claim-extraction = { path = "../claim-extraction" }

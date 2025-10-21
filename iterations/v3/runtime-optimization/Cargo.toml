@@ -16,14 +16,14 @@ tracing = "0.1"
 thiserror = "1.0"
 
 # Apple Silicon integration
-apple-silicon = { path = "../apple-silicon" }
+agent-agency-apple-silicon = { path = "../apple-silicon" }
 
 # Council and CAWS integration
-council = { path = "../council" }
+agent-agency-council = { path = "../council" }
 caws-runtime-validator = { path = "../caws/runtime-validator" }
 
 # Performance monitoring
-observability = { path = "../observability" }
+agent-agency-observability = { path = "../observability" }
 
 # Model benchmarking for performance feedback
 model-benchmarking = { path = "../model-benchmarking" }
