@@ -579,7 +579,7 @@ impl EvidenceCollector {
         // Implement sophisticated evidence-type relevance calculation
         
         // 1. Analyze claim content structure (subject, predicate, object patterns)
-        let claim_structure = self.analyze_claim_structure(claim);
+        let _claim_structure = self.analyze_claim_structure(claim);
         
         // 2. Map evidence types to claim categories (legal, technical, procedural, etc.)
         let claim_category = self.categorize_claim(claim);
@@ -662,7 +662,7 @@ impl EvidenceCollector {
     }
 
     /// Get base relevance score for evidence type and claim category
-    fn get_base_relevance_score(&self, evidence_type: &EvidenceType, category: &ClaimCategory) -> f64 {
+    fn get_base_relevance_score(&self, evidence_type: &EvidenceType, _category: &ClaimCategory) -> f64 {
         match evidence_type {
             EvidenceType::CouncilDecision => 0.9,
             EvidenceType::CodeAnalysis => 0.8,
@@ -1061,7 +1061,7 @@ impl EvidenceCollector {
     }
 
     /// Helper methods for evidence collection (placeholders for V2 implementation)
-    async fn find_code_evidence(&self, term: &str, context: &ProcessingContext) -> Result<Option<Evidence>> {
+    async fn find_code_evidence(&self, term: &str, _context: &ProcessingContext) -> Result<Option<Evidence>> {
         // Placeholder - would search codebase for the term
         Ok(Some(Evidence {
             id: Uuid::new_v4(),
@@ -1079,7 +1079,7 @@ impl EvidenceCollector {
         }))
     }
 
-    async fn extract_ast_evidence(&self, claim: &AtomicClaim, context: &ProcessingContext) -> Result<Option<Evidence>> {
+    async fn extract_ast_evidence(&self, claim: &AtomicClaim, _context: &ProcessingContext) -> Result<Option<Evidence>> {
         // Placeholder - would analyze AST for structural evidence
         Ok(Some(Evidence {
             id: Uuid::new_v4(),
@@ -1097,7 +1097,7 @@ impl EvidenceCollector {
         }))
     }
 
-    async fn find_measurement_evidence(&self, measurement: &str, context: &ProcessingContext) -> Result<Option<Evidence>> {
+    async fn find_measurement_evidence(&self, measurement: &str, _context: &ProcessingContext) -> Result<Option<Evidence>> {
         // Placeholder - would look for measurement data
         Ok(Some(Evidence {
             id: Uuid::new_v4(),
@@ -1115,7 +1115,7 @@ impl EvidenceCollector {
         }))
     }
 
-    async fn find_documentation_evidence(&self, claim: &AtomicClaim, context: &ProcessingContext) -> Result<Option<Evidence>> {
+    async fn find_documentation_evidence(&self, claim: &AtomicClaim, _context: &ProcessingContext) -> Result<Option<Evidence>> {
         // Placeholder - would search documentation
         Ok(Some(Evidence {
             id: Uuid::new_v4(),
@@ -1133,7 +1133,7 @@ impl EvidenceCollector {
         }))
     }
 
-    async fn find_code_pattern_evidence(&self, claim: &AtomicClaim, context: &ProcessingContext) -> Result<Option<Evidence>> {
+    async fn find_code_pattern_evidence(&self, claim: &AtomicClaim, _context: &ProcessingContext) -> Result<Option<Evidence>> {
         // Placeholder - would look for code patterns
         Ok(Some(Evidence {
             id: Uuid::new_v4(),
@@ -1151,7 +1151,7 @@ impl EvidenceCollector {
         }))
     }
 
-    async fn collect_general_evidence(&self, claim: &AtomicClaim, context: &ProcessingContext) -> Result<Vec<Evidence>> {
+    async fn collect_general_evidence(&self, claim: &AtomicClaim, _context: &ProcessingContext) -> Result<Vec<Evidence>> {
         // Placeholder for general evidence collection
         Ok(vec![Evidence {
             id: Uuid::new_v4(),
