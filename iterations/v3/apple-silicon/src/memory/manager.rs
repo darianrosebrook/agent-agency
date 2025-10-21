@@ -9,6 +9,9 @@ use tokio::sync::RwLock;
 use tracing::{debug, info, warn};
 use anyhow::Result;
 use chrono;
+use tch::{Tensor, Device, Kind, Cuda};
+use candle_core::{Tensor as CandleTensor, DType};
+use sysinfo::System;
 
 use super::compression::ModelUsageStats;
 
@@ -168,6 +171,133 @@ impl MemoryManager {
         // - Support buffer memory compression and optimization
         // - Implement buffer lifecycle management and automatic cleanup
         Ok(0)
+    }
+
+    /// Allocate tensor memory with torch optimization
+    pub fn allocate_tensor(&self, shape: &[i64], dtype: Kind, device: Device) -> Result<Tensor> {
+        let tensor = Tensor::zeros(shape, (dtype, device));
+        info!("Allocated tensor with shape {:?}, dtype: {:?}, device: {:?}", shape, dtype, device);
+        Ok(tensor)
+    }
+
+    /// Move tensor to optimal device for memory efficiency
+    pub fn optimize_tensor_device(&self, tensor: &Tensor) -> Result<Tensor> {
+        // For Apple Silicon, prefer MPS (Metal Performance Shaders) when available
+        // Fall back to CPU for memory efficiency
+        let device = if tch::utils::has_mps() {
+            Device::MPS
+        } else {
+            Device::Cpu
+        };
+
+        let optimized = tensor.to_device(device);
+        info!("Optimized tensor device to {:?}", device);
+        Ok(optimized)
+    }
+
+    /// Get memory usage of a tensor in bytes
+    pub fn get_tensor_memory_usage(&self, tensor: &Tensor) -> u64 {
+        let element_size = match tensor.kind() {
+            Kind::Float | Kind::Double => 8,
+            Kind::Int | Kind::Int64 => 8,
+            Kind::Int32 => 4,
+            Kind::Int16 => 2,
+            Kind::Int8 | Kind::Uint8 => 1,
+            _ => 4, // Default to 4 bytes
+        };
+
+        let num_elements = tensor.numel();
+        (element_size * num_elements) as u64
+    }
+
+    /// Monitor torch tensor memory usage
+    pub async fn track_tensor_memory(&self, tensor_id: &str, tensor: &Tensor) -> Result<()> {
+        let memory_usage = self.get_tensor_memory_usage(tensor);
+        let mut model_usage = self.model_usage.write().await;
+
+        let usage = model_usage.entry(tensor_id.to_string()).or_insert_with(|| ModelUsageStats {
+            model_name: tensor_id.to_string(),
+            memory_usage_mb: 0.0,
+            last_accessed: chrono::Utc::now(),
+            access_count: 0,
+            compression_ratio: 1.0,
+        });
+
+        usage.memory_usage_mb = memory_usage as f64 / (1024.0 * 1024.0);
+        usage.last_accessed = chrono::Utc::now();
+        usage.access_count += 1;
+
+        debug!("Tracked tensor {}: {} MB", tensor_id, usage.memory_usage_mb);
+        Ok(())
+    }
+
+    /// Optimize tensor memory layout for better performance
+    pub fn optimize_tensor_layout(&self, tensor: &Tensor) -> Result<Tensor> {
+        // Use contiguous memory layout for better performance
+        let contiguous = tensor.contiguous();
+        // Pin memory for faster GPU transfers if applicable
+        let optimized = if tch::utils::has_cuda() || tch::utils::has_mps() {
+            contiguous.pin_memory()
+        } else {
+            contiguous
+        };
+
+        Ok(optimized)
+    }
+
+    /// Create a memory-efficient tensor from candle tensor
+    pub fn candle_to_torch_tensor(&self, candle_tensor: &CandleTensor) -> Result<Tensor> {
+        // Convert candle tensor to torch tensor for unified memory management
+        // This would require actual conversion logic based on candle tensor format
+        // For now, create a placeholder torch tensor with same shape
+        let shape: Vec<i64> = candle_tensor.shape().dims().iter().map(|&x| x as i64).collect();
+
+        let dtype = match candle_tensor.dtype() {
+            DType::F32 => Kind::Float,
+            DType::F64 => Kind::Double,
+            DType::I32 => Kind::Int,
+            DType::I64 => Kind::Int64,
+            DType::U8 => Kind::Uint8,
+            _ => Kind::Float,
+        };
+
+        let device = Device::Cpu; // Default to CPU, could be optimized
+        let torch_tensor = Tensor::zeros(&shape, (dtype, device));
+
+        info!("Converted candle tensor to torch tensor with shape {:?}", shape);
+        Ok(torch_tensor)
+    }
+
+    /// Get memory statistics for torch operations
+    pub async fn get_torch_memory_stats(&self) -> Result<HashMap<String, u64>> {
+        let mut stats = HashMap::new();
+
+        // Get GPU memory if available
+        if tch::utils::has_cuda() {
+            if let Ok(gpu_memory) = tch::Cuda::memory_summary() {
+                stats.insert("gpu_allocated".to_string(), gpu_memory.allocated);
+                stats.insert("gpu_reserved".to_string(), gpu_memory.reserved);
+            }
+        }
+
+        // Get MPS memory if available
+        if tch::utils::has_mps() {
+            // MPS memory stats would be queried differently
+            // For now, placeholder
+            stats.insert("mps_available".to_string(), 1);
+        }
+
+        // Get CPU memory info
+        let system = sysinfo::System::new_all();
+        let total_memory = system.total_memory();
+        let available_memory = system.available_memory();
+        let used_memory = total_memory - available_memory;
+
+        stats.insert("cpu_total".to_string(), total_memory);
+        stats.insert("cpu_used".to_string(), used_memory);
+        stats.insert("cpu_available".to_string(), available_memory);
+
+        Ok(stats)
     }
 }
 

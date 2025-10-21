@@ -20,7 +20,7 @@ futures = "0.3"
 # Local crates
 agent-agency-contracts = { path = "../agent-agency-contracts" }
 agent-agency-database = { path = "../database" }
-# agent-agency-apple-silicon = { path = "../apple-silicon", optional = true, features = ["torch"] } # PLACEHOLDER: disabled due to libtorch missing headers
+agent-agency-apple-silicon = { path = "../apple-silicon", optional = true }
 
 # Additional dependencies
 anyhow = "1.0"
@@ -34,7 +34,7 @@ strsim = "0.11"  # String similarity algorithms for semantic analysis
 once_cell = "1.5"  # Lazy initialization
 
 # NLP and text processing for position extraction
-# rust-bert = "0.23"  # PLACEHOLDER: BERT models for semantic understanding - disabled due to torch-sys dependency
+rust-bert = "0.21"  # BERT models for semantic understanding
 tokenizers = "0.19"  # HuggingFace tokenizers
 lingua = "1.6"  # Language detection
 whatlang = "0.18"  # Fast language detection
@@ -57,4 +57,4 @@ console = "0.16"
 
 [features]
 default = ["full"]
-full = [] # agent-agency-apple-silicon disabled due to libtorch issues
+full = ["agent-agency-apple-silicon"]
