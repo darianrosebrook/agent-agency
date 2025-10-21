@@ -1,5 +1,6 @@
 //! Types for claim extraction and verification pipeline
 
+use anyhow::Result;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -15,6 +16,7 @@ pub struct ProcessingContext {
     pub domain_hints: Vec<String>,
     pub metadata: std::collections::HashMap<String, serde_json::Value>, // Additional metadata
     pub input_text: String, // Input text being processed
+    pub language: Option<Language>,
 }
 
 /// Result of claim extraction process
@@ -66,6 +68,13 @@ pub struct AtomicClaim {
     pub scope: ClaimScope,
     pub confidence: f64,
     pub contextual_brackets: Vec<String>,
+    pub subject: Option<String>,
+    pub predicate: Option<String>,
+    pub object: Option<String>,
+    pub context_brackets: Vec<String>, // Alias for contextual_brackets
+    pub verification_requirements: Vec<VerificationRequirement>,
+    pub position: (usize, usize),
+    pub sentence_fragment: String,
 }
 
 /// Types of claims that can be extracted
@@ -86,6 +95,9 @@ pub enum VerifiabilityLevel {
     IndirectlyVerifiable,
     Unverifiable,
     RequiresContext,
+    HighlyVerifiable,
+    ModeratelyVerifiable,
+    LowVerifiability,
 }
 
 /// Scope of a claim within the system
@@ -114,6 +126,7 @@ pub struct Evidence {
     pub content: String,
     pub source: EvidenceSource,
     pub confidence: f64,
+    pub relevance: f64,
     pub timestamp: DateTime<Utc>,
 }
 
@@ -132,15 +145,50 @@ pub enum EvidenceType {
     ExternalSource,          // External API sources
     TestResult,              // Individual test result
     UserFeedback,            // User-provided feedback
+    Measurement,
+    LogicalAnalysis,
 }
 
 /// Source of evidence
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EvidenceSource {
-    pub source_type: SourceType,
-    pub location: String,
-    pub authority: String,
-    pub freshness: DateTime<Utc>,
+#[serde(tag = "type", content = "data")]
+pub enum EvidenceSource {
+    #[serde(rename = "code_search")]
+    CodeSearch {
+        location: String,
+        authority: String,
+        freshness: DateTime<Utc>
+    },
+    #[serde(rename = "code_analysis")]
+    CodeAnalysis {
+        location: String,
+        authority: String,
+        freshness: DateTime<Utc>
+    },
+    #[serde(rename = "documentation")]
+    Documentation {
+        location: String,
+        authority: String,
+        freshness: DateTime<Utc>
+    },
+    #[serde(rename = "measurement")]
+    Measurement {
+        location: String,
+        authority: String,
+        freshness: DateTime<Utc>
+    },
+    #[serde(rename = "logical_reasoning")]
+    LogicalReasoning {
+        location: String,
+        authority: String,
+        freshness: DateTime<Utc>
+    },
+    #[serde(rename = "general")]
+    General {
+        location: String,
+        authority: String,
+        freshness: DateTime<Utc>
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -155,6 +203,9 @@ pub enum SourceType {
     Analysis,
     External,      // External API sources
     Documentation, // Documentation sources
+    Measurement,
+    LogicalAnalysis,
+    General,
 }
 
 /// Metadata about the processing operation
@@ -241,6 +292,18 @@ pub struct DecompositionResult {
 pub struct VerificationResult {
     pub evidence: Vec<Evidence>,
     pub verification_confidence: f64,
+    pub verified_claims: Vec<VerifiedClaim>,
+    pub council_verification: CouncilVerificationResult,
+    pub overall_confidence: f64,
+}
+
+/// Result from council verification process
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CouncilVerificationResult {
+    pub submitted_claims: Vec<Uuid>,
+    pub council_verdict: String,
+    pub additional_evidence: Vec<Evidence>,
+    pub verification_timestamp: DateTime<Utc>,
 }
 
 /// Errors that can occur during claim extraction
@@ -316,6 +379,7 @@ pub struct UnverifiableContent {
     pub content: String,
     pub reason: UnverifiableReason,
     pub suggested_rewrite: Option<String>,
+    pub original_content: String,
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -326,6 +390,9 @@ pub enum VerificationMethod {
     PerformanceMeasurement,
     SecurityScan,
     ConstitutionalCheck, // CAWS compliance
+    Measurement,
+    LogicalAnalysis,
+    ProcessAnalysis,
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -349,7 +416,7 @@ pub enum AuthorityLevel {
     Tertiary,  // Background context
 }
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq)]
 pub enum UnverifiableReason {
     SubjectiveLanguage,
     VagueCriteria,
@@ -378,12 +445,18 @@ pub struct VerificationResults {
 }
 
 /// Individual verified claim
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VerifiedClaim {
     pub original_claim: String,
     pub verification_results: VerificationStatus,
     pub overall_confidence: f64,
     pub verification_timestamp: DateTime<Utc>,
+    pub id: Uuid,
+    pub claim_text: String,
+    pub verification_status: VerificationStatus,
+    pub confidence: f64,
+    pub evidence: Vec<Evidence>,
+    pub timestamp: DateTime<Utc>,
 }
 
 /// Status of verification process
@@ -392,6 +465,7 @@ pub enum VerificationStatus {
     Verified,
     Refuted,
     Pending,
+    Unverified,
     Error(String),
 }
 
@@ -404,7 +478,7 @@ pub enum CouncilEnvironment {
 }
 
 /// Programming languages supported for verification
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Language {
     Rust,
     TypeScript,
@@ -554,7 +628,7 @@ pub struct SubjectPredicateObject {
 }
 
 /// Verification requirement for claims
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VerificationRequirement {
     pub requirement_type: String,
     pub description: String,
@@ -563,7 +637,7 @@ pub struct VerificationRequirement {
 }
 
 /// Verification priority levels
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum VerificationPriority {
     High,
     Medium,

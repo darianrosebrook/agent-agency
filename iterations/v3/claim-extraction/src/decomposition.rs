@@ -148,7 +148,14 @@ impl DecompositionStage {
                             data_impact: DataImpact::None,
                         },
                         confidence,
-                        contextual_brackets,
+                        contextual_brackets: contextual_brackets.clone(),
+                        subject: None,
+                        predicate: None,
+                        object: None,
+                        context_brackets: contextual_brackets,
+                        verification_requirements: Vec::new(), // TODO: Use derived requirements
+                        position: (0, 0), // TODO: Calculate actual position
+                        sentence_fragment: normalized_clause.clone(),
                     };
 
                     all_claims.push(claim);
@@ -241,7 +248,7 @@ impl DecompositionStage {
                 ],
             },
         }
-    }
+        }
 
     /// Calculate confidence in decomposition quality
     fn calculate_decomposition_confidence(&self, claims: &[AtomicClaim]) -> f64 {
@@ -260,7 +267,7 @@ impl DecompositionStage {
             / claims.len() as f64
             * 0.2;
 
-        (average_confidence + contextual_boost).min(1.0f32)
+        (average_confidence + contextual_boost).min(1.0)
     }
 }
 
@@ -323,6 +330,13 @@ impl ClaimExtractor {
                     },
                     confidence: 0.8,
                     contextual_brackets: vec![],
+                    subject: None,
+                    predicate: None,
+                    object: None,
+                    context_brackets: vec![],
+                    verification_requirements: vec![],
+                    position: (mat.start(), mat.end()),
+                    sentence_fragment: sentence.to_string(),
                 });
             }
         }
@@ -348,6 +362,13 @@ impl ClaimExtractor {
                     },
                     confidence: 0.7,
                     contextual_brackets: vec![],
+                    subject: None,
+                    predicate: None,
+                    object: None,
+                    context_brackets: vec![],
+                    verification_requirements: vec![],
+                    position: (mat.start(), mat.end()),
+                    sentence_fragment: sentence.to_string(),
                 });
             }
         }
@@ -377,6 +398,13 @@ impl ClaimExtractor {
                     },
                     confidence: 0.9,
                     contextual_brackets: vec![],
+                    subject: None,
+                    predicate: None,
+                    object: None,
+                    context_brackets: vec![],
+                    verification_requirements: vec![],
+                    position: (mat.start(), mat.end()),
+                    sentence_fragment: sentence.to_string(),
                 });
             }
         }
@@ -402,6 +430,13 @@ impl ClaimExtractor {
                     },
                     confidence: 0.95,
                     contextual_brackets: vec![],
+                    subject: None,
+                    predicate: None,
+                    object: None,
+                    context_brackets: vec![],
+                    verification_requirements: vec![],
+                    position: (mat.start(), mat.end()),
+                    sentence_fragment: sentence.to_string(),
                 });
             }
         }
@@ -720,18 +755,26 @@ impl ContextBracketAdder {
                     let claim_text = format!("{} {} {}",
                         triple.subject,
                         triple.predicate,
-                        triple.object.as_deref().unwrap_or("")
+                        triple.object.as_ref().unwrap_or(&String::new())
                     ).trim().to_string();
 
                     claims.push(AtomicClaim {
                         id: uuid::Uuid::new_v4(),
                         claim_text,
-                        subject: triple.subject,
-                        predicate: triple.predicate,
-                        object: triple.object,
+                        claim_type: self.infer_claim_type_from_triple(&triple),
+                        verifiability: self.assess_verifiability_from_triple(&triple),
+                        scope: ClaimScope {
+                            working_spec_id: context.working_spec_id.clone(),
+                            component_boundaries: context.domain_hints.clone(),
+                            data_impact: DataImpact::None,
+                        },
+                        confidence: self.calculate_claim_confidence(&triple, context),
+                        contextual_brackets: vec![], // TODO: Add contextual brackets
+                        subject: Some(triple.subject.clone()),
+                        predicate: Some(triple.predicate.clone()),
+                        object: triple.object.clone(),
                         context_brackets: self.add_contextual_brackets_v2(clause, context),
                         verification_requirements: self.determine_verification_requirements(&triple, context),
-                        confidence: self.calculate_claim_confidence(&triple, context),
                         position: (0, clause.len()), // Approximate position in original sentence
                         sentence_fragment: clause.clone(),
                     });
@@ -777,6 +820,7 @@ impl ContextBracketAdder {
                     subject,
                     predicate: verb,
                     object,
+                    confidence: 0.8, // Default confidence for extracted triples
                 });
             }
         }
@@ -867,9 +911,16 @@ impl ContextBracketAdder {
         common_nouns.contains(&text.to_lowercase().as_str())
     }
 
+    /// Check if text has subject-predicate structure
+    fn has_subject_predicate_structure(&self, text: &str) -> bool {
+        // Simple heuristic: check for common predicate patterns
+        let predicates = ["is", "are", "was", "were", "has", "have", "had", "does", "do", "did", "can", "may", "will", "would", "should", "must"];
+        predicates.iter().any(|&pred| text.to_lowercase().contains(pred))
+    }
+
     /// Check contextual relevance of claim (V2 logic)
     fn is_claim_contextually_relevant(&self, triple: &SubjectPredicateObject, context: &ProcessingContext) -> bool {
-        let claim_text = format!("{} {} {}", triple.subject, triple.predicate, triple.object.as_deref().unwrap_or(""));
+        let claim_text = format!("{} {} {}", triple.subject, triple.predicate, triple.object.as_ref().unwrap_or(&String::new()));
 
         // Check domain hints
         for hint in &context.domain_hints {
@@ -879,7 +930,7 @@ impl ContextBracketAdder {
         }
 
         // Check technical terms based on language
-        if matches!(context.language, Language::Rust | Language::TypeScript) {
+        if matches!(context.language, Some(Language::Rust) | Some(Language::TypeScript)) {
             let technical_terms = ["function", "method", "class", "interface", "type", "api", "struct", "enum"];
             for term in &technical_terms {
                 if claim_text.to_lowercase().contains(term) {
@@ -940,6 +991,41 @@ impl ContextBracketAdder {
         requirements
     }
 
+    /// Infer claim type from subject-predicate-object triple
+    fn infer_claim_type_from_triple(&self, triple: &SubjectPredicateObject) -> ClaimType {
+        // Check for technical terms
+        let combined_text = format!("{} {} {}", triple.subject, triple.predicate, triple.object.as_ref().unwrap_or(&String::new()));
+
+        if combined_text.to_lowercase().contains("api") ||
+           combined_text.to_lowercase().contains("function") ||
+           combined_text.to_lowercase().contains("method") ||
+           combined_text.to_lowercase().contains("class") {
+            ClaimType::Technical
+        } else if combined_text.to_lowercase().contains("must") ||
+                  combined_text.to_lowercase().contains("shall") ||
+                  combined_text.to_lowercase().contains("required") {
+            ClaimType::Constitutional
+        } else if matches!(triple.predicate.as_str(), "does" | "performs" | "executes" | "runs") {
+            ClaimType::Procedural
+        } else {
+            ClaimType::Factual
+        }
+    }
+
+    /// Assess verifiability level from subject-predicate-object triple
+    fn assess_verifiability_from_triple(&self, triple: &SubjectPredicateObject) -> VerifiabilityLevel {
+        // Strong predicates indicate high verifiability
+        if matches!(triple.predicate.as_str(), "is" | "are" | "was" | "were" | "has" | "have" | "contains") {
+            VerifiabilityLevel::HighlyVerifiable
+        } else if matches!(triple.predicate.as_str(), "can" | "may" | "might" | "could") {
+            VerifiabilityLevel::ModeratelyVerifiable
+        } else if matches!(triple.predicate.as_str(), "should" | "ought" | "must" | "shall") {
+            VerifiabilityLevel::DirectlyVerifiable
+        } else {
+            VerifiabilityLevel::IndirectlyVerifiable
+        }
+    }
+
     /// Calculate confidence score for claim (V2 logic)
     fn calculate_claim_confidence(&self, triple: &SubjectPredicateObject, context: &ProcessingContext) -> f64 {
         let mut confidence = 0.7; // Base confidence
@@ -977,7 +1063,7 @@ impl ContextBracketAdder {
         debug!("Starting V2 enhanced decomposition for: {}", sentence);
 
         // Use enhanced V2 atomic claim extraction
-        let atomic_claims = self.extract_atomic_claims_v2(sentence, context).await?;
+        let atomic_claims = self.extract_atomic_claims_v2(sentence, context)?;
 
         let decomposition_confidence = self.calculate_decomposition_confidence(&atomic_claims);
 
@@ -985,6 +1071,26 @@ impl ContextBracketAdder {
             atomic_claims,
             decomposition_confidence,
         })
+    }
+
+    /// Calculate confidence in decomposition quality
+    fn calculate_decomposition_confidence(&self, claims: &[AtomicClaim]) -> f64 {
+        if claims.is_empty() {
+            return 0.0;
+        }
+
+        let total_confidence: f64 = claims.iter().map(|claim| claim.confidence).sum();
+        let average_confidence = total_confidence / claims.len() as f64;
+
+        // Boost confidence for claims with contextual brackets
+        let contextual_boost = claims
+            .iter()
+            .filter(|claim| !claim.contextual_brackets.is_empty())
+            .count() as f64
+            / claims.len() as f64
+            * 0.2;
+
+        (average_confidence + contextual_boost).min(1.0)
     }
 }
 
@@ -1571,7 +1677,7 @@ impl DecompositionStage {
             confidence -= 0.2;
         }
 
-        confidence.max(0.0f32).min(1.0f32)
+        confidence.max(0.0).min(1.0)
     }
 
     /// Infer claim type from content

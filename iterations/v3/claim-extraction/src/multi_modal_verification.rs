@@ -846,7 +846,7 @@ impl MultiModalVerificationEngine {
             spec_score = total_confidence / spec_count as f64;
             // Boost score for claims with multiple specification validations
             if spec_count > 1 {
-                spec_score = (spec_score * 1.15).min(1.0f32);
+                spec_score = (spec_score * 1.15).min(1.0);
             }
         } else {
             // Base score for claims that might be covered by general specifications
@@ -1010,7 +1010,7 @@ impl MultiModalVerificationEngine {
             relevance *= 1.1;
         }
 
-        Ok(relevance.min(1.0f32))
+        Ok(relevance.min(1.0))
     }
 
     /// Analyze historical validation for a claim
@@ -1209,7 +1209,7 @@ impl MultiModalVerificationEngine {
             similarity *= 1.2;
         }
 
-        Ok(similarity.min(1.0f32))
+        Ok(similarity.min(1.0))
     }
 
     /// Analyze authority credibility for a claim
@@ -1356,7 +1356,7 @@ impl MultiModalVerificationEngine {
         }
 
         // Limit confidence to 1.0
-        confidence.min(1.0f32) as f64
+        confidence.min(1.0) as f64
     }
 
     /// Extract context around a match position
@@ -1445,7 +1445,7 @@ impl MultiModalVerificationEngine {
             score -= 0.1;
         }
 
-        score.min(1.0f32).max(0.0f32)
+        score.min(1.0).max(0.0f32)
     }
 
     /// Discover test files based on keywords and context
@@ -1621,13 +1621,13 @@ impl MultiModalVerificationEngine {
     }
 
     /// Find potential antecedent candidates within text window
-    fn find_antecedent_candidates(
+    fn find_antecedent_candidates<'a>(
         &self,
         text: &str,
-        entities: &[Entity],
+        entities: &'a [Entity],
         pronoun_pos: &(usize, usize),
         window_size: usize,
-    ) -> Vec<&Entity> {
+    ) -> Vec<&'a Entity> {
         let pronoun_start = pronoun_pos.0;
         let window_start = pronoun_start.saturating_sub(window_size);
 
@@ -1915,8 +1915,10 @@ impl MultiModalVerificationEngine {
 
     /// Calculate semantic similarity based on word overlap and entity types
     fn calculate_semantic_similarity(&self, s1: &str, s2: &str) -> f64 {
-        let words1: HashSet<_> = s1.to_lowercase().split_whitespace().collect();
-        let words2: HashSet<_> = s2.to_lowercase().split_whitespace().collect();
+        let s1_lower = s1.to_lowercase();
+        let s2_lower = s2.to_lowercase();
+        let words1: HashSet<_> = s1_lower.split_whitespace().collect();
+        let words2: HashSet<_> = s2_lower.split_whitespace().collect();
 
         let intersection = words1.intersection(&words2).count();
         let union = words1.len() + words2.len() - intersection;
@@ -2199,17 +2201,25 @@ impl MultiModalVerificationEngine {
         Ok(Some(AtomicClaim {
             id: Uuid::new_v4(),
             claim_text,
-            subject: function.name.clone(),
-            predicate: "has_signature".to_string(),
+            claim_type: ClaimType::Technical,
+            verifiability: VerifiabilityLevel::DirectlyVerifiable,
+            scope: ClaimScope {
+                working_spec_id: "default".to_string(),
+                component_boundaries: vec!["code".to_string()],
+                data_impact: DataImpact::ReadOnly,
+            },
+            confidence,
+            contextual_brackets: vec!["code".to_string(), "function".to_string()],
+            subject: Some(function.name.clone()),
+            predicate: Some("has_signature".to_string()),
             object: Some(function.signature.clone()),
             context_brackets: vec!["code".to_string(), "function".to_string()],
             verification_requirements: vec![VerificationRequirement {
-                method: VerificationMethod::CodeAnalysis,
-                evidence_type: EvidenceType::CodeAnalysis,
-                minimum_confidence: 0.8,
-                required_sources: vec![SourceType::FileSystem],
+                requirement_type: "code_analysis".to_string(),
+                description: "Analyze function signature".to_string(),
+                priority: VerificationPriority::High,
+                evidence_needed: vec!["signature_match".to_string()],
             }],
-            confidence,
             position: (function.line_start, function.line_end),
             sentence_fragment: claim_text.clone(),
         }))
@@ -2227,17 +2237,25 @@ impl MultiModalVerificationEngine {
         Ok(Some(AtomicClaim {
             id: Uuid::new_v4(),
             claim_text,
-            subject: api_doc.endpoint.clone(),
-            predicate: "is_documented".to_string(),
+            claim_type: ClaimType::Technical,
+            verifiability: VerifiabilityLevel::DirectlyVerifiable,
+            scope: ClaimScope {
+                working_spec_id: "api_docs".to_string(),
+                component_boundaries: vec!["documentation".to_string()],
+                data_impact: DataImpact::ReadOnly,
+            },
+            confidence,
+            contextual_brackets: vec!["documentation".to_string(), "api".to_string()],
+            subject: Some(api_doc.endpoint.clone()),
+            predicate: Some("is_documented".to_string()),
             object: Some(api_doc.description.clone()),
             context_brackets: vec!["documentation".to_string(), "api".to_string()],
             verification_requirements: vec![VerificationRequirement {
-                method: VerificationMethod::DocumentationAnalysis,
-                evidence_type: EvidenceType::Documentation,
-                minimum_confidence: 0.7,
-                required_sources: vec![SourceType::Documentation],
+                requirement_type: "documentation_analysis".to_string(),
+                description: "Check API documentation quality".to_string(),
+                priority: VerificationPriority::Medium,
+                evidence_needed: vec!["style_compliance".to_string()],
             }],
-            confidence,
             position: (0, 0), // Position in doc file
             sentence_fragment: claim_text.clone(),
         }))
@@ -2255,17 +2273,25 @@ impl MultiModalVerificationEngine {
         Ok(Some(AtomicClaim {
             id: Uuid::new_v4(),
             claim_text,
-            subject: statistic.variable.clone(),
-            predicate: statistic.metric.clone(),
+            claim_type: ClaimType::Performance,
+            verifiability: VerifiabilityLevel::DirectlyVerifiable,
+            scope: ClaimScope {
+                working_spec_id: "data_analysis".to_string(),
+                component_boundaries: vec!["statistics".to_string()],
+                data_impact: DataImpact::ReadOnly,
+            },
+            confidence,
+            contextual_brackets: vec!["data".to_string(), "statistics".to_string()],
+            subject: Some(statistic.variable.clone()),
+            predicate: Some(statistic.metric.clone()),
             object: Some(format!("{:.3}", statistic.value)),
             context_brackets: vec!["data".to_string(), "statistics".to_string()],
             verification_requirements: vec![VerificationRequirement {
-                method: VerificationMethod::StatisticalAnalysis,
-                evidence_type: EvidenceType::Measurement,
-                minimum_confidence: 0.8,
-                required_sources: vec![SourceType::Measurement],
+                requirement_type: "statistical_analysis".to_string(),
+                description: "Validate statistical significance".to_string(),
+                priority: VerificationPriority::High,
+                evidence_needed: vec!["p_value_check".to_string()],
             }],
-            confidence,
             position: (0, 0), // Position in analysis output
             sentence_fragment: claim_text.clone(),
         }))

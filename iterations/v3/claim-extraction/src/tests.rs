@@ -423,12 +423,23 @@ mod verification_tests {
         // Test case with atomic claims
         let atomic_claims = vec![AtomicClaim {
             id: Uuid::new_v4(),
-            content: "The API should return 200 status code for valid requests".to_string(),
-            verifiability_level: VerifiabilityLevel::DirectlyVerifiable,
-            context_brackets: vec!["API endpoint".to_string()],
+            claim_text: "The API should return 200 status code for valid requests".to_string(),
+            claim_type: ClaimType::Technical,
+            verifiability: VerifiabilityLevel::DirectlyVerifiable,
+            scope: ClaimScope {
+                working_spec_id: "test".to_string(),
+                component_boundaries: vec!["api".to_string()],
+                data_impact: DataImpact::ReadOnly,
+            },
             confidence: 0.8,
-            created_at: chrono::Utc::now(),
-            metadata: HashMap::new(),
+            contextual_brackets: vec!["API endpoint".to_string()],
+            subject: None,
+            predicate: None,
+            object: None,
+            context_brackets: vec!["API endpoint".to_string()],
+            verification_requirements: vec![],
+            position: (0, 0),
+            sentence_fragment: "The API should return 200 status code for valid requests".to_string(),
         }];
 
         let result = verification.process(&atomic_claims).await?;
@@ -462,12 +473,23 @@ mod verification_tests {
         // Test case with claims requiring council evaluation
         let council_claims = vec![AtomicClaim {
             id: Uuid::new_v4(),
-            content: "The system should comply with security standards".to_string(),
-            verifiability_level: VerifiabilityLevel::RequiresContext,
-            context_brackets: vec!["Security compliance".to_string()],
+            claim_text: "The system should comply with security standards".to_string(),
+            claim_type: ClaimType::Security,
+            verifiability: VerifiabilityLevel::RequiresContext,
+            scope: ClaimScope {
+                working_spec_id: "security".to_string(),
+                component_boundaries: vec!["system".to_string()],
+                data_impact: DataImpact::ReadOnly,
+            },
             confidence: 0.7,
-            created_at: chrono::Utc::now(),
-            metadata: HashMap::new(),
+            contextual_brackets: vec!["Security compliance".to_string()],
+            subject: None,
+            predicate: None,
+            object: None,
+            context_brackets: vec!["Security compliance".to_string()],
+            verification_requirements: vec![],
+            position: (0, 0),
+            sentence_fragment: "The system should comply with security standards".to_string(),
         }];
 
         let result = verification.process(&council_claims).await?;
@@ -498,12 +520,23 @@ mod verification_tests {
         // Test case with high-confidence claims
         let high_confidence_claims = vec![AtomicClaim {
             id: Uuid::new_v4(),
-            content: "The function should return a boolean value".to_string(),
-            verifiability_level: VerifiabilityLevel::DirectlyVerifiable,
-            context_brackets: vec!["Function signature".to_string()],
+            claim_text: "The function should return a boolean value".to_string(),
+            claim_type: ClaimType::Technical,
+            verifiability: VerifiabilityLevel::DirectlyVerifiable,
+            scope: ClaimScope {
+                working_spec_id: "function_test".to_string(),
+                component_boundaries: vec!["function".to_string()],
+                data_impact: DataImpact::ReadOnly,
+            },
             confidence: 0.95,
-            created_at: chrono::Utc::now(),
-            metadata: HashMap::new(),
+            contextual_brackets: vec!["Function signature".to_string()],
+            subject: None,
+            predicate: None,
+            object: None,
+            context_brackets: vec!["Function signature".to_string()],
+            verification_requirements: vec![],
+            position: (0, 0),
+            sentence_fragment: "The function should return a boolean value".to_string(),
         }];
 
         let result = verification.process(&high_confidence_claims).await?;

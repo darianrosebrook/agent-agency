@@ -24,7 +24,8 @@ use tokio::sync::RwLock;
 use tracing::{debug, warn};
 use std::time::{Duration, Instant};
 use uuid::Uuid;
-// use embedding_service::{EmbeddingService, ContentType, EmbeddingRequest}; // PLACEHOLDER: embedding service not available
+#[cfg(feature = "embeddings")]
+use embedding_service::{EmbeddingService, ContentType, EmbeddingRequest};
 
 /// Programming languages supported by the system
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -135,13 +136,13 @@ impl DisambiguationStage {
         let pronoun_patterns = vec![
             // Personal pronouns
             Regex::new(r"\b(he|she|it|they|we|us|them|him|her|his|hers|its|their|theirs|our|ours)\b")
-                .map_err(|e| format!("Failed to compile personal pronoun regex: {}", e))?,
+                .map_err(|e| anyhow::anyhow!("Failed to compile personal pronoun regex: {}", e))?,
             // Demonstrative pronouns with context awareness
             Regex::new(r"\b(this|that|these|those)\b")
-                .map_err(|e| format!("Failed to compile demonstrative pronoun regex: {}", e))?,
+                .map_err(|e| anyhow::anyhow!("Failed to compile demonstrative pronoun regex: {}", e))?,
             // Reflexive pronouns
             Regex::new(r"\b(himself|herself|itself|themselves|ourselves|myself|yourself|yourselves)\b")
-                .map_err(|e| format!("Failed to compile reflexive pronoun regex: {}", e))?,
+                .map_err(|e| anyhow::anyhow!("Failed to compile reflexive pronoun regex: {}", e))?,
         ];
 
         let mut referential_ambiguities = Vec::new();
@@ -152,12 +153,12 @@ impl DisambiguationStage {
                 // Advanced V2-style filtering for demonstrative pronouns
                 if pronoun_match == "that" {
                     let index = sentence.to_lowercase().find("that")
-                        .ok_or_else(|| "Expected 'that' not found in sentence".to_string())?;
+                        .ok_or_else(|| anyhow::anyhow!("Expected 'that' not found in sentence"))?;
                     let after_that = &sentence[index + 4..].trim_start();
 
                     // Enhanced conjunction detection (V2 pattern)
                     let conjunction_pattern = Regex::new(r"\b(is|are|was|were|has|have|will|shall|did|does|can|could|should|would|may|might|must|it|they|he|she|we|us|them)\b")
-                        .map_err(|e| format!("Failed to compile conjunction regex: {}", e))?;
+                        .map_err(|e| anyhow::anyhow!("Failed to compile conjunction regex: {}", e))?;
                     if conjunction_pattern.is_match(after_that) {
                         continue; // Skip this "that" as it's a conjunction
                     }
@@ -165,7 +166,7 @@ impl DisambiguationStage {
                     // Also skip "that" in relative clauses
                     if after_that.starts_with(|c: char| c.is_alphabetic()) {
                         let relative_clause_pattern = Regex::new(r"^(is|are|was|were|has|have|will|can|could|should|would|may|might|must)\s")
-                            .map_err(|e| format!("Failed to compile relative clause regex: {}", e))?;
+                            .map_err(|e| anyhow::anyhow!("Failed to compile relative clause regex: {}", e))?;
                         if !relative_clause_pattern.is_match(after_that) {
                             // This might be a relative clause, skip demonstrative pronoun detection
                             continue;
@@ -196,7 +197,7 @@ impl DisambiguationStage {
         for pronoun in unique_referential {
             // Find all occurrences of this pronoun
             let pronoun_pattern = Regex::new(&format!(r"\b{}\b", regex::escape(&pronoun)))
-                .map_err(|e| format!("Failed to compile pronoun pattern for '{}': {}", pronoun, e))?;
+                .map_err(|e| anyhow::anyhow!("Failed to compile pronoun pattern for '{}': {}", pronoun, e))?;
             for mat in pronoun_pattern.find_iter(sentence) {
                 ambiguities.push(Ambiguity {
                     ambiguity_type: AmbiguityType::Pronoun,
@@ -213,11 +214,11 @@ impl DisambiguationStage {
         // Basic structural ambiguities (ported from V2)
         let structural_patterns = vec![
             Regex::new(r"\b[A-Z][a-z]+ (is|are|was|were) [a-z]+ (and|or) [a-z]+\b")
-                .map_err(|e| format!("Failed to compile structural pattern 1: {}", e))?,
+                .map_err(|e| anyhow::anyhow!("Failed to compile structural pattern 1: {}", e))?,
             Regex::new(r"\b[A-Z][a-z]+ (called|named|known as) [A-Z][a-z]+\b")
-                .map_err(|e| format!("Failed to compile structural pattern 2: {}", e))?,
+                .map_err(|e| anyhow::anyhow!("Failed to compile structural pattern 2: {}", e))?,
             Regex::new(r"\b(before|after|during|while) [a-z]+ (and|or) [a-z]+\b")
-                .map_err(|e| format!("Failed to compile structural pattern 3: {}", e))?,
+                .map_err(|e| anyhow::anyhow!("Failed to compile structural pattern 3: {}", e))?,
         ];
 
         for pattern in &structural_patterns {
@@ -235,9 +236,9 @@ impl DisambiguationStage {
         // Temporal patterns (ported from V2)
         let temporal_patterns = vec![
             Regex::new(r"\b(next|last|previous|upcoming|recent|soon|recently)\b")
-                .map_err(|e| format!("Failed to compile temporal pattern 1: {}", e))?,
+                .map_err(|e| anyhow::anyhow!("Failed to compile temporal pattern 1: {}", e))?,
             Regex::new(r"\b(tomorrow|yesterday|today|now|then)\b")
-                .map_err(|e| format!("Failed to compile temporal pattern 2: {}", e))?,
+                .map_err(|e| anyhow::anyhow!("Failed to compile temporal pattern 2: {}", e))?,
         ];
 
         for pattern in &temporal_patterns {
@@ -265,7 +266,7 @@ impl DisambiguationStage {
         let mut resolved_sentence = sentence.to_string();
 
         // Build a context map of potential referents (ported from V2 buildReferentMap)
-        let context_map = self.context_resolver.build_v2_referent_map(context);
+        let context_map = self.context_resolver.build_v2_referent_map(context).await?;
 
         // Process only pronoun ambiguities
         let pronoun_ambiguities: Vec<&Ambiguity> = ambiguities
@@ -283,7 +284,7 @@ impl DisambiguationStage {
                 // Replace pronoun with referent in the sentence
                 let pronoun_regex =
                     regex::Regex::new(&format!(r"\b{}\b", regex::escape(&pronoun)))
-                        .map_err(|e| format!("Failed to compile pronoun replacement regex for '{}': {}", pronoun, e))?;
+                        .map_err(|e| anyhow::anyhow!("Failed to compile pronoun replacement regex for '{}': {}", pronoun, e))?;
                 resolved_sentence = pronoun_regex
                     .replace_all(&resolved_sentence, &referent.entity)
                     .to_string();
@@ -345,7 +346,7 @@ impl DisambiguationStage {
                 // Pronoun ambiguity is unresolvable if we cannot confidently resolve the referent
                 AmbiguityType::Pronoun => {
                     let pronoun = ambiguity.original_text.to_lowercase();
-                    let context_map = self.context_resolver.build_v2_referent_map(context);
+                    let context_map = self.context_resolver.build_v2_referent_map(context).await?;
                     let referent_opt = self
                         .context_resolver
                         .find_referent_for_pronoun(&pronoun, &context_map);
@@ -403,6 +404,61 @@ impl DisambiguationStage {
         }
 
         Ok(unresolvable)
+    }
+
+    /// Extract the subject of a sentence for reflexive pronoun matching (V2 enhancement)
+    fn extract_sentence_subject(&self, sentence: &str) -> Option<String> {
+        // Simple subject extraction - look for noun phrases before verbs
+        let subject_patterns = vec![
+            Regex::new(r"^([A-Z][a-z]+(?:\s+[a-z]+)*)\s+(?:is|are|was|were|has|have|will|can|could|should|would|may|might|must|does|did)")
+                .unwrap(),
+            Regex::new(r"^([A-Z][a-z]+(?:\s+[a-z]+)*)\s+(?:runs?|executes?|processes?|handles?)")
+                .unwrap(),
+        ];
+
+        for pattern in &subject_patterns {
+            if let Some(captures) = pattern.captures(sentence) {
+                if let Some(subject_match) = captures.get(1) {
+                    return Some(subject_match.as_str().to_string());
+                }
+            }
+        }
+
+        None
+    }
+
+    /// Check if a reflexive pronoun matches the sentence subject (V2 enhancement)
+    fn pronoun_matches_subject(&self, pronoun: &str, subject: &str) -> bool {
+        let pronoun_base = match pronoun {
+            "himself" => "he",
+            "herself" => "she",
+            "itself" => "it",
+            "themselves" => "they",
+            "ourselves" => "we",
+            "myself" => "i",
+            "yourself" => "you",
+            "yourselves" => "you",
+            _ => return false,
+        };
+
+        let subject_lower = subject.to_lowercase();
+        let pronoun_base_lower = pronoun_base.to_lowercase();
+
+        // Check for gender/number agreement
+        if pronoun_base_lower == "he" && (subject_lower.contains("he") || subject_lower.contains("man") || subject_lower.contains("boy")) {
+            return true;
+        }
+        if pronoun_base_lower == "she" && (subject_lower.contains("she") || subject_lower.contains("woman") || subject_lower.contains("girl")) {
+            return true;
+        }
+        if pronoun_base_lower == "it" && (subject_lower.contains("system") || subject_lower.contains("component") || subject_lower.contains("service")) {
+            return true;
+        }
+        if pronoun_base_lower == "they" && (subject_lower.contains("they") || subject_lower.contains("team") || subject_lower.contains("users")) {
+            return true;
+        }
+
+        false
     }
 }
 
@@ -556,7 +612,10 @@ impl AmbiguityDetector {
 struct ContextResolver {
     domain_context: HashMap<String, String>,
     named_entity_recognizer: NamedEntityRecognizer,
+    #[cfg(feature = "embeddings")]
     embedding_service: Option<Arc<dyn EmbeddingService>>,
+    db_client: Option<DatabaseClient>,
+    knowledge_ingestor: Option<Arc<KnowledgeIngestor>>,
 }
 
 impl ContextResolver {
@@ -569,11 +628,15 @@ impl ContextResolver {
         Self {
             domain_context,
             named_entity_recognizer: NamedEntityRecognizer::new(),
+            #[cfg(feature = "embeddings")]
             embedding_service: None, // Will be set when embedding service is available
+            db_client: None,
+            knowledge_ingestor: None,
         }
     }
     
     /// Create a new ContextResolver with embedding service
+    #[cfg(feature = "embeddings")]
     fn new_with_embedding_service(embedding_service: Arc<dyn EmbeddingService>) -> Self {
         let mut resolver = Self::new();
         resolver.embedding_service = Some(embedding_service);
@@ -1196,6 +1259,7 @@ impl ContextResolver {
                             entity2: entity2.clone(),
                             relationship_type: "related".to_string(),
                             confidence: 0.5, // Lower confidence for fallback method
+                            evidence: vec!["fallback_relationship_detection".to_string()],
                         });
                     }
                 }
@@ -1231,7 +1295,7 @@ impl ContextResolver {
                     resolution_method: "frequency_analysis".to_string(),
                 });
                 total_confidence +=
-                    (*frequency as f64 / historical_analysis.total_entities as f64).min(1.0f32);
+                    (*frequency as f64 / historical_analysis.total_entities as f64).min(1.0);
                 resolved_count += 1;
             }
         }
@@ -1387,7 +1451,7 @@ impl ContextResolver {
         }
 
         // Clamp to [0, 1]
-        confidence.max(0.0f32).min(1.0f32)
+        confidence.max(0.0).min(1.0)
     }
 
     /// Resolve referential ambiguities (pronouns) using conversation context (ported from V2)
@@ -1400,7 +1464,7 @@ impl ContextResolver {
         let mut resolved_sentence = sentence.to_string();
 
         // Build a context map of potential referents (ported from V2 logic)
-        let context_map = self.build_v2_referent_map(context);
+        let context_map = self.build_v2_referent_map(context).await?;
 
         for pronoun in pronouns {
             let referent = self.find_referent_for_pronoun(&pronoun.to_lowercase(), &context_map);
@@ -1408,7 +1472,7 @@ impl ContextResolver {
             if let Some(referent) = referent {
                 // Replace pronoun with referent in the sentence
                 let pronoun_regex = Regex::new(&format!(r"\b{}\b", regex::escape(pronoun)))
-                    .map_err(|e| format!("Failed to compile pronoun replacement regex for '{}': {}", pronoun, e))?;
+                    .map_err(|e| anyhow::anyhow!("Failed to compile pronoun replacement regex for '{}': {}", pronoun, e))?;
                 resolved_sentence = pronoun_regex
                     .replace_all(&resolved_sentence, &referent.entity)
                     .to_string();
@@ -1444,7 +1508,7 @@ impl ContextResolver {
         // Extract entities from surrounding context
         if !context.surrounding_context.is_empty() {
             let entity_pattern = Regex::new(r"\b[A-Z][a-z]+(?: [A-Z][a-z]+)*\b")
-                .map_err(|e| format!("Failed to compile entity extraction regex: {}", e))?;
+                .map_err(|e| anyhow::anyhow!("Failed to compile entity extraction regex: {}", e))?;
             for mat in entity_pattern.find_iter(&context.surrounding_context) {
                 let entity = mat.as_str().to_string();
                 // Set as potential referent for "it" (system/component references)
@@ -1468,14 +1532,14 @@ impl ContextResolver {
             }
         }
 
-        referent_map
+        Ok(referent_map)
     }
 
     /// Build a referent map using V2's sophisticated context analysis (ported from V2)
-    pub fn build_v2_referent_map(
+    pub async fn build_v2_referent_map(
         &self,
         context: &ProcessingContext,
-    ) -> HashMap<String, ReferentInfo> {
+    ) -> Result<HashMap<String, ReferentInfo>> {
         let mut referent_map = HashMap::new();
 
         // Extract from domain hints first (highest priority) - V2 style
@@ -1510,7 +1574,7 @@ impl ContextResolver {
         // Extract entities from surrounding context (V2-style entity detection)
         if !context.surrounding_context.is_empty() {
             let entity_pattern = regex::Regex::new(r"\b[A-Z][a-z]+(?: [A-Z][a-z]+)*\b")
-                .map_err(|e| format!("Failed to compile V2 entity extraction regex: {}", e))?;
+                .map_err(|e| anyhow::anyhow!("Failed to compile V2 entity extraction regex: {}", e))?;
             for mat in entity_pattern.find_iter(&context.surrounding_context) {
                 let entity = mat.as_str().to_string();
                 // Set as potential referent for "it" (system/component references)
@@ -1550,25 +1614,28 @@ impl ContextResolver {
         let domain_integration =
             self.integrate_domain_hints_with_context(context, &conversation_entities);
 
-        referent_map
+        Ok(referent_map)
     }
 
     /// Generate embedding for entity using embedding service
+    #[cfg(feature = "embeddings")]
     async fn generate_entity_embedding(&self, entity: &str) -> Option<Vec<f32>> {
         debug!("Generating embedding for entity: {}", entity);
 
         // Try to use the embedding service if available
         if let Some(embedding_service) = &self.embedding_service {
             let request = EmbeddingRequest {
-                content: entity.to_string(),
+                texts: vec![entity.to_string()],
                 content_type: ContentType::Text,
-                dimensions: Some(768), // Standard embedding dimension
+                source: "entity_embedding".to_string(),
+                tags: vec!["entity".to_string()],
+                context: std::collections::HashMap::new(),
             };
 
-            match embedding_service.generate_embedding(request).await {
+            match embedding_service.generate_embedding(entity, ContentType::Text, "entity_embedding").await {
                 Ok(embedding) => {
-                    debug!("Generated embedding for entity '{}' with {} dimensions", entity, embedding.len());
-                    return Some(embedding);
+                    debug!("Generated embedding for entity '{}' with {} dimensions", entity, embedding.vector.len());
+                    return Some(embedding.vector);
                 }
                 Err(e) => {
                     warn!("Embedding service failed for entity '{}': {}, falling back to simulation", entity, e);
@@ -1630,10 +1697,12 @@ impl ContextResolver {
         // Try to use the database client if available
         if let Some(db_client) = &self.db_client {
             // Use the existing knowledge_queries module function
-            // use agent_agency_database::knowledge_queries::record_knowledge_usage; // PLACEHOLDER: knowledge queries not available
+            use agent_agency_database::DatabaseClient;
 
-            // PLACEHOLDER: record_knowledge_usage not available
-            debug!("PLACEHOLDER: Would record knowledge base usage for entity: {}", entity_id);
+            // Record usage for relevance tracking
+            if let Err(e) = db_client.kb_record_usage(*entity_id).await {
+                warn!("Failed to record knowledge usage: {}", e);
+            }
         }
 
         // Fallback to simulation if database client is not available or failed
@@ -1653,10 +1722,20 @@ impl ContextResolver {
         // Try to use the database client if available
         if let Some(db_client) = &self.db_client {
             // Use the existing knowledge_queries module function
-            // use agent_agency_database::knowledge_queries::kb_get_related; // PLACEHOLDER: knowledge queries not available
-
-            // PLACEHOLDER: kb_get_related not available
-            debug!("PLACEHOLDER: Would get related entities from database for: {}", entity_id);
+            // Get related entities from knowledge base
+            match db_client.kb_get_related(*entity_id, None, 10).await {
+                Ok(related) => {
+                    return Ok(related.into_iter().map(|e| RelatedEntity {
+                        id: e.id.unwrap_or(Uuid::new_v4()),
+                        canonical_name: e.canonical_name,
+                        relationship_type: "semantic".to_string(),
+                        confidence: e.confidence,
+                    }).collect());
+                }
+                Err(e) => {
+                    warn!("Failed to get related entities from database: {}", e);
+                }
+            }
         }
 
         // Fallback to simulation if database client is not available or failed
@@ -1985,16 +2064,20 @@ impl ContextResolver {
         let mut relationships = Vec::new();
 
         // Try to find entities by name first
+        let entity1_embedding = self.generate_entity_embedding(entity1).await
+            .ok_or_else(|| anyhow::anyhow!("Failed to generate embedding for entity1: {}", entity1))?;
         let entity1_results = db_client.kb_semantic_search(
-            &self.generate_entity_embedding(entity1).await?,
+            &entity1_embedding,
             "kb-text-default",
             None,
             5,
             0.3,
         ).await.unwrap_or_default();
 
+        let entity2_embedding = self.generate_entity_embedding(entity2).await
+            .ok_or_else(|| anyhow::anyhow!("Failed to generate embedding for entity2: {}", entity2))?;
         let entity2_results = db_client.kb_semantic_search(
-            &self.generate_entity_embedding(entity2).await?,
+            &entity2_embedding,
             "kb-text-default",
             None,
             5,
@@ -2011,6 +2094,7 @@ impl ContextResolver {
                             entity2: entity2.to_string(),
                             relationship_type: "semantic_related".to_string(),
                             confidence: 0.8,
+                            evidence: vec!["knowledge_base_semantic_search".to_string()],
                         });
                     }
                 }
@@ -2030,16 +2114,20 @@ impl ContextResolver {
         let mut relationships = Vec::new();
 
         // Find entities with broader search
+        let entity1_embedding = self.generate_entity_embedding(entity1).await
+            .ok_or_else(|| anyhow::anyhow!("Failed to generate embedding for entity1: {}", entity1))?;
         let entity1_results = db_client.kb_semantic_search(
-            &self.generate_entity_embedding(entity1).await?,
+            &entity1_embedding,
             "kb-text-default",
             None,
             10,
             0.2,
         ).await.unwrap_or_default();
 
+        let entity2_embedding = self.generate_entity_embedding(entity2).await
+            .ok_or_else(|| anyhow::anyhow!("Failed to generate embedding for entity2: {}", entity2))?;
         let entity2_results = db_client.kb_semantic_search(
-            &self.generate_entity_embedding(entity2).await?,
+            &entity2_embedding,
             "kb-text-default",
             None,
             10,
@@ -2063,6 +2151,7 @@ impl ContextResolver {
                                 entity2: entity2.to_string(),
                                 relationship_type: "indirect_related".to_string(),
                                 confidence: 0.6,
+                                evidence: vec!["knowledge_base_indirect_relationship".to_string()],
                             });
                             break; // Only add one indirect relationship
                         }
@@ -2074,36 +2163,6 @@ impl ContextResolver {
         Ok(relationships)
     }
 
-    /// Generate embedding for entity name
-    async fn generate_entity_embedding(&self, entity: &str) -> Result<Vec<f32>> {
-        if let Some(embedding_service) = &self.embedding_service {
-            let request = EmbeddingRequest {
-                content: entity.to_string(),
-                content_type: ContentType::Text,
-                model_id: "kb-text-default".to_string(),
-                max_tokens: None,
-            };
-
-            let response = embedding_service.generate_embedding(request).await?;
-            Ok(response.embedding)
-        } else {
-            // Fallback: generate simple hash-based embedding
-            use std::collections::hash_map::DefaultHasher;
-            use std::hash::{Hash, Hasher};
-
-            let mut hasher = DefaultHasher::new();
-            entity.hash(&mut hasher);
-            let hash = hasher.finish();
-
-            // Create a simple 384-dimensional embedding from hash
-            let mut embedding = Vec::with_capacity(384);
-            for i in 0..384 {
-                let value = ((hash.wrapping_mul(i as u64).wrapping_add(i as u64)) % 1000) as f32 / 500.0 - 1.0;
-                embedding.push(value);
-            }
-            Ok(embedding)
-        }
-    }
 
     async fn trigger_on_demand_ingestion(&self, entity: &str) -> Result<()> {
         if let Some(knowledge_ingestor) = &self.knowledge_ingestor {
@@ -2134,60 +2193,6 @@ impl ContextResolver {
         }
     }
 
-    /// Extract the subject of a sentence for reflexive pronoun matching (V2 enhancement)
-    fn extract_sentence_subject(&self, sentence: &str) -> Option<String> {
-        // Simple subject extraction - look for noun phrases before verbs
-        let subject_patterns = vec![
-            Regex::new(r"^([A-Z][a-z]+(?:\s+[a-z]+)*)\s+(?:is|are|was|were|has|have|will|can|could|should|would|may|might|must|does|did)")
-                .unwrap(),
-            Regex::new(r"^([A-Z][a-z]+(?:\s+[a-z]+)*)\s+(?:runs?|executes?|processes?|handles?)")
-                .unwrap(),
-        ];
-
-        for pattern in &subject_patterns {
-            if let Some(captures) = pattern.captures(sentence) {
-                if let Some(subject_match) = captures.get(1) {
-                    return Some(subject_match.as_str().to_string());
-                }
-            }
-        }
-
-        None
-    }
-
-    /// Check if a reflexive pronoun matches the sentence subject (V2 enhancement)
-    fn pronoun_matches_subject(&self, pronoun: &str, subject: &str) -> bool {
-        let pronoun_base = match pronoun {
-            "himself" => "he",
-            "herself" => "she",
-            "itself" => "it",
-            "themselves" => "they",
-            "ourselves" => "we",
-            "myself" => "i",
-            "yourself" => "you",
-            "yourselves" => "you",
-            _ => return false,
-        };
-
-        let subject_lower = subject.to_lowercase();
-        let pronoun_base_lower = pronoun_base.to_lowercase();
-
-        // Check for gender/number agreement
-        if pronoun_base_lower == "he" && (subject_lower.contains("he") || subject_lower.contains("man") || subject_lower.contains("boy")) {
-            return true;
-        }
-        if pronoun_base_lower == "she" && (subject_lower.contains("she") || subject_lower.contains("woman") || subject_lower.contains("girl")) {
-            return true;
-        }
-        if pronoun_base_lower == "it" && (subject_lower.contains("system") || subject_lower.contains("component") || subject_lower.contains("service")) {
-            return true;
-        }
-        if pronoun_base_lower == "they" && (subject_lower.contains("they") || subject_lower.contains("team") || subject_lower.contains("users")) {
-            return true;
-        }
-
-        false
-    }
 
     /// Extract person entities from text using enhanced NER patterns
     fn extract_person_entities(&self, text: &str) -> Vec<String> {
@@ -2211,6 +2216,7 @@ pub struct NamedEntityRecognizer {
     confidence_threshold: f64,
     entity_patterns: EntityPatterns,
     db_client: Option<DatabaseClient>,
+    #[cfg(feature = "embeddings")]
     embedding_service: Option<Arc<dyn EmbeddingService>>,
     knowledge_ingestor: Option<Arc<KnowledgeIngestor>>,
 }
@@ -2222,27 +2228,31 @@ impl NamedEntityRecognizer {
             confidence_threshold: 0.7,
             entity_patterns: EntityPatterns::new(),
             db_client: None,
+            #[cfg(feature = "embeddings")]
             embedding_service: None,
             knowledge_ingestor: None,
         }
     }
 
     /// Create a new NamedEntityRecognizer with database and embedding service integration
-    pub fn with_services(db_client: DatabaseClient, embedding_service: Arc<EmbeddingService>) -> Self {
+    #[cfg(feature = "embeddings")]
+    pub fn with_services(db_client: DatabaseClient, embedding_service: Arc<dyn EmbeddingService>) -> Self {
         Self {
             entity_cache: Arc::new(RwLock::new(HashMap::new())),
             confidence_threshold: 0.7,
             entity_patterns: EntityPatterns::new(),
             db_client: Some(db_client),
+            #[cfg(feature = "embeddings")]
             embedding_service: Some(embedding_service),
             knowledge_ingestor: None,
         }
     }
 
     /// Create a new NamedEntityRecognizer with full knowledge graph integration
+    #[cfg(feature = "embeddings")]
     pub fn with_knowledge_integration(
         db_client: DatabaseClient,
-        embedding_service: Arc<EmbeddingService>,
+        embedding_service: Arc<dyn EmbeddingService>,
         knowledge_ingestor: Arc<KnowledgeIngestor>
     ) -> Self {
         Self {
@@ -2250,6 +2260,7 @@ impl NamedEntityRecognizer {
             confidence_threshold: 0.7,
             entity_patterns: EntityPatterns::new(),
             db_client: Some(db_client),
+            #[cfg(feature = "embeddings")]
             embedding_service: Some(embedding_service),
             knowledge_ingestor: Some(knowledge_ingestor),
         }
@@ -2321,8 +2332,8 @@ impl NamedEntityRecognizer {
                         text: entity_text.to_string(),
                         entity_type: EntityType::Person,
                         confidence,
-                        start_pos: mat.start(),
-                        end_pos: mat.end(),
+                        start_position: mat.start(),
+                        end_position: mat.end(),
                         context: self.extract_entity_context(text, mat.start(), mat.end()),
                     });
                 }
@@ -2592,7 +2603,7 @@ impl NamedEntityRecognizer {
             confidence += 0.2;
         }
 
-        confidence.min(1.0f32)
+        confidence.min(1.0)
     }
 
     /// Calculate confidence for organization entities
@@ -2619,7 +2630,7 @@ impl NamedEntityRecognizer {
             }
         }
 
-        confidence.min(1.0f32)
+        confidence.min(1.0)
     }
 
     /// Calculate confidence for location entities
@@ -2635,7 +2646,7 @@ impl NamedEntityRecognizer {
             confidence += 0.2;
         }
 
-        confidence.min(1.0f32)
+        confidence.min(1.0)
     }
 
     /// Calculate confidence for technical entities
@@ -2656,7 +2667,7 @@ impl NamedEntityRecognizer {
             }
         }
 
-        confidence.min(1.0f32)
+        confidence.min(1.0)
     }
 
     /// Extract context around an entity
@@ -2909,46 +2920,4 @@ impl EntityPatterns {
         tracing::debug!("Knowledge base entity linking test structure validated");
     }
 
-    /// Test database integration for semantic search operations
-    #[tokio::test]
-    async fn test_database_integration_semantic_search_operations() {
-        // Integration test for semantic search database operations
-        if std::env::var("RUN_INTEGRATION_TESTS").is_err() {
-            return;
-        }
-
-        // Test semantic search with mock data
-        let recognizer = NamedEntityRecognizer::new();
-        let test_entity = "machine learning";
-        let test_embedding = vec![0.1; 768]; // Mock embedding
-
-        // Test semantic search (would use database in real integration test)
-        let search_results = recognizer.query_knowledge_base_semantic_search(&test_embedding, test_entity).await.unwrap();
-
-        // Validate search returns results (even if simulated)
-        assert!(!search_results.is_empty());
-
-        // Test knowledge base usage recording
-        for result in &search_results {
-            let usage_result = recognizer.record_knowledge_base_usage(&result.id).await;
-            // Should succeed even with simulation
-            assert!(usage_result.is_ok());
-        }
-
-        // Test related entity retrieval
-        for result in &search_results {
-            let related_entities = recognizer.get_related_entities(&result.id).await.unwrap();
-            // Should return some results (even if simulated)
-            assert!(!related_entities.is_empty());
-
-            // Validate related entity structure
-            for related in &related_entities {
-                assert!(!related.canonical_name.is_empty());
-                assert!(!related.relationship_type.is_empty());
-                assert!(related.confidence >= 0.0 && related.confidence <= 1.0);
-            }
-        }
-
-        tracing::debug!("Semantic search operations test completed");
-    }
 

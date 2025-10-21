@@ -23,6 +23,13 @@ mod tests {
             },
             confidence: 0.8,
             contextual_brackets: vec![],
+            subject: None,
+            predicate: None,
+            object: None,
+            context_brackets: vec![],
+            verification_requirements: vec![],
+            position: (0, 0),
+            sentence_fragment: claim_text.to_string(),
         }
     }
 

@@ -370,8 +370,7 @@ impl EvidenceCollector {
             claim_id: claim.id,
             evidence_type: EvidenceType::CodeAnalysis,
             content,
-            source: EvidenceSource {
-                source_type: SourceType::FileSystem,
+            source: EvidenceSource::CodeAnalysis {
                 location: "cargo clippy".to_string(),
                 authority: "rust_clippy".to_string(),
                 freshness: Utc::now(),
@@ -406,8 +405,7 @@ impl EvidenceCollector {
                 claim_id: claim.id,
                 evidence_type: EvidenceType::CodeAnalysis,
                 content,
-                source: EvidenceSource {
-                    source_type: SourceType::FileSystem,
+                source: EvidenceSource::CodeAnalysis {
                     location: file_path.to_string_lossy().to_string(),
                     authority: "code_metrics".to_string(),
                     freshness: Utc::now(),
@@ -490,15 +488,15 @@ impl EvidenceCollector {
     /// Assess code complexity based on metrics
     fn assess_code_complexity(&self, metrics: &CodeMetrics) -> f64 {
         // Simple complexity scoring based on lines of code and function count
-        let _loc_score = (metrics.lines_of_code as f64 / 1000.0).min(1.0f32);
-        let _func_score = (metrics.function_count as f64 / 20.0).min(1.0f32);
+        let _loc_score = (metrics.lines_of_code as f64 / 1000.0).min(1.0);
+        let _func_score = (metrics.function_count as f64 / 20.0).min(1.0);
 
         // Higher scores indicate better code quality (lower complexity per function)
         if metrics.function_count == 0 {
             0.5 // Neutral score for files without functions
         } else {
             let avg_loc_per_func = metrics.lines_of_code as f64 / metrics.function_count as f64;
-            let complexity_penalty = (avg_loc_per_func / 50.0).min(1.0f32); // Penalty for very long functions
+            let complexity_penalty = (avg_loc_per_func / 50.0).min(1.0); // Penalty for very long functions
             (1.0 - complexity_penalty).max(0.1f32)
         }
     }
@@ -563,8 +561,7 @@ impl EvidenceCollector {
             claim_id: claim.id,
             evidence_type: EvidenceType::Documentation,
             content,
-            source: EvidenceSource {
-                source_type: SourceType::FileSystem,
+            source: EvidenceSource::Documentation {
                 location: "src/".to_string(),
                 authority: "documentation_analysis".to_string(),
                 freshness: Utc::now(),
@@ -619,8 +616,7 @@ impl EvidenceCollector {
             claim_id: claim.id,
             evidence_type: EvidenceType::TestResults,
             content,
-            source: EvidenceSource {
-                source_type: SourceType::FileSystem,
+            source: EvidenceSource::Measurement {
                 location: "target/coverage/".to_string(),
                 authority: "coverage_analysis".to_string(),
                 freshness: Utc::now(),
@@ -730,8 +726,7 @@ impl EvidenceCollector {
             claim_id: claim.id,
             evidence_type: EvidenceType::TestResults,
             content,
-            source: EvidenceSource {
-                source_type: SourceType::TestSuite,
+            source: EvidenceSource::Measurement {
                 location: "cargo test".to_string(),
                 authority: "rust_test_runner".to_string(),
                 freshness: Utc::now(),
@@ -797,8 +792,7 @@ impl EvidenceCollector {
                                 claim_id: claim.id,
                                 evidence_type: EvidenceType::TestResults,
                                 content,
-                                source: EvidenceSource {
-                                    source_type: SourceType::TestSuite,
+                                source: EvidenceSource::Measurement {
                                     location: "npm test".to_string(),
                                     authority: "jest_test_runner".to_string(),
                                     freshness: Utc::now(),
@@ -850,8 +844,7 @@ impl EvidenceCollector {
             claim_id: claim.id,
             evidence_type: EvidenceType::PerformanceMetrics,
             content: format!("Test Performance Analysis:\n{}", content),
-            source: EvidenceSource {
-                source_type: SourceType::FileSystem,
+            source: EvidenceSource::Measurement {
                 location: "target/debug/deps/".to_string(),
                 authority: "test_performance_analyzer".to_string(),
                 freshness: Utc::now(),
@@ -882,7 +875,7 @@ impl EvidenceCollector {
 
         // Normalize to 0.1-1.0 range
         let normalized_score = relevance_score / claim_words.len() as f64;
-        (normalized_score * 0.9 + 0.1).min(1.0f32) // Minimum relevance of 0.1
+        (normalized_score * 0.9 + 0.1).min(1.0) // Minimum relevance of 0.1
     }
 
     /// Collect evidence from documentation
@@ -951,8 +944,7 @@ impl EvidenceCollector {
                             claim_id: claim.id,
                             evidence_type: EvidenceType::Documentation,
                             content: content_summary,
-                            source: EvidenceSource {
-                                source_type: SourceType::FileSystem,
+                            source: EvidenceSource::Documentation {
                                 location: readme_path.to_string(),
                                 authority: "readme_documentation".to_string(),
                                 freshness: Utc::now(),
@@ -1002,8 +994,7 @@ impl EvidenceCollector {
                             claim_id: claim.id,
                             evidence_type: EvidenceType::Documentation,
                             content: content_summary,
-                            source: EvidenceSource {
-                                source_type: SourceType::FileSystem,
+                            source: EvidenceSource::Documentation {
                                 location: spec_path.to_string(),
                                 authority: "api_specification".to_string(),
                                 freshness: Utc::now(),
@@ -1056,8 +1047,7 @@ impl EvidenceCollector {
                         claim_id: claim.id,
                         evidence_type: EvidenceType::Documentation,
                         content: content_summary,
-                        source: EvidenceSource {
-                            source_type: SourceType::FileSystem,
+                        source: EvidenceSource::Documentation {
                             location: file_path.to_string_lossy().to_string(),
                             authority: "code_documentation".to_string(),
                             freshness: Utc::now(),
@@ -1114,8 +1104,7 @@ impl EvidenceCollector {
                     claim_id: claim.id,
                     evidence_type: EvidenceType::Documentation,
                     content: content_summary,
-                    source: EvidenceSource {
-                        source_type: SourceType::FileSystem,
+                    source: EvidenceSource::Documentation {
                         location: file_path,
                         authority: "architectural_documentation".to_string(),
                         freshness: Utc::now(),
@@ -1132,8 +1121,7 @@ impl EvidenceCollector {
             claim_id: claim.id,
             evidence_type: EvidenceType::Documentation,
             content: "No relevant architectural documentation found".to_string(),
-            source: EvidenceSource {
-                source_type: SourceType::FileSystem,
+            source: EvidenceSource::Documentation {
                 location: "docs/".to_string(),
                 authority: "architectural_documentation".to_string(),
                 freshness: Utc::now(),
@@ -1174,8 +1162,7 @@ impl EvidenceCollector {
                                 claim_id: claim.id,
                                 evidence_type: EvidenceType::Documentation,
                                 content: content_summary,
-                                source: EvidenceSource {
-                                    source_type: SourceType::FileSystem,
+                                source: EvidenceSource::Documentation {
                                     location: path.to_string_lossy().to_string(),
                                     authority: "technical_documentation".to_string(),
                                     freshness: Utc::now(),
@@ -1218,7 +1205,7 @@ impl EvidenceCollector {
         }
 
         let base_score = matches as f64 / claim_words.len() as f64;
-        base_score.min(1.0f32)
+        base_score.min(1.0)
     }
 
     /// Extract relevant excerpts from text
@@ -1337,8 +1324,7 @@ impl EvidenceCollector {
             claim_id: claim.id,
             evidence_type: EvidenceType::PerformanceMetrics,
             content,
-            source: EvidenceSource {
-                source_type: SourceType::FileSystem,
+            source: EvidenceSource::Measurement {
                 location: "target/criterion/".to_string(),
                 authority: "cargo_bench".to_string(),
                 freshness: Utc::now(),
@@ -1387,8 +1373,7 @@ impl EvidenceCollector {
             claim_id: claim.id,
             evidence_type: EvidenceType::PerformanceMetrics,
             content,
-            source: EvidenceSource {
-                source_type: SourceType::FileSystem,
+            source: EvidenceSource::Measurement {
                 location: "cargo check".to_string(),
                 authority: "compile_performance".to_string(),
                 freshness: Utc::now(),
@@ -1426,8 +1411,7 @@ impl EvidenceCollector {
                     claim_id: claim.id,
                     evidence_type: EvidenceType::PerformanceMetrics,
                     content,
-                    source: EvidenceSource {
-                        source_type: SourceType::FileSystem,
+                    source: EvidenceSource::Measurement {
                         location: perf_file.to_string(),
                         authority: "runtime_performance".to_string(),
                         freshness: Utc::now(),
@@ -1445,12 +1429,11 @@ impl EvidenceCollector {
                 claim_id: claim.id,
                 evidence_type: EvidenceType::PerformanceMetrics,
                 content: "No runtime performance data available - consider implementing performance monitoring".to_string(),
-                source: EvidenceSource {
-                    source_type: SourceType::FileSystem,
+                source: EvidenceSource::Measurement {
                     location: "performance_analysis".to_string(),
-                authority: "performance_monitor".to_string(),
-                freshness: Utc::now(),
-            },
+                    authority: "performance_monitor".to_string(),
+                    freshness: Utc::now(),
+                },
                 confidence: 0.3,
             timestamp: Utc::now(),
             });
@@ -1496,8 +1479,7 @@ impl EvidenceCollector {
             claim_id: claim.id,
             evidence_type: EvidenceType::PerformanceMetrics,
             content,
-            source: EvidenceSource {
-                source_type: SourceType::FileSystem,
+            source: EvidenceSource::Measurement {
                 location: "memory_analysis".to_string(),
                 authority: "memory_profiler".to_string(),
                 freshness: Utc::now(),
@@ -1584,8 +1566,7 @@ impl EvidenceCollector {
             claim_id: claim.id,
             evidence_type: EvidenceType::SecurityScan,
             content,
-            source: EvidenceSource {
-                source_type: SourceType::FileSystem,
+            source: EvidenceSource::CodeAnalysis {
                 location: "cargo audit".to_string(),
                 authority: "cargo_audit".to_string(),
                 freshness: Utc::now(),
@@ -1644,8 +1625,7 @@ impl EvidenceCollector {
                 claim_id: claim.id,
                 evidence_type: EvidenceType::SecurityScan,
                 content,
-                source: EvidenceSource {
-                    source_type: SourceType::FileSystem,
+                source: EvidenceSource::CodeAnalysis {
                     location: "cargo clippy".to_string(),
                     authority: "clippy_security".to_string(),
                     freshness: Utc::now(),
@@ -1687,8 +1667,7 @@ impl EvidenceCollector {
             claim_id: claim.id,
             evidence_type: EvidenceType::SecurityScan,
             content,
-            source: EvidenceSource {
-                source_type: SourceType::FileSystem,
+            source: EvidenceSource::CodeAnalysis {
                 location: "Cargo.lock".to_string(),
                 authority: "dependency_analysis".to_string(),
                 freshness: Utc::now(),
@@ -1759,8 +1738,7 @@ impl EvidenceCollector {
             claim_id: claim.id,
             evidence_type: EvidenceType::SecurityScan,
             content,
-            source: EvidenceSource {
-                source_type: SourceType::FileSystem,
+            source: EvidenceSource::CodeAnalysis {
                 location: "code_analysis".to_string(),
                 authority: "security_pattern_analyzer".to_string(),
                 freshness: Utc::now(),
@@ -1856,8 +1834,7 @@ impl EvidenceCollector {
             claim_id: claim.id,
             evidence_type: EvidenceType::ConstitutionalReference,
             content,
-            source: EvidenceSource {
-                source_type: SourceType::FileSystem,
+            source: EvidenceSource::LogicalReasoning {
                 location: ".caws/working-spec.yaml".to_string(),
                 authority: "caws_spec_validator".to_string(),
                 freshness: Utc::now(),
@@ -1901,18 +1878,17 @@ impl EvidenceCollector {
                     claim_id: claim.id,
                     evidence_type: EvidenceType::ConstitutionalReference,
                     content,
-                    source: EvidenceSource {
-                        source_type: SourceType::FileSystem,
+                    source: EvidenceSource::LogicalReasoning {
                         location: "apps/tools/caws/gates.js".to_string(),
                         authority: "caws_gates".to_string(),
                         freshness: Utc::now(),
                     },
-                    confidence: pass_rate * 0.9 + 0.1,
+                    confidence: gates_analysis.pass_rate * 0.9 + 0.1,
                     timestamp: Utc::now(),
                 });
 
                 // Add detailed failure evidence if any gates failed
-                if failed_gates > 0 {
+                if gates_analysis.failed_gates > 0 {
                     let failure_details = stderr
                         .lines()
                         .filter(|line| line.contains("FAIL") || line.contains("ERROR"))
@@ -1926,7 +1902,7 @@ impl EvidenceCollector {
                             claim_id: claim.id,
                             evidence_type: EvidenceType::ConstitutionalReference,
                             content: format!("CAWS Gates Failures:\n{}", failure_details),
-                            source: EvidenceSource {
+                            source: EvidenceSource::LogicalReasoning {
                                 source_type: SourceType::FileSystem,
                                 location: "apps/tools/caws/gates.js".to_string(),
                                 authority: "caws_gates_failures".to_string(),
@@ -1944,7 +1920,7 @@ impl EvidenceCollector {
                     claim_id: claim.id,
                     evidence_type: EvidenceType::ConstitutionalReference,
                     content: format!("CAWS gates execution failed: {}", e),
-                    source: EvidenceSource {
+                    source: EvidenceSource::LogicalReasoning {
                         source_type: SourceType::FileSystem,
                         location: "apps/tools/caws/gates.js".to_string(),
                         authority: "caws_gates_error".to_string(),
@@ -1992,7 +1968,7 @@ impl EvidenceCollector {
             claim_id: claim.id,
             evidence_type: EvidenceType::ConstitutionalReference,
             content,
-            source: EvidenceSource {
+            source: EvidenceSource::LogicalReasoning {
                 source_type: SourceType::FileSystem,
                 location: ".caws/provenance/chain.json".to_string(),
                 authority: "caws_provenance".to_string(),
@@ -2054,7 +2030,7 @@ impl EvidenceCollector {
             claim_id: claim.id,
             evidence_type: EvidenceType::ConstitutionalReference,
             content,
-            source: EvidenceSource {
+            source: EvidenceSource::LogicalReasoning {
                 source_type: SourceType::FileSystem,
                 location: ".caws/".to_string(),
                 authority: "caws_workflow_compliance".to_string(),
@@ -2117,7 +2093,7 @@ impl EvidenceCollector {
             score += 0.05;
         }
 
-        score.min(1.0f32)
+        score.min(1.0)
     }
 
     /// Parse test timing data from file and perform analysis
@@ -2375,7 +2351,7 @@ impl EvidenceCollector {
     }
 
     /// Analyze actual memory usage of the current process and related processes
-    async fn analyze_memory_usage(&self) -> Result<String> {
+    async fn analyze_current_memory_usage(&self) -> Result<String> {
         let mut analysis = String::new();
 
         // Get current process memory usage
@@ -2526,7 +2502,7 @@ impl EvidenceCollector {
     }
 
     /// Analyze dependency security by parsing Cargo.lock and checking against vulnerability databases
-    async fn analyze_dependency_security(&self, lockfile_content: &str, total_deps: usize) -> Result<String> {
+    async fn analyze_lockfile_security(&self, lockfile_content: &str, total_deps: usize) -> Result<String> {
         // Parse dependencies from Cargo.lock
         let dependencies = self.parse_cargo_lock(lockfile_content)?;
 
@@ -2804,7 +2780,7 @@ impl EvidenceCollector {
 
             // Look for patterns like "[PASS] gate_name", "gate_name: PASS", etc.
             if line.contains("PASS") || line.contains("FAIL") || line.contains("SKIP") || line.contains("ERROR") {
-                let (name, status) = if let Some(bracket_start) = line.find('[') {
+                let (name, status_str) = if let Some(bracket_start) = line.find('[') {
                     if let Some(bracket_end) = line[bracket_start..].find(']') {
                         let status_str = &line[bracket_start + 1..bracket_start + bracket_end];
                         let name = line[bracket_start + bracket_end + 1..].trim();
@@ -2828,11 +2804,12 @@ impl EvidenceCollector {
                     _ => continue,
                 };
 
+                let has_error = matches!(status, GateStatus::Fail | GateStatus::Error);
                 results.push(GateResult {
                     name: name.to_string(),
                     status,
                     duration_ms: None,
-                    error_message: if matches!(status, GateStatus::Fail | GateStatus::Error) {
+                    error_message: if has_error {
                         Some(line.to_string())
                     } else {
                         None

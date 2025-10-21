@@ -504,7 +504,7 @@ impl VerifiabilityDetector {
         }
 
         // Check if the content relates to technical concepts when document is technical
-        if context.language == Language::Rust || context.language == Language::TypeScript {
+        if context.language == Some(Language::Rust) || context.language == Some(Language::TypeScript) {
             let technical_indicators = ["function", "method", "class", "interface", "type", "api", "endpoint"];
             for indicator in &technical_indicators {
                 if content.to_lowercase().contains(indicator) {
