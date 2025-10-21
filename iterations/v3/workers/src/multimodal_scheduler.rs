@@ -12,6 +12,7 @@ use chrono::{DateTime, Utc};
 // };
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::default::Default;
 use tokio::sync::{mpsc, RwLock, Semaphore};
 use tracing::{debug, error, info, warn};
 use uuid::Uuid;
@@ -184,8 +185,9 @@ impl MultimodalJobScheduler {
         let concurrency_semaphore = Arc::new(Semaphore::new(config.max_concurrent_jobs));
 
         let performance_tracker = Arc::new(AgentPerformanceTracker::new(
-            AgentType::MultimodalProcessor,
+            AgentType::GeneralistWorker,
             "multimodal-scheduler".to_string(),
+            Arc::new(AgentTelemetryCollector::new(Default::default())),
         ));
 
         Self {
@@ -648,6 +650,7 @@ pub struct SchedulerStats {
     pub running_jobs: usize,
     pub completed_jobs: usize,
     pub success_rate: f32,
+    #[serde(skip)]
     pub circuit_breaker_state: CircuitBreakerState,
     pub available_capacity: usize,
     pub max_concurrent_jobs: usize,

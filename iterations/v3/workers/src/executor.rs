@@ -421,16 +421,20 @@ impl TaskExecutor {
         CawsSpec {
             version: "1.0".to_string(),
             metadata: CawsMetadata {
-                created_at: chrono::Utc::now(),
-                created_by: "orchestrator".to_string(),
-                description: council_spec.description.clone(),
-                tags: vec!["converted".to_string()],
+                name: "converted_spec".to_string(),
+                author: "orchestrator".to_string(),
+                modified_at: chrono::Utc::now(),
             },
             quality_gates,
             compliance: compliance_requirements,
             validation_rules: Self::convert_validation_rules(council_spec),
             benchmarks: None, // TODO: Add performance benchmarks
-            security: SecurityRequirements::default(),
+            security: SecurityRequirements {
+                authentication: true,
+                authorization: true,
+                encryption: true,
+                audit_logging: true,
+            },
         }
     }
 

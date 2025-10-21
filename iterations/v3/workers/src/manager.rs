@@ -6,7 +6,9 @@
 use crate::types::*;
 use crate::{CawsChecker, TaskExecutor, TaskRouter, WorkerPoolConfig};
 use agent_agency_council::TaskSpec;
+use agent_agency_database::DatabaseClient;
 use agent_agency_resilience::CircuitBreaker;
+use std::default::Default;
 use anyhow::Result;
 use async_trait::async_trait;
 use dashmap::DashMap;
@@ -34,7 +36,7 @@ pub struct WorkerPoolManager {
 
 impl WorkerPoolManager {
     /// Create a new worker pool manager
-    pub fn new(config: WorkerPoolConfig) -> Self {
+    pub async fn new(config: WorkerPoolConfig) -> Self {
         let (event_sender, _event_receiver) = mpsc::unbounded_channel();
 
         // Create HTTP client with health check timeouts
@@ -49,7 +51,7 @@ impl WorkerPoolManager {
             workers: Arc::new(DashMap::new()),
             task_router: Arc::new(TaskRouter::new()),
             task_executor: Arc::new(TaskExecutor::new()),
-            caws_checker: Arc::new(CawsChecker::new()),
+            caws_checker: Arc::new(CawsChecker::new(DatabaseClient::new(Default::default()).await.unwrap())),
             event_sender,
             stats: Arc::new(RwLock::new(WorkerPoolStats {
                 total_workers: 0,

@@ -23,6 +23,8 @@ pub enum AgentType {
     IntegrationValidator,
     /// Research agent for context synthesis
     ResearchAgent,
+    /// Worker for task execution
+    Worker,
     /// Generalist worker for adaptive tasks
     GeneralistWorker,
     /// Specialist worker for domain expertise

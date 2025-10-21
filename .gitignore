@@ -103,3 +103,7 @@ xcuserdata/
 *.tmp
 *.temp
 .cache/
+recovered_work
+recovery_analyzer.py
+recovery_output/
+recovery_report.json

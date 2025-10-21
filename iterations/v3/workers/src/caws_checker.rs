@@ -1081,7 +1081,7 @@ impl CawsChecker {
         });
 
         // Store violation in database for audit trail and tracking
-        if let Some(db_client) = &self.db_client {
+        if let Some(ref db_client) = self.db_client {
             let db_violation = DbCawsViolation {
                 id: violation_id,
                 task_id: Uuid::nil(), // Will be set by caller if available
@@ -1156,7 +1156,7 @@ impl CawsChecker {
                 END
         "#;
 
-        let mut conn = db_client.get_connection().await?;
+        let mut conn = db_client.pool().acquire().await?;
         sqlx::query(query)
             .bind(&violation.id)
             .bind(&violation.task_id)
@@ -1326,7 +1326,10 @@ impl CawsChecker {
 
         query
         .bind(&rule_id)
-        .bind(chrono::Utc::now())
+        .bind(serde_json::json!({})) // constitutional_reference
+        .bind("active") // status
+        .bind(chrono::Utc::now()) // created_at
+        .bind(Option::<chrono::DateTime<chrono::Utc>>::None) // resolved_at
         .bind(metadata)
         .execute(self.db_client.pool())
         .await

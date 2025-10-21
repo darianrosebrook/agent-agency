@@ -489,7 +489,7 @@ pub struct AuthRateLimitStats {
 }
 
 /// Main MCP server
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct MCPServer {
     config: MCPConfig,
     tool_registry: Arc<ToolRegistry>,
@@ -566,7 +566,7 @@ impl MCPServer {
             rate_limiter,
             auth_rate_limiter,
             api_rate_limiter,
-            slo_tracker,
+            slo_tracker: slo_tracker.as_ref().clone(),
             db_client,
         }
     }
@@ -707,13 +707,17 @@ impl MCPServer {
         let auth_api_key = self.config.server.auth_api_key.clone();
         let rate_limiter = self.rate_limiter.clone();
 
+        let auth_rate_limiter = self.auth_rate_limiter.clone();
+        let api_rate_limiter = self.api_rate_limiter.clone();
+        let slo_tracker = self.slo_tracker.clone();
+        
         let handle = tokio::task::spawn_blocking(move || {
             let io = Self::build_io_handler(
                 registry.clone(),
                 registry_for_stats.clone(),
                 caws.clone(),
                 version_payload.clone(),
-                self.slo_tracker.clone(),
+                slo_tracker.clone(),
             );
             let builder = ServerBuilder::new(io).request_middleware(
                 move |request: jsonrpc_http_server::hyper::Request<Body>| {
@@ -732,7 +736,7 @@ impl MCPServer {
                         .unwrap_or("unknown");
 
                     // Check authentication rate limit before processing auth
-                    if let Some(ref auth_limiter) = self.auth_rate_limiter {
+                    if let Some(ref auth_limiter) = auth_rate_limiter {
                         match auth_limiter.allow_auth_attempt(client_ip) {
                             AuthRateLimitResult::Blocked(reason) => {
                                 warn!(ip = %client_ip, reason = %reason, "Authentication rate limit exceeded");
@@ -753,7 +757,7 @@ impl MCPServer {
                             .and_then(|value| value.to_str().ok());
                         if provided != Some(expected.as_str()) {
                             // Record failed authentication attempt
-                            if let Some(ref auth_limiter) = self.auth_rate_limiter {
+                            if let Some(ref auth_limiter) = auth_rate_limiter {
                                 auth_limiter.record_failed_attempt(client_ip);
                             }
                             AUTH_FAILURES_TOTAL.inc();
@@ -802,7 +806,7 @@ impl MCPServer {
                     }
 
                     // Check API-specific rate limiting
-                    if let Some(ref api_limiter) = self.api_rate_limiter {
+                    if let Some(ref api_limiter) = api_rate_limiter {
                         if !api_limiter.should_allow("/api/validate", client_ip) {
                             warn!("API rate limit exceeded for {} on endpoint /api/validate", client_ip);
                             API_RATE_LIMIT_HITS.inc();
@@ -911,23 +915,10 @@ impl MCPServer {
                     .map_err(|e| {
                         // TODO: Implement proper circuit breaker error handling
                         JsonRpcError {
-                            CIRCUIT_BREAKER_TRIPS.inc();
-                            JsonRpcError {
-                                code: jsonrpc_core::ErrorCode::InternalError,
-                                message: "Service temporarily unavailable".to_string(),
-                                data: Some(serde_json::Value::String("Circuit breaker open".to_string())),
-                            }
-                        },
-                        security::CircuitBreakerError::OperationFailed(orig_err) => JsonRpcError {
                             code: jsonrpc_core::ErrorCode::InternalError,
                             message: "Tool validation failed".to_string(),
-                            data: Some(serde_json::Value::String(orig_err.to_string())),
-                        },
-                        security::CircuitBreakerError::Timeout(duration) => JsonRpcError {
-                            code: jsonrpc_core::ErrorCode::InternalError,
-                            message: format!("Tool validation timed out after {:?}", duration),
-                            data: Some(serde_json::Value::String("Request timeout".to_string())),
-                        },
+                            data: Some(serde_json::Value::String(e.to_string())),
+                        }
                     })?;
                 Ok(serde_json::to_value(&res).unwrap())
             }
@@ -997,15 +988,20 @@ impl MCPServer {
         let auth_api_key = self.config.server.auth_api_key.clone();
         let rate_limiter = self.rate_limiter.clone();
 
+        let slo_tracker = self.slo_tracker.clone();
+        let auth_rate_limiter = self.auth_rate_limiter.clone();
+        let rate_limiter = self.rate_limiter.clone();
+        let auth_api_key = self.config.server.auth_api_key.clone();
+        
         let handle = tokio::task::spawn_blocking(move || {
             let io = MCPServer::build_io_handler(
                 registry.clone(),
                 registry_stats.clone(),
                 caws.clone(),
                 version_payload.clone(),
-                self.slo_tracker.clone(),
+                slo_tracker.clone(),
             );
-
+            
             let middleware = move |req: &ws::Request| {
                 // Extract client IP for rate limiting (WebSocket connections)
                 let client_ip = req
@@ -1017,7 +1013,7 @@ impl MCPServer {
                     .unwrap_or("unknown");
 
                 // Check authentication rate limit before processing auth
-                if let Some(ref auth_limiter) = self.auth_rate_limiter {
+                if let Some(ref auth_limiter) = auth_rate_limiter {
                     match auth_limiter.allow_auth_attempt(client_ip) {
                         AuthRateLimitResult::Blocked(reason) => {
                             warn!(ip = %client_ip, reason = %reason, "WebSocket authentication rate limit exceeded");
@@ -1036,7 +1032,7 @@ impl MCPServer {
                         .and_then(|value| std::str::from_utf8(value).ok());
                     if provided != Some(expected.as_str()) {
                         // Record failed authentication attempt
-                        if let Some(ref auth_limiter) = self.auth_rate_limiter {
+                        if let Some(ref auth_limiter) = auth_rate_limiter {
                             auth_limiter.record_failed_attempt(client_ip);
                         }
 
