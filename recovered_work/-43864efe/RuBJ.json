@@ -1,0 +1,353 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-agency/v3/contracts/working-spec.schema.json",
+  "title": "WorkingSpec",
+  "description": "CAWS-validated working specification for task execution",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Contract version for compatibility"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Z]+-[0-9]+$",
+      "description": "Working spec identifier (e.g., FEAT-001, FIX-042)"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "description": "Human-readable title"
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000,
+      "description": "Detailed task description"
+    },
+    "goals": {
+      "type": "array",
+      "items": {"type": "string"},
+      "minItems": 1,
+      "description": "High-level objectives to achieve"
+    },
+    "risk_tier": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 3,
+      "description": "Risk tier: 1=critical, 2=standard, 3=low"
+    },
+    "constraints": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "max_duration_minutes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 480,
+          "description": "Maximum allowed execution time"
+        },
+        "max_iterations": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10,
+          "description": "Maximum refinement iterations"
+        },
+        "budget_limits": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "max_files": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Maximum files that can be modified"
+            },
+            "max_loc": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10000,
+              "description": "Maximum lines of code that can be added/changed"
+            }
+          },
+          "description": "Change budget constraints"
+        },
+        "scope_restrictions": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "allowed_paths": {
+              "type": "array",
+              "items": {"type": "string"},
+              "description": "Allowed file/directory paths (regex patterns)"
+            },
+            "blocked_paths": {
+              "type": "array",
+              "items": {"type": "string"},
+              "description": "Blocked file/directory paths (regex patterns)"
+            }
+          },
+          "description": "Path-based access restrictions"
+        }
+      },
+      "description": "Execution constraints and safety limits"
+    },
+    "acceptance_criteria": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Z][0-9]+$",
+            "description": "Criterion identifier (e.g., A1, A2)"
+          },
+          "given": {
+            "type": "string",
+            "description": "Precondition context"
+          },
+          "when": {
+            "type": "string",
+            "description": "Action or event that occurs"
+          },
+          "then": {
+            "type": "string",
+            "description": "Expected outcome or behavior"
+          },
+          "priority": {
+            "type": "string",
+            "enum": ["must", "should", "could", "won't"],
+            "description": "MoSCoW priority"
+          }
+        },
+        "required": ["id", "given", "when", "then"]
+      },
+      "minItems": 1,
+      "description": "Acceptance criteria in Given-When-Then format"
+    },
+    "test_plan": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "unit_tests": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "description": {"type": "string"},
+              "target_function": {"type": "string"},
+              "test_cases": {
+                "type": "array",
+                "items": {"type": "string"}
+              }
+            },
+            "required": ["description"]
+          },
+          "description": "Unit test specifications"
+        },
+        "integration_tests": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "description": {"type": "string"},
+              "components": {
+                "type": "array",
+                "items": {"type": "string"}
+              },
+              "test_cases": {
+                "type": "array",
+                "items": {"type": "string"}
+              }
+            },
+            "required": ["description"]
+          },
+          "description": "Integration test specifications"
+        },
+        "e2e_scenarios": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "description": {"type": "string"},
+              "user_journey": {"type": "string"},
+              "expected_outcomes": {
+                "type": "array",
+                "items": {"type": "string"}
+              }
+            },
+            "required": ["description"]
+          },
+          "description": "End-to-end test scenarios"
+        },
+        "coverage_targets": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "line_coverage": {"type": "number", "minimum": 0, "maximum": 1},
+            "branch_coverage": {"type": "number", "minimum": 0, "maximum": 1},
+            "mutation_score": {"type": "number", "minimum": 0, "maximum": 1}
+          },
+          "description": "Test coverage targets"
+        }
+      },
+      "description": "Comprehensive test plan"
+    },
+    "rollback_plan": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "strategy": {
+          "type": "string",
+          "enum": ["git_revert", "manual_revert", "feature_flag", "database_migration"],
+          "description": "Rollback strategy to use"
+        },
+        "automated_steps": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Automated rollback steps"
+        },
+        "manual_steps": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Manual rollback steps required"
+        },
+        "data_impact": {
+          "type": "string",
+          "enum": ["none", "reversible", "destructive"],
+          "description": "Impact on persistent data"
+        },
+        "downtime_required": {"type": "boolean"},
+        "rollback_window_minutes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1440,
+          "description": "Time window for successful rollback"
+        }
+      },
+      "description": "Rollback and recovery procedures"
+    },
+    "context": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "workspace_root": {
+          "type": "string",
+          "description": "Root directory path for the workspace"
+        },
+        "git_branch": {
+          "type": "string",
+          "description": "Current git branch"
+        },
+        "recent_changes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "file": {"type": "string"},
+              "change_type": {
+                "type": "string",
+                "enum": ["added", "modified", "deleted"]
+              },
+              "timestamp": {"type": "string", "format": "date-time"}
+            },
+            "required": ["file", "change_type", "timestamp"]
+          },
+          "description": "Recent file changes in the workspace"
+        },
+        "dependencies": {
+          "type": "object",
+          "patternProperties": {
+            "^.*$": {"type": "string"}
+          },
+          "description": "Project dependencies and their versions"
+        },
+        "environment": {
+          "type": "string",
+          "enum": ["development", "staging", "production"],
+          "description": "Target environment"
+        }
+      },
+      "description": "Workspace context and dependencies"
+    },
+    "non_functional_requirements": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "performance": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "response_time_ms": {"type": "integer", "minimum": 1},
+            "throughput_req_per_sec": {"type": "integer", "minimum": 1},
+            "memory_limit_mb": {"type": "integer", "minimum": 1},
+            "cpu_limit_percent": {"type": "integer", "minimum": 1, "maximum": 100}
+          },
+          "description": "Performance requirements"
+        },
+        "security": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Security requirements and controls"
+        },
+        "accessibility": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Accessibility requirements"
+        },
+        "scalability": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "concurrent_users": {"type": "integer", "minimum": 1},
+            "data_retention_days": {"type": "integer", "minimum": 1}
+          },
+          "description": "Scalability requirements"
+        }
+      },
+      "description": "Non-functional requirements"
+    },
+    "validation_results": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "caws_compliant": {"type": "boolean"},
+        "violations": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "suggestions": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "quality_score": {"type": "number", "minimum": 0, "maximum": 1},
+        "validated_at": {"type": "string", "format": "date-time"}
+      },
+      "description": "CAWS validation results"
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "created_at": {"type": "string", "format": "date-time"},
+        "created_by": {"type": "string"},
+        "last_modified": {"type": "string", "format": "date-time"},
+        "version": {"type": "integer", "minimum": 1},
+        "tags": {
+          "type": "array",
+          "items": {"type": "string"}
+        }
+      },
+      "description": "Metadata and versioning information"
+    }
+  },
+  "required": ["version", "id", "title", "description", "goals", "risk_tier", "acceptance_criteria"]
+}

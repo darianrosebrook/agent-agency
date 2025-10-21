@@ -1,0 +1,347 @@
+.container {
+  background: var(--surface-color, #ffffff);
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--border-color, #e1e5e9);
+  max-width: 600px;
+  margin: 0 auto;
+
+  h3 {
+    margin: 0 0 1rem 0;
+    color: var(--text-primary, #1a1a1a);
+    font-size: 1.25rem;
+    font-weight: 600;
+  }
+
+  h4 {
+    margin: 1rem 0 0.5rem 0;
+    color: var(--text-primary, #1a1a1a);
+    font-size: 1rem;
+    font-weight: 500;
+  }
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+
+  .actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .clearButton {
+    background: var(--color-gray-100, #f3f4f6);
+    border: 1px solid var(--color-gray-300, #d1d5db);
+    border-radius: 4px;
+    padding: 0.25rem 0.5rem;
+    cursor: pointer;
+    font-size: 0.8rem;
+    color: var(--text-secondary, #6b7280);
+    transition: all var(--transition-fast);
+
+    &:hover {
+      background: var(--color-gray-200, #e5e7eb);
+      color: var(--text-primary, #1a1a1a);
+    }
+  }
+}
+
+.emptyState {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--text-secondary, #6b7280);
+
+  .emptyIcon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+  }
+
+  h4 {
+    margin: 0 0 0.5rem 0;
+    color: var(--text-primary, #1a1a1a);
+  }
+
+  p {
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.5;
+  }
+}
+
+.voicemailList {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.voicemailItem {
+  background: var(--color-gray-50, #f9fafb);
+  border: 1px solid var(--color-gray-200, #e5e7eb);
+  border-radius: 8px;
+  padding: 1rem;
+  transition: all var(--transition-fast);
+
+  &.unplayed {
+    border-left: 4px solid var(--color-blue-500, #3b82f6);
+    background: linear-gradient(135deg, var(--color-blue-50, #eff6ff) 0%, var(--color-gray-50, #f9fafb) 100%);
+
+    &:hover {
+      border-color: var(--color-blue-300, #93c5fd);
+      box-shadow: 0 2px 8px rgba(59, 130, 246, 0.1);
+    }
+  }
+
+  &.played {
+    border-left: 4px solid var(--color-gray-300, #d1d5db);
+    opacity: 0.8;
+
+    &:hover {
+      border-color: var(--color-gray-400, #9ca3af);
+    }
+  }
+}
+
+.voicemailContent {
+  margin-bottom: 0.75rem;
+}
+
+.voicemailHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+
+  .priorityBadge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: uppercase;
+
+    &.high {
+      background: var(--color-red-100, #fef2f2);
+      color: var(--color-red-800, #991b1b);
+    }
+
+    &.medium {
+      background: var(--color-yellow-100, #fef3c7);
+      color: var(--color-yellow-800, #92400e);
+    }
+
+    &.low {
+      background: var(--color-green-100, #f0fdf4);
+      color: var(--color-green-800, #166534);
+    }
+  }
+
+  .timestamp {
+    font-size: 0.8rem;
+    color: var(--text-secondary, #6b7280);
+    font-family: var(--font-family-mono, monospace);
+  }
+}
+
+.message {
+  color: var(--text-primary, #1a1a1a);
+  line-height: 1.5;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.playbackStatus {
+  font-size: 0.8rem;
+
+  .playedStatus {
+    color: var(--color-green-600, #16a34a);
+  }
+
+  .unplayedStatus {
+    color: var(--color-red-600, #dc2626);
+    font-weight: 500;
+  }
+}
+
+.voicemailActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+
+  button {
+    padding: 0.375rem 0.75rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 500;
+    transition: all var(--transition-fast);
+
+    &.playButton {
+      background: var(--color-blue-500, #3b82f6);
+      color: white;
+
+      &:hover {
+        background: var(--color-blue-600, #2563eb);
+      }
+    }
+
+    &.dismissButton {
+      background: var(--color-red-500, #ef4444);
+      color: white;
+
+      &:hover {
+        background: var(--color-red-600, #dc2626);
+      }
+    }
+  }
+}
+
+.testSection {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-color, #e1e5e9);
+
+  .testButtons {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+
+    button {
+      padding: 0.5rem;
+      background: var(--color-gray-100, #f3f4f6);
+      border: 1px solid var(--color-gray-300, #d1d5db);
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      color: var(--text-secondary, #6b7280);
+      transition: all var(--transition-fast);
+
+      &:hover {
+        background: var(--color-gray-200, #e5e7eb);
+        color: var(--text-primary, #1a1a1a);
+      }
+    }
+  }
+}
+
+// Responsive design
+@media (max-width: 768px) {
+  .container {
+    margin: 1rem;
+    padding: 1rem;
+  }
+
+  .voicemailItem {
+    padding: 0.75rem;
+  }
+
+  .voicemailHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+
+  .voicemailActions {
+    justify-content: center;
+  }
+}
+
+// Dark mode support
+@media (prefers-color-scheme: dark) {
+  .container {
+    background: var(--surface-color-dark, #1f2937);
+    border-color: var(--border-color-dark, #374151);
+
+    h3, h4 {
+      color: var(--text-primary-dark, #f9fafb);
+    }
+  }
+
+  .clearButton {
+    background: var(--color-gray-800, #1f2937);
+    border-color: var(--color-gray-600, #4b5563);
+    color: var(--text-secondary-dark, #9ca3af);
+
+    &:hover {
+      background: var(--color-gray-700, #374151);
+      color: var(--text-primary-dark, #f9fafb);
+    }
+  }
+
+  .emptyState {
+    color: var(--text-secondary-dark, #9ca3af);
+
+    h4 {
+      color: var(--text-primary-dark, #f9fafb);
+    }
+  }
+
+  .voicemailItem {
+    background: var(--color-gray-800, #1f2937);
+    border-color: var(--color-gray-700, #374151);
+
+    &.unplayed {
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, var(--color-gray-800, #1f2937) 100%);
+    }
+
+    &.played {
+      background: var(--color-gray-900, #111827);
+      opacity: 0.7;
+    }
+  }
+
+  .priorityBadge {
+    &.high {
+      background: rgba(239, 68, 68, 0.2);
+      color: var(--color-red-300, #fca5a5);
+    }
+
+    &.medium {
+      background: rgba(245, 158, 11, 0.2);
+      color: var(--color-yellow-300, #fcd34d);
+    }
+
+    &.low {
+      background: rgba(16, 185, 129, 0.2);
+      color: var(--color-green-300, #6ee7b7);
+    }
+  }
+
+  .timestamp {
+    color: var(--text-secondary-dark, #9ca3af);
+  }
+
+  .message {
+    color: var(--text-primary-dark, #f9fafb);
+  }
+
+  .playedStatus {
+    color: var(--color-green-400, #4ade80);
+  }
+
+  .unplayedStatus {
+    color: var(--color-red-400, #f87171);
+  }
+
+  .testSection {
+    border-top-color: var(--border-color-dark, #374151);
+  }
+
+  .testButtons button {
+    background: var(--color-gray-800, #1f2937);
+    border-color: var(--color-gray-600, #4b5563);
+    color: var(--text-secondary-dark, #9ca3af);
+
+    &:hover {
+      background: var(--color-gray-700, #374151);
+      color: var(--text-primary-dark, #f9fafb);
+    }
+  }
+}
+

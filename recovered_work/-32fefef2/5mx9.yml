@@ -1,0 +1,78 @@
+_format_version: "3.0"
+
+services:
+  - name: agent-agency-api
+    url: http://orchestrator:8080
+    routes:
+      - name: orchestrator-api
+        paths:
+          - /api/v1
+        methods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+        plugins:
+          - name: cors
+          - name: request-transformer
+            config:
+              add:
+                headers:
+                  - "X-API-Version:v1"
+          - name: rate-limiting
+            config:
+              minute: 1000
+              hour: 10000
+              policy: local
+          - name: key-auth
+            config:
+              key_names:
+                - "apikey"
+                - "X-API-Key"
+
+  - name: council-api
+    url: http://council:8081
+    routes:
+      - name: council-internal
+        paths:
+          - /internal/council
+        methods:
+          - POST
+        plugins:
+          - name: request-transformer
+            config:
+              add:
+                headers:
+                  - "X-Internal-Service:council"
+          - name: ip-restriction
+            config:
+              allow:
+                - "172.0.0.0/8"  # Docker internal network
+
+  - name: health-checks
+    url: http://orchestrator:8080/health
+    routes:
+      - name: health-endpoint
+        paths:
+          - /health
+        methods:
+          - GET
+        plugins:
+          - name: cors
+
+consumers:
+  - username: agent-agency-admin
+    keyauth_credentials:
+      - key: admin-api-key-2024
+
+  - username: agent-agency-user
+    keyauth_credentials:
+      - key: user-api-key-2024
+
+plugins:
+  - name: prometheus
+    config:
+      status_code_metrics: true
+      latency_metrics: true
+      bandwidth_metrics: true
+      upstream_health_metrics: true

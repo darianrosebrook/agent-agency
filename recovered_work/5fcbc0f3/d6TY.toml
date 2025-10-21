@@ -1,0 +1,12 @@
+[package]
+name = "agent-agency-v3-demo"
+version = "3.0.0"
+edition = "2021"
+authors = ["Agent Agency V3"]
+description = "Demonstration of the complete autonomous AI development platform"
+
+[dependencies]
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1", features = ["v4"] }
+

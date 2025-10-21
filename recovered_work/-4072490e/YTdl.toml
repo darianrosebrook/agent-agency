@@ -1,0 +1,45 @@
+[package]
+name = "tool-ecosystem"
+version = "0.1.0"
+edition = "2021"
+description = "Complete Tool Calling Ecosystem - MCP integration with CAWS tooling for reasoning and conflict resolution"
+license = "MIT"
+
+[dependencies]
+# Core dependencies
+anyhow = "1.0"
+async-trait = "0.1"
+tokio = { version = "1.0", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tracing = "0.1"
+thiserror = "1.0"
+
+# MCP integration
+mcp-integration = { path = "../mcp-integration" }
+
+# CAWS integration
+# caws-runtime-validator = { path = "../caws/runtime-validator" } # TODO: Implement runtime validator
+council = { path = "../council" }
+claim-extraction = { path = "../claim-extraction" }
+
+# Tool execution
+observability = { path = "../observability" }
+
+# Model integration for tool reasoning
+model-benchmarking = { path = "../model-benchmarking" }
+
+# Time utilities
+chrono = { version = "0.4", features = ["serde"] }
+
+# HTTP client for tool calls
+reqwest = { version = "0.11", features = ["json"] }
+
+# JSON schema validation
+jsonschema = "0.17"
+
+# LRU cache for tool caching
+lru = "0.12"
+
+[dev-dependencies]
+tokio-test = "0.4"

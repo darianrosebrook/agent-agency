@@ -1,0 +1,321 @@
+@import 'variables.scss';
+@import 'mixins.scss';
+
+// CSS Reset and base styles
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-family: var(--font-family-sans);
+  line-height: var(--line-height-normal);
+  -webkit-text-size-adjust: 100%;
+  -moz-tab-size: 4;
+  tab-size: 4;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: inherit;
+  line-height: inherit;
+  color: var(--color-text-primary);
+  background-color: var(--color-bg-secondary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+// Focus styles for accessibility
+:focus {
+  outline: 2px solid var(--color-primary-500);
+  outline-offset: 2px;
+}
+
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-primary-500);
+  outline-offset: 2px;
+}
+
+// Dashboard layout
+.dashboard {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.dashboard-body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+}
+
+.dashboard-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.dashboard-content {
+  flex: 1;
+  padding: var(--spacing-2xl);
+  max-width: var(--max-width-2xl);
+  margin: 0 auto;
+  width: 100%;
+}
+
+// Section styles
+.section-title {
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+  margin-bottom: var(--spacing-xl);
+  margin-top: 0;
+}
+
+// Overview grid
+.overview-grid {
+  display: grid;
+  gap: var(--spacing-2xl);
+
+  @include breakpoint(md) {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+// Welcome card
+.welcome-card {
+  @include card-base;
+  padding: var(--spacing-2xl);
+
+  h2 {
+    font-size: var(--font-size-2xl);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text-primary);
+    margin-bottom: var(--spacing-lg);
+    margin-top: 0;
+  }
+
+  p {
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-base);
+    line-height: var(--line-height-relaxed);
+    margin-bottom: var(--spacing-2xl);
+  }
+}
+
+.quick-actions {
+  display: flex;
+  gap: var(--spacing-md);
+  flex-wrap: wrap;
+
+  .action-button {
+    @include button-base;
+    font-size: var(--font-size-base);
+    padding: var(--spacing-lg) var(--spacing-xl);
+    min-width: 140px;
+
+    &.primary {
+      @include button-primary;
+    }
+
+    &.secondary {
+      @include button-secondary;
+    }
+  }
+}
+
+// Health status indicators
+.health-status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  border-radius: var(--radius-md);
+
+  &.healthy {
+    @include status-indicator(var(--color-success-50), var(--color-success-800), var(--color-success-300));
+  }
+
+  &.degraded {
+    @include status-indicator(var(--color-warning-50), var(--color-warning-800), var(--color-warning-300));
+  }
+
+  &.unhealthy {
+    @include status-indicator(var(--color-error-50), var(--color-error-800), var(--color-error-300));
+  }
+
+  &.unknown {
+    @include status-indicator(var(--color-gray-50), var(--color-gray-700), var(--color-gray-300));
+  }
+
+  &::before {
+    content: '';
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+
+    .healthy &::before {
+      background-color: var(--color-success);
+    }
+
+    .degraded &::before {
+      background-color: var(--color-warning);
+    }
+
+    .unhealthy &::before {
+      background-color: var(--color-error);
+    }
+
+    .unknown &::before {
+      background-color: var(--color-gray-400);
+    }
+  }
+}
+
+// Loading states
+.loading-spinner {
+  @include animate-spin;
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--color-gray-300);
+  border-top: 2px solid var(--color-primary-600);
+  border-radius: 50%;
+}
+
+.loading-skeleton {
+  @include loading-skeleton;
+  height: 1rem;
+  border-radius: var(--radius-sm);
+
+  &.large {
+    height: 2rem;
+  }
+
+  &.xl {
+    height: 3rem;
+  }
+}
+
+// Error states
+.error-message {
+  @include card-base;
+  padding: var(--spacing-lg);
+  background-color: var(--color-error-50);
+  border-color: var(--color-error-200);
+  color: var(--color-error-800);
+
+  .error-title {
+    font-weight: var(--font-weight-semibold);
+    margin-bottom: var(--spacing-sm);
+  }
+
+  .error-details {
+    font-size: var(--font-size-sm);
+    color: var(--color-error-700);
+  }
+}
+
+// Empty states
+.empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  padding: var(--spacing-2xl);
+}
+
+.empty-state-content {
+  max-width: 600px;
+  text-align: center;
+}
+
+.empty-state-icon {
+  font-size: var(--font-size-4xl);
+  margin-bottom: var(--spacing-lg);
+  opacity: 0.7;
+}
+
+.empty-state-title {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  margin-bottom: var(--spacing-md);
+  margin-top: 0;
+}
+
+.empty-state-description {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-relaxed);
+  margin-bottom: var(--spacing-2xl);
+}
+
+.empty-state-actions {
+  display: flex;
+  justify-content: center;
+  gap: var(--spacing-md);
+}
+
+// Form elements
+select {
+  background: var(--input-bg-dark, #374151);
+  border-color: var(--border-color-dark, #4b5563);
+  color: var(--text-primary-dark, #f9fafb);
+
+  &:disabled {
+    background: var(--disabled-bg-dark, #1f2937);
+    color: var(--disabled-text-dark, #6b7280);
+  }
+}
+
+// Utility classes
+.sr-only {
+  @include sr-only;
+}
+
+.text-truncate {
+  @include text-truncate;
+}
+
+.visually-hidden {
+  @include sr-only;
+}
+
+// Print styles
+@media print {
+  .dashboard {
+    background: white !important;
+  }
+
+  .dashboard-content {
+    padding: 0 !important;
+  }
+}
+
+// High contrast mode support
+@media (prefers-contrast: high) {
+  :root {
+    --color-border: var(--color-gray-900);
+    --color-text-secondary: var(--color-gray-800);
+  }
+}
+
+// Reduced motion support
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

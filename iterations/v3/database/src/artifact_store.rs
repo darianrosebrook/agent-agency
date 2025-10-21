@@ -13,7 +13,7 @@ use uuid::Uuid;
 use chrono;
 use tracing;
 
-use crate::{DatabaseClient, DatabaseConfig, client::DatabaseOperations};
+use crate::{DatabaseClient, DatabaseConfig, client::DatabaseOperations, models::CreateAuditTrailEntry};
 use agent_agency_contracts::{ExecutionArtifacts, execution_artifacts::ArtifactMetadata};
 
 /// Unique identifier for artifacts
@@ -999,19 +999,22 @@ impl ArtifactStorage for DatabaseArtifactStorage {
                     );
 
                     // Create audit log entry for the integrity violation
-                    let _ = self.client.create_task_audit_event(
-                        task_id,
-                        "artifact",
-                        "integrity_check",
-                        "integrity_violation",
-                        serde_json::json!({
+                    let audit_entry = CreateAuditTrailEntry {
+                        entity_type: "artifact".to_string(),
+                        entity_id: artifact_id,
+                        action: "integrity_check".to_string(),
+                        details: serde_json::json!({
                             "artifact_id": artifact_id,
                             "artifact_type": artifact_type,
                             "stored_checksum": stored_checksum,
                             "computed_checksum": computed_checksum,
                             "violation_type": "checksum_mismatch"
-                        })
-                    ).await;
+                        }),
+                        user_id: None,
+                        ip_address: None,
+                        timestamp: None,
+                    };
+                    let _ = self.client.create_audit_trail_entry(audit_entry).await;
 
                     return Err(ArtifactStorageError::IntegrityCheckFailed);
                 }
@@ -1051,18 +1054,21 @@ impl ArtifactStorage for DatabaseArtifactStorage {
             );
 
             // Create audit log entry for the collection integrity violation
-            let _ = self.client.create_task_audit_event(
-                task_id,
-                "artifact",
-                "integrity_check",
-                "collection_integrity_violation",
-                serde_json::json!({
+            let audit_entry = CreateAuditTrailEntry {
+                entity_type: "artifact".to_string(),
+                entity_id: task_id,
+                action: "integrity_check".to_string(),
+                details: serde_json::json!({
                     "task_id": task_id,
                     "stored_checksum": stored_collection_checksum,
                     "computed_checksum": computed_collection_checksum,
                     "violation_type": "collection_checksum_mismatch"
-                })
-            ).await;
+                }),
+                user_id: None,
+                ip_address: None,
+                timestamp: None,
+            };
+            let _ = self.client.create_audit_trail_entry(audit_entry).await;
 
             return Err(ArtifactStorageError::IntegrityCheckFailed);
         }

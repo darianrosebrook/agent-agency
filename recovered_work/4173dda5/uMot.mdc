@@ -1,0 +1,152 @@
+---
+description: Prevent documentation bloat by enforcing proper organization of temporary files, session reports, and implementation tracking documents. Maintain clean project structure by ensuring documentation follows established patterns.
+globs: [
+  "docs/**/*.md",
+  "docs/**/*.txt",
+  "docs/**/*.json",
+  "docs/**/*.yaml",
+  "docs/**/*.yml",
+  "docs/**/*.xml",
+  "docs/**/*.csv",
+]
+alwaysApply: true
+---
+# Documentation Organization & Summary Bloat Prevention
+
+## Purpose
+
+Prevent documentation bloat by enforcing proper organization of temporary files, session reports, and implementation tracking documents. Maintain clean project structure by ensuring documentation follows established patterns.
+
+## Core Principles
+
+### 📁 Documentation Hierarchy
+
+**Root Directory** - Essential project files only:
+- `README.md` - Main project overview and setup
+- `CHANGELOG.md` - Version history and release notes
+- `agents.md` - Core agent system documentation
+- Configuration files (package.json, Cargo.toml, etc.)
+
+**Documentation Directory** (`docs/`) - Active project documentation:
+- Architecture documents (`README.md`, component docs)
+- API documentation
+- User guides and tutorials
+- Active development documentation
+
+**Archive Directory** (`docs/archive/`) - Historical and reference materials:
+- Session summaries and progress reports
+- Implementation tracking documents
+- Completed project phases
+- Historical assessments and audits
+
+### 🚫 Prohibited Documentation Patterns
+
+**Never create these in root or active directories:**
+- `SESSION_*_SUMMARY.md` - Session reports
+- `IMPLEMENTATION_STATUS.md` - Progress tracking
+- `TODO_*_COMPLETE.md` - Task completion reports
+- `*_SUMMARY.md` - Generic summary files
+- `*_REPORT.md` - Status reports
+- `*_AUDIT.md` - Audit documents
+- `*_CHECKLIST.md` - Checklist documents
+- `PHASE*_*.md` - Phase tracking documents
+- `NEXT_ACTIONS.md` - Action item lists
+
+### ✅ Approved Documentation Locations
+
+| Document Type | Location | Examples |
+|---------------|----------|----------|
+| **Session Reports** | `docs/archive/session-reports/` | `EXTENDED_SESSION_SUMMARY.md`, `SESSION_COMPLETION_SUMMARY.md` |
+| **Implementation Tracking** | `docs/archive/implementation-tracking/` | `IMPLEMENTATION_STATUS.md`, `DEPLOYMENT_READINESS.md` |
+| **Project Assessments** | `docs/archive/implementation-tracking/` | `EXECUTIVE_BRIEFING.md`, `SECURITY_HARDENING_AUDIT.md` |
+| **Multi-Project Docs** | `docs/archive/multimodal-rag/` | `MULTIMODAL_RAG_*.md` |
+| **Core Documentation** | `docs/` | `agent-agency.md`, component READMEs |
+| **Version History** | Root | `CHANGELOG.md` |
+
+### 🔧 Enforcement Rules
+
+**File Creation Restrictions:**
+- Summary files must use `docs/archive/session-reports/` prefix
+- Implementation tracking must use `docs/archive/implementation-tracking/` prefix
+- Audit documents must use `docs/archive/implementation-tracking/` prefix
+- Project-specific docs must use appropriate `docs/archive/` subdirectory
+
+**Naming Conventions:**
+- Session reports: `SESSION_*_SUMMARY.md` or `*_SESSION_*.md`
+- Implementation tracking: `*_STATUS.md`, `*_READINESS.md`, `*_CHECKLIST.md`
+- Assessments: `*_BRIEFING.md`, `*_AUDIT.md`, `*_ASSESSMENT.md`
+
+### 📝 Documentation Workflow
+
+**Before creating new documentation:**
+
+1. **Determine document type:**
+   - Session summary? → `docs/archive/session-reports/`
+   - Implementation status? → `docs/archive/implementation-tracking/`
+   - Project assessment? → `docs/archive/implementation-tracking/`
+   - Core documentation? → `docs/`
+
+2. **Check existing structure:**
+   - Use established naming patterns
+   - Follow existing organization in archive directories
+
+3. **Consider permanence:**
+   - Temporary tracking? → Archive location
+   - Permanent documentation? → `docs/` location
+
+### 🚨 Violation Consequences
+
+**Automatic Prevention:**
+- IDE should warn when creating files in inappropriate locations
+- Pre-commit hooks should block commits of summary files to root directories
+- Documentation lints should flag misplaced files
+
+**Manual Correction:**
+- Move misplaced files to appropriate archive locations
+- Update file references in related documentation
+- Clean up duplicate or redundant documentation
+
+### 📋 Maintenance Guidelines
+
+**Regular Cleanup:**
+- Review `docs/archive/` quarterly for outdated content
+- Archive completed implementation tracking to compressed storage
+- Maintain clear separation between active and historical documentation
+
+**Documentation Standards:**
+- Use consistent naming across similar document types
+- Include creation date and author in archived documents
+- Maintain links between related documents in different categories
+
+### 🎯 Quality Gates
+
+**Documentation Quality Checklist:**
+- [ ] Document type matches intended location
+- [ ] Naming follows established patterns
+- [ ] Content is appropriately scoped (not too broad/narrow)
+- [ ] References to other documents are accurate
+- [ ] Document provides unique value (not redundant)
+
+**Archive Organization Checklist:**
+- [ ] Files are in correct category subdirectory
+- [ ] Related files are grouped together
+- [ ] Archive structure is logical and discoverable
+- [ ] Historical documents are properly dated
+
+### 📚 Examples
+
+**✅ Correct Placement:**
+```
+docs/archive/session-reports/SESSION_COMPLETION_SUMMARY.md
+docs/archive/implementation-tracking/IMPLEMENTATION_STATUS.md
+docs/archive/multimodal-rag/MULTIMODAL_RAG_FINAL_REPORT.md
+```
+
+**❌ Incorrect Placement:**
+```
+SESSION_COMPLETION_SUMMARY.md (in root)
+IMPLEMENTATION_STATUS.md (in root)
+docs/MULTIMODAL_RAG_FINAL_REPORT.md (should be in archive)
+```
+
+This rule ensures the project maintains a clean, organized documentation structure that separates essential project information from temporary tracking and historical records.

@@ -1,0 +1,3 @@
+This is a test file for checksum verification.
+It contains multiple lines of text.
+Used for testing the model checksum functionality.

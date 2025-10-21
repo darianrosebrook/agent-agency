@@ -1,0 +1,41 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - namespace.yml
+  - configmap.yml
+  - secret.yml
+  - serviceaccount.yml
+  - orchestrator-deployment.yml
+  - council-deployment.yml
+  - postgres-statefulset.yml
+  - redis-deployment.yml
+  - elasticsearch-statefulset.yml
+  - ingress.yml
+  - network-policies.yml
+  - monitoring/
+
+images:
+  - name: agent-agency/orchestrator
+    newTag: v3.0.0
+  - name: agent-agency/council
+    newTag: v3.0.0
+
+configMapGenerator:
+  - name: agent-agency-config
+    literals:
+      - RUST_LOG=info
+      - AUDIT_TRAIL_ENABLED=true
+      - CIRCUIT_BREAKERS_ENABLED=true
+      - GRACEFUL_DEGRADATION_ENABLED=true
+
+secretGenerator:
+  - name: agent-agency-secrets
+    literals:
+      - database-password=change-me-in-production
+      - redis-password=
+      - jwt-secret=change-me-in-production
+      - encryption-key=change-me-in-production
+
+patchesStrategicMerge:
+  - patches/resource-limits.yml

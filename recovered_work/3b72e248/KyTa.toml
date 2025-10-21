@@ -1,0 +1,22 @@
+[package]
+name = "self-prompting-agent"
+version = "0.1.0"
+
+[dependencies]
+agent-agency-contracts = { path = "../agent-agency-contracts" }
+orchestration = { path = "../orchestration" }
+reflexive-learning = { path = "../reflexive-learning" }
+agent-agency-workers = { path = "../workers" }
+tokio = { workspace = true, features = ["full"] }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+uuid = { workspace = true, features = ["v4"] }
+chrono = { workspace = true, features = ["serde"] }
+async-trait = { workspace = true }
+reqwest = { version = "0.11", features = ["json"] }
+diffy = "0.3"
+git2 = "0.19"
+tempfile = "3.8"
+rand = "0.8"
+regex = "1.10"

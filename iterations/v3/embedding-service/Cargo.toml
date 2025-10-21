@@ -49,6 +49,8 @@ dot = "0.1"
 ort = { version = "2.0.0-rc.10", features = ["load-dynamic"] }
 tokenizers = "0.15"
 num_cpus = "1.16"
+safetensors = "0.6.2"
+hf-hub = "0.4.3"
 
 # CLIP model support using Candle
 candle-core = "0.9.1"

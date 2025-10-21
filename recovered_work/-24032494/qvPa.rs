@@ -1,0 +1,649 @@
+//! MCP Server Interface for Autonomous Task Execution
+//!
+//! Provides Model Context Protocol (MCP) server for IDE integration,
+//! enabling direct access to autonomous task execution from development tools.
+
+use std::collections::HashMap;
+use std::sync::Arc;
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
+use tokio::sync::Mutex;
+use uuid::Uuid;
+
+use crate::orchestration::orchestrate::Orchestrator;
+use crate::orchestration::tracking::ProgressTracker;
+
+/// MCP server configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct McpConfig {
+    /// Server name
+    pub name: String,
+
+    /// Server version
+    pub version: String,
+
+    /// Supported protocol version
+    pub protocol_version: String,
+
+    /// Enable tool execution
+    pub enable_tools: bool,
+
+    /// Enable resource access
+    pub enable_resources: bool,
+
+    /// Enable prompt templates
+    pub enable_prompts: bool,
+
+    /// Maximum concurrent requests
+    pub max_concurrent_requests: usize,
+}
+
+/// MCP server implementation
+pub struct McpServer {
+    config: McpConfig,
+    orchestrator: Option<Arc<Orchestrator>>,
+    progress_tracker: Option<Arc<ProgressTracker>>,
+    active_requests: Arc<Mutex<HashMap<String, RequestState>>>,
+}
+
+#[derive(Debug, Clone)]
+struct RequestState {
+    request_id: String,
+    task_id: Option<Uuid>,
+    status: RequestStatus,
+    created_at: chrono::DateTime<chrono::Utc>,
+}
+
+#[derive(Debug, Clone)]
+enum RequestStatus {
+    Pending,
+    Processing,
+    Completed,
+    Failed,
+}
+
+/// MCP request/response types
+#[derive(Debug, Serialize, Deserialize)]
+pub struct McpRequest {
+    pub jsonrpc: String,
+    pub id: serde_json::Value,
+    pub method: String,
+    pub params: Option<Value>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct McpResponse {
+    pub jsonrpc: String,
+    pub id: serde_json::Value,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub result: Option<Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<McpError>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct McpError {
+    pub code: i32,
+    pub message: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub data: Option<Value>,
+}
+
+impl McpServer {
+    pub fn new(config: McpConfig) -> Self {
+        Self {
+            config,
+            orchestrator: None,
+            progress_tracker: None,
+            active_requests: Arc::new(Mutex::new(HashMap::new())),
+        }
+    }
+
+    pub fn with_orchestrator(mut self, orchestrator: Arc<Orchestrator>) -> Self {
+        self.orchestrator = Some(orchestrator);
+        self
+    }
+
+    pub fn with_progress_tracker(mut self, tracker: Arc<ProgressTracker>) -> Self {
+        self.progress_tracker = Some(tracker);
+        self
+    }
+
+    /// Handle an MCP request
+    pub async fn handle_request(&self, request: McpRequest) -> Result<McpResponse, McpError> {
+        match request.method.as_str() {
+            "initialize" => self.handle_initialize(request).await,
+            "tools/list" => self.handle_tools_list(request).await,
+            "tools/call" => self.handle_tools_call(request).await,
+            "resources/list" => self.handle_resources_list(request).await,
+            "resources/read" => self.handle_resources_read(request).await,
+            "prompts/list" => self.handle_prompts_list(request).await,
+            "prompts/get" => self.handle_prompts_get(request).await,
+            _ => Err(McpError {
+                code: -32601,
+                message: format!("Method not found: {}", request.method),
+                data: None,
+            }),
+        }
+    }
+
+    /// Handle server initialization
+    async fn handle_initialize(&self, request: McpRequest) -> Result<McpResponse, McpError> {
+        let capabilities = serde_json::json!({
+            "tools": if self.config.enable_tools {
+                Some(serde_json::json!({
+                    "listChanged": true
+                }))
+            } else {
+                None
+            },
+            "resources": if self.config.enable_resources {
+                Some(serde_json::json!({}))
+            } else {
+                None
+            },
+            "prompts": if self.config.enable_prompts {
+                Some(serde_json::json!({}))
+            } else {
+                None
+            }
+        });
+
+        let result = serde_json::json!({
+            "protocolVersion": self.config.protocol_version,
+            "capabilities": capabilities,
+            "serverInfo": {
+                "name": self.config.name,
+                "version": self.config.version
+            }
+        });
+
+        Ok(McpResponse {
+            jsonrpc: "2.0".to_string(),
+            id: request.id,
+            result: Some(result),
+            error: None,
+        })
+    }
+
+    /// Handle tools list request
+    async fn handle_tools_list(&self, request: McpRequest) -> Result<McpResponse, McpError> {
+        if !self.config.enable_tools {
+            return Err(McpError {
+                code: -32601,
+                message: "Tools not supported".to_string(),
+                data: None,
+            });
+        }
+
+        let tools = vec![
+            serde_json::json!({
+                "name": "submit_task",
+                "description": "Submit a task for autonomous execution",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "description": {
+                            "type": "string",
+                            "description": "Natural language description of the task"
+                        },
+                        "risk_tier": {
+                            "type": "string",
+                            "enum": ["critical", "high", "standard"],
+                            "description": "Risk tier override"
+                        },
+                        "context": {
+                            "type": "string",
+                            "description": "Additional context or requirements"
+                        }
+                    },
+                    "required": ["description"]
+                }
+            }),
+            serde_json::json!({
+                "name": "get_task_status",
+                "description": "Get the status of a running task",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "task_id": {
+                            "type": "string",
+                            "description": "UUID of the task"
+                        }
+                    },
+                    "required": ["task_id"]
+                }
+            }),
+            serde_json::json!({
+                "name": "list_tasks",
+                "description": "List all tasks with their status",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "status": {
+                            "type": "string",
+                            "enum": ["pending", "running", "completed", "failed"],
+                            "description": "Filter by status"
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Maximum number of tasks to return",
+                            "default": 20
+                        }
+                    }
+                }
+            }),
+            serde_json::json!({
+                "name": "cancel_task",
+                "description": "Cancel a running task",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "task_id": {
+                            "type": "string",
+                            "description": "UUID of the task to cancel"
+                        }
+                    },
+                    "required": ["task_id"]
+                }
+            }),
+        ];
+
+        let result = serde_json::json!({
+            "tools": tools
+        });
+
+        Ok(McpResponse {
+            jsonrpc: "2.0".to_string(),
+            id: request.id,
+            result: Some(result),
+            error: None,
+        })
+    }
+
+    /// Handle tools call request
+    async fn handle_tools_call(&self, request: McpRequest) -> Result<McpResponse, McpError> {
+        if !self.config.enable_tools {
+            return Err(McpError {
+                code: -32601,
+                message: "Tools not supported".to_string(),
+                data: None,
+            });
+        }
+
+        let params = request.params.ok_or_else(|| McpError {
+            code: -32602,
+            message: "Invalid params".to_string(),
+            data: None,
+        })?;
+
+        let tool_name = params.get("name")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| McpError {
+                code: -32602,
+                message: "Tool name required".to_string(),
+                data: None,
+            })?;
+
+        let arguments = params.get("arguments")
+            .and_then(|v| v.as_object())
+            .ok_or_else(|| McpError {
+                code: -32602,
+                message: "Tool arguments required".to_string(),
+                data: None,
+            })?;
+
+        match tool_name {
+            "submit_task" => self.handle_submit_task(request.id, arguments).await,
+            "get_task_status" => self.handle_get_task_status(request.id, arguments).await,
+            "list_tasks" => self.handle_list_tasks(request.id, arguments).await,
+            "cancel_task" => self.handle_cancel_task(request.id, arguments).await,
+            _ => Err(McpError {
+                code: -32601,
+                message: format!("Unknown tool: {}", tool_name),
+                data: None,
+            }),
+        }
+    }
+
+    /// Handle submit task tool
+    async fn handle_submit_task(&self, request_id: Value, args: &serde_json::Map<String, Value>) -> Result<McpResponse, McpError> {
+        let description = args.get("description")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| McpError {
+                code: -32602,
+                message: "description required".to_string(),
+                data: None,
+            })?;
+
+        let risk_tier = args.get("risk_tier")
+            .and_then(|v| v.as_str());
+
+        let context = args.get("context")
+            .and_then(|v| v.as_str());
+
+        // Generate request ID for tracking
+        let request_id_str = format!("mcp-{}", uuid::Uuid::new_v4());
+
+        // Track the request
+        {
+            let mut active_requests = self.active_requests.lock().await;
+            active_requests.insert(request_id_str.clone(), RequestState {
+                request_id: request_id_str.clone(),
+                task_id: None,
+                status: RequestStatus::Pending,
+                created_at: chrono::Utc::now(),
+            });
+        }
+
+        // Submit the task asynchronously
+        if let Some(orchestrator) = &self.orchestrator {
+            let orchestrator = Arc::clone(orchestrator);
+            let active_requests = Arc::clone(&self.active_requests);
+            let description = description.to_string();
+
+            tokio::spawn(async move {
+                match orchestrator.orchestrate_task(&description).await {
+                    Ok(result) => {
+                        let mut active_requests = active_requests.lock().await;
+                        if let Some(request) = active_requests.get_mut(&request_id_str) {
+                            request.task_id = Some(result.task_id);
+                            request.status = RequestStatus::Completed;
+                        }
+                    }
+                    Err(e) => {
+                        tracing::error!("Task orchestration failed: {:?}", e);
+                        let mut active_requests = active_requests.lock().await;
+                        if let Some(request) = active_requests.get_mut(&request_id_str) {
+                            request.status = RequestStatus::Failed;
+                        }
+                    }
+                }
+            });
+        }
+
+        let result = serde_json::json!({
+            "task_id": request_id_str,
+            "status": "submitted",
+            "message": "Task submitted for autonomous execution"
+        });
+
+        Ok(McpResponse {
+            jsonrpc: "2.0".to_string(),
+            id: request_id,
+            result: Some(result),
+            error: None,
+        })
+    }
+
+    /// Handle get task status tool
+    async fn handle_get_task_status(&self, request_id: Value, args: &serde_json::Map<String, Value>) -> Result<McpResponse, McpError> {
+        let task_id_str = args.get("task_id")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| McpError {
+                code: -32602,
+                message: "task_id required".to_string(),
+                data: None,
+            })?;
+
+        let task_id = uuid::Uuid::parse_str(task_id_str)
+            .map_err(|_| McpError {
+                code: -32602,
+                message: "Invalid task_id format".to_string(),
+                data: None,
+            })?;
+
+        // Get progress information
+        let progress_info = if let Some(tracker) = &self.progress_tracker {
+            tracker.get_progress(task_id).await
+                .map_err(|e| McpError {
+                    code: -32603,
+                    message: format!("Progress tracking error: {:?}", e),
+                    data: None,
+                })?
+        } else {
+            None
+        };
+
+        let status = if let Some(progress) = progress_info {
+            serde_json::json!({
+                "task_id": task_id,
+                "status": format!("{:?}", progress.status).to_lowercase(),
+                "progress_percentage": progress.completion_percentage,
+                "current_phase": progress.current_phase,
+                "started_at": progress.start_time,
+                "last_updated": progress.last_update
+            })
+        } else {
+            serde_json::json!({
+                "task_id": task_id,
+                "status": "unknown",
+                "message": "Task not found or not yet started"
+            })
+        };
+
+        Ok(McpResponse {
+            jsonrpc: "2.0".to_string(),
+            id: request_id,
+            result: Some(status),
+            error: None,
+        })
+    }
+
+    /// Handle list tasks tool
+    async fn handle_list_tasks(&self, request_id: Value, args: &serde_json::Map<String, Value>) -> Result<McpResponse, McpError> {
+        let status_filter = args.get("status")
+            .and_then(|v| v.as_str());
+
+        let limit = args.get("limit")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(20) as usize;
+
+        // TODO: Integrate with progress tracker for real task status queries
+        // - [ ] Connect to progress tracker service or database
+        // - [ ] Implement task status queries with filtering and pagination
+        // - [ ] Add real-time task progress updates
+        // - [ ] Handle progress tracker connection failures
+        // - [ ] Implement task status caching for performance
+        let tasks = serde_json::json!([
+            {
+                "task_id": "550e8400-e29b-41d4-a716-446655440000",
+                "status": "completed",
+                "progress_percentage": 100.0,
+                "description": "Implement user authentication system"
+            },
+            {
+                "task_id": "550e8400-e29b-41d4-a716-446655440001",
+                "status": "running",
+                "progress_percentage": 67.5,
+                "description": "Build API integration layer"
+            }
+        ]);
+
+        Ok(McpResponse {
+            jsonrpc: "2.0".to_string(),
+            id: request_id,
+            result: Some(tasks),
+            error: None,
+        })
+    }
+
+    /// Handle cancel task tool
+    async fn handle_cancel_task(&self, request_id: Value, args: &serde_json::Map<String, Value>) -> Result<McpResponse, McpError> {
+        let task_id_str = args.get("task_id")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| McpError {
+                code: -32602,
+                message: "task_id required".to_string(),
+                data: None,
+            })?;
+
+        let _task_id = uuid::Uuid::parse_str(task_id_str)
+            .map_err(|_| McpError {
+                code: -32602,
+                message: "Invalid task_id format".to_string(),
+                data: None,
+            })?;
+
+        // In practice, this would cancel the task in the orchestrator
+        let result = serde_json::json!({
+            "task_id": task_id_str,
+            "status": "cancelled",
+            "message": "Task cancellation requested"
+        });
+
+        Ok(McpResponse {
+            jsonrpc: "2.0".to_string(),
+            id: request_id,
+            result: Some(result),
+            error: None,
+        })
+    }
+
+    /// Handle resources list request
+    async fn handle_resources_list(&self, _request: McpRequest) -> Result<McpResponse, McpError> {
+        // TODO: Implement MCP resources discovery and management
+        // - Define MCP resource schema and metadata
+        // - Implement resource registration and discovery
+        // - Add resource versioning and compatibility checking
+        // - Support resource access control and permissions
+        // - Implement resource health monitoring and status
+        // - Add resource usage tracking and analytics
+        // PLACEHOLDER: Returning empty resources list
+        let result = serde_json::json!({
+            "resources": []
+        });
+
+        Ok(McpResponse {
+            jsonrpc: "2.0".to_string(),
+            id: _request.id,
+            result: Some(result),
+            error: None,
+        })
+    }
+
+    /// Handle resources read request
+    async fn handle_resources_read(&self, _request: McpRequest) -> Result<McpResponse, McpError> {
+        Err(McpError {
+            code: -32601,
+            message: "Resource reading not implemented".to_string(),
+            data: None,
+        })
+    }
+
+    /// Handle prompts list request
+    async fn handle_prompts_list(&self, _request: McpRequest) -> Result<McpResponse, McpError> {
+        let prompts = vec![
+            serde_json::json!({
+                "name": "task_template",
+                "description": "Template for submitting development tasks",
+                "arguments": [
+                    {
+                        "name": "task_type",
+                        "description": "Type of task (feature, bugfix, refactor)",
+                        "required": true
+                    }
+                ]
+            }),
+            serde_json::json!({
+                "name": "code_review",
+                "description": "Request code review for current changes",
+                "arguments": []
+            }),
+        ];
+
+        let result = serde_json::json!({
+            "prompts": prompts
+        });
+
+        Ok(McpResponse {
+            jsonrpc: "2.0".to_string(),
+            id: _request.id,
+            result: Some(result),
+            error: None,
+        })
+    }
+
+    /// Handle prompts get request
+    async fn handle_prompts_get(&self, request: McpRequest) -> Result<McpResponse, McpError> {
+        let params = request.params.ok_or_else(|| McpError {
+            code: -32602,
+            message: "Invalid params".to_string(),
+            data: None,
+        })?;
+
+        let prompt_name = params.get("name")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| McpError {
+                code: -32602,
+                message: "Prompt name required".to_string(),
+                data: None,
+            })?;
+
+        let (description, messages) = match prompt_name {
+            "task_template" => {
+                let description = "Generate a well-structured task description for autonomous execution";
+                let messages = vec![
+                    serde_json::json!({
+                        "role": "user",
+                        "content": {
+                            "type": "text",
+                            "text": "Create a {task_type} that {description}"
+                        }
+                    }),
+                    serde_json::json!({
+                        "role": "assistant",
+                        "content": {
+                            "type": "text",
+                            "text": "I'll help you create a comprehensive task description. Here's a structured approach:\n\n## Task Description\n\n**What needs to be done:**\n[Detailed description of the task]\n\n**Requirements:**\n- [Specific requirement 1]\n- [Specific requirement 2]\n\n**Acceptance Criteria:**\n- [Measurable outcome 1]\n- [Measurable outcome 2]\n\n**Context:**\n[Any additional context or constraints]\n\n**Risk Level:** [Critical/High/Standard]\n\nThis structure ensures the autonomous execution system can properly plan and implement your task."
+                        }
+                    }),
+                ];
+                (description, messages)
+            }
+            "code_review" => {
+                let description = "Request comprehensive code review for current changes";
+                let messages = vec![
+                    serde_json::json!({
+                        "role": "user",
+                        "content": {
+                            "type": "text",
+                            "text": "Please perform a comprehensive code review of my current changes, focusing on:\n- Code quality and best practices\n- Security vulnerabilities\n- Performance implications\n- Test coverage\n- Documentation completeness"
+                        }
+                    }),
+                ];
+                (description, messages)
+            }
+            _ => {
+                return Err(McpError {
+                    code: -32602,
+                    message: format!("Unknown prompt: {}", prompt_name),
+                    data: None,
+                });
+            }
+        };
+
+        let result = serde_json::json!({
+            "description": description,
+            "messages": messages
+        });
+
+        Ok(McpResponse {
+            jsonrpc: "2.0".to_string(),
+            id: request.id,
+            result: Some(result),
+            error: None,
+        })
+    }
+}
+
+/// MCP protocol error codes
+pub mod error_codes {
+    pub const PARSE_ERROR: i32 = -32700;
+    pub const INVALID_REQUEST: i32 = -32600;
+    pub const METHOD_NOT_FOUND: i32 = -32601;
+    pub const INVALID_PARAMS: i32 = -32602;
+    pub const INTERNAL_ERROR: i32 = -32603;
+}
+
+pub type Result<T> = std::result::Result<T, McpError>;

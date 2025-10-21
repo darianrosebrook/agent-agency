@@ -1,0 +1,126 @@
+# Prometheus alerting rules for Multimodal RAG System
+
+groups:
+  - name: multimodal_rag_alerts
+    rules:
+      # High error rate
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m]) > 0.05
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is {{ $value | humanizePercentage }} for the last 5 minutes"
+
+      # High response time
+      - alert: HighResponseTime
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High response time detected"
+          description: "95th percentile response time is {{ $value }}s"
+
+      # High memory usage
+      - alert: HighMemoryUsage
+        expr: (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes > 0.8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage"
+          description: "Memory usage is {{ $value | humanizePercentage }}"
+
+      # High CPU usage
+      - alert: HighCPUUsage
+        expr: 100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage"
+          description: "CPU usage is {{ $value }}%"
+
+      # Database connection issues
+      - alert: DatabaseConnectionIssues
+        expr: up{job="postgres"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Database connection lost"
+          description: "PostgreSQL database is unreachable"
+
+      # Redis connection issues
+      - alert: RedisConnectionIssues
+        expr: up{job="redis"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Redis connection lost"
+          description: "Redis cache is unreachable"
+
+      # Vector search performance
+      - alert: SlowVectorSearch
+        expr: histogram_quantile(0.95, rate(multimodal_vector_search_duration_seconds_bucket[5m])) > 2
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Slow vector search performance"
+          description: "95th percentile vector search time is {{ $value }}s"
+
+      # Embedding generation issues
+      - alert: EmbeddingGenerationFailures
+        expr: rate(multimodal_embedding_generation_total{status="failure"}[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High embedding generation failure rate"
+          description: "Embedding generation failure rate is {{ $value }} failures/second"
+
+      # Multimodal processing queue backlog
+      - alert: ProcessingQueueBacklog
+        expr: multimodal_processing_queue_size > 100
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Large processing queue backlog"
+          description: "Processing queue has {{ $value }} pending jobs"
+
+      # Disk space low
+      - alert: LowDiskSpace
+        expr: (node_filesystem_avail_bytes / node_filesystem_size_bytes) < 0.1
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Low disk space"
+          description: "Disk space is {{ $value | humanizePercentage }} available"
+
+  - name: multimodal_rag_sla
+    rules:
+      # SLA: 99.9% uptime
+      - alert: SLABreach
+        expr: (up{job="multimodal-rag-service"} == 0) or (rate(http_requests_total{status=~"5.."}[1h]) / rate(http_requests_total[1h]) > 0.001)
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "SLA breach detected"
+          description: "Service availability or error rate exceeds SLA thresholds"
+
+      # SLA: Response time < 2s for 95% of requests
+      - alert: ResponseTimeSLABreach
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[1h])) > 2
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Response time SLA breach"
+          description: "95th percentile response time exceeds 2s SLA"

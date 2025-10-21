@@ -1,0 +1,61 @@
+# Agent Agency V3 - Council Service Dockerfile
+# Python-based AI service with GPU support
+
+FROM python:3.11-slim
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    curl \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install NVIDIA CUDA (optional, for GPU support)
+# Uncomment if deploying to GPU-enabled infrastructure
+# RUN apt-get update && apt-get install -y \
+#     nvidia-cuda-toolkit \
+#     nvidia-driver-470 \
+#     && rm -rf /var/lib/apt/lists/*
+
+# Create app directory
+RUN mkdir -p /app && \
+    groupadd -r council && useradd -r -g council council && \
+    chown -R council:council /app
+
+WORKDIR /app
+
+# Copy Python requirements
+COPY deploy/docker/requirements.txt .
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application code
+COPY iterations/v3/council/ ./council/
+COPY iterations/v3/self-prompting-agent/ ./self-prompting-agent/
+
+# Copy models and configurations
+COPY deploy/docker/config/council-config.yml ./config/
+
+# Create model cache directory
+RUN mkdir -p /app/models && \
+    chown -R council:council /app/models
+
+# Switch to non-root user
+USER council
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:8081/health || exit 1
+
+# Expose port
+EXPOSE 8081
+
+# Environment variables
+ENV PYTHONPATH=/app
+ENV PYTHONUNBUFFERED=1
+ENV TRANSFORMERS_CACHE=/app/models
+ENV HF_HOME=/app/models
+
+# Run the council service
+CMD ["python", "-m", "council.main"]

@@ -1,0 +1,24 @@
+[package]
+name = "agent-agency-api-server"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+# Core async runtime
+tokio.workspace = true
+clap = { version = "4.0", features = ["derive"] }
+
+# Web framework
+axum.workspace = true
+tower-http.workspace = true
+
+# JSON handling
+serde_json.workspace = true
+
+# Date/time
+chrono.workspace = true
+
+# HTTP client
+reqwest = { version = "0.11", features = ["json"] }
