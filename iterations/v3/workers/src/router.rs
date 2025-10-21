@@ -4,7 +4,7 @@
 
 use crate::types::*;
 use crate::{LoadBalancingStrategy, RoutingAlgorithm};
-use agent_agency_council::models::{RiskTier, TaskSpec};
+use agent_agency_council::{TaskSpec, models::RiskTier};
 use anyhow::{anyhow, bail, Context, Result};
 use chrono::{DateTime, Utc};
 use dashmap::DashMap;

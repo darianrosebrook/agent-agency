@@ -1073,30 +1073,30 @@ impl MultiModalVerificationEngine {
             if term.len() > 4 {
                 // Generate simulated historical claims for development/testing
                 historical_claims.push(HistoricalClaim {
-                    id: Some(Uuid::new_v4()),
+                    id: Uuid::new_v4(),
                     claim_text: format!("The system should handle {} correctly", term),
                     confidence_score: 0.85,
-                    source_count: 1,
+                    source_count: Some(1),
                     verification_status: VerificationStatus::Verified,
-                    last_verified: chrono::Utc::now() - chrono::Duration::days(30),
-                    related_entities: vec![term.clone()],
-                    claim_type: ClaimType::Factual,
-                    created_at: chrono::Utc::now() - chrono::Duration::days(30),
-                    updated_at: chrono::Utc::now(),
-                    metadata: std::collections::HashMap::new(),
-                    source_references: vec!["source://historical".to_string()],
-                    cross_references: vec![],
-                    validation_metadata: std::collections::HashMap::new(),
+                    last_verified: Some(chrono::Utc::now() - chrono::Duration::days(30)),
+                    related_entities: Some(vec![term.clone()]),
+                    claim_type: Some(ClaimType::Factual),
+                    created_at: Some(chrono::Utc::now() - chrono::Duration::days(30)),
+                    updated_at: Some(chrono::Utc::now()),
+                    metadata: Some(std::collections::HashMap::new()),
+                    source_references: Some(vec!["source://historical".to_string()]),
+                    cross_references: Some(vec![]),
+                    validation_metadata: Some(std::collections::HashMap::new()),
                     validation_confidence: 0.85,
                     validation_timestamp: chrono::Utc::now() - chrono::Duration::days(30),
                     validation_outcome: ValidationOutcome::Validated,
                 });
 
                 historical_claims.push(HistoricalClaim {
-                    id: None,
-                    confidence_score: None,
+                    id: Uuid::new_v4(),
+                    confidence_score: 0.5,
                     source_count: None,
-                    verification_status: None,
+                    verification_status: VerificationStatus::Unverified,
                     last_verified: None,
                     related_entities: None,
                     claim_type: None,
@@ -1106,7 +1106,9 @@ impl MultiModalVerificationEngine {
                     source_references: None,
                     cross_references: None,
                     validation_metadata: None,
-                    
+                    timestamp: chrono::Utc::now(),
+                    evidence: vec![],
+
                     claim_text: format!("{} must be implemented according to specifications", term),
                     validation_confidence: 0.92,
                     validation_timestamp: chrono::Utc::now() - chrono::Duration::days(15),
@@ -1117,10 +1119,10 @@ impl MultiModalVerificationEngine {
 
         // Add some generic historical claims
         historical_claims.push(HistoricalClaim {
-                    id: None,
-                    confidence_score: None,
+                    id: Uuid::new_v4(),
+                    confidence_score: 0.5,
                     source_count: None,
-                    verification_status: None,
+                    verification_status: VerificationStatus::Unverified,
                     last_verified: None,
                     related_entities: None,
                     claim_type: None,
@@ -1130,7 +1132,9 @@ impl MultiModalVerificationEngine {
                     source_references: None,
                     cross_references: None,
                     validation_metadata: None,
-                    
+                    timestamp: chrono::Utc::now(),
+                    evidence: vec![],
+
             claim_text: "The system should maintain data consistency".to_string(),
             validation_confidence: 0.88,
             validation_timestamp: chrono::Utc::now() - chrono::Duration::days(7),
@@ -1138,10 +1142,10 @@ impl MultiModalVerificationEngine {
         });
 
         historical_claims.push(HistoricalClaim {
-                    id: None,
-                    confidence_score: None,
+                    id: Uuid::new_v4(),
+                    confidence_score: 0.5,
                     source_count: None,
-                    verification_status: None,
+                    verification_status: VerificationStatus::Unverified,
                     last_verified: None,
                     related_entities: None,
                     claim_type: None,
@@ -1151,7 +1155,9 @@ impl MultiModalVerificationEngine {
                     source_references: None,
                     cross_references: None,
                     validation_metadata: None,
-                    
+                    timestamp: chrono::Utc::now(),
+                    evidence: vec![],
+
             claim_text: "Error handling must be robust".to_string(),
             validation_confidence: 0.91,
             validation_timestamp: chrono::Utc::now() - chrono::Duration::days(3),
@@ -1263,6 +1269,27 @@ impl MultiModalVerificationEngine {
     }
 
     /// Find fuzzy keyword matches (handles typos, variations)
+    fn find_exact_matches(&self, content: &str, keyword: &str) -> Vec<KeywordMatch> {
+        let mut matches = Vec::new();
+        let mut start = 0;
+
+        while let Some(pos) = content[start..].find(keyword) {
+            let absolute_pos = start + pos;
+
+            matches.push(KeywordMatch {
+                keyword: keyword.to_string(),
+                position: absolute_pos,
+                match_type: MatchType::Exact,
+                context: self.extract_context(content, absolute_pos, keyword.len()),
+                relevance_score: 1.0, // Exact matches have maximum relevance
+            });
+
+            start = absolute_pos + 1;
+        }
+
+        matches
+    }
+
     fn find_fuzzy_matches(&self, content: &str, keyword: &str) -> Vec<KeywordMatch> {
         let mut matches = Vec::new();
 
@@ -1283,7 +1310,7 @@ impl MultiModalVerificationEngine {
                         position: absolute_pos,
                         match_type: MatchType::Fuzzy,
                         context: self.extract_context(content, absolute_pos, word.len()),
-                        confidence,
+                        relevance_score: confidence,
                     });
                 }
 
@@ -1458,7 +1485,7 @@ impl MultiModalVerificationEngine {
 
     /// Perform comprehensive coreference resolution on text
 // [refactor candidate]: split into claim_extraction/verification/coreference.rs - coreference resolution logic and resolve_coreferences method
-    pub async fn resolve_coreferences(&self, text: &str) -> Result<CoreferenceResolution> {
+    pub async fn resolve_coreferences(&mut self, text: &str) -> Result<CoreferenceResolution> {
         let start_time = Instant::now();
 
         // Check cache first
@@ -1765,6 +1792,58 @@ impl MultiModalVerificationEngine {
     }
 
     /// Find exact matches for entity in context
+    fn levenshtein_distance(&self, s1: &str, s2: &str) -> usize {
+        let s1_chars: Vec<char> = s1.chars().collect();
+        let s2_chars: Vec<char> = s2.chars().collect();
+        let len1 = s1_chars.len();
+        let len2 = s2_chars.len();
+
+        if len1 == 0 {
+            return len2;
+        }
+        if len2 == 0 {
+            return len1;
+        }
+
+        let mut matrix = vec![vec![0; len2 + 1]; len1 + 1];
+
+        // Initialize first row and column
+        for i in 0..=len1 {
+            matrix[i][0] = i;
+        }
+        for j in 0..=len2 {
+            matrix[0][j] = j;
+        }
+
+        // Fill the matrix
+        for i in 1..=len1 {
+            for j in 1..=len2 {
+                let cost = if s1_chars[i - 1] == s2_chars[j - 1] { 0 } else { 1 };
+
+                matrix[i][j] = (matrix[i - 1][j] + 1) // deletion
+                    .min(matrix[i][j - 1] + 1) // insertion
+                    .min(matrix[i - 1][j - 1] + cost); // substitution
+            }
+        }
+
+        matrix[len1][len2]
+    }
+
+    fn get_related_terms(&self, keyword: &str) -> Result<Vec<String>> {
+        // Simple implementation - return synonyms and related terms
+        // In a real implementation, this could query a thesaurus or knowledge base
+        let related = match keyword.to_lowercase().as_str() {
+            "error" | "errors" => vec!["exception", "fault", "issue", "problem", "failure"],
+            "user" | "users" => vec!["account", "login", "authentication", "person", "customer"],
+            "data" | "database" => vec!["information", "records", "storage", "db", "table"],
+            "api" | "endpoint" => vec!["interface", "service", "rest", "http", "web"],
+            "test" | "testing" => vec!["verify", "validate", "check", "assert", "spec"],
+            _ => vec![keyword.to_string()], // Default to just the keyword
+        };
+
+        Ok(related.into_iter().map(|s| s.to_string()).collect())
+    }
+
     fn find_exact_match(&self, entity: &Entity, context: &str) -> Option<Entity> {
         let context_lower = context.to_lowercase();
         let entity_text_lower = entity.text.to_lowercase();
@@ -1942,20 +2021,20 @@ impl MultiModalVerificationEngine {
             r#"
             SELECT * FROM find_similar_claims($1, 0.6, 5, 0.5)
             "#,
-            &[&search_term],
-        ).await;
+            &[serde_json::Value::String(search_term.to_string())],
+        ).await?;
 
-        match result {
-            Ok(rows) => {
-                let mut claims = Vec::new();
-                for row in rows {
-                    // Parse database row into HistoricalClaim
-                    let claim = HistoricalClaim {
+        let claims = match result {
+            database::client::QueryResult::Rows(rows) => {
+                rows.into_iter().map(|row| {
+                    Ok(HistoricalClaim {
                         id: row.get("id"),
                         claim_text: row.get("claim_text"),
                         confidence_score: row.get("confidence_score"),
-                        source_count: row.get("source_count"),
+                        timestamp: chrono::Utc::now(),
                         verification_status: row.get("verification_status"),
+                        evidence: vec![],
+                        source_count: row.get("source_count"),
                         last_verified: row.get("last_verified_at"),
                         related_entities: row.get("related_entities"),
                         claim_type: row.get("claim_type"),
@@ -1964,16 +2043,17 @@ impl MultiModalVerificationEngine {
                         metadata: None, // Not returned by function
                         source_references: row.get("source_references"),
                         cross_references: row.get("cross_references"),
-                    };
-                    claims.push(claim);
-                }
-                Ok(claims)
+                        validation_metadata: None,
+                        validation_confidence: 0.8,
+                        validation_timestamp: chrono::Utc::now(),
+                        validation_outcome: ValidationOutcome::Validated,
+                    })
+                }).collect::<Result<Vec<_>>>()?
             }
-            Err(e) => {
-                warn!("Database query failed: {}", e);
-                Ok(vec![])
-            }
-        }
+            _ => vec![],
+        };
+
+        Ok(claims)
     }
 
     /// Record access to a historical claim for usage tracking
@@ -1984,7 +2064,7 @@ impl MultiModalVerificationEngine {
     ) -> Result<()> {
         let result = db_client.execute_parameterized_query(
             "SELECT record_claim_access($1)",
-            &[&claim_id],
+            &[serde_json::Value::String(claim_id.to_string())],
         ).await;
 
         match result {
@@ -2231,7 +2311,10 @@ impl MultiModalVerificationEngine {
         let follows_style = self.check_documentation_style(api_doc, style_guide);
 
         let claim_text = format!("API {} is documented with parameters: {}",
-            api_doc.endpoint, api_doc.parameters.join(", "));
+            api_doc.endpoints.join(", "), {
+                let param_names: Vec<&String> = api_doc.parameters.keys().collect();
+                param_names.join(", ")
+            });
         let confidence = if follows_style { 0.9 } else { 0.6 };
 
         Ok(Some(AtomicClaim {
@@ -2246,9 +2329,9 @@ impl MultiModalVerificationEngine {
             },
             confidence,
             contextual_brackets: vec!["documentation".to_string(), "api".to_string()],
-            subject: Some(api_doc.endpoint.clone()),
+            subject: Some(api_doc.endpoints.join(", ")),
             predicate: Some("is_documented".to_string()),
-            object: Some(api_doc.description.clone()),
+            object: Some("API documentation".to_string()),
             context_brackets: vec!["documentation".to_string(), "api".to_string()],
             verification_requirements: vec![VerificationRequirement {
                 requirement_type: "documentation_analysis".to_string(),
@@ -2698,6 +2781,73 @@ impl MultiModalVerificationEngine {
 
         // Aggregate results
         self.aggregate_historical_claims(&db_claims, &cached_claims).await
+    }
+
+    async fn query_database_for_historical_claims(
+        &self,
+        claim_terms: &[String],
+    ) -> Result<Vec<HistoricalClaim>> {
+        let db_client = self.db_client.as_ref()
+            .ok_or_else(|| anyhow!("Database client not available"))?;
+
+        let search_term = claim_terms.join(" ");
+        let result = db_client.execute_parameterized_query(
+            "SELECT id, claim_text, confidence_score, source_count, verification_status,
+                    last_verified_at, related_entities, claim_type, created_at, updated_at,
+                    metadata, source_references, cross_references, validation_metadata,
+                    validation_confidence, validation_timestamp, validation_outcome
+             FROM historical_claims
+             WHERE claim_text ILIKE $1
+             ORDER BY validation_confidence DESC, validation_timestamp DESC
+             LIMIT 10",
+            &[serde_json::Value::String(format!("%{}%", search_term))],
+        ).await?;
+
+        let claims = match result {
+            database::client::QueryResult::Rows(rows) => {
+                rows.into_iter().map(|row| {
+                    Ok(HistoricalClaim {
+                        id: row.get("id"),
+                        claim_text: row.get("claim_text"),
+                        verification_status: row.get("verification_status"),
+                        evidence: vec![], // Would need separate query to get evidence
+                        confidence_score: row.get("confidence_score"),
+                        timestamp: row.get("created_at"),
+                        source_count: row.get("source_count"),
+                        last_verified: row.get("last_verified_at"),
+                        related_entities: row.get("related_entities"),
+                        claim_type: row.get("claim_type"),
+                        created_at: row.get("created_at"),
+                        updated_at: row.get("updated_at"),
+                        metadata: row.get("metadata"),
+                        source_references: row.get("source_references"),
+                        cross_references: row.get("cross_references"),
+                        validation_metadata: row.get("validation_metadata"),
+                        validation_confidence: row.get("validation_confidence"),
+                        validation_timestamp: row.get("validation_timestamp"),
+                        validation_outcome: row.get("validation_outcome"),
+                    })
+                }).collect::<Result<Vec<_>>>()?
+            }
+            _ => vec![],
+        };
+
+        Ok(claims)
+    }
+
+    async fn get_cached_historical_claims(
+        &self,
+        claim_terms: &[String],
+    ) -> Result<Vec<HistoricalClaim>> {
+        let mut claims = Vec::new();
+
+        for term in claim_terms {
+            if let Some(cached) = self.historical_claims_cache.get(term) {
+                claims.extend(cached.clone());
+            }
+        }
+
+        Ok(claims)
     }
 
     async fn monitor_database_performance(

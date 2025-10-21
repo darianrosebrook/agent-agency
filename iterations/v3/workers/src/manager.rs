@@ -5,7 +5,7 @@
 
 use crate::types::*;
 use crate::{CawsChecker, TaskExecutor, TaskRouter, WorkerPoolConfig};
-use agent_agency_council::models::TaskSpec;
+use agent_agency_council::TaskSpec;
 use agent_agency_resilience::CircuitBreaker;
 use anyhow::Result;
 use async_trait::async_trait;
@@ -558,34 +558,34 @@ impl WorkerPoolManager {
                                 WorkerHealthStatus::Unhealthy
                             };
 
-                            // Measure actual response time and collect worker metrics
-                            let check_start = std::time::Instant::now();
-                            let metrics_url = format!("{}/metrics", worker.endpoint.trim_end_matches('/'));
-                            let actual_metrics = self.collect_worker_metrics(&metrics_url).await;
-                            let response_time_ms = check_start.elapsed().as_millis() as u64;
+                        // Measure actual response time and collect worker metrics
+                        let check_start = std::time::Instant::now();
+                        let metrics_url = format!("{}/metrics", worker.endpoint.trim_end_matches('/'));
+                        let actual_metrics = self.collect_worker_metrics(&metrics_url).await;
+                        let response_time_ms = check_start.elapsed().as_millis() as u64;
 
-                            // Create health metrics with actual measurements
-                            let health_metrics = WorkerHealthMetrics {
-                                response_time_ms,
-                                cpu_usage_percent: actual_metrics.cpu_usage.unwrap_or(45.0) as f32,
-                                memory_usage_percent: actual_metrics.memory_usage.unwrap_or(60.0) as f32,
-                                active_tasks: actual_metrics.active_tasks.unwrap_or(2),
-                                queue_depth: actual_metrics.queue_depth.unwrap_or(5),
-                                last_seen: chrono::Utc::now(),
-                                consecutive_failures: if is_healthy { 0 } else { 1 },
-                            };
+                        // Create health metrics with actual measurements
+                        let health_metrics = WorkerHealthMetrics {
+                            response_time_ms,
+                            cpu_usage_percent: actual_metrics.cpu_usage.unwrap_or(45.0) as f32,
+                            memory_usage_percent: actual_metrics.memory_usage.unwrap_or(60.0) as f32,
+                            active_tasks: actual_metrics.active_tasks.unwrap_or(2),
+                            queue_depth: actual_metrics.queue_depth.unwrap_or(5),
+                            last_seen: chrono::Utc::now(),
+                            consecutive_failures: if is_healthy { 0 } else { 1 },
+                        };
 
-                            worker_mut.health_metrics = Some(health_metrics);
-                            worker_mut.last_health_check = Some(chrono::Utc::now());
-                        }
+                        worker_mut.health_metrics = Some(health_metrics);
+                        worker_mut.last_health_check = Some(chrono::Utc::now());
 
                         // Emit health check event
                         let _ = event_sender.send(WorkerPoolEvent::WorkerHealthChecked {
                             worker_id,
                             is_healthy,
-                            response_time_ms: response_time_ms,
+                            response_time_ms,
                             checked_at: chrono::Utc::now(),
                         });
+                    }
                     };
 
                     // Execute the health check

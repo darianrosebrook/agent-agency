@@ -6,7 +6,7 @@
 use crate::types::*;
 use anyhow::Result;
 use regex::Regex;
-use std::time::Duration;
+use chrono::Duration;
 use tracing::debug;
 
 /// Stage 2: Qualification of verifiable content
@@ -250,6 +250,7 @@ impl VerifiabilityDetector {
                     content: mat.as_str().to_string(),
                     reason: UnverifiableReason::SubjectiveLanguage,
                     suggested_rewrite: Some(self.suggest_rewrite(mat.as_str())),
+                    original_content: mat.as_str().to_string(),
                 });
             }
         }
@@ -420,7 +421,7 @@ impl VerifiabilityDetector {
                         source_requirements: vec![SourceRequirement {
                             source_type: SourceType::Measurement,
                             authority_level: AuthorityLevel::Primary,
-                            freshness_requirement: Some(Duration::from_secs(300)), // 5 minutes max age
+                            freshness_requirement: Some(Duration::seconds(300)), // 5 minutes max age
                         }],
                     }],
                 });
@@ -479,7 +480,7 @@ impl VerifiabilityDetector {
                     content: mat.as_str().to_string(),
                     verification_method: VerificationMethod::ProcessAnalysis,
                     evidence_requirements: vec![EvidenceRequirement {
-                        evidence_type: EvidenceType::ProcessAnalysis,
+                        evidence_type: EvidenceType::CodeAnalysis,
                         minimum_confidence: 0.8,
                         source_requirements: vec![SourceRequirement {
                             source_type: SourceType::Documentation,

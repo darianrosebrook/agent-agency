@@ -12,6 +12,7 @@ pub mod verdict_aggregation;
 pub mod workflow;
 pub mod risk_scorer;
 pub mod error_handling;
+pub mod models;
 
 pub use error::{CouncilError, CouncilResult};
 pub use judge::{
@@ -37,3 +38,5 @@ pub use error_handling::{
     DegradationLevel, RecoveryOrchestrator, SystemHealth, HealthStatus,
     error_factory,
 };
+
+pub use models::*;

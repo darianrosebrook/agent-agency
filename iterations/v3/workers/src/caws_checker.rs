@@ -13,14 +13,14 @@
 //! Enhanced with AST-based diff sizing and violation code mapping.
 
 use crate::types::*;
-use agent_agency_council::models::{
+use agent_agency_council::{TaskSpec, models::{
     FileModification as CouncilFileModification, FileOperation as CouncilFileOperation, RiskTier,
-    TaskSpec, WorkerOutput as CouncilWorkerOutput,
-};
+    WorkerOutput as CouncilWorkerOutput,
+}};
 use agent_agency_database::{CawsViolation as DbCawsViolation, DatabaseClient};
 use anyhow::{Context, Result};
 use serde_json::json;
-use sqlx::Row;
+use sqlx::{query, Row};
 use std::collections::HashMap;
 use tracing::info;
 use uuid::Uuid;
@@ -85,6 +85,40 @@ pub trait LanguageAnalyzer: Send + Sync + std::fmt::Debug {
         diff: &str,
         content: Option<&str>,
     ) -> Result<ChangeComplexity>;
+
+    /// Analyze diff scope for impact assessment
+    fn analyze_diff_scope(&self, diff: &str) -> Result<DiffScope>;
+
+    /// Estimate blast radius for change impact
+    fn estimate_blast_radius(&self, diff: &str) -> u32;
+
+    /// Classify change type for risk assessment
+    fn classify_change_type(&self, diff: &str) -> ChangeType;
+
+    /// Analyze AST complexity for surgical change scoring
+    fn analyze_ast_complexity(
+        &self,
+        diff: &str,
+        content: Option<&str>,
+    ) -> Result<(u32, u32, u32, u32)>; // (structural, logical, dependency, cyclomatic)
+
+    /// Calculate cyclomatic complexity from AST
+    fn calculate_cyclomatic_complexity_ast(&self, file: &syn::File) -> u32;
+
+    /// Helper method for calculating complexity of AST items
+    fn calculate_item_complexity(&self, item: &syn::Item) -> u32;
+
+    /// Helper method for calculating function complexity
+    fn calculate_function_complexity(&self, _sig: &syn::Signature, block: &syn::Block) -> u32;
+
+    /// Helper method for visiting AST blocks
+    fn visit_block(&self, block: &syn::Block, complexity: &mut u32);
+
+    /// Helper method for visiting AST statements
+    fn visit_stmt(&self, stmt: &syn::Stmt, complexity: &mut u32);
+
+    /// Helper method for visiting AST expressions
+    fn visit_expr(&self, expr: &syn::Expr, complexity: &mut u32);
 }
 
 /// Language analysis result
@@ -1290,7 +1324,8 @@ impl CawsChecker {
         // Implement proper rule_id mapping with comprehensive rule identification system
         let rule_id = self.get_or_create_rule_id(&rule, &description, &severity).await?;
 
-        query = query.bind(&rule_id)
+        query
+        .bind(&rule_id)
         .bind(chrono::Utc::now())
         .bind(metadata)
         .execute(self.db_client.pool())

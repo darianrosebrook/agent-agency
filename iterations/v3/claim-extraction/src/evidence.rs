@@ -376,6 +376,8 @@ impl EvidenceCollector {
                 freshness: Utc::now(),
             },
             confidence,
+            relevance: confidence * 0.9,
+            relevance: confidence * 0.9,
             timestamp: Utc::now(),
         })
     }
@@ -411,6 +413,7 @@ impl EvidenceCollector {
                     freshness: Utc::now(),
                 },
                 confidence: complexity_score,
+                relevance: complexity_score * 0.8,
                 timestamp: Utc::now(),
             });
         }
@@ -567,6 +570,7 @@ impl EvidenceCollector {
                 freshness: Utc::now(),
             },
             confidence,
+            relevance: confidence * 0.9,
             timestamp: Utc::now(),
         })
     }
@@ -622,6 +626,7 @@ impl EvidenceCollector {
                 freshness: Utc::now(),
             },
             confidence,
+            relevance: confidence * 0.9,
             timestamp: Utc::now(),
         })
     }
@@ -798,6 +803,7 @@ impl EvidenceCollector {
                                     freshness: Utc::now(),
                                 },
                                 confidence,
+            relevance: confidence * 0.9,
                                 timestamp: Utc::now(),
                             });
                         }
@@ -850,6 +856,7 @@ impl EvidenceCollector {
                 freshness: Utc::now(),
             },
             confidence,
+            relevance: confidence * 0.9,
             timestamp: Utc::now(),
         })
     }
@@ -1330,6 +1337,7 @@ impl EvidenceCollector {
                 freshness: Utc::now(),
             },
             confidence,
+            relevance: confidence * 0.9,
             timestamp: Utc::now(),
         })
     }
@@ -1379,6 +1387,7 @@ impl EvidenceCollector {
                 freshness: Utc::now(),
             },
             confidence,
+            relevance: confidence * 0.9,
             timestamp: Utc::now(),
         })
     }
@@ -1485,6 +1494,7 @@ impl EvidenceCollector {
                 freshness: Utc::now(),
             },
             confidence,
+            relevance: confidence * 0.9,
             timestamp: Utc::now(),
         })
     }
@@ -1572,6 +1582,7 @@ impl EvidenceCollector {
                 freshness: Utc::now(),
             },
             confidence,
+            relevance: confidence * 0.9,
             timestamp: Utc::now(),
         })
     }
@@ -1673,6 +1684,8 @@ impl EvidenceCollector {
                 freshness: Utc::now(),
             },
             confidence,
+            relevance: confidence * 0.9,
+            relevance: 0.8,
             timestamp: Utc::now(),
         })
     }
@@ -1744,6 +1757,8 @@ impl EvidenceCollector {
                 freshness: Utc::now(),
             },
             confidence,
+            relevance: confidence * 0.9,
+            relevance: 0.7,
             timestamp: Utc::now(),
         })
     }
@@ -1840,6 +1855,7 @@ impl EvidenceCollector {
                 freshness: Utc::now(),
             },
             confidence,
+            relevance: confidence * 0.9,
             timestamp: Utc::now(),
         })
     }
@@ -1975,6 +1991,7 @@ impl EvidenceCollector {
                 freshness: Utc::now(),
             },
             confidence,
+            relevance: confidence * 0.9,
             timestamp: Utc::now(),
         })
     }

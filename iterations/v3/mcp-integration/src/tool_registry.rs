@@ -493,7 +493,7 @@ impl ToolRegistry {
             .and_then(|v| v.as_str())
             .ok_or_else(|| anyhow::anyhow!("Missing 'command' parameter"))?;
 
-        let args = request.parameters
+        let args: Vec<String> = request.parameters
             .get("args")
             .and_then(|v| v.as_array())
             .map(|arr| arr.iter().filter_map(|v| v.as_str()).map(|s| s.to_string()).collect())

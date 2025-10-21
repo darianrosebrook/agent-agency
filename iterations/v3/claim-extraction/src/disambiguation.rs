@@ -2548,6 +2548,9 @@ impl ContextResolver {
         }
 
         let normalized = self.normalize_entity_label(entity);
+        if normalized.is_empty() {
+            return Ok(None);
+        }
         let (properties, confidence, source_uri) =
             match self.build_channel_payload(channel, entity, &normalized, config) {
                 Some(payload) => payload,

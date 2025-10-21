@@ -3,10 +3,36 @@
 //! Executes tasks by communicating with worker models and handling the execution lifecycle.
 
 use crate::types::*;
-use agent_agency_council::models::{RiskTier, TaskContext as CouncilTaskContext, TaskSpec};
-use agent_agency_resilience::{retry_with_backoff, CircuitBreaker, RetryConfig};
+use agent_agency_council::{TaskSpec, models::{RiskTier, TaskContext as CouncilTaskContext}};
+use agent_agency_resilience::{CircuitBreaker, RetryConfig};
+
+// TODO: Implement proper retry with backoff
+async fn retry_with_backoff<F, T, E>(
+    operation: F,
+    max_retries: u32,
+    base_delay_ms: u64,
+) -> Result<T, E>
+where
+    F: Fn() -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<T, E>> + Send>>,
+{
+    let mut delay = base_delay_ms;
+    for attempt in 0..max_retries {
+        match operation().await {
+            Ok(result) => return Ok(result),
+            Err(e) => {
+                if attempt == max_retries - 1 {
+                    return Err(e);
+                }
+                tokio::time::sleep(tokio::time::Duration::from_millis(delay)).await;
+                delay = (delay * 2).min(5000); // Exponential backoff with max 5s
+            }
+        }
+    }
+    unreachable!()
+}
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::sync::Arc;
 use tracing::{info, warn};
 use uuid::Uuid;
@@ -345,7 +371,7 @@ impl TaskExecutor {
                 id: format!("validation-{}", i),
                 name: format!("Waiver Validation {}", i),
                 description: format!("Validate waiver: {}", waiver.reason),
-                rule_type: ValidationRuleType::Custom,
+                rule_type: ValidationRuleType::Custom("waiver_validation".to_string()),
                 config: serde_json::json!({
                     "waiver_id": waiver.id,
                     "reason": waiver.reason
@@ -384,12 +410,11 @@ impl TaskExecutor {
             ComplianceRequirements::default()
         } else {
             ComplianceRequirements {
-                standards: vec!["ISO27001".to_string()], // Placeholder
-                certifications: council_spec.waivers.iter()
+                regulatory: vec!["ISO27001".to_string()], // Placeholder
+                policies: council_spec.waivers.iter()
                     .map(|w| w.id.clone())
                     .collect(),
-                audit_requirements: vec![],
-                reporting_frequency: "monthly".to_string(),
+                audit: vec![],
             }
         };
 
@@ -1252,7 +1277,7 @@ pub enum ValidationRuleType {
 }
 
 /// Severity levels
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum SeverityLevel {
     /// Critical - must be fixed
     Critical,

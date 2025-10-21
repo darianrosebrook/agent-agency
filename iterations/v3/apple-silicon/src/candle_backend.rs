@@ -1452,6 +1452,8 @@ trait CandleInferenceModel: Send + Sync {
 }
 
 /// LRU cache for loaded models with size management
+}
+
 struct ModelCache {
     cache: lru::LruCache<String, Box<dyn CandleInferenceModel>>,
     max_memory_mb: u64,
