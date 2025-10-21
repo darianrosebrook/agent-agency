@@ -20,9 +20,11 @@ pub mod fsck;
 pub mod index;
 pub mod types;
 pub mod integration;
+pub mod metrics;
 
 // Re-export key types for convenience
 pub use api::*;
 pub use types::*;
 pub use integration::*;
+pub use metrics::*;
 // pub use source_integrity::{Digest, StreamingHasher, MerkleTree};  // Temporarily disabled
