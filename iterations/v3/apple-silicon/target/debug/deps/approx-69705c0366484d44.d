@@ -1,0 +1,9 @@
+/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/apple-silicon/target/debug/deps/approx-69705c0366484d44.d: /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/approx-0.5.1/src/lib.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/approx-0.5.1/src/abs_diff_eq.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/approx-0.5.1/src/relative_eq.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/approx-0.5.1/src/ulps_eq.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/approx-0.5.1/src/macros.rs
+
+/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/apple-silicon/target/debug/deps/libapprox-69705c0366484d44.rmeta: /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/approx-0.5.1/src/lib.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/approx-0.5.1/src/abs_diff_eq.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/approx-0.5.1/src/relative_eq.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/approx-0.5.1/src/ulps_eq.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/approx-0.5.1/src/macros.rs
+
+/Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/approx-0.5.1/src/lib.rs:
+/Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/approx-0.5.1/src/abs_diff_eq.rs:
+/Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/approx-0.5.1/src/relative_eq.rs:
+/Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/approx-0.5.1/src/ulps_eq.rs:
+/Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/approx-0.5.1/src/macros.rs:

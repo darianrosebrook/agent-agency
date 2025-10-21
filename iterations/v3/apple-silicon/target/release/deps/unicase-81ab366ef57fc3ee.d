@@ -1,0 +1,10 @@
+/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/apple-silicon/target/release/deps/unicase-81ab366ef57fc3ee.d: /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/unicase-2.8.1/src/lib.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/unicase-2.8.1/src/ascii.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/unicase-2.8.1/src/unicode/mod.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/unicase-2.8.1/src/unicode/map.rs
+
+/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/apple-silicon/target/release/deps/libunicase-81ab366ef57fc3ee.rlib: /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/unicase-2.8.1/src/lib.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/unicase-2.8.1/src/ascii.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/unicase-2.8.1/src/unicode/mod.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/unicase-2.8.1/src/unicode/map.rs
+
+/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/apple-silicon/target/release/deps/libunicase-81ab366ef57fc3ee.rmeta: /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/unicase-2.8.1/src/lib.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/unicase-2.8.1/src/ascii.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/unicase-2.8.1/src/unicode/mod.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/unicase-2.8.1/src/unicode/map.rs
+
+/Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/unicase-2.8.1/src/lib.rs:
+/Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/unicase-2.8.1/src/ascii.rs:
+/Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/unicase-2.8.1/src/unicode/mod.rs:
+/Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/unicase-2.8.1/src/unicode/map.rs:

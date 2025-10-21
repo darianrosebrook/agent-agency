@@ -23,14 +23,192 @@ pub struct InferenceRouter {
 }
 
 impl InferenceRouter {
-    /// Create a new inference router
-    pub fn new(config: RoutingConfig) -> Self {
+    /// Create a new inference router with system capability detection
+    pub async fn new(config: RoutingConfig) -> Result<Self> {
+        let system_capabilities = Self::detect_system_capabilities().await;
+
+        Ok(Self {
+            config,
+            system_capabilities: Arc::new(RwLock::new(system_capabilities)),
+            current_resource_usage: Arc::new(RwLock::new(ResourceUsage::default())),
+            model_performance_cache: Arc::new(RwLock::new(HashMap::new())),
+            routing_history: Arc::new(RwLock::new(Vec::new())),
+        })
+    }
+
+    /// Create a new inference router with default capabilities (for testing)
+    pub fn new_with_defaults(config: RoutingConfig) -> Self {
         Self {
             config,
             system_capabilities: Arc::new(RwLock::new(SystemCapabilities::default())),
             current_resource_usage: Arc::new(RwLock::new(ResourceUsage::default())),
             model_performance_cache: Arc::new(RwLock::new(HashMap::new())),
             routing_history: Arc::new(RwLock::new(Vec::new())),
+        }
+    }
+
+    /// Detect actual system capabilities
+    async fn detect_system_capabilities() -> SystemCapabilities {
+        let mut capabilities = SystemCapabilities::default();
+
+        // Detect CPU information
+        capabilities.cpu_cores = num_cpus::get() as u32;
+        capabilities.cpu_frequency_mhz = Self::detect_cpu_frequency();
+
+        // Detect memory
+        capabilities.total_memory_mb = Self::detect_total_memory_mb();
+
+        // Detect ANE availability and capabilities
+        let ane_caps = Self::detect_ane_capabilities().await;
+        capabilities.ane_available = ane_caps.is_available;
+        capabilities.ane_compute_units = ane_caps.compute_units;
+        capabilities.ane_memory_mb = ane_caps.max_memory_mb;
+
+        // Detect Metal GPU availability
+        let gpu_caps = Self::detect_gpu_capabilities().await;
+        capabilities.metal_available = gpu_caps.is_available;
+        capabilities.metal_device_name = gpu_caps.device_name;
+        capabilities.metal_memory_mb = gpu_caps.memory_mb;
+
+        // Detect system management capabilities
+        capabilities.thermal_management = Self::detect_thermal_management();
+        capabilities.power_management = Self::detect_power_management();
+
+        capabilities
+    }
+
+    /// Detect CPU frequency in MHz
+    fn detect_cpu_frequency() -> u32 {
+        #[cfg(target_os = "macos")]
+        {
+            // On macOS, try to read from sysctl
+            use std::process::Command;
+            if let Ok(output) = Command::new("sysctl")
+                .args(&["-n", "hw.cpufrequency"])
+                .output()
+            {
+                if let Ok(freq_str) = String::from_utf8(output.stdout) {
+                    if let Ok(freq_hz) = freq_str.trim().parse::<u64>() {
+                        return (freq_hz / 1_000_000) as u32; // Convert Hz to MHz
+                    }
+                }
+            }
+        }
+
+        // Fallback: estimate based on CPU cores (rough approximation)
+        match num_cpus::get() {
+            1..=4 => 2400,   // Mobile/older CPUs
+            5..=8 => 3200,   // Desktop CPUs
+            9..=16 => 3600,  // High-end CPUs
+            _ => 3000,       // Default
+        }
+    }
+
+    /// Detect total system memory in MB
+    fn detect_total_memory_mb() -> u64 {
+        #[cfg(target_os = "macos")]
+        {
+            use std::process::Command;
+            if let Ok(output) = Command::new("sysctl")
+                .args(&["-n", "hw.memsize"])
+                .output()
+            {
+                if let Ok(mem_str) = String::from_utf8(output.stdout) {
+                    if let Ok(mem_bytes) = mem_str.trim().parse::<u64>() {
+                        return mem_bytes / (1024 * 1024); // Convert bytes to MB
+                    }
+                }
+            }
+        }
+
+        // Fallback: estimate based on system type
+        #[cfg(target_arch = "aarch64")]
+        { 8 * 1024 } // 8GB for ARM64 systems
+        #[cfg(not(target_arch = "aarch64"))]
+        { 16 * 1024 } // 16GB for x86 systems
+    }
+
+    /// Detect ANE capabilities
+    async fn detect_ane_capabilities() -> ANECapabilities {
+        #[cfg(target_os = "macos")]
+        {
+            // Use the ANE manager to detect capabilities
+            crate::ane::ANEManager::detect_capabilities().await
+        }
+
+        #[cfg(not(target_os = "macos"))]
+        {
+            // Fallback for non-macOS systems
+            ANECapabilities {
+                is_available: false,
+                compute_units: 0,
+                max_memory_mb: 0,
+                supported_precisions: vec![],
+            }
+        }
+    }
+
+    /// Detect GPU capabilities
+    async fn detect_gpu_capabilities() -> GPUCapabilities {
+        #[cfg(target_os = "macos")]
+        {
+            // Check if Metal is available
+            use std::process::Command;
+            if let Ok(output) = Command::new("system_profiler")
+                .args(&["SPDisplaysDataType", "-json"])
+                .output()
+            {
+                if let Ok(json_str) = String::from_utf8(output.stdout) {
+                    if let Ok(json) = serde_json::from_str::<serde_json::Value>(&json_str) {
+                        if let Some(displays) = json.get("SPDisplaysDataType") {
+                            if let Some(display_array) = displays.as_array() {
+                                if !display_array.is_empty() {
+                                    // We have at least one display, assume Metal GPU is available
+                                    return GPUCapabilities {
+                                        is_available: true,
+                                        device_name: Some("Apple Silicon GPU".to_string()),
+                                        memory_mb: 0, // Would need more complex detection
+                                    };
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        GPUCapabilities {
+            is_available: false,
+            device_name: None,
+            memory_mb: 0,
+        }
+    }
+
+    /// Detect thermal management capabilities
+    fn detect_thermal_management() -> bool {
+        #[cfg(target_os = "macos")]
+        {
+            // macOS has thermal management on Apple Silicon
+            true
+        }
+
+        #[cfg(not(target_os = "macos"))]
+        {
+            false
+        }
+    }
+
+    /// Detect power management capabilities
+    fn detect_power_management() -> bool {
+        #[cfg(target_os = "macos")]
+        {
+            // macOS has power management
+            true
+        }
+
+        #[cfg(not(target_os = "macos"))]
+        {
+            false
         }
     }
 
@@ -294,36 +472,15 @@ impl InferenceRouter {
     fn calculate_priority_score(
         &self,
         target: &OptimizationTarget,
-        request: &InferenceRequest,
+        _request: &InferenceRequest,
     ) -> f32 {
-        // High priority requests prefer faster targets
-        match request.priority {
-            InferencePriority::Critical => match target {
-                OptimizationTarget::ANE => 1.0,
-                OptimizationTarget::GPU => 0.9,
-                OptimizationTarget::CPU => 0.7,
-                OptimizationTarget::Auto => 0.8,
-            },
-            InferencePriority::High => match target {
-                OptimizationTarget::ANE => 0.9,
-                OptimizationTarget::GPU => 1.0,
-                OptimizationTarget::CPU => 0.6,
-                OptimizationTarget::Auto => 0.7,
-            },
-            InferencePriority::Normal => match target {
-                OptimizationTarget::ANE => 0.8,
-                OptimizationTarget::GPU => 0.9,
-                OptimizationTarget::CPU => 0.8,
-                OptimizationTarget::Auto => 0.8,
-            },
-            InferencePriority::Low => {
-                match target {
-                    OptimizationTarget::ANE => 0.6,
-                    OptimizationTarget::GPU => 0.7,
-                    OptimizationTarget::CPU => 1.0, // CPU is fine for low priority
-                    OptimizationTarget::Auto => 0.7,
-                }
-            }
+        // Simple priority policy: ANE > GPU > CPU
+        // This implements the requirement to prefer ANE, then GPU, then CPU
+        match target {
+            OptimizationTarget::ANE => 1.0,    // Highest priority
+            OptimizationTarget::GPU => 0.8,    // Second priority
+            OptimizationTarget::CPU => 0.6,    // Lowest priority
+            OptimizationTarget::Auto => 0.9,   // Auto can choose optimally
         }
     }
 
@@ -609,23 +766,6 @@ impl Default for ResourceUsage {
     }
 }
 
-impl Default for SystemCapabilities {
-    fn default() -> Self {
-        Self {
-            ane_available: true,
-            ane_compute_units: 16,
-            ane_memory_mb: 2048,
-            metal_available: true,
-            metal_device_name: Some("Apple GPU".to_string()),
-            metal_memory_mb: 8192,
-            cpu_cores: 12,
-            cpu_frequency_mhz: 3200,
-            total_memory_mb: 32768,
-            thermal_management: true,
-            power_management: true,
-        }
-    }
-}
 
 #[cfg(test)]
 mod tests {

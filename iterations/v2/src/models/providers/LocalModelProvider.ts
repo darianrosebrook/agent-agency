@@ -63,7 +63,25 @@ export interface ModelGenerationResponse {
   /** Compute cost details */
   computeCost?: LocalComputeCost;
 
-  /** Cost of generation (simplified for external use) */
+  // TODO: Implement comprehensive cost calculation and billing system
+  // - Calculate actual computational costs based on resource usage (CPU, GPU, memory)
+  // - Implement cost models for different model types and sizes
+  // - Support cost tracking per user, project, and time period
+  // - Add cost forecasting and budget management
+  // - Implement cost optimization and resource efficiency analysis
+  // - Support multi-cloud cost comparison and optimization
+  // - Add cost anomaly detection and alerting
+  // - Implement detailed cost breakdown and attribution
+  /** TODO: Implement comprehensive cost calculation and billing system
+   * - Calculate actual computational costs based on resource usage (CPU, GPU, memory)
+   * - Implement cost models for different model types and sizes
+   * - Support cost tracking per user, project, and time period
+   * - Add cost forecasting and budget management
+   * - Implement cost optimization and resource efficiency analysis
+   * - Support multi-cloud cost comparison and optimization
+   * - Add cost anomaly detection and alerting
+   * - Implement detailed cost breakdown and attribution
+   */
   cost?: number;
 }
 

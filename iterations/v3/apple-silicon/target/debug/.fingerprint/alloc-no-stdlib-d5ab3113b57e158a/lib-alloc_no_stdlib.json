@@ -1,0 +1,1 @@
+{"rustc":17018002404295328610,"features":"[]","declared_features":"[\"unsafe\"]","target":1942380541186272485,"profile":8276155916380437441,"path":17333476016112228762,"deps":[],"local":[{"CheckDepInfo":{"dep_info":"debug/.fingerprint/alloc-no-stdlib-d5ab3113b57e158a/dep-lib-alloc_no_stdlib","checksum":false}}],"rustflags":[],"config":2069994364910194474,"compile_kind":0}

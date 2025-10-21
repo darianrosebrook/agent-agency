@@ -24,7 +24,16 @@ describe("Text Transformation E2E", () => {
   }, 30000);
 
   it("should complete text transformation workflow with evaluation", async () => {
-    jest.setTimeout(30000); // 30 seconds for this simplified test
+    // TODO: Implement comprehensive end-to-end testing with proper performance baselines
+    // - Establish realistic performance expectations for text transformation workflows
+    // - Implement adaptive test timeouts based on system performance and load
+    // - Add performance regression detection and alerting
+    // - Support parallel test execution for faster feedback
+    // - Implement test result caching for unchanged scenarios
+    // - Add test flakiness detection and stabilization strategies
+    // - Support different test environments (development, staging, production)
+    // - Implement comprehensive test metrics and reporting
+    jest.setTimeout(30000); // Current simplified timeout for basic test completion
     // Define a simpler test scenario that should pass quickly
     const scenario = {
       id: "text-transformation-e2e",

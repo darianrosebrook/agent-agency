@@ -1,186 +1,45 @@
-//! Thermal Manager
-//!
-//! Manages thermal monitoring and throttling for Apple Silicon.
+//! Thermal management for Apple Silicon
 
 use crate::types::*;
-use anyhow::Result;
-use std::sync::Arc;
-use tokio::sync::RwLock;
-use tracing::{info, warn};
 
-/// Thermal manager for monitoring and controlling system temperature
+/// Thermal manager
 #[derive(Debug)]
 pub struct ThermalManager {
-    config: ThermalConfig,
-    current_status: Arc<RwLock<ThermalStatus>>,
-    monitoring_active: Arc<RwLock<bool>>,
+    max_temp_c: u32,
+    current_temp_c: u32,
 }
 
 impl ThermalManager {
     /// Create a new thermal manager
-    pub fn new(config: ThermalConfig) -> Self {
+    pub fn new(max_temp_c: u32) -> Self {
         Self {
-            config,
-            current_status: Arc::new(RwLock::new(ThermalStatus {
-                current_temperature_c: 25.0,
-                max_temperature_c: 85.0,
-                throttle_level: ThrottleLevel::None,
-                thermal_pressure: ThermalPressure::None,
-                cooling_active: false,
-                timestamp: chrono::Utc::now(),
-            })),
-            monitoring_active: Arc::new(RwLock::new(false)),
+            max_temp_c,
+            current_temp_c: 50, // Default room temperature
         }
     }
 
-    /// Start thermal monitoring
-    pub async fn start_monitoring(&self) -> Result<()> {
-        let mut active = self.monitoring_active.write().await;
-        *active = true;
-
-        info!("Thermal monitoring started");
-        Ok(())
+    /// Get current temperature
+    pub fn temperature(&self) -> u32 {
+        self.current_temp_c
     }
 
-    /// Stop thermal monitoring
-    pub async fn stop_monitoring(&self) -> Result<()> {
-        let mut active = self.monitoring_active.write().await;
-        *active = false;
-
-        info!("Thermal monitoring stopped");
-        Ok(())
+    /// Check if throttling is needed
+    pub fn should_throttle(&self) -> bool {
+        self.current_temp_c >= self.max_temp_c
     }
 
-    /// Get current thermal status
-    pub async fn get_thermal_status(&self) -> ThermalStatus {
-        let status = self.current_status.read().await;
-        status.clone()
-    }
-
-    /// Update thermal status
-    pub async fn update_thermal_status(&self, temperature_c: f32) -> Result<()> {
-        let mut status = self.current_status.write().await;
-        status.current_temperature_c = temperature_c;
-        status.timestamp = chrono::Utc::now();
-
-        // Update thermal pressure
-        status.thermal_pressure = if temperature_c < 60.0 {
-            ThermalPressure::None
-        } else if temperature_c < 70.0 {
-            ThermalPressure::Nominal
-        } else if temperature_c < 80.0 {
-            ThermalPressure::Fair
-        } else if temperature_c < 85.0 {
-            ThermalPressure::Serious
-        } else {
-            ThermalPressure::Critical
-        };
-
-        // Update throttle level
-        if self.config.enable_thermal_throttling {
-            status.throttle_level =
-                if temperature_c < self.config.thermal_throttle_threshold_celsius {
-                    ThrottleLevel::None
-                } else if temperature_c < self.config.thermal_throttle_threshold_celsius + 5.0 {
-                    ThrottleLevel::Light
-                } else if temperature_c < self.config.thermal_throttle_threshold_celsius + 10.0 {
-                    ThrottleLevel::Medium
-                } else {
-                    ThrottleLevel::Heavy
-                };
+    /// Get thermal status
+    pub fn status(&self) -> ThermalStats {
+        ThermalStats {
+            temperature_c: self.current_temp_c as f32,
+            throttle_active: self.should_throttle(),
+            fan_speed_rpm: Some(2000),
         }
-
-        // Activate cooling if needed
-        status.cooling_active = temperature_c > 75.0;
-
-        if temperature_c > self.config.max_temperature_celsius {
-            warn!("Critical temperature reached: {:.1}°C", temperature_c);
-        }
-
-        Ok(())
-    }
-
-    /// Check if system is within thermal limits
-    pub async fn is_within_thermal_limits(&self) -> bool {
-        let status = self.current_status.read().await;
-        status.current_temperature_c < self.config.max_temperature_celsius
-    }
-
-    /// Get recommended throttle level
-    pub async fn get_recommended_throttle_level(&self) -> ThrottleLevel {
-        let status = self.current_status.read().await;
-        status.throttle_level.clone()
     }
 }
 
 impl Default for ThermalManager {
     fn default() -> Self {
-        Self::new(ThermalConfig {
-            enable_thermal_monitoring: true,
-            thermal_throttle_threshold_celsius: 80.0,
-            max_temperature_celsius: 85.0,
-            cooling_down_period_ms: 10000,
-            monitoring_interval_ms: 5000,
-            enable_thermal_throttling: true,
-        })
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[tokio::test]
-    async fn test_thermal_manager_creation() {
-        let config = ThermalConfig {
-            enable_thermal_monitoring: true,
-            thermal_throttle_threshold_celsius: 80.0,
-            max_temperature_celsius: 85.0,
-            cooling_down_period_ms: 10000,
-            monitoring_interval_ms: 5000,
-            enable_thermal_throttling: true,
-        };
-
-        let manager = ThermalManager::new(config);
-        assert!(manager.is_within_thermal_limits().await);
-    }
-
-    #[tokio::test]
-    async fn test_thermal_status_update() {
-        let manager = ThermalManager::default();
-
-        manager.update_thermal_status(45.0).await.unwrap();
-        let status = manager.get_thermal_status().await;
-        assert_eq!(status.current_temperature_c, 45.0);
-        assert_eq!(status.thermal_pressure, ThermalPressure::None);
-        assert_eq!(status.throttle_level, ThrottleLevel::None);
-    }
-
-    #[tokio::test]
-    async fn test_thermal_pressure_levels() {
-        let manager = ThermalManager::default();
-
-        // Test different temperature levels
-        manager.update_thermal_status(65.0).await.unwrap();
-        let status = manager.get_thermal_status().await;
-        assert_eq!(status.thermal_pressure, ThermalPressure::Nominal);
-
-        manager.update_thermal_status(75.0).await.unwrap();
-        let status = manager.get_thermal_status().await;
-        assert_eq!(status.thermal_pressure, ThermalPressure::Fair);
-
-        manager.update_thermal_status(90.0).await.unwrap();
-        let status = manager.get_thermal_status().await;
-        assert_eq!(status.thermal_pressure, ThermalPressure::Critical);
-    }
-
-    #[tokio::test]
-    async fn test_thermal_limits() {
-        let manager = ThermalManager::default();
-
-        assert!(manager.is_within_thermal_limits().await);
-
-        manager.update_thermal_status(90.0).await.unwrap();
-        assert!(!manager.is_within_thermal_limits().await);
+        Self::new(85)
     }
 }

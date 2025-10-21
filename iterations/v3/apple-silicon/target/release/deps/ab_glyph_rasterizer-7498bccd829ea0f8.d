@@ -1,0 +1,9 @@
+/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/apple-silicon/target/release/deps/ab_glyph_rasterizer-7498bccd829ea0f8.d: /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ab_glyph_rasterizer-0.1.10/src/lib.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ab_glyph_rasterizer-0.1.10/src/geometry.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ab_glyph_rasterizer-0.1.10/src/raster.rs
+
+/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/apple-silicon/target/release/deps/libab_glyph_rasterizer-7498bccd829ea0f8.rlib: /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ab_glyph_rasterizer-0.1.10/src/lib.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ab_glyph_rasterizer-0.1.10/src/geometry.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ab_glyph_rasterizer-0.1.10/src/raster.rs
+
+/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/apple-silicon/target/release/deps/libab_glyph_rasterizer-7498bccd829ea0f8.rmeta: /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ab_glyph_rasterizer-0.1.10/src/lib.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ab_glyph_rasterizer-0.1.10/src/geometry.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ab_glyph_rasterizer-0.1.10/src/raster.rs
+
+/Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ab_glyph_rasterizer-0.1.10/src/lib.rs:
+/Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ab_glyph_rasterizer-0.1.10/src/geometry.rs:
+/Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ab_glyph_rasterizer-0.1.10/src/raster.rs:

@@ -5,6 +5,57 @@ use std::collections::HashMap;
 use std::fmt::Display;
 use uuid::Uuid;
 
+/// Compute units available on Apple Silicon
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum ComputeUnit {
+    /// Apple Neural Engine
+    ANE,
+    /// Metal GPU
+    GPU,
+    /// CPU cores
+    CPU,
+    /// All available compute units
+    All,
+}
+
+/// Core ML specific errors
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum CoreMLError {
+    /// Invalid input data or parameters
+    InvalidInput(String),
+    /// Unsupported format or feature
+    UnsupportedFormat(String),
+    /// Unsupported data type
+    UnsupportedDataType(String),
+    /// Unsupported output type
+    UnsupportedOutputType(String),
+    /// Memory allocation or management error
+    MemoryError(String),
+    /// System-level error
+    SystemError(String),
+    /// Parsing or serialization error
+    ParsingError(String),
+    /// Validation error
+    ValidationError(String),
+}
+
+impl std::fmt::Display for CoreMLError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            CoreMLError::InvalidInput(msg) => write!(f, "Invalid input: {}", msg),
+            CoreMLError::UnsupportedFormat(msg) => write!(f, "Unsupported format: {}", msg),
+            CoreMLError::UnsupportedDataType(msg) => write!(f, "Unsupported data type: {}", msg),
+            CoreMLError::UnsupportedOutputType(msg) => write!(f, "Unsupported output type: {}", msg),
+            CoreMLError::MemoryError(msg) => write!(f, "Memory error: {}", msg),
+            CoreMLError::SystemError(msg) => write!(f, "System error: {}", msg),
+            CoreMLError::ParsingError(msg) => write!(f, "Parsing error: {}", msg),
+            CoreMLError::ValidationError(msg) => write!(f, "Validation error: {}", msg),
+        }
+    }
+}
+
+impl std::error::Error for CoreMLError {}
+
 /// Optimization targets for Apple Silicon
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum OptimizationTarget {
@@ -165,7 +216,7 @@ pub enum DataLayout {
 }
 
 /// GPU memory statistics
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GpuMemoryStats {
     /// Total GPU memory in bytes
     pub total: u64,
@@ -176,7 +227,7 @@ pub struct GpuMemoryStats {
 }
 
 /// ANE (Apple Neural Engine) statistics
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AneStats {
     /// ANE utilization percentage (0.0-100.0)
     pub utilization_percent: f32,
@@ -189,7 +240,7 @@ pub struct AneStats {
 }
 
 /// Comprehensive thermal monitoring data
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ThermalStats {
     /// Overall system temperature in Celsius
     pub system_temperature: f32,
@@ -507,6 +558,41 @@ pub struct SystemCapabilities {
     pub power_management: bool,
 }
 
+impl Default for SystemCapabilities {
+    fn default() -> Self {
+        Self {
+            ane_available: false,
+            ane_compute_units: 0,
+            ane_memory_mb: 0,
+            metal_available: false,
+            metal_device_name: None,
+            metal_memory_mb: 0,
+            cpu_cores: num_cpus::get() as u32,
+            cpu_frequency_mhz: 0,
+            total_memory_mb: 0,
+            thermal_management: false,
+            power_management: false,
+        }
+    }
+}
+
+/// ANE device capabilities
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ANECapabilities {
+    pub is_available: bool,
+    pub compute_units: u32,
+    pub max_memory_mb: u32,
+    pub supported_precisions: Vec<String>,
+}
+
+/// GPU device capabilities
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GPUCapabilities {
+    pub is_available: bool,
+    pub device_name: Option<String>,
+    pub memory_mb: u32,
+}
+
 /// Model loading status
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ModelLoadingStatus {
@@ -737,6 +823,133 @@ pub enum BufferStructureType {
     Cache,
     Persistent,
     Scratch,
+}
+
+/// ANE (Apple Neural Engine) Manager for neural processing acceleration
+#[derive(Debug, Clone)]
+pub struct ANEManager {
+    pub device_count: usize,
+    pub max_concurrent_operations: usize,
+    pub supported_precisions: Vec<String>,
+}
+
+impl ANEManager {
+    /// Check if ANE is available on this system
+    pub fn is_ane_available() -> bool {
+        // TODO: Implement actual ANE detection
+        // For now, assume available on Apple Silicon
+        cfg!(target_arch = "aarch64")
+    }
+
+    /// Create a new ANE manager instance
+    pub fn new() -> Result<Self, CoreMLError> {
+        if !Self::is_ane_available() {
+            return Err(CoreMLError::SystemError("ANE not available on this system".to_string()));
+        }
+
+        Ok(Self {
+            device_count: 1, // ANE is typically a single device
+            max_concurrent_operations: 4,
+            supported_precisions: vec!["fp16".to_string(), "int8".to_string()],
+        })
+    }
+
+    /// Create an ANE device for computation
+    pub async fn create_ane_device(&self) -> Result<ANEDevice, CoreMLError> {
+        // TODO: Implement actual ANE device creation
+        Ok(ANEDevice {
+            id: 0,
+            performance_profile: ANEPerformanceProfile::HighPerformance,
+        })
+    }
+
+    /// Get ANE performance statistics
+    pub async fn get_ane_performance_stats(&self, _device: ANEDevice) -> Result<ANEPerformanceStats, CoreMLError> {
+        // TODO: Implement actual ANE performance monitoring
+        Ok(ANEPerformanceStats {
+            active_operations: 2,
+            total_operations: 8,
+            power_consumption_mw: 1500,
+            thermal_state: 45.0,
+            utilization_percentage: 25.0,
+        })
+    }
+}
+
+/// ANE Device handle
+#[derive(Debug, Clone)]
+pub struct ANEDevice {
+    pub id: u32,
+    pub performance_profile: ANEPerformanceProfile,
+}
+
+/// ANE Performance Profile
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ANEPerformanceProfile {
+    LowPower,
+    Balanced,
+    HighPerformance,
+}
+
+/// ANE Performance Statistics
+#[derive(Debug, Clone)]
+pub struct ANEPerformanceStats {
+    pub active_operations: u32,
+    pub total_operations: u32,
+    pub power_consumption_mw: u32,
+    pub thermal_state: f32,
+    pub utilization_percentage: f32,
+}
+
+/// Core ML Model wrapper for macOS
+#[cfg(target_os = "macos")]
+#[derive(Debug, Clone)]
+pub struct CoreMLModel {
+    pub model_path: String,
+    pub is_loaded: bool,
+    pub input_shapes: HashMap<String, Vec<usize>>,
+    pub output_shapes: HashMap<String, Vec<usize>>,
+}
+
+#[cfg(target_os = "macos")]
+impl CoreMLModel {
+    /// Create a new Core ML model from file path
+    pub fn new(model_path: &std::path::Path) -> Result<Self, CoreMLError> {
+        // TODO: Implement actual Core ML model loading
+        Ok(Self {
+            model_path: model_path.to_string_lossy().to_string(),
+            is_loaded: false,
+            input_shapes: HashMap::new(),
+            output_shapes: HashMap::new(),
+        })
+    }
+
+    /// Get model description
+    pub fn model_description(&self) -> String {
+        format!("CoreMLModel at {}", self.model_path)
+    }
+
+    /// Get model type (placeholder)
+    pub fn model_type(&self) -> String {
+        "mlprogram".to_string()
+    }
+}
+
+/// Advanced quantization engine for model optimization
+#[derive(Debug)]
+pub struct AdvancedQuantizationEngine {
+    pub quantization_methods: Vec<String>,
+    pub calibration_data: Vec<Vec<f32>>,
+}
+
+impl AdvancedQuantizationEngine {
+    /// Create a new quantization engine
+    pub fn new() -> Self {
+        Self {
+            quantization_methods: vec!["dynamic".to_string(), "static".to_string()],
+            calibration_data: Vec::new(),
+        }
+    }
 }
 
 #[cfg(test)]

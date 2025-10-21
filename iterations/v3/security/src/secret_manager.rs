@@ -790,10 +790,23 @@ impl SecretManager {
 
 impl Clone for SecretManager {
     fn clone(&self) -> Self {
-        // Note: This is a simplified clone that shares the provider and cache
-        // In a production system, you might want separate instances
+        // TODO: Implement proper secret manager cloning with resource isolation
+        // - Create separate provider instances to prevent resource sharing
+        // - Implement connection pooling for cloned instances
+        // - Add proper resource cleanup for cloned managers
+        // - Implement lazy initialization for cloned providers
+        // - Support configuration inheritance with overrides
+        // - Add cloning performance monitoring and optimization
+        // - Implement thread-safe cloning for concurrent access
+        // - Add clone validation and consistency checking
         Self {
-            provider: Box::new(LocalFileProvider::new("dummy".to_string())), // Placeholder
+            // TODO: Replace placeholder with proper provider cloning
+            // - Implement provider factory pattern for consistent cloning
+            // - Support different provider types with appropriate cloning strategies
+            // - Add provider state synchronization during cloning
+            // - Implement provider configuration deep cloning
+            // - Support provider-specific cloning optimizations
+            provider: Box::new(LocalFileProvider::new("dummy".to_string())),
             config: self.config.clone(),
             cache: self.cache.clone(),
             audit_enabled: self.audit_enabled,

@@ -246,14 +246,32 @@ impl MemoryMonitor {
         }
     }
 
-    /// Force garbage collection (simplified implementation)
+    /// TODO: Implement comprehensive memory management and garbage collection
+    /// - Integrate with Rust's memory allocator and GC mechanisms
+    /// - Implement generational garbage collection strategies
+    /// - Add memory compaction and defragmentation capabilities
+    /// - Support memory pressure monitoring and automatic GC triggering
+    /// - Implement finalization and resource cleanup coordination
+    /// - Add memory leak detection and reporting
+    /// - Support custom allocation strategies and memory pools
+    /// - Implement memory usage profiling and optimization
     fn force_gc(&self) {
-        // In a real implementation, this would integrate with the Rust GC
-        // For now, we'll just log and potentially clear some caches
+        // TODO: Replace mock GC with actual memory management integration
+        // - Connect with system memory allocators and deallocators
+        // - Implement reference counting and ownership tracking
+        // - Support cyclic reference detection and breaking
+        // - Add memory fragmentation analysis and optimization
+        // - Implement memory usage quotas and limits
+        // - Support memory-mapped file management and cleanup
+        // - Add memory pressure-based eviction and optimization
+        // - Implement memory usage analytics and forecasting
         info!("Garbage collection triggered - clearing memory pressure");
 
-        // This is where you would integrate with actual GC mechanisms
-        // For demonstration, we'll just log
+        // TODO: Integrate with actual garbage collection mechanisms
+        // - Use jemalloc or custom allocators for memory management
+        // - Implement mark-and-sweep or copying GC algorithms
+        // - Support concurrent and incremental garbage collection
+        // - Add GC pause time optimization and monitoring
         let before = MemoryTrackingAllocator::memory_stats();
         debug!("GC triggered at {} MB allocated", before.allocated_bytes / (1024 * 1024));
     }
@@ -344,7 +362,15 @@ where
                 self.created_count.fetch_add(1, Ordering::Relaxed);
                 (self.factory)()
             } else {
-                // Wait for an object to be returned (simplified - in practice you'd use a channel)
+                // TODO: Implement proper object pool waiting and synchronization
+                // - Use async channels or condition variables for proper waiting
+                // - Implement configurable timeout for object acquisition
+                // - Add fairness guarantees for waiting threads/tasks
+                // - Support priority-based object allocation
+                // - Implement pool expansion strategies when under pressure
+                // - Add deadlock detection and prevention mechanisms
+                // - Support asynchronous object pool operations
+                // - Implement pool statistics and monitoring
                 panic!("Object pool exhausted - increase max_size or implement proper waiting");
             }
         };

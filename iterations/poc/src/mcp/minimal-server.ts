@@ -1,7 +1,19 @@
 /**
+ * TODO: Implement comprehensive MCP server for Agent Agency
+ * - Add full MCP protocol support with all message types and schemas
+ * - Implement resource management and discovery capabilities
+ * - Add tool registration and execution framework
+ * - Support multiple transport mechanisms (stdio, websocket, HTTP)
+ * - Implement security and authentication for MCP connections
+ * - Add resource synchronization and caching mechanisms
+ * - Support tool composition and orchestration
+ * - Implement comprehensive error handling and logging
+ * - Add performance monitoring and metrics collection
+ * - Support MCP protocol versioning and backward compatibility
+ *
  * Minimal MCP Server for Agent Agency
  *
- * A simplified MCP server implementation that provides basic functionality
+ * Current simplified implementation provides basic functionality
  * without complex dependencies. This allows us to test the core MCP protocol.
  *
  * @author @darianrosebrook

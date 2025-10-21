@@ -1,3 +1,12 @@
+// [refactor candidate]: split language types into workers/caws/language_types.rs (ProgrammingLanguage enum, LanguageAnalysisResult, etc.)
+// [refactor candidate]: split diff analysis into workers/caws/diff_analysis.rs (DiffAnalyzer, DiffAnalysisResult, etc.)
+// [refactor candidate]: split violation mapping into workers/caws/violation_mapper.rs (ViolationCodeMapper, ConstitutionalReference, etc.)
+// [refactor candidate]: split Rust analyzer into workers/caws/analyzers/rust.rs (RustAnalyzer)
+// [refactor candidate]: split TypeScript analyzer into workers/caws/analyzers/typescript.rs (TypeScriptAnalyzer)
+// [refactor candidate]: split JavaScript analyzer into workers/caws/analyzers/javascript.rs (JavaScriptAnalyzer)
+// [refactor candidate]: split compliance into workers/caws/compliance.rs (CawsWaiver, CawsValidationResult, etc.)
+// [refactor candidate]: split main checker into workers/caws/checker.rs (CawsChecker)
+// [refactor candidate]: create workers/caws/mod.rs and workers/caws/analyzers/mod.rs for module re-exports
 //! CAWS Checker
 //!
 //! Provides CAWS compliance checking and validation for worker outputs.
@@ -125,6 +134,44 @@ pub struct ChangeComplexity {
     pub dependency_changes: u32,
     pub complexity_score: f32,
     pub is_surgical: bool,
+    /// Cyclomatic complexity score from AST analysis
+    pub cyclomatic_complexity: u32,
+    /// Diff scope analysis (lines changed, files affected)
+    pub diff_scope: DiffScope,
+}
+
+/// Diff scope analysis for change impact assessment
+#[derive(Debug, Clone)]
+pub struct DiffScope {
+    /// Number of lines changed in the diff
+    pub lines_changed: u32,
+    /// Number of files affected
+    pub files_affected: u32,
+    /// Estimated blast radius (how many modules/components affected)
+    pub blast_radius: u32,
+    /// Change type classification
+    pub change_type: ChangeType,
+}
+
+/// Classification of change types for impact assessment
+#[derive(Debug, Clone)]
+pub enum ChangeType {
+    /// Simple variable or constant changes
+    Variable,
+    /// Function or method modifications
+    Function,
+    /// Class or interface changes
+    Structural,
+    /// Import/export dependency changes
+    Dependency,
+    /// Configuration or build system changes
+    Configuration,
+    /// Test-only changes
+    Test,
+    /// Documentation changes
+    Documentation,
+    /// Mixed or complex changes
+    Mixed,
 }
 
 /// Diff analysis result
@@ -227,14 +274,17 @@ impl CawsChecker {
         // Check risk tier appropriateness
         self.check_risk_tier_appropriateness(task_spec, &mut violations, &mut suggestions)?;
 
+        // Filter violations based on active waivers
+        let filtered_violations = self.filter_violations_with_waivers(violations).await?;
+
         // Calculate compliance score
-        let compliance_score = self.calculate_compliance_score(&violations, &warnings);
-        let is_compliant = violations.is_empty();
+        let compliance_score = self.calculate_compliance_score(&filtered_violations, &warnings);
+        let is_compliant = filtered_violations.is_empty();
 
         Ok(CawsValidationResult {
             is_compliant,
             compliance_score,
-            violations,
+            violations: filtered_violations,
             warnings,
             suggestions,
             validated_at: chrono::Utc::now(),
@@ -280,14 +330,17 @@ impl CawsChecker {
             &mut suggestions,
         )?;
 
+        // Filter violations based on active waivers
+        let filtered_violations = self.filter_violations_with_waivers(violations).await?;
+
         // Calculate compliance score
-        let compliance_score = self.calculate_compliance_score(&violations, &warnings);
-        let is_compliant = violations.is_empty();
+        let compliance_score = self.calculate_compliance_score(&filtered_violations, &warnings);
+        let is_compliant = filtered_violations.is_empty();
 
         Ok(CawsValidationResult {
             is_compliant,
             compliance_score,
-            violations,
+            violations: filtered_violations,
             warnings,
             suggestions,
             validated_at: chrono::Utc::now(),
@@ -1118,6 +1171,69 @@ impl CawsChecker {
         Ok(true)
     }
 
+    /// Filter violations based on active waivers
+    async fn filter_violations_with_waivers(&self, violations: Vec<CawsViolation>) -> Result<Vec<CawsViolation>> {
+        if violations.is_empty() {
+            return Ok(violations);
+        }
+
+        // Extract unique gate names from violations (using rule names as gates)
+        let gates: Vec<String> = violations.iter()
+            .map(|v| v.rule.clone())
+            .collect();
+
+        // Query active waivers that cover any of these gates
+        let query = r#"
+            SELECT DISTINCT w.id, w.title, w.gates, w.expires_at, w.approved_by
+            FROM waivers w
+            WHERE w.status = 'active'
+              AND w.expires_at > NOW()
+              AND w.gates && $1::text[]
+            ORDER BY w.created_at DESC
+        "#;
+
+        let waiver_rows = self.db_client.query(query, &[&gates])
+            .await
+            .map_err(|e| anyhow::anyhow!("Failed to query active waivers: {}", e))?;
+
+        if waiver_rows.is_empty() {
+            // No active waivers for any of these gates
+            return Ok(violations);
+        }
+
+        // Collect all waived gates from active waivers
+        let mut waived_gates = std::collections::HashSet::new();
+        for waiver_row in waiver_rows {
+            let waiver_gates: Vec<String> = waiver_row.get("gates");
+            let waiver_title: String = waiver_row.get("title");
+            let waiver_approver: String = waiver_row.get("approved_by");
+
+            for gate in waiver_gates {
+                waived_gates.insert(gate);
+            }
+
+            info!("Active waiver '{}' approved by {} waives gates", waiver_title, waiver_approver);
+        }
+
+        // Filter violations to only include those not covered by waivers
+        let filtered_violations: Vec<CawsViolation> = violations.into_iter()
+            .filter(|violation| {
+                if waived_gates.contains(&violation.rule) {
+                    info!("Violation '{}' waived by active waiver", violation.rule);
+                    false // Filter out (remove) this violation
+                } else {
+                    true // Keep this violation
+                }
+            })
+            .collect();
+
+        info!("Filtered {} violations down to {} ({} waived)",
+              violations.len(), filtered_violations.len(),
+              violations.len() - filtered_violations.len());
+
+        Ok(filtered_violations)
+    }
+
     /// Store violation in database (for future use)
     pub async fn store_violation(&self, task_id: Uuid, violation: CawsViolation) -> Result<String> {
         let CawsViolation {
@@ -1873,21 +1989,29 @@ impl LanguageAnalyzer for TypeScriptAnalyzer {
     fn calculate_change_complexity(
         &self,
         diff: &str,
-        _content: Option<&str>,
+        content: Option<&str>,
     ) -> Result<ChangeComplexity> {
         let diff_lines = diff.lines().count() as u32;
-        let structural_changes =
-            diff.matches("interface ").count() as u32 + diff.matches("class ").count() as u32;
-        let logical_changes =
-            diff.matches("function ").count() as u32 + diff.matches("const ").count() as u32;
-        let dependency_changes =
-            diff.matches("import ").count() as u32 + diff.matches("export ").count() as u32;
+        
+        // Enhanced complexity analysis using AST parsing
+        let (structural_changes, logical_changes, dependency_changes, cyclomatic_complexity) = 
+            self.analyze_ast_complexity(diff, content)?;
 
-        let complexity_score = (structural_changes as f32 * 0.4
-            + logical_changes as f32 * 0.3
-            + dependency_changes as f32 * 0.3)
+        // Calculate weighted complexity score with cyclomatic complexity
+        let complexity_score = (structural_changes as f32 * 0.3
+            + logical_changes as f32 * 0.2
+            + dependency_changes as f32 * 0.2
+            + cyclomatic_complexity as f32 * 0.3)
             / 10.0;
-        let is_surgical = complexity_score < 0.5 && diff_lines < 30;
+            
+        // More sophisticated surgical change detection
+        let is_surgical = complexity_score < 0.4 
+            && diff_lines < 25 
+            && cyclomatic_complexity < 5
+            && structural_changes < 3;
+
+        // Analyze diff scope for impact assessment
+        let diff_scope = self.analyze_diff_scope(diff)?;
 
         Ok(ChangeComplexity {
             structural_changes,
@@ -1895,7 +2019,239 @@ impl LanguageAnalyzer for TypeScriptAnalyzer {
             dependency_changes,
             complexity_score,
             is_surgical,
+            cyclomatic_complexity,
+            diff_scope,
         })
+    }
+
+    /// Analyze diff scope for change impact assessment
+    fn analyze_diff_scope(&self, diff: &str) -> Result<DiffScope> {
+        let lines_changed = diff.lines().count() as u32;
+        
+        // Count files affected (rough estimate from diff headers)
+        let files_affected = diff.matches("diff --git").count() as u32 + 
+                           diff.matches("+++").count() as u32 + 
+                           diff.matches("---").count() as u32;
+        
+        // Estimate blast radius based on change patterns
+        let blast_radius = self.estimate_blast_radius(diff);
+        
+        // Classify change type
+        let change_type = self.classify_change_type(diff);
+
+        Ok(DiffScope {
+            lines_changed,
+            files_affected: files_affected.max(1), // At least 1 file
+            blast_radius,
+            change_type,
+        })
+    }
+
+    /// Estimate blast radius based on change patterns
+    fn estimate_blast_radius(&self, diff: &str) -> u32 {
+        let mut radius = 1; // Base radius
+        
+        // Import/export changes affect more modules
+        if diff.contains("import ") || diff.contains("export ") {
+            radius += 2;
+        }
+        
+        // Interface/class changes affect more components
+        if diff.contains("interface ") || diff.contains("class ") {
+            radius += 3;
+        }
+        
+        // Configuration changes can affect entire system
+        if diff.contains("config") || diff.contains("Config") {
+            radius += 4;
+        }
+        
+        // Test changes have minimal blast radius
+        if diff.contains("test") || diff.contains("spec") {
+            radius = radius.max(1);
+        }
+        
+        radius
+    }
+
+    /// Classify the type of change based on diff content
+    fn classify_change_type(&self, diff: &str) -> ChangeType {
+        let has_imports = diff.contains("import ") || diff.contains("require(");
+        let has_exports = diff.contains("export ");
+        let has_classes = diff.contains("class ") || diff.contains("interface ");
+        let has_functions = diff.contains("function ") || diff.contains("=>");
+        let has_tests = diff.contains("test") || diff.contains("spec") || diff.contains("describe");
+        let has_docs = diff.contains("//") || diff.contains("/*") || diff.contains("*");
+        let has_config = diff.contains("config") || diff.contains("Config") || diff.contains(".json");
+
+        if has_tests {
+            ChangeType::Test
+        } else if has_docs && !has_functions && !has_classes {
+            ChangeType::Documentation
+        } else if has_config {
+            ChangeType::Configuration
+        } else if has_imports || has_exports {
+            ChangeType::Dependency
+        } else if has_classes {
+            ChangeType::Structural
+        } else if has_functions {
+            ChangeType::Function
+        } else if diff.matches("const ").count() > 0 || diff.matches("let ").count() > 0 {
+            ChangeType::Variable
+        } else {
+            ChangeType::Mixed
+        }
+    }
+
+    /// Analyze AST complexity for TypeScript/JavaScript code
+    fn analyze_ast_complexity(
+        &self,
+        diff: &str,
+        content: Option<&str>,
+    ) -> Result<(u32, u32, u32, u32)> {
+        use syn::parse_str;
+        
+        // Parse the diff content to analyze structural changes
+        let mut structural_changes = 0u32;
+        let mut logical_changes = 0u32;
+        let mut dependency_changes = 0u32;
+        let mut cyclomatic_complexity = 0u32;
+
+        // Count structural elements in diff
+        structural_changes += diff.matches("interface ").count() as u32;
+        structural_changes += diff.matches("class ").count() as u32;
+        structural_changes += diff.matches("enum ").count() as u32;
+        structural_changes += diff.matches("namespace ").count() as u32;
+
+        // Count logical elements
+        logical_changes += diff.matches("function ").count() as u32;
+        logical_changes += diff.matches("const ").count() as u32;
+        logical_changes += diff.matches("let ").count() as u32;
+        logical_changes += diff.matches("var ").count() as u32;
+
+        // Count dependency changes
+        dependency_changes += diff.matches("import ").count() as u32;
+        dependency_changes += diff.matches("export ").count() as u32;
+        dependency_changes += diff.matches("require(").count() as u32;
+
+        // Calculate cyclomatic complexity from control flow statements
+        cyclomatic_complexity += diff.matches("if ").count() as u32;
+        cyclomatic_complexity += diff.matches("else ").count() as u32;
+        cyclomatic_complexity += diff.matches("for ").count() as u32;
+        cyclomatic_complexity += diff.matches("while ").count() as u32;
+        cyclomatic_complexity += diff.matches("switch ").count() as u32;
+        cyclomatic_complexity += diff.matches("case ").count() as u32;
+        cyclomatic_complexity += diff.matches("catch ").count() as u32;
+        cyclomatic_complexity += diff.matches("&&").count() as u32;
+        cyclomatic_complexity += diff.matches("||").count() as u32;
+        cyclomatic_complexity += diff.matches("?").count() as u32; // ternary operators
+
+        // Try to parse the full content for more accurate complexity analysis
+        if let Some(full_content) = content {
+            if let Ok(file) = parse_str::<syn::File>(full_content) {
+                cyclomatic_complexity = self.calculate_cyclomatic_complexity_ast(&file);
+            }
+        }
+
+        Ok((structural_changes, logical_changes, dependency_changes, cyclomatic_complexity))
+    }
+
+    /// Calculate cyclomatic complexity from AST
+    fn calculate_cyclomatic_complexity_ast(&self, file: &syn::File) -> u32 {
+        let mut complexity = 1; // Base complexity
+
+        for item in &file.items {
+            complexity += self.calculate_item_complexity(item);
+        }
+
+        complexity
+    }
+
+    /// Calculate complexity for a specific AST item
+    fn calculate_item_complexity(&self, item: &syn::Item) -> u32 {
+        match item {
+            syn::Item::Fn(func) => self.calculate_function_complexity(&func.sig, &func.block),
+            syn::Item::Impl(impl_item) => {
+                let mut complexity = 0;
+                for item in &impl_item.items {
+                    if let syn::ImplItem::Fn(func) = item {
+                        complexity += self.calculate_function_complexity(&func.sig, &func.block);
+                    }
+                }
+                complexity
+            }
+            _ => 0,
+        }
+    }
+
+    /// Calculate complexity for a function
+    fn calculate_function_complexity(&self, _sig: &syn::Signature, block: &syn::Block) -> u32 {
+        let mut complexity = 0;
+        self.visit_block(block, &mut complexity);
+        complexity
+    }
+
+    /// Visit a block and count control flow statements
+    fn visit_block(&self, block: &syn::Block, complexity: &mut u32) {
+        for stmt in &block.stmts {
+            self.visit_stmt(stmt, complexity);
+        }
+    }
+
+    /// Visit a statement and count control flow
+    fn visit_stmt(&self, stmt: &syn::Stmt, complexity: &mut u32) {
+        match stmt {
+            syn::Stmt::Expr(expr) => self.visit_expr(expr, complexity),
+            syn::Stmt::Semi(expr, _) => self.visit_expr(expr, complexity),
+            _ => {}
+        }
+    }
+
+    /// Visit an expression and count control flow
+    fn visit_expr(&self, expr: &syn::Expr, complexity: &mut u32) {
+        match expr {
+            syn::Expr::If(expr_if) => {
+                *complexity += 1;
+                self.visit_expr(&expr_if.cond, complexity);
+                self.visit_block(&expr_if.then_branch, complexity);
+                if let Some((_, else_branch)) = &expr_if.else_branch {
+                    self.visit_expr(else_branch, complexity);
+                }
+            }
+            syn::Expr::ForLoop(expr_for) => {
+                *complexity += 1;
+                self.visit_expr(&expr_for.body, complexity);
+            }
+            syn::Expr::While(expr_while) => {
+                *complexity += 1;
+                self.visit_expr(&expr_while.cond, complexity);
+                self.visit_block(&expr_while.body, complexity);
+            }
+            syn::Expr::Match(expr_match) => {
+                *complexity += expr_match.arms.len() as u32;
+                self.visit_expr(&expr_match.expr, complexity);
+                for arm in &expr_match.arms {
+                    self.visit_expr(&arm.body, complexity);
+                }
+            }
+            syn::Expr::Binary(expr_binary) => {
+                if matches!(expr_binary.op, syn::BinOp::And(_) | syn::BinOp::Or(_)) {
+                    *complexity += 1;
+                }
+                self.visit_expr(&expr_binary.left, complexity);
+                self.visit_expr(&expr_binary.right, complexity);
+            }
+            syn::Expr::Conditional(expr_cond) => {
+                *complexity += 1;
+                self.visit_expr(&expr_cond.cond, complexity);
+                self.visit_expr(&expr_cond.then_branch, complexity);
+                self.visit_expr(&expr_cond.else_branch, complexity);
+            }
+            syn::Expr::Block(expr_block) => {
+                self.visit_block(&expr_block.block, complexity);
+            }
+            _ => {}
+        }
     }
 }
 
@@ -2012,21 +2368,29 @@ impl LanguageAnalyzer for JavaScriptAnalyzer {
     fn calculate_change_complexity(
         &self,
         diff: &str,
-        _content: Option<&str>,
+        content: Option<&str>,
     ) -> Result<ChangeComplexity> {
         let diff_lines = diff.lines().count() as u32;
-        let structural_changes =
-            diff.matches("class ").count() as u32 + diff.matches("function ").count() as u32;
-        let logical_changes =
-            diff.matches("const ").count() as u32 + diff.matches("let ").count() as u32;
-        let dependency_changes =
-            diff.matches("require(").count() as u32 + diff.matches("import ").count() as u32;
+        
+        // Enhanced complexity analysis using AST parsing
+        let (structural_changes, logical_changes, dependency_changes, cyclomatic_complexity) = 
+            self.analyze_ast_complexity(diff, content)?;
 
-        let complexity_score = (structural_changes as f32 * 0.4
-            + logical_changes as f32 * 0.3
-            + dependency_changes as f32 * 0.3)
+        // Calculate weighted complexity score with cyclomatic complexity
+        let complexity_score = (structural_changes as f32 * 0.3
+            + logical_changes as f32 * 0.2
+            + dependency_changes as f32 * 0.2
+            + cyclomatic_complexity as f32 * 0.3)
             / 10.0;
-        let is_surgical = complexity_score < 0.5 && diff_lines < 30;
+            
+        // More sophisticated surgical change detection
+        let is_surgical = complexity_score < 0.4 
+            && diff_lines < 25 
+            && cyclomatic_complexity < 5
+            && structural_changes < 3;
+
+        // Analyze diff scope for impact assessment
+        let diff_scope = self.analyze_diff_scope(diff)?;
 
         Ok(ChangeComplexity {
             structural_changes,
@@ -2034,7 +2398,239 @@ impl LanguageAnalyzer for JavaScriptAnalyzer {
             dependency_changes,
             complexity_score,
             is_surgical,
+            cyclomatic_complexity,
+            diff_scope,
         })
+    }
+
+    /// Analyze diff scope for change impact assessment
+    fn analyze_diff_scope(&self, diff: &str) -> Result<DiffScope> {
+        let lines_changed = diff.lines().count() as u32;
+        
+        // Count files affected (rough estimate from diff headers)
+        let files_affected = diff.matches("diff --git").count() as u32 + 
+                           diff.matches("+++").count() as u32 + 
+                           diff.matches("---").count() as u32;
+        
+        // Estimate blast radius based on change patterns
+        let blast_radius = self.estimate_blast_radius(diff);
+        
+        // Classify change type
+        let change_type = self.classify_change_type(diff);
+
+        Ok(DiffScope {
+            lines_changed,
+            files_affected: files_affected.max(1), // At least 1 file
+            blast_radius,
+            change_type,
+        })
+    }
+
+    /// Estimate blast radius based on change patterns
+    fn estimate_blast_radius(&self, diff: &str) -> u32 {
+        let mut radius = 1; // Base radius
+        
+        // Import/export changes affect more modules
+        if diff.contains("import ") || diff.contains("export ") {
+            radius += 2;
+        }
+        
+        // Interface/class changes affect more components
+        if diff.contains("interface ") || diff.contains("class ") {
+            radius += 3;
+        }
+        
+        // Configuration changes can affect entire system
+        if diff.contains("config") || diff.contains("Config") {
+            radius += 4;
+        }
+        
+        // Test changes have minimal blast radius
+        if diff.contains("test") || diff.contains("spec") {
+            radius = radius.max(1);
+        }
+        
+        radius
+    }
+
+    /// Classify the type of change based on diff content
+    fn classify_change_type(&self, diff: &str) -> ChangeType {
+        let has_imports = diff.contains("import ") || diff.contains("require(");
+        let has_exports = diff.contains("export ");
+        let has_classes = diff.contains("class ") || diff.contains("interface ");
+        let has_functions = diff.contains("function ") || diff.contains("=>");
+        let has_tests = diff.contains("test") || diff.contains("spec") || diff.contains("describe");
+        let has_docs = diff.contains("//") || diff.contains("/*") || diff.contains("*");
+        let has_config = diff.contains("config") || diff.contains("Config") || diff.contains(".json");
+
+        if has_tests {
+            ChangeType::Test
+        } else if has_docs && !has_functions && !has_classes {
+            ChangeType::Documentation
+        } else if has_config {
+            ChangeType::Configuration
+        } else if has_imports || has_exports {
+            ChangeType::Dependency
+        } else if has_classes {
+            ChangeType::Structural
+        } else if has_functions {
+            ChangeType::Function
+        } else if diff.matches("const ").count() > 0 || diff.matches("let ").count() > 0 {
+            ChangeType::Variable
+        } else {
+            ChangeType::Mixed
+        }
+    }
+
+    /// Analyze AST complexity for JavaScript code
+    fn analyze_ast_complexity(
+        &self,
+        diff: &str,
+        content: Option<&str>,
+    ) -> Result<(u32, u32, u32, u32)> {
+        use syn::parse_str;
+        
+        // Parse the diff content to analyze structural changes
+        let mut structural_changes = 0u32;
+        let mut logical_changes = 0u32;
+        let mut dependency_changes = 0u32;
+        let mut cyclomatic_complexity = 0u32;
+
+        // Count structural elements in diff
+        structural_changes += diff.matches("class ").count() as u32;
+        structural_changes += diff.matches("function ").count() as u32;
+        structural_changes += diff.matches("const ").count() as u32;
+        structural_changes += diff.matches("let ").count() as u32;
+
+        // Count logical elements
+        logical_changes += diff.matches("var ").count() as u32;
+        logical_changes += diff.matches("if ").count() as u32;
+        logical_changes += diff.matches("for ").count() as u32;
+        logical_changes += diff.matches("while ").count() as u32;
+
+        // Count dependency changes
+        dependency_changes += diff.matches("require(").count() as u32;
+        dependency_changes += diff.matches("import ").count() as u32;
+        dependency_changes += diff.matches("export ").count() as u32;
+
+        // Calculate cyclomatic complexity from control flow statements
+        cyclomatic_complexity += diff.matches("if ").count() as u32;
+        cyclomatic_complexity += diff.matches("else ").count() as u32;
+        cyclomatic_complexity += diff.matches("for ").count() as u32;
+        cyclomatic_complexity += diff.matches("while ").count() as u32;
+        cyclomatic_complexity += diff.matches("switch ").count() as u32;
+        cyclomatic_complexity += diff.matches("case ").count() as u32;
+        cyclomatic_complexity += diff.matches("catch ").count() as u32;
+        cyclomatic_complexity += diff.matches("&&").count() as u32;
+        cyclomatic_complexity += diff.matches("||").count() as u32;
+        cyclomatic_complexity += diff.matches("?").count() as u32; // ternary operators
+
+        // Try to parse the full content for more accurate complexity analysis
+        if let Some(full_content) = content {
+            if let Ok(file) = parse_str::<syn::File>(full_content) {
+                cyclomatic_complexity = self.calculate_cyclomatic_complexity_ast(&file);
+            }
+        }
+
+        Ok((structural_changes, logical_changes, dependency_changes, cyclomatic_complexity))
+    }
+
+    /// Calculate cyclomatic complexity from AST
+    fn calculate_cyclomatic_complexity_ast(&self, file: &syn::File) -> u32 {
+        let mut complexity = 1; // Base complexity
+
+        for item in &file.items {
+            complexity += self.calculate_item_complexity(item);
+        }
+
+        complexity
+    }
+
+    /// Calculate complexity for a specific AST item
+    fn calculate_item_complexity(&self, item: &syn::Item) -> u32 {
+        match item {
+            syn::Item::Fn(func) => self.calculate_function_complexity(&func.sig, &func.block),
+            syn::Item::Impl(impl_item) => {
+                let mut complexity = 0;
+                for item in &impl_item.items {
+                    if let syn::ImplItem::Fn(func) = item {
+                        complexity += self.calculate_function_complexity(&func.sig, &func.block);
+                    }
+                }
+                complexity
+            }
+            _ => 0,
+        }
+    }
+
+    /// Calculate complexity for a function
+    fn calculate_function_complexity(&self, _sig: &syn::Signature, block: &syn::Block) -> u32 {
+        let mut complexity = 0;
+        self.visit_block(block, &mut complexity);
+        complexity
+    }
+
+    /// Visit a block and count control flow statements
+    fn visit_block(&self, block: &syn::Block, complexity: &mut u32) {
+        for stmt in &block.stmts {
+            self.visit_stmt(stmt, complexity);
+        }
+    }
+
+    /// Visit a statement and count control flow
+    fn visit_stmt(&self, stmt: &syn::Stmt, complexity: &mut u32) {
+        match stmt {
+            syn::Stmt::Expr(expr) => self.visit_expr(expr, complexity),
+            syn::Stmt::Semi(expr, _) => self.visit_expr(expr, complexity),
+            _ => {}
+        }
+    }
+
+    /// Visit an expression and count control flow
+    fn visit_expr(&self, expr: &syn::Expr, complexity: &mut u32) {
+        match expr {
+            syn::Expr::If(expr_if) => {
+                *complexity += 1;
+                self.visit_expr(&expr_if.cond, complexity);
+                self.visit_block(&expr_if.then_branch, complexity);
+                if let Some((_, else_branch)) = &expr_if.else_branch {
+                    self.visit_expr(else_branch, complexity);
+                }
+            }
+            syn::Expr::ForLoop(expr_for) => {
+                *complexity += 1;
+                self.visit_expr(&expr_for.body, complexity);
+            }
+            syn::Expr::While(expr_while) => {
+                *complexity += 1;
+                self.visit_expr(&expr_while.cond, complexity);
+                self.visit_block(&expr_while.body, complexity);
+            }
+            syn::Expr::Match(expr_match) => {
+                *complexity += expr_match.arms.len() as u32;
+                self.visit_expr(&expr_match.expr, complexity);
+                for arm in &expr_match.arms {
+                    self.visit_expr(&arm.body, complexity);
+                }
+            }
+            syn::Expr::Binary(expr_binary) => {
+                if matches!(expr_binary.op, syn::BinOp::And(_) | syn::BinOp::Or(_)) {
+                    *complexity += 1;
+                }
+                self.visit_expr(&expr_binary.left, complexity);
+                self.visit_expr(&expr_binary.right, complexity);
+            }
+            syn::Expr::Conditional(expr_cond) => {
+                *complexity += 1;
+                self.visit_expr(&expr_cond.cond, complexity);
+                self.visit_expr(&expr_cond.then_branch, complexity);
+                self.visit_expr(&expr_cond.else_branch, complexity);
+            }
+            syn::Expr::Block(expr_block) => {
+                self.visit_block(&expr_block.block, complexity);
+            }
+            _ => {}
+        }
     }
 }
 

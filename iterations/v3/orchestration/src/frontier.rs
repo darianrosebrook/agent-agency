@@ -388,7 +388,16 @@ impl Frontier {
         // - Support priority queue persistence and recovery
         // - Implement queue size limits and eviction policies
         // - Add queue performance monitoring and metrics
-        // PLACEHOLDER: Rejecting at capacity for now
+        // TODO: Implement sophisticated capacity management and admission control
+        // - Implement configurable capacity limits and thresholds
+        // - Support different rejection policies (random, priority-based, oldest)
+        // - Add capacity monitoring and alerting mechanisms
+        // - Implement graceful degradation under load
+        // - Support capacity borrowing and dynamic allocation
+        // - Add capacity forecasting and predictive scaling
+        // - Implement request queuing with timeout handling
+        // - Support priority-based admission control
+        // - Add capacity utilization analytics and reporting
         false
     }
 }

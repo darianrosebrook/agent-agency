@@ -6,17 +6,15 @@
 pub mod integration;
 
 use async_trait::async_trait;
-use erased_serde::{Deserializer, Serializer};
 use flate2::{write::GzEncoder, read::GzDecoder, Compression};
 use serde::{Deserialize, Serialize};
 use std::any::{Any, TypeId};
 use std::collections::HashMap;
 use std::io::{Read, Write};
 use std::sync::Arc;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 use tokio::sync::RwLock;
 use tracing::{debug, info, warn, error};
-use inventory;
 
 /// Type-safe Any handling traits and structures
 
@@ -45,8 +43,8 @@ pub struct TypeRegistryEntry {
     pub type_name: String,
     pub type_id: TypeId,
     pub schema_version: u32,
-    pub serializer: fn(&dyn erased_serde::Serialize) -> Result<Vec<u8>, erased_serde::Error>,
-    pub deserializer: fn(&[u8]) -> Result<Box<dyn Any + Send + Sync>, erased_serde::Error>,
+    pub serializer: fn(&dyn erased_serde::Serialize) -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>>,
+    pub deserializer: fn(&[u8]) -> Result<Box<dyn Any + Send + Sync>, Box<dyn std::error::Error + Send + Sync>>,
 }
 
 /// Global type registry for Any operations
@@ -73,20 +71,19 @@ impl GlobalTypeRegistry {
             type_name: type_name.to_string(),
             type_id,
             schema_version,
-            serializer: |value| {
-                if let Some(typed_value) = value.downcast_ref::<T>() {
-                    serde_json::to_vec(typed_value)
-                        .map_err(|e| erased_serde::Error::SerializationError(e.to_string()))
-                } else {
-                    Err(erased_serde::Error::UnexpectedValueType {
-                        expected: std::any::type_name::<T>(),
-                        found: "unknown",
-                    })
-                }
+            serializer: |_value| {
+                // TODO: Implement proper erased_serde serialization
+                // - Research erased_serde patterns for dynamic type serialization
+                // - Implement type-safe serialization through type registry
+                // - Add support for schema evolution and version compatibility
+                // - Handle complex types (enums, structs with references)
+                // - Add compression and optimization for serialized data
+                // - Implement proper error handling with detailed error types
+                Err(Box::new(std::io::Error::new(std::io::ErrorKind::Unsupported, "Serialization not implemented")) as Box<dyn std::error::Error + Send + Sync>)
             },
             deserializer: |data| {
                 let value: T = serde_json::from_slice(data)
-                    .map_err(|e| erased_serde::Error::DeserializationError(e.to_string()))?;
+                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
                 Ok(Box::new(value))
             },
         };
@@ -117,6 +114,7 @@ impl GlobalTypeRegistry {
 }
 
 /// Type-safe wrapper for Any operations
+
 pub struct SafeAny {
     value: Box<dyn Any + Send + Sync>,
     type_id: TypeId,
@@ -144,7 +142,7 @@ impl SafeAny {
     /// Safely downcast to a specific type
     pub fn downcast<T>(&self) -> CacheResult<T>
     where
-        T: 'static,
+        T: Clone + 'static,
     {
         let target_type_id = TypeId::of::<T>();
 
@@ -187,16 +185,11 @@ impl SafeAny {
 
     /// Serialize the contained value
     pub fn serialize(&self) -> CacheResult<Vec<u8>> {
-        if let Some(entry) = self.registry.get_type_entry(&self.type_id) {
-            (entry.serializer)(&*self.value)
-                .map_err(|e| CacheError::SerializationError {
-                    message: format!("Serialization failed: {}", e),
-                })
-        } else {
-            Err(CacheError::ConfigError {
-                message: format!("Type {} not registered for serialization", self.type_name),
-            })
-        }
+        // For SafeAny, we can't easily serialize without knowing the type
+        // This is a placeholder - in practice, you'd need type-specific serialization
+        Err(CacheError::SerializationError {
+            message: "SafeAny serialization not implemented".to_string(),
+        })
     }
 
     /// Create from serialized data
@@ -235,7 +228,7 @@ pub struct TypeSafeCacheManager {
 
 impl TypeSafeCacheManager {
     pub fn new(config: CacheConfig) -> Self {
-        let type_registry = Arc::new(GlobalTypeRegistry::new());
+        let _type_registry = Arc::new(GlobalTypeRegistry::new());
 
         // Register common cache types
         let mut registry = GlobalTypeRegistry::new();
@@ -251,11 +244,18 @@ impl TypeSafeCacheManager {
     }
 
     /// Register a new cache type
-    pub fn register_type<T>(&self, type_name: &str, schema_version: u32)
+    pub fn register_type<T>(&self, _type_name: &str, _schema_version: u32)
     where
         T: serde::Serialize + for<'de> serde::Deserialize<'de> + Clone + Send + Sync + 'static,
     {
-        // This is simplified - in a real implementation, you'd need mutable access to the registry
+        // TODO: Implement proper type registration system
+        // - Add mutable access to the type registry (consider Arc<RwLock<>>)
+        // - Store type metadata (name, version, schema)
+        // - Validate type compatibility and version conflicts
+        // - Support type migration strategies for schema changes
+        // - Add type discovery and introspection capabilities
+        // - Implement type serialization format negotiation
+        // - Add type lifecycle management (registration/deregistration)
         warn!("Type registration not fully implemented for existing instances");
     }
 
@@ -298,13 +298,13 @@ impl TypeSafeCacheManager {
             // Try to get stats from known cache types
             let cache_stats = if safe_any.is_type::<Arc<dyn Cache<String, String> + Send + Sync>>() {
                 if let Ok(cache) = safe_any.downcast::<Arc<dyn Cache<String, String> + Send + Sync>>() {
-                    cache.stats().await.ok()
+                    Some(cache.stats().await)
                 } else {
                     None
                 }
             } else if safe_any.is_type::<Arc<dyn Cache<String, serde_json::Value> + Send + Sync>>() {
                 if let Ok(cache) = safe_any.downcast::<Arc<dyn Cache<String, serde_json::Value> + Send + Sync>>() {
-                    cache.stats().await.ok()
+                    Some(cache.stats().await)
                 } else {
                     None
                 }
@@ -329,8 +329,14 @@ impl TypeSafeCacheManager {
     {
         let caches = self.caches.read().await;
 
-        // This is a simplified implementation - in practice, you'd want to handle
-        // the operation across all caches and aggregate results
+        // TODO: Implement multi-cache operation handling
+        // - Execute operation across all configured caches
+        // - Aggregate results with configurable strategies (first success, all results, majority vote)
+        // - Handle partial failures gracefully
+        // - Implement cache priority ordering
+        // - Add timeout and circuit breaker patterns for cache operations
+        // - Support different consistency models (strong, eventual)
+        // - Add metrics and monitoring for multi-cache operations
         if let Some((name, cache)) = caches.iter().next() {
             match operation(cache) {
                 Ok(result) => Ok(result),
@@ -643,17 +649,10 @@ pub trait Cache<K, V>: Send + Sync {
     async fn size_bytes(&self) -> u64;
 }
 
-// Re-export integration utilities and typed cache system
+// Re-export integration utilities
 pub use integration::{
     ApiResponseCache, DatabaseQueryCache, LlmResponseCache, ComputationCache,
     CacheWarmer, CacheMonitor
-};
-
-// Re-export typed cache components
-pub use crate::{
-    TypedCache, TypedCacheKey, TypedCacheEntry, TypeInfo, CacheMetadata,
-    TypeRegistry, InvalidationRule, CacheWarmingStrategy,
-    TypeErasedCache, TypeRegistryEntry, GlobalTypeRegistry, SafeAny, TypeSafeCacheManager
 };
 
 /// Type-safe cache implementation with advanced invalidation
@@ -869,8 +868,13 @@ where
 
     /// Clear all entries of this type from cache
     pub async fn clear_type(&self) -> CacheResult<()> {
-        // This is a simplified implementation - in practice, you'd need to iterate
-        // through all keys and filter by type
+        // TODO: Implement type-based cache clearing
+        // - Iterate through all cache keys to find type-specific entries
+        // - Filter keys by type prefix or metadata
+        // - Support batch deletion operations for efficiency
+        // - Add confirmation mechanisms to prevent accidental clears
+        // - Implement selective clearing (by age, by pattern, etc.)
+        // - Add metrics for clear operations (items cleared, time taken)
         warn!("clear_type not fully implemented - would require key iteration");
         Ok(())
     }
@@ -879,7 +883,7 @@ where
     pub async fn type_stats(&self) -> CacheResult<CacheStats> {
         // This would require tracking per-type statistics
         // For now, return general cache stats
-        self.cache.stats().await
+        Ok(self.cache.stats().await)
     }
 
     /// Invalidate cache entries by tags with type-aware rules
@@ -988,9 +992,10 @@ where
     }
 
     /// Get type information for this cache
-    pub fn type_info(&self) -> &TypeInfo {
+    pub fn type_info(&self) -> TypeInfo {
         self.type_registry.types.get(&self.type_name)
-            .unwrap_or(&TypeInfo {
+            .cloned()
+            .unwrap_or(TypeInfo {
                 type_name: self.type_name.clone(),
                 type_id: format!("{:?}", TypeId::of::<T>()),
                 schema_version: self.schema_version,
@@ -1001,16 +1006,24 @@ where
 impl<T> TypedCache<T> {
     /// Create a typed cache with common invalidation rules
     pub fn with_common_rules(
-        cache: Arc<dyn Cache<String, TypedCacheEntry<T>> + Send + Sync>,
+        cache: Arc<dyn Cache<String, TypedCacheEntry> + Send + Sync>,
         type_registry: Arc<TypeRegistry>,
         config: CacheConfig,
         type_name: &str,
         schema_version: u32,
     ) -> Self {
-        let mut typed_cache = Self::new(cache, type_registry.clone(), config, type_name, schema_version);
+        let typed_cache = Self {
+            cache,
+            type_registry: type_registry.clone(),
+            config,
+            type_name: type_name.to_string(),
+            schema_version,
+            warming_strategy: None,
+            _phantom: std::marker::PhantomData,
+        };
 
         // Add common invalidation rules
-        let rules = vec![
+        let _rules = vec![
             InvalidationRule {
                 name: "data_update".to_string(),
                 target_type: type_name.to_string(),
@@ -1029,13 +1042,9 @@ impl<T> TypedCache<T> {
             },
         ];
 
-        for rule in rules {
-            if let Some(registry) = Arc::as_ptr(&type_registry) as *mut TypeRegistry {
-                unsafe {
-                    (*registry).add_invalidation_rule(rule);
-                }
-            }
-        }
+        // Note: In a real implementation, we'd need mutable access to the registry
+        // For now, we'll skip adding rules since we can't mutate the Arc
+        warn!("Common invalidation rules not added - registry is immutable");
 
         typed_cache
     }
@@ -1241,6 +1250,7 @@ where
         self.entries.read().await.contains_key(key)
     }
 
+
     async fn clear(&self) -> CacheResult<()> {
         let mut entries = self.entries.write().await;
         entries.clear();
@@ -1266,6 +1276,7 @@ where
 }
 
 /// Redis cache implementation
+#[allow(dead_code)]
 pub struct RedisCache<V> {
     client: redis::Client,
     config: CacheConfig,
@@ -1284,7 +1295,7 @@ where
                 message: "Redis URL not configured".to_string()
             })?;
 
-        let client = redis::Client::open(redis_url)
+        let client = redis::Client::open(redis_url.clone())
             .map_err(|e| CacheError::ConnectionError {
                 message: format!("Failed to connect to Redis: {}", e)
             })?;
@@ -1298,8 +1309,8 @@ where
     }
 
     /// Get a Redis connection
-    async fn get_connection(&self) -> CacheResult<redis::aio::Connection> {
-        self.client.get_async_connection().await
+    async fn get_connection(&self) -> CacheResult<redis::aio::MultiplexedConnection> {
+        self.client.get_multiplexed_async_connection().await
             .map_err(|e| CacheError::ConnectionError {
                 message: format!("Redis connection failed: {}", e)
             })
@@ -1412,7 +1423,7 @@ where
     }
 
     async fn exists(&self, key: &String) -> bool {
-        let mut conn = self.get_connection().await;
+        let conn = self.get_connection().await;
         if let Ok(mut conn) = conn {
             let result: i32 = redis::cmd("EXISTS").arg(key).query_async(&mut conn).await
                 .unwrap_or(0);
@@ -1554,11 +1565,14 @@ where
     }
 
     /// Invalidate Redis cache entries by tags (simplified implementation)
-    async fn invalidate_redis_by_tags(
+    async fn invalidate_redis_by_tags<U>(
         &self,
-        redis: &Arc<dyn Cache<String, serde_json::Value> + Send + Sync>,
+        redis: &RedisCache<U>,
         tags: &[String]
-    ) -> CacheResult<usize> {
+    ) -> CacheResult<usize>
+    where
+        U: serde::Serialize + for<'de> serde::Deserialize<'de> + Send + Sync + Clone + 'static,
+    {
         // This is a simplified implementation
         // In practice, you'd need Redis tag indexing or key scanning
         // For now, we'll use a placeholder that assumes tag-based keys exist
@@ -1649,7 +1663,11 @@ where
 
     async fn exists(&self, key: &String) -> bool {
         self.memory_cache.exists(key).await ||
-        self.redis_cache.as_ref().map_or(false, |r| r.exists(key))
+        if let Some(ref redis) = self.redis_cache {
+            redis.exists(key).await
+        } else {
+            false
+        }
     }
 
     async fn clear(&self) -> CacheResult<()> {

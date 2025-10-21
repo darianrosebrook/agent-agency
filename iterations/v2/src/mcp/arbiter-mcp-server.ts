@@ -616,7 +616,16 @@
 //       await workspaceManager.initialize();
 //       logger.info("Workspace State Manager initialized");
 
-//       // Skip Task Orchestrator and Arbiter Orchestrator for now - focus on core execution capabilities
+//       // TODO: Implement comprehensive task orchestration and coordination
+//       // - Integrate Task Orchestrator for distributed task management
+//       // - Add Arbiter Orchestrator for intelligent task routing and scheduling
+//       // - Implement task dependency resolution and workflow orchestration
+//       // - Support task prioritization and resource allocation
+//       // - Add task monitoring and status tracking across components
+//       // - Implement task failure recovery and retry mechanisms
+//       // - Support distributed task execution and coordination
+//       // - Add task performance analytics and optimization
+//       // - Implement task lifecycle management and cleanup
 //       logger.info(
 //         "Core components initialized - ready for autonomous task execution"
 //       );

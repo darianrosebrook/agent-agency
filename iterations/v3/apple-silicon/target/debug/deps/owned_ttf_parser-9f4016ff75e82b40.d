@@ -1,0 +1,8 @@
+/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/apple-silicon/target/debug/deps/owned_ttf_parser-9f4016ff75e82b40.d: /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/owned_ttf_parser-0.15.2/src/lib.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/owned_ttf_parser-0.15.2/src/convert.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/owned_ttf_parser-0.15.2/src/owned.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/owned_ttf_parser-0.15.2/src/preparse.rs
+
+/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/apple-silicon/target/debug/deps/libowned_ttf_parser-9f4016ff75e82b40.rmeta: /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/owned_ttf_parser-0.15.2/src/lib.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/owned_ttf_parser-0.15.2/src/convert.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/owned_ttf_parser-0.15.2/src/owned.rs /Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/owned_ttf_parser-0.15.2/src/preparse.rs
+
+/Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/owned_ttf_parser-0.15.2/src/lib.rs:
+/Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/owned_ttf_parser-0.15.2/src/convert.rs:
+/Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/owned_ttf_parser-0.15.2/src/owned.rs:
+/Users/darianrosebrook/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/owned_ttf_parser-0.15.2/src/preparse.rs:

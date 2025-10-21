@@ -41,7 +41,7 @@ pub use async_inference::{
 };
 pub use buffer_pool::{BufferPool, BufferPoolConfig, BufferPoolStats};
 pub use candle_backend::CandleBackend;
-pub use core_ml::CoreMLManager;
+// pub use core_ml::CoreMLManager; // TODO: Implement CoreMLManager
 #[cfg(target_os = "macos")]
 pub use core_ml_backend::CoreMLBackend;
 #[cfg(target_os = "macos")]

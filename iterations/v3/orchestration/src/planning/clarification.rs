@@ -197,7 +197,16 @@ impl ClarificationSystem {
                     // - Support configurable scope boundary rules
                     // - Implement scope validation and consistency checking
                     // - Add scope boundary negotiation and refinement
-                    "Focus on core authentication features, exclude social login and MFA for now".to_string() // PLACEHOLDER: Hardcoded scope suggestion
+                    // TODO: Implement intelligent scope suggestion and analysis
+                    // - Analyze task requirements and codebase structure for scope determination
+                    // - Implement feature complexity assessment and dependency analysis
+                    // - Support configurable scope boundary rules and templates
+                    // - Add scope validation against business requirements and constraints
+                    // - Implement scope negotiation and refinement capabilities
+                    // - Support iterative scope definition and adjustment
+                    // - Add scope impact analysis and risk assessment
+                    // - Implement scope documentation and traceability
+                    "Focus on core authentication features, exclude social login and MFA for now".to_string() // TODO: Replace hardcoded suggestion with intelligent analysis
                 },
                 QuestionType::SuccessCriteria => {
                     "Users can register, login securely, and reset passwords when forgotten".to_string()

@@ -13,6 +13,8 @@ use anyhow::{bail, Result};
 use serde::{Deserialize, Serialize};
 use dashmap::DashMap;
 use half::f16;
+#[cfg(target_os = "macos")]
+use crate::core_ml_bridge;
 use std::collections::{HashMap, VecDeque};
 use std::sync::Arc;
 use std::time::Duration;
@@ -158,7 +160,7 @@ pub enum TensorLayout {
 }
 
 /// Tensor metadata for optimization and tracking
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct TensorMetadata {
     /// Creation timestamp
     pub created_at: chrono::DateTime<chrono::Utc>,
@@ -294,6 +296,8 @@ pub struct AsyncConfig {
     pub max_queued_requests: usize,
     /// Timeout for requests in the queue (milliseconds)
     pub queue_timeout_ms: u64,
+    /// Timeout for individual inference operations
+    pub inference_timeout: std::time::Duration,
     /// Enable priority-based request queuing
     pub enable_priority_queue: bool,
 }
@@ -304,6 +308,7 @@ impl Default for AsyncConfig {
             max_concurrent_requests: 4,
             max_queued_requests: 100,
             queue_timeout_ms: 5000,
+            inference_timeout: std::time::Duration::from_secs(30),
             enable_priority_queue: true,
         }
     }
@@ -483,6 +488,34 @@ pub struct ModelInstance {
     pub created_at: chrono::DateTime<chrono::Utc>,
     /// Last used timestamp
     pub last_used: chrono::DateTime<chrono::Utc>,
+    /// Core ML model handle (macOS only)
+    #[cfg(target_os = "macos")]
+    pub coreml_handle: Option<std::ptr::NonNull<std::ffi::c_void>>,
+}
+
+impl ModelInstance {
+    /// Create a new model instance
+    pub fn new(id: String, path: String, format: ModelFormat, device: TensorDevice, memory_mb: usize) -> Self {
+        let now = chrono::Utc::now();
+        Self {
+            id,
+            path,
+            format,
+            device,
+            memory_mb,
+            created_at: now,
+            last_used: now,
+            #[cfg(target_os = "macos")]
+            coreml_handle: None,
+        }
+    }
+
+    /// Set the Core ML handle for this model instance
+    #[cfg(target_os = "macos")]
+    pub fn with_coreml_handle(mut self, handle: *mut std::ffi::c_void) -> Self {
+        self.coreml_handle = std::ptr::NonNull::new(handle);
+        self
+    }
 }
 
 /// Model loading strategies
@@ -673,7 +706,6 @@ pub struct AggregatedMetrics {
 struct InnerAsyncEngine {
     /// Tokio runtime for async execution
     runtime: Arc<tokio::runtime::Runtime>,
-    /// TODO: Implement actual model pool for acquiring model instances
     /// Production model pool for managing loaded models
     model_pool: Arc<ModelPool>,
     /// Production telemetry collector for comprehensive metrics
@@ -776,68 +808,278 @@ impl AsyncInferenceEngine {
             .await
             .map_err(|e| anyhow::anyhow!("Failed to acquire model {}: {}", request.model_id, e))?;
 
-        // Simulate inference time based on model and input size
-        let base_inference_time = match model.model_type {
-            ModelType::Text => 50,  // Text models are faster
-            ModelType::Vision => 200, // Vision models take longer
-            ModelType::Multimodal => 150, // Multimodal in between
+        // Execute real Core ML inference instead of simulation
+        #[cfg(target_os = "macos")]
+        {
+            let outputs = self.execute_coreml_inference(&model, &request.inputs)
+                .await
+                .map_err(|e| anyhow::anyhow!("Core ML inference failed: {}", e))?;
+
+            let latency_ms = start.elapsed().as_millis() as u64;
+
+            // Estimate tokens processed based on input size
+            let tokens_processed = request.inputs.values()
+                .map(|tensor| tensor.data.len() / 4) // Rough estimate: 4 bytes per token
+                .sum::<usize>();
+
+            return Ok(InferenceResult::Success {
+                outputs,
+                latency_ms,
+                device_used: "CoreML".to_string(),
+            });
+        }
+
+        #[cfg(not(target_os = "macos"))]
+        {
+            // Fallback to simulation on non-macOS platforms
+            warn!("⚠️ Core ML not available on this platform, using simulation");
+
+            let base_inference_time = match model.model_type {
+                ModelType::Text => 50,
+                ModelType::Vision => 200,
+                ModelType::Multimodal => 150,
+            };
+
+            let input_size_factor = (request.inputs.values()
+                .map(|tensor| tensor.data.len())
+                .sum::<usize>() as f64).sqrt() / 100.0;
+
+            let inference_time_ms = (base_inference_time as f64 * input_size_factor.max(0.5).min(3.0)) as u64;
+            tokio::time::sleep(Duration::from_millis(inference_time_ms)).await;
+
+            let latency_ms = start.elapsed().as_millis() as u64;
+
+            // Generate mock outputs based on model type
+            let outputs = match model.model_type {
+                ModelType::Text => {
+                    let mut outputs = HashMap::new();
+                    outputs.insert("text_output".to_string(), Tensor {
+                        data: vec![0.1, 0.2, 0.3, 0.4], // Mock text embeddings
+                        shape: vec![1, 4],
+                        dtype: TensorDataType::F32,
+                        device: TensorDevice::Cpu,
+                        layout: TensorLayout::RowMajor,
+                        metadata: None,
+                    });
+                    outputs
+                },
+                ModelType::Vision => {
+                    let mut outputs = HashMap::new();
+                    outputs.insert("vision_features".to_string(), Tensor {
+                        data: vec![0.5; 512], // Mock vision features
+                        shape: vec![1, 512],
+                        dtype: TensorDataType::F32,
+                        device: TensorDevice::Cpu,
+                        layout: TensorLayout::RowMajor,
+                        metadata: None,
+                    });
+                    outputs
+                },
+                ModelType::Multimodal => {
+                    let mut outputs = HashMap::new();
+                    outputs.insert("multimodal_output".to_string(), Tensor {
+                        data: vec![0.3; 768], // Mock multimodal features
+                        shape: vec![1, 768],
+                        dtype: TensorDataType::F32,
+                        device: TensorDevice::Cpu,
+                        layout: TensorLayout::RowMajor,
+                        metadata: None,
+                    });
+                    outputs
+                },
+            };
+
+            Ok(InferenceResult::Success {
+                outputs,
+                latency_ms,
+                device_used: "CPU".to_string(),
+            })
+        }
+    }
+
+    /// Execute inference using Core ML on macOS
+    #[cfg(target_os = "macos")]
+    async fn execute_coreml_inference(
+        &self,
+        model: &ModelInstance,
+        inputs: &HashMap<String, Tensor>,
+    ) -> Result<HashMap<String, Tensor>> {
+        // Get the Core ML model handle
+        let handle = model.coreml_handle
+            .ok_or_else(|| anyhow::anyhow!("Model does not have Core ML backend"))?;
+
+        // Convert inputs to JSON format expected by Core ML
+        let inputs_json = self.prepare_coreml_inputs(inputs)?;
+
+        // Execute prediction with timeout
+        let timeout_ms = self.inner.config.inference_timeout.as_millis() as i32;
+        // TODO: Use safe CoreMLModel wrapper instead of raw FFI
+        // let outputs_json = CoreMLModel::from_raw(handle).predict(&inputs_json, timeout_ms)?;
+        let outputs_json = unsafe {
+            use std::ffi::CString;
+            let c_inputs = CString::new(inputs_json.clone())?;
+            let mut out_outputs: *mut std::ffi::c_char = std::ptr::null_mut();
+            let mut out_err: *mut std::ffi::c_char = std::ptr::null_mut();
+            let ret = crate::core_ml_bridge::coreml_predict(
+                handle.as_ptr(),
+                c_inputs.as_ptr(),
+                &mut out_outputs,
+                timeout_ms,
+                &mut out_err
+            );
+            if ret != 0 {
+                let err_msg = if !out_err.is_null() {
+                    unsafe { std::ffi::CStr::from_ptr(out_err) }.to_string_lossy().to_string()
+                } else {
+                    "Unknown CoreML error".to_string()
+                };
+                return Err(anyhow::anyhow!("CoreML prediction failed: {}", err_msg));
+            }
+            unsafe { std::ffi::CStr::from_ptr(out_outputs) }.to_string_lossy().to_string()
         };
 
-        // Scale by input size (rough approximation)
-        let input_size_factor = (request.inputs.values()
-            .map(|tensor| tensor.data.len())
-            .sum::<usize>() as f64).sqrt() / 100.0;
+        // Parse outputs back into tensors
+        self.parse_coreml_outputs(&outputs_json)
+    }
 
-        let inference_time_ms = (base_inference_time as f64 * input_size_factor.max(0.5).min(3.0)) as u64;
-        tokio::time::sleep(Duration::from_millis(inference_time_ms)).await;
+    /// Prepare inputs for Core ML inference
+    #[cfg(target_os = "macos")]
+    fn prepare_coreml_inputs(&self, inputs: &HashMap<String, Tensor>) -> Result<String> {
+        use serde_json::{json, Value};
 
-        let latency_ms = start.elapsed().as_millis() as u64;
+        let mut coreml_inputs = serde_json::Map::new();
 
-        // Generate mock outputs based on model type
-        let outputs = match model.model_type {
-            ModelType::Text => {
-                let mut outputs = HashMap::new();
-                outputs.insert("text_output".to_string(), Tensor {
-                    data: vec![0.1, 0.2, 0.3, 0.4], // Mock text embeddings
-                    shape: vec![1, 4],
-                    dtype: TensorDataType::F32,
-                    device: TensorDevice::CPU,
-                    layout: TensorLayout::RowMajor,
-                    metadata: None,
-                });
-                outputs
-            },
-            ModelType::Vision => {
-                let mut outputs = HashMap::new();
-                outputs.insert("vision_features".to_string(), Tensor {
-                    data: vec![0.5; 512], // Mock vision features
-                    shape: vec![1, 512],
-                    dtype: TensorDataType::F32,
-                    device: TensorDevice::CPU,
-                    layout: TensorLayout::RowMajor,
-                    metadata: None,
-                });
-                outputs
-            },
-            ModelType::Multimodal => {
-                let mut outputs = HashMap::new();
-                outputs.insert("multimodal_output".to_string(), Tensor {
-                    data: vec![0.3; 768], // Mock multimodal features
-                    shape: vec![1, 768],
-                    dtype: TensorDataType::F32,
-                    device: TensorDevice::CPU,
-                    layout: TensorLayout::RowMajor,
-                    metadata: None,
-                });
-                outputs
-            },
-        };
+        for (name, tensor) in inputs {
+            // Convert tensor data based on type
+            match tensor.dtype {
+                TensorDataType::F32 => {
+                    // Data is already in f32 format
+                    coreml_inputs.insert(name.clone(), json!(tensor.data));
+                }
+                TensorDataType::F16 => {
+                    // Convert f16 to f32
+                    let f32_data: Vec<f32> = tensor.data.iter()
+                        .map(|&h| f16::from_bits(h as u16).to_f32())
+                        .collect();
+                    coreml_inputs.insert(name.clone(), json!(f32_data));
+                }
+                TensorDataType::I32 => {
+                    // Convert f32 representation back to i32
+                    let i32_data: Vec<i32> = tensor.data.iter()
+                        .map(|&f| f as i32)
+                        .collect();
+                    coreml_inputs.insert(name.clone(), json!(i32_data));
+                }
+                _ => {
+                    return Err(anyhow::anyhow!("Unsupported tensor data type for Core ML: {:?}", tensor.dtype));
+                }
+            }
+        }
 
-        Ok(InferenceResult::Success {
-            outputs,
-            latency_ms,
-            device_used: model.device.to_string(),
-        })
+        Ok(serde_json::to_string(&coreml_inputs)?)
+    }
+
+    /// Parse Core ML outputs back into tensors
+    #[cfg(target_os = "macos")]
+    fn parse_coreml_outputs(&self, outputs_json: &str) -> Result<HashMap<String, Tensor>> {
+        let outputs: serde_json::Value = serde_json::from_str(outputs_json)
+            .map_err(|e| anyhow::anyhow!("Failed to parse Core ML outputs: {}", e))?;
+
+        let mut result = HashMap::new();
+
+        if let serde_json::Value::Object(map) = outputs {
+            for (name, value) in map {
+                let tensor = match value {
+                    serde_json::Value::Array(arr) => {
+                        if arr.is_empty() {
+                            continue;
+                        }
+
+                        // Determine data type from first element and convert to f32
+                        match &arr[0] {
+                            serde_json::Value::Number(n) => {
+                                if n.is_f64() {
+                                    // Float outputs
+                                    let data: Vec<f32> = arr.iter()
+                                        .filter_map(|v| v.as_f64())
+                                        .map(|v| v as f32)
+                                        .collect();
+
+                                    Tensor {
+                                        data,
+                                        shape: vec![data.len()],
+                                        dtype: TensorDataType::F32,
+                                        device: TensorDevice::Cpu,
+                                        layout: TensorLayout::RowMajor,
+                                        metadata: None,
+                                    }
+                                } else {
+                                    // Integer outputs converted to float
+                                    let data: Vec<f32> = arr.iter()
+                                        .filter_map(|v| v.as_i64())
+                                        .map(|v| v as f32)
+                                        .collect();
+
+                                    Tensor {
+                                        data,
+                                        shape: vec![data.len()],
+                                        dtype: TensorDataType::F32,
+                                        device: TensorDevice::Cpu,
+                                        layout: TensorLayout::RowMajor,
+                                        metadata: None,
+                                    }
+                                }
+                            }
+                            _ => {
+                                // Convert to string representation
+                                let json_str = value.to_string();
+                                let data = json_str.as_bytes().iter().map(|&b| b as f32).collect();
+
+                                Tensor {
+                                    data,
+                                    shape: vec![data.len()],
+                                    dtype: TensorDataType::F32,
+                                    device: TensorDevice::Cpu,
+                                    layout: TensorLayout::RowMajor,
+                                    metadata: None,
+                                }
+                            }
+                        }
+                    }
+                    serde_json::Value::Number(n) => {
+                        // Single number output
+                        let data = vec![n.as_f64().unwrap_or(0.0) as f32];
+
+                        Tensor {
+                            data,
+                            shape: vec![1],
+                            dtype: TensorDataType::F32,
+                            device: TensorDevice::Cpu,
+                            layout: TensorLayout::RowMajor,
+                            metadata: None,
+                        }
+                    }
+                    _ => {
+                        // Other types - convert to string representation
+                        let json_str = value.to_string();
+                        let data = json_str.as_bytes().iter().map(|&b| b as f32).collect();
+
+                        Tensor {
+                            data,
+                            shape: vec![data.len()],
+                            dtype: TensorDataType::F32,
+                            device: TensorDevice::Cpu,
+                            layout: TensorLayout::RowMajor,
+                            metadata: None,
+                        }
+                    }
+                };
+
+                result.insert(name, tensor);
+            }
+        }
+
+        Ok(result)
     }
 
     /// Get current queue statistics
