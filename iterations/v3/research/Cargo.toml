@@ -27,7 +27,7 @@ parking_lot = "0.12"
 # Vector search and embeddings
 qdrant-client = "1.10"
 fxhash = "0.2"
-# embedding-service = { path = "../embedding-service", optional = true } # Temporarily disabled
+embedding-service = { path = "../embedding-service", optional = true }
 lru = "0.12"
 
 # Database integration
@@ -52,7 +52,7 @@ image = { version = "0.24", features = ["jpeg", "png", "webp", "tiff", "bmp", "g
 
 [features]
 default = []
-# embeddings = ["embedding-service"] # Temporarily disabled
+embeddings = ["embedding-service"]
 
 [dev-dependencies]
 tokio-test = "0.4"

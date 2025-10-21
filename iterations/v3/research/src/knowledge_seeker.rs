@@ -6,10 +6,10 @@
 use crate::types::*;
 use crate::ContentProcessingConfig;
 use crate::{
-    ConfigurationUpdate, ContentProcessor, ContextBuilder, MultimodalContext,
-    MultimodalContextProvider, VectorSearchEngine, WebScraper,
+    ConfigurationUpdate, ContentProcessor, ContextBuilder, VectorSearchEngine, WebScraper,
     // MultimodalRetriever, MultimodalRetrieverConfig, // Temporarily disabled
 };
+use crate::multimodal_context_provider::MultimodalContext;
 use agent_agency_database::DatabaseClient;
 use anyhow::{Context, Result};
 use async_trait::async_trait;
