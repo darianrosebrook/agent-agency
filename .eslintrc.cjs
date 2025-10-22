@@ -32,7 +32,6 @@ module.exports = {
     "**/*.d.ts",
     "**/*.js",
     "test-*.js", // Ignore our test scripts
-    "iterations/", // Ignore iterations directory to avoid tsconfig conflicts
     "docs/archive/", // Ignore archived documentation files
     "playground/", // Ignore playground files
   ],
