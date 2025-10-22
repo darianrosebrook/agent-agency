@@ -81,3 +81,6 @@ objc = "0.2"
 
 # Vector operations for embeddings
 ndarray = "0.15"
+
+# PyTorch bindings for quantization
+tch = "0.13"

@@ -6,6 +6,7 @@
  */
 
 import Ajv, { type Ajv as AjvType, type Options } from "ajv";
+import addFormats from "ajv-formats";
 import * as fs from "fs";
 import * as yaml from "js-yaml";
 import * as path from "path";
@@ -19,8 +20,10 @@ export class CawsValidator extends CawsBaseTool {
     super();
     this.ajv = new Ajv({
       allErrors: true,
-      allowUnionTypes: true,
+      verbose: true,
+      strict: false, // Allow draft schemas
     } as Options);
+    addFormats(this.ajv); // Add format support for date-time, uri, etc.
   }
 
   /**

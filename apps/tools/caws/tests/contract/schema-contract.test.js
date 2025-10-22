@@ -9,12 +9,18 @@
 const fs = require("fs");
 const path = require("path");
 const Ajv = require("ajv");
+const addFormats = require("ajv-formats");
 
 describe("CAWS Schema Contracts", () => {
   let ajv;
 
   beforeAll(() => {
-    ajv = new Ajv({ allErrors: true, verbose: true });
+    ajv = new Ajv({
+      allErrors: true,
+      verbose: true,
+      strict: false, // Allow draft-2020 schemas
+    });
+    addFormats(ajv); // Add format support for date-time, uri, etc.
   });
 
   describe("Working Specification Schema", () => {
@@ -30,14 +36,23 @@ describe("CAWS Schema Contracts", () => {
 
       // Test with a valid working spec
       const validSpec = {
-        id: "TEST-001",
+        id: "FEAT-0001",
         title: "Test specification",
         risk_tier: 2,
         mode: "feature",
+        change_budget: {
+          max_files: 10,
+          max_loc: 500,
+        },
+        blast_radius: {
+          modules: ["test"],
+        },
+        operational_rollback_slo: "5m",
         scope: {
           in: ["src/test.ts"],
           out: ["node_modules/"],
         },
+        invariants: ["Test invariant"],
         acceptance: [
           {
             id: "A1",
@@ -46,17 +61,26 @@ describe("CAWS Schema Contracts", () => {
             then: "Expected output",
           },
         ],
+        non_functional: {},
+        contracts: [
+          {
+            type: "typescript",
+            path: "src/types/test.ts",
+          },
+        ],
       };
 
       const isValid = validate(validSpec);
-      expect(isValid).toBe(true);
-
-      if (validate.errors) {
-        console.log(
-          "Validation errors:",
-          JSON.stringify(validate.errors, null, 2)
-        );
+      if (!isValid) {
+        const errorMsg = `Validation failed: ${JSON.stringify(
+          validate.errors,
+          null,
+          2
+        )}`;
+        console.error(errorMsg);
+        throw new Error(errorMsg);
       }
+      expect(isValid).toBe(true);
     });
 
     test("should reject invalid working spec structure", () => {
@@ -70,7 +94,7 @@ describe("CAWS Schema Contracts", () => {
 
       // Test with an invalid working spec (missing required fields)
       const invalidSpec = {
-        id: "TEST-001",
+        id: "FEAT-0001",
         // Missing title, risk_tier, etc.
       };
 
@@ -110,17 +134,21 @@ describe("CAWS Schema Contracts", () => {
       const validate = ajv.compile(schema);
 
       const validWaiver = {
-        title: "Test Waiver",
-        reason: "emergency_hotfix",
-        description: "Testing waiver validation",
-        gates: ["test_coverage"],
-        expiresAt: "2025-12-31T23:59:59Z",
-        approvedBy: "test-user",
-        impactLevel: "low",
-        mitigationPlan: "Will fix in next release",
+        "test-waiver": {
+          gate: "coverage",
+          reason: "Testing waiver validation with minimum 10 characters",
+          owner: "test-user",
+          expiry: "2025-12-31T23:59:59Z",
+        },
       };
 
       const isValid = validate(validWaiver);
+      if (!isValid && validate.errors) {
+        console.log(
+          "Waiver validation errors:",
+          JSON.stringify(validate.errors, null, 2)
+        );
+      }
       expect(isValid).toBe(true);
     });
   });

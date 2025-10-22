@@ -4557,6 +4557,7 @@ dependencies = [
 name = "integration-tests"
 version = "0.1.0"
 dependencies = [
+ "agent-agency-apple-silicon",
  "agent-agency-config",
  "agent-agency-council",
  "agent-agency-database",
@@ -6301,6 +6302,7 @@ dependencies = [
 name = "model-benchmarking"
 version = "0.1.0"
 dependencies = [
+ "agent-agency-apple-silicon",
  "agent-agency-council",
  "anyhow",
  "async-trait",
@@ -7155,6 +7157,7 @@ checksum = "04744f49eae99ab78e0d5c0b603ab218f515ea8cfe5a456d7629ad883a3b6e7d"
 name = "orchestration"
 version = "0.1.0"
 dependencies = [
+ "agent-agency-apple-silicon",
  "agent-agency-contracts",
  "agent-agency-council",
  "agent-agency-database",
@@ -10766,9 +10769,6 @@ dependencies = [
  "anyhow",
  "cc",
  "libc",
- "serde",
- "serde_json",
- "ureq 2.12.1",
  "zip 0.6.6",
 ]
 

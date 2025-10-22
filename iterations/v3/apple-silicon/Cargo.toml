@@ -73,7 +73,7 @@ parking_lot = "0.12"
 bytemuck = "1.14"
 half = "2.4"
 ndarray = "0.15"
-candle-core = { version = "0.9.1", optional = true }
+candle_core = { version = "0.9.1", optional = true, package = "candle-core" }
 safetensors = "0.4"
 
 # Observability and caching - temporarily disabled due to compilation issues
@@ -109,5 +109,5 @@ cpu = []
 coreml = []                          # Core ML support (available on both Intel and Apple Silicon)
 torch = ["tch"]                      # PyTorch bindings for quantization
 mpsgraph = []                        # Metal Performance Shaders Graph (Apple Silicon only)
-candle = ["candle-core", "candle-nn", "candle-transformers"] # Candle ML framework support
+candle = ["candle_core", "candle-nn", "candle-transformers"] # Candle ML framework support
 ort = ["dep:ort"]                    # ONNX Runtime support

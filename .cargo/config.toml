@@ -1,0 +1,21 @@
+[build]
+# Do NOT set a global build.target here if you often switch architectures.
+# Prefer passing --target on the command line or use per-package scripts.
+
+[target.aarch64-apple-darwin]
+linker = "clang"
+rustflags = [
+  "-C", "link-arg=-arch", "-C", "link-arg=arm64",
+  # Only add frameworks here (objc2 crates sometimes add them; be explicit anyway):
+  "-C", "link-arg=-framework", "-C", "link-arg=Metal",
+  "-C", "link-arg=-framework", "-C", "link-arg=MetalPerformanceShaders",
+  "-C", "link-arg=-framework", "-C", "link-arg=Foundation"
+]
+# Optional, if you want to force a minimum OS:
+# rustflags += ["-C", "link-arg=-mmacosx-version-min=12.0"]
+
+[target.x86_64-apple-darwin]
+linker = "clang"
+rustflags = [
+  "-C", "link-arg=-arch", "-C", "link-arg=x86_64"
+]

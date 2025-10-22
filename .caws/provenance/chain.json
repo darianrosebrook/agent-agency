@@ -16294,5 +16294,73 @@
     },
     "previous_hash": "3410688e94535cdf20db73c088964da4a7cd5121fd0126987406c251dcc9924b",
     "hash": "46a6500166aec641b9dada1d0e48279c9185b4f5b9ed9b1f9af1b8b1896b569c"
+  },
+  {
+    "id": "prov-1761097808754",
+    "timestamp": "2025-10-22T01:50:08.754Z",
+    "commit": {
+      "hash": "39c6d6644aa6646dc50d0066c11892d0a06f3d43",
+      "message": "feat: establish Apple Silicon crate architecture and fix core compilation issues",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "AGENT-001",
+      "title": "P0 Blockers: Truthful System Loop with Auditability and Control",
+      "risk_tier": 1,
+      "mode": "feature",
+      "waiver_ids": []
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-22T01:50:08.755Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "46a6500166aec641b9dada1d0e48279c9185b4f5b9ed9b1f9af1b8b1896b569c",
+    "hash": "1d6c43d4dd46e0e6dcf2c6842441ed5d38d2fa4237918d1d79e87bf9a31f0349"
+  },
+  {
+    "id": "prov-1761097864123",
+    "timestamp": "2025-10-22T01:51:04.123Z",
+    "commit": {
+      "hash": "a0e02dc840a98aac1b96d5f6bdd4ca05cfcdd8c8",
+      "message": "Saving progress before it gets lost again",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "AGENT-001",
+      "title": "P0 Blockers: Truthful System Loop with Auditability and Control",
+      "risk_tier": 1,
+      "mode": "feature",
+      "waiver_ids": []
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-22T01:51:04.123Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "1d6c43d4dd46e0e6dcf2c6842441ed5d38d2fa4237918d1d79e87bf9a31f0349",
+    "hash": "2222d44762045ecef05a5bb5a808ec6e33e3657da9b444d6d8e026130d43679e"
   }
 ]
