@@ -53,7 +53,7 @@ impl ModelRouter {
     /// Create a new model router
     pub fn new() -> Self {
         Self {
-            device_id: DeviceId("router".to_string()),
+            device_id: "router".to_string(),
         }
     }
 

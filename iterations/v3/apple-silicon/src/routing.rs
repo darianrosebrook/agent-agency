@@ -727,7 +727,7 @@ impl InferenceRouter {
 
 impl Default for InferenceRouter {
     fn default() -> Self {
-        Self::new(RoutingConfig {
+        Self::new_with_defaults(RoutingConfig {
             enable_routing: true,
             routing_algorithm: crate::types::RoutingAlgorithm::PerformanceBased,
             load_balancing_strategy: crate::types::LoadBalancingStrategy::ResourceBased,
@@ -762,6 +762,9 @@ impl Default for ResourceUsage {
             thermal_celsius: 25.0,
             power_watts: 0.0,
             timestamp: chrono::Utc::now(),
+            gpu_memory: None,
+            ane_stats: None,
+            thermal_stats: None,
         }
     }
 }

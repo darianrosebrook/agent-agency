@@ -1,7 +1,8 @@
 //! Inference engine abstraction
 
-use crate::ComputeUnit;
-use candle_core::DType;
+use crate::QuantizationConfig;
+pub use candle_core::DType;
+pub use crate::ComputeUnit;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -10,7 +11,15 @@ use std::time::Duration;
 
 /// Data type enumeration
 pub type TensorMap = HashMap<String, Vec<f32>>;
-pub type TensorSpec = (String, Vec<usize>);
+
+/// Tensor specification with name, shape, and data type
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TensorSpec {
+    pub name: String,
+    pub shape: Vec<usize>,
+    pub dtype: DType,
+    pub batch_capable: bool,
+}
 
 /// Model format enumeration
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]

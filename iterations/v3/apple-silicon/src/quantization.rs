@@ -25,6 +25,17 @@ pub struct QuantizationConfig {
     pub optimization: OptimizationConfig,
 }
 
+impl Default for QuantizationConfig {
+    fn default() -> Self {
+        Self {
+            method: QuantizationMethod::None,
+            params: QuantizationParams::default(),
+            validation: ValidationConfig::default(),
+            optimization: OptimizationConfig::default(),
+        }
+    }
+}
+
 /// Quantization parameters
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct QuantizationParams {
@@ -64,6 +75,17 @@ pub struct ValidationConfig {
     pub enable_performance_check: bool,
 }
 
+impl Default for ValidationConfig {
+    fn default() -> Self {
+        Self {
+            enable_accuracy_check: true,
+            max_accuracy_loss: 0.05, // 5% max loss
+            validation_samples: 100,
+            enable_performance_check: true,
+        }
+    }
+}
+
 /// Optimization configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OptimizationConfig {
@@ -75,6 +97,17 @@ pub struct OptimizationConfig {
     pub chunk_size_mb: u32,
     /// Enable compression during storage
     pub enable_compression: bool,
+}
+
+impl Default for OptimizationConfig {
+    fn default() -> Self {
+        Self {
+            enable_parallel: true,
+            max_memory_mb: 4096, // 4GB
+            chunk_size_mb: 512,  // 512MB chunks
+            enable_compression: true,
+        }
+    }
 }
 
 /// Quantization result

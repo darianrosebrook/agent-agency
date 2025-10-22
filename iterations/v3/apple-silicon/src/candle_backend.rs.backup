@@ -348,52 +348,6 @@ impl InferenceEngine for CandleBackend {
         }
     }
 
-    /// Extract tensors from ONNX protobuf
-    fn extract_tensors_from_onnx_protobuf(&self, data: &[u8]) -> anyhow::Result<(Vec<TensorSpec>, Vec<TensorSpec>)> {
-        self.extract_tensors_from_onnx_protobuf(data)
-    }
-
-    /// Find protobuf section in data
-    fn find_protobuf_section(&self, data: &str, keyword: &str) -> Option<String> {
-        self.find_protobuf_section(data, keyword)
-    }
-
-    /// Parse tensor specs from protobuf section
-    fn parse_tensor_specs_from_section(&self, section: String, is_input: bool) -> anyhow::Result<Vec<TensorSpec>> {
-        self.parse_tensor_specs_from_section(section, is_input)
-    }
-
-    /// Parse shape from line
-    fn parse_shape_from_line(&self, line: &str) -> Vec<usize> {
-        self.parse_shape_from_line(line)
-    }
-
-    /// Parse dtype from line
-    fn parse_dtype_from_line(&self, line: &str) -> anyhow::Result<DType> {
-        self.parse_dtype_from_line(line)
-    }
-
-    /// Check if ONNX tensor is batch capable
-    fn is_onnx_tensor_batch_capable(&self, shape: &[usize]) -> bool {
-        self.is_onnx_tensor_batch_capable(shape)
-    }
-
-    /// Validate ONNX compatibility
-    fn validate_onnx_compatibility(&self, schema: &IoSchema) -> anyhow::Result<()> {
-        self.validate_onnx_compatibility(schema)
-    }
-
-    /// Load SafeTensors model
-    fn load_safetensors_model(&self, path: &std::path::Path, device: &candle_core::Device) -> anyhow::Result<Box<dyn crate::inference::PreparedModel>> {
-        self.load_safetensors_model(path, device)
-    }
-
-    /// Load ONNX model
-    fn load_onnx_model(&self, path: &std::path::Path, device: &candle_core::Device) -> anyhow::Result<Box<dyn crate::inference::PreparedModel>> {
-        self.load_onnx_model(path, device)
-    }
-
-
     /// Parse SafeTensors metadata and extract I/O schema
     fn parse_safetensors_metadata(&self, model_data: &[u8]) -> Result<IoSchema> {
         use safetensors::SafeTensors;
@@ -412,7 +366,7 @@ impl InferenceEngine for CandleBackend {
 
             // Heuristic to classify tensors as inputs or outputs
             // This is a simplified approach - in production, use model metadata
-            let is_input = self.is_likely_input_tensor(&name);
+            let is_input = self.is_likely_input_tensor(&name, &shape);
             let spec = TensorSpec {
                 name: name.to_string(),
                 dtype,
@@ -471,12 +425,21 @@ impl InferenceEngine for CandleBackend {
     }
 
     /// Heuristic to determine if a tensor is likely an input
-    fn is_likely_input_tensor(&self, name: &str) -> bool {
+    fn is_likely_input_tensor(&self, name: &str, shape: &[usize]) -> bool {
         let name_lower = name.to_lowercase();
 
         // Common input tensor patterns
         if name_lower.contains("input") || name_lower.contains("x") || name_lower.starts_with("in") {
             return true;
+        }
+
+        // Shape-based heuristics (typical input shapes)
+        if shape.len() == 4 && shape[3] == 3 { // [batch, height, width, channels]
+            return true; // Likely image input
+        }
+
+        if shape.len() == 3 && shape[2] >= 128 { // [batch, seq_len, hidden_dim]
+            return true; // Likely text input
         }
 
         false
@@ -701,12 +664,10 @@ impl InferenceEngine for CandleBackend {
             _ => bail!("Unsupported model format: {:?}", model._model_path),
         }
     }
-}
 
-impl CandleBackend {
     /// SafeTensors model loading - implemented with tensor loading and device placement
     /// Supports FP32, FP16, I32, I8, U8 dtypes with proper Candle tensor creation
-    pub fn load_safetensors_model(&self, path: &std::path::Path, device: &candle_core::Device) -> Result<Box<dyn crate::inference::PreparedModel>> {
+    fn load_safetensors_model(&self, path: &std::path::Path, device: &candle_core::Device) -> Result<Box<dyn crate::inference::PreparedModel>> {
         use safetensors::SafeTensors;
         use std::fs;
 
@@ -777,51 +738,6 @@ impl CandleBackend {
         Self::_load_onnx_model(path, device)
     }
 
-    /// Parse SafeTensors metadata
-    fn parse_safetensors_metadata(&self, model_data: &[u8]) -> anyhow::Result<IoSchema> {
-        Self::_parse_safetensors_metadata(model_data)
-    }
-
-    /// Map SafeTensors dtype
-    fn map_safetensors_dtype(&self, dtype: safetensors::Dtype) -> anyhow::Result<DType> {
-        Self::_map_safetensors_dtype(dtype)
-    }
-
-    /// Check if tensor is likely an input
-    fn is_likely_input_tensor(&self, name: &str) -> bool {
-        Self::_is_likely_input_tensor(name)
-    }
-
-    /// Validate metadata compatibility
-    fn validate_metadata_compatibility(&self, schema: &IoSchema) -> anyhow::Result<()> {
-        Self::_validate_metadata_compatibility(schema)
-    }
-
-    /// Parse ONNX metadata
-    fn parse_onnx_metadata(&self, model_data: &[u8]) -> anyhow::Result<IoSchema> {
-        Self::_parse_onnx_metadata(model_data)
-    }
-
-    /// Load Candle model
-    fn load_candle_model(&self, model: &CandleModel, device: &candle_core::Device) -> anyhow::Result<Box<dyn crate::inference::PreparedModel>> {
-        Self::_load_candle_model(model, device)
-    }
-
-    /// Convert bytes to Candle tensor
-    fn bytes_to_candle_tensor(&self, bytes: &[u8], spec: &TensorSpec) -> anyhow::Result<candle_core::Tensor> {
-        Self::_bytes_to_candle_tensor(bytes, spec)
-    }
-
-    /// Convert Candle tensor to bytes
-    fn candle_tensor_to_bytes(&self, tensor: &candle_core::Tensor, spec: &TensorSpec) -> anyhow::Result<Vec<u8>> {
-        Self::_candle_tensor_to_bytes(tensor, spec)
-    }
-
-    /// Convert DType to Candle DType
-    fn dtype_to_candle_dtype(&self, dtype: DType) -> anyhow::Result<candle_core::DType> {
-        Self::_dtype_to_candle_dtype(dtype)
-    }
-
     /// Load ONNX model using the ort crate (private helper)
     fn _load_onnx_model(path: &std::path::Path, device: &candle_core::Device) -> anyhow::Result<Box<dyn crate::inference::PreparedModel>> {
         use std::fs;
@@ -884,9 +800,8 @@ impl CandleBackend {
 
         Ok(Box::new(model))
     }
-}
 
-// Prepared model containing loaded Candle tensors
+/// Prepared model containing loaded Candle tensors
 #[derive(Debug)]
 pub struct CandlePreparedModel {
     tensors: std::collections::HashMap<String, candle_core::Tensor>,
@@ -1148,7 +1063,9 @@ mod tests {
         let backend = CandleBackend::new();
         let _opts = PrepareOptions {
             compute_units: ComputeUnit::CPU,
-            quantization: crate::QuantizationConfig::default(),
+            quantization: "fp32".to_string(),
+            cache_dir: PathBuf::from("/tmp"),
+            timeout_ms: 5000,
         };
 
         // Create dummy model for capability testing
@@ -1701,3 +1618,4 @@ mod tests {
             _ => DType::F32, // Default fallback
         }
     }
+}

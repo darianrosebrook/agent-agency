@@ -31,9 +31,14 @@ impl ThermalManager {
     /// Get thermal status
     pub fn status(&self) -> ThermalStats {
         ThermalStats {
-            temperature_c: self.current_temp_c as f32,
-            throttle_active: self.should_throttle(),
-            fan_speed_rpm: Some(2000),
+            system_temperature: self.current_temp_c as f32,
+            cpu_temperature: None,
+            gpu_temperature: None,
+            ane_temperature: None,
+            battery_temperature: None,
+            thermal_pressure: if self.should_throttle() { 80.0 } else { 20.0 },
+            fan_speed_percent: Some(50.0), // Placeholder
+            is_throttling: self.should_throttle(),
         }
     }
 }

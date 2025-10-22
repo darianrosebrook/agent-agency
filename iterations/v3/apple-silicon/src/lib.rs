@@ -16,6 +16,7 @@ pub mod core_ml_bridge;
 pub mod enhanced_telemetry;
 pub mod inference;
 pub mod memory;
+#[cfg(target_arch = "aarch64")]
 pub mod metal_gpu;
 pub mod model_pool;
 pub mod model_router;
@@ -58,7 +59,7 @@ pub use memory::MemoryManager;
 pub use metal_gpu::MetalGPUManager;
 pub use model_pool::{ModelPool, ModelPoolConfig, ModelPoolStats};
 pub use model_router::{
-    DeviceId, ModelRouter, ModelVariant, RoutingMode, RoutingPolicy, RoutingStats,
+    ModelRouter, ModelVariant, RoutingMode, RoutingPolicy, RoutingStats,
     VariantPerformance,
 };
 pub use operator_fusion::{
@@ -134,6 +135,17 @@ pub struct MemoryConfig {
     pub cleanup_threshold_percent: u32,
 }
 
+impl Default for MemoryConfig {
+    fn default() -> Self {
+        Self {
+            max_memory_mb: 4096, // 4GB default
+            check_interval_ms: 1000, // 1 second
+            pressure_monitoring: true,
+            cleanup_threshold_percent: 80,
+        }
+    }
+}
+
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct QuantizationConfig {
     /// Default quantization method
@@ -142,6 +154,16 @@ pub struct QuantizationConfig {
     pub dynamic_quantization: bool,
     /// Quantization quality threshold
     pub quality_threshold: f32,
+}
+
+impl Default for QuantizationConfig {
+    fn default() -> Self {
+        Self {
+            default_method: QuantizationMethod::None,
+            dynamic_quantization: false,
+            quality_threshold: 0.95,
+        }
+    }
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]

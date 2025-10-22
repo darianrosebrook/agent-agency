@@ -8,6 +8,29 @@
 //!
 //! Manages Metal GPU acceleration for Apple Silicon inference.
 
+#[cfg(not(target_arch = "aarch64"))]
+// Stub implementation for non-Apple Silicon architectures
+pub mod stub {
+    use crate::types::*;
+    use anyhow::Result;
+
+    pub struct MetalGPUManager;
+
+    impl MetalGPUManager {
+        pub fn new() -> Result<Self> {
+            Err(anyhow::anyhow!("Metal GPU acceleration is only available on Apple Silicon (aarch64)"))
+        }
+
+        pub fn measure_gpu_utilization(&self) -> Result<f32> {
+            Err(anyhow::anyhow!("Metal GPU acceleration is only available on Apple Silicon (aarch64)"))
+        }
+    }
+
+    pub use stub::*;
+}
+
+#[cfg(target_arch = "aarch64")]
+
 use crate::types::*;
 use anyhow::{anyhow, bail, Result};
 use serde::{Deserialize, Serialize};

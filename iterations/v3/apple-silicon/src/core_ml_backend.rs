@@ -61,11 +61,11 @@ impl InferenceEngine for CoreMLBackend {
     fn capabilities(&self, _mdl: &dyn PreparedModel) -> CapabilityReport {
         CapabilityReport {
             device_class: "ANE/GPU".to_string(),
-            supported_dtypes: vec![DType::F32, DType::F16, DType::I8],
+            supported_dtypes: vec![DType::F32, DType::F16, DType::U8],
             max_batch_size: 1,
             ane_op_coverage_pct: 80,
-            compute_units_requested: ComputeUnits::All,
-            compute_units_actual: ComputeUnits::All,
+            compute_units_requested: ComputeUnit::All,
+            compute_units_actual: ComputeUnit::All,
             compile_p99_ms: 2000,
             infer_p99_ms: 15,
         }
@@ -143,8 +143,7 @@ impl InferenceEngine for CoreMLBackend {
         match dtype {
             DType::F32 => 4,
             DType::F16 => 2,
-            DType::I32 => 4,
-            DType::I8 => 1,
+            DType::U32 => 4,
             DType::U8 => 1,
         }
     }

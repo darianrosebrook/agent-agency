@@ -1011,9 +1011,10 @@ mod tests {
             gpu_percent: 50.0,
             ane_percent: 75.0,
             memory_used_mb: 8192,
-            memory_total_mb: 32768,
-            thermal_celsius: 65.0,
-            power_watts: 25.0,
+            gpu_memory: None,
+            ane_stats: None,
+            thermal_stats: None,
+            power_watts: 0.0,
             timestamp: chrono::Utc::now(),
         };
 
