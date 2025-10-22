@@ -20,7 +20,7 @@ futures = "0.3"
 # Local crates
 agent-agency-contracts = { path = "../agent-agency-contracts" }
 agent-agency-database = { path = "../database" }
-# agent-agency-apple-silicon = { path = "../apple-silicon", optional = true }  # Disabled - has compilation errors
+# agent-agency-apple-silicon = { path = "../apple-silicon", optional = true }  # Disabled - torch compilation works but is slow under Rosetta
 
 # Additional dependencies
 anyhow = "1.0"
@@ -57,5 +57,5 @@ console = "0.16"
 
 [features]
 default = []
-full = ["dep:rust-bert"]  # Removed apple-silicon due to compilation errors
+full = ["dep:rust-bert"]  # Removed apple-silicon due to torch compilation issues
 with_bert = ["dep:rust-bert"]

@@ -17,7 +17,7 @@ thiserror = "1.0"
 
 # Model management
 model-benchmarking = { path = "../model-benchmarking" }
-# agent-agency-apple-silicon = { path = "../apple-silicon" } # PLACEHOLDER: temp disabled to avoid libtorch
+agent-agency-apple-silicon = { path = "../apple-silicon" }
 
 # Performance monitoring - temporarily excluded due to database dependency
 # agent-agency-observability = { path = "../observability" }

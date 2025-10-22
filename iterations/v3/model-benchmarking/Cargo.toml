@@ -38,12 +38,12 @@ agent-agency-council = { path = "../council" }
 claim-extraction = { path = "../claim-extraction" }
 
 # Apple Silicon integration for Core ML
-# agent-agency-apple-silicon = { path = "../apple-silicon", optional = true } # PLACEHOLDER: temp disabled to avoid libtorch
+agent-agency-apple-silicon = { path = "../apple-silicon", optional = true }
 
 # For examples
 tracing-subscriber = "0.3"
 
 [features]
 default = []
-# coreml = ["agent-agency-apple-silicon"] # Disabled - dependency commented out
+coreml = ["agent-agency-apple-silicon"]
 

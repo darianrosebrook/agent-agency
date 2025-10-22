@@ -461,6 +461,170 @@ export interface EvaluationThresholds {
   maxDiffSize: number;
 }
 
+// Validation types (extracted from CAWS)
+export interface ValidationResult {
+  passed: boolean;
+  score: number;
+  details: any;
+  errors?: string[];
+  warnings?: string[];
+  recommendations?: string[];
+}
+
+export interface PerformanceResult {
+  endpoint: string;
+  p95_ms: number;
+  budget_ms: number;
+  passed: boolean;
+  deviation_percent: number;
+  score: number;
+  details: any;
+}
+
+export interface ContractValidationResult {
+  passed: boolean;
+  score: number;
+  details: Record<string, any>;
+  risk_tier?: number;
+  acceptance?: string[];
+  contracts?: ContractDetails[];
+  non_functional?: NonFunctionalRequirements;
+  errors: Array<{
+    type: "request" | "response" | "schema";
+    endpoint: string;
+    message: string;
+    details?: any;
+  }>;
+  coverage: {
+    endpointsTested: number;
+    totalEndpoints: number;
+    schemasValidated: number;
+  };
+}
+
+export interface ContractDetails {
+  endpoint: string;
+  method: string;
+  status: "valid" | "invalid" | "warning";
+  schema?: Record<string, any>;
+  examples?: Array<{
+    request?: Record<string, any>;
+    response?: Record<string, any>;
+  }>;
+}
+
+export interface NonFunctionalRequirements {
+  performance?: {
+    maxResponseTime?: number;
+    throughput?: number;
+  };
+  security?: {
+    authentication?: boolean;
+    authorization?: boolean;
+    encryption?: boolean;
+  };
+  reliability?: {
+    availability?: number;
+    errorRate?: number;
+  };
+}
+
+export interface TrustScoreComponents {
+  coverage_branch: number;
+  mutation_score: number;
+  contracts_consumer: boolean;
+  contracts_provider: boolean;
+  a11y_passed: boolean;
+  perf_within_budget: boolean;
+  flake_rate: number;
+}
+
+export interface TrustScoreResult {
+  total_score: number;
+  tier: string;
+  components: TrustScoreComponents;
+  breakdown: {
+    coverage: number;
+    mutation: number;
+    contracts: number;
+    a11y: number;
+    perf: number;
+    flake: number;
+  };
+  recommendations: string[];
+}
+
+// Feature flag types
+export interface FeatureFlag {
+  name: string;
+  description: string;
+  enabled: boolean;
+  rolloutPercentage: number;
+  environment: string[];
+  userGroups: string[];
+  dependencies: string[];
+  createdAt: string;
+  updatedAt: string;
+  killSwitch?: boolean;
+}
+
+export interface FeatureFlagEvaluation {
+  enabled: boolean;
+  flag: FeatureFlag;
+  reason: string;
+}
+
+export interface FeatureFlagUpdate {
+  name?: string;
+  description?: string;
+  enabled?: boolean;
+  rolloutPercentage?: number;
+  environment?: string[];
+  userGroups?: string[];
+  dependencies?: string[];
+  killSwitch?: boolean;
+}
+
+export interface FeatureContext {
+  environment: string;
+  userId?: string;
+  userGroups?: string[];
+  requestId?: string;
+  metadata?: any;
+}
+
+// Observability and Provenance types
+export interface ProvenanceData {
+  agent: string;
+  model: string;
+  commit: string;
+  artifacts: string[];
+  results: Record<string, any>;
+  approvals: string[];
+  generatedAt: string;
+  metadata?: ProvenanceMetadata;
+}
+
+export interface PerformanceMetrics {
+  p95_ms?: number;
+  p99_ms?: number;
+  average_ms?: number;
+  throughput?: number;
+  error_rate?: number;
+  budget_ms?: number;
+  deviation_percent?: number;
+}
+
+export interface ProvenanceMetadata {
+  environment?: string;
+  branch?: string;
+  pullRequest?: number;
+  buildId?: string;
+  deploymentId?: string;
+  tags?: string[];
+  custom?: Record<string, any>;
+}
+
 // Enums for enhanced features
 export type RLAlgorithm = "ppo" | "grpo" | "dqn" | "sac";
 export type RewardFunction =
@@ -479,3 +643,117 @@ export type TaskComplexity =
   | "moderate"
   | "complex"
   | "extreme";
+
+// Waiver request types
+export interface WaiverRequest {
+  id: string;
+  title: string;
+  reason:
+    | "emergency_hotfix"
+    | "legacy_integration"
+    | "experimental_feature"
+    | "third_party_constraint"
+    | "performance_critical"
+    | "security_patch"
+    | "infrastructure_limitation"
+    | "other";
+  description: string;
+  gates: string[];
+  expiresAt: Date;
+  approvedBy: string;
+  impactLevel: "low" | "medium" | "high" | "critical";
+  mitigationPlan: string;
+  tenantId: string;
+  requestedAt: Date;
+  status: "pending" | "approved" | "rejected" | "expired";
+}
+
+// Policy enforcement types
+export interface BudgetLimits {
+  maxFiles: number;
+  maxLoc: number;
+  maxDurationMs: number;
+  maxConcurrentTasks: number;
+}
+
+export interface QualityGates {
+  minCoverage: number;
+  minMutationScore: number;
+  requireContracts: boolean;
+  requireManualReview: boolean;
+  trustScore: number;
+}
+
+export interface EnforcementResult {
+  allowed: boolean;
+  violations: string[];
+  waivers: WaiverRequest[];
+  recommendations: string[];
+  budgetStatus: {
+    currentFiles: number;
+    currentLoc: number;
+    remainingTimeMs: number;
+  };
+  gateStatus: {
+    coverageMet: boolean;
+    mutationMet: boolean;
+    contractsMet: boolean;
+    trustScoreMet: boolean;
+  };
+}
+
+export interface TaskBudget {
+  taskId: string;
+  tenantId: string;
+  limits: BudgetLimits;
+  currentUsage: {
+    files: number;
+    loc: number;
+    durationMs: number;
+  };
+  startTime: Date;
+  checkIns: Array<{
+    timestamp: Date;
+    files: number;
+    loc: number;
+    message: string;
+  }>;
+}
+
+// Waiver service types
+export interface WaiverFilter {
+  tenantId?: string;
+  gate?: string;
+  status?: WaiverRequest["status"];
+  requester?: string;
+  approver?: string;
+  impactLevel?: WaiverRequest["impactLevel"];
+  reason?: WaiverRequest["reason"];
+}
+
+export interface WaiverApprovalRequest {
+  waiverId: string;
+  approved: boolean;
+  approver: string;
+  notes?: string;
+  approvalCriteria?: {
+    riskAssessment: "low" | "medium" | "high" | "critical";
+    mitigationVerified: boolean;
+    stakeholderNotified: boolean;
+  };
+}
+
+export interface WaiverAnalytics {
+  totalWaivers: number;
+  activeWaivers: number;
+  waiversByGate: Record<string, number>;
+  waiversByStatus: Record<string, number>;
+  waiversByImpact: Record<string, number>;
+  recentApprovals: Array<{
+    id: string;
+    gate: string;
+    approvedAt: string;
+    approver: string;
+  }>;
+  averageApprovalTime: number; // in hours
+}

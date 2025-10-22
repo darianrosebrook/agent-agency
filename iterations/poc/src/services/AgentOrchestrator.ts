@@ -17,7 +17,7 @@ import {
 } from "../types/index";
 import { Logger } from "../utils/Logger";
 import { AdvancedTaskRouter, RoutingConfig } from "./AdvancedTaskRouter.js";
-import { CawsConstitutionalEnforcer } from "./CawsConstitutionalEnforcer.js";
+import { PolicyEnforcer } from "./PolicyEnforcer.js";
 import { ErrorPatternAnalyzer } from "./ErrorPatternAnalyzer.js";
 
 export interface MemoryAwareAgentOrchestratorConfig
@@ -43,7 +43,7 @@ export class AgentOrchestrator {
   private memoryManager?: MultiTenantMemoryManager;
   private taskRouter?: AdvancedTaskRouter;
   private errorAnalyzer?: ErrorPatternAnalyzer;
-  private cawsEnforcer?: CawsConstitutionalEnforcer;
+  private policyEnforcer?: PolicyEnforcer;
 
   constructor(config?: Partial<MemoryAwareAgentOrchestratorConfig>) {
     this.logger = new Logger("AgentOrchestrator");
@@ -90,9 +90,9 @@ export class AgentOrchestrator {
       await this.initializeErrorAnalyzer();
     }
 
-    // Initialize CAWS constitutional enforcer if enabled
+    // Initialize policy enforcer if enabled
     if (this.config.cawsEnforcementEnabled) {
-      await this.initializeCawsEnforcer();
+      await this.initializePolicyEnforcer();
     }
 
     // TODO: Initialize agent registry
@@ -152,17 +152,17 @@ export class AgentOrchestrator {
   }
 
   /**
-   * Initialize the CAWS constitutional enforcer
+   * Initialize the policy enforcer
    */
-  private async initializeCawsEnforcer(): Promise<void> {
+  private async initializePolicyEnforcer(): Promise<void> {
     try {
-      this.logger.info("Initializing CAWS constitutional enforcer...");
+      this.logger.info("Initializing policy enforcer...");
 
-      this.cawsEnforcer = new CawsConstitutionalEnforcer(this.memoryManager);
+      this.policyEnforcer = new PolicyEnforcer(this.memoryManager);
 
-      this.logger.info("CAWS constitutional enforcer initialized successfully");
+      this.logger.info("Policy enforcer initialized successfully");
     } catch (error) {
-      this.logger.error("Failed to initialize CAWS enforcer:", error);
+      this.logger.error("Failed to initialize policy enforcer:", error);
       throw error;
     }
   }
@@ -287,13 +287,13 @@ export class AgentOrchestrator {
       options?.tenantId || this.config.defaultTenantId || "default-tenant";
     const tier = options?.tier || this.config.defaultTier || 2;
 
-    // Enforce CAWS constitution before task creation
+    // Enforce policy before task creation
     if (
       this.config.cawsEnforcementEnabled &&
-      this.cawsEnforcer &&
+      this.policyEnforcer &&
       !options?.skipConstitutionCheck
     ) {
-      const enforcement = await this.cawsEnforcer.enforceConstitution(
+      const enforcement = await this.policyEnforcer.enforcePolicy(
         taskId,
         tenantId,
         tier,
@@ -306,17 +306,17 @@ export class AgentOrchestrator {
       );
 
       if (!enforcement.allowed) {
-        const errorMsg = `CAWS Constitutional violation: ${enforcement.violations.join(
+        const errorMsg = `Policy violation: ${enforcement.violations.join(
           ", "
         )}`;
         this.logger.warn(
-          `Task ${taskId} blocked by CAWS constitution:`,
+          `Task ${taskId} blocked by policy:`,
           enforcement.violations
         );
         throw new Error(errorMsg);
       }
 
-      this.logger.info(`Task ${taskId} passed CAWS constitutional check`);
+      this.logger.info(`Task ${taskId} passed policy check`);
     }
 
     const newTask: Task = {
@@ -331,8 +331,8 @@ export class AgentOrchestrator {
     this.logger.info(`Submitted task: ${taskId} for agent: ${task.agentId}`);
 
     // Start budget tracking for approved tasks
-    if (this.cawsEnforcer) {
-      this.cawsEnforcer.startBudgetTracking(taskId, tenantId, tier);
+    if (this.policyEnforcer) {
+      this.policyEnforcer.startBudgetTracking(taskId, tenantId, tier);
     }
 
     // Use advanced routing if available and enabled
@@ -469,18 +469,18 @@ export class AgentOrchestrator {
     }
 
     // Stop budget tracking and update final usage
-    if (this.cawsEnforcer) {
+    if (this.policyEnforcer) {
       // Estimate final usage from task metadata if available
       const finalFiles = (task.metadata as any)?.finalFiles || 0;
       const finalLoc = (task.metadata as any)?.finalLoc || 0;
 
-      this.cawsEnforcer.updateBudgetUsage(
+      this.policyEnforcer.updateBudgetUsage(
         taskId,
         finalFiles,
         finalLoc,
         `Task ${outcome}`
       );
-      this.cawsEnforcer.stopBudgetTracking(taskId);
+      this.policyEnforcer.stopBudgetTracking(taskId);
     }
 
     // Learn from task outcome if memory system is enabled

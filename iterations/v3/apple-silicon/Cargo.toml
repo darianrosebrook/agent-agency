@@ -38,10 +38,8 @@ objc2-metal-performance-shaders-graph = "0.3"
 # Note: IOKit bindings not available in crates.io, would need custom bindings
 
 # ML/AI integration
-candle-core = { version = "0.9.1", optional = true }
 candle-nn = { version = "0.9.1", optional = true }
 candle-transformers = { version = "0.9.1", optional = true }
-safetensors = "0.4"
 ort = { version = "2.0.0-rc.10", optional = true }
 protobuf = "3.4"
 
@@ -75,6 +73,8 @@ parking_lot = "0.12"
 bytemuck = "1.14"
 half = "2.4"
 ndarray = "0.15"
+candle-core = { version = "0.9.1", optional = true }
+safetensors = "0.4"
 
 # Observability and caching - temporarily disabled due to compilation issues
 # agent-agency-observability = { path = "../observability" }

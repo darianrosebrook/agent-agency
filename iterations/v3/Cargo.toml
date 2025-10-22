@@ -92,6 +92,13 @@ clap = { version = "4.0", features = ["derive"] }
 core-foundation = "0.9"
 objc = "0.2"
 
+# Concurrent data structures
+parking_lot = "0.12"
+dashmap = "5.5"
+
+# Half-precision floating point
+half = "2.4"
+
 # Vector operations for embeddings
 ndarray = "0.15"
 
@@ -101,6 +108,10 @@ rand = { version = "0.8", features = ["std"] }
 # Force compatible versions to resolve indicatif/console conflicts
 indicatif = "0.17"
 console = { version = "0.15", features = ["std"] }
+
+# PyTorch/ML integration (unified workspace version)
+tch = { version = "0.13", default-features = false }
+torch-sys = { version = "0.13", default-features = false }
 
 # CAWS integration (using Node.js tools, not Rust crate)
 # caws-core = { path = "../../apps/tools/caws" }
