@@ -56,6 +56,7 @@ pub use inference::{
     PrepareOptions, PreparedModel, TensorMap, TensorSpec,
 };
 pub use memory::MemoryManager;
+#[cfg(target_arch = "aarch64")]
 pub use metal_gpu::MetalGPUManager;
 pub use model_pool::{ModelPool, ModelPoolConfig, ModelPoolStats};
 pub use model_router::{

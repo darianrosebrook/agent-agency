@@ -206,6 +206,18 @@ impl ANEManager {
         }
     }
 
+    /// Detect ANE capabilities for this system
+    pub async fn detect_capabilities() -> crate::ANECapabilities {
+        // For now, return basic capabilities
+        // In a real implementation, this would query the actual ANE hardware
+        crate::ANECapabilities {
+            is_available: true,
+            compute_units: 16,
+            max_memory_mb: 8192, // 8GB typical ANE memory
+            supported_precisions: vec!["fp16".to_string(), "int8".to_string()],
+        }
+    }
+
     /// TODO: Implement comprehensive ANE model loading and management
     /// - Integrate with Apple Neural Engine CoreML framework bindings
     /// - Support MLModel format compilation for ANE execution

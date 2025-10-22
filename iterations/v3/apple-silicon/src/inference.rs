@@ -1,7 +1,17 @@
 //! Inference engine abstraction
 
 use crate::QuantizationConfig;
+#[cfg(feature = "candle")]
 pub use candle_core::DType;
+
+#[cfg(not(feature = "candle"))]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum DType {
+    F32,
+    F16,
+    U32,
+    U8,
+}
 pub use crate::ComputeUnit;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};

@@ -2,6 +2,7 @@
 
 use crate::{ComputeUnit, TensorMap, TensorSpec};
 use crate::inference::{DType, IoSchema};
+#[cfg(feature = "candle")]
 use candle_core::DType as CandleDType;
 use crate::inference::{CapabilityReport, InferenceEngine, PrepareOptions, PreparedModel, ModelArtifact, PreparedCandleModel, CandleModel};
 use async_trait::async_trait;

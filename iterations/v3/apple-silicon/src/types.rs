@@ -21,6 +21,17 @@ pub enum ComputeUnit {
     All,
 }
 
+impl std::fmt::Display for ComputeUnit {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ComputeUnit::ANE => write!(f, "ANE"),
+            ComputeUnit::GPU => write!(f, "GPU"),
+            ComputeUnit::CPU => write!(f, "CPU"),
+            ComputeUnit::All => write!(f, "All"),
+        }
+    }
+}
+
 /// Core ML specific errors
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum CoreMLError {
@@ -85,6 +96,18 @@ pub enum QuantizationMethod {
     Dynamic,
     /// Custom quantization
     Custom(String),
+}
+
+impl std::fmt::Display for QuantizationMethod {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            QuantizationMethod::None => write!(f, "None"),
+            QuantizationMethod::INT8 => write!(f, "INT8"),
+            QuantizationMethod::INT4 => write!(f, "INT4"),
+            QuantizationMethod::Dynamic => write!(f, "Dynamic"),
+            QuantizationMethod::Custom(name) => write!(f, "Custom({})", name),
+        }
+    }
 }
 
 /// Model optimization status
