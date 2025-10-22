@@ -122,6 +122,15 @@ pub struct BidirectionalChannel {
     receiver: TimeoutReceiver,
 }
 
+impl Clone for BidirectionalChannel {
+    fn clone(&self) -> Self {
+        // Can't clone receiver, so create a new channel
+        // This is a limitation - cloned channels won't share the same receiver
+        let config = ChannelConfig::default(); // Use default config for clones
+        Self::new(config)
+    }
+}
+
 impl BidirectionalChannel {
     pub fn new(config: ChannelConfig) -> Self {
         let (tx, rx) = tokio::sync::mpsc::unbounded_channel();

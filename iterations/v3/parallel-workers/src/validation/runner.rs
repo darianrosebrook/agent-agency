@@ -80,11 +80,12 @@ impl ValidationRunner {
         context: &ValidationContext,
     ) -> Result<ValidationReport, ValidationError> {
         let summary = self.runner.get_summary(context).await;
+        let recommendations = self.generate_recommendations(&summary.results);
         let report = ValidationReport {
             context: context.clone(),
             summary,
             execution_time: std::time::Duration::from_secs(0), // Would need timing
-            recommendations: self.generate_recommendations(&summary.results),
+            recommendations,
         };
 
         Ok(report)
@@ -95,7 +96,7 @@ impl ValidationRunner {
         &self,
         context: &ValidationContext,
     ) -> Result<bool, ValidationError> {
-        self.runner.check_blocking_gates(context).await
+        Ok(self.runner.check_blocking_gates(context).await)
     }
 
     /// Generate detailed validation report

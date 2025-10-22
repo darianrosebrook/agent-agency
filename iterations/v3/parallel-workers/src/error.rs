@@ -7,6 +7,7 @@ use crate::types::{TaskId, SubTaskId, WorkerId, WorkerSpecialty};
 
 /// Main error type for the parallel worker system
 #[derive(Error, Debug)]
+#[non_exhaustive]
 pub enum ParallelError {
     #[error("Task decomposition failed: {message}")]
     Decomposition { message: String, source: Option<Box<dyn std::error::Error + Send + Sync>> },
@@ -18,7 +19,7 @@ pub enum ParallelError {
     WorkerExecution { worker_id: WorkerId, message: String, source: Option<Box<dyn std::error::Error + Send + Sync>> },
 
     #[error("Worker error: {0}")]
-    Worker(#[from] WorkerError),
+    Worker(WorkerError),
 
     #[error("Progress tracking failed: {message}")]
     ProgressTracking { message: String, source: Option<Box<dyn std::error::Error + Send + Sync>> },
@@ -77,7 +78,8 @@ pub enum DecompositionError {
 }
 
 /// Error type for worker operations
-#[derive(Error, Debug, Clone)]
+#[derive(Error, Debug)]
+#[non_exhaustive]
 pub enum WorkerError {
     #[error("Worker not found")]
     WorkerNotFound { worker_id: WorkerId },
@@ -111,6 +113,9 @@ pub enum WorkerError {
 
     #[error("Not implemented: {0}")]
     NotImplemented(String),
+
+    #[error("Execution failed: {message}")]
+    ExecutionFailed { worker_id: WorkerId, message: String },
 
     #[error("I/O error: {message}")]
     Io {

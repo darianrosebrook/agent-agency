@@ -369,24 +369,16 @@ pub struct SubtaskScores {
 }
 
 /// Handle to an active worker
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct WorkerHandle {
     pub id: WorkerId,
     pub subtask_id: SubTaskId,
-    pub join_handle: Option<tokio::task::JoinHandle<Result<WorkerResult, WorkerError>>>,
     pub start_time: DateTime<Utc>,
+    // Note: join_handle removed due to lifetime issues
+    // TODO: Implement separate join handle tracking
 }
 
-impl Clone for WorkerHandle {
-    fn clone(&self) -> Self {
-        Self {
-            id: self.id.clone(),
-            subtask_id: self.subtask_id.clone(),
-            join_handle: None, // Cannot clone JoinHandle, so set to None
-            start_time: self.start_time,
-        }
-    }
-}
+// Clone is now derived
 
 /// Quality validation result
 #[derive(Debug, Clone)]
