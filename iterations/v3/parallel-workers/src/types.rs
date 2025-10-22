@@ -7,6 +7,9 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+// Re-export error types for convenience
+pub use crate::error::WorkerError;
+
 /// Unique identifier for tasks
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct TaskId(pub String);
@@ -251,26 +254,7 @@ pub enum ArtifactType {
     Binary,
 }
 
-/// Worker execution error
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct WorkerError {
-    pub error_type: WorkerErrorType,
-    pub message: String,
-    pub details: Option<String>,
-    pub suggestions: Vec<String>,
-}
-
-/// Types of worker errors
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub enum WorkerErrorType {
-    Compilation,
-    Runtime,
-    Timeout,
-    ResourceExhaustion,
-    DependencyFailure,
-    ValidationFailure,
-    Unknown,
-}
+// WorkerError is now defined in error.rs as an enum
 
 /// Overall task result synthesized from worker results
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -389,8 +373,19 @@ pub struct SubtaskScores {
 pub struct WorkerHandle {
     pub id: WorkerId,
     pub subtask_id: SubTaskId,
-    pub join_handle: tokio::task::JoinHandle<Result<WorkerResult, WorkerError>>,
+    pub join_handle: Option<tokio::task::JoinHandle<Result<WorkerResult, WorkerError>>>,
     pub start_time: DateTime<Utc>,
+}
+
+impl Clone for WorkerHandle {
+    fn clone(&self) -> Self {
+        Self {
+            id: self.id.clone(),
+            subtask_id: self.subtask_id.clone(),
+            join_handle: None, // Cannot clone JoinHandle, so set to None
+            start_time: self.start_time,
+        }
+    }
 }
 
 /// Quality validation result

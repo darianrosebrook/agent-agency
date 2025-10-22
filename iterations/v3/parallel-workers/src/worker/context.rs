@@ -382,6 +382,7 @@ impl SafeFileOperations {
             .await
             .map_err(|e| WorkerError::Io {
                 message: format!("Failed to read file {}: {}", path.display(), e),
+                source: Some(Box::new(e)),
             })
     }
 
@@ -405,6 +406,7 @@ impl SafeFileOperations {
                 .await
                 .map_err(|e| WorkerError::Io {
                     message: format!("Failed to create parent directory: {}", e),
+                    source: Some(Box::new(e)),
                 })?;
         }
 
@@ -412,6 +414,7 @@ impl SafeFileOperations {
             .await
             .map_err(|e| WorkerError::Io {
                 message: format!("Failed to write file {}: {}", path.display(), e),
+                source: Some(Box::new(e)),
             })
     }
 
@@ -427,11 +430,13 @@ impl SafeFileOperations {
             .await
             .map_err(|e| WorkerError::Io {
                 message: format!("Failed to read directory {}: {}", path.display(), e),
+                source: Some(Box::new(e)),
             })?;
 
         let mut files = Vec::new();
         while let Some(entry) = entries.next_entry().await.map_err(|e| WorkerError::Io {
             message: format!("Failed to read directory entry: {}", e),
+            source: Some(Box::new(e)),
         })? {
             let path = entry.path();
             if self.context.is_file_in_scope(&path) {

@@ -24,6 +24,7 @@ impl Default for ChannelConfig {
 }
 
 /// Reliable channel sender with retry logic
+#[derive(Clone)]
 pub struct ReliableSender {
     sender: tokio::sync::mpsc::UnboundedSender<WorkerMessage>,
     config: ChannelConfig,
@@ -122,12 +123,12 @@ pub struct BidirectionalChannel {
 }
 
 impl BidirectionalChannel {
-    pub fn new(config: ChannelConfig) -> (Self, tokio::sync::mpsc::UnboundedReceiver<WorkerMessage>) {
+    pub fn new(config: ChannelConfig) -> Self {
         let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
         let sender = ReliableSender::new(tx, config.clone());
         let receiver = TimeoutReceiver::new(rx, config);
 
-        (Self { sender, receiver }, rx)
+        Self { sender, receiver }
     }
 
     pub fn split(self) -> (ReliableSender, TimeoutReceiver) {
@@ -170,10 +171,10 @@ impl ChannelRegistry {
     }
 
     /// Create a new channel for a worker
-    pub fn create_channel(&self, worker_id: WorkerId) -> (BidirectionalChannel, tokio::sync::mpsc::UnboundedReceiver<WorkerMessage>) {
-        let (channel, receiver) = BidirectionalChannel::new(self.config.clone());
-        self.channels.insert(worker_id, channel);
-        (self.channels.get(&worker_id).unwrap().clone(), receiver)
+    pub fn create_channel(&self, worker_id: WorkerId) -> BidirectionalChannel {
+        let channel = BidirectionalChannel::new(self.config.clone());
+        self.channels.insert(worker_id.clone(), channel);
+        self.channels.get(&worker_id).unwrap().clone()
     }
 
     /// Get a channel for sending messages to a worker
@@ -197,7 +198,7 @@ impl ChannelRegistry {
         let mut errors = Vec::new();
 
         for entry in self.channels.iter() {
-            if let Err(e) = entry.value().sender.send(message.clone()).await {
+            if let Err(e) = entry.value().sender.send(message.clone()) {
                 errors.push(e);
             }
         }

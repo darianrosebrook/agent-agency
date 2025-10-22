@@ -341,9 +341,9 @@ mod tests {
         assert!(result.is_ok());
 
         let asr = result.unwrap();
-        assert_eq!(asr.text, "Hello world");
-        assert_eq!(asr.speech_turns.len(), 1);
-        assert_eq!(asr.speech_turns[0].word_timings.len(), 2);
+        assert_eq!(asr.turns.len(), 1);
+        assert_eq!(asr.turns[0].text, "Hello world");
+        assert_eq!(asr.turns[0].word_timings.len(), 2);
     }
 
     #[test]

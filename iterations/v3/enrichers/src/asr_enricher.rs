@@ -15,7 +15,8 @@ use uuid::Uuid;
 
 /// FFI declarations for ASR Bridge
 #[cfg(target_os = "macos")]
-#[link(name = "ASRBridge", kind = "static")]
+// TODO: Re-enable when static linking is implemented
+// #[link(name = "ASRBridge", kind = "static")]
 extern "C" {
     fn speech_recognize_audio(
         audioPath: *const std::ffi::c_char,
@@ -90,7 +91,8 @@ struct SwiftSpeechRecognizer {
 
 /// Whisper-CoreML integration
 #[cfg(target_os = "macos")]
-#[link(name = "WhisperAudio", kind = "static")]
+// TODO: Re-enable when static linking is implemented
+// #[link(name = "WhisperAudio", kind = "static")]
 extern "C" {
     fn whisper_audio_preprocess_file(
         audioPath: *const std::ffi::c_char,

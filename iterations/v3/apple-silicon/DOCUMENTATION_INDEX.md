@@ -1,52 +1,69 @@
-# Apple Silicon ML Documentation Index
+# Agent Agency Documentation Index
 
 ## 📚 Documentation Overview
 
-This index provides a comprehensive guide to the Apple Silicon ML inference framework documentation, organized by audience and use case.
+This index provides a comprehensive guide to the Agent Agency constitutional AI system documentation, organized by audience and use case.
 
 ## 🚀 Quick Start
 
 ### For New Users
-1. **[README.md](README.md)** - High-level overview and getting started
-2. **[src/ane/README.md](src/ane/README.md)** - ANE Manager introduction
-3. **[src/ane/QUICK_REFERENCE.md](src/ane/QUICK_REFERENCE.md)** - Common usage patterns
+1. **[../../README.md](../../README.md)** - System overview and getting started
+2. **[../../docs/agents.md](../../docs/agents.md)** - Agent system introduction
+3. **[../../QUICK_START.md](../../QUICK_START.md)** - Quick start guide
 
 ### For Developers
-1. **[ARCHITECTURE.md](ARCHITECTURE.md)** - System architecture deep dive
-2. **[README.md](README.md)** - Component integration guide
-3. **API Documentation** - Generated Rust docs (`cargo doc`)
+1. **[../../docs/CONSTITUTIONAL_COUNCIL.md](../../docs/CONSTITUTIONAL_COUNCIL.md)** - Governance framework
+2. **[../../docs/TASK_EXECUTION_LIFECYCLE.md](../../docs/TASK_EXECUTION_LIFECYCLE.md)** - Task execution pipeline
+3. **[../../docs/MCP_TOOL_ECOSYSTEM.md](../../docs/MCP_TOOL_ECOSYSTEM.md)** - Tool integration
+4. **[../../docs/MULTI_MODEL_AI_SYSTEM.md](../../docs/MULTI_MODEL_AI_SYSTEM.md)** - AI orchestration
 
-## 🔶 ANE Manager Documentation
+## 🔶 Core Feature Documentation
 
-### Core Concepts
-- **[src/ane/README.md](src/ane/README.md)** - Complete ANE Manager guide
-- **[src/ane/QUICK_REFERENCE.md](src/ane/QUICK_REFERENCE.md)** - Usage examples and patterns
-- **[ARCHITECTURE.md](ARCHITECTURE.md)** - ANE integration architecture
+### Constitutional AI Governance
+- **[../../docs/CONSTITUTIONAL_COUNCIL.md](../../docs/CONSTITUTIONAL_COUNCIL.md)** - Four-judge oversight system
+- **[../../docs/agents/full-guide.md](../../docs/agents/full-guide.md)** - CAWS workflow implementation
+- **[../../docs/agents/tutorial.md](../../docs/agents/tutorial.md)** - CLI usage tutorial
 
-### Technical Reference
-- **Source Code** - `src/ane/` directory with inline documentation
-- **Error Types** - `src/ane/errors.rs` with comprehensive error handling
-- **Resource Management** - `src/ane/resource_pool.rs` admission control
-- **Performance Metrics** - `src/ane/metrics/ewma.rs` observability
+### Task Execution & Orchestration
+- **[../../docs/TASK_EXECUTION_LIFECYCLE.md](../../docs/TASK_EXECUTION_LIFECYCLE.md)** - Complete execution pipeline
+- **[../../docs/agents/examples.md](../../docs/agents/examples.md)** - Working examples
+- **[../../docs/runtime-optimization/README.md](../../docs/runtime-optimization/README.md)** - Performance optimization
 
-### Testing & Benchmarks
-- **Integration Tests** - `ane-tests/tests/ane_integration_tests.rs`
-- **Performance Benchmarks** - `ane-tests/benches/ane_benchmarks.rs`
-- **Unit Tests** - Inline tests in each module
+### AI Model Management
+- **[../../docs/MULTI_MODEL_AI_SYSTEM.md](../../docs/MULTI_MODEL_AI_SYSTEM.md)** - Multi-model orchestration
+- **[README.md](README.md)** - Apple Silicon ML framework
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** - System architecture
 
-## 🍎 Apple Silicon Framework Documentation
+### Tool Ecosystem
+- **[../../docs/MCP_TOOL_ECOSYSTEM.md](../../docs/MCP_TOOL_ECOSYSTEM.md)** - 13+ MCP tools
+- **[../../docs/MCP/README.md](../../docs/MCP/README.md)** - MCP protocol integration
+- **[../../docs/mcp-integration/README.md](../../docs/mcp-integration/README.md)** - Tool development
 
-### Backend Components
-- **Core ML Backend** - `src/core_ml_backend.rs`
-- **MPS Backend** - `compat/mps.rs`
-- **Metal Backend** - `src/metal_gpu.rs`
-- **Buffer Pool** - `src/buffer_pool.rs`
+## 🛡️ Security & Compliance
+
+### Security Architecture
+- **[../../docs/SECURITY_AUDIT_ARCHITECTURE.md](../../docs/SECURITY_AUDIT_ARCHITECTURE.md)** - Security controls
+- **[../../docs/quality-assurance/README.md](../../docs/quality-assurance/README.md)** - Quality gates
+- **Policy Enforcement** - Security policy validation
+
+### Audit & Provenance
+- **Provenance Tracking** - Cryptographic audit trails
+- **Compliance Monitoring** - Regulatory compliance validation
+- **Audit Logging** - Tamper-evident audit logs
+
+## 🏗️ System Architecture
+
+### Core Components
+- **[../../docs/data-layer/README.md](../../docs/data-layer/README.md)** - Data persistence
+- **[../../docs/database/README.md](../../docs/database/README.md)** - Database schema
+- **Orchestration Engine** - Task orchestration
+- **[../../docs/memory-system/](../../docs/memory-system/)** - Memory management
 
 ### Advanced Features
-- **Model Routing** - `src/model_router.rs`
-- **Quantization** - `src/quantization.rs`
-- **Telemetry** - `src/telemetry.rs`
-- **Operator Fusion** - `src/operator_fusion.rs`
+- **Federated Learning** - Distributed training
+- **Self-Prompting Agents** - Autonomous agents
+- **Reflexive Learning** - Learning systems
+- **Runtime Optimization** - Performance tuning
 
 ## 🧪 Quality Assurance
 
@@ -56,149 +73,92 @@ This index provides a comprehensive guide to the Apple Silicon ML inference fram
 - **Performance Tests** - Benchmark regression detection
 - **Chaos Tests** - Failure scenario validation
 
-### Benchmarks
-- **ANE Performance** - Core ML inference benchmarks
-- **Memory Usage** - Leak detection and usage profiling
-- **Concurrency** - Multi-threaded performance validation
-- **Scalability** - Load testing under various conditions
+### Code Quality
+- **CAWS Compliance** - Constitutional workflow standards
+- **Security Audits** - Automated security scanning
+- **Code Reviews** - Peer review processes
 
-## 📊 Performance & Observability
+## 📊 Performance & Monitoring
 
-### Metrics Collection
-- **ANE Metrics** - Latency, throughput, memory usage
-- **System Metrics** - Hardware utilization and health
-- **Custom Metrics** - Application-specific KPIs
+### Performance Optimization
+- **[../../docs/runtime-optimization/QUICK_REFERENCE.md](../../docs/runtime-optimization/QUICK_REFERENCE.md)** - Performance tuning
+- **Benchmark Suites** - Performance validation
+- **Load Testing** - Scalability testing
 
-### Monitoring
-- **Health Checks** - Automatic system validation
-- **Performance Tracking** - Real-time metrics with EWMA
-- **Error Monitoring** - Failure rate and recovery tracking
+### Monitoring & Alerting
+- **[../../docs/monitoring-alerting.md](../../docs/monitoring-alerting.md)** - Monitoring setup
+- **Health Checks** - System validation
+- **Metrics Collection** - Performance tracking
 
-## 🔧 Configuration & Deployment
+## 🔧 Development & Operations
 
-### Configuration
-- **ANE Config** - Resource limits and defaults
-- **Backend Config** - Acceleration backend settings
-- **Model Config** - Per-model optimization settings
+### Development Workflow
+- **[../../docs/agents/full-guide.md](../../docs/agents/full-guide.md)** - CAWS development
+- **Testing Frameworks** - Comprehensive test suites
+- **CI/CD Pipeline** - Automated quality gates
 
-### Deployment
-- **Production Setup** - Service deployment patterns
-- **Scaling** - Horizontal and vertical scaling strategies
-- **Monitoring** - Production observability setup
+### Deployment & Scaling
+- **Docker Deployment** - Container orchestration
+- **Kubernetes** - Production scaling
+- **Load Balancing** - Traffic distribution
 
-## 🏛️ Architecture Documentation
+## 🔗 Integration & APIs
 
-### System Architecture
-- **[ARCHITECTURE.md](ARCHITECTURE.md)** - Complete system overview
-- **Component Relationships** - Integration patterns and data flow
-- **Scalability Design** - Performance and reliability architecture
+### External Integrations
+- **[../../docs/MCP/USAGE.md](../../docs/MCP/USAGE.md)** - MCP protocol usage
+- **[../../docs/mcp-integration/README.md](../../docs/mcp-integration/README.md)** - Third-party tools
+- **API Contracts** - REST API specifications
 
-### Design Patterns
-- **Resource Management** - Admission control and pooling
-- **Error Handling** - Comprehensive error classification
-- **Async Patterns** - Concurrency and cancellation handling
+### Data Integration
+- **[../../docs/data-layer/README.md](../../docs/data-layer/README.md)** - Data layer integration
+- **Federated Learning** - Distributed data processing
+- **Multi-tenant Memory** - Isolated data management
 
-## 🔍 Troubleshooting & Debugging
+## 🎯 Specialized Features
 
-### Common Issues
-- **ANE Unavailable** - Hardware detection and fallback
-- **Memory Limits** - Resource exhaustion handling
-- **Performance Issues** - Profiling and optimization
+### AI Safety & Ethics
+- **Constitutional Council** - Ethical oversight framework
+- **Content Filtering** - Safe content generation
+- **Bias Detection** - Fairness monitoring
 
-### Debugging Tools
-- **Logging** - Structured logging with tracing
-- **Metrics** - Performance monitoring and alerting
-- **Health Checks** - System validation and recovery
+### Advanced AI Capabilities
+- **Self-Prompting Agents** - Autonomous improvement loops
+- **Multimodal RAG** - Multi-modal retrieval systems
+- **Reflexive Learning** - Continuous learning systems
 
-## 📈 Performance Optimization
+### Production Features
+- **High Availability** - Fault-tolerant operation
+- **Disaster Recovery** - Business continuity planning
+- **Compliance Automation** - Regulatory compliance
 
-### ANE Optimization
-- **Model Compilation** - Core ML optimization strategies
-- **Precision Selection** - FP16 vs FP32 trade-offs
-- **Batching** - Throughput vs latency optimization
+## 🔮 Research & Innovation
 
-### System Optimization
-- **Memory Management** - Buffer pooling and reuse
-- **Concurrency Tuning** - Thread pool and async optimization
-- **I/O Optimization** - Input/output processing efficiency
+### Active Research Areas
+- **Constitutional AI** - Ethical AI governance
+- **Self-Improving Agents** - Autonomous optimization
+- **Multi-Modal Intelligence** - Cross-domain understanding
+- **Federated Learning** - Privacy-preserving collaboration
 
-## 🚨 Error Reference
-
-### ANE Error Types
-- **Resource Errors** - Memory and concurrency limits
-- **Model Errors** - Loading and validation failures
-- **Execution Errors** - Inference and timeout failures
-- **System Errors** - Hardware and compatibility issues
-
-### Recovery Strategies
-- **Automatic Retry** - Transient failure handling
-- **Backend Fallback** - Alternative acceleration paths
-- **Graceful Degradation** - Reduced functionality modes
-
-## 🔗 API Reference
-
-### Public APIs
-- **ANEManager** - Core inference interface
-- **Backend Traits** - Acceleration backend contracts
-- **Configuration Types** - Setup and tuning parameters
-
-### Internal APIs
-- **Resource Pool** - Internal resource management
-- **Metrics System** - Performance tracking internals
-- **Compatibility Layer** - Hardware detection and adaptation
-
-## 📋 Development Workflow
-
-### Contributing
-1. **Setup** - Development environment configuration
-2. **Testing** - Running test suites and benchmarks
-3. **Documentation** - Updating docs for changes
-4. **Review** - Code review and quality gates
-
-### Development Tools
-- **Cargo** - Build system and dependency management
-- **Criterion** - Performance benchmarking
-- **Tracing** - Structured logging and debugging
-- **Tokio** - Async runtime for testing
-
-## 🎯 Use Cases & Examples
-
-### Production Applications
-- **Real-time Inference** - Low-latency ML serving
-- **Batch Processing** - High-throughput data processing
-- **Edge Deployment** - Resource-constrained environments
-
-### Development Workflows
-- **Model Prototyping** - Rapid iteration and testing
-- **Performance Profiling** - Optimization and tuning
-- **Integration Testing** - End-to-end validation
-
-## 🔮 Future Development
-
-### Roadmap
-- **ANE Enhancements** - Advanced ANE features and optimizations
-- **New Backends** - Additional acceleration options
-- **Advanced Features** - Auto-tuning, model optimization
-
-### Research Areas
-- **Performance Research** - ANE kernel optimization
-- **Reliability Research** - Failure prediction and recovery
-- **Scalability Research** - Large-scale deployment patterns
+### Future Capabilities
+- **Agent Self-Governance** - Autonomous CAWS compliance
+- **Cross-Agent Collaboration** - Multi-agent coordination
+- **Real-time Adaptation** - Dynamic capability adjustment
+- **Explainable AI** - Transparent decision processes
 
 ---
 
 ## 📞 Getting Help
 
 ### Support Resources
-- **Issues** - GitHub issue tracker for bugs and features
-- **Discussions** - Community forum for questions and ideas
 - **Documentation** - Comprehensive docs for self-service
+- **Code Examples** - Working implementations and patterns
+- **Architecture Guides** - System design and integration
 
-### Community
-- **Contributing Guide** - How to contribute to the project
-- **Code of Conduct** - Community standards and guidelines
-- **Roadmap** - Planned features and development direction
+### Development Resources
+- **CAWS Guidelines** - Constitutional workflow standards
+- **Quality Gates** - Automated validation processes
+- **Security Policies** - Compliance and safety requirements
 
 ---
 
-**This documentation provides comprehensive coverage of the Apple Silicon ML framework, from high-level concepts to low-level implementation details.**
+**This documentation provides comprehensive coverage of the Agent Agency constitutional AI system, from core governance features to advanced AI capabilities.**

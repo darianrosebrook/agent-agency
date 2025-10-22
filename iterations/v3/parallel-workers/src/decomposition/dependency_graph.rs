@@ -2,7 +2,7 @@
 
 use crate::types::*;
 use crate::error::*;
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{HashMap, HashSet};
 
 /// Dependency analyzer for understanding relationships between subtasks
 pub struct DependencyAnalyzer;

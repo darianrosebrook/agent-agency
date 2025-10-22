@@ -28,7 +28,8 @@ struct VNRecognizeTextRequest {
 
 /// FFI declarations for Vision Bridge
 #[cfg(target_os = "macos")]
-#[link(name = "VisionBridge", kind = "static")]
+// TODO: Re-enable when static linking is implemented
+// #[link(name = "VisionBridge", kind = "static")]
 extern "C" {
     fn vision_extract_text(
         imagePath: *const std::ffi::c_char,

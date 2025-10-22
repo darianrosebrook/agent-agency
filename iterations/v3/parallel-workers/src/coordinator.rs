@@ -52,6 +52,7 @@ pub struct ParallelCoordinator {
 
 #[derive(Debug, Clone)]
 pub struct ParallelCoordinatorConfig {
+    pub enabled: bool,
     pub max_concurrent_workers: usize,
     pub task_timeout_seconds: u64,
     pub complexity_threshold: f32,
@@ -62,6 +63,7 @@ pub struct ParallelCoordinatorConfig {
 impl Default for ParallelCoordinatorConfig {
     fn default() -> Self {
         Self {
+            enabled: true,
             max_concurrent_workers: 8,
             task_timeout_seconds: 300,
             complexity_threshold: 0.6,
@@ -176,10 +178,8 @@ impl ParallelCoordinator {
         for worker_id in worker_handles {
             match self.worker_manager.wait_for_worker(&worker_id).await {
                 Ok(result) => {
-                    // Update progress
-                    if let Ok(worker_progress) = self.progress_aggregator.get_worker_progress(&worker_id) {
-                        self.progress_aggregator.update_from_worker_progress(&worker_progress)?;
-                    }
+                    // TODO: Update progress tracking with worker completion
+                    // For now, just collect the results
 
                     results.push(result);
                 }
@@ -348,7 +348,7 @@ pub mod integration {
             }
         }
 
-        (base_benefit * multiplier).min(1.0).max(0.0)
+        ((base_benefit * multiplier) as f32).min(1.0f32).max(0.0f32)
     }
 
     // TODO: Add convert_to_complex_task method when integrating with orchestration

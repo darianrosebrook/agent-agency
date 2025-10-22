@@ -50,6 +50,13 @@ impl DecompositionEngine {
         let recommended_workers = subtask_scores.complexity_scores.len().min(8); // Cap at 8 workers
         let should_parallelize = subtask_scores.parallelization_score > 0.6;
 
+        // Validate decomposition strategy with council (if available)
+        // TODO: Integrate with council for consensus validation of decomposition strategy
+        // This would involve:
+        // 1. Creating a council task spec from the analysis
+        // 2. Getting council consensus on the decomposition approach
+        // 3. Adjusting recommended_workers based on council feedback
+
         Ok(TaskAnalysis {
             patterns,
             dependencies,

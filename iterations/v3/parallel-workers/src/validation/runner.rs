@@ -22,7 +22,7 @@ impl ValidationRunner {
     pub async fn run_parallel(
         &self,
         context: &ValidationContext,
-    ) -> ValidationResult<ValidationReport> {
+    ) -> Result<ValidationReport, ValidationError> {
         let gates = self.runner.gates().to_vec();
         let mut handles = Vec::new();
 
@@ -37,7 +37,7 @@ impl ValidationRunner {
                 let mut results = Vec::new();
 
                 for gate in chunk_gates {
-                    let result = gate.validate_with_timeout(&chunk_context).await?;
+                    let result = gate.validate_with_timeout(&chunk_context).await;
                     let passes = gate.passes(&result);
 
                     results.push(GateResult {
@@ -78,8 +78,8 @@ impl ValidationRunner {
     pub async fn run_sequential(
         &self,
         context: &ValidationContext,
-    ) -> ValidationResult<ValidationReport> {
-        let summary = self.runner.get_summary(context).await?;
+    ) -> Result<ValidationReport, ValidationError> {
+        let summary = self.runner.get_summary(context).await;
         let report = ValidationReport {
             context: context.clone(),
             summary,
@@ -94,7 +94,7 @@ impl ValidationRunner {
     pub async fn validate_blocking_gates(
         &self,
         context: &ValidationContext,
-    ) -> ValidationResult<bool> {
+    ) -> Result<bool, ValidationError> {
         self.runner.check_blocking_gates(context).await
     }
 
@@ -103,7 +103,7 @@ impl ValidationRunner {
         &self,
         results: Vec<GateResult>,
         context: &ValidationContext,
-    ) -> ValidationResult<ValidationReport> {
+    ) -> Result<ValidationReport, ValidationError> {
         let total_gates = results.len();
         let passed_gates = results.iter().filter(|r| r.passes).count();
         let failed_gates = total_gates - passed_gates;
@@ -276,12 +276,12 @@ impl ValidationPipeline {
     pub async fn run_with_early_exit(
         &self,
         context: &ValidationContext,
-    ) -> ValidationResult<ValidationReport> {
+    ) -> Result<ValidationReport, ValidationError> {
         let mut results = Vec::new();
         let start_time = std::time::Instant::now();
 
         for gate in &self.gates {
-            let result = gate.validate_with_timeout(context).await?;
+            let result = gate.validate_with_timeout(context).await;
             let passes = gate.passes(&result);
 
             results.push(GateResult {

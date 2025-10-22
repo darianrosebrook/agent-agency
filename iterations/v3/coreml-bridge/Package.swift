@@ -4,12 +4,12 @@ import PackageDescription
 let package = Package(
     name: "CoreMLBridge",
     platforms: [
-        .macOS(.v11)
+        .macOS(.v12)
     ],
     products: [
         .library(
             name: "CoreMLBridge",
-            targets: ["CoreMLBridge", "WhisperAudio"]
+            targets: ["CoreMLBridge", "WhisperAudio", "MistralTokenizer"]
         )
     ],
     targets: [
@@ -29,6 +29,14 @@ let package = Package(
                 .linkedFramework("Foundation"),
                 .linkedFramework("Accelerate"),
                 .linkedFramework("AVFoundation")
+            ]
+        ),
+        .target(
+            name: "MistralTokenizer",
+            dependencies: [],
+            linkerSettings: [
+                .linkedFramework("Foundation"),
+                .linkedFramework("NaturalLanguage")
             ]
         )
     ]

@@ -30,6 +30,10 @@ default = []
 
 [target.'cfg(target_os = "macos")'.dependencies]
 
+# TODO: Add Swift bridge linking when ready
+# [target.'cfg(target_os = "macos")']
+# rustflags = ["-L", "../coreml-bridge/.build/release", "-l", "WhisperAudio", "-l", "CoreMLBridge", "-F", "/System/Library/Frameworks", "-framework", "CoreML", "-framework", "Foundation", "-framework", "Accelerate", "-framework", "AVFoundation"]
+
 [[bin]]
 name = "enrichers"
 path = "src/main.rs"

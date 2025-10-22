@@ -17,6 +17,9 @@ use tokio::time::{Duration, Instant};
 use tracing::{debug, error, info, warn};
 use uuid::Uuid;
 
+// Parallel workers integration
+use parallel_workers::{WorkerSpecialty, SpecializedWorker as ParallelSpecializedWorker};
+
 /// Main worker pool manager
 #[derive(Debug)]
 pub struct WorkerPoolManager {
@@ -974,6 +977,38 @@ impl WorkerPoolManager {
 
         info!("Worker pool manager shutdown complete");
         Ok(())
+    }
+
+    /// Get a specialized worker for parallel execution (integration point)
+    pub async fn get_specialized_worker(
+        &self,
+        specialty: WorkerSpecialty,
+    ) -> Result<Arc<dyn ParallelSpecializedWorker>> {
+        // For now, create workers on demand based on specialty
+        // In the future, this could pool and reuse specialized workers
+
+        match specialty {
+            WorkerSpecialty::CompilationErrors { .. } => {
+                // Create a compilation specialist worker
+                // This would integrate with existing worker infrastructure
+                Err(anyhow::anyhow!("Specialized workers not yet integrated with existing pool"))
+            }
+            WorkerSpecialty::Refactoring { .. } => {
+                Err(anyhow::anyhow!("Specialized workers not yet integrated with existing pool"))
+            }
+            WorkerSpecialty::Testing { .. } => {
+                Err(anyhow::anyhow!("Specialized workers not yet integrated with existing pool"))
+            }
+            WorkerSpecialty::Documentation { .. } => {
+                Err(anyhow::anyhow!("Specialized workers not yet integrated with existing pool"))
+            }
+            WorkerSpecialty::Custom { .. } => {
+                Err(anyhow::anyhow!("Custom specialized workers not supported"))
+            }
+            WorkerSpecialty::TypeSystem { .. } | WorkerSpecialty::AsyncPatterns { .. } => {
+                Err(anyhow::anyhow!("Advanced specialty types not yet supported"))
+            }
+        }
     }
 }
 

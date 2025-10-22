@@ -14,6 +14,7 @@ pub mod worker;
 pub mod communication;
 pub mod progress;
 pub mod validation;
+pub mod integration;
 pub mod types;
 pub mod error;
 

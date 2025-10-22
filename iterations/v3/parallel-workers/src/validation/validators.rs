@@ -9,23 +9,26 @@ pub struct CompilationValidator;
 
 #[async_trait]
 impl super::gates::QualityValidatorTrait for CompilationValidator {
-    async fn validate(&self, context: &ValidationContext) -> ValidationResult<ValidationResult> {
+    async fn validate(&self, context: &ValidationContext) -> ValidationResult {
         // Run cargo check on the package
-        let output = tokio::process::Command::new("cargo")
+        let output = match tokio::process::Command::new("cargo")
             .args(&["check", "--package", &context.package_name])
             .current_dir(&context.workspace_root)
             .output()
-            .await
-            .map_err(|e| ValidationError::ExternalToolFailure {
-                tool_name: "cargo".to_string(),
-                message: e.to_string(),
-            })?;
+            .await {
+                Ok(output) => output,
+                Err(e) => return ValidationResult::Fail {
+                    score: 0.0,
+                    details: format!("Failed to run cargo check: {}", e),
+                    suggestions: vec!["Check that cargo is installed".to_string(), "Verify package name is correct".to_string()],
+                },
+            };
 
         if output.status.success() {
-            Ok(ValidationResult::Pass {
+            ValidationResult::Pass {
                 score: 1.0,
                 details: "Compilation successful".to_string(),
-            })
+            }
         } else {
             let stderr = String::from_utf8_lossy(&output.stderr);
             let error_count = count_compilation_errors(&stderr);
@@ -36,11 +39,11 @@ impl super::gates::QualityValidatorTrait for CompilationValidator {
                 (10.0 - error_count.min(10) as f32) / 10.0
             };
 
-            Ok(ValidationResult::Fail {
+            ValidationResult::Fail {
                 score,
                 details: format!("{} compilation errors found", error_count),
                 suggestions: extract_compilation_suggestions(&stderr),
-            })
+            }
         }
     }
 }
@@ -58,39 +61,42 @@ impl TestValidator {
 
 #[async_trait]
 impl super::gates::QualityValidatorTrait for TestValidator {
-    async fn validate(&self, context: &ValidationContext) -> ValidationResult<ValidationResult> {
+    async fn validate(&self, context: &ValidationContext) -> ValidationResult {
         // Run tests
-        let test_output = tokio::process::Command::new("cargo")
+        let test_output = match tokio::process::Command::new("cargo")
             .args(&["test", "--package", &context.package_name])
             .current_dir(&context.workspace_root)
             .output()
-            .await
-            .map_err(|e| ValidationError::ExternalToolFailure {
-                tool_name: "cargo-test".to_string(),
-                message: e.to_string(),
-            })?;
+            .await {
+                Ok(output) => output,
+                Err(e) => return ValidationResult::Fail {
+                    score: 0.0,
+                    details: format!("Failed to run cargo test: {}", e),
+                    suggestions: vec!["Check that cargo is installed".to_string(), "Verify package name is correct".to_string()],
+                },
+            };
 
         if !test_output.status.success() {
-            return Ok(Ok(ValidationResult::Fail {
+            return ValidationResult::Fail {
                 score: 0.0,
                 details: "Tests failed".to_string(),
                 suggestions: vec![
                     "Run 'cargo test' to see detailed failures".to_string(),
                     "Check test output for specific error messages".to_string(),
                 ],
-            }));
+            };
         }
 
         // Try to get coverage (if cargo-tarpaulin is available)
         match get_test_coverage(&context.workspace_root, &context.package_name).await {
             Ok(coverage) => {
                 if coverage >= self.min_coverage {
-                    Ok(ValidationResult::Pass {
+                    ValidationResult::Pass {
                         score: 1.0,
                         details: format!("Tests passed with {:.1}% coverage", coverage * 100.0),
-                    })
+                    }
                 } else {
-                    Ok(ValidationResult::Warning {
+                    ValidationResult::Warning {
                         score: coverage / self.min_coverage,
                         details: format!("Tests passed but coverage {:.1}% below required {:.1}%",
                                        coverage * 100.0, self.min_coverage * 100.0),
@@ -98,19 +104,19 @@ impl super::gates::QualityValidatorTrait for TestValidator {
                             "Add more unit tests".to_string(),
                             "Improve branch coverage in complex functions".to_string(),
                         ],
-                    })
+                    }
                 }
             }
             Err(_) => {
                 // Coverage tool not available, just check that tests pass
-                Ok(ValidationResult::Warning {
+                ValidationResult::Warning {
                     score: 0.7, // Partial score when coverage can't be measured
                     details: "Tests passed but coverage measurement unavailable".to_string(),
                     suggestions: vec![
                         "Install cargo-tarpaulin for coverage measurement".to_string(),
                         "Run 'cargo tarpaulin --out Html' for detailed coverage report".to_string(),
                     ],
-                })
+                }
             }
         }
     }
@@ -121,23 +127,26 @@ pub struct LintValidator;
 
 #[async_trait]
 impl super::gates::QualityValidatorTrait for LintValidator {
-    async fn validate(&self, context: &ValidationContext) -> ValidationResult<ValidationResult> {
+    async fn validate(&self, context: &ValidationContext) -> ValidationResult {
         // Run clippy
-        let output = tokio::process::Command::new("cargo")
+        let output = match tokio::process::Command::new("cargo")
             .args(&["clippy", "--package", &context.package_name, "--", "-D", "warnings"])
             .current_dir(&context.workspace_root)
             .output()
-            .await
-            .map_err(|e| ValidationError::ExternalToolFailure {
-                tool_name: "clippy".to_string(),
-                message: e.to_string(),
-            })?;
+            .await {
+                Ok(output) => output,
+                Err(e) => return ValidationResult::Fail {
+                    score: 0.0,
+                    details: format!("Failed to run clippy: {}", e),
+                    suggestions: vec!["Check that cargo clippy is installed".to_string()],
+                },
+            };
 
         if output.status.success() {
-            Ok(ValidationResult::Pass {
+            ValidationResult::Pass {
                 score: 1.0,
                 details: "No linting warnings or errors".to_string(),
-            })
+            }
         } else {
             let stderr = String::from_utf8_lossy(&output.stderr);
             let warning_count = count_lint_warnings(&stderr);
@@ -148,14 +157,14 @@ impl super::gates::QualityValidatorTrait for LintValidator {
                 (10.0 - warning_count.min(10) as f32) / 10.0
             };
 
-            Ok(ValidationResult::Warning {
+            ValidationResult::Warning {
                 score,
                 details: format!("{} linting warnings found", warning_count),
                 suggestions: vec![
                     "Run 'cargo clippy' to see detailed warnings".to_string(),
                     "Fix warnings or add #[allow(...)] attributes where appropriate".to_string(),
                 ],
-            })
+            }
         }
     }
 }
@@ -165,7 +174,7 @@ pub struct SecurityValidator;
 
 #[async_trait]
 impl super::gates::QualityValidatorTrait for SecurityValidator {
-    async fn validate(&self, context: &ValidationContext) -> ValidationResult<ValidationResult> {
+    async fn validate(&self, context: &ValidationContext) -> ValidationResult {
         // Run cargo audit if available
         match tokio::process::Command::new("cargo")
             .args(&["audit"])
@@ -174,10 +183,10 @@ impl super::gates::QualityValidatorTrait for SecurityValidator {
             .await
         {
             Ok(output) if output.status.success() => {
-                Ok(ValidationResult::Pass {
+                ValidationResult::Pass {
                     score: 1.0,
                     details: "No security vulnerabilities found".to_string(),
-                })
+                }
             }
             Ok(output) => {
                 let stderr = String::from_utf8_lossy(&output.stderr);
@@ -189,7 +198,7 @@ impl super::gates::QualityValidatorTrait for SecurityValidator {
                     (5.0 - vuln_count.min(5) as f32) / 5.0
                 };
 
-                    Ok(ValidationResult::Fail {
+                    ValidationResult::Fail {
                     score,
                     details: format!("{} security vulnerabilities found", vuln_count),
                     suggestions: vec![
@@ -197,18 +206,18 @@ impl super::gates::QualityValidatorTrait for SecurityValidator {
                         "Update vulnerable dependencies".to_string(),
                         "Review security advisories at https://rustsec.org/advisories".to_string(),
                     ],
-                })
+                }
             }
             Err(_) => {
                 // cargo audit not available, do basic checks
-                Ok(ValidationResult::Warning {
+                ValidationResult::Warning {
                     score: 0.5,
                     details: "Security audit tool not available".to_string(),
                     suggestions: vec![
                         "Install cargo-audit: cargo install cargo-audit".to_string(),
                         "Run regular security audits manually".to_string(),
                     ],
-                })
+                }
             }
         }
     }
@@ -227,21 +236,21 @@ impl PerformanceValidator {
 
 #[async_trait]
 impl super::gates::QualityValidatorTrait for PerformanceValidator {
-    async fn validate(&self, context: &ValidationContext) -> ValidationResult<ValidationResult> {
+    async fn validate(&self, context: &ValidationContext) -> ValidationResult {
         // Check if execution time is within bounds
         let execution_time_ms = context.execution_time.as_millis() as u64;
 
         if execution_time_ms <= self.max_response_time_ms {
-            Ok(ValidationResult::Pass {
+            ValidationResult::Pass {
                 score: 1.0,
                 details: format!("Execution completed in {}ms (within {}ms limit)",
                                execution_time_ms, self.max_response_time_ms),
-            })
+            }
         } else {
             let overrun_percent = (execution_time_ms as f32 / self.max_response_time_ms as f32) - 1.0;
             let score = (1.0 - overrun_percent.min(1.0)).max(0.0);
 
-            Ok(ValidationResult::Warning {
+            ValidationResult::Warning {
                 score,
                 details: format!("Execution took {}ms ({}% over {}ms limit)",
                                execution_time_ms, (overrun_percent * 100.0) as u32, self.max_response_time_ms),
@@ -250,7 +259,7 @@ impl super::gates::QualityValidatorTrait for PerformanceValidator {
                     "Consider parallelization for CPU-intensive operations".to_string(),
                     "Review algorithm complexity".to_string(),
                 ],
-            })
+            }
         }
     }
 }
@@ -260,33 +269,36 @@ pub struct DocumentationValidator;
 
 #[async_trait]
 impl super::gates::QualityValidatorTrait for DocumentationValidator {
-    async fn validate(&self, context: &ValidationContext) -> ValidationResult<ValidationResult> {
+    async fn validate(&self, context: &ValidationContext) -> ValidationResult {
         // Run cargo doc to check documentation
-        let output = tokio::process::Command::new("cargo")
+        let output = match tokio::process::Command::new("cargo")
             .args(&["doc", "--package", &context.package_name, "--no-deps"])
             .current_dir(&context.workspace_root)
             .output()
-            .await
-            .map_err(|e| ValidationError::ExternalToolFailure {
-                tool_name: "cargo-doc".to_string(),
-                message: e.to_string(),
-            })?;
+            .await {
+                Ok(output) => output,
+                Err(e) => return ValidationResult::Fail {
+                    score: 0.0,
+                    details: format!("Failed to run cargo doc: {}", e),
+                    suggestions: vec!["Check that cargo is installed".to_string()],
+                },
+            };
 
         if output.status.success() {
             // Could check for undocumented items here
-            Ok(ValidationResult::Pass {
+            ValidationResult::Pass {
                 score: 1.0,
                 details: "Documentation generated successfully".to_string(),
-            })
+            }
         } else {
-            Ok(ValidationResult::Warning {
+            ValidationResult::Warning {
                 score: 0.8,
                 details: "Documentation generation had issues".to_string(),
                 suggestions: vec![
                     "Run 'cargo doc' to see documentation issues".to_string(),
                     "Add missing documentation for public APIs".to_string(),
                 ],
-            })
+            }
         }
     }
 }
@@ -320,7 +332,7 @@ fn extract_compilation_suggestions(stderr: &str) -> Vec<String> {
     suggestions
 }
 
-async fn get_test_coverage(workspace_root: &std::path::Path, package_name: &str) -> Result<f32> {
+async fn get_test_coverage(workspace_root: &std::path::Path, package_name: &str) -> std::result::Result<f32, anyhow::Error> {
     // Try to run tarpaulin for coverage
     let output = tokio::process::Command::new("cargo")
         .args(&["tarpaulin", "--packages", package_name, "--out", "Json"])

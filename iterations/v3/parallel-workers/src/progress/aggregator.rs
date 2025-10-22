@@ -68,7 +68,7 @@ impl ProgressAggregator {
     /// Register a new worker contribution
     pub fn register_worker(&self, worker_id: WorkerId, subtask_id: SubTaskId, weight: f32) -> ProgressResult<()> {
         let mut contributions = self.worker_contributions.write();
-        contributions.insert(worker_id, WorkerContribution {
+        contributions.insert(worker_id.clone(), WorkerContribution {
             worker_id,
             subtask_id,
             weight,

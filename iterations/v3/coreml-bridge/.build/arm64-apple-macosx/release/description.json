@@ -43,7 +43,7 @@
       ],
       "otherArguments" : [
         "-target",
-        "arm64-apple-macosx11.0",
+        "arm64-apple-macosx12.0",
         "-whole-module-optimization",
         "-num-threads",
         "10",
@@ -59,6 +59,7 @@
         "-emit-objc-header",
         "-emit-objc-header-path",
         "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/coreml-bridge/.build/arm64-apple-macosx/release/CoreMLBridge.build/include/CoreMLBridge-Swift.h",
+        "-color-diagnostics",
         "-swift-version",
         "5",
         "-plugin-path",
@@ -110,6 +111,196 @@
       ],
       "tempsPath" : "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/coreml-bridge/.build/arm64-apple-macosx/release/CoreMLBridge.build",
       "wholeModuleOptimization" : true
+    },
+    "C.MistralTokenizer-arm64-apple-macosx15.0-release.module" : {
+      "executable" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "fileList" : "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/coreml-bridge/.build/arm64-apple-macosx/release/MistralTokenizer.build/sources",
+      "importPath" : "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/coreml-bridge/.build/arm64-apple-macosx/release/Modules",
+      "inputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/coreml-bridge/Sources/MistralTokenizer/MistralTokenizerBridge.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/coreml-bridge/.build/arm64-apple-macosx/release/swift-version--58304C5D6DBC2206.txt"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/coreml-bridge/.build/arm64-apple-macosx/release/MistralTokenizer.build/sources"
+        }
+      ],
+      "isLibrary" : true,
+      "moduleName" : "MistralTokenizer",
+      "moduleOutputPath" : "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/coreml-bridge/.build/arm64-apple-macosx/release/Modules/MistralTokenizer.swiftmodule",
+      "objects" : [
+        "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/coreml-bridge/.build/arm64-apple-macosx/release/MistralTokenizer.build/MistralTokenizerBridge.swift.o"
+      ],
+      "otherArguments" : [
+        "-target",
+        "arm64-apple-macosx12.0",
+        "-whole-module-optimization",
+        "-num-threads",
+        "10",
+        "-serialize-diagnostics",
+        "-O",
+        "-j10",
+        "-DSWIFT_PACKAGE",
+        "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+        "-module-cache-path",
+        "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/coreml-bridge/.build/arm64-apple-macosx/release/ModuleCache",
+        "-parseable-output",
+        "-parse-as-library",
+        "-emit-objc-header",
+        "-emit-objc-header-path",
+        "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/coreml-bridge/.build/arm64-apple-macosx/release/MistralTokenizer.build/include/MistralTokenizer-Swift.h",
+        "-color-diagnostics",
+        "-swift-version",
+        "5",
+        "-plugin-path",
+        "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+        "-sdk",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk",
+        "-F",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-F",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks",
+        "-I",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-L",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-g",
+        "-Xcc",
+        "-isysroot",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk",
+        "-Xcc",
+        "-F",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-Xcc",
+        "-F",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks",
+        "-Xcc",
+        "-fPIC",
+        "-Xcc",
+        "-g",
+        "-package-name",
+        "coreml_bridge"
+      ],
+      "outputFileMapPath" : "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/coreml-bridge/.build/arm64-apple-macosx/release/MistralTokenizer.build/output-file-map.json",
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/coreml-bridge/.build/arm64-apple-macosx/release/MistralTokenizer.build/MistralTokenizerBridge.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/coreml-bridge/.build/arm64-apple-macosx/release/Modules/MistralTokenizer.swiftmodule"
+        }
+      ],
+      "prepareForIndexing" : false,
+      "sources" : [
+        "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/coreml-bridge/Sources/MistralTokenizer/MistralTokenizerBridge.swift"
+      ],
+      "tempsPath" : "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/coreml-bridge/.build/arm64-apple-macosx/release/MistralTokenizer.build",
+      "wholeModuleOptimization" : true
+    },
+    "C.WhisperAudio-arm64-apple-macosx15.0-release.module" : {
+      "executable" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "fileList" : "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/coreml-bridge/.build/arm64-apple-macosx/release/WhisperAudio.build/sources",
+      "importPath" : "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/coreml-bridge/.build/arm64-apple-macosx/release/Modules",
+      "inputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/coreml-bridge/Sources/WhisperAudio/WhisperAudioBridge.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/coreml-bridge/.build/arm64-apple-macosx/release/swift-version--58304C5D6DBC2206.txt"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/coreml-bridge/.build/arm64-apple-macosx/release/WhisperAudio.build/sources"
+        }
+      ],
+      "isLibrary" : true,
+      "moduleName" : "WhisperAudio",
+      "moduleOutputPath" : "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/coreml-bridge/.build/arm64-apple-macosx/release/Modules/WhisperAudio.swiftmodule",
+      "objects" : [
+        "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/coreml-bridge/.build/arm64-apple-macosx/release/WhisperAudio.build/WhisperAudioBridge.swift.o"
+      ],
+      "otherArguments" : [
+        "-target",
+        "arm64-apple-macosx12.0",
+        "-whole-module-optimization",
+        "-num-threads",
+        "10",
+        "-serialize-diagnostics",
+        "-O",
+        "-j10",
+        "-DSWIFT_PACKAGE",
+        "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+        "-module-cache-path",
+        "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/coreml-bridge/.build/arm64-apple-macosx/release/ModuleCache",
+        "-parseable-output",
+        "-parse-as-library",
+        "-emit-objc-header",
+        "-emit-objc-header-path",
+        "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/coreml-bridge/.build/arm64-apple-macosx/release/WhisperAudio.build/include/WhisperAudio-Swift.h",
+        "-color-diagnostics",
+        "-swift-version",
+        "5",
+        "-plugin-path",
+        "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+        "-sdk",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk",
+        "-F",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-F",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks",
+        "-I",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-L",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-g",
+        "-Xcc",
+        "-isysroot",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk",
+        "-Xcc",
+        "-F",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-Xcc",
+        "-F",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks",
+        "-Xcc",
+        "-fPIC",
+        "-Xcc",
+        "-g",
+        "-package-name",
+        "coreml_bridge"
+      ],
+      "outputFileMapPath" : "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/coreml-bridge/.build/arm64-apple-macosx/release/WhisperAudio.build/output-file-map.json",
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/coreml-bridge/.build/arm64-apple-macosx/release/WhisperAudio.build/WhisperAudioBridge.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/coreml-bridge/.build/arm64-apple-macosx/release/Modules/WhisperAudio.swiftmodule"
+        }
+      ],
+      "prepareForIndexing" : false,
+      "sources" : [
+        "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/coreml-bridge/Sources/WhisperAudio/WhisperAudioBridge.swift"
+      ],
+      "tempsPath" : "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/coreml-bridge/.build/arm64-apple-macosx/release/WhisperAudio.build",
+      "wholeModuleOptimization" : true
     }
   },
   "swiftFrontendCommands" : {
@@ -127,7 +318,7 @@
       "-I",
       "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/coreml-bridge/.build/arm64-apple-macosx/release/Modules",
       "-target",
-      "arm64-apple-macosx11.0",
+      "arm64-apple-macosx12.0",
       "-whole-module-optimization",
       "-num-threads",
       "10",
@@ -143,6 +334,135 @@
       "-emit-objc-header",
       "-emit-objc-header-path",
       "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/coreml-bridge/.build/arm64-apple-macosx/release/CoreMLBridge.build/include/CoreMLBridge-Swift.h",
+      "-color-diagnostics",
+      "-swift-version",
+      "5",
+      "-plugin-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+      "-sdk",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk",
+      "-F",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-F",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks",
+      "-I",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-L",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-g",
+      "-Xcc",
+      "-isysroot",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk",
+      "-Xcc",
+      "-F",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-Xcc",
+      "-F",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks",
+      "-Xcc",
+      "-fPIC",
+      "-Xcc",
+      "-g",
+      "-package-name",
+      "coreml_bridge",
+      "-driver-use-frontend-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+    ],
+    "MistralTokenizer" : [
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "-module-name",
+      "MistralTokenizer",
+      "-package-name",
+      "coreml_bridge",
+      "-c",
+      "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/coreml-bridge/Sources/MistralTokenizer/MistralTokenizerBridge.swift",
+      "-I",
+      "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/coreml-bridge/.build/arm64-apple-macosx/release/Modules",
+      "-target",
+      "arm64-apple-macosx12.0",
+      "-whole-module-optimization",
+      "-num-threads",
+      "10",
+      "-serialize-diagnostics",
+      "-O",
+      "-j10",
+      "-DSWIFT_PACKAGE",
+      "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+      "-module-cache-path",
+      "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/coreml-bridge/.build/arm64-apple-macosx/release/ModuleCache",
+      "-parseable-output",
+      "-parse-as-library",
+      "-emit-objc-header",
+      "-emit-objc-header-path",
+      "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/coreml-bridge/.build/arm64-apple-macosx/release/MistralTokenizer.build/include/MistralTokenizer-Swift.h",
+      "-color-diagnostics",
+      "-swift-version",
+      "5",
+      "-plugin-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+      "-sdk",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk",
+      "-F",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-F",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks",
+      "-I",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-L",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-g",
+      "-Xcc",
+      "-isysroot",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk",
+      "-Xcc",
+      "-F",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-Xcc",
+      "-F",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks",
+      "-Xcc",
+      "-fPIC",
+      "-Xcc",
+      "-g",
+      "-package-name",
+      "coreml_bridge",
+      "-driver-use-frontend-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+    ],
+    "WhisperAudio" : [
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "-module-name",
+      "WhisperAudio",
+      "-package-name",
+      "coreml_bridge",
+      "-c",
+      "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/coreml-bridge/Sources/WhisperAudio/WhisperAudioBridge.swift",
+      "-I",
+      "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/coreml-bridge/.build/arm64-apple-macosx/release/Modules",
+      "-target",
+      "arm64-apple-macosx12.0",
+      "-whole-module-optimization",
+      "-num-threads",
+      "10",
+      "-serialize-diagnostics",
+      "-O",
+      "-j10",
+      "-DSWIFT_PACKAGE",
+      "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+      "-module-cache-path",
+      "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/coreml-bridge/.build/arm64-apple-macosx/release/ModuleCache",
+      "-parseable-output",
+      "-parse-as-library",
+      "-emit-objc-header",
+      "-emit-objc-header-path",
+      "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/coreml-bridge/.build/arm64-apple-macosx/release/WhisperAudio.build/include/WhisperAudio-Swift.h",
+      "-color-diagnostics",
       "-swift-version",
       "5",
       "-plugin-path",
@@ -183,6 +503,12 @@
   "targetDependencyMap" : {
     "CoreMLBridge" : [
 
+    ],
+    "MistralTokenizer" : [
+
+    ],
+    "WhisperAudio" : [
+
     ]
   },
   "testDiscoveryCommands" : {
@@ -210,6 +536,34 @@
         }
       ],
       "outputFilePath" : "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/coreml-bridge/.build/arm64-apple-macosx/release/CoreMLBridge.build/sources"
+    },
+    "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/coreml-bridge/.build/arm64-apple-macosx/release/MistralTokenizer.build/sources" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<sources-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/coreml-bridge/Sources/MistralTokenizer/MistralTokenizerBridge.swift"
+        }
+      ],
+      "outputFilePath" : "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/coreml-bridge/.build/arm64-apple-macosx/release/MistralTokenizer.build/sources"
+    },
+    "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/coreml-bridge/.build/arm64-apple-macosx/release/WhisperAudio.build/sources" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<sources-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/coreml-bridge/Sources/WhisperAudio/WhisperAudioBridge.swift"
+        }
+      ],
+      "outputFilePath" : "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/coreml-bridge/.build/arm64-apple-macosx/release/WhisperAudio.build/sources"
     },
     "/Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/coreml-bridge/.build/arm64-apple-macosx/release/swift-version--58304C5D6DBC2206.txt" : {
       "alwaysOutOfDate" : true,

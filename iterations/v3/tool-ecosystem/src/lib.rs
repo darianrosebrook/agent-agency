@@ -14,6 +14,7 @@
 
 pub mod conflict_resolution_tools;
 pub mod evidence_collection_tools;
+pub mod tool_chain_planner;
 pub mod tool_coordinator;
 pub mod tool_discovery;
 pub mod tool_execution;
@@ -24,6 +25,7 @@ pub use evidence_collection_tools::{EvidenceCollectionTool}; // FactVerification
 // pub use governance_tools::{GovernanceTool, AuditLogger, ProvenanceTracker}; // Module not implemented yet
 // pub use quality_gate_tools::{QualityGateTool, CodeAnalysisTool, PerformanceValidator}; // Module not implemented yet
 // pub use reasoning_tools::{ReasoningTool, LogicValidator, InferenceEngine}; // Module not implemented yet
+pub use tool_chain_planner::{ToolChainPlanner, ToolChain as TypedToolChain, ChainResult, PlanningContext, PlanningConstraints};
 pub use tool_coordinator::{ToolCoordinator, ToolChain, ToolExecutionResult};
 pub use tool_discovery::{ToolDiscoveryEngine, ToolCapability}; // ToolMetadata - private
 pub use tool_execution::{ToolExecutor, ToolInvocation, ToolResult};

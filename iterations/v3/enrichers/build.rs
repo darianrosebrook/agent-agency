@@ -3,54 +3,39 @@ use std::process::Command;
 use std::path::Path;
 
 fn main() {
-    // Build Swift ASR bridge on macOS
+    // Build Swift CoreML bridge on macOS
     #[cfg(target_os = "macos")]
     {
-        println!("cargo:rerun-if-changed=../asr-bridge/");
-        println!("cargo:rerun-if-changed=../vision-bridge/");
+        println!("cargo:rerun-if-changed=../coreml-bridge/");
 
-        // Build ASR Bridge
-        let asr_bridge_path = Path::new("../asr-bridge");
-        if asr_bridge_path.exists() {
-            println!("Building ASR Bridge...");
+        // Build CoreML Bridge (optional - will use mock implementations if it fails)
+        let coreml_bridge_path = Path::new("../coreml-bridge");
+        if coreml_bridge_path.exists() {
+            println!("Building CoreML Bridge...");
             let status = Command::new("swift")
                 .args(&["build", "--configuration", "release"])
-                .current_dir(asr_bridge_path)
+                .current_dir(coreml_bridge_path)
                 .status()
-                .expect("Failed to build ASR Bridge");
+                .expect("Failed to execute Swift build");
 
             if !status.success() {
-                panic!("ASR Bridge build failed");
-            }
-
-            // Link the built library
-            println!("cargo:rustc-link-search=native={}/build/lib", asr_bridge_path.display());
-            println!("cargo:rustc-link-lib=static=ASRBridge");
-        }
-
-        // Build Vision Bridge (skip if it fails, ASR is more important)
-        let vision_bridge_path = Path::new("../vision-bridge");
-        if vision_bridge_path.exists() {
-            println!("Building Vision Bridge...");
-            let status = Command::new("swift")
-                .args(&["build", "--configuration", "release"])
-                .current_dir(vision_bridge_path)
-                .status()
-                .expect("Failed to build Vision Bridge");
-
-            if status.success() {
-                // Link the built library
-                println!("cargo:rustc-link-search=native={}/build/lib", vision_bridge_path.display());
-                println!("cargo:rustc-link-lib=static=VisionBridge");
+                println!("CoreML Bridge build failed, using mock implementations");
             } else {
-                println!("Vision Bridge build failed, skipping (ASR functionality will still work)");
+                println!("CoreML Bridge built successfully");
+                // Note: Swift Package Manager doesn't produce traditional static libs
+                // We'll use subprocess calls or dynamic linking for now
             }
         }
 
-        // Link system frameworks
+        // Link system frameworks for CoreML (when available)
+        println!("cargo:rustc-link-lib=framework=CoreML");
+        println!("cargo:rustc-link-lib=framework=Foundation");
+        println!("cargo:rustc-link-lib=framework=Accelerate");
+        println!("cargo:rustc-link-lib=framework=AVFoundation");
+
+        // Fallback frameworks for compatibility
         println!("cargo:rustc-link-lib=framework=Speech");
         println!("cargo:rustc-link-lib=framework=Vision");
-        println!("cargo:rustc-link-lib=framework=Foundation");
     }
 
     #[cfg(not(target_os = "macos"))]

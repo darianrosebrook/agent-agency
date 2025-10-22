@@ -5,7 +5,6 @@ use crate::error::*;
 use async_trait::async_trait;
 
 /// Quality gate definition
-#[derive(Debug)]
 pub struct QualityGate {
     pub name: String,
     pub description: String,

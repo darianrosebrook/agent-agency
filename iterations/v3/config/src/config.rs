@@ -145,6 +145,7 @@ pub struct ComponentConfigs {
     pub council: CouncilConfig,
     pub research: ResearchConfig,
     pub workers: WorkersConfig,
+    pub parallel_workers: ParallelWorkersConfig,
     pub provenance: ProvenanceConfig,
     pub apple_silicon: AppleSiliconConfig,
 }
@@ -186,6 +187,51 @@ pub struct WorkersConfig {
     pub worker_timeout_seconds: u64,
     pub enable_auto_scaling: bool,
     pub min_workers: u32,
+}
+
+/// Parallel workers configuration
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
+pub struct ParallelWorkersConfig {
+    pub enabled: bool,
+    pub complexity_threshold: f32,
+    pub max_concurrent_workers: u32,
+    pub max_subtasks_per_task: u32,
+    pub coordination: ParallelCoordinationConfig,
+    pub decomposition: ParallelDecompositionConfig,
+    pub quality_gates: QualityGatesConfig,
+}
+
+/// Parallel coordination configuration
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
+pub struct ParallelCoordinationConfig {
+    pub message_buffer_size: usize,
+    pub progress_update_interval_ms: u64,
+    pub worker_heartbeat_timeout_ms: u64,
+}
+
+/// Parallel decomposition configuration
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
+pub struct ParallelDecompositionConfig {
+    pub strategies: Vec<String>,
+    pub max_workers_per_task: u32,
+    pub dependency_analysis_enabled: bool,
+}
+
+/// Quality gates configuration
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
+pub struct QualityGatesConfig {
+    pub compilation: QualityGateSettings,
+    pub testing: QualityGateSettings,
+    pub linting: QualityGateSettings,
+    pub security: QualityGateSettings,
+}
+
+/// Individual quality gate settings
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
+pub struct QualityGateSettings {
+    pub enabled: bool,
+    pub blocking: bool,
+    pub min_score: f32,
 }
 
 /// Provenance configuration
@@ -321,6 +367,49 @@ impl AppConfig {
                     worker_timeout_seconds: 60,
                     enable_auto_scaling: true,
                     min_workers: 2,
+                },
+                parallel_workers: ParallelWorkersConfig {
+                    enabled: true,
+                    complexity_threshold: 0.6,
+                    max_concurrent_workers: 8,
+                    max_subtasks_per_task: 20,
+                    coordination: ParallelCoordinationConfig {
+                        message_buffer_size: 1000,
+                        progress_update_interval_ms: 500,
+                        worker_heartbeat_timeout_ms: 30000,
+                    },
+                    decomposition: ParallelDecompositionConfig {
+                        strategies: vec![
+                            "compilation_errors".to_string(),
+                            "refactoring".to_string(),
+                            "testing".to_string(),
+                            "documentation".to_string(),
+                        ],
+                        max_workers_per_task: 8,
+                        dependency_analysis_enabled: true,
+                    },
+                    quality_gates: QualityGatesConfig {
+                        compilation: QualityGateSettings {
+                            enabled: true,
+                            blocking: true,
+                            min_score: 1.0,
+                        },
+                        testing: QualityGateSettings {
+                            enabled: true,
+                            blocking: true,
+                            min_score: 0.8,
+                        },
+                        linting: QualityGateSettings {
+                            enabled: true,
+                            blocking: false,
+                            min_score: 0.9,
+                        },
+                        security: QualityGateSettings {
+                            enabled: true,
+                            blocking: true,
+                            min_score: 0.95,
+                        },
+                    },
                 },
                 provenance: ProvenanceConfig {
                     enable_git_integration: true,

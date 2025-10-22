@@ -2,6 +2,7 @@
 
 use std::path::PathBuf;
 use thiserror::Error;
+use serde::{Deserialize, Serialize};
 use crate::types::{TaskId, SubTaskId, WorkerId, WorkerSpecialty};
 
 /// Main error type for the parallel worker system
@@ -15,6 +16,9 @@ pub enum ParallelError {
 
     #[error("Worker execution failed: {message}")]
     WorkerExecution { worker_id: WorkerId, message: String, source: Option<Box<dyn std::error::Error + Send + Sync>> },
+
+    #[error("Worker error: {0}")]
+    Worker(#[from] WorkerError),
 
     #[error("Progress tracking failed: {message}")]
     ProgressTracking { message: String, source: Option<Box<dyn std::error::Error + Send + Sync>> },
@@ -73,7 +77,7 @@ pub enum DecompositionError {
 }
 
 /// Error type for worker operations
-#[derive(Error, Debug)]
+#[derive(Error, Debug, Clone)]
 pub enum WorkerError {
     #[error("Worker not found")]
     WorkerNotFound { worker_id: WorkerId },
@@ -104,6 +108,15 @@ pub enum WorkerError {
 
     #[error("Worker panic occurred: {message}")]
     WorkerPanic { message: String },
+
+    #[error("Not implemented: {0}")]
+    NotImplemented(String),
+
+    #[error("I/O error: {message}")]
+    Io {
+        message: String,
+        source: Option<Box<dyn std::error::Error + Send + Sync>>,
+    },
 }
 
 /// Error type for progress tracking operations

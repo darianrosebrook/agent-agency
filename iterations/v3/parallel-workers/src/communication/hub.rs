@@ -24,8 +24,7 @@ impl CommunicationHub {
 
     /// Create a communication channel for a worker
     pub fn create_worker_channel(&self, worker_id: WorkerId) -> BidirectionalChannel {
-        let (channel, _receiver) = self.channel_registry.create_channel(worker_id);
-        channel
+        self.channel_registry.create_channel(worker_id)
     }
 
     /// Get the message broker sender for workers to send messages

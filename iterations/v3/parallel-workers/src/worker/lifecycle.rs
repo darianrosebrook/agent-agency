@@ -51,11 +51,11 @@ impl WorkerManager {
             worker_clone.execute_subtask(context_clone).await
         });
 
-        // Create worker handle
+        // Create worker handle (without join_handle to avoid lifetime issues)
         let handle = WorkerHandle {
             id: worker_id.clone(),
             subtask_id: subtask.id,
-            join_handle,
+            join_handle: None, // TODO: Handle join handles separately
             start_time: chrono::Utc::now(),
         };
 
@@ -75,7 +75,7 @@ impl WorkerManager {
             async {
                 match self.spawn_worker(subtask).await {
                     Ok(worker_id) => {
-                        if let Some(handle) = self.active_workers.read().get(&worker_id) {
+                        if let Some(handle) = self.active_workers.read().get(&worker_id).cloned() {
                             Ok(handle)
                         } else {
                             Err(WorkerError::WorkerNotFound { worker_id })
@@ -139,7 +139,7 @@ impl WorkerManager {
     pub async fn wait_for_worker(&self, worker_id: &WorkerId) -> WorkerExecutionResult<WorkerResult> {
         let handle_result = {
             let active_workers = self.active_workers.read();
-            active_workers.get(worker_id).map(|h| h.join_handle.clone())
+            active_workers.get(worker_id).and_then(|h| h.join_handle.as_ref())
         };
 
         match handle_result {
@@ -320,6 +320,14 @@ impl WorkerPool for DefaultWorkerPool {
             }
             WorkerSpecialty::Documentation { .. } => {
                 Ok(Arc::new(DocumentationSpecialist::new()))
+            }
+            WorkerSpecialty::TypeSystem { .. } => {
+                // TODO: Implement TypeSystem specialist
+                Err(WorkerError::NoSpecializedWorkerAvailable { specialty })
+            }
+            WorkerSpecialty::AsyncPatterns { .. } => {
+                // TODO: Implement AsyncPatterns specialist
+                Err(WorkerError::NoSpecializedWorkerAvailable { specialty })
             }
             WorkerSpecialty::Custom { .. } => {
                 // For custom specialties, try to find a matching built-in worker

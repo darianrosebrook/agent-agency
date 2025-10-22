@@ -1,7 +1,7 @@
 //! Worker specialization system
 
 use crate::types::*;
-use crate::error::{WorkerError, WorkerExecutionResult};
+use crate::error::WorkerError;
 use async_trait::async_trait;
 
 /// Trait for specialized workers

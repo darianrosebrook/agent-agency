@@ -12,6 +12,7 @@ pub mod entity_enricher;
 pub mod python_bridge;
 pub mod types;
 pub mod vision_enricher;
+pub mod vision_stubs;
 pub mod visual_caption_enricher;
 
 pub use asr_enricher::AsrEnricher;

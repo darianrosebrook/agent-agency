@@ -38,6 +38,13 @@ use std::sync::Arc;
 use tracing::{debug, info, instrument, warn};
 use regex::Regex;
 
+// Parallel worker system integration
+use parallel_workers::{
+    ParallelCoordinator, ParallelCoordinatorConfig, ComplexTask,
+    integration::{should_route_to_parallel, estimate_parallelization_benefit, convert_to_complex_task},
+    OrchestratorHandle,
+};
+
 fn map_risk_tier(tier: u8) -> CouncilRiskTier {
     match tier {
         1 => CouncilRiskTier::Tier1,
@@ -327,6 +334,7 @@ pub struct Orchestrator {
     retry_config: RetryConfig,
     progress_tracker: Arc<ProgressTracker>,
     db_client: Option<Arc<DatabaseClient>>, // Optional for backward compatibility
+    parallel_coordinator: Option<Arc<ParallelCoordinator>>, // Optional parallel execution support
 }
 
 impl Orchestrator {
@@ -341,6 +349,7 @@ impl Orchestrator {
             None, // Use default circuit breaker config
             None, // Use default retry config
             None, // Use default DB client
+            None, // Use default parallel coordinator
         )
     }
 
@@ -352,6 +361,7 @@ impl Orchestrator {
         _circuit_breaker_config: Option<CircuitBreakerConfig>,
         retry_config: Option<RetryConfig>,
         db_client: Option<Arc<DatabaseClient>>,
+        parallel_coordinator: Option<Arc<ParallelCoordinator>>,
     ) -> Self {
         let client = reqwest::Client::builder()
             .timeout(std::time::Duration::from_secs(30))
@@ -381,7 +391,51 @@ impl Orchestrator {
             retry_config,
             progress_tracker,
             db_client,
+            parallel_coordinator,
         }
+    }
+
+    /// Enable parallel execution support
+    pub fn with_parallel_execution(mut self, coordinator: Arc<ParallelCoordinator>) -> Self {
+        self.parallel_coordinator = Some(coordinator);
+        self
+    }
+
+    /// Check if parallel execution is available
+    pub fn has_parallel_support(&self) -> bool {
+        self.parallel_coordinator.is_some()
+    }
+
+    /// Analyze task complexity to determine execution strategy
+    fn analyze_task_complexity(&self, description: &str) -> f32 {
+        // Use council complexity analysis if available
+        // For now, use simple heuristics based on task characteristics
+
+        let desc_lower = description.to_lowercase();
+        let mut complexity_score = 0.0;
+
+        // Keywords that indicate high complexity
+        let high_complexity_keywords = [
+            "refactor", "migrate", "optimize", "parallel", "concurrent",
+            "multiple", "complex", "large", "scale", "enterprise",
+        ];
+
+        for keyword in &high_complexity_keywords {
+            if desc_lower.contains(keyword) {
+                complexity_score += 0.2;
+            }
+        }
+
+        // Length-based complexity (longer descriptions tend to be more complex)
+        let length_factor = (description.len() as f32 / 1000.0).min(0.3);
+        complexity_score += length_factor;
+
+        // Error-related tasks are highly parallelizable
+        if desc_lower.contains("error") || desc_lower.contains("fix") || desc_lower.contains("bug") {
+            complexity_score += 0.3;
+        }
+
+        complexity_score.min(1.0)
     }
 
     /// Route a task description to a worker for execution (P0: real worker execution path)
@@ -408,6 +462,62 @@ impl Orchestrator {
                     "stage": "worker_routing"
                 }),
             ).await.map_err(|e| format!("Failed to audit task enqueue: {}", e))?;
+        }
+
+        // Check if task should be routed to parallel execution
+        let complexity_score = self.analyze_task_complexity(description);
+        let should_use_parallel = self.parallel_coordinator.is_some() &&
+            should_route_to_parallel(description, complexity_score, &ParallelCoordinatorConfig::default());
+
+        if should_use_parallel {
+            info!("Routing task {} to parallel execution (complexity: {:.2})", task_id, complexity_score);
+
+            // P0: Audit trail - Parallel routing
+            if let Some(ref db_client) = self.db_client {
+                db_client.create_task_audit_event(
+                    task_id,
+                    "orchestration",
+                    "system",
+                    "parallel_routing",
+                    serde_json::json!({
+                        "description": description,
+                        "complexity_score": complexity_score,
+                        "parallel_benefit": estimate_parallelization_benefit(description, None),
+                        "stage": "parallel_coordinator"
+                    }),
+                ).await.map_err(|e| format!("Failed to audit parallel routing: {}", e))?;
+            }
+
+            // Convert to complex task and execute in parallel
+            let workspace_root = std::env::current_dir()
+                .map_err(|e| format!("Failed to get workspace root: {}", e))?;
+
+            let complex_task = convert_to_complex_task(description.to_string(), workspace_root);
+
+            return match self.parallel_coordinator.as_ref().unwrap().execute_parallel(complex_task.clone()).await {
+                Ok(result) => {
+                    // Convert parallel result to orchestration result
+                    Ok(TaskExecutionResult {
+                        task_id,
+                        success: result.success,
+                        output: result.summary,
+                        execution_time_ms: result.execution_time.as_millis() as u64,
+                        worker_endpoint: "parallel-coordinator".to_string(),
+                        metadata: serde_json::json!({
+                            "parallel_execution": true,
+                            "subtasks_completed": result.subtasks_completed,
+                            "total_subtasks": result.total_subtasks,
+                            "quality_scores": result.quality_scores
+                        }),
+                    })
+                }
+                Err(e) => {
+                    warn!("Parallel execution failed, falling back to sequential: {:?}", e);
+
+                    // Fall back to sequential execution
+                    self.execute_sequential_fallback(task_id, description, execution_mode).await
+                }
+            };
         }
 
         // Get worker endpoint (MVP: static discovery)
@@ -481,6 +591,87 @@ impl Orchestrator {
 
         // Generate comprehensive working specification
         let working_spec = self.generate_working_spec(task_id, description, &execution_output).await?;
+
+        // Complete progress tracking
+        self.progress_tracker.complete_execution(task_id, success).await?;
+
+        Ok(TaskExecutionResult {
+            working_spec,
+            artifacts,
+            quality_report: None,
+        })
+    }
+
+    /// Execute task using sequential fallback when parallel execution fails
+    async fn execute_sequential_fallback(
+        &self,
+        task_id: Uuid,
+        description: &str,
+        execution_mode: Option<&str>,
+    ) -> Result<TaskExecutionResult, Box<dyn std::error::Error + Send + Sync>> {
+        warn!("Falling back to sequential execution for task {}", task_id);
+
+        // Get worker endpoint (same logic as original orchestrate_task)
+        let worker_id = "default-worker";
+        let worker_endpoint = self.worker_registry.get_worker_endpoint(worker_id).await
+            .map_err(|e| format!("Failed to get worker endpoint: {}", e))?;
+
+        // Create task execution request (same logic)
+        let mut request = serde_json::json!({
+            "task_id": task_id,
+            "prompt": description,
+            "timestamp": chrono::Utc::now().to_rfc3339(),
+        });
+
+        if let Some(mode) = execution_mode {
+            request["execution_mode"] = serde_json::Value::String(mode.to_string());
+        }
+
+        // Execute with resilience (same logic as original)
+        let circuit_breaker = self.get_or_create_circuit_breaker(worker_id).await;
+        let worker_result = self.execute_with_resilience(
+            task_id,
+            worker_id,
+            &worker_endpoint,
+            &request,
+            &circuit_breaker,
+        ).await?;
+
+        // Parse and return result (same logic as original)
+        let success = worker_result.get("success")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+
+        let output = worker_result.get("output")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string();
+
+        let execution_time_ms = worker_result.get("execution_time_ms")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
+
+        // Generate working specification
+        let working_spec = self.generate_working_spec(task_id, description, &worker_result).await?;
+
+        // Extract artifacts
+        let artifacts = worker_result.get("artifacts")
+            .and_then(|v| v.as_array())
+            .unwrap_or(&vec![])
+            .iter()
+            .filter_map(|a| a.as_object())
+            .map(|obj| {
+                let name = obj.get("name").and_then(|v| v.as_str()).unwrap_or("unknown").to_string();
+                let path = obj.get("path").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                let artifact_type = obj.get("type").and_then(|v| v.as_str()).unwrap_or("unknown").to_string();
+                ExecutionArtifact {
+                    name,
+                    path: std::path::PathBuf::from(path),
+                    artifact_type,
+                    size_bytes: obj.get("size_bytes").and_then(|v| v.as_u64()).unwrap_or(0),
+                }
+            })
+            .collect();
 
         // Complete progress tracking
         self.progress_tracker.complete_execution(task_id, success).await?;
