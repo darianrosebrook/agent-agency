@@ -4,4 +4,4 @@
  * @author @darianrosebrook
  */
 
-export { ValidationError } from "../../caws-validator/types/validation-types";
+export type { ValidationError } from "../../caws-validator/types/validation-types";

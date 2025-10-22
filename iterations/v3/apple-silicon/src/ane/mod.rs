@@ -11,3 +11,11 @@ pub use self::manager::*;
 pub mod ffi;
 pub mod filesystem;
 pub mod manager;
+
+// New ANE implementation modules
+pub mod errors;
+pub mod compat;
+pub mod resource_pool;
+pub mod models;
+pub mod infer;
+pub mod metrics;

@@ -117,7 +117,7 @@ impl E2eAssertions {
         // - [ ] Add execution time analysis and performance validation
         // - [ ] Validate execution state transitions and error handling
         // - [ ] Implement execution result consistency checking
-        if (task.progress_percentage - 100.0).abs() > f64::EPSILON {
+        if (task.progress_percentage - 100.0f32).abs() > f32::EPSILON {
             return Err(AssertionError::ProgressSequenceInvalid {
                 task_id: task.task_id,
                 expected_sequence: expected_sequence.iter().map(|s| s.to_string()).collect(),

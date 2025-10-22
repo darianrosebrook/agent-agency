@@ -10,7 +10,7 @@
 import {
   BaseServiceIntegration,
   ServiceConfig,
-  ServiceType,
+  // ServiceType,
   ServiceOperationResult,
   HealthCheckResult,
 } from "./ExternalServiceFramework";

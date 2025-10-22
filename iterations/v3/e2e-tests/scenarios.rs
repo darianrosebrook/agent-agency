@@ -461,7 +461,7 @@ pub struct ScenarioRunner;
 
 impl ScenarioRunner {
     /// Run a test scenario
-    pub async fn run_scenario(scenario: &TestScenario, harness: &E2eTestHarness) -> Result<ScenarioResult, ScenarioError> {
+    pub async fn run_scenario(scenario: &TestScenario, harness: &E2eTestHarness) -> std::result::Result<ScenarioResult, ScenarioError> {
         tracing::info!("Running E2E scenario: {}", scenario.name);
 
         let start_time = std::time::Instant::now();
@@ -520,7 +520,7 @@ impl ScenarioRunner {
         assertion: &TestAssertion,
         task_results: &[super::harness::TaskTestState],
         harness: &E2eTestHarness,
-    ) -> Result<AssertionResult, ScenarioError> {
+    ) -> std::result::Result<AssertionResult, ScenarioError> {
         let result = match assertion {
             TestAssertion::TaskCompletes { task_index } => {
                 if let Some(task) = task_results.get(*task_index) {

@@ -53,32 +53,34 @@ impl QualificationStage {
         // Enhanced factual claims detection (V2 patterns)
         verifiable_parts.extend(
             self.verifiability_detector
-                .detect_factual_claims_v2(sentence, context)?,
+                .detect_factual_claims(sentence)?,
         );
 
         // Enhanced technical assertions with domain awareness
         verifiable_parts.extend(
             self.verifiability_detector
-                .detect_technical_assertions_v2(sentence, context)?,
+                .detect_technical_assertions(sentence, context)?,
         );
 
         // Measurable outcomes with quantitative indicators
         verifiable_parts.extend(
             self.verifiability_detector
-                .detect_measurable_outcomes_v2(sentence, context)?,
+                .detect_measurable_outcomes(sentence)?,
         );
 
         // New V2 patterns: causal relationships
-        verifiable_parts.extend(
-            self.verifiability_detector
-                .detect_causal_relationships(sentence)?,
-        );
+        // TODO: Implement detect_causal_relationships method
+        // verifiable_parts.extend(
+        //     self.verifiability_detector
+        //         .detect_causal_relationships(sentence)?,
+        // );
 
         // New V2 patterns: temporal assertions
-        verifiable_parts.extend(
-            self.verifiability_detector
-                .detect_temporal_assertions(sentence)?,
-        );
+        // TODO: Implement detect_temporal_assertions method
+        // verifiable_parts.extend(
+        //     self.verifiability_detector
+        //         .detect_temporal_assertions(sentence)?,
+        // );
 
         // Detect unverifiable content
         let mut unverifiable_parts = self
@@ -546,39 +548,41 @@ impl VerifiabilityDetector {
 
         // Enhanced factual claims detection (V2 patterns)
         verifiable_parts.extend(
-            self.detect_factual_claims_v2(sentence, context)?,
+            self.detect_factual_claims(sentence)?,
         );
 
         // Enhanced technical assertions with domain awareness
         verifiable_parts.extend(
-            self.detect_technical_assertions_v2(sentence, context)?,
+            self.detect_technical_assertions(sentence, context)?,
         );
 
         // Measurable outcomes with quantitative indicators
         verifiable_parts.extend(
-            self.detect_measurable_outcomes_v2(sentence, context)?,
+            self.detect_measurable_outcomes(sentence)?,
         );
 
         // New V2 patterns: causal relationships
-        verifiable_parts.extend(
-            self.detect_causal_relationships(sentence)?,
-        );
+        // TODO: Implement detect_causal_relationships method
+        // verifiable_parts.extend(
+        //     self.detect_causal_relationships(sentence)?,
+        // );
 
         // New V2 patterns: temporal assertions
-        verifiable_parts.extend(
-            self.detect_temporal_assertions(sentence)?,
-        );
+        // TODO: Implement detect_temporal_assertions method
+        // verifiable_parts.extend(
+        //     self.detect_temporal_assertions(sentence)?,
+        // );
 
         // Detect unverifiable content with enhanced rewriting
         let mut unverifiable_parts = self
-            .verifiability_detector
             .detect_unverifiable_content(sentence)?;
-        self.content_rewriter
-            .enhance_unverifiable_parts_v2(&mut unverifiable_parts, context);
+        // TODO: Implement content_rewriter functionality
+        // self.content_rewriter
+        //     .enhance_unverifiable_parts_v2(&mut unverifiable_parts, context);
 
         // Calculate overall verifiability with domain weighting
         let overall_verifiability =
-            self.calculate_overall_verifiability_v2(&verifiable_parts, &unverifiable_parts, context);
+            self.calculate_overall_verifiability(&verifiable_parts, &unverifiable_parts);
 
         Ok(VerifiabilityAssessment {
             overall_verifiability,

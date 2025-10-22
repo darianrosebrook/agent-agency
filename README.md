@@ -2,7 +2,7 @@
 
 ## Overview
 
-**Agent Agency** is a production-ready constitutional AI system that implements constitutional governance for autonomous agent operations. The system uses a council of specialized AI judges to provide real-time oversight, ensuring ethical compliance, technical quality, and system coherence through evidence-based decision making.
+**Agent Agency** is a production-ready constitutional AI system that implements constitutional governance for autonomous agent operations. The system orchestrates multiple local AI models (Ollama/Gemma + CoreML/FastViT) with hot-swapping capabilities, using a council of specialized AI judges to provide real-time oversight, ensuring ethical compliance, technical quality, and system coherence through evidence-based decision making.
 
 The V3 iteration delivers a **functional constitutional AI system** with a working core execution loop, constitutional governance, and monitoring capabilities. **The core task execution pipeline is operational** with real implementations for the main workflow, though many advanced features remain as TODOs. Built in Rust for performance and safety, it provides both CLI and web interfaces for task execution and system management.
 
@@ -74,6 +74,13 @@ All tools leverage existing enterprise-grade systems (claim extraction, council 
 
 The **V3 iteration** delivers a functional constitutional AI system with an operational core execution loop and governance framework, though many advanced features remain as TODOs:
 
+#### Multi-Model AI System ✅ Operational
+- **Ollama Integration**: Local Gemma 3N model for general-purpose AI tasks with circuit breaker patterns
+- **CoreML Acceleration**: Apple Silicon optimized models including FastViT T8 F16 for vision processing
+- **Model Hot-Swapping**: Zero-downtime model replacement with performance tracking and A/B testing
+- **Self-Prompting Loops**: Autonomous agent that iteratively improves outputs until quality thresholds met
+- **Model Registry**: Performance-weighted routing with task-specific model affinities (code tasks → Ollama, vision → CoreML)
+
 #### Core Execution Loop ✅ Operational
 - **Task Submission**: REST API and CLI interfaces for task creation
 - **Worker Orchestration**: HTTP-based task distribution with circuit breaker patterns
@@ -102,8 +109,8 @@ The **V3 iteration** delivers a functional constitutional AI system with an oper
 - **Deployment Ready**: Basic Docker setup, production deployment TODO
 
 #### Advanced Features 📋 Planned/Incomplete
-- **Multimodal Processing**: Framework exists, many enrichers are TODO placeholders
-- **Apple Silicon Optimization**: Core ML integration largely TODO
+- **Multimodal Processing**: Framework exists, CoreML/FastViT vision processing operational, advanced enrichers TODO
+- **Apple Silicon Optimization**: CoreML integration operational, advanced thermal management TODO
 - **Distributed Processing**: Single-node only, distributed features TODO
 - **Advanced Analytics**: Basic metrics, comprehensive analytics TODO
 
@@ -135,6 +142,38 @@ This framework investigates approaches to multimodal AI systems and constitution
 - **Production AI Deployment**: Scalable, monitored, and secure deployment of multimodal AI systems
 - **Cross-Modal Validation**: Ensuring consistency and accuracy across different content modalities
 - **Hardware-Accelerated Processing**: Leveraging Apple Silicon for efficient multimodal processing and governance
+
+## V3 System Characteristics
+
+### Ideal Use Cases
+The V3 system excels in environments requiring **enterprise-grade quality assurance** with **local execution**:
+
+- **Enterprise Development Teams**: CAWS governance ensures production-ready code generation with full audit trails
+- **Privacy-Sensitive Organizations**: Local Ollama/CoreML models prevent data leakage to cloud providers
+- **Apple Silicon Ecosystems**: Native CoreML/ANE acceleration provides exceptional performance on Mac hardware
+- **Quality-Critical Workflows**: Self-prompting loops with satisficing logic prevent over-optimization
+- **Cost-Conscious Development**: Eliminates per-API-call costs for high-volume AI-assisted tasks
+
+### System Limitations
+While powerful for its target use cases, V3 has specific constraints:
+
+- **Local Model Constraints**: Gemma 3N has smaller parameter count than GPT-4, affecting reasoning depth and training data recency
+- **Hardware Dependencies**: CoreML optimizations are Apple Silicon-specific, limiting platform portability
+- **Resource Requirements**: Requires powerful local machines (32GB+ RAM, M-series chips) that most developers lack
+- **Cold Start Times**: Model loading and initialization can take 30-60 seconds, unsuitable for interactive workflows
+- **Scalability Boundaries**: Cannot scale across multiple machines like cloud-based systems
+
+### Comparative Advantages
+
+| Aspect | V3 System | Cloud API (GPT-4) | Traditional IDE Tools |
+|--------|-----------|-------------------|----------------------|
+| **Privacy** | ✅ Excellent | ❌ Poor | ✅ Good |
+| **Cost** | ✅ Low | ❌ High (scale) | ✅ Low |
+| **Quality** | ✅ Self-improving | ✅ High baseline | ❌ Variable |
+| **Speed** | ⚠️ Good (local) | ✅ Excellent | ✅ Fast |
+| **Complexity** | ❌ High | ✅ Low | ✅ Low |
+| **Maintenance** | ❌ High | ✅ Low | ✅ Low |
+| **Scalability** | ❌ Limited | ✅ High | ✅ High |
 
 ## Technical Approaches
 

@@ -111,3 +111,9 @@ recovery_output/
 recovery_report.jsonn 
 libtorch-2.2.0.zip
 libtorch/  libtorch-2.2.0.zip
+
+# CoreML Models (large binary files)
+models/
+*.mlpackage/
+*.mlmodelc/
+

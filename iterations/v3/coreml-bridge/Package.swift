@@ -9,7 +9,7 @@ let package = Package(
     products: [
         .library(
             name: "CoreMLBridge",
-            targets: ["CoreMLBridge"]
+            targets: ["CoreMLBridge", "WhisperAudio"]
         )
     ],
     targets: [
@@ -19,6 +19,16 @@ let package = Package(
             linkerSettings: [
                 .linkedFramework("CoreML"),
                 .linkedFramework("Foundation")
+            ]
+        ),
+        .target(
+            name: "WhisperAudio",
+            dependencies: [],
+            linkerSettings: [
+                .linkedFramework("CoreML"),
+                .linkedFramework("Foundation"),
+                .linkedFramework("Accelerate"),
+                .linkedFramework("AVFoundation")
             ]
         )
     ]

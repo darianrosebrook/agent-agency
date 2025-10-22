@@ -385,6 +385,7 @@ pub struct FinalVerdict {
     pub constitutional_refs: Vec<String>,
     #[serde(default)]
     pub verification_summary: Option<VerificationSummary>,
+    pub metadata: Option<serde_json::Value>,
     
     // NEW: Orchestration metrics for comprehensive tracking
     #[serde(default)]

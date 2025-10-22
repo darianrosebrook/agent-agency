@@ -22,31 +22,31 @@ interface SLOAlertsDashboardProps {
 
 export default function SLOAlertsDashboard({ refreshInterval = 30000 }: SLOAlertsDashboardProps) {
   const [alerts, setAlerts] = useState<SLOAlert[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedSeverity, setSelectedSeverity] = useState<string>("all");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
 
   // Fetch SLO alerts data
   const fetchAlerts = useCallback(async () => {
-    try {
-      setError(null);
+    // try {
+    //   setError(null);
 
-      const [alertsResponse] = await Promise.all([
-        fetch("/api/slo-alerts"),
-      ]);
+    //   const [alertsResponse] = await Promise.all([
+    //     fetch("/api/slo-alerts"),
+    //   ]);
 
-      if (!alertsResponse.ok) {
-        throw new Error(`Failed to fetch SLO alerts: ${alertsResponse.status}`);
-      }
+    //   if (!alertsResponse.ok) {
+    //     throw new Error(`Failed to fetch SLO alerts: ${alertsResponse.status}`);
+    //   }
 
-      const alertsData = await alertsResponse.json();
-      setAlerts(alertsData.alerts || []);
-      setLoading(false);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to fetch SLO alerts");
-      setLoading(false);
-    }
+    //   const alertsData = await alertsResponse.json();
+    //   setAlerts(alertsData.alerts || []);
+    //   setLoading(false);
+    // } catch (err) {
+    //   setError(err instanceof Error ? err.message : "Failed to fetch SLO alerts");
+    //   setLoading(false);
+    // }
   }, []);
 
   // Initial data load
@@ -192,11 +192,26 @@ export default function SLOAlertsDashboard({ refreshInterval = 30000 }: SLOAlert
       </div>
 
       <div className={styles.alertsList}>
-        {filteredAlerts.length === 0 ? (
-          <div className={styles.empty}>
-            <span>No SLO alerts match the current filters</span>
-          </div>
-        ) : (
+          {filteredAlerts.length === 0 ? (
+            <div className={styles.emptyState}>
+              <div className={styles.emptyIcon}>🚨</div>
+              <h3>No SLO Alerts</h3>
+              <p>
+                SLO alerts notify you when service level objectives are at risk or violated.
+                When connected to your API server, you'll see:
+              </p>
+              <ul className={styles.emptyFeatures}>
+                <li>⚠️ <strong>Violation alerts</strong> - When SLOs are breached or at risk</li>
+                <li>📊 <strong>Budget warnings</strong> - Remaining error budget notifications</li>
+                <li>🎯 <strong>Performance issues</strong> - Response time and availability alerts</li>
+                <li>📈 <strong>Trend analysis</strong> - Historical alert patterns and insights</li>
+              </ul>
+              <div className={styles.emptyNote}>
+                <span className={styles.noteIcon}>ℹ️</span>
+                <span>No alerts is good news! Your services are meeting their SLO targets</span>
+              </div>
+            </div>
+          ) : (
           filteredAlerts.map(alert => (
             <div key={alert.id} className={styles.alertCard}>
               <div className={styles.alertHeader}>

@@ -1314,7 +1314,7 @@ export class ArbiterMCPServer extends Server {
 
       if (isBackground) {
         // Run in background
-        const child = exec(command, { cwd: this.projectRoot });
+        const _child = exec(command, { cwd: this.projectRoot });
         return {
           content: [
             {

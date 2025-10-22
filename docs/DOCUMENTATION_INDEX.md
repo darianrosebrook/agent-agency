@@ -17,6 +17,7 @@
 - **[docs/1-core-orchestration/](iterations/v2/docs/1-core-orchestration/)** - Core architecture documentation
 - **[docs/STRUCTURE.md](iterations/v2/docs/STRUCTURE.md)** - Project structure overview
 - **[docs/api/](iterations/v2/docs/api/)** - API documentation (OpenAPI/GraphQL specs)
+- **[docs/runtime-optimization/](docs/runtime-optimization/)** - LLM Parameter Feedback Loop system
 
 ### 🔧 Operations & Deployment
 - **[docs/deployment/](iterations/v2/docs/deployment/)** - Deployment guides (Docker, K8s, Cloud)
@@ -136,6 +137,11 @@ agent-agency/
 │   ├── migrations/                # 17 DB migrations
 │   ├── docs/                      # Full documentation
 │   └── package.json               # Dependencies
+├── iterations/v3/
+│   └── runtime-optimization/      # LLM Parameter Feedback Loop
+│       ├── src/                   # 23 Rust files
+│       ├── README.md              # Module documentation
+│       └── docs/                  # Implementation guides
 └── ...
 ```
 
@@ -152,6 +158,7 @@ agent-agency/
 - ✅ Database persistence (PostgreSQL)
 - ✅ Error handling and recovery
 - ✅ External service integration (monitoring, incidents)
+- ✅ **LLM Parameter Feedback Loop** (NEW) - Contextual bandit optimization system
 
 ### Infrastructure
 - ✅ Connection pooling
@@ -196,6 +203,7 @@ agent-agency/
 - **Database**: `iterations/v2/migrations/` (17 files)
 - **Documentation**: `iterations/v2/docs/`
 - **Configuration**: `iterations/v2/docker-compose.yml`
+- **Runtime Optimization**: `iterations/v3/runtime-optimization/` (LLM Parameter Feedback Loop)
 
 ---
 

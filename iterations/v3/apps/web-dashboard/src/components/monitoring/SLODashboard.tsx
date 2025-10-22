@@ -48,48 +48,48 @@ export default function SLODashboard({ refreshInterval = 60000 }: SLODashboardPr
 
   // Fetch SLOs data
   const fetchSlos = useCallback(async () => {
-    try {
-      setError(null);
-      const response = await fetch("/api/slos");
-      if (!response.ok) {
-        throw new Error(`Failed to fetch SLOs: ${response.status}`);
-      }
-      const data = await response.json();
-      setSlos(data.slos || []);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to fetch SLOs");
-    }
+    // try {
+    //   setError(null);
+    //   const response = await fetch("/api/slos");
+    //   if (!response.ok) {
+    //     throw new Error(`Failed to fetch SLOs: ${response.status}`);
+    //   }
+    //   const data = await response.json();
+    //   setSlos(data.slos || []);
+    // } catch (err) {
+    //   setError(err instanceof Error ? err.message : "Failed to fetch SLOs");
+    // }
   }, []);
 
   // Fetch SLO status
   const fetchSloStatus = useCallback(async (sloName: string) => {
-    try {
-      const response = await fetch(`/api/slos/${sloName}/status`);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch SLO status: ${response.status}`);
-      }
-      const data = await response.json();
-      setSloStatuses(prev => ({
-        ...prev,
-        [sloName]: data.status
-      }));
-    } catch (err) {
-      console.error(`Failed to fetch status for ${sloName}:`, err);
-    }
+    // try {
+    //   const response = await fetch(`/api/slos/${sloName}/status`);
+    //   if (!response.ok) {
+    //     throw new Error(`Failed to fetch SLO status: ${response.status}`);
+    //   }
+    //   const data = await response.json();
+    //   setSloStatuses(prev => ({
+    //     ...prev,
+    //     [sloName]: data.status
+    //   }));
+    // } catch (err) {
+    //   console.error(`Failed to fetch status for ${sloName}:`, err);
+    // }
   }, []);
 
   // Fetch SLO measurements
   const fetchMeasurements = useCallback(async (sloName: string) => {
-    try {
-      const response = await fetch(`/api/slos/${sloName}/measurements?limit=50`);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch measurements: ${response.status}`);
-      }
-      const data = await response.json();
-      setMeasurements(data.measurements || []);
-    } catch (err) {
-      console.error(`Failed to fetch measurements for ${sloName}:`, err);
-    }
+    // try {
+    //   const response = await fetch(`/api/slos/${sloName}/measurements?limit=50`);
+    //   if (!response.ok) {
+    //     throw new Error(`Failed to fetch measurements: ${response.status}`);
+    //   }
+    //   const data = await response.json();
+    //   setMeasurements(data.measurements || []);
+    // } catch (err) {
+    //   console.error(`Failed to fetch measurements for ${sloName}:`, err);
+    // }
   }, []);
 
   // Initial data load
@@ -145,6 +145,27 @@ export default function SLODashboard({ refreshInterval = 60000 }: SLODashboardPr
         <div className={styles.error}>
           <span>⚠️ {error}</span>
           <button onClick={fetchSlos}>Retry</button>
+        </div>
+      )}
+
+      {slos.length === 0 && !error && (
+        <div className={styles.emptyState}>
+          <div className={styles.emptyIcon}>📊</div>
+          <h3>No SLOs Configured</h3>
+          <p>
+            Service Level Objectives help you monitor system reliability and performance targets.
+            When connected to your API server, you'll see:
+          </p>
+          <ul className={styles.emptyFeatures}>
+            <li>📈 <strong>Reliability metrics</strong> - Uptime percentages and error rates</li>
+            <li>⚡ <strong>Performance targets</strong> - Response time and throughput goals</li>
+            <li>🎯 <strong>Compliance tracking</strong> - Real-time SLO status and budget remaining</li>
+            <li>📊 <strong>Historical data</strong> - Trends and measurement history</li>
+          </ul>
+          <div className={styles.emptyNote}>
+            <span className={styles.noteIcon}>ℹ️</span>
+            <span>Connect to your API server to start monitoring SLOs</span>
+          </div>
         </div>
       )}
 

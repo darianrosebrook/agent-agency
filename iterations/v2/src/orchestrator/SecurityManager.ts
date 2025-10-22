@@ -579,6 +579,7 @@ export class SecurityManager {
     return {
       agentId: agent.id,
       userId: agent.id, // Use agent ID as user ID for compatibility
+      tenantId: (agent as any).tenantId || "default", // Add required tenantId property
       // TODO: Implement proper tenant resolution and assignment
       // - Implement tenant discovery based on user context and agent registration
       // - Add tenant validation and existence checking

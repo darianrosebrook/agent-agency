@@ -10,7 +10,7 @@
 import {
   BaseServiceIntegration,
   ServiceConfig,
-  ServiceType,
+  // ServiceType,
   ServiceOperationResult,
   HealthCheckResult,
 } from "./ExternalServiceFramework";
@@ -482,7 +482,7 @@ export class NewRelicMonitoringService extends BaseServiceIntegration {
 
     try {
       // New Relic uses a different format for metrics
-      const metricData = {
+      const _metricData = {
         name: metric.name,
         value: metric.value,
         timestamp: Math.floor(
@@ -516,7 +516,7 @@ export class NewRelicMonitoringService extends BaseServiceIntegration {
 
     try {
       // New Relic log format
-      const logData = {
+      const _logData = {
         message: log.message,
         timestamp: Math.floor((log.timestamp || new Date()).getTime() / 1000),
         level: log.level,
@@ -550,7 +550,7 @@ export class NewRelicMonitoringService extends BaseServiceIntegration {
     const startTime = Date.now();
 
     try {
-      const eventPayload = {
+      const _eventPayload = {
         eventType: "ArbiterEvent",
         title: event.title,
         text: event.text,

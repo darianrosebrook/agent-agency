@@ -1767,6 +1767,21 @@ impl ContextResolver {
         Some(embedding)
     }
 
+    /// Generate embedding for entity using embedding service (non-feature version)
+    #[cfg(not(feature = "embeddings"))]
+    async fn generate_entity_embedding(&self, entity: &str) -> Option<Vec<f32>> {
+        debug!("Using simulated embedding for entity: {}", entity);
+
+        // Generate simulated embedding vector (768 dimensions to match typical embedding service)
+        let mut embedding = Vec::new();
+        for _ in 0..768 {
+            embedding.push(fastrand::f32() * 2.0 - 1.0); // Random values between -1 and 1
+        }
+
+        debug!("Generated simulated embedding for entity '{}' with {} dimensions", entity, embedding.len());
+        Some(embedding)
+    }
+
     /// Query knowledge base semantic search for similar entities
     async fn query_knowledge_base_semantic_search(
         &self,
@@ -3323,7 +3338,7 @@ impl NamedEntityRecognizer {
                 .count();
 
             // Boost confidence based on mention frequency
-            boost += (mention_count as f64 * 0.1).min(0.3f32);
+            boost += (mention_count as f64 * 0.1).min(0.3f64);
         }
 
         boost

@@ -137,7 +137,7 @@ export class PerformanceTracker extends EventEmitter {
     const timestamps: number[] = [];
 
     for (const snapshot of relevantSnapshots) {
-      let value: number | undefined;
+      let _value: number | undefined;
 
       // Extract the metric value based on path
       const path = metric.split(".");

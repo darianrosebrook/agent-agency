@@ -15,22 +15,46 @@
 //! 5. **Apple Silicon Optimization**: ANE/Core ML integration with thermal-aware scheduling
 
 pub mod arbiter_pipeline;
+pub mod bandit_policy;
 pub mod bayesian_optimizer;
+pub mod caws_integration;
+pub mod canary_test_suite;
 pub mod chunked_execution;
+pub mod counterfactual_log;
 pub mod kokoro_tuning;
+pub mod llm_parameter_feedback_example;
+pub mod offline_test_suite;
+pub mod parameter_dashboard;
+pub mod parameter_optimizer;
 pub mod performance_monitor;
 pub mod precision_engineering;
 pub mod quality_guardrails;
+pub mod quality_gate_validator;
+pub mod reward;
+pub mod rollout;
+pub mod planning_agent_integration;
 pub mod streaming_pipeline;
 pub mod thermal_scheduler;
 
 pub use arbiter_pipeline::{ArbiterPipelineOptimizer, DecisionPipelineConfig};
+pub use bandit_policy::{BanditPolicy, ParameterSet, TaskFeatures, ThompsonGaussian, LinUCB};
 pub use bayesian_optimizer::{BayesianOptimizer, OptimizationConfig, ParameterSpace};
+pub use caws_integration::{CAWSBudgetTracker, CAWSComplianceValidator, ParameterChangeProvenance};
+pub use canary_test_suite::{CanaryTestSuite, CanaryTestScenario, SLORequirements, BudgetLimits};
 pub use chunked_execution::{ChunkedExecutor, ChunkConfig, ExecutionChunk};
+pub use counterfactual_log::{CounterfactualLogger, OfflineEvaluator, LoggedDecision, TaskOutcome};
 pub use kokoro_tuning::{KokoroTuner, TuningResult, TuningMetrics};
+pub use llm_parameter_feedback_example::LLMParameterFeedbackExample;
+pub use offline_test_suite::{OfflineTestSuite, TestScenario, TestType, TestResult};
+pub use parameter_dashboard::{ParameterDashboardManager, ParameterDashboard, OptimizationStatus, PerformanceMetrics};
+pub use parameter_optimizer::{LLMParameterOptimizer, OptimizationConstraints, RecommendedParameters};
 pub use performance_monitor::{PerformanceMonitor, PerformanceMetrics, SLAMetrics};
 pub use precision_engineering::{PrecisionEngineer, QuantizationStrategy, GraphOptimization};
 pub use quality_guardrails::{QualityGuardrails, ComplianceCheck, PerformanceThreshold};
+pub use quality_gate_validator::{QualityGateValidator, ValidationResult, ComplianceValidator};
+pub use reward::{RewardFunction, ObjectiveWeights, TaskOutcome, BaselineMetrics};
+pub use rollout::{RolloutManager, RolloutPhase, RolloutState, PhaseTransition};
+pub use planning_agent_integration::{OptimizedPlanningAgent, OptimizationStatus};
 pub use streaming_pipeline::{StreamingPipeline, StreamConfig, PipelineMetrics};
 pub use thermal_scheduler::{ThermalScheduler, ThermalConfig, DeviceLoad};
 

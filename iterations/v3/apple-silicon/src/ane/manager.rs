@@ -8,23 +8,29 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use parking_lot::RwLock as SyncRwLock;
 
+// Import our new modules
+use crate::ane::errors::{ANEError, Result};
+use crate::ane::compat::{coreml, iokit};
+use crate::ane::resource_pool::{Pool, PoolBuilder, PoolStats};
+use crate::ane::models::coreml_model::{LoadedCoreMLModel, CompilationOptions, estimate_memory_usage};
+use crate::ane::infer::execute::{execute_inference, InferenceOptions as ExecuteOptions, InferenceResult};
+use crate::ane::metrics::ewma::{Ewma, PerformanceTracker, PerformanceSummary};
+
 /// Apple Neural Engine manager for ANE-accelerated inference
 #[derive(Debug)]
 pub struct ANEManager {
     /// Loaded ANE models
     loaded_models: Arc<RwLock<HashMap<String, ANEModel>>>,
-    /// ANE resource pool
-    resource_pool: Arc<RwLock<ANEResourcePool>>,
+    /// ANE resource pool for memory and concurrency control
+    resource_pool: Arc<Pool>,
     /// Performance metrics
     performance_metrics: Arc<RwLock<HashMap<String, ANEPerformanceMetrics>>>,
     /// ANE device capabilities
     device_capabilities: ANEDeviceCapabilities,
     /// Tokenizers for different model types
     tokenizers: ANETokenizers,
-    /// Metrics collector for observability (disabled)
-    // metrics_collector: Option<Arc<dyn crate::observability::metrics::MetricsBackend>>,
-    /// Cache backend for model caching (disabled)
-    // cache: Option<Arc<dyn crate::observability::cache::CacheBackend>>,
+    /// Performance tracker for EWMA metrics
+    performance_tracker: Arc<RwLock<PerformanceTracker>>,
     /// Loaded ANE framework symbols
     ane_symbols: SyncRwLock<ANESymbols>,
 }
@@ -179,18 +185,19 @@ pub struct ANETokenizers {
 
 impl ANEManager {
     /// Create a new ANE manager
-    pub fn new() -> Self {
-        Self {
+    pub fn new() -> Result<Self> {
+        // Create resource pool with default configuration
+        let resource_pool = PoolBuilder::new()
+            .max_concurrent(4)
+            .memory_total_mb(8192) // 8GB default
+            .build()?;
+        
+        Ok(Self {
             loaded_models: Arc::new(RwLock::new(HashMap::new())),
-            resource_pool: Arc::new(RwLock::new(ANEResourcePool {
-                total_memory_mb: 0,
-                available_memory_mb: 0,
-                active_models: 0,
-                max_concurrent_models: 4,
-            })),
+            resource_pool: Arc::new(resource_pool),
             performance_metrics: Arc::new(RwLock::new(HashMap::new())),
             device_capabilities: ANEDeviceCapabilities {
-                max_memory_mb: 0,
+                max_memory_mb: 8192,
                 supported_precisions: vec!["fp16".to_string(), "int8".to_string()],
                 max_concurrent_operations: 4,
                 compute_units: 16,
@@ -200,78 +207,300 @@ impl ANEManager {
                 wordpiece_tokenizer: None,
                 sentencepiece_tokenizer: None,
             },
-            // metrics_collector: None, // disabled
-            // cache: None, // disabled
+            performance_tracker: Arc::new(RwLock::new(PerformanceTracker::new())),
             ane_symbols: SyncRwLock::new(ANESymbols::default()),
-        }
+        })
+    }
+    
+    /// Create a new ANE manager with custom configuration
+    pub fn with_config(
+        max_concurrent: usize,
+        memory_total_mb: usize,
+        capabilities: ANEDeviceCapabilities,
+    ) -> Result<Self> {
+        let resource_pool = PoolBuilder::new()
+            .max_concurrent(max_concurrent)
+            .memory_total_mb(memory_total_mb)
+            .build()?;
+        
+        Ok(Self {
+            loaded_models: Arc::new(RwLock::new(HashMap::new())),
+            resource_pool: Arc::new(resource_pool),
+            performance_metrics: Arc::new(RwLock::new(HashMap::new())),
+            device_capabilities: capabilities,
+            tokenizers: ANETokenizers {
+                bpe_tokenizer: None,
+                wordpiece_tokenizer: None,
+                sentencepiece_tokenizer: None,
+            },
+            performance_tracker: Arc::new(RwLock::new(PerformanceTracker::new())),
+            ane_symbols: SyncRwLock::new(ANESymbols::default()),
+        })
     }
 
     /// Detect ANE capabilities for this system
     pub async fn detect_capabilities() -> crate::ANECapabilities {
-        // For now, return basic capabilities
-        // In a real implementation, this would query the actual ANE hardware
+        // Check if ANE is available through Core ML
+        let is_available = coreml::coreml::is_ane_available();
+        
+        if !is_available {
+            return crate::ANECapabilities {
+                is_available: false,
+                compute_units: 0,
+                max_memory_mb: 0,
+                supported_precisions: vec![],
+            };
+        }
+        
+        // Get Core ML capabilities
+        let coreml_caps = crate::ane::compat::coreml::detect_coreml_capabilities();
+        
         crate::ANECapabilities {
             is_available: true,
-            compute_units: 16,
-            max_memory_mb: 8192, // 8GB typical ANE memory
-            supported_precisions: vec!["fp16".to_string(), "int8".to_string()],
+            compute_units: 16, // Heuristic for Apple Silicon
+            max_memory_mb: 8192, // Conservative estimate
+            supported_precisions: coreml_caps.supported_precisions,
         }
     }
 
-    /// TODO: Implement comprehensive ANE model loading and management
-    /// - Integrate with Apple Neural Engine CoreML framework bindings
-    /// - Support MLModel format compilation for ANE execution
-    /// - Implement model validation and compatibility checking
-    /// - Add model caching and memory management
-    /// - Support model versioning and update mechanisms
-    /// - Implement model loading performance monitoring
-    /// - Add model security verification and sandboxing
-    /// - Support concurrent model loading and management
-    pub async fn load_model(&self, model_path: &str) -> anyhow::Result<String> {
-        // TODO: Add actual ANE model loading implementation
-        // - Use CoreML framework to load and compile MLModel files
-        // - Handle model format conversion and optimization
-        // - Implement model validation against ANE capabilities
-        // - Add model memory mapping and GPU buffer allocation
-        // - Support model warm-up and initialization
-        Ok("model_id".to_string())
+    /// Load a model for ANE inference
+    /// 
+    /// # Arguments
+    /// * `model_path` - Path to the model file (.mlmodel or .mlmodelc)
+    /// 
+    /// # Returns
+    /// * `Ok(String)` - Model ID for tracking
+    /// * `Err(ANEError)` - If loading fails
+    pub async fn load_model(&self, model_path: &str) -> Result<String> {
+        use std::path::Path;
+        
+        // Check if model is already loaded
+        {
+            let models = self.loaded_models.read().await;
+            if models.contains_key(model_path) {
+                return Err(ANEError::ModelAlreadyLoaded(model_path.to_string()));
+            }
+        }
+        
+        // Load and compile model
+        let model_path = Path::new(model_path);
+        let compilation_options = CompilationOptions::default();
+        let loaded_model = crate::ane::models::coreml_model::load_model(model_path, &compilation_options)?;
+        
+        // Validate ANE compatibility
+        crate::ane::models::coreml_model::validate_ane_compatibility(&loaded_model)?;
+        
+        // Estimate memory usage
+        let memory_cost_mb = estimate_memory_usage(&loaded_model);
+        
+        // Request admission to resource pool
+        let _admission = self.resource_pool.admit(memory_cost_mb).await?;
+        
+        // Register model
+        let model_id = loaded_model.model_id.clone();
+        let ane_model = ANEModel {
+            model_id: model_id.clone(),
+            model_path: loaded_model.compiled_path.display().to_string(),
+            input_shape: loaded_model.schema.inputs.first()
+                .map(|input| input.shape.clone())
+                .unwrap_or_default(),
+            output_shape: loaded_model.schema.outputs.first()
+                .map(|output| output.shape.clone())
+                .unwrap_or_default(),
+            is_loaded: true,
+            last_used: std::time::Instant::now(),
+        };
+        
+        {
+            let mut models = self.loaded_models.write().await;
+            models.insert(model_path.to_string_lossy().to_string(), ane_model);
+        }
+        
+        // Initialize performance metrics
+        {
+            let mut metrics = self.performance_metrics.write().await;
+            metrics.insert(model_id.clone(), ANEPerformanceMetrics {
+                total_inferences: 0,
+                average_latency_ms: 0.0,
+                peak_memory_usage_mb: memory_cost_mb,
+                error_count: 0,
+                last_inference_time: std::time::Instant::now(),
+            });
+        }
+        
+        Ok(model_id)
     }
 
-    /// TODO: Implement comprehensive ANE inference execution and optimization
-    /// - Integrate with CoreML prediction API for ANE acceleration
-    /// - Support different input/output tensor formats and shapes
-    /// - Implement inference batching and parallel execution
-    /// - Add inference performance monitoring and profiling
-    /// - Support model quantization and precision optimization
-    /// - Implement inference result validation and error handling
-    /// - Add inference caching for repeated inputs
-    /// - Support asynchronous inference with completion callbacks
-    pub async fn execute_inference(&self, model_id: &str, input: &[f32]) -> anyhow::Result<Vec<f32>> {
-        // TODO: Add actual ANE inference execution
-        // - Create MLFeatureProvider with input tensors
-        // - Execute prediction using compiled ANE model
-        // - Handle tensor format conversion and memory management
-        // - Implement inference timeout and cancellation
-        // - Add inference result post-processing and validation
-        Ok(vec![0.0])
+    /// Execute inference on a loaded model
+    /// 
+    /// # Arguments
+    /// * `model_id` - Model ID returned from load_model
+    /// * `input` - Input tensor data
+    /// 
+    /// # Returns
+    /// * `Ok(Vec<f32>)` - Output tensor data
+    /// * `Err(ANEError)` - If inference fails
+    pub async fn execute_inference(&self, model_id: &str, input: &[f32]) -> Result<Vec<f32>> {
+        // Find the model
+        let model = {
+            let models = self.loaded_models.read().await;
+            models.values()
+                .find(|m| m.model_id == model_id)
+                .cloned()
+                .ok_or_else(|| ANEError::ModelNotFound(model_id.to_string()))?
+        };
+        
+        // Create inference options
+        let options = ExecuteOptions {
+            timeout_ms: 5000,
+            batch_size: None,
+            precision: Some("fp16".to_string()),
+            compute_units: Some("all".to_string()),
+            enable_monitoring: true,
+        };
+        
+        // Create a mock loaded model for inference
+        let loaded_model = LoadedCoreMLModel {
+            model_id: model_id.to_string(),
+            compiled_path: std::path::PathBuf::from(&model.model_path),
+            metadata: crate::ane::models::coreml_model::ModelMetadata {
+                path: std::path::PathBuf::from(&model.model_path),
+                size_bytes: 1024,
+                format: "mlmodelc".to_string(),
+                version: None,
+                description: None,
+                author: None,
+                license: None,
+            },
+            schema: crate::ane::models::coreml_model::ModelSchema {
+                inputs: vec![crate::ane::models::coreml_model::IOTensorSpec {
+                    name: "input".to_string(),
+                    shape: model.input_shape.clone(),
+                    dtype: crate::ane::models::coreml_model::DType::F32,
+                    optional: false,
+                }],
+                outputs: vec![crate::ane::models::coreml_model::IOTensorSpec {
+                    name: "output".to_string(),
+                    shape: model.output_shape.clone(),
+                    dtype: crate::ane::models::coreml_model::DType::F32,
+                    optional: false,
+                }],
+            },
+            loaded_at: std::time::Instant::now(),
+            last_accessed: std::time::Instant::now(),
+        };
+        
+        // Execute inference
+        let result = execute_inference(&loaded_model, input, &options).await?;
+        
+        // Update performance metrics
+        self.update_performance_metrics(model_id, &result).await;
+        
+        Ok(result.output)
+    }
+    
+    /// Update performance metrics for a model
+    async fn update_performance_metrics(&self, model_id: &str, result: &InferenceResult) {
+        // Update model-specific metrics
+        {
+            let mut metrics = self.performance_metrics.write().await;
+            if let Some(model_metrics) = metrics.get_mut(model_id) {
+                model_metrics.total_inferences += 1;
+                model_metrics.average_latency_ms = Ewma::update(
+                    model_metrics.average_latency_ms,
+                    result.execution_time_ms as f64,
+                    0.2, // Alpha for EWMA
+                );
+                if result.memory_usage_mb > model_metrics.peak_memory_usage_mb {
+                    model_metrics.peak_memory_usage_mb = result.memory_usage_mb;
+                }
+                model_metrics.last_inference_time = std::time::Instant::now();
+            }
+        }
+        
+        // Update global performance tracker
+        {
+            let mut tracker = self.performance_tracker.write().await;
+            tracker.update_latency(result.execution_time_ms as f64);
+            tracker.update_throughput(result.metrics.throughput_ips);
+            tracker.update_memory(result.memory_usage_mb as f64);
+        }
     }
 
     /// Get device status
     pub async fn get_device_status(&self) -> ANEDeviceStatus {
+        let (used_mb, total_mb, active_models) = {
+            let pool_stats = self.resource_pool.stats();
+            let models = self.loaded_models.read().await;
+            (
+                pool_stats.peak_memory_usage_mb as u32,
+                self.resource_pool.config().mem_total_mb as u32,
+                models.len(),
+            )
+        };
+        
+        // Get thermal and power data from IOKit
+        let thermal_status = iokit::iokit::thermal_status();
+        let power_status = iokit::iokit::power_status();
+        
         ANEDeviceStatus {
-            is_available: true,
-            memory_used_mb: 0,
-            memory_total_mb: 2048,
-            active_models: 0,
-            max_concurrent_models: 4,
-            temperature_celsius: 45.0,
-            power_watts: 5.0,
+            is_available: coreml::coreml::is_ane_available(),
+            memory_used_mb: used_mb,
+            memory_total_mb: total_mb,
+            active_models,
+            max_concurrent_models: self.resource_pool.config().max_concurrent,
+            temperature_celsius: thermal_status.system_temperature,
+            power_watts: power_status.system_power,
         }
+    }
+    
+    /// Get performance summary
+    pub async fn get_performance_summary(&self) -> PerformanceSummary {
+        let tracker = self.performance_tracker.read().await;
+        tracker.get_summary()
+    }
+    
+    /// Get resource pool statistics
+    pub fn get_resource_pool_stats(&self) -> PoolStats {
+        self.resource_pool.stats()
+    }
+    
+    /// Unload a model
+    pub async fn unload_model(&self, model_id: &str) -> Result<()> {
+        let _model_path = {
+            let models = self.loaded_models.read().await;
+            models.values()
+                .find(|m| m.model_id == model_id)
+                .map(|m| m.model_path.clone())
+                .ok_or_else(|| ANEError::ModelNotFound(model_id.to_string()))?
+        };
+        
+        // Remove from loaded models
+        {
+            let mut models = self.loaded_models.write().await;
+            models.retain(|_, m| m.model_id != model_id);
+        }
+        
+        // Remove performance metrics
+        {
+            let mut metrics = self.performance_metrics.write().await;
+            metrics.remove(model_id);
+        }
+        
+        Ok(())
     }
 }
 
 impl Default for ANEManager {
     fn default() -> Self {
-        Self::new()
+        Self::new().unwrap_or_else(|_| {
+            // Fallback to a minimal configuration if default creation fails
+            Self::with_config(1, 1024, ANEDeviceCapabilities {
+                max_memory_mb: 1024,
+                supported_precisions: vec!["fp16".to_string()],
+                max_concurrent_operations: 1,
+                compute_units: 1,
+            }).unwrap()
+        })
     }
 }

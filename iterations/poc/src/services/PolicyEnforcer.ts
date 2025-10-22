@@ -10,7 +10,7 @@
 import { EventEmitter } from "events";
 import { MultiTenantMemoryManager } from "../memory/MultiTenantMemoryManager.js";
 import { Logger } from "../utils/Logger.js";
-import type { TrustScoreComponents } from "../types/index.js";
+// import type { TrustScoreComponents } from "../types/index.js";
 
 export interface BudgetLimits {
   maxFiles: number;

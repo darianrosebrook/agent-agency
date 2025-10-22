@@ -51,6 +51,18 @@ pub struct QuantizationParams {
     pub scale_method: ScaleMethod,
 }
 
+impl Default for QuantizationParams {
+    fn default() -> Self {
+        Self {
+            target_precision: None,
+            symmetric: true,
+            per_channel: false,
+            calibration_samples: 100,
+            scale_method: ScaleMethod::MinMax,
+        }
+    }
+}
+
 /// Scale computation methods
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ScaleMethod {

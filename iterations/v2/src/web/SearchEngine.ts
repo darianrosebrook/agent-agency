@@ -170,8 +170,8 @@ export class SearchEngine {
       ) {
         try {
           const fullContent = await this._contentExtractor.extractContent(
-            result.url,
-            this.config.extractionConfig
+            result.content || "", // HTML content
+            result.url
           );
           enrichedResult.fullContent = fullContent;
         } catch (error: any) {
@@ -223,8 +223,8 @@ export class SearchEngine {
       if (i < maxToEnrich) {
         try {
           const fullContent = await this._contentExtractor.extractContent(
-            result.url,
-            this.config.extractionConfig
+            result.content || "", // HTML content
+            result.url
           );
           enrichedResult.fullContent = fullContent;
         } catch (error: any) {

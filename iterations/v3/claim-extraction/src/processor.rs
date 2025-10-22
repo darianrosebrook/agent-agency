@@ -53,7 +53,7 @@ impl ClaimExtractionProcessor {
         debug!("Stage 2: Qualification");
         let qualification_result = self
             .qualification_stage
-            .process_v2(&disambiguation_result.disambiguated_sentence, ctx)
+            .process(&disambiguation_result.disambiguated_sentence, ctx)
             .await
             .map_err(|e| ClaimExtractionError::QualificationFailed(e.to_string()))?;
 
@@ -61,7 +61,7 @@ impl ClaimExtractionProcessor {
         debug!("Stage 3: Decomposition");
         let decomposition_result = self
             .decomposition_stage
-            .process_v2(&disambiguation_result.disambiguated_sentence, ctx)
+            .process(&disambiguation_result.disambiguated_sentence, ctx)
             .await
             .map_err(|e| ClaimExtractionError::DecompositionFailed(e.to_string()))?;
 

@@ -5,6 +5,36 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
 
+/// Clock trait for time operations
+pub trait Clock {
+    fn now(&self) -> DateTime<Utc>;
+}
+
+/// IdGenerator trait for generating unique identifiers
+pub trait IdGenerator {
+    fn generate(&self) -> Uuid;
+}
+
+/// Default clock implementation using system time
+#[derive(Debug, Clone)]
+pub struct SystemClock;
+
+impl Clock for SystemClock {
+    fn now(&self) -> DateTime<Utc> {
+        Utc::now()
+    }
+}
+
+/// Default ID generator implementation using UUID v4
+#[derive(Debug, Clone)]
+pub struct UuidGenerator;
+
+impl IdGenerator for UuidGenerator {
+    fn generate(&self) -> Uuid {
+        Uuid::new_v4()
+    }
+}
+
 /// Worker types in the pool
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum WorkerType {
@@ -754,4 +784,220 @@ pub struct TaskContext {
     pub retry_count: u32,
     pub max_retries: u32,
     pub metadata: std::collections::HashMap<String, serde_json::Value>,
+}
+
+/// Worker assignment for task execution
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WorkerAssignment {
+    pub worker_id: Uuid,
+    pub priority: TaskPriority,
+    pub estimated_completion_time: DateTime<Utc>,
+    pub confidence_score: f32,
+}
+
+/// Task specification for workers
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TaskSpec {
+    pub id: Uuid,
+    pub title: String,
+    pub description: String,
+    pub requirements: TaskRequirements,
+    pub context: TaskContext,
+    pub created_at: DateTime<Utc>,
+    pub deadline: Option<DateTime<Utc>>,
+}
+
+/// Execution input for worker tasks
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExecutionInput {
+    pub task_id: Uuid,
+    pub prompt: String,
+    pub context: String,
+    pub requirements: String,
+    pub caws_spec: Option<String>,
+}
+
+/// Raw execution result from worker
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RawExecutionResult {
+    pub task_id: Uuid,
+    pub worker_id: Uuid,
+    pub raw_output: String,
+    pub execution_time_ms: u64,
+    pub tokens_used: Option<u32>,
+    pub quality_score: f32,
+    pub metadata: HashMap<String, serde_json::Value>,
+    pub error: Option<String>,
+}
+
+/// CAWS specification for task execution
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CawsSpec {
+    pub version: String,
+    pub metadata: CawsMetadata,
+    pub quality_gates: Vec<QualityGate>,
+    pub compliance: ComplianceRequirements,
+    pub validation_rules: Vec<ValidationRule>,
+    pub benchmarks: Option<PerformanceBenchmarks>,
+    pub security: SecurityRequirements,
+}
+
+/// CAWS metadata
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CawsMetadata {
+    pub created_at: DateTime<Utc>,
+    pub created_by: String,
+    pub description: String,
+    pub tags: Vec<String>,
+}
+
+/// Quality gate definition
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QualityGate {
+    pub name: String,
+    pub required: bool,
+    pub threshold: f32,
+}
+
+/// Compliance requirements
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ComplianceRequirements {
+    pub test_coverage_min: f32,
+    pub mutation_score_min: f32,
+    pub performance_budget_ms: Option<u64>,
+}
+
+/// Validation rule
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ValidationRule {
+    pub name: String,
+    pub description: String,
+    pub severity: ViolationSeverity,
+}
+
+/// Performance benchmarks
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PerformanceBenchmarks {
+    pub response_time_ms: u64,
+    pub throughput_rps: u32,
+    pub memory_usage_mb: u32,
+}
+
+/// Security requirements
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SecurityRequirements {
+    pub authentication_required: bool,
+    pub authorization_required: bool,
+    pub encryption_required: bool,
+}
+
+impl Default for SecurityRequirements {
+    fn default() -> Self {
+        Self {
+            authentication_required: true,
+            authorization_required: true,
+            encryption_required: true,
+        }
+    }
+}
+
+impl Default for WorkerAssignment {
+    fn default() -> Self {
+        Self {
+            worker_id: Uuid::new_v4(),
+            priority: TaskPriority::Normal,
+            estimated_completion_time: Utc::now(),
+            confidence_score: 0.5,
+        }
+    }
+}
+
+impl Default for TaskSpec {
+    fn default() -> Self {
+        Self {
+            id: Uuid::new_v4(),
+            title: String::new(),
+            description: String::new(),
+            requirements: TaskRequirements::default(),
+            context: TaskContext::default(),
+            created_at: Utc::now(),
+            deadline: None,
+        }
+    }
+}
+
+impl Default for ExecutionInput {
+    fn default() -> Self {
+        Self {
+            task_id: Uuid::new_v4(),
+            prompt: String::new(),
+            context: String::new(),
+            requirements: String::new(),
+            caws_spec: None,
+        }
+    }
+}
+
+impl Default for RawExecutionResult {
+    fn default() -> Self {
+        Self {
+            task_id: Uuid::new_v4(),
+            worker_id: Uuid::new_v4(),
+            raw_output: String::new(),
+            execution_time_ms: 0,
+            tokens_used: None,
+            quality_score: 0.0,
+            metadata: HashMap::new(),
+            error: None,
+        }
+    }
+}
+
+impl Default for CawsSpec {
+    fn default() -> Self {
+        Self {
+            version: "1.0".to_string(),
+            metadata: CawsMetadata::default(),
+            quality_gates: Vec::new(),
+            compliance: ComplianceRequirements::default(),
+            validation_rules: Vec::new(),
+            benchmarks: None,
+            security: SecurityRequirements::default(),
+        }
+    }
+}
+
+impl Default for CawsMetadata {
+    fn default() -> Self {
+        Self {
+            created_at: Utc::now(),
+            created_by: String::new(),
+            description: String::new(),
+            tags: Vec::new(),
+        }
+    }
+}
+
+impl Default for ComplianceRequirements {
+    fn default() -> Self {
+        Self {
+            test_coverage_min: 0.8,
+            mutation_score_min: 0.7,
+            performance_budget_ms: None,
+        }
+    }
+}
+
+impl Default for TaskContext {
+    fn default() -> Self {
+        Self {
+            task_id: Uuid::new_v4(),
+            worker_id: Uuid::new_v4(),
+            start_time: Utc::now(),
+            timeout_ms: 30000,
+            retry_count: 0,
+            max_retries: 3,
+            metadata: HashMap::new(),
+        }
+    }
 }

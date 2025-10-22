@@ -1,0 +1,489 @@
+=== Duplication Detection Report ===
+Generated: Wed Oct 22 11:41:28 PDT 2025
+
+Duplicate filenames across crates:
+agent.rs
+alerts.rs
+api.rs
+audit.rs
+autonomous_executor.rs
+caws_integration.rs
+circuit_breaker.rs
+cli.rs
+config.rs
+context_builder.rs
+coordinator.rs
+coreml.rs
+error.rs
+errors.rs
+integration.rs
+javascript.rs
+lib.rs
+logging.rs
+main.rs
+manager.rs
+metrics.rs
+mod.rs
+models.rs
+progress_tracker.rs
+quantization.rs
+rate_limiting.rs
+rust.rs
+satisficing.rs
+service.rs
+storage.rs
+tests.rs
+tokenization.rs
+tool_discovery.rs
+tool_registry.rs
+types.rs
+typescript.rs
+validation.rs
+websocket.rs
+
+Duplicate struct names:
+ANEManager {
+AcceptanceCriterion {
+AdaptivePromptingStrategy;
+AdaptiveResourceAllocator {
+AdvancedQuantizationEngine {
+AgentPerformanceMetrics {
+AgentPerformanceSnapshot {
+AgentStatus {
+AgentTelemetryCollector {
+AggregatedMetrics {
+AggregationMetadata {
+AggregationResult {
+AlertManager {
+AlertRule {
+AlertStatistics {
+AmbiguityAnalysis {
+AnomalyDetectionResult {
+AnomalyDetector {
+AppleSiliconConfig {
+Artifact {
+ArtifactMetadata {
+AtomicClaim {
+AuditEvent {
+AuditLogEntry {
+AuditTrailEntry {
+AutonomousExecutor {
+AutonomousExecutorConfig {
+BackupConfig {
+BaselineComparison {
+BaselineMetrics {
+BenchmarkConfig {
+BenchmarkResult {
+BenchmarkRunner {
+BoundingBox {
+BudgetAdherence {
+BudgetCheckResult {
+BudgetChecker {
+BudgetComplianceResult {
+BudgetLimits {
+BudgetState {
+BudgetViolation {
+Budgets {
+CacheConfig {
+CacheMetadata {
+CacheStats {
+CandleBackend {
+CandleModel {
+CandlePreparedModel {
+CapabilityReport {
+CawsChecker {
+CawsChecklist {
+CawsComplianceResult {
+CawsIntegration {
+CawsIntegrationConfig {
+CawsMetadata {
+CawsPolicy {
+CawsRule {
+CawsSpec {
+CawsTestFixtures {
+CawsValidationResult {
+CawsValidator {
+CawsViolation {
+CawsWaiver {
+ChangeComplexity {
+ChangeSet {
+ChunkConfig {
+ChunkList {
+ChunkedExecutor {
+CircuitBreaker {
+CircuitBreakerConfig {
+CircuitBreakerState {
+CircuitBreakerStats {
+ClaimExtractionResult {
+ClaimExtractor {
+Claims {
+ClarificationQuestion {
+ClarificationResponse {
+Cli {
+CliConfig {
+CommandArtifact {
+Commit {
+ComplexityMetrics {
+ComplianceRequirements {
+ComplianceSnapshot {
+ComplianceStatus {
+ComplianceValidationResult {
+Conflict {
+ConsensusCoordinator {
+ConsensusResult {
+ConsistencyCheckResult {
+ConstitutionalReference {
+Constraint {
+ContentOverride {
+ContextBuilder {
+ContextMetadata {
+ContextPerformanceData {
+ContextPreservationEngine {
+ContextSynthesisConfig {
+CoordinationMetrics {
+CoreMLMetrics {
+CoreMLModel {
+CoreMLProvider {
+CoreferenceResolution {
+CouncilConfig {
+CouncilMetrics {
+CouncilVerdict {
+CoverageAnalysis {
+CoverageGap {
+CreateSourceIntegrityAlert {
+CreateSourceIntegrityRecord {
+CreateSourceIntegrityVerification {
+CreditAssigner {
+CrossReference {
+DatabaseArtifactStorage {
+DatabaseClient {
+DatabaseConfig {
+DatabaseHealthChecker {
+DatabaseStats {
+DatabaseStorage {
+DebateArgument {
+DebateRound {
+DebateSession {
+DeduplicationMetrics {
+Dependency {
+DiffAnalysisResult {
+DiffAnalyzer {
+DiffGenerator {
+DiffHunk {
+DiffMetadata {
+DiffScope {
+DiffStats {
+Digest(pub [u8; 32]);
+DisambiguationResult {
+DissentingOpinion {
+DummyEmbeddingProvider {
+EmbeddingCache {
+EmbeddingConfig {
+EmbeddingMetrics {
+EmbeddingModel {
+EmbeddingRequest {
+Entity {
+EntityCandidate {
+EnvironmentConfig {
+ErrorMetrics {
+EvalReport {
+EvaluationMetrics {
+Evidence {
+EvidenceItem {
+EvidenceManifest {
+EvidenceReference {
+ExecutionArtifacts {
+ExecutionChunk {
+ExecutionContext {
+ExecutionMetrics {
+ExecutionResult {
+ExecutionStats {
+ExpectedOutcome {
+ExtractionMetadata {
+FailureAnalysis {
+FailurePattern {
+FileChange {
+FileEvent {
+FileModification {
+FileStorage {
+FinalVerdict {
+GenerationRequest {
+GenerationResponse {
+HealthCheckConfig {
+HealthCheckResult {
+HealthStatus {
+HfTokenizer {
+HistoricalData {
+Hunk {
+IndexStats {
+InferenceOptions {
+InferenceRequest {
+InferenceResult {
+IntegrationTestRunner {
+IoSchema {
+JavaScriptAnalyzer;
+JudgeContribution {
+JudgeEvaluation {
+JudgeRanking {
+JudgeVerdict {
+KnowledgeEntry {
+KnowledgeSeeker {
+LanguageAnalysisResult {
+LanguageViolation {
+LanguageWarning {
+LearningUpdate {
+LogEntry {
+LoggingConfig {
+MCPConfig {
+MCPServer {
+MLModel {
+MaintenanceTask {
+MemoryConfig {
+MemoryManager {
+MemoryStorage {
+MetricsCollector {
+MitigationStrategy {
+ModelInfo {
+ModelMetadata {
+ModelMetrics {
+ModelPerformance {
+ModelPerformanceMetrics {
+ModelPool {
+ModelPrediction {
+ModelRegistry {
+MultimodalContext {
+MultimodalSearchResult {
+MyComponent {
+NamedEntity {
+NoOpMetricsBackend;
+NoopEmitter;
+ObjectiveWeights {
+OnnxEmbeddingProvider {
+OnnxPreparedModel {
+OptimizationConfig {
+OptimizationConstraints {
+OptimizationResult {
+OptimizationStatus {
+Orchestrator {
+OutcomePrediction {
+ParameterConstraint {
+ParameterDefinition {
+ParameterEvaluation {
+ParsedOperation {
+ParsedTensor {
+PartialResults {
+ParticipantContribution {
+PasswordPolicy {
+Patch {
+PatchArtifact {
+PatternUpdate {
+PerformanceAnalysis {
+PerformanceBenchmark {
+PerformanceConfig {
+PerformanceDelta {
+PerformanceMetric {
+PerformanceMetrics {
+PerformanceOptimization {
+PerformancePrediction {
+PerformancePredictor {
+PerformanceRegression {
+PerformanceReport {
+PerformanceRequirement {
+PerformanceRequirements {
+PerformanceSnapshot {
+PerformanceSummary {
+PerformanceTracker {
+PerformanceTrends {
+PipelineMetrics {
+PlanningAgent {
+PlanningMetadata {
+PoolStats {
+PostgresSourceIntegrityStorage {
+PredictiveLearningSystem {
+PrepareOptions {
+ProcessingContext {
+ProcessingMetadata {
+ProcessingStats {
+ProgressTracker {
+ProvenanceConfig {
+ProvenanceRecord {
+QualityAnalysis {
+QualityGate {
+QualityGateValidator {
+QualityMetrics {
+QualityReport {
+QualityThresholds {
+QuantizationConfig {
+QuantizationManager {
+QuantizationParams {
+QuantizationResult {
+QuantizationStats {
+QueryMetrics {
+RateLimitConfig {
+RateLimitMiddleware {
+RateLimiter {
+Recommendation {
+RecoveryConfig {
+RecoveryMetrics {
+RecoveryObjectives {
+RedisCircuitBreaker {
+RedisConfig {
+RefinementDecision {
+RefinementDirective {
+ReflexiveLearningSystem {
+RegistryStatistics {
+RequestContext {
+RequiredChange {
+ResearchCapabilities {
+ResearchConfig {
+ResourceAllocation {
+ResourceConstraints {
+ResourcePrediction {
+ResourcePredictor {
+ResourceRequirements {
+ResourceThresholds {
+ResourceTrend {
+ResourceUsage {
+ResourceUtilization {
+RestoreFilters {
+RetentionPolicy {
+RetryConfig {
+RetryExecutor {
+RiskAssessment {
+RiskFactor {
+RollbackManager {
+RollbackPlan {
+RoutingConfig {
+RoutingDecision {
+RoutingRecommendation {
+RoutingStats {
+RustAnalyzer;
+SLAMetrics {
+SatisficingConfig {
+SatisficingEvaluator {
+ScalingRecommendation {
+ScopeRestrictions {
+SearchResult {
+SeasonalPattern {
+Secret {
+SecretMetadata {
+SecurityConfig {
+SecurityRequirements {
+SecurityViolation {
+SelfAssessment {
+SelfPromptingAgent {
+SelfPromptingResult {
+ServerConfig {
+SlaValidationResult {
+SourceIntegrityAlert {
+SourceIntegrityRecord {
+SourceIntegrityVerification {
+SourceLocation {
+Speaker {
+SpecialTokens {
+SpecializationScore {
+SpeechSegment {
+StorageMetrics {
+StrategyOptimizer {
+StrategyRecommendation {
+StreamingHasher {
+StructuredLogger {
+SuccessCriterion {
+SystemClock;
+SystemDashboard {
+SystemHealthMonitor {
+SystemHealthSnapshot {
+SystemMetrics {
+SystemResourceMonitor {
+Task {
+TaskConstraints {
+TaskContext {
+TaskDescriptor {
+TaskError {
+TaskExecutionResult {
+TaskFeatures {
+TaskOutcome {
+TaskProgress {
+TaskRequest {
+TaskRequirements {
+TaskResponse {
+TaskScope {
+TaskSpec {
+TechStack {
+TelemetryCollector {
+TensorSpec {
+TestDataGenerator;
+TestFixtures;
+TestPerformanceMetrics {
+TestPlan {
+TestResult {
+TestResults {
+TestScenario {
+TestSuiteResults {
+ThermalConfig {
+ThermalStatus {
+TokenUsage {
+TokenizerConfig {
+ToolChainStep {
+ToolDiscoveryConfig {
+ToolExecutionResult {
+ToolRegistry {
+TrendAnalysis {
+TypeScriptAnalyzer;
+UnifiedDiff {
+UnresolvableAmbiguity {
+UpdateMetadata {
+UsedParameters {
+ValidationCheck {
+ValidationConfig {
+ValidationContext {
+ValidationIssue {
+ValidationMetrics {
+ValidationResult {
+ValidationResults {
+ValidationRule {
+VectorSearchMetrics {
+VerifiabilityAssessment {
+VerificationCriteria {
+VerificationRequirement {
+VerificationResult {
+VerificationSummary {
+Violation {
+ViolationCodeMapper {
+ViolationStats {
+VoteEntry {
+Waiver {
+WaiverApprovalRequest {
+WaiverGenerator {
+WaiverRef {
+WaiverRequest {
+WebScrapingConfig {
+WebSocketQuery {
+WebSocketStats {
+WordTiming {
+Worker {
+WorkerAssignment {
+WorkerMetadata {
+WorkerOutput {
+WorkerOutputContract {
+WorkerPerformanceMetrics {
+WorkingSpec {
+WorkingSpecScope {
+WorkloadSpec {
+WorkspaceFactory;
+ZeroKnowledgeProof {
+
+Duplicate trait names:
+ArtifactStorage: Send + Sync {
+EmbeddingProvider: Send + Sync {
+HealthCheck: Send + Sync {
+InferenceEngine: Send + Sync {
+JudgeEvaluator: Send + Sync {
+LanguageAnalyzer: Send + Sync + std::fmt::Debug {
+MetricsBackend: Send + Sync {
+ModelProvider: Send + Sync {
+PreparedModel: Send + Sync {
+ProvenanceEmitter: Send + Sync + std::fmt::Debug {
+ResearchAgent: Send + Sync {
+SourceIntegrityStorage: Send + Sync {
+Workspace: Send + Sync {

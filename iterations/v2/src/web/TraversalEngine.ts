@@ -48,7 +48,7 @@ export class TraversalEngine {
 
   constructor(private readonly config: TraversalConfig) {
     // Create content extractor with default config
-    const extractionConfig: ContentExtractionConfig = {
+    const _extractionConfig: ContentExtractionConfig = {
       includeImages: false,
       includeLinks: true,
       includeMetadata: true,
@@ -66,7 +66,7 @@ export class TraversalEngine {
       },
     };
 
-    this.contentExtractor = new ContentExtractor(extractionConfig);
+    this.contentExtractor = new ContentExtractor();
 
     this.nodes = new Map();
     this.visitQueue = [];
@@ -310,7 +310,7 @@ export class TraversalEngine {
    */
   private async visitNode(
     url: string,
-    extractionConfig: ContentExtractionConfig
+    _extractionConfig: ContentExtractionConfig
   ): Promise<void> {
     const node = this.nodes.get(url);
     if (!node || node.status !== "pending") {
@@ -322,10 +322,13 @@ export class TraversalEngine {
     this.visiting.add(url);
 
     try {
+      // TODO: Fetch HTML content from URL before extraction
+      const html = "<html><body>Content not fetched yet</body></html>"; // Placeholder
+
       // Extract content
       const content = await this.contentExtractor.extractContent(
-        url,
-        extractionConfig
+        html, // HTML content
+        url
       );
 
       // Update node

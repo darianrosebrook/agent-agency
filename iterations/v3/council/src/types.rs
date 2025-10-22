@@ -1,6 +1,7 @@
 //! Core types for the Council system
 
 use serde::{Deserialize, Serialize};
+use serde_json;
 use std::collections::HashMap;
 use uuid::Uuid;
 
@@ -8,6 +9,34 @@ use uuid::Uuid;
 pub type TaskId = Uuid;
 pub type JudgeId = String;
 pub type VerdictId = Uuid;
+
+/// Task type for evaluation
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum TaskType {
+    CodeReview,
+    TestExecution,
+    Build,
+}
+
+/// Judge specialization score
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SpecializationScore {
+    pub domain: String,
+    pub score: f32,
+    pub confidence: f32,
+}
+
+/// Historical judge performance data
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HistoricalJudgeData {
+    pub judge_id: String,
+    pub task_type: String,
+    pub accuracy_score: f32,
+    pub consistency_score: f32,
+    pub speed_score: f32,
+    pub total_tasks: u32,
+    pub recent_trend: String,
+}
 
 /// Risk tier for CAWS compliance evaluation
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -246,23 +275,11 @@ pub struct ConsensusResult {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum FinalVerdict {
-    Accepted {
-        confidence: f32,
-        summary: String,
-    },
-    Rejected {
-        primary_reasons: Vec<String>,
-        summary: String,
-    },
-    RequiresModification {
-        required_changes: Vec<RequiredChange>,
-        summary: String,
-    },
-    NeedsInvestigation {
-        questions: Vec<String>,
-        summary: String,
-    },
+pub struct FinalVerdict {
+    pub decision: String,
+    pub confidence: f32,
+    pub summary: String,
+    pub metadata: std::collections::HashMap<String, serde_json::Value>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -718,6 +735,22 @@ pub struct ResourcePrediction {
     pub horizon_seconds: i64,
     pub predicted_usage: ResourceUsageMetrics,
     pub confidence: f32,
+}
+
+/// Resource usage metrics for learning and monitoring
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ResourceUsageMetrics {
+    pub cpu_usage_percent: f32,
+    pub memory_usage_mb: u64,
+    pub thermal_status: crate::learning::ThermalStatus,
+    pub ane_utilization: Option<f32>,
+    pub gpu_utilization: Option<f32>,
+    pub energy_consumption: Option<f32>, // Joules
+    // Additional fields expected by the code
+    pub cpu_percent: f32,
+    pub memory_mb: f32,
+    pub io_bytes_per_sec: u64,
+    pub network_bytes_per_sec: u64,
 }
 
 impl TaskSpec {

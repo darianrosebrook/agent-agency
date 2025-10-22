@@ -7,16 +7,16 @@
  * @author @darianrosebrook
  */
 
-import Ajv, { type Ajv as AjvType, type Options } from "ajv";
+import Ajv, { type Ajv as AjvType } from "ajv";
 import addFormats from "ajv-formats";
 import * as fs from "fs";
 import * as yaml from "js-yaml";
-import * as path from "path";
+// import * as path from "path";
 import type {
   ValidationResult,
   ContractValidationResult,
-  ContractDetails,
-  NonFunctionalRequirements,
+  // ContractDetails,
+  // NonFunctionalRequirements,
   TrustScoreResult,
   TrustScoreComponents,
 } from "../types/index.js";

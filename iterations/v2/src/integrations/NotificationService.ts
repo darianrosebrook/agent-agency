@@ -10,7 +10,7 @@
 import {
   BaseServiceIntegration,
   ServiceConfig,
-  ServiceType,
+  // ServiceType,
   ServiceOperationResult,
   HealthCheckResult,
 } from "./ExternalServiceFramework";
@@ -588,7 +588,7 @@ export class EmailNotificationService extends BaseServiceIntegration {
       // In a real implementation, this would use an SMTP library like nodemailer
       // For now, we'll simulate the email sending
 
-      const emailData = {
+      const _emailData = {
         to: payload.recipients || this.config.defaultRecipients || [],
         from: this.config.fromEmail,
         subject: `[${payload.severity.toUpperCase()}] ${payload.title}`,

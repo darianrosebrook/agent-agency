@@ -974,7 +974,7 @@ export class ClaimExtractor
             // Extract the term and context from the bracket string format "term [context]"
             const match = bracket.match(/^(.+?)\s+\[(.+)\]$/);
             if (match) {
-              const [, term, context] = match;
+              const [, term, _context] = match;
               const regex = new RegExp(`\\b${term}\\b`, "gi");
               bracketedStatement = bracketedStatement.replace(regex, bracket);
             }

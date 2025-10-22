@@ -86,6 +86,10 @@ pub enum ClaimType {
     Constitutional, // CAWS-related
     Performance,
     Security,
+    Behavioral,
+    Functional,
+    Structural,
+    Informational,
 }
 
 /// Level of verifiability for a claim
@@ -94,6 +98,9 @@ pub enum VerifiabilityLevel {
     DirectlyVerifiable,
     IndirectlyVerifiable,
     Unverifiable,
+    High,
+    Medium,
+    Low,
     RequiresContext,
     HighlyVerifiable,
     ModeratelyVerifiable,
@@ -497,6 +504,19 @@ pub struct HistoricalClaim {
     pub evidence: Vec<Evidence>,
     pub confidence_score: f64,
     pub timestamp: chrono::DateTime<chrono::Utc>,
+    pub source_count: Option<i32>,
+    pub last_verified: Option<chrono::DateTime<chrono::Utc>>,
+    pub related_entities: Option<Vec<String>>,
+    pub claim_type: Option<String>,
+    pub created_at: Option<chrono::DateTime<chrono::Utc>>,
+    pub updated_at: Option<chrono::DateTime<chrono::Utc>>,
+    pub metadata: Option<serde_json::Value>,
+    pub source_references: Option<Vec<String>>,
+    pub cross_references: Option<Vec<String>>,
+    pub validation_metadata: Option<serde_json::Value>,
+    pub validation_confidence: f64,
+    pub validation_timestamp: chrono::DateTime<chrono::Utc>,
+    pub validation_outcome: ValidationOutcome,
 }
 
 /// Keyword match result
@@ -507,6 +527,7 @@ pub struct KeywordMatch {
     pub context: String,
     pub relevance_score: f64,
     pub match_type: MatchType,
+    pub confidence: f64,
 }
 
 /// Type of keyword match

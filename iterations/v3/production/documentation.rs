@@ -34,7 +34,7 @@ impl ApiDocs {
     }
 
     /// Generate API documentation
-    pub async fn generate_api_docs(&self) -> Result<String, DocumentationError> {
+    pub async fn generate_api_docs(&self) -> std::result::Result<String, DocumentationError> {
         let mut docs = String::new();
 
         docs.push_str("# Agent Agency V3 API Documentation\n\n");
@@ -166,7 +166,7 @@ impl DeploymentGuide {
     }
 
     /// Generate deployment guide
-    pub async fn generate_deployment_guide(&self) -> Result<String, DocumentationError> {
+    pub async fn generate_deployment_guide(&self) -> std::result::Result<String, DocumentationError> {
         let mut guide = String::new();
 
         guide.push_str("# Agent Agency V3 Deployment Guide\n\n");
@@ -350,7 +350,7 @@ impl ArchitectureDocs {
     }
 
     /// Generate architecture documentation
-    pub async fn generate_architecture_docs(&self) -> Result<String, DocumentationError> {
+    pub async fn generate_architecture_docs(&self) -> std::result::Result<String, DocumentationError> {
         let mut docs = String::new();
 
         docs.push_str("# Agent Agency V3 Architecture\n\n");
@@ -542,7 +542,7 @@ impl DocumentationGenerator {
     }
 
     /// Generate all documentation
-    pub async fn generate_all_docs(&self) -> Result<HashMap<String, String>, DocumentationError> {
+    pub async fn generate_all_docs(&self) -> std::result::Result<HashMap<String, String>, DocumentationError> {
         let mut docs = HashMap::new();
 
         if self.config.include_api_docs {
@@ -565,7 +565,7 @@ impl DocumentationGenerator {
     }
 
     /// Generate documentation index
-    async fn generate_index(&self, docs: &HashMap<String, String>) -> Result<String, DocumentationError> {
+    async fn generate_index(&self, docs: &HashMap<String, String>) -> std::result::Result<String, DocumentationError> {
         let mut index = String::new();
 
         index.push_str("# Agent Agency V3 Documentation\n\n");
@@ -637,7 +637,7 @@ impl DocumentationGenerator {
     }
 
     /// Save documentation to files
-    pub async fn save_to_files(&self, docs: &HashMap<String, String>) -> Result<(), DocumentationError> {
+    pub async fn save_to_files(&self, docs: &HashMap<String, String>) -> std::result::Result<(), DocumentationError> {
         use tokio::fs;
 
         // Create output directory

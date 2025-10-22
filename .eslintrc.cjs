@@ -22,5 +22,18 @@ module.exports = {
     "@typescript-eslint/prefer-nullish-coalescing": "error",
     "@typescript-eslint/prefer-optional-chain": "error",
   },
-  ignorePatterns: ["node_modules/", "dist/", "coverage/", "**/*.d.ts"],
+  globals: {
+    NodeJS: "readonly", // Define NodeJS global
+  },
+  ignorePatterns: [
+    "node_modules/",
+    "dist/",
+    "coverage/",
+    "**/*.d.ts",
+    "**/*.js",
+    "test-*.js", // Ignore our test scripts
+    "iterations/", // Ignore iterations directory to avoid tsconfig conflicts
+    "docs/archive/", // Ignore archived documentation files
+    "playground/", // Ignore playground files
+  ],
 };

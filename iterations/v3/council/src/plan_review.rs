@@ -183,11 +183,7 @@ impl PlanReviewService {
         context_items.push(format!("Acceptance criteria count: {}", working_spec.acceptance_criteria.len()));
 
         Ok(MultimodalContext {
-            text_content: context_items.join("\n"),
-            image_urls: vec![], // No images for plan review
-            audio_urls: vec![], // No audio for plan review
-            video_urls: vec![], // No video for plan review
-            document_urls: vec![], // No documents for plan review
+            evidence_items: vec![], // Placeholder - no evidence items for plan review
             metadata: HashMap::from([
                 ("source".to_string(), "plan_review".to_string()),
                 ("working_spec_id".to_string(), working_spec.id.clone()),

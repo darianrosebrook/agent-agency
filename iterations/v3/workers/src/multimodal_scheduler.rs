@@ -435,14 +435,16 @@ impl MultimodalJobScheduler {
         Ok(())
     }
 
-    /// TODO: Implement actual video processing pipeline
-    /// - [ ] Integrate video codec support (H.264, H.265, VP9, AV1)
-    /// - [ ] Implement video frame extraction and sampling strategies
-    /// - [ ] Add video metadata extraction (duration, resolution, bitrate)
-    /// - [ ] Support video preprocessing (stabilization, quality enhancement)
-    /// - [ ] Implement video segmentation and scene detection
-    /// - [ ] Add video content analysis and feature extraction
-    /// - [ ] Support different video formats and container types
+    /// Process video job
+    async fn process_video_job(&self, job: &MultimodalJob) -> Result<JobPerformanceMetrics> {
+        // TODO: Implement actual video processing pipeline
+        // - [ ] Integrate video codec support (H.264, H.265, VP9, AV1)
+        // - [ ] Implement video frame extraction and sampling strategies
+        // - [ ] Add video metadata extraction (duration, resolution, bitrate)
+        // - [ ] Support video preprocessing (stabilization, quality enhancement)
+        // - [ ] Implement video segmentation and scene detection
+        // - [ ] Add video content analysis and feature extraction
+        // - [ ] Support different video formats and container types
         tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
         
         Ok(JobPerformanceMetrics {

@@ -1,0 +1,42 @@
+[package]
+name = "parallel-workers"
+version = "0.1.0"
+edition = "2021"
+authors = ["Darian Rosebrook <darian@example.com>"]
+
+[dependencies]
+# Core async runtime
+tokio = { workspace = true, features = ["full"] }
+async-trait = { workspace = true }
+futures = { workspace = true }
+
+# Serialization
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+
+# Error handling
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+
+# Utilities
+uuid = { workspace = true, features = ["v4", "serde"] }
+chrono = { workspace = true, features = ["serde"] }
+
+# Concurrent data structures
+parking_lot = { workspace = true }
+dashmap = { workspace = true }
+
+# Logging and observability
+tracing = { workspace = true }
+
+# Path handling
+path-absolutize = "3.1"
+
+# Additional utilities
+tokio-util = "0.7"
+regex = "1.10"
+
+# Workspace dependencies
+# orchestration = { path = "../orchestration" } # TODO: Add back when orchestration integration is implemented
+# workers = { path = "../workers" } # TODO: Add back when worker integration is implemented
+# council = { path = "../council" } # TODO: Add back when council integration is needed

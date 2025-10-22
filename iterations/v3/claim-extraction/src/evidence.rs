@@ -412,6 +412,7 @@ impl EvidenceCollector {
                     freshness: Utc::now(),
                 },
                 confidence: complexity_score,
+                relevance: 0.8, // Default relevance score
                 timestamp: Utc::now(),
             });
         }
@@ -498,7 +499,7 @@ impl EvidenceCollector {
         } else {
             let avg_loc_per_func = metrics.lines_of_code as f64 / metrics.function_count as f64;
             let complexity_penalty = (avg_loc_per_func / 50.0).min(1.0); // Penalty for very long functions
-            (1.0 - complexity_penalty).max(0.1f32)
+            (1.0 - complexity_penalty).max(0.1f64)
         }
     }
 
@@ -568,6 +569,7 @@ impl EvidenceCollector {
                 freshness: Utc::now(),
             },
             confidence,
+            relevance: 0.7, // Documentation analysis relevance
             timestamp: Utc::now(),
         })
     }
@@ -623,6 +625,7 @@ impl EvidenceCollector {
                 freshness: Utc::now(),
             },
             confidence,
+            relevance: 0.8, // Test coverage relevance
             timestamp: Utc::now(),
         })
     }
@@ -733,7 +736,8 @@ impl EvidenceCollector {
                 freshness: Utc::now(),
             },
             confidence: confidence * claim_relevance,
-            timestamp: Utc::now(),
+                relevance: 0.8, // Default relevance score
+                timestamp: Utc::now(),
         })
     }
 
@@ -799,6 +803,7 @@ impl EvidenceCollector {
                                     freshness: Utc::now(),
                                 },
                                 confidence,
+                                relevance: 0.9, // High relevance for test results
                                 timestamp: Utc::now(),
                             });
                         }
@@ -851,6 +856,7 @@ impl EvidenceCollector {
                 freshness: Utc::now(),
             },
             confidence,
+            relevance: 0.7, // Test performance relevance
             timestamp: Utc::now(),
         })
     }
@@ -950,6 +956,7 @@ impl EvidenceCollector {
                                 authority: "readme_documentation".to_string(),
                                 freshness: Utc::now(),
                             },
+                            relevance: relevance_score,
                             confidence: relevance_score * 0.8, // README docs are authoritative
                             timestamp: Utc::now(),
                         });
@@ -1001,6 +1008,7 @@ impl EvidenceCollector {
                                 freshness: Utc::now(),
                             },
                             confidence: relevance_score * 0.9, // API specs are highly authoritative
+                            relevance: relevance_score,
                             timestamp: Utc::now(),
                         });
                     }
@@ -1054,6 +1062,7 @@ impl EvidenceCollector {
                             freshness: Utc::now(),
                         },
                         confidence: 0.7, // Code comments are moderately authoritative
+                        relevance: 0.6, // Code comments have moderate relevance
                         timestamp: Utc::now(),
                     });
                 }
@@ -1111,6 +1120,7 @@ impl EvidenceCollector {
                         freshness: Utc::now(),
                     },
                     confidence: highest_relevance * 0.85, // Architectural docs are authoritative
+                    relevance: highest_relevance,
                     timestamp: Utc::now(),
                 });
             }
@@ -1128,7 +1138,8 @@ impl EvidenceCollector {
                 freshness: Utc::now(),
             },
             confidence: 0.2,
-            timestamp: Utc::now(),
+                relevance: 0.8, // Default relevance score
+                timestamp: Utc::now(),
         })
     }
 
@@ -1332,6 +1343,7 @@ impl EvidenceCollector {
                 freshness: Utc::now(),
             },
             confidence,
+            relevance: 0.8, // Benchmark relevance
             timestamp: Utc::now(),
         })
     }
@@ -1381,6 +1393,7 @@ impl EvidenceCollector {
                 freshness: Utc::now(),
             },
             confidence,
+            relevance: 0.7, // Compile performance relevance
             timestamp: Utc::now(),
         })
     }
@@ -1419,7 +1432,8 @@ impl EvidenceCollector {
                         freshness: Utc::now(),
                     },
                     confidence: 0.75,
-                    timestamp: Utc::now(),
+                relevance: 0.8, // Default relevance score
+                timestamp: Utc::now(),
                 });
             }
         }
@@ -1437,7 +1451,8 @@ impl EvidenceCollector {
                     freshness: Utc::now(),
                 },
                 confidence: 0.3,
-            timestamp: Utc::now(),
+                relevance: 0.8, // Default relevance score
+                timestamp: Utc::now(),
             });
         }
 
@@ -1487,6 +1502,7 @@ impl EvidenceCollector {
                 freshness: Utc::now(),
             },
             confidence,
+            relevance: 0.7, // Memory analysis relevance
             timestamp: Utc::now(),
         })
     }
@@ -1574,6 +1590,7 @@ impl EvidenceCollector {
                 freshness: Utc::now(),
             },
             confidence,
+            relevance: 0.9, // Security audit relevance
             timestamp: Utc::now(),
         })
     }
@@ -1633,6 +1650,7 @@ impl EvidenceCollector {
                     freshness: Utc::now(),
                 },
                 confidence: 0.8,
+                relevance: 0.8, // Default relevance score
                 timestamp: Utc::now(),
             });
         }
@@ -1675,6 +1693,7 @@ impl EvidenceCollector {
                 freshness: Utc::now(),
             },
             confidence,
+            relevance: 0.8, // Dependency security relevance
             timestamp: Utc::now(),
         })
     }
@@ -1746,6 +1765,7 @@ impl EvidenceCollector {
                 freshness: Utc::now(),
             },
             confidence,
+            relevance: 0.8, // Security pattern relevance
             timestamp: Utc::now(),
         })
     }
@@ -1842,6 +1862,7 @@ impl EvidenceCollector {
                 freshness: Utc::now(),
             },
             confidence,
+            relevance: 0.9, // Constitutional reference relevance
             timestamp: Utc::now(),
         })
     }
@@ -1886,7 +1907,8 @@ impl EvidenceCollector {
                         freshness: Utc::now(),
                     },
                     confidence: gates_analysis.pass_rate * 0.9 + 0.1,
-                    timestamp: Utc::now(),
+                relevance: 0.8, // Default relevance score
+                timestamp: Utc::now(),
                 });
 
                 // Add detailed failure evidence if any gates failed
@@ -1905,12 +1927,12 @@ impl EvidenceCollector {
                             evidence_type: EvidenceType::ConstitutionalReference,
                             content: format!("CAWS Gates Failures:\n{}", failure_details),
                             source: EvidenceSource::LogicalReasoning {
-                                source_type: SourceType::FileSystem,
                                 location: "apps/tools/caws/gates.js".to_string(),
                                 authority: "caws_gates_failures".to_string(),
                                 freshness: Utc::now(),
                             },
                             confidence: 0.7, // Lower confidence for failure details
+                            relevance: 0.8, // Gate failure relevance
                             timestamp: Utc::now(),
                         });
                     }
@@ -1929,7 +1951,8 @@ impl EvidenceCollector {
                         freshness: Utc::now(),
                     },
                     confidence: 0.2,
-                    timestamp: Utc::now(),
+                relevance: 0.8, // Default relevance score
+                timestamp: Utc::now(),
                 });
             }
         }
@@ -1971,12 +1994,12 @@ impl EvidenceCollector {
             evidence_type: EvidenceType::ConstitutionalReference,
             content,
             source: EvidenceSource::LogicalReasoning {
-                source_type: SourceType::FileSystem,
                 location: ".caws/provenance/chain.json".to_string(),
                 authority: "caws_provenance".to_string(),
                 freshness: Utc::now(),
             },
             confidence,
+            relevance: 0.8, // Provenance relevance
             timestamp: Utc::now(),
         })
     }
@@ -2033,13 +2056,13 @@ impl EvidenceCollector {
             evidence_type: EvidenceType::ConstitutionalReference,
             content,
             source: EvidenceSource::LogicalReasoning {
-                source_type: SourceType::FileSystem,
                 location: ".caws/".to_string(),
                 authority: "caws_workflow_compliance".to_string(),
                 freshness: Utc::now(),
             },
             confidence: compliance_score,
-            timestamp: Utc::now(),
+                relevance: 0.8, // Default relevance score
+                timestamp: Utc::now(),
         })
     }
 

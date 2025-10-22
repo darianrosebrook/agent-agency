@@ -146,10 +146,10 @@ describe("GC Safety Tests", () => {
       } = require("../../src/services/CawsConstitutionalEnforcer");
 
       // Check that cleanup/dispose methods were called on dependencies
-      const memoryInstance = MultiTenantMemoryManager.mock.results[0]?.value;
-      const routerInstance = AdvancedTaskRouter.mock.results[0]?.value;
-      const analyzerInstance = ErrorPatternAnalyzer.mock.results[0]?.value;
-      const enforcerInstance =
+      const _memoryInstance = MultiTenantMemoryManager.mock.results[0]?.value;
+      const _routerInstance = AdvancedTaskRouter.mock.results[0]?.value;
+      const _analyzerInstance = ErrorPatternAnalyzer.mock.results[0]?.value;
+      const _enforcerInstance =
         CawsConstitutionalEnforcer.mock.results[0]?.value;
 
       // Note: In a real implementation, these would be called during disposal
@@ -184,7 +184,7 @@ describe("GC Safety Tests", () => {
 
       await Promise.all(taskPromises);
 
-      const afterTasksMemoryUsage = process.memoryUsage().heapUsed;
+      const _afterTasksMemoryUsage = process.memoryUsage().heapUsed;
 
       // Force garbage collection if available (only in certain Node.js environments)
       if (global.gc) {
@@ -871,7 +871,7 @@ describe("GC Safety Tests", () => {
 
     it("should detect file handle leaks", async () => {
       let openFileHandles = 0;
-      const originalOpen = jest.fn();
+      const _originalOpen = jest.fn();
       const originalClose = jest.fn();
 
       // Mock file operations

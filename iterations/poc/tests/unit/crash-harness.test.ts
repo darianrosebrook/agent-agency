@@ -409,7 +409,7 @@ describe("Crash Harness Tests", () => {
       for (const invalidAgent of invalidAgents) {
         try {
           await orchestrator.registerAgent(invalidAgent as any);
-        } catch (error) {
+        } catch (_error) {
           failureCount++;
         }
       }

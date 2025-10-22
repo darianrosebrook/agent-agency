@@ -106,7 +106,6 @@ pub struct HnswIndexer {
 
 /// Comprehensive HNSW (Hierarchical Navigable Small World) Index Implementation
 /// Provides efficient approximate nearest neighbor search with hierarchical graph structure
-
 /// Distance metrics supported by HNSW
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum DistanceMetric {

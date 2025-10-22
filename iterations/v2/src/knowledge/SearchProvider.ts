@@ -354,6 +354,7 @@ export class GoogleSearchProvider extends BaseSearchProvider {
       // Emit search execution event
       events.emit({
         id: `event-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+        type: "search_executed",
         // TODO: Implement comprehensive event system for knowledge operations
         // - Define specific event types for search operations (initiated, completed, failed)
         // - Add event payload schemas for different knowledge provider types

@@ -78,7 +78,7 @@ export class WorkspaceStateManager extends EventEmitter {
 
       // Initialize database client for embedding storage
       // Use environment variables for database configuration
-      const dbConfig = {
+      const _dbConfig = {
         host: process.env.KNOWLEDGE_DB_HOST || "localhost",
         port: parseInt(process.env.KNOWLEDGE_DB_PORT || "5432"),
         database: process.env.KNOWLEDGE_DB_NAME || "knowledge_db",

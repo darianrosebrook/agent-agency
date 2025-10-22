@@ -47,12 +47,7 @@ export class WebNavigator {
     knowledgeSeeker: KnowledgeSeeker
   ) {
     // Initialize content extractor
-    this.contentExtractor = new ContentExtractor({
-      userAgent: config.http.userAgent,
-      timeoutMs: config.http.timeoutMs,
-      maxRedirects: config.http.maxRedirects,
-      verifySsl: config.security.verifySsl,
-    });
+    this.contentExtractor = new ContentExtractor();
 
     // Initialize search engine
     this.searchEngine = new SearchEngine(
@@ -245,9 +240,12 @@ export class WebNavigator {
     const startTime = Date.now();
 
     try {
+      // TODO: Fetch HTML content from URL before extraction
+      const html = "<html><body>Content not fetched yet</body></html>"; // Placeholder
+
       const content = await this.contentExtractor.extractContent(
-        url,
-        extractionConfig
+        html, // HTML content
+        url
       );
 
       // Store metrics

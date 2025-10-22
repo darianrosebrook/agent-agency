@@ -4,6 +4,7 @@ members = [
     # "self-prompting-agent",  # Disabled - has 161 compilation errors, TODOs partially addressed
     "apple-silicon",  # Re-enabled after fixing torch integration and type imports
     "caws/runtime-validator",  # Consolidated CAWS validation service
+    "parallel-workers",  # Parallel task execution system
     "workers",
     "research",
     "mcp-integration",  # MCP integration server
@@ -98,6 +99,10 @@ dashmap = "5.5"
 
 # Half-precision floating point
 half = "2.4"
+
+# Additional dependencies for parallel-workers
+tokio-util = { version = "0.7", features = ["time"] }
+path-absolutize = "3.1"
 
 # Vector operations for embeddings
 ndarray = "0.15"

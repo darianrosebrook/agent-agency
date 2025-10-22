@@ -18,14 +18,43 @@ pub struct OptimizationConfig {
     pub parameter_space: ParameterSpace,
     /// Maximum optimization iterations
     pub max_iterations: usize,
-    /// Exploration vs exploitation trade-off (0.0 = pure exploitation, 1.0 = pure exploration)
+    /// Exploration vs exploitation trade-off (0.0 = exploit, 1.0 = explore)
     pub exploration_factor: f64,
-    /// Quality degradation threshold (maximum allowed degradation)
+    /// Max allowed quality degradation vs baseline (negative allowed down to this bound)
     pub quality_threshold: f64,
-    /// CAWS compliance threshold
+    /// Minimum CAWS compliance score (0..1)
     pub compliance_threshold: f64,
-    /// Convergence criteria
+    /// Convergence criteria on objective improvement
     pub convergence_threshold: f64,
+
+    // NEW: hard runtime constraints (checked pre-/post-proposal)
+    pub constraints: OptimizationConstraints,
+    // NEW: scalarization weights for reward (kept separate from hard constraints)
+    pub objective_weights: ObjectiveWeights,
+    // NEW: minimum confidence to deploy a proposal (lower CI bound gating)
+    pub min_confidence: f64,
+    // NEW: decays exploration over steps; if None, keep fixed exploration_factor
+    pub exploration_decay: Option<f64>,
+    // NEW: policy/optimizer identity for provenance
+    pub policy_version: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OptimizationConstraints {
+    pub max_latency_ms: u64,
+    pub max_tokens: u32,
+    pub require_caws: bool,
+    /// Trust-region around current baseline to avoid large jumps
+    pub max_delta_temperature: f32,   // e.g., 0.2
+    pub max_delta_max_tokens: u32,    // e.g., 200
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ObjectiveWeights {
+    /// Reward = w_q * quality - w_l * norm_latency - w_t * norm_tokens
+    pub w_quality: f64,
+    pub w_latency: f64,
+    pub w_tokens: f64,
 }
 
 /// Parameter space definition for optimization
@@ -450,6 +479,33 @@ impl Default for OptimizationConfig {
             quality_threshold: 0.85,
             compliance_threshold: 0.95,
             convergence_threshold: 0.01,
+            constraints: OptimizationConstraints::default(),
+            objective_weights: ObjectiveWeights::default(),
+            min_confidence: 0.8,
+            exploration_decay: Some(0.95),
+            policy_version: "bayesian_optimizer@1.0.0".to_string(),
+        }
+    }
+}
+
+impl Default for OptimizationConstraints {
+    fn default() -> Self {
+        Self {
+            max_latency_ms: 5000,
+            max_tokens: 4000,
+            require_caws: true,
+            max_delta_temperature: 0.2,
+            max_delta_max_tokens: 200,
+        }
+    }
+}
+
+impl Default for ObjectiveWeights {
+    fn default() -> Self {
+        Self {
+            w_quality: 1.0,
+            w_latency: 0.1,
+            w_tokens: 0.05,
         }
     }
 }

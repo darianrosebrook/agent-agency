@@ -12,6 +12,13 @@ pub mod verdict_aggregation;
 pub mod workflow;
 pub mod risk_scorer;
 pub mod error_handling;
+pub mod coordinator;
+pub mod models;
+pub mod types;
+pub mod evidence_enrichment;
+pub mod resilience;
+pub mod claim_extraction_multimodal;
+pub mod learning;
 
 pub use error::{CouncilError, CouncilResult};
 pub use judge::{
@@ -37,3 +44,7 @@ pub use error_handling::{
     DegradationLevel, RecoveryOrchestrator, SystemHealth, HealthStatus,
     error_factory,
 };
+pub use evidence_enrichment::EvidenceEnrichmentCoordinator;
+pub use resilience::ResilienceManager;
+pub use claim_extraction_multimodal::{MultimodalEvidenceEnricher, ClaimWithMultimodalEvidence};
+pub use types::ResourceUsageMetrics;

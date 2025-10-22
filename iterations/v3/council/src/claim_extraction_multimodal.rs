@@ -319,7 +319,7 @@ impl MultimodalEvidenceEnricher {
                 citation: ModalityCitation {
                     source_id: format!("doc-{:03}", i + 1),
                     source_uri: format!("doc:article-{}", i + 123),
-                    page_number: Some(i + 1),
+                    page_number: Some((i + 1) as u32),
                     time_range: None,
                     bbox: None,
                     citation_confidence: 0.90,
@@ -344,7 +344,7 @@ impl MultimodalEvidenceEnricher {
                 citation: ModalityCitation {
                     source_id: format!("img-{:03}", i + 1),
                     source_uri: format!("doc:image-{}", i + 456),
-                    page_number: Some(i + 1),
+                    page_number: Some((i + 1) as u32),
                     time_range: None,
                     bbox: Some([0.1 + i as f32 * 0.1, 0.2, 0.3, 0.4]),
                     citation_confidence: 0.85,
@@ -370,7 +370,7 @@ impl MultimodalEvidenceEnricher {
                     source_id: format!("vid-{:03}", i + 1),
                     source_uri: format!("doc:video-{}", i + 789),
                     page_number: None,
-                    time_range: Some([12000 + i as i32 * 1000, 18000 + i as i32 * 1000]),
+                    time_range: Some([(12000 + i as i32 * 1000) as u64, (18000 + i as i32 * 1000) as u64]),
                     bbox: None,
                     citation_confidence: 0.88,
                 },
@@ -394,7 +394,7 @@ impl MultimodalEvidenceEnricher {
                 citation: ModalityCitation {
                     source_id: format!("diag-{:03}", i + 1),
                     source_uri: format!("doc:diagram-{}", i + 654),
-                    page_number: Some(i + 1),
+                    page_number: Some((i + 1) as u32),
                     time_range: None,
                     bbox: Some([0.1 + i as f32 * 0.1, 0.2, 0.3, 0.4]),
                     citation_confidence: 0.92,
@@ -420,7 +420,7 @@ impl MultimodalEvidenceEnricher {
                     source_id: format!("speech-{:03}", i + 1),
                     source_uri: format!("doc:transcript-{}", i + 321),
                     page_number: None,
-                    time_range: Some([5000 + i as i32 * 1000, 8000 + i as i32 * 1000]),
+                    time_range: Some([(5000 + i as i32 * 1000) as u64, (8000 + i as i32 * 1000) as u64]),
                     bbox: None,
                     citation_confidence: 0.83,
                 },
@@ -507,6 +507,7 @@ impl MultimodalEvidenceEnricher {
             .map(|(mod_name, _)| mod_name.clone())
             .collect();
 
+        let consistent_modalities_clone = consistent_modalities.clone();
         let conflicting_modalities: Vec<String> = modalities
             .iter()
             .filter(|m| !consistent_modalities.contains(&m.to_string()))
@@ -520,7 +521,7 @@ impl MultimodalEvidenceEnricher {
             conflicting_modalities,
             reasoning: format!(
                 "Evidence consistency: {:.2}. Supporting modalities: {:?}",
-                consistency_score, consistent_modalities
+                consistency_score, consistent_modalities_clone
             ),
         }
     }

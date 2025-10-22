@@ -357,6 +357,7 @@ impl PlanningAgent {
 
         // Extract and analyze goals with comprehensive NLP
         let goal_analysis_result = goal_analyzer.analyze_goals_comprehensive(&task_request.description).await?;
+        let goals = goal_analysis_result.goals.into_iter().map(|goal| goal.text).collect::<Vec<String>>();
 
         // Generate basic acceptance criteria
         let acceptance_criteria = self.generate_acceptance_criteria(&task_request.description)?;
@@ -601,37 +602,6 @@ impl PlanningAgent {
         })
     }
 
-    /// Extract goals from description using simplified keyword extraction (legacy method)
-    fn extract_goals_from_description(&self, description: &str) -> PlanningResult<Vec<String>> {
-        // Simple keyword-based extraction for backward compatibility
-        let goal_keywords = ["implement", "create", "build", "add", "develop", "design", "fix", "improve", "optimize", "integrate"];
-
-        let goals: Vec<String> = description
-            .split(|c: char| c == '.' || c == '!' || c == '?')
-            .filter_map(|sentence| {
-                let sentence = sentence.trim();
-                if sentence.is_empty() {
-                    return None;
-                }
-
-                let contains_goal_keyword = goal_keywords
-                    .iter()
-                    .any(|&keyword| sentence.to_lowercase().contains(keyword));
-
-                if contains_goal_keyword {
-                    Some(sentence.to_string())
-                } else {
-                    None
-                }
-            })
-            .collect();
-
-        if goals.is_empty() {
-            return Err(PlanningError::ValidationError("No clear goals identified in task description".to_string()));
-        }
-
-        Ok(goals)
-    }
 }
 
 /// Comprehensive Goal Extraction and Analysis Implementation
@@ -940,7 +910,7 @@ struct GoalValidationRule {
 
 /// Pre-compiled regex patterns for goal extraction
 static GOAL_PATTERNS: Lazy<HashMap<&'static str, Lazy<Regex>>> = Lazy::new(|| {
-    let mut patterns = HashMap::new();
+    let mut patterns: HashMap<&'static str, Lazy<Regex>> = HashMap::new();
 
     // Goal indicators
     patterns.insert("goal_indicators", Lazy::new(|| {
@@ -995,7 +965,7 @@ impl AdvancedGoalAnalyzer {
     pub fn new(config: GoalAnalysisConfig) -> Self {
         let goal_patterns = Self::compile_goal_patterns();
         let goal_type_patterns = Self::compile_goal_type_patterns();
-        let semantic_cache = LruCache::new(config.cache_size);
+        let semantic_cache = LruCache::new(std::num::NonZeroUsize::new(config.cache_size).unwrap_or(std::num::NonZeroUsize::new(100).unwrap()));
         let prioritization_engine = GoalPrioritizationEngine::new();
         let dependency_analyzer = GoalDependencyAnalyzer::new();
         let validation_engine = GoalValidationEngine::new();
@@ -1016,7 +986,7 @@ impl AdvancedGoalAnalyzer {
         let mut patterns = HashMap::new();
 
         for (name, lazy_pattern) in &*GOAL_PATTERNS {
-            patterns.insert(name.to_string(), lazy_pattern.clone());
+            patterns.insert(name.to_string(), (*lazy_pattern).clone());
         }
 
         patterns
@@ -1246,7 +1216,7 @@ impl AdvancedGoalAnalyzer {
         }
 
         // Cap at 1.0
-        score.min(1.0)
+        score.min(1.0f64)
     }
 
     /// Extract stakeholder requirement from sentence
@@ -1392,7 +1362,7 @@ impl AdvancedGoalAnalyzer {
         let avg_confidence = goals.iter().map(|g| g.confidence).sum::<f64>() / goals.len() as f64;
         let goal_count_bonus = if goals.len() >= 3 { 0.1 } else { 0.0 };
 
-        (avg_confidence + goal_count_bonus).min(1.0)
+        (avg_confidence + goal_count_bonus).min(1.0f64)
     }
 }
 
@@ -1469,7 +1439,7 @@ impl GoalPrioritizationEngine {
         let business_value = goal.business_value;
         let stakeholder_importance = goal.stakeholder_importance;
         let technical_feasibility = 1.0 / (1.0 + goal.estimated_effort); // Higher effort = lower feasibility
-        let risk_factor = 1.0 - (goal.risks.len() as f64 * 0.1).min(0.5); // Risk penalty
+        let risk_factor = 1.0 - (goal.risks.len() as f64 * 0.1).min(0.5f64); // Risk penalty
         let effort_impact_ratio = goal.business_value / goal.estimated_effort.max(0.1);
 
         // Weighted combination
@@ -1485,7 +1455,7 @@ impl GoalPrioritizationEngine {
         let business_value = goal.business_value;
         let technical_feasibility = 1.0 / (1.0 + goal.estimated_effort);
         let stakeholder_importance = goal.stakeholder_importance;
-        let risk_factor = 1.0 - (goal.risks.len() as f64 * 0.1).min(0.5);
+        let risk_factor = 1.0 - (goal.risks.len() as f64 * 0.1).min(0.5f64);
         let effort_impact_ratio = goal.business_value / goal.estimated_effort.max(0.1);
 
         let total_score = business_value * 0.3 +

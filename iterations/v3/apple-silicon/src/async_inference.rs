@@ -853,7 +853,7 @@ impl AsyncInferenceEngine {
             let outputs = match model.model_type {
                 ModelType::Text => {
                     let mut outputs = HashMap::new();
-                    outputs.insert("text_output".to_string(), Tensor {
+                    outputs.insert("text_output".to_string(), crate::async_inference::Tensor {
                         data: vec![0.1, 0.2, 0.3, 0.4], // Mock text embeddings
                         shape: vec![1, 4],
                         dtype: TensorDataType::F32,
@@ -865,7 +865,7 @@ impl AsyncInferenceEngine {
                 },
                 ModelType::Vision => {
                     let mut outputs = HashMap::new();
-                    outputs.insert("vision_features".to_string(), Tensor {
+                    outputs.insert("vision_features".to_string(), crate::async_inference::Tensor {
                         data: vec![0.5; 512], // Mock vision features
                         shape: vec![1, 512],
                         dtype: TensorDataType::F32,
@@ -877,7 +877,7 @@ impl AsyncInferenceEngine {
                 },
                 ModelType::Multimodal => {
                     let mut outputs = HashMap::new();
-                    outputs.insert("multimodal_output".to_string(), Tensor {
+                    outputs.insert("multimodal_output".to_string(), crate::async_inference::Tensor {
                         data: vec![0.3; 768], // Mock multimodal features
                         shape: vec![1, 768],
                         dtype: TensorDataType::F32,
@@ -990,7 +990,7 @@ impl AsyncInferenceEngine {
         if let serde_json::Value::Object(map) = outputs {
             for (name, value) in map {
                 let tensor = match value {
-                    serde_json::Value::Array(arr) => {
+                    serde_json::Value::Array(ref arr) => {
                         if arr.is_empty() {
                             continue;
                         }
@@ -1005,9 +1005,10 @@ impl AsyncInferenceEngine {
                                         .map(|v| v as f32)
                                         .collect();
 
-                                    Tensor {
+                                    let data_len = data.len();
+                                    crate::async_inference::Tensor {
                                         data,
-                                        shape: vec![data.len()],
+                                        shape: vec![data_len],
                                         dtype: TensorDataType::F32,
                                         device: TensorDevice::Cpu,
                                         layout: TensorLayout::RowMajor,
@@ -1020,9 +1021,10 @@ impl AsyncInferenceEngine {
                                         .map(|v| v as f32)
                                         .collect();
 
-                                    Tensor {
+                                    let data_len = data.len();
+                                    crate::async_inference::Tensor {
                                         data,
-                                        shape: vec![data.len()],
+                                        shape: vec![data_len],
                                         dtype: TensorDataType::F32,
                                         device: TensorDevice::Cpu,
                                         layout: TensorLayout::RowMajor,
@@ -1033,11 +1035,12 @@ impl AsyncInferenceEngine {
                             _ => {
                                 // Convert to string representation
                                 let json_str = value.to_string();
-                                let data = json_str.as_bytes().iter().map(|&b| b as f32).collect();
+                                let data: Vec<f32> = json_str.as_bytes().iter().map(|&b| b as f32).collect();
+                                let data_len = data.len();
 
-                                Tensor {
+                                crate::async_inference::Tensor {
                                     data,
-                                    shape: vec![data.len()],
+                                    shape: vec![data_len],
                                     dtype: TensorDataType::F32,
                                     device: TensorDevice::Cpu,
                                     layout: TensorLayout::RowMajor,
@@ -1050,7 +1053,7 @@ impl AsyncInferenceEngine {
                         // Single number output
                         let data = vec![n.as_f64().unwrap_or(0.0) as f32];
 
-                        Tensor {
+                        crate::async_inference::Tensor {
                             data,
                             shape: vec![1],
                             dtype: TensorDataType::F32,
@@ -1062,11 +1065,12 @@ impl AsyncInferenceEngine {
                     _ => {
                         // Other types - convert to string representation
                         let json_str = value.to_string();
-                        let data = json_str.as_bytes().iter().map(|&b| b as f32).collect();
+                        let data: Vec<f32> = json_str.as_bytes().iter().map(|&b| b as f32).collect();
+                        let data_len = data.len();
 
-                        Tensor {
+                        crate::async_inference::Tensor {
                             data,
-                            shape: vec![data.len()],
+                            shape: vec![data_len],
                             dtype: TensorDataType::F32,
                             device: TensorDevice::Cpu,
                             layout: TensorLayout::RowMajor,

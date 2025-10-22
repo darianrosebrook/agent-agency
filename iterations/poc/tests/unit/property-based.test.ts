@@ -20,7 +20,7 @@ import { AdvancedTaskRouter } from "../../src/services/AdvancedTaskRouter";
 import { ErrorPatternAnalyzer } from "../../src/services/ErrorPatternAnalyzer";
 import { CawsConstitutionalEnforcer } from "../../src/services/CawsConstitutionalEnforcer";
 import { Logger } from "../../src/utils/Logger";
-import { Task, Agent, AgentType, AgentStatus } from "../../src/types/index";
+import { Task, AgentType } from "../../src/types/index";
 
 // Mock all dependencies
 jest.mock("../../src/memory/MultiTenantMemoryManager");
@@ -374,7 +374,7 @@ describe("Property-Based Tests", () => {
               // Should handle any valid JSON payload
               expect(typeof taskId).toBe("string");
               expect(taskId.length).toBeGreaterThan(0);
-            } catch (error) {
+            } catch (_error) {
               // Skip non-serializable objects - this is expected
               return;
             }

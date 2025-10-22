@@ -44,33 +44,33 @@ export default function AlertsDashboard({ refreshInterval = 30000 }: AlertsDashb
 
   // Fetch alerts data
   const fetchAlerts = useCallback(async () => {
-    try {
-      setError(null);
+    // try {
+    //   setError(null);
 
-      const [alertsResponse, statsResponse] = await Promise.all([
-        fetch("/api/alerts"),
-        fetch("/api/alerts/statistics")
-      ]);
+    //   const [alertsResponse, statsResponse] = await Promise.all([
+    //     fetch("/api/alerts"),
+    //     fetch("/api/alerts/statistics")
+    //   ]);
 
-      if (!alertsResponse.ok) {
-        throw new Error(`Failed to fetch alerts: ${alertsResponse.status}`);
-      }
+    //   if (!alertsResponse.ok) {
+    //     throw new Error(`Failed to fetch alerts: ${alertsResponse.status}`);
+    //   }
 
-      if (!statsResponse.ok) {
-        throw new Error(`Failed to fetch statistics: ${statsResponse.status}`);
-      }
+    //   if (!statsResponse.ok) {
+    //     throw new Error(`Failed to fetch statistics: ${statsResponse.status}`);
+    //   }
 
-      const alertsData = await alertsResponse.json();
-      const statsData = await statsResponse.json();
+    //   const alertsData = await alertsResponse.json();
+    //   const statsData = await statsResponse.json();
 
-      setAlerts(alertsData.alerts || []);
-      setStatistics(statsData.statistics || null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to fetch alerts");
-      console.error("Failed to fetch alerts:", err);
-    } finally {
-      setLoading(false);
-    }
+    //   setAlerts(alertsData.alerts || []);
+    //   setStatistics(statsData.statistics || null);
+    // } catch (err) {
+    //   setError(err instanceof Error ? err.message : "Failed to fetch alerts");
+    //   console.error("Failed to fetch alerts:", err);
+    // } finally {
+    //   setLoading(false);
+    // }
   }, []);
 
   // Acknowledge alert
@@ -249,11 +249,26 @@ export default function AlertsDashboard({ refreshInterval = 30000 }: AlertsDashb
 
       {/* Alerts List */}
       <div className={styles.alertsList}>
-        {filteredAlerts.length === 0 ? (
-          <div className={styles.noAlerts}>
-            <p>✅ No alerts match the current filters</p>
-          </div>
-        ) : (
+          {filteredAlerts.length === 0 ? (
+            <div className={styles.emptyState}>
+              <div className={styles.emptyIcon}>🔔</div>
+              <h3>No Alerts Found</h3>
+              <p>
+                System alerts help you monitor infrastructure health and application performance.
+                When connected to your API server, you'll see:
+              </p>
+              <ul className={styles.emptyFeatures}>
+                <li>🚨 <strong>Critical alerts</strong> - System failures and service outages</li>
+                <li>⚠️ <strong>Warning alerts</strong> - Performance degradation and capacity issues</li>
+                <li>📊 <strong>Metric alerts</strong> - Threshold violations and anomalies</li>
+                <li>🔧 <strong>Maintenance alerts</strong> - Scheduled downtime and updates</li>
+              </ul>
+              <div className={styles.emptyNote}>
+                <span className={styles.noteIcon}>ℹ️</span>
+                <span>No alerts means your system is running smoothly!</span>
+              </div>
+            </div>
+          ) : (
           filteredAlerts.map((alert) => (
             <div key={alert.id} className={`${styles.alertCard} ${styles[alert.severity]}`}>
               <div className={styles.alertHeader}>

@@ -28,8 +28,8 @@ import { LogLevel, Logger } from "../../src/observability/Logger";
 describe("Adapters System Integration", () => {
   let auditLogger: AuditLogger;
   let cacheClient: DistributedCacheClient;
-  let incidentNotifier: IncidentNotifier;
-  let infraController: InfrastructureController;
+  let _incidentNotifier: IncidentNotifier;
+  let _infraController: InfrastructureController;
   let notificationAdapter: NotificationAdapter;
 
   // Test data fixtures
@@ -154,7 +154,7 @@ describe("Adapters System Integration", () => {
       logger
     );
 
-    incidentNotifier = new IncidentNotifier({
+    _incidentNotifier = new IncidentNotifier({
       enabled: true,
       incidentSystem: {
         type: "mock",
@@ -174,7 +174,7 @@ describe("Adapters System Integration", () => {
       },
     });
 
-    infraController = new InfrastructureController({
+    _infraController = new InfrastructureController({
       enabled: true,
       providers: {
         docker: {

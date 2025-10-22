@@ -89,7 +89,7 @@ impl AuthManager {
     }
 
     /// Authenticate user with username/password
-    pub async fn authenticate(&self, username: &str, password: &str) -> Result<String, SecurityError> {
+    pub async fn authenticate(&self, username: &str, password: &str) -> std::result::Result<String, SecurityError> {
         if !self.config.enable_authentication {
             return Err(SecurityError::AuthenticationDisabled);
         }
@@ -134,7 +134,7 @@ impl AuthManager {
     }
 
     /// Validate JWT token
-    pub async fn validate_token(&self, token: &str) -> Result<User, SecurityError> {
+    pub async fn validate_token(&self, token: &str) -> std::result::Result<User, SecurityError> {
         if !self.config.enable_authentication {
             return Err(SecurityError::AuthenticationDisabled);
         }
@@ -171,7 +171,7 @@ impl AuthManager {
     }
 
     /// Validate API key
-    pub fn validate_api_key(&self, api_key: &str) -> Result<(), SecurityError> {
+    pub fn validate_api_key(&self, api_key: &str) -> std::result::Result<(), SecurityError> {
         if !self.config.enable_authentication {
             return Ok(());
         }
@@ -184,7 +184,7 @@ impl AuthManager {
     }
 
     /// Invalidate token (logout)
-    pub async fn invalidate_token(&self, token: &str) -> Result<(), SecurityError> {
+    pub async fn invalidate_token(&self, token: &str) -> std::result::Result<(), SecurityError> {
         let mut sessions = self.active_sessions.write().await;
         if let Some(session) = sessions.get_mut(token) {
             session.is_active = false;
@@ -193,14 +193,14 @@ impl AuthManager {
     }
 
     /// Add user (for testing/admin purposes)
-    pub async fn add_user(&self, user: User) -> Result<(), SecurityError> {
+    pub async fn add_user(&self, user: User) -> std::result::Result<(), SecurityError> {
         let mut users = self.users.write().await;
         users.insert(user.username.clone(), user);
         Ok(())
     }
 
     /// Get user by ID
-    pub async fn get_user(&self, user_id: &str) -> Result<User, SecurityError> {
+    pub async fn get_user(&self, user_id: &str) -> std::result::Result<User, SecurityError> {
         let users = self.users.read().await;
         for user in users.values() {
             if user.id == user_id {
@@ -211,7 +211,7 @@ impl AuthManager {
     }
 
     /// Generate JWT token for user
-    fn generate_jwt_token(&self, user: &User) -> Result<String, SecurityError> {
+    fn generate_jwt_token(&self, user: &User) -> std::result::Result<String, SecurityError> {
         let now = Utc::now().timestamp() as usize;
         let expiration = (Utc::now() + ChronoDuration::hours(self.config.jwt_expiration_hours)).timestamp() as usize;
 
@@ -349,7 +349,7 @@ impl InputValidator {
     }
 
     /// Validate input string
-    pub fn validate_string(&self, input: &str, field_name: &str, max_length: usize) -> Result<(), SecurityError> {
+    pub fn validate_string(&self, input: &str, field_name: &str, max_length: usize) -> std::result::Result<(), SecurityError> {
         if !self.config.enable_input_validation {
             return Ok(());
         }
@@ -383,7 +383,7 @@ impl InputValidator {
     }
 
     /// Validate task description
-    pub fn validate_task_description(&self, description: &str) -> Result<(), SecurityError> {
+    pub fn validate_task_description(&self, description: &str) -> std::result::Result<(), SecurityError> {
         self.validate_string(description, "task_description", 10000)?;
 
         // Check for suspicious patterns
@@ -410,7 +410,7 @@ impl InputValidator {
     }
 
     /// Validate username
-    pub fn validate_username(&self, username: &str) -> Result<(), SecurityError> {
+    pub fn validate_username(&self, username: &str) -> std::result::Result<(), SecurityError> {
         self.validate_string(username, "username", 50)?;
 
         // Username should be alphanumeric with underscores and hyphens
@@ -425,7 +425,7 @@ impl InputValidator {
     }
 
     /// Validate password
-    pub fn validate_password(&self, password: &str) -> Result<(), SecurityError> {
+    pub fn validate_password(&self, password: &str) -> std::result::Result<(), SecurityError> {
         if !self.config.enable_input_validation {
             return Ok(());
         }
@@ -455,7 +455,7 @@ impl InputValidator {
     }
 
     /// Validate email
-    pub fn validate_email(&self, email: &str) -> Result<(), SecurityError> {
+    pub fn validate_email(&self, email: &str) -> std::result::Result<(), SecurityError> {
         self.validate_string(email, "email", 254)?;
 
         // Basic email validation
@@ -490,7 +490,7 @@ impl InputValidator {
     }
 
     /// Check request size
-    pub fn validate_request_size(&self, size: usize) -> Result<(), SecurityError> {
+    pub fn validate_request_size(&self, size: usize) -> std::result::Result<(), SecurityError> {
         if size > self.config.max_request_size_bytes {
             return Err(SecurityError::ValidationError {
                 field: "request".to_string(),
@@ -516,7 +516,7 @@ impl RateLimiter {
     }
 
     /// Check if request is allowed
-    pub async fn check_rate_limit(&self, identifier: &str) -> Result<(), SecurityError> {
+    pub async fn check_rate_limit(&self, identifier: &str) -> std::result::Result<(), SecurityError> {
         if !self.config.enable_rate_limiting {
             return Ok(());
         }
@@ -578,24 +578,24 @@ impl SecurityManager {
     }
 
     /// Authenticate user
-    pub async fn authenticate(&self, username: &str, password: &str) -> Result<String, SecurityError> {
+    pub async fn authenticate(&self, username: &str, password: &str) -> std::result::Result<String, SecurityError> {
         self.input_validator.validate_username(username)?;
         self.input_validator.validate_password(password)?;
         self.auth_manager.authenticate(username, password).await
     }
 
     /// Validate token
-    pub async fn validate_token(&self, token: &str) -> Result<User, SecurityError> {
+    pub async fn validate_token(&self, token: &str) -> std::result::Result<User, SecurityError> {
         self.auth_manager.validate_token(token).await
     }
 
     /// Validate API key
-    pub fn validate_api_key(&self, api_key: &str) -> Result<(), SecurityError> {
+    pub fn validate_api_key(&self, api_key: &str) -> std::result::Result<(), SecurityError> {
         self.auth_manager.validate_api_key(api_key)
     }
 
     /// Authorize action
-    pub fn authorize(&self, user: &User, resource: &str, action: &str) -> Result<(), SecurityError> {
+    pub fn authorize(&self, user: &User, resource: &str, action: &str) -> std::result::Result<(), SecurityError> {
         if !self.authz_manager.can_access_resource(user, resource, action) {
             return Err(SecurityError::InsufficientPermissions {
                 user: user.username.clone(),
@@ -607,12 +607,12 @@ impl SecurityManager {
     }
 
     /// Validate input
-    pub fn validate_task_description(&self, description: &str) -> Result<(), SecurityError> {
+    pub fn validate_task_description(&self, description: &str) -> std::result::Result<(), SecurityError> {
         self.input_validator.validate_task_description(description)
     }
 
     /// Check rate limit
-    pub async fn check_rate_limit(&self, identifier: &str) -> Result<(), SecurityError> {
+    pub async fn check_rate_limit(&self, identifier: &str) -> std::result::Result<(), SecurityError> {
         self.rate_limiter.check_rate_limit(identifier).await
     }
 

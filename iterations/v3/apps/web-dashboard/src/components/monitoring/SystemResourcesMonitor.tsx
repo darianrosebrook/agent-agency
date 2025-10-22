@@ -88,8 +88,23 @@ export default function SystemResourcesMonitor({
         <div className={styles.header}>
           <h3>System Resources</h3>
         </div>
-        <div className={styles.noData}>
-          <p>No system resource data available</p>
+        <div className={styles.emptyState}>
+          <div className={styles.emptyIcon}>📊</div>
+          <h3>No Resource Data</h3>
+          <p>
+            System resource monitoring helps you track CPU, memory, and task performance.
+            When connected to your API server, you'll see:
+          </p>
+          <ul className={styles.emptyFeatures}>
+            <li>🖥️ <strong>CPU Usage</strong> - Real-time processor utilization</li>
+            <li>🧠 <strong>Memory Usage</strong> - RAM consumption and availability</li>
+            <li>📋 <strong>Task Metrics</strong> - Active, completed, and failed tasks</li>
+            <li>⚡ <strong>Performance</strong> - Response times and throughput</li>
+          </ul>
+          <div className={styles.emptyNote}>
+            <span className={styles.noteIcon}>ℹ️</span>
+            <span>Connect to your API server to monitor system resources</span>
+          </div>
         </div>
       </div>
     );
@@ -101,6 +116,7 @@ export default function SystemResourcesMonitor({
         <h3>System Resources</h3>
         <span className={styles.timestamp}>
           Last updated: {new Date().toLocaleTimeString()}
+          {/* STATIC: Timestamp calculated client-side */}
         </span>
       </div>
 

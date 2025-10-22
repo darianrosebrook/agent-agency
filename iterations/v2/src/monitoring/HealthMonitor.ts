@@ -314,7 +314,7 @@ export class HealthMonitor extends EventEmitter {
   private collectMetrics(): void {
     // Collect detailed system metrics
     const memUsage = process.memoryUsage();
-    const cpuUsage = process.cpuUsage();
+    const _cpuUsage = process.cpuUsage();
     const loadAverage = os.loadavg();
 
     // Calculate memory usage percentages

@@ -1396,7 +1396,7 @@ export class FailureManager extends EventEmitter {
     };
 
     // Determine impact based on component type and error
-    const errorMessage = error.message || error.toString();
+    const _errorMessage = error.message || error.toString();
 
     if (componentId.includes("database") || componentId.includes("auth")) {
       impact.userImpact = "Authentication and data access unavailable";

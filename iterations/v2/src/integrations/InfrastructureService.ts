@@ -10,7 +10,7 @@
 import {
   BaseServiceIntegration,
   ServiceConfig,
-  ServiceType,
+  // ServiceType,
   ServiceOperationResult,
   HealthCheckResult,
 } from "./ExternalServiceFramework";
@@ -1125,7 +1125,7 @@ export class AWSInfrastructureService extends BaseServiceIntegration {
   /// - [ ] Add support for custom headers and query parameters
   /// - [ ] Implement proper cleanup of sensitive signing data
   /// - [ ] Add support for AWS authentication monitoring and debugging
-  private getAWSAuthHeader(service: string, action: string): string {
+  private getAWSAuthHeader(service: string, _action: string): string {
     return `AWS4-HMAC-SHA256 Credential=${this.config.accessKeyId}/${
       new Date().toISOString().split("T")[0]
     }/${this.region}/${service}/aws4_request`;

@@ -424,7 +424,7 @@ export class WaiversService {
     waiver: WaiverRequest,
     approval: WaiverApprovalRequest
   ): Promise<void> {
-    const workflow = this.approvalWorkflow[waiver.impactLevel];
+    const _workflow = this.approvalWorkflow[waiver.impactLevel];
 
     if (!approval.approvalCriteria) {
       throw new Error("Approval criteria must be provided for waiver approval");
