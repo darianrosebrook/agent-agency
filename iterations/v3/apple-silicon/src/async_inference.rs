@@ -899,12 +899,13 @@ impl AsyncInferenceEngine {
         #[cfg(all(target_os = "macos", not(feature = "candle")))]
         {
             // Fallback to simulation on non-macOS platforms
-            warn!("⚠️ Core ML not available on this platform, using simulation");
+            tracing::warn!("⚠️ Core ML not available on this platform, using simulation");
 
-            let base_inference_time = match model.model_type {
-                ModelType::Text => 50,
-                ModelType::Vision => 200,
-                ModelType::Multimodal => 150,
+            let base_inference_time = match model.format {
+                ModelFormat::Onnx => 100,
+                ModelFormat::Candle => 80,
+                ModelFormat::CoreML => 50,
+                ModelFormat::Torch => 120,
             };
 
             let input_size_factor = (request.inputs.values()
@@ -917,8 +918,8 @@ impl AsyncInferenceEngine {
             let latency_ms = start.elapsed().as_millis() as u64;
 
             // Generate mock outputs based on model type
-            let outputs = match model.model_type {
-                ModelType::Text => {
+            let outputs = match model.format {
+                ModelFormat::Onnx => {
                     let mut outputs = HashMap::new();
                     outputs.insert("text_output".to_string(), crate::async_inference::Tensor {
                         data: vec![0.1, 0.2, 0.3, 0.4], // Mock text embeddings
@@ -930,7 +931,7 @@ impl AsyncInferenceEngine {
                     });
                     outputs
                 },
-                ModelType::Vision => {
+                ModelFormat::Candle => {
                     let mut outputs = HashMap::new();
                     outputs.insert("vision_features".to_string(), crate::async_inference::Tensor {
                         data: vec![0.5; 512], // Mock vision features
@@ -942,11 +943,23 @@ impl AsyncInferenceEngine {
                     });
                     outputs
                 },
-                ModelType::Multimodal => {
+                ModelFormat::CoreML => {
                     let mut outputs = HashMap::new();
-                    outputs.insert("multimodal_output".to_string(), crate::async_inference::Tensor {
-                        data: vec![0.3; 768], // Mock multimodal features
+                    outputs.insert("output".to_string(), crate::async_inference::Tensor {
+                        data: vec![0.3; 768], // Mock features
                         shape: vec![1, 768],
+                        dtype: TensorDataType::F32,
+                        device: TensorDevice::Cpu,
+                        layout: TensorLayout::RowMajor,
+                        metadata: None,
+                    });
+                    outputs
+                },
+                ModelFormat::Torch => {
+                    let mut outputs = HashMap::new();
+                    outputs.insert("output".to_string(), crate::async_inference::Tensor {
+                        data: vec![0.2; 256], // Mock features
+                        shape: vec![1, 256],
                         dtype: TensorDataType::F32,
                         device: TensorDevice::Cpu,
                         layout: TensorLayout::RowMajor,
@@ -956,17 +969,17 @@ impl AsyncInferenceEngine {
                 },
             };
 
-            Ok(InferenceResult::Success {
+            return Ok(InferenceResult::Success {
                 outputs,
                 latency_ms,
                 device_used: "CPU".to_string(),
-            })
+            });
         }
 
-        // Final fallback for when no specialized inference is available
-        #[cfg(any(not(target_os = "macos"), not(feature = "candle")))]
+        // Final fallback for when no specialized inference is available (non-macOS)
+        #[cfg(not(target_os = "macos"))]
         {
-            warn!("⚠️ Advanced inference backends not available, using basic simulation");
+            tracing::warn!("⚠️ Advanced inference backends not available, using basic simulation");
 
             let latency_ms = start.elapsed().as_millis() as u64;
 
