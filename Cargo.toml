@@ -25,7 +25,7 @@ members = [
     "iterations/v3/caching",
     "iterations/v3/memory",
     "iterations/v3/integration-tests"
-]
+    "iterations/v3/pytorch-wrapper",]
 
 [workspace.package]
 version = "0.1.0"
@@ -82,5 +82,4 @@ objc = "0.2"
 # Vector operations for embeddings
 ndarray = "0.15"
 
-# PyTorch bindings for quantization
-tch = "0.13"
+# Safe PyTorch wrapper (optional PyTorch linking)
