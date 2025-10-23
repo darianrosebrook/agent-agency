@@ -28,7 +28,7 @@ use std::time::Duration;
 pub type TensorMap = HashMap<String, Vec<f32>>;
 
 /// Tensor specification with name, shape, and data type
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct TensorSpec {
     pub name: String,
     pub shape: Vec<usize>,
@@ -50,7 +50,7 @@ pub enum ModelFmt {
 }
 
 /// I/O schema for model inputs and outputs
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct IoSchema {
     pub inputs: Vec<TensorSpec>,
     pub outputs: Vec<TensorSpec>,

@@ -291,6 +291,21 @@ pub struct DiskUsageMetrics {
     pub inode_usage: HashMap<String, InodeUsage>,
 }
 
+impl Default for DiskUsageMetrics {
+    fn default() -> Self {
+        Self {
+            filesystem_usage: HashMap::new(),
+            total_disk_space: 0,
+            total_used_space: 0,
+            total_available_space: 0,
+            overall_usage_percentage: 0.0,
+            usage_trends: DiskUsageTrends::default(),
+            filesystem_health: HashMap::new(),
+            inode_usage: HashMap::new(),
+        }
+    }
+}
+
 /// Per-filesystem usage information
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FilesystemUsage {

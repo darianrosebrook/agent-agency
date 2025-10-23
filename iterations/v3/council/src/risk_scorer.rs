@@ -28,6 +28,7 @@ pub enum ComputationalComplexity {
 }
 
 /// Multi-dimensional risk scorer
+#[derive(Debug)]
 pub struct RiskScorer {
     /// Technical risk weights (should sum to 1.0)
     technical_weights: TechnicalRiskWeights,

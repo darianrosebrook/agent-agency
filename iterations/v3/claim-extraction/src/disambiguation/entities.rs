@@ -4,9 +4,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use anyhow::Result;
-use async_trait::async_trait;
 use crate::disambiguation::types::*;
-use crate::types::Entity;
 use crate::ProcessingContext;
 use crate::disambiguation::patterns::EntityPatterns;
 

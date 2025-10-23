@@ -2,9 +2,11 @@
 //!
 //! Routes tasks to appropriate workers based on capabilities, load, and other factors.
 
-use crate::types::*;
+use crate::types::{TaskRequirements, WorkerAssignmentDetails, TaskSpec, Worker, TaskRoutingResult, WorkerStatus};
+use agent_agency_contracts::{WorkerHealthStatus, WorkerType};
 use crate::{LoadBalancingStrategy, RoutingAlgorithm};
-use agent_agency_council::models::{RiskTier, TaskSpec};
+use agent_agency_contracts::RiskTier;
+use agent_agency_contracts::WorkerAssignment;
 use anyhow::{anyhow, bail, Context, Result};
 use chrono::{DateTime, Utc};
 use dashmap::DashMap;
@@ -464,14 +466,14 @@ impl TaskRouter {
         &self,
         candidates: &[WorkerCandidate],
         _requirements: &TaskRequirements,
-    ) -> Result<Vec<WorkerAssignment>> {
+    ) -> Result<Vec<WorkerAssignmentDetails>> {
         if candidates.is_empty() {
             return Ok(Vec::new());
         }
 
         // Select the best candidate
         let best_candidate = &candidates[0];
-        let assignment = WorkerAssignment {
+        let assignment = WorkerAssignmentDetails {
             worker_id: best_candidate.worker.id,
             worker_name: best_candidate.worker.name.clone(),
             capability_match_score: best_candidate.capability_score,
@@ -492,7 +494,7 @@ impl TaskRouter {
         &self,
         candidates: &[WorkerCandidate],
         _requirements: &TaskRequirements,
-    ) -> Result<Vec<WorkerAssignment>> {
+    ) -> Result<Vec<WorkerAssignmentDetails>> {
         if candidates.is_empty() {
             return Ok(Vec::new());
         }
@@ -503,7 +505,7 @@ impl TaskRouter {
             .min_by(|a, b| a.load_factor.partial_cmp(&b.load_factor).unwrap())
             .unwrap();
 
-        let assignment = WorkerAssignment {
+        let assignment = WorkerAssignmentDetails {
             worker_id: best_candidate.worker.id,
             worker_name: best_candidate.worker.name.clone(),
             capability_match_score: best_candidate.capability_score,
@@ -524,7 +526,7 @@ impl TaskRouter {
         &self,
         candidates: &[WorkerCandidate],
         requirements: &TaskRequirements,
-    ) -> Result<Vec<WorkerAssignment>> {
+    ) -> Result<Vec<WorkerAssignmentDetails>> {
         if candidates.is_empty() {
             return Ok(Vec::new());
         }
@@ -617,7 +619,7 @@ impl TaskRouter {
                 .unwrap_or_default()
         );
 
-        let assignment = WorkerAssignment {
+        let assignment = WorkerAssignmentDetails {
             worker_id: selected.worker.id,
             worker_name: selected.worker.name.clone(),
             capability_match_score: selected.capability_score,
@@ -677,7 +679,7 @@ impl TaskRouter {
         &self,
         candidates: &[WorkerCandidate],
         _requirements: &TaskRequirements,
-    ) -> Result<Vec<WorkerAssignment>> {
+    ) -> Result<Vec<WorkerAssignmentDetails>> {
         if candidates.is_empty() {
             return Ok(Vec::new());
         }
@@ -694,7 +696,7 @@ impl TaskRouter {
             })
             .unwrap();
 
-        let assignment = WorkerAssignment {
+        let assignment = WorkerAssignmentDetails {
             worker_id: best_candidate.worker.id,
             worker_name: best_candidate.worker.name.clone(),
             capability_match_score: best_candidate.capability_score,
@@ -714,7 +716,7 @@ impl TaskRouter {
         &self,
         candidates: &[WorkerCandidate],
         _requirements: &TaskRequirements,
-    ) -> Result<Vec<WorkerAssignment>> {
+    ) -> Result<Vec<WorkerAssignmentDetails>> {
         if candidates.is_empty() {
             return Ok(Vec::new());
         }
@@ -722,7 +724,7 @@ impl TaskRouter {
         // Use combined score for selection
         let best_candidate = &candidates[0]; // Already sorted by combined score
 
-        let assignment = WorkerAssignment {
+        let assignment = WorkerAssignmentDetails {
             worker_id: best_candidate.worker.id,
             worker_name: best_candidate.worker.name.clone(),
             capability_match_score: best_candidate.capability_score,
@@ -813,7 +815,7 @@ impl TaskRouter {
     /// Calculate estimated completion time
     fn calculate_estimated_completion_time(
         &self,
-        assignments: &[WorkerAssignment],
+        assignments: &[WorkerAssignmentDetails],
         _requirements: &TaskRequirements,
     ) -> chrono::DateTime<chrono::Utc> {
         if assignments.is_empty() {
@@ -832,7 +834,7 @@ impl TaskRouter {
     /// Calculate confidence score for the routing decision
     fn calculate_confidence_score(
         &self,
-        assignments: &[WorkerAssignment],
+        assignments: &[WorkerAssignmentDetails],
         requirements: &TaskRequirements,
     ) -> f32 {
         if assignments.is_empty() {
@@ -891,36 +893,16 @@ mod tests {
             id: Uuid::new_v4(),
             title: "Implement Rust API".to_string(),
             description: "Create a REST API in Rust with tokio".to_string(),
+            requirements: TaskRequirements::default(),
+            context: TaskContext::default(),
+            created_at: Utc::now(),
+            deadline: None,
             risk_tier: RiskTier::Tier2,
             scope: TaskScope {
                 files_affected: vec!["src/api.rs".to_string()],
-                max_files: Some(5),
                 max_loc: Some(1000),
                 domains: vec!["backend".to_string()],
             },
-            acceptance_criteria: vec![],
-            context: CouncilTaskContext {
-                workspace_root: "/workspace".to_string(),
-                git_branch: "main".to_string(),
-                recent_changes: vec![],
-                dependencies: std::collections::HashMap::new(),
-                environment: ConfigEnvironment::Development,
-            },
-            worker_output: CouncilWorkerOutput {
-                content: "".to_string(),
-                files_modified: vec![],
-                rationale: "".to_string(),
-                self_assessment: SelfAssessment {
-                    caws_compliance: 0.0,
-                    quality_score: 0.0,
-                    confidence: 0.0,
-                    concerns: vec![],
-                    improvements: vec![],
-                    estimated_effort: None,
-                },
-                metadata: std::collections::HashMap::new(),
-            },
-            caws_spec: None,
         };
 
         let requirements = router.task_spec_to_requirements(&task_spec);
@@ -943,36 +925,16 @@ mod tests {
             id: Uuid::new_v4(),
             title: "Test task".to_string(),
             description: "A simple test task".to_string(),
+            requirements: TaskRequirements::default(),
+            context: TaskContext::default(),
+            created_at: Utc::now(),
+            deadline: None,
             risk_tier: RiskTier::Tier2,
             scope: TaskScope {
                 files_affected: vec!["file1.rs".to_string(), "file2.rs".to_string()],
-                max_files: Some(5),
                 max_loc: Some(1000),
                 domains: vec!["backend".to_string()],
             },
-            acceptance_criteria: vec![],
-            context: CouncilTaskContext {
-                workspace_root: "/workspace".to_string(),
-                git_branch: "main".to_string(),
-                recent_changes: vec![],
-                dependencies: std::collections::HashMap::new(),
-                environment: ConfigEnvironment::Development,
-            },
-            worker_output: CouncilWorkerOutput {
-                content: "".to_string(),
-                files_modified: vec![],
-                rationale: "".to_string(),
-                self_assessment: SelfAssessment {
-                    caws_compliance: 0.0,
-                    quality_score: 0.0,
-                    confidence: 0.0,
-                    concerns: vec![],
-                    improvements: vec![],
-                    estimated_effort: None,
-                },
-                metadata: std::collections::HashMap::new(),
-            },
-            caws_spec: None,
         };
 
         let context_length = router.estimate_context_length(&task_spec);

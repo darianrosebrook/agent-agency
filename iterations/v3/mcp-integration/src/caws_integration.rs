@@ -8,8 +8,8 @@
 
 // Re-export from runtime-validator (primary implementation)
 pub use caws_runtime_validator::integration::{
-    McpIntegration, DefaultMcpIntegration, McpValidationResult, 
-    ToolExecutionContext, ToolExecutionRecord, McpIntegrationError
+    McpIntegration, DefaultMcpIntegration, McpValidationResult,
+    ToolExecutionContext, ToolExecutionRecord, McpIntegrationError, McpCawsIntegration
 };
 
 use crate::types::*;

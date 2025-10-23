@@ -473,7 +473,7 @@ impl ModelPool {
 }
 
 /// Model instance with lifecycle management
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct ModelInstance {
     /// Unique model identifier
     pub id: String,
@@ -492,6 +492,21 @@ pub struct ModelInstance {
     /// Safe Core ML model wrapper (macOS only)
     #[cfg(target_os = "macos")]
     pub coreml_model: Option<crate::core_ml_bridge::CoreMLModel>,
+}
+
+impl std::fmt::Debug for ModelInstance {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ModelInstance")
+            .field("id", &self.id)
+            .field("path", &self.path)
+            .field("format", &self.format)
+            .field("device", &self.device)
+            .field("memory_mb", &self.memory_mb)
+            .field("created_at", &self.created_at)
+            .field("last_used", &self.last_used)
+            .field("coreml_model", &self.coreml_model.as_ref().map(|_| "<CoreMLModel>"))
+            .finish()
+    }
 }
 
 impl ModelInstance {
@@ -795,7 +810,7 @@ impl AsyncInferenceEngine {
         // Race between inference, cancellation, and timeout
         let result = tokio::select! {
             result = inference_future => {
-                let _elapsed_ms = start.elapsed().as_millis() as u64;
+                let elapsed_ms = start.elapsed().as_millis() as u64;
                 // Record telemetry results (will integrate later)
                 result
             }
@@ -850,7 +865,7 @@ impl AsyncInferenceEngine {
             let latency_ms = start.elapsed().as_millis() as u64;
 
             // Estimate tokens processed based on input size
-            let tokens_processed = request.inputs.values()
+            let _tokens_processed = request.inputs.values()
                 .map(|tensor| tensor.data.len() / 4) // Rough estimate: 4 bytes per token
                 .sum::<usize>();
 

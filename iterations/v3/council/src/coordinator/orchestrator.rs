@@ -86,6 +86,7 @@ pub struct MultimodalContext {
 
 
 /// Main coordinator for council consensus building
+#[derive(Debug)]
 pub struct ConsensusCoordinator {
     config: CouncilConfig,
     emitter: std::sync::Arc<dyn ProvenanceEmitter>,
@@ -489,7 +490,7 @@ impl ConsensusCoordinator {
         let consistency_factor = 1.0 - (std_dev / mean_accuracy.max(0.1)).min(1.0);
         let reliability_score = mean_accuracy * 0.7 + consistency_factor * 0.3;
 
-        reliability_score.max(0.0).min(1.0)
+        reliability_score.clamp(0.0, 1.0)
     }
 
     /// Apply time-weighted performance scoring (recent vs old performance)
@@ -518,7 +519,7 @@ impl ConsensusCoordinator {
         }
 
         if total_weight > 0.0 {
-            (weighted_sum / total_weight).max(0.0).min(1.0)
+            (weighted_sum / total_weight).clamp(0.0, 1.0)
         } else {
             0.5
         }
@@ -654,7 +655,7 @@ impl ConsensusCoordinator {
         let calibration_score = well_calibrated as f32 / decision_history.len() as f32;
 
         // Combine quality and calibration
-        (average_quality * 0.7 + calibration_score * 0.3).max(0.0).min(1.0)
+        (average_quality * 0.7 + calibration_score * 0.3).clamp(0.0, 1.0)
     }
 
     /// Calculate performance-based participant ranking
@@ -690,7 +691,7 @@ impl ConsensusCoordinator {
 
         // Combine factors
         let final_weight = (base_weight * sample_confidence) + specialization_bonus + (quality_score * 0.1);
-        final_weight.max(0.1).min(1.0)
+        final_weight.clamp(0.1, 1.0)
     }
 
     // ============================================================================
@@ -1198,7 +1199,7 @@ impl ConsensusCoordinator {
 
         // Calculate average confidence from evidence
         let avg_confidence = if evidence_count > 0 {
-            (confidence_sum / evidence_count as f32).min(1.0).max(0.0)
+            (confidence_sum / evidence_count as f32).clamp(0.0, 1.0)
         } else {
             0.5
         };
@@ -1387,7 +1388,7 @@ impl ConsensusCoordinator {
                     let time_weighted_score = self.apply_time_weighting(&performance_data);
 
                     // Combine reliability and time-weighted scores
-                    let expertise_weight = (reliability_score * 0.7 + time_weighted_score * 0.3).max(0.1).min(1.0);
+                    let expertise_weight = (reliability_score * 0.7 + time_weighted_score * 0.3).clamp(0.1, 1.0);
 
                     // Implement performance trend analysis
                     self.analyze_performance_trends(&performance_data, participant_id);

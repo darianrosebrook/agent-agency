@@ -436,8 +436,8 @@ mod tests {
         let base_content = b"line1\nline2\nline3\n";
         let after_content = b"line1\nline2_modified\nline3\nline4\n";
         
-        let base_digest = Digest::from_bytes(&[1, 2, 3, 4]);
-        let after_digest = Digest::from_bytes(&[5, 6, 7, 8]);
+        let base_digest = Digest::from_bytes([10; 32]);
+        let after_digest = Digest::from_bytes([11; 32]);
 
         let diff = generator
             .generate_diff(
@@ -463,8 +463,8 @@ mod tests {
         let base_content = b"line1\nline2\nline3\n";
         let after_content = b"line1\nline2_modified\nline3\nline4\n";
         
-        let base_digest = Digest::from_bytes(&[1, 2, 3, 4]);
-        let after_digest = Digest::from_bytes(&[5, 6, 7, 8]);
+        let base_digest = Digest::from_bytes([10; 32]);
+        let after_digest = Digest::from_bytes([11; 32]);
 
         let diff = generator
             .generate_diff(
@@ -489,8 +489,8 @@ mod tests {
     #[test]
     fn test_diff_store() {
         let mut store = DiffStore::new();
-        let base_digest = Digest::from_bytes(&[1, 2, 3, 4]);
-        let after_digest = Digest::from_bytes(&[5, 6, 7, 8]);
+        let base_digest = Digest::from_bytes([10; 32]);
+        let after_digest = Digest::from_bytes([11; 32]);
 
         let diff = LineagedDiff {
             base_commit: "commit123".to_string(),

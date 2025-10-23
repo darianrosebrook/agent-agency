@@ -11,7 +11,7 @@ use serde_json;
 use std::collections::HashMap;
 use std::path::Path;
 use std::cmp::Ordering;
-use tracing::{debug, info, warn, error};
+use tracing::{debug, info, warn};
 use uuid::Uuid;
 
 /// Code metrics for analysis

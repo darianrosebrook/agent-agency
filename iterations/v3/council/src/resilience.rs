@@ -246,6 +246,12 @@ impl std::fmt::Debug for HealthChecker {
     }
 }
 
+impl Default for HealthChecker {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl HealthChecker {
     pub fn new() -> Self {
         Self {
@@ -325,6 +331,12 @@ pub struct ResilienceManager {
     circuit_breakers: Arc<RwLock<HashMap<String, Arc<CircuitBreaker>>>>,
     retry_executor: RetryExecutor,
     health_checker: HealthChecker,
+}
+
+impl Default for ResilienceManager {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl ResilienceManager {

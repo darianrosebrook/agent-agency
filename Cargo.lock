@@ -185,6 +185,7 @@ dependencies = [
 name = "agent-agency-contracts"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
  "chrono",
  "jsonschema",
  "once_cell",
@@ -539,6 +540,7 @@ dependencies = [
  "parking_lot 0.12.5",
  "proc-macro2",
  "quote",
+ "rand 0.8.5",
  "reqwest 0.11.27",
  "serde",
  "serde_json",

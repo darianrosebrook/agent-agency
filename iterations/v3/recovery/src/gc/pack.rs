@@ -601,7 +601,7 @@ mod tests {
         let mut pack_index = PackIndex::new(index_path);
         
         let entry = PackIndexEntry {
-            digest: Digest::from_bytes(&[1, 2, 3, 4]),
+            digest: Digest::from_bytes([12; 32]),
             offset: 0,
             size: 100,
             object_type: ObjectType::Blob,

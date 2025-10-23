@@ -474,8 +474,14 @@ mod tests {
     fn test_gc_cycle() {
         let mut collector = GarbageCollector::new();
         let protected_refs = vec![
-            ObjectRef::Blob(Digest::from_bytes(&[1, 2, 3, 4])),
-            ObjectRef::Commit(Digest::from_bytes(&[5, 6, 7, 8])),
+            ObjectRef {
+                digest: Digest::from_bytes([13; 32]),
+                size: 100,
+            },
+            ObjectRef {
+                digest: Digest::from_bytes([14; 32]),
+                size: 200,
+            },
         ];
 
         let result = collector.run_gc_cycle(&protected_refs).unwrap();
@@ -492,7 +498,10 @@ mod tests {
         assert!(!scheduler.should_run_gc());
         
         // Force GC
-        let protected_refs = vec![ObjectRef::Blob(Digest::from_bytes(&[1, 2, 3, 4]))];
+        let protected_refs = vec![ObjectRef {
+            digest: Digest::from_bytes([15; 32]),
+            size: 150,
+        }];
         let result = scheduler.force_gc(&protected_refs).unwrap();
         assert!(result.reachable_objects >= 0);
     }
@@ -500,7 +509,7 @@ mod tests {
     #[test]
     fn test_grace_period() {
         let mut collector = GarbageCollector::new();
-        let digest = Digest::from_bytes(&[1, 2, 3, 4]);
+        let digest = Digest::from_bytes([16; 32]);
         
         // Add object to grace period
         collector.grace_period.grace_objects.insert(digest, 0);

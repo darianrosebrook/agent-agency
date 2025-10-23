@@ -102,6 +102,19 @@ pub struct AdvancedPositionExtractor {
     pub(crate) config: ExtractionConfig,
 }
 
+impl std::fmt::Debug for AdvancedPositionExtractor {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AdvancedPositionExtractor")
+            .field("nlp_model", &self.nlp_model)
+            .field("language_detector", &"<LanguageDetector>")
+            .field("pattern_recognizers", &self.pattern_recognizers)
+            .field("decision_embeddings", &self.decision_embeddings)
+            .field("config", &self.config)
+            .finish()
+    }
+}
+
+
 impl AdvancedPositionExtractor {
     /// Create a new position extractor
     pub async fn new() -> Result<Self, PositionExtractionError> {

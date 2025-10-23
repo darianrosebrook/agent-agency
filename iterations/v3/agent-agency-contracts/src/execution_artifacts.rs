@@ -568,3 +568,5 @@ pub fn validate_execution_artifacts_value(value: &serde_json::Value) -> Result<(
         ContractError::validation(ContractKind::ExecutionArtifacts, issues)
     })
 }
+
+// TODO: Add proper Default implementations after fixing struct field mismatches

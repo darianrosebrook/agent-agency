@@ -162,7 +162,7 @@ pub struct WorkerPerformanceMetrics {
 
 /// Learning signal storage and retrieval
 #[async_trait::async_trait]
-pub trait LearningSignalStorage: Send + Sync {
+pub trait LearningSignalStorage: Send + Sync + std::fmt::Debug {
     /// Store a learning signal
     async fn store_signal(&self, signal: LearningSignal) -> Result<()>;
 
@@ -339,6 +339,7 @@ pub enum RecommendationPriority {
 }
 
 /// Learning signal analyzer for adaptive routing
+#[derive(Debug)]
 pub struct LearningSignalAnalyzer {
     storage: Box<dyn LearningSignalStorage>,
     db_client: Option<DatabaseClient>,
@@ -370,6 +371,12 @@ pub struct AggregatedJudgeData {
     pub performance_distribution: String,
     pub quality_metrics: Vec<String>,
     pub total_evaluations: u32,
+}
+
+impl Default for LearningSignalAnalyzer {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl LearningSignalAnalyzer {

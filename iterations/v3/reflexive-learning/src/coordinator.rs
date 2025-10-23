@@ -4,8 +4,10 @@
 //! (671 lines) with Rust adaptations and council integration.
 
 use crate::predictive::PredictiveLearningSystem;
+use crate::progress_tracker::ProgressSnapshot;
 use crate::types::*;
 use anyhow::Result;
+use sqlx::types::chrono::Utc;
 use std::collections::HashSet;
 use tracing::{debug, info, instrument, warn};
 use uuid::Uuid;
@@ -1750,14 +1752,14 @@ impl MultiTurnLearningCoordinator {
         session: &LearningSession,
         analysis: &PerformanceAnalysisResult,
     ) -> Result<(), LearningSystemError> {
-    /// TODO: Implement proper transaction-like operation for learning updates
-    /// - [ ] Use database transactions for atomic learning updates
-    /// - [ ] Implement rollback mechanisms for failed updates
-    /// - [ ] Add concurrent update conflict resolution
-    /// - [ ] Support distributed transactions for multi-node deployments
-    /// - [ ] Implement update journaling and audit trails
-    /// - [ ] Add transaction timeout and deadlock detection
-    /// - [ ] Support partial transaction commits and compensations
+        // TODO: Implement proper transaction-like operation for learning updates
+        // - [ ] Use database transactions for atomic learning updates
+        // - [ ] Implement rollback mechanisms for failed updates
+        // - [ ] Add concurrent update conflict resolution
+        // - [ ] Support distributed transactions for multi-node deployments
+        // - [ ] Implement update journaling and audit trails
+        // - [ ] Add transaction timeout and deadlock detection
+        // - [ ] Support partial transaction commits and compensations
         let performance_update = PerformanceUpdate {
             average_completion_time: analysis.completion_time_trend.average_duration,
             average_quality_score: analysis.quality_trend.average,
@@ -2310,6 +2312,7 @@ pub struct WorkerPerformanceData {
     pub error_rate: f64,
 }
 
+impl MultiTurnLearningCoordinator {
     /// Analyze turn data using comprehensive heuristics
     pub async fn analyze_turn_heuristics(
         &self,

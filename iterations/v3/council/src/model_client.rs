@@ -14,6 +14,12 @@ use crate::judge::JudgeVerdict;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ModelRef(u64);
 
+impl Default for ModelRef {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ModelRef {
     /// Create a new unique model reference
     pub fn new() -> Self {
@@ -46,6 +52,7 @@ pub trait CoreMlInvoker {
 
 /// Default placeholder implementation for CoreML operations
 /// This will be replaced with actual CoreML integration
+#[derive(Debug)]
 pub struct DefaultCoreMlInvoker;
 
 impl CoreMlInvoker for DefaultCoreMlInvoker {
@@ -57,6 +64,7 @@ impl CoreMlInvoker for DefaultCoreMlInvoker {
 }
 
 /// Channel message for inference operations
+#[derive(Debug)]
 pub struct InferenceMessage {
     pub request: InferenceRequest,
     pub response_tx: oneshot::Sender<CouncilResult<String>>,

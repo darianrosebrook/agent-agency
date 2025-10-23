@@ -140,7 +140,7 @@ pub async fn execute_inference(
 }
 
 /// Validate input tensor against model schema
-fn validate_input(model: &LoadedCoreMLModel, input: &[f32]) -> Result<()> {
+fn validate_input(model: &LoadedCoreMLModel, _input: &[f32]) -> Result<()> {
     if model.schema.inputs.is_empty() {
         return Err(ANEError::InvalidShape("Model has no input specifications".to_string()));
     }
@@ -148,10 +148,10 @@ fn validate_input(model: &LoadedCoreMLModel, input: &[f32]) -> Result<()> {
     let expected_input = &model.schema.inputs[0];
     let expected_elements = expected_input.shape.iter().product::<usize>();
     
-    if input.len() != expected_elements {
+    if _input.len() != expected_elements {
         return Err(ANEError::InvalidShape(
-            format!("Input size mismatch: expected {} elements, got {}", 
-                   expected_elements, input.len())
+            format!("Input size mismatch: expected {} elements, got {}",
+                   expected_elements, _input.len())
         ));
     }
     
@@ -160,9 +160,9 @@ fn validate_input(model: &LoadedCoreMLModel, input: &[f32]) -> Result<()> {
 
 /// Prepare input tensor for inference
 fn prepare_input(
-    model: &LoadedCoreMLModel,
-    input: &[f32],
-    options: &InferenceOptions,
+    _model: &LoadedCoreMLModel,
+    _input: &[f32],
+    _options: &InferenceOptions,
 ) -> Result<Vec<f32>> {
     // TODO: Implement actual input preparation
     // This would include:
@@ -172,7 +172,7 @@ fn prepare_input(
     // - Batch dimension handling
     
     // For now, just return a copy
-    Ok(input.to_vec())
+    Ok(_input.to_vec())
 }
 
 /// Execute inference with timeout
@@ -206,7 +206,7 @@ async fn execute_with_timeout(
 
 /// Process output tensor
 fn process_output(
-    model: &LoadedCoreMLModel,
+    _model: &LoadedCoreMLModel,
     output: &[f32],
 ) -> Result<Vec<f32>> {
     // TODO: Implement actual output processing

@@ -10,6 +10,7 @@ use std::time::Instant;
 use tracing::{debug, info};
 
 /// Main claim extraction processor with multi-modal verification integration
+#[derive(Debug)]
 pub struct ClaimExtractionProcessor {
     disambiguation_stage: DisambiguationStage,
     qualification_stage: QualificationStage,

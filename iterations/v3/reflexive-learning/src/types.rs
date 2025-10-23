@@ -28,7 +28,7 @@ pub enum TaskType {
     Integration,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Hash, Eq, PartialEq)]
 pub enum TaskComplexity {
     Simple,
     Moderate,
@@ -358,6 +358,7 @@ pub enum LearningUpdateType {
     ResourceReallocation,
     ContextUpdate,
     PerformanceOptimization,
+    SelfPromptingOptimization,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -551,7 +552,7 @@ pub struct FailurePattern {
     pub mitigation_strategy: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum FailureType {
     QualityFailure,
     PerformanceFailure,
@@ -583,6 +584,15 @@ pub enum LearningSystemError {
 
     #[error("Learning algorithm failed: {0}")]
     LearningAlgorithmFailed(String),
+
+    #[error("Initialization failed: {0}")]
+    InitializationError(String),
+
+    #[error("Persistence failed: {0}")]
+    PersistenceError(String),
+
+    #[error("Validation failed: {0}")]
+    ValidationError(String),
 }
 
 /// Learning signals from self-prompting agent execution

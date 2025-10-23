@@ -451,7 +451,7 @@ mod tests {
         assert!(matches!(result, SessionCheckResult::Allowed));
         
         // Test duplicate session
-        let mut enforcer = PolicyEnforcer::new(policy);
+        let mut enforcer = PolicyEnforcer::new(policy.clone());
         enforcer.add_session(SessionInfo {
             session_id: "session1".to_string(),
             start_time: 0,

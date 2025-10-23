@@ -484,7 +484,7 @@ mod tests {
         let mut store = ChunkStore::new();
         
         let chunk = Chunk {
-            digest: Digest::from_bytes(&[1, 2, 3, 4]),
+            digest: Digest::from_bytes([7; 32]),
             offset: 0,
             length: 10,
             data: b"Hello, world!".to_vec(),

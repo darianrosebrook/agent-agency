@@ -21,7 +21,6 @@ pub struct FilesystemSpace {
 
 /// Get filesystem space information for a given path using statvfs
 pub fn get_filesystem_space<P: AsRef<Path>>(path: P) -> Result<FilesystemSpace> {
-    use std::os::unix::fs::MetadataExt;
     use std::fs;
 
     // For now, return dummy values

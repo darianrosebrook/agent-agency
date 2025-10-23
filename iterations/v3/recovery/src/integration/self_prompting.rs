@@ -401,13 +401,13 @@ mod tests {
         let session_meta = SessionMeta {
             agent_id: Some("agent1".to_string()),
             iteration: 1,
-            labels: vec!["test".to_string()],
-            protected: false,
+            task_id: "task1".to_string(),
+            user_id: Some("user1".to_string()),
         };
         
         let session_ref = recovery.start_session(session_meta).unwrap();
-        assert_eq!(session_ref.agent_id, Some("agent1".to_string()));
-        assert_eq!(session_ref.iteration, 1);
+        assert_eq!(session_ref.meta.agent_id, Some("agent1".to_string()));
+        assert_eq!(session_ref.meta.iteration, 1);
         
         recovery.end_session().unwrap();
         assert!(!recovery.get_current_session().is_some());
@@ -421,8 +421,8 @@ mod tests {
         let session_meta = SessionMeta {
             agent_id: Some("agent1".to_string()),
             iteration: 1,
-            labels: vec!["test".to_string()],
-            protected: false,
+            task_id: "task1".to_string(),
+            user_id: Some("user1".to_string()),
         };
         
         recovery.start_session(session_meta).unwrap();
@@ -445,13 +445,13 @@ mod tests {
         let session_meta = SessionMeta {
             agent_id: Some("agent1".to_string()),
             iteration: 1,
-            labels: vec!["test".to_string()],
-            protected: false,
+            task_id: "task1".to_string(),
+            user_id: Some("user1".to_string()),
         };
         
         recovery.start_session(session_meta).unwrap();
         
         let result = recovery.create_checkpoint(Some("test-checkpoint".to_string())).unwrap();
-        assert_eq!(result.session_id, recovery.get_current_session().unwrap().session_id);
+        assert_eq!(result.session_id, recovery.get_current_session().unwrap().id);
     }
 }

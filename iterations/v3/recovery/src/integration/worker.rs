@@ -468,10 +468,14 @@ mod tests {
         let mut recovery = WorkerRecovery::new(config);
         
         let session = SessionRef {
-            session_id: "test-session".to_string(),
-            start_time: 0,
-            agent_id: Some("agent1".to_string()),
-            iteration: 1,
+            id: "test-session".to_string(),
+            meta: SessionMeta {
+                task_id: "task1".to_string(),
+                iteration: 1,
+                agent_id: Some("agent1".to_string()),
+                user_id: Some("user1".to_string()),
+            },
+            created_at: chrono::Utc::now(),
         };
         
         recovery.set_session(session);
@@ -486,20 +490,23 @@ mod tests {
         let config = WorkerRecoveryConfig::default();
         let recovery = WorkerRecovery::new(config);
         
+        let digest = Digest::from_bytes([9; 32]);
         let plan = RestorePlan {
+            target: "commit1".to_string(),
             actions: vec![
-                RestoreAction {
+                RestoreAction::WriteFile {
                     path: PathBuf::from("test.txt"),
-                    content: b"Hello, world!".to_vec(),
-                    expected_digest: Digest::from_bytes(&[1, 2, 3, 4]),
                     mode: crate::types::FileMode::Regular,
+                    expected: digest,
+                    source: crate::types::ObjectRef {
+                        digest: digest,
+                        size: 12,
+                    },
                     size: 12,
                 }
             ],
-            total_size: 12,
-            created_at: 0,
-            commit_id: "commit1".to_string(),
-            session_id: Some("session1".to_string()),
+            total_files: 1,
+            total_bytes: 12,
         };
         
         let preview = recovery.preview_restore_plan(&plan).unwrap();

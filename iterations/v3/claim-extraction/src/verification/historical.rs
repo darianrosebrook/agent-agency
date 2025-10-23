@@ -55,9 +55,9 @@ impl HistoricalLookup {
                 for row in rows {
                     // Parse database row into HistoricalClaim
                     let claim = HistoricalClaim {
-                        id: row.get::<&str, _>("id").unwrap_or("").to_string(),
-                        claim_text: row.get::<&str, _>("claim_text").unwrap_or("Unknown claim").to_string(),
-                        verification_status: row.get::<&str, _>("verification_status")
+                        id: row.try_get::<&str, _>("id").unwrap_or("").to_string(),
+                        claim_text: row.try_get::<&str, _>("claim_text").unwrap_or("Unknown claim").to_string(),
+                        verification_status: row.try_get::<&str, _>("verification_status")
                             .map(|s| match s {
                                 "Verified" => VerificationStatus::Verified,
                                 "Unverified" => VerificationStatus::Unverified,
@@ -65,19 +65,19 @@ impl HistoricalLookup {
                             })
                             .unwrap_or(VerificationStatus::Unverified),
                         evidence: vec![],
-                        confidence_score: row.get("confidence_score").unwrap_or(0.5),
+                        confidence_score: row.try_get::<_, f64>("confidence_score").unwrap_or(0.5),
                         timestamp: chrono::Utc::now(),
                         source_count: row.get("source_count"),
-                        last_verified: row.get::<Option<chrono::DateTime<chrono::Utc>>, _>("last_verified_at").unwrap_or(None),
+                        last_verified: row.try_get::<&str, _>("last_verified_at").ok().and_then(|ts| chrono::DateTime::parse_from_rfc3339(ts).ok()).map(|dt| dt.with_timezone(&chrono::Utc)),
                         related_entities: row.get("related_entities"),
                         claim_type: row.get("claim_type"),
-                        created_at: row.get::<Option<chrono::DateTime<chrono::Utc>>, _>("created_at").unwrap_or(None),
+                        created_at: row.try_get::<&str, _>("created_at").ok().and_then(|ts| chrono::DateTime::parse_from_rfc3339(ts).ok()).map(|dt| dt.with_timezone(&chrono::Utc)),
                         updated_at: None, // Not returned by function
                         metadata: None, // Not returned by function
                         source_references: row.get("source_references"),
                         cross_references: row.get("cross_references"),
                         validation_metadata: None,
-                        validation_confidence: row.get("confidence_score").unwrap_or(0.5),
+                        validation_confidence: row.try_get::<_, f64>("confidence_score").unwrap_or(0.5),
                         validation_timestamp: chrono::Utc::now(),
                         validation_outcome: ValidationOutcome::Validated,
                     };

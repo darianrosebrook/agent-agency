@@ -1,7 +1,6 @@
 //! Entity pattern recognition using regex
 
 use regex::Regex;
-use crate::disambiguation::types::*;
 
 /// Pattern-based entity recognition using regex
 #[derive(Clone)]

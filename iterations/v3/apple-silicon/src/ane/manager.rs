@@ -10,15 +10,15 @@ use parking_lot::RwLock as SyncRwLock;
 
 // Import our new modules
 use crate::ane::errors::{ANEError, Result};
-use crate::ane::compat::{coreml::coreml, iokit};
+use crate::ane::compat::iokit;
 use crate::ane::resource_pool::{Pool, PoolBuilder, PoolStats};
-use crate::ane::models::coreml_model::{LoadedCoreMLModel, CompilationOptions, estimate_memory_usage as estimate_coreml_memory_usage, compile_if_needed};
+use crate::ane::models::coreml_model::{LoadedCoreMLModel, CompilationOptions, estimate_memory_usage as estimate_coreml_memory_usage};
 use crate::ane::models::mistral_model::{estimate_memory_usage as estimate_mistral_memory_usage};
-use crate::ane::models::mistral_model::{MistralModel, MistralCompilationOptions, SafeModelHandle, SafeMistralTokenizer, KVCache, ModelSchema};
+use crate::ane::models::mistral_model::{MistralModel, MistralCompilationOptions, SafeModelHandle, SafeMistralTokenizer, KVCache};
 use crate::ane::circuit_breaker::{CircuitBreaker, CircuitBreakerConfig};
 use crate::telemetry::TelemetryCollector;
 use crate::ane::infer::execute::{execute_inference, InferenceOptions as ExecuteOptions, InferenceResult};
-use crate::ane::infer::mistral::{deliberate_constitution, generate_debate_argument, generate_text, MistralInferenceOptions, ConstitutionalVerdict, DebateArgument};
+use crate::ane::infer::mistral::{deliberate_constitution, generate_debate_argument, MistralInferenceOptions, ConstitutionalVerdict, DebateArgument};
 use crate::ane::metrics::ewma::{Ewma, PerformanceTracker, PerformanceSummary};
 
 /// Apple Neural Engine manager for ANE-accelerated inference
@@ -542,7 +542,7 @@ impl ANEManager {
         // Load and compile Mistral model
         let model_path = Path::new(model_path);
         // TODO: Implement Mistral-specific compilation
-        let compiled_path = model_path.to_path_buf(); // Placeholder
+        let _compiled_path = model_path.to_path_buf(); // Placeholder
 
         // Load model through CoreML bridge (placeholder)
         let model_ref = crate::ane::compat::coreml::coreml::ModelRef::new(); // TODO: Implement actual CoreML loading

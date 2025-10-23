@@ -34,10 +34,10 @@ impl YOLOInferenceExecutor {
         let start_time = Instant::now();
 
         // Preprocess image for YOLO input
-        let input_tensor = self.preprocess_image_for_yolo(image)?;
+        let _input_tensor = self.preprocess_image_for_yolo(image)?;
 
         // Create inference options
-        let inference_options = InferenceOptions {
+        let _inference_options = InferenceOptions {
             timeout_ms: options.timeout_ms,
             batch_size: Some(1),
             precision: Some("fp16".to_string()),

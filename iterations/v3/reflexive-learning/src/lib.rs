@@ -50,7 +50,13 @@ impl ReflexiveLearningSystem {
         let coordinator = MultiTurnLearningCoordinator::new(config);
         let progress_tracker = progress_tracker::ProgressTracker::new();
         let credit_assigner = credit_assigner::CreditAssigner::new();
-        let adaptive_allocator = adaptive_allocator::AdaptiveResourceAllocator::new();
+        let system_limits = adaptive_allocator::SystemResourceLimits {
+            max_cpu_cores: 8,
+            max_memory_gb: 16.0,
+            max_gpu_memory_gb: Some(8.0),
+            max_concurrent_tasks: 4,
+        };
+        let adaptive_allocator = adaptive_allocator::AdaptiveResourceAllocator::new(system_limits);
         let persistence_config = LearningPersistenceConfig::default();
         let persistence_manager = LearningPersistenceManager::new(persistence_config).await
             .map_err(|e| LearningSystemError::InitializationError(e.to_string()))?;

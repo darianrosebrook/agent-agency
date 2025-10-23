@@ -15,6 +15,7 @@ pub use javascript::JavaScriptAnalyzer;
 use crate::caws::language_types::{LanguageAnalysisResult, ProgrammingLanguage};
 use crate::types::FileModification as CouncilFileModification;
 use crate::caws::diff_analysis::ChangeComplexity;
+use anyhow::Result;
 
 /// Trait for language-specific analysis
 pub trait LanguageAnalyzer: Send + Sync + std::fmt::Debug {
@@ -26,10 +27,10 @@ pub trait LanguageAnalyzer: Send + Sync + std::fmt::Debug {
         &self,
         modification: &CouncilFileModification,
     ) -> Result<LanguageAnalysisResult>;
-    
+
     /// Get the programming language this analyzer handles
     fn language(&self) -> ProgrammingLanguage;
-    
+
     /// Check if the analyzer supports the given file extension
     fn supports_extension(&self, ext: &str) -> bool;
 

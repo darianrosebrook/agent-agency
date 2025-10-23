@@ -99,6 +99,7 @@ pub enum SessionStatus {
 }
 
 /// The main Council that coordinates reviews
+#[derive(Debug)]
 pub struct Council {
     config: CouncilConfig,
     available_judges: Vec<Arc<dyn Judge>>,
@@ -156,7 +157,7 @@ impl Council {
                         success_threshold: 3,
                         recovery_timeout: Duration::from_secs(60),
                         monitoring_window: Duration::from_secs(300), // 5 minutes
-                        request_timeout: Duration::from_secs(config.judge_timeout_seconds as u64),
+                        request_timeout: Duration::from_secs(config.judge_timeout_seconds),
                     },
                 ));
                 circuit_breakers.insert(service.to_string(), breaker);

@@ -6,7 +6,7 @@
 use crate::ane::errors::{ANEError, Result};
 use parking_lot::Mutex;
 use std::sync::Arc;
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 /// Resource admission permit
 /// 
@@ -106,7 +106,7 @@ impl Pool {
     pub async fn admit(&self, mem_cost_mb: usize) -> Result<Admission> {
         // Check memory availability first (fast path)
         {
-            let mut used = self.mem_used_mb.lock();
+            let used = self.mem_used_mb.lock();
             if *used + mem_cost_mb > self.mem_total_mb {
                 let mut stats = self.stats.lock();
                 stats.admission_failures += 1;

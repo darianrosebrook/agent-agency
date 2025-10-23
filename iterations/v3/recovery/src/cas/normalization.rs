@@ -489,7 +489,7 @@ mod tests {
 
     #[test]
     fn test_should_normalize() {
-        let mut normalizer = TextNormalizer::new();
+        let normalizer = TextNormalizer::new();
         
         // Text file should be normalized
         assert!(normalizer.should_normalize("test.txt", b"Hello, world!"));

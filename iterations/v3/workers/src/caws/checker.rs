@@ -51,7 +51,7 @@ pub struct CawsChecker {
 
 impl CawsChecker {
     /// Create a new CAWS checker
-    pub fn new(db_client: DatabaseClient) -> Self {
+    pub fn new(db_client: Option<DatabaseClient>) -> Self {
         // DEPRECATED: Legacy analyzers (kept for backward compatibility during migration)
         let mut analyzers: HashMap<ProgrammingLanguage, Box<dyn LanguageAnalyzer>> = HashMap::new();
         analyzers.insert(ProgrammingLanguage::Rust, Box::new(RustAnalyzer::new()));
@@ -63,7 +63,7 @@ impl CawsChecker {
         let runtime_analyzers = Arc::new(LanguageAnalyzerRegistry::new());
 
         Self {
-            db_client: Some(Arc::new(db_client)),
+            db_client: db_client.map(Arc::new),
             
             // DEPRECATED: Legacy components
             analyzers,

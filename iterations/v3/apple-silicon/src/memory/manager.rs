@@ -554,6 +554,10 @@ impl MultiTenantMemoryManager {
             tenant_usage_entry.model_count += 1;
         }
 
+        // Update global memory status
+        drop(tenant_usage); // Release lock before updating global status
+        self.update_global_memory_status().await?;
+
         // Generate allocation ID
         let allocation_id = format!("alloc_{}_{}_{}",
                                    request.tenant_id.simple(),
@@ -585,6 +589,10 @@ impl MultiTenantMemoryManager {
         tenant_usage_entry.allocated_memory_mb = tenant_usage_entry.allocated_memory_mb.saturating_sub(released_memory_mb);
         tenant_usage_entry.used_memory_mb = tenant_usage_entry.used_memory_mb.saturating_sub(released_memory_mb);
 
+        // Update global memory status
+        drop(tenant_usage); // Release lock before updating global status
+        self.update_global_memory_status().await?;
+
         debug!("Released {} MB for tenant {}", released_memory_mb, tenant_id);
         Ok(())
     }
@@ -601,6 +609,40 @@ impl MultiTenantMemoryManager {
     pub async fn get_all_tenant_usage(&self) -> Result<HashMap<TenantId, TenantMemoryUsage>> {
         let tenant_usage = self.tenant_usage.read().await;
         Ok(tenant_usage.clone())
+    }
+
+    /// Update global memory status based on current allocations
+    async fn update_global_memory_status(&self) -> Result<()> {
+        let tenant_usage = self.tenant_usage.read().await;
+        let mut global_status = self.global_status.write().await;
+
+        // Calculate total allocated memory across all tenants
+        let total_allocated: u64 = tenant_usage.values()
+            .map(|usage| usage.allocated_memory_mb)
+            .sum();
+
+        // Update used memory (allocated + some overhead for system)
+        global_status.used_memory_mb = total_allocated;
+        global_status.available_memory_mb = global_status.total_memory_mb.saturating_sub(total_allocated);
+
+        // Update memory pressure based on usage percentage
+        let usage_percent = if global_status.total_memory_mb > 0 {
+            (total_allocated as f32 / global_status.total_memory_mb as f32) * 100.0
+        } else {
+            100.0
+        };
+
+        global_status.memory_pressure = match () {
+            _ if usage_percent < 70.0 => crate::MemoryPressure::Normal,
+            _ if usage_percent <= 75.0 => crate::MemoryPressure::Warning,
+            _ if usage_percent < 85.0 => crate::MemoryPressure::Medium,
+            _ if usage_percent < 90.0 => crate::MemoryPressure::High,
+            _ => crate::MemoryPressure::Critical,
+        };
+
+        global_status.timestamp = chrono::Utc::now();
+
+        Ok(())
     }
 
     /// Perform memory balancing across tenants

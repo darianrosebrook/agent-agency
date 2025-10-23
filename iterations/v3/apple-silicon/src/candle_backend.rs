@@ -10,11 +10,15 @@ use crate::inference::{
 };
 use anyhow::{anyhow, bail, Context, Result};
 use async_trait::async_trait;
+#[cfg(feature = "candle")]
 use candle_core::{Device, Tensor};
 use tracing::{debug, info, warn};
 use safetensors::SafeTensors;
+#[cfg(feature = "onnx-runtime")]
 use ort::session::Session;
+#[cfg(feature = "onnx-runtime")]
 use ort::tensor::TensorElementType;
+#[cfg(feature = "onnx-runtime")]
 use ort::execution_providers::ExecutionProvider;
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -33,10 +37,12 @@ pub trait CandleInferenceModel: Send + Sync + std::fmt::Debug {
 }
 
 /// ONNX prepared model with session
+#[cfg(feature = "onnx-runtime")]
 #[derive(Debug)]
 pub struct OnnxPreparedModel {
     session: Arc<Session>,
     io_schema: IoSchema,
+    #[cfg(feature = "candle")]
     device: Device,
 }
 
@@ -362,6 +368,7 @@ fn map_ort_value_type(t: &ort::value::ValueType) -> DType {
     }
 }
 
+#[cfg(feature = "onnx-runtime")]
 impl CandleInferenceModel for OnnxPreparedModel {
     fn forward(&self, inputs: &HashMap<String, Tensor>) -> Result<HashMap<String, Tensor>> {
         // Validate inputs against schema

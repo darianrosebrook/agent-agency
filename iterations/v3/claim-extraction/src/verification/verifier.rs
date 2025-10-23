@@ -3,11 +3,10 @@
 //! This module contains the `MultiModalVerificationEngine` and its primary methods
 //! for orchestrating claim verification across multiple modalities.
 
-use std::collections::HashMap;
 use std::sync::Arc;
 use lru::LruCache;
 use agent_agency_database::DatabaseClient;
-use tracing::{debug, info, warn};
+use tracing::{info, warn};
 
 use crate::types::*;
 use crate::verification::types::{CoreferenceResolution as VerificationCoreferenceResolution, *};
@@ -432,7 +431,7 @@ impl MultiModalVerificationEngine {
         let terms: Vec<String> = self.extract_search_keywords(&claim.claim_text);
         let hist = self.simulate_historical_lookup(&terms).await?;
         let best = hist.iter()
-            .filter_map(|h| self.calculate_claim_similarity(claim, h).now_or_never().and_then(|x| x))
+            .filter_map(|h| self.calculate_claim_similarity(claim, h).now_or_never().and_then(|r| r.ok()))
             .fold(0.0, f64::max);
 
         let score = (0.5 * spec_score + 0.3 * doc_score + 0.2 * best).min(1.0);
@@ -737,13 +736,37 @@ impl MultiModalVerificationEngine {
         let mut evidence = Vec::new();
         let mut overall_confidence = 0.0;
         let mut successful_verifications = 0;
+        let mut verified_claims = Vec::new();
 
         for claim in claims {
             match self.verify_single_claim(claim).await {
                 Ok(verification_result) => {
-                    evidence.extend(verification_result.evidence);
+                    evidence.extend(verification_result.evidence.clone());
                     overall_confidence += verification_result.overall_confidence;
                     successful_verifications += 1;
+                    
+                    // Convert VerificationResult to VerifiedClaim
+                    let verified_claim = VerifiedClaim {
+                        id: claim.id,
+                        claim_text: claim.claim_text.clone(),
+                        verification_status: if verification_result.overall_confidence > 0.7 {
+                            VerificationStatus::Verified
+                        } else {
+                            VerificationStatus::Unverified
+                        },
+                        confidence: verification_result.overall_confidence,
+                        evidence: verification_result.evidence,
+                        timestamp: chrono::Utc::now(),
+                        original_claim: claim.claim_text.clone(),
+                        verification_results: if verification_result.overall_confidence > 0.7 {
+                            VerificationStatus::Verified
+                        } else {
+                            VerificationStatus::Unverified
+                        },
+                        overall_confidence: verification_result.overall_confidence,
+                        verification_timestamp: chrono::Utc::now(),
+                    };
+                    verified_claims.push(verified_claim);
                 }
                 Err(e) => {
                     warn!("Failed to verify claim {}: {}", claim.id, e);
@@ -756,7 +779,7 @@ impl MultiModalVerificationEngine {
         Ok(VerificationResult {
             evidence,
             verification_confidence: final_confidence,
-            verified_claims: results.verified_claims,
+            verified_claims,
             council_verification: CouncilVerificationResult {
                 submitted_claims: claims.iter().map(|c| c.id).collect(),
                 council_verdict: "Verified".to_string(),
@@ -774,6 +797,7 @@ impl MultiModalVerificationEngine {
 }
 
 /// Test consistency and relevance check result
+#[derive(Debug)]
 pub struct TestConsistency {
     pub overall_score: f64,
     pub issues: Vec<String>,

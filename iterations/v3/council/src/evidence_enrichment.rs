@@ -14,7 +14,7 @@ use std::collections::HashMap;
 use tracing::{debug, info};
 
 /// Evidence enrichment coordinator for council evaluations
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct EvidenceEnrichmentCoordinator {
     evidence_cache: HashMap<String, Vec<CouncilEvidence>>,
 }

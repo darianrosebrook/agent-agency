@@ -157,7 +157,7 @@ impl WhisperInferenceExecutor {
 
         // Compute STFT (simplified)
         let n_frames = (audio.len() - self.audio_config.n_fft) / self.audio_config.hop_length + 1;
-        let mut spectrogram = vec![0.0f32; self.audio_config.n_fft / 2 * n_frames];
+        let _spectrogram = vec![0.0f32; self.audio_config.n_fft / 2 * n_frames];
 
         // Apply mel filterbank (simplified triangular filters)
         let mut mel_spectrogram = vec![0.0f32; self.audio_config.n_mels * n_frames];
@@ -214,7 +214,7 @@ impl WhisperInferenceExecutor {
     async fn run_coreml_inference(
         &self,
         input: &WhisperInputTensor,
-        options: &crate::ane::infer::execute::InferenceOptions,
+        _options: &crate::ane::infer::execute::InferenceOptions,
     ) -> Result<WhisperOutputTensor> {
         #[cfg(target_os = "macos")]
         {
@@ -224,7 +224,7 @@ impl WhisperInferenceExecutor {
             let input_shape = [1i32, input.n_mels as i32, input.n_time_steps as i32];
 
             // Run inference on the encoder
-            let output_tensor = coreml::run_inference(
+            let _output_tensor = coreml::run_inference(
                 self.coreml_model_handle,
                 "input", // CoreML input name for mel spectrogram
                 mel_data,
@@ -253,7 +253,7 @@ impl WhisperInferenceExecutor {
     fn decode_whisper_output(
         &self,
         result: WhisperInferenceResult,
-        preprocessed: &PreprocessedAudio,
+        _preprocessed: &PreprocessedAudio,
     ) -> Result<WhisperTranscription> {
         // Decode tokens to text
         let text = self.decode_tokens_to_text(&result.tokens)?;
@@ -277,7 +277,7 @@ impl WhisperInferenceExecutor {
     }
 
     /// Decode token sequence to text
-    fn decode_tokens_to_text(&self, tokens: &[i32]) -> Result<String> {
+    fn decode_tokens_to_text(&self, _tokens: &[i32]) -> Result<String> {
         // This would use the actual Whisper tokenizer
         // For now, return placeholder text
         Ok("This is a placeholder transcription result.".to_string())

@@ -531,7 +531,10 @@ mod tests {
             source_type: SourceType::Code,
             content_hash: "abc123def456".to_string(),
             content_size: 1024,
-            metadata: HashMap::new(),
+            hash_algorithm: HashAlgorithm::Sha256,
+            integrity_status: IntegrityStatus::Verified,
+            tampering_indicators: Vec::new(),
+            verification_metadata: HashMap::new(),
         };
 
         // Store record
@@ -571,7 +574,10 @@ mod tests {
                     source_type: SourceType::Code,
                     content_hash: format!("hash-{}", i),
                     content_size: 1024 + i as u64,
-                    metadata: HashMap::new(),
+                    hash_algorithm: HashAlgorithm::Sha256,
+                    integrity_status: IntegrityStatus::Verified,
+                    tampering_indicators: Vec::new(),
+                    verification_metadata: HashMap::new(),
                 };
 
                 // Store record
@@ -649,7 +655,10 @@ mod tests {
             source_type: SourceType::Code,
             content_hash: "iso-hash-1".to_string(),
             content_size: 2048,
-            metadata: HashMap::new(),
+            hash_algorithm: HashAlgorithm::Sha256,
+            integrity_status: IntegrityStatus::Verified,
+            tampering_indicators: Vec::new(),
+            verification_metadata: HashMap::new(),
         };
 
         let record2 = CreateSourceIntegrityRecord {
@@ -657,7 +666,10 @@ mod tests {
             source_type: SourceType::Code,
             content_hash: "iso-hash-2".to_string(),
             content_size: 4096,
-            metadata: HashMap::new(),
+            hash_algorithm: HashAlgorithm::Sha256,
+            integrity_status: IntegrityStatus::Verified,
+            tampering_indicators: Vec::new(),
+            verification_metadata: HashMap::new(),
         };
 
         // Store both records
@@ -731,7 +743,10 @@ mod tests {
                 source_type: SourceType::Code,
                 content_hash: format!("perf-hash-{}", i),
                 content_size: 1024,
-                metadata: HashMap::new(),
+                hash_algorithm: HashAlgorithm::Sha256,
+                integrity_status: IntegrityStatus::Verified,
+                tampering_indicators: Vec::new(),
+                verification_metadata: HashMap::new(),
             };
 
             let id = storage.store_record(&record).await.unwrap();
@@ -763,7 +778,10 @@ mod tests {
             source_type: SourceType::Content,
             content_hash: "test_hash".to_string(),
             content_size: 100,
-            metadata: HashMap::new(),
+            hash_algorithm: HashAlgorithm::Sha256,
+            integrity_status: IntegrityStatus::Verified,
+            tampering_indicators: Vec::new(),
+            verification_metadata: HashMap::new(),
         };
 
         // Test basic validation
@@ -794,7 +812,10 @@ mod tests {
             source_type: SourceType::Code,
             content_hash: "corrupted-hash".to_string(),
             content_size: 0, // Invalid size
-            metadata: HashMap::new(),
+            hash_algorithm: HashAlgorithm::Sha256,
+            integrity_status: IntegrityStatus::Verified,
+            tampering_indicators: Vec::new(),
+            verification_metadata: HashMap::new(),
         };
 
         // Store corrupted record (should still work, validation happens elsewhere)
@@ -810,7 +831,10 @@ mod tests {
             source_type: SourceType::Binary,
             content_hash: "large-hash".to_string(),
             content_size: 10 * 1024 * 1024 * 1024, // 10GB
-            metadata: HashMap::new(),
+            hash_algorithm: HashAlgorithm::Sha256,
+            integrity_status: IntegrityStatus::Verified,
+            tampering_indicators: Vec::new(),
+            verification_metadata: HashMap::new(),
         };
 
         let large_id = storage.store_record(&large_record).await.unwrap();
@@ -823,7 +847,10 @@ mod tests {
             source_type: SourceType::Code,
             content_hash: "duplicate-hash-1".to_string(),
             content_size: 2048,
-            metadata: HashMap::new(),
+            hash_algorithm: HashAlgorithm::Sha256,
+            integrity_status: IntegrityStatus::Verified,
+            tampering_indicators: Vec::new(),
+            verification_metadata: HashMap::new(),
         };
 
         let dup_id1 = storage.store_record(&duplicate_record).await.unwrap();
@@ -833,7 +860,10 @@ mod tests {
             source_type: SourceType::Code,
             content_hash: "duplicate-hash-2".to_string(),
             content_size: 4096,
-            metadata: HashMap::new(),
+            hash_algorithm: HashAlgorithm::Sha256,
+            integrity_status: IntegrityStatus::Verified,
+            tampering_indicators: Vec::new(),
+            verification_metadata: HashMap::new(),
         };
 
         let dup_id2 = storage.store_record(&duplicate_record2).await.unwrap();
@@ -867,7 +897,10 @@ mod tests {
                 source_type: SourceType::Code,
                 content_hash: format!("perf-hash-{}", i),
                 content_size: 1024 + (i as u64 * 100),
-                metadata: HashMap::new(),
+                hash_algorithm: HashAlgorithm::Sha256,
+                integrity_status: IntegrityStatus::Verified,
+                tampering_indicators: Vec::new(),
+                verification_metadata: HashMap::new(),
             };
 
             let id = storage.store_record(&record).await.unwrap();
@@ -929,7 +962,10 @@ mod tests {
                     source_type: SourceType::Code,
                     content_hash: format!("hash-{}", i),
                     content_size: 1024 + i as u64,
-                    metadata: HashMap::new(),
+                    hash_algorithm: HashAlgorithm::Sha256,
+                    integrity_status: IntegrityStatus::Verified,
+                    tampering_indicators: Vec::new(),
+                    verification_metadata: HashMap::new(),
                 };
 
                 // Store record
@@ -1008,7 +1044,10 @@ mod tests {
             source_type: SourceType::Code,
             content_hash: "iso-hash-1".to_string(),
             content_size: 2048,
-            metadata: HashMap::new(),
+            hash_algorithm: HashAlgorithm::Sha256,
+            integrity_status: IntegrityStatus::Verified,
+            tampering_indicators: Vec::new(),
+            verification_metadata: HashMap::new(),
         };
 
         let record2 = CreateSourceIntegrityRecord {
@@ -1016,7 +1055,10 @@ mod tests {
             source_type: SourceType::Code,
             content_hash: "iso-hash-2".to_string(),
             content_size: 4096,
-            metadata: HashMap::new(),
+            hash_algorithm: HashAlgorithm::Sha256,
+            integrity_status: IntegrityStatus::Verified,
+            tampering_indicators: Vec::new(),
+            verification_metadata: HashMap::new(),
         };
 
         // Store both records
@@ -1095,7 +1137,10 @@ mod tests {
                     source_type: SourceType::Code,
                     content_hash: format!("pool-hash-{}", i),
                     content_size: 512,
-                    metadata: HashMap::new(),
+                    hash_algorithm: HashAlgorithm::Sha256,
+                    integrity_status: IntegrityStatus::Verified,
+                    tampering_indicators: Vec::new(),
+                    verification_metadata: HashMap::new(),
                 };
 
                 // Store and immediately retrieve

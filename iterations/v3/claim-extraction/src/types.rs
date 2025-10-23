@@ -253,6 +253,7 @@ pub struct UnverifiableBreakdown {
     pub opinion_based: u32,
     pub future_prediction: u32,
     pub emotional_content: u32,
+    pub improvement_claim: u32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

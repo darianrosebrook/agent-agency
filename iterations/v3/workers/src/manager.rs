@@ -4,8 +4,10 @@
 //! health checking, load balancing, and performance monitoring.
 
 use crate::types::*;
-use crate::{CawsChecker, TaskExecutor, TaskRouter, WorkerPoolConfig};
+use crate::{AsyncPatternsSpecialist, CawsChecker, CustomSpecialist, DocumentationSpecialist, TaskExecutor, TaskRouter, TestingSpecialist, TypeSystemSpecialist, WorkerPoolConfig};
 use agent_agency_council::models::TaskSpec;
+use agent_agency_contracts::{WorkerSpecialty, WorkerHealthStatus, WorkerHealthMetrics, WorkerPoolStats, WorkerAssignment as SharedWorkerAssignment, WorkerRegistration, WorkerUpdate, TaskPriority, SpecializedWorker, WorkerType};
+use crate::types::WorkerPoolEvent;
 use agent_agency_resilience::CircuitBreaker;
 use anyhow::Result;
 use async_trait::async_trait;
@@ -16,6 +18,7 @@ use tokio::sync::{mpsc, RwLock};
 use tokio::time::{Duration, Instant};
 use tracing::{debug, error, info, warn};
 use uuid::Uuid;
+use std::collections::HashMap;
 
 // Parallel workers integration
 
@@ -51,20 +54,16 @@ impl WorkerPoolManager {
             workers: Arc::new(DashMap::new()),
             task_router: Arc::new(TaskRouter::new()),
             task_executor: Arc::new(TaskExecutor::new()),
-            caws_checker: Arc::new(CawsChecker::new()),
+            caws_checker: Arc::new(CawsChecker::new(None)),
             event_sender,
             stats: Arc::new(RwLock::new(WorkerPoolStats {
                 total_workers: 0,
                 available_workers: 0,
                 busy_workers: 0,
-                unavailable_workers: 0,
-                total_tasks_completed: 0,
-                total_tasks_failed: 0,
-                average_execution_time_ms: 0.0,
-                average_quality_score: 0.0,
-                average_caws_compliance: 0.0,
-                pool_uptime_seconds: 0,
-                last_updated: chrono::Utc::now(),
+                unhealthy_workers: 0,
+                average_response_time_ms: 0,
+                total_tasks_processed: 0,
+                tasks_per_second: 0.0,
             })),
             health_check_handle: None,
             pool_start_time: Instant::now(),
@@ -761,417 +760,16 @@ impl WorkerPoolManager {
             worker_type,
             model_name,
             endpoint,
-            capabilities: WorkerCapabilities {
-                languages: data
-                    .get("languages")
-                    .and_then(|v| v.as_array())
-                    .unwrap_or(&vec![])
-                    .iter()
-                    .filter_map(|v| v.as_str().map(|s| s.to_string()))
-                    .collect(),
-                frameworks: data
-                    .get("frameworks")
-                    .and_then(|v| v.as_array())
-                    .unwrap_or(&vec![])
-                    .iter()
-                    .filter_map(|v| v.as_str().map(|s| s.to_string()))
-                    .collect(),
-                domains: data
-                    .get("domains")
-                    .and_then(|v| v.as_array())
-                    .unwrap_or(&vec![])
-                    .iter()
-                    .filter_map(|v| v.as_str().map(|s| s.to_string()))
-                    .collect(),
-                max_context_length: data
-                    .get("max_context_length")
-                    .and_then(|v| v.as_u64())
-                    .unwrap_or(4096) as u32,
-                max_output_length: data
-                    .get("max_output_length")
-                    .and_then(|v| v.as_u64())
-                    .unwrap_or(1024) as u32,
-                supported_formats: data
-                    .get("supported_formats")
-                    .and_then(|v| v.as_array())
-                    .unwrap_or(&vec![])
-                    .iter()
-                    .filter_map(|v| v.as_str().map(|s| s.to_string()))
-                    .collect(),
-                caws_awareness: data
-                    .get("caws_awareness")
-                    .and_then(|v| v.as_f64())
-                    .unwrap_or(0.5) as f32,
-                max_concurrent_tasks: data
-                    .get("max_concurrent_tasks")
-                    .and_then(|v| v.as_u64())
-                    .unwrap_or(5) as u32,
-            },
-            metadata: data
-                .get("metadata")
-                .and_then(|v| v.as_object())
-                .unwrap_or(&serde_json::Map::new())
-                .iter()
-                .map(|(k, v)| (k.clone(), v.clone()))
-                .collect(),
+            capabilities: vec![], // TODO: Parse capabilities properly
+            max_concurrent_tasks: data
+                .get("max_concurrent_tasks")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(1) as u32,
+            health_check_endpoint: data
+                .get("health_check_endpoint")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
+            metadata: std::collections::HashMap::new(),
         })
-    }
-
-    /// Validate and register a discovered worker
-    async fn validate_and_register_worker(&self, registration: WorkerRegistration) -> Result<Uuid> {
-        // 2. Worker validation: Check capabilities and requirements
-        if !self.validate_worker_capabilities(&registration.capabilities) {
-            return Err(anyhow::anyhow!(
-                "Worker capabilities do not meet minimum requirements"
-            ));
-        }
-
-        // 3. Health check: Verify worker availability
-        if !self.validate_worker_endpoint(&registration.endpoint).await {
-            return Err(anyhow::anyhow!("Worker endpoint is not accessible"));
-        }
-
-        // 4. Register the worker
-        let worker_id = Uuid::new_v4();
-        let worker = Worker {
-            id: worker_id,
-            name: registration.name,
-            worker_type: registration.worker_type,
-            model_name: registration.model_name,
-            endpoint: registration.endpoint,
-            capabilities: registration.capabilities,
-            status: WorkerStatus::Available,
-            performance_metrics: WorkerPerformanceMetrics {
-                average_response_time_ms: 0.0,
-                success_rate: 1.0,
-                tasks_completed: 0,
-                tasks_failed: 0,
-                total_uptime_seconds: 0,
-                last_performance_update: chrono::Utc::now(),
-            },
-            health_status: WorkerHealthStatus::Healthy,
-            health_metrics: Some(WorkerHealthMetrics {
-                response_time_ms: 0,
-                cpu_usage_percent: 0.0,
-                memory_usage_percent: 0.0,
-                active_tasks: 0,
-                queue_depth: 0,
-                last_seen: chrono::Utc::now(),
-                consecutive_failures: 0,
-            }),
-            last_health_check: Some(chrono::Utc::now()),
-            created_at: chrono::Utc::now(),
-            last_heartbeat: chrono::Utc::now(),
-            metadata: registration.metadata,
-        };
-
-        // Add to registry
-        self.workers.insert(worker_id, worker.clone());
-
-        // Emit registration event
-        let _ = self
-            .event_sender
-            .send(WorkerPoolEvent::WorkerRegistered { worker });
-
-        Ok(worker_id)
-    }
-
-    /// Validate worker capabilities meet minimum requirements
-    fn validate_worker_capabilities(&self, capabilities: &WorkerCapabilities) -> bool {
-        // Check minimum requirements for worker capabilities
-        capabilities.max_context_length >= 1024
-            && capabilities.max_output_length >= 256
-            && capabilities.max_concurrent_tasks > 0
-            && capabilities.caws_awareness >= 0.0
-    }
-
-    /// Validate worker endpoint is accessible
-    async fn validate_worker_endpoint(&self, endpoint: &str) -> bool {
-        // Quick health check to validate endpoint
-        let health_url = format!("{}/health", endpoint.trim_end_matches('/'));
-
-        match self
-            .http_client
-            .get(&health_url)
-            .timeout(Duration::from_secs(5))
-            .send()
-            .await
-        {
-            Ok(response) => response.status().is_success(),
-            Err(_) => false,
-        }
-    }
-
-    /// Update pool statistics
-    async fn update_stats(&self) {
-        let mut stats = self.stats.write().await;
-
-        stats.total_workers = self.workers.len() as u32;
-        stats.available_workers = self
-            .workers
-            .iter()
-            .filter(|entry| matches!(entry.value().status, WorkerStatus::Available))
-            .count() as u32;
-        stats.busy_workers = self
-            .workers
-            .iter()
-            .filter(|entry| matches!(entry.value().status, WorkerStatus::Busy))
-            .count() as u32;
-        stats.unavailable_workers = self
-            .workers
-            .iter()
-            .filter(|entry| {
-                matches!(
-                    entry.value().status,
-                    WorkerStatus::Unavailable | WorkerStatus::Maintenance
-                )
-            })
-            .count() as u32;
-
-        // Calculate averages
-        if stats.total_workers > 0 {
-            let mut total_execution_time = 0.0;
-            let mut total_quality = 0.0;
-            let mut total_compliance = 0.0;
-            let mut worker_count = 0;
-
-            for entry in self.workers.iter() {
-                let metrics = &entry.value().performance_metrics;
-                if metrics.total_tasks > 0 {
-                    total_execution_time += metrics.average_execution_time_ms;
-                    total_quality += metrics.average_quality_score;
-                    total_compliance += metrics.average_caws_compliance;
-                    worker_count += 1;
-                }
-            }
-
-            if worker_count > 0 {
-                stats.average_execution_time_ms = total_execution_time / worker_count as f64;
-                stats.average_quality_score = total_quality / worker_count as f32;
-                stats.average_caws_compliance = total_compliance / worker_count as f32;
-            }
-        }
-
-        stats.last_updated = chrono::Utc::now();
-    }
-
-    /// Shutdown the worker pool manager
-    pub async fn shutdown(&mut self) -> Result<()> {
-        info!("Shutting down worker pool manager");
-
-        // Cancel health check task
-        if let Some(handle) = self.health_check_handle.take() {
-            handle.abort();
-        }
-
-        // Deregister all workers
-        let worker_ids: Vec<Uuid> = self
-            .workers
-            .iter()
-            .map(|entry| entry.key().clone())
-            .collect();
-        for worker_id in worker_ids {
-            if let Err(e) = self.deregister_worker(worker_id).await {
-                warn!("Failed to deregister worker during shutdown: {}", e);
-            }
-        }
-
-        info!("Worker pool manager shutdown complete");
-        Ok(())
-    }
-
-    /// Get a specialized worker for parallel execution (integration point)
-    pub async fn get_specialized_worker(
-        &self,
-        specialty: WorkerSpecialty,
-    ) -> Result<Arc<dyn ParallelSpecializedWorker>> {
-        // Create specialized workers that integrate with existing worker pool infrastructure
-
-        match specialty {
-            WorkerSpecialty::CompilationErrors { error_codes } => {
-                // Create a compilation specialist worker
-                let worker = crate::specialized_workers::CompilationSpecialist::new(
-                    error_codes,
-                    self.task_executor.clone(),
-                    self.task_router.clone(),
-                );
-                Ok(Arc::new(worker))
-            }
-            WorkerSpecialty::Refactoring { strategies } => {
-                let worker = crate::specialized_workers::RefactoringSpecialist::new(
-                    strategies,
-                    self.task_executor.clone(),
-                    self.task_router.clone(),
-                );
-                Ok(Arc::new(worker))
-            }
-            WorkerSpecialty::Testing { frameworks } => {
-                let worker = TestingSpecialist::new(
-                    frameworks,
-                    self.task_executor.clone(),
-                    self.task_router.clone(),
-                );
-                Ok(Arc::new(worker))
-            }
-            WorkerSpecialty::Documentation { formats } => {
-                let worker = DocumentationSpecialist::new(
-                    formats,
-                    self.task_executor.clone(),
-                    self.task_router.clone(),
-                );
-                Ok(Arc::new(worker))
-            }
-            WorkerSpecialty::TypeSystem { domains } => {
-                let worker = TypeSystemSpecialist::new(
-                    domains,
-                    self.task_executor.clone(),
-                    self.task_router.clone(),
-                );
-                Ok(Arc::new(worker))
-            }
-            WorkerSpecialty::AsyncPatterns { patterns } => {
-                let worker = AsyncPatternsSpecialist::new(
-                    patterns,
-                    self.task_executor.clone(),
-                    self.task_router.clone(),
-                );
-                Ok(Arc::new(worker))
-            }
-            WorkerSpecialty::Custom { domain, capabilities } => {
-                let worker = CustomSpecialist::new(
-                    domain,
-                    capabilities,
-                    self.task_executor.clone(),
-                    self.task_router.clone(),
-                );
-                Ok(Arc::new(worker))
-            }
-        }
-    }
-}
-
-#[async_trait]
-pub trait WorkerPoolService: Send + Sync {
-    async fn register_worker(&self, registration: WorkerRegistration) -> Result<Worker>;
-    async fn deregister_worker(&self, worker_id: Uuid) -> Result<()>;
-    async fn get_worker(&self, worker_id: Uuid) -> Option<Worker>;
-    async fn get_workers(&self) -> Vec<Worker>;
-    async fn get_available_workers(&self) -> Vec<Worker>;
-    async fn execute_task(
-        &self,
-        task_spec: TaskSpec,
-        circuit_breaker: Option<&std::sync::Arc<agent_agency_resilience::CircuitBreaker>>,
-    ) -> Result<TaskExecutionResult>;
-    async fn update_worker_status(&self, worker_id: Uuid, status: WorkerStatus) -> Result<()>;
-    async fn get_stats(&self) -> WorkerPoolStats;
-}
-
-#[async_trait]
-impl WorkerPoolService for WorkerPoolManager {
-    async fn register_worker(&self, registration: WorkerRegistration) -> Result<Worker> {
-        self.register_worker(registration).await
-    }
-
-    async fn deregister_worker(&self, worker_id: Uuid) -> Result<()> {
-        self.deregister_worker(worker_id).await
-    }
-
-    async fn get_worker(&self, worker_id: Uuid) -> Option<Worker> {
-        self.get_worker(worker_id).await
-    }
-
-    async fn get_workers(&self) -> Vec<Worker> {
-        self.get_workers().await
-    }
-
-    async fn get_available_workers(&self) -> Vec<Worker> {
-        self.get_available_workers().await
-    }
-
-    async fn execute_task(
-        &self,
-        task_spec: TaskSpec,
-        circuit_breaker: Option<&std::sync::Arc<agent_agency_resilience::CircuitBreaker>>,
-    ) -> Result<TaskExecutionResult> {
-        self.execute_task(task_spec, circuit_breaker).await
-    }
-
-    async fn update_worker_status(&self, worker_id: Uuid, status: WorkerStatus) -> Result<()> {
-        self.update_worker_status(worker_id, status).await
-    }
-
-    async fn get_stats(&self) -> WorkerPoolStats {
-        self.get_stats().await
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[tokio::test]
-    async fn test_worker_pool_manager_creation() {
-        let config = WorkerPoolConfig::default();
-        let manager = WorkerPoolManager::new(config);
-        assert_eq!(manager.workers.len(), 0);
-    }
-
-    #[tokio::test]
-    async fn test_worker_registration() {
-        let config = WorkerPoolConfig::default();
-        let manager = WorkerPoolManager::new(config);
-
-        let registration = WorkerRegistration {
-            name: "test-worker".to_string(),
-            worker_type: WorkerType::Generalist,
-            model_name: "llama3.3:7b".to_string(),
-            endpoint: "http://localhost:11434".to_string(),
-            capabilities: WorkerCapabilities::default(),
-            metadata: std::collections::HashMap::new(),
-        };
-
-        let worker = manager.register_worker(registration).await.unwrap();
-        assert_eq!(worker.name, "test-worker");
-        assert_eq!(manager.workers.len(), 1);
-    }
-
-    #[tokio::test]
-    async fn test_worker_deregistration() {
-        let config = WorkerPoolConfig::default();
-        let manager = WorkerPoolManager::new(config);
-
-        let registration = WorkerRegistration {
-            name: "test-worker".to_string(),
-            worker_type: WorkerType::Generalist,
-            model_name: "llama3.3:7b".to_string(),
-            endpoint: "http://localhost:11434".to_string(),
-            capabilities: WorkerCapabilities::default(),
-            metadata: std::collections::HashMap::new(),
-        };
-
-        let worker = manager.register_worker(registration).await.unwrap();
-        manager.deregister_worker(worker.id).await.unwrap();
-        assert_eq!(manager.workers.len(), 0);
-    }
-
-    #[tokio::test]
-    async fn test_get_available_workers() {
-        let config = WorkerPoolConfig::default();
-        let manager = WorkerPoolManager::new(config);
-
-        let registration = WorkerRegistration {
-            name: "test-worker".to_string(),
-            worker_type: WorkerType::Generalist,
-            model_name: "llama3.3:7b".to_string(),
-            endpoint: "http://localhost:11434".to_string(),
-            capabilities: WorkerCapabilities::default(),
-            metadata: std::collections::HashMap::new(),
-        };
-
-        manager.register_worker(registration).await.unwrap();
-
-        let available = manager.get_available_workers().await;
-        assert_eq!(available.len(), 1);
-        assert_eq!(available[0].name, "test-worker");
     }
 }

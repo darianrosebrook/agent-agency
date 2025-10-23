@@ -99,11 +99,18 @@ pub struct SLOAlertThresholds {
 }
 
 /// Advanced SLO Tracker
+#[derive(Debug)]
 pub struct SLOTracker {
     config: SLOTrackerConfig,
     slos: HashMap<String, SLO>,
     statuses: Arc<RwLock<HashMap<String, SLOStatus>>>,
     alerts: Arc<RwLock<Vec<SLOAlert>>>,
+}
+
+impl Default for SLOTracker {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl SLOTracker {

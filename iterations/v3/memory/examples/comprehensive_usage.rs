@@ -67,7 +67,7 @@ async fn setup_object_pools(memory_manager: &Arc<MemoryManager>) {
             created_at: std::time::Instant::now(),
         },
         20
-    ).await?;
+    );
 
     // LLM client pool
     memory_manager.create_pool(
@@ -80,7 +80,7 @@ async fn setup_object_pools(memory_manager: &Arc<MemoryManager>) {
             request_count: 0,
         },
         10
-    ).await?;
+    );
 
     // HTTP client pool
     memory_manager.create_pool(
@@ -93,7 +93,7 @@ async fn setup_object_pools(memory_manager: &Arc<MemoryManager>) {
             request_count: 0,
         },
         50
-    ).await;
+    );
 
     println!(" Object pools created");
 }
@@ -114,7 +114,7 @@ async fn demonstrate_memory_monitoring(memory_manager: &Arc<MemoryManager>) {
     println!("  - Memory Pressure: {:?}", pressure);
 
     // Get memory history
-    let history = memory_manager.get_memory_history(Duration::from_secs(60)).await;
+    let history = memory_manager.get_memory_history(Duration::from_secs(60));
     println!(" Memory history points: {}", history.len());
 }
 
@@ -128,7 +128,7 @@ async fn simulate_workload(memory_manager: &Arc<MemoryManager>) {
         let manager = memory_manager.clone();
         let handle = tokio::spawn(async move {
             // Get database connection from pool
-            if let Some(mut conn) = manager.get_from_pool::<DatabaseConnection>("database_connections").await {
+            if let Some(conn) = manager.get_from_pool::<DatabaseConnection>("database_connections").await {
                 let result = conn.get().query(&format!("SELECT * FROM users WHERE id = {}", i)).await;
                 match result {
                     Ok(rows) => println!("Query {}: {} rows", i, rows.len()),
@@ -145,13 +145,8 @@ async fn simulate_workload(memory_manager: &Arc<MemoryManager>) {
         let _ = handle.await;
     }
 
-    // Check pool stats
-    if let Some(pool) = memory_manager.pools.read().await.get("database_connections") {
-        if let Some(pool) = pool.downcast_ref::<ObjectPool<DatabaseConnection, Box<dyn Fn() -> DatabaseConnection + Send + Sync>>>() {
-            let stats = pool.stats().await;
-            println!(" Database pool stats: {:?}", stats);
-        }
-    }
+    // Check pool stats (simplified - pools field is private)
+    println!(" Pool stats checking would go here (pools field is private)");
 
     println!(" Workload simulation completed");
 }
@@ -177,7 +172,7 @@ async fn demonstrate_caching(smart_cache: &mut SmartCache<String, String>) {
     }
 
     // Check memory pressure impact on caching
-    let pressure = smart_cache.memory_manager.get_memory_pressure();
+    let pressure = smart_cache.get_memory_pressure();
     println!(" Cache operating under memory pressure: {:?}", pressure);
 
     let (entries, memory_mb) = smart_cache.stats();
@@ -187,7 +182,7 @@ async fn demonstrate_caching(smart_cache: &mut SmartCache<String, String>) {
 async fn check_memory_leaks(memory_manager: &Arc<MemoryManager>) {
     println!(" Checking for memory leaks...");
 
-    let alerts = memory_manager.analyze_memory_leaks().await;
+    let alerts = memory_manager.analyze_memory_leaks();
 
     if alerts.is_empty() {
         println!(" No memory leaks detected");
@@ -214,7 +209,7 @@ async fn show_performance_metrics(memory_manager: &Arc<MemoryManager>) {
     println!("  - Memory Pressure: {:?}", pressure);
 
     // Memory usage trend
-    let history = memory_manager.get_memory_history(Duration::from_secs(300)).await;
+    let history = memory_manager.get_memory_history(Duration::from_secs(300));
     if history.len() >= 2 {
         let first = &history[0].1;
         let last = &history[history.len() - 1].1;

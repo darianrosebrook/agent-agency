@@ -738,6 +738,18 @@ impl MemoryManager {
         }
     }
 
+    /// Get pool stats for a specific pool
+    pub async fn get_pool_stats(&self, name: &str) -> Option<PoolStats> {
+        let pools = self.pools.read().unwrap();
+        if let Some(_pool_box) = pools.get(name) {
+            // Try to downcast to ObjectPool and get stats
+            // This is a simplified implementation - in practice you'd need proper type handling
+            None // Placeholder - would need proper implementation
+        } else {
+            None
+        }
+    }
+
     /// Force garbage collection
     pub fn force_gc(&self) {
         self.monitor.force_gc();

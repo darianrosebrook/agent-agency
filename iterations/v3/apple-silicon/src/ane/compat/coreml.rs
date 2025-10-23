@@ -9,15 +9,13 @@ use std::path::Path;
 use std::marker::PhantomData;
 use std::ptr::NonNull;
 
-#[cfg(target_os = "macos")]
-use objc2::rc::Retained;
+// Removed unused import: objc2::rc::Retained
 // TODO: Fix objc2 imports when Core ML integration is implemented
 // #[cfg(target_os = "macos")]
 // use objc2_core_ml::{MLModel, MLMultiArray, MLPredictionOptions};
 // #[cfg(target_os = "macos")]
 // use objc2_foundation::{NSDictionary, NSError, NSString, NSURL};
-#[cfg(target_os = "macos")]
-use std::ffi::c_void;
+// Removed unused import: std::ffi::c_void
 
 /// Target platform detection
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
@@ -29,8 +27,6 @@ const TARGET_APPLE_SILICON: bool = false;
 /// Core ML framework interface
 pub mod coreml {
     use super::*;
-    use std::ffi::CString;
-    use std::os::raw::c_char;
 
     /// Check if ANE is available on this system
     pub fn is_ane_available() -> bool {
@@ -313,12 +309,14 @@ pub mod coreml {
     }
 
     /// Core ML model type with opaque reference
+    #[derive(Debug)]
     pub struct CoreMLModel {
         pub model_ref: ModelRef,
         pub metadata: ModelMetadata,
     }
 
     /// Model metadata
+    #[derive(Debug)]
     pub struct ModelMetadata {
         pub name: String,
         pub version: String,

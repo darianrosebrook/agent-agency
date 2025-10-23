@@ -105,7 +105,7 @@ impl CircuitBreaker {
 
     /// Record a successful operation
     pub fn record_success(&self) {
-        let mut state = self.state.lock().unwrap();
+        let state = self.state.lock().unwrap();
         let mut success_count = self.success_count.lock().unwrap();
 
         match *state {

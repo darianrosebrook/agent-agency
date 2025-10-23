@@ -425,7 +425,7 @@ mod tests {
     #[test]
     fn test_optimistic_concurrency_success() {
         let mut manager = ConcurrencyManager::new();
-        let digest = Digest::from_bytes(&[1, 2, 3, 4]);
+        let digest = Digest::from_bytes([1; 32]);
         
         let result = manager.record_change(
             "test.txt",
@@ -446,8 +446,8 @@ mod tests {
     #[test]
     fn test_optimistic_concurrency_conflict() {
         let mut manager = ConcurrencyManager::new();
-        let digest1 = Digest::from_bytes(&[1, 2, 3, 4]);
-        let digest2 = Digest::from_bytes(&[5, 6, 7, 8]);
+        let digest1 = Digest::from_bytes([1; 32]);
+        let digest2 = Digest::from_bytes([2; 32]);
         
         // First change succeeds
         let result1 = manager.record_change(
@@ -482,7 +482,7 @@ mod tests {
     #[test]
     fn test_conflict_classification() {
         let mut manager = ConcurrencyManager::new();
-        let digest = Digest::from_bytes(&[1, 2, 3, 4]);
+        let digest = Digest::from_bytes([3; 32]);
         
         // Set up a file state
         manager.file_states.insert("test.txt".to_string(), digest);
@@ -500,7 +500,7 @@ mod tests {
         // Agent vs agent conflict
         let result = manager.record_change(
             "test.txt",
-            Digest::from_bytes(&[5, 6, 7, 8]),
+            Digest::from_bytes([4; 32]),
             Some(digest),
             agent_source,
             "session1",
@@ -521,7 +521,7 @@ mod tests {
         // Add some changes
         manager.record_change(
             "test1.txt",
-            Digest::from_bytes(&[1, 2, 3, 4]),
+            Digest::from_bytes([5; 32]),
             None,
             ChangeSource::AgentIteration {
                 iteration: 1,
@@ -533,7 +533,7 @@ mod tests {
         
         manager.record_change(
             "test2.txt",
-            Digest::from_bytes(&[5, 6, 7, 8]),
+            Digest::from_bytes([6; 32]),
             None,
             ChangeSource::HumanEdit {
                 user_id: "user1".to_string(),

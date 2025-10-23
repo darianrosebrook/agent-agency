@@ -311,7 +311,7 @@ impl LearningPersistenceManager {
             }
             Err(_) => {
                 info!("No existing learning state found, creating initial state");
-                Self::create_initial_state()
+                Ok(Self::create_initial_state())
             }
         }
     }

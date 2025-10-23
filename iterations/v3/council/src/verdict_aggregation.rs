@@ -150,8 +150,15 @@ pub struct AggregationMetadata {
 }
 
 /// Verdict aggregator that combines judge opinions
+#[derive(Debug)]
 pub struct VerdictAggregator {
     config: AggregationConfig,
+}
+
+impl Default for VerdictAggregator {
+    fn default() -> Self {
+        Self::new(AggregationConfig::default())
+    }
 }
 
 /// Configuration for verdict aggregation
@@ -424,7 +431,7 @@ impl VerdictAggregator {
             quality -= 0.05;
         }
 
-        quality.max(0.0).min(1.0)
+        quality.clamp(0.0, 1.0)
     }
 
     fn analyze_verdict_distribution(&self, contributions: &[WeightedContribution]) -> VerdictDistribution {
@@ -1085,6 +1092,12 @@ struct VerdictDistribution {
 /// Create a default verdict aggregator
 pub fn create_verdict_aggregator() -> VerdictAggregator {
     VerdictAggregator::new(AggregationConfig::default())
+}
+
+impl Default for ChangeDeduplicationEngine {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl ChangeDeduplicationEngine {

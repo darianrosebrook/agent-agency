@@ -121,6 +121,12 @@ pub enum OverrideAction {
     Reviewed,
 }
 
+impl Default for ExpertAuthorityManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ExpertAuthorityManager {
     pub fn new() -> Self {
         Self {

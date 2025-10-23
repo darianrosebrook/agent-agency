@@ -224,6 +224,10 @@ where
         let memory_mb = self.cache.estimate_memory_usage() / (1024 * 1024);
         (entries, memory_mb)
     }
+
+    pub fn get_memory_pressure(&self) -> crate::MemoryPressure {
+        self.memory_manager.get_memory_pressure()
+    }
 }
 
 /// Memory-aware task scheduler

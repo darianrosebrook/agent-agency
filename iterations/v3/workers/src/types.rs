@@ -5,6 +5,9 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
 
+// Use shared types from contracts
+use agent_agency_contracts::{WorkerHealthStatus, WorkerHealthMetrics, RiskTier, WorkerType, WorkerRegistration, TaskPriority};
+
 /// Clock trait for time operations
 pub trait Clock {
     fn now(&self) -> DateTime<Utc>;
@@ -35,12 +38,6 @@ impl IdGenerator for UuidGenerator {
     }
 }
 
-/// Worker types in the pool
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub enum WorkerType {
-    Generalist,
-    Specialist(String), // Specialization area
-}
 
 /// Worker status
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -111,17 +108,10 @@ pub struct TaskAssignment {
     pub requirements: TaskRequirements,
 }
 
-/// Task priority levels
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-pub enum TaskPriority {
-    Low = 1,
-    Normal = 2,
-    High = 3,
-    Critical = 4,
-}
 
 /// Task requirements for routing
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct TaskRequirements {
     pub required_languages: Vec<String>,
     pub required_frameworks: Vec<String>,
@@ -280,25 +270,7 @@ pub struct WorkerPoolStats {
     pub last_updated: DateTime<Utc>,
 }
 
-/// Worker health status
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub enum WorkerHealthStatus {
-    Healthy,
-    Degraded,
-    Unhealthy,
-}
-
-/// Worker health metrics
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct WorkerHealthMetrics {
-    pub response_time_ms: u64,
-    pub cpu_usage_percent: f32,
-    pub memory_usage_percent: f32,
-    pub active_tasks: u32,
-    pub queue_depth: u32,
-    pub last_seen: DateTime<Utc>,
-    pub consecutive_failures: u32,
-}
+// WorkerHealthStatus and WorkerHealthMetrics are now imported from agent_agency_contracts
 
 /// Worker metrics collection from /metrics endpoint
 #[derive(Debug, Clone, Default)]
@@ -323,15 +295,15 @@ pub struct WorkerHealthCheck {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TaskRoutingResult {
     pub task_id: Uuid,
-    pub selected_workers: Vec<WorkerAssignment>,
+    pub selected_workers: Vec<WorkerAssignmentDetails>,
     pub routing_reasoning: String,
     pub estimated_completion_time: DateTime<Utc>,
     pub confidence_score: f32,
 }
 
-/// Worker assignment with reasoning
+/// Worker assignment with reasoning (workers-specific)
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct WorkerAssignment {
+pub struct WorkerAssignmentDetails {
     pub worker_id: Uuid,
     pub worker_name: String,
     pub capability_match_score: f32,
@@ -386,16 +358,6 @@ pub enum WorkerPoolEvent {
     },
 }
 
-/// Worker configuration for registration
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct WorkerRegistration {
-    pub name: String,
-    pub worker_type: WorkerType,
-    pub model_name: String,
-    pub endpoint: String,
-    pub capabilities: WorkerCapabilities,
-    pub metadata: HashMap<String, serde_json::Value>,
-}
 
 /// Worker update request
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -423,6 +385,9 @@ impl Worker {
             capabilities,
             status: WorkerStatus::Available,
             performance_metrics: WorkerPerformanceMetrics::default(),
+            health_status: WorkerHealthStatus::Healthy,
+            health_metrics: None,
+            last_health_check: None,
             created_at: Utc::now(),
             last_heartbeat: Utc::now(),
             metadata: HashMap::new(),
@@ -787,6 +752,14 @@ pub struct TaskContext {
 }
 
 
+/// Task scope definition
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TaskScope {
+    pub domains: Vec<String>,
+    pub files_affected: Vec<String>,
+    pub max_loc: Option<usize>,
+}
+
 /// Task specification for workers
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TaskSpec {
@@ -797,6 +770,8 @@ pub struct TaskSpec {
     pub context: TaskContext,
     pub created_at: DateTime<Utc>,
     pub deadline: Option<DateTime<Utc>>,
+    pub risk_tier: RiskTier,
+    pub scope: TaskScope,
 }
 
 /// Execution input for worker tasks
@@ -893,13 +868,15 @@ impl Default for SecurityRequirements {
     }
 }
 
-impl Default for WorkerAssignment {
+impl Default for WorkerAssignmentDetails {
     fn default() -> Self {
         Self {
             worker_id: Uuid::new_v4(),
-            priority: TaskPriority::Normal,
-            estimated_completion_time: Utc::now(),
-            confidence_score: 0.5,
+            worker_name: "unknown".to_string(),
+            capability_match_score: 0.0,
+            estimated_execution_time_ms: 0,
+            reasoning: "default assignment".to_string(),
+            load_factor: 1.0,
         }
     }
 }
@@ -914,6 +891,12 @@ impl Default for TaskSpec {
             context: TaskContext::default(),
             created_at: Utc::now(),
             deadline: None,
+            risk_tier: RiskTier::Tier3,
+            scope: TaskScope {
+                domains: vec![],
+                files_affected: vec![],
+                max_loc: None,
+            },
         }
     }
 }

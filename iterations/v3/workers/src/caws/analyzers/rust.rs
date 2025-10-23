@@ -6,6 +6,7 @@
 use super::LanguageAnalyzer;
 use crate::caws::language_types::{LanguageAnalysisResult, ProgrammingLanguage, ViolationSeverity, LanguageViolation, LanguageWarning, SourceLocation};
 use std::collections::HashMap;
+use anyhow::Result;
 
 /// Rust-specific analyzer
 #[derive(Debug)]
@@ -36,6 +37,36 @@ impl LanguageAnalyzer for RustAnalyzer {
 
     fn supports_extension(&self, ext: &str) -> bool {
         matches!(ext, "rs")
+    }
+
+    fn analyze_file_modification(
+        &self,
+        modification: &super::CouncilFileModification,
+    ) -> Result<LanguageAnalysisResult> {
+        // TODO: Implement file modification analysis
+        Ok(LanguageAnalysisResult {
+            language: ProgrammingLanguage::Rust,
+            complexity_score: 0.0,
+            violations: vec![],
+            warnings: vec![],
+            metrics: HashMap::new(),
+        })
+    }
+
+    fn calculate_change_complexity(
+        &self,
+        diff: &str,
+        content: Option<&str>,
+    ) -> Result<super::ChangeComplexity> {
+        // TODO: Implement change complexity calculation
+        Ok(super::ChangeComplexity {
+            cyclomatic_complexity: 0,
+            cognitive_complexity: 0,
+            nesting_depth: 0,
+            parameter_count: 0,
+            line_count: 0,
+            total_score: 0.0,
+        })
     }
 }
 

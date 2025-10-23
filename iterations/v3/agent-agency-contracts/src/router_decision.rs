@@ -21,7 +21,7 @@ pub struct Assignment {
 #[serde(rename_all = "snake_case")]
 pub enum WorkerType {
     Generalist,
-    Specialist,
+    Specialist(String),
 }
 
 impl RouterDecisionContract {

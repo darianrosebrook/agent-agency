@@ -46,6 +46,7 @@ parking_lot = "0.12"  # Fast mutexes for coordination
 futures = "0.3"  # Async utilities
 tokio-stream = "0.1"  # Stream processing
 bytes = "1.5"  # Byte buffer handling
+rand = "0.8"  # Random number generation for retry jitter
 
 [dev-dependencies]
 jsonschema = "0.17"

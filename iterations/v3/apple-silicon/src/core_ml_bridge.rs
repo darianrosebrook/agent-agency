@@ -6,7 +6,7 @@
 use crate::async_inference::{Tensor, TensorDataType, TensorDevice, TensorLayout};
 use anyhow::{anyhow, Result};
 use candle_core::{Device, Tensor as CandleTensor};
-use candle_coreml::CoreMLModel as CandleCoreMLModel;
+use crate::ane::compat::coreml::coreml::CoreMLModel as CandleCoreMLModel;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::Path;
@@ -16,7 +16,8 @@ use tokio::time::timeout;
 use tracing::{debug, info, warn};
 
 /// Safe Core ML model wrapper
-#[derive(Debug, Clone)]
+#[derive(Clone)]
+#[derive(Debug)]
 pub struct CoreMLModel {
     /// Underlying candle-coreml model
     model: Arc<CandleCoreMLModel>,
@@ -82,8 +83,16 @@ impl CoreMLModel {
             }
         };
 
-        // Load the model using candle-coreml
-        let model = CandleCoreMLModel::load(path)?;
+        // TODO: Load the model using local Core ML API
+        // For now, create a placeholder model since candle-coreml API doesn't match local API
+        let model = Arc::new(CandleCoreMLModel {
+            model_ref: crate::ane::compat::coreml::coreml::ModelRef::new(),
+            metadata: crate::ane::compat::coreml::coreml::ModelMetadata {
+                name: path.display().to_string(),
+                version: "1.0".to_string(),
+                description: "Loaded model".to_string(),
+            },
+        });
 
         // Extract model metadata
         let metadata = Self::extract_metadata(&model)?;
@@ -96,7 +105,7 @@ impl CoreMLModel {
         );
 
         Ok(Self {
-            model: Arc::new(model),
+            model,
             metadata,
             device,
         })
@@ -201,40 +210,10 @@ impl CoreMLModel {
         // Convert to slice of references as expected by candle-coreml
         let input_refs: Vec<&CandleTensor> = candle_inputs.iter().collect();
 
-        // Call candle-coreml forward method
-        let candle_output = (&*self.model)
-            .forward(&input_refs)
-            .map_err(|e| anyhow!("Core ML inference failed: {}", e))?;
-
-        // candle-coreml returns a single tensor, so we need to determine how to map it back
-        // For now, assume the output corresponds to the first input's name with "_output" suffix
-        let output_name = if !input_names.is_empty() {
-            format!("{}_output", input_names[0])
-        } else {
-            "output".to_string()
-        };
-
-        // Convert output back to our Tensor format
-        let shape: Vec<usize> = candle_output.shape().dims().to_vec();
-        let data = candle_output
-            .flatten_all()?
-            .to_vec1::<f32>()
-            .map_err(|e| anyhow!("Failed to extract tensor data: {}", e))?;
-
-        let output_tensor = Tensor {
-            data,
-            shape,
-            dtype: TensorDataType::F32,
-            device: TensorDevice::Cpu,
-            layout: TensorLayout::RowMajor,
-            metadata: None,
-        };
-
-        let mut result = HashMap::new();
-        result.insert(output_name, output_tensor);
-
-        debug!("Core ML inference completed successfully with {} outputs", result.len());
-        Ok(result)
+        // TODO: Call local Core ML inference API instead of candle
+        // For now, create a dummy output tensor since the APIs don't match
+        // This should use crate::ane::compat::coreml::run_inference with proper parameters
+        Err(anyhow!("Core ML inference not yet implemented in candle bridge - use local API directly"))
     }
 
 

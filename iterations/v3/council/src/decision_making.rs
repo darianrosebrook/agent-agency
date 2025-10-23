@@ -9,7 +9,7 @@ use crate::verdict_aggregation::AggregationResult;
 
 /// Decision engine that applies algorithms to reach final decisions
 #[async_trait]
-pub trait DecisionEngine: Send + Sync {
+pub trait DecisionEngine: Send + Sync + std::fmt::Debug {
     /// Make a final decision from aggregation results
     async fn make_decision(
         &self,
@@ -262,6 +262,7 @@ pub enum ConsensusStrategy {
 }
 
 /// Decision algorithm implementation
+#[derive(Debug)]
 pub struct AlgorithmicDecisionEngine {
     strategy: ConsensusStrategy,
     risk_thresholds: RiskThresholds,

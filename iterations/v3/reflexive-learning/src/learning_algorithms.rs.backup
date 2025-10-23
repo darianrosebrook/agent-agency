@@ -264,33 +264,6 @@ pub struct EnsembleAnalytics {
     pub components: Vec<ComponentContribution>,
 }
 
-/// Problem characteristics for meta-learning
-#[derive(Debug, Clone)]
-pub struct ProblemCharacteristics {
-    pub has_discrete_outputs: bool,
-    pub has_sequential_decisions: bool,
-    pub has_unlabeled_data: bool,
-    pub data_size: usize,
-    pub feature_count: usize,
-}
-
-/// Algorithm performance record for meta-learning
-#[derive(Debug, Clone)]
-pub struct AlgorithmPerformance {
-    pub algorithm_type: LearningAlgorithmType,
-    pub problem_type: String,
-    pub score: f64,
-    pub timestamp: chrono::DateTime<chrono::Utc>,
-}
-
-/// Advanced learning algorithm orchestrator
-#[derive(Debug)]
-pub struct LearningOrchestrator {
-    algorithms: HashMap<LearningAlgorithmType, Arc<LearningAlgorithms>>,
-    performance_history: Arc<RwLock<Vec<AlgorithmPerformance>>>,
-    current_best: Arc<RwLock<HashMap<String, LearningAlgorithmType>>>,
-}
-
 impl LearningAlgorithms {
     pub fn new() -> Self {
         Self {
@@ -695,47 +668,33 @@ impl LearningAlgorithms {
         }
     }
 
-
-/// Learning system health metrics
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct LearningSystemHealth {
-    pub algorithm_count: usize,
-    pub total_experiments: usize,
-    pub average_performance: f64,
-    pub last_updated: chrono::DateTime<chrono::Utc>,
+/// Problem characteristics for meta-learning
+#[derive(Debug, Clone)]
+pub struct ProblemCharacteristics {
+    pub has_discrete_outputs: bool,
+    pub has_sequential_decisions: bool,
+    pub has_unlabeled_data: bool,
+    pub data_size: usize,
+    pub feature_count: usize,
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[tokio::test]
-    async fn ensemble_predict_records_component_analysis() {
-        let algorithms = LearningAlgorithms::new();
-        let features = vec![0.5, 1.0, 1.5, 2.0];
-
-        let prediction = algorithms
-            .ensemble_predict(&features)
-            .await
-            .expect("ensemble prediction should succeed");
-
-        let analysis = algorithms.get_last_ensemble_analysis().await;
-        assert!(
-            analysis.is_some(),
-            "ensemble prediction should capture analytics metadata"
-        );
-
-        let snapshot = analysis.expect("analysis snapshot to be available");
-        assert!(
-            !snapshot.components.is_empty(),
-            "component analytics should list contributing models"
-        );
-        assert!(
-            (snapshot.weighted_prediction - prediction).abs() < f64::EPSILON,
-            "analytics prediction should align with returned prediction"
-        );
-    }
+/// Algorithm performance record for meta-learning
+#[derive(Debug, Clone)]
+pub struct AlgorithmPerformance {
+    pub algorithm_type: LearningAlgorithmType,
+    pub problem_type: String,
+    pub score: f64,
+    pub timestamp: chrono::DateTime<chrono::Utc>,
 }
+
+/// Advanced learning algorithm orchestrator
+#[derive(Debug)]
+pub struct LearningOrchestrator {
+    algorithms: HashMap<LearningAlgorithmType, Arc<LearningAlgorithms>>,
+    performance_history: Arc<RwLock<Vec<AlgorithmPerformance>>>,
+    current_best: Arc<RwLock<HashMap<String, LearningAlgorithmType>>>,
+}
+
 impl LearningOrchestrator {
     /// Create a new learning orchestrator
     pub fn new() -> Self {
@@ -1082,5 +1041,46 @@ impl LearningOrchestrator {
             "execute_standard_flow" => 0.0,    // Neutral risk
             _ => 0.0,
         }
+    }
+}
+
+/// Learning system health metrics
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LearningSystemHealth {
+    pub algorithm_count: usize,
+    pub total_experiments: usize,
+    pub average_performance: f64,
+    pub last_updated: chrono::DateTime<chrono::Utc>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn ensemble_predict_records_component_analysis() {
+        let algorithms = LearningAlgorithms::new();
+        let features = vec![0.5, 1.0, 1.5, 2.0];
+
+        let prediction = algorithms
+            .ensemble_predict(&features)
+            .await
+            .expect("ensemble prediction should succeed");
+
+        let analysis = algorithms.get_last_ensemble_analysis().await;
+        assert!(
+            analysis.is_some(),
+            "ensemble prediction should capture analytics metadata"
+        );
+
+        let snapshot = analysis.expect("analysis snapshot to be available");
+        assert!(
+            !snapshot.components.is_empty(),
+            "component analytics should list contributing models"
+        );
+        assert!(
+            (snapshot.weighted_prediction - prediction).abs() < f64::EPSILON,
+            "analytics prediction should align with returned prediction"
+        );
     }
 }

@@ -16,6 +16,8 @@ pub mod task_request;
 pub mod task_response;
 pub mod working_spec;
 pub mod worker_output;
+pub mod worker_types;
+pub mod execution_events;
 
 pub use error::{ContractError, ContractKind, ValidationIssue};
 pub use execution_artifacts::{
@@ -73,4 +75,12 @@ pub use worker_output::{
     validate_worker_output_value, CawsChecklist, ClaimContract, CommandArtifact, EvidenceReference,
     PatchArtifact, WaiverContract, WorkerArtifacts, WorkerMetadata, WorkerOutputContract,
     WorkerSeeds, WorkerSelfAssessment,
+};
+pub use worker_types::{
+    WorkerSpecialty, SpecializedWorker, WorkerContext, WorkerResult, WorkerHealthStatus,
+    WorkerHealthMetrics, WorkerPoolStats, WorkerAssignment, WorkerRegistration, WorkerUpdate,
+    WorkerPoolEvent, WorkerEventType,
+};
+pub use execution_events::{
+    ExecutionEvent, WorkingSpecScope,
 };

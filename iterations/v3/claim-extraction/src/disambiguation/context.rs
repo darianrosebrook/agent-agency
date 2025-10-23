@@ -3,7 +3,6 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 use anyhow::Result;
-use async_trait::async_trait;
 use crate::disambiguation::types::*;
 use crate::ProcessingContext;
 

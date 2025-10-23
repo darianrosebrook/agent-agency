@@ -3,12 +3,12 @@
 //! This module contains all the foreign function interface bindings
 //! for interacting with Apple's private frameworks.
 
-use std::os::raw::{c_char, c_int, c_void};
+use std::os::raw::{c_int, c_void};
 
 /// ANE Framework FFI Bindings
 /// Real ANE API bindings for Apple Silicon hardware
 pub mod ane_framework {
-    use std::os::raw::{c_int, c_void};
+    use std::os::raw::c_void;
 
     /// ANE Device handle (opaque pointer)
     pub type ANEDeviceRef = *mut c_void;

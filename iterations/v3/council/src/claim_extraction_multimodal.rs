@@ -125,6 +125,7 @@ pub struct CrossModalValidation {
 }
 
 /// Multimodal evidence enricher for claims
+#[derive(Debug)]
 pub struct MultimodalEvidenceEnricher {
     /// Reference to multimodal context provider
     context_provider: Option<Box<dyn std::any::Any + Send + Sync>>,

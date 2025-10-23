@@ -490,7 +490,7 @@ impl RestoreProgress {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fs;
+    use crate::RestoreAction;
     use tempfile::TempDir;
 
     #[test]
@@ -498,22 +498,27 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let test_file = temp_dir.path().join("test.txt");
         let content = b"Hello, world!";
-        let digest = Digest::from_bytes(&[1, 2, 3, 4]);
+        let digest = Digest::from_bytes([8; 32]);
         
         let mut restore = AtomicRestore::new();
         let plan = RestorePlan {
-            actions: vec![RestoreAction {
+            target: "test-commit".to_string(),
+            actions: vec![RestoreAction::WriteFile {
                 path: test_file.clone(),
-                content: content.to_vec(),
-                expected_digest: digest,
                 mode: FileMode::Regular,
+                expected: digest,
+                source: ObjectRef {
+                    digest: digest,
+                    size: content.len() as u64,
+                },
                 size: content.len() as u64,
             }],
+            total_files: 1,
+            total_bytes: content.len() as u64,
         };
 
         let result = restore.restore_from_plan(&plan).unwrap();
-        assert_eq!(result.restored_files.len(), 1);
-        assert_eq!(result.failed_files.len(), 0);
+        assert_eq!(result.files_restored, 1);
         assert!(test_file.exists());
     }
 
@@ -522,30 +527,36 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let test_file = temp_dir.path().join("test.txt");
         let content = b"Hello, world!";
-        let digest = Digest::from_bytes(&[1, 2, 3, 4]);
+        let digest = Digest::from_bytes([8; 32]);
         
         let mut config = RestoreConfig::default();
         config.dry_run = true;
         let mut restore = AtomicRestore::with_config(config);
         
         let plan = RestorePlan {
-            actions: vec![RestoreAction {
+            target: "test-commit-dry".to_string(),
+            actions: vec![RestoreAction::WriteFile {
                 path: test_file.clone(),
-                content: content.to_vec(),
-                expected_digest: digest,
                 mode: FileMode::Regular,
+                expected: digest,
+                source: ObjectRef {
+                    digest: digest,
+                    size: content.len() as u64,
+                },
                 size: content.len() as u64,
             }],
+            total_files: 1,
+            total_bytes: content.len() as u64,
         };
 
         let result = restore.restore_from_plan(&plan).unwrap();
-        assert_eq!(result.restored_files.len(), 1);
+        assert_eq!(result.files_restored, 1);
         assert!(!test_file.exists()); // File should not exist in dry run
     }
 
     #[test]
     fn test_restore_progress() {
-        let progress = RestoreProgress::new(100, 1024 * 1024);
+        let mut progress = RestoreProgress::new(100, 1024 * 1024);
         assert_eq!(progress.total_files, 100);
         assert_eq!(progress.total_bytes, 1024 * 1024);
         assert_eq!(progress.progress_percentage(), 0.0);

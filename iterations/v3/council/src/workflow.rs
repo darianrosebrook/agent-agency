@@ -11,6 +11,7 @@ use crate::council::{CouncilSession, SessionStatus};
 use crate::decision_making::FinalDecision;
 
 /// Workflow orchestrator for council sessions
+#[derive(Debug)]
 pub struct CouncilWorkflow {
     session: CouncilSession,
     workflow_state: WorkflowState,
@@ -348,6 +349,7 @@ pub struct WorkflowSummary {
 }
 
 /// Workflow manager for coordinating multiple council sessions
+#[derive(Debug)]
 pub struct WorkflowManager {
     active_workflows: HashMap<String, CouncilWorkflow>,
     completed_workflows: Vec<CouncilWorkflow>,
