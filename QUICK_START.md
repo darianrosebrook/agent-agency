@@ -128,6 +128,43 @@ docker-compose -f deploy/docker-compose/dev.yml up
 kubectl apply -f deploy/kubernetes/base/
 ```
 
+### Optional Dependencies & Features
+
+#### PyTorch Integration (Apple Silicon)
+
+The project includes a **safe PyTorch wrapper** that prevents linking issues while maintaining full functionality:
+
+```bash
+# Default build (no PyTorch dependencies)
+cargo build
+
+# Enable PyTorch features (requires libtorch-cpu installation)
+cargo build --features torch
+
+# Apple Silicon specific build with PyTorch
+cargo build --features torch -p agent-agency-apple-silicon
+
+# Enable PyTorch for all crates
+cargo build --workspace --features torch
+```
+
+**PyTorch Wrapper Benefits:**
+- ✅ **No linking errors** by default (BridgesFFI issues eliminated)
+- ✅ **Graceful degradation** when PyTorch not available
+- ✅ **Optional PyTorch linking** with feature flags
+- ✅ **Stub implementations** for CPU-only operations
+- ✅ **Safe Apple Silicon support** with MPS/CUDA fallbacks
+
+**When PyTorch is enabled:**
+- Apple Silicon crate gains GPU memory management
+- Tensor operations use MPS (Metal Performance Shaders)
+- Model loading and inference capabilities
+- Hardware acceleration for ML workloads
+
+**Dependencies needed for PyTorch features:**
+- `libtorch-cpu` directory (PyTorch native libraries)
+- PyTorch-compatible hardware (optional, CPU fallback available)
+
 ## Key Files to Know
 
 | File | Purpose |
