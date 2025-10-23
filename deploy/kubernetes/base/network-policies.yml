@@ -1,0 +1,268 @@
+---
+# Deny all traffic by default
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: agent-agency
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+---
+# Allow internal communication between agent-agency components
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-internal-communication
+  namespace: agent-agency
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: agent-agency
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: agent-agency
+    - podSelector:
+        matchLabels:
+          app: ingress-nginx  # Allow ingress controller
+    ports:
+    - protocol: TCP
+      port: 8080  # Orchestrator
+    - protocol: TCP
+      port: 8081  # Council
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: agent-agency
+    - podSelector:
+        matchLabels:
+          app: postgres
+    - podSelector:
+        matchLabels:
+          app: redis
+    - podSelector:
+        matchLabels:
+          app: elasticsearch
+    ports:
+    - protocol: TCP
+      port: 5432  # PostgreSQL
+    - protocol: TCP
+      port: 6379  # Redis
+    - protocol: TCP
+      port: 9200  # Elasticsearch
+---
+# Database access policy
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: database-access
+  namespace: agent-agency
+spec:
+  podSelector:
+    matchLabels:
+      app: postgres
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: agent-agency
+    - podSelector:
+        matchLabels:
+          app: backup  # Allow backup jobs
+    ports:
+    - protocol: TCP
+      port: 5432
+---
+# Redis access policy
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: redis-access
+  namespace: agent-agency
+spec:
+  podSelector:
+    matchLabels:
+      app: redis
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: agent-agency
+    - podSelector:
+        matchLabels:
+          app: backup  # Allow backup jobs
+    ports:
+    - protocol: TCP
+      port: 6379
+---
+# Monitoring access policy
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: monitoring-access
+  namespace: agent-agency
+spec:
+  podSelector:
+    matchLabels:
+      component: monitoring
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: agent-agency
+    - namespaceSelector:
+        matchLabels:
+          name: ingress-nginx  # Allow external access via ingress
+    - podSelector:
+        matchLabels:
+          component: monitoring  # Allow inter-monitoring communication
+  egress:
+  - to: []  # Allow all egress for monitoring
+    ports:
+    - protocol: TCP
+      port: 443  # HTTPS for external APIs
+    - protocol: TCP
+      port: 80   # HTTP for external APIs
+---
+# External API access policy
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: external-api-access
+  namespace: agent-agency
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: agent-agency
+  policyTypes:
+  - Egress
+  egress:
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 443  # HTTPS for external APIs (OpenAI, Anthropic, etc.)
+    - protocol: TCP
+      port: 80   # HTTP fallback
+  - to:
+    - ipBlock:
+        cidr: 0.0.0.0/0
+        except:
+        - 10.0.0.0/8    # Exclude private networks
+        - 172.16.0.0/12
+        - 192.168.0.0/16
+---
+# DNS access policy
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: dns-access
+  namespace: agent-agency
+spec:
+  podSelector: {}
+  policyTypes:
+  - Egress
+  egress:
+  - to: []
+    ports:
+    - protocol: UDP
+      port: 53  # DNS
+    - protocol: TCP
+      port: 53  # DNS over TCP
+---
+# Ingress access policy
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: ingress-access
+  namespace: agent-agency
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: agent-agency
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: ingress-nginx
+    ports:
+    - protocol: TCP
+      port: 8080  # Orchestrator
+    - protocol: TCP
+      port: 8081  # Council
+---
+# Backup and maintenance access
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: maintenance-access
+  namespace: agent-agency
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          job-name: backup-job  # Allow backup jobs
+    - podSelector:
+        matchLabels:
+          component: maintenance
+  egress:
+  - to:
+    - ipBlock:
+        cidr: 0.0.0.0/0  # Allow all egress for maintenance
+---
+# Service mesh policy (if using Istio)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: service-mesh-access
+  namespace: agent-agency
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"networking.k8s.io/v1","kind":"NetworkPolicy","metadata":{"annotations":{},"name":"service-mesh-access","namespace":"agent-agency"},"spec":{"podSelector":{},"policyTypes":["Ingress","Egress"],"ingress":[{"from":[{"podSelector":{"matchLabels":{"app":"istiod"}}},{"podSelector":{"matchLabels":{"security.istio.io/tlsMode":"istio"}}}],"ports":[{"protocol":"TCP","port":15090}]}],"egress":[{"to":[{"podSelector":{"matchLabels":{"app":"istiod"}}}],"ports":[{"protocol":"TCP","port":15012},{"protocol":"TCP","port":15017}]}]}}
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: istiod
+    - podSelector:
+        matchLabels:
+          security.istio.io/tlsMode: istio
+    ports:
+    - protocol: TCP
+      port: 15090  # Istio metrics
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          app: istiod
+    ports:
+    - protocol: TCP
+      port: 15012  # Istio control plane
+    - protocol: TCP
+      port: 15017  # Istio policy

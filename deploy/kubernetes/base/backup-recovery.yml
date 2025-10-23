@@ -1,0 +1,254 @@
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: database-backup
+  namespace: agent-agency
+spec:
+  schedule: "0 2 * * *"  # Daily at 2 AM
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: backup-service-account
+          containers:
+          - name: backup
+            image: postgres:15-alpine
+            command:
+            - /bin/sh
+            - -c
+            - |
+              # Create backup
+              TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+              BACKUP_FILE="/backup/agent_agency_${TIMESTAMP}.sql.gz"
+
+              echo "Creating backup: $BACKUP_FILE"
+              pg_dump -h postgres -U agent_agency agent_agency | gzip > "$BACKUP_FILE"
+
+              # Upload to S3
+              aws s3 cp "$BACKUP_FILE" "s3://agent-agency-backups/database/${TIMESTAMP}.sql.gz"
+
+              # Keep only last 30 days
+              aws s3api list-objects-v2 --bucket agent-agency-backups --prefix database/ \
+                | jq -r '.Contents[].Key' \
+                | sort \
+                | head -n -30 \
+                | xargs -I {} aws s3 rm "s3://agent-agency-backups/{}"
+
+              echo "Backup completed successfully"
+            env:
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: agent-agency-runtime-secrets
+                  key: database-password
+            volumeMounts:
+            - name: backup-storage
+              mountPath: /backup
+          volumes:
+          - name: backup-storage
+            emptyDir: {}
+          restartPolicy: OnFailure
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: redis-backup
+  namespace: agent-agency
+spec:
+  schedule: "0 */4 * * *"  # Every 4 hours
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: backup
+            image: redis:7-alpine
+            command:
+            - /bin/sh
+            - -c
+            - |
+              # Create Redis backup
+              TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+              BACKUP_FILE="/backup/redis_${TIMESTAMP}.rdb"
+
+              echo "Creating Redis backup: $BACKUP_FILE"
+              redis-cli -h redis SAVE
+              cp /data/dump.rdb "$BACKUP_FILE"
+
+              # Upload to S3
+              aws s3 cp "$BACKUP_FILE" "s3://agent-agency-backups/redis/${TIMESTAMP}.rdb"
+
+              echo "Redis backup completed successfully"
+            volumeMounts:
+            - name: redis-data
+              mountPath: /data
+            - name: backup-storage
+              mountPath: /backup
+          volumes:
+          - name: redis-data
+            persistentVolumeClaim:
+              claimName: redis-storage
+          - name: backup-storage
+            emptyDir: {}
+          restartPolicy: OnFailure
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: etcd-backup
+  namespace: agent-agency
+spec:
+  schedule: "0 */6 * * *"  # Every 6 hours
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: backup
+            image: bitnami/etcd:3.5
+            command:
+            - /bin/sh
+            - -c
+            - |
+              # Create etcd backup
+              TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+              BACKUP_FILE="/backup/etcd_${TIMESTAMP}.db"
+
+              echo "Creating etcd backup: $BACKUP_FILE"
+              etcdctl snapshot save "$BACKUP_FILE" \
+                --endpoints=https://etcd-cluster:2379 \
+                --cacert=/etc/etcd/ca.crt \
+                --cert=/etc/etcd/client.crt \
+                --key=/etc/etcd/client.key
+
+              # Upload to S3
+              aws s3 cp "$BACKUP_FILE" "s3://agent-agency-backups/etcd/${TIMESTAMP}.db"
+
+              echo "etcd backup completed successfully"
+            volumeMounts:
+            - name: etcd-certs
+              mountPath: /etc/etcd
+              readOnly: true
+            - name: backup-storage
+              mountPath: /backup
+          volumes:
+          - name: etcd-certs
+            secret:
+              secretName: etcd-client-certs
+          - name: backup-storage
+            emptyDir: {}
+          restartPolicy: OnFailure
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: backup-service-account
+  namespace: agent-agency
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: backup-role
+  namespace: agent-agency
+rules:
+- apiGroups: [""]
+  resources: ["pods", "pods/exec"]
+  verbs: ["get", "list", "create"]
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: backup-role-binding
+  namespace: agent-agency
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: backup-role
+subjects:
+- kind: ServiceAccount
+  name: backup-service-account
+---
+# Disaster Recovery Configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: disaster-recovery-config
+  namespace: agent-agency
+data:
+  recovery-script.sh: |
+    #!/bin/bash
+    set -e
+
+    echo "Starting disaster recovery..."
+
+    # 1. Restore database from latest backup
+    LATEST_BACKUP=$(aws s3api list-objects-v2 --bucket agent-agency-backups --prefix database/ \
+      | jq -r '.Contents | sort_by(.LastModified) | last | .Key')
+
+    echo "Restoring database from: $LATEST_BACKUP"
+    aws s3 cp "s3://agent-agency-backups/$LATEST_BACKUP" /tmp/backup.sql.gz
+    gunzip /tmp/backup.sql.gz
+
+    # Apply database restore
+    kubectl exec -n agent-agency deployment/postgres -- \
+      psql -U agent_agency -d agent_agency < /tmp/backup.sql
+
+    # 2. Restore Redis data
+    LATEST_REDIS=$(aws s3api list-objects-v2 --bucket agent-agency-backups --prefix redis/ \
+      | jq -r '.Contents | sort_by(.LastModified) | last | .Key')
+
+    echo "Restoring Redis from: $LATEST_REDIS"
+    aws s3 cp "s3://agent-agency-backups/$LATEST_REDIS" /tmp/redis.rdb
+
+    # Copy to Redis pod
+    kubectl cp /tmp/redis.rdb agent-agency/redis-0:/data/dump.rdb -n agent-agency
+    kubectl exec -n agent-agency redis-0 -- redis-cli SHUTDOWN NOSAVE
+    sleep 10
+    kubectl exec -n agent-agency redis-0 -- redis-server /etc/redis/redis.conf
+
+    # 3. Scale up application
+    kubectl scale deployment agent-agency-orchestrator --replicas=3 -n agent-agency
+    kubectl scale deployment agent-agency-council --replicas=2 -n agent-agency
+
+    # 4. Run health checks
+    for i in {1..30}; do
+      if kubectl exec -n agent-agency deployment/agent-agency-orchestrator -- curl -f http://localhost:8080/health; then
+        echo "Health check passed!"
+        break
+      fi
+      echo "Health check failed, retrying in 10s..."
+      sleep 10
+    done
+
+    echo "Disaster recovery completed!"
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: disaster-recovery
+  namespace: agent-agency
+spec:
+  template:
+    spec:
+      serviceAccountName: backup-service-account
+      containers:
+      - name: recovery
+        image: amazonlinux:2
+        command: ["/bin/bash", "-c"]
+        args:
+        - |
+          yum install -y awscli jq postgresql
+          chmod +x /etc/disaster-recovery/recovery-script.sh
+          /etc/disaster-recovery/recovery-script.sh
+        volumeMounts:
+        - name: recovery-config
+          mountPath: /etc/disaster-recovery
+      volumes:
+      - name: recovery-config
+        configMap:
+          name: disaster-recovery-config
+      restartPolicy: Never

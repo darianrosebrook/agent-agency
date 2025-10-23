@@ -4,6 +4,7 @@
 //! including temperature, power consumption, and device status monitoring.
 
 use crate::ane::errors::{ANEError, Result};
+use tracing::{info, warn};
 
 /// Target platform detection
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]

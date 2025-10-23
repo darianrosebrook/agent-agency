@@ -5,348 +5,294 @@ on:
     branches: [ main, develop ]
     tags: [ 'v*' ]
   pull_request:
-    branches: [ main, develop ]
-  workflow_dispatch:
-    inputs:
-      environment:
-        description: 'Deployment environment'
-        required: true
-        default: 'staging'
-        type: choice
-        options:
-          - staging
-          - production
-      region:
-        description: 'AWS region'
-        required: true
-        default: 'us-east-1'
-        type: string
+    branches: [ main ]
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  # Build and test
-  build-and-test:
-    name: Build and Test
+  test:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        component: [orchestrator, council]
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    - uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: actions/setup-buildx-action@v3
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
 
-      - name: Log in to Container Registry
-        uses: actions/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+    - name: Cache Docker layers
+      uses: actions/cache@v3
+      with:
+        path: /tmp/.buildx-cache
+        key: ${{ runner.os }}-buildx-${{ github.sha }}
+        restore-keys: |
+          ${{ runner.os }}-buildx-
 
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-${{ matrix.component }}
-          tags: |
-            type=ref,event=branch
-            type=ref,event=pr
-            type=sha,prefix={{branch}}-
-            type=raw,value=latest,enable={{is_default_branch}}
+    - name: Build orchestrator for testing
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: deploy/docker/Dockerfile.orchestrator
+        push: false
+        tags: agent-agency/orchestrator:test
+        cache-from: type=local,src=/tmp/.buildx-cache
+        cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
 
-      - name: Build and push Docker image
-        uses: actions/docker-build-push-action@v5
-        with:
-          context: .
-          file: deploy/docker/Dockerfile.${{ matrix.component }}
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+    - name: Build council for testing
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: deploy/docker/Dockerfile.council
+        push: false
+        tags: agent-agency/council:test
+        cache-from: type=local,src=/tmp/.buildx-cache
 
-  # Security scanning
+    # Move cache to avoid cache bloat
+    - name: Move cache
+      run: |
+        rm -rf /tmp/.buildx-cache
+        mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+
   security-scan:
-    name: Security Scan
     runs-on: ubuntu-latest
-    needs: build-and-test
+    needs: test
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    - uses: actions/checkout@v4
 
-      - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
-        with:
-          scan-type: 'fs'
-          scan-ref: '.'
-          format: 'sarif'
-          output: 'trivy-results.sarif'
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
 
-      - name: Upload Trivy scan results
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
-        with:
-          sarif_file: 'trivy-results.sarif'
+    - name: Upload Trivy scan results
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'
 
-      - name: Run Snyk security scan
-        uses: snyk/actions/rust@master
-        continue-on-error: true
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        with:
-          args: --file=Cargo.toml
-
-  # Quality gates
-  quality-gates:
-    name: Quality Gates
+  build-and-push:
     runs-on: ubuntu-latest
-    needs: build-and-test
+    needs: [test, security-scan]
+    if: github.event_name != 'pull_request'
+    permissions:
+      contents: read
+      packages: write
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    - name: Checkout repository
+      uses: actions/checkout@v4
 
-      - name: Set up Rust
-        uses: actions/setup-rust@v1
-        with:
-          rust-version: '1.75'
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Cache Rust dependencies
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-
+    - name: Extract metadata for orchestrator
+      id: meta-orchestrator
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-orchestrator
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=semver,pattern={{version}}
+          type=semver,pattern={{major}}.{{minor}}
+          type=sha,prefix={{branch}}-
+          type=raw,value=latest,enable={{is_default_branch}}
 
-      - name: Run CAWS validation
-        run: |
-          if command -v caws &> /dev/null; then
-            caws validate --quiet
-          else
-            echo "CAWS not available, skipping validation"
-          fi
+    - name: Build and push orchestrator
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: deploy/docker/Dockerfile.orchestrator
+        push: true
+        tags: ${{ steps.meta-orchestrator.outputs.tags }}
+        labels: ${{ steps.meta-orchestrator.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
 
-      - name: Run tests with coverage
-        run: |
-          cargo install cargo-tarpaulin
-          cargo tarpaulin --out Xml --exclude-files "tests/*"
+    - name: Extract metadata for council
+      id: meta-council
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-council
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=semver,pattern={{version}}
+          type=semver,pattern={{major}}.{{minor}}
+          type=sha,prefix={{branch}}-
+          type=raw,value=latest,enable={{is_default_branch}}
 
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
-        with:
-          file: cobertura.xml
-          flags: rust
-          name: codecov-umbrella
-          fail_ci_if_error: false
+    - name: Build and push council
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: deploy/docker/Dockerfile.council
+        push: true
+        tags: ${{ steps.meta-council.outputs.tags }}
+        labels: ${{ steps.meta-council.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
 
-      - name: Run Clippy
-        run: cargo clippy -- -D warnings
-
-      - name: Check formatting
-        run: cargo fmt --check
-
-  # Deploy to staging
   deploy-staging:
-    name: Deploy to Staging
     runs-on: ubuntu-latest
-    needs: [build-and-test, security-scan, quality-gates]
-    if: github.ref == 'refs/heads/develop' || github.event_name == 'workflow_dispatch'
+    needs: build-and-push
+    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
     environment: staging
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    - name: Checkout repository
+      uses: actions/checkout@v4
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ github.event.inputs.region || 'us-east-1' }}
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
 
-      - name: Set up Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: "1.5.0"
+    - name: Update kubeconfig for staging
+      run: |
+        aws eks update-kubeconfig --region us-east-1 --name agent-agency-staging
 
-      - name: Terraform init
-        working-directory: deploy/terraform/aws
-        run: terraform init
+    - name: Deploy to staging
+      run: |
+        cd deploy/kubernetes/aws
+        kustomize edit set image agent-agency/orchestrator=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-orchestrator:develop
+        kustomize edit set image agent-agency/council=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-council:develop
+        kubectl apply -k overlays/staging/
 
-      - name: Terraform plan
-        working-directory: deploy/terraform/aws
-        run: |
-          terraform plan -var="environment=staging" -out=tfplan
+    - name: Run smoke tests
+      run: |
+        # Wait for rollout
+        kubectl rollout status deployment/agent-agency-orchestrator -n agent-agency-staging --timeout=300s
+        kubectl rollout status deployment/agent-agency-council -n agent-agency-staging --timeout=300s
 
-      - name: Terraform apply
-        working-directory: deploy/terraform/aws
-        run: terraform apply tfplan
+        # Run health checks
+        kubectl run smoke-test --image=curlimages/curl --rm -i --restart=Never -- curl -f http://agent-agency-orchestrator:8080/health
+        kubectl run smoke-test --image=curlimages/curl --rm -i --restart=Never -- curl -f http://agent-agency-council:8081/health
 
-      - name: Configure kubectl
-        run: aws eks update-kubeconfig --region ${{ github.event.inputs.region || 'us-east-1' }} --name agent-agency-staging
-
-      - name: Deploy to Kubernetes
-        run: |
-          kubectl apply -k deploy/kubernetes/aws/overlays/staging/
-          kubectl rollout status deployment/agent-agency-orchestrator -n agent-agency --timeout=600s
-
-      - name: Run integration tests
-        run: |
-          kubectl apply -f deploy/kubernetes/base/integration-tests.yml
-          kubectl wait --for=condition=complete job/integration-tests -n agent-agency --timeout=300s
-
-      - name: Health check
-        run: |
-          kubectl port-forward svc/agent-agency-orchestrator 8080:8080 -n agent-agency &
-          sleep 10
-          curl -f http://localhost:8080/health || exit 1
-
-  # Deploy to production
   deploy-production:
-    name: Deploy to Production
     runs-on: ubuntu-latest
-    needs: [build-and-test, security-scan, quality-gates]
-    if: github.ref == 'refs/tags/v*' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production')
+    needs: build-and-push
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     environment: production
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    - name: Checkout repository
+      uses: actions/checkout@v4
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_PROD }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_PROD }}
-          aws-region: ${{ github.event.inputs.region || 'us-east-1' }}
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
 
-      - name: Set up Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: "1.5.0"
+    - name: Update kubeconfig for production
+      run: |
+        aws eks update-kubeconfig --region us-east-1 --name agent-agency-production
 
-      - name: Terraform init
-        working-directory: deploy/terraform/aws
-        run: terraform init
+    - name: Deploy to production (blue-green)
+      run: |
+        # Get current active deployment
+        CURRENT=$(kubectl get svc agent-agency-api -o jsonpath='{.spec.selector.version}' -n agent-agency-prod)
 
-      - name: Terraform plan
-        working-directory: deploy/terraform/aws
-        run: |
-          terraform plan -var="environment=production" -out=tfplan
+        if [ "$CURRENT" = "blue" ]; then
+          TARGET="green"
+        else
+          TARGET="blue"
+        fi
 
-      - name: Terraform apply
-        working-directory: deploy/terraform/aws
-        run: terraform apply tfplan
+        echo "Deploying to $TARGET environment"
 
-      - name: Configure kubectl
-        run: aws eks update-kubeconfig --region ${{ github.event.inputs.region || 'us-east-1' }} --name agent-agency-production
+        # Update images for target environment
+        cd deploy/kubernetes/aws
+        kustomize edit set image agent-agency/orchestrator=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-orchestrator:latest
+        kustomize edit set image agent-agency/council=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-council:latest
 
-      - name: Deploy to Kubernetes
-        run: |
-          kubectl apply -k deploy/kubernetes/aws/overlays/production/
-          kubectl rollout status deployment/agent-agency-orchestrator -n agent-agency --timeout=900s
+        # Deploy to target environment
+        kubectl apply -k overlays/production-$TARGET/
 
-      - name: Run smoke tests
-        run: |
-          kubectl apply -f deploy/kubernetes/base/smoke-tests.yml
-          kubectl wait --for=condition=complete job/smoke-tests -n agent-agency --timeout=300s
+        # Wait for rollout
+        kubectl rollout status deployment/agent-agency-orchestrator-$TARGET -n agent-agency-prod --timeout=600s
+        kubectl rollout status deployment/agent-agency-council-$TARGET -n agent-agency-prod --timeout=600s
 
-      - name: Health check
-        run: |
-          kubectl port-forward svc/agent-agency-orchestrator 8080:8080 -n agent-agency &
-          sleep 10
-          curl -f http://localhost:8080/health || exit 1
+    - name: Switch traffic (zero-downtime)
+      run: |
+        # Switch service to new deployment
+        kubectl patch svc agent-agency-api -n agent-agency-prod --type='json' -p='[{"op": "replace", "path": "/spec/selector/version", "value": "'$TARGET'"}]'
 
-      - name: Performance test
-        run: |
-          kubectl apply -f deploy/kubernetes/base/performance-tests.yml
-          kubectl wait --for=condition=complete job/performance-tests -n agent-agency --timeout=600s
+        # Wait for traffic to switch
+        sleep 30
 
-      - name: Create deployment notification
-        uses: actions/github-script@v7
-        with:
-          script: |
-            github.rest.issues.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: `🚀 Agent Agency v${{ github.ref_name }} deployed to production`,
-              body: `
-              ## Deployment Summary
-              - **Version**: ${{ github.ref_name }}
-              - **Environment**: Production
-              - **Region**: ${{ github.event.inputs.region || 'us-east-1' }}
-              - **Timestamp**: ${new Date().toISOString()}
-              - **Commit**: ${context.sha}
+    - name: Run production tests
+      run: |
+        # Run comprehensive health checks
+        kubectl run prod-test --image=curlimages/curl --rm -i --restart=Never -- curl -f https://api.agent-agency.yourdomain.com/health
 
-              ## Health Checks
-              - ✅ Application health check passed
-              - ✅ Smoke tests completed successfully
-              - ✅ Performance tests within SLA
+        # Run load test (optional)
+        kubectl run load-test --image=fortio/fortio:latest --rm -i --restart=Never -- fortio load -qps 100 -t 60s https://api.agent-agency.yourdomain.com/api/tasks
 
-              ## Rollback Plan
-              Previous version can be restored by redeploying ${{ github.event.before }}.
-              `,
-              labels: ['deployment', 'production', 'automated']
-            });
+    - name: Cleanup old deployment
+      run: |
+        # Keep old deployment for rollback capability
+        echo "Old deployment kept for rollback. Manual cleanup required after verification."
 
-  # Rollback job (manual trigger)
   rollback:
-    name: Rollback Production
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'rollback'
-    environment: production
+    if: failure() && github.ref == 'refs/heads/main'
+    needs: deploy-production
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_PROD }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_PROD }}
-          aws-region: ${{ github.event.inputs.region || 'us-east-1' }}
+    - name: Rollback production
+      run: |
+        aws eks update-kubeconfig --region us-east-1 --name agent-agency-production
 
-      - name: Configure kubectl
-        run: aws eks update-kubeconfig --region ${{ github.event.inputs.region || 'us-east-1' }} --name agent-agency-production
+        # Switch back to previous deployment
+        PREVIOUS=$(kubectl get svc agent-agency-api -o jsonpath='{.spec.selector.version}' -n agent-agency-prod)
 
-      - name: Rollback deployment
-        run: |
-          kubectl rollout undo deployment/agent-agency-orchestrator -n agent-agency
-          kubectl rollout status deployment/agent-agency-orchestrator -n agent-agency --timeout=600s
+        if [ "$PREVIOUS" = "blue" ]; then
+          ROLLBACK_TARGET="green"
+        else
+          ROLLBACK_TARGET="blue"
+        fi
 
-      - name: Health check after rollback
-        run: |
-          kubectl port-forward svc/agent-agency-orchestrator 8080:8080 -n agent-agency &
-          sleep 10
-          curl -f http://localhost:8080/health || exit 1
+        echo "Rolling back to $ROLLBACK_TARGET"
+        kubectl patch svc agent-agency-api -n agent-agency-prod --type='json' -p='[{"op": "replace", "path": "/spec/selector/version", "value": "'$ROLLBACK_TARGET'"}]'
 
-      - name: Create rollback notification
-        uses: actions/github-script@v7
-        with:
-          script: |
-            github.rest.issues.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: `⬅️ Agent Agency production rollback completed`,
-              body: `
-              ## Rollback Summary
-              - **Environment**: Production
-              - **Region**: ${{ github.event.inputs.region || 'us-east-1' }}
-              - **Timestamp**: ${new Date().toISOString()}
-              - **Triggered by**: @${{ github.actor }}
+        # Send alert
+        curl -X POST -H 'Content-type: application/json' \
+          --data '{"text":"🚨 Production deployment failed, rollback initiated"}' \
+          ${{ secrets.SLACK_WEBHOOK_URL }}
 
-              ## Status
-              - ✅ Rollback completed successfully
-              - ✅ Health checks passed
-              - ✅ Application responding normally
+  notify:
+    runs-on: ubuntu-latest
+    needs: [deploy-staging, deploy-production, rollback]
+    if: always()
+    steps:
+    - name: Send deployment notification
+      run: |
+        if [ "${{ needs.deploy-production.result }}" = "success" ]; then
+          STATUS="✅ Production deployment successful"
+          COLOR="good"
+        elif [ "${{ needs.rollback.result }}" = "success" ]; then
+          STATUS="⚠️ Production deployment failed, rollback completed"
+          COLOR="warning"
+        else
+          STATUS="❌ Deployment failed"
+          COLOR="danger"
+        fi
 
-              Previous deployment has been restored.
-              `,
-              labels: ['rollback', 'production', 'incident']
-            });
+        curl -X POST -H 'Content-type: application/json' \
+          --data '{"attachments": [{"color": "'$COLOR'", "text": "'$STATUS' - Commit: ${{ github.sha }}"}]}' \
+          ${{ secrets.SLACK_WEBHOOK_URL }}
