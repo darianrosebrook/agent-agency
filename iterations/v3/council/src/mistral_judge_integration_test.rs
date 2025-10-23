@@ -4,6 +4,7 @@ use crate::judge::{Judge, JudgeVerdict, JudgeConfig, ReviewContext};
 use crate::mistral_tokenizer::MistralTokenizer;
 use agent_agency_contracts::working_spec::WorkingSpec;
 use agent_agency_contracts::task_request::RiskTier;
+use crate::JudgeType;
 use std::collections::HashMap;
 
 #[test]
@@ -40,7 +41,7 @@ async fn test_mistral_judge_basic_functionality() {
 
     let config = JudgeConfig {
         judge_id: "mistral-test".to_string(),
-        judge_type: crate::types::JudgeType::Quality,
+        judge_type: JudgeType::Quality,
         model_name: "mistral-7b-instruct".to_string(),
         temperature: 0.1,
         max_tokens: 1000,
@@ -53,17 +54,19 @@ async fn test_mistral_judge_basic_functionality() {
 
     // Create a simple test working spec
     let working_spec = WorkingSpec {
-        id: uuid::Uuid::new_v4(),
+        version: "1.0".to_string(),
+        id: "TEST-001".to_string(),
         title: "Test Implementation".to_string(),
         description: "A simple test implementation".to_string(),
-        requirements: vec!["Clean code".to_string(), "Good documentation".to_string()],
-        constraints: vec![],
+        goals: vec!["Clean code".to_string(), "Good documentation".to_string()],
+        risk_tier: 3,
+        constraints: Default::default(),
         acceptance_criteria: vec![],
-        technical_approach: "Standard implementation".to_string(),
-        estimated_effort: "2-3 days".to_string(),
-        risk_assessment: "Low risk".to_string(),
-        dependencies: vec![],
-        metadata: HashMap::new(),
+        test_plan: Default::default(),
+        rollback_plan: Default::default(),
+        context: Default::default(),
+        non_functional_requirements: None,
+        metadata: Default::default(),
     };
 
     let context = ReviewContext {
@@ -93,7 +96,7 @@ fn test_mistral_judge_config() {
 
     let config = JudgeConfig {
         judge_id: "mistral-test".to_string(),
-        judge_type: crate::types::JudgeType::Quality,
+        judge_type: JudgeType::Quality,
         model_name: "mistral-7b-instruct".to_string(),
         temperature: 0.1,
         max_tokens: 1000,
@@ -113,7 +116,7 @@ async fn test_mistral_judge_specialization() {
 
     let config = JudgeConfig {
         judge_id: "mistral-test".to_string(),
-        judge_type: crate::types::JudgeType::Quality,
+        judge_type: JudgeType::Quality,
         model_name: "mistral-7b-instruct".to_string(),
         temperature: 0.1,
         max_tokens: 1000,
@@ -125,17 +128,19 @@ async fn test_mistral_judge_specialization() {
     let judge = MistralJudge::new(config).unwrap();
 
     let working_spec = WorkingSpec {
-        id: uuid::Uuid::new_v4(),
+        version: "1.0".to_string(),
+        id: "TEST-002".to_string(),
         title: "Test Implementation".to_string(),
         description: "A simple test implementation".to_string(),
-        requirements: vec!["Clean code".to_string()],
-        constraints: vec![],
+        goals: vec!["Clean code".to_string()],
+        risk_tier: 3,
+        constraints: Default::default(),
         acceptance_criteria: vec![],
-        technical_approach: "Standard implementation".to_string(),
-        estimated_effort: "2-3 days".to_string(),
-        risk_assessment: "Low risk".to_string(),
-        dependencies: vec![],
-        metadata: HashMap::new(),
+        test_plan: Default::default(),
+        rollback_plan: Default::default(),
+        context: Default::default(),
+        non_functional_requirements: None,
+        metadata: Default::default(),
     };
 
     let context = ReviewContext {
@@ -161,7 +166,7 @@ fn test_mistral_judge_health_metrics() {
 
     let config = JudgeConfig {
         judge_id: "mistral-test".to_string(),
-        judge_type: crate::types::JudgeType::Quality,
+        judge_type: JudgeType::Quality,
         model_name: "mistral-7b-instruct".to_string(),
         temperature: 0.1,
         max_tokens: 1000,

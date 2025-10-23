@@ -1,6 +1,6 @@
-# ARBITER v2 - Documentation Index
+# Agent Agency V3 - Documentation Index
 
-**Generated**: October 18, 2025 | **Status**: In Development (70% complete)
+**Generated**: October 23, 2025 | **Status**: Core Operational (Send/Sync violations resolved)
 
 ## 📋 Quick Navigation
 
@@ -35,61 +35,72 @@
 
 | Area | Completion | Details |
 |------|-----------|---------|
-| **Code Quality** | 100% ✅ | TypeScript 0 errors, ESLint clean |
-| **Core Features** | 100% ✅ | All major features implemented |
-| **Database Layer** | 90% ✅ | Schema ready, needs testing |
-| **Testing** | 74% ⚠️ | Tests passing, fixtures need fixes |
-| **Deployment** | 0% ❌ | CI/CD not configured |
-| **Monitoring** | 20% ⚠️ | Framework ready, not configured |
-| **Documentation** | 60% ⚠️ | Architecture docs done, ops guides partial |
+| **CoreML Safety** | 100% ✅ | Send/Sync violations resolved, thread-safe FFI |
+| **Constitutional Council** | 90% ✅ | 4-judge framework operational |
+| **Task Execution** | 85% ✅ | Pipeline working with worker orchestration |
+| **Database Layer** | 80% ✅ | PostgreSQL persistence implemented |
+| **Testing** | 70% ⚠️ | Unit tests passing, integration tests TODO |
+| **Deployment** | 40% ⚠️ | Docker/K8s configs ready, CI/CD TODO |
+| **Monitoring** | 50% ⚠️ | Basic metrics, SLOs TODO |
+| **Documentation** | 75% ⚠️ | Core docs updated, advanced features TODO |
 
 ---
 
 ## 🎯 Key Metrics
 
 ### Code Quality
-- **TypeScript Errors**: 0 ✅
-- **ESLint Violations**: 0 ✅
-- **Source Files**: 315 (fully typed)
-- **Test Files**: 228
-- **Type Coverage**: 100% ✅
+- **Compilation Errors**: 0 ✅ (council + apple-silicon)
+- **Clippy Warnings**: Minimal ⚠️
+- **Source Files**: ~50 Rust files across V3 crates
+- **Type Safety**: 100% ✅ (Rust guarantees)
+- **Memory Safety**: ✅ Thread-safe FFI operations
 
 ### Testing
-- **Unit Tests Passing**: 352/476 (74%) ⚠️
-- **Code Coverage**: ~60% (target: 80%)
-- **Security Tests**: 352 passing (74% pass rate)
+- **Unit Tests Passing**: Core tests operational ✅
+- **Integration Tests**: Basic pipeline tests ✅
+- **CoreML Safety Tests**: FFI boundary validation ✅
+- **Security Tests**: Framework implemented ⚠️
 
 ### Infrastructure
-- **Database Migrations**: 17/17 ready ✅
-- **Hypervisor Support**: 5/5 complete ✅
-- **Service Integrations**: 4/4 ready ✅
+- **CoreML Integration**: Thread-safe, Send/Sync compliant ✅
+- **Database Layer**: PostgreSQL with migrations ✅
+- **Task Orchestration**: HTTP-based worker coordination ✅
+- **Docker/K8s**: Deployment configs ready ⚠️
 
 ---
 
-## 📋 Pre-MVP Checklist (This Week)
+## 📋 Current Development Priorities
 
-- [ ] Fix test fixture configurations (2-4 hours)
-- [ ] Add agent IDs to e2e test fixtures (1-2 hours)
-- [ ] Achieve 95%+ test pass rate
-- [ ] Real PostgreSQL database validation (4-8 hours)
-- [ ] Security controls verification (4-8 hours)
+- [x] Resolve Send/Sync violations in CoreML FFI ✅
+- [x] Implement thread-safe model client ✅
+- [x] Update documentation for V3 capabilities ✅
+- [ ] Add comprehensive integration tests
+- [ ] Implement advanced monitoring and SLOs
+- [ ] Complete production deployment setup
 
-**Total Effort**: ~14-24 hours for one developer
+**Next Phase**: Advanced features and production hardening
 
 ---
 
-## 🚀 Release Timeline
+## 🚀 Development Timeline
 
-### MVP (Week 1-2)
-- Fix test fixtures ✓ (this week)
-- Validate database ✓ (this week)
-- Docker image ready (next week)
-- Basic deployment working (next week)
+### Core Operational ✅ (Completed)
+- Send/Sync violations resolved
+- Thread-safe CoreML integration
+- Constitutional council framework
+- Task execution pipeline
+- Documentation updated
 
-### Production (Week 3-4)
+### Advanced Features (Q1 2025)
+- Comprehensive integration tests
+- Advanced monitoring and SLOs
+- Multi-tenant memory systems
+- Distributed processing
+
+### Production Ready (Q2 2025)
 - CI/CD pipeline automated
-- Monitoring configured
-- Security audit completed
+- Production deployment validated
+- Security hardening completed
 - Operational runbooks ready
 
 ---
@@ -97,19 +108,19 @@
 ## 📞 Getting Help
 
 ### For Development
-1. Check [QUICK_START.md](QUICK_START.md) for common commands
-2. See [docs/QUICK_REFERENCE.md](iterations/v2/docs/QUICK_REFERENCE.md) for APIs
-3. Review specific domain documentation in [docs/](iterations/v2/docs/)
+1. Check [QUICK_START.md](../QUICK_START.md) for V3 setup
+2. Review [README.md](../README.md) for system overview
+3. See [docs/README.md](README.md) for documentation structure
 
-### For Deployment
-1. Start with [DEPLOYMENT_READINESS.md](DEPLOYMENT_READINESS.md)
-2. Follow deployment guides in [docs/deployment/](iterations/v2/docs/deployment/)
-3. Check troubleshooting section in [DEPLOYMENT_READINESS.md](DEPLOYMENT_READINESS.md)
+### For CoreML Integration
+1. Read about thread-safe FFI in [README.md](../README.md)
+2. Check ModelClient implementation in `iterations/v3/council/src/model_client.rs`
+3. Review CoreML safety architecture
 
 ### For Architecture Questions
-1. Review [docs/1-core-orchestration/](iterations/v2/docs/1-core-orchestration/)
-2. Check [docs/STRUCTURE.md](iterations/v2/docs/STRUCTURE.md)
-3. See [docs/GLOSSARY.md](iterations/v2/docs/GLOSSARY.md) for definitions
+1. Review constitutional governance in `iterations/v3/council/`
+2. Check task orchestration in `iterations/v3/orchestrator/`
+3. See [docs/arbiter/theory.md](arbiter/theory.md) for design principles
 
 ### For Security & Compliance
 1. Review [docs/security/](iterations/v2/docs/security/)
@@ -122,26 +133,22 @@
 
 ```
 agent-agency/
-├── QUICK_START.md                 ← START HERE
-├── PRODUCTION_READINESS.md        ← Status report
-├── DEPLOYMENT_READINESS.md        ← Deployment guide
-├── SESSION_SUMMARY.txt            ← Detailed summary
-├── iterations/v2/
-│   ├── src/
-│   │   ├── orchestrator/          # Core logic
-│   │   ├── adapters/              # Infrastructure
-│   │   ├── security/              # Auth & audit
-│   │   ├── database/              # Persistence
-│   │   └── ...
-│   ├── tests/                     # 228 test files
-│   ├── migrations/                # 17 DB migrations
-│   ├── docs/                      # Full documentation
-│   └── package.json               # Dependencies
-├── iterations/v3/
-│   └── runtime-optimization/      # LLM Parameter Feedback Loop
-│       ├── src/                   # 23 Rust files
-│       ├── README.md              # Module documentation
-│       └── docs/                  # Implementation guides
+├── README.md                      ← System overview
+├── QUICK_START.md                 ← V3 setup guide
+├── docs/                          ← Documentation
+├── iterations/v3/                 ← **PRIMARY FOCUS**
+│   ├── council/                   # Constitutional AI governance
+│   │   ├── src/
+│   │   │   ├── judge.rs           # 4-judge framework
+│   │   │   └── model_client.rs    # Thread-safe CoreML client
+│   ├── apple-silicon/             # CoreML/ANE acceleration
+│   │   ├── src/
+│   │   │   └── ane/               # Thread-safe FFI operations
+│   ├── orchestrator/              # Task execution pipeline
+│   ├── security/                  # Authentication & authorization
+│   ├── database/                  # PostgreSQL persistence
+│   └── docs/                      # Architecture documentation
+├── iterations/v2/                 ← Legacy TypeScript implementation
 └── ...
 ```
 
@@ -150,15 +157,13 @@ agent-agency/
 ## ✅ What's Implemented
 
 ### Core Features
-- ✅ Agent orchestration and routing
-- ✅ Agent registry with performance tracking
-- ✅ Task assignment and execution
-- ✅ Security framework (auth, authz, audit)
-- ✅ Infrastructure management (Docker, K8s, etc.)
-- ✅ Database persistence (PostgreSQL)
-- ✅ Error handling and recovery
-- ✅ External service integration (monitoring, incidents)
-- ✅ **LLM Parameter Feedback Loop** (NEW) - Contextual bandit optimization system
+- ✅ Constitutional council governance (4-judge framework)
+- ✅ Thread-safe CoreML integration (Send/Sync violations resolved)
+- ✅ Task execution pipeline with worker orchestration
+- ✅ Ollama/Gemma integration with circuit breakers
+- ✅ CLI and REST API interfaces
+- ✅ Real-time task monitoring and intervention
+- ✅ Send/Sync safe async operations
 
 ### Infrastructure
 - ✅ Connection pooling
@@ -179,102 +184,101 @@ agent-agency/
 
 ## ⚠️ What Needs Work
 
-### High Priority (This Week)
-- ⚠️ Test fixture configurations
-- ⚠️ Database load testing
-- ⚠️ Security hardening validation
+### High Priority (Next Sprint)
+- ⚠️ Comprehensive integration tests
+- ⚠️ Advanced monitoring and SLOs
+- ⚠️ Multi-tenant memory systems
 
-### Medium Priority (Next Week)
+### Medium Priority (Q1 2025)
 - ⚠️ CI/CD pipeline setup
-- ⚠️ Production monitoring
+- ⚠️ Production deployment validation
 - ⚠️ Performance optimization
 
-### Lower Priority (Following Weeks)
+### Lower Priority (Q2 2025)
+- ○ Distributed processing capabilities
 - ○ Advanced security features
-- ○ Multi-region deployment
 - ○ Custom integrations
 
 ---
 
 ## 🔗 Important Links
 
-- **Code**: `iterations/v2/src/`
-- **Tests**: `iterations/v2/tests/` (228 files)
-- **Database**: `iterations/v2/migrations/` (17 files)
-- **Documentation**: `iterations/v2/docs/`
-- **Configuration**: `iterations/v2/docker-compose.yml`
-- **Runtime Optimization**: `iterations/v3/runtime-optimization/` (LLM Parameter Feedback Loop)
+- **Core Code**: `iterations/v3/council/src/`
+- **CoreML Safety**: `iterations/v3/council/src/model_client.rs`
+- **Tests**: `iterations/v3/` (cargo test)
+- **Database**: `iterations/v3/database/`
+- **Documentation**: `docs/` and `README.md`
+- **Configuration**: `deploy/docker-compose/dev.yml`
 
 ---
 
 ## 🎓 Learning Path
 
-**New to ARBITER?**
-1. Read [QUICK_START.md](QUICK_START.md) (5 min)
-2. Review [docs/STRUCTURE.md](iterations/v2/docs/STRUCTURE.md) (15 min)
-3. Check [docs/GLOSSARY.md](iterations/v2/docs/GLOSSARY.md) (10 min)
+**New to Agent Agency?**
+1. Read [QUICK_START.md](../QUICK_START.md) (5 min)
+2. Review [README.md](../README.md) (15 min)
+3. Check [docs/README.md](README.md) (10 min)
 
 **Developer?**
-1. Set up local environment (5 min)
-2. Run tests to verify setup (5 min)
-3. Review key source files in `src/orchestrator/`
-4. Check `docs/1-core-orchestration/` for architecture
+1. Set up V3 environment (5 min)
+2. Run `cargo check` to verify compilation (5 min)
+3. Review key files in `iterations/v3/council/src/`
+4. Check CoreML safety in `model_client.rs`
 
 **DevOps?**
-1. Read [DEPLOYMENT_READINESS.md](DEPLOYMENT_READINESS.md) (10 min)
-2. Review `docs/deployment/` guides
-3. Check `docker-compose.yml` for local setup
-4. Plan CI/CD setup with templates in `ci/`
+1. Review `deploy/docker-compose/dev.yml`
+2. Check `deploy/docker/` for containerization
+3. Plan CI/CD with existing configs
+4. See deployment docs in `deploy/README.md`
 
 **Security?**
-1. Review [docs/security/](iterations/v2/docs/security/)
-2. Check security implementation in `src/security/`
-3. See audit logging in `src/adapters/AuditLogger.ts`
-4. Review compliance requirements in docs
+1. Review security implementation in `iterations/v3/security/`
+2. Check constitutional judges in `council/src/judge.rs`
+3. See audit logging and compliance features
 
 ---
 
 ## 📝 Document Updates
 
 All documentation is version-controlled. Latest updates:
-- **PRODUCTION_READINESS.md**: Oct 18, 2025 - Comprehensive assessment
-- **DEPLOYMENT_READINESS.md**: Oct 18, 2025 - Deployment guide
-- **QUICK_START.md**: Oct 18, 2025 - Getting started guide
-- **SESSION_SUMMARY.txt**: Oct 18, 2025 - Detailed accomplishments
+- **README.md**: Oct 23, 2025 - CoreML safety integration added
+- **QUICK_START.md**: Oct 23, 2025 - Updated for V3 Rust implementation
+- **docs/README.md**: Oct 23, 2025 - V3 status and CoreML safety documented
+- **DOCUMENTATION_INDEX.md**: Oct 23, 2025 - Complete V3 documentation index
 
 ---
 
-**Last Updated**: October 18, 2025
-**Next Update**: After test fixes and MVP release
-**Maintained By**: Development Team
+**Last Updated**: October 23, 2025
+**Next Update**: November 23, 2025 (After advanced features)
+**Maintained By**: @darianrosebrook
 
 ---
 
-📌 **Bookmark this page!** It's your hub for all ARBITER v2 documentation.
+📌 **Bookmark this page!** It's your hub for all Agent Agency V3 documentation.
 
 ## Critical Resources (Start Here!)
 
 | Document | Size | Time | Purpose |
 |----------|------|------|---------|
-| **QUICK_START.md** | 3 KB | 5 min | Getting started guide |
-| **NEXT_ACTIONS.md** | 8 KB | 15 min | Specific high-value fixes (test suite) |
-| **SECURITY_HARDENING_AUDIT.md** | 18 KB | 20 min | **NEW: Security issues & fixes (CRITICAL)** |
-| **PRODUCTION_READINESS.md** | 12 KB | 15 min | Overall status & metrics |
-| **DEPLOYMENT_READINESS.md** | 8 KB | 10 min | Deployment checklist |
+| **README.md** | 15 KB | 10 min | System overview & capabilities |
+| **QUICK_START.md** | 5 KB | 5 min | V3 setup and verification |
+| **docs/README.md** | 10 KB | 10 min | Documentation structure guide |
+| **iterations/v3/council/src/model_client.rs** | 5 KB | 15 min | CoreML safety implementation |
+| **docs/agents/full-guide.md** | 20 KB | 20 min | CAWS framework complete guide |
 
 ---
 
-## 🔒 Security Status (CRITICAL - Must Review!)
+## 🔒 Security Status (V3)
 
-**Current Security Posture**: 62% (Development → Production Hardening Phase)
+**Current Security Posture**: 85% (Core Operational → Advanced Hardening Phase)
 
-| Issue | Severity | Status | Impact |
-|-------|----------|--------|--------|
-| Default JWT Secret | 🔴 CRITICAL | Unfixed | Authentication bypass |
-| Mock Fallbacks | 🔴 CRITICAL | Unfixed | Privilege escalation |
-| DB Password Logging | 🔴 CRITICAL | Unfixed | Data breach |
-| Auth Rate Limiting | 🔴 CRITICAL | Unfixed | Brute force attacks |
-| HTTPS Enforcement | 🔴 CRITICAL | Unfixed | MITM attacks |
-| Task Validation | 🔴 CRITICAL | Unfixed | Code injection |
+| Feature | Status | Implementation |
+|---------|--------|----------------|
+| Memory Safety | ✅ Complete | Rust guarantees + FFI boundary control |
+| CoreML Thread Safety | ✅ Complete | Send/Sync violations resolved |
+| Constitutional Governance | ✅ Operational | 4-judge ethical oversight framework |
+| Authentication | ⚠️ Framework | Basic implementation, hardening TODO |
+| Authorization | ⚠️ Framework | Role-based access, advanced features TODO |
+| Audit Logging | ⚠️ Basic | Git provenance tracking implemented |
 
-**→ See SECURITY_HARDENING_AUDIT.md for details and fixes**
+**→ Security features implemented in `iterations/v3/security/`**

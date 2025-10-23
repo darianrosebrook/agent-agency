@@ -86,6 +86,23 @@ V3 provides complete governance through constitutional oversight, execution mode
 - Incident investigation capabilities
 - Quality assurance through traceability
 
+### 5. CoreML Safety Architecture
+**Problem**: Send/Sync violations when integrating CoreML FFI with async Rust.
+
+**Solution**: Thread-confined CoreML operations with channel-based communication.
+
+**Safety Architecture**:
+- **Thread Confinement**: Raw CoreML pointers isolated to dedicated threads
+- **Opaque References**: `ModelRef(u64)` identifiers safe to send across threads
+- **Channel Communication**: Async coordination via `crossbeam::channel`
+- **Registry System**: Thread-local mapping of references to handles
+
+**Benefits**:
+- Zero Send/Sync violations in async contexts
+- Memory safety with proper resource cleanup
+- High-performance inference with minimal overhead
+- Safe integration with constitutional council operations
+
 ## System Architecture Diagram
 
 ```mermaid
@@ -117,6 +134,13 @@ flowchart LR
     Integration[Integration Validator<br/>system coherence]
   end
 
+  subgraph CoreML[CoreML Safety Layer]
+    ModelClient[Model Client<br/>Send/Sync interface]
+    InferenceThread[Inference Thread<br/>FFI operations]
+    Registry[Thread Registry<br/>ModelRef → Handle]
+    Channel[Channel Comm<br/>crossbeam::channel]
+  end
+
   subgraph Workers[Worker Pool]
     Executor[Task Executor<br/>HTTP client, retries]
     WorkerService[Worker Service<br/>task execution, simulation]
@@ -136,6 +160,9 @@ flowchart LR
   Orchestration --> Council
   Orchestration --> Workers
   Workers --> Orchestration
+
+  Council --> CoreML
+  CoreML --> Council
 
   Orchestration --> Database
   Council --> Database
@@ -199,6 +226,20 @@ flowchart LR
 - Commit trailer integration
 - Basic cryptographic verification capabilities
 - Compliance and regulatory reporting framework
+
+### AI/ML Safety Components (Operational)
+
+**CoreML Safety Layer (`council/src/model_client.rs`)**
+- Thread-confined FFI operations preventing Send/Sync violations
+- Opaque `ModelRef(u64)` identifiers for safe cross-thread communication
+- Channel-based async coordination with dedicated inference threads
+- Thread-local registry system for handle management
+
+**Apple Silicon Integration (`apple-silicon/`)**
+- Safe CoreML model loading and inference
+- Memory-safe tensor operations with bounds validation
+- FFI boundary control with comprehensive error handling
+- ANE acceleration support for vision processing
 
 ### Monitoring & Control
 

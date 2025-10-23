@@ -192,7 +192,7 @@ lint-strict:
 
 lint-soft:
 	@echo "🔍 Running soft lint checks on entire workspace..."
-	@cargo clippy --all-targets -- -A clippy::module_name_repetitions --quiet || echo "⚠️  Some clippy warnings remain in workspace"
+	@cargo clippy --all-targets -- -A clippy::module_name_repetitions || echo "⚠️  Some clippy warnings remain in workspace"
 
 clean-timing:
 	@echo "🧹 Cleaning timing and performance logs..."

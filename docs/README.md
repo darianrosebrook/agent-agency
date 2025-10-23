@@ -76,16 +76,19 @@ docs/
 
 **V3 Implementation Status**:
 
-- `end-to-end/POC.md` - **UPDATED** V3 E2E implementation status
-- V3 components: Council, Research, Orchestration, Security, Context Preservation
-- Current progress: Core execution loop operational, many advanced features remain as TODO implementations
+- `end-to-end/POC.md` - V3 E2E implementation status
+- V3 components: Council (constitutional governance), Apple Silicon (CoreML), Orchestrator (task execution), Security, Database
+- Current progress: Core execution loop operational with thread-safe CoreML integration, Send/Sync violations resolved
 - **NEW**: `monitoring-alerting.md` - Basic monitoring and alerting system documentation
+- **NEW**: Thread-safe CoreML FFI integration with channel-based communication
 
-**Status Documents** (in `iterations/v2/`):
+**V3 Status Tracking**:
 
-- `COMPONENT_STATUS_INDEX.md` - Master component status index
-- `components/*/STATUS.md` - Individual component status docs
-- Evidence-based, regularly updated
+- Core functionality operational with Send/Sync safety
+- Constitutional council governance framework implemented
+- Thread-safe CoreML integration completed
+- Task execution pipeline functional
+- Advanced features remain as TODO implementations
 
 ### ⚠️ Documentation with Disclaimers
 
@@ -217,7 +220,7 @@ docs/
 - **Documentation Health Score**: ✅ 95% (Target ≥85%)
 - **Accuracy**: ✅ 98%+ claims verified against implementation
 - **Freshness**: ✅ 95%+ docs updated within 90 days
-- **User Reports**: ✅ 0 inaccuracies reported (Q4 2024)
+- **CoreML Safety**: ✅ Thread-safe FFI integration documented
 - **V3 Alignment**: ✅ Documentation reflects current v3 implementation status
 
 ---
@@ -246,7 +249,8 @@ docs/
 
 | Type             | Location                               | Requirements                    |
 | ---------------- | -------------------------------------- | ------------------------------- |
-| Component Status | `iterations/v2/components/*/STATUS.md` | Evidence-based, tested          |
+| Implementation   | `iterations/v3/` crates                | Thread-safe, tested code        |
+| CoreML Safety    | `iterations/v3/council/src/model_client.rs` | Send/Sync compliant FFI     |
 | Proposals        | `docs/proposals/`                      | Future tense, disclaimer header |
 | Guides           | `docs/agents/`                         | Accurate, tested examples       |
 | Theory           | `docs/arbiter/theory.md`               | Clearly aspirational            |
@@ -353,6 +357,6 @@ docs/
 
 ---
 
-**Last Updated**: October 20, 2025  
-**Next Review**: November 20, 2025 (Monthly during V3 development)  
+**Last Updated**: October 23, 2025 (CoreML safety integration completed)
+**Next Review**: November 23, 2025 (Monthly during V3 development)
 **Review Frequency**: Monthly during active development, quarterly for stable releases

@@ -5,7 +5,7 @@
 //! of the arbitration system.
 
 use anyhow::{Context, Result};
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Utc, Datelike, Timelike};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
@@ -444,7 +444,7 @@ impl LearningSignalAnalyzer {
     }
 
     /// Count complexity indicators in description
-    fn count_complexity_indicators(&self, description: &str) -> u32 {
+    fn count_complexity_indicators(description: &str) -> u32 {
         let indicators = [
             "complex", "difficult", "challenging", "critical", "urgent",
             "breaking", "migration", "security", "performance", "optimization",
@@ -504,16 +504,16 @@ impl LearningSignalAnalyzer {
     ) -> Result<Vec<LearningSignal>> {
         // Implement basic task similarity analysis using task characteristics
         // Extract features from task specification for similarity comparison
-        let task_features = self.extract_task_features(task_spec)?;
+        let task_features = LearningSignalAnalyzer::extract_task_features(task_spec)?;
 
         // Find similar tasks from learning history
-        let similar_tasks = self.find_similar_tasks(&task_features)?;
+        let similar_tasks = LearningSignalAnalyzer::find_similar_tasks(&task_features)?;
 
         // Generate learning signals based on similar task outcomes
         let mut signals = Vec::new();
 
         for similar_task in similar_tasks {
-            let similarity_score = self.calculate_similarity(&task_features, &similar_task.features);
+            let similarity_score = LearningSignalAnalyzer::calculate_similarity(&task_features, &similar_task.features);
 
             if similarity_score > 0.7 { // High similarity threshold
                 signals.push(LearningSignal {
@@ -1261,7 +1261,7 @@ impl LearningSignalAnalyzer {
     }
 
     /// Extract features from task specification for similarity analysis
-    fn extract_task_features(&self, task_spec: &crate::types::TaskSpec) -> Result<TaskFeatures> {
+    fn extract_task_features(task_spec: &crate::types::TaskSpec) -> Result<TaskFeatures> {
         Ok(TaskFeatures {
             risk_tier: task_spec.risk_tier as u32,
             title_length: task_spec.title.len() as u32,
@@ -1271,12 +1271,12 @@ impl LearningSignalAnalyzer {
             max_files: 100, // Placeholder
             max_loc: 1000, // Placeholder
             has_external_deps: task_spec.description.contains("external") || task_spec.description.contains("dependency"),
-            complexity_indicators: self.count_complexity_indicators(&task_spec.description),
+            complexity_indicators: LearningSignalAnalyzer::count_complexity_indicators(&task_spec.description),
         })
     }
 
     /// Find similar tasks from learning history
-    fn find_similar_tasks(&self, features: &TaskFeatures) -> Result<Vec<SimilarTask>> {
+    fn find_similar_tasks(features: &TaskFeatures) -> Result<Vec<SimilarTask>> {
         // In a real implementation, this would query a database or vector store
         // For now, return mock similar tasks based on feature similarity
         let mut similar_tasks = Vec::new();
@@ -1314,7 +1314,7 @@ impl LearningSignalAnalyzer {
     }
 
     /// Calculate similarity between two task feature sets
-    fn calculate_similarity(&self, features1: &TaskFeatures, features2: &TaskFeatures) -> f32 {
+    fn calculate_similarity(features1: &TaskFeatures, features2: &TaskFeatures) -> f32 {
         // Simple Euclidean distance-based similarity
         let risk_diff = (features1.risk_tier as f32 - features2.risk_tier as f32).abs();
         let title_diff = (features1.title_length as f32 - features2.title_length as f32).abs() / 100.0;
@@ -1630,15 +1630,14 @@ mod tests {
                 ane_utilization: Some(0.8),
                 gpu_utilization: None,
                 energy_consumption: Some(2.5),
+                cpu_percent: 45.0,
+                memory_mb: 512.0,
+                io_bytes_per_sec: 1024,
+                network_bytes_per_sec: 512,
             },
             caws_compliance_score: 0.95,
             claim_verification_score: Some(0.88),
-            task_complexity: TaskComplexity {
-                estimated_effort: EffortLevel::Moderate,
-                domain_complexity: 0.6,
-                interdependency_count: 3,
-                risk_factors: vec![RiskFactor::HighRiskTier],
-            },
+            task_complexity: TaskComplexity::Medium,
             worker_performance: None,
             signal_type: "performance_test".to_string(),
             confidence: 0.9,
@@ -1680,7 +1679,7 @@ mod tests {
     }
 
     /// Extract features from task specification for similarity analysis
-    fn extract_task_features(&self, task_spec: &crate::types::TaskSpec) -> Result<TaskFeatures> {
+    fn extract_task_features(task_spec: &crate::types::TaskSpec) -> Result<TaskFeatures> {
         Ok(TaskFeatures {
             risk_tier: task_spec.risk_tier as u32,
             title_length: task_spec.title.len() as u32,
@@ -1689,11 +1688,13 @@ mod tests {
             scope_files_count: task_spec.scope.files_affected.len() as u32,
             max_files: task_spec.scope.max_files.unwrap_or(0),
             max_loc: task_spec.scope.max_loc.unwrap_or(0),
+            has_external_deps: false, // Placeholder
+            complexity_indicators: 0, // Placeholder
         })
     }
 
     /// Find similar tasks from learning history
-    fn find_similar_tasks(&self, features: &TaskFeatures) -> Result<Vec<SimilarTask>> {
+    fn find_similar_tasks(features: &TaskFeatures) -> Result<Vec<SimilarTask>> {
         // In a real implementation, this would query a database or vector store
         // For now, return mock similar tasks based on feature similarity
         let mut similar_tasks = Vec::new();
@@ -1710,6 +1711,8 @@ mod tests {
                     scope_files_count: 5,
                     max_files: 25,
                     max_loc: 1000,
+                    has_external_deps: false, // Placeholder
+                    complexity_indicators: 0, // Placeholder
                 };
 
                 similar_tasks.push(SimilarTask {
@@ -1725,7 +1728,7 @@ mod tests {
     }
 
     /// Calculate similarity between two task feature sets
-    fn calculate_similarity(&self, features1: &TaskFeatures, features2: &TaskFeatures) -> f32 {
+    fn calculate_similarity(features1: &TaskFeatures, features2: &TaskFeatures) -> f32 {
         // Simple Euclidean distance-based similarity
         let risk_diff = (features1.risk_tier as f32 - features2.risk_tier as f32).abs();
         let title_diff = (features1.title_length as f32 - features2.title_length as f32).abs() / 100.0;
@@ -1740,7 +1743,7 @@ mod tests {
     }
 
     /// Analyze weekly patterns in resource usage
-    fn analyze_weekly_patterns_detailed(&self, entries: &[HistoricalResourceEntry], cpu_values: &[f32], overall_mean: f32) -> (Option<SeasonalPattern>, f32) {
+    fn analyze_weekly_patterns_detailed(entries: &[HistoricalResourceEntry], cpu_values: &[f32], overall_mean: f32) -> (Option<SeasonalPattern>, f32) {
         let mut weekday_sums = [0.0f32; 7];
         let mut weekday_counts = [0usize; 7];
 
@@ -1791,7 +1794,7 @@ mod tests {
     }
 
     /// Analyze daily patterns in resource usage
-    fn analyze_daily_patterns(&self, entries: &[HistoricalResourceEntry], cpu_values: &[f32], overall_mean: f32) -> (Option<SeasonalPattern>, f32) {
+    fn analyze_daily_patterns(entries: &[HistoricalResourceEntry], cpu_values: &[f32], overall_mean: f32) -> (Option<SeasonalPattern>, f32) {
         // Group by hour of day
         let mut hourly_sums = [0.0f32; 24];
         let mut hourly_counts = [0usize; 24];
@@ -1830,7 +1833,7 @@ mod tests {
     }
 
     /// Analyze trend patterns using autocorrelation
-    fn analyze_trend_patterns_detailed(&self, cpu_values: &[f32], overall_mean: f32) -> Option<SeasonalPattern> {
+    fn analyze_trend_patterns_detailed(cpu_values: &[f32], overall_mean: f32) -> Option<SeasonalPattern> {
         if cpu_values.len() < 10 {
             return None;
         }
@@ -1859,7 +1862,7 @@ mod tests {
 
                 if normalized_autocorr.abs() > 0.3 {
                     let trend_type = if normalized_autocorr > 0.0 { "persistent" } else { "oscillating" };
-                    let confidence = normalized_autocorr.abs().min(0.9f64);
+                    let confidence = normalized_autocorr.abs().min(0.9f32);
 
                     return Some(SeasonalPattern {
                         pattern_type: format!("cpu_{}_trend", trend_type),

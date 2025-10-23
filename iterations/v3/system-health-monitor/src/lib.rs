@@ -6,7 +6,7 @@
 
 #![deny(unused_imports, unused_must_use)]
 #![warn(unused_variables, dead_code)]
-#![allow(unused_variables)]
+#![allow(unused_variables, dead_code, unused_assignments)]
 
 pub mod agent_integration;
 pub mod types;

@@ -8,6 +8,7 @@ pub mod error;
 pub mod judge;
 pub mod mistral_tokenizer;
 pub mod mistral_judge_integration_test;
+pub mod mistral_integration_demo;
 pub mod council;
 pub mod decision_making;
 pub mod verdict_aggregation;

@@ -1,60 +1,65 @@
-# ARBITER v2 - Quick Start Guide
+# Agent Agency V3 - Quick Start Guide
 
 ## 5-Minute Overview
 
-ARBITER is a multi-agent orchestration system for AI-powered workflow automation.
+Agent Agency is a constitutional AI system with thread-safe CoreML integration for Apple Silicon optimization.
 
-**Status**: ✅ Functionally complete | ⚠️ MVP in progress | ❌ Production not ready
+**Status**: ✅ Core operational with Send/Sync safety | ⚠️ Advanced features TODO | 🚧 Production hardening needed
 
 ### What's Ready
-- Core orchestration engine
-- Agent registry and task routing
-- Security framework with audit logging
-- PostgreSQL persistence layer
-- Infrastructure management (Docker, K8s, etc.)
+- Constitutional council governance (4-judge framework)
+- Thread-safe CoreML integration (Send/Sync violations resolved)
+- Task execution pipeline with worker orchestration
+- Ollama/Gemma integration with circuit breakers
+- CLI and REST API interfaces
+- Real-time task monitoring and intervention
 
 ### What's Next
-1. Fix test fixtures (2-4 hours) → Get tests to 95% pass rate
-2. Validate database under load (4-8 hours)
-3. Set up CI/CD pipeline (8-16 hours)
-4. Configure production monitoring (4-8 hours)
+1. Advanced monitoring and SLO tracking
+2. Multi-tenant memory systems
+3. Distributed processing capabilities
+4. Production deployment hardening
 
 ## Getting Started (5 Minutes)
 
 ```bash
 # 1. Clone and navigate
-cd agent-agency/iterations/v2
+cd agent-agency/iterations/v3
 
-# 2. Install dependencies
-npm install
+# 2. Verify compilation (Send/Sync safety)
+cargo check -p agent-agency-council -p agent-agency-apple-silicon
+# Should show 0 errors ✅
 
-# 3. Verify code quality
-npm run typecheck  # Should show 0 errors
-npm run lint       # Should show 0 violations
+# 3. Start database (optional)
+docker run -d --name postgres-v3 -e POSTGRES_PASSWORD=password -p 5432:5432 postgres:15
 
-# 4. Run tests
-npm test -- --maxWorkers=1
+# 4. Run database migrations
+cargo run --bin migrate
 
-# 5. Start development server
-npm run dev
+# 5. Start API server
+cargo run --bin api-server &
+
+# 6. Test execution pipeline
+cargo run --bin agent-agency-cli execute "Hello world" --mode dry-run
 ```
 
 ## Project Structure
 
 ```
-iterations/v2/
-├── src/
-│   ├── orchestrator/          # Core orchestration engine
-│   ├── adapters/              # Infrastructure adapters
-│   ├── security/              # Security framework
-│   ├── database/              # Database layer
-│   ├── observability/         # Logging & monitoring
-│   └── ...
-├── tests/                     # Test files (228 files)
-├── migrations/                # Database migrations (17 files)
-├── docs/                      # Documentation
-├── docker-compose.yml         # Local dev environment
-└── package.json               # Dependencies
+iterations/v3/
+├── council/                   # Constitutional AI governance
+│   ├── src/
+│   │   ├── judge.rs           # Constitutional judges (4 types)
+│   │   ├── model_client.rs    # Thread-safe CoreML client
+│   │   └── council.rs         # Council orchestration
+├── apple-silicon/             # CoreML/ANE acceleration
+│   ├── src/
+│   │   ├── ane/               # Apple Neural Engine integration
+│   │   └── async_inference.rs # Thread-safe inference
+├── orchestrator/              # Task execution pipeline
+├── security/                  # Authentication & authorization
+├── database/                  # PostgreSQL persistence
+└── docs/                      # Architecture documentation
 ```
 
 ## Common Tasks
@@ -62,87 +67,90 @@ iterations/v2/
 ### Run Tests
 ```bash
 # All tests
-npm test
+cargo test
 
-# Specific test file
-npm test -- --testPathPattern="security"
+# Specific crate tests
+cargo test -p agent-agency-council
 
-# With coverage
-npm test -- --coverage
+# With coverage (requires cargo-tarpaulin)
+cargo tarpaulin --workspace
 
-# Watch mode
-npm test -- --watch
+# Run specific test
+cargo test test_name
 ```
 
 ### Database Operations
 ```bash
 # Connect to local database
-psql postgresql://postgres:test123@localhost:5432/agent_agency_v2
+psql postgresql://postgres:password@localhost:5432/agent_agency_v3
 
 # Run migrations
-npm run migrate
+cargo run --bin migrate
 
-# Seed test data
-npm run seed:dev
+# Check database status
+cargo run --bin agent-agency-cli db status
 ```
 
 ### Code Quality
 ```bash
-# Type check
-npm run typecheck
+# Type check and compile
+cargo check
 
-# Lint check
-npm run lint
+# Run Clippy lints
+cargo clippy
 
 # Format code
-npm run format
+cargo fmt
 
-# Both
-npm run verify
+# All quality checks
+cargo fmt --check && cargo clippy && cargo test
 ```
 
 ### Build & Deploy
 ```bash
 # Build for production
-npm run build
+cargo build --release
 
 # Build Docker image
-docker build -t arbiter-v2:latest .
+docker build -t agent-agency-v3:latest -f deploy/docker/Dockerfile.orchestrator .
 
-# Run Docker locally
-docker-compose up
+# Run with Docker Compose
+docker-compose -f deploy/docker-compose/dev.yml up
+
+# Deploy to Kubernetes
+kubectl apply -f deploy/kubernetes/base/
 ```
 
 ## Key Files to Know
 
 | File | Purpose |
 |------|---------|
-| `src/orchestrator/ArbiterOrchestrator.ts` | Main orchestration logic |
-| `src/orchestrator/AgentRegistryManager.ts` | Agent registry and management |
-| `src/adapters/InfrastructureController.ts` | Infrastructure operations |
-| `src/security/AgentRegistrySecurity.ts` | Security controls |
-| `src/database/ConnectionPoolManager.ts` | Database connection management |
-| `migrations/` | Database schema versions |
-| `docs/1-core-orchestration/` | Architecture documentation |
+| `council/src/judge.rs` | Constitutional judges implementation |
+| `council/src/model_client.rs` | Thread-safe CoreML client |
+| `apple-silicon/src/ane/` | Apple Neural Engine integration |
+| `orchestrator/src/workflow.rs` | Task execution pipeline |
+| `database/src/client.rs` | PostgreSQL persistence layer |
+| `security/src/auth.rs` | Authentication & authorization |
+| `docs/` | Architecture documentation |
 
 ## Troubleshooting
 
-### TypeScript Errors
+### Compilation Errors
 ```bash
-# Check for errors
-npm run typecheck
+# Check for compilation errors
+cargo check -p agent-agency-council -p agent-agency-apple-silicon
 
-# Most common: Missing type definitions
-# Solution: Check node_modules/@types or add @types/package
+# Most common: Send/Sync violations in CoreML integration
+# Solution: Ensure ModelRef is used instead of raw pointers
 ```
 
 ### Test Failures
 ```bash
-# Run single test to debug
-npm test -- tests/unit/security/CommandValidator.test.ts
+# Run specific test to debug
+cargo test test_name -- --nocapture
 
 # Check test output for details
-# Most common: Fixture configuration issues
+# Most common: Async timing issues or fixture configuration
 ```
 
 ### Database Connection Issues
@@ -151,48 +159,48 @@ npm test -- tests/unit/security/CommandValidator.test.ts
 psql --version
 
 # Connect manually to test
-psql postgresql://postgres:test123@localhost:5432/agent_agency_v2
+psql postgresql://postgres:password@localhost:5432/agent_agency_v3
 
-# Check connection pool status
-curl http://localhost:3000/health/db
+# Check connection status
+cargo run --bin agent-agency-cli db status
 ```
 
 ## Next Steps
 
-1. **Read the Full Documentation**
-   - PRODUCTION_READINESS.md → Comprehensive status
-   - DEPLOYMENT_READINESS.md → Deployment guide
-   - SESSION_SUMMARY.txt → Detailed accomplishments
+1. **Verify Core Functionality**
+   - Test constitutional council with dry-run tasks
+   - Validate CoreML thread safety with real inference
+   - Check task execution pipeline end-to-end
 
-2. **Fix Immediate Blockers**
-   - Fix test fixtures (2-4 hours)
-   - Achieve 95%+ test pass rate
-   - Run database validation
+2. **Read the Documentation**
+   - README.md → Complete system overview
+   - docs/README.md → Documentation structure
+   - docs/agents/full-guide.md → CAWS framework guide
 
-3. **Prepare for MVP**
-   - Set up Docker/Kubernetes deployment
-   - Configure basic monitoring
-   - Document operational procedures
+3. **Advanced Features**
+   - Implement comprehensive monitoring and SLOs
+   - Add multi-tenant memory systems
+   - Enable distributed processing capabilities
 
-4. **Plan for Production**
+4. **Production Readiness**
    - Set up CI/CD pipeline
    - Configure production monitoring
-   - Prepare security audit
+   - Complete security hardening
 
 ## Resources
 
-- **Docs**: `docs/`
-- **API Docs**: `docs/api/`
-- **Deployment**: `docs/deployment/`
-- **Architecture**: `docs/1-core-orchestration/`
-- **Issues**: GitHub Issues (or Jira)
+- **Core Docs**: `README.md` and `docs/README.md`
+- **Architecture**: `docs/` directory
+- **CAWS Framework**: `docs/agents/full-guide.md`
+- **API Reference**: REST endpoints and contracts
+- **Issues**: GitHub Issues
 
 ## Team Contacts
 
-- Architecture: [See CONTRIBUTORS.md]
-- DevOps: [See CONTRIBUTORS.md]
-- Security: [See CONTRIBUTORS.md]
+- Architecture: @darianrosebrook
+- Development: Core team
+- Security: Core team
 
 ---
 
-**Questions?** Check the full documentation or create an issue!
+**Questions?** Check the README.md or create a GitHub issue!

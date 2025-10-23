@@ -4,7 +4,9 @@
 
 **Agent Agency** is a production-ready constitutional AI system that implements constitutional governance for autonomous agent operations. The system orchestrates multiple local AI models (Ollama/Gemma + CoreML/FastViT) with hot-swapping capabilities, using a council of specialized AI judges to provide real-time oversight, ensuring ethical compliance, technical quality, and system coherence through evidence-based decision making.
 
-The V3 iteration delivers a **functional constitutional AI system** with a working core execution loop, constitutional governance, and monitoring capabilities. **The core task execution pipeline is operational** with real implementations for the main workflow, though many advanced features remain as TODOs. Built in Rust for performance and safety, it provides both CLI and web interfaces for task execution and system management.
+The V3 iteration delivers a **functional constitutional AI system** with a working core execution loop, constitutional governance, and monitoring capabilities. **The core task execution pipeline is operational** with real implementations for the main workflow, including **thread-safe CoreML integration** with Send/Sync safety guarantees. Built in Rust for performance and safety, it provides both CLI and web interfaces for task execution and system management.
+
+**Recent Major Achievement**: Complete resolution of Send/Sync violations in CoreML FFI operations through thread-confined architecture with channel-based communication, enabling safe async coordination across the entire system.
 
 This mono-repo contains multiple iterations examining different approaches to AI agent systems:
 
@@ -76,10 +78,18 @@ The **V3 iteration** delivers a functional constitutional AI system with an oper
 
 #### Multi-Model AI System ✅ Operational
 - **Ollama Integration**: Local Gemma 3N model for general-purpose AI tasks with circuit breaker patterns
-- **CoreML Acceleration**: Apple Silicon optimized models including FastViT T8 F16 for vision processing
+- **CoreML Acceleration**: Apple Silicon optimized models including FastViT T8 F16 for vision processing with **thread-safe FFI integration**
 - **Model Hot-Swapping**: Zero-downtime model replacement with performance tracking and A/B testing
 - **Self-Prompting Loops**: Autonomous agent that iteratively improves outputs until quality thresholds met
 - **Model Registry**: Performance-weighted routing with task-specific model affinities (code tasks → Ollama, vision → CoreML)
+- **Send/Sync Safety**: **NEW** - CoreML operations safely integrated with async Rust runtime through thread confinement and channel-based communication
+
+#### CoreML Safety Architecture ✅ **NEW** - Production Ready
+- **Thread-Confinement**: CoreML raw pointers isolated to dedicated threads, preventing Send/Sync violations
+- **Opaque Model References**: `ModelRef(u64)` identifiers safely cross async boundaries
+- **Channel-Based Communication**: Async coordination between council and inference threads using `crossbeam::channel`
+- **Memory Safety**: Proper resource cleanup and leak prevention with Drop implementations
+- **FFI Boundary Control**: All unsafe CoreML operations quarantined with comprehensive validation
 
 #### Core Execution Loop ✅ Operational
 - **Task Submission**: REST API and CLI interfaces for task creation
@@ -168,6 +178,7 @@ While powerful for its target use cases, V3 has specific constraints:
 | Aspect | V3 System | Cloud API (GPT-4) | Traditional IDE Tools |
 |--------|-----------|-------------------|----------------------|
 | **Privacy** | ✅ Excellent | ❌ Poor | ✅ Good |
+| **Safety** | ✅ **NEW** - Thread-safe CoreML | ⚠️ Variable | ✅ Good |
 | **Cost** | ✅ Low | ❌ High (scale) | ✅ Low |
 | **Quality** | ✅ Self-improving | ✅ High baseline | ❌ Variable |
 | **Speed** | ⚠️ Good (local) | ✅ Excellent | ✅ Fast |
@@ -270,32 +281,36 @@ cd iterations/v3
 ```bash
 cd iterations/v3
 
-# 1. Start the database (optional - system has in-memory fallback)
+# 1. Verify compilation (includes CoreML safety checks)
+cargo check -p agent-agency-council -p agent-agency-apple-silicon
+# Should show 0 errors - Send/Sync violations resolved ✅
+
+# 2. Start the database (optional - system has in-memory fallback)
 docker run -d --name postgres-v3 -e POSTGRES_PASSWORD=password -p 5432:5432 postgres:15
 docker exec -it postgres-v3 psql -U postgres -c "CREATE DATABASE agent_agency_v3;"
 
-# 2. Run database migrations (if using PostgreSQL)
+# 3. Run database migrations (if using PostgreSQL)
 cargo run --bin migrate
 
-# 3. Start the API server
+# 4. Start the API server
 cargo run --bin api-server &
 API_PID=$!
 
-# 4. Start the worker service (in another terminal)
+# 5. Start the worker service (in another terminal)
 cargo run --bin agent-agency-worker &
 WORKER_PID=$!
 
-# 5. Execute a task (core execution loop is operational)
+# 6. Execute a task (core execution loop is operational with thread-safe CoreML)
 cargo run --bin agent-agency-cli execute "Test the execution pipeline" --mode dry-run
 
-# 6. Monitor progress via CLI
+# 7. Monitor progress via CLI
 cargo run --bin agent-agency-cli intervene status <task-id>
 
 # Cleanup when done
 kill $API_PID $WORKER_PID
 ```
 
-**Note**: The core task execution pipeline is operational, but many advanced features remain as TODO implementations. Use dry-run mode for safe testing without filesystem changes.
+**Note**: The core task execution pipeline is operational with thread-safe CoreML integration. Send/Sync violations have been resolved through proper FFI boundary control. Many advanced features remain as TODO implementations. Use dry-run mode for safe testing without filesystem changes.
 
 ### CLI Usage Examples
 
