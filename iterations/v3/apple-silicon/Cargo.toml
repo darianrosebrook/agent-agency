@@ -9,7 +9,7 @@ metal = ["dep:metal"]
 mpsgraph = ["metal", "dep:objc2-metal-performance-shaders-graph"]
 cpu-fallback = []
 candle = ["dep:candle-core", "dep:candle-nn", "dep:candle-transformers"]
-torch = []
+torch = ["agent-agency-pytorch-wrapper/pytorch"]
 onnx-runtime = ["dep:ort"]
 
 [dependencies]
@@ -64,6 +64,8 @@ rand_pcg = "0.3"
 chrono = { version = "0.4", features = ["serde"] }
 
 # ANE-specific dependencies
+# Safe PyTorch wrapper
+agent-agency-pytorch-wrapper = { path = "../pytorch-wrapper", default-features = false }
 tempfile = "3.0"
 
 # Benchmarking
