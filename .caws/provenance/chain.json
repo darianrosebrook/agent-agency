@@ -17008,5 +17008,39 @@
     },
     "previous_hash": "71236a46824117b47bc1cd5f11e3bbda6d4158e132c9fedf5eae2b76dbcbf91a",
     "hash": "e9e35970e21dde186c5a4f7a8c48b08e46c5f0d9b75c0b1f2e92577b3509a043"
+  },
+  {
+    "id": "prov-1761228103053",
+    "timestamp": "2025-10-23T14:01:43.053Z",
+    "commit": {
+      "hash": "ec04faa13ab5dd1a0770fb9c7b7f9d84708f7564",
+      "message": "Complete apple-silicon compilation fixes",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "AGENT-001",
+      "title": "P0 Blockers: Truthful System Loop with Auditability and Control",
+      "risk_tier": 1,
+      "mode": "feature",
+      "waiver_ids": []
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-23T14:01:43.054Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "e9e35970e21dde186c5a4f7a8c48b08e46c5f0d9b75c0b1f2e92577b3509a043",
+    "hash": "7b99e9d1674c56716ba2122cdf0e67967a059dd00140c57c26ca7961a4f76eaa"
   }
 ]
