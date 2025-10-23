@@ -76,6 +76,7 @@ pub struct SecurityScanResults {
 }
 
 /// Main CAWS validator
+#[derive(Debug)]
 pub struct CawsValidator {
     policy: CawsPolicy,
 }

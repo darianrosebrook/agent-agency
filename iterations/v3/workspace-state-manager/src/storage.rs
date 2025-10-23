@@ -91,102 +91,6 @@ impl FileStorage {
 
         serde_json::from_slice(&json).map_err(Into::into)
     }
-
-    /// Validate state before serialization
-    fn validate_state_for_serialization(
-        &self,
-        state: &WorkspaceState,
-    ) -> Result<(), WorkspaceError> {
-        // Validate required fields
-        if state.id.0 == uuid::Uuid::nil() {
-            return Err(WorkspaceError::Validation(
-                "State ID cannot be empty".to_string(),
-            ));
-        }
-
-        if state.workspace_root.as_os_str().is_empty() {
-            return Err(WorkspaceError::Validation(
-                "Workspace root cannot be empty".to_string(),
-            ));
-        }
-
-        // Validate file counts match actual files
-        if state.files.len() != state.total_files {
-            return Err(WorkspaceError::Validation(format!(
-                "File count mismatch: expected {}, got {}",
-                state.total_files,
-                state.files.len()
-            )));
-        }
-
-        // Validate timestamp consistency
-        if state.captured_at != state.timestamp {
-            warn!(
-                "Timestamp mismatch in workspace state: captured_at={}, timestamp={}",
-                state.captured_at, state.timestamp
-            );
-        }
-
-        Ok(())
-    }
-
-    /// Serialize state to compressed JSON
-    fn serialize_to_json_compressed(
-        &self,
-        state: &WorkspaceState,
-    ) -> Result<Vec<u8>, WorkspaceError> {
-        // Serialize to JSON
-        let json_data = serde_json::to_vec(state).map_err(WorkspaceError::Serialization)?;
-
-        // Compress the JSON data
-        let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
-        encoder
-            .write_all(&json_data)
-            .map_err(WorkspaceError::Io)?;
-
-        let compressed_data = encoder.finish().map_err(WorkspaceError::Io)?;
-
-        debug!(
-            "Serialized state {}: {} bytes -> {} bytes (compression ratio: {:.2})",
-            state.id,
-            json_data.len(),
-            compressed_data.len(),
-            json_data.len() as f64 / compressed_data.len() as f64
-        );
-
-        Ok(compressed_data)
-    }
-
-    /// Verify serialization integrity
-    fn verify_serialization_integrity(&self, serialized_data: &[u8]) -> Result<(), WorkspaceError> {
-        // Check if data is not empty
-        if serialized_data.is_empty() {
-            return Err(WorkspaceError::Validation(
-                "Serialized data cannot be empty".to_string(),
-            ));
-        }
-
-        // Check minimum size (compressed data should be at least some bytes)
-        if serialized_data.len() < 10 {
-            return Err(WorkspaceError::Validation(
-                "Serialized data too small to be valid".to_string(),
-            ));
-        }
-
-        // Verify we can decompress the data
-        let mut decoder = GzDecoder::new(serialized_data);
-        let mut decompressed = Vec::new();
-        decoder.read_to_end(&mut decompressed).map_err(|e| {
-            WorkspaceError::Validation(format!("Decompression verification failed: {}", e))
-        })?;
-
-        // Verify we can parse the JSON
-        serde_json::from_slice::<WorkspaceState>(&decompressed).map_err(|e| {
-            WorkspaceError::Validation(format!("JSON parsing verification failed: {}", e))
-        })?;
-
-        Ok(())
-    }
 }
 
 #[async_trait]
@@ -477,25 +381,6 @@ impl Default for MemoryStorage {
 }
 
 impl MemoryStorage {
-    /// Validate state before storing
-    fn validate_state(&self, state: &WorkspaceState) -> Result<(), WorkspaceError> {
-        // Check if state has files
-        if state.files.is_empty() {
-            return Err(WorkspaceError::Storage("Empty state files".to_string()));
-        }
-
-        // Check if state size is within limits
-        if state.total_size > 100 * 1024 * 1024 {
-            // 100MB limit
-            return Err(WorkspaceError::Storage(format!(
-                "State size {} exceeds limit",
-                state.total_size
-            )));
-        }
-
-        Ok(())
-    }
-
     /// Serialize state for storage
     fn serialize_state(&self, state: &WorkspaceState) -> Result<WorkspaceState, WorkspaceError> {
         // Implement proper state serialization with JSON format and compression
@@ -519,32 +404,6 @@ impl MemoryStorage {
 
     /// Optimize storage performance
     /// Clean up old states to free memory
-    /// Clean up diffs that reference removed states
-    async fn cleanup_orphaned_diffs(
-        &self,
-        removed_state_ids: &[StateId],
-    ) -> Result<(), WorkspaceError> {
-        if removed_state_ids.is_empty() {
-            return Ok(());
-        }
-
-        let mut diffs = self.diffs.write().await;
-        let mut to_remove = Vec::new();
-
-        for (key, _diff) in diffs.iter() {
-            if removed_state_ids.contains(&key.0) || removed_state_ids.contains(&key.1) {
-                to_remove.push(*key);
-            }
-        }
-
-        for key in to_remove {
-            diffs.remove(&key);
-            debug!("Cleaned up orphaned diff: {:?}", key);
-        }
-
-        Ok(())
-    }
-
     /// Compress large states to save memory
     /// Compress data using gzip compression
     fn compress_data(&self, data: &[u8]) -> Result<Vec<u8>, WorkspaceError> {
@@ -572,6 +431,22 @@ impl MemoryStorage {
             return Err(WorkspaceError::DiffComputation(
                 "Diff has file changes but empty changes vector".to_string(),
             ));
+        }
+
+        Ok(())
+    }
+
+    /// Validate state before storing
+    fn validate_state(&self, state: &WorkspaceState) -> Result<(), WorkspaceError> {
+        // Check if state has files
+        if state.files.is_empty() {
+            return Err(WorkspaceError::Storage("Empty state files".to_string()));
+        }
+
+        // Check if state size is within limits
+        if state.total_size > 100 * 1024 * 1024 {
+            // 100MB limit
+            return Err(WorkspaceError::Storage("State too large".to_string()));
         }
 
         Ok(())

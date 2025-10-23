@@ -477,5 +477,3 @@ impl Default for OptimizationConfig {
 /// @darianrosebrook
 /// Runtime optimization system implementing Kokoro-level performance engineering
 /// for Agent Agency V3 with CAWS compliance preservation
-
-

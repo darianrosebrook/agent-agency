@@ -3,11 +3,10 @@
 //! Manages the lifecycle of workers in the pool, including registration,
 //! health checking, load balancing, and performance monitoring.
 
-use crate::types::*;
-use crate::{AsyncPatternsSpecialist, CawsChecker, CustomSpecialist, DocumentationSpecialist, TaskExecutor, TaskRouter, TestingSpecialist, TypeSystemSpecialist, WorkerPoolConfig};
+use crate::types::{WorkerPool, WorkerManager, WorkerPoolConfig, WorkerPoolEvent};
+use crate::{AsyncPatternsSpecialist, CawsChecker, CustomSpecialist, DocumentationSpecialist, TaskExecutor, TaskRouter, TestingSpecialist, TypeSystemSpecialist};
 use agent_agency_council::models::TaskSpec;
 use agent_agency_contracts::{WorkerSpecialty, WorkerHealthStatus, WorkerHealthMetrics, WorkerPoolStats, WorkerAssignment as SharedWorkerAssignment, WorkerRegistration, WorkerUpdate, TaskPriority, SpecializedWorker, WorkerType};
-use crate::types::WorkerPoolEvent;
 use agent_agency_resilience::CircuitBreaker;
 use anyhow::Result;
 use async_trait::async_trait;

@@ -171,19 +171,6 @@ impl DatabaseArtifactStorage {
         }
     }
 
-    /// Convert database metadata to contract ArtifactMetadata
-    
-    fn db_to_contract_metadata(
-        &self,
-        db_metadata: &DatabaseArtifactMetadata,
-    ) -> agent_agency_contracts::execution_artifacts::ArtifactMetadata {
-        agent_agency_contracts::execution_artifacts::ArtifactMetadata {
-            compression_applied: Some(db_metadata.compression_used),
-            storage_location: Some(format!("database:{}", db_metadata.id)),
-            retention_policy: Some("default".to_string()),
-            tags: vec![],
-        }
-    }
 
     /// Get the next version number for a task
     async fn get_next_version_for_task(&self, task_id: Uuid) -> Result<i32, ArtifactStorageError> {
@@ -212,13 +199,6 @@ impl DatabaseArtifactStorage {
         }
     }
 
-    /// Compare two version strings
-    
-    fn compare_versions(&self, v1: &str, v2: &str) -> Result<std::cmp::Ordering, ArtifactStorageError> {
-        let v1_num = self.validate_version(v1)?;
-        let v2_num = self.validate_version(v2)?;
-        Ok(v1_num.cmp(&v2_num))
-    }
 
     /// Get version metadata including creation time and size
     pub async fn get_version_metadata(&self, task_id: Uuid, version: &str) -> Result<VersionMetadata, ArtifactStorageError> {
@@ -385,42 +365,8 @@ impl DatabaseArtifactStorage {
         }
     }
 
-    /// Calculate size of artifacts in bytes
-    
-    fn calculate_artifact_size(artifacts: &ExecutionArtifacts) -> u64 {
-        // Estimate size based on JSON serialization
-        serde_json::to_string(artifacts)
-            .map(|s| s.len() as u64)
-            .unwrap_or(1024) // fallback size
-    }
 
-    /// Generate SHA-256 checksum for integrity
-    
-    fn generate_checksum(artifacts: &ExecutionArtifacts) -> String {
-        use sha2::{Sha256, Digest};
-        let data = serde_json::to_string(artifacts).unwrap_or_default();
-        let mut hasher = Sha256::new();
-        hasher.update(data.as_bytes());
-        format!("{:x}", hasher.finalize())
-    }
 
-    /// Get the next version number for a task
-    
-    async fn get_next_version(&self, task_id: Uuid) -> Result<i32, ArtifactStorageError> {
-        let result = sqlx::query(
-            r#"
-            SELECT COALESCE(MAX(version), 0) + 1 as next_version
-            FROM artifact_metadata
-            WHERE task_id = $1
-            "#
-        )
-        .bind(task_id)
-        .fetch_one(&*self.pool)
-        .await
-        .map_err(|e| ArtifactStorageError::DatabaseError(e.to_string()))?;
-
-        Ok(result.get::<i32, _>("next_version"))
-    }
 
     /// Map execution artifacts to database rows
     fn artifacts_to_db_rows(&self, artifacts: &ExecutionArtifacts) -> Vec<DbArtifactRow> {

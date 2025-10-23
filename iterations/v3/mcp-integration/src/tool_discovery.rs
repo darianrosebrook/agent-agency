@@ -527,6 +527,7 @@ impl ToolDiscovery {
             parameters: m.parameters.clone(),
             output_schema: m.output_schema.clone(),
             endpoint: m.endpoint.clone().unwrap_or_default(),
+            manifest: m.clone(),
             caws_compliance: crate::types::CawsComplianceStatus::Unknown,
             registration_time: chrono::Utc::now(),
             last_updated: chrono::Utc::now(),
@@ -891,7 +892,7 @@ impl ToolDiscovery {
 
         // 4. Health monitoring: Monitor endpoint health and performance
         let response_time = start_time.elapsed().as_millis() as u64;
-        self.record_health_metrics(endpoint, endpoint_type, health_result.is_ok(), response_time).await;
+        self.record_health_metrics(endpoint, endpoint_type, health_result.is_ok(), response_time);
 
         // Combine health check and validation results
         let is_healthy = health_result.unwrap_or(false) && validation_result;

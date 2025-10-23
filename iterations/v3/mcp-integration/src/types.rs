@@ -18,6 +18,7 @@ pub struct MCPTool {
     pub parameters: ToolParameters,
     pub output_schema: serde_json::Value,
     pub endpoint: String,
+    pub manifest: ToolManifest,
     pub caws_compliance: CawsComplianceStatus,
     pub registration_time: DateTime<Utc>,
     pub last_updated: DateTime<Utc>,

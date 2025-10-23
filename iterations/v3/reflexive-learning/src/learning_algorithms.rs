@@ -736,6 +736,7 @@ mod tests {
         );
     }
 }
+
 impl LearningOrchestrator {
     /// Create a new learning orchestrator
     pub fn new() -> Self {

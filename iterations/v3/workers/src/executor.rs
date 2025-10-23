@@ -3,6 +3,7 @@
 //! Executes tasks by communicating with worker models and handling the execution lifecycle.
 
 use crate::types::{*, UuidGenerator};
+use agent_agency_contracts::IssueSeverity;
 use agent_agency_council::models::{RiskTier, TaskContext as CouncilTaskContext, TaskSpec};
 use agent_agency_resilience::{CircuitBreaker, RetryConfig};
 use anyhow::{Context, Result};
@@ -320,22 +321,22 @@ impl TaskExecutor {
     }
 
     /// Determine severity level for a council rule
-    fn determine_rule_severity(rule: &str) -> GateSeverity {
+    fn determine_rule_severity(rule: &str) -> IssueSeverity {
         let rule_lower = rule.to_lowercase();
 
         // Critical rules
         if rule_lower.contains("security") || rule_lower.contains("safety") ||
            rule_lower.contains("critical") || rule_lower.contains("blocking") {
-            GateSeverity::Critical
+            IssueSeverity::Error
         }
         // High impact rules
         else if rule_lower.contains("performance") || rule_lower.contains("reliability") ||
                 rule_lower.contains("compliance") || rule_lower.contains("audit") {
-            GateSeverity::High
+            IssueSeverity::Warning
         }
         // Medium rules (default)
         else {
-            GateSeverity::Medium
+            IssueSeverity::Info
         }
     }
 

@@ -17042,5 +17042,39 @@
     },
     "previous_hash": "e9e35970e21dde186c5a4f7a8c48b08e46c5f0d9b75c0b1f2e92577b3509a043",
     "hash": "7b99e9d1674c56716ba2122cdf0e67967a059dd00140c57c26ca7961a4f76eaa"
+  },
+  {
+    "id": "prov-1761228183613",
+    "timestamp": "2025-10-23T14:03:03.613Z",
+    "commit": {
+      "hash": "18171023de98c75a0200a0e77b5d1be7c19e4e49",
+      "message": "Update CAWS provenance tracking for compilation fixes",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "AGENT-001",
+      "title": "P0 Blockers: Truthful System Loop with Auditability and Control",
+      "risk_tier": 1,
+      "mode": "feature",
+      "waiver_ids": []
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-23T14:03:03.614Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "7b99e9d1674c56716ba2122cdf0e67967a059dd00140c57c26ca7961a4f76eaa",
+    "hash": "3c0ab79b29076d9cbdbb31e4c1e6537b36fea5ca4c6003847716fc7dec3058e0"
   }
 ]

@@ -170,6 +170,7 @@ pub enum OrchestrationIntegrationError {
 }
 
 /// MCP-specific CAWS integration
+#[derive(Debug)]
 pub struct McpCawsIntegration {
     validator: Arc<CawsValidator>,
     policy: Arc<CawsPolicy>,

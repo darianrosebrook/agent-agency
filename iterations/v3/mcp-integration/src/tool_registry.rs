@@ -512,11 +512,12 @@ impl ToolRegistry {
 
         // Validate arguments for security
         for arg in &args {
-            if arg.contains("..") || arg.contains("/") || arg.contains("\\") {
-                return Err(anyhow::anyhow!("Invalid path characters in argument"));
+            let arg_str: &str = arg.as_str();
+            if arg_str.contains("..") || arg_str.contains("/") || arg_str.contains("\\") {
+                return Err(anyhow::anyhow!("Invalid path characters in argument: {}", arg_str));
             }
-            if arg.contains("rm") || arg.contains("sudo") || arg.contains("chmod") {
-                return Err(anyhow::anyhow!("Potentially dangerous argument: {}", arg));
+            if arg_str.contains("rm") || arg_str.contains("sudo") || arg_str.contains("chmod") {
+                return Err(anyhow::anyhow!("Potentially dangerous argument: {}", arg_str));
             }
         }
 

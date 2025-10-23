@@ -163,8 +163,8 @@ impl ApiResponseCache {
 /// Database query cache with intelligent invalidation
 
 pub struct DatabaseQueryCache<T> {
-    cache: Arc<dyn Cache<String, T> + Send + Sync>,
-    config: CacheConfig,
+    _cache: Arc<dyn Cache<String, T> + Send + Sync>,
+    _config: CacheConfig,
     /// Table dependency tracking
     table_dependencies: HashMap<String, TableDependency>,
     /// Query-to-table mappings
@@ -179,8 +179,8 @@ where
 {
     pub fn new(cache: Arc<dyn Cache<String, T> + Send + Sync>, config: CacheConfig) -> Self {
         Self {
-            cache,
-            config,
+            _cache: cache,
+            _config: config,
             table_dependencies: HashMap::new(),
             query_mappings: HashMap::new(),
             invalidation_metrics: HashMap::new(),

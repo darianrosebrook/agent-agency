@@ -24,7 +24,7 @@ pub mod slo;
 // Re-export specific types to avoid conflicts
 pub use agent_telemetry::{
     AgentPerformanceMetrics, AgentPerformanceTracker, AgentTelemetryCollector, AgentType,
-    BusinessMetrics, CoordinationMetrics, SystemDashboard, SystemAlert,
+    BusinessMetrics, CoordinationMetrics, SystemDashboard, SystemAlert, TelemetryConfig,
 };
 pub use alerts::{
     Alert, AlertCondition, AlertManager, AlertRule, AlertSeverity as AlertSeverityType,

@@ -218,8 +218,8 @@ impl ModelHotSwapOrchestrator {
         info!("Initializing model hot-swap orchestrator");
 
         let model_registry = Arc::new(ModelRegistry::new());
-        let performance_router = Arc::new(PerformanceRouter::new(config.enable_performance_routing));
-        let load_balancer = Arc::new(LoadBalancer::new(BalancingStrategy::PerformanceWeighted));
+        let performance_router = Arc::new(PerformanceRouter::new());
+        let load_balancer = Arc::new(LoadBalancer::new());
         let traffic_splitter = Arc::new(TrafficSplitter::new(SplitConfig {
             model_weights: HashMap::new(),
             sticky_sessions: false,
@@ -257,7 +257,7 @@ impl ModelHotSwapOrchestrator {
         self.validate_replacement_request(&request).await?;
 
         // Check model compatibility
-        self.version_manager.validate_compatibility(&request.model_id, &request.new_version).await?;
+        self.version_manager.check_compatibility(&Version::parse("1.0.0")?, &request.new_version).await?;
 
         // Execute replacement based on strategy
         let result = match request.strategy {

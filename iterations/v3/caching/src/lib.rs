@@ -138,7 +138,7 @@ pub struct SafeAny {
     value: Box<dyn Any + Send + Sync>,
     type_id: TypeId,
     type_name: String,
-    registry: Arc<GlobalTypeRegistry>,
+    _registry: Arc<GlobalTypeRegistry>,
 }
 
 impl SafeAny {
@@ -154,7 +154,7 @@ impl SafeAny {
             value: Box::new(value),
             type_id,
             type_name,
-            registry,
+            _registry: registry,
         }
     }
 
@@ -227,7 +227,7 @@ impl SafeAny {
                 value,
                 type_id: entry.type_id,
                 type_name: entry.type_name.clone(),
-                registry,
+                _registry: registry,
             })
         } else {
             Err(CacheError::ConfigError {

@@ -10,8 +10,8 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 // CLIP model imports
-use candle_core::{Device, Tensor};
-use candle_transformers::models::clip::{self, ClipModel};
+use candle_core::Device;
+use candle_transformers::models::clip::ClipModel;
 use tokenizers::Tokenizer;
 
 /// Trait for embedding providers
@@ -420,7 +420,7 @@ impl ClipEmbeddingProvider {
         let device = Device::Cpu;
 
         // Get tokenizer name based on variant
-        let tokenizer_name = match variant {
+        let _tokenizer_name = match variant {
             ClipModelVariant::VitB32 => "openai/clip-vit-base-patch32",
             ClipModelVariant::VitB16 => "openai/clip-vit-base-patch16",
             ClipModelVariant::VitL14 => "openai/clip-vit-large-patch14",

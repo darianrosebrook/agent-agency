@@ -152,20 +152,33 @@ impl CawsIntegration {
     pub async fn validate_tool(&self, tool: &MCPTool) -> Result<CawsComplianceResult> {
         info!("Validating tool for CAWS compliance: {}", tool.name);
 
+        // Create a manifest from tool data for validation
+        let manifest = serde_json::json!({
+            "name": tool.name,
+            "version": tool.version,
+            "description": tool.description,
+            "author": tool.author,
+            "tool_type": tool.tool_type,
+            "capabilities": tool.capabilities,
+            "parameters": tool.parameters,
+            "output_schema": tool.output_schema,
+            "endpoint": tool.endpoint
+        });
+
         // DEPRECATED: Delegate to runtime-validator implementation
-        let runtime_result = self.inner.validate_tool_manifest(&tool.manifest, "2").await
+        let runtime_result = self.inner.validate_tool_manifest(&manifest).await
             .map_err(|e| anyhow::anyhow!("Runtime validator error: {}", e))?;
-        
+
         // Convert runtime-validator result to legacy format
         let violations: Vec<crate::types::CawsViolation> = runtime_result.violations
             .into_iter()
             .map(|v| crate::types::CawsViolation {
                 rule_id: "RUNTIME-VALIDATOR".to_string(),
                 rule_name: "Runtime Validator Check".to_string(),
-                severity: if runtime_result.compliant { 
-                    crate::types::ViolationSeverity::Info 
-                } else { 
-                    crate::types::ViolationSeverity::Error 
+                severity: if runtime_result.compliant {
+                    crate::types::ViolationSeverity::Info
+                } else {
+                    crate::types::ViolationSeverity::Error
                 },
                 description: v,
                 suggestion: None,
@@ -174,17 +187,15 @@ impl CawsIntegration {
                 file_path: None,
             })
             .collect();
-        
+
         let compliance_score = if runtime_result.compliant { 1.0 } else { 0.5 };
-        
+
         let result = CawsComplianceResult {
-            tool_id: tool.id,
-            compliant: runtime_result.compliant,
+            is_compliant: runtime_result.compliant,
             compliance_score,
             violations,
-            recommendations: runtime_result.recommendations,
-            risk_assessment: runtime_result.risk_assessment,
-            validated_at: chrono::Utc::now(),
+            checked_at: chrono::Utc::now(),
+            rulebook_version: "2.0".to_string(),
         };
 
         // Cache the result

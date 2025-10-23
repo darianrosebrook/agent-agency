@@ -94,7 +94,7 @@ pub enum RiskLevel {
 /// Backup validator
 
 pub struct BackupValidator {
-    db_client: Arc<DatabaseClient>,
+    _db_client: Arc<DatabaseClient>,
     config: BackupValidationConfig,
     validation_history: Arc<RwLock<Vec<ValidationResult>>>,
 }
@@ -103,7 +103,7 @@ impl BackupValidator {
     /// Create a new backup validator
     pub fn new(db_client: Arc<DatabaseClient>, config: BackupValidationConfig) -> Self {
         Self {
-            db_client,
+            _db_client: db_client,
             config,
             validation_history: Arc::new(RwLock::new(Vec::new())),
         }

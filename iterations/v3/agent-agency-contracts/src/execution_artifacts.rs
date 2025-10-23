@@ -42,6 +42,23 @@ pub struct ExecutionArtifacts {
     pub metadata: Option<ArtifactMetadata>,
 }
 
+impl Default for ExecutionArtifacts {
+    fn default() -> Self {
+        Self {
+            version: "1.0.0".to_string(),
+            task_id: Uuid::nil(),
+            working_spec_id: String::new(),
+            iteration: 0,
+            code_changes: CodeChanges::default(),
+            tests: TestArtifacts::default(),
+            coverage: CoverageResults::default(),
+            linting: LintingResults::default(),
+            provenance: Provenance::default(),
+            metadata: None,
+        }
+    }
+}
+
 /// All code changes made during execution
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -59,6 +76,17 @@ pub struct CodeChanges {
 
     /// Code change statistics
     pub statistics: CodeChangeStats,
+}
+
+impl Default for CodeChanges {
+    fn default() -> Self {
+        Self {
+            diffs: Vec::new(),
+            new_files: Vec::new(),
+            deleted_files: Vec::new(),
+            statistics: CodeChangeStats::default(),
+        }
+    }
 }
 
 /// Unified diff artifact
@@ -147,6 +175,17 @@ pub struct CodeChangeStats {
     pub total_loc: u32,
 }
 
+impl Default for CodeChangeStats {
+    fn default() -> Self {
+        Self {
+            files_modified: 0,
+            lines_added: 0,
+            lines_removed: 0,
+            total_loc: 0,
+        }
+    }
+}
+
 /// All test artifacts and execution results
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -163,6 +202,17 @@ pub struct TestArtifacts {
     /// Test files created or modified
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub test_files: Vec<TestFileInfo>,
+}
+
+impl Default for TestArtifacts {
+    fn default() -> Self {
+        Self {
+            unit_tests: TestSuiteResults::default(),
+            integration_tests: TestSuiteResults::default(),
+            e2e_tests: E2eTestResults::default(),
+            test_files: Vec::new(),
+        }
+    }
 }
 
 /// Test suite execution results
@@ -187,6 +237,19 @@ pub struct TestSuiteResults {
     /// Individual test results
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub results: Vec<TestResult>,
+}
+
+impl Default for TestSuiteResults {
+    fn default() -> Self {
+        Self {
+            total: 0,
+            passed: 0,
+            failed: 0,
+            skipped: 0,
+            duration_ms: 0,
+            results: Vec::new(),
+        }
+    }
 }
 
 /// Individual test result
@@ -248,6 +311,19 @@ pub struct E2eTestResults {
     /// E2E scenario results
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub scenarios: Vec<E2eScenarioResult>,
+}
+
+impl Default for E2eTestResults {
+    fn default() -> Self {
+        Self {
+            total: 0,
+            passed: 0,
+            failed: 0,
+            skipped: 0,
+            duration_ms: 0,
+            scenarios: Vec::new(),
+        }
+    }
 }
 
 /// Individual E2E scenario result
@@ -339,6 +415,20 @@ pub struct CoverageResults {
     pub uncovered_branches: Vec<UncoveredBranch>,
 }
 
+impl Default for CoverageResults {
+    fn default() -> Self {
+        Self {
+            line_coverage: 0.0,
+            branch_coverage: 0.0,
+            function_coverage: 0.0,
+            mutation_score: 0.0,
+            coverage_report_path: None,
+            uncovered_lines: Vec::new(),
+            uncovered_branches: Vec::new(),
+        }
+    }
+}
+
 /// Uncovered lines in a file
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -390,6 +480,20 @@ pub struct LintingResults {
     /// Configuration used
     #[serde(skip_serializing_if = "Option::is_none")]
     pub config_used: Option<String>,
+}
+
+impl Default for LintingResults {
+    fn default() -> Self {
+        Self {
+            total_issues: 0,
+            errors: 0,
+            warnings: 0,
+            info: 0,
+            issues_by_file: std::collections::HashMap::new(),
+            linter_version: None,
+            config_used: None,
+        }
+    }
 }
 
 /// Individual linting issue
@@ -465,6 +569,23 @@ pub struct Provenance {
     pub audit_trail: Vec<AuditEvent>,
 }
 
+impl Default for Provenance {
+    fn default() -> Self {
+        Self {
+            execution_id: Uuid::nil(),
+            worker_id: None,
+            worker_version: None,
+            started_at: chrono::Utc::now(),
+            completed_at: None,
+            duration_ms: 0,
+            environment: ExecutionEnvironment::default(),
+            git_info: GitInfo::default(),
+            seeds_used: ExecutionSeeds::default(),
+            audit_trail: Vec::new(),
+        }
+    }
+}
+
 /// Execution environment details
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -483,6 +604,17 @@ pub struct ExecutionEnvironment {
     pub dependencies: std::collections::HashMap<String, String>,
 }
 
+impl Default for ExecutionEnvironment {
+    fn default() -> Self {
+        Self {
+            os: "unknown".to_string(),
+            architecture: "unknown".to_string(),
+            rust_version: None,
+            dependencies: std::collections::HashMap::new(),
+        }
+    }
+}
+
 /// Git repository information
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -499,6 +631,17 @@ pub struct GitInfo {
     /// Uncommitted changes
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub uncommitted_changes: Vec<String>,
+}
+
+impl Default for GitInfo {
+    fn default() -> Self {
+        Self {
+            commit_hash: "unknown".to_string(),
+            branch: "unknown".to_string(),
+            dirty: false,
+            uncommitted_changes: Vec::new(),
+        }
+    }
 }
 
 /// Deterministic seeds used for reproducible execution

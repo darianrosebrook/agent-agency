@@ -199,95 +199,52 @@ impl AgentTelemetryCollector {
 /// Task completion record for throughput calculation
 #[derive(Debug, Clone)]
 struct TaskCompletionRecord {
-    timestamp: chrono::DateTime<chrono::Utc>,
-    agent_id: String,
-    success: bool,
+    _timestamp: chrono::DateTime<chrono::Utc>,
+    _agent_id: String,
+    _success: bool,
 }
 
 /// Time-windowed task completion tracker for accurate throughput calculation
 #[derive(Debug)]
 struct TaskThroughputTracker {
     /// Recent task completions (last 24 hours)
-    completions: VecDeque<TaskCompletionRecord>,
+    _completions: VecDeque<TaskCompletionRecord>,
     /// Maximum time window to keep records (24 hours)
-    max_window_duration: chrono::Duration,
+    _max_window_duration: chrono::Duration,
 }
 
 impl TaskThroughputTracker {
     fn new() -> Self {
         Self {
-            completions: VecDeque::new(),
-            max_window_duration: chrono::Duration::hours(24),
+            _completions: VecDeque::new(),
+            _max_window_duration: chrono::Duration::hours(24),
         }
     }
 
     /// Record a task completion
     fn record_completion(&mut self, agent_id: String, success: bool) {
         let record = TaskCompletionRecord {
-            timestamp: chrono::Utc::now(),
-            agent_id,
-            success,
+            _timestamp: chrono::Utc::now(),
+            _agent_id: agent_id,
+            _success: success,
         };
 
-        self.completions.push_back(record);
+        self._completions.push_back(record);
 
         // Clean old records outside the time window
         self.cleanup_old_records();
     }
 
-    /// Calculate throughput over the last hour
-    fn calculate_hourly_throughput(&self) -> f64 {
-        self.calculate_throughput_for_duration(chrono::Duration::hours(1))
-    }
 
-    /// Calculate throughput over the last 24 hours
-    fn calculate_daily_throughput(&self) -> f64 {
-        self.calculate_throughput_for_duration(chrono::Duration::hours(24))
-    }
 
-    /// Calculate throughput for a specific duration
-    fn calculate_throughput_for_duration(&self, duration: chrono::Duration) -> f64 {
-        let cutoff = chrono::Utc::now() - duration;
-        let recent_completions: Vec<_> = self.completions
-            .iter()
-            .filter(|record| record.timestamp > cutoff)
-            .collect();
 
-        if recent_completions.is_empty() {
-            return 0.0;
-        }
-
-        // Calculate tasks per hour
-        let total_tasks = recent_completions.len() as f64;
-        let hours = duration.num_seconds() as f64 / 3600.0;
-        total_tasks / hours
-    }
-
-    /// Calculate availability over the last 24 hours
-    fn calculate_availability(&self) -> f64 {
-        let cutoff = chrono::Utc::now() - chrono::Duration::hours(24);
-        let recent_completions: Vec<_> = self.completions
-            .iter()
-            .filter(|record| record.timestamp > cutoff)
-            .collect();
-
-        if recent_completions.is_empty() {
-            return 100.0; // Default to 100% if no data
-        }
-
-        let successful_tasks = recent_completions.iter()
-            .filter(|record| record.success)
-            .count();
-
-        (successful_tasks as f64 / recent_completions.len() as f64) * 100.0
-    }
 
     /// Clean up records older than the maximum window
     fn cleanup_old_records(&mut self) {
-        let cutoff = chrono::Utc::now() - self.max_window_duration;
-        while let Some(record) = self.completions.front() {
-            if record.timestamp < cutoff {
-                self.completions.pop_front();
+        let cutoff = chrono::Utc::now() - self._max_window_duration;
+        while let Some(record) = self._completions.front() {
+            if record._timestamp < cutoff {
+                self._completions.pop_front();
             } else {
                 break;
             }
@@ -392,15 +349,15 @@ impl AgentPerformanceTracker {
 #[derive(Debug)]
 pub struct AgentIntegratedHealthMonitor {
     /// Base system health monitor
-    base_monitor: SystemHealthMonitor,
+    _base_monitor: SystemHealthMonitor,
     /// Agent telemetry collector (placeholder)
-    telemetry_collector: Arc<AgentTelemetryCollector>,
+    _telemetry_collector: Arc<AgentTelemetryCollector>,
     /// Agent performance tracking
-    agent_performance_trackers: Arc<RwLock<std::collections::HashMap<String, AgentPerformanceTracker>>>,
+    _agent_performance_trackers: Arc<RwLock<std::collections::HashMap<String, AgentPerformanceTracker>>>,
     /// Task throughput tracker for accurate business metrics
-    task_throughput_tracker: Arc<RwLock<TaskThroughputTracker>>,
+    _task_throughput_tracker: Arc<RwLock<TaskThroughputTracker>>,
     /// Integration configuration
-    config: AgentIntegrationConfig,
+    _config: AgentIntegrationConfig,
 }
 
 /// Configuration for agent integration
@@ -440,11 +397,11 @@ impl AgentIntegratedHealthMonitor {
         let telemetry_collector = Arc::new(AgentTelemetryCollector::new());
 
         Self {
-            base_monitor: SystemHealthMonitor::new(base_config),
-            telemetry_collector,
-            agent_performance_trackers: Arc::new(RwLock::new(std::collections::HashMap::new())),
-            task_throughput_tracker: Arc::new(RwLock::new(TaskThroughputTracker::new())),
-            config: integration_config,
+            _base_monitor: SystemHealthMonitor::new(base_config),
+            _telemetry_collector: telemetry_collector,
+            _agent_performance_trackers: Arc::new(RwLock::new(std::collections::HashMap::new())),
+            _task_throughput_tracker: Arc::new(RwLock::new(TaskThroughputTracker::new())),
+            _config: integration_config,
         }
     }
 

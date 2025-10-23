@@ -11,8 +11,9 @@ use chrono::{DateTime, Utc};
 use tracing::{debug, warn};
 
 use crate::manager::WorkerPoolManager;
-use crate::types::{TaskSpec, TaskExecutionResult, TaskRequirements, TaskContext, TaskScope, RiskTier};
-use agent_agency_contracts::{WorkerAssignment, RiskTier as ContractsRiskTier, ExecutionArtifacts, execution_events::{ExecutionEvent, WorkingSpecScope}, working_spec::WorkingSpec, TaskPriority};
+use crate::types::{TaskExecutionResult, TaskRequirements, TaskContext, TaskScope};
+use agent_agency_council::models::TaskSpec;
+use agent_agency_contracts::{WorkerAssignment, RiskTier, ExecutionArtifacts, execution_events::{ExecutionEvent, WorkingSpecScope}, working_spec::WorkingSpec, TaskPriority};
 use agent_agency_observability::DiffStats;
 use agent_agency_resilience::{CircuitBreaker, CircuitBreakerConfig};
 use caws_runtime_validator::integration::{OrchestrationValidationResult, WorkingSpec as RuntimeWorkingSpec, TaskDescriptor as RuntimeTaskDescriptor, ExecutionMode, DiffStats as RuntimeDiffStats};
@@ -296,7 +297,7 @@ impl AutonomousExecutor {
         // Create a temporary WorkerAssignment from TaskExecutionResult
         let temp_assignment = agent_agency_contracts::WorkerAssignment {
             worker_id: assignment.worker_id,
-            priority: TaskPriority::Medium,
+            priority: TaskPriority::Normal,
             estimated_completion_time: assignment.started_at + chrono::Duration::minutes(5),
             confidence_score: 0.8,
         };
@@ -776,7 +777,7 @@ impl AutonomousExecutor {
         // Create a temporary WorkerAssignment from TaskExecutionResult
         let temp_assignment = agent_agency_contracts::WorkerAssignment {
             worker_id: assignment.worker_id,
-            priority: TaskPriority::Medium,
+            priority: TaskPriority::Normal,
             estimated_completion_time: assignment.started_at + chrono::Duration::minutes(5),
             confidence_score: 0.8,
         };
@@ -1089,11 +1090,11 @@ impl AutonomousExecutor {
             created_at: Utc::now(),
             deadline: None,
             risk_tier: working_spec.risk_tier.map(|rt| match rt {
-                ContractsRiskTier::Low => RiskTier::Low,
-                ContractsRiskTier::Medium => RiskTier::Medium,
-                ContractsRiskTier::High => RiskTier::High,
-                ContractsRiskTier::Critical => RiskTier::Critical,
-            }).unwrap_or(RiskTier::Medium),
+                1 => RiskTier::Tier1,
+                2 => RiskTier::Tier2,
+                3 => RiskTier::Tier3,
+                _ => RiskTier::Tier3,
+            }).unwrap_or(RiskTier::Tier3),
             scope: TaskScope {
                 included_paths: vec![], // Default empty scope since WorkingSpec doesn't have scope info
                 excluded_paths: vec![], // Default empty scope since WorkingSpec doesn't have scope info

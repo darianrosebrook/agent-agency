@@ -199,7 +199,7 @@ pub struct DatabaseClient {
     /// Connection semaphore for rate limiting
     connection_semaphore: Arc<Semaphore>,
     /// Prepared statement cache
-    prepared_statements: Arc<RwLock<HashMap<String, String>>>,
+    _prepared_statements: Arc<RwLock<HashMap<String, String>>>,
 }
 
 /// Circuit breaker for database resilience
@@ -430,7 +430,7 @@ impl DatabaseClient {
         let connection_semaphore = Arc::new(Semaphore::new(config.pool_max as usize));
 
         // Initialize prepared statement cache
-        let prepared_statements = Arc::new(RwLock::new(HashMap::new()));
+        let _prepared_statements = Arc::new(RwLock::new(HashMap::new()));
 
         info!("Database client initialized successfully");
         Ok(Self {
@@ -440,7 +440,7 @@ impl DatabaseClient {
             circuit_breaker,
             metrics,
             connection_semaphore,
-            prepared_statements,
+            _prepared_statements,
         })
     }
 
@@ -489,7 +489,7 @@ impl DatabaseClient {
         let connection_semaphore = Arc::new(Semaphore::new(config.pool_max as usize));
 
         // Initialize prepared statement cache
-        let prepared_statements = Arc::new(RwLock::new(HashMap::new()));
+        let _prepared_statements = Arc::new(RwLock::new(HashMap::new()));
 
         Ok(Self {
             bridge,
@@ -498,7 +498,7 @@ impl DatabaseClient {
             circuit_breaker,
             metrics,
             connection_semaphore,
-            prepared_statements,
+            _prepared_statements,
         })
     }
 

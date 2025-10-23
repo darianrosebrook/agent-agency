@@ -10,16 +10,16 @@ use crate::types::*;
 
 #[derive(Debug)]
 pub struct MetricsCollector {
-    system: System,
+    _system: System,
 }
 
 impl Default for MetricsCollector { fn default() -> Self { Self::new() } }
 
 impl MetricsCollector {
     pub fn new() -> Self {
-        let mut system = System::new_all();
-        system.refresh_all();
-        Self { system }
+        let mut _system = System::new_all();
+        _system.refresh_all();
+        Self { _system }
     }
 
     pub async fn collect_system_metrics(&self) -> Result<SystemMetrics> {

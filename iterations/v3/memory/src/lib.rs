@@ -555,14 +555,14 @@ where
 /// Memory leak detector
 pub struct MemoryLeakDetector {
     allocation_snapshots: Arc<RwLock<Vec<(Instant, HashMap<String, usize>)>>>,
-    alert_threshold_mb: u64,
+    _alert_threshold_mb: u64,
 }
 
 impl MemoryLeakDetector {
     pub fn new(alert_threshold_mb: u64) -> Self {
         Self {
             allocation_snapshots: Arc::new(RwLock::new(Vec::new())),
-            alert_threshold_mb,
+            _alert_threshold_mb: alert_threshold_mb,
         }
     }
 
@@ -645,7 +645,7 @@ impl Default for MemoryManagementConfig {
 
 /// Central memory manager
 pub struct MemoryManager {
-    config: MemoryManagementConfig,
+    _config: MemoryManagementConfig,
     monitor: Arc<MemoryMonitor>,
     leak_detector: Option<Arc<MemoryLeakDetector>>,
     pools: Arc<RwLock<HashMap<String, Box<dyn std::any::Any + Send + Sync>>>>,
@@ -661,7 +661,7 @@ impl MemoryManager {
         };
 
         Self {
-            config,
+            _config: config,
             monitor,
             leak_detector,
             pools: Arc::new(RwLock::new(HashMap::new())),

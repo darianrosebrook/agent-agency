@@ -589,7 +589,7 @@ impl MCPServer {
             rate_limiter,
             auth_rate_limiter,
             api_rate_limiter,
-            slo_tracker,
+            slo_tracker: Arc::clone(&slo_tracker),
             db_client,
         }
     }
@@ -738,6 +738,7 @@ impl MCPServer {
         let rate_limiter = self.rate_limiter.clone();
         let auth_rate_limiter = self.auth_rate_limiter.clone();
         let api_rate_limiter = self.api_rate_limiter.clone();
+        let slo_tracker = self.slo_tracker.clone();
 
         let handle = tokio::task::spawn_blocking(move || {
             let io = MCPServer::build_io_handler_static(
@@ -745,7 +746,7 @@ impl MCPServer {
                 registry_for_stats.clone(),
                 caws.clone(),
                 version_payload.clone(),
-                Arc::clone(&self.slo_tracker),
+                slo_tracker,
             );
             let builder = ServerBuilder::new(io).request_middleware(
                 move |request: jsonrpc_http_server::hyper::Request<Body>| {
@@ -992,6 +993,9 @@ impl MCPServer {
         }));
         let auth_api_key = self.config.server.auth_api_key.clone();
         let rate_limiter = self.rate_limiter.clone();
+        let slo_tracker = self.slo_tracker.clone();
+        let auth_rate_limiter = self.auth_rate_limiter.clone();
+        let api_rate_limiter = self.api_rate_limiter.clone();
 
         let handle = tokio::task::spawn_blocking(move || {
             let io = MCPServer::build_io_handler_static(
@@ -999,10 +1003,14 @@ impl MCPServer {
                 registry_stats.clone(),
                 caws.clone(),
                 version_payload.clone(),
-                self.slo_tracker.clone(),
+                slo_tracker,
             );
 
-            let middleware = move |req: &ws::Request| {
+            let rate_limiter_clone = rate_limiter.clone();
+            let auth_rate_limiter_clone = auth_rate_limiter.clone();
+            let api_rate_limiter_clone = api_rate_limiter.clone();
+            let auth_api_key_clone = auth_api_key.clone();
+            let middleware: Box<dyn Fn(&ws::Request) -> Option<ws::Response> + Send + Sync> = Box::new(move |req: &ws::Request| {
                 // Extract client IP for rate limiting (WebSocket connections)
                 let client_ip = req
                     .header("x-forwarded-for")
@@ -1013,7 +1021,7 @@ impl MCPServer {
                     .unwrap_or("unknown");
 
                 // Check authentication rate limit before processing auth
-                if let Some(ref auth_limiter) = self.auth_rate_limiter {
+                if let Some(ref auth_limiter) = &auth_rate_limiter_clone {
                     match auth_limiter.allow_auth_attempt(client_ip) {
                         AuthRateLimitResult::Blocked(reason) => {
                             warn!(ip = %client_ip, reason = %reason, "WebSocket authentication rate limit exceeded");
@@ -1026,7 +1034,7 @@ impl MCPServer {
                 }
 
                 // Check API key authentication
-                let auth_failed = if let Some(ref expected) = auth_api_key {
+                let auth_failed = if let Some(ref expected) = auth_api_key_clone {
                     let provided = req
                         .header("x-api-key")
                         .and_then(|value| std::str::from_utf8(value).ok());
@@ -1082,7 +1090,7 @@ impl MCPServer {
                 }
 
                 // Check general rate limiting
-                if let Some(ref limiter) = rate_limiter {
+                if let Some(ref limiter) = &rate_limiter_clone {
                     let mut guard = limiter.lock().unwrap();
                     if !guard.allow() {
                         return Some(rate_limited_ws_response());
@@ -1090,7 +1098,7 @@ impl MCPServer {
                 }
 
                 None
-            };
+            });
 
             let server = WsServerBuilder::new(io)
                 .request_middleware(middleware)
@@ -1203,8 +1211,10 @@ impl MCPServer {
         // Check CAWS compliance if enabled
         let _caws_result = if self.config.caws_integration.enable_caws_checking {
             // NEW: Use runtime-validator for primary CAWS validation
+            let manifest_value = serde_json::to_value(&tool.manifest)
+                .map_err(|e| anyhow::anyhow!("Failed to serialize manifest: {}", e))?;
             let runtime_result = self.caws_runtime_validator
-                .validate_tool_manifest(&tool.manifest, "2")
+                .validate_tool_manifest(&manifest_value)
                 .await
                 .map_err(|e| anyhow::anyhow!("Runtime validator error: {}", e))?;
             

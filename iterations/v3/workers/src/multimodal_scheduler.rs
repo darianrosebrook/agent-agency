@@ -5,8 +5,6 @@
 
 use anyhow::Result;
 use chrono::{DateTime, Utc};
-use indexers::{
-};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{mpsc, RwLock, Semaphore};
@@ -15,7 +13,7 @@ use uuid::Uuid;
 
 use crate::types::*;
 use agent_agency_observability::{
-    AgentPerformanceMetrics, AgentPerformanceTracker, AgentTelemetryCollector, AgentType,
+    AgentPerformanceMetrics, AgentPerformanceTracker, AgentTelemetryCollector, AgentType, TelemetryConfig,
 };
 
 /// Multimodal job scheduling configuration

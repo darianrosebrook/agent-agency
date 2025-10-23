@@ -371,54 +371,6 @@ impl ConfigValidator {
     }
 }
 
-/// Custom validation functions
-fn validate_log_level(level: &str) -> Result<(), ValidationError> {
-    let valid_levels = ["trace", "debug", "info", "warn", "error"];
-    if !valid_levels.contains(&level.to_lowercase().as_str()) {
-        return Err(ValidationError {
-            field: "level".to_string(),
-            message: "Invalid log level".into(),
-            code: "invalid_log_level".into(),
-        });
-    }
-    Ok(())
-}
-
-fn validate_trace_level(level: &str) -> Result<(), ValidationError> {
-    let valid_levels = ["trace", "debug", "info", "warn", "error"];
-    if !valid_levels.contains(&level.to_lowercase().as_str()) {
-        return Err(ValidationError {
-            field: "level".to_string(),
-            message: "Invalid trace level".into(),
-            code: "invalid_trace_level".into(),
-        });
-    }
-    Ok(())
-}
-
-fn validate_environment(env: &str) -> Result<(), ValidationError> {
-    let valid_envs = ["development", "staging", "production", "test"];
-    if !valid_envs.contains(&env.to_lowercase().as_str()) {
-        return Err(ValidationError {
-            field: "environment".to_string(),
-            message: "Invalid environment".into(),
-            code: "invalid_environment".into(),
-        });
-    }
-    Ok(())
-}
-
-fn validate_region(region: &str) -> Result<(), ValidationError> {
-    let valid_regions = ["us-east-1", "us-west-2", "eu-west-1", "ap-southeast-1"];
-    if !valid_regions.contains(&region.to_lowercase().as_str()) {
-        return Err(ValidationError {
-            field: "region".to_string(),
-            message: "Invalid region".into(),
-            code: "invalid_region".into(),
-        });
-    }
-    Ok(())
-}
 
 /// Validation error with additional context
 #[derive(Debug, Clone)]
