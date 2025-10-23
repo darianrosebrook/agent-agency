@@ -77,8 +77,7 @@ impl YOLOPerformanceMonitor {
         // Record in telemetry
         self.telemetry.record_inference(
             metrics.total_inference_time_ms as u64,
-            true, // Assume success for now
-            "yolo"
+            true // Assume success for now
         );
 
         // Store in history

@@ -753,6 +753,16 @@ pub struct ResourceUsageMetrics {
     pub network_bytes_per_sec: u64,
 }
 
+impl std::fmt::Display for RiskTier {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            RiskTier::Tier1 => write!(f, "Tier1"),
+            RiskTier::Tier2 => write!(f, "Tier2"),
+            RiskTier::Tier3 => write!(f, "Tier3"),
+        }
+    }
+}
+
 impl TaskSpec {
     /// Check if this task requires unanimous approval
     pub fn requires_unanimous_approval(&self) -> bool {

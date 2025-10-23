@@ -32,6 +32,7 @@ use super::debate::{compile_debate_contributions, sign_debate_transcript, analyz
 use super::extraction::{AdvancedPositionExtractor, ExtractionConfig, ExtractionResult, ExtractionMetadata, ExtractionStats, DecisionType, PositionConfidence, DecisionReasoning, RiskAssessment, PositionConsistency, PositionExtractionError, SentenceEmbeddingsModelType};
 use super::authority::{ExpertAuthorityManager, apply_override_policies, ExpertAuthorityLevel, ExpertQualification, OverrideRequest, OverrideRiskAssessment, OverrideStatus, OverrideReason, ImpactLevel, OverrideAuditEntry, OverrideAction};
 use super::metrics::{CoordinatorMetricsSnapshot, EvaluationMetrics, TimingMetrics, SLAMetrics, JudgePerformanceSnapshot, HealthIndicators, JudgePerformanceStats};
+use crate::advanced_monitoring::SLOTracker;
 
 /// Placeholder types for missing agent_agency_research dependency
 #[derive(Debug, Clone)]
@@ -102,6 +103,8 @@ pub struct ConsensusCoordinator {
     expert_authority_manager: Arc<std::sync::RwLock<ExpertAuthorityManager>>,
     /// Optional database client for persistence operations
     db_client: Option<Arc<agent_agency_database::client::DatabaseClient>>,
+    /// SLO tracker for service level objectives monitoring
+    slo_tracker: Arc<SLOTracker>,
 }
 
 /// Internal metrics for tracking coordinator performance
@@ -405,6 +408,7 @@ impl ConsensusCoordinator {
             queue_tracker: Arc::new(std::sync::RwLock::new(queue_tracker)),
             expert_authority_manager: Arc::new(std::sync::RwLock::new(ExpertAuthorityManager::new())),
             db_client: None, // Database client will be set separately if needed
+            slo_tracker: Arc::new(SLOTracker::new()), // SLO tracking for service level objectives
         }
     }
 
@@ -1027,6 +1031,12 @@ impl ConsensusCoordinator {
             }
         }
 
+        // Record SLO metrics before returning
+        let metrics_snapshot = self.create_metrics_snapshot().await;
+        if let Err(e) = self.slo_tracker.record_metrics(&metrics_snapshot).await {
+            warn!("Failed to record SLO metrics: {}", e);
+        }
+
         // Emit final verdict provenance
         self.emitter
             .on_final_verdict(task_id, &result.final_verdict);
@@ -1035,6 +1045,108 @@ impl ConsensusCoordinator {
             task_id, consensus_score
         );
         Ok(result)
+    }
+
+    /// Create a metrics snapshot for SLO tracking
+    async fn create_metrics_snapshot(&self) -> CoordinatorMetricsSnapshot {
+        let metrics = self.metrics.read().unwrap();
+        let uptime_seconds = chrono::Utc::now().timestamp() as u64; // Simplified uptime calculation
+
+        // Convert internal metrics to the SLO-compatible format
+        let evaluations = EvaluationMetrics {
+            total: metrics.total_evaluations,
+            successful: metrics.successful_evaluations,
+            failed: metrics.failed_evaluations,
+            success_rate: if metrics.total_evaluations > 0 {
+                (metrics.successful_evaluations as f64 / metrics.total_evaluations as f64) * 100.0
+            } else {
+                100.0
+            },
+        };
+
+        let timing = TimingMetrics {
+            total_evaluations: metrics.total_evaluations,
+            successful_evaluations: metrics.successful_evaluations,
+            failed_evaluations: metrics.failed_evaluations,
+            total_evaluation_time_ms: metrics.total_evaluation_time_ms,
+            total_enrichment_time_ms: metrics.total_enrichment_time_ms,
+            total_judge_inference_time_ms: metrics.total_judge_inference_time_ms,
+            total_debate_time_ms: metrics.total_debate_time_ms,
+            sla_violations: metrics.sla_violations,
+            average_evaluation_time_ms: if metrics.total_evaluations > 0 {
+                metrics.total_evaluation_time_ms / metrics.total_evaluations
+            } else {
+                0
+            },
+            average_enrichment_time_ms: if metrics.total_evaluations > 0 {
+                metrics.total_enrichment_time_ms / metrics.total_evaluations
+            } else {
+                0
+            },
+            average_judge_inference_time_ms: if metrics.total_evaluations > 0 {
+                metrics.total_judge_inference_time_ms / metrics.total_evaluations
+            } else {
+                0
+            },
+            average_debate_time_ms: if metrics.total_evaluations > 0 {
+                metrics.total_debate_time_ms / metrics.total_evaluations
+            } else {
+                0
+            },
+        };
+
+        let sla = SLAMetrics {
+            violations: metrics.sla_violations,
+            violation_rate: if metrics.total_evaluations > 0 {
+                (metrics.sla_violations as f64 / metrics.total_evaluations as f64) * 100.0
+            } else {
+                0.0
+            },
+            threshold_ms: 30000, // 30 seconds SLA threshold
+        };
+
+        // Convert judge performance data
+        let mut judge_stats = HashMap::new();
+        for (judge_name, stats) in &metrics.judge_performance {
+            judge_stats.insert(judge_name.clone(), JudgePerformanceStats {
+                total_evaluations: stats.total_evaluations,
+                successful_evaluations: stats.successful_evaluations,
+                average_confidence: stats.average_confidence,
+                total_time_ms: stats.total_time_ms,
+            });
+        }
+
+        let judge_performance = JudgePerformanceSnapshot {
+            judge_stats,
+            total_judges: metrics.judge_performance.len() as u64,
+            average_confidence: if !metrics.judge_performance.is_empty() {
+                metrics.judge_performance.values()
+                    .map(|s| s.average_confidence)
+                    .sum::<f32>() / metrics.judge_performance.len() as f32
+            } else {
+                0.0
+            },
+        };
+
+        let health = HealthIndicators {
+            active_evaluations: 0, // Not tracked in current metrics
+            queue_depth: 0, // Not tracked in current metrics
+            error_rate: if metrics.total_evaluations > 0 {
+                (metrics.failed_evaluations as f64 / metrics.total_evaluations as f64) * 100.0
+            } else {
+                0.0
+            },
+        };
+
+        CoordinatorMetricsSnapshot {
+            timestamp: chrono::Utc::now(),
+            uptime_seconds,
+            evaluations,
+            timing,
+            sla,
+            judge_performance,
+            health,
+        }
     }
 
     /// Prepare evidence packets for debate

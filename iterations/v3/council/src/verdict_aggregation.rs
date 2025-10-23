@@ -335,6 +335,14 @@ impl VerdictAggregator {
         let mut score: f64 = 0.5; // Base score
 
         match contribution.judge_type {
+            crate::judge::JudgeType::Constitutional => {
+                // Constitutional judges handle CAWS compliance and governance
+                if task_description.contains("compliance") || task_description.contains("constitutional") ||
+                   task_description.contains("caws") || task_description.contains("governance") ||
+                   context.risk_tier == agent_agency_contracts::task_request::RiskTier::Tier1 {
+                    score += 0.4; // High priority for compliance and high-risk tasks
+                }
+            },
             crate::judge::JudgeType::QualityAssurance => {
                 if task_description.contains("quality") || task_description.contains("test") {
                     score += 0.3;

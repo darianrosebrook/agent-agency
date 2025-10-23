@@ -149,9 +149,76 @@ performance:
       refactoring: true
       testing: true
       documentation: true
-      type_system: true
-      async_patterns: true
-      custom_domains: true
+
+    # Learning System Configuration
+    learning:
+      enabled: true
+
+      # Metrics collection
+      metrics_collection:
+        enabled: true
+        collection_interval_ms: 1000
+        max_records_buffer: 10000
+        retention_days: 90
+
+      # Pattern analysis
+      pattern_analysis:
+        enabled: true
+        min_pattern_confidence: 0.7
+        max_patterns_per_type: 1000
+        pattern_update_interval_ms: 30000
+
+      # Adaptive worker selection
+      adaptive_selection:
+        enabled: true
+        selection_strategy: "performance_weighted"
+        fairness_alpha: 0.3
+        exploration_rate: 0.1
+        max_workers_per_task: 5
+
+      # Configuration optimization
+      config_optimization:
+        enabled: true
+        optimization_interval_ms: 60000
+        min_improvement_threshold: 0.05
+        max_configurations_per_pattern: 50
+
+      # Learning persistence
+      persistence:
+        enabled: true
+        batch_size: 100
+        flush_interval_ms: 5000
+        connection_pool_size: 5
+
+      # Reward system
+      reward_system:
+        quality_weight: 0.4
+        latency_weight: 0.3
+        token_cost_weight: 0.2
+        rework_rate_weight: 0.1
+        baseline_update_interval_ms: 3600000  # 1 hour
+
+      # Drift detection
+      drift_detection:
+        enabled: true
+        cusum_threshold: 3.0
+        adwin_delta: 0.002
+        min_samples_before_detection: 100
+        drift_freeze_duration_ms: 300000  # 5 minutes
+
+      # Failure taxonomy
+      failure_taxonomy:
+        enabled: true
+        max_categories: 100
+        min_confidence_threshold: 0.6
+        rca_max_depth: 3
+
+      # Council integration
+      council_integration:
+        enabled: true
+        signal_batch_size: 50
+        signal_flush_interval_ms: 10000
+        max_signal_age_ms: 300000
 
   # Caching
   cache:

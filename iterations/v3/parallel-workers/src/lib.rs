@@ -23,6 +23,8 @@ pub mod orchestrator_bridge;
 pub mod monitoring_bridge;
 pub mod types;
 pub mod error;
+pub mod metrics;
+pub mod learning;
 
 // Coordinator types are re-exported above
 

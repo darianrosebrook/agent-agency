@@ -17,7 +17,7 @@ pub mod enhanced_telemetry;
 pub mod inference;
 pub mod memory;
 #[cfg(target_arch = "aarch64")]
-pub mod metal_gpu;
+pub mod metal;
 pub mod model_pool;
 pub mod model_router;
 pub mod operator_fusion;
@@ -64,7 +64,7 @@ pub use inference::{
 };
 pub use memory::MemoryManager;
 #[cfg(target_arch = "aarch64")]
-pub use metal_gpu::MetalGPUManager;
+pub use metal::{MetalGPU, MetalGPUManager, CpuGPUStub, GPUPerformanceSnapshot};
 pub use model_pool::{ModelPool, ModelPoolConfig, ModelPoolStats};
 pub use model_router::{
     ModelRouter, ModelVariant, RoutingMode, RoutingPolicy, RoutingStats,

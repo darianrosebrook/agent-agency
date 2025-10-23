@@ -84,6 +84,24 @@ pub struct ComplexTask {
     pub context: TaskContext,
     pub complexity_score: f32,
     pub estimated_subtasks: Option<usize>,
+    pub scope: TaskScope,
+    pub quality_requirements: QualityRequirements,
+}
+
+/// Task scope definition
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TaskScope {
+    pub files: Vec<PathBuf>,
+    pub directories: Vec<PathBuf>,
+    pub patterns: Vec<String>,
+}
+
+/// Quality requirements for task execution
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QualityRequirements {
+    pub required_gates: Vec<String>,
+    pub minimum_coverage: Option<f32>,
+    pub performance_budget: Option<Duration>,
 }
 
 /// Task execution context
@@ -118,7 +136,7 @@ pub enum Priority {
 }
 
 /// Worker specialty domains
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum WorkerSpecialty {
     CompilationErrors { error_codes: Vec<String> },
     TypeSystem { domains: Vec<TypeDomain> },
@@ -130,7 +148,7 @@ pub enum WorkerSpecialty {
 }
 
 /// Type system domains for specialization
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum TypeDomain {
     StructFields,
     TraitBounds,
@@ -139,25 +157,6 @@ pub enum TypeDomain {
     AssociatedTypes,
 }
 
-/// Task scope boundaries
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TaskScope {
-    pub included_files: Vec<PathBuf>,
-    pub excluded_files: Vec<PathBuf>,
-    pub included_patterns: Vec<String>,
-    pub excluded_patterns: Vec<String>,
-    pub time_budget: Duration,
-    pub quality_requirements: QualityRequirements,
-}
-
-/// Quality requirements for task execution
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct QualityRequirements {
-    pub min_test_coverage: Option<f32>,
-    pub linting_required: bool,
-    pub compilation_required: bool,
-    pub documentation_required: bool,
-}
 
 /// Worker execution context
 #[derive(Debug, Clone)]
@@ -250,6 +249,9 @@ pub struct ExecutionMetrics {
     pub memory_usage_mb: Option<f32>,
     pub files_modified: usize,
     pub lines_changed: usize,
+    pub quality_score: f32,
+    pub execution_time_ms: u64,
+    pub tokens: Option<u64>,
 }
 
 /// Artifacts produced by worker execution
@@ -336,7 +338,7 @@ pub struct TaskAnalysis {
 }
 
 /// Identified patterns in the task
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TaskPattern {
     CompilationErrors { error_groups: Vec<ErrorGroup> },
     RefactoringOperations { operations: Vec<RefactoringOp> },
@@ -344,8 +346,101 @@ pub enum TaskPattern {
     DocumentationNeeds { missing_docs: Vec<String> },
 }
 
+/// Wrapper for TaskPattern that can be used as HashMap key
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct TaskPatternKey {
+    pub pattern_type: String,
+    pub hash: u64,
+}
+
+impl std::cmp::PartialEq for TaskPattern {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (TaskPattern::CompilationErrors { error_groups: a }, TaskPattern::CompilationErrors { error_groups: b }) => a == b,
+            (TaskPattern::RefactoringOperations { operations: a }, TaskPattern::RefactoringOperations { operations: b }) => {
+                if a.len() != b.len() {
+                    return false;
+                }
+                for (op_a, op_b) in a.iter().zip(b.iter()) {
+                    if op_a.operation_type != op_b.operation_type || 
+                       op_a.affected_files != op_b.affected_files ||
+                       (op_a.complexity - op_b.complexity).abs() > f32::EPSILON {
+                        return false;
+                    }
+                }
+                true
+            }
+            (TaskPattern::TestingGaps { missing_tests: a }, TaskPattern::TestingGaps { missing_tests: b }) => a == b,
+            (TaskPattern::DocumentationNeeds { missing_docs: a }, TaskPattern::DocumentationNeeds { missing_docs: b }) => a == b,
+            _ => false,
+        }
+    }
+}
+
+impl std::cmp::Eq for TaskPattern {}
+
+impl std::hash::Hash for TaskPattern {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        match self {
+            TaskPattern::CompilationErrors { error_groups } => {
+                "CompilationErrors".hash(state);
+                error_groups.len().hash(state);
+                for group in error_groups {
+                    group.error_code.hash(state);
+                    group.count.hash(state);
+                }
+            }
+            TaskPattern::RefactoringOperations { operations } => {
+                "RefactoringOperations".hash(state);
+                operations.len().hash(state);
+                for op in operations {
+                    op.operation_type.hash(state);
+                    op.affected_files.len().hash(state);
+                }
+            }
+            TaskPattern::TestingGaps { missing_tests } => {
+                "TestingGaps".hash(state);
+                missing_tests.len().hash(state);
+                for test in missing_tests {
+                    test.hash(state);
+                }
+            }
+            TaskPattern::DocumentationNeeds { missing_docs } => {
+                "DocumentationNeeds".hash(state);
+                missing_docs.len().hash(state);
+                for doc in missing_docs {
+                    doc.hash(state);
+                }
+            }
+        }
+    }
+}
+
+impl From<TaskPattern> for TaskPatternKey {
+    fn from(pattern: TaskPattern) -> Self {
+        use std::collections::hash_map::DefaultHasher;
+        use std::hash::{Hash, Hasher};
+        
+        let mut hasher = DefaultHasher::new();
+        let pattern_type = match &pattern {
+            TaskPattern::CompilationErrors { .. } => "CompilationErrors",
+            TaskPattern::RefactoringOperations { .. } => "RefactoringOperations",
+            TaskPattern::TestingGaps { .. } => "TestingGaps",
+            TaskPattern::DocumentationNeeds { .. } => "DocumentationNeeds",
+        };
+        
+        // Hash the pattern content for uniqueness
+        pattern.hash(&mut hasher);
+        
+        Self {
+            pattern_type: pattern_type.to_string(),
+            hash: hasher.finish(),
+        }
+    }
+}
+
 /// Group of similar errors
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct ErrorGroup {
     pub error_code: String,
     pub count: usize,
@@ -353,7 +448,7 @@ pub struct ErrorGroup {
 }
 
 /// Refactoring operations identified
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct RefactoringOp {
     pub operation_type: String,
     pub affected_files: Vec<PathBuf>,
@@ -361,7 +456,7 @@ pub struct RefactoringOp {
 }
 
 /// Dependencies between subtasks
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Dependency {
     pub from_subtask: SubTaskId,
     pub to_subtask: SubTaskId,
@@ -370,7 +465,7 @@ pub struct Dependency {
 }
 
 /// Types of dependencies
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum DependencyType {
     FileAccess,
     CompilationOrder,
@@ -457,10 +552,9 @@ impl Default for Priority {
 impl Default for QualityRequirements {
     fn default() -> Self {
         Self {
-            min_test_coverage: Some(0.8),
-            linting_required: true,
-            compilation_required: true,
-            documentation_required: false,
+            required_gates: vec!["compilation".to_string(), "linting".to_string()],
+            minimum_coverage: Some(0.8),
+            performance_budget: Some(Duration::from_secs(300)),
         }
     }
 }
@@ -468,12 +562,9 @@ impl Default for QualityRequirements {
 impl Default for TaskScope {
     fn default() -> Self {
         Self {
-            included_files: vec![],
-            excluded_files: vec![],
-            included_patterns: vec![],
-            excluded_patterns: vec![],
-            time_budget: Duration::from_secs(300), // 5 minutes
-            quality_requirements: QualityRequirements::default(),
+            files: vec![],
+            directories: vec![],
+            patterns: vec![],
         }
     }
 }

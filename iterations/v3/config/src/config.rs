@@ -199,6 +199,7 @@ pub struct ParallelWorkersConfig {
     pub coordination: ParallelCoordinationConfig,
     pub decomposition: ParallelDecompositionConfig,
     pub quality_gates: QualityGatesConfig,
+    pub learning: LearningConfig,
 }
 
 /// Parallel coordination configuration
@@ -232,6 +233,105 @@ pub struct QualityGateSettings {
     pub enabled: bool,
     pub blocking: bool,
     pub min_score: f32,
+}
+
+/// Learning system configuration
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
+pub struct LearningConfig {
+    pub enabled: bool,
+    pub metrics_collection: MetricsCollectionConfig,
+    pub pattern_analysis: PatternAnalysisConfig,
+    pub adaptive_selection: AdaptiveSelectionConfig,
+    pub config_optimization: ConfigOptimizationConfig,
+    pub persistence: LearningPersistenceConfig,
+    pub reward_system: RewardSystemConfig,
+    pub drift_detection: DriftDetectionConfig,
+    pub failure_taxonomy: FailureTaxonomyConfig,
+    pub council_integration: CouncilIntegrationConfig,
+}
+
+/// Metrics collection configuration
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
+pub struct MetricsCollectionConfig {
+    pub enabled: bool,
+    pub collection_interval_ms: u64,
+    pub max_records_buffer: usize,
+    pub retention_days: u32,
+}
+
+/// Pattern analysis configuration
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
+pub struct PatternAnalysisConfig {
+    pub enabled: bool,
+    pub min_pattern_confidence: f32,
+    pub max_patterns_per_type: usize,
+    pub pattern_update_interval_ms: u64,
+}
+
+/// Adaptive worker selection configuration
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
+pub struct AdaptiveSelectionConfig {
+    pub enabled: bool,
+    pub selection_strategy: String,
+    pub fairness_alpha: f32,
+    pub exploration_rate: f32,
+    pub max_workers_per_task: usize,
+}
+
+/// Configuration optimization configuration
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
+pub struct ConfigOptimizationConfig {
+    pub enabled: bool,
+    pub optimization_interval_ms: u64,
+    pub min_improvement_threshold: f32,
+    pub max_configurations_per_pattern: usize,
+}
+
+/// Learning persistence configuration
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
+pub struct LearningPersistenceConfig {
+    pub enabled: bool,
+    pub batch_size: usize,
+    pub flush_interval_ms: u64,
+    pub connection_pool_size: u32,
+}
+
+/// Reward system configuration
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
+pub struct RewardSystemConfig {
+    pub quality_weight: f32,
+    pub latency_weight: f32,
+    pub token_cost_weight: f32,
+    pub rework_rate_weight: f32,
+    pub baseline_update_interval_ms: u64,
+}
+
+/// Drift detection configuration
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
+pub struct DriftDetectionConfig {
+    pub enabled: bool,
+    pub cusum_threshold: f32,
+    pub adwin_delta: f64,
+    pub min_samples_before_detection: usize,
+    pub drift_freeze_duration_ms: u64,
+}
+
+/// Failure taxonomy configuration
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
+pub struct FailureTaxonomyConfig {
+    pub enabled: bool,
+    pub max_categories: usize,
+    pub min_confidence_threshold: f32,
+    pub rca_max_depth: usize,
+}
+
+/// Council integration configuration
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
+pub struct CouncilIntegrationConfig {
+    pub enabled: bool,
+    pub signal_batch_size: usize,
+    pub signal_flush_interval_ms: u64,
+    pub max_signal_age_ms: u64,
 }
 
 /// Provenance configuration

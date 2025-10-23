@@ -111,19 +111,19 @@ impl WorkerExecutionContext {
     }
 
     /// Get files included in the subtask scope
-    pub fn included_files(&self) -> &[std::path::PathBuf] {
-        &self.subtask.scope.included_files
+    pub fn files(&self) -> &[std::path::PathBuf] {
+        &self.subtask.scope.files
     }
 
     /// Check if a file is in scope
     pub fn is_file_in_scope(&self, file_path: &std::path::Path) -> bool {
         // Check included files
-        if self.subtask.scope.included_files.iter().any(|f| f == file_path) {
+        if self.subtask.scope.files.iter().any(|f| f == file_path) {
             return true;
         }
 
         // Check excluded files
-        if self.subtask.scope.excluded_files.iter().any(|f| f == file_path) {
+        if self.subtask.scope.directories.iter().any(|f| f == file_path) {
             return false;
         }
 
@@ -131,14 +131,14 @@ impl WorkerExecutionContext {
         let file_str = file_path.to_string_lossy();
 
         // Check included patterns
-        for pattern in &self.subtask.scope.included_patterns {
+        for pattern in &self.subtask.scope.patterns {
             if file_str.contains(pattern) {
                 return true;
             }
         }
 
         // Check excluded patterns
-        for pattern in &self.subtask.scope.excluded_patterns {
+        for pattern in &self.subtask.scope.patterns {
             if file_str.contains(pattern) {
                 return false;
             }
@@ -151,7 +151,7 @@ impl WorkerExecutionContext {
     /// Get time remaining for execution
     pub fn time_remaining(&self) -> Option<std::time::Duration> {
         // TODO: Track actual start time and calculate remaining time
-        Some(self.subtask.scope.time_budget)
+        Some(std::time::Duration::from_secs(300)) // Default 5 minutes
     }
 
     /// Check if time limit exceeded
@@ -169,8 +169,7 @@ impl WorkerExecutionContext {
         env.insert("WORKER_SUBTASK_ID".to_string(), subtask.id.0.clone());
         env.insert("WORKER_PARENT_TASK_ID".to_string(), subtask.parent_id.0.clone());
         env.insert("WORKER_PRIORITY".to_string(), format!("{:?}", subtask.priority));
-        env.insert("WORKER_TIME_BUDGET_SECS".to_string(),
-                  subtask.scope.time_budget.as_secs().to_string());
+        env.insert("WORKER_TIME_BUDGET_SECS".to_string(), "300".to_string()); // Default 5 minutes
 
         // Specialty-specific environment
         match &subtask.specialty {
@@ -227,7 +226,7 @@ impl ResourceLimits {
             max_memory_mb: Some(512), // 512MB default
             max_cpu_percent: Some(50.0), // 50% CPU default
             max_file_handles: Some(100), // 100 file handles default
-            time_limit: subtask.scope.time_budget,
+            time_limit: std::time::Duration::from_secs(300), // Default 5 minutes
             network_access: true, // Allow network by default
             filesystem_write_access: true, // Allow writes by default
         }

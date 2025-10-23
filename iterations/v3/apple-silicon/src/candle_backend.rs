@@ -363,10 +363,78 @@ fn map_ort_value_type(t: &ort::value::ValueType) -> DType {
 }
 
 impl CandleInferenceModel for OnnxPreparedModel {
-    fn forward(&self, _inputs: &HashMap<String, Tensor>) -> Result<HashMap<String, Tensor>> {
-        // PLACEHOLDER: ONNX Runtime inference not yet fully implemented
-        // TODO: Implement proper ONNX Runtime tensor conversion and execution
-        bail!("ONNX Runtime inference not yet fully implemented for this backend")
+    fn forward(&self, inputs: &HashMap<String, Tensor>) -> Result<HashMap<String, Tensor>> {
+        use ort::tensor::OrtOwnedTensor;
+        use ort::value::Value;
+
+        // Prepare input tensors for ONNX Runtime
+        let mut ort_inputs = Vec::new();
+        let mut input_names = Vec::new();
+
+        for input_spec in &self.io_schema.inputs {
+            if let Some(tensor) = inputs.get(&input_spec.name) {
+                // Convert candle tensor to ONNX Runtime tensor
+                let ort_tensor = Self::tensor_to_ort(tensor, &input_spec)?;
+                ort_inputs.push(Value::from(ort_tensor));
+                input_names.push(input_spec.name.clone());
+            } else {
+                bail!("Missing required input tensor: {}", input_spec.name);
+            }
+        }
+
+        // Run inference with named inputs
+        let input_map: std::collections::HashMap<String, Value> = input_names
+            .into_iter()
+            .zip(ort_inputs)
+            .collect();
+
+        let outputs = self.session.run(input_map)?;
+
+        // Convert outputs back to candle tensors
+        // ONNX Runtime returns outputs in model-defined order
+        let mut result = HashMap::new();
+        for (i, output_value) in outputs.iter().enumerate() {
+            if let Some(output_spec) = self.io_schema.outputs.get(i) {
+                let candle_tensor = Self::ort_to_tensor(output_value, output_spec, &self.device)?;
+                result.insert(output_spec.name.clone(), candle_tensor);
+            } else {
+                bail!("Unexpected output at index {} (model has {} outputs)", i, self.io_schema.outputs.len());
+            }
+        }
+
+        debug!("ONNX inference completed successfully with {} outputs", result.len());
+        Ok(result)
+    }
+}
+
+impl OnnxPreparedModel {
+    /// Convert candle tensor to ONNX Runtime tensor
+    fn tensor_to_ort(tensor: &Tensor, spec: &TensorSpec) -> Result<OrtOwnedTensor<'static, f32>> {
+        // For now, assume FP32 tensors (most common case)
+        // TODO: Add support for other data types based on spec.dtype
+        let data: Vec<f32> = tensor.flatten_all()?.to_vec1()?;
+
+        // Use shape from tensor, fallback to spec shape if needed
+        let shape = tensor.shape().dims();
+
+        OrtOwnedTensor::from_vec(data, shape)
+            .map_err(|e| anyhow!("Failed to create ONNX tensor: {}", e))
+    }
+
+    /// Convert ONNX Runtime tensor to candle tensor
+    fn ort_to_tensor(value: &Value, spec: &TensorSpec, device: &Device) -> Result<Tensor> {
+        match value.try_extract_tensor::<f32>() {
+            Ok(tensor) => {
+                let data = tensor.view().as_slice().unwrap_or_default().to_vec();
+                let shape = tensor.view().dims();
+
+                Tensor::from_vec(data, shape, device)
+                    .map_err(|e| anyhow!("Failed to create candle tensor: {}", e))
+            }
+            Err(_) => {
+                bail!("Unsupported ONNX tensor type for output: {}", spec.name);
+            }
+        }
     }
 }
 

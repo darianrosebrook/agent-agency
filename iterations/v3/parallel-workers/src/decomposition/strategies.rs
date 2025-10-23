@@ -52,12 +52,11 @@ impl DecompositionStrategy for CompilationErrorStrategy {
                             error_group.count, error_group.error_code, error_group.affected_files.len()
                         ),
                         scope: TaskScope {
-                            included_files: error_group.affected_files.clone(),
-                            excluded_files: vec![],
-                            included_patterns: vec![format!("*{}*", error_group.error_code)],
-                            excluded_patterns: vec![],
-                            time_budget: std::time::Duration::from_secs(300), // 5 minutes
-                            quality_requirements: QualityRequirements::default(),
+                            files: error_group.affected_files.clone(),
+                            directories: vec![],
+                    patterns: vec![format!("*{}*", error_group.error_code)],
+                            // time_budget: std::time::Duration::from_secs(300), // 5 minutes
+                            // quality_requirements: QualityRequirements::default(),
                         },
                         specialty: WorkerSpecialty::CompilationErrors {
                             error_codes: vec![error_group.error_code.clone()],
@@ -80,12 +79,11 @@ impl DecompositionStrategy for CompilationErrorStrategy {
                 title: "Fix compilation errors".to_string(),
                 description: "Resolve all compilation errors in the codebase".to_string(),
                 scope: TaskScope {
-                    included_files: vec![],
-                    excluded_files: vec![],
-                    included_patterns: vec!["*.rs".to_string()],
-                    excluded_patterns: vec!["target/*".to_string()],
-                    time_budget: std::time::Duration::from_secs(600), // 10 minutes
-                    quality_requirements: QualityRequirements::default(),
+                    files: vec![],
+                    directories: vec![],
+                    patterns: vec!["*.rs".to_string()],
+                    // time_budget: std::time::Duration::from_secs(600), // 10 minutes
+                    // quality_requirements: QualityRequirements::default(),
                 },
                 specialty: WorkerSpecialty::CompilationErrors {
                     error_codes: vec![],
@@ -140,12 +138,11 @@ impl DecompositionStrategy for RefactoringStrategy {
                             operation.operation_type, operation.affected_files.len()
                         ),
                         scope: TaskScope {
-                            included_files: operation.affected_files.clone(),
-                            excluded_files: vec![],
-                            included_patterns: vec![],
-                            excluded_patterns: vec![],
-                            time_budget: std::time::Duration::from_secs(300), // 5 minutes
-                            quality_requirements: QualityRequirements::default(),
+                            files: operation.affected_files.clone(),
+                            directories: vec![],
+                patterns: vec![],
+                            // time_budget: std::time::Duration::from_secs(300), // 5 minutes
+                            // quality_requirements: QualityRequirements::default(),
                         },
                         specialty: WorkerSpecialty::Refactoring {
                             strategies: vec![operation.operation_type.clone()],
@@ -170,12 +167,11 @@ impl DecompositionStrategy for RefactoringStrategy {
                 title: "General refactoring".to_string(),
                 description: "Perform general refactoring operations".to_string(),
                 scope: TaskScope {
-                    included_files: vec![],
-                    excluded_files: vec![],
-                    included_patterns: vec!["*.rs".to_string()],
-                    excluded_patterns: vec!["target/*".to_string()],
-                    time_budget: std::time::Duration::from_secs(600), // 10 minutes
-                    quality_requirements: QualityRequirements::default(),
+                    files: vec![],
+                    directories: vec![],
+                    patterns: vec!["*.rs".to_string()],
+                    // time_budget: std::time::Duration::from_secs(600), // 10 minutes
+                    // quality_requirements: QualityRequirements::default(),
                 },
                 specialty: WorkerSpecialty::Refactoring {
                     strategies: vec!["general".to_string()],
@@ -226,17 +222,9 @@ impl DecompositionStrategy for TestingStrategy {
                         title: format!("Add {}", test_gap),
                         description: test_gap.clone(),
                         scope: TaskScope {
-                            included_files: vec![],
-                            excluded_files: vec![],
-                            included_patterns: vec!["*.rs".to_string(), "*test*.rs".to_string()],
-                            excluded_patterns: vec!["target/*".to_string()],
-                            time_budget: std::time::Duration::from_secs(300), // 5 minutes
-                            quality_requirements: QualityRequirements {
-                                min_test_coverage: Some(0.8),
-                                linting_required: true,
-                                compilation_required: true,
-                                documentation_required: false,
-                            },
+                            files: vec![],
+                            directories: vec![],
+                            patterns: vec!["*.rs".to_string(), "*test*.rs".to_string()],
                         },
                         specialty: WorkerSpecialty::Testing {
                             frameworks: vec!["rust".to_string()], // Could be parameterized
@@ -260,17 +248,9 @@ impl DecompositionStrategy for TestingStrategy {
                 title: "Add unit tests".to_string(),
                 description: "Add unit tests for functions and methods".to_string(),
                 scope: TaskScope {
-                    included_files: vec![],
-                    excluded_files: vec![],
-                    included_patterns: vec!["src/**/*.rs".to_string()],
-                    excluded_patterns: vec!["target/*".to_string(), "tests/*".to_string()],
-                    time_budget: std::time::Duration::from_secs(600), // 10 minutes
-                    quality_requirements: QualityRequirements {
-                        min_test_coverage: Some(0.8),
-                        linting_required: true,
-                        compilation_required: true,
-                        documentation_required: false,
-                    },
+                    files: vec![],
+                    directories: vec![],
+                    patterns: vec!["src/**/*.rs".to_string()],
                 },
                 specialty: WorkerSpecialty::Testing {
                     frameworks: vec!["rust".to_string()],
@@ -287,17 +267,9 @@ impl DecompositionStrategy for TestingStrategy {
                 title: "Add integration tests".to_string(),
                 description: "Add integration tests for component interactions".to_string(),
                 scope: TaskScope {
-                    included_files: vec![],
-                    excluded_files: vec![],
-                    included_patterns: vec!["tests/**/*.rs".to_string()],
-                    excluded_patterns: vec![],
-                    time_budget: std::time::Duration::from_secs(600), // 10 minutes
-                    quality_requirements: QualityRequirements {
-                        min_test_coverage: Some(0.7),
-                        linting_required: true,
-                        compilation_required: true,
-                        documentation_required: false,
-                    },
+                    files: vec![],
+                    directories: vec![],
+                    patterns: vec!["tests/**/*.rs".to_string()],
                 },
                 specialty: WorkerSpecialty::Testing {
                     frameworks: vec!["rust".to_string()],
@@ -348,17 +320,9 @@ impl DecompositionStrategy for DocumentationStrategy {
                         title: format!("Add {}", doc_need),
                         description: doc_need.clone(),
                         scope: TaskScope {
-                            included_files: vec![],
-                            excluded_files: vec![],
-                            included_patterns: vec!["*.rs".to_string(), "*.md".to_string()],
-                            excluded_patterns: vec![],
-                            time_budget: std::time::Duration::from_secs(180), // 3 minutes
-                            quality_requirements: QualityRequirements {
-                                min_test_coverage: None,
-                                linting_required: false,
-                                compilation_required: false,
-                                documentation_required: true,
-                            },
+                            files: vec![],
+                            directories: vec![],
+                            patterns: vec!["*.rs".to_string(), "*.md".to_string()],
                         },
                         specialty: WorkerSpecialty::Documentation {
                             formats: vec!["markdown".to_string(), "rustdoc".to_string()],
@@ -382,17 +346,9 @@ impl DecompositionStrategy for DocumentationStrategy {
                 title: "Add API documentation".to_string(),
                 description: "Add documentation comments to public APIs".to_string(),
                 scope: TaskScope {
-                    included_files: vec![],
-                    excluded_files: vec![],
-                    included_patterns: vec!["src/**/*.rs".to_string()],
-                    excluded_patterns: vec!["target/*".to_string()],
-                    time_budget: std::time::Duration::from_secs(300), // 5 minutes
-                    quality_requirements: QualityRequirements {
-                        min_test_coverage: None,
-                        linting_required: false,
-                        compilation_required: false,
-                        documentation_required: true,
-                    },
+                    files: vec![],
+                    directories: vec![],
+                    patterns: vec!["src/**/*.rs".to_string()],
                 },
                 specialty: WorkerSpecialty::Documentation {
                     formats: vec!["rustdoc".to_string()],
@@ -409,17 +365,9 @@ impl DecompositionStrategy for DocumentationStrategy {
                 title: "Update README".to_string(),
                 description: "Update README with usage examples and API documentation".to_string(),
                 scope: TaskScope {
-                    included_files: vec!["README.md".into()],
-                    excluded_files: vec![],
-                    included_patterns: vec!["README.md".to_string()],
-                    excluded_patterns: vec![],
-                    time_budget: std::time::Duration::from_secs(180), // 3 minutes
-                    quality_requirements: QualityRequirements {
-                        min_test_coverage: None,
-                        linting_required: false,
-                        compilation_required: false,
-                        documentation_required: true,
-                    },
+                    files: vec!["README.md".into()],
+                    directories: vec![],
+                    patterns: vec!["README.md".to_string()],
                 },
                 specialty: WorkerSpecialty::Documentation {
                     formats: vec!["markdown".to_string()],

@@ -34,6 +34,15 @@ fn main() {
         }
     }
 
+    // Link to BridgesFFI framework on macOS
+    #[cfg(target_os = "macos")]
+    {
+        // The BridgesFFI framework is built by the Swift package manager
+        // and should be available in the standard framework search paths
+        println!("cargo:rustc-link-lib=framework=BridgesFFI");
+        println!("cargo:rerun-if-changed=../bridges/Sources");
+    }
+
     println!("cargo:rerun-if-env-changed=LIBTORCH");
     println!("cargo:rerun-if-env-changed=CARGO_FEATURE_TORCH");
 }

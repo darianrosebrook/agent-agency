@@ -86,6 +86,8 @@ pub fn convert_to_complex_task(description: String, workspace_root: PathBuf) -> 
         },
         complexity_score,
         estimated_subtasks: Some((complexity_score * 5.0).max(2.0) as usize), // Rough estimate
+        scope: crate::TaskScope::default(),
+        quality_requirements: crate::QualityRequirements::default(),
     }
 }
 

@@ -382,7 +382,201 @@ pub mod coreml {
         // Handle is dropped here, which calls the Drop impl for CoreMlHandle
     }
 
-    /// Mistral tokenizer functions
+    // ============================================================================
+    // FFI Declarations for BridgesFFI
+    // ============================================================================
+
+    #[cfg_attr(target_os = "macos", link(name = "BridgesFFI", kind = "framework"))]
+    extern "C" {
+        // Core functions
+        pub fn agentbridge_init() -> i32;
+        pub fn agentbridge_shutdown() -> i32;
+        pub fn agentbridge_get_version(out_version: *mut *mut std::ffi::c_char) -> i32;
+        pub fn agentbridge_free_string(ptr: *mut std::ffi::c_char);
+
+        // Model management
+        pub fn agentbridge_model_download(
+            identifier: *const std::ffi::c_char,
+            channel: *const std::ffi::c_char,
+            out_model_path: *mut *mut std::ffi::c_char,
+            out_error: *mut *mut std::ffi::c_char
+        ) -> i32;
+
+        pub fn agentbridge_model_is_cached(
+            identifier: *const std::ffi::c_char,
+            channel: *const std::ffi::c_char
+        ) -> i32;
+
+        pub fn agentbridge_model_remove_cached(
+            identifier: *const std::ffi::c_char,
+            channel: *const std::ffi::c_char,
+            out_error: *mut *mut std::ffi::c_char
+        ) -> i32;
+
+        pub fn agentbridge_model_get_cache_stats(
+            out_stats: *mut *mut std::ffi::c_char,
+            out_error: *mut *mut std::ffi::c_char
+        ) -> i32;
+
+        pub fn agentbridge_model_clear_cache(
+            out_error: *mut *mut std::ffi::c_char
+        ) -> i32;
+
+        pub fn agentbridge_model_create(
+            model_path: *const std::ffi::c_char,
+            config_json: *const std::ffi::c_char,
+            out_model_ref: *mut u64,
+            out_error: *mut *mut std::ffi::c_char
+        ) -> i32;
+
+        pub fn agentbridge_model_destroy(model_ref: u64) -> i32;
+
+        pub fn agentbridge_model_get_info(
+            model_ref: u64,
+            out_info: *mut *mut std::ffi::c_char,
+            out_error: *mut *mut std::ffi::c_char
+        ) -> i32;
+
+        // Text processing - Mistral
+        pub fn agentbridge_text_mistral_create(
+            model_path: *const std::ffi::c_char,
+            out_model_ref: *mut u64,
+            out_error: *mut *mut std::ffi::c_char
+        ) -> i32;
+
+        pub fn agentbridge_text_mistral_generate(
+            model_ref: u64,
+            prompt: *const std::ffi::c_char,
+            max_tokens: i32,
+            temperature: f32,
+            out_text: *mut *mut std::ffi::c_char,
+            out_error: *mut *mut std::ffi::c_char
+        ) -> i32;
+
+        pub fn agentbridge_text_mistral_encode(
+            text: *const std::ffi::c_char,
+            out_tokens: *mut *mut i32,
+            out_token_count: *mut i32,
+            out_error: *mut *mut std::ffi::c_char
+        ) -> i32;
+
+        pub fn agentbridge_text_mistral_decode(
+            tokens: *const i32,
+            token_count: i32,
+            out_text: *mut *mut std::ffi::c_char,
+            out_error: *mut *mut std::ffi::c_char
+        ) -> i32;
+
+        pub fn agentbridge_text_mistral_free_tokens(tokens: *mut i32, count: i32);
+
+        // Audio processing - Whisper
+        pub fn agentbridge_audio_whisper_create(
+            model_path: *const std::ffi::c_char,
+            model_size: *const std::ffi::c_char,
+            out_model_ref: *mut u64,
+            out_error: *mut *mut std::ffi::c_char
+        ) -> i32;
+
+        pub fn agentbridge_audio_whisper_transcribe(
+            model_ref: u64,
+            audio_path: *const std::ffi::c_char,
+            language: *const std::ffi::c_char,
+            out_text: *mut *mut std::ffi::c_char,
+            out_segments_json: *mut *mut std::ffi::c_char,
+            out_confidence: *mut f32,
+            out_error: *mut *mut std::ffi::c_char
+        ) -> i32;
+
+        // Audio processing - Speech Framework
+        pub fn agentbridge_audio_speech_create(
+            language: *const std::ffi::c_char,
+            out_model_ref: *mut u64,
+            out_error: *mut *mut std::ffi::c_char
+        ) -> i32;
+
+        pub fn agentbridge_audio_speech_transcribe(
+            model_ref: u64,
+            audio_path: *const std::ffi::c_char,
+            out_text: *mut *mut std::ffi::c_char,
+            out_confidence: *mut f32,
+            out_error: *mut *mut std::ffi::c_char
+        ) -> i32;
+
+        // Vision processing - YOLO
+        pub fn agentbridge_vision_yolo_create(
+            model_path: *const std::ffi::c_char,
+            out_model_ref: *mut u64,
+            out_error: *mut *mut std::ffi::c_char
+        ) -> i32;
+
+        pub fn agentbridge_vision_yolo_detect(
+            model_ref: u64,
+            image_data: *const u8,
+            data_length: i32,
+            confidence_threshold: f32,
+            out_detections_json: *mut *mut std::ffi::c_char,
+            out_detection_count: *mut i32,
+            out_error: *mut *mut std::ffi::c_char
+        ) -> i32;
+
+        // Vision processing - OCR
+        pub fn agentbridge_vision_ocr_create(
+            language: *const std::ffi::c_char,
+            out_model_ref: *mut u64,
+            out_error: *mut *mut std::ffi::c_char
+        ) -> i32;
+
+        pub fn agentbridge_vision_ocr_extract(
+            model_ref: u64,
+            image_data: *const u8,
+            data_length: i32,
+            out_text: *mut *mut std::ffi::c_char,
+            out_confidence: *mut f32,
+            out_error: *mut *mut std::ffi::c_char
+        ) -> i32;
+
+        // Text generation - Diffusion
+        pub fn agentbridge_text_diffusion_create(
+            model_path: *const std::ffi::c_char,
+            out_model_ref: *mut u64,
+            out_error: *mut *mut std::ffi::c_char
+        ) -> i32;
+
+        pub fn agentbridge_text_diffusion_generate(
+            model_ref: u64,
+            prompt: *const std::ffi::c_char,
+            width: i32,
+            height: i32,
+            steps: i32,
+            guidance_scale: f32,
+            seed: u64,
+            out_image_data: *mut *mut u8,
+            out_data_length: *mut i32,
+            out_error: *mut *mut std::ffi::c_char
+        ) -> i32;
+
+        pub fn agentbridge_text_diffusion_free_image(image_data: *mut u8);
+
+        // System monitoring
+        pub fn agentbridge_system_get_metrics(
+            out_metrics: *mut *mut std::ffi::c_char,
+            out_error: *mut *mut std::ffi::c_char
+        ) -> i32;
+
+        pub fn agentbridge_system_profile_start(
+            session_name: *const std::ffi::c_char,
+            out_session_id: *mut u64,
+            out_error: *mut *mut std::ffi::c_char
+        ) -> i32;
+
+        pub fn agentbridge_system_profile_stop(
+            session_id: u64,
+            out_report: *mut *mut std::ffi::c_char,
+            out_error: *mut *mut std::ffi::c_char
+        ) -> i32;
+    }
+
+    /// Mistral tokenizer functions (wrappers around FFI)
     pub fn mistral_tokenizer_create() -> *mut std::ffi::c_void {
         std::ptr::null_mut()
     }

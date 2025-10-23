@@ -23,6 +23,7 @@ pub mod resilience;
 pub mod claim_extraction_multimodal;
 pub mod learning;
 pub mod model_client;
+pub mod advanced_monitoring;
 
 pub use error::{CouncilError, CouncilResult};
 pub use judge::{
@@ -51,4 +52,5 @@ pub use error_handling::{
 pub use evidence_enrichment::EvidenceEnrichmentCoordinator;
 pub use resilience::ResilienceManager;
 pub use claim_extraction_multimodal::{MultimodalEvidenceEnricher, ClaimWithMultimodalEvidence};
+pub use advanced_monitoring::{SLOTracker, SLOStatus, SLOAlert, AlertLevel, SLOComponent, SLODashboardSummary};
 pub use types::ResourceUsageMetrics;

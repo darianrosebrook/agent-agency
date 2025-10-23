@@ -197,8 +197,7 @@ impl WorkerManager {
         // Set basic environment variables
         env.insert("WORKER_SUBTASK_ID".to_string(), subtask.id.0.clone());
         env.insert("WORKER_SPECIALTY".to_string(), format!("{:?}", subtask.specialty));
-        env.insert("WORKER_TIME_BUDGET_SECS".to_string(),
-                  subtask.scope.time_budget.as_secs().to_string());
+        env.insert("WORKER_TIME_BUDGET_SECS".to_string(), "300".to_string()); // Default 5 minutes
 
         // Add subtask-specific environment
         match &subtask.specialty {

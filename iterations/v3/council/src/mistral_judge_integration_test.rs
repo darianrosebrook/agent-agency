@@ -41,7 +41,7 @@ async fn test_mistral_judge_basic_functionality() {
 
     let config = JudgeConfig {
         judge_id: "mistral-test".to_string(),
-        judge_type: JudgeType::Quality,
+        judge_type: JudgeType::QualityAssurance,
         model_name: "mistral-7b-instruct".to_string(),
         temperature: 0.1,
         max_tokens: 1000,
@@ -80,7 +80,6 @@ async fn test_mistral_judge_basic_functionality() {
             data_impact: agent_agency_contracts::working_spec::DataImpact::None,
             downtime_required: None,
             rollback_window_minutes: None,
-            verification_steps: vec![],
         },
         context: agent_agency_contracts::working_spec::WorkingSpecContext {
             workspace_root: "/tmp/test".to_string(),
@@ -121,7 +120,7 @@ fn test_mistral_judge_config() {
 
     let config = JudgeConfig {
         judge_id: "mistral-test".to_string(),
-        judge_type: JudgeType::Quality,
+        judge_type: JudgeType::QualityAssurance,
         model_name: "mistral-7b-instruct".to_string(),
         temperature: 0.1,
         max_tokens: 1000,
@@ -141,7 +140,7 @@ async fn test_mistral_judge_specialization() {
 
     let config = JudgeConfig {
         judge_id: "mistral-test".to_string(),
-        judge_type: JudgeType::Quality,
+        judge_type: JudgeType::QualityAssurance,
         model_name: "mistral-7b-instruct".to_string(),
         temperature: 0.1,
         max_tokens: 1000,
@@ -179,7 +178,6 @@ async fn test_mistral_judge_specialization() {
             data_impact: agent_agency_contracts::working_spec::DataImpact::None,
             downtime_required: None,
             rollback_window_minutes: None,
-            verification_steps: vec![],
         },
         context: agent_agency_contracts::working_spec::WorkingSpecContext {
             workspace_root: "/tmp/test".to_string(),
@@ -216,7 +214,7 @@ fn test_mistral_judge_health_metrics() {
 
     let config = JudgeConfig {
         judge_id: "mistral-test".to_string(),
-        judge_type: JudgeType::Quality,
+        judge_type: JudgeType::QualityAssurance,
         model_name: "mistral-7b-instruct".to_string(),
         temperature: 0.1,
         max_tokens: 1000,

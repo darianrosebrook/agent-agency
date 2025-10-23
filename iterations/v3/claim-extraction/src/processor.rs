@@ -1,6 +1,6 @@
 use crate::decomposition::DecompositionStage;
 use crate::disambiguation::DisambiguationStage;
-use crate::multi_modal_verification::MultiModalVerificationEngine;
+use crate::verification::MultiModalVerificationEngine;
 use crate::qualification::QualificationStage;
 use crate::types::VerifiedClaim;
 use crate::types::*;
@@ -22,7 +22,7 @@ impl ClaimExtractionProcessor {
     /// Create a new claim extraction processor with all stages
     pub fn new() -> Self {
         Self {
-            disambiguation_stage: DisambiguationStage::new(),
+            disambiguation_stage: DisambiguationStage::minimal(),
             qualification_stage: QualificationStage::new(),
             decomposition_stage: DecompositionStage::new(),
             verification_stage: VerificationStage::new(),

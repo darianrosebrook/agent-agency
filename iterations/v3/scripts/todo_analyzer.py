@@ -172,7 +172,7 @@ class HiddenTodoAnalyzer:
             r'named_entities\.',
             r'ascii_case_insensitive_html_attributes\.',
 
-            # Package management
+            # Package management and dependencies
             r'\bnode_modules\b',
             r'package-lock\.json$',
             r'package\.json$',
@@ -186,6 +186,22 @@ class HiddenTodoAnalyzer:
             r'poetry\.lock$',
             r'Cargo\.lock$',
             r'Cargo\.toml$',
+
+            # External libraries and frameworks
+            r'libtorch-cpu',
+            r'libtorch\b',
+            r'\.venv-whisper\b',
+            r'whisper_conversion_env',
+            r'\bsite-packages\b',
+            r'lib/python\d+\.\d+/site-packages',
+            r'whisperkit\b',
+            r'\.build\b',
+
+            # Model and data directories
+            r'models\b',
+            r'\bmodels/',
+            r'temp\.rs$',
+            r'todo_analyzer\.',
 
             # Version control and IDE
             r'\.git\b',
@@ -271,6 +287,11 @@ class HiddenTodoAnalyzer:
             r'~$',
             r'\.bak$',
             r'\.backup$',
+
+            # Additional exclusions from user's search
+            r'\.gitignore$',
+            r'\.json$',
+            r'\.md$',
         ]
 
         # Explicit TODO patterns (highest priority) - more restrictive
@@ -282,6 +303,11 @@ class HiddenTodoAnalyzer:
                 r'\bXXX\b.*?:',
                 r'\bTEMP\b.*?:.*?(implement|fix|replace|complete|add)',
                 r'\bTEMPORARY\b.*?:.*?(implement|fix|replace|complete|add)',
+                # User's VSCode search patterns
+                r'\bTODO\b(?!(_|\.|anal|\sanal|s))',
+                r'\bin\s+a\s+real\b(?!(_|\.|anal|\sanal|s))',
+                r'\bsimplified\b(?!(_|\.|anal|\sanal|s))',
+                r'\bfor\s+now\b(?!(_|\.|anal|\sanal|s))',
             ]
         }
 
@@ -1006,7 +1032,7 @@ class HiddenTodoAnalyzer:
 
         return file_analysis
 
-    def analyze_directory(self, languages: Optional[List[str]] = None, min_confidence: float = 0.7) -> Dict:
+    def analyze_directory(self, languages: Optional[List[str]] = None, min_confidence: float = 0.7, v3_only: bool = False) -> Dict:
         """Analyze all files in the directory for hidden TODO patterns with improved accuracy."""
         print(f"Analyzing files with improved patterns in: {self.root_dir}")
         print(f"Minimum confidence threshold: {min_confidence}")
@@ -1017,7 +1043,13 @@ class HiddenTodoAnalyzer:
             if languages and language not in languages:
                 continue
             for ext in config['extensions']:
-                all_files.extend(self.root_dir.rglob(f'*{ext}'))
+                if v3_only:
+                    # Only analyze files in iterations/v3/ directory
+                    v3_dir = self.root_dir / 'iterations' / 'v3'
+                    if v3_dir.exists():
+                        all_files.extend(v3_dir.rglob(f'*{ext}'))
+                else:
+                    all_files.extend(self.root_dir.rglob(f'*{ext}'))
 
         # Filter out ignored files
         non_ignored_files = [
@@ -1334,6 +1366,8 @@ def main():
                         action='store_true', help='CI mode - exit with error code if hidden TODOs found')
     parser.add_argument('--warn-only',
                         action='store_true', help='Warning mode - only warn, never fail')
+    parser.add_argument('--v3-only',
+                        action='store_true', help='Only analyze v3 folder (matches user search scope)')
 
     args = parser.parse_args()
 
@@ -1346,7 +1380,7 @@ def main():
     if args.files:
         results = analyzer.analyze_files(args.files, args.min_confidence)
     else:
-        results = analyzer.analyze_directory(args.languages, args.min_confidence)
+        results = analyzer.analyze_directory(args.languages, args.min_confidence, args.v3_only)
 
     # Print summary
     summary = results['summary']

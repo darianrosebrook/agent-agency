@@ -53,7 +53,7 @@ impl YOLOInferenceExecutor {
         let detections = Vec::new();
 
         // Record telemetry
-        self.model.telemetry.record_inference(inference_time.as_millis() as u64, true, "yolo");
+        self.model.telemetry.record_inference(inference_time.as_millis() as u64, true);
 
         // Update access time
         self.model.last_accessed = Instant::now();

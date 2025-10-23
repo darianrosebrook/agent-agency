@@ -216,6 +216,22 @@ pub struct DiskIOMetrics {
     pub per_disk_metrics: HashMap<String, PerDiskMetrics>,
 }
 
+impl Default for DiskIOMetrics {
+    fn default() -> Self {
+        Self {
+            read_iops: 0,
+            write_iops: 0,
+            read_throughput: 0,
+            write_throughput: 0,
+            avg_read_latency_ms: 0.0,
+            avg_write_latency_ms: 0.0,
+            disk_utilization: 0.0,
+            queue_depth: 0,
+            per_disk_metrics: HashMap::new(),
+        }
+    }
+}
+
 /// Per-disk I/O metrics
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PerDiskMetrics {
@@ -317,6 +333,22 @@ pub struct DiskUsageTrends {
     pub confidence: f64,
     /// Historical data points used for analysis
     pub historical_data_points: u32,
+}
+
+impl Default for DiskUsageTrends {
+    fn default() -> Self {
+        Self {
+            current_usage_percentage: 0.0,
+            growth_rate_bytes_per_day: 0.0,
+            predicted_usage_7_days: 0.0,
+            predicted_usage_30_days: 0.0,
+            days_until_90_percent: None,
+            days_until_95_percent: None,
+            days_until_100_percent: None,
+            confidence: 0.0,
+            historical_data_points: 0,
+        }
+    }
 }
 
 /// Historical disk usage data point

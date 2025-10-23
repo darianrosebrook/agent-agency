@@ -17,6 +17,15 @@ pub enum FailureMode {
     Timeout,
 }
 
+/// Inference metrics
+#[derive(Debug, Clone)]
+pub struct InferenceMetrics {
+    pub total_inferences: u64,
+    pub successful_inferences: u64,
+    pub average_latency_ms: f64,
+    pub error_rate: f64,
+}
+
 /// Telemetry collector
 #[derive(Debug, Clone)]
 pub struct TelemetryCollector {
@@ -44,7 +53,7 @@ impl TelemetryCollector {
     }
 
     /// Record an inference
-    pub fn record_inference(&mut self, duration_ms: u64, success: bool, _compute_unit: &str) {
+    pub fn record_inference(&mut self, duration_ms: u64, success: bool) {
         self.metrics.inference_count += 1;
         if !success {
             self.metrics.error_count += 1;

@@ -64,7 +64,7 @@ impl WhisperInferenceExecutor {
         let transcription = self.decode_whisper_output(inference_result, &preprocessed)?;
 
         // Record telemetry
-        self.model.telemetry.record_inference(inference_time.as_millis() as u64, true, "whisper");
+        self.model.telemetry.record_inference(inference_time.as_millis() as u64, true);
 
         // Update access time
         self.model.last_accessed = Instant::now();

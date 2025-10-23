@@ -846,6 +846,7 @@ pub enum IssueSeverity {
 /// Judge type specialization
 #[derive(Debug, Clone, PartialEq)]
 pub enum JudgeType {
+    Constitutional,     // CAWS compliance and constitutional analysis
     QualityAssurance,
     Security,
     Performance,

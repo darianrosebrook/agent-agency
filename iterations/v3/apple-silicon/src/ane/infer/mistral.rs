@@ -120,7 +120,7 @@ pub async fn deliberate_constitution(
 
     // Record telemetry
     let duration = start_time.elapsed();
-    model.telemetry.record_inference(duration.as_millis() as u64, true, "mistral_constitutional");
+    model.telemetry.record_inference(duration.as_millis() as u64, true);
 
     Ok(verdict)
 }
@@ -155,7 +155,7 @@ pub async fn generate_debate_argument(
 
     // Record telemetry
     let duration = start_time.elapsed();
-    model.telemetry.record_inference(duration.as_millis() as u64, true, "mistral_debate");
+    model.telemetry.record_inference(duration.as_millis() as u64, true);
 
     Ok(argument)
 }

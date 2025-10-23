@@ -111,6 +111,9 @@ impl SpecializedWorker for CompilationSpecialist {
                 memory_usage_mb: Some(50.0),
                 files_modified: 2,
                 lines_changed: 15,
+                quality_score: 0.9,
+                execution_time_ms: 5000,
+                tokens: Some(1000),
             },
             artifacts: vec![
                 Artifact {
@@ -213,6 +216,9 @@ impl SpecializedWorker for RefactoringSpecialist {
                 memory_usage_mb: Some(60.0),
                 files_modified: 3,
                 lines_changed: 25,
+                quality_score: 0.85,
+                execution_time_ms: 3000,
+                tokens: Some(800),
             },
             artifacts: vec![
                 Artifact {
@@ -314,6 +320,9 @@ impl SpecializedWorker for TestingSpecialist {
                 memory_usage_mb: Some(40.0),
                 files_modified: 1,
                 lines_changed: 50,
+                quality_score: 0.95,
+                execution_time_ms: 2000,
+                tokens: Some(500),
             },
             artifacts: vec![
                 Artifact {
@@ -415,6 +424,9 @@ impl SpecializedWorker for DocumentationSpecialist {
                 memory_usage_mb: Some(30.0),
                 files_modified: 2,
                 lines_changed: 30,
+                quality_score: 0.8,
+                execution_time_ms: 1000,
+                tokens: Some(200),
             },
             artifacts: vec![
                 Artifact {

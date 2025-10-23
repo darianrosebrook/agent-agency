@@ -86,12 +86,9 @@ impl DecompositionEngine {
                             title: format!("Fix {} errors", error_group.error_code),
                             description: format!("Resolve {} compilation errors", error_group.count),
                             scope: TaskScope {
-                                included_files: error_group.affected_files.clone(),
-                                excluded_files: vec![],
-                                included_patterns: vec![],
-                                excluded_patterns: vec![],
-                                time_budget: std::time::Duration::from_secs(300),
-                                quality_requirements: QualityRequirements::default(),
+                                files: error_group.affected_files.clone(),
+                                directories: vec![],
+                                patterns: vec![],
                             },
                             specialty: WorkerSpecialty::CompilationErrors {
                                 error_codes: vec![error_group.error_code.clone()],
@@ -111,12 +108,9 @@ impl DecompositionEngine {
                             title: operation.operation_type.clone(),
                             description: format!("Perform {} refactoring", operation.operation_type),
                             scope: TaskScope {
-                                included_files: operation.affected_files.clone(),
-                                excluded_files: vec![],
-                                included_patterns: vec![],
-                                excluded_patterns: vec![],
-                                time_budget: std::time::Duration::from_secs(300),
-                                quality_requirements: QualityRequirements::default(),
+                                files: operation.affected_files.clone(),
+                                directories: vec![],
+                                patterns: vec![],
                             },
                             specialty: WorkerSpecialty::Refactoring {
                                 strategies: vec![operation.operation_type.clone()],
@@ -138,15 +132,9 @@ impl DecompositionEngine {
                             title: "Add tests".to_string(),
                             description: test_gap.clone(),
                             scope: TaskScope {
-                                included_files: vec![],
-                                excluded_files: vec![],
-                                included_patterns: vec!["*.rs".to_string()],
-                                excluded_patterns: vec![],
-                                time_budget: std::time::Duration::from_secs(300),
-                                quality_requirements: QualityRequirements {
-                                    min_test_coverage: Some(0.8),
-                                    ..QualityRequirements::default()
-                                },
+                                files: vec![],
+                                directories: vec![],
+                                patterns: vec!["*.rs".to_string()],
                             },
                             specialty: WorkerSpecialty::Testing {
                                 frameworks: vec!["rust".to_string()],
@@ -166,15 +154,9 @@ impl DecompositionEngine {
                             title: "Add documentation".to_string(),
                             description: doc_need.clone(),
                             scope: TaskScope {
-                                included_files: vec![],
-                                excluded_files: vec![],
-                                included_patterns: vec!["*.rs".to_string()],
-                                excluded_patterns: vec![],
-                                time_budget: std::time::Duration::from_secs(180),
-                                quality_requirements: QualityRequirements {
-                                    documentation_required: true,
-                                    ..QualityRequirements::default()
-                                },
+                                files: vec![],
+                                directories: vec![],
+                                patterns: vec!["*.rs".to_string()],
                             },
                             specialty: WorkerSpecialty::Documentation {
                                 formats: vec!["rustdoc".to_string()],

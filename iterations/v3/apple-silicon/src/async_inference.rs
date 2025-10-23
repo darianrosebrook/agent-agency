@@ -20,6 +20,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::Mutex;
 use tokio_util::sync::CancellationToken;
+use tracing::{debug, info};
 use uuid::Uuid;
 
 /// Production-ready tensor data structure for async inference
@@ -488,9 +489,9 @@ pub struct ModelInstance {
     pub created_at: chrono::DateTime<chrono::Utc>,
     /// Last used timestamp
     pub last_used: chrono::DateTime<chrono::Utc>,
-    /// Core ML model handle (macOS only)
+    /// Safe Core ML model wrapper (macOS only)
     #[cfg(target_os = "macos")]
-    pub coreml_handle: Option<std::ptr::NonNull<std::ffi::c_void>>,
+    pub coreml_model: Option<crate::core_ml_bridge::CoreMLModel>,
 }
 
 impl ModelInstance {
@@ -506,14 +507,14 @@ impl ModelInstance {
             created_at: now,
             last_used: now,
             #[cfg(target_os = "macos")]
-            coreml_handle: None,
+            coreml_model: None,
         }
     }
 
-    /// Set the Core ML handle for this model instance
+    /// Set the safe Core ML model wrapper for this model instance
     #[cfg(target_os = "macos")]
-    pub fn with_coreml_handle(mut self, handle: *mut std::ffi::c_void) -> Self {
-        self.coreml_handle = std::ptr::NonNull::new(handle);
+    pub fn with_coreml_model(mut self, model: crate::core_ml_bridge::CoreMLModel) -> Self {
+        self.coreml_model = Some(model);
         self
     }
 }
@@ -745,6 +746,37 @@ impl AsyncInferenceEngine {
         })
     }
 
+    /// Load a Core ML model and register it with the pool
+    #[cfg(target_os = "macos")]
+    pub async fn load_coreml_model(
+        &self,
+        model_id: String,
+        model_path: &std::path::Path,
+        compute_units: crate::core_ml_bridge::ComputeUnit,
+    ) -> Result<()> {
+        use crate::core_ml_bridge::CoreMLModel;
+
+        info!("Loading Core ML model '{}' from {}", model_id, model_path.display());
+
+        // Load the model using the safe wrapper
+        let coreml_model = CoreMLModel::load(model_path, compute_units)?;
+
+        // Create model instance with the safe wrapper
+        let model_instance = ModelInstance::new(
+            model_id.clone(),
+            model_path.to_string_lossy().to_string(),
+            ModelFormat::CoreML,
+            TensorDevice::Cpu, // Core ML handles device internally
+            100, // Placeholder memory estimate - could be improved
+        ).with_coreml_model(coreml_model);
+
+        // Register with the pool
+        self.inner.model_pool.register_model(model_instance).await?;
+
+        info!("Successfully loaded and registered Core ML model '{}'", model_id);
+        Ok(())
+    }
+
     /// Perform async inference with cancellation support
     pub async fn infer(
         &self,
@@ -904,187 +936,47 @@ impl AsyncInferenceEngine {
         model: &ModelInstance,
         inputs: &HashMap<String, Tensor>,
     ) -> Result<HashMap<String, Tensor>> {
-        // Get the Core ML model handle
-        let handle = model.coreml_handle
+        // Get the safe Core ML model wrapper
+        let coreml_model = model.coreml_model
+            .as_ref()
             .ok_or_else(|| anyhow::anyhow!("Model does not have Core ML backend"))?;
 
-        // Convert inputs to JSON format expected by Core ML
-        let inputs_json = self.prepare_coreml_inputs(inputs)?;
-
-        // Execute prediction with timeout
-        let timeout_ms = self.inner.config.inference_timeout.as_millis() as i32;
-        // TODO: Use safe CoreMLModel wrapper instead of raw FFI
-        // let outputs_json = CoreMLModel::from_raw(handle).predict(&inputs_json, timeout_ms)?;
-        let outputs_json = unsafe {
-            use std::ffi::CString;
-            let c_inputs = CString::new(inputs_json.clone())?;
-            let mut out_outputs: *mut std::ffi::c_char = std::ptr::null_mut();
-            let mut out_err: *mut std::ffi::c_char = std::ptr::null_mut();
-            let ret = crate::core_ml_bridge::coreml_predict(
-                handle.as_ptr(),
-                c_inputs.as_ptr(),
-                &mut out_outputs,
-                timeout_ms,
-                &mut out_err
-            );
-            if ret != 0 {
-                let err_msg = if !out_err.is_null() {
-                    unsafe { std::ffi::CStr::from_ptr(out_err) }.to_string_lossy().to_string()
-                } else {
-                    "Unknown CoreML error".to_string()
-                };
-                return Err(anyhow::anyhow!("CoreML prediction failed: {}", err_msg));
-            }
-            unsafe { std::ffi::CStr::from_ptr(out_outputs) }.to_string_lossy().to_string()
-        };
-
-        // Parse outputs back into tensors
-        self.parse_coreml_outputs(&outputs_json)
-    }
-
-    /// Prepare inputs for Core ML inference
-    #[cfg(target_os = "macos")]
-    fn prepare_coreml_inputs(&self, inputs: &HashMap<String, Tensor>) -> Result<String> {
-        use serde_json::{json, Value};
-
-        let mut coreml_inputs = serde_json::Map::new();
-
+        // Convert inputs from async_inference::Tensor to candle_core::Tensor
+        let mut candle_inputs = HashMap::new();
         for (name, tensor) in inputs {
-            // Convert tensor data based on type
-            match tensor.dtype {
-                TensorDataType::F32 => {
-                    // Data is already in f32 format
-                    coreml_inputs.insert(name.clone(), json!(tensor.data));
-                }
-                TensorDataType::F16 => {
-                    // Convert f16 to f32
-                    let f32_data: Vec<f32> = tensor.data.iter()
-                        .map(|&h| f16::from_bits(h as u16).to_f32())
-                        .collect();
-                    coreml_inputs.insert(name.clone(), json!(f32_data));
-                }
-                TensorDataType::I32 => {
-                    // Convert f32 representation back to i32
-                    let i32_data: Vec<i32> = tensor.data.iter()
-                        .map(|&f| f as i32)
-                        .collect();
-                    coreml_inputs.insert(name.clone(), json!(i32_data));
-                }
-                _ => {
-                    return Err(anyhow::anyhow!("Unsupported tensor data type for Core ML: {:?}", tensor.dtype));
-                }
-            }
+            // Convert our Tensor to candle Tensor
+            let shape: &[usize] = &tensor.shape;
+            let candle_tensor = candle_core::Tensor::from_vec(
+                tensor.data.clone(),
+                shape,
+                &candle_core::Device::Cpu,
+            )?;
+            candle_inputs.insert(name.clone(), candle_tensor);
         }
 
-        Ok(serde_json::to_string(&coreml_inputs)?)
-    }
+        // Execute prediction with timeout using safe wrapper
+        let timeout_ms = self.inner.config.inference_timeout.as_millis() as u64;
+        let candle_outputs = coreml_model.predict(candle_inputs, timeout_ms).await?;
 
-    /// Parse Core ML outputs back into tensors
-    #[cfg(target_os = "macos")]
-    fn parse_coreml_outputs(&self, outputs_json: &str) -> Result<HashMap<String, Tensor>> {
-        let outputs: serde_json::Value = serde_json::from_str(outputs_json)
-            .map_err(|e| anyhow::anyhow!("Failed to parse Core ML outputs: {}", e))?;
-
-        let mut result = HashMap::new();
-
-        if let serde_json::Value::Object(map) = outputs {
-            for (name, value) in map {
-                let tensor = match value {
-                    serde_json::Value::Array(ref arr) => {
-                        if arr.is_empty() {
-                            continue;
-                        }
-
-                        // Determine data type from first element and convert to f32
-                        match &arr[0] {
-                            serde_json::Value::Number(n) => {
-                                if n.is_f64() {
-                                    // Float outputs
-                                    let data: Vec<f32> = arr.iter()
-                                        .filter_map(|v| v.as_f64())
-                                        .map(|v| v as f32)
-                                        .collect();
-
-                                    let data_len = data.len();
-                                    crate::async_inference::Tensor {
-                                        data,
-                                        shape: vec![data_len],
-                                        dtype: TensorDataType::F32,
-                                        device: TensorDevice::Cpu,
-                                        layout: TensorLayout::RowMajor,
-                                        metadata: None,
-                                    }
-                                } else {
-                                    // Integer outputs converted to float
-                                    let data: Vec<f32> = arr.iter()
-                                        .filter_map(|v| v.as_i64())
-                                        .map(|v| v as f32)
-                                        .collect();
-
-                                    let data_len = data.len();
-                                    crate::async_inference::Tensor {
-                                        data,
-                                        shape: vec![data_len],
-                                        dtype: TensorDataType::F32,
-                                        device: TensorDevice::Cpu,
-                                        layout: TensorLayout::RowMajor,
-                                        metadata: None,
-                                    }
-                                }
-                            }
-                            _ => {
-                                // Convert to string representation
-                                let json_str = value.to_string();
-                                let data: Vec<f32> = json_str.as_bytes().iter().map(|&b| b as f32).collect();
-                                let data_len = data.len();
-
-                                crate::async_inference::Tensor {
-                                    data,
-                                    shape: vec![data_len],
-                                    dtype: TensorDataType::F32,
-                                    device: TensorDevice::Cpu,
-                                    layout: TensorLayout::RowMajor,
-                                    metadata: None,
-                                }
-                            }
-                        }
-                    }
-                    serde_json::Value::Number(n) => {
-                        // Single number output
-                        let data = vec![n.as_f64().unwrap_or(0.0) as f32];
-
-                        crate::async_inference::Tensor {
-                            data,
-                            shape: vec![1],
-                            dtype: TensorDataType::F32,
-                            device: TensorDevice::Cpu,
-                            layout: TensorLayout::RowMajor,
-                            metadata: None,
-                        }
-                    }
-                    _ => {
-                        // Other types - convert to string representation
-                        let json_str = value.to_string();
-                        let data: Vec<f32> = json_str.as_bytes().iter().map(|&b| b as f32).collect();
-                        let data_len = data.len();
-
-                        crate::async_inference::Tensor {
-                            data,
-                            shape: vec![data_len],
-                            dtype: TensorDataType::F32,
-                            device: TensorDevice::Cpu,
-                            layout: TensorLayout::RowMajor,
-                            metadata: None,
-                        }
-                    }
-                };
-
-                result.insert(name, tensor);
-            }
+        // Convert outputs back from candle_core::Tensor to async_inference::Tensor
+        let mut outputs = HashMap::new();
+        for (name, candle_tensor) in candle_outputs {
+            let shape = candle_tensor.shape().dims().to_vec();
+            let tensor = Tensor {
+                data: candle_tensor.flatten_all()?.to_vec1()?,
+                shape,
+                dtype: TensorDataType::F32, // Assume F32 for now
+                device: TensorDevice::Cpu,
+                layout: TensorLayout::RowMajor,
+                metadata: None,
+            };
+            outputs.insert(name, tensor);
         }
 
-        Ok(result)
+        debug!("Core ML inference completed successfully with {} outputs", outputs.len());
+        Ok(outputs)
     }
+
 
     /// Get current queue statistics
     pub async fn queue_stats(&self) -> QueueStats {

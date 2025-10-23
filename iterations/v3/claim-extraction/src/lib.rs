@@ -12,7 +12,6 @@
 pub mod decomposition;
 pub mod disambiguation;
 pub mod evidence;
-pub mod multi_modal_verification;
 pub mod processor;
 pub mod qualification;
 pub mod types;
@@ -21,10 +20,8 @@ pub mod verification;
 #[cfg(test)]
 mod tests;
 
-#[cfg(test)]
-mod multi_modal_verification_tests;
 
-pub use multi_modal_verification::MultiModalVerificationEngine;
+pub use verification::MultiModalVerificationEngine;
 pub use processor::ClaimExtractionProcessor;
 pub use types::*;
 
@@ -48,7 +45,7 @@ impl ClaimExtractionAndVerificationProcessor {
     /// Create a new claim extraction processor
     pub fn new() -> Self {
         Self {
-            disambiguation_stage: disambiguation::DisambiguationStage::new(),
+            disambiguation_stage: disambiguation::minimal_stage(),
             qualification_stage: qualification::QualificationStage::new(),
             decomposition_stage: decomposition::DecompositionStage::new(),
             verification_stage: verification::VerificationStage::new(),
