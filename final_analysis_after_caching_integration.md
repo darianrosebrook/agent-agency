@@ -2,10 +2,10 @@
 ============================================================
 
 ## Summary
-- Total files: 42368
-- Non-ignored files: 799
+- Total files: 42369
+- Non-ignored files: 800
 - Ignored files: 41569
-- Files with hidden TODOs: 247
+- Files with hidden TODOs: 248
 - Total hidden TODOs found: 787
 - Code stub detections: 0
 - High confidence TODOs (≥0.9): 781
@@ -17,16 +17,16 @@
 - **cpp**: 1 files
 - **javascript**: 28 files
 - **python**: 2 files
-- **rust**: 604 files
+- **rust**: 605 files
 - **shell**: 16 files
 - **typescript**: 130 files
 - **yaml**: 18 files
 
 ## Pattern Statistics
-- `\bTODO\b(?!(_|\.|anal|\sanal|s))`: 312 occurrences
-- `\bTODO\b.*?:`: 300 occurrences
+- `\bTODO\b(?!(_|\.|anal|\sanal|s))`: 309 occurrences
+- `\bTODO\b.*?:`: 297 occurrences
 - `\bsimplified\b(?!(_|\.|anal|\sanal|s))`: 167 occurrences
-- `\bfor\s+now\b(?!(_|\.|anal|\sanal|s))`: 158 occurrences
+- `\bfor\s+now\b(?!(_|\.|anal|\sanal|s))`: 161 occurrences
 - `\bin\s+a\s+real\b(?!(_|\.|anal|\sanal|s))`: 76 occurrences
 - `\bin\s+a\s+real\s+implementation\b`: 69 occurrences
 - `\bplaceholder\s+implementation\b`: 31 occurrences
@@ -51,11 +51,11 @@
 - `iterations/v3/parallel-workers/src/coordinator.rs` (rust): 17 high-confidence TODOs
 - `iterations/v3/parallel-workers/src/learning/persistence.rs` (rust): 17 high-confidence TODOs
 - `iterations/v3/self-prompting-agent/src/loop_controller.rs` (rust): 16 high-confidence TODOs
-- `iterations/v3/caching/src/lib.rs` (rust): 15 high-confidence TODOs
 - `iterations/v3/apple-silicon/src/ane/compat/iokit.rs` (rust): 14 high-confidence TODOs
 - `iterations/v3/parallel-workers/src/worker/lifecycle.rs` (rust): 13 high-confidence TODOs
-- `iterations/v3/caching/src/integration.rs` (rust): 11 high-confidence TODOs
+- `iterations/v3/caching/src/lib.rs` (rust): 11 high-confidence TODOs
 - `iterations/v3/embedding-service/src/multimodal_indexer.rs` (rust): 11 high-confidence TODOs
+- `iterations/v3/caching/src/integration.rs` (rust): 10 high-confidence TODOs
 - `iterations/v3/embedding-service/src/provider.rs` (rust): 10 high-confidence TODOs
 - `iterations/v3/tool-ecosystem/src/schema_registry.rs` (rust): 10 high-confidence TODOs
 - `iterations/v3/tool-ecosystem/src/evidence_collection_tools.rs` (rust): 10 high-confidence TODOs
@@ -112,6 +112,7 @@
 - `iterations/v3/apple-silicon/src/ane/infer/mistral.rs` (rust): 4 high-confidence TODOs
 - `iterations/v3/runtime-optimization/src/performance_monitor.rs` (rust): 4 high-confidence TODOs
 - `iterations/v3/runtime-optimization/src/llm_parameter_feedback_example.rs` (rust): 4 high-confidence TODOs
+- `iterations/v3/reflexive-learning/src/persistence.rs` (rust): 4 high-confidence TODOs
 - `iterations/v3/federated-learning/src/participant.rs` (rust): 4 high-confidence TODOs
 - `iterations/v3/recovery/src/integration/worker.rs` (rust): 4 high-confidence TODOs
 - `iterations/v3/ingestors/src/video_ingestor.rs` (rust): 4 high-confidence TODOs
@@ -132,6 +133,7 @@
 - `iterations/v3/runtime-optimization/src/arbiter_pipeline.rs` (rust): 3 high-confidence TODOs
 - `iterations/v3/runtime-optimization/src/reward.rs` (rust): 3 high-confidence TODOs
 - `iterations/v3/runtime-optimization/src/parameter_optimizer.rs` (rust): 3 high-confidence TODOs
+- `iterations/v3/reflexive-learning/src/learning_algorithms.rs` (rust): 3 high-confidence TODOs
 - `iterations/v3/recovery/src/cas/concurrency.rs` (rust): 3 high-confidence TODOs
 - `iterations/v3/council/src/council.rs` (rust): 3 high-confidence TODOs
 - `iterations/v3/council/src/decision_making.rs` (rust): 3 high-confidence TODOs
@@ -168,7 +170,6 @@
 - `iterations/v3/runtime-optimization/src/streaming_pipeline.rs` (rust): 2 high-confidence TODOs
 - `iterations/v3/runtime-optimization/src/rollout.rs` (rust): 2 high-confidence TODOs
 - `iterations/v3/runtime-optimization/src/planning_agent_integration.rs` (rust): 2 high-confidence TODOs
-- `iterations/v3/reflexive-learning/src/learning_algorithms.rs` (rust): 2 high-confidence TODOs
 - `iterations/v3/federated-learning/src/security.rs` (rust): 2 high-confidence TODOs
 - `iterations/v3/federated-learning/src/differential_privacy.rs` (rust): 2 high-confidence TODOs
 - `iterations/v3/recovery/src/cas/mod.rs` (rust): 2 high-confidence TODOs

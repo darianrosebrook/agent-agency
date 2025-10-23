@@ -420,16 +420,21 @@ where
                     *complexity += 20;
                     self.extract_tables_from_query(&query, tables, complexity);
                 }
-                sqlparser::ast::SetExpr::SetOperation {   .. } => {
-                    // UNION, INTERSECT, EXCEPT
+                sqlparser::ast::SetExpr::SetOperation { left, right, .. } => {
+                    // UNION, INTERSECT, EXCEPT - extract tables from both operands
                     *complexity += 15;
-                    // TODO: Implement proper set operation table extraction
-                    // - Handle Box<SetExpr> dereferencing for nested queries
-                    // - Extract tables from both left and right operands
-                    // - Properly propagate table dependencies through UNION/INTERSECT/EXCEPT
-                    // - Handle recursive set operations (UNION of UNIONs)
-                    // - Add support for ORDER BY and LIMIT clauses in set operations
-                    // - Implement column name resolution for complex set operations
+
+                    // Recursively extract tables from left operand
+                    self.extract_tables_from_set_expr(left, tables, complexity);
+
+                    // Recursively extract tables from right operand
+                    self.extract_tables_from_set_expr(right, tables, complexity);
+
+                    // Increase complexity for recursive set operations
+                    if matches!(**left, sqlparser::ast::SetExpr::SetOperation { .. }) ||
+                       matches!(**right, sqlparser::ast::SetExpr::SetOperation { .. }) {
+                        *complexity += 10; // Bonus for nested set operations
+                    }
                 }
                 _ => {}
             }

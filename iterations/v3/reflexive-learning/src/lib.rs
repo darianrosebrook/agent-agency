@@ -14,11 +14,13 @@ pub mod context_preservation;
 pub mod coordinator;
 pub mod credit_assigner;
 pub mod learning_algorithms;
+pub mod persistence;
 pub mod predictive;
 pub mod progress_tracker;
 pub mod types;
 
 pub use coordinator::MultiTurnLearningCoordinator;
+pub use persistence::{LearningPersistenceManager, LearningPersistenceConfig};
 pub use predictive::{
     PerformancePredictor, PredictiveLearningConfig, PredictiveLearningSystem, ResourcePredictor,
     StrategyOptimizer,
@@ -36,6 +38,7 @@ pub struct ReflexiveLearningSystem {
     credit_assigner: credit_assigner::CreditAssigner,
     adaptive_allocator: adaptive_allocator::AdaptiveResourceAllocator,
     context_preservation: context_preservation::ContextPreservationEngine,
+    persistence_manager: LearningPersistenceManager,
 }
 
 impl ReflexiveLearningSystem {
@@ -48,6 +51,9 @@ impl ReflexiveLearningSystem {
         let progress_tracker = progress_tracker::ProgressTracker::new();
         let credit_assigner = credit_assigner::CreditAssigner::new();
         let adaptive_allocator = adaptive_allocator::AdaptiveResourceAllocator::new();
+        let persistence_config = LearningPersistenceConfig::default();
+        let persistence_manager = LearningPersistenceManager::new(persistence_config).await
+            .map_err(|e| LearningSystemError::InitializationError(e.to_string()))?;
         let context_preservation = context_preservation::ContextPreservationEngine::new();
 
         Ok(Self {
@@ -56,6 +62,7 @@ impl ReflexiveLearningSystem {
             credit_assigner,
             adaptive_allocator,
             context_preservation,
+            persistence_manager,
         })
     }
 
@@ -74,6 +81,10 @@ impl ReflexiveLearningSystem {
 
         // Initialize context preservation
         self.context_preservation.initialize_session(session.id, "default").await?;
+
+        // Persist session start
+        self.persistence_manager.save_state().await
+            .map_err(|e| LearningSystemError::PersistenceError(e.to_string()))?;
 
         Ok(session)
     }
@@ -189,6 +200,10 @@ impl ReflexiveLearningSystem {
                 rollback_risk: RiskLevel::Low,
             }),
         };
+
+        // Persist learning changes
+        self.persistence_manager.save_state().await
+            .map_err(|e| LearningSystemError::PersistenceError(e.to_string()))?;
 
         Ok(LearningUpdate {
             update_id: uuid::Uuid::new_v4(),
