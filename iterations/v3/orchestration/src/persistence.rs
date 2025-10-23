@@ -2,6 +2,7 @@ use agent_agency_council::types::{CawsWaiver, ConsensusResult};
 use anyhow::Result;
 use async_trait::async_trait;
 use std::sync::Arc;
+use tokio_postgres::Client;
 
 /// Placeholder trait for verdict persistence
 #[async_trait]
@@ -28,14 +29,14 @@ pub trait VerdictWriter: Send + Sync {
 ///    - Handle large-scale database operations
 ///    - Optimize database operation quality and reliability
 pub struct DatabaseWriter {
-    connection_pool: Arc<tokio_postgres::Pool>,
+    connection_pool: Arc<Client>,
     schema_manager: Arc<DatabaseSchemaManager>,
     query_optimizer: Arc<QueryOptimizer>,
     error_handler: Arc<DatabaseErrorHandler>,
 }
 
 impl DatabaseWriter {
-    pub fn new(connection_pool: Arc<tokio_postgres::Pool>) -> Self {
+    pub fn new(connection_pool: Arc<Client>) -> Self {
         Self {
             schema_manager: Arc::new(DatabaseSchemaManager::new()),
             query_optimizer: Arc::new(QueryOptimizer::new()),

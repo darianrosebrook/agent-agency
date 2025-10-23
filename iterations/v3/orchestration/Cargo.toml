@@ -27,7 +27,10 @@ agent-agency-database = { path = "../database" }
 agent-agency-contracts = { path = "../agent-agency-contracts" }
 agent-agency-observability = { path = "../observability" }
 claim-extraction = { path = "../claim-extraction" }
-# agent-agency-workers = { path = "../workers" }  # Temporarily commented to resolve circular dependency
+# agent-agency-workers = { path = "../workers" }  # Circular dependency - commented out
+# self-prompting-agent = { path = "../self-prompting-agent" }  # Circular dependency - commented out
+parallel-workers = { path = "../parallel-workers" }
+tool-ecosystem = { path = "../tool-ecosystem" }
 file_ops = { path = "../file_ops" }
 tracing = "0.1"
 flate2 = "1.0"

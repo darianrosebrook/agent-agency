@@ -83,7 +83,6 @@ objc = "0.2"
 
 # Vector operations for embeddings
 dashmap = "5.5"
-parking_lot = "0.12"
 # Safe PyTorch wrapper (optional PyTorch linking)
 ndarray = "0.15"
 

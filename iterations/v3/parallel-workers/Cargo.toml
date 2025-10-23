@@ -24,7 +24,7 @@ chrono = { workspace = true, features = ["serde"] }
 
 # Concurrent data structures
 parking_lot = { workspace = true }
-dashmap = { workspace = true }
+dashmap.workspace = true
 
 # Logging and observability
 tracing = { workspace = true }

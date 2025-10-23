@@ -266,6 +266,11 @@ impl CouncilTodoAnalyzer {
             Regex::new(r"\bdemo\s+implementation\b")?,
             Regex::new(r"\bsample\s+implementation\b")?,
             Regex::new(r"\btemplate\s+implementation\b")?,
+            Regex::new(r"\bstub\s+implementation\s+for\b")?,
+            Regex::new(r"\bsimplified\s+.*?\s+calculation\b")?,
+            Regex::new(r"\bsimplified\s+.*?\s+implementation\b")?,
+            Regex::new(r"\bfor\s+now\b.*?(just|simply|only)\s+(concatenate|return|use)")?,
+            Regex::new(r"\bin\s+practice\b.*?(would|should|will)\s+(intelligently|properly|correctly)")?,
         ];
 
         // Regex for code stubs patterns
@@ -298,6 +303,10 @@ impl CouncilTodoAnalyzer {
             Regex::new(r"\bmagic\s+string\b")?,
             Regex::new(r"\bconstant\s+value\b.*?(replace|change|make\s+configurable)")?,
             Regex::new(r"\bdefault\s+value\b.*?(replace|change|make\s+configurable)")?,
+            Regex::new(r"\bhardcoded\s+return\s+value\b")?,
+            Regex::new(r"\bhardcoded\s+result\b")?,
+            Regex::new(r"\bhardcoded\s+efficiency\b")?,
+            Regex::new(r"\bhardcoded\s+percentage\b")?,
         ];
 
         // Regex for future improvements patterns
@@ -310,6 +319,9 @@ impl CouncilTodoAnalyzer {
             Regex::new(r"\bwould\s+be\b.*?(implemented|added|fixed)")?,
             Regex::new(r"\bcould\s+be\b.*?(implemented|added|fixed)")?,
             Regex::new(r"\bwill\s+be\b.*?(implemented|added|fixed)")?,
+            Regex::new(r"\bin\s+practice\b.*?(would|should|will)\s+(analyze|merge|intelligently)")?,
+            Regex::new(r"\bin\s+practice\b.*?(this\s+would|this\s+should|this\s+will)")?,
+            Regex::new(r"\bfor\s+now\b.*?(just|simply|only)")?,
         ];
 
         self.high_confidence_patterns

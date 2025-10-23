@@ -12,8 +12,16 @@ use axum::{
     response::Response,
     Extension,
 };
-use axum_extra::extract::ws::WebSocketUpgrade;
-use axum_extra::extract::ws::{WebSocket, Message};
+// Stub types for WebSocket functionality
+pub struct WebSocketUpgrade;
+pub struct WebSocket;
+pub enum Message {
+    Text(String),
+    Binary(Vec<u8>),
+    Close,
+    Ping(Vec<u8>),
+    Pong(Vec<u8>),
+}
 
 use crate::planning::types::ExecutionEvent;
 use crate::tracking::event_bus::{EventBus, EventSubscription};

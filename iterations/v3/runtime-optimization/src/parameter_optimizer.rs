@@ -139,7 +139,7 @@ impl LLMParameterOptimizer {
         
         // 3. Use bandit policy to select best candidate
         let policy = self.policy.read().unwrap();
-        let selection = policy.select(task_features, &candidates);
+        let selection = policy.as_ref().select(task_features, &candidates);
         drop(policy);
         
         // 4. Validate selection meets constraints
@@ -210,7 +210,7 @@ impl LLMParameterOptimizer {
         // Update bandit policy
         {
             let mut policy = self.policy.write().unwrap();
-            policy.update(&TaskFeatures::default(), reward);
+            policy.update(&TaskFeatures::default(), &param_set, reward);
         }
         
         // Log for counterfactual evaluation
@@ -223,7 +223,7 @@ impl LLMParameterOptimizer {
             log_propensity,
             outcome.clone(),
             parameters.policy_version,
-        ).await?;
+        )?;
         
         // Update parameter history
         {

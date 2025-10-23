@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Model Context Protocol (MCP) Tool Ecosystem provides **13 specialized AI-powered tools** for governance, policy enforcement, conflict resolution, evidence collection, quality assurance, and workflow optimization. These tools enable constitutional AI agents to operate with real-time oversight and automated quality control.
+The Model Context Protocol (MCP) Tool Ecosystem provides **14 specialized AI-powered tools** for governance, policy enforcement, conflict resolution, evidence collection, quality assurance, and workflow optimization. These tools enable constitutional AI agents to operate with real-time oversight and automated quality control.
 
 ## Tool Categories
 
@@ -34,9 +34,10 @@ The Model Context Protocol (MCP) Tool Ecosystem provides **13 specialized AI-pow
 │  │  └─────────────────────────────────────────────────────┘   │    │
 │  └─────────────────────────────────────────────────────┘       │    │
 │  ┌─────────────────────────────────────────────────────────────┐    │
-│  │              Quality Gate Tools (3)                       │    │
+│  │              Quality Gate Tools (4)                       │    │
 │  │  ┌─────────────────────────────────────────────────────┐   │    │
 │  │  │ code_analyzer │ test_executor │ performance_validator │  │    │
+│  │  │ doc_quality_validator │                               │    │
 │  │  └─────────────────────────────────────────────────────┘   │    │
 │  └─────────────────────────────────────────────────────┘       │    │
 │  ┌─────────────────────────────────────────────────────────────┐    │
@@ -419,6 +420,58 @@ const validation = await mcp.callTool('performance_validator', {
   baseline_comparison: 'last_stable_release',
   test_duration: '30m'
 });
+```
+
+### doc_quality_validator
+
+**Purpose**: Validates documentation quality and prevents problematic content
+
+**Capabilities**:
+- Superiority claim detection and prevention
+- Unfounded achievement claim validation
+- Marketing language identification
+- Temporal documentation organization
+- Engineering-grade content standards enforcement
+
+**Usage**:
+```javascript
+const validation = await mcp.callTool('doc_quality_validator', {
+  content: "# My Project\n\nThis is a revolutionary breakthrough in AI technology!",
+  content_type: "markdown",
+  file_path: "docs/README.md",
+  validation_level: "moderate",
+  include_suggestions: true
+});
+
+console.log(`Quality Score: ${validation.quality_score}`);
+console.log(`Issues Found: ${validation.issues.length}`);
+```
+
+**Response Schema**:
+```typescript
+interface DocQualityResult {
+  validation_id: string;
+  quality_score: number;        // 0.0 - 1.0
+  issues: QualityIssue[];
+  metrics: QualityMetrics;
+  recommendations: string[];
+}
+
+interface QualityIssue {
+  severity: 'error' | 'warning' | 'info';
+  rule_id: string;
+  message: string;
+  line_number: number;
+  suggested_fix: string;
+}
+
+interface QualityMetrics {
+  superiority_claims: number;
+  unfounded_achievements: number;
+  marketing_language: number;
+  temporal_docs: number;
+  emoji_usage: number;
+}
 ```
 
 ## 6. Reasoning Tools

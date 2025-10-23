@@ -9,6 +9,9 @@ use chrono::{DateTime, Utc};
 
 use crate::planning::types::{ExecutionArtifacts, CodeChange, ChangeType};
 
+/// Artifact ID type alias
+pub type ArtifactId = Uuid;
+
 /// Artifact manager configuration
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct ArtifactManagerConfig {

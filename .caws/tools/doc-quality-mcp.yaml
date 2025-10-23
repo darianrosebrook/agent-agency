@@ -1,0 +1,333 @@
+# MCP Documentation Quality Tool
+# Integrates documentation quality validation into the MCP ecosystem
+
+name: "doc_quality_validator"
+version: "1.0.0"
+description: "Validates documentation quality and prevents superiority claims, unfounded achievements, and marketing language"
+
+# MCP Tool Definition
+mcp_tool:
+  name: "doc_quality_validator"
+  description: "Validates documentation quality against engineering standards and prevents problematic content"
+  input_schema:
+    type: "object"
+    properties:
+      content:
+        type: "string"
+        description: "Documentation content to validate"
+      content_type:
+        type: "string"
+        enum: ["markdown", "text", "rst", "adoc"]
+        description: "Type of documentation content"
+      file_path:
+        type: "string"
+        description: "Path to the documentation file (optional)"
+      validation_level:
+        type: "string"
+        enum: ["strict", "moderate", "lenient"]
+        default: "moderate"
+        description: "Validation strictness level"
+      include_suggestions:
+        type: "boolean"
+        default: true
+        description: "Include suggested fixes for issues"
+    required: ["content", "content_type"]
+
+  output_schema:
+    type: "object"
+    properties:
+      validation_id:
+        type: "string"
+        description: "Unique validation identifier"
+      quality_score:
+        type: "number"
+        minimum: 0
+        maximum: 1
+        description: "Overall documentation quality score"
+      issues:
+        type: "array"
+        items:
+          type: "object"
+          properties:
+            severity:
+              type: "string"
+              enum: ["error", "warning", "info"]
+            rule_id:
+              type: "string"
+            message:
+              type: "string"
+            line_number:
+              type: "integer"
+            suggested_fix:
+              type: "string"
+      metrics:
+        type: "object"
+        properties:
+          superiority_claims:
+            type: "integer"
+            description: "Number of superiority claims found"
+          unfounded_achievements:
+            type: "integer"
+            description: "Number of unfounded achievement claims found"
+          marketing_language:
+            type: "integer"
+            description: "Number of marketing language instances found"
+          temporal_docs:
+            type: "integer"
+            description: "Number of temporal documentation issues found"
+          emoji_usage:
+            type: "integer"
+            description: "Number of emoji usage issues found"
+      recommendations:
+        type: "array"
+        items:
+          type: "string"
+        description: "General recommendations for improvement"
+
+# Tool Implementation
+implementation:
+  # Python script path
+  script_path: "scripts/doc-quality-linter.py"
+  
+  # Command line arguments
+  args:
+    - "--format"
+    - "json"
+    - "--path"
+    - "{file_path}"
+  
+  # Environment variables
+  env:
+    DOC_QUALITY_STRICT: "{validation_level}"
+    INCLUDE_SUGGESTIONS: "{include_suggestions}"
+
+# Integration with existing MCP tools
+integration:
+  # Quality Gate Tools
+  quality_gates:
+    - "code_analyzer"
+    - "test_executor"
+    - "performance_validator"
+  
+  # Governance Tools
+  governance:
+    - "audit_logger"
+    - "provenance_tracker"
+    - "compliance_reporter"
+  
+  # Policy Tools
+  policy:
+    - "caws_policy_validator"
+    - "waiver_auditor"
+    - "budget_verifier"
+
+# Usage Examples
+examples:
+  # Basic validation
+  basic_validation: |
+    const result = await mcp.callTool('doc_quality_validator', {
+      content: "# My Project\n\nThis is a revolutionary breakthrough in AI technology!",
+      content_type: "markdown",
+      validation_level: "strict"
+    });
+  
+  # File-based validation
+  file_validation: |
+    const result = await mcp.callTool('doc_quality_validator', {
+      content: fileContent,
+      content_type: "markdown",
+      file_path: "docs/README.md",
+      validation_level: "moderate",
+      include_suggestions: true
+    });
+  
+  # Integration with other tools
+  integrated_workflow: |
+    // 1. Validate documentation quality
+    const docQuality = await mcp.callTool('doc_quality_validator', {
+      content: documentation,
+      content_type: "markdown"
+    });
+    
+    // 2. If quality is good, proceed with code analysis
+    if (docQuality.quality_score > 0.8) {
+      const codeAnalysis = await mcp.callTool('code_analyzer', {
+        code_path: "./src/main.rs"
+      });
+    }
+    
+    // 3. Log the validation results
+    await mcp.callTool('audit_logger', {
+      event_type: "documentation_validation",
+      details: docQuality
+    });
+
+# Quality Standards
+standards:
+  # Prohibited content patterns
+  prohibited_patterns:
+    superiority_claims:
+      - "revolutionary"
+      - "breakthrough"
+      - "innovative"
+      - "groundbreaking"
+      - "cutting-edge"
+      - "state-of-the-art"
+      - "next-generation"
+      - "advanced"
+      - "premium"
+      - "superior"
+      - "best"
+      - "leading"
+      - "industry-leading"
+      - "award-winning"
+      - "game-changing"
+    
+    unfounded_achievements:
+      - "production-ready"
+      - "enterprise-grade"
+      - "battle-tested"
+      - "complete"
+      - "finished"
+      - "done"
+      - "achieved"
+      - "delivered"
+      - "implemented"
+      - "operational"
+      - "ready"
+      - "deployed"
+      - "launched"
+      - "released"
+      - "100%"
+      - "fully"
+      - "comprehensive"
+      - "entire"
+      - "total"
+      - "all"
+      - "every"
+      - "perfect"
+      - "ideal"
+      - "optimal"
+      - "maximum"
+      - "minimum"
+      - "unlimited"
+      - "infinite"
+      - "endless"
+    
+    temporal_docs:
+      - "SESSION_.*_SUMMARY\.md"
+      - "IMPLEMENTATION_STATUS\.md"
+      - "TODO_.*_COMPLETE\.md"
+      - ".*_SUMMARY\.md"
+      - ".*_REPORT\.md"
+      - ".*_AUDIT\.md"
+      - ".*_CHECKLIST\.md"
+      - "PHASE.*\.md"
+      - "NEXT_ACTIONS\.md"
+  
+  # Quality thresholds
+  thresholds:
+    strict:
+      max_superiority_claims: 0
+      max_unfounded_achievements: 0
+      max_marketing_language: 0
+      max_temporal_docs: 0
+      min_quality_score: 0.9
+    
+    moderate:
+      max_superiority_claims: 0
+      max_unfounded_achievements: 2
+      max_marketing_language: 1
+      max_temporal_docs: 0
+      min_quality_score: 0.8
+    
+    lenient:
+      max_superiority_claims: 1
+      max_unfounded_achievements: 5
+      max_marketing_language: 3
+      max_temporal_docs: 1
+      min_quality_score: 0.7
+
+# Agent Integration
+agent_integration:
+  # When agents should use this tool
+  triggers:
+    - "documentation_creation"
+    - "documentation_update"
+    - "documentation_review"
+    - "quality_assurance"
+    - "pre_commit_validation"
+  
+  # Integration with agent workflows
+  workflows:
+    autonomous_documentation:
+      steps:
+        1: "Create documentation content"
+        2: "Validate with doc_quality_validator"
+        3: "Fix issues if quality_score < threshold"
+        4: "Proceed with implementation"
+    
+    quality_gate_validation:
+      steps:
+        1: "Run doc_quality_validator"
+        2: "Check quality_score against tier requirements"
+        3: "Block if quality insufficient"
+        4: "Allow if quality meets standards"
+    
+    continuous_improvement:
+      steps:
+        1: "Monitor documentation quality metrics"
+        2: "Identify patterns in quality issues"
+        3: "Update quality standards"
+        4: "Provide feedback to agents"
+
+# Performance & Monitoring
+performance:
+  # Expected performance characteristics
+  response_time_ms: 100
+  throughput_per_second: 50
+  memory_usage_mb: 10
+  
+  # Monitoring metrics
+  metrics:
+    - "validation_count"
+    - "quality_score_distribution"
+    - "issue_type_frequency"
+    - "suggestion_effectiveness"
+    - "agent_adoption_rate"
+
+# Error Handling
+error_handling:
+  # Common error scenarios
+  scenarios:
+    invalid_content:
+      error: "Invalid content format"
+      resolution: "Ensure content is valid markdown/text/rst/adoc"
+    
+    script_not_found:
+      error: "Documentation quality linter not found"
+      resolution: "Ensure scripts/doc-quality-linter.py exists and is executable"
+    
+    validation_timeout:
+      error: "Validation took too long"
+      resolution: "Reduce content size or increase timeout"
+  
+  # Fallback behavior
+  fallback:
+    - "Return basic quality assessment"
+    - "Log error for investigation"
+    - "Continue with reduced validation"
+
+# Security Considerations
+security:
+  # Content sanitization
+  sanitization:
+    - "Remove potentially malicious content"
+    - "Validate file paths"
+    - "Limit content size"
+  
+  # Access control
+  access_control:
+    - "Validate agent permissions"
+    - "Log all validation requests"
+    - "Rate limit validation requests"

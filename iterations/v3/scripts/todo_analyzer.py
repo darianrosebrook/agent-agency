@@ -338,6 +338,11 @@ class HiddenTodoAnalyzer:
                 r'\bdemo\s+implementation\b',
                 r'\bsample\s+implementation\b',
                 r'\btemplate\s+implementation\b',
+                r'\bstub\s+implementation\s+for\b',
+                r'\bsimplified\s+.*?\s+calculation\b',
+                r'\bsimplified\s+.*?\s+implementation\b',
+                r'\bfor\s+now\b.*?(just|simply|only)\s+(concatenate|return|use)',
+                r'\bin\s+practice\b.*?(would|should|will)\s+(intelligently|properly|correctly)',
             ],
             
             'temporary_solutions': [
@@ -359,6 +364,10 @@ class HiddenTodoAnalyzer:
                 r'\bmagic\s+string\b',
                 r'\bconstant\s+value\b.*?(replace|change|make\s+configurable)',
                 r'\bdefault\s+value\b.*?(replace|change|make\s+configurable)',
+                r'\bhardcoded\s+return\s+value\b',
+                r'\bhardcoded\s+result\b',
+                r'\bhardcoded\s+efficiency\b',
+                r'\bhardcoded\s+percentage\b',
             ],
             
             'future_improvements': [
@@ -370,6 +379,9 @@ class HiddenTodoAnalyzer:
                 r'\bwould\s+be\b.*?(implemented|added|fixed)',
                 r'\bcould\s+be\b.*?(implemented|added|fixed)',
                 r'\bwill\s+be\b.*?(implemented|added|fixed)',
+                r'\bin\s+practice\b.*?(would|should|will)\s+(analyze|merge|intelligently)',
+                r'\bin\s+practice\b.*?(this\s+would|this\s+should|this\s+will)',
+                r'\bfor\s+now\b.*?(just|simply|only)',
             ],
         }
 

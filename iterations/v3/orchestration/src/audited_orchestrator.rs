@@ -22,6 +22,22 @@ use crate::planning::agent::PlanningAgent;
 use crate::frontier::{Frontier, FrontierConfig, FrontierError};
 use file_ops::{validate_changeset_with_waiver, WaiverRequest, apply_waiver};
 use agent_agency_database::DatabaseClient;
+use agent_agency_resilience::CircuitBreaker;
+
+/// Context for tracking active operations
+#[derive(Debug, Clone)]
+pub struct OperationContext {
+    /// Operation ID for correlation
+    pub operation_id: String,
+    /// Start time
+    pub start_time: Instant,
+    /// Operation type
+    pub operation_type: String,
+    /// Parent operation ID (if nested)
+    pub parent_operation_id: Option<String>,
+    /// Correlation ID for distributed tracing
+    pub correlation_id: Option<String>,
+}
 
 /// Audited orchestrator that wraps all operations with comprehensive audit logging
 #[derive(Debug)]
@@ -35,7 +51,7 @@ pub struct AuditedOrchestrator {
     /// Frontier queue for spawned tasks (optional)
     frontier: Option<std::sync::RwLock<Frontier>>,
     /// Circuit breakers for external services
-    circuit_breakers: HashMap<String, Arc<crate::audit_trail::CircuitBreaker>>,
+    circuit_breakers: HashMap<String, Arc<CircuitBreaker>>,
     /// Database client for persistence
     db_client: Arc<DatabaseClient>,
 }
@@ -57,20 +73,6 @@ impl AuditedOrchestrator {
         Ok(())
     }
 
-/// Context for tracking active operations
-#[derive(Debug, Clone)]
-struct OperationContext {
-    /// Operation ID for correlation
-    operation_id: String,
-    /// Start time
-    start_time: Instant,
-    /// Operation type
-    operation_type: String,
-    /// Parent operation ID (if nested)
-    parent_operation_id: Option<String>,
-    /// Correlation ID for distributed tracing
-    correlation_id: Option<String>,
-}
 
 /// Configuration for the audited orchestrator
 #[derive(Debug, Clone)]
@@ -121,12 +123,12 @@ impl AuditedOrchestrator {
     }
 
     /// Set circuit breaker for external service protection
-    pub fn set_circuit_breaker(&mut self, service_name: String, circuit_breaker: Arc<crate::audit_trail::CircuitBreaker>) {
+    pub fn set_circuit_breaker(&mut self, service_name: String, circuit_breaker: Arc<CircuitBreaker>) {
         self.circuit_breakers.insert(service_name, circuit_breaker);
     }
 
     /// Set multiple circuit breakers at once
-    pub fn set_circuit_breakers(&mut self, circuit_breakers: HashMap<String, Arc<crate::audit_trail::CircuitBreaker>>) {
+    pub fn set_circuit_breakers(&mut self, circuit_breakers: HashMap<String, Arc<CircuitBreaker>>) {
         self.circuit_breakers.extend(circuit_breakers);
     }
 

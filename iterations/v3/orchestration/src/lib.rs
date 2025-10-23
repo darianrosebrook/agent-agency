@@ -17,6 +17,8 @@ pub mod quality;
 pub mod refinement;
 pub mod tracking;
 pub mod multimodal_orchestration;
+pub mod enrichers;
+pub mod council;
 pub mod audit_trail;
 pub mod audited_orchestrator;
 pub mod kimi_k2_enhanced_executor;

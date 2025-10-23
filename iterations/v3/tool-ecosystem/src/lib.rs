@@ -442,10 +442,3 @@ pub enum PolicyValidationResult {
     /// Task is blocked by policy
     Blocked(String),
 }
-
-/// @darianrosebrook
-/// Complete CAWS tool ecosystem for reasoning, conflict resolution, and evidence collection
-/// through MCP-based modular tool discovery and execution
-pub use crate::tool_orchestrator::ToolOrchestrator;
-
-

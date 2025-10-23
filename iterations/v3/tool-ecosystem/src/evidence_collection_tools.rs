@@ -1551,12 +1551,24 @@ pub enum UnverifiableReason {
 
 /// Evidence item
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum EvidenceType {
+    CodeAnalysis,
+    StandardsCompliance,
+    Benchmarking,
+    Profiling,
+    LoadTesting,
+    Documentation,
+    Testing,
+    SecurityAudit,
+}
+
 pub struct EvidenceItem {
     pub id: String,
     pub content: String,
     pub source: String,
     pub tags: Vec<String>,
     pub timestamp: chrono::DateTime<chrono::Utc>,
+    pub evidence_type: EvidenceType,
 }
 
 /// Verification result

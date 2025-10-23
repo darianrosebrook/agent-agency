@@ -2366,7 +2366,7 @@ pub struct WorkingSpec {
     pub title: String,
     pub description: String,
     pub risk_tier: u8,
-    pub scope: Option<crate::caws_runtime::WorkingSpecScope>,
+    pub scope: Option<agent_agency_council::models::TaskScope>,
     pub acceptance_criteria: Vec<AcceptanceCriterion>,
     pub test_plan: Option<TestPlan>,
     pub rollback_plan: Option<RollbackPlan>,

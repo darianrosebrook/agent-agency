@@ -6,6 +6,7 @@
 use anyhow::{Context, Result};
 use ingestors::{FileWatcher, VideoIngestor, SlidesIngestor, DiagramsIngestor, CaptionsIngestor};
 use enrichers::{VisionEnricher, AsrEnricher, EntityEnricher, VisualCaptionEnricher, CircuitBreaker};
+use crate::enrichers::types::EnrichedBlock;
 use indexers::{Bm25Indexer, HnswIndexer, JobScheduler};
 use agent_agency_research::KnowledgeSeeker;
 use agent_agency_council::coordinator::ConsensusCoordinator;
@@ -374,7 +375,7 @@ impl MultimodalOrchestrator {
     }
 
     /// Enrich blocks with multimodal content
-    async fn enrich_blocks(&self, blocks: &[ingestors::types::Block]) -> Result<Vec<enrichers::types::EnrichedBlock>> {
+    async fn enrich_blocks(&self, blocks: &[ingestors::types::Block]) -> Result<Vec<EnrichedBlock>> {
         let mut enriched_blocks = Vec::new();
 
         for block in blocks {
@@ -394,7 +395,7 @@ impl MultimodalOrchestrator {
                 }
                 _ => {
                     // Default enrichment
-                    enrichers::types::EnrichedBlock {
+                    EnrichedBlock {
                         id: block.id,
                         original_content: block.content.clone(),
                         enriched_content: block.content.clone(),
@@ -412,7 +413,7 @@ impl MultimodalOrchestrator {
     }
 
     /// Index enriched blocks
-    async fn index_blocks(&self, blocks: &[enrichers::types::EnrichedBlock]) -> Result<usize> {
+    async fn index_blocks(&self, blocks: &[EnrichedBlock]) -> Result<usize> {
         let mut indexed_count = 0;
 
         for block in blocks {

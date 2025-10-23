@@ -8,6 +8,9 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, info, warn};
 
+#[cfg(feature = "bayesian_opt")]
+use crate::bayesian_optimizer::OptimizationResult;
+
 /// Configuration for Kokoro tuner
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct KokoroConfig {
@@ -134,7 +137,8 @@ impl KokoroTuner {
     }
 
     /// Perform final tuning with optimization results
-    pub async fn final_tune(&self, _optimization_result: &crate::OptimizationResult) -> Result<TuningResult> {
+    #[cfg(feature = "bayesian_opt")]
+    pub async fn final_tune(&self, _optimization_result: &OptimizationResult) -> Result<TuningResult> {
         // Stub implementation for final tuning
         Ok(TuningResult {
             session_id: "stub_session".to_string(),

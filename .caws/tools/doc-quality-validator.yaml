@@ -1,0 +1,221 @@
+# CAWS Documentation Quality Validator
+# Validates documentation against quality standards and prevents problematic content
+
+name: "doc-quality-validator"
+version: "1.0.0"
+description: "Validates documentation quality and prevents superiority claims, unfounded achievements, and marketing language"
+
+# Tool configuration
+config:
+  # Paths to check
+  paths:
+    - "**/*.md"
+    - "**/*.txt"
+    - "**/*.rst"
+    - "**/*.adoc"
+  
+  # Excluded directories
+  exclude:
+    - "node_modules/**"
+    - ".git/**"
+    - "target/**"
+    - "dist/**"
+    - "build/**"
+    - "__pycache__/**"
+    - "docs/archive/**"  # Archive content is historical
+  
+  # Quality thresholds
+  thresholds:
+    max_errors: 0
+    max_warnings: 5
+    max_superiority_claims: 0
+    max_unfounded_achievements: 0
+    max_temporal_docs_in_main: 0
+
+# Quality rules
+rules:
+  # Superiority claims (ERROR)
+  superiority_claims:
+    severity: "error"
+    patterns:
+      - "revolutionary"
+      - "breakthrough"
+      - "innovative"
+      - "groundbreaking"
+      - "cutting-edge"
+      - "state-of-the-art"
+      - "next-generation"
+      - "advanced"
+      - "premium"
+      - "superior"
+      - "best"
+      - "leading"
+      - "industry-leading"
+      - "award-winning"
+      - "game-changing"
+    message: "Superiority claim detected. Remove marketing language and focus on technical capabilities."
+    suggested_fix: "Replace with engineering-grade language that describes actual capabilities."
+
+  # Unfounded achievements (WARNING)
+  unfounded_achievements:
+    severity: "warning"
+    patterns:
+      - "production-ready"
+      - "enterprise-grade"
+      - "battle-tested"
+      - "complete"
+      - "finished"
+      - "done"
+      - "achieved"
+      - "delivered"
+      - "implemented"
+      - "operational"
+      - "ready"
+      - "deployed"
+      - "launched"
+      - "released"
+      - "100%"
+      - "fully"
+      - "comprehensive"
+      - "entire"
+      - "total"
+      - "all"
+      - "every"
+      - "perfect"
+      - "ideal"
+      - "optimal"
+      - "maximum"
+      - "minimum"
+      - "unlimited"
+      - "infinite"
+      - "endless"
+    message: "Unfounded achievement claim detected. Verify claim with evidence or use more accurate language."
+    suggested_fix: "Provide evidence for the claim or use more accurate status language."
+
+  # Temporal documentation in wrong location (ERROR)
+  temporal_docs_wrong_location:
+    severity: "error"
+    patterns:
+      - "SESSION_.*_SUMMARY\.md"
+      - "IMPLEMENTATION_STATUS\.md"
+      - "TODO_.*_COMPLETE\.md"
+      - ".*_SUMMARY\.md"
+      - ".*_REPORT\.md"
+      - ".*_AUDIT\.md"
+      - ".*_CHECKLIST\.md"
+      - "PHASE.*\.md"
+      - "NEXT_ACTIONS\.md"
+    allowed_locations:
+      - "docs/archive/"
+      - "docs/archive/session-reports/"
+      - "docs/archive/implementation-tracking/"
+      - "docs/archive/project-docs/"
+      - "docs/archive/summaries/"
+      - "docs/archive/security-audits/"
+      - "docs/archive/deployment-readiness/"
+      - "docs/archive/multimodal-rag/"
+      - "docs/archive/aspirational/"
+      - "docs/archive/misleading-claims/"
+    message: "Temporal documentation in wrong location. Move to appropriate archive directory."
+    suggested_fix: "Move file to docs/archive/ subdirectory based on content type."
+
+  # Emoji usage (WARNING)
+  emoji_usage:
+    severity: "warning"
+    allowed_emojis:
+      - "⚠️"
+      - "✅"
+      - "🚫"
+    message: "Emoji usage detected. Remove emoji or use approved emojis only."
+    suggested_fix: "Remove emoji or use approved emojis only (⚠️, ✅, 🚫)."
+
+  # Code example validation (INFO)
+  code_examples:
+    severity: "info"
+    check_syntax: true
+    check_imports: true
+    check_async: true
+    message: "Code example may have issues. Verify example works as documented."
+    suggested_fix: "Test code example and fix any syntax or logic issues."
+
+# Integration with CAWS workflow
+workflow:
+  # Pre-commit validation
+  pre_commit:
+    enabled: true
+    exit_on_error: true
+    exit_on_warning: false
+  
+  # Pre-push validation
+  pre_push:
+    enabled: true
+    exit_on_error: true
+    exit_on_warning: true
+  
+  # CI/CD integration
+  ci_cd:
+    enabled: true
+    fail_on_error: true
+    fail_on_warning: false
+    report_format: "json"
+
+# Quality gates
+quality_gates:
+  # Must pass for commits
+  commit_gates:
+    - "no_superiority_claims"
+    - "no_temporal_docs_in_main"
+    - "max_5_warnings"
+  
+  # Must pass for pushes
+  push_gates:
+    - "no_superiority_claims"
+    - "no_unfounded_achievements"
+    - "no_temporal_docs_in_main"
+    - "max_2_warnings"
+  
+  # Must pass for releases
+  release_gates:
+    - "no_superiority_claims"
+    - "no_unfounded_achievements"
+    - "no_temporal_docs_in_main"
+    - "no_warnings"
+    - "all_code_examples_verified"
+
+# Reporting
+reporting:
+  # Output formats
+  formats:
+    - "text"
+    - "json"
+    - "html"
+  
+  # Report sections
+  sections:
+    - "summary"
+    - "errors"
+    - "warnings"
+    - "suggestions"
+    - "quality_metrics"
+  
+  # Quality metrics to track
+  metrics:
+    - "accuracy_score"
+    - "reality_alignment"
+    - "engineering_focus"
+    - "marketing_language_free"
+    - "temporal_content_organized"
+
+# Continuous improvement
+improvement:
+  # Learning from issues
+  learn_from_issues: true
+  
+  # Pattern detection
+  detect_new_patterns: true
+  
+  # Rule evolution
+  evolve_rules: true
+  
+  # Feedback integration
+  integrate_feedback: true

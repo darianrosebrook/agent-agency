@@ -238,10 +238,8 @@ impl LLMParameterFeedbackExample {
             presence_penalty: params.presence_penalty,
             stop_sequences: params.stop_sequences.clone(),
             seed: params.seed,
-            schema_version: 1,
             origin: params.origin.clone(),
             policy_version: params.policy_version.clone(),
-            timestamp: params.created_at,
             created_at: params.created_at,
         }
     }

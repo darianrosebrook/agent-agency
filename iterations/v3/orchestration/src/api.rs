@@ -301,7 +301,7 @@ pub async fn pause_task(
                 .map_err(|e| TaskApiError::DatabaseError(e.to_string()))?;
             }
         }
-        Ok(Err(e)) | Err(_) => {
+        Ok(Err(e)) | Err(e) => {
             // Timeout or network error, but task is still marked as paused
             sqlx::query(
                 r#"
@@ -439,7 +439,7 @@ pub async fn resume_task(
                 .map_err(|e| TaskApiError::DatabaseError(e.to_string()))?;
             }
         }
-        Ok(Err(e)) | Err(_) => {
+        Ok(Err(e)) | Err(e) => {
             // Timeout or network error, but task is still marked as executing
             sqlx::query(
                 r#"

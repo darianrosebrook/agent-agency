@@ -26,7 +26,7 @@ struct TestAnalysisResult {
     test_files_detected: u32,
 }
 
-use crate::caws_runtime::{CawsRuntimeValidator, ValidationResult, DiffStats, TaskDescriptor};
+use crate::caws_runtime::{CawsRuntimeValidator, ValidationResult, DiffStats, TaskDescriptor, WaiverRef};
 use crate::planning::{WorkingSpec, AcceptanceCriterion};
 use claim_extraction::{ClaimExtractionProcessor, ProcessingContext, ClaimExtractionResult};
 
@@ -210,7 +210,7 @@ impl ArbiterOrchestrator {
     /// Multi-model debate orchestration for competing outputs
     pub async fn orchestrate_debate(
         &self,
-        task: &crate::planning::Task,
+        task: &crate::planning::types::TaskRequest,
         competing_outputs: Vec<WorkerOutput>,
     ) -> Result<DebateResult, ArbiterError> {
         if !self.config.enable_debate_protocol || competing_outputs.len() < 2 {
@@ -730,7 +730,7 @@ impl ArbiterOrchestrator {
 
     fn build_review_context(
         &self,
-        task: &crate::planning::Task,
+        task: &crate::planning::types::TaskRequest,
         outputs: &[WorkerOutput],
         evidence: &[EvidenceManifest],
     ) -> council::ReviewContext {

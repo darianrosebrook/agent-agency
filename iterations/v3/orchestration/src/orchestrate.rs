@@ -18,6 +18,28 @@ use crate::tracking::ProgressTracker;
 use agent_agency_apple_silicon::{
     AllocationPlanner, AllocationRequest, AllocationPlan, DeviceKind, DeviceSensors,
 };
+
+/// Task scope definition for orchestration boundaries
+#[derive(Debug, Clone)]
+pub struct TaskScope {
+    pub in_scope: Vec<String>,
+    pub out_scope: Vec<String>,
+}
+
+/// Change budget for orchestration constraints
+#[derive(Debug, Clone)]
+pub struct ChangeBudget {
+    pub max_files: u32,
+    pub max_loc: u32,
+}
+
+/// Blast radius for orchestration impact analysis
+#[derive(Debug, Clone)]
+pub struct BlastRadius {
+    pub modules: Vec<String>,
+    pub data_migration: bool,
+    pub external_deps: Vec<String>,
+}
 use agent_agency_contracts::working_spec::{
     WorkingSpecMetadata, AcceptanceCriterion, NonFunctionalRequirements, RollbackPlan,
 };
@@ -32,7 +54,6 @@ use agent_agency_council::types::{CawsWaiver, ConsensusResult, FinalVerdict};
 use agent_agency_resilience::{CircuitBreaker, CircuitBreakerConfig, retry, RetryConfig};
 use agent_agency_database::DatabaseClient;
 use anyhow::{Context, Result};
-use std::collections::HashMap;
 use std::sync::Arc;
 use tracing::{debug, info, instrument, warn};
 use regex::Regex;

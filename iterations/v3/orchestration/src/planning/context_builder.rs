@@ -8,6 +8,22 @@ use crate::planning::agent::{
     TaskContext, RepositoryInfo, Incident, TechStack, HistoricalData, TaskHistory
 };
 
+/// Quality trend analysis result
+#[derive(Debug, Clone)]
+pub struct QualityTrend {
+    pub period: String,
+    pub quality_score: f64,
+    pub trend_direction: String,
+}
+
+/// Risk pattern analysis result
+#[derive(Debug, Clone)]
+pub struct RiskPattern {
+    pub pattern_type: String,
+    pub severity: f64,
+    pub frequency: u32,
+}
+
 /// Context builder configuration
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct ContextBuilderConfig {

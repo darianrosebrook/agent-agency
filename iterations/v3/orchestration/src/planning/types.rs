@@ -2,6 +2,34 @@ use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
+// Re-export types from council for convenience
+pub use agent_agency_council::models::RiskTier;
+
+/// Task type enumeration
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum TaskType {
+    Feature,
+    BugFix,
+    Refactor,
+    Documentation,
+    Test,
+    Optimization,
+    Security,
+    Maintenance,
+}
+
+/// Task for orchestration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Task {
+    pub id: Uuid,
+    pub description: String,
+    pub task_type: TaskType,
+    pub target_files: Vec<String>,
+    pub constraints: Vec<String>,
+    pub priority: u8,
+    pub created_at: DateTime<Utc>,
+}
+
 /// Task intake request schema
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TaskRequest {
