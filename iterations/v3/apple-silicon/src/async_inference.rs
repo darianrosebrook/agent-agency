@@ -20,7 +20,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::Mutex;
 use tokio_util::sync::CancellationToken;
-use tracing::{debug, info};
+use tracing::{debug, info, warn};
 use uuid::Uuid;
 
 /// Production-ready tensor data structure for async inference
@@ -490,22 +490,24 @@ pub struct ModelInstance {
     /// Last used timestamp
     pub last_used: chrono::DateTime<chrono::Utc>,
     /// Safe Core ML model wrapper (macOS only)
-    #[cfg(target_os = "macos")]
+    #[cfg(all(target_os = "macos", feature = "candle"))]
     pub coreml_model: Option<crate::core_ml_bridge::CoreMLModel>,
 }
 
 impl std::fmt::Debug for ModelInstance {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("ModelInstance")
+        let mut debug = f.debug_struct("ModelInstance");
+        debug
             .field("id", &self.id)
             .field("path", &self.path)
             .field("format", &self.format)
             .field("device", &self.device)
             .field("memory_mb", &self.memory_mb)
             .field("created_at", &self.created_at)
-            .field("last_used", &self.last_used)
-            .field("coreml_model", &self.coreml_model.as_ref().map(|_| "<CoreMLModel>"))
-            .finish()
+            .field("last_used", &self.last_used);
+        #[cfg(all(target_os = "macos", feature = "candle"))]
+        debug.field("coreml_model", &self.coreml_model.as_ref().map(|_| "<CoreMLModel>"));
+        debug.finish()
     }
 }
 
@@ -521,13 +523,13 @@ impl ModelInstance {
             memory_mb,
             created_at: now,
             last_used: now,
-            #[cfg(target_os = "macos")]
+            #[cfg(all(target_os = "macos", feature = "candle"))]
             coreml_model: None,
         }
     }
 
     /// Set the safe Core ML model wrapper for this model instance
-    #[cfg(target_os = "macos")]
+    #[cfg(all(target_os = "macos", feature = "candle"))]
     pub fn with_coreml_model(mut self, model: crate::core_ml_bridge::CoreMLModel) -> Self {
         self.coreml_model = Some(model);
         self
@@ -761,8 +763,26 @@ impl AsyncInferenceEngine {
         })
     }
 
+    /// Execute Core ML inference using the loaded model
+    #[cfg(all(target_os = "macos", feature = "candle"))]
+    pub async fn execute_coreml_inference(
+        &self,
+        model: &ModelInstance,
+        inputs: &TensorMap,
+    ) -> Result<TensorMap> {
+        use crate::core_ml_bridge::CoreMLModel;
+
+        // Get the Core ML model from the model instance
+        let coreml_model = model.coreml_model.as_ref()
+            .ok_or_else(|| anyhow::anyhow!("Model instance does not have Core ML model"))?;
+
+        // Execute inference
+        let timeout_ms = 30000; // 30 second timeout
+        coreml_model.predict(inputs.clone(), timeout_ms).await
+    }
+
     /// Load a Core ML model and register it with the pool
-    #[cfg(target_os = "macos")]
+    #[cfg(all(target_os = "macos", feature = "candle"))]
     pub async fn load_coreml_model(
         &self,
         model_id: String,
@@ -856,7 +876,7 @@ impl AsyncInferenceEngine {
             .map_err(|e| anyhow::anyhow!("Failed to acquire model {}: {}", request.model_id, e))?;
 
         // Execute real Core ML inference instead of simulation
-        #[cfg(target_os = "macos")]
+        #[cfg(all(target_os = "macos", feature = "candle"))]
         {
             let outputs = self.execute_coreml_inference(&model, &request.inputs)
                 .await
@@ -876,7 +896,7 @@ impl AsyncInferenceEngine {
             });
         }
 
-        #[cfg(not(target_os = "macos"))]
+        #[cfg(all(target_os = "macos", not(feature = "candle")))]
         {
             // Fallback to simulation on non-macOS platforms
             warn!("⚠️ Core ML not available on this platform, using simulation");
@@ -942,10 +962,35 @@ impl AsyncInferenceEngine {
                 device_used: "CPU".to_string(),
             })
         }
+
+        // Final fallback for when no specialized inference is available
+        #[cfg(any(not(target_os = "macos"), not(feature = "candle")))]
+        {
+            warn!("⚠️ Advanced inference backends not available, using basic simulation");
+
+            let latency_ms = start.elapsed().as_millis() as u64;
+
+            // Create minimal mock output
+            let mut outputs = HashMap::new();
+            outputs.insert("output".to_string(), crate::async_inference::Tensor {
+                data: vec![0.0; 10], // Minimal mock output
+                shape: vec![1, 10],
+                dtype: TensorDataType::F32,
+                device: TensorDevice::Cpu,
+                layout: TensorLayout::RowMajor,
+                metadata: None,
+            });
+
+            Ok(InferenceResult::Success {
+                outputs,
+                latency_ms,
+                device_used: "CPU (simulation)".to_string(),
+            })
+        }
     }
 
     /// Execute inference using Core ML on macOS
-    #[cfg(target_os = "macos")]
+    #[cfg(all(target_os = "macos", feature = "candle"))]
     async fn execute_coreml_inference(
         &self,
         model: &ModelInstance,

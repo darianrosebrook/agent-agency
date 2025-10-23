@@ -48,11 +48,12 @@ pub use async_inference::{
     QueueStats,
 };
 pub use buffer_pool::{BufferPool, BufferPoolConfig, BufferPoolStats};
+#[cfg(feature = "candle")]
 pub use candle_backend::CandleBackend;
 // pub use core_ml::CoreMLManager; // TODO: Implement CoreMLManager
 #[cfg(target_os = "macos")]
 pub use core_ml_backend::CoreMLBackend;
-#[cfg(target_os = "macos")]
+#[cfg(all(target_os = "macos", feature = "candle"))]
 pub use core_ml_bridge::CoreMLModel;
 pub use enhanced_telemetry::{
     AlertLevel, AnomalyDetectionResult, EnhancedTelemetry, MetricPoint, PerformanceAlert,

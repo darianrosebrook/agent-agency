@@ -13,13 +13,9 @@ use async_trait::async_trait;
 #[cfg(feature = "candle")]
 use candle_core::{Device, Tensor};
 use tracing::{debug, info, warn};
+#[cfg(feature = "candle")]
 use safetensors::SafeTensors;
-#[cfg(feature = "onnx-runtime")]
-use ort::session::Session;
-#[cfg(feature = "onnx-runtime")]
-use ort::tensor::TensorElementType;
-#[cfg(feature = "onnx-runtime")]
-use ort::execution_providers::ExecutionProvider;
+// ORT imports are now only used inside gated functions
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
@@ -32,12 +28,13 @@ use lru;
 pub enum CandleModelKind { Onnx, SafeTensors }
 
 /// Trait for inference models that can be cached
+#[cfg(feature = "candle")]
 pub trait CandleInferenceModel: Send + Sync + std::fmt::Debug {
     fn forward(&self, inputs: &HashMap<String, Tensor>) -> Result<HashMap<String, Tensor>>;
 }
 
 /// ONNX prepared model with session
-#[cfg(feature = "onnx-runtime")]
+#[cfg(all(feature = "candle", feature = "onnx-runtime"))]
 #[derive(Debug)]
 pub struct OnnxPreparedModel {
     session: Arc<Session>,
@@ -47,6 +44,7 @@ pub struct OnnxPreparedModel {
 }
 
 /// Model cache for prepared inference models
+#[cfg(feature = "candle")]
 #[derive(Debug)]
 struct ModelCache {
     cache: lru::LruCache<String, Arc<dyn CandleInferenceModel>>,
@@ -54,6 +52,7 @@ struct ModelCache {
     current_memory_mb: u64,
 }
 
+#[cfg(feature = "candle")]
 impl ModelCache {
     fn new(max_memory_mb: u64) -> Self {
         Self {
@@ -115,10 +114,12 @@ impl PreparedModel for CandleModel {
 }
 
 /// Candle backend implementation
+#[cfg(feature = "candle")]
 pub struct CandleBackend {
     model_cache: Mutex<ModelCache>,
 }
 
+#[cfg(feature = "candle")]
 impl std::fmt::Debug for CandleBackend {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("CandleBackend")
@@ -127,6 +128,7 @@ impl std::fmt::Debug for CandleBackend {
     }
 }
 
+#[cfg(feature = "candle")]
 impl CandleBackend {
     pub fn new() -> Self {
         // Allocate 1GB for model cache by default
@@ -152,6 +154,7 @@ impl CandleBackend {
     }
 
     /// Load ONNX model and extract I/O schema
+    #[cfg(feature = "onnx-runtime")]
     fn load_onnx(&self, path: &std::path::Path) -> Result<(Arc<Vec<u8>>, IoSchema)> {
         use std::fs;
 
@@ -230,6 +233,7 @@ impl CandleBackend {
     }
 
     /// Parse ONNX metadata using ort session
+    #[cfg(feature = "onnx-runtime")]
     fn parse_onnx_metadata(&self, model_data: &[u8]) -> Result<IoSchema> {
         use ort::{session::Session, execution_providers::ExecutionProvider};
 
@@ -345,6 +349,7 @@ fn json_tensor_spec(v: &serde_json::Value) -> Result<TensorSpec> {
 }
 
 /// Helper function to map ORT element type to DType
+#[cfg(feature = "onnx-runtime")]
 fn map_ort_elem(t: &ort::tensor::TensorElementType) -> DType {
     use ort::tensor::TensorElementType as T;
     match t {
@@ -360,6 +365,7 @@ fn map_ort_elem(t: &ort::tensor::TensorElementType) -> DType {
 }
 
 /// Helper function to map ORT value type to DType
+#[cfg(feature = "onnx-runtime")]
 fn map_ort_value_type(t: &ort::value::ValueType) -> DType {
     use ort::value::ValueType as V;
     match t {
@@ -368,7 +374,7 @@ fn map_ort_value_type(t: &ort::value::ValueType) -> DType {
     }
 }
 
-#[cfg(feature = "onnx-runtime")]
+#[cfg(all(feature = "candle", feature = "onnx-runtime"))]
 impl CandleInferenceModel for OnnxPreparedModel {
     fn forward(&self, inputs: &HashMap<String, Tensor>) -> Result<HashMap<String, Tensor>> {
         // Validate inputs against schema
@@ -398,6 +404,7 @@ impl CandleInferenceModel for OnnxPreparedModel {
     }
 }
 
+#[cfg(feature = "candle")]
 impl Default for CandleBackend {
     fn default() -> Self {
         Self::new()
@@ -405,6 +412,7 @@ impl Default for CandleBackend {
 }
 
 #[async_trait]
+#[cfg(feature = "candle")]
 impl InferenceEngine for CandleBackend {
     async fn prepare(
         &self,
@@ -427,9 +435,14 @@ impl InferenceEngine for CandleBackend {
                         let (bytes, schema) = self.load_safetensors(path)?;
                         (bytes, schema, CandleModelKind::SafeTensors)
                     }
+                    #[cfg(feature = "onnx-runtime")]
                     ModelFmt::Onnx => {
                         let (bytes, schema) = self.load_onnx(path)?;
                         (bytes, schema, CandleModelKind::Onnx)
+                    }
+                    #[cfg(not(feature = "onnx-runtime"))]
+                    ModelFmt::Onnx => {
+                        bail!("ONNX runtime not available - compile with --features onnx-runtime")
                     }
                     _ => bail!("Unsupported format: {:?}", format),
                 };
@@ -487,6 +500,7 @@ impl InferenceEngine for CandleBackend {
         if model_opt.is_none() {
             // build prepared inference model
             let built: Box<dyn CandleInferenceModel> = match cm.kind {
+                #[cfg(feature = "onnx-runtime")]
                 CandleModelKind::Onnx => {
                     let session = Session::builder()?
                         .commit_from_memory(&cm.model_data)
@@ -496,6 +510,10 @@ impl InferenceEngine for CandleBackend {
                         io_schema: cm.io_schema.clone(),
                         device: Device::Cpu
                     })
+                }
+                #[cfg(not(feature = "onnx-runtime"))]
+                CandleModelKind::Onnx => {
+                    return Err(anyhow!("ONNX runtime feature not enabled"));
                 }
                 CandleModelKind::SafeTensors => {
                     // Require a registered architecture handler (feature-gated)

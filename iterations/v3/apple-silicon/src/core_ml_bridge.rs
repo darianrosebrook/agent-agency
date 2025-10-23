@@ -5,6 +5,7 @@
 
 use crate::async_inference::{Tensor, TensorDataType, TensorDevice, TensorLayout};
 use anyhow::{anyhow, Result};
+#[cfg(feature = "candle")]
 use candle_core::{Device, Tensor as CandleTensor};
 use crate::ane::compat::coreml::coreml::CoreMLModel as CandleCoreMLModel;
 use serde::{Deserialize, Serialize};
@@ -16,6 +17,7 @@ use tokio::time::timeout;
 use tracing::{debug, info, warn};
 
 /// Safe Core ML model wrapper
+#[cfg(feature = "candle")]
 #[derive(Clone)]
 #[derive(Debug)]
 pub struct CoreMLModel {
@@ -60,6 +62,7 @@ pub enum ComputeUnit {
     All,
 }
 
+#[cfg(feature = "candle")]
 impl CoreMLModel {
     /// Load and compile a Core ML model from file path
     pub fn load(path: &Path, compute_units: ComputeUnit) -> Result<Self> {
@@ -144,6 +147,7 @@ impl CoreMLModel {
     }
 
     /// Convert candle dtype to string representation
+    #[cfg(feature = "candle")]
     fn tensor_dtype_to_string(dtype: candle_core::DType) -> String {
         match dtype {
             candle_core::DType::F32 => "float32",
@@ -164,6 +168,7 @@ impl CoreMLModel {
     }
 
     /// Run inference with timeout
+    #[cfg(feature = "candle")]
     pub async fn predict(
         &self,
         inputs: HashMap<String, Tensor>,
@@ -183,6 +188,7 @@ impl CoreMLModel {
     }
 
     /// Execute real Core ML inference using candle-coreml
+    #[cfg(feature = "candle")]
     async fn execute_real_inference(
         &self,
         inputs: &HashMap<String, Tensor>,

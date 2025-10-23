@@ -11,6 +11,7 @@ use anyhow::Result;
 use chrono;
 #[cfg(feature = "torch")]
 use tch::{Tensor, Device, Kind, Cuda};
+#[cfg(feature = "candle")]
 use candle_core::{Tensor as CandleTensor, DType};
 use sysinfo::System;
 use uuid::Uuid;
@@ -349,7 +350,7 @@ impl MemoryManager {
     }
 
     /// Create a memory-efficient tensor from candle tensor
-    #[cfg(feature = "torch")]
+    #[cfg(all(feature = "torch", feature = "candle"))]
     pub fn candle_to_torch_tensor(&self, candle_tensor: &CandleTensor) -> Result<Tensor> {
         // Convert candle tensor to torch tensor for unified memory management
         // This would require actual conversion logic based on candle tensor format
