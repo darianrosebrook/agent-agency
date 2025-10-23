@@ -6,7 +6,7 @@ pub mod authority;
 pub mod metrics;
 
 // Re-exports for ergonomic access
-pub use orchestrator::ConsensusCoordinator;
+pub use orchestrator::{ConsensusCoordinator, ProvenanceEmitter};
 pub use resolution::{CawsResolutionResult, ResolutionType};
 pub use debate::{DebateContribution, SignedTranscript, ContributionAnalysis, CompiledContributions};
 pub use extraction::{

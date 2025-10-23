@@ -25,11 +25,15 @@ agent-agency-provenance = { path = "../provenance" }
 agent-agency-resilience = { path = "../resilience" }
 agent-agency-database = { path = "../database" }
 agent-agency-contracts = { path = "../agent-agency-contracts" }
+agent-agency-observability = { path = "../observability" }
 claim-extraction = { path = "../claim-extraction" }
-agent-agency-workers = { path = "../workers" }
+# agent-agency-workers = { path = "../workers" }  # Temporarily commented to resolve circular dependency
 file_ops = { path = "../file_ops" }
 tracing = "0.1"
 flate2 = "1.0"
+axum = "0.7"
+axum-extra = "0.9"
+sha2 = "0.10"
 
 # Multimodal RAG integration dependencies
 ingestors = { path = "../ingestors" }

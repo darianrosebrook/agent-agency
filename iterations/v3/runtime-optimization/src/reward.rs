@@ -6,6 +6,12 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+#[cfg(feature = "bandit_policy")]
+use crate::bandit_policy::ParameterSet;
+
+#[cfg(not(feature = "bandit_policy"))]
+use crate::bandit_stubs::ParameterSet;
+
 /// Objective weights for reward scalarization
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ObjectiveWeights {
@@ -158,7 +164,7 @@ impl RewardFunction {
     /// Check hard constraints (pre-action)
     pub fn check_constraints(
         &self,
-        proposed: &crate::bandit_policy::ParameterSet,
+        proposed: &ParameterSet,
         constraints: &OptimizationConstraints,
         baseline: &BaselineMetrics,
     ) -> ConstraintCheckResult {
@@ -220,14 +226,14 @@ impl RewardFunction {
     }
 
     /// Get expected quality for a parameter set (placeholder)
-    fn get_expected_quality(&self, _params: &crate::bandit_policy::ParameterSet) -> Option<f64> {
+    fn get_expected_quality(&self, _params: &ParameterSet) -> Option<f64> {
         // In a real implementation, this would query historical performance data
         // For now, return None to indicate no historical data
         None
     }
 
     /// Check CAWS compliance for parameters
-    fn check_caws_compliance(&self, params: &crate::bandit_policy::ParameterSet) -> bool {
+    fn check_caws_compliance(&self, params: &ParameterSet) -> bool {
         // Basic CAWS compliance checks
         // 1. Temperature within reasonable bounds
         if params.temperature < 0.0 || params.temperature > 2.0 {
@@ -339,7 +345,7 @@ mod tests {
             max_tokens: 1000,
         };
 
-        let params = crate::bandit_policy::ParameterSet {
+        let params = ParameterSet {
             temperature: 0.5, // Within trust region
             max_tokens: 800,  // Within trust region
             top_p: Some(0.9),

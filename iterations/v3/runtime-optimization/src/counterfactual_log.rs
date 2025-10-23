@@ -9,7 +9,11 @@ use std::sync::{Arc, RwLock};
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
 
+#[cfg(feature = "bandit_policy")]
 use crate::bandit_policy::{ParameterSet, TaskFeatures, BanditPolicy};
+
+#[cfg(not(feature = "bandit_policy"))]
+use crate::bandit_stubs::{ParameterSet, TaskFeatures, BanditPolicy};
 
 /// Logged decision for offline policy evaluation (IPS/DR)
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -13,12 +13,14 @@ pub mod persistence_postgres;
 pub mod planning;
 pub mod provenance;
 pub mod quality;
-pub mod production;
+// pub mod production;  // Module not found
 pub mod refinement;
 pub mod tracking;
 pub mod multimodal_orchestration;
 pub mod audit_trail;
 pub mod audited_orchestrator;
+pub mod kimi_k2_enhanced_executor;
+pub mod kimi_k2_multimodal_orchestrator;
 
 // Re-export key components
 pub use multimodal_orchestration::{

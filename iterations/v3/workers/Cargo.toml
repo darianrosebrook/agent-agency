@@ -32,7 +32,8 @@ agent-agency-council = { path = "../council" }
 agent-agency-resilience = { path = "../resilience" }
 agent-agency-contracts = { path = "../agent-agency-contracts" }
 agent-agency-database = { path = "../database" }
-# orchestration = { path = "../orchestration" }  # Circular dependency
+# self-prompting-agent = { path = "../self-prompting-agent" }  # Circular dependency
+orchestration = { path = "../orchestration" }
 # claim-extraction = { path = "../claim-extraction" }  # Temporarily commented to resolve circular dependency
 
 # Multimodal RAG integration dependencies
@@ -47,6 +48,10 @@ futures = "0.3"  # Async utilities
 tokio-stream = "0.1"  # Stream processing
 bytes = "1.5"  # Byte buffer handling
 rand = "0.8"  # Random number generation for retry jitter
+
+[features]
+default = []
+self-prompting = []
 
 [dev-dependencies]
 jsonschema = "0.17"

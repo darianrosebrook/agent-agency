@@ -38,5 +38,29 @@ chrono = { version = "0.4", features = ["serde"] }
 # Math operations
 nalgebra = "0.32"
 
+# Cryptographic hashing for stable IDs
+blake3 = "1.5"
+
+# Statistical distributions
+rand_distr = "0.4"
+
+# UUID generation
+uuid = { version = "1.0", features = ["v4"] }
+
+# LRU cache for performance optimization
+lru = "0.12"
+
+[features]
+default = ["full_optimization"]
+full_optimization = []
+# Feature flags to isolate problematic components
+bayesian_opt = []
+bandit_policy = []
+thermal_scheduler = []
+chunked_execution = []
+precision_engineering = []
+planning_integration = []
+quality_validation = []
+
 [dev-dependencies]
 tokio-test = "0.4"

@@ -8,11 +8,12 @@ use std::sync::Arc;
 use tokio::sync::{mpsc, RwLock};
 use uuid::Uuid;
 use axum::{
-    extract::{ws::WebSocketUpgrade, Path, Query},
+    extract::{Path, Query},
     response::Response,
     Extension,
 };
-use axum::extract::ws::{WebSocket, Message};
+use axum_extra::extract::ws::WebSocketUpgrade;
+use axum_extra::extract::ws::{WebSocket, Message};
 
 use crate::planning::types::ExecutionEvent;
 use crate::tracking::event_bus::{EventBus, EventSubscription};

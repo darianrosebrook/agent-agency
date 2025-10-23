@@ -54,3 +54,4 @@ pub use resilience::ResilienceManager;
 pub use claim_extraction_multimodal::{MultimodalEvidenceEnricher, ClaimWithMultimodalEvidence};
 pub use advanced_monitoring::{SLOTracker, SLOStatus, SLOAlert, AlertLevel, SLOComponent, SLODashboardSummary};
 pub use types::ResourceUsageMetrics;
+pub use coordinator::{ConsensusCoordinator, ProvenanceEmitter};

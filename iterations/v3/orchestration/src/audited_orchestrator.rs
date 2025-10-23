@@ -983,5 +983,5 @@ impl From<String> for AuditError {
 }
 
 // Re-export key types for convenience
-pub use crate::audit_trail::{AuditQuery, AuditOutputFormat, AuditLogLevel};
-pub use crate::orchestrate::{OrchestratorConfig, OrchestrationResult, OrchestrationContext};
+pub use crate::audit_trail::AuditQuery;
+pub use crate::orchestrate::{OrchestrationResult, OrchestrationContext};

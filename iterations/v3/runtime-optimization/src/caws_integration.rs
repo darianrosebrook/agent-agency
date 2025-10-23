@@ -9,6 +9,12 @@ use std::sync::{Arc, RwLock};
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
 
+#[cfg(feature = "bandit_policy")]
+use ParameterSet;
+
+#[cfg(not(feature = "bandit_policy"))]
+use crate::bandit_stubs::ParameterSet;
+
 /// CAWS budget tracker for token usage
 pub struct CAWSBudgetTracker {
     /// Tokens/day budget per task_type
@@ -133,8 +139,8 @@ impl CAWSBudgetTracker {
 pub struct ParameterChangeProvenance {
     pub change_id: Uuid,
     pub task_type: String,
-    pub old_params: crate::bandit_policy::ParameterSet,
-    pub new_params: crate::bandit_policy::ParameterSet,
+    pub old_params: ParameterSet,
+    pub new_params: ParameterSet,
     pub reason: String,
     pub approved_by: Option<String>,
     pub waiver_id: Option<WaiverId>,
@@ -160,14 +166,14 @@ impl CAWSComplianceValidator {
     pub async fn validate_parameter_change(
         &self,
         task_type: &str,
-        old_params: &crate::bandit_policy::ParameterSet,
-        new_params: &crate::bandit_policy::ParameterSet,
+        old_params: &ParameterSet,
+        new_params: &ParameterSet,
         reason: String,
         approver: Option<String>,
     ) -> Result<ComplianceValidationResult> {
         // 1. Check budget constraints
         let budget_check = self.budget_tracker
-            .check_budget(task_type, 1000, new_params.max_tokens) // Simplified volume estimate
+            .check_budget(task_type, 1000, new_params.max_tokens as u32) // Simplified volume estimate
             .await?;
         
         if !budget_check.within_budget {
@@ -217,7 +223,7 @@ impl CAWSComplianceValidator {
     /// Check parameter constraints
     fn check_parameter_constraints(
         &self,
-        params: &crate::bandit_policy::ParameterSet,
+        params: &ParameterSet,
     ) -> Vec<String> {
         let mut violations = Vec::new();
         

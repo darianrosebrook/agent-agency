@@ -56,6 +56,34 @@ pub struct WorkingSpec {
     pub metadata: Option<WorkingSpecMetadata>,
 }
 
+impl WorkingSpec {
+    /// Get maximum files allowed from budget constraints
+    pub fn max_files(&self) -> Option<u32> {
+        self.constraints.budget_limits.as_ref()
+            .and_then(|b| b.max_files)
+    }
+
+    /// Get maximum LOC allowed from budget constraints
+    pub fn max_loc(&self) -> Option<u32> {
+        self.constraints.budget_limits.as_ref()
+            .and_then(|b| b.max_loc)
+    }
+
+    /// Get allowed paths from scope restrictions
+    pub fn allowed_paths(&self) -> Vec<String> {
+        self.constraints.scope_restrictions.as_ref()
+            .map(|s| s.allowed_paths.clone())
+            .unwrap_or_default()
+    }
+
+    /// Get blocked paths from scope restrictions
+    pub fn blocked_paths(&self) -> Vec<String> {
+        self.constraints.scope_restrictions.as_ref()
+            .map(|s| s.blocked_paths.clone())
+            .unwrap_or_default()
+    }
+}
+
 /// Execution constraints and safety limits
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]

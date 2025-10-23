@@ -9,8 +9,16 @@ use std::sync::{Arc, RwLock};
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
 
+#[cfg(feature = "bandit_policy")]
 use crate::bandit_policy::{ParameterSet, TaskFeatures, BanditPolicy, ThompsonGaussian, LinUCB};
+
+#[cfg(not(feature = "bandit_policy"))]
+use crate::bandit_stubs::{ParameterSet, TaskFeatures, BanditPolicy, ThompsonGaussian, LinUCB};
+#[cfg(feature = "bandit_policy")]
 use crate::counterfactual_log::{CounterfactualLogger, TaskOutcome, LoggedDecision};
+
+#[cfg(not(feature = "bandit_policy"))]
+use crate::{reward::TaskOutcome, bandit_stubs::{CounterfactualLogger, LoggedDecision}};
 
 /// LLM Parameter Optimizer
 pub struct LLMParameterOptimizer {
@@ -193,7 +201,7 @@ impl LLMParameterOptimizer {
             seed: parameters.seed,
             origin: parameters.origin,
             policy_version: parameters.policy_version,
-            created_at: parameters.timestamp,
+            created_at: parameters.created_at,
         };
         
         // Calculate reward
@@ -202,7 +210,7 @@ impl LLMParameterOptimizer {
         // Update bandit policy
         {
             let mut policy = self.policy.write().unwrap();
-            policy.update(&TaskFeatures::default(), &param_set, reward);
+            policy.update(&TaskFeatures::default(), reward);
         }
         
         // Log for counterfactual evaluation

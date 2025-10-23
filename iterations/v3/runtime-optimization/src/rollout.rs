@@ -8,6 +8,12 @@ use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 use chrono::{DateTime, Utc};
 
+#[cfg(feature = "bandit_policy")]
+use crate::counterfactual_log::TaskOutcome;
+
+#[cfg(not(feature = "bandit_policy"))]
+use crate::reward::TaskOutcome;
+
 /// Rollout phase enumeration
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
 pub enum RolloutPhase {
@@ -187,7 +193,7 @@ impl RolloutManager {
     pub async fn check_and_rollback(
         &self,
         task_type: &str,
-        recent_outcomes: &[crate::counterfactual_log::TaskOutcome],
+        recent_outcomes: &[TaskOutcome],
     ) -> Result<Option<RollbackDecision>> {
         let mut state = self.state.write().unwrap();
         let rollout_state = state.get_mut(task_type);
@@ -268,7 +274,7 @@ impl RolloutManager {
     /// Detect SLO breaches in recent outcomes
     async fn detect_slo_breaches(
         &self,
-        outcomes: &[crate::counterfactual_log::TaskOutcome],
+        outcomes: &[TaskOutcome],
     ) -> Result<Vec<SLOBreach>> {
         let mut breaches = Vec::new();
         

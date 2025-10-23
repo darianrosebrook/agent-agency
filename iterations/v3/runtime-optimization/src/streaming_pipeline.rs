@@ -10,7 +10,11 @@ use std::sync::Arc;
 use tokio::sync::{mpsc, RwLock};
 use tracing::{debug, info, warn};
 
+#[cfg(feature = "chunked_execution")]
 use crate::chunked_execution::{ChunkedExecutor, ChunkConfig, ExecutionChunk};
+
+#[cfg(not(feature = "chunked_execution"))]
+use crate::chunked_stubs::{ChunkedExecutor, ChunkConfig, ExecutionChunk};
 
 /// Streaming pipeline configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -3,9 +3,19 @@
 //! Demonstrates how to integrate the LLM parameter optimization system
 //! with the planning agent for adaptive parameter tuning.
 
+#[cfg(feature = "bandit_policy")]
+use crate::bandit_policy::{TaskFeatures, ThompsonGaussian};
+
+#[cfg(not(feature = "bandit_policy"))]
+use crate::bandit_stubs::{TaskFeatures, ThompsonGaussian};
+
+#[cfg(feature = "bandit_policy")]
+use crate::counterfactual_log::{CounterfactualLogger, TaskOutcome};
+
+#[cfg(not(feature = "bandit_policy"))]
+use crate::{reward::TaskOutcome, bandit_stubs::{CounterfactualLogger, ParameterSet}};
+
 use crate::{
-    bandit_policy::{TaskFeatures, ThompsonGaussian},
-    counterfactual_log::{CounterfactualLogger, TaskOutcome},
     parameter_optimizer::{LLMParameterOptimizer, OptimizationConstraints},
     rollout::{RolloutManager, RolloutPhase},
     caws_integration::{CAWSComplianceValidator, CAWSBudgetTracker},
@@ -125,8 +135,7 @@ impl LLMParameterFeedbackExample {
     }
 
     /// Get baseline parameters for a task type
-    async fn get_baseline_parameters(&self, task_type: &str) -> Result<crate::bandit_policy::ParameterSet> {
-        use crate::bandit_policy::ParameterSet;
+    async fn get_baseline_parameters(&self, task_type: &str) -> Result<ParameterSet> {
         use chrono::Utc;
         
         Ok(ParameterSet {
@@ -147,7 +156,7 @@ impl LLMParameterFeedbackExample {
     async fn execute_generation(
         &self,
         prompt: &str,
-        params: &crate::bandit_policy::ParameterSet,
+        params: &ParameterSet,
         request_id: Uuid,
     ) -> Result<GenerationResponse> {
         // This would integrate with the actual LLM client
@@ -177,7 +186,7 @@ impl LLMParameterFeedbackExample {
     async fn measure_outcome(
         &self,
         response: &GenerationResponse,
-        params: &crate::bandit_policy::ParameterSet,
+        params: &ParameterSet,
     ) -> Result<TaskOutcome> {
         // Simulate quality measurement
         let quality_score = self.estimate_quality(&response.content);
@@ -216,7 +225,7 @@ impl LLMParameterFeedbackExample {
     }
 
     /// Convert ParameterSet to UsedParameters
-    fn convert_to_used_parameters(&self, params: &crate::bandit_policy::ParameterSet) -> crate::orchestration::planning::llm_client::UsedParameters {
+    fn convert_to_used_parameters(&self, params: &ParameterSet) -> crate::orchestration::planning::llm_client::UsedParameters {
         use crate::orchestration::planning::llm_client::UsedParameters;
         use chrono::Utc;
         
@@ -253,7 +262,7 @@ impl LLMParameterFeedbackExample {
         // to validate that the learned policy improves over baseline
         
         let evaluator = self.cf_logger.evaluator();
-        let decisions = evaluator.get_decisions(task_type);
+        let decisions = evaluator.get_decisions(task_type)?;
         
         if decisions.len() < 100 {
             return Err(anyhow::anyhow!("Insufficient data for offline evaluation: {} decisions", decisions.len()));

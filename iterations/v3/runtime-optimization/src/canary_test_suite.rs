@@ -6,12 +6,24 @@ use tokio::sync::RwLock;
 use chrono::{DateTime, Utc, Duration};
 use uuid::Uuid;
 
+#[cfg(feature = "bandit_policy")]
 use crate::bandit_policy::{ParameterSet, TaskFeatures};
+
+#[cfg(not(feature = "bandit_policy"))]
+use crate::bandit_stubs::{ParameterSet, TaskFeatures};
+#[cfg(feature = "bandit_policy")]
 use crate::counterfactual_log::{LoggedDecision, TaskOutcome};
+
+#[cfg(not(feature = "bandit_policy"))]
+use crate::{reward::TaskOutcome, bandit_stubs::LoggedDecision};
 use crate::parameter_optimizer::{LLMParameterOptimizer, OptimizationConstraints};
 use crate::rollout::{RolloutManager, RolloutPhase, SLOMonitor, RolloutState};
 use crate::caws_integration::{CAWSBudgetTracker, ParameterChangeProvenance};
+#[cfg(feature = "quality_validation")]
 use crate::quality_gate_validator::{QualityGateValidator, ValidationResult};
+
+#[cfg(not(feature = "quality_validation"))]
+use crate::quality_stubs::{QualityGateValidator, ValidationResult};
 use crate::reward::{RewardFunction, ObjectiveWeights, BaselineMetrics};
 
 /// Canary test suite for LLM Parameter Feedback Loop
@@ -507,7 +519,7 @@ impl CanaryTestSuite {
         }
 
         // Check token usage SLO
-        if outcome.tokens_used > scenario.slo_requirements.max_token_usage {
+        if outcome.tokens_used > scenario.slo_requirements.max_token_usage as usize {
             alerts.push(CanaryAlert {
                 id: Uuid::new_v4(),
                 severity: TriggerSeverity::Warning,
@@ -586,7 +598,7 @@ impl CanaryTestSuite {
                     outcome.quality_score < trigger.threshold
                 }
                 RollbackTriggerType::ErrorRateIncrease => {
-                    if !outcome.success { 1.0 } else { 0.0 } > trigger.threshold
+                    (if !outcome.success { 1.0 } else { 0.0 }) > trigger.threshold
                 }
                 RollbackTriggerType::BudgetExceeded => {
                     outcome.tokens_used as f64 > trigger.threshold
@@ -750,10 +762,10 @@ impl CanaryTestSuite {
 
         Ok(RollbackAnalysisResult {
             rollback_triggered,
-            rollback_time,
+            rollback_time_seconds: rollback_time,
             rollback_reason: if rollback_triggered { Some("SLO violation".to_string()) } else { None },
             rollback_success: !rollback_triggered || rollback_time.is_some(),
-            recovery_time: if rollback_triggered { Some(60) } else { None },
+            recovery_time_seconds: if rollback_triggered { Some(60) } else { None },
             triggers_activated: scenario.rollback_triggers.clone(),
             false_positives: 0,
             false_negatives: 0,
@@ -774,7 +786,7 @@ impl CanaryTestSuite {
                 baseline_latency: 200,
                 canary_latency: 200,
                 latency_delta: 0,
-                baseline_tokens: scenario.baseline_parameters.max_tokens,
+                baseline_tokens: scenario.baseline_parameters.max_tokens as u32,
                 canary_tokens: scenario.test_parameters.max_tokens,
                 token_delta: 0,
                 baseline_reward: 0.0,
@@ -796,7 +808,7 @@ impl CanaryTestSuite {
             baseline_latency: 200, // Placeholder
             canary_latency: avg_latency,
             latency_delta: avg_latency as i64 - 200,
-            baseline_tokens: scenario.baseline_parameters.max_tokens,
+            baseline_tokens: scenario.baseline_parameters.max_tokens as u32,
             canary_tokens: avg_tokens,
             token_delta: avg_tokens as i32 - scenario.baseline_parameters.max_tokens as i32,
             baseline_reward: 0.0, // Placeholder

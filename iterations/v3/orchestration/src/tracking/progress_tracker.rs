@@ -10,7 +10,7 @@ use uuid::Uuid;
 use chrono::{DateTime, Utc};
 
 use crate::planning::types::ExecutionEvent;
-use crate::observability::metrics::MetricsCollector;
+use agent_agency_observability::metrics::MetricsCollector;
 
 /// Progress tracking configuration
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]

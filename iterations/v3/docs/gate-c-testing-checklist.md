@@ -175,8 +175,8 @@ cargo test --lib core_ml_backend::tests::test_core_ml_backend_circuit_breaker_in
 
 ```bash
 # Check Gate C validation guide exists and is comprehensive
-wc -l docs/CORE_ML_GATE_C_VALIDATION.md  # Should be 400+ lines
-head -50 docs/CORE_ML_GATE_C_VALIDATION.md
+wc -l docs/core-ml-gate-c-validation.md  # Should be 400+ lines
+head -50 docs/core-ml-gate-c-validation.md
 ```
 
 **Verify it contains:**
@@ -312,7 +312,7 @@ head -50 docs/CORE_ML_GATE_C_VALIDATION.md
 |------|---------|--------|
 | apple-silicon/src/telemetry.rs | Metrics system | ✅ Complete |
 | apple-silicon/src/core_ml_backend.rs | Backend + telemetry | ✅ Complete |
-| docs/CORE_ML_GATE_C_VALIDATION.md | Testing guide | ✅ Complete |
+| docs/core-ml-gate-c-validation.md | Testing guide | ✅ Complete |
 | scripts/models/download_fastvit.py | Model acquisition | ✅ Ready |
 | tests/fixtures/models/manifest.json | Model metadata | ✅ Created |
 

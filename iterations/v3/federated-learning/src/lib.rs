@@ -471,6 +471,6 @@ impl Default for FederatedConfig {
     }
 }
 
-/// @darianrosebrook
-/// Federated privacy-preserving learning system for cross-tenant model improvement
-/// without data sharing through secure aggregation protocols
+// @darianrosebrook
+// Federated privacy-preserving learning system for cross-tenant model improvement
+// without data sharing through secure aggregation protocols

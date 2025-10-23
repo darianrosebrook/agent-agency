@@ -9,7 +9,7 @@ use tokio::sync::RwLock;
 use tracing::{debug, info, warn, error};
 
 use crate::multimodal_orchestration::{MultimodalOrchestrator, ProcessingResult, ProcessingStatus};
-use crate::types::*;
+use crate::planning::types::*;
 
 // Kimi K2 enhanced components
 use self_prompting_agent::{

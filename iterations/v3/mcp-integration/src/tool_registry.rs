@@ -493,7 +493,7 @@ impl ToolRegistry {
             .and_then(|v| v.as_str())
             .ok_or_else(|| anyhow::anyhow!("Missing 'command' parameter"))?;
 
-        let args = request.parameters
+        let args: Vec<String> = request.parameters
             .get("args")
             .and_then(|v| v.as_array())
             .map(|arr| arr.iter().filter_map(|v| v.as_str()).map(|s| s.to_string()).collect())
@@ -511,8 +511,7 @@ impl ToolRegistry {
         }
 
         // Validate arguments for security
-        for arg in &args {
-            let arg_str: &str = arg.as_str();
+        for arg_str in args.iter().map(|s| s.as_str()) {
             if arg_str.contains("..") || arg_str.contains("/") || arg_str.contains("\\") {
                 return Err(anyhow::anyhow!("Invalid path characters in argument: {}", arg_str));
             }

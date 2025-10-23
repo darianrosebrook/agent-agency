@@ -609,11 +609,11 @@ impl ArtifactStorage for DatabaseStorage {
 
 /// Database-backed artifact storage (wrapper around database crate implementation)
 #[derive(Debug)]
-pub struct DatabaseArtifactStorage {
+pub struct OrchestrationDatabaseArtifactStorage {
     db_storage: agent_agency_database::DatabaseArtifactStorage,
 }
 
-impl DatabaseArtifactStorage {
+impl OrchestrationDatabaseArtifactStorage {
     /// Create a new database artifact storage
     pub fn new(db_client: std::sync::Arc<DatabaseClient>) -> Self {
         let db_storage = agent_agency_database::DatabaseArtifactStorage::from_client(db_client);
@@ -622,7 +622,7 @@ impl DatabaseArtifactStorage {
 }
 
 #[async_trait]
-impl ArtifactStorage for DatabaseArtifactStorage {
+impl ArtifactStorage for OrchestrationDatabaseArtifactStorage {
     async fn store(
         &self,
         artifacts: &ExecutionArtifacts,

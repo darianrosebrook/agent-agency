@@ -444,7 +444,7 @@ download-models:
 
 ## 8b. Safety & Invariants Enforcement Checklist
 
-**Verified during code review + local testing (reference CORE_ML_IMPLEMENTATION_PATH.md § 10):**
+**Verified during code review + local testing (reference core-ml-implementation-path.md § 10):**
 
 - [ ] Every FFI call wrapped in `with_autorelease_pool { }`
 - [ ] No ObjC types escape public Rust API boundary

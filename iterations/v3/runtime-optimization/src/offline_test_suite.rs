@@ -6,11 +6,21 @@ use tokio::sync::RwLock;
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
+#[cfg(feature = "bandit_policy")]
 use crate::bandit_policy::{BanditPolicy, ParameterSet, TaskFeatures, ThompsonGaussian, LinUCB};
+
+#[cfg(not(feature = "bandit_policy"))]
+use crate::bandit_stubs::{BanditPolicy, ParameterSet, TaskFeatures, ThompsonGaussian, LinUCB};
+
 use crate::counterfactual_log::{LoggedDecision, TaskOutcome, OfflineEvaluator, PolicyEvaluationResult};
 use crate::parameter_optimizer::{LLMParameterOptimizer, OptimizationConstraints};
 use crate::reward::{RewardFunction, ObjectiveWeights, BaselineMetrics};
+
+#[cfg(feature = "quality_validation")]
 use crate::quality_gate_validator::{QualityGateValidator, ValidationResult};
+
+#[cfg(not(feature = "quality_validation"))]
+use crate::quality_stubs::{QualityGateValidator, ValidationResult};
 use crate::rollout::{RolloutManager, RolloutPhase, SLOMonitor};
 
 /// Offline test suite for LLM Parameter Feedback Loop

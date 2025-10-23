@@ -6,8 +6,16 @@ use tokio::sync::RwLock;
 use chrono::{DateTime, Utc, Duration};
 use uuid::Uuid;
 
+#[cfg(feature = "bandit_policy")]
 use crate::bandit_policy::{ParameterSet, TaskFeatures};
+
+#[cfg(not(feature = "bandit_policy"))]
+use crate::bandit_stubs::{ParameterSet, TaskFeatures};
+#[cfg(feature = "bandit_policy")]
 use crate::counterfactual_log::{LoggedDecision, TaskOutcome, PolicyEvaluationResult};
+
+#[cfg(not(feature = "bandit_policy"))]
+use crate::{reward::TaskOutcome, bandit_stubs::{LoggedDecision, PolicyEvaluationResult}};
 use crate::parameter_optimizer::{LLMParameterOptimizer, RecommendedParameters};
 use crate::rollout::{RolloutPhase, RolloutState, SLOMonitor};
 use crate::reward::{RewardResult, BaselineMetrics};
@@ -291,15 +299,17 @@ impl ParameterDashboardManager {
         
         let mut points = Vec::new();
         for decision in decisions {
-            let point = ParetoPoint {
-                parameters: decision.chosen_params.clone(),
-                quality: decision.outcome.quality_score,
-                latency: decision.outcome.latency_ms,
-                tokens: decision.outcome.tokens_used as u32,
-                reward: 0.0, // Would be calculated from reward function
-                dominated: false,
-            };
-            points.push(point);
+            if let Some(outcome) = &decision.outcome {
+                let point = ParetoPoint {
+                    parameters: decision.chosen_params.clone(),
+                    quality: outcome.quality_score,
+                    latency: outcome.latency_ms,
+                    tokens: outcome.tokens_used as u32,
+                    reward: 0.0, // Would be calculated from reward function
+                    dominated: false,
+                };
+                points.push(point);
+            }
         }
         
         // Calculate Pareto dominance

@@ -342,9 +342,9 @@ flowchart LR
 
 ## See Also
 
-- **[SYSTEM_OVERVIEW.md](./SYSTEM_OVERVIEW.md)** - Complete system capabilities and status
+- **[system-overview.md](./system-overview.md)** - Complete system capabilities and status
 - **[interaction-contracts.md](./interaction-contracts.md)** - API contracts and data schemas
-- **[BUILD_OPTIMIZATION.md](./BUILD_OPTIMIZATION.md)** - Build performance and optimization
+- **[build-optimization.md](./build-optimization.md)** - Build performance and optimization
 - **[database/README.md](../database/README.md)** - Database schema and operations
 - **[../../docs/quality-assurance/README.md](../../docs/quality-assurance/README.md)** - CAWS and testing framework
 - **[../../docs/agents/full-guide.md](../../docs/agents/full-guide.md)** - CAWS workflow implementation guide

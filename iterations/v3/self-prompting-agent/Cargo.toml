@@ -8,7 +8,7 @@ agent-agency-contracts = { path = "../agent-agency-contracts" }
 caws-runtime-validator = { path = "../caws/runtime-validator" }
 orchestration = { path = "../orchestration" }
 reflexive-learning = { path = "../reflexive-learning" }
-agent-agency-workers = { path = "../workers" }
+# agent-agency-workers = { path = "../workers" }  # Temporarily commented to resolve circular dependency
 agent-agency-apple-silicon = { path = "../apple-silicon" }
 file_ops = { path = "../file_ops" }
 tokio = { workspace = true, features = ["full"] }

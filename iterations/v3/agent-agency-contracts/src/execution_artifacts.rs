@@ -658,6 +658,16 @@ pub struct ExecutionSeeds {
     pub random_seed: i64,
 }
 
+impl Default for ExecutionSeeds {
+    fn default() -> Self {
+        Self {
+            time_seed: "default".to_string(),
+            uuid_seed: "default".to_string(),
+            random_seed: 0,
+        }
+    }
+}
+
 /// Individual audit event in the execution trail
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]

@@ -14,49 +14,558 @@
 //! 4. **Bayesian Hyper-Tuning**: Continuous parameter optimization with quality preservation
 //! 5. **Apple Silicon Optimization**: ANE/Core ML integration with thermal-aware scheduling
 
-pub mod arbiter_pipeline;
-pub mod bandit_policy;
-pub mod bayesian_optimizer;
+// Core modules (always available)
 pub mod caws_integration;
 pub mod canary_test_suite;
-pub mod chunked_execution;
-pub mod counterfactual_log;
 pub mod kokoro_tuning;
 pub mod llm_parameter_feedback_example;
-pub mod offline_test_suite;
 pub mod parameter_dashboard;
-pub mod parameter_optimizer;
 pub mod performance_monitor;
-pub mod precision_engineering;
-pub mod quality_guardrails;
-pub mod quality_gate_validator;
 pub mod reward;
-pub mod rollout;
-pub mod planning_agent_integration;
-pub mod streaming_pipeline;
+
+// Feature-dependent modules
+#[cfg(feature = "bandit_policy")]
+pub mod counterfactual_log;
+
+#[cfg(feature = "bandit_policy")]
+pub mod offline_test_suite;
+
+// Feature-gated modules
+#[cfg(feature = "bayesian_opt")]
+pub mod bayesian_optimizer;
+
+#[cfg(feature = "bandit_policy")]
+pub mod bandit_policy;
+
+#[cfg(feature = "thermal_scheduler")]
 pub mod thermal_scheduler;
 
+#[cfg(feature = "chunked_execution")]
+pub mod chunked_execution;
+
+#[cfg(feature = "precision_engineering")]
+pub mod precision_engineering;
+
+#[cfg(feature = "planning_integration")]
+pub mod planning_agent_integration;
+
+#[cfg(feature = "quality_validation")]
+pub mod quality_gate_validator;
+
+#[cfg(feature = "quality_validation")]
+pub mod quality_guardrails;
+
+// Always available (core infrastructure)
+pub mod arbiter_pipeline;
+pub mod parameter_optimizer;
+pub mod rollout;
+
+// Feature-dependent modules
+#[cfg(feature = "chunked_execution")]
+pub mod streaming_pipeline;
+
+// Stub types for disabled features (to avoid compilation errors)
+#[cfg(not(feature = "bayesian_opt"))]
+mod bayesian_stubs {
+    use serde::{Deserialize, Serialize};
+
+    #[derive(Debug, Clone, Default)]
+    pub struct BayesianOptimizer;
+
+    impl BayesianOptimizer {
+        pub fn new(_config: crate::OptimizationConfig) -> Result<Self, anyhow::Error> {
+            Ok(Self)
+        }
+    }
+
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct OptimizationConfig {
+        pub max_evaluations: usize,
+        pub exploration_weight: f64,
+    }
+
+    impl Default for OptimizationConfig {
+        fn default() -> Self {
+            Self {
+                max_evaluations: 100,
+                exploration_weight: 0.1,
+            }
+        }
+    }
+
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct ParameterSpace {
+        pub dimensions: Vec<String>,
+    }
+
+    impl Default for ParameterSpace {
+        fn default() -> Self {
+            Self { dimensions: vec![] }
+        }
+    }
+}
+
+#[cfg(not(feature = "bandit_policy"))]
+mod bandit_stubs {
+    use serde::{Deserialize, Serialize};
+
+    pub trait BanditPolicy {
+        fn select_arm(&self, features: &TaskFeatures) -> ParameterSet;
+        fn update(&mut self, features: &TaskFeatures, reward: f64);
+    }
+
+    #[derive(Debug, Clone)]
+    pub struct ThompsonGaussian;
+
+    impl ThompsonGaussian {
+        pub fn new() -> Self {
+            Self
+        }
+    }
+
+    impl BanditPolicy for ThompsonGaussian {
+        fn select_arm(&self, _features: &TaskFeatures) -> ParameterSet {
+            ParameterSet::default()
+        }
+
+        fn update(&mut self, _features: &TaskFeatures, _reward: f64) {
+            // Stub implementation
+        }
+    }
+
+    #[derive(Debug, Clone)]
+    pub struct LinUCB;
+
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct ParameterSet {
+        pub temperature: f64,
+        pub max_tokens: usize,
+        pub top_p: Option<f64>,
+        pub frequency_penalty: Option<f64>,
+        pub presence_penalty: Option<f64>,
+        pub stop_sequences: Vec<String>,
+        pub seed: Option<u64>,
+        pub origin: String,
+        pub policy_version: String,
+        pub created_at: chrono::DateTime<chrono::Utc>,
+    }
+
+    impl Default for ParameterSet {
+        fn default() -> Self {
+            Self {
+                temperature: 0.7,
+                max_tokens: 1000,
+                top_p: Some(0.9),
+                frequency_penalty: None,
+                presence_penalty: None,
+                stop_sequences: vec![],
+                seed: None,
+                origin: "stub".to_string(),
+                policy_version: "1.0.0".to_string(),
+                created_at: chrono::Utc::now(),
+            }
+        }
+    }
+
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct TaskFeatures {
+        pub risk_tier: u32,
+        pub title_length: u32,
+        pub description_length: u32,
+        pub acceptance_criteria_count: u32,
+        pub scope_files_count: u32,
+        pub max_files: u32,
+        pub max_loc: u32,
+        pub has_external_deps: bool,
+        pub complexity_indicators: Vec<String>,
+        pub model_name: Option<String>,
+        pub prompt_tokens: Option<u32>,
+        pub prior_failures: Option<u32>,
+    }
+
+
+    impl TaskFeatures {
+        pub fn fingerprint(&self) -> u64 {
+            // Simplified fingerprint for stub
+            12345
+        }
+    }
+
+    #[derive(Debug, Clone)]
+    pub struct CounterfactualLogger;
+
+    impl CounterfactualLogger {
+        pub fn new() -> Self {
+            Self
+        }
+
+        pub fn evaluator(&self) -> OfflineEvaluator {
+            OfflineEvaluator
+        }
+
+        pub fn log_decision(&self, _request_id: uuid::Uuid, _task_type: String, _model_name: Option<String>, _features: TaskFeatures, _parameters: ParameterSet, _log_propensity: f64, _outcome: crate::reward::TaskOutcome, _policy_version: String) -> Result<(), anyhow::Error> {
+            Ok(())
+        }
+    }
+
+    #[derive(Debug, Clone)]
+    pub struct OfflineEvaluator;
+
+    impl OfflineEvaluator {
+        pub fn new() -> Self {
+            Self
+        }
+
+        pub fn get_decisions(&self, _task_type: &str) -> Result<Vec<LoggedDecision>, anyhow::Error> {
+            Ok(vec![])
+        }
+
+        pub fn evaluate_ips(&self, _policy: &dyn BanditPolicy, _task_type: &str) -> Result<PolicyEvaluationResult, anyhow::Error> {
+            Ok(PolicyEvaluationResult {
+                estimated_reward: 0.0,
+                confidence_interval: (0.0, 0.0),
+                sample_size: 0,
+                effective_sample_size: 0.0,
+            })
+        }
+    }
+
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct LoggedDecision {
+        pub decision_id: String,
+        pub timestamp: chrono::DateTime<chrono::Utc>,
+        pub chosen_params: ParameterSet,
+        pub outcome: Option<crate::reward::TaskOutcome>,
+    }
+
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct PolicyEvaluationResult {
+        pub estimated_reward: f64,
+        pub confidence_interval: (f64, f64),
+        pub sample_size: usize,
+        pub effective_sample_size: f64,
+    }
+
+}
+
+#[cfg(not(feature = "thermal_scheduler"))]
+mod thermal_stubs {
+    use serde::{Deserialize, Serialize};
+
+    #[derive(Debug, Clone)]
+    pub struct ThermalScheduler;
+
+    impl ThermalScheduler {
+        pub fn new(_config: ThermalConfig) -> Self {
+            Self
+        }
+    }
+
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct ThermalConfig {
+        pub max_temperature_celsius: f64,
+        pub throttling_threshold_celsius: f64,
+    }
+
+    impl Default for ThermalConfig {
+        fn default() -> Self {
+            Self {
+                max_temperature_celsius: 85.0,
+                throttling_threshold_celsius: 80.0,
+            }
+        }
+    }
+
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct DeviceLoad {
+        pub temperature_celsius: f64,
+        pub utilization_percent: f64,
+    }
+}
+
+#[cfg(not(feature = "chunked_execution"))]
+mod chunked_stubs {
+    use serde::{Deserialize, Serialize};
+
+    #[derive(Debug, Clone)]
+    pub struct ChunkedExecutor;
+
+    impl ChunkedExecutor {
+        pub fn new(_config: ChunkConfig) -> Self {
+            Self
+        }
+    }
+
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct ChunkConfig {
+        pub max_chunk_size: usize,
+        pub overlap_tokens: usize,
+    }
+
+    impl Default for ChunkConfig {
+        fn default() -> Self {
+            Self {
+                max_chunk_size: 4096,
+                overlap_tokens: 128,
+            }
+        }
+    }
+
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct ExecutionChunk {
+        pub content: String,
+        pub start_position: usize,
+        pub end_position: usize,
+    }
+
+    #[derive(Debug, Clone)]
+    pub struct StreamingPipeline;
+
+    impl StreamingPipeline {
+        pub fn new(_config: StreamConfig) -> Result<Self, anyhow::Error> {
+            Ok(Self)
+        }
+    }
+
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct StreamConfig {
+        pub buffer_size: usize,
+        pub flush_interval_ms: u64,
+    }
+
+    impl Default for StreamConfig {
+        fn default() -> Self {
+            Self {
+                buffer_size: 1024,
+                flush_interval_ms: 100,
+            }
+        }
+    }
+
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct PipelineMetrics {
+        pub throughput: f64,
+        pub latency_ms: f64,
+    }
+}
+
+#[cfg(not(feature = "precision_engineering"))]
+mod precision_stubs {
+    use serde::{Deserialize, Serialize};
+
+    #[derive(Debug, Clone)]
+    pub struct PrecisionEngineer;
+
+    impl PrecisionEngineer {
+        pub fn new(_config: PrecisionConfig) -> Self {
+            Self
+        }
+    }
+
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct PrecisionConfig {
+        pub target_precision: String,
+        pub quantization_enabled: bool,
+    }
+
+    impl Default for PrecisionConfig {
+        fn default() -> Self {
+            Self {
+                target_precision: "fp16".to_string(),
+                quantization_enabled: true,
+            }
+        }
+    }
+
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub enum QuantizationStrategy {
+        INT8,
+        FP16,
+        Dynamic,
+    }
+
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct GraphOptimization {
+        pub enabled: bool,
+        pub max_optimization_time_ms: u64,
+    }
+}
+
+#[cfg(not(feature = "quality_validation"))]
+mod quality_stubs {
+    use serde::{Deserialize, Serialize};
+
+    #[derive(Debug, Clone)]
+    pub struct QualityGuardrails;
+
+    impl QualityGuardrails {
+        pub fn new(_config: QualityConfig) -> Result<Self, anyhow::Error> {
+            Ok(Self)
+        }
+    }
+
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct QualityConfig {
+        pub min_quality_score: f64,
+        pub max_regression_threshold: f64,
+    }
+
+    impl Default for QualityConfig {
+        fn default() -> Self {
+            Self {
+                min_quality_score: 0.8,
+                max_regression_threshold: 0.05,
+            }
+        }
+    }
+
+    #[derive(Debug, Clone)]
+    pub struct ComplianceCheck;
+
+    #[derive(Debug, Clone)]
+    pub struct PerformanceThreshold;
+
+    #[derive(Debug, Clone)]
+    pub struct QualityGateValidator;
+
+    impl QualityGateValidator {
+        pub fn new(_config: QualityConfig) -> Result<Self, anyhow::Error> {
+            Ok(Self)
+        }
+    }
+
+    #[derive(Debug, Clone)]
+    pub struct ValidationResult;
+
+    #[derive(Debug, Clone)]
+    pub struct ComplianceValidator;
+}
+
+#[cfg(not(feature = "planning_integration"))]
+mod planning_stubs {
+    #[derive(Debug, Clone)]
+    pub struct OptimizedPlanningAgent;
+}
+
+// Re-export stubs when features are disabled
+#[cfg(not(feature = "bayesian_opt"))]
+pub use bayesian_stubs::*;
+
+#[cfg(not(feature = "bandit_policy"))]
+pub use bandit_stubs::*;
+
+#[cfg(not(feature = "thermal_scheduler"))]
+pub use thermal_stubs::*;
+
+#[cfg(not(feature = "chunked_execution"))]
+pub use chunked_stubs::{ChunkedExecutor, ChunkConfig, ExecutionChunk, StreamingPipeline, StreamConfig, PipelineMetrics};
+
+#[cfg(not(feature = "precision_engineering"))]
+pub use precision_stubs::*;
+
+#[cfg(not(feature = "quality_validation"))]
+pub use quality_stubs::*;
+
+#[cfg(not(feature = "planning_integration"))]
+pub use planning_stubs::*;
+
+// Stub for missing orchestration module
+pub mod orchestration {
+    pub mod planning {
+        pub mod llm_client {
+            use serde::{Deserialize, Serialize};
+
+            #[derive(Debug, Clone, Serialize, Deserialize)]
+            pub enum FinishReason {
+                Stop,
+                Length,
+                ContentFilter,
+            }
+
+            #[derive(Debug, Clone, Serialize, Deserialize)]
+            pub struct UsedParameters {
+                pub temperature: f64,
+                pub max_tokens: usize,
+                pub top_p: f64,
+                pub frequency_penalty: Option<f64>,
+                pub presence_penalty: Option<f64>,
+                pub stop_sequences: Vec<String>,
+                pub seed: Option<u64>,
+                pub origin: String,
+                pub policy_version: String,
+                pub created_at: chrono::DateTime<chrono::Utc>,
+                pub model_name: Option<String>,
+            }
+
+            impl Default for UsedParameters {
+                fn default() -> Self {
+                    Self {
+                        temperature: 0.7,
+                        max_tokens: 1000,
+                        top_p: 0.9,
+                        frequency_penalty: None,
+                        presence_penalty: None,
+                        stop_sequences: vec![],
+                        seed: None,
+                        origin: "stub".to_string(),
+                        policy_version: "1.0.0".to_string(),
+                        created_at: chrono::Utc::now(),
+                        model_name: None,
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Always available exports
 pub use arbiter_pipeline::{ArbiterPipelineOptimizer, DecisionPipelineConfig};
-pub use bandit_policy::{BanditPolicy, ParameterSet, TaskFeatures, ThompsonGaussian, LinUCB};
-pub use bayesian_optimizer::{BayesianOptimizer, OptimizationConfig, ParameterSpace};
 pub use caws_integration::{CAWSBudgetTracker, CAWSComplianceValidator, ParameterChangeProvenance};
 pub use canary_test_suite::{CanaryTestSuite, CanaryTestScenario, SLORequirements, BudgetLimits};
-pub use chunked_execution::{ChunkedExecutor, ChunkConfig, ExecutionChunk};
-pub use counterfactual_log::{CounterfactualLogger, OfflineEvaluator, LoggedDecision, TaskOutcome};
 pub use kokoro_tuning::{KokoroTuner, TuningResult, TuningMetrics};
 pub use llm_parameter_feedback_example::LLMParameterFeedbackExample;
-pub use offline_test_suite::{OfflineTestSuite, TestScenario, TestType, TestResult};
-pub use parameter_dashboard::{ParameterDashboardManager, ParameterDashboard, OptimizationStatus, PerformanceMetrics};
+pub use parameter_dashboard::{ParameterDashboardManager, ParameterDashboard, OptimizationStatus, PerformanceMetrics as DashboardPerformanceMetrics};
 pub use parameter_optimizer::{LLMParameterOptimizer, OptimizationConstraints, RecommendedParameters};
-pub use performance_monitor::{PerformanceMonitor, PerformanceMetrics, SLAMetrics};
-pub use precision_engineering::{PrecisionEngineer, QuantizationStrategy, GraphOptimization};
-pub use quality_guardrails::{QualityGuardrails, ComplianceCheck, PerformanceThreshold};
-pub use quality_gate_validator::{QualityGateValidator, ValidationResult, ComplianceValidator};
-pub use reward::{RewardFunction, ObjectiveWeights, TaskOutcome, BaselineMetrics};
+pub use performance_monitor::{PerformanceMonitor, PerformanceMetrics as MonitorPerformanceMetrics, SLAMetrics};
+pub use reward::{RewardFunction, ObjectiveWeights, TaskOutcome as RewardTaskOutcome, BaselineMetrics};
 pub use rollout::{RolloutManager, RolloutPhase, RolloutState, PhaseTransition};
-pub use planning_agent_integration::{OptimizedPlanningAgent, OptimizationStatus};
+
+// Feature-dependent exports
+#[cfg(feature = "bandit_policy")]
+pub use counterfactual_log::{CounterfactualLogger, OfflineEvaluator, LoggedDecision, TaskOutcome};
+
+#[cfg(feature = "bandit_policy")]
+pub use offline_test_suite::{OfflineTestSuite, TestScenario, TestType, TestResult};
+
+#[cfg(feature = "chunked_execution")]
 pub use streaming_pipeline::{StreamingPipeline, StreamConfig, PipelineMetrics};
+
+// Feature-gated exports
+#[cfg(feature = "bayesian_opt")]
+pub use bayesian_optimizer::{BayesianOptimizer, OptimizationConfig, ParameterSpace};
+
+#[cfg(feature = "bandit_policy")]
+pub use bandit_policy::{BanditPolicy, ParameterSet, TaskFeatures};
+
+#[cfg(feature = "thermal_scheduler")]
 pub use thermal_scheduler::{ThermalScheduler, ThermalConfig, DeviceLoad};
+
+#[cfg(feature = "chunked_execution")]
+pub use chunked_execution::{ChunkedExecutor, ChunkConfig, ExecutionChunk};
+
+#[cfg(feature = "precision_engineering")]
+pub use precision_engineering::{PrecisionEngineer, QuantizationStrategy, GraphOptimization};
+
+#[cfg(feature = "quality_validation")]
+pub use quality_guardrails::{QualityGuardrails, ComplianceCheck, PerformanceThreshold};
+
+#[cfg(feature = "quality_validation")]
+pub use quality_gate_validator::{QualityGateValidator, ValidationResult, ComplianceValidator};
+
+#[cfg(feature = "planning_integration")]
+pub use planning_agent_integration::{OptimizedPlanningAgent, OptimizationStatus};
+
+// Feature-dependent modules are disabled when their features are not enabled
 
 use anyhow::{Result, Context};
 use serde::{Deserialize, Serialize};
@@ -64,6 +573,9 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{info, warn, debug, error};
+
+// Import PerformanceMetrics from the appropriate module
+use performance_monitor::PerformanceMetrics;
 
 /// Main runtime optimization coordinator
 ///
@@ -442,20 +954,22 @@ pub struct OptimizationConfig {
     pub arbiter_config: DecisionPipelineConfig,
     /// Parameter space for optimization
     pub parameter_space: ParameterSpace,
-    /// Precision engineering configuration
-    pub precision_config: precision_engineering::PrecisionConfig,
     /// Streaming pipeline configuration
     pub stream_config: StreamConfig,
-    /// Quality guardrails configuration
-    pub quality_config: quality_guardrails::QualityConfig,
-    /// Performance monitoring configuration
-    pub monitor_config: performance_monitor::MonitorConfig,
     /// Thermal scheduling configuration
     pub thermal_config: ThermalConfig,
     /// Chunked execution configuration
     pub chunk_config: ChunkConfig,
     /// Kokoro tuning configuration
     pub kokoro_config: kokoro_tuning::KokoroConfig,
+    /// Performance monitoring configuration
+    pub monitor_config: performance_monitor::MonitorConfig,
+
+    // Feature-gated configuration fields
+    #[cfg(feature = "precision_engineering")]
+    pub precision_config: PrecisionConfig,
+    #[cfg(feature = "quality_validation")]
+    pub quality_config: QualityConfig,
 }
 
 impl Default for OptimizationConfig {
@@ -463,17 +977,19 @@ impl Default for OptimizationConfig {
         Self {
             arbiter_config: DecisionPipelineConfig::default(),
             parameter_space: ParameterSpace::default(),
-            precision_config: precision_engineering::PrecisionConfig::default(),
             stream_config: StreamConfig::default(),
-            quality_config: quality_guardrails::QualityConfig::default(),
-            monitor_config: performance_monitor::MonitorConfig::default(),
             thermal_config: ThermalConfig::default(),
             chunk_config: ChunkConfig::default(),
             kokoro_config: kokoro_tuning::KokoroConfig::default(),
+            monitor_config: performance_monitor::MonitorConfig::default(),
+            #[cfg(feature = "precision_engineering")]
+            precision_config: PrecisionConfig::default(),
+            #[cfg(feature = "quality_validation")]
+            quality_config: QualityConfig::default(),
         }
     }
 }
 
-/// @darianrosebrook
-/// Runtime optimization system implementing Kokoro-level performance engineering
-/// for Agent Agency V3 with CAWS compliance preservation
+// @darianrosebrook
+// Runtime optimization system implementing Kokoro-level performance engineering
+// for Agent Agency V3 with CAWS compliance preservation

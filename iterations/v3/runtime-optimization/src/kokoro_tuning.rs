@@ -8,6 +8,27 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, info, warn};
 
+/// Configuration for Kokoro tuner
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct KokoroConfig {
+    /// Maximum tuning iterations
+    pub max_iterations: usize,
+    /// Exploration vs exploitation trade-off
+    pub exploration_factor: f64,
+    /// Thermal constraints
+    pub thermal_budget_celsius: f64,
+}
+
+impl Default for KokoroConfig {
+    fn default() -> Self {
+        Self {
+            max_iterations: 100,
+            exploration_factor: 0.1,
+            thermal_budget_celsius: 80.0,
+        }
+    }
+}
+
 /// Kokoro tuner for hyper-parameter optimization
 pub struct KokoroTuner {
     optimizer: BayesianOptimizer,

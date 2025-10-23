@@ -13,16 +13,12 @@ use crate::provenance::OrchestrationProvenanceEmitter;
 use crate::planning::types::{ExecutionArtifacts, TestResults, CoverageReport, MutationReport, LintReport, TypeCheckReport, ProvenanceRecord};
 use crate::tracking::ProgressTracker;
 use agent_agency_apple_silicon::{
-    adaptive_resource_manager::{
-        AppleModelRegistry, AppleModelRegistryConfig, SimplePlanner, SystemSensors,
-    },
-    AllocationPlanner,
+    AllocationPlanner, AllocationRequest, AllocationPlan, DeviceKind, DeviceSensors,
 };
 use agent_agency_contracts::working_spec::{
-    TaskMode, TaskScope, ChangeBudget, BlastRadius, WorkingSpecMetadata,
-    AcceptanceCriterion, CriterionPriority, NonFunctionalRequirements, RollbackPlan,
+    WorkingSpecMetadata, AcceptanceCriterion, NonFunctionalRequirements, RollbackPlan,
 };
-use agent_agency_council::coordinator::{ConsensusCoordinator, ProvenanceEmitter};
+use agent_agency_council::{ConsensusCoordinator, ProvenanceEmitter};
 use agent_agency_council::models::{
     AcceptanceCriterion as CouncilAcceptanceCriterion, Environment as CouncilEnvironment,
     RiskTier as CouncilRiskTier, SelfAssessment as CouncilSelfAssessment,
@@ -30,7 +26,7 @@ use agent_agency_council::models::{
     WorkerOutput as CouncilWorkerOutput,
 };
 use agent_agency_council::types::{CawsWaiver, ConsensusResult, FinalVerdict};
-use agent_agency_resilience::{CircuitBreaker, CircuitBreakerConfig, retry_with_backoff, RetryConfig};
+use agent_agency_resilience::{CircuitBreaker, CircuitBreakerConfig, retry, RetryConfig};
 use agent_agency_database::DatabaseClient;
 use anyhow::{Context, Result};
 use std::collections::HashMap;
@@ -730,7 +726,7 @@ impl Orchestrator {
         }
 
         let mut attempt = 0;
-        let result = retry_with_backoff(
+        let result = retry(
             &self.retry_config,
             || async {
                 attempt += 1;
