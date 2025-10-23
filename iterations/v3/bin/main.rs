@@ -87,10 +87,10 @@ pub struct CouncilVerdict {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("🚀 Agent Agency V3 - Autonomous AI Development Platform");
+    println!(" Agent Agency V3 - Autonomous AI Development Platform");
     println!("═══════════════════════════════════════════════════════════\n");
 
-    println!("🎯 Autonomous Execution Workflow Demonstration");
+    println!(" Autonomous Execution Workflow Demonstration");
     println!("═════════════════════════════════════════════════\n");
 
     // Demonstrate the complete workflow
@@ -101,26 +101,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     ];
 
     for (i, task_description) in demo_tasks.iter().enumerate() {
-        println!("📋 Task {}: {}", i + 1, task_description);
+        println!(" Task {}: {}", i + 1, task_description);
         println!("─".repeat(80));
 
         // Phase 1: Natural Language Planning
-        println!("🤖 Phase 1: Constitutional AI Planning");
+        println!(" Phase 1: Constitutional AI Planning");
         let working_spec = generate_working_spec(task_description).await?;
-        println!("   ✅ Generated working specification");
-        println!("   📋 Title: {}", working_spec.title);
-        println!("   🎯 Risk Tier: {:?}", working_spec.risk_tier);
-        println!("   📝 Acceptance Criteria: {}", working_spec.acceptance_criteria.len());
+        println!("    Generated working specification");
+        println!("    Title: {}", working_spec.title);
+        println!("    Risk Tier: {:?}", working_spec.risk_tier);
+        println!("    Acceptance Criteria: {}", working_spec.acceptance_criteria.len());
 
         // Phase 2: Constitutional Review
         println!("⚖️  Phase 2: Constitutional Council Review");
         let council_verdict = constitutional_review(&working_spec).await?;
-        println!("   ✅ Council reviewed plan");
-        println!("   🎭 Verdict: {}", if council_verdict.approved { "APPROVED" } else { "REJECTED" });
-        println!("   📊 Confidence: {:.1}%", council_verdict.confidence * 100.0);
+        println!("    Council reviewed plan");
+        println!("    Verdict: {}", if council_verdict.approved { "APPROVED" } else { "REJECTED" });
+        println!("    Confidence: {:.1}%", council_verdict.confidence * 100.0);
 
         if !council_verdict.approved {
-            println!("   ❌ Task rejected by council");
+            println!("    Task rejected by council");
             continue;
         }
 
@@ -128,43 +128,43 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("⚙️  Phase 3: Autonomous Implementation & Testing");
         let task_id = Uuid::new_v4();
         let implementation_result = autonomous_implementation(&working_spec, task_id).await?;
-        println!("   ✅ Implementation completed");
-        println!("   📊 Code lines generated: {}", implementation_result.code_lines);
-        println!("   🧪 Tests created: {}", implementation_result.test_count);
+        println!("    Implementation completed");
+        println!("    Code lines generated: {}", implementation_result.code_lines);
+        println!("    Tests created: {}", implementation_result.test_count);
 
         // Phase 4: Quality Assurance
         println!("🛡️  Phase 4: Quality Assurance Pipeline");
         let quality_report = quality_assurance(&implementation_result).await?;
-        println!("   ✅ Quality gates executed");
-        println!("   📈 Overall Score: {:.1}%", quality_report.overall_score * 100.0);
-        println!("   ✅ Gates Passed: {}/{}", quality_report.gates_passed, quality_report.gates_executed);
+        println!("    Quality gates executed");
+        println!("    Overall Score: {:.1}%", quality_report.overall_score * 100.0);
+        println!("    Gates Passed: {}/{}", quality_report.gates_passed, quality_report.gates_executed);
 
         if quality_report.gates_failed > 0 {
             println!("   ⚠️  Gates Failed: {}", quality_report.gates_failed);
             for rec in &quality_report.recommendations {
-                println!("   💡 {}", rec);
+                println!("    {}", rec);
             }
         }
 
         // Phase 5: Constitutional Refinement
         if quality_report.overall_score < 0.8 {
-            println!("🔄 Phase 5: Constitutional Refinement");
+            println!(" Phase 5: Constitutional Refinement");
             let refinement_result = constitutional_refinement(&working_spec, &quality_report).await?;
-            println!("   ✅ Refinement completed");
-            println!("   📈 Quality improvement: {:.1}%", refinement_result.quality_improvement);
-            println!("   🔄 Iterations used: {}", refinement_result.iterations);
+            println!("    Refinement completed");
+            println!("    Quality improvement: {:.1}%", refinement_result.quality_improvement);
+            println!("    Iterations used: {}", refinement_result.iterations);
         } else {
-            println!("✨ Phase 5: No refinement needed - quality standards met!");
+            println!(" Phase 5: No refinement needed - quality standards met!");
         }
 
-        println!("🎉 Task {} completed successfully!\n", i + 1);
+        println!(" Task {} completed successfully!\n", i + 1);
     }
 
     // Demonstrate system capabilities
-    println!("🔧 System Capabilities Overview");
+    println!(" System Capabilities Overview");
     println!("═══════════════════════════════════\n");
 
-    println!("🤖 Constitutional AI Governance:");
+    println!(" Constitutional AI Governance:");
     println!("   • Multi-judge council system with specialized judges");
     println!("   • Constitutional review for all plans and implementations");
     println!("   • Ethical oversight and compliance enforcement");
@@ -187,14 +187,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("   • Satisficing logic to prevent perfection paralysis");
     println!();
 
-    println!("🔌 Multi-Interface Integration:");
+    println!(" Multi-Interface Integration:");
     println!("   • REST API for web applications");
     println!("   • CLI for terminal users and CI/CD");
     println!("   • MCP server for IDE integration");
     println!("   • WebSocket for real-time monitoring");
     println!();
 
-    println!("📊 Production Infrastructure:");
+    println!(" Production Infrastructure:");
     println!("   • Structured error handling and recovery");
     println!("   • Enterprise security with authentication");
     println!("   • Complete observability and health monitoring");
@@ -202,16 +202,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("   • Scalable worker system with concurrency control");
     println!();
 
-    println!("🎯 Key Achievements:");
-    println!("   ✅ Complete autonomous task execution from natural language");
-    println!("   ✅ Constitutional AI governance ensuring ethical compliance");
-    println!("   ✅ Production-grade quality assurance and testing");
-    println!("   ✅ Enterprise-ready security and observability");
-    println!("   ✅ Multi-interface accessibility");
-    println!("   ✅ Scalable, distributed execution architecture");
+    println!(" Key Achievements:");
+    println!("    Complete autonomous task execution from natural language");
+    println!("    Constitutional AI governance ensuring ethical compliance");
+    println!("    Production-grade quality assurance and testing");
+    println!("    Enterprise-ready security and observability");
+    println!("    Multi-interface accessibility");
+    println!("    Scalable, distributed execution architecture");
     println!();
 
-    println!("🚀 Agent Agency V3: The autonomous AI development era has arrived!");
+    println!(" Agent Agency V3: The autonomous AI development era has arrived!");
     println!("   Ready for production deployment with full enterprise capabilities.\n");
 
     Ok(())

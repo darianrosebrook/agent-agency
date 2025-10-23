@@ -28,12 +28,12 @@ if [[ -n "$RUSTC_WRAPPER" ]]; then
         export SCCACHE_BUCKET="$SCCACHE_BUCKET"
         export SCCACHE_REGION="${SCCACHE_REGION:-us-east-1}"
         if [[ "$VERBOSE" == "true" ]]; then
-            echo "✅ Using distributed sccache with bucket: $SCCACHE_BUCKET"
+            echo " Using distributed sccache with bucket: $SCCACHE_BUCKET"
         fi
     fi
 
     if [[ "$VERBOSE" == "true" ]]; then
-        echo "✅ Using sccache: $RUSTC_WRAPPER"
+        echo " Using sccache: $RUSTC_WRAPPER"
         echo "   Cache dir: $SCCACHE_DIR"
         echo "   Namespace: $SCCACHE_NAMESPACE"
     fi
@@ -46,7 +46,7 @@ case "$PLATFORM" in
     *linux*)
         export RUSTFLAGS="${RUSTFLAGS:-} -Clink-arg=-fuse-ld=lld"
         if [[ "$VERBOSE" == "true" ]]; then
-            echo "✅ Using lld linker for Linux"
+            echo " Using lld linker for Linux"
         fi
         ;;
     *darwin*)
@@ -54,7 +54,7 @@ case "$PLATFORM" in
         if command -v ld64.lld >/dev/null 2>&1; then
             export RUSTFLAGS="${RUSTFLAGS:-} -Clink-arg=-fuse-ld=/usr/local/bin/ld64.lld"
             if [[ "$VERBOSE" == "true" ]]; then
-                echo "✅ Using ld64.lld linker for macOS"
+                echo " Using ld64.lld linker for macOS"
             fi
         else
             if [[ "$VERBOSE" == "true" ]]; then
@@ -73,7 +73,7 @@ export CARGO_TARGET_DIR="$TARGET_DIR"
 mkdir -p "$TARGET_DIR"
 
 if [[ "$VERBOSE" == "true" ]]; then
-    echo "🚀 Agent build configuration:"
+    echo " Agent build configuration:"
     echo "   Agent ID: $AGENT_ID"
     echo "   Mode: $MODE"
     echo "   Platform: $PLATFORM"
@@ -88,7 +88,7 @@ if [[ "$MODE" == "dev" ]]; then
     if rustc -vV | grep -q nightly; then
         export RUSTFLAGS="$RUSTFLAGS -Zcodegen-backend=cranelift"
         if [[ "$VERBOSE" == "true" ]]; then
-            echo "✅ Using Cranelift backend for faster dev builds"
+            echo " Using Cranelift backend for faster dev builds"
         fi
     else
         if [[ "$VERBOSE" == "true" ]]; then
@@ -101,13 +101,13 @@ fi
 case "$MODE" in
     "dev")
         if [[ "$VERBOSE" == "true" ]]; then
-            echo "🔨 Running cargo build (dev mode)..."
+            echo " Running cargo build (dev mode)..."
         fi
         cargo build ${FEATURES:+--features "$FEATURES"} -j "$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)" "$@"
         ;;
     "test")
         if [[ "$VERBOSE" == "true" ]]; then
-            echo "🧪 Running cargo test..."
+            echo " Running cargo test..."
         fi
         # Use nextest if available, otherwise fall back to cargo test
         if command -v cargo-nextest >/dev/null 2>&1; then
@@ -118,23 +118,23 @@ case "$MODE" in
         ;;
     "release")
         if [[ "$VERBOSE" == "true" ]]; then
-            echo "🚀 Running cargo build --release..."
+            echo " Running cargo build --release..."
         fi
         cargo build --release ${FEATURES:+--features "$FEATURES"} "$@"
         ;;
     "check")
         if [[ "$VERBOSE" == "true" ]]; then
-            echo "✅ Running cargo check..."
+            echo " Running cargo check..."
         fi
         cargo check ${FEATURES:+--features "$FEATURES"} "$@"
         ;;
     *)
-        echo "❌ Unknown mode: $MODE. Use dev|test|release|check"
+        echo " Unknown mode: $MODE. Use dev|test|release|check"
         exit 1
         ;;
 esac
 
 if [[ "$VERBOSE" == "true" ]]; then
-    echo "✅ Build completed successfully"
+    echo " Build completed successfully"
     echo "   Target directory: $TARGET_DIR"
 fi

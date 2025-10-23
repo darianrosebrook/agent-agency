@@ -39,7 +39,7 @@ pub async fn generate_architecture_diagram(spec: &ArchitectureSpec) -> Result<Pa
     // Save to documentation assets
     let image_path = save_diagram_image(generated_image, spec.name).await?;
 
-    println!("✅ Generated architecture diagram: {}", image_path.display());
+    println!(" Generated architecture diagram: {}", image_path.display());
     println!("   Prompt: {}", prompt);
     println!("   Generation time: {}ms", generated_image.metadata.generation_time_ms);
     println!("   Quality score: {:.2}", generated_image.metadata.quality_score);
@@ -84,7 +84,7 @@ async fn load_diffusion_model(
     // In real implementation, this would load the actual CoreML-Anything model
     // For now, return a mock/placeholder model
 
-    println!("🔄 Loading CoreML-Anything model...");
+    println!(" Loading CoreML-Anything model...");
     println!("   Model: CoreML-Anything-V3.1");
     println!("   Size: ~2.1GB");
     println!("   Precision: FP16");
@@ -94,7 +94,7 @@ async fn load_diffusion_model(
     let model_path = Path::new("../../models/diffusion/anything-v3-1_split-einsum");
     let model = DiffusionModel::load(&model_path, telemetry.clone(), circuit_breaker).await?;
 
-    println!("✅ CoreML-Anything model loaded successfully");
+    println!(" CoreML-Anything model loaded successfully");
     Ok(model)
 }
 

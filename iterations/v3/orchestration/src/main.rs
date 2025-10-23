@@ -88,8 +88,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             watch,
             output: _,
         } => {
-            println!("🤖 Submitting task for autonomous execution...");
-            println!("📋 Task: {}", description);
+            println!(" Submitting task for autonomous execution...");
+            println!(" Task: {}", description);
             println!();
 
             // Create task descriptor
@@ -106,12 +106,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             // Submit the task to the autonomous executor
             match autonomous_executor.submit_task(task_descriptor).await {
                 Ok(task_id) => {
-                    println!("✅ Task accepted!");
-                    println!("🆔 Task ID: {}", task_id);
+                    println!(" Task accepted!");
+                    println!(" Task ID: {}", task_id);
                     println!();
 
                     if watch {
-                        println!("👀 Monitoring execution progress...");
+                        println!(" Monitoring execution progress...");
                         println!("   (Press Ctrl+C to stop monitoring)\n");
 
                         // Watch progress
@@ -119,14 +119,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         for _ in 0..120 { // Monitor for up to 2 minutes
                             if let Some(progress) = progress_tracker.get_progress(task_id).await? {
                                 if progress.completion_percentage != last_completion {
-                                    println!("📈 Progress: {:.1}% - {}",
+                                    println!(" Progress: {:.1}% - {}",
                                              progress.completion_percentage,
                                              progress.current_phase.as_deref().unwrap_or("Processing"));
 
                                     last_completion = progress.completion_percentage;
 
                                     if progress.completion_percentage >= 100.0 {
-                                        println!("\n🎉 Task completed successfully!");
+                                        println!("\n Task completed successfully!");
                                         break;
                                     }
                                 }
@@ -136,35 +136,35 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         }
 
                         if last_completion < 100.0 {
-                            println!("\n⏳ Task still in progress (monitoring stopped after 2 minutes)");
+                            println!("\n Task still in progress (monitoring stopped after 2 minutes)");
                         }
                     } else {
-                        println!("💡 Use --watch flag to monitor execution progress");
-                        println!("💡 Use 'cargo run -- status {} --watch' to monitor this task", task_id);
+                        println!(" Use --watch flag to monitor execution progress");
+                        println!(" Use 'cargo run -- status {} --watch' to monitor this task", task_id);
                     }
                 }
                 Err(e) => {
-                    eprintln!("❌ Task submission failed: {}", e);
+                    eprintln!(" Task submission failed: {}", e);
                     std::process::exit(1);
                 }
             }
         }
 
         Commands::Status { task_id, watch } => {
-            println!("📊 Checking status of task: {}", task_id);
+            println!(" Checking status of task: {}", task_id);
 
             if let Ok(uuid) = uuid::Uuid::parse_str(&task_id) {
                 // Check progress tracker first
                 if let Some(progress) = progress_tracker.get_progress(uuid).await? {
-                    println!("📈 Progress: {:.1}%", progress.completion_percentage);
-                    println!("🎯 Phase: {}", progress.current_phase.as_deref().unwrap_or("Unknown"));
-                    println!("📅 Status: {:?}", progress.status);
+                    println!(" Progress: {:.1}%", progress.completion_percentage);
+                    println!(" Phase: {}", progress.current_phase.as_deref().unwrap_or("Unknown"));
+                    println!(" Status: {:?}", progress.status);
 
                     // Also check autonomous executor for detailed state
                     if let Some(task_state) = autonomous_executor.get_task_status(uuid).await {
-                        println!("🔄 Retry Count: {}", task_state.retry_count);
+                        println!(" Retry Count: {}", task_state.retry_count);
                         if let Some(error) = &task_state.error_message {
-                            println!("❌ Error: {}", error);
+                            println!(" Error: {}", error);
                         }
                         if let Some(consensus) = &task_state.consensus_result {
                             println!("🏛️  Consensus: {:.1}% agreement", consensus.confidence * 100.0);
@@ -172,20 +172,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
 
                     if watch {
-                        println!("\n👀 Watching for updates... (Press Ctrl+C to stop)");
+                        println!("\n Watching for updates... (Press Ctrl+C to stop)");
                         // Watch for progress updates
                         let mut last_completion = progress.completion_percentage;
                         for _ in 0..60 { // Monitor for up to 1 minute
                             if let Some(updated_progress) = progress_tracker.get_progress(uuid).await? {
                                 if updated_progress.completion_percentage != last_completion {
-                                    println!("📈 Progress: {:.1}% - {}",
+                                    println!(" Progress: {:.1}% - {}",
                                              updated_progress.completion_percentage,
                                              updated_progress.current_phase.as_deref().unwrap_or("Processing"));
 
                                     last_completion = updated_progress.completion_percentage;
 
                                     if updated_progress.completion_percentage >= 100.0 {
-                                        println!("\n🎉 Task completed!");
+                                        println!("\n Task completed!");
                                         break;
                                     }
                                 }
@@ -195,44 +195,44 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         }
 
                         if last_completion < 100.0 {
-                            println!("\n⏳ Task still in progress (monitoring stopped)");
+                            println!("\n Task still in progress (monitoring stopped)");
                         }
                     }
                 } else {
-                    println!("❌ Task not found");
+                    println!(" Task not found");
                 }
             } else {
-                eprintln!("❌ Invalid task ID format");
+                eprintln!(" Invalid task ID format");
                 std::process::exit(1);
             }
         }
 
         Commands::List { .. } => {
-            println!("📋 Recent Tasks:");
+            println!(" Recent Tasks:");
             // In a real implementation, this would list recent tasks
             println!("   (Task listing not implemented in demo)");
         }
 
         Commands::Cancel { task_id } => {
-            println!("🛑 Cancelling task: {}", task_id);
+            println!(" Cancelling task: {}", task_id);
 
             if let Ok(uuid) = uuid::Uuid::parse_str(&task_id) {
                 match autonomous_executor.cancel_task(uuid).await {
-                    Ok(true) => println!("✅ Task cancelled successfully"),
-                    Ok(false) => println!("❌ Task not found or could not be cancelled"),
+                    Ok(true) => println!(" Task cancelled successfully"),
+                    Ok(false) => println!(" Task not found or could not be cancelled"),
                     Err(e) => {
-                        eprintln!("❌ Failed to cancel task: {}", e);
+                        eprintln!(" Failed to cancel task: {}", e);
                         std::process::exit(1);
                     }
                 }
             } else {
-                eprintln!("❌ Invalid task ID format");
+                eprintln!(" Invalid task ID format");
                 std::process::exit(1);
             }
         }
 
         Commands::Logs { .. } => {
-            println!("📄 Task Logs:");
+            println!(" Task Logs:");
             // In a real implementation, this would show logs
             println!("   (Log viewing not implemented in demo)");
         }

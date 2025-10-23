@@ -5,11 +5,11 @@ use std::path::PathBuf;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("🚀 Starting Parallel Worker System Demo");
+    println!(" Starting Parallel Worker System Demo");
 
     // Create a parallel coordinator
     let mut coordinator = new_coordinator();
-    println!("✅ Coordinator created");
+    println!(" Coordinator created");
 
     // Create a simple task that can benefit from parallel execution
     let task = ComplexTask {
@@ -27,30 +27,30 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         estimated_subtasks: Some(4), // Estimate 4 subtasks
     };
 
-    println!("📋 Task created: {}", task.description);
+    println!(" Task created: {}", task.description);
     println!("   - Complexity score: {:.2}", task.complexity_score);
     println!("   - Estimated subtasks: {}", task.estimated_subtasks.unwrap_or(0));
 
     // Execute the task in parallel
-    println!("⚡ Executing task in parallel...");
+    println!(" Executing task in parallel...");
     let start_time = std::time::Instant::now();
 
     match coordinator.execute_parallel(task).await {
         Ok(result) => {
             let duration = start_time.elapsed();
 
-            println!("✅ Task completed successfully!");
-            println!("📊 Results:");
+            println!(" Task completed successfully!");
+            println!(" Results:");
             println!("   - Success: {}", result.success);
             println!("   - Subtasks completed: {}/{}",
                      result.subtasks_completed, result.total_subtasks);
             println!("   - Execution time: {:.2}s", duration.as_secs_f32());
             println!("   - Quality scores: {:?}", result.quality_scores);
 
-            println!("📝 Summary: {}", result.summary);
+            println!(" Summary: {}", result.summary);
 
             // Show worker breakdown
-            println!("👷 Worker Breakdown:");
+            println!(" Worker Breakdown:");
             for breakdown in &result.worker_breakdown {
                 println!("   - {:?}: {:.2}s, {} files, {} lines",
                         breakdown.specialty,
@@ -60,12 +60,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
         Err(e) => {
-            println!("❌ Task execution failed: {:?}", e);
-            println!("💡 This is expected during development - the system is still being implemented");
+            println!(" Task execution failed: {:?}", e);
+            println!(" This is expected during development - the system is still being implemented");
         }
     }
 
-    println!("🏁 Demo complete!");
+    println!(" Demo complete!");
     Ok(())
 }
 

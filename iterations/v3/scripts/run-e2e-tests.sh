@@ -5,7 +5,7 @@
 
 set -e
 
-echo "🚀 Agent Agency V3 - E2E Test Runner"
+echo " Agent Agency V3 - E2E Test Runner"
 echo "═══════════════════════════════════════"
 echo ""
 
@@ -23,7 +23,7 @@ print_status() {
 
 # Function to print success
 print_success() {
-    echo -e "${GREEN}✅ $1${NC}"
+    echo -e "${GREEN} $1${NC}"
 }
 
 # Function to print warning
@@ -33,7 +33,7 @@ print_warning() {
 
 # Function to print error
 print_error() {
-    echo -e "${RED}❌ $1${NC}"
+    echo -e "${RED} $1${NC}"
 }
 
 # Check if we're in the right directory
@@ -149,11 +149,11 @@ Test Environment: $(uname -a)
 SUMMARY
 -------
 
-✅ Build: PASSED
-✅ Unit Tests: PASSED
-✅ Integration Tests: PASSED
-✅ Autonomous Pipeline E2E: COMPLETED (with possible expected failures)
-✅ Performance Benchmarks: COMPLETED
+ Build: PASSED
+ Unit Tests: PASSED
+ Integration Tests: PASSED
+ Autonomous Pipeline E2E: COMPLETED (with possible expected failures)
+ Performance Benchmarks: COMPLETED
 
 DETAILED RESULTS
 ---------------
@@ -183,10 +183,10 @@ EOF
 print_success "Test report generated: $REPORT_FILE"
 
 echo ""
-print_success "🎉 All E2E tests completed!"
+print_success " All E2E tests completed!"
 echo ""
-echo "📊 Test Report: $REPORT_FILE"
-echo "📈 Performance benchmarks ensure system meets production requirements"
-echo "🔍 E2E tests validate complete autonomous pipeline functionality"
+echo " Test Report: $REPORT_FILE"
+echo " Performance benchmarks ensure system meets production requirements"
+echo " E2E tests validate complete autonomous pipeline functionality"
 echo ""
-echo "🚀 Agent Agency V3 is ready for production deployment!"
+echo " Agent Agency V3 is ready for production deployment!"

@@ -15,7 +15,7 @@ NC='\033[0m' # No Color
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$PROJECT_ROOT"
 
-echo -e "${BLUE}🔍 Running comprehensive Rust linting for agent-agency...${NC}"
+echo -e "${BLUE} Running comprehensive Rust linting for agent-agency...${NC}"
 echo ""
 
 # Function to run command and show status
@@ -25,9 +25,9 @@ run_check() {
     
     echo -e "${YELLOW}Running: $name${NC}"
     if eval "$command"; then
-        echo -e "${GREEN}✅ $name passed${NC}"
+        echo -e "${GREEN} $name passed${NC}"
     else
-        echo -e "${RED}❌ $name failed${NC}"
+        echo -e "${RED} $name failed${NC}"
         return 1
     fi
     echo ""
@@ -48,7 +48,7 @@ fi
 
 # 3. Formatting check
 if ! run_check "Formatting check" "cargo fmt --all -- --check"; then
-    echo -e "${YELLOW}💡 Run 'cargo fmt --all' to fix formatting issues${NC}"
+    echo -e "${YELLOW} Run 'cargo fmt --all' to fix formatting issues${NC}"
     OVERALL_SUCCESS=false
 fi
 
@@ -78,9 +78,9 @@ fi
 # Summary
 echo "=========================================="
 if [ "$OVERALL_SUCCESS" = true ]; then
-    echo -e "${GREEN}🎉 All linting checks passed!${NC}"
+    echo -e "${GREEN} All linting checks passed!${NC}"
     exit 0
 else
-    echo -e "${RED}❌ Some linting checks failed. Please fix the issues above.${NC}"
+    echo -e "${RED} Some linting checks failed. Please fix the issues above.${NC}"
     exit 1
 fi

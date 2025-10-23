@@ -20,17 +20,17 @@ async fn main() -> Result<()> {
         .with_max_level(tracing::Level::INFO)
         .init();
 
-    info!("🚀 Agent Agency V3 Complete System Demonstration");
+    info!(" Agent Agency V3 Complete System Demonstration");
     info!("================================================\n");
 
     // Run the complete system demonstration
     match demo_runner::run_complete_demo().await {
         Ok(_) => {
-            info!("\n🎉 Demonstration completed successfully!");
+            info!("\n Demonstration completed successfully!");
             info!("Agent Agency V3 is fully operational and production-ready.");
         }
         Err(e) => {
-            error!("\n❌ Demonstration failed: {}", e);
+            error!("\n Demonstration failed: {}", e);
             return Err(e);
         }
     }

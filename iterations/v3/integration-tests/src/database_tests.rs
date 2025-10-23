@@ -149,7 +149,7 @@ impl DatabaseIntegrationTests {
             return Ok(());
         }
 
-        info!("✅ Database client connectivity established");
+        info!(" Database client connectivity established");
 
         // Test query execution with prepared statements
         let test_query = "SELECT 1 as test_value";
@@ -159,14 +159,14 @@ impl DatabaseIntegrationTests {
         let test_value: i32 = rows[0].try_get("test_value")?;
         assert_eq!(test_value, 1, "Should return the expected test value");
 
-        info!("✅ Database client query execution successful");
+        info!(" Database client query execution successful");
 
         // Test connection pooling metrics
         let metrics = client.get_metrics().await?;
         assert!(metrics.total_connections >= 1, "Should have at least one connection");
         assert!(metrics.active_connections >= 0, "Active connections should be non-negative");
 
-        info!("✅ Database client connection pooling metrics validated");
+        info!(" Database client connection pooling metrics validated");
 
         Ok(())
     }
@@ -188,7 +188,7 @@ impl DatabaseIntegrationTests {
         let connection_stats = health_checker.collect_connection_statistics().await?;
         assert!(connection_stats.total_connections >= 0, "Should have valid connection count");
 
-        info!("✅ Database connection statistics collected");
+        info!(" Database connection statistics collected");
 
         // Test index usage monitoring
         let index_stats = health_checker.collect_index_statistics().await?;
@@ -207,7 +207,7 @@ impl DatabaseIntegrationTests {
         assert!(diagnostics.connection_stats.is_some(), "Should have connection statistics");
         assert!(diagnostics.table_sizes.is_some(), "Should have table size data");
 
-        info!("✅ Database health monitoring comprehensive diagnostics generated");
+        info!(" Database health monitoring comprehensive diagnostics generated");
 
         Ok(())
     }
@@ -234,7 +234,7 @@ impl DatabaseIntegrationTests {
             assert!(is_valid, "Migration {} should be valid", migration.name);
         }
 
-        info!("✅ Database migration validation successful");
+        info!(" Database migration validation successful");
 
         // Test migration planning
         let migration_plan = migration_manager.create_migration_plan(&pending_migrations).await?;
@@ -252,7 +252,7 @@ impl DatabaseIntegrationTests {
         let success_rate = migration_manager.calculate_migration_success_rate().await?;
         assert!(success_rate >= 0.0 && success_rate <= 1.0, "Success rate should be between 0 and 1");
 
-        info!("✅ Database migration management comprehensive testing completed");
+        info!(" Database migration management comprehensive testing completed");
 
         Ok(())
     }
@@ -291,7 +291,7 @@ impl DatabaseIntegrationTests {
             assert!(result >= 0 && result < 5, "Should return valid test ID");
         }
 
-        info!("✅ Concurrent database operations completed successfully");
+        info!(" Concurrent database operations completed successfully");
 
         // Check connection pool metrics after concurrent operations
         let final_metrics = client.get_metrics().await?;
@@ -300,7 +300,7 @@ impl DatabaseIntegrationTests {
         // Connection pool should handle concurrent load without issues
         assert!(final_connections >= initial_connections, "Connection pool should maintain or grow");
 
-        info!("✅ Database connection pooling stress test passed");
+        info!(" Database connection pooling stress test passed");
 
         Ok(())
     }
@@ -328,7 +328,7 @@ impl DatabaseIntegrationTests {
         let rows = recovery_result?;
         assert_eq!(rows.len(), 1, "Should return one row after recovery");
 
-        info!("✅ Database error handling and recovery successful");
+        info!(" Database error handling and recovery successful");
 
         // Test transaction rollback on error
         let transaction_result = client.execute_transaction(|tx| {
@@ -348,7 +348,7 @@ impl DatabaseIntegrationTests {
         let check_result = client.query(check_query, &[]).await?;
         assert_eq!(check_result.len(), 1, "Database should be in clean state after rollback");
 
-        info!("✅ Database transaction rollback successful");
+        info!(" Database transaction rollback successful");
 
         Ok(())
     }
@@ -370,7 +370,7 @@ impl DatabaseIntegrationTests {
         let single_query_time = start_time.elapsed();
 
         assert_eq!(rows.len(), 100, "Should return 100 rows");
-        info!("✅ Single query performance: {:?}", single_query_time);
+        info!(" Single query performance: {:?}", single_query_time);
 
         // Test concurrent load performance
         let concurrent_queries = 10;
@@ -405,7 +405,7 @@ impl DatabaseIntegrationTests {
         let average_duration = total_duration / concurrent_queries as u32;
         let total_load_time = load_start_time.elapsed();
 
-        info!("✅ Concurrent load test completed:");
+        info!(" Concurrent load test completed:");
         info!("   - Total rows processed: {}", total_rows);
         info!("   - Average query time: {:?}", average_duration);
         info!("   - Total load time: {:?}", total_load_time);
@@ -417,7 +417,7 @@ impl DatabaseIntegrationTests {
         assert!(average_duration < std::time::Duration::from_millis(200),
             "Average concurrent query should complete within 200ms, took {:?}", average_duration);
 
-        info!("✅ Database performance under load meets requirements");
+        info!(" Database performance under load meets requirements");
 
         Ok(())
     }

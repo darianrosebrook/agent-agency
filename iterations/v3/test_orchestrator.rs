@@ -26,14 +26,14 @@ async fn test_orchestrator_routes_task_to_worker() {
 
     match result {
         Ok(task_result) => {
-            println!("✅ Orchestrator successfully routed task to worker");
+            println!(" Orchestrator successfully routed task to worker");
             println!("   Task ID: {}", task_result.working_spec.id);
             println!("   Worker ID: {}", task_result.artifacts.worker_id);
             println!("   Execution Output: {}", task_result.artifacts.execution_output);
             assert!(!task_result.artifacts.execution_output.is_empty());
         }
         Err(e) => {
-            println!("❌ Orchestrator failed to route task: {}", e);
+            println!(" Orchestrator failed to route task: {}", e);
             // This might fail if no worker is running, which is expected in CI
             // For manual testing, ensure a worker is running first
             println!("Note: This test requires a worker running on localhost:8081");

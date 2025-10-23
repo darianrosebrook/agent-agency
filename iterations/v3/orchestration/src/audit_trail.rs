@@ -794,7 +794,7 @@ mod auditors {
             }
 
             if self.config.log_level != AuditLogLevel::Minimal {
-                println!("📁 FILE AUDIT: {} {} {:?}", event.operation, event.target.as_deref().unwrap_or(""), event.result);
+                println!(" FILE AUDIT: {} {} {:?}", event.operation, event.target.as_deref().unwrap_or(""), event.result);
             }
 
             Ok(())
@@ -934,12 +934,12 @@ mod auditors {
 
             if self.config.log_level != AuditLogLevel::Minimal {
                 let status = match &event.result {
-                    AuditResult::Success { .. } => "✅",
-                    AuditResult::Failure { .. } => "❌",
-                    AuditResult::InProgress => "⏳",
-                    AuditResult::Cancelled => "🚫",
+                    AuditResult::Success { .. } => "",
+                    AuditResult::Failure { .. } => "",
+                    AuditResult::InProgress => "",
+                    AuditResult::Cancelled => "",
                 };
-                println!("💻 TERMINAL: {} {} ({}ms)",
+                println!(" TERMINAL: {} {} ({}ms)",
                     status,
                     event.target.as_deref().unwrap_or(""),
                     event.performance.as_ref().map(|p| p.duration.as_millis()).unwrap_or(0)
@@ -1168,7 +1168,7 @@ mod auditors {
             *stats.events_by_category.entry(event.category.clone()).or_insert(0) += 1;
 
             if self.config.log_level == AuditLogLevel::Detailed || self.config.log_level == AuditLogLevel::Debug {
-                println!("🧠 THINKING: {} {} (confidence: {:.2})",
+                println!(" THINKING: {} {} (confidence: {:.2})",
                     event.operation,
                     event.target.as_deref().unwrap_or(""),
                     event.parameters.get("confidence").and_then(|v| v.as_f64()).unwrap_or(0.0)
@@ -1248,8 +1248,8 @@ mod auditors {
                     .and_then(|v| v.as_u64()).unwrap_or(0);
                 let success = event.parameters.get("success")
                     .and_then(|v| v.as_bool()).unwrap_or(false);
-                let status = if success { "✅" } else { "❌" };
-                println!("⚡ PERFORMANCE: {} {} - {}ms", status, event.target.as_deref().unwrap_or(""), duration_ms);
+                let status = if success { "" } else { "" };
+                println!(" PERFORMANCE: {} {} - {}ms", status, event.target.as_deref().unwrap_or(""), duration_ms);
             }
 
             Ok(())
@@ -1358,8 +1358,8 @@ mod auditors {
             if self.config.log_level != AuditLogLevel::Minimal {
                 let strategy = event.parameters.get("recovery_strategy").and_then(|v| v.as_str()).unwrap_or("");
                 let success = event.parameters.get("success").and_then(|v| v.as_bool()).unwrap_or(false);
-                let status = if success { "✅" } else { "❌" };
-                println!("🔄 RECOVERY: {} {} - {}", status, event.target.as_deref().unwrap_or(""), strategy);
+                let status = if success { "" } else { "" };
+                println!(" RECOVERY: {} {} - {}", status, event.target.as_deref().unwrap_or(""), strategy);
             }
 
             Ok(())
@@ -1456,7 +1456,7 @@ mod auditors {
             *stats.events_by_category.entry(event.category.clone()).or_insert(0) += 1;
 
             if self.config.log_level != AuditLogLevel::Minimal {
-                println!("🎓 LEARNING: {} {} - {}",
+                println!(" LEARNING: {} {} - {}",
                     event.operation,
                     event.target.as_deref().unwrap_or(""),
                     event.parameters.get("impact").or_else(|| event.parameters.get("expected_improvement")).and_then(|v| v.as_str()).unwrap_or("")

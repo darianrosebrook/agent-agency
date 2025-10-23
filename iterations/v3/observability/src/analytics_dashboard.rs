@@ -26,6 +26,24 @@ use std::net::UdpSocket;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
+/// CPU statistics for system monitoring
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CpuStatistics {
+    pub average_usage: f64,
+    pub peak_usage: f64,
+    pub min_usage: f64,
+    pub trend_slope: f64,
+    pub volatility: f64,
+}
+
+/// CPU measurement data point
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CpuMeasurement {
+    pub timestamp: DateTime<Utc>,
+    pub usage: f64,
+    pub core_id: Option<u32>,
+}
+
 /// Analytics-specific errors
 #[derive(Debug, thiserror::Error)]
 pub enum AnalyticsError {
@@ -145,7 +163,6 @@ impl RedisConfig {
 }
 
 /// Production Redis client implementation with connection pooling and monitoring
-#[derive(Debug)]
 struct ProductionRedisClient {
     client: redis::Client,
     config: RedisConfig,
@@ -236,7 +253,7 @@ impl ProductionRedisClient {
 #[async_trait::async_trait]
 impl RedisClient for ProductionRedisClient {
     async fn get(&self, key: &str) -> Result<Option<Vec<u8>>> {
-        let conn = self.get_connection().await?;
+        let mut conn = self.get_connection().await?;
         let result = conn.get::<_, Option<Vec<u8>>>(key).await;
         self.return_connection(conn).await;
 
@@ -247,7 +264,7 @@ impl RedisClient for ProductionRedisClient {
     }
 
     async fn set(&self, key: &str, value: &[u8], ttl_seconds: u64) -> Result<()> {
-        let conn = self.get_connection().await?;
+        let mut conn = self.get_connection().await?;
         let result = conn.set_ex::<_, _, ()>(key, value, ttl_seconds).await;
         self.return_connection(conn).await;
 
@@ -258,7 +275,7 @@ impl RedisClient for ProductionRedisClient {
     }
 
     async fn del(&self, key: &str) -> Result<()> {
-        let conn = self.get_connection().await?;
+        let mut conn = self.get_connection().await?;
         let result = conn.del::<_, ()>(key).await;
         self.return_connection(conn).await;
 
@@ -269,7 +286,7 @@ impl RedisClient for ProductionRedisClient {
     }
 
     async fn exists(&self, key: &str) -> Result<bool> {
-        let conn = self.get_connection().await?;
+        let mut conn = self.get_connection().await?;
         let result = conn.exists::<_, bool>(key).await;
         self.return_connection(conn).await;
 
@@ -280,7 +297,7 @@ impl RedisClient for ProductionRedisClient {
     }
 
     async fn incr(&self, key: &str) -> Result<i64> {
-        let conn = self.get_connection().await?;
+        let mut conn = self.get_connection().await?;
         let result = conn.incr::<_, _, i64>(key, 1).await;
         self.return_connection(conn).await;
 
@@ -291,7 +308,7 @@ impl RedisClient for ProductionRedisClient {
     }
 
     async fn incr_by(&self, key: &str, increment: i64) -> Result<i64> {
-        let conn = self.get_connection().await?;
+        let mut conn = self.get_connection().await?;
         let result = conn.incr::<_, _, i64>(key, increment).await;
         self.return_connection(conn).await;
 
@@ -302,7 +319,7 @@ impl RedisClient for ProductionRedisClient {
     }
 
     async fn expire(&self, key: &str, seconds: u64) -> Result<bool> {
-        let conn = self.get_connection().await?;
+        let mut conn = self.get_connection().await?;
         let result = conn.expire::<_, bool>(key, seconds as i64).await;
         self.return_connection(conn).await;
 
@@ -688,7 +705,17 @@ impl AnalyticsDashboard {
         config: AnalyticsDashboardConfig,
         redis_url: &str,
     ) -> Result<Self> {
-        let redis_client = Some(Arc::new(ProductionRedisClient::new(redis_url).await?) as Arc<dyn RedisClient + Send + Sync>);
+        let redis_config = RedisConfig {
+            url: redis_url.to_string(),
+            pool_size: 10,
+            connection_timeout_seconds: 5,
+            command_timeout_seconds: 3,
+            tls_enabled: redis_url.starts_with("rediss://"),
+            username: None,
+            password: None,
+            database: None,
+        };
+        let redis_client = Some(Arc::new(ProductionRedisClient::new(redis_config).await?) as Arc<dyn RedisClient + Send + Sync>);
 
         Ok(Self {
             analytics_engine,
@@ -714,7 +741,17 @@ impl AnalyticsDashboard {
         db_client: DatabaseClient,
         redis_url: &str,
     ) -> Result<Self> {
-        let redis_client = Some(Arc::new(ProductionRedisClient::new(redis_url).await?) as Arc<dyn RedisClient + Send + Sync>);
+        let redis_config = RedisConfig {
+            url: redis_url.to_string(),
+            pool_size: 10,
+            connection_timeout_seconds: 5,
+            command_timeout_seconds: 3,
+            tls_enabled: redis_url.starts_with("rediss://"),
+            username: None,
+            password: None,
+            database: None,
+        };
+        let redis_client = Some(Arc::new(ProductionRedisClient::new(redis_config).await?) as Arc<dyn RedisClient + Send + Sync>);
 
         Ok(Self {
             analytics_engine,
@@ -775,6 +812,7 @@ impl AnalyticsDashboard {
     /// Start the analytics dashboard
     pub async fn start(&self) -> Result<()> {
         let dashboard = self.clone();
+        let dashboard_for_cleanup = dashboard.clone();
 
         // Start analytics update task
         let config = self.config.clone();
@@ -787,7 +825,7 @@ impl AnalyticsDashboard {
                 interval.tick().await;
 
                 // Update analytics insights with current system state
-                if let Err(e) = self.update_analytics_insights().await {
+                if let Err(e) = dashboard.update_analytics_insights().await {
                     tracing::warn!("Failed to update analytics insights: {}", e);
                 } else {
                     tracing::debug!("Analytics insights updated successfully");
@@ -796,6 +834,7 @@ impl AnalyticsDashboard {
         });
 
         // Start session cleanup task
+        let dashboard_arc = Arc::new(dashboard_for_cleanup);
         let dashboard_clone = Arc::downgrade(&dashboard_arc);
         tokio::spawn(async move {
             let mut interval = tokio::time::interval(std::time::Duration::from_secs(300)); // 5 minutes
@@ -2242,7 +2281,7 @@ impl AnalyticsDashboard {
             });
         }
 
-        let usages: Vec<f64> = measurements.iter().map(|m| m.cpu_usage).collect();
+        let usages: Vec<f64> = measurements.iter().map(|m| m.usage).collect();
 
         let average_usage = usages.iter().sum::<f64>() / usages.len() as f64;
         let peak_usage = usages.iter().fold(0.0f64, |a, &b| a.max(b));
@@ -2292,10 +2331,10 @@ impl AnalyticsDashboard {
 
         let n = measurements.len() as f64;
         let timestamps: Vec<f64> = measurements.iter()
-            .map(|m| m.timestamp as f64)
+            .map(|m| m.timestamp.timestamp() as f64)
             .collect();
         let usages: Vec<f64> = measurements.iter()
-            .map(|m| m.cpu_usage)
+            .map(|m| m.usage)
             .collect();
 
         let timestamp_mean = timestamps.iter().sum::<f64>() / n;
@@ -3485,15 +3524,6 @@ struct CpuMeasurement {
     timestamp: i64,
 }
 
-/// CPU usage statistics
-#[derive(Debug, Clone)]
-struct CpuStatistics {
-    average_usage: f64,
-    peak_usage: f64,
-    min_usage: f64,
-    trend_slope: f64,
-    volatility: f64,
-}
 
     #[tokio::test]
     async fn test_database_integration_analytics_dashboard_operations() {

@@ -15,7 +15,7 @@ NC='\033[0m' # No Color
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$PROJECT_ROOT"
 
-echo -e "${BLUE}🔧 Running auto-fix for common Rust issues...${NC}"
+echo -e "${BLUE} Running auto-fix for common Rust issues...${NC}"
 echo ""
 
 # Function to run command and show status
@@ -25,9 +25,9 @@ run_fix() {
     
     echo -e "${YELLOW}Running: $name${NC}"
     if eval "$command"; then
-        echo -e "${GREEN}✅ $name completed${NC}"
+        echo -e "${GREEN} $name completed${NC}"
     else
-        echo -e "${RED}❌ $name failed${NC}"
+        echo -e "${RED} $name failed${NC}"
         return 1
     fi
     echo ""
@@ -49,5 +49,5 @@ if ! run_fix "Clean unused imports" "cargo +nightly fix --workspace --allow-dirt
     echo -e "${YELLOW}⚠️  Could not clean unused imports (nightly toolchain required)${NC}"
 fi
 
-echo -e "${GREEN}🎉 Auto-fix completed!${NC}"
-echo -e "${YELLOW}💡 Run './scripts/lint.sh' to check remaining issues${NC}"
+echo -e "${GREEN} Auto-fix completed!${NC}"
+echo -e "${YELLOW} Run './scripts/lint.sh' to check remaining issues${NC}"

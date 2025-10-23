@@ -106,7 +106,7 @@ async fn test_full_autonomous_pipeline_execution() {
     assert!(!exec_result.files_changed.is_empty(),
             "Execution should modify files");
 
-    println!("✅ Full autonomous pipeline test completed successfully");
+    println!(" Full autonomous pipeline test completed successfully");
 }
 
 /// Test arbiter adjudication with claim verification
@@ -156,7 +156,7 @@ async fn test_arbiter_adjudication_with_claims() {
     assert!(debate_result.evidence_manifest.caws_compliance_score >= 0.0,
             "CAWS compliance should be calculated");
 
-    println!("✅ Arbiter adjudication with claims test passed");
+    println!(" Arbiter adjudication with claims test passed");
 }
 
 /// Test self-prompting loop with file operations and rollback
@@ -213,7 +213,7 @@ async fn test_self_prompting_with_file_operations() {
                 "Multiple changesets should exist if rollback occurred");
     }
 
-    println!("✅ Self-prompting with file operations test passed");
+    println!(" Self-prompting with file operations test passed");
 }
 
 /// Test claim extraction across different modalities
@@ -294,7 +294,7 @@ async fn test_multi_modal_claim_extraction() {
     assert!(doc_claims.is_ok(), "Documentation claim extraction should succeed");
     assert!(!doc_claims.unwrap().is_empty(), "Documentation claims should be extracted");
 
-    println!("✅ Multi-modal claim extraction test passed");
+    println!(" Multi-modal claim extraction test passed");
 }
 
 /// Test CLI intervention controls
@@ -329,7 +329,7 @@ async fn test_cli_intervention_controls() {
 
     assert!(result.is_ok(), "CLI dry-run mode should execute successfully");
 
-    println!("✅ CLI intervention controls test passed");
+    println!(" CLI intervention controls test passed");
 }
 
 /// Test performance under load
@@ -379,7 +379,7 @@ async fn test_performance_under_load() {
     assert!(duration < Duration::from_secs(30),
             "Concurrent execution should complete within 30 seconds, took {:?}", duration);
 
-    println!("✅ Performance under load test passed ({:?})", duration);
+    println!(" Performance under load test passed ({:?})", duration);
 }
 
 /// Test error recovery and rollback
@@ -433,7 +433,7 @@ async fn test_error_recovery_and_rollback() {
         }
     }
 
-    println!("✅ Error recovery and rollback test completed");
+    println!(" Error recovery and rollback test completed");
 }
 
 // Helper functions and mocks

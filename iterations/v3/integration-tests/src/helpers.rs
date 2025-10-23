@@ -196,7 +196,7 @@ impl TestEnvironmentUtils {
             }
         }
 
-        info!("✅ Test environment check completed");
+        info!(" Test environment check completed");
         Ok(())
     }
 
@@ -208,7 +208,7 @@ impl TestEnvironmentUtils {
         Self::remove_test_files().await?;
         Self::reset_external_services().await?;
 
-        info!("✅ Test environment cleanup completed");
+        info!(" Test environment cleanup completed");
         Ok(())
     }
 
@@ -220,7 +220,7 @@ impl TestEnvironmentUtils {
         Self::create_test_directories().await?;
         Self::start_external_services().await?;
 
-        info!("✅ Test environment setup completed");
+        info!(" Test environment setup completed");
         Ok(())
     }
 

@@ -473,6 +473,7 @@ pub enum VerificationStatus {
     Refuted,
     Pending,
     Unverified,
+    PartiallyVerified,
     Error(String),
 }
 

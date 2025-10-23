@@ -305,10 +305,10 @@ jobs:
             job_name="${job%%:*}"
             display_name="${job##*:}"
 
-            if [ "${{ needs.$job_name.result }}" = "success" ]; then
-              echo "✅ $display_name: PASSED" >> $GITHUB_STEP_SUMMARY
+            if [ "${{ needs[\"$job_name\"][\"result\"] }}" = "success" ]; then
+              echo " $display_name: PASSED" >> $GITHUB_STEP_SUMMARY
             else
-              echo "❌ $display_name: FAILED" >> $GITHUB_STEP_SUMMARY
+              echo " $display_name: FAILED" >> $GITHUB_STEP_SUMMARY
               all_passed=false
             fi
           done
@@ -316,10 +316,10 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
 
           if [ "$all_passed" = true ]; then
-            echo "## 🎉 All Tests Passed!" >> $GITHUB_STEP_SUMMARY
+            echo "##  All Tests Passed!" >> $GITHUB_STEP_SUMMARY
             echo "Self-governing agent system is ready for deployment." >> $GITHUB_STEP_SUMMARY
           else
-            echo "## ⚠️ Some Tests Failed" >> $GITHUB_STEP_SUMMARY
+            echo "##  Some Tests Failed" >> $GITHUB_STEP_SUMMARY
             echo "Please review the failed tests and fix issues before deployment." >> $GITHUB_STEP_SUMMARY
             exit 1
           fi

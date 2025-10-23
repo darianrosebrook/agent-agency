@@ -10,7 +10,7 @@ use super::*;
 use std::hash::{Hash, Hasher};
 use std::collections::hash_map::DefaultHasher;
 use std::collections::{HashMap, HashSet};
-use sqlparser::ast::{Query, Statement, TableWithJoins, TableFactor};
+use sqlparser::ast::{Query, Statement, TableWithJoins, TableFactor, SetExpr};
 use sqlparser::dialect::GenericDialect;
 use sqlparser::parser::Parser;
 use once_cell::sync::Lazy;
@@ -386,16 +386,13 @@ where
 
     /// Extract tables from SELECT queries (handles JOINs, subqueries, etc.)
     fn extract_tables_from_query(&self, query: &Query, tables: &mut HashSet<String>, complexity: &mut u8) {
-        if let Some(with) = &query.with {
-            // Handle CTEs (Common Table Expressions)
-            *complexity += 10;
-            for cte in &with.cte_tables {
-                self.extract_tables_from_query(&cte.query, tables, complexity);
-            }
-        }
-
         let body = &query.body;
-        match &**body {
+        self.extract_tables_from_set_expr(body, tables, complexity);
+    }
+
+    /// Extract tables from SetExpr (handles SELECT, UNION, etc.)
+    fn extract_tables_from_set_expr(&self, set_expr: &SetExpr, tables: &mut HashSet<String>, complexity: &mut u8) {
+        match set_expr {
                 sqlparser::ast::SetExpr::Select(select) => {
                     // FROM clause
                     for table_with_joins in &select.from {

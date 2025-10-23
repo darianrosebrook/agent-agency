@@ -3427,7 +3427,7 @@ mod tests {
 
         async fn execute(&self, query: &str, params: &[&(dyn sqlx::Type<sqlx::Postgres> + Sync)]) -> Result<u64, sqlx::Error> {
             // Simple mock that simulates successful execution
-            println!("🔧 Mock executing query: {}", query);
+            println!(" Mock executing query: {}", query);
             Ok(1)
         }
 

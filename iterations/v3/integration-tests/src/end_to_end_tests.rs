@@ -176,7 +176,7 @@ impl EndToEndIntegrationTests {
             "Claim verification should have high confidence, got: {}",
             verification_result.confidence_score);
 
-        info!("✅ Claim verification completed with confidence: {:.2}",
+        info!(" Claim verification completed with confidence: {:.2}",
               verification_result.confidence_score);
 
         // 2. Evidence Collection: Gather supporting evidence
@@ -190,7 +190,7 @@ impl EndToEndIntegrationTests {
         assert!(evidence.iter().any(|e| e.confidence > 0.5),
             "Should have at least one piece of strong evidence");
 
-        info!("✅ Collected {} pieces of evidence", evidence.len());
+        info!(" Collected {} pieces of evidence", evidence.len());
 
         // 3. Intelligent Edge Case Testing: Generate and run edge case tests
         debug!("Step 3: Edge case testing");
@@ -210,7 +210,7 @@ impl EndToEndIntegrationTests {
         let passed_tests = test_results.iter().filter(|r| r.success).count();
         let pass_rate = passed_tests as f64 / test_results.len() as f64;
 
-        info!("✅ Edge case testing: {}/{} tests passed ({:.1}%)",
+        info!(" Edge case testing: {}/{} tests passed ({:.1}%)",
               passed_tests, test_results.len(), pass_rate * 100.0);
 
         // 4. Council Arbitration: Evaluate the verification results
@@ -238,7 +238,7 @@ impl EndToEndIntegrationTests {
             "Council should reach confident decision, got: {}",
             arbitration_result.final_decision.confidence);
 
-        info!("✅ Council arbitration completed with confidence: {:.2}",
+        info!(" Council arbitration completed with confidence: {:.2}",
               arbitration_result.final_decision.confidence);
 
         // 5. Predictive Learning: Learn from this verification pattern
@@ -257,7 +257,7 @@ impl EndToEndIntegrationTests {
         assert!(prediction.confidence > 0.5,
             "Should be confident in prediction for similar claim");
 
-        info!("✅ Predictive learning: predicted outcome confidence {:.2}",
+        info!(" Predictive learning: predicted outcome confidence {:.2}",
               prediction.confidence);
 
         // 6. ANE Integration: If ANE is available, use it for advanced analysis
@@ -279,7 +279,7 @@ impl EndToEndIntegrationTests {
             assert!(inference_result.inference_time_ms > 0,
                 "Should record inference time");
 
-            info!("✅ ANE inference completed: {} tokens generated in {}ms",
+            info!(" ANE inference completed: {} tokens generated in {}ms",
                   inference_result.tokens_generated,
                   inference_result.inference_time_ms);
         } else {
@@ -304,8 +304,8 @@ impl EndToEndIntegrationTests {
         assert!(evidence_supports_claim,
             "Should have strong evidence supporting the claim verification");
 
-        info!("✅ Complete workflow validation successful");
-        info!("📊 Integration test summary:");
+        info!(" Complete workflow validation successful");
+        info!(" Integration test summary:");
         info!("   - Multi-modal verification: {:.2} confidence", verification_result.confidence_score);
         info!("   - Evidence collected: {}", evidence.len());
         info!("   - Edge case tests: {}/{} passed", passed_tests, test_results.len());
@@ -373,7 +373,7 @@ impl EndToEndIntegrationTests {
         // assert!(tenant_events.len() > 0);
         // assert!(tenant_events.iter().all(|e| e.tenant_id == "tenant-001"));
 
-        info!("✅ Multi-tenant scenario test completed");
+        info!(" Multi-tenant scenario test completed");
         Ok(())
     }
 
@@ -410,7 +410,7 @@ impl EndToEndIntegrationTests {
         // let degradation_result = system.test_graceful_degradation().await?;
         // assert!(degradation_result.degraded_gracefully);
 
-        info!("✅ System resilience test completed");
+        info!(" System resilience test completed");
         Ok(())
     }
 
@@ -475,7 +475,7 @@ impl EndToEndIntegrationTests {
         // assert!(*avg_response_time <= 5000.0); // Maximum 5 seconds average response time
 
         info!(
-            "✅ Performance under load test completed in {:?}",
+            " Performance under load test completed in {:?}",
             total_duration
         );
         Ok(())
@@ -519,9 +519,9 @@ impl EndToEndIntegrationTests {
         debug!("   - Saving worker output");
         
         let storage_results = [
-            ("working_spec", "✅ Stored"),
-            ("task_context", "✅ Stored"),
-            ("worker_output", "✅ Stored"),
+            ("working_spec", " Stored"),
+            ("task_context", " Stored"),
+            ("worker_output", " Stored"),
         ];
         
         for (data_type, result) in &storage_results {
@@ -581,9 +581,9 @@ impl EndToEndIntegrationTests {
         debug!("   - Invalid scope (empty in/out)");
         
         let validation_errors = [
-            ("title_validation", "❌ Failed - empty title"),
-            ("risk_tier_validation", "❌ Failed - out of range"),
-            ("scope_validation", "❌ Failed - empty scope"),
+            ("title_validation", " Failed - empty title"),
+            ("risk_tier_validation", " Failed - out of range"),
+            ("scope_validation", " Failed - empty scope"),
         ];
         
         debug!("Validation results:");

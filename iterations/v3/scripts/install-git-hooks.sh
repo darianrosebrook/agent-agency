@@ -8,7 +8,7 @@ set -e
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 HOOKS_DIR="$PROJECT_ROOT/.git/hooks"
 
-echo "🔧 Installing CAWS Git Hooks..."
+echo " Installing CAWS Git Hooks..."
 echo "   Project root: $PROJECT_ROOT"
 echo "   Hooks directory: $HOOKS_DIR"
 
@@ -32,7 +32,7 @@ if [ ! -d "$PROJECT_ROOT/.caws" ]; then
     exit 0
 fi
 
-echo "🔍 Checking for AI-assisted changes..."
+echo " Checking for AI-assisted changes..."
 
 # Check if any staged files contain AI-assisted markers
 HAS_AI_CHANGES=false
@@ -40,7 +40,7 @@ HAS_AI_CHANGES=false
 # Check for Cursor AI markers in staged files
 if git diff --cached --name-only | xargs -I {} sh -c '
     if git show ":{}" | grep -q "AI-assisted\|Cursor\|GitHub Copilot\|Claude\|GPT\|AI-generated"; then
-        echo "🤖 Found AI-assisted content in: {}"
+        echo " Found AI-assisted content in: {}"
         HAS_AI_CHANGES=true
         exit 1
     fi
@@ -53,7 +53,7 @@ COMMIT_MSG_FILE="$1"
 if [ -n "$COMMIT_MSG_FILE" ] && [ -f "$COMMIT_MSG_FILE" ]; then
     if grep -q "AI-assisted\|Cursor\|GitHub Copilot\|Claude\|GPT\|AI-generated" "$COMMIT_MSG_FILE"; then
         HAS_AI_CHANGES=true
-        echo "🤖 Commit message indicates AI assistance"
+        echo " Commit message indicates AI assistance"
     fi
 fi
 
@@ -71,7 +71,7 @@ if [ "$HAS_AI_CHANGES" = true ]; then
     exit 1
 fi
 
-echo "✅ Pre-commit checks passed"
+echo " Pre-commit checks passed"
 EOF
 
 chmod +x "$HOOKS_DIR/pre-commit"
@@ -93,7 +93,7 @@ if [ ! -d "$PROJECT_ROOT/.caws" ]; then
     exit 0
 fi
 
-echo "📝 Validating commit message..."
+echo " Validating commit message..."
 
 # Read the commit message
 COMMIT_MSG="$(cat "$COMMIT_MSG_FILE")"
@@ -140,10 +140,10 @@ if echo "$COMMIT_MSG" | grep -q "^Provenance:"; then
         exit 1
     fi
 
-    echo "✅ Provenance trailer validated: $TRAILER_VALUE"
+    echo " Provenance trailer validated: $TRAILER_VALUE"
 fi
 
-echo "✅ Commit message validation passed"
+echo " Commit message validation passed"
 EOF
 
 chmod +x "$HOOKS_DIR/commit-msg"
@@ -168,7 +168,7 @@ fi
 COMMIT_HASH=$(git rev-parse HEAD)
 COMMIT_MSG=$(git log -1 --pretty=%B)
 
-echo "📊 Recording commit provenance..."
+echo " Recording commit provenance..."
 
 # Check if commit has provenance trailer
 if echo "$COMMIT_MSG" | grep -q "^Provenance:"; then
@@ -187,14 +187,14 @@ if echo "$COMMIT_MSG" | grep -q "^Provenance:"; then
                 data.commitHash = '$COMMIT_HASH';
                 data.trailer = 'Provenance: $TRAILER_VALUE';
                 fs.writeFileSync(provenancePath, JSON.stringify(data, null, 2));
-                console.log('✅ Provenance record updated with commit hash');
+                console.log(' Provenance record updated with commit hash');
             } catch (err) {
                 console.error('⚠️  Failed to update provenance record:', err.message);
             }
         "
     fi
 
-    echo "✅ Commit $COMMIT_HASH linked to provenance $TRAILER_VALUE"
+    echo " Commit $COMMIT_HASH linked to provenance $TRAILER_VALUE"
 else
     echo "ℹ️  No provenance trailer found in commit"
 fi
@@ -202,7 +202,7 @@ EOF
 
 chmod +x "$HOOKS_DIR/post-commit"
 
-echo "✅ CAWS Git hooks installed successfully!"
+echo " CAWS Git hooks installed successfully!"
 echo ""
 echo "Installed hooks:"
 echo "  - pre-commit: Checks for AI-assisted changes"
@@ -211,7 +211,7 @@ echo "  - post-commit: Records commit-provenance linkage"
 echo ""
 echo "To uninstall hooks, remove files from .git/hooks/"
 echo ""
-echo "🎯 Next steps:"
+echo " Next steps:"
 echo "  1. Configure your CAWS project: node apps/tools/caws/cli.js init"
 echo "  2. Generate provenance: node apps/tools/caws/provenance.js generate"
 echo "  3. Make AI-assisted commits with proper attribution"

@@ -233,7 +233,7 @@ change_budget_max_loc: 300
         assert!(spec.estimated_effort_hours > 0.0, "Spec should have effort estimate");
         assert!(!spec.context_hash.is_empty(), "Spec should have context hash");
 
-        println!("✅ Planning workflow completed successfully");
+        println!(" Planning workflow completed successfully");
         println!("   Spec ID: {}", spec.id);
         println!("   Title: {}", spec.title);
         println!("   Risk Tier: {}", spec.risk_tier);
@@ -341,6 +341,6 @@ change_budget_max_loc: 300
         assert_eq!(response.task_id, response_deserialized.task_id);
         assert!(matches!(response.status, TaskStatus::SpecReady));
 
-        println!("✅ Type system integration test passed");
+        println!(" Type system integration test passed");
     }
 }

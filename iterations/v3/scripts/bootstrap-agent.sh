@@ -20,9 +20,9 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 log_info() { echo -e "${BLUE}ℹ️  $1${NC}"; }
-log_success() { echo -e "${GREEN}✅ $1${NC}"; }
+log_success() { echo -e "${GREEN} $1${NC}"; }
 log_warning() { echo -e "${YELLOW}⚠️  $1${NC}"; }
-log_error() { echo -e "${RED}❌ $1${NC}"; }
+log_error() { echo -e "${RED} $1${NC}"; }
 
 if [[ "$VERBOSE" == "true" ]]; then
     log_info "Starting agent bootstrap for ID: $AGENT_ID (type: $AGENT_TYPE)"
@@ -266,14 +266,14 @@ export_environment() {
 
     if [[ "$VERBOSE" == "true" ]]; then
         echo ""
-        echo "🔧 Environment variables set:"
+        echo " Environment variables set:"
         env | grep -E '^(CARGO_|PYTHON_|NODE_|TURBO_|PNPM_|SCCACHE_|COMPILE_|LINK_|TEST_|FILE_|BUILD_|AGENT_)' | sort
     fi
 }
 
 # Main execution
 main() {
-    log_info "🚀 Bootstrapping agent: $AGENT_ID"
+    log_info " Bootstrapping agent: $AGENT_ID"
 
     # Compute namespace first
     BUILD_NAMESPACE="$(compute_namespace)"
@@ -292,12 +292,12 @@ main() {
     # Verification
     if [[ "$VERBOSE" == "true" ]]; then
         echo ""
-        echo "🔍 Verification:"
+        echo " Verification:"
         echo "  Namespace deterministic: $(compute_namespace | grep -c "$BUILD_NAMESPACE" || echo "false")"
         echo "  Cache dirs exist: $(find . -maxdepth 1 -name ".target" -o -name ".cache" -o -name ".venv" | wc -l)"
     fi
 
-    log_success "Agent $AGENT_ID is ready for concurrent work! 🎉"
+    log_success "Agent $AGENT_ID is ready for concurrent work! "
 }
 
 # Run main function

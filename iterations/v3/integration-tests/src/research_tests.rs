@@ -157,7 +157,7 @@ impl ResearchIntegrationTests {
         let events = self.mock_events.get_events().await;
         // assert!(events.iter().any(|e| e.event_type == "knowledge_searched"));
 
-        info!("✅ Knowledge seeking test completed");
+        info!(" Knowledge seeking test completed");
         Ok(())
     }
 
@@ -238,7 +238,7 @@ impl ResearchIntegrationTests {
         debug!("Key findings: {:?}", synthesized_context.key_findings);
         debug!("Cross-references found: {}", synthesized_context.cross_references.len());
 
-        info!("✅ Context synthesis test completed");
+        info!(" Context synthesis test completed");
         Ok(())
     }
 
@@ -309,7 +309,7 @@ impl ResearchIntegrationTests {
             debug!("Cross-reference {}: strength={:.3}, context='{}'", i, cross_ref.strength, cross_ref.context);
         }
 
-        info!("✅ Cross-reference detection test completed");
+        info!(" Cross-reference detection test completed");
         Ok(())
     }
 
@@ -373,7 +373,7 @@ impl ResearchIntegrationTests {
         debug!("Scraped title: {}", scraped_result.title);
         debug!("Processing time: {}ms", scraped_result.processing_time_ms);
 
-        info!("✅ Web scraping test completed");
+        info!(" Web scraping test completed");
         Ok(())
     }
 
@@ -410,7 +410,7 @@ impl ResearchIntegrationTests {
                    i, result.title, result.relevance_score, result.credibility_score);
         }
 
-        info!("✅ Vector search test completed");
+        info!(" Vector search test completed");
         Ok(())
     }
 
@@ -474,7 +474,7 @@ impl ResearchIntegrationTests {
             debug!("  {}: {:.2}", metric, value);
         }
 
-        info!("✅ Hybrid search test completed");
+        info!(" Hybrid search test completed");
         Ok(())
     }
 }

@@ -5,7 +5,7 @@ use std::time::Duration;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("🚀 Agent Agency Caching System Demo");
+    println!(" Agent Agency Caching System Demo");
 
     // Configure caching
     let cache_config = CacheConfig {
@@ -25,7 +25,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cache_manager = Arc::new(CacheManager::new(cache_config.clone()));
 
     // Example 1: API Response Caching
-    println!("\n📡 API Response Caching");
+    println!("\n API Response Caching");
     let api_cache = cache_manager
         .get_or_create_cache::<serde_json::Value>("api_responses")
         .await?;
@@ -49,7 +49,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .get_cached_response("GET", "/api/users", Some("limit=10"), None)
         .await?;
 
-    println!("✅ Cached API response: {}", cached_response);
+    println!(" Cached API response: {}", cached_response);
 
     // Example 2: Database Query Caching
     println!("\n🗄️ Database Query Caching");
@@ -74,10 +74,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .get_cached_results("SELECT * FROM tasks WHERE status = $1", &query_params)
         .await?;
 
-    println!("✅ Cached {} query results", cached_results.len());
+    println!(" Cached {} query results", cached_results.len());
 
     // Example 3: LLM Response Caching
-    println!("\n🤖 LLM Response Caching");
+    println!("\n LLM Response Caching");
     let llm_cache = cache_manager
         .get_or_create_cache::<String>("llm_responses")
         .await?;
@@ -101,10 +101,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .get_cached_response("gpt-4", "What is the capital of France?", Some(0.7), Some(100))
         .await?;
 
-    println!("✅ Cached LLM response: {}", cached_llm_response);
+    println!(" Cached LLM response: {}", cached_llm_response);
 
     // Example 4: Computation Result Caching
-    println!("\n🧮 Computation Result Caching");
+    println!("\n Computation Result Caching");
     let comp_cache = cache_manager
         .get_or_create_cache::<i64>("computations")
         .await?;
@@ -132,28 +132,28 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         )
         .await?;
 
-    println!("✅ Computed fibonacci(10) = {} (cached for future calls)", result);
+    println!(" Computed fibonacci(10) = {} (cached for future calls)", result);
 
     // Example 5: Cache Statistics and Monitoring
-    println!("\n📊 Cache Statistics");
+    println!("\n Cache Statistics");
     let monitor = CacheMonitor::new(cache_manager.clone(), 100);
     monitor.record_stats().await?;
 
     let hit_rates = monitor.hit_rate_over_time(1).await;
     for (cache_name, hit_rate) in hit_rates {
-        println!("📈 {} hit rate: {:.1}%", cache_name, hit_rate * 100.0);
+        println!(" {} hit rate: {:.1}%", cache_name, hit_rate * 100.0);
     }
 
     let recommendations = monitor.get_recommendations().await;
     if !recommendations.is_empty() {
-        println!("💡 Recommendations:");
+        println!(" Recommendations:");
         for rec in recommendations {
             println!("   • {}", rec);
         }
     }
 
     // Example 6: Cache Warming
-    println!("\n🔥 Cache Warming");
+    println!("\n Cache Warming");
     let warmer = CacheWarmer::new(cache_manager.clone());
 
     // Warm with common API endpoints
@@ -163,18 +163,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     ];
 
     warmer.warm_api_cache(common_endpoints).await?;
-    println!("✅ Cache warming completed for common endpoints");
+    println!(" Cache warming completed for common endpoints");
 
     // Example 7: Cache Invalidation
     println!("\n🗑️ Cache Invalidation");
     if let Ok(api_cache) = cache_manager.get_or_create_cache::<serde_json::Value>("api_responses").await {
         let multi_cache = MultiLevelCache::<serde_json::Value>::new(cache_config.clone())?;
         let invalidated = multi_cache.invalidate_by_tags(&["api".to_string()]).await?;
-        println!("✅ Invalidated {} cache entries by tag", invalidated);
+        println!(" Invalidated {} cache entries by tag", invalidated);
     }
 
-    println!("\n🎉 Caching system demo completed successfully!");
-    println!("💡 Key benefits demonstrated:");
+    println!("\n Caching system demo completed successfully!");
+    println!(" Key benefits demonstrated:");
     println!("   • Multi-level caching (memory + Redis support)");
     println!("   • Intelligent cache invalidation");
     println!("   • Performance monitoring and recommendations");

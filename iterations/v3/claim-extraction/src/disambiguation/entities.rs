@@ -10,7 +10,6 @@ use crate::ProcessingContext;
 use crate::disambiguation::patterns::EntityPatterns;
 
 /// Named Entity Recognizer with optional integrations
-#[derive(Debug)]
 pub struct NamedEntityRecognizer {
     entity_cache: Arc<RwLock<HashMap<String, Vec<EntityMatch>>>>,
     confidence_threshold: f64,
@@ -295,7 +294,7 @@ impl NamedEntityRecognizer {
         _context: &ProcessingContext,
     ) -> Result<Vec<NamedEntity>> {
         // Simple deduplication by text and type
-        let mut seen = HashMap::new();
+        let mut seen: HashMap<String, Entity> = HashMap::new();
         let mut deduplicated = Vec::new();
 
         for entity in entities {

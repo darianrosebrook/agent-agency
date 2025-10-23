@@ -23,7 +23,7 @@ async fn load_server_config(config_file: &str) -> Result<(), Box<dyn std::error:
         return Err("No configuration found. Either provide a config file or set AGENT_AGENCY_API_KEYS environment variable.".into());
     }
 
-    println!("✅ Configuration loaded successfully");
+    println!(" Configuration loaded successfully");
     println!("   API Keys: {}", api_keys.as_ref().unwrap().len());
 
     Ok(())
@@ -54,29 +54,29 @@ async fn test_auth_middleware(api_keys: &[String]) {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("🧪 Testing API Server Configuration");
+    println!(" Testing API Server Configuration");
 
     // Test 1: No config should fail
-    println!("\n📋 Test 1: No configuration (should fail)");
+    println!("\n Test 1: No configuration (should fail)");
     env::remove_var("AGENT_AGENCY_API_KEYS");
     match load_server_config("nonexistent.toml").await {
-        Ok(_) => println!("❌ Unexpected success"),
-        Err(e) => println!("✅ Expected failure: {}", e),
+        Ok(_) => println!(" Unexpected success"),
+        Err(e) => println!(" Expected failure: {}", e),
     }
 
     // Test 2: Environment variable config should work
-    println!("\n📋 Test 2: Environment variable configuration");
+    println!("\n Test 2: Environment variable configuration");
     env::set_var("AGENT_AGENCY_API_KEYS", "test-key-123,dev-key-456");
     match load_server_config("nonexistent.toml").await {
-        Ok(_) => println!("✅ Environment config loaded successfully"),
-        Err(e) => println!("❌ Unexpected failure: {}", e),
+        Ok(_) => println!(" Environment config loaded successfully"),
+        Err(e) => println!(" Unexpected failure: {}", e),
     }
 
     // Test 3: Authentication middleware
-    println!("\n📋 Test 3: Authentication middleware");
+    println!("\n Test 3: Authentication middleware");
     let api_keys = vec!["test-key-123".to_string(), "dev-key-456".to_string()];
     test_auth_middleware(&api_keys).await;
 
-    println!("\n🎉 All tests completed!");
+    println!("\n All tests completed!");
     Ok(())
 }

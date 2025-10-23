@@ -807,12 +807,12 @@ impl AdaptivePromptingStrategy {
                 if notes.contains("[Failure:") && notes.contains("patterns:") {
                     // Parse the failure bucket from notes
                     // Implemented: Robust action request parsing and validation
-                    // - ✅ Add formal grammar definition for action requests (PEG + Nom parsers)
-                    // - ✅ Implement comprehensive parsing with error recovery (multi-strategy fallback)
-                    // - ✅ Support complex action request structures and nesting (full AST with conditions)
-                    // - ✅ Add action request validation against schema (type-safe parameter validation)
-                    // - ✅ Implement action request normalization and canonicalization (standardized forms)
-                    // - ✅ Add action request parsing performance optimization (parallel strategies with caching)
+                    // -  Add formal grammar definition for action requests (PEG + Nom parsers)
+                    // -  Implement comprehensive parsing with error recovery (multi-strategy fallback)
+                    // -  Support complex action request structures and nesting (full AST with conditions)
+                    // -  Add action request validation against schema (type-safe parameter validation)
+                    // -  Implement action request normalization and canonicalization (standardized forms)
+                    // -  Add action request parsing performance optimization (parallel strategies with caching)
                     // This implementation provides enterprise-grade action request parsing with:
                     // - Multiple parsing strategies (PEG, parser combinators, regex fallback)
                     // - Comprehensive error handling and recovery

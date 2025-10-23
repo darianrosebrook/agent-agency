@@ -5,6 +5,7 @@
 use agent_agency_database::DatabaseClient;
 use uuid::Uuid;
 use crate::{HistoricalClaim, VerificationStatus, ValidationOutcome};
+use tracing::warn;
 
 /// Historical claims lookup
 pub struct HistoricalLookup {
@@ -29,7 +30,7 @@ impl HistoricalLookup {
     }
 
     /// Record claim access for usage tracking
-    pub async fn record_claim_access(&self, claim_id: Uuid) -> Result<()> {
+    pub async fn record_claim_access(&self, claim_id: Uuid) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         if let Some(ref client) = self.db_client {
             self.record_claim_access_db(client, claim_id).await
         } else {
@@ -39,7 +40,7 @@ impl HistoricalLookup {
     }
 
     /// Query database for historical claims
-    async fn query_database_for_historical_claims(&self, db_client: &DatabaseClient, search_term: &str) -> Result<Vec<HistoricalClaim>> {
+    async fn query_database_for_historical_claims(&self, db_client: &DatabaseClient, search_term: &str) -> Result<Vec<HistoricalClaim>, Box<dyn std::error::Error + Send + Sync>> {
         // Use the find_similar_claims function we created in the migration
         let result = db_client.execute_parameterized_query(
             r#"
@@ -86,7 +87,7 @@ impl HistoricalLookup {
     }
 
     /// Get cached historical claims (fallback implementation)
-    async fn get_cached_historical_claims(&self, _search_term: &str) -> Result<Vec<HistoricalClaim>> {
+    async fn get_cached_historical_claims(&self, _search_term: &str) -> Result<Vec<HistoricalClaim>, Box<dyn std::error::Error + Send + Sync>> {
         // Simulate some historical claims for testing
         // In a real implementation, this would query a cache or local store
         Ok(vec![
@@ -115,7 +116,7 @@ impl HistoricalLookup {
     }
 
     /// Record claim access in database
-    async fn record_claim_access_db(&self, db_client: &DatabaseClient, claim_id: Uuid) -> Result<()> {
+    async fn record_claim_access_db(&self, db_client: &DatabaseClient, claim_id: Uuid) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let result = db_client.execute_parameterized_query(
             "SELECT record_claim_access($1)",
             vec![serde_json::Value::from(claim_id.to_string())],

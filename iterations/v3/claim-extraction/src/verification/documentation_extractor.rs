@@ -5,6 +5,8 @@
 use regex::Regex;
 use std::collections::HashMap;
 use crate::verification::types::*;
+use crate::types::AtomicClaim;
+use anyhow::Result;
 
 /// Documentation claim extractor
 pub struct DocumentationExtractor;
@@ -44,7 +46,7 @@ impl DocumentationExtractor {
     /// Check documentation consistency and completeness
     pub async fn check_documentation_consistency(&self, doc_output: &DocumentationOutput, style_guide: &DocumentationStandards) -> Result<DocumentationConsistency> {
         let mut issues = Vec::new();
-        let mut score = 1.0;
+        let mut score: f64 = 1.0;
 
         // Check required sections exist
         for required_section in &style_guide.required_sections {
@@ -71,7 +73,7 @@ impl DocumentationExtractor {
         }
 
         Ok(DocumentationConsistency {
-            overall_score: score.max(0.0),
+            overall_score: score.max(0.0) as f64,
             issues,
             sections_present: style_guide.required_sections.iter()
                 .map(|s| (s.clone(), self.has_section(&doc_output.content, s)))
@@ -195,39 +197,72 @@ impl DocumentationExtractor {
     /// Extract API documentation claim
     fn extract_api_documentation_claim(&self, api_ref: &str, _style_guide: &DocumentationStandards) -> Result<Option<AtomicClaim>> {
         Ok(Some(AtomicClaim {
-            id: uuid::Uuid::new_v4().to_string(),
+            id: uuid::Uuid::new_v4(),
             claim_text: format!("API endpoint {} is documented", api_ref),
             claim_type: crate::ClaimType::Functional,
             confidence: 0.9,
-            source: "documentation".to_string(),
-            timestamp: chrono::Utc::now(),
-            metadata: std::collections::HashMap::new(),
+            verifiability: VerifiabilityLevel::DirectlyVerifiable,
+            scope: ClaimScope {
+                working_spec_id: "documentation-analysis".to_string(),
+                component_boundaries: vec![],
+                data_impact: DataImpact::ReadOnly,
+            },
+            contextual_brackets: vec![],
+            subject: None,
+            predicate: None,
+            object: None,
+            context_brackets: vec![],
+            verification_requirements: vec![],
+            position: (0, 0),
+            sentence_fragment: "".to_string(),
         }))
     }
 
     /// Extract usage example claim
     fn extract_usage_example_claim(&self, example: &UsageExample, _style_guide: &DocumentationStandards) -> Result<Option<AtomicClaim>> {
         Ok(Some(AtomicClaim {
-            id: uuid::Uuid::new_v4().to_string(),
+            id: uuid::Uuid::new_v4(),
             claim_text: format!("Usage example provided: {}", example.description),
             claim_type: crate::ClaimType::Functional,
             confidence: 0.8,
-            source: "documentation".to_string(),
-            timestamp: chrono::Utc::now(),
-            metadata: std::collections::HashMap::new(),
+            verifiability: VerifiabilityLevel::DirectlyVerifiable,
+            scope: ClaimScope {
+                working_spec_id: "documentation-analysis".to_string(),
+                component_boundaries: vec![],
+                data_impact: DataImpact::ReadOnly,
+            },
+            contextual_brackets: vec![],
+            subject: None,
+            predicate: None,
+            object: None,
+            context_brackets: vec![],
+            verification_requirements: vec![],
+            position: (0, 0),
+            sentence_fragment: "".to_string(),
         }))
     }
 
     /// Extract section claim
     fn extract_section_claim(&self, section: &str, _style_guide: &DocumentationStandards) -> Result<Option<AtomicClaim>> {
         Ok(Some(AtomicClaim {
-            id: uuid::Uuid::new_v4().to_string(),
+            id: uuid::Uuid::new_v4(),
             claim_text: format!("Documentation section '{}' exists", section),
             claim_type: crate::ClaimType::Informational,
             confidence: 0.95,
-            source: "documentation".to_string(),
-            timestamp: chrono::Utc::now(),
-            metadata: std::collections::HashMap::new(),
+            verifiability: VerifiabilityLevel::DirectlyVerifiable,
+            scope: ClaimScope {
+                working_spec_id: "documentation-analysis".to_string(),
+                component_boundaries: vec![],
+                data_impact: DataImpact::ReadOnly,
+            },
+            contextual_brackets: vec![],
+            subject: None,
+            predicate: None,
+            object: None,
+            context_brackets: vec![],
+            verification_requirements: vec![],
+            position: (0, 0),
+            sentence_fragment: "".to_string(),
         }))
     }
 }

@@ -238,6 +238,55 @@ pub enum MatchType {
     Header,
 }
 
+/// Test output structure for code verification
+#[derive(Debug, Clone)]
+pub struct TestOutput {
+    pub test_results: Vec<TestResult>,
+    pub coverage: f64,
+    pub passed: usize,
+    pub failed: usize,
+    pub total: usize,
+}
+
+/// Individual test result
+#[derive(Debug, Clone)]
+pub struct TestResult {
+    pub name: String,
+    pub passed: bool,
+    pub duration_ms: u64,
+    pub output: String,
+}
+
+/// Test consistency analysis
+#[derive(Debug, Clone)]
+pub struct TestConsistency {
+    pub overall_score: f64,
+    pub consistency_issues: Vec<String>,
+}
+
+/// Test coverage analysis
+#[derive(Debug, Clone)]
+pub struct TestCoverage {
+    pub overall_score: f64,
+    pub line_coverage: f64,
+    pub branch_coverage: f64,
+    pub function_coverage: f64,
+}
+
+/// Test relevance analysis
+#[derive(Debug, Clone)]
+pub struct TestRelevance {
+    pub overall_score: f64,
+    pub relevance_factors: Vec<String>,
+}
+
+/// Test quality analysis
+#[derive(Debug, Clone)]
+pub struct TestQuality {
+    pub overall_score: f64,
+    pub quality_metrics: Vec<String>,
+}
+
 /// Helper for verification check results
 #[derive(Debug, Default)]
 pub struct CheckResult {

@@ -91,20 +91,20 @@ impl SelfPromptingAgent {
     }
 
     fn execute_task(&self, task: Task) -> SelfPromptingResult {
-        println!("🎯 Executing task: {}", task.description);
-        println!("📋 Initial code quality: {:.2}", evaluate_quality(&task.context[0].content));
+        println!(" Executing task: {}", task.description);
+        println!(" Initial code quality: {:.2}", evaluate_quality(&task.context[0].content));
 
         let mut current_code = task.context[0].content.clone();
         let mut iterations = Vec::new();
 
         for iteration in 1..=self.max_iterations {
-            println!("\n🔄 Iteration {}", iteration);
+            println!("\n Iteration {}", iteration);
 
             let (improved_code, improvement) = self.model.improve_code(&current_code, iteration);
             let quality_score = evaluate_quality(&improved_code);
 
-            println!("📈 Quality score: {:.2}", quality_score);
-            println!("💡 Improvement: {}", improvement);
+            println!(" Quality score: {:.2}", quality_score);
+            println!(" Improvement: {}", improvement);
 
             iterations.push(IterationResult {
                 iteration,
@@ -116,7 +116,7 @@ impl SelfPromptingAgent {
 
             // Check satisficing condition
             if quality_score >= self.quality_threshold {
-                println!("✅ Quality threshold reached!");
+                println!(" Quality threshold reached!");
                 break;
             }
         }
@@ -134,7 +134,7 @@ impl SelfPromptingAgent {
 }
 
 fn main() {
-    println!("🚀 Self-Governing Agent - Simple Demonstration");
+    println!(" Self-Governing Agent - Simple Demonstration");
     println!("==============================================");
 
     let agent = SelfPromptingAgent::new(5, 0.8);
@@ -155,31 +155,31 @@ fn main() {
 
     let result = agent.execute_task(task);
 
-    println!("\n🏁 Final Results:");
+    println!("\n Final Results:");
     println!("=================");
     println!("Success: {}", result.success);
     println!("Iterations: {}", result.iterations.len());
     println!("Final Quality Score: {:.2}", result.final_quality_score);
-    println!("\n📝 Final Code:");
+    println!("\n Final Code:");
     println!("==============");
     println!("{}", result.final_code);
 
-    println!("\n📊 Iteration Summary:");
+    println!("\n Iteration Summary:");
     println!("====================");
     for iter in &result.iterations {
         println!("Iteration {}: {:.2} - {}",
                 iter.iteration, iter.quality_score, iter.improvement);
     }
 
-    println!("\n🎉 Demonstration shows:");
-    println!("✅ Iterative improvement loop");
-    println!("✅ Quality evaluation and scoring");
-    println!("✅ Satisficing logic (early stopping)");
-    println!("✅ Progressive code enhancement");
-    println!("✅ Autonomous decision making");
+    println!("\n Demonstration shows:");
+    println!(" Iterative improvement loop");
+    println!(" Quality evaluation and scoring");
+    println!(" Satisficing logic (early stopping)");
+    println!(" Progressive code enhancement");
+    println!(" Autonomous decision making");
 
     if result.success {
-        println!("\n🎯 SUCCESS: Self-governing agent achieved quality threshold!");
+        println!("\n SUCCESS: Self-governing agent achieved quality threshold!");
     } else {
         println!("\n⚠️  PARTIAL: Agent made improvements but didn't reach threshold");
     }

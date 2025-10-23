@@ -4,7 +4,7 @@ set -euo pipefail
 # Build performance analysis script
 # Helps identify bottlenecks in Rust compilation
 
-echo "🔍 Rust Build Performance Analysis"
+echo " Rust Build Performance Analysis"
 echo "=================================="
 
 # Check if we're in a Rust project
@@ -19,7 +19,7 @@ run_with_timing() {
     local description="$2"
     
     echo ""
-    echo "📊 $description"
+    echo " $description"
     echo "Command: $cmd"
     echo "----------------------------------------"
     
@@ -33,7 +33,7 @@ run_with_timing() {
         
         # Check if timing report was generated
         if [[ -d "target/.rustc-timing" ]]; then
-            echo "✅ Timing report generated in target/.rustc-timing/"
+            echo " Timing report generated in target/.rustc-timing/"
             echo "   Open target/.rustc-timing/index.html in your browser"
         fi
     else
@@ -45,7 +45,7 @@ run_with_timing() {
 # Function to analyze crate graph
 analyze_crate_graph() {
     echo ""
-    echo "📈 Crate Graph Analysis"
+    echo " Crate Graph Analysis"
     echo "----------------------"
     
     if command -v cargo-tree >/dev/null 2>&1; then
@@ -73,7 +73,7 @@ check_performance_issues() {
         echo "Found proc-macros in:"
         grep -r "proc-macro = true" . --include="*.toml" | cut -d: -f1
     else
-        echo "✅ No proc-macros found"
+        echo " No proc-macros found"
     fi
     
     # Check for large feature sets
@@ -91,14 +91,14 @@ check_performance_issues() {
         echo "Found inline attributes in:"
         find . -name "*.rs" -exec grep -l "#\[inline" {} \; | head -5
     else
-        echo "✅ No inline attributes found"
+        echo " No inline attributes found"
     fi
 }
 
 # Function to suggest optimizations
 suggest_optimizations() {
     echo ""
-    echo "💡 Optimization Suggestions"
+    echo " Optimization Suggestions"
     echo "-------------------------"
     
     echo "1. Enable sccache for compiler caching:"
@@ -132,7 +132,7 @@ echo "Starting build performance analysis..."
 
 # Check basic setup
 echo ""
-echo "🔧 Build Environment"
+echo " Build Environment"
 echo "-------------------"
 echo "Rust version: $(rustc --version)"
 echo "Cargo version: $(cargo --version)"
@@ -140,31 +140,31 @@ echo "Platform: $(rustc -vV | sed -n 's/^host: //p')"
 
 # Check for sccache
 if command -v sccache >/dev/null 2>&1; then
-    echo "✅ sccache available: $(sccache --version | head -1)"
+    echo " sccache available: $(sccache --version | head -1)"
     sccache --show-stats | head -10
 else
-    echo "❌ sccache not available (recommended for faster builds)"
+    echo " sccache not available (recommended for faster builds)"
 fi
 
 # Check for fast linkers
 echo ""
-echo "🔗 Linker Configuration"
+echo " Linker Configuration"
 echo "----------------------"
 case "$(rustc -vV | sed -n 's/^host: //p')" in
     *linux*)
         if command -v lld >/dev/null 2>&1; then
-            echo "✅ lld available"
+            echo " lld available"
         else
-            echo "❌ lld not available (recommended for Linux)"
+            echo " lld not available (recommended for Linux)"
         fi
         ;;
     *darwin*)
         if command -v ld64.lld >/dev/null 2>&1; then
-            echo "✅ ld64.lld available"
+            echo " ld64.lld available"
         elif command -v zld >/dev/null 2>&1; then
-            echo "✅ zld available"
+            echo " zld available"
         else
-            echo "❌ Fast linker not available (ld64.lld or zld recommended)"
+            echo " Fast linker not available (ld64.lld or zld recommended)"
         fi
         ;;
 esac
@@ -178,7 +178,7 @@ run_with_timing "cargo check" "Full workspace check"
 
 # Run package-specific builds
 echo ""
-echo "📦 Package-specific builds"
+echo " Package-specific builds"
 echo "-------------------------"
 for package in $(cargo metadata --format-version 1 | jq -r '.workspace_members[]' | sed 's/.* //'); do
     if [[ -d "$package" ]]; then
@@ -190,5 +190,5 @@ done
 suggest_optimizations
 
 echo ""
-echo "🎯 Analysis complete!"
+echo " Analysis complete!"
 echo "Check the timing reports in target/.rustc-timing/ for detailed breakdowns"

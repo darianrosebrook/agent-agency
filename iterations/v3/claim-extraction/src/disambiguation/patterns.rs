@@ -5,6 +5,7 @@ use crate::disambiguation::types::*;
 
 /// Pattern-based entity recognition using regex
 #[derive(Clone)]
+#[derive(Debug)]
 pub struct EntityPatterns {
     pub person_patterns: Vec<Regex>,
     pub organization_patterns: Vec<Regex>,

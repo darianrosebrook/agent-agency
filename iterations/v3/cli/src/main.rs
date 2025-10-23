@@ -270,18 +270,18 @@ async fn execute_task(
     watch: bool,
     dashboard: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    println!("🚀 Agent Agency V3 - Autonomous Execution");
+    println!(" Agent Agency V3 - Autonomous Execution");
     println!("═══════════════════════════════════════════\n");
 
     // Display execution mode information
     match mode {
         ExecutionMode::Strict => {
-            println!("🔒 EXECUTION MODE: STRICT");
+            println!(" EXECUTION MODE: STRICT");
             println!("   Manual approval required for each changeset");
             println!("   Full control over what changes are applied\n");
         }
         ExecutionMode::Auto => {
-            println!("🤖 EXECUTION MODE: AUTO");
+            println!(" EXECUTION MODE: AUTO");
             println!("   Automatic execution with quality gate validation");
             println!("   Changes applied only if all gates pass\n");
         }
@@ -300,10 +300,10 @@ async fn execute_task(
         return Err(format!("Project path does not exist: {:?}", project_path_buf).into());
     }
 
-    println!("📋 Task: {}", description);
-    println!("📁 Project: {}", project_path);
-    println!("🎯 Risk Tier: {}", risk_tier.unwrap_or_else(|| "auto".to_string()));
-    println!("🔄 Max iterations: {}\n", max_iterations);
+    println!(" Task: {}", description);
+    println!(" Project: {}", project_path);
+    println!(" Risk Tier: {}", risk_tier.unwrap_or_else(|| "auto".to_string()));
+    println!(" Max iterations: {}\n", max_iterations);
 
     // Execute task via API with specified mode
     let api_base_url = std::env::var("AGENT_AGENCY_API_URL")
@@ -327,7 +327,7 @@ async fn execute_task(
     });
 
     // Submit task
-    println!("🚀 Submitting task to Agent Agency API...");
+    println!(" Submitting task to Agent Agency API...");
     let submit_url = format!("{}/api/v1/tasks", api_base_url);
     let response = client
         .post(&submit_url)
@@ -345,9 +345,9 @@ async fn execute_task(
     let task_id = task_response["task_id"].as_str()
         .ok_or("Invalid task response: missing task_id")?;
 
-    println!("✅ Task submitted successfully!");
-    println!("📋 Task ID: {}", task_id);
-    println!("🔗 Status URL: {}/api/v1/tasks/{}", api_base_url, task_id);
+    println!(" Task submitted successfully!");
+    println!(" Task ID: {}", task_id);
+    println!(" Status URL: {}/api/v1/tasks/{}", api_base_url, task_id);
 
     // Monitor task progress based on mode
     match mode {
@@ -363,10 +363,10 @@ async fn execute_task(
     }
 
     if dashboard {
-        println!("📊 Dashboard available at: http://localhost:3001");
+        println!(" Dashboard available at: http://localhost:3001");
     }
 
-    println!("\n🎉 Execution completed successfully!");
+    println!("\n Execution completed successfully!");
     Ok(())
 }
 
@@ -393,15 +393,15 @@ async fn monitor_dry_run_task(
 
         match status {
             "completed" => {
-                println!("\n🎯 Dry-run completed successfully!");
-                println!("💡 No actual changes were applied to the filesystem");
+                println!("\n Dry-run completed successfully!");
+                println!(" No actual changes were applied to the filesystem");
 
                 // Show results summary
                 if let Some(result) = task_data.get("result") {
                     if let Some(artifacts) = result.get("artifacts") {
                         if let Some(files_created) = artifacts.get("files_created").as_array() {
                             if !files_created.is_empty() {
-                                println!("📄 Files that would be created:");
+                                println!(" Files that would be created:");
                                 for file in files_created {
                                     if let Some(name) = file.as_str() {
                                         println!("   + {}", name);
@@ -411,7 +411,7 @@ async fn monitor_dry_run_task(
                         }
                         if let Some(files_modified) = artifacts.get("files_modified").as_array() {
                             if !files_modified.is_empty() {
-                                println!("📝 Files that would be modified:");
+                                println!(" Files that would be modified:");
                                 for file in files_modified {
                                     if let Some(name) = file.as_str() {
                                         println!("   ~ {}", name);
@@ -422,7 +422,7 @@ async fn monitor_dry_run_task(
                     }
                 }
 
-                println!("\n💡 Review results above and run with --mode auto to apply changes");
+                println!("\n Review results above and run with --mode auto to apply changes");
                 break;
             }
             "failed" => {
@@ -430,7 +430,7 @@ async fn monitor_dry_run_task(
                 return Err(format!("Task failed: {}", error_msg).into());
             }
             "cancelled" => {
-                println!("\n🛑 Task was cancelled");
+                println!("\n Task was cancelled");
                 break;
             }
             _ => {
@@ -438,7 +438,7 @@ async fn monitor_dry_run_task(
                 if let Some(progress) = task_data.get("progress") {
                     if let Some(percentage) = progress.get("percentage").as_f64() {
                         if let Some(phase) = progress.get("current_phase").as_str() {
-                            println!("📋 {}: {:.1}%", phase, percentage);
+                            println!(" {}: {:.1}%", phase, percentage);
                         }
                     }
                 }
@@ -458,7 +458,7 @@ async fn monitor_auto_task(
     task_id: &str,
     watch: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    println!("🤖 AUTO MODE: Monitoring execution with automatic quality gate validation\n");
+    println!(" AUTO MODE: Monitoring execution with automatic quality gate validation\n");
 
     // Poll task status until completion
     loop {
@@ -474,15 +474,15 @@ async fn monitor_auto_task(
 
         match status {
             "completed" => {
-                println!("\n🎯 Task completed successfully!");
-                println!("✅ All quality gates passed automatically");
+                println!("\n Task completed successfully!");
+                println!(" All quality gates passed automatically");
 
                 // Show results summary
                 if let Some(result) = task_data.get("result") {
                     if let Some(artifacts) = result.get("artifacts") {
                         let files_created = artifacts.get("files_created").as_array().unwrap_or(&vec![]).len();
                         let files_modified = artifacts.get("files_modified").as_array().unwrap_or(&vec![]).len();
-                        println!("📊 Execution summary:");
+                        println!(" Execution summary:");
                         println!("   • Files created: {}", files_created);
                         println!("   • Files modified: {}", files_modified);
                     }
@@ -491,11 +491,11 @@ async fn monitor_auto_task(
             }
             "failed" => {
                 let error_msg = task_data["error_message"].as_str().unwrap_or("Unknown error");
-                println!("\n❌ Task failed: {}", error_msg);
+                println!("\n Task failed: {}", error_msg);
                 return Err(format!("Task failed: {}", error_msg).into());
             }
             "cancelled" => {
-                println!("\n🛑 Task was cancelled");
+                println!("\n Task was cancelled");
                 break;
             }
             _ => {
@@ -504,10 +504,10 @@ async fn monitor_auto_task(
                     if let Some(percentage) = progress.get("percentage").as_f64() {
                         if let Some(phase) = progress.get("current_phase").as_str() {
                             let gate_status = match phase {
-                                "Planning" | "Review" => "⏳",
-                                "Implementation" | "Testing" => "🔍",
-                                "Quality" => "🚪",
-                                _ => "📋"
+                                "Planning" | "Review" => "",
+                                "Implementation" | "Testing" => "",
+                                "Quality" => "",
+                                _ => ""
                             };
                             println!("{} {}: {:.1}%", gate_status, phase, percentage);
                         }
@@ -529,7 +529,7 @@ async fn monitor_strict_task(
     task_id: &str,
     watch: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    println!("🔒 STRICT MODE: Manual approval required for each phase\n");
+    println!(" STRICT MODE: Manual approval required for each phase\n");
 
     let mut last_phase = String::new();
 
@@ -547,15 +547,15 @@ async fn monitor_strict_task(
 
         match status {
             "completed" => {
-                println!("\n🎯 Task completed successfully!");
-                println!("✅ All phases approved and executed");
+                println!("\n Task completed successfully!");
+                println!(" All phases approved and executed");
 
                 // Show results summary
                 if let Some(result) = task_data.get("result") {
                     if let Some(artifacts) = result.get("artifacts") {
                         let files_created = artifacts.get("files_created").as_array().unwrap_or(&vec![]).len();
                         let files_modified = artifacts.get("files_modified").as_array().unwrap_or(&vec![]).len();
-                        println!("📊 Execution summary:");
+                        println!(" Execution summary:");
                         println!("   • Files created: {}", files_created);
                         println!("   • Files modified: {}", files_modified);
                     }
@@ -564,11 +564,11 @@ async fn monitor_strict_task(
             }
             "failed" => {
                 let error_msg = task_data["error_message"].as_str().unwrap_or("Unknown error");
-                println!("\n❌ Task failed: {}", error_msg);
+                println!("\n Task failed: {}", error_msg);
                 return Err(format!("Task failed: {}", error_msg).into());
             }
             "cancelled" => {
-                println!("\n🛑 Task was cancelled");
+                println!("\n Task was cancelled");
                 break;
             }
             "awaiting_approval" => {
@@ -578,12 +578,12 @@ async fn monitor_strict_task(
                         if current_phase != last_phase {
                             last_phase = current_phase.to_string();
 
-                            println!("\n📋 Phase: {}", current_phase);
-                            println!("   🔒 Manual approval required");
+                            println!("\n Phase: {}", current_phase);
+                            println!("    Manual approval required");
 
                             if !watch {
                                 // In non-watch mode, automatically approve for CI/testing
-                                println!("   ✅ Auto-approved (non-interactive mode)");
+                                println!("    Auto-approved (non-interactive mode)");
                             } else {
                                 // In watch mode, wait for user input
                                 println!("   Apply changes for this phase? (y/n): ");
@@ -593,7 +593,7 @@ async fn monitor_strict_task(
                                 let input = input.trim().to_lowercase();
 
                                 if input != "y" && input != "yes" {
-                                    println!("   ❌ Execution cancelled by user");
+                                    println!("    Execution cancelled by user");
 
                                     // Cancel the task via API
                                     let cancel_url = format!("{}/api/v1/tasks/{}/cancel", api_base_url, task_id);
@@ -607,7 +607,7 @@ async fn monitor_strict_task(
                                     return Ok(());
                                 }
 
-                                println!("   ✅ Approved by user");
+                                println!("    Approved by user");
                             }
                         }
                     }
@@ -620,7 +620,7 @@ async fn monitor_strict_task(
                 if let Some(progress) = task_data.get("progress") {
                     if let Some(percentage) = progress.get("percentage").as_f64() {
                         if let Some(phase) = progress.get("current_phase").as_str() {
-                            println!("📋 {}: {:.1}%", phase, percentage);
+                            println!(" {}: {:.1}%", phase, percentage);
                         }
                     }
                 }
@@ -656,9 +656,9 @@ async fn intervene_task(
             let url = format!("{}/api/v1/tasks/{}/pause", api_base_url, task_id);
             let response = client.post(&url).send().await?;
             if response.status().is_success() {
-                println!("✅ Task paused successfully");
+                println!(" Task paused successfully");
             } else {
-                println!("❌ Failed to pause task: {}", response.status());
+                println!(" Failed to pause task: {}", response.status());
             }
         }
 
@@ -667,14 +667,14 @@ async fn intervene_task(
             let url = format!("{}/api/v1/tasks/{}/resume", api_base_url, task_id);
             let response = client.post(&url).send().await?;
             if response.status().is_success() {
-                println!("✅ Task resumed successfully");
+                println!(" Task resumed successfully");
             } else {
-                println!("❌ Failed to resume task: {}", response.status());
+                println!(" Failed to resume task: {}", response.status());
             }
         }
 
         InterventionCommand::Abort => {
-            println!("🛑 Aborting task execution...");
+            println!(" Aborting task execution...");
             println!("⚠️  This will cancel the task and rollback any applied changes");
             println!("   Are you sure? (y/n): ");
 
@@ -686,12 +686,12 @@ async fn intervene_task(
                 let url = format!("{}/api/v1/tasks/{}/cancel", api_base_url, task_id);
                 let response = client.post(&url).send().await?;
                 if response.status().is_success() {
-                    println!("✅ Task aborted successfully");
+                    println!(" Task aborted successfully");
                 } else {
-                    println!("❌ Failed to abort task: {}", response.status());
+                    println!(" Failed to abort task: {}", response.status());
                 }
             } else {
-                println!("   ❌ Abort cancelled");
+                println!("    Abort cancelled");
             }
         }
 
@@ -709,9 +709,9 @@ async fn intervene_task(
                 .send()
                 .await?;
             if response.status().is_success() {
-                println!("✅ Verdict override applied");
+                println!(" Verdict override applied");
             } else {
-                println!("❌ Failed to override verdict: {}", response.status());
+                println!(" Failed to override verdict: {}", response.status());
             }
         }
 
@@ -729,14 +729,14 @@ async fn intervene_task(
                 .send()
                 .await?;
             if response.status().is_success() {
-                println!("✅ Parameter modified successfully");
+                println!(" Parameter modified successfully");
             } else {
-                println!("❌ Failed to modify parameter: {}", response.status());
+                println!(" Failed to modify parameter: {}", response.status());
             }
         }
 
         InterventionCommand::Guide { guidance } => {
-            println!("💬 Injecting guidance into execution...");
+            println!(" Injecting guidance into execution...");
             println!("   Guidance: {}", guidance);
             let url = format!("{}/api/v1/tasks/{}/guidance", api_base_url, task_id);
             let response = client
@@ -747,9 +747,9 @@ async fn intervene_task(
                 .send()
                 .await?;
             if response.status().is_success() {
-                println!("✅ Guidance injected successfully");
+                println!(" Guidance injected successfully");
             } else {
-                println!("❌ Failed to inject guidance: {}", response.status());
+                println!(" Failed to inject guidance: {}", response.status());
             }
         }
     }
@@ -765,12 +765,12 @@ async fn handle_waiver_command(command: WaiverCommand) -> Result<(), Box<dyn std
 
     match command {
         WaiverCommand::List => {
-            println!("📋 Listing all waivers...");
+            println!(" Listing all waivers...");
             let url = format!("{}/api/v1/waivers", api_base_url);
             let response = client.get(&url).send().await?;
             if response.status().is_success() {
                 let waivers: serde_json::Value = response.json().await?;
-                println!("✅ Active waivers:");
+                println!(" Active waivers:");
                 if let Some(waivers_array) = waivers.as_array() {
                     if waivers_array.is_empty() {
                         println!("   No active waivers found");
@@ -788,7 +788,7 @@ async fn handle_waiver_command(command: WaiverCommand) -> Result<(), Box<dyn std
                     }
                 }
             } else {
-                println!("❌ Failed to list waivers: {}", response.status());
+                println!(" Failed to list waivers: {}", response.status());
             }
         }
 
@@ -802,7 +802,7 @@ async fn handle_waiver_command(command: WaiverCommand) -> Result<(), Box<dyn std
             expires_at,
             approved_by,
         } => {
-            println!("📝 Creating waiver...");
+            println!(" Creating waiver...");
             println!("   Title: {}", title);
             println!("   Reason: {}", reason);
 
@@ -835,13 +835,13 @@ async fn handle_waiver_command(command: WaiverCommand) -> Result<(), Box<dyn std
 
             if response.status().is_success() {
                 let created_waiver: serde_json::Value = response.json().await?;
-                println!("✅ Waiver created successfully");
+                println!(" Waiver created successfully");
                 if let Some(id) = created_waiver.get("id").and_then(|v| v.as_str()) {
                     println!("   Waiver ID: {}", id);
                 }
             } else {
                 let error_text = response.text().await.unwrap_or_default();
-                println!("❌ Failed to create waiver: {} - {}", response.status(), error_text);
+                println!(" Failed to create waiver: {} - {}", response.status(), error_text);
             }
         }
 
@@ -850,7 +850,7 @@ async fn handle_waiver_command(command: WaiverCommand) -> Result<(), Box<dyn std
             approver,
             justification,
         } => {
-            println!("✅ Approving waiver {}...", waiver_id);
+            println!(" Approving waiver {}...", waiver_id);
             println!("   Approver: {}", approver);
 
             let approval_request = serde_json::json!({
@@ -867,10 +867,10 @@ async fn handle_waiver_command(command: WaiverCommand) -> Result<(), Box<dyn std
                 .await?;
 
             if response.status().is_success() {
-                println!("✅ Waiver approved successfully");
+                println!(" Waiver approved successfully");
             } else {
                 let error_text = response.text().await.unwrap_or_default();
-                println!("❌ Failed to approve waiver: {} - {}", response.status(), error_text);
+                println!(" Failed to approve waiver: {} - {}", response.status(), error_text);
             }
         }
     }
@@ -886,13 +886,13 @@ async fn handle_provenance_command(command: ProvenanceCommand) -> Result<(), Box
 
     match command {
         ProvenanceCommand::InstallHooks => {
-            println!("🔧 Installing CAWS Git hooks for provenance enforcement...");
+            println!(" Installing CAWS Git hooks for provenance enforcement...");
             let script_path = std::env::current_dir()?
                 .join("scripts")
                 .join("install-git-hooks.sh");
 
             if !script_path.exists() {
-                println!("❌ Git hooks installation script not found at: {}", script_path.display());
+                println!(" Git hooks installation script not found at: {}", script_path.display());
                 println!("   Please ensure you're in the project root directory.");
                 return Ok(());
             }
@@ -902,24 +902,24 @@ async fn handle_provenance_command(command: ProvenanceCommand) -> Result<(), Box
                 .status()?;
 
             if status.success() {
-                println!("✅ Git hooks installed successfully!");
+                println!(" Git hooks installed successfully!");
                 println!("");
-                println!("🎯 Hooks installed:");
+                println!(" Hooks installed:");
                 println!("  - pre-commit: Validates AI-assisted changes");
                 println!("  - commit-msg: Enforces provenance trailers");
                 println!("  - post-commit: Links commits to provenance records");
             } else {
-                println!("❌ Failed to install git hooks");
+                println!(" Failed to install git hooks");
             }
         }
 
         ProvenanceCommand::Generate => {
-            println!("🔄 Generating provenance record...");
+            println!(" Generating provenance record...");
 
             // Check if we're in a CAWS project
             let caws_dir = std::env::current_dir()?.join(".caws");
             if !caws_dir.exists() {
-                println!("❌ Not in a CAWS project directory (.caws not found)");
+                println!(" Not in a CAWS project directory (.caws not found)");
                 println!("   Run 'agent-agency provenance install-hooks' first");
                 return Ok(());
             }
@@ -930,20 +930,20 @@ async fn handle_provenance_command(command: ProvenanceCommand) -> Result<(), Box
                 .status()?;
 
             if status.success() {
-                println!("✅ Provenance record generated successfully!");
+                println!(" Provenance record generated successfully!");
                 println!("   Check .caws/provenance.json for details");
             } else {
-                println!("❌ Failed to generate provenance record");
+                println!(" Failed to generate provenance record");
             }
         }
 
         ProvenanceCommand::List => {
-            println!("📋 Listing provenance records...");
+            println!(" Listing provenance records...");
             let url = format!("{}/api/v1/provenance", api_base_url);
             let response = client.get(&url).send().await?;
             if response.status().is_success() {
                 let records: serde_json::Value = response.json().await?;
-                println!("✅ Provenance records:");
+                println!(" Provenance records:");
                 if let Some(records_array) = records.as_array() {
                     if records_array.is_empty() {
                         println!("   No provenance records found");
@@ -960,12 +960,12 @@ async fn handle_provenance_command(command: ProvenanceCommand) -> Result<(), Box
                     }
                 }
             } else {
-                println!("❌ Failed to list provenance records: {}", response.status());
+                println!(" Failed to list provenance records: {}", response.status());
             }
         }
 
         ProvenanceCommand::Link { provenance_id, commit_hash } => {
-            println!("🔗 Linking provenance {} to commit {}...", provenance_id, commit_hash);
+            println!(" Linking provenance {} to commit {}...", provenance_id, commit_hash);
 
             let link_request = serde_json::json!({
                 "provenance_id": provenance_id,
@@ -981,15 +981,15 @@ async fn handle_provenance_command(command: ProvenanceCommand) -> Result<(), Box
                 .await?;
 
             if response.status().is_success() {
-                println!("✅ Provenance linked to commit successfully!");
+                println!(" Provenance linked to commit successfully!");
             } else {
                 let error_text = response.text().await.unwrap_or_default();
-                println!("❌ Failed to link provenance: {} - {}", response.status(), error_text);
+                println!(" Failed to link provenance: {} - {}", response.status(), error_text);
             }
         }
 
         ProvenanceCommand::Verify { commit_hash } => {
-            println!("🔍 Verifying provenance trailer in commit {}...", commit_hash);
+            println!(" Verifying provenance trailer in commit {}...", commit_hash);
 
             let url = format!("{}/api/v1/provenance/verify/{}", api_base_url, commit_hash);
             let response = client.get(&url).send().await?;
@@ -999,28 +999,28 @@ async fn handle_provenance_command(command: ProvenanceCommand) -> Result<(), Box
                 if let Some(has_trailer) = result.get("has_trailer").and_then(|v| v.as_bool()) {
                     if has_trailer {
                         if let Some(trailer) = result.get("trailer").and_then(|v| v.as_str()) {
-                            println!("✅ Provenance trailer found: {}", trailer);
+                            println!(" Provenance trailer found: {}", trailer);
                         } else {
-                            println!("✅ Provenance trailer present but details unavailable");
+                            println!(" Provenance trailer present but details unavailable");
                         }
                     } else {
-                        println!("❌ No provenance trailer found in commit");
+                        println!(" No provenance trailer found in commit");
                     }
                 }
             } else {
-                println!("❌ Failed to verify commit: {}", response.status());
+                println!(" Failed to verify commit: {}", response.status());
             }
         }
 
         ProvenanceCommand::Show { commit_hash } => {
-            println!("📊 Showing provenance for commit {}...", commit_hash);
+            println!(" Showing provenance for commit {}...", commit_hash);
 
             let url = format!("{}/api/v1/provenance/commit/{}", api_base_url, commit_hash);
             let response = client.get(&url).send().await?;
 
             if response.status().is_success() {
                 let record: serde_json::Value = response.json().await?;
-                println!("✅ Provenance record found:");
+                println!(" Provenance record found:");
                 if let Some(verdict_id) = record.get("verdict_id").and_then(|v| v.as_str()) {
                     println!("   Verdict ID: {}", verdict_id);
                 }
@@ -1034,9 +1034,9 @@ async fn handle_provenance_command(command: ProvenanceCommand) -> Result<(), Box
                     println!("   Trailer: {}", trailer);
                 }
             } else if response.status().as_u16() == 404 {
-                println!("❌ No provenance record found for this commit");
+                println!(" No provenance record found for this commit");
             } else {
-                println!("❌ Failed to retrieve provenance: {}", response.status());
+                println!(" Failed to retrieve provenance: {}", response.status());
             }
         }
     }

@@ -14,14 +14,14 @@ use tokio;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("🧠 Starting comprehensive memory management demo");
+    println!(" Starting comprehensive memory management demo");
 
     // 1. Initialize memory management
     let config = MemoryManagementConfig::default();
     let memory_manager = Arc::new(MemoryManager::new(config));
     memory_manager.initialize().await?;
 
-    println!("✅ Memory management initialized");
+    println!(" Memory management initialized");
 
     // 2. Set up object pools for expensive resources
     setup_object_pools(&memory_manager).await;
@@ -34,7 +34,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         300,  // TTL seconds
     );
 
-    println!("✅ Object pools and caches created");
+    println!(" Object pools and caches created");
 
     // 4. Demonstrate memory monitoring
     demonstrate_memory_monitoring(&memory_manager).await;
@@ -51,12 +51,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 8. Show performance metrics
     show_performance_metrics(&memory_manager).await;
 
-    println!("🎉 Memory management demo completed successfully!");
+    println!(" Memory management demo completed successfully!");
     Ok(())
 }
 
 async fn setup_object_pools(memory_manager: &Arc<MemoryManager>) {
-    println!("🔧 Setting up object pools...");
+    println!(" Setting up object pools...");
 
     // Database connection pool
     memory_manager.create_pool(
@@ -95,11 +95,11 @@ async fn setup_object_pools(memory_manager: &Arc<MemoryManager>) {
         50
     ).await;
 
-    println!("✅ Object pools created");
+    println!(" Object pools created");
 }
 
 async fn demonstrate_memory_monitoring(memory_manager: &Arc<MemoryManager>) {
-    println!("📊 Demonstrating memory monitoring...");
+    println!(" Demonstrating memory monitoring...");
 
     // Wait a bit for monitoring to collect data
     tokio::time::sleep(Duration::from_secs(1)).await;
@@ -107,7 +107,7 @@ async fn demonstrate_memory_monitoring(memory_manager: &Arc<MemoryManager>) {
     let stats = memory_manager.get_memory_stats();
     let pressure = memory_manager.get_memory_pressure();
 
-    println!("📈 Current Memory Stats:");
+    println!(" Current Memory Stats:");
     println!("  - Allocated: {} MB", stats.allocated_bytes / (1024 * 1024));
     println!("  - Peak Usage: {} MB", stats.peak_usage_bytes / (1024 * 1024));
     println!("  - Active Allocations: {}", stats.active_allocations);
@@ -115,11 +115,11 @@ async fn demonstrate_memory_monitoring(memory_manager: &Arc<MemoryManager>) {
 
     // Get memory history
     let history = memory_manager.get_memory_history(Duration::from_secs(60)).await;
-    println!("📈 Memory history points: {}", history.len());
+    println!(" Memory history points: {}", history.len());
 }
 
 async fn simulate_workload(memory_manager: &Arc<MemoryManager>) {
-    println!("🏭 Simulating workload with object pooling...");
+    println!(" Simulating workload with object pooling...");
 
     // Simulate concurrent database operations
     let mut handles = vec![];
@@ -149,15 +149,15 @@ async fn simulate_workload(memory_manager: &Arc<MemoryManager>) {
     if let Some(pool) = memory_manager.pools.read().await.get("database_connections") {
         if let Some(pool) = pool.downcast_ref::<ObjectPool<DatabaseConnection, Box<dyn Fn() -> DatabaseConnection + Send + Sync>>>() {
             let stats = pool.stats().await;
-            println!("🏊 Database pool stats: {:?}", stats);
+            println!(" Database pool stats: {:?}", stats);
         }
     }
 
-    println!("✅ Workload simulation completed");
+    println!(" Workload simulation completed");
 }
 
 async fn demonstrate_caching(smart_cache: &mut SmartCache<String, String>) {
-    println!("💾 Demonstrating memory-managed caching...");
+    println!(" Demonstrating memory-managed caching...");
 
     // Insert some data
     for i in 0..100 {
@@ -166,31 +166,31 @@ async fn demonstrate_caching(smart_cache: &mut SmartCache<String, String>) {
         smart_cache.insert(key, value);
     }
 
-    println!("📥 Inserted 100 cache entries");
+    println!(" Inserted 100 cache entries");
 
     // Access some data
     for i in 0..10 {
         let key = format!("user_{}", i);
         if let Some(value) = smart_cache.get(&key) {
-            println!("📤 Cache hit for {}: {}", key, value);
+            println!(" Cache hit for {}: {}", key, value);
         }
     }
 
     // Check memory pressure impact on caching
     let pressure = smart_cache.memory_manager.get_memory_pressure();
-    println!("🩸 Cache operating under memory pressure: {:?}", pressure);
+    println!(" Cache operating under memory pressure: {:?}", pressure);
 
     let (entries, memory_mb) = smart_cache.stats();
-    println!("📊 Cache stats: {} entries, ~{} MB memory usage", entries, memory_mb);
+    println!(" Cache stats: {} entries, ~{} MB memory usage", entries, memory_mb);
 }
 
 async fn check_memory_leaks(memory_manager: &Arc<MemoryManager>) {
-    println!("🔍 Checking for memory leaks...");
+    println!(" Checking for memory leaks...");
 
     let alerts = memory_manager.analyze_memory_leaks().await;
 
     if alerts.is_empty() {
-        println!("✅ No memory leaks detected");
+        println!(" No memory leaks detected");
     } else {
         println!("⚠️ Memory leak alerts:");
         for alert in alerts {
@@ -200,12 +200,12 @@ async fn check_memory_leaks(memory_manager: &Arc<MemoryManager>) {
 }
 
 async fn show_performance_metrics(memory_manager: &Arc<MemoryManager>) {
-    println!("📈 Performance metrics summary:");
+    println!(" Performance metrics summary:");
 
     let stats = memory_manager.get_memory_stats();
     let pressure = memory_manager.get_memory_pressure();
 
-    println!("🔢 Final Memory Statistics:");
+    println!(" Final Memory Statistics:");
     println!("  - Total Allocated: {} MB", stats.allocated_bytes / (1024 * 1024));
     println!("  - Peak Usage: {} MB", stats.peak_usage_bytes / (1024 * 1024));
     println!("  - Allocation Count: {}", stats.allocation_count);
@@ -219,7 +219,7 @@ async fn show_performance_metrics(memory_manager: &Arc<MemoryManager>) {
         let first = &history[0].1;
         let last = &history[history.len() - 1].1;
         let growth = (last.allocated_bytes as f64 - first.allocated_bytes as f64) / first.allocated_bytes as f64 * 100.0;
-        println!("📈 Memory growth over session: {:.2}%", growth);
+        println!(" Memory growth over session: {:.2}%", growth);
     }
 
     // Global allocator stats
@@ -227,7 +227,7 @@ async fn show_performance_metrics(memory_manager: &Arc<MemoryManager>) {
     let global_peak = MemoryTrackingAllocator::peak_usage();
     let global_allocations = MemoryTrackingAllocator::allocation_count();
 
-    println!("🌍 Global Allocator Stats:");
+    println!(" Global Allocator Stats:");
     println!("  - Current Allocated: {} MB", global_allocated / (1024 * 1024));
     println!("  - Peak Usage: {} MB", global_peak / (1024 * 1024));
     println!("  - Total Allocations: {}", global_allocations);

@@ -602,7 +602,7 @@ impl AuditedOrchestrator {
         ).await?;
 
         // Phase 1: Planning
-        println!("🔍 Starting planning phase...");
+        println!(" Starting planning phase...");
         let planning_result = match self.execute_planning(task_description, context.clone()).await {
             Ok(result) => result,
             Err(e) => {
@@ -670,7 +670,7 @@ impl AuditedOrchestrator {
                 }),
             ).await?;
 
-            println!("⚡ Starting execution phase...");
+            println!(" Starting execution phase...");
             match self.orchestrator.execute_operation(review_result.clone()).await {
                 Ok(result) => result,
                 Err(e) => {

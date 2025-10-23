@@ -28,7 +28,7 @@ use crate::fixtures::*;
 /// Benchmark arbiter adjudication performance
 #[tokio::test]
 async fn benchmark_arbiter_adjudication() {
-    println!("🧪 Benchmarking Arbiter Adjudication Performance");
+    println!(" Benchmarking Arbiter Adjudication Performance");
 
     let config = create_test_arbiter_config();
     let arbiter = ArbiterOrchestrator::new(config);
@@ -50,7 +50,7 @@ async fn benchmark_arbiter_adjudication() {
 
         let debate_result = result.unwrap();
 
-        println!("  📊 {} outputs: {:?}", count, duration);
+        println!("   {} outputs: {:?}", count, duration);
         println!("     Claims extracted: {}", debate_result.evidence_manifest.claims.len());
         println!("     Factual accuracy: {:.2}%", debate_result.evidence_manifest.factual_accuracy_score * 100.0);
         println!("     CAWS compliance: {:.2}%", debate_result.evidence_manifest.caws_compliance_score * 100.0);
@@ -64,13 +64,13 @@ async fn benchmark_arbiter_adjudication() {
         }
     }
 
-    println!("✅ Arbiter adjudication benchmarks passed");
+    println!(" Arbiter adjudication benchmarks passed");
 }
 
 /// Benchmark self-prompting loop performance
 #[tokio::test]
 async fn benchmark_self_prompting_loop() {
-    println!("🧪 Benchmarking Self-Prompting Loop Performance");
+    println!(" Benchmarking Self-Prompting Loop Performance");
 
     let workspace_factory = WorkspaceFactory::new();
     let allow_list = AllowList {
@@ -115,7 +115,7 @@ async fn benchmark_self_prompting_loop() {
 
         match result {
             Ok(execution_result) => {
-                println!("  📊 {} task: {:?}", level, duration);
+                println!("   {} task: {:?}", level, duration);
                 println!("     Iterations: {}", execution_result.iterations);
                 println!("     Final quality: {:.2}%", execution_result.final_quality * 100.0);
                 println!("     Changesets: {}", execution_result.changesets.len());
@@ -139,13 +139,13 @@ async fn benchmark_self_prompting_loop() {
         }
     }
 
-    println!("✅ Self-prompting loop benchmarks passed");
+    println!(" Self-prompting loop benchmarks passed");
 }
 
 /// Benchmark claim extraction performance across modalities
 #[tokio::test]
 async fn benchmark_claim_extraction() {
-    println!("🧪 Benchmarking Claim Extraction Performance");
+    println!(" Benchmarking Claim Extraction Performance");
 
     let processor = ClaimExtractionProcessor::new();
 
@@ -170,7 +170,7 @@ async fn benchmark_claim_extraction() {
 
         let extraction_result = result.unwrap();
 
-        println!("  📊 {}: {:?}", case_name, duration);
+        println!("   {}: {:?}", case_name, duration);
         println!("     Claims extracted: {}", extraction_result.verified_claims.len());
         println!("     Processing time: {:.2}ms", duration.as_millis());
 
@@ -188,13 +188,13 @@ async fn benchmark_claim_extraction() {
         }
     }
 
-    println!("✅ Claim extraction benchmarks passed");
+    println!(" Claim extraction benchmarks passed");
 }
 
 /// Benchmark full autonomous pipeline throughput
 #[tokio::test]
 async fn benchmark_autonomous_pipeline_throughput() {
-    println!("🧪 Benchmarking Autonomous Pipeline Throughput");
+    println!(" Benchmarking Autonomous Pipeline Throughput");
 
     let config = create_performance_test_config();
     let worker_pool = Arc::new(WorkerPoolManager::new(config.worker.clone()));
@@ -246,7 +246,7 @@ async fn benchmark_autonomous_pipeline_throughput() {
         let duration = start.elapsed();
         let throughput = num_tasks as f64 / duration.as_secs_f64();
 
-        println!("  📊 {} concurrent tasks: {:?}", num_tasks, duration);
+        println!("   {} concurrent tasks: {:?}", num_tasks, duration);
         println!("     Success rate: {}/{} ({:.1}%)",
                 success_count, num_tasks,
                 (success_count as f64 / num_tasks as f64) * 100.0);
@@ -266,13 +266,13 @@ async fn benchmark_autonomous_pipeline_throughput() {
         assert!(success_rate >= 0.7, "Success rate should be >= 70% for {} tasks", num_tasks);
     }
 
-    println!("✅ Autonomous pipeline throughput benchmarks passed");
+    println!(" Autonomous pipeline throughput benchmarks passed");
 }
 
 /// Benchmark memory usage during large-scale operations
 #[tokio::test]
 async fn benchmark_memory_usage() {
-    println!("🧪 Benchmarking Memory Usage");
+    println!(" Benchmarking Memory Usage");
 
     // Test memory usage with large claim extraction
     let processor = ClaimExtractionProcessor::new();
@@ -290,7 +290,7 @@ async fn benchmark_memory_usage() {
 
     let extraction_result = result.unwrap();
 
-    println!("  📊 Memory usage for large content:");
+    println!("   Memory usage for large content:");
     println!("     Initial memory: {} MB", start_memory / 1024 / 1024);
     println!("     Final memory: {} MB", end_memory / 1024 / 1024);
     println!("     Memory delta: {} MB", memory_delta / 1024 / 1024);
@@ -300,13 +300,13 @@ async fn benchmark_memory_usage() {
     assert!(memory_delta < 500 * 1024 * 1024,
            "Memory usage should be < 500MB for large content processing");
 
-    println!("✅ Memory usage benchmarks passed");
+    println!(" Memory usage benchmarks passed");
 }
 
 /// Benchmark error recovery performance
 #[tokio::test]
 async fn benchmark_error_recovery() {
-    println!("🧪 Benchmarking Error Recovery Performance");
+    println!(" Benchmarking Error Recovery Performance");
 
     let workspace_factory = WorkspaceFactory::new();
     let allow_list = AllowList {
@@ -344,7 +344,7 @@ async fn benchmark_error_recovery() {
 
     match result {
         Ok(execution_result) => {
-            println!("  📊 Error recovery successful:");
+            println!("   Error recovery successful:");
             println!("     Total duration: {:?}", total_duration);
             println!("     Iterations: {}", execution_result.iterations);
             println!("     Rollbacks: {}", execution_result.changesets.len().saturating_sub(1));
@@ -366,7 +366,7 @@ async fn benchmark_error_recovery() {
         }
     }
 
-    println!("✅ Error recovery benchmarks completed");
+    println!(" Error recovery benchmarks completed");
 }
 
 // Helper functions

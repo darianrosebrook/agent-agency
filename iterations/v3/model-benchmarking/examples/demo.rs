@@ -12,7 +12,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize tracing for logging
     tracing_subscriber::fmt::init();
 
-    println!("🚀 Model Benchmarking System Demo");
+    println!(" Model Benchmarking System Demo");
     println!("==================================");
 
     // Create a metrics collector
@@ -73,12 +73,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
     let runner = BenchmarkRunner::with_config(config);
 
-    println!("\n📊 Running Micro Benchmarks");
+    println!("\n Running Micro Benchmarks");
     println!("---------------------------");
 
     // Run micro benchmarks for all models
     for model in &models {
-        println!("\n🔍 Testing: {}", model.name);
+        println!("\n Testing: {}", model.name);
 
         let result = runner.run_micro_benchmark(model).await?;
         println!("   Score: {:.2}", result.score);
@@ -90,16 +90,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         // Display SLA validation results
         if let Some(sla_validation) = &result.sla_validation {
             println!(
-                "   📊 SLA Status: {}",
+                "    SLA Status: {}",
                 if sla_validation.overall_compliant {
-                    "✅ COMPLIANT"
+                    " COMPLIANT"
                 } else {
-                    "❌ NON-COMPLIANT"
+                    " NON-COMPLIANT"
                 }
             );
             if !sla_validation.overall_compliant {
                 println!(
-                    "   🚨 Critical Violations: {}",
+                    "    Critical Violations: {}",
                     sla_validation.summary.critical_violations
                 );
             }
@@ -114,7 +114,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Run compliance benchmarks for all models
     for model in &models {
-        println!("\n🔍 Testing: {}", model.name);
+        println!("\n Testing: {}", model.name);
 
         let result = runner.run_compliance_benchmark(model).await?;
         println!("   Score: {:.2}", result.score);
@@ -125,16 +125,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         // Display SLA validation results for compliance benchmark
         if let Some(sla_validation) = &result.sla_validation {
             println!(
-                "   📊 SLA Status: {}",
+                "    SLA Status: {}",
                 if sla_validation.overall_compliant {
-                    "✅ COMPLIANT"
+                    " COMPLIANT"
                 } else {
-                    "❌ NON-COMPLIANT"
+                    " NON-COMPLIANT"
                 }
             );
             if !sla_validation.overall_compliant {
                 println!(
-                    "   🚨 Critical Violations: {}",
+                    "    Critical Violations: {}",
                     sla_validation.summary.critical_violations
                 );
             }
@@ -144,7 +144,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         collector.store_benchmark_result(result).await?;
     }
 
-    println!("\n📈 Performance Analysis");
+    println!("\n Performance Analysis");
     println!("----------------------");
 
     // Generate performance report
@@ -153,7 +153,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Total Benchmarks: {}", report.total_benchmarks);
     println!("Average Performance: {:.2}", report.average_performance);
 
-    println!("\n🏆 Top Performers:");
+    println!("\n Top Performers:");
     for (i, performer) in report.top_performers.iter().enumerate() {
         println!(
             "   {}. {} - Score: {:.2}",
@@ -163,20 +163,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         );
     }
 
-    println!("\n📊 Performance Distribution:");
+    println!("\n Performance Distribution:");
     for (category, count) in &report.performance_distribution {
         println!("   {}: {} models", category, count);
     }
 
     if !report.recommendations.is_empty() {
-        println!("\n💡 Recommendations:");
+        println!("\n Recommendations:");
         for (i, rec) in report.recommendations.iter().enumerate() {
             println!("   {}. {} ({:?})", i + 1, rec.description, rec.priority);
         }
     }
 
     // Show individual model summaries
-    println!("\n📋 Individual Model Summaries");
+    println!("\n Individual Model Summaries");
     println!("------------------------------");
 
     for model in &models {
@@ -254,7 +254,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let sla_report = sla_validator.validate_all(&all_measurements);
     println!("{}", format_sla_report(&sla_report));
 
-    println!("\n✅ Demo completed successfully!");
+    println!("\n Demo completed successfully!");
     println!("The benchmarking system is now collecting real performance metrics.");
 
     Ok(())

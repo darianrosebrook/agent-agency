@@ -72,28 +72,35 @@ impl GlobalTypeRegistry {
             type_id,
             schema_version,
             serializer: |value| {
-                // Implement proper erased_serde serialization with compression
-                let mut buffer = Vec::new();
-
-                // Create a compression encoder
-                let mut encoder = GzEncoder::new(&mut buffer, Compression::default());
-
-                // Serialize using erased_serde
-                match erased_serde::serialize(value, erased_serde::Serializer::new(&mut encoder)) {
-                    Ok(_) => {
-                        // Finalize compression
-                        drop(encoder); // Flush the encoder
-                        Ok(buffer)
+                // Serialize to JSON first, then compress
+                match serde_json::to_vec(value) {
+                    Ok(json_data) => {
+                        // Compress the JSON data
+                        let mut compressed = Vec::new();
+                        let mut encoder = GzEncoder::new(&mut compressed, Compression::default());
+                        if let Err(e) = encoder.write_all(&json_data) {
+                            return Err(Box::new(e) as Box<dyn std::error::Error + Send + Sync>);
+                        }
+                        if let Err(e) = encoder.finish() {
+                            return Err(Box::new(e) as Box<dyn std::error::Error + Send + Sync>);
+                        }
+                        Ok(compressed)
                     }
                     Err(e) => Err(Box::new(e) as Box<dyn std::error::Error + Send + Sync>),
                 }
             },
             deserializer: |data| {
-                // Implement proper erased_serde deserialization with decompression
+                // Decompress first, then deserialize from JSON
                 let mut decoder = GzDecoder::new(data);
+                let mut decompressed = Vec::new();
+                
+                // First decompress
+                if let Err(e) = decoder.read_to_end(&mut decompressed) {
+                    return Err(Box::new(e) as Box<dyn std::error::Error + Send + Sync>);
+                }
 
-                // Deserialize using erased_serde
-                match erased_serde::deserialize::<T>(erased_serde::Deserializer::new(&mut decoder)) {
+                // Then deserialize from JSON
+                match serde_json::from_slice::<T>(&decompressed) {
                     Ok(value) => Ok(Box::new(value) as Box<dyn Any + Send + Sync>),
                     Err(e) => Err(Box::new(e) as Box<dyn std::error::Error + Send + Sync>),
                 }
@@ -380,7 +387,7 @@ impl TypeSafeCacheManager {
             }
         }
 
-        Err(CacheError::CacheOperationError("All cache operations failed".to_string()))
+        Err(CacheError::ConnectionError { message: "All cache operations failed".to_string() })
     }
 
     /// Validate type compatibility across all registered caches
@@ -900,23 +907,18 @@ where
     /// Clear all entries of this type from cache
     pub async fn clear_type(&self) -> CacheResult<()> {
         // Implement type-based cache clearing with batch operations
-        let type_name = self.type_name();
+        let type_name = &self.type_name;
         let mut total_cleared = 0;
         let start_time = std::time::Instant::now();
 
-        // Clear from all registered caches
-        let caches = self.caches.read().await;
-
-        for (cache_name, cache) in caches.iter() {
-            // Use type-specific clearing if supported, otherwise clear entire cache
-            match cache.clear() {
-                Ok(_) => {
-                    debug!("Cleared cache '{}' for type '{}'", cache_name, type_name);
-                    total_cleared += 1;
-                }
-                Err(e) => {
-                    warn!("Failed to clear cache '{}' for type '{}': {:?}", cache_name, type_name, e);
-                }
+        // Clear from the underlying cache
+        match self.cache.clear().await {
+            Ok(_) => {
+                debug!("Cleared cache for type '{}'", type_name);
+                total_cleared += 1;
+            }
+            Err(e) => {
+                warn!("Failed to clear cache for type '{}': {:?}", type_name, e);
             }
         }
 

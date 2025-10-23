@@ -409,19 +409,19 @@ impl RtoRpoMonitor {
 
         match alert.alert_type {
             AlertType::RTOViolation => {
-                error!("🚨 CRITICAL: RTO violation detected - immediate attention required");
+                error!(" CRITICAL: RTO violation detected - immediate attention required");
             }
             AlertType::RPOViolation => {
-                error!("🚨 CRITICAL: RPO violation detected - data loss risk");
+                error!(" CRITICAL: RPO violation detected - data loss risk");
             }
             AlertType::ServiceUnavailable => {
-                error!("🚨 CRITICAL: Critical service unavailable");
+                error!(" CRITICAL: Critical service unavailable");
             }
             AlertType::ComplianceThreshold => {
                 warn!("⚠️  WARNING: Multiple compliance violations detected");
             }
             AlertType::RecoveryFailure => {
-                error!("🚨 CRITICAL: Recovery operation failed");
+                error!(" CRITICAL: Recovery operation failed");
             }
         }
 

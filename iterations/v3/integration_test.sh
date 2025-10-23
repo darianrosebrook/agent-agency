@@ -5,7 +5,7 @@
 
 set -e
 
-echo "🚀 Starting Agent Agency V3 Integration Test"
+echo " Starting Agent Agency V3 Integration Test"
 echo "=============================================="
 
 # Colors for output
@@ -29,10 +29,10 @@ run_test() {
     ((TOTAL_TESTS++))
 
     if eval "$test_command" 2>/dev/null; then
-        echo -e "${GREEN}✅ PASS: ${test_name}${NC}"
+        echo -e "${GREEN} PASS: ${test_name}${NC}"
         ((PASSED_TESTS++))
     else
-        echo -e "${RED}❌ FAIL: ${test_name}${NC}"
+        echo -e "${RED} FAIL: ${test_name}${NC}"
         ((FAILED_TESTS++))
     fi
     echo ""
@@ -48,7 +48,7 @@ check_port() {
     fi
 }
 
-echo "📋 Checking system components..."
+echo " Checking system components..."
 echo "==============================="
 
 # Test 1: Check if core binaries can be built
@@ -56,7 +56,7 @@ echo "Building core components..."
 run_test "Build agent-agency-worker" "cd /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3 && cargo build --bin agent-agency-worker --quiet"
 run_test "Build agent-agency-cli" "cd /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3 && cargo build --bin agent-agency-cli --quiet"
 
-echo "🧪 Testing acceptance criteria extraction..."
+echo " Testing acceptance criteria extraction..."
 echo "==========================================="
 
 # Test 2: Test acceptance criteria extraction
@@ -64,7 +64,7 @@ run_test "Acceptance criteria extraction basic functionality" "
 cd /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3 && cargo run --bin agent-agency-cli -- --help 2>/dev/null | grep -q 'agent-agency-cli'
 "
 
-echo "🔧 Testing execution modes..."
+echo " Testing execution modes..."
 echo "============================"
 
 # Test 3: Test execution mode parsing
@@ -72,7 +72,7 @@ run_test "CLI recognizes execution modes" "
 cd /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3 && cargo run --bin agent-agency-cli -- execute 'test task' --mode dry-run --help 2>/dev/null || echo 'Expected: help shown'
 "
 
-echo "🔗 Testing worker communication..."
+echo " Testing worker communication..."
 echo "================================"
 
 # Test 4: Start worker and test basic connectivity
@@ -112,7 +112,7 @@ if check_port 8082; then
     "
 fi
 
-echo "🛑 Testing cancellation..."
+echo " Testing cancellation..."
 echo "========================"
 
 if check_port 8082; then
@@ -128,23 +128,23 @@ fi
 # Cleanup
 cleanup
 
-echo "📊 Test Results Summary"
+echo " Test Results Summary"
 echo "======================="
 echo -e "Total tests: ${TOTAL_TESTS}"
 echo -e "${GREEN}Passed: ${PASSED_TESTS}${NC}"
 echo -e "${RED}Failed: ${FAILED_TESTS}${NC}"
 
 if [ $FAILED_TESTS -eq 0 ]; then
-    echo -e "${GREEN}🎉 All integration tests passed!${NC}"
+    echo -e "${GREEN} All integration tests passed!${NC}"
     echo ""
-    echo "✅ Successfully implemented:"
+    echo " Successfully implemented:"
     echo "   • Worker execution path with HTTP communication"
     echo "   • Strict/Auto/Dry-run execution modes"
     echo "   • Task acceptance criteria extraction"
     echo "   • SLO status and alerts passthrough"
     echo "   • CLI control operations and monitoring"
     echo ""
-    echo "🚀 The Agent Agency V3 system is ready for production use!"
+    echo " The Agent Agency V3 system is ready for production use!"
 else
     echo -e "${RED}⚠️  Some tests failed. Check the implementation.${NC}"
     exit 1

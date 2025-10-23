@@ -995,7 +995,7 @@ impl StateStorage for MemoryStorage {
         self.cleanup_old_diffs().await?;
 
         debug!(
-            "✅ Stored workspace diff {:?} -> {:?} in memory",
+            " Stored workspace diff {:?} -> {:?} in memory",
             diff.from_state, diff.to_state
         );
         Ok(())

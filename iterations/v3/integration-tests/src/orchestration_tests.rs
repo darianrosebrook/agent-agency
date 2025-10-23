@@ -152,7 +152,7 @@ impl OrchestrationIntegrationTests {
         assert!(analysis.coverage_score > 0.0, "Should have some edge case coverage");
         assert!(analysis.effectiveness_score > 0.0, "Should have some effectiveness");
 
-        info!("✅ Orchestration edge case integration successful");
+        info!(" Orchestration edge case integration successful");
 
         Ok(())
     }
@@ -235,7 +235,7 @@ impl OrchestrationIntegrationTests {
         assert!(outcome_prediction.success_probability >= 0.0 && outcome_prediction.success_probability <= 1.0,
             "Success probability should be between 0 and 1");
 
-        info!("✅ Orchestration predictive learning integration successful");
+        info!(" Orchestration predictive learning integration successful");
 
         Ok(())
     }
@@ -311,7 +311,7 @@ impl OrchestrationIntegrationTests {
 
         assert!(throughput > 0.1, "Should have reasonable throughput under load");
 
-        info!("✅ Orchestration load balancing successful");
+        info!(" Orchestration load balancing successful");
 
         Ok(())
     }
@@ -381,7 +381,7 @@ impl OrchestrationIntegrationTests {
 
         assert!(healthy_result.is_some(), "System should remain functional after error recovery");
 
-        info!("✅ Orchestration error recovery successful - system remained stable");
+        info!(" Orchestration error recovery successful - system remained stable");
 
         Ok(())
     }
@@ -453,7 +453,7 @@ impl OrchestrationIntegrationTests {
         info!("Performance optimization success rate: {:.2}", success_rate);
         assert!(success_rate >= 0.5, "Should maintain reasonable success rate under optimization");
 
-        info!("✅ Orchestration performance optimization successful");
+        info!(" Orchestration performance optimization successful");
 
         Ok(())
     }

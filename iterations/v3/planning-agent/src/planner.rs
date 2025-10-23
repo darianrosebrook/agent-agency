@@ -336,12 +336,12 @@ impl PlanningAgent {
     /// Generate initial working specification from task request
     async fn generate_working_spec(&self, task_request: &agent_agency_contracts::task_request::TaskRequest) -> PlanningResult<agent_agency_contracts::working_spec::WorkingSpec> {
         // Implemented: Sophisticated goal extraction and analysis
-        // - ✅ Add natural language processing for goal identification - Advanced NLP with BERT embeddings, pattern matching, and semantic analysis
-        // - ✅ Implement goal hierarchy and dependency analysis - Multi-level goal decomposition with dependency graphs and conflict resolution
-        // - ✅ Support goal prioritization and ranking algorithms - ML-based prioritization, stakeholder analysis, and business value scoring
-        // - ✅ Add goal validation against project constraints - Constraint checking, feasibility analysis, and risk assessment
-        // - ✅ Implement goal decomposition into actionable tasks - Hierarchical decomposition with SMART criteria and resource estimation
-        // - ✅ Add goal progress tracking and completion criteria - Progress metrics, milestone tracking, and success criteria definition
+        // -  Add natural language processing for goal identification - Advanced NLP with BERT embeddings, pattern matching, and semantic analysis
+        // -  Implement goal hierarchy and dependency analysis - Multi-level goal decomposition with dependency graphs and conflict resolution
+        // -  Support goal prioritization and ranking algorithms - ML-based prioritization, stakeholder analysis, and business value scoring
+        // -  Add goal validation against project constraints - Constraint checking, feasibility analysis, and risk assessment
+        // -  Implement goal decomposition into actionable tasks - Hierarchical decomposition with SMART criteria and resource estimation
+        // -  Add goal progress tracking and completion criteria - Progress metrics, milestone tracking, and success criteria definition
         // This implementation provides enterprise-grade goal analysis with:
         // - Multi-modal goal extraction (explicit/implicit goals, stakeholder goals, system goals)
         // - Advanced prioritization using ML and business value analysis

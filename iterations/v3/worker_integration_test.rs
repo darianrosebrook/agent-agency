@@ -42,7 +42,7 @@ async fn test_worker_execution_integration() {
 
     match result {
         Ok(execution_result) => {
-            println!("✅ Task execution successful!");
+            println!(" Task execution successful!");
             println!("Task ID: {}", execution_result.task_id);
             println!("Worker ID: {}", execution_result.worker_id);
             println!("Status: {:?}", execution_result.status);
@@ -52,7 +52,7 @@ async fn test_worker_execution_integration() {
             assert!(execution_result.execution_time_ms > 0);
         }
         Err(e) => {
-            panic!("❌ Task execution failed: {}", e);
+            panic!(" Task execution failed: {}", e);
         }
     }
 }
@@ -70,10 +70,10 @@ async fn test_worker_cancellation_integration() {
 
     match cancel_result {
         Ok(()) => {
-            println!("✅ Task cancellation successful!");
+            println!(" Task cancellation successful!");
         }
         Err(e) => {
-            panic!("❌ Task cancellation failed: {}", e);
+            panic!(" Task cancellation failed: {}", e);
         }
     }
 }

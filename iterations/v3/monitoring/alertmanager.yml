@@ -37,10 +37,10 @@ receivers:
   - name: 'critical-alerts'
     email_configs:
       - to: '${CRITICAL_ALERT_EMAIL}'
-        subject: '🚨 CRITICAL: {{ .GroupLabels.alertname }}'
+        subject: ' CRITICAL: {{ .GroupLabels.alertname }}'
         body: |
           {{ range .Alerts }}
-          🚨 **CRITICAL ALERT**
+           **CRITICAL ALERT**
 
           **Alert:** {{ .Annotations.summary }}
           **Description:** {{ .Annotations.description }}
@@ -59,7 +59,7 @@ receivers:
     slack_configs:
       - api_url: '${SLACK_WEBHOOK_URL}'
         channel: '#critical-alerts'
-        title: '🚨 CRITICAL ALERT: {{ .GroupLabels.alertname }}'
+        title: ' CRITICAL ALERT: {{ .GroupLabels.alertname }}'
         text: '{{ .CommonAnnotations.description }}'
         send_resolved: true
 
@@ -89,10 +89,10 @@ receivers:
   - name: 'slo-alerts'
     email_configs:
       - to: '${SLO_ALERT_EMAIL}'
-        subject: '📊 SLO ALERT: {{ .GroupLabels.alertname }}'
+        subject: ' SLO ALERT: {{ .GroupLabels.alertname }}'
         body: |
           {{ range .Alerts }}
-          📊 **SLO ALERT**
+           **SLO ALERT**
 
           **Alert:** {{ .Annotations.summary }}
           **Description:** {{ .Annotations.description }}
@@ -111,7 +111,7 @@ receivers:
     slack_configs:
       - api_url: '${SLACK_WEBHOOK_URL}'
         channel: '#slo-alerts'
-        title: '📊 SLO ALERT: {{ .GroupLabels.alertname }}'
+        title: ' SLO ALERT: {{ .GroupLabels.alertname }}'
         text: 'SLO breach detected: {{ .CommonAnnotations.description }}'
         send_resolved: true
 

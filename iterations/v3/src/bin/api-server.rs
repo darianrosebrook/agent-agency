@@ -104,8 +104,8 @@ async fn load_server_config(config_file: &str) -> Result<ServerConfig, Box<dyn s
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
 
-    println!("🚀 Starting Agent Agency V3 API Server");
-    println!("📡 Server: {}:{}", args.host, args.port);
+    println!(" Starting Agent Agency V3 API Server");
+    println!(" Server: {}:{}", args.host, args.port);
 
     // Load server configuration
     let server_config = load_server_config(&args.config_file).await?;
@@ -113,11 +113,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Validate configuration if API key auth is required
     if args.require_api_key {
         if server_config.api_keys.as_ref().map_or(true, |keys| keys.is_empty()) {
-            eprintln!("❌ API key authentication required but no API keys configured!");
+            eprintln!(" API key authentication required but no API keys configured!");
             eprintln!("   Set AGENT_AGENCY_API_KEYS environment variable or add api_keys to {}", args.config_file);
             std::process::exit(1);
         }
-        println!("🔐 API key authentication enabled");
+        println!(" API key authentication enabled");
     }
 
     // TODO: Implement comprehensive service initialization and dependency injection
@@ -177,8 +177,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let addr = format!("{}:{}", args.host, args.port);
     let listener = tokio::net::TcpListener::bind(&addr).await?;
 
-    println!("✅ API server ready at http://{}", addr);
-    println!("📊 Health check: http://{}/health", addr);
+    println!(" API server ready at http://{}", addr);
+    println!(" Health check: http://{}/health", addr);
 
     // Serve requests
     axum::serve(listener, app).await?;

@@ -378,28 +378,28 @@ impl CliInterface {
             .map(|s| Uuid::parse_str(s).unwrap_or_else(|_| Uuid::new_v4()))
             .unwrap_or_else(|| Uuid::new_v4());
 
-        println!("🚀 Submitted task: {}", task_id);
-        println!("📝 Description: {}", description);
+        println!(" Submitted task: {}", task_id);
+        println!(" Description: {}", description);
 
         if let Some(risk) = &risk_tier {
             println!("⚠️  Risk tier: {}", risk);
         }
 
         if let Some(pri) = &priority {
-            println!("⭐ Priority: {}", pri);
+            println!(" Priority: {}", pri);
         }
 
-        println!("\n📊 Task submitted successfully!");
-        println!("🔍 Task ID: {}", task_id);
-        println!("📈 Status: https://localhost:{}/tasks/{}", self.config.port, task_id);
+        println!("\n Task submitted successfully!");
+        println!(" Task ID: {}", task_id);
+        println!(" Status: https://localhost:{}/tasks/{}", self.config.port, task_id);
 
         if watch {
-            println!("\n👀 Watching execution progress...\n");
+            println!("\n Watching execution progress...\n");
             self.watch_task_progress(task_id).await?;
         }
 
         if let Some(output_path) = output {
-            println!("💾 Results will be saved to: {}", output_path.display());
+            println!(" Results will be saved to: {}", output_path.display());
         }
 
         Ok(())
@@ -418,7 +418,7 @@ impl CliInterface {
         if watch {
             loop {
                 self.display_task_status(task_id).await?;
-                println!("\n⏰ Next update in {} seconds... (Ctrl+C to stop)", interval);
+                println!("\n Next update in {} seconds... (Ctrl+C to stop)", interval);
                 sleep(Duration::from_secs(interval)).await;
                 // Clear screen for next update
                 if !self.config.no_interactive {
@@ -477,7 +477,7 @@ impl CliInterface {
 
     /// Display task status from real API response
     fn display_real_task_status(&self, status_data: &serde_json::Value) -> Result<(), CliError> {
-        println!("📋 Task Status: {}", status_data.get("id").and_then(|v| v.as_str()).unwrap_or("unknown"));
+        println!(" Task Status: {}", status_data.get("id").and_then(|v| v.as_str()).unwrap_or("unknown"));
         println!("═".repeat(50));
 
         let status = status_data.get("status").and_then(|v| v.as_str()).unwrap_or("unknown");
@@ -486,14 +486,14 @@ impl CliInterface {
         let description = status_data.get("description").and_then(|v| v.as_str()).unwrap_or("No description");
 
         let status_icon = match status {
-            "pending" => "⏳",
-            "planning" => "🧠",
+            "pending" => "",
+            "planning" => "",
             "executing" => "⚙️",
-            "quality_check" => "✅",
-            "refining" => "🔄",
-            "completed" => "✅",
-            "failed" => "❌",
-            _ => "❓",
+            "quality_check" => "",
+            "refining" => "",
+            "completed" => "",
+            "failed" => "",
+            _ => "",
         };
 
         println!("Status: {} {}", status_icon, status);
@@ -519,37 +519,37 @@ impl CliInterface {
 
     /// Display cached/local task status as fallback
     async fn display_cached_task_status(&self, task_id: Uuid) -> Result<(), CliError> {
-        println!("📋 Task Status (Cached): {}", task_id);
+        println!(" Task Status (Cached): {}", task_id);
         println!("═".repeat(50));
 
         // Simulate different status scenarios for demo purposes
         let statuses = vec![
-            ("pending", "⏳ Waiting to start", 0.0, None),
-            ("planning", "🧠 Generating execution plan", 25.0, Some("Planning phase")),
+            ("pending", " Waiting to start", 0.0, None),
+            ("planning", " Generating execution plan", 25.0, Some("Planning phase")),
             ("executing", "⚙️  Executing implementation", 60.0, Some("Code generation")),
-            ("quality_check", "✅ Running quality gates", 85.0, Some("Testing")),
-            ("refining", "🔄 Applying refinements", 95.0, Some("Code cleanup")),
-            ("completed", "✅ Task completed successfully", 100.0, None),
+            ("quality_check", " Running quality gates", 85.0, Some("Testing")),
+            ("refining", " Applying refinements", 95.0, Some("Code cleanup")),
+            ("completed", " Task completed successfully", 100.0, None),
         ];
 
         // Rotate through statuses for demo (in practice, this would be real data)
         let status_idx = (Utc::now().timestamp() / 10 % statuses.len() as i64) as usize;
         let (status, message, progress, phase) = &statuses[status_idx];
 
-        println!("📊 Status: {}", status.to_uppercase());
-        println!("💬 {}", message);
-        println!("📈 Progress: {:.1}%", progress);
+        println!(" Status: {}", status.to_uppercase());
+        println!(" {}", message);
+        println!(" Progress: {:.1}%", progress);
 
         if let Some(phase) = phase {
-            println!("🎯 Current Phase: {}", phase);
+            println!(" Current Phase: {}", phase);
         }
 
-        println!("🕐 Started: {} minutes ago", (Utc::now().timestamp() % 60));
-        println!("🔄 Last Updated: Just now");
+        println!(" Started: {} minutes ago", (Utc::now().timestamp() % 60));
+        println!(" Last Updated: Just now");
 
         if *status == "completed" {
-            println!("⭐ Quality Score: 95.2%");
-            println!("📦 Artifacts: 12 files generated");
+            println!(" Quality Score: 95.2%");
+            println!(" Artifacts: 12 files generated");
         }
 
         Ok(())
@@ -569,7 +569,7 @@ impl CliInterface {
                         last_progress = progress.completion_percentage;
 
                         if progress.completion_percentage >= 100.0 {
-                            println!("\n🎉 Task completed!");
+                            println!("\n Task completed!");
                             break;
                         }
                     }
@@ -591,14 +591,14 @@ impl CliInterface {
         let bar = "█".repeat(filled) + &"░".repeat(empty);
         let phase_str = phase.as_ref().map(|p| format!(" - {}", p)).unwrap_or_default();
 
-        print!("\r📊 [{}{}] {:.1}%{}", bar, " ".repeat(10), percentage, phase_str);
+        print!("\r [{}{}] {:.1}%{}", bar, " ".repeat(10), percentage, phase_str);
         io::stdout().flush().unwrap();
     }
 
     /// List tasks
     async fn list_tasks(&self, status_filter: Option<String>, limit: usize) -> Result<(), CliError> {
         // Simulate task listing
-        println!("📋 Recent Tasks");
+        println!(" Recent Tasks");
         println!("═".repeat(80));
 
         let sample_tasks = vec![
@@ -621,11 +621,11 @@ impl CliInterface {
             }
 
             let status_icon = match status {
-                "completed" => "✅",
+                "completed" => "",
                 "running" => "⚙️ ",
-                "pending" => "⏳",
-                "failed" => "❌",
-                _ => "❓",
+                "pending" => "",
+                "failed" => "",
+                _ => "",
             };
 
             println!("{:<40} {:<10} {:<8} {:<20} {:<10}",
@@ -656,38 +656,38 @@ impl CliInterface {
             .map_err(|_| CliError::InvalidTaskId(task_id_str.clone()))?;
 
         // Simulate result retrieval
-        println!("📋 Task Results: {}", task_id_str);
+        println!(" Task Results: {}", task_id_str);
         println!("═".repeat(50));
 
-        println!("✅ Status: COMPLETED");
-        println!("⭐ Quality Score: 95.2%");
-        println!("🕐 Completed: 2 minutes ago");
-        println!("📦 Artifacts Generated: 12 files");
+        println!(" Status: COMPLETED");
+        println!(" Quality Score: 95.2%");
+        println!(" Completed: 2 minutes ago");
+        println!(" Artifacts Generated: 12 files");
         println!("  • Source code: 8 files");
         println!("  • Tests: 3 files");
         println!("  • Documentation: 1 file");
         println!();
 
-        println!("🎯 Working Spec:");
+        println!(" Working Spec:");
         println!("  Title: User Authentication System");
         println!("  Risk Tier: High");
         println!("  Acceptance Criteria: 5/5 passed");
         println!();
 
-        println!("🧪 Quality Gates:");
-        println!("  ✅ CAWS Compliance: 100%");
-        println!("  ✅ Linting: 0 errors");
-        println!("  ✅ Type Checking: 0 errors");
-        println!("  ✅ Testing: 95% coverage");
-        println!("  ✅ Mutation Testing: 78% score");
+        println!(" Quality Gates:");
+        println!("   CAWS Compliance: 100%");
+        println!("   Linting: 0 errors");
+        println!("   Type Checking: 0 errors");
+        println!("   Testing: 95% coverage");
+        println!("   Mutation Testing: 78% score");
         println!();
 
         if let Some(save_path) = save_artifacts {
-            println!("💾 Saving artifacts to: {}", save_path.display());
+            println!(" Saving artifacts to: {}", save_path.display());
             // In practice, this would download and save artifacts
             std::fs::create_dir_all(&save_path)
                 .map_err(|e| CliError::IoError(e))?;
-            println!("✅ Artifacts saved successfully");
+            println!(" Artifacts saved successfully");
         }
 
         Ok(())
@@ -698,29 +698,29 @@ impl CliInterface {
         let _task_id = Uuid::parse_str(&task_id_str)
             .map_err(|_| CliError::InvalidTaskId(task_id_str.clone()))?;
 
-        println!("🛑 Cancelling task: {}", task_id_str);
-        println!("✅ Task cancelled successfully");
+        println!(" Cancelling task: {}", task_id_str);
+        println!(" Task cancelled successfully");
 
         Ok(())
     }
 
     /// Get system metrics
     async fn get_metrics(&self) -> Result<(), CliError> {
-        println!("📊 System Metrics");
+        println!(" System Metrics");
         println!("═".repeat(40));
 
         println!("🖥️  Active Tasks: 3");
-        println!("✅ Completed Today: 24");
-        println!("❌ Failed Today: 2");
-        println!("📈 Success Rate: 92.3%");
+        println!(" Completed Today: 24");
+        println!(" Failed Today: 2");
+        println!(" Success Rate: 92.3%");
         println!();
-        println!("⚡ Average Execution Time: 12.5 minutes");
-        println!("⭐ Average Quality Score: 89.7%");
-        println!("🎯 Tasks in Queue: 1");
+        println!(" Average Execution Time: 12.5 minutes");
+        println!(" Average Quality Score: 89.7%");
+        println!(" Tasks in Queue: 1");
         println!();
-        println!("💻 System Health: 🟢 Excellent");
-        println!("🔄 Council Agreement Rate: 94.2%");
-        println!("🧠 AI Model Performance: 96.8%");
+        println!(" System Health:  Excellent");
+        println!(" Council Agreement Rate: 94.2%");
+        println!(" AI Model Performance: 96.8%");
 
         Ok(())
     }
@@ -777,15 +777,15 @@ impl CliInterface {
         mode: ExecutionMode,
         dashboard: bool,
     ) -> Result<(), CliError> {
-        println!("🚀 Starting self-prompting execution with mode: {:?}", mode);
+        println!(" Starting self-prompting execution with mode: {:?}", mode);
 
         match mode {
             ExecutionMode::Strict => {
-                println!("🔒 Strict mode: Manual approval required for each changeset");
+                println!(" Strict mode: Manual approval required for each changeset");
                 self.execute_strict_mode(description, files, model, watch, max_iterations).await?;
             }
             ExecutionMode::Auto => {
-                println!("🤖 Auto mode: Automatic execution with quality gate validation");
+                println!(" Auto mode: Automatic execution with quality gate validation");
                 self.execute_auto_mode(description, files, model, watch, max_iterations).await?;
             }
             ExecutionMode::DryRun => {
@@ -795,20 +795,20 @@ impl CliInterface {
         }
 
         if dashboard {
-            println!("📊 Dashboard enabled: Real-time iteration tracking available");
+            println!(" Dashboard enabled: Real-time iteration tracking available");
             // TODO: Start dashboard server
         }
 
         // TODO: Implement actual self-prompting execution
-        println!("📝 Task: {}", description);
-        println!("📁 Files: {:?}", files);
-        println!("🧠 Model: {:?}", model);
-        println!("🔄 Max iterations: {}", max_iterations);
-        println!("👀 Watch: {}", watch);
+        println!(" Task: {}", description);
+        println!(" Files: {:?}", files);
+        println!(" Model: {:?}", model);
+        println!(" Max iterations: {}", max_iterations);
+        println!(" Watch: {}", watch);
 
         // Placeholder implementation
         println!("⚠️  Self-prompting execution not yet fully implemented");
-        println!("✅ Guardrail modes and dashboard options configured");
+        println!(" Guardrail modes and dashboard options configured");
 
         Ok(())
     }
@@ -822,7 +822,7 @@ impl CliInterface {
         watch: bool,
         max_iterations: usize,
     ) -> Result<(), CliError> {
-        println!("📋 Submitting task for strict mode execution...");
+        println!(" Submitting task for strict mode execution...");
 
         // Submit task with strict mode flag
         let task_request = TaskSubmissionRequest {
@@ -837,14 +837,14 @@ impl CliInterface {
 
         // In a real implementation, this would submit to the API
         // For now, simulate the workflow
-        println!("✅ Task submitted with ID: strict-task-{}", uuid::Uuid::new_v4());
+        println!(" Task submitted with ID: strict-task-{}", uuid::Uuid::new_v4());
 
         if watch {
-            println!("👀 Entering interactive approval mode...");
-            println!("📝 Task: {}", description);
-            println!("🔄 Max iterations: {}", max_iterations);
+            println!(" Entering interactive approval mode...");
+            println!(" Task: {}", description);
+            println!(" Max iterations: {}", max_iterations);
             println!("⚠️  Manual approval required for each change");
-            println!("💡 Use 'approve' to accept changes, 'reject' to stop, 'diff' to view changes");
+            println!(" Use 'approve' to accept changes, 'reject' to stop, 'diff' to view changes");
         }
 
         Ok(())
@@ -859,7 +859,7 @@ impl CliInterface {
         watch: bool,
         max_iterations: usize,
     ) -> Result<(), CliError> {
-        println!("🤖 Submitting task for auto mode execution...");
+        println!(" Submitting task for auto mode execution...");
 
         // Submit task with auto mode flag
         let task_request = TaskSubmissionRequest {
@@ -878,12 +878,12 @@ impl CliInterface {
 
         // In a real implementation, this would submit to the API
         // For now, simulate the workflow
-        println!("✅ Task submitted with ID: auto-task-{}", uuid::Uuid::new_v4());
-        println!("🔍 Quality gates enabled: test coverage, mutation testing, linting");
+        println!(" Task submitted with ID: auto-task-{}", uuid::Uuid::new_v4());
+        println!(" Quality gates enabled: test coverage, mutation testing, linting");
 
         if watch {
-            println!("👀 Monitoring automatic execution...");
-            println!("📊 Will automatically promote changes if all quality gates pass");
+            println!(" Monitoring automatic execution...");
+            println!(" Will automatically promote changes if all quality gates pass");
         }
 
         Ok(())
@@ -913,13 +913,13 @@ impl CliInterface {
 
         // In a real implementation, this would submit to the API
         // For now, simulate the workflow
-        println!("✅ Task submitted with ID: dry-run-task-{}", uuid::Uuid::new_v4());
+        println!(" Task submitted with ID: dry-run-task-{}", uuid::Uuid::new_v4());
         println!("🛡️  Dry-run mode: No filesystem changes will be applied");
-        println!("📄 All artifacts will be generated for review");
+        println!(" All artifacts will be generated for review");
 
         if watch {
-            println!("👀 Monitoring dry-run execution...");
-            println!("📋 Artifacts will be available for review without execution");
+            println!(" Monitoring dry-run execution...");
+            println!(" Artifacts will be available for review without execution");
         }
 
         Ok(())
@@ -927,7 +927,7 @@ impl CliInterface {
 
     /// List available models
     async fn list_available_models(&self) -> Result<(), CliError> {
-        println!("🤖 Available Models:");
+        println!(" Available Models:");
         println!("  - gpt-4-turbo");
         println!("  - gpt-4");
         println!("  - claude-3-opus");
@@ -938,27 +938,27 @@ impl CliInterface {
 
     /// Swap active model
     async fn swap_model(&self, old_model: String, new_model: String) -> Result<(), CliError> {
-        println!("🔄 Swapping model: {} → {}", old_model, new_model);
-        println!("✅ Model swap completed");
+        println!(" Swapping model: {} → {}", old_model, new_model);
+        println!(" Model swap completed");
         Ok(())
     }
 
     /// Run playground test
     async fn run_playground_test(&self, test: Option<String>) -> Result<(), CliError> {
         match test.as_deref() {
-            Some("typescript") => println!("🧪 Running TypeScript playground test"),
-            Some("rust") => println!("🧪 Running Rust playground test"),
-            Some("python") => println!("🧪 Running Python playground test"),
-            None => println!("🧪 Running all playground tests"),
+            Some("typescript") => println!(" Running TypeScript playground test"),
+            Some("rust") => println!(" Running Rust playground test"),
+            Some("python") => println!(" Running Python playground test"),
+            None => println!(" Running all playground tests"),
             _ => return Err(CliError::InvalidArgument(format!("Unknown test: {}", test.unwrap()))),
         }
-        println!("✅ Playground test completed");
+        println!(" Playground test completed");
         Ok(())
     }
 
     /// Show execution history
     async fn show_execution_history(&self, limit: usize) -> Result<(), CliError> {
-        println!("📚 Execution History (last {}):", limit);
+        println!(" Execution History (last {}):", limit);
         println!("  No executions found (placeholder)");
         Ok(())
     }
@@ -970,14 +970,14 @@ impl CliInterface {
                 println!("🛡️  Quality Gates Status");
                 println!("═".repeat(40));
 
-                println!("✅ CAWS Runtime Validator: Active");
-                println!("✅ Linting (ESLint): Configured");
-                println!("✅ Type Checking (TSC): Ready");
-                println!("✅ Testing (Jest): Available");
-                println!("✅ Coverage (Istanbul): Enabled");
-                println!("✅ Mutation (Stryker): Configured");
+                println!(" CAWS Runtime Validator: Active");
+                println!(" Linting (ESLint): Configured");
+                println!(" Type Checking (TSC): Ready");
+                println!(" Testing (Jest): Available");
+                println!(" Coverage (Istanbul): Enabled");
+                println!(" Mutation (Stryker): Configured");
                 println!();
-                println!("🎯 Risk Tier Thresholds:");
+                println!(" Risk Tier Thresholds:");
                 println!("  • Critical: 0 errors, 90% coverage");
                 println!("  • High: 5 errors max, 80% coverage");
                 println!("  • Standard: 10 errors max, 70% coverage");
@@ -996,35 +996,35 @@ impl CliInterface {
 
                 let tier = risk_tier.unwrap_or_else(|| "standard".to_string());
 
-                println!("🔍 Running Quality Gates (Tier: {})", tier);
+                println!(" Running Quality Gates (Tier: {})", tier);
                 println!("═".repeat(50));
 
                 for gate in gates_list {
-                    print!("⏳ Checking {}... ", gate);
+                    print!(" Checking {}... ", gate);
                     io::stdout().flush().unwrap();
 
                     // Simulate gate execution
                     sleep(Duration::from_millis(500)).await;
 
                     match gate.as_str() {
-                        "caws" => println!("✅ PASSED"),
-                        "lint" => println!("✅ PASSED (0 errors)"),
-                        "type" => println!("✅ PASSED (0 errors)"),
-                        "test" => println!("✅ PASSED (95% coverage)"),
-                        "coverage" => println!("✅ PASSED (87.3%)"),
-                        _ => println!("❓ UNKNOWN GATE"),
+                        "caws" => println!(" PASSED"),
+                        "lint" => println!(" PASSED (0 errors)"),
+                        "type" => println!(" PASSED (0 errors)"),
+                        "test" => println!(" PASSED (95% coverage)"),
+                        "coverage" => println!(" PASSED (87.3%)"),
+                        _ => println!(" UNKNOWN GATE"),
                     }
                 }
 
-                println!("\n🎉 All quality gates passed!");
-                println!("⭐ Overall Score: 92.4%");
+                println!("\n All quality gates passed!");
+                println!(" Overall Score: 92.4%");
             }
 
             QualityCommands::Config => {
                 println!("⚙️  Quality Configuration");
                 println!("═".repeat(40));
 
-                println!("📊 Thresholds by Risk Tier:");
+                println!(" Thresholds by Risk Tier:");
                 println!("  Critical:");
                 println!("    • CAWS Violations: 0");
                 println!("    • Lint Errors: 0");

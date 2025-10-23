@@ -109,7 +109,7 @@ mod tests {
             ("with-special-chars", "password!@#$%^&*()"),
             ("json-data", r#"{"key": "value", "number": 123}"#),
             ("long-string", &"A".repeat(1000)), // 1KB string
-            ("unicode", "héllo wörld 🌍"),
+            ("unicode", "héllo wörld "),
             ("empty-string", ""),
         ];
 

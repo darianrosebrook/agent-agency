@@ -320,7 +320,7 @@ impl PerformanceTests {
         TestAssertions::assert_performance_requirements(&stats, &requirements)?;
 
         info!(
-            "✅ API response times test completed - Average: {:?}, P95: {:?}, P99: {:?}",
+            " API response times test completed - Average: {:?}, P95: {:?}, P99: {:?}",
             stats.average, stats.p95, stats.p99
         );
         Ok(())
@@ -374,7 +374,7 @@ impl PerformanceTests {
         TestAssertions::assert_performance_requirements(&stats, &requirements)?;
 
         info!(
-            "✅ Database query performance test completed - Average: {:?}, P95: {:?}, P99: {:?}",
+            " Database query performance test completed - Average: {:?}, P95: {:?}, P99: {:?}",
             stats.average, stats.p95, stats.p99
         );
         Ok(())
@@ -419,7 +419,7 @@ impl PerformanceTests {
         // Assert memory was properly cleaned up
         // assert!(memory_cleanup > 0, "Memory was not properly cleaned up");
 
-        info!("✅ Memory usage test completed");
+        info!(" Memory usage test completed");
         Ok(())
     }
 
@@ -467,7 +467,7 @@ impl PerformanceTests {
         // Assert performance requirements
         // TestAssertions::assert_performance_requirements(&stats, &requirements)?;
 
-        info!("✅ Concurrent processing test completed");
+        info!(" Concurrent processing test completed");
         Ok(())
     }
 
@@ -534,7 +534,7 @@ impl PerformanceTests {
             max_error_rate
         );
 
-        info!("✅ Throughput test completed - Actual: {:.2} ops/sec, Target: {:.2} ops/sec, Error rate: {:.2}%", 
+        info!(" Throughput test completed - Actual: {:.2} ops/sec, Target: {:.2} ops/sec, Error rate: {:.2}%", 
               actual_throughput, target_throughput, error_rate * 100.0);
         Ok(())
     }
@@ -595,7 +595,7 @@ impl PerformanceTests {
         //             throughput_ratio, load_ratio * min_scaling_factor, prev_load, curr_load);
         // }
 
-        info!("✅ Scalability test completed");
+        info!(" Scalability test completed");
         Ok(())
     }
 }
@@ -952,11 +952,11 @@ mod tests {
 
         // Generate summary report
         info!("=== COMPREHENSIVE PERFORMANCE REPORT ===");
-        info!("✅ Integration workflow benchmarks completed");
-        info!("✅ Concurrent load benchmarks completed");
-        info!("✅ Scalability benchmarks completed");
-        info!("✅ Error handling benchmarks completed");
-        info!("✅ Resource utilization benchmarks completed");
+        info!(" Integration workflow benchmarks completed");
+        info!(" Concurrent load benchmarks completed");
+        info!(" Scalability benchmarks completed");
+        info!(" Error handling benchmarks completed");
+        info!(" Resource utilization benchmarks completed");
         info!("=== ALL PERFORMANCE BENCHMARKS PASSED ===");
 
         Ok(())
@@ -976,7 +976,7 @@ impl DatabasePerformanceBenchmarks {
 
     /// Run all database performance benchmarks
     pub async fn run_all_benchmarks(&self) -> Result<Vec<TestResult>> {
-        info!("🔬 Starting Database Performance Benchmarks");
+        info!(" Starting Database Performance Benchmarks");
 
         let mut results = Vec::new();
 
@@ -998,7 +998,7 @@ impl DatabasePerformanceBenchmarks {
         // Concurrent database operations benchmark
         results.push(self.benchmark_concurrent_database_operations().await?);
 
-        info!("✅ Database performance benchmarks completed");
+        info!(" Database performance benchmarks completed");
         Ok(results)
     }
 

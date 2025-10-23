@@ -755,7 +755,7 @@ impl ContextBracketAdder {
                     let claim_text = format!("{} {} {}",
                         triple.subject,
                         triple.predicate,
-                        triple.object.as_ref().unwrap_or(&String::new())
+                        &triple.object
                     ).trim().to_string();
 
                     claims.push(AtomicClaim {
@@ -920,7 +920,7 @@ impl ContextBracketAdder {
 
     /// Check contextual relevance of claim (V2 logic)
     fn is_claim_contextually_relevant(&self, triple: &SubjectPredicateObject, context: &ProcessingContext) -> bool {
-        let claim_text = format!("{} {} {}", triple.subject, triple.predicate, triple.object.as_ref().unwrap_or(&String::new()));
+        let claim_text = format!("{} {} {}", triple.subject, triple.predicate, triple.object);
 
         // Check domain hints
         for hint in &context.domain_hints {
@@ -982,10 +982,10 @@ impl ContextBracketAdder {
         };
 
         requirements.push(VerificationRequirement {
-            method,
-            evidence_type,
-            minimum_confidence: 0.8,
-            required_sources: vec![SourceType::FileSystem],
+            requirement_type: "code_verification".to_string(),
+            description: format!("Verify that {} is implemented correctly", predicate),
+            priority: VerificationPriority::High,
+            evidence_needed: vec!["code_analysis".to_string(), "test_results".to_string()],
         });
 
         requirements
@@ -994,7 +994,7 @@ impl ContextBracketAdder {
     /// Infer claim type from subject-predicate-object triple
     fn infer_claim_type_from_triple(&self, triple: &SubjectPredicateObject) -> ClaimType {
         // Check for technical terms
-        let combined_text = format!("{} {} {}", triple.subject, triple.predicate, triple.object.as_ref().unwrap_or(&String::new()));
+        let combined_text = format!("{} {} {}", triple.subject, triple.predicate, triple.object);
 
         if combined_text.to_lowercase().contains("api") ||
            combined_text.to_lowercase().contains("function") ||
@@ -1028,7 +1028,7 @@ impl ContextBracketAdder {
 
     /// Calculate confidence score for claim (V2 logic)
     fn calculate_claim_confidence(&self, triple: &SubjectPredicateObject, context: &ProcessingContext) -> f64 {
-        let mut confidence = 0.7; // Base confidence
+        let mut confidence: f64 = 0.7; // Base confidence
 
         // Boost for strong predicates
         if matches!(triple.predicate.as_str(), "is" | "are" | "was" | "were" | "has" | "have") {
@@ -1051,7 +1051,7 @@ impl ContextBracketAdder {
     /// Fallback atomic claim extraction (V2 compatibility)
     fn extract_atomic_claims_fallback(&self, sentence: &str, context: &ProcessingContext) -> Result<Vec<AtomicClaim>> {
         // Use original patterns as fallback
-        self.extract_atomic_claims(sentence, context)
+        self.extract_atomic_claims_v2(sentence, context)
     }
 
     /// Enhanced V2 decomposition process with advanced atomic claim extraction

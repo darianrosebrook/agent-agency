@@ -721,12 +721,12 @@ impl VerdictAggregator {
         }
 
         // Implemented: Comprehensive duplicate change detection and merging
-        // - ✅ Add semantic change analysis and deduplication
-        // - ✅ Implement change conflict resolution strategies
-        // - ✅ Support change prioritization and ranking
-        // - ✅ Add change dependency analysis and ordering
-        // - ✅ Implement change merging for compatible modifications
-        // - ✅ Add change deduplication performance optimization
+        // -  Add semantic change analysis and deduplication
+        // -  Implement change conflict resolution strategies
+        // -  Support change prioritization and ranking
+        // -  Add change dependency analysis and ordering
+        // -  Implement change merging for compatible modifications
+        // -  Add change deduplication performance optimization
 
         // Use sophisticated deduplication engine
         let mut deduplication_engine = ChangeDeduplicationEngine::new();

@@ -17,14 +17,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with_max_level(tracing::Level::INFO)
         .init();
 
-    println!("🚀 V3 Superiority Benchmark Demonstration");
+    println!(" V3 Superiority Benchmark Demonstration");
     println!("==========================================");
     println!();
 
     // Create the V3 superiority benchmark system
     let benchmark_system = V3SuperiorityBenchmark::new();
 
-    println!("🏃 Running comprehensive V3 superiority benchmarks...");
+    println!(" Running comprehensive V3 superiority benchmarks...");
     println!("This may take a few moments as we validate all V3 superiority claims.");
     println!();
 
@@ -37,7 +37,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let report_markdown = benchmark_system.export_benchmark_report(&report)?;
 
     // Print key results to console
-    println!("📊 Benchmark Results Summary");
+    println!(" Benchmark Results Summary");
     println!("============================");
     println!(
         "Overall Superiority Score: {:.1}%",
@@ -50,7 +50,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
     println!();
 
-    println!("🔬 Detailed Results:");
+    println!(" Detailed Results:");
     println!("-------------------");
 
     println!("Multi-Modal Verification:");
@@ -88,7 +88,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
     println!();
 
-    println!("🧠 Predictive Learning:");
+    println!(" Predictive Learning:");
     println!(
         "  • Performance Prediction: {:.1}%",
         report.learning_benchmarks.performance_prediction_accuracy * 100.0
@@ -114,7 +114,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
     println!();
 
-    println!("🧪 Intelligent Testing:");
+    println!(" Intelligent Testing:");
     println!(
         "  • Edge Case Detection: {:.1}%",
         report.testing_benchmarks.edge_case_detection_rate * 100.0
@@ -129,7 +129,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
     println!();
 
-    println!("✅ Validated Superiority Claims:");
+    println!(" Validated Superiority Claims:");
     for claim in &report.validated_claims {
         println!("  {}", claim);
     }
@@ -138,16 +138,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Save the full report to a file
     let report_filename = format!("v3_superiority_report_{}.md", report.report_id);
     fs::write(&report_filename, &report_markdown)?;
-    println!("📄 Full report saved to: {}", report_filename);
+    println!(" Full report saved to: {}", report_filename);
     println!();
 
-    println!("🏆 V3 Superiority Validation Complete!");
+    println!(" V3 Superiority Validation Complete!");
     println!("=====================================");
     println!("V3 has been empirically validated to be a quantum leap beyond V2.");
     println!("All superiority claims from the V3 Superiority Plan have been confirmed.");
     println!();
 
-    println!("🎉 **V3 ACHIEVES QUANTUM SUPERIORITY OVER V2!** 🎉");
+    println!(" **V3 ACHIEVES QUANTUM SUPERIORITY OVER V2!** ");
 
     Ok(())
 }

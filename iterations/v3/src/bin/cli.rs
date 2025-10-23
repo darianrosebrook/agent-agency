@@ -114,7 +114,7 @@ async fn start_dashboard_server(
         .with_state(state);
 
     let addr = std::net::SocketAddr::from(([127, 0, 0, 1], 3001));
-    println!("📊 Dashboard server starting on http://{}", addr);
+    println!(" Dashboard server starting on http://{}", addr);
 
     let listener = tokio::net::TcpListener::bind(addr).await?;
     axum::serve(listener, app).await?;
@@ -346,18 +346,18 @@ async fn execute_task(
     watch: bool,
     dashboard: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    println!("🚀 Agent Agency V3 - Autonomous Execution");
+    println!(" Agent Agency V3 - Autonomous Execution");
     println!("═══════════════════════════════════════════\n");
 
     // Display execution mode information
     match mode {
         ExecutionMode::Strict => {
-            println!("🔒 EXECUTION MODE: STRICT");
+            println!(" EXECUTION MODE: STRICT");
             println!("   Manual approval required for each changeset");
             println!("   Full control over what changes are applied\n");
         }
         ExecutionMode::Auto => {
-            println!("🤖 EXECUTION MODE: AUTO");
+            println!(" EXECUTION MODE: AUTO");
             println!("   Automatic execution with quality gate validation");
             println!("   Changes applied only if all gates pass\n");
         }
@@ -440,7 +440,7 @@ async fn execute_task(
     // Set user approval callback for strict mode
     if mode == ExecutionMode::Strict {
         loop_controller.set_user_approval_callback(Box::new(|prompt: &str| {
-            println!("❓ {}", prompt);
+            println!(" {}", prompt);
             let mut input = String::new();
             io::stdin().read_line(&mut input)?;
             let input = input.trim().to_lowercase();
@@ -465,14 +465,14 @@ async fn execute_task(
 
     let task_id = Uuid::new_v4();
 
-    println!("📋 Task: {}", task.description);
-    println!("📁 Project: {:?}", project_path);
-    println!("🆔 Task ID: {}", task_id);
-    println!("🎯 Risk Tier: {}\n", task.risk_tier);
+    println!(" Task: {}", task.description);
+    println!(" Project: {:?}", project_path);
+    println!(" Task ID: {}", task_id);
+    println!(" Risk Tier: {}\n", task.risk_tier);
 
     // Start dashboard if requested
     let dashboard_handle = if dashboard {
-        println!("📊 Starting real-time dashboard...");
+        println!(" Starting real-time dashboard...");
         let execution_rx_clone = execution_rx.clone();
         Some(tokio::spawn(async move {
             if let Err(e) = start_dashboard_server(execution_rx_clone).await {
@@ -490,11 +490,11 @@ async fn execute_task(
             execute_dry_run(&loop_controller, &task, watch).await?;
         }
         ExecutionMode::Auto => {
-            println!("🤖 Starting autonomous execution...\n");
+            println!(" Starting autonomous execution...\n");
             execute_auto(&executor, &loop_controller, &task, task_id, watch).await?;
         }
         ExecutionMode::Strict => {
-            println!("🔒 Starting strict mode execution...\n");
+            println!(" Starting strict mode execution...\n");
             execute_strict(&executor, &loop_controller, &task, task_id, watch).await?;
         }
     }
@@ -505,7 +505,7 @@ async fn execute_task(
         loop_registry.remove(&task_id);
     }
 
-    println!("\n🎉 Execution completed successfully!");
+    println!("\n Execution completed successfully!");
     Ok(())
 }
 
@@ -515,18 +515,18 @@ async fn execute_dry_run(
     task: &Task,
     watch: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    println!("📝 Generating execution plan...");
+    println!(" Generating execution plan...");
 
     // Generate working specification in dry-run mode
     let working_spec = generate_working_spec(task, true)?;
-    println!("📋 Working specification generated (dry-run mode)");
-    println!("   📄 File: .caws/working-spec.yaml");
-    println!("   🎯 Risk tier: {}", working_spec.risk_tier);
-    println!("   📊 Change budget: {} files, {} LOC", working_spec.change_budget.max_files, working_spec.change_budget.max_loc);
+    println!(" Working specification generated (dry-run mode)");
+    println!("    File: .caws/working-spec.yaml");
+    println!("    Risk tier: {}", working_spec.risk_tier);
+    println!("    Change budget: {} files, {} LOC", working_spec.change_budget.max_files, working_spec.change_budget.max_loc);
 
     // Simulate artifact generation
     let artifacts = simulate_artifact_generation(&working_spec).await?;
-    println!("📊 Artifacts that would be created:");
+    println!(" Artifacts that would be created:");
     println!("   • {} code files", artifacts.code_files.len());
     println!("   • {} test files", artifacts.test_files.len());
     println!("   • {} documentation files", artifacts.doc_files.len());
@@ -534,19 +534,19 @@ async fn execute_dry_run(
     println!("   • Execution results and metrics");
 
     // Show acceptance criteria
-    println!("✅ Acceptance criteria to validate:");
+    println!(" Acceptance criteria to validate:");
     for (i, ac) in working_spec.acceptance_criteria.iter().enumerate() {
         println!("   {}. Given {}, When {}, Then {}", i + 1, ac.given, ac.when, ac.then);
     }
 
     if watch {
-        println!("\n👀 Watching for changes... (Press Ctrl+C to stop)");
+        println!("\n Watching for changes... (Press Ctrl+C to stop)");
         // Implement watching for changes
         let project_path = std::path::Path::new(".");
         tokio::select! {
             _ = start_file_watching(project_path) => {},
             _ = tokio::signal::ctrl_c() => {
-                println!("\n👋 Stopping file watcher...");
+                println!("\n Stopping file watcher...");
             }
         }
     }
@@ -566,22 +566,22 @@ async fn execute_auto(
     println!("⚙️  Executing with automatic quality gate validation...");
 
     // Generate working specification
-    println!("📝 Phase 1: Generating working specification...");
+    println!(" Phase 1: Generating working specification...");
     let working_spec = generate_working_spec(task, false)?;
-    println!("   ✅ Working specification generated (ID: {})", working_spec.id);
+    println!("    Working specification generated (ID: {})", working_spec.id);
 
     // Execute with autonomous executor
-    println!("🤖 Phase 2: Starting autonomous execution...");
+    println!(" Phase 2: Starting autonomous execution...");
     let execution_result = executor.execute_task(task_id, &working_spec).await?;
 
     match execution_result.success {
         true => {
-            println!("   ✅ Autonomous execution completed successfully");
-            println!("   📊 Execution time: {}ms", execution_result.execution_time_ms);
-            println!("   🎯 Risk tier validated: {}", working_spec.risk_tier);
+            println!("    Autonomous execution completed successfully");
+            println!("    Execution time: {}ms", execution_result.execution_time_ms);
+            println!("    Risk tier validated: {}", working_spec.risk_tier);
         }
         false => {
-            println!("   ❌ Autonomous execution failed");
+            println!("    Autonomous execution failed");
             if let Some(error) = &execution_result.error_message {
                 println!("   Error: {}", error);
             }
@@ -593,14 +593,14 @@ async fn execute_auto(
     if executor.config.enable_arbiter_adjudication {
         println!("⚖️  Phase 3: Arbiter adjudication...");
         // The executor handles arbiter integration internally
-        println!("   ✅ Quality gates validated through arbiter adjudication");
+        println!("    Quality gates validated through arbiter adjudication");
     }
 
     // Final verification
-    println!("🔍 Phase 4: Final verification...");
-    println!("   ✅ All acceptance criteria validated");
-    println!("   ✅ Code quality standards met");
-    println!("   ✅ Task completed successfully");
+    println!(" Phase 4: Final verification...");
+    println!("    All acceptance criteria validated");
+    println!("    Code quality standards met");
+    println!("    Task completed successfully");
 
     Ok(())
 }
@@ -613,7 +613,7 @@ async fn execute_strict(
     task_id: Uuid,
     watch: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    println!("🔒 Executing with manual approval controls...");
+    println!(" Executing with manual approval controls...");
 
     // Implement strict mode with user prompts for each changeset
     let phases = vec![
@@ -627,25 +627,25 @@ async fn execute_strict(
     ];
 
     for (index, (phase_name, description)) in phases.iter().enumerate() {
-        println!("\n📋 Phase {}: {}", index + 1, phase_name);
+        println!("\n Phase {}: {}", index + 1, phase_name);
         println!("   Description: {}", description);
 
         // Generate preview for user approval
         match *phase_name {
             "Planning" => {
                 let working_spec = generate_working_spec(task, false)?;
-                println!("   📄 Preview: Working spec with {} files budget, risk tier {}",
+                println!("    Preview: Working spec with {} files budget, risk tier {}",
                     working_spec.change_budget.max_files, working_spec.risk_tier);
             }
             "Code Generation" => {
-                println!("   📝 Preview: Implementation code ready for {} acceptance criteria",
+                println!("    Preview: Implementation code ready for {} acceptance criteria",
                     task.acceptance_criteria.len());
             }
             "Testing" => {
-                println!("   🧪 Preview: Test suite covering all requirements");
+                println!("    Preview: Test suite covering all requirements");
             }
             _ => {
-                println!("   📋 Preview: {} phase ready for execution", phase_name);
+                println!("    Preview: {} phase ready for execution", phase_name);
             }
         }
 
@@ -653,11 +653,11 @@ async fn execute_strict(
         let approved = prompt_user_approval(&format!("Proceed with {} phase?", phase_name))?;
 
         if !approved {
-            println!("❌ Phase {} rejected by user", phase_name);
+            println!(" Phase {} rejected by user", phase_name);
             return Err(format!("User rejected {} phase", phase_name).into());
         }
 
-        println!("✅ Phase {} approved, executing...", phase_name);
+        println!(" Phase {} approved, executing...", phase_name);
 
         // Simulate phase execution with progress
         for progress in (0..=100).step_by(25) {
@@ -665,10 +665,10 @@ async fn execute_strict(
             std::io::stdout().flush()?;
             tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
         }
-        println!("   Progress: 100% ✅ Complete");
+        println!("   Progress: 100%  Complete");
     }
 
-    println!("\n🎉 All phases completed successfully with manual approval!");
+    println!("\n All phases completed successfully with manual approval!");
 
     Ok(())
 }
@@ -690,10 +690,10 @@ async fn intervene_task(
             let loop_registry = LOOP_REGISTRY.lock().unwrap();
             if let Some(loop_controller) = loop_registry.get(&task_id) {
                 loop_controller.pause_execution();
-                println!("✅ Task paused successfully");
+                println!(" Task paused successfully");
                 println!("   Task {} is now in paused state", task_id);
             } else {
-                println!("❌ No active task found with ID: {}", task_id);
+                println!(" No active task found with ID: {}", task_id);
             }
         }
 
@@ -703,15 +703,15 @@ async fn intervene_task(
             let loop_registry = LOOP_REGISTRY.lock().unwrap();
             if let Some(loop_controller) = loop_registry.get(&task_id) {
                 loop_controller.resume_execution();
-                println!("✅ Task resumed successfully");
+                println!(" Task resumed successfully");
                 println!("   Task {} is now running", task_id);
             } else {
-                println!("❌ No active task found with ID: {}", task_id);
+                println!(" No active task found with ID: {}", task_id);
             }
         }
 
         InterventionCommand::Abort => {
-            println!("🛑 Aborting task execution...");
+            println!(" Aborting task execution...");
             println!("⚠️  This will cancel the task and rollback any applied changes");
             println!("   Are you sure? (y/n): ");
 
@@ -725,14 +725,14 @@ async fn intervene_task(
                     loop_controller.abort_execution();
 
                     // TODO: Implement actual rollback logic
-                    println!("🔄 Rolling back applied changes...");
-                    println!("✅ Task aborted successfully");
+                    println!(" Rolling back applied changes...");
+                    println!(" Task aborted successfully");
                     println!("   Task {} is now in aborted state", task_id);
                 } else {
-                    println!("❌ No active task found with ID: {}", task_id);
+                    println!(" No active task found with ID: {}", task_id);
                 }
             } else {
-                println!("   ❌ Abort cancelled");
+                println!("    Abort cancelled");
             }
         }
 
@@ -750,20 +750,20 @@ async fn intervene_task(
                     let loop_registry = LOOP_REGISTRY.lock().unwrap();
                     if let Some(loop_controller) = loop_registry.get(&task_id) {
                         loop_controller.override_verdict(verdict.clone(), reason.clone());
-                        println!("📡 Sending verdict override to arbiter...");
+                        println!(" Sending verdict override to arbiter...");
                         println!("   Override: {} (Reason: {})", verdict, reason);
-                        println!("✅ Verdict override applied");
+                        println!(" Verdict override applied");
                         println!("   Task {} will use overridden verdict", task_id);
                     } else {
-                        println!("❌ No active task found with ID: {}", task_id);
+                        println!(" No active task found with ID: {}", task_id);
                     }
                 }
                 TaskState::Aborted => {
-                    println!("❌ Cannot override verdict of aborted task");
+                    println!(" Cannot override verdict of aborted task");
                 }
                 TaskState::Completed => {
                     println!("⚠️  Task is already completed, override may not take effect");
-                    println!("✅ Verdict override recorded for future reference");
+                    println!(" Verdict override recorded for future reference");
                 }
             }
         }
@@ -781,22 +781,22 @@ async fn intervene_task(
                     let loop_registry = LOOP_REGISTRY.lock().unwrap();
                     if let Some(loop_controller) = loop_registry.get(&task_id) {
                         loop_controller.modify_parameter(parameter.clone(), value.clone());
-                        println!("🔧 Updating task configuration...");
+                        println!(" Updating task configuration...");
                         println!("   Parameter '{}' set to: {}", parameter, value);
 
                         // Validate parameter format
                         if validate_parameter(&parameter, &value) {
-                            println!("✅ Parameter modified successfully");
+                            println!(" Parameter modified successfully");
                             println!("   Task {} will use updated parameter", task_id);
                         } else {
-                            println!("❌ Invalid parameter value format");
+                            println!(" Invalid parameter value format");
                         }
                     } else {
-                        println!("❌ No active task found with ID: {}", task_id);
+                        println!(" No active task found with ID: {}", task_id);
                     }
                 }
                 TaskState::Aborted => {
-                    println!("❌ Cannot modify parameters of aborted task");
+                    println!(" Cannot modify parameters of aborted task");
                 }
                 TaskState::Completed => {
                     println!("⚠️  Task is already completed, parameter change may not take effect");
@@ -805,7 +805,7 @@ async fn intervene_task(
         }
 
         InterventionCommand::Guide { guidance } => {
-            println!("💬 Injecting guidance into execution...");
+            println!(" Injecting guidance into execution...");
             println!("   Guidance: {}", guidance);
 
             let registry = TASK_REGISTRY.lock().unwrap();
@@ -816,21 +816,21 @@ async fn intervene_task(
                     let loop_registry = LOOP_REGISTRY.lock().unwrap();
                     if let Some(loop_controller) = loop_registry.get(&task_id) {
                         loop_controller.inject_guidance(guidance.clone());
-                        println!("🎯 Injecting guidance into task execution...");
+                        println!(" Injecting guidance into task execution...");
                         println!("   Guidance will be available to next execution step");
 
                         if guidance.len() > 500 {
                             println!("⚠️  Guidance is quite long ({} chars), ensure it's actionable", guidance.len());
                         }
 
-                        println!("✅ Guidance injected successfully");
+                        println!(" Guidance injected successfully");
                         println!("   Task {} will use provided guidance", task_id);
                     } else {
-                        println!("❌ No active task found with ID: {}", task_id);
+                        println!(" No active task found with ID: {}", task_id);
                     }
                 }
                 TaskState::Aborted => {
-                    println!("❌ Cannot inject guidance into aborted task");
+                    println!(" Cannot inject guidance into aborted task");
                 }
                 TaskState::Completed => {
                     println!("⚠️  Task is already completed, guidance injection may not take effect");
@@ -945,7 +945,7 @@ async fn simulate_artifact_generation(
 async fn start_file_watching(
     project_path: &std::path::Path,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    println!("👀 Setting up file watchers...");
+    println!(" Setting up file watchers...");
 
     let (tx, mut rx) = tokio::sync::mpsc::channel(100);
 
@@ -958,19 +958,19 @@ async fn start_file_watching(
 
     watcher.watch(project_path, RecursiveMode::Recursive)?;
 
-    println!("✅ File watching active");
+    println!(" File watching active");
 
     while let Some(res) = rx.recv().await {
         match res {
             Ok(event) => {
-                println!("📁 File change detected: {:?}", event.kind);
+                println!(" File change detected: {:?}", event.kind);
                 for path in event.paths {
                     if let Some(file_name) = path.file_name() {
-                        println!("   📄 {}", file_name.to_string_lossy());
+                        println!("    {}", file_name.to_string_lossy());
                     }
                 }
             }
-            Err(e) => println!("❌ Watch error: {:?}", e),
+            Err(e) => println!(" Watch error: {:?}", e),
         }
     }
 
@@ -979,7 +979,7 @@ async fn start_file_watching(
 
 /// Prompt user for approval
 fn prompt_user_approval(prompt: &str) -> Result<bool, Box<dyn std::error::Error>> {
-    println!("❓ {} (y/n)", prompt);
+    println!(" {} (y/n)", prompt);
 
     let mut input = String::new();
     io::stdin().read_line(&mut input)?;

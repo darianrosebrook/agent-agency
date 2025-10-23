@@ -118,7 +118,7 @@ impl ClaimExtractionIntegrationTests {
         let events = self.mock_events.get_events().await;
         // assert!(events.iter().any(|e| e.event_type == "disambiguation_completed"));
 
-        info!("✅ Disambiguation stage test completed");
+        info!(" Disambiguation stage test completed");
         Ok(())
     }
 
@@ -150,7 +150,7 @@ impl ClaimExtractionIntegrationTests {
         let events = self.mock_events.get_events().await;
         // assert!(events.iter().any(|e| e.event_type == "qualification_completed"));
 
-        info!("✅ Qualification stage test completed");
+        info!(" Qualification stage test completed");
         Ok(())
     }
 
@@ -187,7 +187,7 @@ impl ClaimExtractionIntegrationTests {
         //     assert!(claim.scope.is_some());
         // }
 
-        info!("✅ Decomposition stage test completed");
+        info!(" Decomposition stage test completed");
         Ok(())
     }
 
@@ -240,7 +240,7 @@ impl ClaimExtractionIntegrationTests {
         //     assert!(claim.confidence <= 1.0);
         // }
 
-        info!("✅ Verification stage test completed");
+        info!(" Verification stage test completed");
         Ok(())
     }
 
@@ -275,7 +275,7 @@ impl ClaimExtractionIntegrationTests {
         // assert!(metrics.contains_key("claims_extracted_count"));
         // assert!(metrics.contains_key("claims_verified_count"));
 
-        info!("✅ End-to-end pipeline test completed");
+        info!(" End-to-end pipeline test completed");
         Ok(())
     }
 
@@ -309,7 +309,7 @@ impl ClaimExtractionIntegrationTests {
         // let recovery_result = pipeline.recover_from_error(&invalid_input).await?;
         // assert!(recovery_result.recovered);
 
-        info!("✅ Error handling test completed");
+        info!(" Error handling test completed");
         Ok(())
     }
 }

@@ -17,6 +17,7 @@ thiserror = "1"
 uuid = { version = "1", features = ["v4", "serde"] }
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "process", "sync", "time"] }
 sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "json", "uuid", "chrono"] }
+tokio-postgres = "0.7"
 parking_lot = "0.12"
 agent-agency-council = { path = "../council" }
 agent-agency-apple-silicon = { path = "../apple-silicon" }
@@ -24,6 +25,8 @@ agent-agency-provenance = { path = "../provenance" }
 agent-agency-resilience = { path = "../resilience" }
 agent-agency-database = { path = "../database" }
 agent-agency-contracts = { path = "../agent-agency-contracts" }
+claim-extraction = { path = "../claim-extraction" }
+agent-agency-workers = { path = "../workers" }
 file_ops = { path = "../file_ops" }
 tracing = "0.1"
 flate2 = "1.0"

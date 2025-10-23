@@ -954,8 +954,8 @@ impl AlertManager {
         let severity_emoji = match alert.severity {
             AlertSeverity::Info => "ℹ️",
             AlertSeverity::Warning => "⚠️",
-            AlertSeverity::Error => "🚨",
-            AlertSeverity::Critical => "💥",
+            AlertSeverity::Error => "",
+            AlertSeverity::Critical => "",
         };
 
         format!(

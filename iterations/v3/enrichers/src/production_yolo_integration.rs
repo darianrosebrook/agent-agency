@@ -38,7 +38,7 @@ impl ProductionYOLOExecutor {
         // 2. Initialize CoreML/Swift bridge
         // 3. Set up monitoring and optimization
 
-        println!("🔧 Initializing YOLO production executor...");
+        println!(" Initializing YOLO production executor...");
         println!("   Model path: apple-silicon/models/yolov3.mlmodel");
         println!("   Expected size: ~118MB");
         println!("   Backend: CoreML with ANE acceleration");
@@ -47,7 +47,7 @@ impl ProductionYOLOExecutor {
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
         self.model_loaded = true;
-        println!("✅ YOLO model initialized successfully");
+        println!(" YOLO model initialized successfully");
 
         Ok(())
     }
@@ -137,7 +137,7 @@ impl ProductionVisionEnricher {
         // Set up the YOLO executor in the base enricher
         // Note: This would need to be adapted for the actual trait object pattern
 
-        println!("🎯 YOLO integration initialized for production");
+        println!(" YOLO integration initialized for production");
         Ok(())
     }
 
@@ -254,7 +254,7 @@ impl ProductionVisionEnricher {
 
     /// Log performance metrics for monitoring
     async fn log_performance_metrics(&self, metrics: &PerformanceMetrics) {
-        println!("📊 Vision Analysis Performance:");
+        println!(" Vision Analysis Performance:");
         println!("   OCR Time: {}ms", metrics.ocr_time_ms);
         println!("   YOLO Time: {}ms", metrics.yolo_time_ms);
         println!("   Total Time: {}ms", metrics.total_time_ms);

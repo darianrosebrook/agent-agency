@@ -8,7 +8,6 @@ use crate::disambiguation::types::*;
 use crate::ProcessingContext;
 
 /// Context resolver for disambiguating ambiguities
-#[derive(Debug)]
 pub struct ContextResolver {
     domain_context: HashMap<String, String>,
     embedding_provider: Option<Arc<dyn EmbeddingProvider>>,

@@ -74,7 +74,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let help_requested = args.iter().any(|arg| arg == "--help" || arg == "-h");
 
     if help_requested {
-        println!("🔍 Agent Agency V3 Implementation Validation");
+        println!(" Agent Agency V3 Implementation Validation");
         println!("============================================\n");
         println!("USAGE:");
         println!("  {} [--enforce] [--help]", args[0]);
@@ -91,9 +91,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     }
 
-    println!("🔍 Agent Agency V3 Implementation Validation");
+    println!(" Agent Agency V3 Implementation Validation");
     if enforce_mode {
-        println!("🚫 ENFORCEMENT MODE: Will exit non-zero on TODO/FIXME detection");
+        println!(" ENFORCEMENT MODE: Will exit non-zero on TODO/FIXME detection");
     }
     println!("============================================\n");
 
@@ -108,13 +108,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut total_lines = 0;
 
     for crate_name in &crates {
-        println!("📦 Validating crate: {}", crate_name);
+        println!(" Validating crate: {}", crate_name);
 
         let crate_path = Path::new(crate_name);
         let src_path = crate_path.join("src");
 
         if !src_path.exists() {
-            println!("  ❌ Source directory missing for {}", crate_name);
+            println!("   Source directory missing for {}", crate_name);
             continue;
         }
 
@@ -128,7 +128,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             })
             .collect::<Vec<_>>();
 
-        println!("  📁 Found {} Rust files", rust_files.len());
+        println!("   Found {} Rust files", rust_files.len());
 
         // Read and validate each file
         for file_entry in rust_files {
@@ -151,7 +151,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                    content.contains("trait ");
             let has_impl_block = content.contains("impl ");
 
-            println!("    ✅ {}: {} lines, {} docs, {} uses, {} types, {} impls",
+            println!("     {}: {} lines, {} docs, {} uses, {} types, {} impls",
                     file_name,
                     lines,
                     has_mod_decl as u8,
@@ -165,7 +165,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             if has_todo_marker {
                 if enforce_mode {
-                    eprintln!("    ❌ Contains TODO/FIXME markers (enforced failure)");
+                    eprintln!("     Contains TODO/FIXME markers (enforced failure)");
                     process::exit(1);
                 } else {
                     println!("    ⚠️  Contains TODO/FIXME markers");
@@ -174,7 +174,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             if has_unimplemented {
                 if enforce_mode {
-                    eprintln!("    ❌ Contains unimplemented! or todo! macros (enforced failure)");
+                    eprintln!("     Contains unimplemented! or todo! macros (enforced failure)");
                     process::exit(1);
                 } else {
                     println!("    ⚠️  Contains unimplemented! or todo! macros");
@@ -185,22 +185,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         // Check Cargo.toml exists
         let cargo_path = crate_path.join("Cargo.toml");
         if cargo_path.exists() {
-            println!("  ✅ Cargo.toml present");
+            println!("   Cargo.toml present");
         } else {
-            println!("  ❌ Cargo.toml missing");
+            println!("   Cargo.toml missing");
         }
 
         println!();
     }
 
-    println!("📊 Validation Summary:");
+    println!(" Validation Summary:");
     println!("  • Total Crates: {}", crates.len());
     println!("  • Total Files: {}", total_files);
     println!("  • Total Lines: {}", total_lines);
     println!("  • Average Lines per File: {}", total_lines / total_files.max(1));
 
     // Implementation quality checks
-    println!("\n🏆 Implementation Quality Metrics:");
+    println!("\n Implementation Quality Metrics:");
 
     let expected_files = 29; // Based on our implementation
     let file_coverage = (total_files as f32 / expected_files as f32) * 100.0;
@@ -210,18 +210,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let line_coverage = (total_lines as f32 / expected_lines as f32) * 100.0;
     println!("  • Line Coverage: {:.1}% ({}/{})", line_coverage, total_lines, expected_lines);
 
-    println!("\n🎯 Roadmap Completion Status:");
-    println!("  ✅ Constitutional Authority - Arbiter/Council System");
-    println!("  ✅ CAWS Runtime Integration - Quality guardrails");
-    println!("  ✅ Low-Level Runtime Optimization - Kokoro-inspired tuning");
-    println!("  ✅ Multi-Stage Decision Pipeline - Bayesian optimization");
-    println!("  ✅ Dynamic Resource Allocation - Thermal-aware scheduling");
-    println!("  ✅ Streaming Inference Pipelines - Real-time optimization");
-    println!("  ✅ Complete Tool Calling Ecosystem - MCP integration");
-    println!("  ✅ Federated Privacy-Preserving Learning - Secure aggregation");
-    println!("  ✅ Model-Agnostic Hot-Swapping - Zero-downtime updates");
+    println!("\n Roadmap Completion Status:");
+    println!("   Constitutional Authority - Arbiter/Council System");
+    println!("   CAWS Runtime Integration - Quality guardrails");
+    println!("   Low-Level Runtime Optimization - Kokoro-inspired tuning");
+    println!("   Multi-Stage Decision Pipeline - Bayesian optimization");
+    println!("   Dynamic Resource Allocation - Thermal-aware scheduling");
+    println!("   Streaming Inference Pipelines - Real-time optimization");
+    println!("   Complete Tool Calling Ecosystem - MCP integration");
+    println!("   Federated Privacy-Preserving Learning - Secure aggregation");
+    println!("   Model-Agnostic Hot-Swapping - Zero-downtime updates");
 
-    println!("\n🚀 System Status: FULLY IMPLEMENTED AND VALIDATED");
+    println!("\n System Status: FULLY IMPLEMENTED AND VALIDATED");
     println!("All components are structurally sound and ready for integration testing.");
 
     Ok(())

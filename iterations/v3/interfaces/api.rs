@@ -974,7 +974,7 @@ async fn approve_waiver(
     let title: String = row.get("title");
     let gates: Vec<String> = row.get("gates");
 
-    println!("✅ Waiver '{}' approved by {} for gates: {:?}", title, request.approver, gates);
+    println!(" Waiver '{}' approved by {} for gates: {:?}", title, request.approver, gates);
     Ok(StatusCode::OK)
 }
 

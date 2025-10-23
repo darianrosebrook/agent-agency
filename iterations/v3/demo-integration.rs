@@ -15,11 +15,11 @@ use self_prompting_agent::{
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("🚀 Agent Agency V3 - Integrated Autonomous Agent Demo");
+    println!(" Agent Agency V3 - Integrated Autonomous Agent Demo");
     println!("==================================================");
 
     // Initialize components
-    println!("\n📦 Initializing components...");
+    println!("\n Initializing components...");
 
     let model_registry = Arc::new(ModelRegistry::new());
     let evaluation_orchestrator = Arc::new(RwLock::new(EvaluationOrchestrator::new(
@@ -33,10 +33,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         ExecutionMode::DryRun, // Safe mode - no actual file changes
     ).await?;
 
-    println!("✅ Integrated agent initialized successfully");
+    println!(" Integrated agent initialized successfully");
 
     // Create a sample task
-    println!("\n🎯 Creating sample task...");
+    println!("\n Creating sample task...");
 
     let task = Task {
         id: Uuid::new_v4(),
@@ -56,15 +56,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         updated_at: Utc::now(),
     };
 
-    println!("📋 Task: {}", task.description);
+    println!(" Task: {}", task.description);
 
     // Execute task autonomously
-    println!("\n🤖 Executing task autonomously...");
+    println!("\n Executing task autonomously...");
     println!("   Mode: Dry Run (no actual file changes)");
 
     match agent.execute_task_autonomously(task.clone()).await {
         Ok(result) => {
-            println!("✅ Task completed!");
+            println!(" Task completed!");
             println!("   Task ID: {}", result.task_id);
             println!("   Success: {}", result.final_report.status == self_prompting_agent::evaluation::EvalStatus::Pass);
             println!("   Iterations: {}", result.iterations);
@@ -73,13 +73,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("   Artifacts Generated: {}", result.artifacts.len());
         }
         Err(e) => {
-            println!("❌ Task failed: {}", e);
+            println!(" Task failed: {}", e);
             println!("   This is expected in dry-run mode without full model setup");
         }
     }
 
-    println!("\n🎉 Integration demo complete!");
-    println!("\n📝 Key Integration Points Demonstrated:");
+    println!("\n Integration demo complete!");
+    println!("\n Key Integration Points Demonstrated:");
     println!("   • Model Registry → Loop Controller connection");
     println!("   • Evaluation Orchestrator integration");
     println!("   • Sandbox Environment coordination");

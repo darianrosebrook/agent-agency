@@ -230,7 +230,7 @@ impl CouncilIntegrationTests {
             "Should have recorded verdict confidence score"
         );
 
-        info!("✅ Verdict generation test completed");
+        info!(" Verdict generation test completed");
         Ok(())
     }
 
@@ -363,7 +363,7 @@ impl CouncilIntegrationTests {
         );
 
         info!(
-            "✅ Evidence enrichment test completed - enriched {} items",
+            " Evidence enrichment test completed - enriched {} items",
             enriched_evidence.len()
         );
         Ok(())
@@ -523,7 +523,7 @@ impl CouncilIntegrationTests {
         );
 
         info!(
-            "✅ Consensus building test completed - {} decision with {:.2} confidence",
+            " Consensus building test completed - {} decision with {:.2} confidence",
             consensus_decision, consensus_confidence
         );
         Ok(())
@@ -557,7 +557,7 @@ impl CouncilIntegrationTests {
         // assert!(judge_types.contains("technical"));
         // assert!(judge_types.contains("quality"));
 
-        info!("✅ Judge coordination test completed");
+        info!(" Judge coordination test completed");
         Ok(())
     }
 
@@ -597,7 +597,7 @@ impl CouncilIntegrationTests {
         // let events = self.mock_events.get_events_by_type("learning_update").await;
         // assert!(!events.is_empty());
 
-        info!("✅ Learning signals test completed");
+        info!(" Learning signals test completed");
         Ok(())
     }
 
@@ -645,7 +645,7 @@ impl CouncilIntegrationTests {
         // assert!(metrics.contains_key("total_processing_time_ms"));
         // assert!(metrics.contains_key("average_processing_time_ms"));
 
-        info!("✅ Load performance test completed in {:?}", duration);
+        info!(" Load performance test completed in {:?}", duration);
         Ok(())
     }
 
@@ -656,21 +656,21 @@ impl CouncilIntegrationTests {
         // Test 1: Majority voting (>50% threshold)
         let majority_result = self.test_majority_voting_algorithm().await?;
         info!(
-            "✅ Majority voting test: {}",
+            " Majority voting test: {}",
             if majority_result { "PASSED" } else { "FAILED" }
         );
 
         // Test 2: Weighted consensus (60% threshold)
         let weighted_result = self.test_weighted_consensus_algorithm().await?;
         info!(
-            "✅ Weighted consensus test: {}",
+            " Weighted consensus test: {}",
             if weighted_result { "PASSED" } else { "FAILED" }
         );
 
         // Test 3: Multi-criteria analysis (70% threshold)
         let multicriteria_result = self.test_multicriteria_analysis_algorithm().await?;
         info!(
-            "✅ Multi-criteria analysis test: {}",
+            " Multi-criteria analysis test: {}",
             if multicriteria_result {
                 "PASSED"
             } else {

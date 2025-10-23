@@ -61,7 +61,7 @@ impl MockDatabase {
         });
         audit_logs.push(audit_event);
 
-        println!("✅ Mock DB: Created task {}", task_id);
+        println!(" Mock DB: Created task {}", task_id);
         Ok(())
     }
 
@@ -95,7 +95,7 @@ impl MockDatabase {
         let mut waivers = self.waivers.write().await;
         waivers.push(waiver_with_id.clone());
 
-        println!("✅ Mock DB: Created waiver {}", waiver_id);
+        println!(" Mock DB: Created waiver {}", waiver_id);
         Ok(waiver_with_id)
     }
 }
@@ -129,7 +129,7 @@ async fn create_task(
     State(state): State<AppState>,
     Json(payload): Json<TaskRequest>,
 ) -> Result<Json<TaskResponse>, StatusCode> {
-    println!("📝 Creating task: {}", payload.description);
+    println!(" Creating task: {}", payload.description);
 
     // Create task in mock database
     let task_id = Uuid::new_v4();
@@ -144,11 +144,11 @@ async fn create_task(
                 created_at: chrono::Utc::now().to_rfc3339(),
             };
 
-            println!("✅ Task created: {}", task_id);
+            println!(" Task created: {}", task_id);
             Ok(Json(response))
         }
         Err(e) => {
-            println!("❌ Failed to create task: {}", e);
+            println!(" Failed to create task: {}", e);
             Err(StatusCode::INTERNAL_SERVER_ERROR)
         }
     }
@@ -158,7 +158,7 @@ async fn get_task(
     State(state): State<AppState>,
     Path(task_id): Path<String>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
-    println!("📖 Getting task: {}", task_id);
+    println!(" Getting task: {}", task_id);
 
     let uuid = match Uuid::parse_str(&task_id) {
         Ok(uuid) => uuid,
@@ -194,18 +194,18 @@ async fn get_task(
                 "events": events
             });
 
-            println!("✅ Task retrieved with {} events", events.len());
+            println!(" Task retrieved with {} events", events.len());
             Ok(Json(response))
         }
         None => {
-            println!("❌ Task not found: {}", task_id);
+            println!(" Task not found: {}", task_id);
             Err(StatusCode::NOT_FOUND)
         }
     }
 }
 
 async fn list_tasks(State(state): State<AppState>) -> Result<Json<Vec<TaskResponse>>, StatusCode> {
-    println!("📋 Listing tasks");
+    println!(" Listing tasks");
 
     let tasks_data = state.db.list_tasks().await;
     let tasks = tasks_data.iter().map(|task| {
@@ -222,7 +222,7 @@ async fn list_tasks(State(state): State<AppState>) -> Result<Json<Vec<TaskRespon
         }
     }).collect::<Vec<_>>();
 
-    println!("✅ Found {} tasks", tasks.len());
+    println!(" Found {} tasks", tasks.len());
     Ok(Json(tasks))
 }
 
@@ -230,16 +230,16 @@ async fn create_waiver(
     State(state): State<AppState>,
     Json(payload): Json<serde_json::Value>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
-    println!("📋 Creating waiver");
+    println!(" Creating waiver");
 
     match state.db.create_waiver(payload).await {
         Ok(waiver) => {
             let waiver_id = waiver.get("id").and_then(|v| v.as_str()).unwrap_or("unknown");
-            println!("✅ Waiver created: {}", waiver_id);
+            println!(" Waiver created: {}", waiver_id);
             Ok(Json(waiver))
         }
         Err(e) => {
-            println!("❌ Failed to create waiver: {}", e);
+            println!(" Failed to create waiver: {}", e);
             Err(StatusCode::INTERNAL_SERVER_ERROR)
         }
     }
@@ -247,7 +247,7 @@ async fn create_waiver(
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("🚀 Starting Test API Server");
+    println!(" Starting Test API Server");
 
     // Initialize mock database for testing
     println!("⚠️  Using in-memory mock database for testing");
@@ -269,12 +269,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let addr = "127.0.0.1:8080";
     let listener = TcpListener::bind(addr).await?;
 
-    println!("✅ Test API server ready at http://{}", addr);
-    println!("📊 Health check: http://{}", addr);
-    println!("📝 Create task: POST http://{}/tasks", addr);
-    println!("📖 Get task: GET http://{}/tasks/<uuid>", addr);
-    println!("📋 List tasks: GET http://{}/tasks", addr);
-    println!("📋 Create waiver: POST http://{}/waivers", addr);
+    println!(" Test API server ready at http://{}", addr);
+    println!(" Health check: http://{}", addr);
+    println!(" Create task: POST http://{}/tasks", addr);
+    println!(" Get task: GET http://{}/tasks/<uuid>", addr);
+    println!(" List tasks: GET http://{}/tasks", addr);
+    println!(" Create waiver: POST http://{}/waivers", addr);
 
     axum::serve(listener, app).await?;
 

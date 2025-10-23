@@ -287,12 +287,12 @@ impl E2eTestRunner {
         let average_tasks = total_tasks as f64 / results.len() as f64;
 
         // Implemented: Proper test timing data parsing and validation
-        // - ✅ Add comprehensive timing data parsing from various test formats (JUnit, TestNG, xUnit, etc.) - Multi-format parsers with automatic format detection
-        // - ✅ Implement statistical analysis for performance regression detection - Statistical tests, trend analysis, and regression detection algorithms
-        // - ✅ Support timing data aggregation and outlier detection - Robust aggregation methods and statistical outlier detection
-        // - ✅ Add timing validation against SLAs and performance budgets - SLA validation, budget checking, and threshold monitoring
-        // - ✅ Implement timing trend analysis and forecasting - Time-series analysis, forecasting models, and trend prediction
-        // - ✅ Support timing data visualization and reporting - Comprehensive reporting with charts, histograms, and trend analysis
+        // -  Add comprehensive timing data parsing from various test formats (JUnit, TestNG, xUnit, etc.) - Multi-format parsers with automatic format detection
+        // -  Implement statistical analysis for performance regression detection - Statistical tests, trend analysis, and regression detection algorithms
+        // -  Support timing data aggregation and outlier detection - Robust aggregation methods and statistical outlier detection
+        // -  Add timing validation against SLAs and performance budgets - SLA validation, budget checking, and threshold monitoring
+        // -  Implement timing trend analysis and forecasting - Time-series analysis, forecasting models, and trend prediction
+        // -  Support timing data visualization and reporting - Comprehensive reporting with charts, histograms, and trend analysis
         // This implementation provides enterprise-grade test timing analysis with:
         // - Multi-format test result parsing (JUnit XML, TestNG XML, xUnit JSON, custom formats)
         // - Statistical regression detection using hypothesis testing and confidence intervals
@@ -316,12 +316,12 @@ impl E2eTestRunner {
         );
 
         // Implemented: Comprehensive system resource monitoring
-        // - ✅ Add detailed CPU usage tracking per process and core - Per-core CPU utilization, process-level CPU tracking, thread analysis
-        // - ✅ Implement memory usage analysis with heap/stack breakdown - Virtual/physical memory, swap usage, memory pressure analysis
-        // - ✅ Support disk I/O monitoring and bottleneck detection - Read/write throughput, IOPS, queue depth, latency analysis
-        // - ✅ Add network usage tracking and bandwidth analysis - Interface statistics, packet rates, connection tracking, bandwidth utilization
-        // - ✅ Implement GPU memory and utilization monitoring - GPU memory usage, utilization rates, temperature monitoring (NVIDIA/AMD)
-        // - ✅ Support resource usage profiling and flame graphs - Time-series data collection, resource leak detection, predictive scaling
+        // -  Add detailed CPU usage tracking per process and core - Per-core CPU utilization, process-level CPU tracking, thread analysis
+        // -  Implement memory usage analysis with heap/stack breakdown - Virtual/physical memory, swap usage, memory pressure analysis
+        // -  Support disk I/O monitoring and bottleneck detection - Read/write throughput, IOPS, queue depth, latency analysis
+        // -  Add network usage tracking and bandwidth analysis - Interface statistics, packet rates, connection tracking, bandwidth utilization
+        // -  Implement GPU memory and utilization monitoring - GPU memory usage, utilization rates, temperature monitoring (NVIDIA/AMD)
+        // -  Support resource usage profiling and flame graphs - Time-series data collection, resource leak detection, predictive scaling
         // This implementation provides enterprise-grade system resource monitoring with:
         // - Real-time multi-dimensional resource tracking
         // - Predictive scaling based on resource usage patterns
@@ -384,7 +384,7 @@ impl E2eTestRunner {
 
         for result in results {
             report.push_str(&format!("### {}: {}\n\n", result.scenario_name,
-                if result.passed { "✅ PASSED" } else { "❌ FAILED" }));
+                if result.passed { " PASSED" } else { " FAILED" }));
 
             report.push_str(&format!("- Duration: {:.2}s\n", result.total_duration.as_secs_f64()));
             report.push_str(&format!("- Tasks Executed: {}\n", result.task_results.len()));
@@ -434,9 +434,9 @@ impl E2eTestRunner {
         }
 
         if result.failed_scenarios > 0 {
-            tracing::warn!("❌ {} scenarios failed", result.failed_scenarios);
+            tracing::warn!(" {} scenarios failed", result.failed_scenarios);
         } else {
-            tracing::info!("✅ All scenarios passed!");
+            tracing::info!(" All scenarios passed!");
         }
     }
 }

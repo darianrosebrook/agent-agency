@@ -1,8 +1,8 @@
 ╔════════════════════════════════════════════════════════════════════════════════╗
 ║                   Core ML Integration - Architecture Overview                   ║
 ║                                                                                 ║
-║                        ✅ PHASES 0-2 COMPLETE                                  ║
-║                        ⏳ PHASE 3 INFRASTRUCTURE READY                          ║
+║                         PHASES 0-2 COMPLETE                                  ║
+║                         PHASE 3 INFRASTRUCTURE READY                          ║
 ╚════════════════════════════════════════════════════════════════════════════════╝
 
 ┌────────────────────────────────────────────────────────────────────────────────┐
@@ -27,10 +27,10 @@
 │   CANDLE BACKEND         │   │   CORE ML BACKEND           │
 │   (CPU Reference)        │   │   (Apple Silicon ANE/GPU)   │
 │                          │   │                             │
-│ ✅ test_candle_send_sync │   │ ✅ 4/4 tests passing        │
-│ ✅ Numeric parity        │   │ ✅ Telemetry integrated    │
-│    baseline              │   │ ✅ Circuit breaker active  │
-│ ✅ Always available      │   │ ✅ Fallback to CPU on fail │
+│  test_candle_send_sync │   │  4/4 tests passing        │
+│  Numeric parity        │   │  Telemetry integrated    │
+│    baseline              │   │  Circuit breaker active  │
+│  Always available      │   │  Fallback to CPU on fail │
 └──────────────────────────┘   └─────────────────────────────┘
                                          │
                     ┌────────────────────┼───────────────────┐
@@ -39,10 +39,10 @@
          │ TELEMETRY SYSTEM    │  │ CORE ML BRIDGE │  │ Swift Bridge   │
          │ (427 lines)         │  │ (300+ lines)   │  │ (250+ lines)   │
          │                     │  │                │  │                │
-         │ ✅ 7/7 tests pass  │  │ ✅ Safe FFI    │  │ ✅ C ABI       │
-         │ ✅ Metrics collect │  │ ✅ Drop guards │  │ ✅ Auto pools  │
-         │ ✅ Circuit breaker │  │ ✅ No panics   │  │ ✅ Error xlate │
-         │ ✅ Thread-safe     │  │ ✅ Timeout     │  │ ✅ SPM target  │
+         │  7/7 tests pass  │  │  Safe FFI    │  │  C ABI       │
+         │  Metrics collect │  │  Drop guards │  │  Auto pools  │
+         │  Circuit breaker │  │  No panics   │  │  Error xlate │
+         │  Thread-safe     │  │  Timeout     │  │  SPM target  │
          │                     │  │    enforcement│  │                │
          │ Tracks:            │  │                │  │ Functions:     │
          │ • Compile ops      │  │                │  │ • compile      │
@@ -77,28 +77,28 @@
 PHASE 3 VALIDATION CHECKLIST
 ═════════════════════════════════════════════════════════════════════════════════
 
-✅ Phase 2 (Telemetry System)
-   ✅ 11/11 tests verified
-   ✅ Metrics collection functional
-   ✅ Circuit breaker tested
-   ✅ Thread safety validated
-   ✅ No panics across FFI
+ Phase 2 (Telemetry System)
+    11/11 tests verified
+    Metrics collection functional
+    Circuit breaker tested
+    Thread safety validated
+    No panics across FFI
 
-⏳ Phase 3A (Model Acquisition)
-   ⏳ Download FastViT T8 model
-   ⏳ Save to: tests/fixtures/models/fastvit_t8.mlmodel
-   ⏳ Create manifest.json
+ Phase 3A (Model Acquisition)
+    Download FastViT T8 model
+    Save to: tests/fixtures/models/fastvit_t8.mlmodel
+    Create manifest.json
    
-⏳ Phase 3B (Inference Testing)
-   ⏳ Load model with telemetry
-   ⏳ Run 1000+ inference cycles
-   ⏳ Measure ANE dispatch rate
-   ⏳ Validate performance speedup
+ Phase 3B (Inference Testing)
+    Load model with telemetry
+    Run 1000+ inference cycles
+    Measure ANE dispatch rate
+    Validate performance speedup
    
-⏳ Phase 3C (Performance Validation)
-   ⏳ Core ML p99 ≤ 0.7x CPU p99
-   ⏳ Numeric parity (L∞ ≤ 1e-2, RMSE ≤ 1e-3)
-   ⏳ Profile with Instruments.app
+ Phase 3C (Performance Validation)
+    Core ML p99 ≤ 0.7x CPU p99
+    Numeric parity (L∞ ≤ 1e-2, RMSE ≤ 1e-3)
+    Profile with Instruments.app
 
 ═════════════════════════════════════════════════════════════════════════════════
 

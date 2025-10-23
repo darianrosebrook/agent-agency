@@ -170,7 +170,7 @@ mod integration_tests {
         assert!(!verdict.rationale.is_empty());
         assert!(!verdict.suggested_improvements.is_empty());
 
-        println!("✅ Plan review integration test passed");
+        println!(" Plan review integration test passed");
         println!("   Working Spec ID: {}", verdict.working_spec_id);
         println!("   Decision: {:?}", verdict.decision);
         println!("   Constitutional Score: {:.2}", verdict.constitutional_score);
@@ -218,7 +218,7 @@ mod integration_tests {
         assert_eq!(verdict.constitutional_score, deserialized.constitutional_score);
         assert_eq!(verdict.judge_verdicts.len(), 1);
 
-        println!("✅ Plan review type system test passed");
+        println!(" Plan review type system test passed");
     }
 
     #[test]
@@ -268,6 +268,6 @@ mod integration_tests {
             assert!(json.contains(expected_type), "JSON should contain {}", expected_type);
         }
 
-        println!("✅ Plan review rejection scenarios test passed");
+        println!(" Plan review rejection scenarios test passed");
     }
 }

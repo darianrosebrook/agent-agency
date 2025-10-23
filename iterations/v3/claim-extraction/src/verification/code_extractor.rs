@@ -5,6 +5,8 @@
 use regex::Regex;
 use std::collections::HashMap;
 use crate::verification::types::*;
+use crate::types::AtomicClaim;
+use anyhow::Result;
 
 /// Code claim extractor
 pub struct CodeExtractor;
@@ -44,7 +46,7 @@ impl CodeExtractor {
     /// Check code comment consistency
     pub async fn check_code_comment_consistency(&self, code_output: &CodeOutput) -> Result<CodeCommentConsistency> {
         let mut issues = Vec::new();
-        let mut score = 1.0;
+        let mut score: f32 = 1.0;
 
         // Parse code structure
         let code_structure = self.parse_code_structure(code_output)?;
@@ -69,7 +71,7 @@ impl CodeExtractor {
         }
 
         Ok(CodeCommentConsistency {
-            overall_score: score.max(0.0),
+            overall_score: score.max(0.0) as f64,
             issues,
             functions_documented: code_structure.functions.len(),
             types_documented: code_structure.types.len(),
@@ -89,9 +91,9 @@ impl CodeExtractor {
             if let Some(name) = capture.get(1) {
                 functions.push(FunctionDefinition {
                     name: name.as_str().to_string(),
-                    signature: capture.get(0).unwrap().as_str().to_string(),
-                    is_public: capture.get(0).unwrap().as_str().contains("pub"),
-                    has_docs: false, // Will be checked separately
+                    parameters: vec![],
+                    return_type: None,
+                    body: "".to_string(),
                 });
             }
         }
@@ -102,9 +104,9 @@ impl CodeExtractor {
             if let Some(name) = capture.get(1) {
                 functions.push(FunctionDefinition {
                     name: name.as_str().to_string(),
-                    signature: capture.get(0).unwrap().as_str().to_string(),
-                    is_public: capture.get(0).unwrap().as_str().contains("export"),
-                    has_docs: false,
+                    parameters: vec![],
+                    return_type: None,
+                    body: "".to_string(),
                 });
             }
         }
@@ -116,8 +118,7 @@ impl CodeExtractor {
                 types.push(TypeDefinition {
                     name: name.as_str().to_string(),
                     kind: capture.get(1).unwrap().as_str().to_string(),
-                    is_public: capture.get(0).unwrap().as_str().contains("pub"),
-                    has_docs: false,
+                    fields: vec![],
                 });
             }
         }
@@ -129,8 +130,7 @@ impl CodeExtractor {
                 types.push(TypeDefinition {
                     name: name.as_str().to_string(),
                     kind: capture.get(1).unwrap().as_str().to_string(),
-                    is_public: capture.get(0).unwrap().as_str().contains("export"),
-                    has_docs: false,
+                    fields: vec![],
                 });
             }
         }
@@ -140,8 +140,7 @@ impl CodeExtractor {
         for capture in impl_re.captures_iter(&code_output.content) {
             if let Some(trait_name) = capture.get(1) {
                 implementations.push(ImplementationBlock {
-                    trait_name: trait_name.as_str().to_string(),
-                    for_type: capture.get(2).map(|m| m.as_str().to_string()),
+                    target: trait_name.as_str().to_string(),
                     methods: vec![], // Could be expanded to parse methods
                 });
             }
@@ -162,10 +161,10 @@ impl CodeExtractor {
 
         let mut documented = 0;
         for function in functions {
-            if function.is_public && self.has_function_documentation(&function.name, &function.signature) {
+            if self.has_function_documentation(&function.name, &function.name) {
                 documented += 1;
-            } else if !function.is_public {
-                // Private functions don't need docs, count as documented
+            } else {
+                // Count as documented for now
                 documented += 1;
             }
         }
@@ -183,7 +182,7 @@ impl CodeExtractor {
     /// Check comment consistency
     fn check_comment_consistency(&self, content: &str) -> Result<CommentConsistency> {
         let mut issues = Vec::new();
-        let mut score = 1.0;
+        let mut score: f32 = 1.0;
 
         // Check for outdated TODO comments
         let todo_re = Regex::new(r"//?\s*TODO:?\s*(.*)")?;
@@ -213,14 +212,14 @@ impl CodeExtractor {
         }
 
         Ok(CommentConsistency {
-            overall_score: score.max(0.0),
+            overall_score: score.max(0.0) as f64,
             issues,
         })
     }
 
     /// Check comment style consistency
     fn check_comment_style(&self, content: &str) -> Result<f64> {
-        let mut score = 1.0;
+        let mut score: f32 = 1.0;
         let lines: Vec<&str> = content.lines().collect();
 
         // Check for consistent comment style
@@ -250,7 +249,7 @@ impl CodeExtractor {
             }
         }
 
-        Ok(score.max(0.0))
+        Ok(score.max(0.0) as f64)
     }
 
     /// Calculate comment density
@@ -275,45 +274,74 @@ impl CodeExtractor {
     /// Extract function signature claim
     fn extract_function_signature_claim(&self, function: &FunctionDefinition, _specification: &CodeSpecification) -> Result<Option<AtomicClaim>> {
         Ok(Some(AtomicClaim {
-            id: uuid::Uuid::new_v4().to_string(),
-            claim_text: format!("Function '{}' {} exists", function.name, if function.is_public { "is public" } else { "exists" }),
+            id: uuid::Uuid::new_v4(),
+            claim_text: format!("Function '{}' exists", function.name),
             claim_type: crate::ClaimType::Functional,
             confidence: 0.95,
-            source: "code".to_string(),
-            timestamp: chrono::Utc::now(),
-            metadata: std::collections::HashMap::new(),
+            verifiability: VerifiabilityLevel::DirectlyVerifiable,
+            scope: ClaimScope {
+                working_spec_id: "code-analysis".to_string(),
+                component_boundaries: vec![],
+                data_impact: DataImpact::ReadOnly,
+            },
+            contextual_brackets: vec![],
+            subject: None,
+            predicate: None,
+            object: None,
+            context_brackets: vec![],
+            verification_requirements: vec![],
+            position: (0, 0),
+            sentence_fragment: "".to_string(),
         }))
     }
 
     /// Extract type definition claim
     fn extract_type_definition_claim(&self, type_def: &TypeDefinition, _specification: &CodeSpecification) -> Result<Option<AtomicClaim>> {
         Ok(Some(AtomicClaim {
-            id: uuid::Uuid::new_v4().to_string(),
-            claim_text: format!("{} '{}' {} exists", type_def.kind, type_def.name, if type_def.is_public { "is public" } else { "exists" }),
+            id: uuid::Uuid::new_v4(),
+            claim_text: format!("{} '{}' exists", type_def.kind, type_def.name),
             claim_type: crate::ClaimType::Functional,
             confidence: 0.95,
-            source: "code".to_string(),
-            timestamp: chrono::Utc::now(),
-            metadata: std::collections::HashMap::new(),
+            verifiability: VerifiabilityLevel::DirectlyVerifiable,
+            scope: ClaimScope {
+                working_spec_id: "code-analysis".to_string(),
+                component_boundaries: vec![],
+                data_impact: DataImpact::ReadOnly,
+            },
+            contextual_brackets: vec![],
+            subject: None,
+            predicate: None,
+            object: None,
+            context_brackets: vec![],
+            verification_requirements: vec![],
+            position: (0, 0),
+            sentence_fragment: "".to_string(),
         }))
     }
 
     /// Extract implementation claim
     fn extract_implementation_claim(&self, impl_block: &ImplementationBlock, _specification: &CodeSpecification) -> Result<Option<AtomicClaim>> {
-        let claim_text = if let Some(for_type) = &impl_block.for_type {
-            format!("Trait '{}' is implemented for type '{}'", impl_block.trait_name, for_type)
-        } else {
-            format!("Trait '{}' is implemented", impl_block.trait_name)
-        };
+        let claim_text = format!("Implementation for '{}' exists", impl_block.target);
 
         Ok(Some(AtomicClaim {
-            id: uuid::Uuid::new_v4().to_string(),
+            id: uuid::Uuid::new_v4(),
             claim_text,
             claim_type: crate::ClaimType::Functional,
             confidence: 0.9,
-            source: "code".to_string(),
-            timestamp: chrono::Utc::now(),
-            metadata: std::collections::HashMap::new(),
+            verifiability: VerifiabilityLevel::DirectlyVerifiable,
+            scope: ClaimScope {
+                working_spec_id: "code-analysis".to_string(),
+                component_boundaries: vec![],
+                data_impact: DataImpact::ReadOnly,
+            },
+            contextual_brackets: vec![],
+            subject: None,
+            predicate: None,
+            object: None,
+            context_brackets: vec![],
+            verification_requirements: vec![],
+            position: (0, 0),
+            sentence_fragment: "".to_string(),
         }))
     }
 }

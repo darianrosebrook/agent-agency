@@ -108,9 +108,9 @@ async fn test_mistral_judge_basic_functionality() {
 
     let verdict = result.unwrap();
     match verdict {
-        JudgeVerdict::Approve { .. } => println!("✅ Judge approved the specification"),
-        JudgeVerdict::Refine { .. } => println!("🔄 Judge requested refinements"),
-        JudgeVerdict::Reject { .. } => println!("❌ Judge rejected the specification"),
+        JudgeVerdict::Approve { .. } => println!(" Judge approved the specification"),
+        JudgeVerdict::Refine { .. } => println!(" Judge requested refinements"),
+        JudgeVerdict::Reject { .. } => println!(" Judge rejected the specification"),
     }
 }
 

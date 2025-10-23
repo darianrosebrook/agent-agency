@@ -237,15 +237,15 @@ impl Default for SlaValidator {
 pub fn format_sla_report(report: &SlaValidationReport) -> String {
     let mut output = String::new();
 
-    output.push_str("🚀 SLA Validation Report\n");
+    output.push_str(" SLA Validation Report\n");
     output.push_str("=======================\n\n");
 
     output.push_str(&format!(
-        "📊 Validation Time: {}\n",
+        " Validation Time: {}\n",
         report.timestamp.format("%Y-%m-%d %H:%M:%S UTC")
     ));
     output.push_str(&format!(
-        "✅ Overall Status: {}\n",
+        " Overall Status: {}\n",
         if report.overall_compliant {
             "COMPLIANT"
         } else {
@@ -254,7 +254,7 @@ pub fn format_sla_report(report: &SlaValidationReport) -> String {
     ));
     output.push_str("\n");
 
-    output.push_str("📈 Summary:\n");
+    output.push_str(" Summary:\n");
     output.push_str(&format!(
         "  • Passed: {}/{}\n",
         report.summary.passed_count,
@@ -271,14 +271,14 @@ pub fn format_sla_report(report: &SlaValidationReport) -> String {
     ));
     output.push_str("\n");
 
-    output.push_str("📋 Individual SLA Results:\n");
+    output.push_str(" Individual SLA Results:\n");
     for result in &report.sla_results {
-        let status_icon = if result.passed { "✅" } else { "❌" };
+        let status_icon = if result.passed { "" } else { "" };
         let severity_icon = match result.severity {
-            SlaViolationSeverity::Minor => "🟡",
-            SlaViolationSeverity::Moderate => "🟠",
-            SlaViolationSeverity::Critical => "🔴",
-            SlaViolationSeverity::Catastrophic => "💀",
+            SlaViolationSeverity::Minor => "",
+            SlaViolationSeverity::Moderate => "",
+            SlaViolationSeverity::Critical => "",
+            SlaViolationSeverity::Catastrophic => "",
         };
 
         output.push_str(&format!(

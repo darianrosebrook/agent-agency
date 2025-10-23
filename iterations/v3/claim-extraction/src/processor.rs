@@ -4,7 +4,7 @@ use crate::verification::MultiModalVerificationEngine;
 use crate::qualification::QualificationStage;
 use crate::types::VerifiedClaim;
 use crate::types::*;
-use crate::verification::VerificationStage;
+// VerificationStage is not defined in verification module - removing this import
 use anyhow::Result;
 use std::time::Instant;
 use tracing::{debug, info};

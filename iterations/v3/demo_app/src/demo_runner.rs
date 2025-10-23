@@ -7,25 +7,25 @@ use tracing::{info, warn, error};
 
 /// Run the complete Agent Agency V3 system demonstration
 pub async fn run_complete_demo() -> Result<()> {
-    info!("🔧 Initializing Agent Agency V3 Components...");
+    info!(" Initializing Agent Agency V3 Components...");
 
     // Step 1: Initialize Runtime Optimization
     let runtime_optimizer = initialize_runtime_optimization().await?;
-    info!("✅ Runtime Optimization initialized");
+    info!(" Runtime Optimization initialized");
 
     // Step 2: Initialize Tool Ecosystem
     let tool_coordinator = initialize_tool_ecosystem().await?;
-    info!("✅ Tool Ecosystem initialized");
+    info!(" Tool Ecosystem initialized");
 
     // Step 3: Initialize Federated Learning
     let federation_coordinator = initialize_federated_learning().await?;
-    info!("✅ Federated Learning initialized");
+    info!(" Federated Learning initialized");
 
     // Step 4: Initialize Model Hot-Swapping
     let model_load_balancer = initialize_model_hotswap().await?;
-    info!("✅ Model Hot-Swapping initialized");
+    info!(" Model Hot-Swapping initialized");
 
-    info!("\n🔄 Running Integrated Workflows...\n");
+    info!("\n Running Integrated Workflows...\n");
 
     // Demonstrate Runtime Optimization
     run_runtime_optimization_demo(&runtime_optimizer).await?;
@@ -47,7 +47,7 @@ pub async fn run_complete_demo() -> Result<()> {
         &model_load_balancer,
     ).await?;
 
-    info!("\n📊 System Performance Summary:");
+    info!("\n System Performance Summary:");
     info!("  • Runtime Optimization: Hyper-tuned for performance");
     info!("  • Tool Ecosystem: 5+ tools registered and operational");
     info!("  • Federated Learning: 3 participants actively contributing");
@@ -127,7 +127,7 @@ async fn initialize_model_hotswap() -> Result<Arc<model_hotswap::LoadBalancer>> 
 async fn run_runtime_optimization_demo(
     optimizer: &Arc<runtime_optimization::KokoroTuner>
 ) -> Result<()> {
-    info!("⚡ Runtime Optimization Demo");
+    info!(" Runtime Optimization Demo");
 
     let workload = runtime_optimization::WorkloadSpec {
         name: "inference_workload".to_string(),
@@ -138,10 +138,10 @@ async fn run_runtime_optimization_demo(
     };
 
     let tuning_result = optimizer.tune_model(&workload).await?;
-    info!("  📊 Tuned {} parameters", tuning_result.parameters.len());
-    info!("  📈 Performance improvement: {:.1}% throughput",
+    info!("   Tuned {} parameters", tuning_result.parameters.len());
+    info!("   Performance improvement: {:.1}% throughput",
           tuning_result.metrics.throughput_ops_per_sec);
-    info!("  🕒 Latency reduction: {:.1}ms P95",
+    info!("   Latency reduction: {:.1}ms P95",
           tuning_result.metrics.latency_p95_ms);
 
     // Demonstrate Quality Guardrails
@@ -170,7 +170,7 @@ async fn run_runtime_optimization_demo(
 
     let checks = guardrails.run_all_checks(&check_context).await?;
     let passed_checks = checks.iter().filter(|c| c.is_valid).count();
-    info!("  ✅ Quality guardrails: {}/{} checks passed", passed_checks, checks.len());
+    info!("   Quality guardrails: {}/{} checks passed", passed_checks, checks.len());
 
     Ok(())
 }
@@ -179,7 +179,7 @@ async fn run_runtime_optimization_demo(
 async fn run_tool_ecosystem_demo(
     coordinator: &Arc<tool_ecosystem::ToolCoordinator>
 ) -> Result<()> {
-    info!("🔧 Tool Ecosystem Demo");
+    info!(" Tool Ecosystem Demo");
 
     // Register sample tools
     let tools = vec![
@@ -191,11 +191,11 @@ async fn run_tool_ecosystem_demo(
     ];
 
     for (tool_id, description) in tools {
-        info!("  🔧 Registering tool: {} - {}", tool_id, description);
+        info!("   Registering tool: {} - {}", tool_id, description);
         // In a real implementation, we would register actual tools
     }
 
-    info!("  ✅ {} tools registered and operational", tools.len());
+    info!("   {} tools registered and operational", tools.len());
     Ok(())
 }
 
@@ -203,21 +203,21 @@ async fn run_tool_ecosystem_demo(
 async fn run_federated_learning_demo(
     coordinator: &Arc<federated_learning::FederationCoordinator>
 ) -> Result<()> {
-    info!("🤝 Federated Learning Demo");
+    info!(" Federated Learning Demo");
 
     // Start a federation round
     let round_id = coordinator.start_round().await?;
-    info!("  🎯 Started federated learning round {}", round_id);
+    info!("   Started federated learning round {}", round_id);
 
     // Simulate participants joining
     let participants = vec!["alice", "bob", "charlie"];
     for participant in &participants {
-        info!("  👤 Participant {} joined federation", participant);
+        info!("   Participant {} joined federation", participant);
     }
 
     // Get federation statistics
     let stats = coordinator.get_statistics().await?;
-    info!("  📊 Federation status: {} active participants", stats.active_participants);
+    info!("   Federation status: {} active participants", stats.active_participants);
 
     // Demonstrate privacy preservation
     let mut dp_engine = federated_learning::DifferentialPrivacyEngine::new(
@@ -232,7 +232,7 @@ async fn run_federated_learning_demo(
 
     let original_data = vec![vec![1.0, 2.0, 3.0, 4.0, 5.0]];
     let private_data = dp_engine.add_noise(original_data).await?;
-    info!("  🔒 Differential privacy applied: data protected with ε={}, δ={}",
+    info!("   Differential privacy applied: data protected with ε={}, δ={}",
           1.0, 1e-5);
 
     Ok(())
@@ -242,26 +242,26 @@ async fn run_federated_learning_demo(
 async fn run_model_hotswap_demo(
     load_balancer: &Arc<model_hotswap::LoadBalancer>
 ) -> Result<()> {
-    info!("🔄 Model Hot-Swapping Demo");
+    info!(" Model Hot-Swapping Demo");
 
     // Get current distribution
     let initial_stats = load_balancer.get_statistics().await?;
-    info!("  📊 Initial state: {} active models, {}% traffic distributed",
+    info!("   Initial state: {} active models, {}% traffic distributed",
           initial_stats.active_models, (initial_stats.total_traffic * 100.0) as i32);
 
     // Start canary deployment
     load_balancer.start_canary("model_v2", 0.1).await?;
-    info!("  🚀 Started canary deployment: 10% traffic to model_v2");
+    info!("   Started canary deployment: 10% traffic to model_v2");
 
     let canary_stats = load_balancer.get_statistics().await?;
-    info!("  📊 Canary state: {} active models", canary_stats.active_models);
+    info!("   Canary state: {} active models", canary_stats.active_models);
 
     // Complete the deployment
     load_balancer.complete_canary("model_v2").await?;
-    info!("  ✅ Completed canary deployment: 100% traffic to model_v2");
+    info!("   Completed canary deployment: 100% traffic to model_v2");
 
     let final_stats = load_balancer.get_statistics().await?;
-    info!("  📊 Final state: {} active models, zero-downtime achieved",
+    info!("   Final state: {} active models, zero-downtime achieved",
           final_stats.active_models);
 
     Ok(())
@@ -274,7 +274,7 @@ async fn run_integrated_workflow_demo(
     federation_coordinator: &Arc<federated_learning::FederationCoordinator>,
     model_load_balancer: &Arc<model_hotswap::LoadBalancer>,
 ) -> Result<()> {
-    info!("🔗 Integrated Workflow Demo");
+    info!(" Integrated Workflow Demo");
     info!("  Demonstrating how all components work together seamlessly");
 
     // Step 1: Runtime optimization provides baseline performance
@@ -287,23 +287,23 @@ async fn run_integrated_workflow_demo(
     };
 
     let _optimization_result = runtime_optimizer.tune_model(&workload).await?;
-    info!("  ⚡ Step 1: Runtime optimization completed - system tuned for performance");
+    info!("   Step 1: Runtime optimization completed - system tuned for performance");
 
     // Step 2: Tool ecosystem provides capabilities for the workflow
-    info!("  🔧 Step 2: Tool ecosystem activated - capabilities ready for orchestration");
+    info!("   Step 2: Tool ecosystem activated - capabilities ready for orchestration");
 
     // Step 3: Federated learning improves model performance
     let _federation_round = federation_coordinator.start_round().await?;
-    info!("  🤝 Step 3: Federated learning round initiated - privacy-preserving improvement");
+    info!("   Step 3: Federated learning round initiated - privacy-preserving improvement");
 
     // Step 4: Model hot-swapping enables seamless updates
     let _canary_result = model_load_balancer.start_canary("improved_model", 0.05).await?;
-    info!("  🔄 Step 4: Model hot-swapping initiated - 5% canary deployment started");
+    info!("   Step 4: Model hot-swapping initiated - 5% canary deployment started");
 
     // Simulate workflow completion
     sleep(Duration::from_secs(1)).await;
 
-    info!("  🎯 Integrated workflow completed successfully!");
+    info!("   Integrated workflow completed successfully!");
     info!("     • Performance optimized via runtime tuning");
     info!("     • Capabilities orchestrated via tool ecosystem");
     info!("     • Model improved via federated learning");

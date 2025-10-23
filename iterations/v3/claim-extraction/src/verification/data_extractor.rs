@@ -124,36 +124,58 @@ impl DataExtractor {
     }
 
     /// Extract statistical claim from data
-    fn extract_statistical_claim(&self, stat: &StatisticalResult, _schema: &DataSchema) -> Result<Option<AtomicClaim>> {
+    fn extract_statistical_claim(&self, stat: &StatisticalResult, _schema: &DataSchema) -> Result<Option<AtomicClaim>, Box<dyn std::error::Error + Send + Sync>> {
         // Create claim about statistical finding
         let claim_text = format!("{} has {} of {:.3}", stat.variable, stat.metric, stat.value);
 
         Ok(Some(AtomicClaim {
-            id: uuid::Uuid::new_v4().to_string(),
+            id: uuid::Uuid::new_v4(),
             claim_text,
-            claim_type: ClaimType::Data,
+            claim_type: ClaimType::Informational,
+            verifiability: VerifiabilityLevel::DirectlyVerifiable,
+            scope: ClaimScope {
+                working_spec_id: "data-analysis".to_string(),
+                component_boundaries: vec![],
+                data_impact: DataImpact::ReadOnly,
+            },
             confidence: 0.8,
-            source: "data_analysis".to_string(),
-            timestamp: chrono::Utc::now(),
-            metadata: std::collections::HashMap::new(),
+            contextual_brackets: vec![],
+            subject: None,
+            predicate: None,
+            object: None,
+            context_brackets: vec![],
+            verification_requirements: vec![],
+            position: (0, 0),
+            sentence_fragment: "".to_string(),
         }))
     }
 
     /// Extract insight claim from analysis
-    fn extract_insight_claim(&self, insight: &str, _schema: &DataSchema) -> Result<Option<AtomicClaim>> {
+    fn extract_insight_claim(&self, insight: &str, _schema: &DataSchema) -> Result<Option<AtomicClaim>, Box<dyn std::error::Error + Send + Sync>> {
         Ok(Some(AtomicClaim {
-            id: uuid::Uuid::new_v4().to_string(),
+            id: uuid::Uuid::new_v4(),
             claim_text: insight.to_string(),
-            claim_type: ClaimType::Data,
+            claim_type: ClaimType::Informational,
+            verifiability: VerifiabilityLevel::IndirectlyVerifiable,
+            scope: ClaimScope {
+                working_spec_id: "data-analysis".to_string(),
+                component_boundaries: vec![],
+                data_impact: DataImpact::ReadOnly,
+            },
             confidence: 0.7,
-            source: "data_insight".to_string(),
-            timestamp: chrono::Utc::now(),
-            metadata: std::collections::HashMap::new(),
+            contextual_brackets: vec![],
+            subject: None,
+            predicate: None,
+            object: None,
+            context_brackets: vec![],
+            verification_requirements: vec![],
+            position: (0, 0),
+            sentence_fragment: "".to_string(),
         }))
     }
 
     /// Extract correlation claim from data
-    fn extract_correlation_claim(&self, correlation: &CorrelationResult, _schema: &DataSchema) -> Result<Option<AtomicClaim>> {
+    fn extract_correlation_claim(&self, correlation: &CorrelationResult, _schema: &DataSchema) -> Result<Option<AtomicClaim>, Box<dyn std::error::Error + Send + Sync>> {
         let strength = if correlation.correlation_coefficient.abs() > 0.7 {
             "strong"
         } else if correlation.correlation_coefficient.abs() > 0.3 {
@@ -178,13 +200,24 @@ impl DataExtractor {
         );
 
         Ok(Some(AtomicClaim {
-            id: uuid::Uuid::new_v4().to_string(),
+            id: uuid::Uuid::new_v4(),
             claim_text,
-            claim_type: ClaimType::Data,
+            claim_type: ClaimType::Informational,
+            verifiability: VerifiabilityLevel::DirectlyVerifiable,
+            scope: ClaimScope {
+                working_spec_id: "data-analysis".to_string(),
+                component_boundaries: vec![],
+                data_impact: DataImpact::ReadOnly,
+            },
             confidence: correlation.correlation_coefficient.abs().min(1.0),
-            source: "correlation_analysis".to_string(),
-            timestamp: chrono::Utc::now(),
-            metadata: std::collections::HashMap::new(),
+            contextual_brackets: vec![],
+            subject: None,
+            predicate: None,
+            object: None,
+            context_brackets: vec![],
+            verification_requirements: vec![],
+            position: (0, 0),
+            sentence_fragment: "".to_string(),
         }))
     }
 }

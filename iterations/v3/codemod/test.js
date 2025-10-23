@@ -6,22 +6,22 @@
  * @author CAWS Framework
  */
 
-const tsMorph = require('ts-morph');
+const tsMorph = require("ts-morph");
 
 function applyCodemod(dryRun = true) {
-  console.log('🔧 Applying codemod transformations...');
+  console.log(" Applying codemod transformations...");
 
   const project = new tsMorph.Project();
 
   // Load all TypeScript source files
-  const sourceFiles = project.addSourceFilesAtPaths('src/**/*.ts');
+  const sourceFiles = project.addSourceFilesAtPaths("src/**/*.ts");
 
   if (sourceFiles.length === 0) {
-    console.log('⚠️  No TypeScript source files found in src/ directory');
+    console.log("⚠️  No TypeScript source files found in src/ directory");
     return { filesProcessed: 0, changesApplied: 0 };
   }
 
-  console.log(`📁 Processing ${sourceFiles.length} source files`);
+  console.log(` Processing ${sourceFiles.length} source files`);
   let totalChanges = 0;
 
   for (const sourceFile of sourceFiles) {
@@ -41,8 +41,8 @@ function applyCodemod(dryRun = true) {
       func.addJsDoc({
         description: `Handles ${func.getName()} operations`,
         tags: [
-          { tagName: 'param', text: 'options - Configuration options' },
-          { tagName: 'returns', text: 'Result of the operation' },
+          { tagName: "param", text: "options - Configuration options" },
+          { tagName: "returns", text: "Result of the operation" },
         ],
       });
       fileChanges++;
@@ -54,19 +54,19 @@ function applyCodemod(dryRun = true) {
     // Add your transformation logic here...
 
     if (fileChanges > 0) {
-      console.log(`  ✅ Applied ${fileChanges} transformations`);
+      console.log(`   Applied ${fileChanges} transformations`);
       totalChanges += fileChanges;
     }
   }
 
-  console.log(`📊 Codemod complete: ${totalChanges} total transformations`);
+  console.log(` Codemod complete: ${totalChanges} total transformations`);
 
   if (!dryRun) {
-    console.log('💾 Saving changes...');
+    console.log(" Saving changes...");
     project.saveSync();
-    console.log('✅ All changes saved successfully');
+    console.log(" All changes saved successfully");
   } else {
-    console.log('🔍 Dry run - no files were modified');
+    console.log(" Dry run - no files were modified");
   }
 
   return {
@@ -78,14 +78,14 @@ function applyCodemod(dryRun = true) {
 // CLI interface
 if (require.main === module) {
   const args = process.argv.slice(2);
-  const dryRun = !args.includes('--apply');
+  const dryRun = !args.includes("--apply");
 
   try {
     const result = applyCodemod(dryRun);
-    console.log('✅ Codemod execution completed');
+    console.log(" Codemod execution completed");
     process.exit(0);
   } catch (error) {
-    console.error('❌ Codemod execution failed:', error.message);
+    console.error(" Codemod execution failed:", error.message);
     process.exit(1);
   }
 }

@@ -1802,12 +1802,12 @@ impl MultimodalIndexer {
     /// Parse DOT format content to extract graph structure
     async fn parse_dot_content(&self, content: &GraphContent, _block_id: Uuid) -> Result<ParsedGraph> {
         // Implemented: Comprehensive DOT format parsing
-        // - ✅ Integrate Graphviz DOT parser library (petgraph + dot crate)
-        // - ✅ Parse complete graph structure with nodes and edges
-        // - ✅ Support DOT attributes and styling information
-        // - ✅ Handle complex graph layouts and hierarchies
-        // - ✅ Implement DOT syntax validation and error handling
-        // - ✅ Add DOT format conversion and export capabilities
+        // -  Integrate Graphviz DOT parser library (petgraph + dot crate)
+        // -  Parse complete graph structure with nodes and edges
+        // -  Support DOT attributes and styling information
+        // -  Handle complex graph layouts and hierarchies
+        // -  Implement DOT syntax validation and error handling
+        // -  Add DOT format conversion and export capabilities
 
         // This implementation provides enterprise-grade DOT parsing with:
         // - Full DOT grammar support including subgraphs and clusters
@@ -1936,13 +1936,13 @@ impl MultimodalIndexer {
         let mut edges = Vec::new();
         
         // Implemented: Proper Mermaid format parsing
-        // - ✅ Use Mermaid parsing library or implement full Mermaid grammar - Comprehensive Mermaid grammar with syntax validation
-        // - ✅ Support all Mermaid diagram types - Support for flowchart, sequence, gantt, state, pie, and class diagrams
-        // - ✅ Parse Mermaid syntax including styles, classes, and configurations - Advanced styling and theming support
-        // - ✅ Handle Mermaid directives and theme configurations - Directive parsing with theme and configuration management
-        // - ✅ Implement proper error handling for malformed Mermaid syntax - Comprehensive error handling with recovery
-        // - ✅ Support Mermaid subgraphs and complex nested structures - Full subgraph support with nesting
-        // - ✅ Add Mermaid-to-graph conversion with accurate node/edge relationships - Accurate AST parsing and graph conversion
+        // -  Use Mermaid parsing library or implement full Mermaid grammar - Comprehensive Mermaid grammar with syntax validation
+        // -  Support all Mermaid diagram types - Support for flowchart, sequence, gantt, state, pie, and class diagrams
+        // -  Parse Mermaid syntax including styles, classes, and configurations - Advanced styling and theming support
+        // -  Handle Mermaid directives and theme configurations - Directive parsing with theme and configuration management
+        // -  Implement proper error handling for malformed Mermaid syntax - Comprehensive error handling with recovery
+        // -  Support Mermaid subgraphs and complex nested structures - Full subgraph support with nesting
+        // -  Add Mermaid-to-graph conversion with accurate node/edge relationships - Accurate AST parsing and graph conversion
         // This implementation provides enterprise-grade Mermaid parsing with:
         // - Comprehensive Mermaid grammar support with all diagram types and syntax validation
         // - Support for flowchart, sequence, gantt, state, pie, class, and advanced diagram types
@@ -2172,13 +2172,13 @@ impl MultimodalIndexer {
         Some(GraphEdge {
             id: Uuid::new_v4(),
             // Implemented: Proper node name to UUID mapping for graph edges
-            // - ✅ Create node name to UUID mapping registry during parsing - Comprehensive node registry with bidirectional mapping
-            // - ✅ Support forward and backward references in graph definitions - Forward declaration support with lazy resolution
-            // - ✅ Handle node name conflicts and disambiguation - Conflict detection and automatic disambiguation
-            // - ✅ Implement lazy UUID assignment for referenced but undefined nodes - On-demand UUID generation for referenced nodes
-            // - ✅ Support different naming conventions (quoted, unquoted, with attributes) - Multi-format node name parsing
-            // - ✅ Add node reference validation and error reporting - Comprehensive validation with clear error messages
-            // - ✅ Implement efficient node lookup by name during edge creation - O(1) lookup with hash-based indexing
+            // -  Create node name to UUID mapping registry during parsing - Comprehensive node registry with bidirectional mapping
+            // -  Support forward and backward references in graph definitions - Forward declaration support with lazy resolution
+            // -  Handle node name conflicts and disambiguation - Conflict detection and automatic disambiguation
+            // -  Implement lazy UUID assignment for referenced but undefined nodes - On-demand UUID generation for referenced nodes
+            // -  Support different naming conventions (quoted, unquoted, with attributes) - Multi-format node name parsing
+            // -  Add node reference validation and error reporting - Comprehensive validation with clear error messages
+            // -  Implement efficient node lookup by name during edge creation - O(1) lookup with hash-based indexing
             // This implementation provides enterprise-grade node mapping with:
             // - Comprehensive node registry with bidirectional name-to-UUID and UUID-to-name mapping
             // - Support for forward references, backward references, and cyclic dependencies

@@ -1293,12 +1293,12 @@ impl Default for VerdictParserConfig {
 /// Parse verdict from participant contribution
 fn parse_contribution_verdict(&self, contribution: &ParticipantContribution) -> Result<PlanVerdict> {
     // Implemented: Structured verdict parsing and analysis
-    // - ✅ Add verdict schema definition and validation - Comprehensive VerdictSchema with full type safety
-    // - ✅ Implement verdict structure parsing and normalization - Multi-format parsers (YAML, JSON, Text) with normalization
-    // - ✅ Support verdict confidence scoring and aggregation - Multi-factor confidence with validation and aggregation
-    // - ✅ Add verdict consistency checking and validation - Internal/external consistency analysis with conflict detection
-    // - ✅ Implement verdict comparison and conflict resolution - Decision ranking and conflict resolution algorithms
-    // - ✅ Add verdict provenance tracking and audit trail - Full metadata tracking with timestamps and source attribution
+    // -  Add verdict schema definition and validation - Comprehensive VerdictSchema with full type safety
+    // -  Implement verdict structure parsing and normalization - Multi-format parsers (YAML, JSON, Text) with normalization
+    // -  Support verdict confidence scoring and aggregation - Multi-factor confidence with validation and aggregation
+    // -  Add verdict consistency checking and validation - Internal/external consistency analysis with conflict detection
+    // -  Implement verdict comparison and conflict resolution - Decision ranking and conflict resolution algorithms
+    // -  Add verdict provenance tracking and audit trail - Full metadata tracking with timestamps and source attribution
     // This implementation provides enterprise-grade verdict parsing with:
     // - Multi-format support (YAML, JSON, natural language text)
     // - Comprehensive schema validation with detailed error reporting

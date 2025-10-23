@@ -80,7 +80,7 @@ async fn execute_task(
 
     // Check execution mode
     let is_dry_run = request.execution_mode.as_deref() == Some("dry_run");
-    let mode_indicator = if is_dry_run { "👁️  DRY-RUN" } else { "🔧" };
+    let mode_indicator = if is_dry_run { "👁️  DRY-RUN" } else { "" };
 
     println!("{} Worker {} executing task {}", mode_indicator, worker_id, request.task_id);
 
@@ -98,7 +98,7 @@ async fn execute_task(
             ("".to_string(), "Simulated task failure (dry-run)".to_string(), 1)
         } else {
             // Successful simulation
-            (format!("DRY-RUN: Task {} would complete successfully\nSimulated output: {}\n\n💡 No actual filesystem changes were made", request.task_id, request.prompt), "".to_string(), 0)
+            (format!("DRY-RUN: Task {} would complete successfully\nSimulated output: {}\n\n No actual filesystem changes were made", request.task_id, request.prompt), "".to_string(), 0)
         }
     } else {
         // Normal execution
@@ -123,7 +123,7 @@ async fn execute_task(
         completed_at: completed_at.to_rfc3339(),
     };
 
-    println!("✅ Worker completed task {} in {}ms", request.task_id, execution_time.as_millis());
+    println!(" Worker completed task {} in {}ms", request.task_id, execution_time.as_millis());
 
     Json(response)
 }
@@ -133,7 +133,7 @@ async fn cancel_task(
 ) -> Json<TaskCancelResponse> {
     let worker_id = format!("worker-{}", request.task_id.simple());
 
-    println!("🛑 Worker {} cancelling task {}: {}", worker_id, request.task_id, request.reason);
+    println!(" Worker {} cancelling task {}: {}", worker_id, request.task_id, request.reason);
 
     // In a real implementation, this would signal the task execution to stop
     // For now, we simulate successful cancellation
@@ -147,7 +147,7 @@ async fn cancel_task(
         reason: request.reason.clone(),
     };
 
-    println!("✅ Worker cancelled task {}", request.task_id);
+    println!(" Worker cancelled task {}", request.task_id);
 
     Json(response)
 }
@@ -156,11 +156,11 @@ async fn cancel_task(
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
 
-    println!("🔧 Starting Agent Agency Worker");
-    println!("📡 Server: {}:{}", args.host, args.port);
+    println!(" Starting Agent Agency Worker");
+    println!(" Server: {}:{}", args.host, args.port);
 
     let worker_id = args.worker_id.unwrap_or_else(|| "default-worker".to_string());
-    println!("👷 Worker ID: {}", worker_id);
+    println!(" Worker ID: {}", worker_id);
 
     // Create router
     let app = Router::new()
@@ -178,9 +178,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let addr: SocketAddr = format!("{}:{}", args.host, args.port).parse()?;
     let listener = tokio::net::TcpListener::bind(addr).await?;
 
-    println!("✅ Worker ready at http://{}", addr);
-    println!("🔧 Execution endpoint: http://{}/execute", addr);
-    println!("🛑 Cancel endpoint: http://{}/cancel", addr);
+    println!(" Worker ready at http://{}", addr);
+    println!(" Execution endpoint: http://{}/execute", addr);
+    println!(" Cancel endpoint: http://{}/cancel", addr);
 
     // Serve requests
     axum::serve(listener, app).await?;

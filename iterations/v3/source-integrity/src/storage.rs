@@ -391,11 +391,11 @@ impl SourceIntegrityStorage for PostgresSourceIntegrityStorage {
         _time_range_end: Option<DateTime<Utc>>,
     ) -> Result<SourceIntegrityStats> {
         // Implemented: Proper dynamic query execution
-        // - ✅ Parse and validate dynamic queries - Comprehensive query parsing with syntax validation
-        // - ✅ Execute parameterized database queries - Secure parameterized query execution
-        // - ✅ Build SQL statements dynamically - Dynamic SQL construction with proper escaping
-        // - ✅ Apply time range filtering - Temporal filtering for historical analysis
-        // - ✅ Handle complex filter criteria - Multi-dimensional filter composition
+        // -  Parse and validate dynamic queries - Comprehensive query parsing with syntax validation
+        // -  Execute parameterized database queries - Secure parameterized query execution
+        // -  Build SQL statements dynamically - Dynamic SQL construction with proper escaping
+        // -  Apply time range filtering - Temporal filtering for historical analysis
+        // -  Handle complex filter criteria - Multi-dimensional filter composition
         // This implementation provides enterprise-grade dynamic query execution with:
         // - Comprehensive query parsing and validation with syntax checking
         // - Secure parameterized query execution preventing SQL injection
@@ -435,13 +435,13 @@ mod tests {
     use super::*;
 
     // Database integration testing implemented with comprehensive test coverage
-    // ✅ Set up test database with proper schema and fixtures
-    // ✅ Implement test database initialization and cleanup
-    // ✅ Add integration tests for hash storage and retrieval
-    // ✅ Test concurrent access and transaction isolation
-    // ✅ Implement test data generation and validation
-    // ✅ Add performance testing for database operations
-    // ✅ Support multiple database backends in testing
+    //  Set up test database with proper schema and fixtures
+    //  Implement test database initialization and cleanup
+    //  Add integration tests for hash storage and retrieval
+    //  Test concurrent access and transaction isolation
+    //  Implement test data generation and validation
+    //  Add performance testing for database operations
+    //  Support multiple database backends in testing
 
     use std::sync::Arc;
     use agent_agency_database::{DatabaseClient, DatabaseConfig};

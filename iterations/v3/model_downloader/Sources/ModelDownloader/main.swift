@@ -11,13 +11,13 @@ import WhisperKit
 @main
 struct ModelDownloader {
     static func main() async throws {
-        print("🤖 Agent Agency Whisper Model Downloader")
+        print(" Agent Agency Whisper Model Downloader")
         print("========================================")
 
         let modelName = "large-v3"
         let downloadPath = "../models/whisper/\(modelName)"
 
-        print("📥 Downloading Whisper \(modelName) model...")
+        print(" Downloading Whisper \(modelName) model...")
         print("   Target path: \(downloadPath)")
 
         do {
@@ -27,24 +27,24 @@ struct ModelDownloader {
                 downloadBase: URL(fileURLWithPath: downloadPath)
             )
 
-            print("🔄 Initializing WhisperKit (this will download the model)...")
+            print(" Initializing WhisperKit (this will download the model)...")
             let whisperKit = try await WhisperKit(config)
 
-            print("✅ Model downloaded successfully!")
+            print(" Model downloaded successfully!")
             print("   Model: \(modelName)")
             print("   Path: \(downloadPath)")
 
             // Test basic functionality
-            print("🧪 Testing model loading...")
+            print(" Testing model loading...")
             let testText = "This is a test of the Whisper model."
             print("   Test input: \"\(testText)\"")
 
             // Note: We can't actually transcribe without audio input,
             // but model loading success indicates download worked
-            print("✅ Model validation complete!")
+            print(" Model validation complete!")
 
         } catch {
-            print("❌ Error downloading model: \(error)")
+            print(" Error downloading model: \(error)")
             throw error
         }
     }

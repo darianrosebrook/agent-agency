@@ -68,13 +68,13 @@ impl YOLOPerformanceDashboard {
 
     /// Generate a comprehensive performance report
     pub fn generate_performance_report(&mut self) {
-        println!("\n🚀 YOLO Performance Dashboard Report");
+        println!("\n YOLO Performance Dashboard Report");
         println!("=====================================\n");
 
         let stats = self.yolo_monitor.get_statistics();
 
         // Basic Statistics
-        println!("📊 Performance Statistics:");
+        println!(" Performance Statistics:");
         println!("   Total Inferences: {}", stats.total_inferences);
         println!("   Average Inference Time: {:.1}ms", stats.average_inference_time_ms);
         println!("   Min/Max Inference Time: {:.1}ms / {:.1}ms",
@@ -89,7 +89,7 @@ impl YOLOPerformanceDashboard {
             if ane_util < 70.0 {
                 println!("   ⚠️  Low ANE utilization - check model compatibility");
             } else {
-                println!("   ✅ Good ANE utilization");
+                println!("    Good ANE utilization");
             }
         } else {
             println!("   ANE utilization: Not available");
@@ -102,30 +102,30 @@ impl YOLOPerformanceDashboard {
         }
 
         // Performance Analysis
-        println!("\n🎯 Performance Analysis:");
+        println!("\n Performance Analysis:");
         if stats.average_inference_time_ms < 50.0 {
-            println!("   ✅ Excellent performance (< 50ms)");
+            println!("    Excellent performance (< 50ms)");
         } else if stats.average_inference_time_ms < 100.0 {
-            println!("   ✅ Good performance (< 100ms)");
+            println!("    Good performance (< 100ms)");
         } else if stats.average_inference_time_ms < 200.0 {
             println!("   ⚠️  Acceptable performance (< 200ms)");
         } else {
-            println!("   ❌ Poor performance (> 200ms)");
+            println!("    Poor performance (> 200ms)");
         }
 
         // Memory Analysis
         if stats.average_memory_usage_mb < 400.0 {
-            println!("   ✅ Low memory usage");
+            println!("    Low memory usage");
         } else if stats.average_memory_usage_mb < 600.0 {
             println!("   ⚠️  Moderate memory usage");
         } else {
-            println!("   ❌ High memory usage");
+            println!("    High memory usage");
         }
 
         // Optimization Recommendations
         let recommendations = self.yolo_monitor.get_optimization_recommendations();
         if !recommendations.is_empty() && !recommendations[0].contains("looks good") {
-            println!("\n💡 Optimization Recommendations:");
+            println!("\n Optimization Recommendations:");
             for (i, rec) in recommendations.iter().enumerate() {
                 println!("   {}. {}", i + 1, rec);
             }
@@ -139,7 +139,7 @@ impl YOLOPerformanceDashboard {
         println!("   Memory Strategy: {:?}", opt_params.memory_strategy);
         println!("   Compute Units: {:?}", opt_params.compute_units);
 
-        println!("\n📈 Dashboard updated at {}", chrono::Utc::now().format("%H:%M:%S UTC"));
+        println!("\n Dashboard updated at {}", chrono::Utc::now().format("%H:%M:%S UTC"));
     }
 
     /// Get real-time performance metrics
@@ -274,7 +274,7 @@ impl PerformanceAlerts {
 
         // Log the alert
         match level {
-            AlertLevel::Critical => tracing::error!("🚨 {}", message),
+            AlertLevel::Critical => tracing::error!(" {}", message),
             AlertLevel::Warning => tracing::warn!("⚠️  {}", message),
             AlertLevel::Info => tracing::info!("ℹ️  {}", message),
         }

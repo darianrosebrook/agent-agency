@@ -19,32 +19,32 @@ endef
 build: build-dev
 
 build-dev:
-	@echo "🔨 Building in dev mode with optimized settings..."
+	@echo " Building in dev mode with optimized settings..."
 	@$(call log_timing,build-dev,./scripts/build-wrapper.sh dev --workspace --verbose)
 
 build-test:
-	@echo "🧪 Building tests with optimized settings..."
+	@echo " Building tests with optimized settings..."
 	@$(call log_timing,build-test,./scripts/build-wrapper.sh test --workspace --verbose)
 
 build-release:
-	@echo "🚀 Building release with optimized settings..."
+	@echo " Building release with optimized settings..."
 	@$(call log_timing,build-release,./scripts/build-wrapper.sh release --workspace --verbose)
 
 check:
-	@echo "✅ Checking workspace with optimized settings..."
+	@echo " Checking workspace with optimized settings..."
 	@./scripts/build-wrapper.sh check --workspace
 
 check-fast:
-	@echo "⚡ Fast check (single package)..."
+	@echo " Fast check (single package)..."
 	@AGENT_ID="fast-check" ./scripts/build-wrapper.sh check --lib
 
 # Tool installation
 install-tools:
-	@echo "📦 Installing build optimization tools..."
+	@echo " Installing build optimization tools..."
 	@cargo install sccache cargo-nextest || echo "Some tools may already be installed"
-	@echo "🔧 Installing fast linker for macOS..."
+	@echo " Installing fast linker for macOS..."
 	@brew install llvm || echo "LLVM may already be installed"
-	@echo "✅ Tools installed. You may need to restart your shell to use them."
+	@echo " Tools installed. You may need to restart your shell to use them."
 
 # Default verification (Tier 2)
 verify: test-coverage schema-validate gates
@@ -133,7 +133,7 @@ mutants-mcp-files:
 
 # Timing and performance analysis
 timing-report:
-	@echo "📊 Build Timing Report"
+	@echo " Build Timing Report"
 	@echo "===================="
 	@if [ -f $(TIMING_LOG) ]; then \
 		echo "Recent build operations:"; \
@@ -153,7 +153,7 @@ timing-report:
 	fi
 
 perf-report:
-	@echo "📈 Build Performance Metrics"
+	@echo " Build Performance Metrics"
 	@echo "============================"
 	@if [ -f $(TIMING_LOG) ]; then \
 		echo "Average build times:"; \
@@ -182,19 +182,19 @@ perf-report:
 
 # Linting targets
 lint-strict:
-	@echo "🔍 Running strict lint checks on top 5 noisy crates..."
+	@echo " Running strict lint checks on top 5 noisy crates..."
 	@echo "Target crates: enrichers, recovery, parallel-workers, system-health-monitor"
-	@RUSTFLAGS="-D warnings" cargo check -p enrichers --lib --quiet || (echo "❌ enrichers failed strict lint check"; exit 1)
-	@RUSTFLAGS="-D warnings" cargo check -p recovery --lib --quiet || (echo "❌ recovery failed strict lint check"; exit 1)
-	@RUSTFLAGS="-D warnings" cargo check -p parallel-workers --lib --quiet || (echo "❌ parallel-workers failed strict lint check"; exit 1)
-	@RUSTFLAGS="-D warnings" cargo check -p agent-agency-system-health-monitor --lib --quiet || (echo "❌ system-health-monitor failed strict lint check"; exit 1)
-	@echo "✅ All top 5 crates pass strict lint checks"
+	@RUSTFLAGS="-D warnings" cargo check -p enrichers --lib --quiet || (echo " enrichers failed strict lint check"; exit 1)
+	@RUSTFLAGS="-D warnings" cargo check -p recovery --lib --quiet || (echo " recovery failed strict lint check"; exit 1)
+	@RUSTFLAGS="-D warnings" cargo check -p parallel-workers --lib --quiet || (echo " parallel-workers failed strict lint check"; exit 1)
+	@RUSTFLAGS="-D warnings" cargo check -p agent-agency-system-health-monitor --lib --quiet || (echo " system-health-monitor failed strict lint check"; exit 1)
+	@echo " All top 5 crates pass strict lint checks"
 
 lint-soft:
-	@echo "🔍 Running soft lint checks on entire workspace..."
+	@echo " Running soft lint checks on entire workspace..."
 	@cargo clippy --all-targets -- -A clippy::module_name_repetitions || echo "⚠️  Some clippy warnings remain in workspace"
 
 clean-timing:
-	@echo "🧹 Cleaning timing and performance logs..."
+	@echo " Cleaning timing and performance logs..."
 	@rm -f $(TIMING_LOG) $(PERF_METRICS)
-	@echo "✅ Timing logs cleaned"
+	@echo " Timing logs cleaned"

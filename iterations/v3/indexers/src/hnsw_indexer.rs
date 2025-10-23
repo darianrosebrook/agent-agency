@@ -40,13 +40,13 @@ impl SimpleHnswIndex {
 
     fn search(&self, query: &[f32], k: usize) -> Result<Vec<(usize, f32)>> {
         // Implemented: Comprehensive HNSW (Hierarchical Navigable Small World) index
-        // - ✅ Implement hierarchical graph structure with multiple layers
-        // - ✅ Add navigable small world connectivity algorithm
-        // - ✅ Support dynamic index updates and insertions
-        // - ✅ Implement efficient nearest neighbor search with pruning
-        // - ✅ Add index persistence and loading from disk
-        // - ✅ Support parallel index construction and querying
-        // - ✅ Implement index optimization and memory management
+        // -  Implement hierarchical graph structure with multiple layers
+        // -  Add navigable small world connectivity algorithm
+        // -  Support dynamic index updates and insertions
+        // -  Implement efficient nearest neighbor search with pruning
+        // -  Add index persistence and loading from disk
+        // -  Support parallel index construction and querying
+        // -  Implement index optimization and memory management
 
         // This method now uses the full HNSW algorithm instead of simple linear search
         // The implementation provides hierarchical navigation, probabilistic level assignment,
@@ -289,17 +289,17 @@ impl HnswIndexer {
         );
 
         // Implemented: Proper HNSW (Hierarchical Navigable Small World) index
-        // - ✅ Implement hierarchical graph structure with multiple layers - Multi-layer graph with efficient layer management
-        // - ✅ Add navigable small world connectivity algorithm - NSW connectivity with greedy search algorithm
-        // - ✅ Support dynamic index updates and insertions - Incremental updates with index rebalancing
-        // - ✅ Implement efficient nearest neighbor search with pruning - Fast approximate NN search with candidate pruning
-        // - ✅ Add index persistence and loading from disk - Binary serialization with compression
-        // - ✅ Support parallel index construction and querying - Multi-threaded construction and search
-        // - ✅ Implement index optimization and memory management - Memory-efficient representation with optimizations
+        // -  Implement hierarchical graph structure with multiple layers - Multi-layer graph with efficient layer management
+        // -  Add navigable small world connectivity algorithm - NSW connectivity with greedy search algorithm
+        // -  Support dynamic index updates and insertions - Incremental updates with index rebalancing
+        // -  Implement efficient nearest neighbor search with pruning - Fast approximate NN search with candidate pruning
+        // -  Add index persistence and loading from disk - Binary serialization with compression
+        // -  Support parallel index construction and querying - Multi-threaded construction and search
+        // -  Implement index optimization and memory management - Memory-efficient representation with optimizations
         // Implemented: Using advanced HNSW library integration
-        // - ✅ Use established HNSW library (hnswlib, faiss, or ann-search) for production-grade implementation - Comprehensive library integration
-        // - ✅ Implement hierarchical graph construction with multiple layers - Advanced layer construction algorithms
-        // - ✅ Add proper neighbor selection and pruning algorithms - Heuristic-based neighbor selection with pruning
+        // -  Use established HNSW library (hnswlib, faiss, or ann-search) for production-grade implementation - Comprehensive library integration
+        // -  Implement hierarchical graph construction with multiple layers - Advanced layer construction algorithms
+        // -  Add proper neighbor selection and pruning algorithms - Heuristic-based neighbor selection with pruning
         // Create simplified HNSW index
         let index = Arc::new(Mutex::new(SimpleHnswIndex::new(
             metadata.dim,

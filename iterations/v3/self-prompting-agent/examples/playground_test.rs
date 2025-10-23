@@ -21,7 +21,7 @@ struct MockReflexiveLearningSystem;
 #[async_trait::async_trait]
 impl ReflexiveLearningSystem for MockReflexiveLearningSystem {
     async fn process_signals(&self, signals: Vec<self_prompting_agent::learning_bridge::LearningSignal>) -> Result<self_prompting_agent::learning_bridge::LearningUpdate, self_prompting_agent::learning_bridge::LearningError> {
-        println!("📊 Processed {} learning signals", signals.len());
+        println!(" Processed {} learning signals", signals.len());
         Ok(self_prompting_agent::learning_bridge::LearningUpdate {
             signals_processed: signals.len(),
             insights_generated: vec!["Mock insight".to_string()],
@@ -31,7 +31,7 @@ impl ReflexiveLearningSystem for MockReflexiveLearningSystem {
     }
 
     async fn update_model_preferences(&self, _model_id: &str, _task_type: &str, _score: f64) -> Result<(), self_prompting_agent::learning_bridge::LearningError> {
-        println!("🔄 Updated model preferences");
+        println!(" Updated model preferences");
         Ok(())
     }
 
@@ -62,11 +62,11 @@ impl PlaygroundTest {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("🚀 Self-Prompting Agent Playground Test Harness");
+    println!(" Self-Prompting Agent Playground Test Harness");
     println!("===============================================\n");
 
     // Initialize components
-    println!("🔧 Initializing self-prompting agent...");
+    println!(" Initializing self-prompting agent...");
 
     // Create model registry with Ollama
     let mut model_registry = ModelRegistry::new();
@@ -75,7 +75,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     match OllamaProvider::new("gemma:3n") {
         Ok(provider) => {
             model_registry.register_provider("ollama-gemma".to_string(), Box::new(provider))?;
-            println!("✅ Registered Ollama Gemma 3N provider");
+            println!(" Registered Ollama Gemma 3N provider");
         }
         Err(e) => {
             println!("⚠️  Ollama not available ({}), using mock responses", e);
@@ -99,7 +99,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Arc::new(evaluator),
     ).await?;
 
-    println!("✅ Agent initialized successfully\n");
+    println!(" Agent initialized successfully\n");
 
     // Define test cases
     let test_cases = vec![
@@ -132,18 +132,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         true, // Use Git for snapshots
     ).await?;
 
-    println!("🧪 Running playground tests...\n");
+    println!(" Running playground tests...\n");
 
     let mut results = Vec::new();
 
     for test_case in test_cases {
-        println!("📋 Test: {}", test_case.name);
+        println!(" Test: {}", test_case.name);
         println!("   Description: {}", test_case.description);
         println!("   File: {}", test_case.file_path);
 
         // Check if file exists
         if !Path::new(test_case.file_path).exists() {
-            println!("   ❌ File not found, skipping\n");
+            println!("    File not found, skipping\n");
             continue;
         }
 
@@ -163,20 +163,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             Ok(result) => {
                 let duration = start_time.elapsed();
 
-                println!("   ✅ Completed in {:.2}s", duration.as_secs_f64());
-                println!("   📊 Final Score: {:.2}", result.task_result.final_report.score);
-                println!("   🔄 Iterations: {}", result.iterations_performed);
-                println!("   🤖 Model Used: {}", result.task_result.model_used);
-                println!("   🛑 Stop Reason: {:?}", result.final_stop_reason);
+                println!("    Completed in {:.2}s", duration.as_secs_f64());
+                println!("    Final Score: {:.2}", result.task_result.final_report.score);
+                println!("    Iterations: {}", result.iterations_performed);
+                println!("    Model Used: {}", result.task_result.model_used);
+                println!("    Stop Reason: {:?}", result.final_stop_reason);
 
                 // Process learning signals
                 learning_bridge.process_task_result(&result.task_result, &[]).await?;
-                println!("   🧠 Learning signals processed");
+                println!("    Learning signals processed");
 
                 results.push((test_case.name, Ok(result)));
             }
             Err(e) => {
-                println!("   ❌ Failed: {}", e);
+                println!("    Failed: {}", e);
                 results.push((test_case.name, Err(e.to_string())));
             }
         }
@@ -185,7 +185,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // Summary
-    println!("📈 Test Summary");
+    println!(" Test Summary");
     println!("==============");
 
     let total_tests = results.len();
@@ -197,12 +197,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Success Rate: {:.1}%", (successful_tests as f64 / total_tests as f64) * 100.0);
 
     if successful_tests == total_tests {
-        println!("\n🎉 All tests passed! Self-prompting agent is working correctly.");
+        println!("\n All tests passed! Self-prompting agent is working correctly.");
     } else {
         println!("\n⚠️  Some tests failed. Check agent configuration and dependencies.");
     }
 
-    println!("\n🏁 Playground test harness completed.");
+    println!("\n Playground test harness completed.");
 
     Ok(())
 }

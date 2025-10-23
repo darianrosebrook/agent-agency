@@ -62,7 +62,7 @@ impl TestExecutor {
 
         match result {
             Ok(Ok(_)) => {
-                info!("✅ Test passed: {} (took {:?})", test_name, duration);
+                info!(" Test passed: {} (took {:?})", test_name, duration);
                 TestResult {
                     test_name: test_name.to_string(),
                     duration,
@@ -72,7 +72,7 @@ impl TestExecutor {
                 }
             }
             Ok(Err(e)) => {
-                warn!("❌ Test failed: {} - {}", test_name, e);
+                warn!(" Test failed: {} - {}", test_name, e);
                 TestResult {
                     test_name: test_name.to_string(),
                     duration,
@@ -83,7 +83,7 @@ impl TestExecutor {
             }
             Err(_) => {
                 warn!(
-                    "⏰ Test timed out: {} (after {:?})",
+                    " Test timed out: {} (after {:?})",
                     test_name, self.timeout
                 );
                 TestResult {
@@ -133,7 +133,7 @@ impl DatabaseTestUtils {
 
         // Try to connect to real database first
         if let Ok(client) = agent_agency_database::client::DatabaseClient::new(&self.connection_string).await {
-            info!("✅ Connected to real database - using production setup");
+            info!(" Connected to real database - using production setup");
 
             // 1. Database initialization: Initialize test database for integration tests
             self.create_real_test_schema(&client).await?;
@@ -155,7 +155,7 @@ impl DatabaseTestUtils {
             self.monitor_real_resource_usage(&client).await?;
             self.report_real_database_status(&client).await?;
 
-            info!("✅ Real database integration test setup completed successfully");
+            info!(" Real database integration test setup completed successfully");
             return Ok(());
         }
 
@@ -183,7 +183,7 @@ impl DatabaseTestUtils {
 
         // Try to connect to real database first for cleanup
         if let Ok(client) = agent_agency_database::client::DatabaseClient::new(&self.connection_string).await {
-            info!("✅ Connected to real database for cleanup - using production cleanup");
+            info!(" Connected to real database for cleanup - using production cleanup");
 
             // 1. Database cleanup: Clean up test database after integration tests
             self.remove_real_test_data(&client).await?;
@@ -205,7 +205,7 @@ impl DatabaseTestUtils {
             self.cleanup_real_monitoring_resources(&client).await?;
             self.report_real_monitoring_cleanup(&client).await?;
 
-            info!("✅ Real database cleanup completed successfully");
+            info!(" Real database cleanup completed successfully");
             return Ok(());
         }
 
@@ -451,7 +451,7 @@ impl DatabaseTestUtils {
             client.execute(create_sql, &[]).await?;
         }
 
-        info!("✅ Real test database schema created successfully");
+        info!(" Real test database schema created successfully");
         Ok(())
     }
 
@@ -472,7 +472,7 @@ impl DatabaseTestUtils {
             client.execute(index_sql, &[]).await?;
         }
 
-        info!("✅ Real test database tables and indexes created successfully");
+        info!(" Real test database tables and indexes created successfully");
         Ok(())
     }
 
@@ -489,7 +489,7 @@ impl DatabaseTestUtils {
         client.execute("SET work_mem = '64MB'", &[]).await?;
         client.execute("SET maintenance_work_mem = '128MB'", &[]).await?;
 
-        info!("✅ Real database connection configured successfully");
+        info!(" Real database connection configured successfully");
         Ok(())
     }
 
@@ -528,7 +528,7 @@ impl DatabaseTestUtils {
             ).await?;
         }
 
-        info!("✅ Real test database seeded with test data successfully");
+        info!(" Real test database seeded with test data successfully");
         Ok(())
     }
 
@@ -553,7 +553,7 @@ impl DatabaseTestUtils {
             ).await?;
         }
 
-        info!("✅ Real test scenarios set up successfully");
+        info!(" Real test scenarios set up successfully");
         Ok(())
     }
 
@@ -575,7 +575,7 @@ impl DatabaseTestUtils {
         let artifact_count: i64 = artifact_rows[0].try_get("count")?;
         assert!(artifact_count >= 3, "Should have at least 3 test artifacts, found {}", artifact_count);
 
-        info!("✅ Real test data validation completed successfully");
+        info!(" Real test data validation completed successfully");
         Ok(())
     }
 
@@ -587,7 +587,7 @@ impl DatabaseTestUtils {
         client.execute("SET lock_timeout = '15000'", &[]).await?; // 15 seconds
         client.execute("SET idle_in_transaction_session_timeout = '60000'", &[]).await?; // 1 minute
 
-        info!("✅ Real connection parameters configured successfully");
+        info!(" Real connection parameters configured successfully");
         Ok(())
     }
 
@@ -604,7 +604,7 @@ impl DatabaseTestUtils {
         client.execute("VACUUM ANALYZE test_schema.tasks", &[]).await?;
         client.execute("VACUUM ANALYZE test_schema.execution_artifacts", &[]).await?;
 
-        info!("✅ Real database performance optimized successfully");
+        info!(" Real database performance optimized successfully");
         Ok(())
     }
 
@@ -636,7 +636,7 @@ impl DatabaseTestUtils {
             info!("Setting {} = {}", name, setting);
         }
 
-        info!("✅ Real database configuration validated successfully");
+        info!(" Real database configuration validated successfully");
         Ok(())
     }
 
@@ -667,7 +667,7 @@ impl DatabaseTestUtils {
             info!("Table {}: {} live tuples, {} dead tuples", table_name, live_tuples, dead_tuples);
         }
 
-        info!("✅ Real database performance tracked successfully");
+        info!(" Real database performance tracked successfully");
         Ok(())
     }
 
@@ -705,7 +705,7 @@ impl DatabaseTestUtils {
             info!("Table {} total size: {} bytes", table_name, total_size);
         }
 
-        info!("✅ Real resource usage monitored successfully");
+        info!(" Real resource usage monitored successfully");
         Ok(())
     }
 
@@ -736,7 +736,7 @@ impl DatabaseTestUtils {
             info!("  Database Size: {} bytes ({:.2} MB)", database_size, database_size as f64 / (1024.0 * 1024.0));
         }
 
-        info!("✅ Real database status reported successfully");
+        info!(" Real database status reported successfully");
         Ok(())
     }
 
@@ -749,7 +749,7 @@ impl DatabaseTestUtils {
         client.execute("DELETE FROM test_schema.tasks", &[]).await?;
         client.execute("DELETE FROM test_schema.users", &[]).await?;
 
-        info!("✅ Real test data removed successfully");
+        info!(" Real test data removed successfully");
         Ok(())
     }
 
@@ -764,7 +764,7 @@ impl DatabaseTestUtils {
         // Drop the schema itself
         client.execute("DROP SCHEMA IF EXISTS test_schema CASCADE", &[]).await?;
 
-        info!("✅ Real test schema cleaned up successfully");
+        info!(" Real test schema cleaned up successfully");
         Ok(())
     }
 
@@ -793,7 +793,7 @@ impl DatabaseTestUtils {
             }
         }
 
-        info!("✅ Real cleanup error handling completed");
+        info!(" Real cleanup error handling completed");
         Ok(())
     }
 
@@ -804,7 +804,7 @@ impl DatabaseTestUtils {
         // For database testing, we might clean up any temporary tables or data
         client.execute("DROP TABLE IF EXISTS test_schema.temp_data CASCADE", &[]).await?;
 
-        info!("✅ Real temporary files removed successfully");
+        info!(" Real temporary files removed successfully");
         Ok(())
     }
 
@@ -814,7 +814,7 @@ impl DatabaseTestUtils {
         // Clean up any scenario-specific data
         client.execute("DELETE FROM test_schema.execution_artifacts WHERE artifact_type LIKE 'test_scenario_%'", &[]).await?;
 
-        info!("✅ Real test scenarios cleaned up successfully");
+        info!(" Real test scenarios cleaned up successfully");
         Ok(())
     }
 
@@ -841,11 +841,11 @@ impl DatabaseTestUtils {
                 warn!("Test data cleanup incomplete: {} users, {} tasks, {} artifacts remaining",
                       user_count, task_count, artifact_count);
             } else {
-                info!("✅ All test data successfully cleaned up");
+                info!(" All test data successfully cleaned up");
             }
         }
 
-        info!("✅ Real data cleanup validation completed");
+        info!(" Real data cleanup validation completed");
         Ok(())
     }
 
@@ -859,7 +859,7 @@ impl DatabaseTestUtils {
               metrics.active_connections,
               metrics.idle_connections);
 
-        info!("✅ Real database connections verified");
+        info!(" Real database connections verified");
         Ok(())
     }
 
@@ -872,7 +872,7 @@ impl DatabaseTestUtils {
         // Vacuum to reclaim space
         client.execute("VACUUM", &[]).await?;
 
-        info!("✅ Real database resources cleaned up successfully");
+        info!(" Real database resources cleaned up successfully");
         Ok(())
     }
 
@@ -891,7 +891,7 @@ impl DatabaseTestUtils {
             debug!("Post-cleanup setting {} = {}", name, setting);
         }
 
-        info!("✅ Real resource cleanup validated successfully");
+        info!(" Real resource cleanup validated successfully");
         Ok(())
     }
 
@@ -902,7 +902,7 @@ impl DatabaseTestUtils {
         // For PostgreSQL, we might reset monitoring-related settings
         client.execute("SELECT pg_stat_reset()", &[]).await?;
 
-        info!("✅ Real database monitoring stopped successfully");
+        info!(" Real database monitoring stopped successfully");
         Ok(())
     }
 
@@ -912,7 +912,7 @@ impl DatabaseTestUtils {
         // Clean up any monitoring-related temporary data
         client.execute("DROP TABLE IF EXISTS test_schema.monitoring_data CASCADE", &[]).await?;
 
-        info!("✅ Real monitoring resources cleaned up successfully");
+        info!(" Real monitoring resources cleaned up successfully");
         Ok(())
     }
 
@@ -938,7 +938,7 @@ impl DatabaseTestUtils {
                   database_size, database_size as f64 / (1024.0 * 1024.0));
         }
 
-        info!("✅ Real monitoring cleanup reported successfully");
+        info!(" Real monitoring cleanup reported successfully");
         Ok(())
     }
 }

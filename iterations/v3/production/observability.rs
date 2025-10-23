@@ -214,12 +214,12 @@ impl MetricsCollector for InMemoryMetricsCollector {
         });
 
         // Implemented: Proper quantile estimation algorithms
-        // - ✅ Add streaming quantile estimation (P², TDigest, etc.) - Multiple algorithms (P2, TDigest, CKMS, GK)
-        // - ✅ Implement quantile merging for distributed systems - Mergeable quantile sketches for horizontal scaling
-        // - ✅ Support configurable quantile precision and accuracy - Configurable error bounds and compression parameters
-        // - ✅ Add quantile validation and error bounds - Statistical error bounds and confidence intervals
-        // - ✅ Implement quantile-based alerting and monitoring - Threshold-based alerting on quantile changes
-        // - ✅ Add quantile performance optimization for high throughput - Memory-efficient streaming algorithms
+        // -  Add streaming quantile estimation (P², TDigest, etc.) - Multiple algorithms (P2, TDigest, CKMS, GK)
+        // -  Implement quantile merging for distributed systems - Mergeable quantile sketches for horizontal scaling
+        // -  Support configurable quantile precision and accuracy - Configurable error bounds and compression parameters
+        // -  Add quantile validation and error bounds - Statistical error bounds and confidence intervals
+        // -  Implement quantile-based alerting and monitoring - Threshold-based alerting on quantile changes
+        // -  Add quantile performance optimization for high throughput - Memory-efficient streaming algorithms
         // This implementation provides enterprise-grade quantile estimation with:
         // - Multiple estimation algorithms (P², TDigest, CKMS, Greenwald-Khanna)
         // - Distributed quantile merging for scalable systems

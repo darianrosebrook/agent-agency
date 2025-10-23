@@ -8,7 +8,7 @@ use std::time::Duration;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn<std::error::Error>>> {
-    println!("🚀 Agent Agency Database Performance Optimization Demo");
+    println!(" Agent Agency Database Performance Optimization Demo");
 
     // Configure database
     let mut db_config = DatabaseConfig::default();
@@ -45,7 +45,7 @@ async fn main() -> Result<(), Box<dyn<std::error::Error>>> {
     // Create database client (simplified for demo)
     // let db_client = DatabaseClient::new(db_config.clone()).await?;
 
-    println!("\n📊 Database Optimization Configuration");
+    println!("\n Database Optimization Configuration");
     println!("═══════════════════════════════════════");
     println!("Query monitoring: {}", opt_config.enable_query_monitoring);
     println!("Slow query threshold: {}ms", opt_config.slow_query_threshold_ms);
@@ -56,7 +56,7 @@ async fn main() -> Result<(), Box<dyn<std::error::Error>>> {
     // Create optimization manager
     // let opt_manager = DatabaseOptimizationManager::new(db_client, opt_config);
 
-    println!("\n🔍 Query Performance Monitoring");
+    println!("\n Query Performance Monitoring");
     println!("═════════════════════════════════");
 
     // Simulate some query executions
@@ -68,7 +68,7 @@ async fn main() -> Result<(), Box<dyn<std::error::Error>>> {
         ("INSERT INTO tasks (title, description, status) VALUES ($1, $2, $3)", 80),
     ];
 
-    println!("📈 Simulating query executions...");
+    println!(" Simulating query executions...");
     for (query, execution_time) in &sample_queries {
         println!("   Query: {}... ({}ms)", &query[..query.len().min(60)], execution_time);
 
@@ -76,7 +76,7 @@ async fn main() -> Result<(), Box<dyn<std::error::Error>>> {
         // opt_manager.monitor.record_query_execution(query, *execution_time).await;
     }
 
-    println!("\n📋 Index Recommendations Analysis");
+    println!("\n Index Recommendations Analysis");
     println!("═══════════════════════════════════");
 
     // Simulate index recommendations based on query patterns
@@ -107,7 +107,7 @@ async fn main() -> Result<(), Box<dyn<std::error::Error>>> {
         },
     ];
 
-    println!("💡 Recommended Indexes:");
+    println!(" Recommended Indexes:");
     for rec in &recommendations {
         println!("   • {} index on {}.{} (priority: {:?}, improvement: {:.1}%)",
             rec.index_type, rec.table_name, rec.column_name, rec.priority,
@@ -126,12 +126,12 @@ async fn main() -> Result<(), Box<dyn<std::error::Error>>> {
         ("SELECT * FROM council_verdicts WHERE task_id = ? ORDER BY created_at DESC", "READ", "replica1"),
     ];
 
-    println!("🔄 Operation Routing:");
+    println!(" Operation Routing:");
     for (query, operation_type, target) in &operations {
         println!("   {} → {} ({})", &query[..query.len().min(40)], operation_type, target);
     }
 
-    println!("\n📈 Performance Metrics Summary");
+    println!("\n Performance Metrics Summary");
     println!("════════════════════════════════");
 
     let mock_metrics = vec![
@@ -147,7 +147,7 @@ async fn main() -> Result<(), Box<dyn<std::error::Error>>> {
         println!("   {:<25}: {}", metric, value);
     }
 
-    println!("\n🎯 Database Optimization Benefits");
+    println!("\n Database Optimization Benefits");
     println!("═══════════════════════════════════");
 
     let benefits = vec![
@@ -163,8 +163,8 @@ async fn main() -> Result<(), Box<dyn<std::error::Error>>> {
         println!("   {:<18}: {}", area, benefit);
     }
 
-    println!("\n✅ Database optimization demo completed!");
-    println!("💡 Key takeaways:");
+    println!("\n Database optimization demo completed!");
+    println!(" Key takeaways:");
     println!("   • Monitor query performance continuously");
     println!("   • Use strategic indexing for common query patterns");
     println!("   • Implement read/write splitting for scalability");

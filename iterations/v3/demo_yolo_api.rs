@@ -20,11 +20,11 @@ pub struct Detection {
 }
 
 fn main() {
-    println!("🚀 YOLO-CoreML Object Detection API Demo");
+    println!(" YOLO-CoreML Object Detection API Demo");
     println!("==========================================");
     
     // Show configuration
-    println!("\n📋 YOLO Configuration:");
+    println!("\n YOLO Configuration:");
     println!("   Model: yolov3");
     println!("   Input Size: 416x416");
     println!("   Confidence Threshold: 0.5");
@@ -33,7 +33,7 @@ fn main() {
     println!("   Classes: 80 (COCO dataset)");
     
     // Simulate detection results
-    println!("\n🔍 Simulated Detection Results:");
+    println!("\n Simulated Detection Results:");
     let detections = vec![
         Detection {
             class: "car".to_string(),
@@ -68,7 +68,7 @@ fn main() {
     }
     
     // Show API usage patterns
-    println!("\n💻 API Usage Examples:");
+    println!("\n API Usage Examples:");
     println!("   // Load and configure YOLO model");
     println!("   let config = YOLOConfig::default();");
     println!("   let model = load_yolo_model(model_path, config, telemetry, circuit_breaker).await?;");
@@ -87,19 +87,19 @@ fn main() {
     println!("   }");
     
     // Show performance projections
-    println!("\n⚡ Performance Projections:");
+    println!("\n Performance Projections:");
     println!("   ANE Speedup: 2.5-3x vs CPU inference");
     println!("   Target Latency: <100ms per image");
     println!("   Real-time Capable: 30+ FPS");
     println!("   Memory Usage: ~600MB peak");
     
     // Show integration points
-    println!("\n🔗 Integration Points:");
+    println!("\n Integration Points:");
     println!("   • Vision Enricher: UI element detection");
     println!("   • Diagrams Ingestor: Component recognition");
     println!("   • Video Ingestor: Scene analysis");
     println!("   • Research Agent: Visual evidence gathering");
     println!("   • Council: Enhanced deliberation context");
     
-    println!("\n✅ YOLO-CoreML API Demo Complete!");
+    println!("\n YOLO-CoreML API Demo Complete!");
 }

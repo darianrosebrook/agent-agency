@@ -141,7 +141,7 @@ impl TaskStore {
             let tasks: HashMap<Uuid, PersistedTask> = serde_json::from_str(&content)?;
             let task_count = tasks.len();
             *self.tasks.write().unwrap() = tasks;
-            println!("📁 Loaded {} tasks from persistence", task_count);
+            println!(" Loaded {} tasks from persistence", task_count);
         }
         Ok(())
     }
@@ -189,7 +189,7 @@ impl DatabaseTaskStore {
             &[&task.id, &task.spec, &task.state, &task.created_by, &task.metadata],
         ).await?;
 
-        println!("💾 Created task {} in database", task.id);
+        println!(" Created task {} in database", task.id);
         Ok(())
     }
 
@@ -496,7 +496,7 @@ async fn websocket_chat_handler(
 }
 
 async fn handle_websocket_chat(mut socket: axum::extract::ws::WebSocket, session_id: String) {
-    println!("🔗 WebSocket chat connection established for session: {}", session_id);
+    println!(" WebSocket chat connection established for session: {}", session_id);
 
     // Send welcome message
     let welcome_msg = json!({
@@ -516,7 +516,7 @@ async fn handle_websocket_chat(mut socket: axum::extract::ws::WebSocket, session
                 // Parse incoming message
                 if let Ok(chat_msg) = serde_json::from_str::<serde_json::Value>(&text) {
                     if let Some(message) = chat_msg.get("message").and_then(|m| m.as_str()) {
-                        println!("💬 Received chat message: {}", message);
+                        println!(" Received chat message: {}", message);
 
                         // Generate AI response (simple echo for MVP)
                         let response = format!("Echo: {}", message);
@@ -536,18 +536,18 @@ async fn handle_websocket_chat(mut socket: axum::extract::ws::WebSocket, session
                 }
             }
             Ok(axum::extract::ws::Message::Close(_)) => {
-                println!("🔌 WebSocket chat connection closed for session: {}", session_id);
+                println!(" WebSocket chat connection closed for session: {}", session_id);
                 break;
             }
             Err(e) => {
-                println!("❌ WebSocket error for session {}: {}", session_id, e);
+                println!(" WebSocket error for session {}: {}", session_id, e);
                 break;
             }
             _ => {} // Ignore other message types
         }
     }
 
-    println!("🔚 WebSocket chat handler ended for session: {}", session_id);
+    println!(" WebSocket chat handler ended for session: {}", session_id);
 }
 
 async fn get_api_metrics() -> Json<serde_json::Value> {
@@ -653,10 +653,10 @@ async fn pause_task(
             match client.post(&pause_url).send().await {
                 Ok(response) => {
                     if response.status().is_success() {
-                        println!("✅ Task {} paused successfully", task_id);
+                        println!(" Task {} paused successfully", task_id);
                         Ok(axum::http::StatusCode::OK)
                     } else {
-                        println!("❌ Failed to pause task {}: {}", task_id, response.status());
+                        println!(" Failed to pause task {}: {}", task_id, response.status());
                         Err((
                             axum::http::StatusCode::INTERNAL_SERVER_ERROR,
                             Json(json!({"error": format!("Orchestrator returned: {}", response.status())}))
@@ -664,7 +664,7 @@ async fn pause_task(
                     }
                 }
                 Err(e) => {
-                    println!("❌ Failed to call orchestrator for pause: {}", e);
+                    println!(" Failed to call orchestrator for pause: {}", e);
                     Err((
                         axum::http::StatusCode::INTERNAL_SERVER_ERROR,
                         Json(json!({"error": format!("Failed to call orchestrator: {}", e)}))
@@ -695,10 +695,10 @@ async fn resume_task(
             match client.post(&resume_url).send().await {
                 Ok(response) => {
                     if response.status().is_success() {
-                        println!("✅ Task {} resumed successfully", task_id);
+                        println!(" Task {} resumed successfully", task_id);
                         Ok(axum::http::StatusCode::OK)
                     } else {
-                        println!("❌ Failed to resume task {}: {}", task_id, response.status());
+                        println!(" Failed to resume task {}: {}", task_id, response.status());
                         Err((
                             axum::http::StatusCode::INTERNAL_SERVER_ERROR,
                             Json(json!({"error": format!("Orchestrator returned: {}", response.status())}))
@@ -706,7 +706,7 @@ async fn resume_task(
                     }
                 }
                 Err(e) => {
-                    println!("❌ Failed to call orchestrator for resume: {}", e);
+                    println!(" Failed to call orchestrator for resume: {}", e);
                     Err((
                         axum::http::StatusCode::INTERNAL_SERVER_ERROR,
                         Json(json!({"error": format!("Failed to call orchestrator: {}", e)}))
@@ -729,7 +729,7 @@ async fn cancel_task(
         Ok(uuid) => {
             // For now, just log the cancel request - actual implementation would
             // need access to the orchestrator to cancel running tasks
-            println!("❌ Task {} cancel requested", task_id);
+            println!(" Task {} cancel requested", task_id);
             Ok(axum::http::StatusCode::OK)
         }
         Err(_) => Err((
@@ -762,7 +762,7 @@ async fn submit_task(
     let context = request.context.as_ref().map(|c| validation::sanitize_string(c));
 
     let task_id = Uuid::new_v4();
-    println!("📝 Submitting task: {}", description);
+    println!(" Submitting task: {}", description);
 
     // Create task spec JSON for database storage
     let task_spec = json!({
@@ -798,7 +798,7 @@ async fn submit_task(
 
     state.task_store.create_task(task).await
         .map_err(|e| ApiError::Internal(format!("Failed to persist task: {}", e)))?;
-    println!("💾 Task {} persisted successfully", task_id);
+    println!(" Task {} persisted successfully", task_id);
 
     // Execute task directly via HTTP to worker
     tokio::spawn(async move {
@@ -822,13 +822,13 @@ async fn submit_task(
         {
             Ok(response) => {
                 if response.status().is_success() {
-                    println!("✅ Task {} executed successfully", task_id);
+                    println!(" Task {} executed successfully", task_id);
                 } else {
-                    println!("❌ Task {} failed with status: {}", task_id, response.status());
+                    println!(" Task {} failed with status: {}", task_id, response.status());
                 }
             }
             Err(e) => {
-                println!("❌ Task {} failed to send to worker: {}", task_id, e);
+                println!(" Task {} failed to send to worker: {}", task_id, e);
             }
         }
     });
@@ -844,8 +844,8 @@ async fn submit_task(
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
 
-    println!("🚀 Starting Agent Agency V3 API Server");
-    println!("📡 Server: {}:{}", args.host, args.port);
+    println!(" Starting Agent Agency V3 API Server");
+    println!(" Server: {}:{}", args.host, args.port);
 
     // Initialize database configuration
     let db_config = DatabaseConfig {
@@ -863,37 +863,37 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         read_replicas: Vec::new(),
     };
 
-    println!("💾 Persistence: PostgreSQL ({}:{}/{})", db_config.host, db_config.port, db_config.database);
+    println!(" Persistence: PostgreSQL ({}:{}/{})", db_config.host, db_config.port, db_config.database);
 
     // Initialize database-backed task store
     let db_client = DatabaseClient::connect(&db_config).await.unwrap_or_else(|e| {
-        eprintln!("❌ Failed to initialize database connection: {}", e);
-        eprintln!("💡 Make sure PostgreSQL is running and DATABASE_PASSWORD is set");
+        eprintln!(" Failed to initialize database connection: {}", e);
+        eprintln!(" Make sure PostgreSQL is running and DATABASE_PASSWORD is set");
         std::process::exit(1);
     });
 
     // Run database migrations
-    println!("🔄 Running database migrations...");
+    println!(" Running database migrations...");
     let migration_dir = std::path::PathBuf::from("../database/migrations");
     let migration_manager = MigrationManager::new(db_client.clone(), migration_dir).await
         .unwrap_or_else(|e| {
-            eprintln!("❌ Failed to initialize migration manager: {}", e);
+            eprintln!(" Failed to initialize migration manager: {}", e);
             std::process::exit(1);
         });
 
     let migration_results = migration_manager.apply_pending_migrations().await
         .unwrap_or_else(|e| {
-            eprintln!("❌ Failed to run migrations: {}", e);
+            eprintln!(" Failed to run migrations: {}", e);
             std::process::exit(1);
         });
 
-    println!("✅ Applied {} migrations", migration_results.len());
+    println!(" Applied {} migrations", migration_results.len());
 
     let task_store: Arc<dyn TaskStoreTrait + Send + Sync> = Arc::new(
         DatabaseTaskStore { db_client }
     );
 
-    println!("✅ Database connection established");
+    println!(" Database connection established");
 
     // Initialize system health monitor with Redis configuration
     let health_config = SystemHealthMonitorConfig {
@@ -922,15 +922,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let health_monitor = Arc::new(SystemHealthMonitor::new(health_config));
     if args.enable_redis {
-        println!("✅ System health monitor initialized with Redis support");
+        println!(" System health monitor initialized with Redis support");
     } else {
-        println!("✅ System health monitor initialized (Redis disabled)");
+        println!(" System health monitor initialized (Redis disabled)");
     }
 
     // Initialize alert manager
     let alert_manager = Arc::new(alerts::AlertManager::new(None)); // TODO: Pass RTO/RPO monitor when available
     alert_manager.start().await.map_err(|e| format!("Failed to start alert manager: {}", e))?;
-    println!("🚨 Alert manager initialized with default definitions");
+    println!(" Alert manager initialized with default definitions");
 
     // Create shared application state
     // Initialize rate limiter
@@ -944,7 +944,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     // Create API router with full task management and chat
-    println!("💬 Chat endpoints: POST /api/v1/chat/session, WS /api/v1/chat/ws/{session_id}");
+    println!(" Chat endpoints: POST /api/v1/chat/session, WS /api/v1/chat/ws/{session_id}");
 
     // Create API router with full task management
     let api_router = Router::new()
@@ -989,10 +989,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let addr: SocketAddr = format!("{}:{}", args.host, args.port).parse()?;
     let listener = tokio::net::TcpListener::bind(addr).await?;
 
-    println!("✅ API server ready at http://{}", addr);
-    println!("📊 Health check: http://{}/health", addr);
-    println!("📋 Tasks: http://{}/api/v1/tasks", addr);
-    println!("📊 Metrics: http://{}/api/v1/metrics", addr);
+    println!(" API server ready at http://{}", addr);
+    println!(" Health check: http://{}/health", addr);
+    println!(" Tasks: http://{}/api/v1/tasks", addr);
+    println!(" Metrics: http://{}/api/v1/metrics", addr);
 
     // Serve requests
     axum::serve(listener, app).await?;

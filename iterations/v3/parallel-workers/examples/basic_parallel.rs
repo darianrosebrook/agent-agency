@@ -8,7 +8,7 @@ use std::time::Duration;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("🚀 Parallel Worker System v3 - Basic Example");
+    println!(" Parallel Worker System v3 - Basic Example");
     println!("=============================================");
 
     // Create a coordinator
@@ -34,12 +34,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         },
     };
 
-    println!("📋 Created task: {}", task.description);
+    println!(" Created task: {}", task.description);
     println!("   - Complexity: {:.1}", task.complexity_score);
     println!("   - Estimated subtasks: {:?}", task.estimated_subtasks);
 
     // Execute the task
-    println!("\n⚡ Executing task in parallel...");
+    println!("\n Executing task in parallel...");
     let start_time = std::time::Instant::now();
 
     let result = coordinator.execute_parallel(task).await;
@@ -48,7 +48,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     match result {
         Ok(task_result) => {
-            println!("✅ Task completed successfully!");
+            println!(" Task completed successfully!");
             println!("   - Execution time: {:.2}s", execution_time.as_secs_f64());
             println!("   - Total subtasks: {}", task_result.total_subtasks);
             println!("   - Successful subtasks: {}", task_result.subtasks_completed);
@@ -58,12 +58,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("⚠️  Task execution encountered issues (expected for stub implementation):");
             println!("   - Error: {}", e);
             println!("   - Execution time: {:.2}s", execution_time.as_secs_f64());
-            println!("\n📝 Note: This is expected behavior with stub implementations.");
+            println!("\n Note: This is expected behavior with stub implementations.");
             println!("   In a full system, workers would be properly implemented.");
         }
     }
 
-    println!("\n🎯 Parallel Worker System v3 Features Demonstrated:");
+    println!("\n Parallel Worker System v3 Features Demonstrated:");
     println!("   ✓ Task decomposition and analysis");
     println!("   ✓ Parallel execution coordination");
     println!("   ✓ Progress tracking and monitoring");
@@ -71,7 +71,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("   ✓ Result synthesis and aggregation");
     println!("   ✓ Learning system integration (stubbed)");
 
-    println!("\n🏆 System is ready for production use!");
+    println!("\n System is ready for production use!");
     println!("   The learning components can be gradually enabled as needed.");
 
     Ok(())

@@ -54,7 +54,7 @@ pub struct MockOllamaProvider;
 #[async_trait::async_trait]
 impl ModelProvider for MockOllamaProvider {
     async fn infer(&self, prompt: &str) -> Result<String, Box<dyn std::error::Error>> {
-        println!("🤖 Mock Ollama processing: {}", prompt.chars().take(50).collect::<String>());
+        println!(" Mock Ollama processing: {}", prompt.chars().take(50).collect::<String>());
 
         // Simulate different responses based on prompt content
         if prompt.contains("syntax error") {
@@ -139,8 +139,8 @@ impl SelfPromptingAgent {
     }
 
     pub async fn execute_task(&self, task: Task) -> Result<SelfPromptingResult, Box<dyn std::error::Error>> {
-        println!("🎯 Starting self-prompting execution for task: {}", task.description);
-        println!("📋 Context artifacts: {}", task.context.len());
+        println!(" Starting self-prompting execution for task: {}", task.description);
+        println!(" Context artifacts: {}", task.context.len());
 
         let mut iterations = Vec::new();
         let mut current_artifacts = task.context.clone();
@@ -148,22 +148,22 @@ impl SelfPromptingAgent {
         let mut best_artifacts = current_artifacts.clone();
 
         for iteration in 1..=self.max_iterations {
-            println!("\n🔄 Iteration {}", iteration);
+            println!("\n Iteration {}", iteration);
 
             // Create prompt for this iteration
             let prompt = self.create_iteration_prompt(&task, &current_artifacts, iteration);
 
             // Get model response
             let response = self.model_provider.infer(&prompt).await?;
-            println!("📝 Model response length: {} chars", response.len());
+            println!(" Model response length: {} chars", response.len());
 
             // Extract code from response
             if let Some(improved_code) = extract_code_from_response(&response) {
-                println!("💡 Extracted improved code");
+                println!(" Extracted improved code");
 
                 // Evaluate quality
                 let quality_score = evaluate_code_quality(&improved_code);
-                println!("📊 Quality score: {:.2}", quality_score);
+                println!(" Quality score: {:.2}", quality_score);
 
                 // Update artifacts
                 let improved_artifact = Artifact {
@@ -188,7 +188,7 @@ impl SelfPromptingAgent {
 
                 // Check if we should stop (simple satisficing)
                 if quality_score >= 0.8 {
-                    println!("✅ Quality threshold reached, stopping early");
+                    println!(" Quality threshold reached, stopping early");
                     break;
                 }
             } else {
@@ -240,7 +240,7 @@ impl SelfPromptingAgent {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("🚀 Self-Governing Agent System Demonstration");
+    println!(" Self-Governing Agent System Demonstration");
     println!("=============================================");
 
     // Create mock model provider
@@ -250,7 +250,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let agent = SelfPromptingAgent::new(model_provider, 3);
 
     // Test case 1: Fix syntax error
-    println!("\n📝 Test Case 1: Fix Syntax Error");
+    println!("\n Test Case 1: Fix Syntax Error");
     println!("--------------------------------");
 
     let broken_code = r#"fn main() {
@@ -267,7 +267,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     let result1 = agent.execute_task(task1).await?;
-    println!("\n🏁 Final Result:");
+    println!("\n Final Result:");
     println!("- Success: {}", result1.success);
     println!("- Iterations: {}", result1.iterations.len());
     println!("- Final Quality: {:.2}", result1.final_quality_score);
@@ -278,7 +278,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // Test case 2: Add documentation
-    println!("\n📝 Test Case 2: Add Documentation");
+    println!("\n Test Case 2: Add Documentation");
     println!("---------------------------------");
 
     let undocumented_code = r#"fn calculate_total(items: Vec<i32>) -> i32 {
@@ -295,7 +295,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     let result2 = agent.execute_task(task2).await?;
-    println!("\n🏁 Final Result:");
+    println!("\n Final Result:");
     println!("- Success: {}", result2.success);
     println!("- Iterations: {}", result2.iterations.len());
     println!("- Final Quality: {:.2}", result2.final_quality_score);
@@ -305,13 +305,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("{}", final_artifact.content);
     }
 
-    println!("\n🎉 Demonstration Complete!");
+    println!("\n Demonstration Complete!");
     println!("==========================");
     println!("The self-governing agent successfully demonstrated:");
-    println!("✅ Autonomous task execution through iterative improvement");
-    println!("✅ Quality evaluation and satisficing logic");
-    println!("✅ Code extraction and refinement");
-    println!("✅ Early stopping when quality thresholds are met");
+    println!(" Autonomous task execution through iterative improvement");
+    println!(" Quality evaluation and satisficing logic");
+    println!(" Code extraction and refinement");
+    println!(" Early stopping when quality thresholds are met");
 
     Ok(())
 }

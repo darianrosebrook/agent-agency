@@ -582,7 +582,7 @@ impl VerifiabilityDetector {
 
         // Calculate overall verifiability with domain weighting
         let overall_verifiability =
-            self.calculate_overall_verifiability(&verifiable_parts, &unverifiable_parts);
+            self.calculate_overall_verifiability_v2(&verifiable_parts, &unverifiable_parts, context);
 
         Ok(VerifiabilityAssessment {
             overall_verifiability,

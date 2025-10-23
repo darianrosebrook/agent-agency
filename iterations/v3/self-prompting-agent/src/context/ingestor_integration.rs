@@ -411,10 +411,10 @@ impl MultimodalContextEnricher {
 
         for segment in segments {
             let segment_type = match segment.segment_type {
-                SegmentType::Slide => "📊 Slide",
-                SegmentType::Speech => "🎤 Speech",
-                SegmentType::Diagram => "📈 Diagram",
-                SegmentType::Scene => "🎬 Scene",
+                SegmentType::Slide => " Slide",
+                SegmentType::Speech => " Speech",
+                SegmentType::Diagram => " Diagram",
+                SegmentType::Scene => " Scene",
             };
 
             let timestamp_info = if let Some(ts) = segment.timestamp {
