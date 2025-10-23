@@ -1,0 +1,195 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+  namespace: agent-agency
+  labels:
+    app: grafana
+    component: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+        component: monitoring
+    spec:
+      containers:
+      - name: grafana
+        image: grafana/grafana:10.2.0
+        ports:
+        - containerPort: 3000
+          name: http
+        env:
+        - name: GF_SECURITY_ADMIN_USER
+          valueFrom:
+            secretKeyRef:
+              name: grafana-admin
+              key: username
+        - name: GF_SECURITY_ADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: grafana-admin
+              key: password
+        - name: GF_USERS_ALLOW_SIGN_UP
+          value: "false"
+        - name: GF_INSTALL_PLUGINS
+          value: "grafana-piechart-panel,grafana-worldmap-panel"
+        - name: GF_SMTP_ENABLED
+          value: "true"
+        - name: GF_SMTP_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: agent-agency-config
+              key: SMTP_HOST
+        volumeMounts:
+        - name: storage
+          mountPath: /var/lib/grafana
+        - name: config
+          mountPath: /etc/grafana/provisioning/datasources
+          readOnly: true
+        - name: dashboards
+          mountPath: /etc/grafana/provisioning/dashboards
+          readOnly: true
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            cpu: 500m
+            memory: 1Gi
+        livenessProbe:
+          httpGet:
+            path: /api/health
+            port: 3000
+          initialDelaySeconds: 60
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+      volumes:
+      - name: storage
+        persistentVolumeClaim:
+          claimName: grafana-storage
+      - name: config
+        configMap:
+          name: grafana-datasources
+      - name: dashboards
+        configMap:
+          name: grafana-dashboards
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana
+  namespace: agent-agency
+  labels:
+    app: grafana
+    component: monitoring
+spec:
+  selector:
+    app: grafana
+  ports:
+  - name: http
+    port: 3000
+    targetPort: 3000
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-datasources
+  namespace: agent-agency
+spec:
+  data:
+    prometheus.yml: |
+      apiVersion: 1
+      datasources:
+      - name: Prometheus
+        type: prometheus
+        access: proxy
+        url: http://prometheus:9090
+        isDefault: true
+        editable: true
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboards
+  namespace: agent-agency
+spec:
+  data:
+    dashboards.yml: |
+      apiVersion: 1
+      providers:
+      - name: 'Agent Agency'
+        orgId: 1
+        folder: ''
+        type: file
+        disableDeletion: false
+        updateIntervalSeconds: 10
+        allowUiUpdates: true
+        options:
+          path: /etc/grafana/provisioning/dashboards
+    agent-agency-overview.json: |
+      {
+        "dashboard": {
+          "id": null,
+          "title": "Agent Agency Overview",
+          "tags": ["agent-agency"],
+          "timezone": "browser",
+          "panels": [
+            {
+              "id": 1,
+              "title": "Task Completion Rate",
+              "type": "stat",
+              "targets": [{
+                "expr": "rate(agent_agency_tasks_completed_total[5m]) / rate(agent_agency_tasks_started_total[5m]) * 100",
+                "legendFormat": "Completion Rate"
+              }]
+            },
+            {
+              "id": 2,
+              "title": "Council Evaluation Latency",
+              "type": "graph",
+              "targets": [{
+                "expr": "histogram_quantile(0.95, rate(agent_agency_council_evaluation_duration_bucket[5m]))",
+                "legendFormat": "95th percentile"
+              }]
+            }
+          ],
+          "time": {
+            "from": "now-1h",
+            "to": "now"
+          },
+          "refresh": "30s"
+        }
+      }
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: grafana-storage
+  namespace: agent-agency
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: gp3
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: grafana-admin
+  namespace: agent-agency
+type: Opaque
+data:
+  username: YWRtaW4=  # admin (base64)
+  password: YWRtaW4=  # admin (base64) - CHANGE IN PRODUCTION!

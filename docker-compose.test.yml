@@ -1,0 +1,347 @@
+version: '3.8'
+
+services:
+  # PostgreSQL database for integration testing
+  postgres:
+    image: postgres:15-alpine
+    container_name: agent-agency-postgres-test
+    environment:
+      POSTGRES_DB: agent_agency_test
+      POSTGRES_USER: test_user
+      POSTGRES_PASSWORD: test_password
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8"
+    ports:
+      - "5433:5432"  # Different port to avoid conflicts
+    volumes:
+      - postgres_test_data:/var/lib/postgresql/data
+      - ./scripts/migrate-db.js:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U test_user -d agent_agency_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - agent-agency-test
+
+  # Redis for caching and pub/sub
+  redis:
+    image: redis:7-alpine
+    container_name: agent-agency-redis-test
+    ports:
+      - "6380:6379"  # Different port to avoid conflicts
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_test_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - agent-agency-test
+
+  # Orchestration service
+  orchestration:
+    build:
+      context: .
+      dockerfile: deploy/docker/Dockerfile.orchestrator
+    container_name: agent-agency-orchestration-test
+    environment:
+      - DATABASE_URL=postgresql://test_user:test_password@postgres:5432/agent_agency_test
+      - REDIS_URL=redis://redis:6379
+      - RUST_LOG=debug
+      - TEST_MODE=true
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - agent-agency-test
+
+  # Worker service (simulated distributed workers)
+  worker-1:
+    build:
+      context: .
+      dockerfile: deploy/docker/Dockerfile.worker
+    container_name: agent-agency-worker-1-test
+    environment:
+      - WORKER_ID=worker-1
+      - ORCHESTRATOR_URL=http://orchestration:8080
+      - REDIS_URL=redis://redis:6379
+      - RUST_LOG=debug
+      - TEST_MODE=true
+    depends_on:
+      orchestration:
+        condition: service_healthy
+    networks:
+      - agent-agency-test
+
+  worker-2:
+    build:
+      context: .
+      dockerfile: deploy/docker/Dockerfile.worker
+    container_name: agent-agency-worker-2-test
+    environment:
+      - WORKER_ID=worker-2
+      - ORCHESTRATOR_URL=http://orchestration:8080
+      - REDIS_URL=redis://redis:6379
+      - RUST_LOG=debug
+      - TEST_MODE=true
+    depends_on:
+      orchestration:
+        condition: service_healthy
+    networks:
+      - agent-agency-test
+
+  # Health monitoring service
+  health-monitor:
+    build:
+      context: .
+      dockerfile: deploy/docker/Dockerfile.health-monitor
+    container_name: agent-agency-health-test
+    environment:
+      - DATABASE_URL=postgresql://test_user:test_password@postgres:5432/agent_agency_test
+      - REDIS_URL=redis://redis:6379
+      - ORCHESTRATOR_URL=http://orchestration:8080
+      - RUST_LOG=debug
+      - TEST_MODE=true
+    ports:
+      - "8081:8081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      orchestration:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - agent-agency-test
+
+  # Alerting service
+  alerting:
+    build:
+      context: .
+      dockerfile: deploy/docker/Dockerfile.alerting
+    container_name: agent-agency-alerting-test
+    environment:
+      - DATABASE_URL=postgresql://test_user:test_password@postgres:5432/agent_agency_test
+      - REDIS_URL=redis://redis:6379
+      - HEALTH_MONITOR_URL=http://health-monitor:8081
+      - ORCHESTRATOR_URL=http://orchestration:8080
+      - RUST_LOG=debug
+      - TEST_MODE=true
+      # Mock email service for testing
+      - SMTP_HOST=localhost
+      - SMTP_PORT=2525
+    ports:
+      - "8082:8082"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      health-monitor:
+        condition: service_healthy
+    networks:
+      - agent-agency-test
+
+  # Mock SMTP server for testing email alerts
+  smtp-mock:
+    image: mailhog/mailhog:latest
+    container_name: agent-agency-smtp-test
+    ports:
+      - "8025:8025"  # Web UI
+      - "2525:1025"  # SMTP port
+    networks:
+      - agent-agency-test
+
+  # Learning system service
+  learning:
+    build:
+      context: .
+      dockerfile: deploy/docker/Dockerfile.learning
+    container_name: agent-agency-learning-test
+    environment:
+      - DATABASE_URL=postgresql://test_user:test_password@postgres:5432/agent_agency_test
+      - REDIS_URL=redis://redis:6379
+      - ORCHESTRATOR_URL=http://orchestration:8080
+      - TOOL_ECOSYSTEM_URL=http://tool-ecosystem:8083
+      - RUST_LOG=debug
+      - TEST_MODE=true
+    ports:
+      - "8083:8083"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      orchestration:
+        condition: service_healthy
+    networks:
+      - agent-agency-test
+
+  # Tool ecosystem service
+  tool-ecosystem:
+    build:
+      context: .
+      dockerfile: deploy/docker/Dockerfile.tool-ecosystem
+    container_name: agent-agency-tools-test
+    environment:
+      - DATABASE_URL=postgresql://test_user:test_password@postgres:5432/agent_agency_test
+      - REDIS_URL=redis://redis:6379
+      - ORCHESTRATOR_URL=http://orchestration:8080
+      - RUST_LOG=debug
+      - TEST_MODE=true
+    ports:
+      - "8084:8084"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      orchestration:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8084/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - agent-agency-test
+
+  # Claim extraction service
+  claim-extraction:
+    build:
+      context: .
+      dockerfile: deploy/docker/Dockerfile.claim-extraction
+    container_name: agent-agency-claims-test
+    environment:
+      - DATABASE_URL=postgresql://test_user:test_password@postgres:5432/agent_agency_test
+      - REDIS_URL=redis://redis:6379
+      - ORCHESTRATOR_URL=http://orchestration:8080
+      - TOOL_ECOSYSTEM_URL=http://tool-ecosystem:8084
+      - RUST_LOG=debug
+      - TEST_MODE=true
+    ports:
+      - "8085:8085"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      orchestration:
+        condition: service_healthy
+      tool-ecosystem:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8085/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - agent-agency-test
+
+  # Apple Silicon inference service
+  apple-silicon:
+    build:
+      context: .
+      dockerfile: deploy/docker/Dockerfile.apple-silicon
+    container_name: agent-agency-apple-silicon-test
+    environment:
+      - DATABASE_URL=postgresql://test_user:test_password@postgres:5432/agent_agency_test
+      - REDIS_URL=redis://redis:6379
+      - ORCHESTRATOR_URL=http://orchestration:8080
+      - RUST_LOG=debug
+      - TEST_MODE=true
+      # Disable Core ML in containerized tests (no ANE available)
+      - DISABLE_COREML=true
+    ports:
+      - "8086:8086"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      orchestration:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8086/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - agent-agency-test
+
+  # Integration test runner
+  integration-tests:
+    build:
+      context: .
+      dockerfile: deploy/docker/Dockerfile.integration-tests
+    container_name: agent-agency-integration-tests
+    environment:
+      - DATABASE_URL=postgresql://test_user:test_password@postgres:5432/agent_agency_test
+      - REDIS_URL=redis://redis:6379
+      - ORCHESTRATOR_URL=http://orchestration:8080
+      - HEALTH_MONITOR_URL=http://health-monitor:8081
+      - ALERTING_URL=http://alerting:8082
+      - LEARNING_URL=http://learning:8083
+      - TOOL_ECOSYSTEM_URL=http://tool-ecosystem:8084
+      - CLAIM_EXTRACTION_URL=http://claim-extraction:8085
+      - APPLE_SILICON_URL=http://apple-silicon:8086
+      - WORKER_1_URL=http://worker-1:8081
+      - WORKER_2_URL=http://worker-2:8081
+      - RUST_LOG=debug
+      - TEST_MODE=true
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      orchestration:
+        condition: service_healthy
+      health-monitor:
+        condition: service_healthy
+      alerting:
+        condition: service_healthy
+      learning:
+        condition: service_healthy
+      tool-ecosystem:
+        condition: service_healthy
+      claim-extraction:
+        condition: service_healthy
+      apple-silicon:
+        condition: service_healthy
+      worker-1:
+        condition: service_healthy
+      worker-2:
+        condition: service_healthy
+    volumes:
+      - ./iterations/v3/integration-tests:/app/integration-tests
+      - ./test-data:/app/test-data
+    networks:
+      - agent-agency-test
+    command: ["cargo", "test", "--test", "integration", "--", "--nocapture"]
+
+volumes:
+  postgres_test_data:
+  redis_test_data:
+
+networks:
+  agent-agency-test:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
