@@ -706,27 +706,27 @@ class FallbackCollector {
 
 **Collection Coverage**:
 
-- ✅ ≥95% of task executions captured
-- ✅ 100% of routing decisions logged
-- ✅ ≥90% of evaluations recorded
+- ≥95% of task executions captured
+- 100% of routing decisions logged
+- ≥90% of evaluations recorded
 
 **Data Quality**:
 
-- ✅ <5% validation failures
-- ✅ 0 privacy violations
-- ✅ <1% duplicate rate
+- <5% validation failures
+- 0 privacy violations
+- <1% duplicate rate
 
 **Performance**:
 
-- ✅ Collection overhead <50ms per task
-- ✅ Storage growth <100MB per day
-- ✅ No impact on task execution latency
+- Collection overhead <50ms per task
+- Storage growth <100MB per day
+- No impact on task execution latency
 
 **RL Readiness**:
 
-- ✅ ≥5,000 quality data points within 30 days
-- ✅ Batch export operational
-- ✅ Data meets RL training requirements
+- ≥5,000 quality data points within 30 days
+- Batch export operational
+- Data meets RL training requirements
 
 ---
 

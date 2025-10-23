@@ -10,7 +10,7 @@
 ## Agentic RL & Extended Thinking Enhancement
 
 **Version**: 2.0.0
-**Risk Tier**: 🟡 T2 (Features, APIs, data writes)
+**Risk Tier**: T2 (Features, APIs, data writes)
 **Quality Gates**: 80% coverage, 50% mutation, contracts required
 **Total Duration**: 12 weeks
 **Start Date**: October 14, 2025
@@ -36,9 +36,9 @@ This roadmap transforms the V1 POC foundation into a production-ready agentic RL
 
 **Deliverables**:
 
-- ✅ ThinkingBudgetManager implementation
-- ✅ Basic AST diff analysis
-- ✅ Turn-level reward logging infrastructure
+- ThinkingBudgetManager implementation
+- Basic AST diff analysis
+- Turn-level reward logging infrastructure
 
 ### Week 1: Thinking Budget Infrastructure
 
@@ -228,9 +228,9 @@ class TurnLevelRewardCalculator {
 
 **Deliverables**:
 
-- ✅ AgenticRLTrainer with GRPO-style updates
-- ✅ Minimal-diff evaluator with reward penalties
-- ✅ Model-based judges in evaluation system
+- AgenticRLTrainer with GRPO-style updates
+- Minimal-diff evaluator with reward penalties
+- Model-based judges in evaluation system
 
 ### Week 4: Agentic RL Trainer Foundation
 
@@ -470,9 +470,9 @@ class RLTrainingPipeline {
 
 **Deliverables**:
 
-- ✅ SFT warmup pipeline for tool usage
-- ✅ Intermediate reward computation for tool calls
-- ✅ Tool adoption metrics and monitoring
+- SFT warmup pipeline for tool usage
+- Intermediate reward computation for tool calls
+- Tool adoption metrics and monitoring
 
 ### Week 8: SFT Warmup Pipeline
 
@@ -633,9 +633,9 @@ class ToolAdoptionMonitor {
 
 **Deliverables**:
 
-- ✅ Performance benchmarking suite
-- ✅ A/B testing framework for RL features
-- ✅ Production rollback procedures
+- Performance benchmarking suite
+- A/B testing framework for RL features
+- Production rollback procedures
 
 ### Week 11: Performance Benchmarking & Integration Testing
 
@@ -850,11 +850,11 @@ class RLFeatureABTester {
 
 ### V1 Components Required
 
-- ✅ Multi-tenant memory system
-- ✅ MCP server with tool management
-- ✅ Evaluation orchestrator foundation
-- ✅ Agent orchestrator with task routing
-- ✅ Basic quality assurance (linting, testing)
+- Multi-tenant memory system
+- MCP server with tool management
+- Evaluation orchestrator foundation
+- Agent orchestrator with task routing
+- Basic quality assurance (linting, testing)
 
 ### New Infrastructure Needed
 

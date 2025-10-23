@@ -60,7 +60,7 @@ pub trait StrategyExecutor: Send + Sync {
         strategy: &RefinementStrategy,
         scope: &RefinementScope,
         quality_context: &QualityContext,
-    ) -> Result<StrategyExecutionResult, StrategyExecutionError>;
+    ) -> Result<StrategyExecutionResult>;
 }
 
 /// Quality context for strategy execution
@@ -101,7 +101,7 @@ impl StrategyExecutor for DefaultStrategyExecutor {
         strategy: &RefinementStrategy,
         scope: &RefinementScope,
         quality_context: &QualityContext,
-    ) -> Result<StrategyExecutionResult, StrategyExecutionError> {
+    ) -> Result<StrategyExecutionResult> {
         let actions = self.generate_actions(strategy, scope, quality_context)?;
 
         // Simulate execution - in practice this would trigger actual refinement

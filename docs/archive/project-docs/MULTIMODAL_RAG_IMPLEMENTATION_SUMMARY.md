@@ -285,8 +285,8 @@ Critical items requiring external dependencies:
 - ✓ Database schema with integrity constraints
 - ✓ 10/10 unit tests passing
 - ✓ Zero compilation errors or warnings (deferred)
-- ⏳ Enrichers awaiting external bridges
-- ⏳ Integration with Council/Claim extraction
+- Enrichers awaiting external bridges
+- Integration with Council/Claim extraction
 
 ---
 

@@ -1017,11 +1017,12 @@ impl MCPServer {
                     .or_else(|| req
                         .header("x-real-ip")
                         .and_then(|value| std::str::from_utf8(value).ok()))
-                    .unwrap_or("unknown");
+                    .map(|s| s.to_string())
+                    .unwrap_or_else(|| "unknown".to_string());
 
                 // Check authentication rate limit before processing auth
                 if let Some(ref auth_limiter) = &auth_rate_limiter_clone {
-                    match auth_limiter.allow_auth_attempt(client_ip) {
+                    match auth_limiter.allow_auth_attempt(&client_ip) {
                         AuthRateLimitResult::Blocked(reason) => {
                             warn!(ip = %client_ip, reason = %reason, "WebSocket authentication rate limit exceeded");
                             return Some(rate_limited_ws_response());
@@ -1040,7 +1041,7 @@ impl MCPServer {
                     if provided != Some(expected.as_str()) {
                         // Record failed authentication attempt
                         if let Some(ref auth_limiter) = self.auth_rate_limiter {
-                            auth_limiter.record_failed_attempt(client_ip);
+                            auth_limiter.record_failed_attempt(&client_ip);
                         }
 
                         // Log failed WebSocket authentication

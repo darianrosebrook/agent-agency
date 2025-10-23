@@ -237,12 +237,12 @@ graph TB
 
 V2 is successful when:
 
-1. ✅ Arbiter routes ≥85% of tasks to optimal agents
-2. ✅ Benchmark pool collects ≥95% quality data
-3. ✅ RL training produces ≥10% agent improvements
-4. ✅ Improved agents deploy without regressions
-5. ✅ System demonstrates continuous improvement over 90 days
-6. ✅ All three pillars working in integrated harmony
+1. Arbiter routes ≥85% of tasks to optimal agents
+2. Benchmark pool collects ≥95% quality data
+3. RL training produces ≥10% agent improvements
+4. Improved agents deploy without regressions
+5. System demonstrates continuous improvement over 90 days
+6. All three pillars working in integrated harmony
 
 ---
 

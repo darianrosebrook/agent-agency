@@ -1,6 +1,6 @@
 # Core Orchestration: Arbiter & CAWS Constitutional Authority
 
-> **Implementation Status**: ✅ Agent Registry Manager (ARBITER-001) complete and tested  
+> **Implementation Status**: Agent Registry Manager (ARBITER-001) complete and tested  
 > **Progress**: 1/5 components (20%) | **Timeline**: Week 1 of 8  
 > **Details**: [IMPLEMENTATION-STATUS.md](./IMPLEMENTATION-STATUS.md)
 
@@ -244,21 +244,21 @@ interface OrchestrationDataPoint {
 
 **Routing Effectiveness**:
 
-- ✅ Task-agent match accuracy: ≥85%
-- ✅ CAWS compliance rate: 100%
-- ✅ Average task latency: ≤30s
+- Task-agent match accuracy: ≥85%
+- CAWS compliance rate: 100%
+- Average task latency: ≤30s
 
 **Data Collection**:
 
-- ✅ Performance tracking coverage: ≥95%
-- ✅ Data quality validation: ≥95% clean data
-- ✅ Privacy compliance: 0 violations
+- Performance tracking coverage: ≥95%
+- Data quality validation: ≥95% clean data
+- Privacy compliance: 0 violations
 
 **RL Integration**:
 
-- ✅ Data pipeline operational
-- ✅ RL trainer consuming benchmark data
-- ✅ Improved agents deployed back to arbiter
+- Data pipeline operational
+- RL trainer consuming benchmark data
+- Improved agents deployed back to arbiter
 
 ---
 

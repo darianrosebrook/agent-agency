@@ -72,7 +72,7 @@ const validator = new CAWSValidationAdapter({
 // Validate existing spec file
 const result = await validator.validateExistingSpec();
 if (result.success && result.data?.passed) {
-  console.log("✅ Spec validation passed");
+  console.log("Spec validation passed");
 }
 ```
 
@@ -195,7 +195,7 @@ console.log(
 
 // Listen for alerts
 monitor.on("alert", (alert) => {
-  console.log(`🚨 Budget Alert: ${alert.severity} - ${alert.message}`);
+  console.log(`Budget Alert: ${alert.severity} - ${alert.message}`);
 });
 
 // Stop monitoring
@@ -250,7 +250,7 @@ console.log(
 // Get next steps
 const nextSteps = analysis.summary?.nextSteps || [];
 nextSteps.forEach((step) => {
-  console.log(`📋 ${step.priority}: ${step.description}`);
+  console.log(`${step.priority}: ${step.description}`);
 });
 
 // Get step-by-step guidance
@@ -260,7 +260,7 @@ console.log(`Current Step: ${stepGuidance.step?.title}`);
 // Get recommendations
 const recommendations = await guidance.getRecommendations();
 recommendations.forEach((rec) => {
-  console.log(`💡 ${rec.type}: ${rec.message}`);
+  console.log(`${rec.type}: ${rec.message}`);
 });
 ```
 
@@ -632,17 +632,17 @@ async function monitorProjectBudget(projectRoot: string, spec: WorkingSpec) {
         console.warn(`⚠️  Budget warning: ${alert.message}`);
         break;
       case "critical":
-        console.error(`🚨 Budget critical: ${alert.message}`);
+        console.error(`Budget critical: ${alert.message}`);
         break;
       case "exceeded":
-        console.error(`💥 Budget exceeded: ${alert.message}`);
+        console.error(`Budget exceeded: ${alert.message}`);
         break;
     }
   });
 
   monitor.on("status-update", (status) => {
     console.log(
-      `📊 Budget: ${status.filesPercentage}% files, ${status.locPercentage}% LOC`
+      `Budget: ${status.filesPercentage}% files, ${status.locPercentage}% LOC`
     );
   });
 

@@ -24,8 +24,8 @@ Complex engineering tasks (refactoring, debugging, feature implementation) often
 
 #### 1. **Problem Decomposition by Error Type**
 ```rust
-// ❌ Monolithic: Fix all compilation errors in council/
-// ✅ Decomposed: Worker 1 fixes missing fields, Worker 2 fixes trait bounds, etc.
+// Monolithic: Fix all compilation errors in council/
+// Decomposed: Worker 1 fixes missing fields, Worker 2 fixes trait bounds, etc.
 
 // Result: 8 independent workers vs 1 overwhelmed agent
 ```
@@ -81,9 +81,9 @@ cargo check 2>&1 | grep "E0063\|E0308" | wc -l  # 80% reduction
 # Each worker validates before completion
 cargo check --package agent-agency-council
 if [ $? -eq 0 ]; then
-    echo "✅ Worker complete - no regressions"
+    echo "Worker complete - no regressions"
 else
-    echo "❌ Issues remain - iterate"
+    echo "Issues remain - iterate"
 fi
 ```
 

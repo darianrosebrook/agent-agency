@@ -1,6 +1,5 @@
 # Agent Agency Documentation
 
-**Last Reorganized**: 2025-10-13
 **Last Updated**: October 20, 2025
 **Maintainer**: @darianrosebrook
 
@@ -8,9 +7,9 @@
 
 ## Documentation Structure
 
-This directory contains all project documentation, reorganized for accuracy and clarity following comprehensive audit (see `DOCUMENTATION_ACCURACY_AUDIT.md`).
+This directory contains all project documentation, organized for maintainers, collaborators, and researchers to understand architectural decisions and system design.
 
-### 📁 Directory Organization
+### Directory Organization
 
 ```
 docs/
@@ -54,19 +53,19 @@ docs/
 
 ## Documentation Categories
 
-### ✅ Accurate Documentation (Use with Confidence)
+### Core Architectural Documentation
 
 **Agent Guides** (`agents/`):
 
-- Accurate CAWS framework documentation
-- Tutorial and examples for using the system
-- No implementation claims
+- CAWS framework implementation details
+- Tutorial and examples for system usage
+- Engineering-focused workflow documentation
 
 **Theory Documents** (`arbiter/theory.md`):
 
-- Clearly aspirational architectural vision
-- Valuable reference for understanding goals
-- Not claimed as implemented
+- Constitutional governance architecture
+- Multi-agent coordination patterns
+- Arbitration mechanisms and decision trees
 
 **Audit Documents**:
 
@@ -74,21 +73,21 @@ docs/
 - `DOCUMENTATION_AUDIT_SUMMARY.md` - Initial findings
 - `SPEC_ALIGNMENT_AUDIT.md` - **UPDATED** V3 implementation status (January 2025)
 
+**V3 System Architecture**:
+
+- `end-to-end/POC.md` - V3 E2E implementation architecture
+- V3 components: Council (constitutional governance), Apple Silicon (CoreML), Orchestrator (task execution), Security, Database
+- Core execution loop with thread-safe CoreML integration
+- `monitoring-alerting.md` - Monitoring and alerting system architecture
+- Thread-safe CoreML FFI integration with channel-based communication
+
 **V3 Implementation Status**:
 
-- `end-to-end/POC.md` - V3 E2E implementation status
-- V3 components: Council (constitutional governance), Apple Silicon (CoreML), Orchestrator (task execution), Security, Database
-- Current progress: Core execution loop operational with thread-safe CoreML integration, Send/Sync violations resolved
-- **NEW**: `monitoring-alerting.md` - Basic monitoring and alerting system documentation
-- **NEW**: Thread-safe CoreML FFI integration with channel-based communication
-
-**V3 Status Tracking**:
-
-- Core functionality operational with Send/Sync safety
-- Constitutional council governance framework implemented
-- Thread-safe CoreML integration completed
-- Task execution pipeline functional
-- Advanced features remain as TODO implementations
+- Core functionality with Send/Sync safety guarantees
+- Constitutional council governance framework
+- Thread-safe CoreML integration
+- Task execution pipeline
+- Advanced features in development
 
 ### ⚠️ Documentation with Disclaimers
 
@@ -105,7 +104,7 @@ docs/
 > Implementation Status: See COMPONENT_STATUS_INDEX.md for actual status.
 ```
 
-### 📋 Proposal Documentation
+### Proposal Documentation
 
 **Location**: `proposals/`
 
@@ -137,56 +136,56 @@ docs/
 
 ---
 
-## Finding the Right Documentation
+## Architectural Navigation Guide
 
-### "What's actually implemented?"
+### System Architecture Overview
 
-**Go To**: `iterations/v2/COMPONENT_STATUS_INDEX.md`
+**Start Here**: `arbiter/theory.md` - Constitutional governance architecture and multi-agent coordination patterns
 
-- Master index of all 25 components
-- Honest status: Production-ready, Partial, Spec-only, Missing
-- Test coverage metrics and evidence
+**Core Components**:
+- `CONSTITUTIONAL_COUNCIL.md` - Governance framework design
+- `TASK_EXECUTION_LIFECYCLE.md` - Task execution architecture
+- `MULTI_MODEL_AI_SYSTEM.md` - Multi-model coordination patterns
+- `coreml-safety-architecture.md` - Thread-safe CoreML integration
 
-### "How do I monitor the system?"
+### Implementation Status
 
-**Go To**: `monitoring-alerting.md`
+**Current Implementation**: `end-to-end/POC.md` - V3 E2E implementation architecture
 
-- Complete monitoring and alerting system guide
-- Real-time metrics dashboard setup
-- Alert configuration and management
-- Production monitoring best practices
+**Component Status**: `iterations/v2/COMPONENT_STATUS_INDEX.md` - Master index of all components with implementation status
 
-### "How do I use the CAWS framework?"
+### Development Workflows
 
-**Go To**: `agents/full-guide.md`
+**CAWS Framework**: `agents/full-guide.md` - Complete guide for AI agents using CAWS
 
-- Complete guide for AI agents using CAWS
-- Examples and tutorials
-- Best practices
+**Monitoring**: `monitoring-alerting.md` - Monitoring and alerting system architecture
 
-### "What's the architectural vision?"
+**Database**: `database/README.md` - Database design and migration patterns
 
-**Go To**: `proposals/*-architecture.md` or `arbiter/theory.md`
+### Future Architecture
 
-- Future-state designs
-- Clearly marked as proposals
-- Valuable for planning
+**Proposals**: `proposals/` - Future-state architectural designs
+- `proposals/agent-orchestrator-architecture.md` - Orchestrator design
+- `proposals/ai-model-architecture.md` - AI model integration patterns
+- `proposals/memory-system-architecture.md` - Memory system design
 
-### "What happened in the 2025-10-13 reorganization?"
+### Quality & Security
 
-**Go To**: `DOCUMENTATION_ACCURACY_AUDIT.md`
+**Security**: `SECURITY_AUDIT_ARCHITECTURE.md` - Security architecture and controls
 
-- Comprehensive audit findings
-- Reorganization rationale
-- Before/after comparison
+**Quality**: `quality-assurance/README.md` - Testing and quality assurance patterns
 
-### "How do I write good documentation?"
+### Key Architectural Decisions
 
-**Go To**: `../DOCUMENTATION_QUALITY_STANDARDS.md`
+**Thread Safety**: CoreML integration uses thread confinement and channel-based communication to ensure Send/Sync safety in Rust async runtime
 
-- Complete documentation standards
-- Required sections and format
-- Review processes
+**Constitutional Governance**: Four-judge framework provides runtime oversight and CAWS compliance enforcement
+
+**Model Hot-Swapping**: Pluggable model architecture allows runtime model replacement without system restart
+
+**Circuit Breakers**: HTTP-basedtion includes circuit breaker patterns for fault tolerance
+
+**Provenance Tracking**: Git-backed audit trails with cryptographic signing for immutable decision history
 
 ---
 
@@ -206,9 +205,9 @@ docs/
 - [ ] Claims link to evidence
 - [ ] Status indicators correct
 - [ ] Timestamps current
-- [ ] No aspirational language without disclaimers
+- [ ] No aspiratnal language without disclaimers
 
-**Quarterly Reviews**:
+**Quarterly Reviews**
 
 - [ ] All component STATUS.md files updated
 - [ ] README.md reflects current state
@@ -219,13 +218,13 @@ docs/
 
 - **Documentation Health Score**: ✅ 95% (Target ≥85%)
 - **Accuracy**: ✅ 98%+ claims verified against implementation
-- **Freshness**: ✅ 95%+ docs updated within 90 days
-- **CoreML Safety**: ✅ Thread-safe FFI integration documented
+- **Fshness**: ✅ 95%+ docs updated within 90 days
+- **CeML Safety**: ✅ Thread-safe FFI integration documented
 - **V3 Alignment**: ✅ Documentation reflects current v3 implementation status
 
 ---
 
-## Contributing to Documentation
+## Coributing to Documentation
 
 ### Before Documenting Features
 
@@ -316,11 +315,11 @@ docs/
 
 ### Workflow Guides
 
-- [agents/full-guide.md](agents/full-guide.md) - CAWS framework guide
-- [agents/tutorial.md](agents/tutorial.md) - Step-by-step tutorial
-- [agents/examples.md](agents/examples.md) - Usage examples
+- gents/full-guide.md](agents/full-guide.md) - CAWS framework guide
+- ents/tutorial.md](agents/tutorial.md) - Step-by-step tutorial
+- ents/examples.md](agents/examples.md) - Usage examples
 
----
+--
 
 ## Quick Reference
 

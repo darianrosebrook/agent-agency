@@ -319,7 +319,7 @@ const agent = createTestAgent({
 
 ### Pattern 1: Creating Tasks
 
-**❌ Don't do this** (too verbose, error-prone):
+**Don't do this** (too verbose, error-prone):
 
 ```typescript
 const task: Task = {
@@ -340,7 +340,7 @@ const task: Task = {
 };
 ```
 
-**✅ Do this** (use helper):
+**Do this** (use helper):
 
 ```typescript
 const task = createMinimalTask({
@@ -353,7 +353,7 @@ const task = createMinimalTask({
 
 ### Pattern 2: Querying Agents
 
-**❌ Don't do this** (wrong property names):
+**Don't do this** (wrong property names):
 
 ```typescript
 const query: AgentQuery = {
@@ -361,7 +361,7 @@ const query: AgentQuery = {
 };
 ```
 
-**✅ Do this**:
+**Do this**:
 
 ```typescript
 const query: AgentQuery = {
@@ -374,14 +374,14 @@ const query: AgentQuery = {
 
 ### Pattern 3: Accessing Query Results
 
-**❌ Don't do this** (wrong property):
+**Don't do this** (wrong property):
 
 ```typescript
 const results = await registry.getAgentsByCapability(query);
 const agentId = results[0].profile.id; // Wrong! No 'profile' property
 ```
 
-**✅ Do this**:
+**Do this**:
 
 ```typescript
 const results = await registry.getAgentsByCapability(query);
@@ -392,7 +392,7 @@ const agentId = results[0].agent.id; // Correct: 'agent' property
 
 ### Pattern 4: Using Routing Decisions
 
-**❌ Don't do this** (wrong type assumption):
+**Don't do this** (wrong type assumption):
 
 ```typescript
 await tracker.startTaskExecution(
@@ -402,7 +402,7 @@ await tracker.startTaskExecution(
 );
 ```
 
-**✅ Do this**:
+**Do this**:
 
 ```typescript
 await tracker.startTaskExecution(
@@ -418,14 +418,14 @@ await tracker.startTaskExecution(
 
 ### Rule 1: Import from Specific Files
 
-**✅ Preferred**:
+**Preferred**:
 
 ```typescript
 import { Task } from "../types/arbiter-orchestration";
 import { AgentProfile } from "../types/agent-registry";
 ```
 
-**❌ Avoid**:
+**Avoid**:
 
 ```typescript
 import { Task, AgentProfile } from "../types"; // Ambiguous
@@ -458,21 +458,21 @@ Some types are re-exported for convenience, but prefer direct imports for clarit
 ```typescript
 // Old (broken)
 const results = await registry.getAgentsByCapability(query);
-const agent = results[0].profile; // ❌ No 'profile' property
+const agent = results[0].profile; // No 'profile' property
 
 // New (working)
 const results = await registry.getAgentsByCapability(query);
-const agent = results[0].agent; // ✅ Correct property
+const agent = results[0].agent; // Correct property
 ```
 
 ```typescript
 // Old (broken)
 await tracker.startTaskExecution(task.id, routing.selectedAgent, routing);
-// ❌ selectedAgent is AgentProfile, not string
+// selectedAgent is AgentProfile, not string
 
 // New (working)
 await tracker.startTaskExecution(task.id, routing.selectedAgent.id, routing);
-// ✅ Extract ID from profile
+// Extract ID from profile
 ```
 
 ---

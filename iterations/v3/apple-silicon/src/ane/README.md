@@ -36,7 +36,7 @@ The ANE Manager provides **zero-overhead, production-ready access** to Apple's N
 └─────────────────────────────────────────────────────────────┘
 ```
 
-## 🔧 Core Components
+## Core Components
 
 ### Resource Pool (`resource_pool.rs`)
 
@@ -142,7 +142,7 @@ let thermal = thermal_status();     // System temperature
 let power = power_status();        // Power consumption
 ```
 
-## 🎯 Usage Patterns
+## Usage Patterns
 
 ### Basic Inference Pipeline
 
@@ -193,7 +193,7 @@ let result = manager.execute_inference_admitted(admission, &input, &options).awa
 ```rust
 // Performance monitoring
 let metrics = manager.get_performance_summary().await?;
-println!("📊 ANE Performance Summary:");
+println!("ANE Performance Summary:");
 println!("  Total Inferences: {}", metrics.total_inferences);
 println!("  Average Latency: {:.2}ms", metrics.average_latency_ms);
 println!("  Throughput: {:.1} IPS", metrics.average_throughput_ips);
@@ -201,7 +201,7 @@ println!("  Memory Usage: {:.1}MB", metrics.memory_usage_mb);
 
 // Device status
 let device_status = manager.get_device_status().await?;
-println!("🔋 Device Status:");
+println!("Device Status:");
 println!("  Memory Total: {}MB", device_status.memory_total_mb);
 println!("  Max Concurrent: {}", device_status.max_concurrent_models);
 println!("  ANE Available: {}", device_status.ane_available);
@@ -252,7 +252,7 @@ match execute_inference(&model, &input, &options).await {
 - **Lock hygiene**: Minimal lock contention with fine-grained locking
 - **Race condition prevention**: Atomic operations for shared state
 
-## 📊 Performance Characteristics
+## Performance Characteristics
 
 ### Latency Breakdown
 
@@ -278,7 +278,7 @@ match execute_inference(&model, &input, &options).await {
 - **Precise tracking**: Memory usage monitored per operation
 - **Leak detection**: Comprehensive testing for memory leaks
 
-## 🧪 Testing Strategy
+## Testing Strategy
 
 ### Unit Tests
 - **Resource pool**: Admission control, memory limits, concurrency
@@ -298,7 +298,7 @@ match execute_inference(&model, &input, &options).await {
 - **Concurrency**: Multi-threaded performance validation
 - **Scalability**: Load testing under various conditions
 
-## 🔧 Configuration Options
+## Configuration Options
 
 ### ANEConfig
 
@@ -343,7 +343,7 @@ pub struct CompilationOptions {
 }
 ```
 
-## 🚨 Error Types
+## Error Types
 
 ```rust
 pub enum ANEError {
@@ -374,7 +374,7 @@ pub enum ANEError {
 }
 ```
 
-## 🔮 Advanced Features
+## Advanced Features
 
 ### Custom Memory Management
 

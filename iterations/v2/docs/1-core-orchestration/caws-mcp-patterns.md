@@ -120,7 +120,7 @@ export class PerformanceTracker {
 }
 ```
 
-## 🔧 **Quality Assurance Patterns**
+## **Quality Assurance Patterns**
 
 ### 4. **Schema-Based Validation with AJV**
 
@@ -211,7 +211,7 @@ export class ReliabilityTracker {
 }
 ```
 
-## 🔗 **Integration Patterns**
+## **Integration Patterns**
 
 ### 7. **Pre-commit Hooks & CI/CD Integration**
 
@@ -267,7 +267,7 @@ export class EvaluationAdapter {
 }
 ```
 
-## 📊 **Tool Design Patterns**
+## **Tool Design Patterns**
 
 ### 9. **CLI-First Design with Comprehensive Help**
 
@@ -303,7 +303,7 @@ export interface MCPResult {
 }
 ```
 
-## 🔐 **Security & Provenance Patterns**
+## **Security & Provenance Patterns**
 
 ### 11. **Cryptographic Signing & Attestations**
 
@@ -353,7 +353,7 @@ export class PerformanceBudgetValidator {
 }
 ```
 
-## 💡 **V2 MCP Server Structure**
+## **V2 MCP Server Structure**
 
 Based on CAWS patterns, our MCP server should adopt this structure:
 
@@ -389,7 +389,7 @@ apps/mcp-server/
     └── schema-validator.ts       # JSON Schema validation
 ```
 
-## 🎯 **Implementation Roadmap**
+## **Implementation Roadmap**
 
 ### Phase 1: Foundation (Weeks 1-2)
 
@@ -419,7 +419,7 @@ apps/mcp-server/
 - [ ] Implement comprehensive logging and monitoring
 - [ ] Create testing infrastructure following CAWS patterns
 
-## 📈 **Expected Benefits**
+## **Expected Benefits**
 
 1. **Reliability**: Schema validation and flake detection prevent inconsistent behavior
 2. **Security**: Tool allow lists and cryptographic signing protect against malicious agents
@@ -428,7 +428,7 @@ apps/mcp-server/
 5. **Auditability**: Comprehensive provenance tracking enables debugging and compliance
 6. **Scalability**: Centralized configuration and modular architecture support growth
 
-## 🔄 **Continuous Learning**
+## **Continuous Learning**
 
 Like CAWS, our MCP server should include mechanisms for continuous improvement:
 

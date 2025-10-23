@@ -6,7 +6,7 @@ This document provides a quick navigation guide to all V2 documentation organize
 
 ---
 
-## 📊 Status & Planning
+## Status & Planning
 
 **Location**: `docs/status/`
 
@@ -40,7 +40,7 @@ This document provides a quick navigation guide to all V2 documentation organize
 
 ---
 
-## 🔨 Hardening Reports
+## Hardening Reports
 
 **Location**: `docs/reports/hardening/`
 
@@ -65,7 +65,7 @@ This document provides a quick navigation guide to all V2 documentation organize
 
 ---
 
-## 📝 Session Summaries
+## Session Summaries
 
 **Location**: `docs/reports/sessions/`
 
@@ -104,7 +104,7 @@ This document provides a quick navigation guide to all V2 documentation organize
 
 ---
 
-## 📚 Specialized Documentation
+## Specialized Documentation
 
 ### API Documentation
 
@@ -154,7 +154,7 @@ Historical documentation and deprecated guides.
 
 ---
 
-## 🧪 Testing Documentation
+## Testing Documentation
 
 **Location**: `tests/*/README.md`
 
@@ -169,7 +169,7 @@ Historical documentation and deprecated guides.
 
 ---
 
-## 🚀 Quick Links
+## Quick Links
 
 ### For Developers
 
@@ -192,7 +192,7 @@ Historical documentation and deprecated guides.
 
 ---
 
-## 📁 Directory Structure
+## Directory Structure
 
 ```
 v2/
@@ -249,7 +249,7 @@ v2/
 
 ---
 
-## 🔄 Recently Updated
+## Recently Updated
 
 **October 13, 2025**:
 

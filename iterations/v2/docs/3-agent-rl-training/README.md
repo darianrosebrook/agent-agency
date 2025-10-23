@@ -62,11 +62,11 @@ graph TB
 
 **Before RL Training Begins**:
 
-- ✅ Arbiter operational and collecting data
-- ✅ ≥5,000 quality benchmark data points
-- ✅ Data validation gates passing (≥95% clean data)
-- ✅ Privacy compliance verified
-- ✅ Task type diversity (≥5 categories)
+- Arbiter operational and collecting data
+- ≥5,000 quality benchmark data points
+- Data validation gates passing (≥95% clean data)
+- Privacy compliance verified
+- Task type diversity (≥5 categories)
 
 **Why These Prerequisites Matter**:
 
@@ -223,24 +223,24 @@ graph TB
 
 ### Training Quality
 
-- ✅ Training convergence rate: ≥90%
-- ✅ Validation performance: ≥10% improvement over baseline
-- ✅ No catastrophic forgetting
-- ✅ Deployment success rate: ≥95%
+- Training convergence rate: ≥90%
+- Validation performance: ≥10% improvement over baseline
+- No catastrophic forgetting
+- Deployment success rate: ≥95%
 
 ### Agent Improvement
 
-- ✅ Task completion rate: +25% (from 70% to 87.5%)
-- ✅ Tool adoption rate: +300% (from 10% to 40%)
-- ✅ Thinking efficiency: -40% token waste
-- ✅ Reward hacking incidents: -70%
+- Task completion rate: +25% (from 70% to 87.5%)
+- Tool adoption rate: +300% (from 10% to 40%)
+- Thinking efficiency: -40% token waste
+- Reward hacking incidents: -70%
 
 ### System Integration
 
-- ✅ Arbiter recognizes improved capabilities
-- ✅ Routing preferences update automatically
-- ✅ Performance monitoring shows improvement
-- ✅ No degradation in other metrics
+- Arbiter recognizes improved capabilities
+- Routing preferences update automatically
+- Performance monitoring shows improvement
+- No degradation in other metrics
 
 ---
 

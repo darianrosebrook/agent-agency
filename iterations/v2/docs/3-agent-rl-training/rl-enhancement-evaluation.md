@@ -10,7 +10,7 @@ Will Brown's talk on "Reinforcement Learning for Agents: From Pipelines to Polic
 
 ## 1. Alignment with Our Current V2 Architecture
 
-### ✅ Strong Alignment Areas
+### Strong Alignment Areas
 
 | Brown's Concept      | Our V2 Implementation                            | Alignment Score |
 | -------------------- | ------------------------------------------------ | --------------- |

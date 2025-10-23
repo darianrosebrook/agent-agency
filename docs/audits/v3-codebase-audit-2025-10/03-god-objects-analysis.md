@@ -3,7 +3,7 @@
 ## Critical God Objects (>3,000 LOC)
 
 ### 1. `council/src/intelligent_edge_case_testing.rs` - 6,348 LOC
-**Severity**: 🚨 CRITICAL  
+**Severity**: CRITICAL  
 **Refactoring Priority**: P0  
 **Estimated Effort**: 3-4 days
 
@@ -40,7 +40,7 @@ intelligent_edge_case_testing.rs (6,348 LOC)
 ```
 
 ### 2. `system-health-monitor/src/lib.rs` - 4,871 LOC
-**Severity**: 🚨 CRITICAL  
+**Severity**: CRITICAL  
 **Refactoring Priority**: P0  
 **Estimated Effort**: 3-4 days
 
@@ -77,7 +77,7 @@ system-health-monitor/src/lib.rs (4,871 LOC)
 ```
 
 ### 3. `council/src/coordinator.rs` - 4,088 LOC
-**Severity**: 🚨 CRITICAL  
+**Severity**: CRITICAL  
 **Refactoring Priority**: P0  
 **Estimated Effort**: 2-3 days
 
@@ -114,7 +114,7 @@ council/src/coordinator.rs (4,088 LOC)
 ```
 
 ### 4. `apple-silicon/src/metal_gpu.rs` - 3,930 LOC
-**Severity**: 🚨 CRITICAL  
+**Severity**: CRITICAL  
 **Refactoring Priority**: P0  
 **Estimated Effort**: 2-3 days
 
@@ -151,7 +151,7 @@ apple-silicon/src/metal_gpu.rs (3,930 LOC)
 ```
 
 ### 5. `claim-extraction/src/multi_modal_verification.rs` - 3,726 LOC
-**Severity**: 🚨 CRITICAL  
+**Severity**: CRITICAL  
 **Refactoring Priority**: P0  
 **Estimated Effort**: 2-3 days
 
@@ -190,17 +190,17 @@ claim-extraction/src/multi_modal_verification.rs (3,726 LOC)
 ## High-Priority God Objects (>2,000 LOC)
 
 ### 6. `claim-extraction/src/disambiguation.rs` - 3,551 LOC
-**Severity**: 🔴 HIGH  
+**Severity**: HIGH  
 **Refactoring Priority**: P1  
 **Estimated Effort**: 2 days
 
 ### 7. `database/src/client.rs` - 3,457 LOC
-**Severity**: 🔴 HIGH  
+**Severity**: HIGH  
 **Refactoring Priority**: P1  
 **Estimated Effort**: 2 days
 
 ### 8. `observability/src/analytics_dashboard.rs` - 3,166 LOC
-**Severity**: 🔴 HIGH  
+**Severity**: HIGH  
 **Refactoring Priority**: P1  
 **Estimated Effort**: 2 days
 
@@ -219,11 +219,11 @@ claim-extraction/src/multi_modal_verification.rs (3,726 LOC)
 3. **analytics_dashboard.rs** → 4 modules
 
 ### Success Criteria
-- ✅ No files >1,500 LOC
-- ✅ Clear separation of concerns
-- ✅ Maintainable module boundaries
-- ✅ Preserved functionality
-- ✅ Improved testability
+- No files >1,500 LOC
+- Clear separation of concerns
+- Maintainable module boundaries
+- Preserved functionality
+- Improved testability
 
 ## Common Patterns in God Objects
 

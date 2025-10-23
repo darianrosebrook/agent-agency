@@ -100,11 +100,11 @@ node scripts/setup-database.js init
 
 This command:
 
-1. ✅ Creates PostgreSQL role `agent_agency_app`
-2. ✅ Creates database `agent_agency_v2`
-3. ✅ Installs pgvector and required extensions
-4. ✅ Runs all migrations (8 migration files)
-5. ✅ Verifies setup completeness
+1. Creates PostgreSQL role `agent_agency_app`
+2. Creates database `agent_agency_v2`
+3. Installs pgvector and required extensions
+4. Runs all migrations (8 migration files)
+5. Verifies setup completeness
 
 #### Manual Setup Steps (if needed)
 
@@ -139,10 +139,10 @@ node scripts/setup-database.js status
 Expected output:
 
 ```
-✅ Database connection
-✅ Migrations table
-✅ Core tables
-✅ RLS policies
+Database connection
+Migrations table
+Core tables
+RLS policies
 All verification checks passed!
 ```
 

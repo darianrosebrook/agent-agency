@@ -6,7 +6,7 @@ The Audit Trail System provides **Cursor/Claude Code-style observability** for A
 
 ## Features
 
-### 🔍 Comprehensive Operation Tracking
+### Comprehensive Operation Tracking
 - **File Operations**: All reads, writes, searches with performance metrics
 - **Terminal Commands**: Every command executed with results and timing
 - **Council Decisions**: Vote reasoning, consensus building, final decisions
@@ -15,14 +15,14 @@ The Audit Trail System provides **Cursor/Claude Code-style observability** for A
 - **Error Recovery**: All error handling decisions and recovery actions
 - **Learning Insights**: What the agent learns and optimization opportunities
 
-### 📊 Advanced Analytics & Querying
+### Advanced Analytics & Querying
 - **Real-time Statistics**: Live performance metrics and health monitoring
 - **Powerful Search**: Query audit events by category, time range, actor, etc.
 - **Export Capabilities**: Export audit trails in multiple formats (JSON, CSV, etc.)
 - **Trend Analysis**: Identify patterns and optimization opportunities
 - **Performance Profiling**: Detailed timing and resource usage analysis
 
-### 🎯 Continuous Improvement
+### Continuous Improvement
 - **Bottleneck Detection**: Automatically identify performance bottlenecks
 - **Error Pattern Recognition**: Learn from past errors to improve future operations
 - **Optimization Recommendations**: Data-driven suggestions for improvement
@@ -105,20 +105,20 @@ println!("Average latency: {}μs", stats.average_event_latency);
 
 ## Audit Trail Categories
 
-### 📁 File Operations
+### File Operations
 Tracks all file system interactions:
 ```
-📁 FILE AUDIT: Read src/main.rs (1,247 bytes, 45ms)
-📁 FILE AUDIT: Write src/auth/jwt.rs (1,456 bytes, 67ms)
-📁 FILE AUDIT: Search 'auth' in 15 files (3 matches, 120ms)
+FILE AUDIT: Read src/main.rs (1,247 bytes, 45ms)
+FILE AUDIT: Write src/auth/jwt.rs (1,456 bytes, 67ms)
+FILE AUDIT: Search 'auth' in 15 files (3 matches, 120ms)
 ```
 
-### 💻 Terminal Commands
+### Terminal Commands
 Logs all command execution:
 ```
-💻 TERMINAL: ✅ cargo build (2.3s)
-💻 TERMINAL: ⚠️  cargo test (1.8s, 2 warnings)
-💻 TERMINAL: ❌ npm install (timeout after 30s)
+TERMINAL: cargo build (2.3s)
+TERMINAL: ⚠️  cargo test (1.8s, 2 warnings)
+TERMINAL: npm install (timeout after 30s)
 ```
 
 ### 🏛️ Council Decisions
@@ -129,36 +129,36 @@ Records council voting and consensus:
 🏛️ COUNCIL: Judge reasoning - Security concerns addressed
 ```
 
-### 🧠 Agent Thinking
+### Agent Thinking
 Captures reasoning and decision processes:
 ```
-🧠 THINKING: Task breakdown analysis (confidence: 87%)
-🧠 THINKING: Considered: monolithic, microservices → chose microservices
-🧠 THINKING: Risk assessment: Low (security fundamentals solid)
+THINKING: Task breakdown analysis (confidence: 87%)
+THINKING: Considered: monolithic, microservices → chose microservices
+THINKING: Risk assessment: Low (security fundamentals solid)
 ```
 
-### ⚡ Performance Metrics
+### Performance Metrics
 Tracks execution performance:
 ```
-⚡ PERFORMANCE: Planning phase (380ms, success)
-⚡ PERFORMANCE: Council review bottleneck (2.3s average)
-⚡ PERFORMANCE: File operations (45ms average, 99.8% success)
+PERFORMANCE: Planning phase (380ms, success)
+PERFORMANCE: Council review bottleneck (2.3s average)
+PERFORMANCE: File operations (45ms average, 99.8% success)
 ```
 
-### 🔄 Error Recovery
+### Error Recovery
 Logs error handling and recovery:
 ```
-🔄 RECOVERY: Database timeout → increased pool size (success: 94.7%)
-🔄 RECOVERY: Circuit breaker opened for external API
-🔄 RECOVERY: Graceful degradation applied (reduced functionality)
+RECOVERY: Database timeout → increased pool size (success: 94.7%)
+RECOVERY: Circuit breaker opened for external API
+RECOVERY: Graceful degradation applied (reduced functionality)
 ```
 
-### 🎓 Learning Insights
+### Learning Insights
 Records agent learning and improvements:
 ```
-🎓 LEARNING: Complex tasks need breakdown (+15% success rate)
-🎓 LEARNING: Council review time correlates with complexity
-🎓 LEARNING: Error pattern: database timeouts under load
+LEARNING: Complex tasks need breakdown (+15% success rate)
+LEARNING: Council review time correlates with complexity
+LEARNING: Error pattern: database timeouts under load
 ```
 
 ## Configuration Options
@@ -258,12 +258,12 @@ while let Some(event) = event_stream.next().await {
         AuditCategory::Performance => {
             if let Some(duration) = event.performance.as_ref().and_then(|p| Some(p.duration)) {
                 if duration > Duration::from_secs(1) {
-                    println!("🚨 Slow operation detected: {:?}", event);
+                    println!("Slow operation detected: {:?}", event);
                 }
             }
         }
         AuditCategory::ErrorRecovery => {
-            println!("🔄 Error recovery initiated: {:?}", event);
+            println!("Error recovery initiated: {:?}", event);
         }
         _ => {}
     }

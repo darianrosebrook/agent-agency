@@ -1,7 +1,7 @@
 # Test API Alignment Progress
 
 **Date**: October 13, 2025  
-**Status**: 🟡 In Progress (75% Complete)
+**Status**: In Progress (75% Complete)
 
 ---
 
@@ -13,20 +13,20 @@ We've successfully fixed the majority of API alignment issues in the test suite.
 
 ## Progress by Test File
 
-### ✅ LocalModelSelector.test.ts (Main Focus)
+### LocalModelSelector.test.ts (Main Focus)
 
-**Status**: 🟢 **Running** - 23/31 tests passing (74%)
+**Status**: **Running** - 23/31 tests passing (74%)
 
 **Fixed Issues**:
 
-- ✅ Converted from Vitest to Jest
-- ✅ Fixed `ModelSelectionCriteria` objects (added `taskType`, `maxMemoryMB`, `availableHardware`)
-- ✅ Removed invalid properties (`minQuality`, `weights`, `preferredHardware`)
-- ✅ Fixed `updatePerformanceHistory` signatures (added `taskType` parameter)
-- ✅ Fixed `getPerformanceHistory` signatures (added `taskType` parameter)
-- ✅ Fixed `clearHistory` signatures (removed `modelId` parameter)
-- ✅ Replaced `result.model` with `result.primary`
-- ✅ Replaced `expect.fail` with `fail()`
+- Converted from Vitest to Jest
+- Fixed `ModelSelectionCriteria` objects (added `taskType`, `maxMemoryMB`, `availableHardware`)
+- Removed invalid properties (`minQuality`, `weights`, `preferredHardware`)
+- Fixed `updatePerformanceHistory` signatures (added `taskType` parameter)
+- Fixed `getPerformanceHistory` signatures (added `taskType` parameter)
+- Fixed `clearHistory` signatures (removed `modelId` parameter)
+- Replaced `result.model` with `result.primary`
+- Replaced `expect.fail` with `fail()`
 
 **Remaining Issues** (8 failures):
 
@@ -37,30 +37,30 @@ We've successfully fixed the majority of API alignment issues in the test suite.
 
 ---
 
-### ⏳ ModelRegistryIntegration.test.ts
+### ModelRegistryIntegration.test.ts
 
-**Status**: 🟡 **Compiling with errors** - API alignment 80% complete
+**Status**: **Compiling with errors** - API alignment 80% complete
 
 **Fixed Issues**:
 
-- ✅ Converted from Vitest to Jest
-- ✅ Fixed most `ModelSelectionCriteria` objects
-- ✅ Fixed most `updatePerformanceHistory` signatures
-- ✅ Fixed most `getPerformanceHistory` signatures
-- ✅ Fixed `ollamaModelName` → `ollamaName`
-- ✅ Removed invalid properties
+- Converted from Vitest to Jest
+- Fixed most `ModelSelectionCriteria` objects
+- Fixed most `updatePerformanceHistory` signatures
+- Fixed most `getPerformanceHistory` signatures
+- Fixed `ollamaModelName` → `ollamaName`
+- Removed invalid properties
 
 **Remaining Issues**:
 
-- ⏳ Some criteria objects missing `taskType`
-- ⏳ `response.cost` references need removal
-- ⏳ `ollamaEndpoint` property doesn't exist in interface
+- Some criteria objects missing `taskType`
+- `response.cost` references need removal
+- `ollamaEndpoint` property doesn't exist in interface
 
 ---
 
-### ⏳ ModelRegistry.test.ts
+### ModelRegistry.test.ts
 
-**Status**: 🟡 **Compiling with errors**
+**Status**: **Compiling with errors**
 
 **Issue**: Test config structure doesn't match `ModelRegistrationRequest` interface
 
@@ -70,17 +70,17 @@ We've successfully fixed the majority of API alignment issues in the test suite.
 
 ---
 
-### ⏳ ComputeCostTracker.test.ts
+### ComputeCostTracker.test.ts
 
-**Status**: 🟡 **Compiling with errors**
+**Status**: **Compiling with errors**
 
 **Likely Issues**: Similar API alignment issues as above
 
 ---
 
-### ⏳ OllamaProvider.test.ts
+### OllamaProvider.test.ts
 
-**Status**: 🟡 **Not yet tested**
+**Status**: **Not yet tested**
 
 **Likely Issues**: Similar API alignment issues as above
 
@@ -254,7 +254,7 @@ clearHistory(): void  // Clears all history
 
 ## Conclusion
 
-**Status**: 🟢 **Test API Alignment 85% Complete**
+**Status**: **Test API Alignment 85% Complete**
 
 The core API is now correctly defined and most tests are aligned. The remaining work is mechanical fixes to match the established patterns. The main achievement is that **LocalModelSelector tests are running** with 23/31 passing, proving the API is sound.
 

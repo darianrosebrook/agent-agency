@@ -16,7 +16,7 @@ bridges/
 │   │   ├── MemoryManagement.swift
 │   │   └── ErrorHandling.swift
 │   │
-│   ├── Audio/                 # 🎵 Speech & Audio Processing
+│   ├── Audio/                 # Speech & Audio Processing
 │   │   ├── SpeechToText/
 │   │   │   ├── Whisper/       # CoreML Whisper implementation
 │   │   │   └── SpeechFramework/ # Apple's Speech Framework
@@ -29,18 +29,18 @@ bridges/
 │   │   │   └── VisionOCR/     # Vision Framework OCR
 │   │   └── ImageProcessing/   # Image utilities
 │   │
-│   ├── Text/                  # 📝 Text Processing
+│   ├── Text/                  # Text Processing
 │   │   ├── LanguageModels/
 │   │   │   ├── Mistral/       # Mistral LLM
 │   │   │   └── Tokenization/  # Text tokenization
 │   │   └── Generation/
 │   │       └── Diffusion/     # Stable Diffusion
 │   │
-│   ├── System/                # 🔧 Infrastructure
+│   ├── System/                # Infrastructure
 │   │   ├── ModelManagement/   # Model lifecycle & caching
 │   │   └── Performance/       # Monitoring & profiling
 │   │
-│   └── FFI/                   # 🔗 C ABI Layer
+│   └── FFI/                   # C ABI Layer
 │       ├── include/
 │       │   └── bridges_ffi.h  # Stable C headers
 │       ├── BridgesFFI.c       # C shim implementation
@@ -57,25 +57,25 @@ bridges/
 
 ## Key Features
 
-### ✅ **Stable C ABI**
+### **Stable C ABI**
 - Namespaced function symbols (`agentbridge_*`)
 - Opaque handles instead of raw pointers
 - Thread-safe handle management
 - Comprehensive error propagation
 
-### ✅ **Modular Architecture**
+### **Modular Architecture**
 - Granular targets for build performance
 - Feature flags for conditional compilation
 - Clear separation by modality
 - Easy extension for new models
 
-### ✅ **Production Ready**
+### **Production Ready**
 - Memory safety with autorelease pools
 - Comprehensive error handling
 - Performance monitoring
 - Model asset management
 
-### ✅ **Developer Experience**
+### **Developer Experience**
 - Swift protocols for consistency
 - Comprehensive documentation
 - Test-driven development

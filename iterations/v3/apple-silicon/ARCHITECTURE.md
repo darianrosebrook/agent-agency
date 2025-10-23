@@ -34,7 +34,7 @@ This document provides a comprehensive architectural overview of the Apple Silic
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
-## 🔶 ANE Manager Deep Dive
+## ANE Manager Deep Dive
 
 The ANE Manager is a specialized component designed for **maximum performance and observability** when using Apple's Neural Engine.
 
@@ -120,7 +120,7 @@ Metrics Update (error counters)
 Error Response to Client
 ```
 
-## 🔗 Integration Architecture
+## Integration Architecture
 
 ### With Core ML Backend
 
@@ -169,7 +169,7 @@ Memory Hierarchy:
 └── Disk/SSD (model storage, paging)
 ```
 
-## 📊 Performance Architecture
+## Performance Architecture
 
 ### Latency Optimization
 
@@ -266,7 +266,7 @@ Recovery Actions:
 └── System Restart (critical failure → graceful shutdown)
 ```
 
-## 🔧 Configuration Architecture
+## Configuration Architecture
 
 ### Hierarchical Configuration
 
@@ -300,7 +300,7 @@ Runtime Features:
 └── fallback: Automatic backend fallback
 ```
 
-## 📈 Observability Architecture
+## Observability Architecture
 
 ### Metrics Collection
 
@@ -333,7 +333,7 @@ Trace Context:
 └── Performance Context (latency, memory, errors)
 ```
 
-## 🚀 Deployment Architecture
+## Deployment Architecture
 
 ### Production Deployment
 
@@ -370,7 +370,7 @@ Testing Strategy:
 └── Load Tests (production traffic simulation)
 ```
 
-## 🔮 Future Architecture
+## Future Architecture
 
 ### Planned Enhancements
 

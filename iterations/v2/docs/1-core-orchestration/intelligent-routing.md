@@ -386,21 +386,21 @@ class RoutingLearner {
 
 **Routing Accuracy**:
 
-- ✅ Task-agent match accuracy: ≥85%
-- ✅ First-choice success rate: ≥80%
-- ✅ Fallback rate: ≤10%
+- Task-agent match accuracy: ≥85%
+- First-choice success rate: ≥80%
+- Fallback rate: ≤10%
 
 **Learning Effectiveness**:
 
-- ✅ Routing quality improves over time
-- ✅ Exploration rate decreases appropriately
-- ✅ Agent capability profiles stay current
+- Routing quality improves over time
+- Exploration rate decreases appropriately
+- Agent capability profiles stay current
 
 **Performance**:
 
-- ✅ Routing decision latency: <100ms
-- ✅ Tracking overhead: <50ms
-- ✅ Memory footprint: <500MB
+- Routing decision latency: <100ms
+- Tracking overhead: <50ms
+- Memory footprint: <500MB
 
 ---
 

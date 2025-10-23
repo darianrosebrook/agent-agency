@@ -25,16 +25,16 @@ This framework provides a layered architecture for ML inference on Apple Silicon
 └─────────────────────────────────────────────────────────────┘
 ```
 
-## 🔶 ANE Manager - Apple Neural Engine Acceleration
+## ANE Manager - Apple Neural Engine Acceleration
 
 The ANE Manager provides **zero-overhead access** to Apple's Neural Engine, designed for production ML workloads requiring maximum efficiency and observability.
 
 ### Key Features
 
-- **🚀 Core ML First**: Leverages Apple's public ML framework for ANE dispatch
-- **🔒 Memory Safe**: Zero unsafe code, comprehensive resource management
-- **⚡ Async Native**: Built on tokio for high-throughput concurrent inference
-- **📊 Observable**: Built-in metrics, tracing, and performance monitoring
+- **Core ML First**: Leverages Apple's public ML framework for ANE dispatch
+- **Memory Safe**: Zero unsafe code, comprehensive resource management
+- **Async Native**: Built on tokio for high-throughput concurrent inference
+- **Observable**: Built-in metrics, tracing, and performance monitoring
 - **🛡️ Production Ready**: Comprehensive error handling and graceful degradation
 
 ### ANE Architecture
@@ -88,7 +88,7 @@ The ANE Manager implements sophisticated resource management:
 - **Error Recovery**: Comprehensive error handling with automatic cleanup
 - **Testing**: 56+ integration tests with full coverage
 
-## 🍎 Apple Silicon ML Framework
+## Apple Silicon ML Framework
 
 The broader framework provides multiple acceleration backends for comprehensive ML inference coverage.
 
@@ -140,7 +140,7 @@ let telemetry = TelemetryCollector::new();
 telemetry.record_inference(model_id, latency, memory_usage);
 ```
 
-## 🎯 Performance Characteristics
+## Performance Characteristics
 
 ### ANE Manager Benchmarks
 
@@ -160,7 +160,7 @@ telemetry.record_inference(model_id, latency, memory_usage);
 - **Leak Prevention**: Smart pointers and ownership semantics
 - **Async Safety**: Send + Sync bounds on all concurrent operations
 
-## 🔧 Integration Patterns
+## Integration Patterns
 
 ### High-Level Inference API
 
@@ -205,7 +205,7 @@ let service = InferenceService::new(config).await?;
 service.serve().await?;
 ```
 
-## 🧪 Testing & Quality Assurance
+## Testing & Quality Assurance
 
 ### Test Coverage
 
@@ -216,20 +216,20 @@ service.serve().await?;
 
 ### Quality Gates
 
-- ✅ **Zero unsafe code** in production paths
-- ✅ **Memory leak detection** in all test runs
-- ✅ **Race condition testing** with loom
-- ✅ **Performance regression detection** via benchmarks
-- ✅ **Platform compatibility** across macOS versions
+- **Zero unsafe code** in production paths
+- **Memory leak detection** in all test runs
+- **Race condition testing** with loom
+- **Performance regression detection** via benchmarks
+- **Platform compatibility** across macOS versions
 
-## 📊 Observability & Monitoring
+## Observability & Monitoring
 
 ### Built-in Metrics
 
 ```rust
 // Automatic metrics collection
 let metrics = manager.get_performance_summary().await?;
-println!("📊 ANE Performance:");
+println!("ANE Performance:");
 println!("  Throughput: {:.1} IPS", metrics.average_throughput_ips);
 println!("  Latency: {:.2}ms", metrics.average_latency_ms);
 println!("  Memory: {:.1}MB", metrics.memory_usage_mb);
@@ -248,7 +248,7 @@ async fn execute_inference(&self, model_id: &str, input: &[f32]) -> Result<Infer
 }
 ```
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
@@ -300,7 +300,7 @@ let manager = ANEManager::with_config(config)?;
 manager.enable_metrics(true);
 ```
 
-## 🔮 Future Enhancements
+## Future Enhancements
 
 - **ANE Private APIs**: Optional feature-gated access to undocumented ANE features
 - **Multi-Model Batching**: Intelligent batching across multiple models
@@ -308,7 +308,7 @@ manager.enable_metrics(true);
 - **Model Optimization**: Automatic model transformation for ANE compatibility
 - **Energy Awareness**: Power consumption optimization and thermal management
 
-## 📚 Additional Resources
+## Additional Resources
 
 - [ANE Manager Tests](tests/ane_tests.rs) - Comprehensive test suite
 - [ANE Benchmarks](benches/ane_benchmarks.rs) - Performance benchmarks

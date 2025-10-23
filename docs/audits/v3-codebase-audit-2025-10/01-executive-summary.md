@@ -6,20 +6,20 @@
 
 ## Critical Findings
 
-### 🚨 Severe God Objects (P0 Priority)
+### Severe God Objects (P0 Priority)
 1. **`council/src/intelligent_edge_case_testing.rs`** - 6,348 LOC
 2. **`system-health-monitor/src/lib.rs`** - 4,871 LOC  
 3. **`council/src/coordinator.rs`** - 4,088 LOC
 4. **`apple-silicon/src/metal_gpu.rs`** - 3,930 LOC
 5. **`claim-extraction/src/multi_modal_verification.rs`** - 3,726 LOC
 
-### 🔄 Major Duplication Issues
+### Major Duplication Issues
 - **AutonomousExecutor**: Two implementations (workers: 1,827 LOC, orchestration: 573 LOC)
 - **CAWS Validation**: 4+ different implementations across crates
 - **Error Types**: Inconsistent naming (`error.rs` vs `errors.rs`) and multiple error hierarchies
 - **37 duplicate filenames** across crates (excluding lib.rs/main.rs)
 
-### 📊 Scale Metrics
+### Scale Metrics
 - **3,483 struct definitions** across codebase
 - **110 trait definitions** across 86 files
 - **68 files >1,000 LOC** (god object threshold)
@@ -30,7 +30,7 @@
 - **20+ files** contain forbidden naming patterns (enhanced/unified/better/new/etc.)
 - High concentration in `runtime-optimization/`, `context-preservation-engine/`, `caching/`
 
-### 📝 Technical Debt
+### Technical Debt
 - **100+ TODOs/PLACEHOLDERs** across codebase
 - Critical areas: mcp-integration, caching, interfaces
 - Need classification: Critical vs. Non-critical
@@ -45,12 +45,12 @@
 | **P3** | Naming Cleanup | 20+ files | 3-5 days | Low |
 
 ## Success Criteria
-- ✅ No files >1,500 LOC
-- ✅ No duplicate filenames (except lib.rs/main.rs)
-- ✅ Zero naming violations
-- ✅ All TODOs classified and tracked
-- ✅ Clear dependency layers (no cycles)
-- ✅ Test coverage >70% for refactored modules
+- No files >1,500 LOC
+- No duplicate filenames (except lib.rs/main.rs)
+- Zero naming violations
+- All TODOs classified and tracked
+- Clear dependency layers (no cycles)
+- Test coverage >70% for refactored modules
 
 ## Next Steps
 1. **Week 1-2**: Decompose top 5 god objects

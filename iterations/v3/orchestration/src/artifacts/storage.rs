@@ -10,7 +10,8 @@ use chrono::{DateTime, Utc};
 use tokio::sync::RwLock;
 use uuid::Uuid;
 
-use super::manager::{ArtifactId, ArtifactMetadata, ExecutionArtifacts, ArtifactStorageError};
+use super::manager::{ArtifactId, ArtifactMetadata, ArtifactStorageError};
+use crate::planning::types::ExecutionArtifacts;
 use agent_agency_database::{DatabaseClient, DatabaseArtifactStorage};
 
 /// Artifact storage trait
@@ -21,7 +22,7 @@ pub trait ArtifactStorage: Send + Sync {
         &self,
         artifacts: &ExecutionArtifacts,
         metadata: &ArtifactMetadata,
-    ) -> Result<(), ArtifactStorageError>;
+    ) -> Result<()>;
 
     /// Retrieve execution artifacts
     async fn retrieve(
@@ -34,7 +35,7 @@ pub trait ArtifactStorage: Send + Sync {
     async fn delete(
         &self,
         metadata: &ArtifactMetadata,
-    ) -> Result<(), ArtifactStorageError>;
+    ) -> Result<()>;
 
     /// Find artifacts older than cutoff date
     async fn find_old_artifacts(
@@ -74,7 +75,7 @@ impl ArtifactStorage for InMemoryStorage {
         &self,
         artifacts: &ExecutionArtifacts,
         metadata: &ArtifactMetadata,
-    ) -> Result<(), ArtifactStorageError> {
+    ) -> Result<()> {
         let mut artifacts_store = self.artifacts.write().await;
         let mut metadata_store = self.metadata.write().await;
 
@@ -99,7 +100,7 @@ impl ArtifactStorage for InMemoryStorage {
     async fn delete(
         &self,
         metadata: &ArtifactMetadata,
-    ) -> Result<(), ArtifactStorageError> {
+    ) -> Result<()> {
         let mut artifacts_store = self.artifacts.write().await;
         let mut metadata_store = self.metadata.write().await;
 
@@ -192,7 +193,7 @@ impl ArtifactStorage for FileSystemStorage {
         &self,
         artifacts: &ExecutionArtifacts,
         metadata: &ArtifactMetadata,
-    ) -> Result<(), ArtifactStorageError> {
+    ) -> Result<()> {
         use tokio::fs;
 
         // Create directories
@@ -244,7 +245,7 @@ impl ArtifactStorage for FileSystemStorage {
     async fn delete(
         &self,
         metadata: &ArtifactMetadata,
-    ) -> Result<(), ArtifactStorageError> {
+    ) -> Result<()> {
         use tokio::fs;
 
         let version_dir = self.get_artifact_path(metadata).parent().unwrap();
@@ -423,7 +424,7 @@ impl ArtifactStorage for DatabaseStorage {
         &self,
         artifacts: &ExecutionArtifacts,
         metadata: &ArtifactMetadata,
-    ) -> Result<(), ArtifactStorageError> {
+    ) -> Result<()> {
         // Convert ExecutionArtifacts to JSON for storage
         let artifacts_json = serde_json::to_value(artifacts)
             .map_err(|e| ArtifactStorageError::SerializationError(e.to_string()))?;
@@ -497,7 +498,7 @@ impl ArtifactStorage for DatabaseStorage {
     async fn delete(
         &self,
         metadata: &ArtifactMetadata,
-    ) -> Result<(), ArtifactStorageError> {
+    ) -> Result<()> {
         // Delete from execution_artifacts table
         let result = self.db_client.execute_parameterized_query(
             "DELETE FROM execution_artifacts WHERE id = $1 AND task_id = $2",
@@ -627,7 +628,7 @@ impl ArtifactStorage for OrchestrationDatabaseArtifactStorage {
         &self,
         artifacts: &ExecutionArtifacts,
         metadata: &ArtifactMetadata,
-    ) -> Result<(), ArtifactStorageError> {
+    ) -> Result<()> {
         self.db_storage.store(artifacts, metadata).await
             .map_err(|e| ArtifactStorageError::DatabaseError(e.to_string()))
     }
@@ -644,7 +645,7 @@ impl ArtifactStorage for OrchestrationDatabaseArtifactStorage {
     async fn delete(
         &self,
         metadata: &ArtifactMetadata,
-    ) -> Result<(), ArtifactStorageError> {
+    ) -> Result<()> {
         self.db_storage.delete(metadata).await
             .map_err(|e| ArtifactStorageError::DatabaseError(e.to_string()))
     }

@@ -131,12 +131,12 @@ Dashboard (show result + audit)
 
 **Deliberately deferred**:
 
-- ❌ Core ML / Candle / ONNX model inference (too many unknowns)
-- ❌ Advanced analytics (forecasting, correlation, ML anomaly detection)
-- ❌ Vision/ASR bridges (macOS-specific; complex)
-- ❌ ONNX quantization
-- ❌ Workload profiling + optimization
-- ❌ Distributed tracing (Jaeger/Zipkin)
+- Core ML / Candle / ONNX model inference (too many unknowns)
+- Advanced analytics (forecasting, correlation, ML anomaly detection)
+- Vision/ASR bridges (macOS-specific; complex)
+- ONNX quantization
+- Workload profiling + optimization
+- Distributed tracing (Jaeger/Zipkin)
 
 **Why**: These are P2 (after MVP ships). Focus on core loop first.
 

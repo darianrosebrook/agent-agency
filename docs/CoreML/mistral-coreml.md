@@ -3,7 +3,7 @@
 **Model**: Mistral-7B-Instruct-v0.3 (CoreML-optimized)  
 **Primary Use Case**: Constitutional judge deliberations and structured reasoning  
 **Target Performance**: 2.8-3.5x ANE speedup vs CPU inference  
-**Integration Priority**: 🔴 HIGH (Core Council performance bottleneck)
+**Integration Priority**: HIGH (Core Council performance bottleneck)
 
 ## Executive Summary
 
@@ -12,11 +12,11 @@ Mistral-CoreML will accelerate the constitutional judge in our Council system, e
 ## Current State Assessment
 
 ### Existing Council Infrastructure
-- ✅ **Constitutional Judge**: `council/src/judges/constitutional_judge.rs`
-- ✅ **Debate Protocol**: Multi-judge deliberation system
-- ✅ **ANE Acceleration**: Existing FastViT judge uses ANE (<100ms inference)
-- ✅ **Telemetry**: Comprehensive performance monitoring
-- ❌ **LLM Capabilities**: Current judge likely uses simpler inference
+- **Constitutional Judge**: `council/src/judges/constitutional_judge.rs`
+- **Debate Protocol**: Multi-judge deliberation system
+- **ANE Acceleration**: Existing FastViT judge uses ANE (<100ms inference)
+- **Telemetry**: Comprehensive performance monitoring
+- **LLM Capabilities**: Current judge likely uses simpler inference
 
 ### Performance Baseline
 - **Current Judge Latency**: <100ms (FastViT-based)
@@ -316,7 +316,7 @@ impl WorkerPool {
 
 ## Requirements Checklist
 
-### 🔴 Critical Requirements (Must Complete)
+### Critical Requirements (Must Complete)
 - [ ] **Model Acquisition**: Download Mistral-7B-Instruct-v0.3-CoreML (~4.2GB)
 - [ ] **Tokenizer Integration**: Swift bridge for Mistral tokenization
 - [ ] **KV Cache Implementation**: Efficient key-value caching for conversation continuity
@@ -324,7 +324,7 @@ impl WorkerPool {
 - [ ] **Memory Management**: 3.8GB peak usage optimization
 - [ ] **Fallback Strategy**: FastViT fallback for latency-critical cases
 
-### 🟡 High Priority Requirements
+### High Priority Requirements
 - [ ] **Constitutional Judge Migration**: Replace FastViT with Mistral for analysis
 - [ ] **Debate Protocol Enhancement**: LLM-mediated judge discussions
 - [ ] **Risk Assessment Integration**: Dynamic tier determination in Task Router
@@ -332,7 +332,7 @@ impl WorkerPool {
 - [ ] **Prompt Engineering**: Constitutional analysis templates and reasoning patterns
 - [ ] **Performance Monitoring**: Inference time and memory usage tracking
 
-### 🟢 Enhancement Requirements
+### Enhancement Requirements
 - [ ] **Multi-turn Conversations**: Debate continuity across multiple exchanges
 - [ ] **Evidence Integration**: LLM reasoning with multimodal evidence
 - [ ] **Constitutional Learning**: Model fine-tuning on CAWS compliance patterns
@@ -446,26 +446,26 @@ fn test_concurrent_deliberations() {
 ## Success Metrics
 
 ### Technical Metrics
-- ✅ **ANE Speedup**: ≥2.8x vs CPU-only Mistral
-- ✅ **Reasoning Accuracy**: ≥95% constitutional compliance detection
-- ✅ **Memory Efficiency**: <4GB peak usage with KV caching
-- ✅ **Latency**: <500ms for typical deliberations
-- ✅ **Reliability**: 99.9% successful inference rate
+- **ANE Speedup**: ≥2.8x vs CPU-only Mistral
+- **Reasoning Accuracy**: ≥95% constitutional compliance detection
+- **Memory Efficiency**: <4GB peak usage with KV caching
+- **Latency**: <500ms for typical deliberations
+- **Reliability**: 99.9% successful inference rate
 
 ### Business Impact Metrics
-- ✅ **Council Efficiency**: 40% faster constitutional analysis
-- ✅ **Decision Quality**: 25% improvement in verdict accuracy
-- ✅ **Risk Assessment**: 30% better tier classification
-- ✅ **Worker Productivity**: 20% reduction in rejected outputs
-- ✅ **User Trust**: Enhanced transparency in decision reasoning
+- **Council Efficiency**: 40% faster constitutional analysis
+- **Decision Quality**: 25% improvement in verdict accuracy
+- **Risk Assessment**: 30% better tier classification
+- **Worker Productivity**: 20% reduction in rejected outputs
+- **User Trust**: Enhanced transparency in decision reasoning
 
 ---
 
-## Implementation Status: 📋 Planned
+## Implementation Status: Planned
 **Next Action**: Begin Phase 1 infrastructure implementation
 **Estimated Completion**: 8 weeks
 **Dependencies**: Mistral-CoreML model availability, ANE testing hardware
-**Risk Level**: 🟡 Medium (Established Council patterns, new LLM integration)
+**Risk Level**: Medium (Established Council patterns, new LLM integration)
 
 
 

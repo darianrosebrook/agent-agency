@@ -225,7 +225,7 @@ jobs:
             echo "ERROR: Found $FOUND critical placeholder(s)"
             exit 1
           fi
-          echo "✅ No critical placeholders"
+          echo "No critical placeholders"
   
   documentary-todo-summary:
     runs-on: ubuntu-latest

@@ -15,7 +15,7 @@ Documentation System
 └── Integration Points
     ├── docs/generate_diagram_example.rs
     ├── apple-silicon/src/ane/models/diffusion_model.rs
-    ├── models/diffusion/anything-v3-1_split-einsum/ (✅ Downloaded)
+    ├── models/diffusion/anything-v3-1_split-einsum/ (Downloaded)
     └── coreml-bridge/Sources/DiffusionBridge/
 ```
 

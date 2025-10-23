@@ -51,9 +51,9 @@ Risk tiers drive rigor and determine quality gates:
 
 | Tier      | Use Case                    | Coverage | Mutation | Contracts | Review   |
 | --------- | --------------------------- | -------- | -------- | --------- | -------- |
-| **🔴 T1** | Auth, billing, migrations   | 90%+     | 70%+     | Required  | Manual   |
-| **🟡 T2** | Features, APIs, data writes | 80%+     | 50%+     | Required  | Optional |
-| **🟢 T3** | UI, internal tools          | 70%+     | 30%+     | Optional  | Optional |
+| **T1** | Auth, billing, migrations   | 90%+     | 70%+     | Required  | Manual   |
+| **T2** | Features, APIs, data writes | 80%+     | 50%+     | Required  | Optional |
+| **T3** | UI, internal tools          | 70%+     | 30%+     | Optional  | Optional |
 
 **As an agent, you must:**
 
@@ -185,8 +185,8 @@ cat .caws/working-spec.yaml | grep -A 20 "acceptance:"
 
 **Implementation rules:**
 
-- ✅ **DO**: Edit existing modules, use injected dependencies, write deterministic code
-- ❌ **DON'T**: Create shadow files, hardcode timestamps/UUIDs, exceed change budget
+- **DO**: Edit existing modules, use injected dependencies, write deterministic code
+- **DON'T**: Create shadow files, hardcode timestamps/UUIDs, exceed change budget
 
 ### Phase 3: Verify (Must Pass Before PR)
 
@@ -451,7 +451,7 @@ vim .caws/working-spec.yaml # Add root cause note
 **Solution**: Inject time/random/UUID generators.
 
 ```typescript
-// ❌ Bad - Non-deterministic
+// Bad - Non-deterministic
 class OrderService {
   createOrder(items) {
     return {
@@ -462,7 +462,7 @@ class OrderService {
   }
 }
 
-// ✅ Good - Deterministic
+// Good - Deterministic
 class OrderService {
   constructor(private clock: Clock, private idGenerator: IdGenerator) {}
 
@@ -495,7 +495,7 @@ test("createOrder generates valid order", () => {
 **Solution**: Use guard clauses and early returns.
 
 ```typescript
-// ❌ Bad - Deep nesting
+// Bad - Deep nesting
 function processOrder(order) {
   if (order) {
     if (order.items && order.items.length > 0) {
@@ -517,7 +517,7 @@ function processOrder(order) {
   }
 }
 
-// ✅ Good - Guard clauses
+// Good - Guard clauses
 function processOrder(order) {
   if (!order) {
     throw new Error("No order");
@@ -615,12 +615,12 @@ risk_tier: 2 # Choose 1, 2, or 3 based on impact
 **Fix**:
 
 ```yaml
-# ❌ Bad
+# Bad
 id: feature-001
 id: FEAT001
 id: feat_001
 
-# ✅ Good
+# Good
 id: FEAT-001
 id: FIX-042
 id: REFACTOR-003

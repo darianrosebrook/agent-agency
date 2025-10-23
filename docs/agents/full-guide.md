@@ -277,7 +277,7 @@ Add a commit policy hook to reject commit sets that introduce duplicate stems:
 # .git/hooks/pre-commit (or CI script)
 PATTERN='/(copy|final|enhanced|v2)[.-]|/(new-)| - copy\.'
 git diff --cached --name-only | grep -E "$PATTERN" && {
-  echo "❌ Disallowed filename pattern. Use in-place refactor or codemod."
+  echo "Disallowed filename pattern. Use in-place refactor or codemod."
   exit 1
 }
 ```
@@ -520,7 +520,7 @@ jobs:
           BAD=$(git diff --name-only origin/${{ github.base_ref }}... | \
             grep -E '/(copy|final|enhanced|v2)[.-]|/(new-)|(^|/)_.+\.| - copy\.' || true)
           if [ -n "$BAD" ]; then
-            echo "❌ Shadow/duplicate filename patterns detected:"
+            echo "Shadow/duplicate filename patterns detected:"
             echo "$BAD"
             exit 1
           fi
@@ -539,7 +539,7 @@ jobs:
             if ! grep -q -E -f .caws/paths.txt <<< "$f"; then OUT="$OUT\n$f"; fi
           done
           if [ -n "$OUT" ]; then
-            echo -e "❌ Files outside scope.in:\n$OUT"
+            echo -e "Files outside scope.in:\n$OUT"
             echo "If intentional, add a Spec Delta to .caws/working-spec.yaml and include affected paths."
             exit 1
           fi
@@ -556,7 +556,7 @@ jobs:
           FILES=$(git diff --name-only origin/${{ github.base_ref }}... | wc -l)
           LOC=$(git diff --unified=0 origin/${{ github.base_ref }}... | grep -E '^\+|^-' | wc -l)
           echo "Files:$FILES LOC:$LOC (budget Files:$MAXF LOC:$MAXL)"
-          [ "$FILES" -le "$MAXF" ] && [ "$LOC" -le "$MAXL" ] || (echo "❌ Budget exceeded"; exit 1)
+          [ "$FILES" -le "$MAXF" ] && [ "$LOC" -le "$MAXL" ] || (echo "Budget exceeded"; exit 1)
 
   setup:
     runs-on: ubuntu-latest
@@ -977,7 +977,7 @@ This v1.0 combines the philosophical foundation of our system with the practical
 
 ---
 
-## 🚀 Quick Start Guide
+## Quick Start Guide
 
 ### For New Projects
 
@@ -1004,10 +1004,10 @@ This v1.0 combines the philosophical foundation of our system with the practical
 
 ### Support
 
-- 📖 Full documentation: See sections above
+- Full documentation: See sections above
 - 🛠️ Tools: `apps/tools/caws/` contains all utilities
-- 🎯 Examples: Check `docs/` for implementation examples
-- 🤝 Community: Follow the agent conduct rules for collaboration
+- Examples: Check `docs/` for implementation examples
+- Community: Follow the agent conduct rules for collaboration
 
 ---
 

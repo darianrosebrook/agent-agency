@@ -4,31 +4,31 @@ Enterprise-grade memory management for Rust applications with comprehensive moni
 
 ## Features
 
-### 🧠 Memory Monitoring
+### Memory Monitoring
 - **Global Allocator Tracking**: Monitors all heap allocations and deallocations
 - **Memory Pressure Detection**: Low, Moderate, High, and Critical pressure levels
 - **Real-time Statistics**: Current usage, peak usage, allocation counts
 - **Automated GC Triggers**: Memory pressure-based garbage collection
 
-### 🔄 Object Pooling
+### Object Pooling
 - **Generic Object Pools**: Type-safe pooling for any expensive resource
 - **Automatic Lifecycle**: Objects returned to pool on drop
 - **Size Limits**: Configurable maximum pool sizes
 - **Health Checking**: Optional health validation for pooled objects
 
-### 💾 Smart Caching
+### Smart Caching
 - **Memory-Aware Caches**: Size and memory limits with LRU eviction
 - **TTL Support**: Time-based expiration
 - **Pressure-Aware**: Adjusts behavior based on memory pressure
 - **Integration Ready**: Works with existing cache implementations
 
-### 🔍 Leak Detection
+### Leak Detection
 - **Allocation Tracking**: Monitors allocation patterns over time
 - **Trend Analysis**: Detects memory growth trends
 - **Snapshot Comparison**: Compare memory states across time periods
 - **Alert Generation**: Automatic alerts for potential leaks
 
-### 📊 Performance Monitoring
+### Performance Monitoring
 - **Memory Trends**: Increasing, Decreasing, or Stable trends
 - **Peak Usage Tracking**: Historical peak memory usage
 - **Average Calculations**: Rolling average memory usage

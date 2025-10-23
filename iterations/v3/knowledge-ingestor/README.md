@@ -167,21 +167,21 @@ RUST_LOG=info cargo test
 
 ### Completed
 
-- ✅ Database schema (migration 009)
-- ✅ Wikidata parser with stream processing
-- ✅ WordNet parser with tar.gz support
-- ✅ Core vocabulary management
-- ✅ Cross-reference generation with semantic similarity
-- ✅ On-demand ingestion with LRU cache and rate limiting
-- ✅ CLI tool for batch loading
-- ✅ Integration tests
+- Database schema (migration 009)
+- Wikidata parser with stream processing
+- WordNet parser with tar.gz support
+- Core vocabulary management
+- Cross-reference generation with semantic similarity
+- On-demand ingestion with LRU cache and rate limiting
+- CLI tool for batch loading
+- Integration tests
 
 ### Pending Full Integration
 
-- ⏳ Database client integration (requires sqlx query implementation)
-- ⏳ Embedding service integration (requires async context)
-- ⏳ Disambiguation integration (requires database client in context)
-- ⏳ On-demand API implementation (requires external data sources)
+- Database client integration (requires sqlx query implementation)
+- Embedding service integration (requires async context)
+- Disambiguation integration (requires database client in context)
+- On-demand API implementation (requires external data sources)
 
 ## Next Steps
 

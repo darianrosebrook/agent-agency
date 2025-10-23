@@ -1,6 +1,6 @@
 # Local-First Model Selection Strategy
 
-**Status**: ✅ Definitive Strategy Approved  
+**Status**: Definitive Strategy Approved  
 **Last Updated**: October 13, 2025  
 **Priority**: Local/Open-Source First, Paid/Closed-Source Fallback Only
 
@@ -538,7 +538,7 @@ This strategy ensures Agent Agency V2 prioritizes **local, open-source models** 
 **Privacy**: All sensitive data stays local  
 **Flexibility**: Easy to add new models or fall back to paid APIs
 
-**Status**: ✅ **Ready for Implementation**
+**Status**: **Ready for Implementation**
 
 ---
 

@@ -879,14 +879,14 @@ async function monitoredSearch<T>(
 
 ### Pitfall 1: Forgetting Tenant Context
 
-❌ **Wrong**:
+**Wrong**:
 
 ```typescript
 // Bypasses RLS, sees all tenants' data
 const agents = await pool.query("SELECT * FROM agent_profiles");
 ```
 
-✅ **Correct**:
+**Correct**:
 
 ```typescript
 // Uses RLS, sees only tenant's data
@@ -898,7 +898,7 @@ await withTenantContext("tenant-123", async (client) => {
 
 ### Pitfall 2: Vector Embedding Format
 
-❌ **Wrong**:
+**Wrong**:
 
 ```typescript
 // Passing array directly fails
@@ -908,7 +908,7 @@ await pool.query(`
 `, [[0.1, 0.2, ...]]); // Wrong!
 ```
 
-✅ **Correct**:
+**Correct**:
 
 ```typescript
 // Convert to JSON string first
@@ -920,14 +920,14 @@ await pool.query(`
 
 ### Pitfall 3: Deep Graph Traversal
 
-❌ **Wrong**:
+**Wrong**:
 
 ```typescript
 // 5-hop traversal can be slow
 await findRelatedAgents("agent-123", 5);
 ```
 
-✅ **Correct**:
+**Correct**:
 
 ```typescript
 // Limit to 2-3 hops, increase confidence threshold

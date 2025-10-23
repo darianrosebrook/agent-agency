@@ -103,10 +103,10 @@
 | Core 1.1 – Empty Submission | Reject empty task payload with actionable error | A1 (extend with explicit validation clause) | Unit test (`TaskIntakeProcessor`), property test for zero-length payloads | Arbiter Intake | In Progress |
 | Core 1.1 – Malformed JSON | Detect structural errors and return structured failure | A1 / GPT5-P3 (graceful degradation) | Fuzzing malformed JSON corpus, contract test for error schema | Arbiter Intake | In Progress |
 | Core 1.1 – Missing Fields | Enforce required fields (`id`, `type`, `description`) | A1 | Deterministic unit tests per missing field, coverage on priority routing defaults | Arbiter Intake | In Progress |
-| Core 1.1 – Unicode/Binary Payloads | Preserve UTF-8 & guard binary attachments | GPT5-P2 (structured parsing) | Property tests with multilingual corpus + binary detection guard integration test | Arbiter Intake | Property fuzz ✅ |
+| Core 1.1 – Unicode/Binary Payloads | Preserve UTF-8 & guard binary attachments | GPT5-P2 (structured parsing) | Property tests with multilingual corpus + binary detection guard integration test | Arbiter Intake | Property fuzz |
 | Core 1.1 – Long Descriptions | Automatic chunking for >5 KB inputs | GPT5-P1 (resource optimization) | Integration test verifying chunk boundaries + streaming flow | Arbiter Intake | In Progress |
-| Core 1.2 – Worker Exhaustion | Queue backpressure when pools full | GPT5-P3 | Chaos sim with synthetic workload, metrics assertion on queue depth | Worker Resilience | Supervisor backpressure ✅ |
-| Core 1.2 – Worker Failure Mid-Task | Reassignment & state preservation | GPT5-P3 | Replay harness testing snapshot resume + retry policy | Worker Resilience | Failure snapshot ✅ |
+| Core 1.2 – Worker Exhaustion | Queue backpressure when pools full | GPT5-P3 | Chaos sim with synthetic workload, metrics assertion on queue depth | Worker Resilience | Supervisor backpressure |
+| Core 1.2 – Worker Failure Mid-Task | Reassignment & state preservation | GPT5-P3 | Replay harness testing snapshot resume + retry policy | Worker Resilience | Failure snapshot |
 | Core 1.3 – Task Cancellation | Preserve partial work and audit trail | GPT5-P3 | Integration test covering cancellation at different stages | Task State | Pending |
 | Claim 2.x – Conflicting Outputs | Arbitration board resolves disagreement | New acceptance (Phase 3) | Arbitration harness with divergent LLM outputs | Arbitration | Pending |
 | Claim 3.x – Authority Attribution | Verify cited authority credibility | New acceptance (Phase 3) | Contract test verifying provenance scoring | Verification | Pending |

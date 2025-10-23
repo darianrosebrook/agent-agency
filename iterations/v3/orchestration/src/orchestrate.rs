@@ -1,3 +1,6 @@
+use std::collections::HashMap;
+use uuid::Uuid;
+
 use crate::adapter::build_short_circuit_verdict;
 use crate::caws_runtime::{
     CawsRuntimeValidator, DefaultValidator, DiffStats, TaskDescriptor, WorkingSpec,
@@ -50,7 +53,7 @@ fn map_risk_tier(tier: u8) -> CouncilRiskTier {
     }
 }
 
-fn to_task_spec(desc: &TaskDescriptor) -> CouncilTaskSpec {
+pub fn to_task_spec(desc: &TaskDescriptor) -> CouncilTaskSpec {
     CouncilTaskSpec {
         id: uuid::Uuid::new_v4(),
         title: format!("task-{}", desc.task_id),

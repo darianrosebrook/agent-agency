@@ -44,7 +44,7 @@ validation.rs, websocket.rs
 ## Struct/Trait Duplication
 
 ### Duplicate Struct Names (0 found)
-✅ **Good**: No duplicate struct names detected
+**Good**: No duplicate struct names detected
 
 ### Duplicate Trait Names (13 found)
 ```

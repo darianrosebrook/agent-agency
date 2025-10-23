@@ -141,7 +141,7 @@ let hit_rates = monitor.hit_rate_over_time(24).await; // Last 24 hours
 // Get optimization recommendations
 let recommendations = monitor.get_recommendations().await;
 for rec in recommendations {
-    println!("💡 {}", rec);
+    println!("{}", rec);
 }
 ```
 

@@ -8,10 +8,10 @@
 ## Executive Summary
 
 This document provides a **concrete, tactical implementation path** for Core ML integration that:
-- ✅ Avoids painting Rust into FFI corners
-- ✅ Keeps ObjC/Swift complexity quarantined in Swift
-- ✅ Enables safe rollback (feature flags)
-- ✅ Measures before scaling (telemetry gates)
+- Avoids painting Rust into FFI corners
+- Keeps ObjC/Swift complexity quarantined in Swift
+- Enables safe rollback (feature flags)
+- Measures before scaling (telemetry gates)
 
 **TL;DR**: Build a **thin Swift→C ABI bridge**, not raw objc2. Link via `build.rs`. Feature-gate behind `#[cfg(coreml)]`. Measure compile/inference/ANE coverage. Never cross the boundary without timeouts or autorelease pools.
 
@@ -170,10 +170,10 @@ pub fn make_cache_key(
 ## 2. Swift C ABI Bridge (The Safe Path)
 
 **Why Swift+C over raw objc2?**
-- ✅ All unsafe code lives in Swift (one place to audit)
-- ✅ Apple API churn absorbed in Swift layer
-- ✅ No ObjC lifetime magic bleeding into Rust
-- ✅ C ABI is stable across macOS releases
+- All unsafe code lives in Swift (one place to audit)
+- Apple API churn absorbed in Swift layer
+- No ObjC lifetime magic bleeding into Rust
+- C ABI is stable across macOS releases
 
 ### Swift Bridge Structure
 
@@ -454,10 +454,10 @@ private func featureProviderToDict(_ provider: MLFeatureProvider) -> [String: An
 ```
 
 **Key invariants baked in:**
-- ✅ All ObjC types (`MLModel`, etc.) never cross the FFI boundary
-- ✅ JSON contracts are stable and version-agnostic
-- ✅ Opaque `OpaquePointer` handles managed by Rust's Rust side
-- ✅ Every function returns `Int32` (0 = success, 1 = error) plus optional error message
+- All ObjC types (`MLModel`, etc.) never cross the FFI boundary
+- JSON contracts are stable and version-agnostic
+- Opaque `OpaquePointer` handles managed by Rust's Rust side
+- Every function returns `Int32` (0 = success, 1 = error) plus optional error message
 
 ---
 

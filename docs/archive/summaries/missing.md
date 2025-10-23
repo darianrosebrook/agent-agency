@@ -1,17 +1,17 @@
-# 🎯 CORE EXECUTION LOOP OPERATIONAL
+# CORE EXECUTION LOOP OPERATIONAL
 
 **The core task execution pipeline is now operational!** The system provides:
 
-- ✅ **Task Execution Pipeline**: End-to-end task submission, orchestration, and worker execution
-- ✅ **Execution Modes**: Strict, Auto, and Dry-Run modes with appropriate safety controls
-- ✅ **Intervention API**: Pause, resume, cancel operations for running tasks
-- ✅ **Progress Tracking**: Real-time task status updates and monitoring
-- ✅ **CLI Interface**: Command-line task submission and intervention commands
-- ✅ **API Server**: RESTful endpoints with basic authentication and task management
-- ✅ **Database Layer**: Core task persistence and basic provenance storage
-- ✅ **Web Dashboard**: Basic metrics display and database exploration interface
-- ✅ **Provenance Tracking**: Git integration for basic audit trails
-- ✅ **CAWS Compliance**: Runtime validation with waiver system for exceptions
+- **Task Execution Pipeline**: End-to-end task submission, orchestration, and worker execution
+- **Execution Modes**: Strict, Auto, and Dry-Run modes with appropriate safety controls
+- **Intervention API**: Pause, resume, cancel operations for running tasks
+- **Progress Tracking**: Real-time task status updates and monitoring
+- **CLI Interface**: Command-line task submission and intervention commands
+- **API Server**: RESTful endpoints with basic authentication and task management
+- **Database Layer**: Core task persistence and basic provenance storage
+- **Web Dashboard**: Basic metrics display and database exploration interface
+- **Provenance Tracking**: Git integration for basic audit trails
+- **CAWS Compliance**: Runtime validation with waiver system for exceptions
 
 **Many advanced features remain as TODO implementations** (297 remaining TODOs identified)
 
@@ -719,12 +719,12 @@ iterations/v3/interfaces/api.rs:
   501          // For now, just update local state
 
 iterations/v3/interfaces/cli.rs:
-  798              println!("📊 Dashboard enabled: Real-time iteration tracking available");
+  798              println!("Dashboard enabled: Real-time iteration tracking available");
   799:             // TODO: Start dashboard server
   800          }
   801  
   802:         // TODO: Implement actual self-prompting execution
-  803          println!("📝 Task: {}", description);
+  803          println!("Task: {}", description);
 
 iterations/v3/interfaces/mcp.rs:
   441  
@@ -1027,7 +1027,7 @@ iterations/v3/src/bin/api-server.rs:
 iterations/v3/src/bin/cli.rs:
   726  
   727:                     // TODO: Implement actual rollback logic
-  728                      println!("🔄 Rolling back applied changes...");
+  728                      println!("Rolling back applied changes...");
 
 iterations/v3/system-health-monitor/src/agent_integration.rs:
   128      /// Agent performance tracking

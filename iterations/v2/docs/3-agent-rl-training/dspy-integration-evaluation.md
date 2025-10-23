@@ -12,7 +12,7 @@ DSPy presents a compelling opportunity to enhance our V2 agentic RL system with 
 
 ## 1. DSPy Alignment with Our V2 Architecture
 
-### ✅ Strong Synergies
+### Strong Synergies
 
 | DSPy Capability                   | Our V2 Component             | Integration Opportunity               | Impact                      |
 | --------------------------------- | ---------------------------- | ------------------------------------- | --------------------------- |
@@ -22,7 +22,7 @@ DSPy presents a compelling opportunity to enhance our V2 agentic RL system with 
 | **Model Portability**             | Environment Abstraction      | Easy model switching for optimization | +10% deployment flexibility |
 | **Eval-Driven Optimization**      | Turn-Level Rewards           | Systematic reward signal improvement  | +18% reward quality         |
 
-### 🎯 Perfect Fit Areas
+### Perfect Fit Areas
 
 **1. Rubric Engineering Enhancement**
 
@@ -323,7 +323,7 @@ graph TB
 
 ## 5. Pros and Cons Analysis
 
-### ✅ Pros
+### Pros
 
 **1. Systematic Prompt Optimization**
 

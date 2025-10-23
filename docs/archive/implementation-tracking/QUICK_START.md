@@ -4,7 +4,7 @@
 
 ARBITER is a multi-agent orchestration system for AI-powered workflow automation.
 
-**Status**: ✅ Functionally complete | ⚠️ MVP in progress | ❌ Production not ready
+**Status**: Functionally complete | ⚠️ MVP in progress | Production not ready
 
 ### What's Ready
 - Core orchestration engine

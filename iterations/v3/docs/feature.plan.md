@@ -9,7 +9,7 @@
 - Enforce contract validation at every boundary with replayable error handling + retry/backoff so malformed payloads can be quarantined without crashing the pipeline.
 - Deliver deterministic recovery paths (idempotent writes, resume-safe event batching) to honour Tier 1 reliability expectations.
 
-**Risk tier:** 🔴 Tier 1 (multi-agent governance + persistence).  
+**Risk tier:** Tier 1 (multi-agent governance + persistence).  
 **Change budget target:** ≤12 files / ≤900 LOC pending final design.
 
 ## Architecture Sketch
@@ -83,13 +83,13 @@ Retry + CircuitBreaker wrappers
 # TODO Remediation (Tier 1 Continuation)
 
 ## Objectives (In Scope)
-- ✅ **Database parity**: Align `database::models` with the richer CAWS verdict/judge schemas already used by the client layer, fix move/Option handling, and unblock compilation.
-- ✅ **Embedding cache safety**: Provide ergonomic formatting for `EmbeddingId` and ensure `EmbeddingIndex::remove` updates secondary indexes without violating DashMap borrow rules.
-- ✅ **Claim extraction fidelity**: 
+- **Database parity**: Align `database::models` with the richer CAWS verdict/judge schemas already used by the client layer, fix move/Option handling, and unblock compilation.
+- **Embedding cache safety**: Provide ergonomic formatting for `EmbeddingId` and ensure `EmbeddingIndex::remove` updates secondary indexes without violating DashMap borrow rules.
+- **Claim extraction fidelity**: 
   - propagate disambiguation metrics (`ambiguities_resolved`) through stage metadata,
   - implement clause splitting heuristics to replace the current stub,
   - add a production-ready `ContentRewriter` that generates actionable rewrite suggestions for unverifiable fragments.
-- ✅ **Verification uplift**: extend unit coverage for the new logic and exercise the pipeline end-to-end so we meet Tier 1 bars (≥90 % branch, ≥70 % mutation where applicable).
+- **Verification uplift**: extend unit coverage for the new logic and exercise the pipeline end-to-end so we meet Tier 1 bars (≥90 % branch, ≥70 % mutation where applicable).
 
 ## Design Sketch
 ```

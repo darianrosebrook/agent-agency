@@ -34,9 +34,9 @@
 
 These documents represent:
 
-- ✅ Thoughtful design work
-- ✅ Valid architectural patterns
-- ✅ Reference implementations
+- Thoughtful design work
+- Valid architectural patterns
+- Reference implementations
 - ⚠️ **NOT** current implementation state
 
 **Before Implementing**:
@@ -99,15 +99,15 @@ These documents represent:
 
 **Use Future Tense**:
 
-- ✅ "The system will provide..."
-- ✅ "Components should integrate..."
-- ✅ "This design proposes..."
+- "The system will provide..."
+- "Components should integrate..."
+- "This design proposes..."
 
 **Avoid Past/Present as Fact**:
 
-- ❌ "The system provides..." (implies implemented)
-- ❌ "Components integrate..." (claims current state)
-- ❌ "This design implements..." (suggests complete)
+- "The system provides..." (implies implemented)
+- "Components integrate..." (claims current state)
+- "This design implements..." (suggests complete)
 
 ---
 
@@ -154,14 +154,14 @@ proposals/{component}-architecture.md
 
 | Proposal                        | Working Spec | Implementation   | Status        |
 | ------------------------------- | ------------ | ---------------- | ------------- |
-| MCP-architecture                | ❌ Missing   | 🟡 Partial (POC) | Needs Spec    |
-| agent-memory-architecture       | ❌ Missing   | ❌ None          | Proposal Only |
-| agent-orchestrator-architecture | ✅ Exists    | 🟡 Partial       | In Progress   |
-| ai-model-architecture           | ❌ Missing   | ❌ None          | Proposal Only |
-| data-layer-architecture         | ❌ Missing   | 🟡 Partial       | Needs Spec    |
-| mcp-integration-architecture    | ❌ Missing   | 🟡 Partial       | Needs Spec    |
-| memory-system-architecture      | ❌ Missing   | ❌ None          | Proposal Only |
-| quality-assurance-architecture  | ✅ Exists    | 🟡 Partial       | In Progress   |
+| MCP-architecture                | Missing   | Partial (POC) | Needs Spec    |
+| agent-memory-architecture       | Missing   | None          | Proposal Only |
+| agent-orchestrator-architecture | Exists    | Partial       | In Progress   |
+| ai-model-architecture           | Missing   | None          | Proposal Only |
+| data-layer-architecture         | Missing   | Partial       | Needs Spec    |
+| mcp-integration-architecture    | Missing   | Partial       | Needs Spec    |
+| memory-system-architecture      | Missing   | None          | Proposal Only |
+| quality-assurance-architecture  | Exists    | Partial       | In Progress   |
 
 **For Detailed Status**: See [COMPONENT_STATUS_INDEX.md](../../iterations/v2/COMPONENT_STATUS_INDEX.md)
 

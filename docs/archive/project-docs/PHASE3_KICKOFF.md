@@ -86,10 +86,10 @@ cargo test --lib indexers::database --features postgres
 ```
 
 **Acceptance Criteria**:
-- ✅ Can INSERT vector without error
-- ✅ Can search_similar and get ranked results
-- ✅ Audit log contains correct entries
-- ✅ All 3 methods have passing tests
+- Can INSERT vector without error
+- Can search_similar and get ranked results
+- Audit log contains correct entries
+- All 3 methods have passing tests
 
 ---
 
@@ -166,10 +166,10 @@ Similar pattern to Vision bridge. See Phase 3 Plan for code template.
 ```
 
 **Acceptance Criteria**:
-- ✅ Vision bridge returns OCR results
-- ✅ Speech bridge returns transcription with timings
-- ✅ Memory properly managed (@autoreleasepool)
-- ✅ Circuit breaker protects against timeout
+- Vision bridge returns OCR results
+- Speech bridge returns transcription with timings
+- Memory properly managed (@autoreleasepool)
+- Circuit breaker protects against timeout
 
 ---
 
@@ -232,11 +232,11 @@ cargo test --test '*enricher*' --features python-bridges
 ```
 
 **Acceptance Criteria**:
-- ✅ WhisperX subprocess runs successfully
-- ✅ Output parsed and converted to AsrResult
-- ✅ Word timings extracted correctly
-- ✅ BLIP captions generated with tags
-- ✅ Circuit breaker prevents cascade failures
+- WhisperX subprocess runs successfully
+- Output parsed and converted to AsrResult
+- Word timings extracted correctly
+- BLIP captions generated with tags
+- Circuit breaker prevents cascade failures
 
 ---
 
@@ -379,12 +379,12 @@ async fn test_multimodal_rag_full_pipeline() -> Result<()> {
 - Profile memory usage
 
 **Acceptance Criteria**:
-- ✅ Full end-to-end pipeline works
-- ✅ Council integration wired
-- ✅ Claim extraction collects evidence
-- ✅ P99 retrieval latency < 500ms
-- ✅ All integration tests pass
-- ✅ No memory leaks under sustained load
+- Full end-to-end pipeline works
+- Council integration wired
+- Claim extraction collects evidence
+- P99 retrieval latency < 500ms
+- All integration tests pass
+- No memory leaks under sustained load
 
 ---
 
@@ -436,15 +436,15 @@ async fn test_multimodal_rag_full_pipeline() -> Result<()> {
 
 Phase 3 is complete when:
 
-- ✅ PostgreSQL pgvector queries tested and working
-- ✅ Swift Vision and Speech bridges functional
-- ✅ Python WhisperX and BLIP bridges functional
-- ✅ Council integration wired and tested
-- ✅ Claim extraction evidence collection working
-- ✅ End-to-end test passing (file → retrieve → council)
-- ✅ Performance meets P99 < 500ms target
-- ✅ All code reviewed and documented
-- ✅ No breaking changes to Phases 1-2
+- PostgreSQL pgvector queries tested and working
+- Swift Vision and Speech bridges functional
+- Python WhisperX and BLIP bridges functional
+- Council integration wired and tested
+- Claim extraction evidence collection working
+- End-to-end test passing (file → retrieve → council)
+- Performance meets P99 < 500ms target
+- All code reviewed and documented
+- No breaking changes to Phases 1-2
 
 ---
 
@@ -487,4 +487,4 @@ No `--no-verify` allowed. All commits must pass linting and tests.
 **Phase 3 Owner**: [Assigned Developer]  
 **Kickoff Date**: October 25, 2025  
 **Target Completion**: November 8, 2025  
-**Status**: ✅ Ready to Implement
+**Status**: Ready to Implement

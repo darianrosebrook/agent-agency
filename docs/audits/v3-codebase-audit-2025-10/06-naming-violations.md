@@ -199,10 +199,10 @@ echo "Validating naming conventions..."
 VIOLATIONS=$(cd "$V3_PATH" && rg '(?i)\b(enhanced|unified|better|new|next|final|copy|revamp|improved)\b' --count-matches | wc -l)
 
 if [ "$VIOLATIONS" -eq 0 ]; then
-    echo "✅ No naming violations found"
+    echo "No naming violations found"
     exit 0
 else
-    echo "❌ $VIOLATIONS naming violations still exist"
+    echo "$VIOLATIONS naming violations still exist"
     cd "$V3_PATH" && rg '(?i)\b(enhanced|unified|better|new|next|final|copy|revamp|improved)\b' --count-matches
     exit 1
 fi
@@ -211,22 +211,22 @@ fi
 ## Success Criteria
 
 ### Naming Convention Compliance
-- ✅ **Zero forbidden patterns** (enhanced/unified/better/new/etc.)
-- ✅ **Consistent naming** across all crates
-- ✅ **Descriptive names** that indicate purpose
-- ✅ **No duplicate names** (except lib.rs/main.rs)
+- **Zero forbidden patterns** (enhanced/unified/better/new/etc.)
+- **Consistent naming** across all crates
+- **Descriptive names** that indicate purpose
+- **No duplicate names** (except lib.rs/main.rs)
 
 ### File Organization
-- ✅ **Clear module boundaries**
-- ✅ **Logical file grouping**
-- ✅ **Consistent naming patterns**
-- ✅ **Easy to locate functionality**
+- **Clear module boundaries**
+- **Logical file grouping**
+- **Consistent naming patterns**
+- **Easy to locate functionality**
 
 ### Code Quality
-- ✅ **No naming confusion**
-- ✅ **Clear responsibility indication**
-- ✅ **Maintainable file structure**
-- ✅ **Professional naming standards**
+- **No naming confusion**
+- **Clear responsibility indication**
+- **Maintainable file structure**
+- **Professional naming standards**
 
 ## Risk Mitigation
 

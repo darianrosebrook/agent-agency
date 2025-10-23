@@ -1,6 +1,6 @@
 # ANE Manager Quick Reference
 
-## 🚀 Quick Start
+## Quick Start
 
 ```rust
 use apple_silicon::ane::manager::{ANEManager, ANEConfig};
@@ -11,7 +11,7 @@ let model_id = manager.load_model("model.mlmodel", &Default::default()).await?;
 let result = manager.execute_inference(model_id, &input, &Default::default()).await?;
 ```
 
-## 📋 Common Patterns
+## Common Patterns
 
 ### 1. Production Configuration
 
@@ -56,7 +56,7 @@ println!("Latency: {:.2}ms, Throughput: {:.1} IPS",
     metrics.average_throughput_ips);
 ```
 
-## 🔧 Configuration Reference
+## Configuration Reference
 
 ### ANEConfig
 
@@ -90,7 +90,7 @@ match operation().await {
 }
 ```
 
-## 📊 Key Metrics
+## Key Metrics
 
 | Metric | Access | Description |
 |--------|--------|-------------|
@@ -101,7 +101,7 @@ match operation().await {
 | `current_memory_usage_mb` | `get_resource_pool_stats()` | Pool usage |
 | `total_admissions` | `get_resource_pool_stats()` | Successful admissions |
 
-## 🔍 Debugging
+## Debugging
 
 ### Enable Debug Logging
 
@@ -136,7 +136,7 @@ println!("Total time: {:.2}ms", duration.as_millis());
 println!("ANE time: {:.2}ms", result.execution_time_ms);
 ```
 
-## 🧪 Testing
+## Testing
 
 ### Unit Test Pattern
 
@@ -176,7 +176,7 @@ fn bench_inference(c: &mut Criterion) {
 }
 ```
 
-## 🎯 Best Practices
+## Best Practices
 
 ### Memory Management
 - Pre-allocate buffers for repeated inferences
@@ -198,7 +198,7 @@ fn bench_inference(c: &mut Criterion) {
 - Log performance metrics periodically
 - Alert on increasing latency or error rates
 
-## 🔗 Integration Points
+## Integration Points
 
 ### With Core ML Backend
 
@@ -235,7 +235,7 @@ match backend {
 }
 ```
 
-## 📈 Performance Tuning
+## Performance Tuning
 
 ### Latency Optimization
 ```rust

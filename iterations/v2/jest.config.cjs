@@ -27,25 +27,37 @@ module.exports = {
 
   // Transform configuration with SWC for speed
   transform: {
-    "^.+\\.ts$": ["@swc/jest", {
-      "jsc": {
-        "parser": {
-          "syntax": "typescript",
-          "tsx": false,
-          "decorators": true,
-          "dynamicImport": true
+    "^.+\\.ts$": [
+      "@swc/jest",
+      {
+        jsc: {
+          parser: {
+            syntax: "typescript",
+            tsx: false,
+            decorators: true,
+            dynamicImport: true,
+          },
+          target: "es2022",
+          loose: false,
+          externalHelpers: false,
+          keepClassNames: true,
+          transform: {
+            legacyDecorator: true,
+            decoratorMetadata: true,
+            useDefineForClassFields: false,
+          },
         },
-        "target": "es2022",
-        "transform": {
-          "legacyDecorator": true,
-          "decoratorMetadata": true
-        }
+        module: {
+          type: "commonjs",
+          strict: false,
+          strictMode: true,
+          lazy: false,
+          noInterop: false,
+        },
+        minify: false,
+        sourceMaps: true,
       },
-      "module": {
-        "type": "commonjs"
-      },
-      "sourceMaps": true
-    }],
+    ],
     "^.+\\.js$": ["@swc/jest"],
   },
 

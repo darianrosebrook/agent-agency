@@ -618,16 +618,16 @@ async fn test_multimodal_rag_full_pipeline() -> Result<()> {
 
 ## Success Criteria (Phase 3)
 
-- ✅ PostgreSQL pgvector queries working with HNSW indices
-- ✅ Vision Framework bridge extracting OCR blocks
-- ✅ Apple Speech Framework transcribing audio
-- ✅ WhisperX + pyannote producing speaker-aligned transcripts
-- ✅ BLIP generating captions for figures
-- ✅ End-to-end pipeline: file → ingest → enrich → index → retrieve
-- ✅ Council receiving multimodal context with proper budgeting
-- ✅ Claim extraction finding cross-modal evidence with citations
-- ✅ Retrieval P99 latency < 500ms (warm)
-- ✅ All 23+ tests passing
+- PostgreSQL pgvector queries working with HNSW indices
+- Vision Framework bridge extracting OCR blocks
+- Apple Speech Framework transcribing audio
+- WhisperX + pyannote producing speaker-aligned transcripts
+- BLIP generating captions for figures
+- End-to-end pipeline: file → ingest → enrich → index → retrieve
+- Council receiving multimodal context with proper budgeting
+- Claim extraction finding cross-modal evidence with citations
+- Retrieval P99 latency < 500ms (warm)
+- All 23+ tests passing
 
 ---
 

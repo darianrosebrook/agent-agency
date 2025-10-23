@@ -4,7 +4,7 @@
 
 ---
 
-## 🎯 Tutorial Overview
+## Tutorial Overview
 
 This tutorial walks you through using Agent Agency V3 to execute autonomous tasks with constitutional governance. You'll learn how to submit tasks, monitor progress, and intervene when needed.
 
@@ -14,7 +14,7 @@ This tutorial walks you through using Agent Agency V3 to execute autonomous task
 
 ---
 
-## 📋 Tutorial Scenario
+## Tutorial Scenario
 
 **Task**: Implement a user authentication system with JWT tokens
 
@@ -68,14 +68,14 @@ npm run dev
 
 **Expected Output:**
 ```
-🔧 Starting Agent Agency API Server
-📡 Server: 127.0.0.1:8080
-✅ API server ready at http://127.0.0.1:8080
+Starting Agent Agency API Server
+Server: 127.0.0.1:8080
+API server ready at http://127.0.0.1:8080
 
-🔧 Starting Agent Agency Worker
-📡 Server: 127.0.0.1:8081
-👷 Worker ID: default-worker
-✅ Worker ready at http://127.0.0.1:8081
+Starting Agent Agency Worker
+Server: 127.0.0.1:8081
+Worker ID: default-worker
+Worker ready at http://127.0.0.1:8081
 ```
 
 ## Step 2: Submit Your First Task
@@ -126,31 +126,31 @@ curl -X POST http://localhost:8080/api/v1/tasks \
 When you use `--watch`, the CLI will show live progress:
 
 ```
-🚀 Agent Agency V3 - Autonomous Execution
+Agent Agency V3 - Autonomous Execution
 ═══════════════════════════════════════════
 
-🎯 Task: Implement user authentication system...
-🔢 Task ID: 550e8400-e29b-41d4-a716-446655440000
-⚡ Mode: AUTO (Quality Gates Enabled)
+Task: Implement user authentication system...
+Task ID: 550e8400-e29b-41d4-a716-446655440000
+Mode: AUTO (Quality Gates Enabled)
 🎚️  Risk Tier: 2
 
-📋 Phase: Planning and validation
-   ⏳ Analyzing requirements...
-   ✅ Council review passed
-   ✅ CAWS compliance validated
+Phase: Planning and validation
+   Analyzing requirements...
+   Council review passed
+   CAWS compliance validated
 
-📋 Phase: Worker execution
-   🔧 Executing implementation...
-   📊 Progress: 65%
-   ✅ Code generation completed
-   ✅ Tests written and passing
+Phase: Worker execution
+   Executing implementation...
+   Progress: 65%
+   Code generation completed
+   Tests written and passing
 
-📋 Phase: Quality assurance
-   🧪 Running test suite...
-   📊 Coverage: 85% (Target: 80%)
-   ✅ All quality gates passed
+Phase: Quality assurance
+   Running test suite...
+   Coverage: 85% (Target: 80%)
+   All quality gates passed
 
-🎉 Task completed successfully!
+Task completed successfully!
 ⏱️  Total time: 2m 34s
 ```
 
@@ -299,5 +299,5 @@ curl http://localhost:8080/metrics
 
 ---
 
-**🎉 Congratulations!** You've successfully used Agent Agency V3 to execute an autonomous task with constitutional governance. The system provides complete oversight, real-time control, and comprehensive audit trails for all AI operations.
+**Congratulations!** You've successfully used Agent Agency V3 to execute an autonomous task with constitutional governance. The system provides complete oversight, real-time control, and comprehensive audit trails for all AI operations.
 

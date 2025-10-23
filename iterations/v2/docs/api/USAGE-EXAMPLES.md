@@ -93,23 +93,23 @@ import { BudgetMonitor } from "./node_modules/@paths.design/arbiter-v2/src/monit
 import { SpecFileManager } from "./node_modules/@paths.design/arbiter-v2/src/caws-integration/utils/spec-file-manager.js";
 
 async function quickStart() {
-  console.log("🚀 ARBITER Quick Start Example\n");
+  console.log("ARBITER Quick Start Example\n");
 
   const projectRoot = process.cwd();
 
   // Load working spec
   const specManager = new SpecFileManager({ projectRoot });
   const spec = await specManager.readSpecFile();
-  console.log(`📋 Loaded spec: ${spec.title}`);
+  console.log(`Loaded spec: ${spec.title}`);
 
   // Validate spec
   const validator = new CAWSValidationAdapter({ projectRoot });
   const validation = await validator.validateExistingSpec();
 
   if (validation.success && validation.data?.passed) {
-    console.log("✅ Spec validation passed");
+    console.log("Spec validation passed");
   } else {
-    console.log("❌ Spec validation failed:", validation.error?.message);
+    console.log("Spec validation failed:", validation.error?.message);
     return;
   }
 
@@ -121,25 +121,25 @@ async function quickStart() {
   });
 
   monitor.on("alert", (alert) => {
-    console.log(`🚨 Budget Alert: ${alert.message}`);
+    console.log(`Budget Alert: ${alert.message}`);
   });
 
   await monitor.start();
-  console.log("📊 Budget monitoring started");
+  console.log("Budget monitoring started");
 
   // Simulate some work
-  console.log("🔧 Simulating development work...");
+  console.log("Simulating development work...");
   await new Promise((resolve) => setTimeout(resolve, 2000));
 
   // Check status
   const status = monitor.getStatus();
   console.log(
-    `📈 Current budget: ${status.currentUsage.filesChanged} files, ${status.currentUsage.linesChanged} LOC`
+    `Current budget: ${status.currentUsage.filesChanged} files, ${status.currentUsage.linesChanged} LOC`
   );
 
   // Cleanup
   await monitor.stop();
-  console.log("✅ Example completed successfully");
+  console.log("Example completed successfully");
 }
 
 quickStart().catch(console.error);
@@ -208,9 +208,9 @@ const result = await validator.validateExistingSpec();
 if (result.success) {
   console.log("Validation result:", result.data);
   if (result.data?.passed) {
-    console.log("✅ Spec is valid");
+    console.log("Spec is valid");
   } else {
-    console.log("❌ Spec has issues");
+    console.log("Spec has issues");
     if (result.data?.remediation) {
       console.log("Suggested fixes:", result.data.remediation);
     }
@@ -267,7 +267,7 @@ monitor.on("alert", (alert) => {
 // Handle status updates
 monitor.on("status-update", (status) => {
   console.log(
-    `📊 Budget Status: ${status.filesPercentage}% files, ${status.locPercentage}% LOC`
+    `Budget Status: ${status.filesPercentage}% files, ${status.locPercentage}% LOC`
   );
 });
 
@@ -311,7 +311,7 @@ const guidance = new IterativeGuidance(
 // Analyze current progress
 const analysis = await guidance.analyzeProgress();
 
-console.log("📊 Progress Analysis:");
+console.log("Progress Analysis:");
 console.log(
   `Overall Progress: ${(analysis.summary?.overallProgress || 0) * 100}%`
 );
@@ -334,14 +334,14 @@ if (analysis.summary?.nextSteps) {
 // Get detailed guidance for next step
 if (analysis.summary?.nextSteps?.length > 0) {
   const stepGuidance = await guidance.getStepGuidance(0);
-  console.log(`\n🎯 Current Step: ${stepGuidance.step?.title}`);
+  console.log(`\nCurrent Step: ${stepGuidance.step?.title}`);
   console.log(`Description: ${stepGuidance.step?.description}`);
   console.log(`Estimated effort: ${stepGuidance.effort?.hours}h`);
 }
 
 // Get recommendations
 const recommendations = await guidance.getRecommendations();
-console.log("\n💡 Recommendations:");
+console.log("\nRecommendations:");
 recommendations.slice(0, 3).forEach((rec) => {
   console.log(`  ${rec.type}: ${rec.message}`);
 });
@@ -444,7 +444,7 @@ class CollaborativeDevelopment {
 
   async initialize() {
     await this.mcpServer.initialize();
-    console.log("🤝 Collaborative development session started");
+    console.log("Collaborative development session started");
   }
 
   async assignTaskToAgent(agentId, taskDescription, acceptanceCriteria) {
@@ -467,10 +467,10 @@ class CollaborativeDevelopment {
         status: "active",
       });
 
-      console.log(`✅ Task assigned to ${agentId}: ${taskDescription}`);
+      console.log(`Task assigned to ${agentId}: ${taskDescription}`);
       return assignResult.data?.taskId;
     } else {
-      console.error(`❌ Failed to assign task to ${agentId}`);
+      console.error(`Failed to assign task to ${agentId}`);
       return null;
     }
   }
@@ -487,7 +487,7 @@ class CollaborativeDevelopment {
 
     if (progressResult.success) {
       const progress = progressResult.data;
-      console.log(`📊 ${agentId} Progress:`, {
+      console.log(`${agentId} Progress:`, {
         overallProgress: progress?.overallProgress,
         budgetUsage: progress?.budgetUsage,
         blockers: progress?.blockers?.length || 0,
@@ -508,14 +508,14 @@ class CollaborativeDevelopment {
 
     if (verdictResult.success) {
       const verdict = verdictResult.data?.verdict;
-      console.log(`🎯 Final Verdict for ${taskId}: ${verdict}`);
+      console.log(`Final Verdict for ${taskId}: ${verdict}`);
 
       if (verdict === "approved") {
-        console.log("✅ Task completed successfully");
+        console.log("Task completed successfully");
       } else if (verdict === "conditional") {
         console.log("⚠️ Task completed with conditions");
       } else {
-        console.log("❌ Task needs revision");
+        console.log("Task needs revision");
       }
 
       return verdict;
@@ -532,7 +532,7 @@ class CollaborativeDevelopment {
       }
     }
 
-    console.log("👋 Collaborative development session ended");
+    console.log("Collaborative development session ended");
   }
 }
 
@@ -584,7 +584,7 @@ class CIPipeline {
   }
 
   async runValidationStage() {
-    console.log("🔍 CI: Validation Stage");
+    console.log("CI: Validation Stage");
 
     const validation = await this.validator.validateExistingSpec();
 
@@ -603,16 +603,16 @@ class CIPipeline {
     );
 
     if (!validation.success || !validation.data?.passed) {
-      console.error("❌ CI: Validation failed");
+      console.error("CI: Validation failed");
       throw new Error("Spec validation failed");
     }
 
-    console.log("✅ CI: Validation passed");
+    console.log("CI: Validation passed");
     return validation;
   }
 
   async runBudgetCheckStage() {
-    console.log("📊 CI: Budget Check Stage");
+    console.log("CI: Budget Check Stage");
 
     await this.monitor.start();
 
@@ -646,16 +646,16 @@ class CIPipeline {
       status.currentUsage.filesPercentage > 1.0 ||
       status.currentUsage.locPercentage > 1.0
     ) {
-      console.error("❌ CI: Budget exceeded");
+      console.error("CI: Budget exceeded");
       throw new Error("Budget compliance failed");
     }
 
-    console.log("✅ CI: Budget check passed");
+    console.log("CI: Budget check passed");
     return status;
   }
 
   async runTestStage() {
-    console.log("🧪 CI: Test Stage");
+    console.log("CI: Test Stage");
 
     // Run actual tests (would integrate with Jest, etc.)
     const testResults = await this.runTests();
@@ -677,16 +677,16 @@ class CIPipeline {
     );
 
     if (!testResults.passed) {
-      console.error("❌ CI: Tests failed");
+      console.error("CI: Tests failed");
       throw new Error("Test suite failed");
     }
 
-    console.log("✅ CI: Tests passed");
+    console.log("CI: Tests passed");
     return testResults;
   }
 
   async runDeploymentStage() {
-    console.log("🚀 CI: Deployment Stage");
+    console.log("CI: Deployment Stage");
 
     // Simulate deployment
     const deployResult = await this.deployToStaging();
@@ -707,17 +707,17 @@ class CIPipeline {
     );
 
     if (!deployResult.success) {
-      console.error("❌ CI: Deployment failed");
+      console.error("CI: Deployment failed");
       throw new Error("Deployment failed");
     }
 
-    console.log("✅ CI: Deployment completed");
+    console.log("CI: Deployment completed");
     return deployResult;
   }
 
   async runFullPipeline() {
     try {
-      console.log("🚀 Starting CI Pipeline for:", this.spec.title);
+      console.log("Starting CI Pipeline for:", this.spec.title);
 
       await this.runValidationStage();
       await this.runBudgetCheckStage();
@@ -730,8 +730,8 @@ class CIPipeline {
         "compliance"
       );
 
-      console.log("🎉 CI Pipeline completed successfully!");
-      console.log("📋 Final Report:", {
+      console.log("CI Pipeline completed successfully!");
+      console.log("Final Report:", {
         compliant: report.compliance.cawsCompliant,
         totalEntries: report.provenanceChain.entries.length,
         aiContributions: report.aiStats.total,
@@ -739,7 +739,7 @@ class CIPipeline {
 
       return report;
     } catch (error) {
-      console.error("💥 CI Pipeline failed:", error.message);
+      console.error("CI Pipeline failed:", error.message);
 
       // Record failure
       await this.tracker.recordEntry(
@@ -807,7 +807,7 @@ class DevelopmentDashboard {
   async initialize() {
     await this.monitor.start();
     await this.updateDashboard();
-    console.log("📊 Development Dashboard initialized");
+    console.log("Development Dashboard initialized");
   }
 
   async updateDashboard() {
@@ -856,13 +856,13 @@ class DevelopmentDashboard {
   displayDashboard() {
     const data = this.dashboardData;
     console.clear();
-    console.log("🚀 ARBITER Development Dashboard");
+    console.log("ARBITER Development Dashboard");
     console.log("================================");
     console.log(`Updated: ${new Date(data.timestamp).toLocaleTimeString()}`);
     console.log("");
 
     // Budget Section
-    console.log("📊 Budget Usage:");
+    console.log("Budget Usage:");
     console.log(
       `  Files: ${data.budget.files.used}/${data.budget.files.limit} (${(
         data.budget.files.percentage * 100
@@ -875,7 +875,7 @@ class DevelopmentDashboard {
     );
 
     if (data.budget.alerts.length > 0) {
-      console.log("  🚨 Alerts:");
+      console.log("  Alerts:");
       data.budget.alerts.forEach((alert) => {
         console.log(`    ${alert.severity}: ${alert.message}`);
       });
@@ -883,7 +883,7 @@ class DevelopmentDashboard {
     console.log("");
 
     // Progress Section
-    console.log("📈 Progress:");
+    console.log("Progress:");
     console.log(`  Overall: ${(data.progress.overall * 100).toFixed(1)}%`);
 
     const completed = data.progress.acceptanceCriteria.filter(
@@ -900,7 +900,7 @@ class DevelopmentDashboard {
     }
 
     if (data.progress.blockers.length > 0) {
-      console.log("  🚫 Blockers:");
+      console.log("  Blockers:");
       data.progress.blockers.forEach((blocker) => {
         console.log(`    ${blocker.description}`);
       });
@@ -908,7 +908,7 @@ class DevelopmentDashboard {
     console.log("");
 
     // Provenance Section
-    console.log("📋 Activity:");
+    console.log("Activity:");
     console.log(`  Total Entries: ${data.provenance.totalEntries}`);
     console.log(
       `  AI Contributions: ${
@@ -958,7 +958,7 @@ await dashboard.startRealTimeUpdates(3000); // Update every 3 seconds
 // Press Ctrl+C to stop
 process.on("SIGINT", async () => {
   await dashboard.stopRealTimeUpdates();
-  console.log("📊 Dashboard stopped");
+  console.log("Dashboard stopped");
   process.exit(0);
 });
 ```
@@ -1193,12 +1193,12 @@ export class ArbiterVscodeExtension {
       const result = await this.validator.validateExistingSpec();
 
       if (result.success && result.data?.passed) {
-        vscode.window.showInformationMessage("✅ Spec validation passed");
+        vscode.window.showInformationMessage("Spec validation passed");
       } else {
         const message =
           result.data?.remediation?.join("\n") || "Validation failed";
         vscode.window.showErrorMessage(
-          `❌ Spec validation failed:\n${message}`
+          `Spec validation failed:\n${message}`
         );
       }
     } catch (error) {

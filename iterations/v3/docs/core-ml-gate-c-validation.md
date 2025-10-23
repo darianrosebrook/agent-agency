@@ -261,15 +261,15 @@ open -a Instruments
 ### 5.3 What to Look For
 
 **Good Signs:**
-- ✅ ANE tracks show activity during inference
-- ✅ GPU activity visible if GPU path used
-- ✅ No memory growth over time
-- ✅ No excessive context switches
+- ANE tracks show activity during inference
+- GPU activity visible if GPU path used
+- No memory growth over time
+- No excessive context switches
 
 **Red Flags:**
-- ❌ Flat CPU timeline (indicates CPU fallback)
-- ❌ Memory unbounded growth (leak)
-- ❌ Excessive context switching (contention)
+- Flat CPU timeline (indicates CPU fallback)
+- Memory unbounded growth (leak)
+- Excessive context switching (contention)
 
 ---
 
@@ -308,7 +308,7 @@ rmse_val = rmse(candle_out, coreml_out)
 assert l_inf <= threshold_l_inf, f"L∞ {l_inf} exceeds {threshold_l_inf}"
 assert rmse_val <= threshold_rmse, f"RMSE {rmse_val} exceeds {threshold_rmse}"
 
-print(f"✅ Parity verified: L∞={l_inf:.6f}, RMSE={rmse_val:.6f}")
+print(f"Parity verified: L∞={l_inf:.6f}, RMSE={rmse_val:.6f}")
 EOF
 ```
 

@@ -267,30 +267,30 @@ const surfaceConfigurations: Record<TaskSurface, RubricWeights> = {
 
 **Phase 1: Foundation (Weeks 1-3)**
 
-- ✅ Thinking Budget Manager
-- ✅ AST Analysis Infrastructure
-- ✅ **NEW**: Rubric Engineering Framework
-- ✅ **NEW**: Environment Abstraction Interface
+- Thinking Budget Manager
+- AST Analysis Infrastructure
+- **NEW**: Rubric Engineering Framework
+- **NEW**: Environment Abstraction Interface
 
 **Phase 2: Core RL (Weeks 4-7)**
 
-- ✅ Turn-Level Reward System
-- ✅ GRPO Training Foundation
-- ✅ **ENHANCED**: Multi-term Weighted Rewards
-- ✅ **ENHANCED**: Curriculum Learning System
-- ✅ **NEW**: Failure Mode Mitigations
+- Turn-Level Reward System
+- GRPO Training Foundation
+- **ENHANCED**: Multi-term Weighted Rewards
+- **ENHANCED**: Curriculum Learning System
+- **NEW**: Failure Mode Mitigations
 
 **Phase 3: Optimization (Weeks 8-10)**
 
-- ✅ Multi-Turn RL Training
-- ✅ Reward Hacking Prevention
-- ✅ **ENHANCED**: Performance Optimization with RL metrics
+- Multi-Turn RL Training
+- Reward Hacking Prevention
+- **ENHANCED**: Performance Optimization with RL metrics
 
 **Phase 4: Production (Weeks 11-12)**
 
-- ✅ Integration Testing
-- ✅ Gradual Rollout
-- ✅ **ENHANCED**: Comprehensive monitoring with RL observability
+- Integration Testing
+- Gradual Rollout
+- **ENHANCED**: Comprehensive monitoring with RL observability
 
 ### Additional Development Effort
 

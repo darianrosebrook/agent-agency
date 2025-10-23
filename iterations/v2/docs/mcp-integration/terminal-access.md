@@ -17,11 +17,11 @@ The MCP Terminal Access Layer enables task runner agents to execute commands sec
 
 ### Key Features
 
-- **🔒 Security-First**: Command allowlist, argument validation, and resource limits
+- **Security-First**: Command allowlist, argument validation, and resource limits
 - **🛡️ Isolated Sessions**: Each task gets its own sandboxed environment
-- **📊 Audit Logging**: Complete provenance tracking of all terminal operations
-- **⚡ Performance Controls**: Timeout enforcement and output size limits
-- **🔧 MCP Integration**: Seamless integration with existing agent workflows
+- **Audit Logging**: Complete provenance tracking of all terminal operations
+- **Performance Controls**: Timeout enforcement and output size limits
+- **MCP Integration**: Seamless integration with existing agent workflows
 
 ---
 
@@ -269,7 +269,7 @@ All commands must be present in `apps/tools/caws/tools-allow.json`:
 
 Arguments are validated to prevent injection attacks:
 
-#### ✅ Allowed
+#### Allowed
 
 ```json
 ["test", "--coverage", "--verbose"]
@@ -277,7 +277,7 @@ Arguments are validated to prevent injection attacks:
 ["status", "--short"]
 ```
 
-#### ❌ Blocked (Security Violations)
+#### Blocked (Security Violations)
 
 ```json
 ["test; rm -rf /"]          // Shell chaining
@@ -291,12 +291,12 @@ Arguments are validated to prevent injection attacks:
 Sensitive environment variables are automatically filtered:
 
 ```typescript
-// ✅ Preserved
+// Preserved
 NODE_ENV=test
 CI=true
 CAWS_TASK_ID=TASK-001
 
-// ❌ Filtered
+// Filtered
 AWS_SECRET_ACCESS_KEY=...
 DATABASE_PASSWORD=...
 API_KEY=...

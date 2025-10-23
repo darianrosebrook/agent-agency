@@ -12,7 +12,7 @@
 
 Web Navigator has complete CAWS-compliant specification and functional implementation with content extraction, search, and traversal capabilities. This component enables agents to interact with web pages, extract information, and perform web-based tasks.
 
-**Current Status**: 🟡 **Functional but Needs Hardening** (108 passing, 32 failing tests)
+**Current Status**: **Functional but Needs Hardening** (108 passing, 32 failing tests)
 **Implementation Progress**: 7/7 critical components complete
 **Test Coverage**: ~49% statements, 39% branches (below Tier 2 target)
 **Blocking Issues**: 32 test failures in TraversalEngine/ContentExtractor, missing database tables/functions, memory leaks in tests
@@ -21,7 +21,7 @@ Web Navigator has complete CAWS-compliant specification and functional implement
 
 ## Implementation Status
 
-### ✅ Completed Features
+### Completed Features
 
 - **Working Specification**: Complete CAWS-compliant spec exists
 
@@ -51,13 +51,13 @@ Web Navigator has complete CAWS-compliant specification and functional implement
 - **Database Integration**: PostgreSQL persistence for web data
   - File: `src/database/WebNavigatorDatabaseClient.ts`
 
-### 🟡 Partially Implemented
+### Partially Implemented
 
 - **Test Coverage**: Basic unit tests exist but coverage is very low
   - Issues: Only 20 tests covering basic functionality, need comprehensive coverage
   - Status: 20/20 passing but ~9% coverage vs 80% target
 
-### ❌ Not Implemented
+### Not Implemented
 
 - **Browser Automation**: Real browser control (Playwright/Puppeteer)
 
@@ -67,7 +67,7 @@ Web Navigator has complete CAWS-compliant specification and functional implement
 - **Integration Tests**: End-to-end web navigation workflows
   - Missing: Real content extraction, search result validation, traversal testing
 
-### 🚫 Blocked/Missing
+### Blocked/Missing
 
 - **No Implementation Files**: No code exists in `src/web/` or similar
 - **Browser Framework**: Need Playwright or Puppeteer
@@ -78,8 +78,8 @@ Web Navigator has complete CAWS-compliant specification and functional implement
 
 ## Working Specification Status
 
-- **Spec File**: ✅ Exists at `components/web-navigator/.caws/working-spec.yaml`
-- **CAWS Validation**: ✅ Passes (verified previously)
+- **Spec File**: Exists at `components/web-navigator/.caws/working-spec.yaml`
+- **CAWS Validation**: Passes (verified previously)
 - **Acceptance Criteria**: 0/7 implemented
 - **Contracts**: 0/4 defined in code
 
@@ -89,10 +89,10 @@ Web Navigator has complete CAWS-compliant specification and functional implement
 
 ### Code Quality
 
-- **TypeScript Errors**: ✅ 0 errors (passes compilation)
-- **Linting**: ✅ Passes ESLint rules
-- **Test Coverage**: 🟡 9% statements, 5% branches (Target: 80%+/50% for Tier 2)
-- **Mutation Score**: ❌ Not measured (Target: 50% for Tier 2)
+- **TypeScript Errors**: 0 errors (passes compilation)
+- **Linting**: Passes ESLint rules
+- **Test Coverage**: 9% statements, 5% branches (Target: 80%+/50% for Tier 2)
+- **Mutation Score**: Not measured (Target: 50% for Tier 2)
 
 ### Performance
 
@@ -104,7 +104,7 @@ Web Navigator has complete CAWS-compliant specification and functional implement
 
 - **Audit Status**: Not Started
 - **Vulnerabilities**: N/A - No implementation
-- **Compliance**: ❌ Non-compliant - no implementation
+- **Compliance**: Non-compliant - no implementation
 
 ---
 
@@ -119,7 +119,7 @@ Web Navigator has complete CAWS-compliant specification and functional implement
 
 - **MCP Integration** (INFRA-002): MCP server has browser tools
 
-  - Status: 🟡 Partial (POC exists)
+  - Status: Partial (POC exists)
   - Impact: Could leverage existing MCP browser capabilities
 
 - **Chrome/Chromium**: Browser binary
@@ -297,9 +297,9 @@ tests/
 
 ### Documentation
 
-- **README**: ❌ Missing component README
-- **API Docs**: ❌ Missing
-- **Architecture**: 🟡 Partial (in theory.md and spec)
+- **README**: Missing component README
+- **API Docs**: Missing
+- **Architecture**: Partial (in theory.md and spec)
 
 ---
 
@@ -322,7 +322,7 @@ tests/
 
 ## Status Assessment
 
-**Honest Status**: 🟡 **Functional but Needs Hardening (40% Implementation)**
+**Honest Status**: **Functional but Needs Hardening (40% Implementation)**
 
 **Rationale**: Complete implementation exists with core web navigation capabilities, but test coverage is critically low. The component has basic functionality but requires significant hardening for production use.
 
@@ -335,9 +335,9 @@ tests/
 
 **Dependencies Status**:
 
-- ❌ Browser automation framework not installed
-- 🟡 MCP Integration partial (POC may have browser tools)
-- ✅ Browser binary available (system Chromium)
+- Browser automation framework not installed
+- MCP Integration partial (POC may have browser tools)
+- Browser binary available (system Chromium)
 
 **Production Blockers**:
 

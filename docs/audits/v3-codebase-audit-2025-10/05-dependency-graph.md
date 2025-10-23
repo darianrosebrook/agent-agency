@@ -170,20 +170,20 @@ graph TD
 ## Success Criteria
 
 ### Dependency Metrics
-- ✅ **Zero circular dependencies**
-- ✅ **Maximum 3 dependency layers**
-- ✅ **No crate depends on >5 other crates**
-- ✅ **Clear separation of concerns**
+- **Zero circular dependencies**
+- **Maximum 3 dependency layers**
+- **No crate depends on >5 other crates**
+- **Clear separation of concerns**
 
 ### Architecture Quality
-- ✅ **Interface-based dependencies**
-- ✅ **Dependency injection** for external services
-- ✅ **Proper abstraction layers**
-- ✅ **Testable components**
+- **Interface-based dependencies**
+- **Dependency injection** for external services
+- **Proper abstraction layers**
+- **Testable components**
 
 ### Maintainability
-- ✅ **Easy to add new implementations**
-- ✅ **Simple to mock dependencies**
-- ✅ **Clear module boundaries**
-- ✅ **Reduced coupling**
+- **Easy to add new implementations**
+- **Simple to mock dependencies**
+- **Clear module boundaries**
+- **Reduced coupling**
 

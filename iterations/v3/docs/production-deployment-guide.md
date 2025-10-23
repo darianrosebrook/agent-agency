@@ -1,4 +1,4 @@
-# 🚀 Agent Agency V3 - Production Deployment Guide
+# Agent Agency V3 - Production Deployment Guide
 
 ## Overview
 

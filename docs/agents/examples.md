@@ -4,7 +4,7 @@
 
 ---
 
-## 🚀 Basic Task Execution
+## Basic Task Execution
 
 **Example**: Implement a simple user greeting feature
 
@@ -33,25 +33,25 @@ curl -X POST http://localhost:8080/api/v1/tasks \
 
 **Expected Output**:
 ```
-🚀 Agent Agency V3 - Autonomous Execution
+Agent Agency V3 - Autonomous Execution
 ═══════════════════════════════════════════
 
-🎯 Task: Create a simple greeting function...
-🔢 Task ID: 550e8400-e29b-41d4-a716-446655440000
-⚡ Mode: AUTO (Quality Gates Enabled)
+Task: Create a simple greeting function...
+Task ID: 550e8400-e29b-41d4-a716-446655440000
+Mode: AUTO (Quality Gates Enabled)
 🎚️  Risk Tier: 3
 
-📋 Phase: Planning and validation
-   ✅ Council review passed
-   ✅ CAWS compliance validated
+Phase: Planning and validation
+   Council review passed
+   CAWS compliance validated
 
-📋 Phase: Worker execution
-   🔧 Executing implementation...
-   📊 Progress: 100%
-   ✅ Code generation completed
-   ✅ Tests written and passing
+Phase: Worker execution
+   Executing implementation...
+   Progress: 100%
+   Code generation completed
+   Tests written and passing
 
-🎉 Task completed successfully!
+Task completed successfully!
 ⏱️  Total time: 15s
 ```
 
@@ -72,24 +72,24 @@ cargo run --bin agent-agency-cli execute \
 
 **Expected Interaction**:
 ```
-📋 Phase: Planning and validation
-   ⏳ Analyzing requirements...
-   ✅ Council review passed
+Phase: Planning and validation
+   Analyzing requirements...
+   Council review passed
 
-🔒 STRICT MODE: Manual approval required
-   📋 Phase: Planning complete - awaiting approval
+STRICT MODE: Manual approval required
+   Phase: Planning complete - awaiting approval
    Apply planning phase? (y/n): y
-   ✅ Approved by user
+   Approved by user
 
-📋 Phase: Worker execution
-   🔧 Executing implementation...
-   📊 Progress: 75%
-   🔒 STRICT MODE: Manual approval required
-   📋 Phase: Code generation complete - awaiting approval
+Phase: Worker execution
+   Executing implementation...
+   Progress: 75%
+   STRICT MODE: Manual approval required
+   Phase: Code generation complete - awaiting approval
    Apply code changes? (y/n): y
-   ✅ Approved by user
+   Approved by user
 
-🎉 Task completed successfully!
+Task completed successfully!
 ```
 
 ---
@@ -109,18 +109,18 @@ cargo run --bin agent-agency-cli execute \
 ```
 👁️ DRY-RUN MODE: All artifacts generated, no filesystem changes
 
-📋 Phase: Planning and validation
-   ✅ Analysis completed
-   ✅ Artifacts generated
+Phase: Planning and validation
+   Analysis completed
+   Artifacts generated
 
-📋 Phase: Worker execution (simulated)
-   🔧 Simulating implementation...
-   📊 Progress: 100%
-   ✅ Code generation simulated
-   ✅ Tests simulated
+Phase: Worker execution (simulated)
+   Simulating implementation...
+   Progress: 100%
+   Code generation simulated
+   Tests simulated
 
-💡 No actual filesystem changes were made
-🎉 Dry-run completed successfully!
+No actual filesystem changes were made
+Dry-run completed successfully!
 ```
 
 ---
@@ -181,7 +181,7 @@ cargo run --bin agent-agency-cli intervene guidance $TASK_ID \
 
 ---
 
-## 📊 Monitoring & SLO Tracking
+## Monitoring & SLO Tracking
 
 **Example**: Check system health and metrics
 
@@ -248,7 +248,7 @@ curl -X POST http://localhost:8080/api/v1/waivers/$WAIVER_ID/approve
 
 ---
 
-## 📚 Database Exploration
+## Database Exploration
 
 **Example**: Query saved queries and explore data
 
@@ -273,7 +273,7 @@ curl -X POST http://localhost:8080/api/v1/queries \
 
 ---
 
-## 🔍 Provenance Tracking
+## Provenance Tracking
 
 **Example**: Verify and audit task provenance
 
@@ -296,7 +296,7 @@ curl -X POST http://localhost:8080/api/v1/provenance/link \
 
 ---
 
-## 🌐 Web Dashboard Usage
+## Web Dashboard Usage
 
 **Example**: Use the web interface for monitoring
 
@@ -317,7 +317,7 @@ npm run dev
 
 ---
 
-## 🔧 Advanced Configuration
+## Advanced Configuration
 
 **Example**: Configure execution modes and risk tiers
 
@@ -341,7 +341,7 @@ export API_KEYS="key1,key2,key3"
 
 ---
 
-## 🚨 Error Handling Examples
+## Error Handling Examples
 
 **Example**: Handle common errors and recovery
 
@@ -374,7 +374,7 @@ cargo run --bin api-server &
 
 ---
 
-## 📈 Performance Optimization
+## Performance Optimization
 
 **Example**: Monitor and optimize system performance
 
@@ -467,7 +467,7 @@ ai_assessment:
 
 ---
 
-## 🌐 REST API - User Authentication
+## REST API - User Authentication
 
 **Project**: Add JWT-based authentication to user service  
 **Risk Tier**: 1 (security critical)  
@@ -578,7 +578,7 @@ ai_assessment:
 
 ---
 
-## 🧹 Code Refactor - Extract Service Layer
+## Code Refactor - Extract Service Layer
 
 **Project**: Extract business logic into service layer  
 **Risk Tier**: 2 (behavior preservation required)  
@@ -659,7 +659,7 @@ ai_assessment:
 
 ---
 
-## 🐛 Bug Fix - Memory Leak in Data Processing
+## Bug Fix - Memory Leak in Data Processing
 
 **Project**: Fix memory leak in CSV processing pipeline  
 **Risk Tier**: 1 (data integrity + performance)  
@@ -742,7 +742,7 @@ ai_assessment:
 
 ---
 
-## 📖 Documentation - API Reference
+## Documentation - API Reference
 
 **Project**: Add comprehensive API documentation  
 **Risk Tier**: 3 (no functional changes)  
@@ -809,7 +809,7 @@ ai_assessment:
 
 ---
 
-## 🔧 CLI Tool - Add Interactive Mode
+## CLI Tool - Add Interactive Mode
 
 **Project**: Add interactive mode to CLI tool  
 **Risk Tier**: 3 (low risk feature addition)  
@@ -955,7 +955,7 @@ ai_assessment:
 
 ---
 
-## 📋 Key Patterns Observed
+## Key Patterns Observed
 
 ### Risk Tier Patterns
 
@@ -999,7 +999,7 @@ ai_assessment:
 
 ---
 
-## 🎯 Using These Examples
+## Using These Examples
 
 1. **Find Similar Project**: Look for examples matching your project type and risk level
 2. **Copy Structure**: Use the YAML structure as a starting point

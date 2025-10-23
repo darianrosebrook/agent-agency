@@ -7,7 +7,8 @@ use async_trait::async_trait;
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
 
-use super::manager::{ArtifactMetadata, ExecutionArtifacts, ArtifactVersion};
+use super::manager::{ArtifactMetadata, ArtifactVersion};
+use crate::planning::types::ExecutionArtifacts;
 use agent_agency_database::DatabaseClient;
 
 /// Version control trait
@@ -18,7 +19,7 @@ pub trait VersionControl: Send + Sync {
         &self,
         metadata: &ArtifactMetadata,
         artifacts: &ExecutionArtifacts,
-    ) -> Result<(), VersionControlError>;
+    ) -> Result<()>;
 
     /// Get a specific version
     async fn get_version(
@@ -38,13 +39,13 @@ pub trait VersionControl: Send + Sync {
         &self,
         task_id: Uuid,
         version: &str,
-    ) -> Result<(), VersionControlError>;
+    ) -> Result<()>;
 
     /// Delete all versions for a task
     async fn delete_versions(
         &self,
         task_id: Uuid,
-    ) -> Result<(), VersionControlError>;
+    ) -> Result<()>;
 
     /// Get version statistics
     async fn get_version_statistics(&self) -> Result<HashMap<Uuid, usize>, VersionControlError>;
@@ -83,7 +84,7 @@ impl VersionControl for GitVersionControl {
         &self,
         metadata: &ArtifactMetadata,
         artifacts: &ExecutionArtifacts,
-    ) -> Result<(), VersionControlError> {
+    ) -> Result<()> {
         use tokio::fs;
         use tokio::process::Command;
 
@@ -214,7 +215,7 @@ impl VersionControl for GitVersionControl {
         &self,
         task_id: Uuid,
         version: &str,
-    ) -> Result<(), VersionControlError> {
+    ) -> Result<()> {
         use tokio::process::Command;
 
         let artifact_path = self.get_artifact_path(&ArtifactMetadata {
@@ -272,7 +273,7 @@ impl VersionControl for GitVersionControl {
     async fn delete_versions(
         &self,
         task_id: Uuid,
-    ) -> Result<(), VersionControlError> {
+    ) -> Result<()> {
         let versions = self.list_versions(task_id).await?;
 
         for version in versions {
@@ -338,7 +339,7 @@ impl VersionControl for DatabaseVersionControl {
         &self,
         metadata: &ArtifactMetadata,
         artifacts: &ExecutionArtifacts,
-    ) -> Result<(), VersionControlError> {
+    ) -> Result<()> {
         // First, ensure the artifact exists in the database
         let artifact_result = self.db_client.execute_parameterized_query(
             r#"
@@ -483,7 +484,7 @@ impl VersionControl for DatabaseVersionControl {
         &self,
         task_id: Uuid,
         version: &str,
-    ) -> Result<(), VersionControlError> {
+    ) -> Result<()> {
         // Parse version (could be number or label)
         let version_condition = if let Ok(version_num) = version.parse::<i32>() {
             format!("av.version_number = {}", version_num)
@@ -513,7 +514,7 @@ impl VersionControl for DatabaseVersionControl {
     async fn delete_versions(
         &self,
         task_id: Uuid,
-    ) -> Result<(), VersionControlError> {
+    ) -> Result<()> {
         let result = self.db_client.execute_parameterized_query(
             "DELETE FROM artifact_versions WHERE task_id = $1",
             &[&task_id],

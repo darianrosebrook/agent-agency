@@ -360,21 +360,21 @@ caws provenance analyze-ai --component arbiter --metric waiver-rate
 
 **Self-Audit Health**:
 
-- ✅ Arbiter passes self-audit before every release
-- ✅ Self-audit coverage ≥95% of CAWS standards
-- ✅ Zero critical self-audit violations
+- Arbiter passes self-audit before every release
+- Self-audit coverage ≥95% of CAWS standards
+- Zero critical self-audit violations
 
 **Self-Waiver Reduction**:
 
-- ✅ Self-waiver rate decreases ≥50% over 6 months
-- ✅ All self-waivers time-bound with expiration
-- ✅ Mitigation plans documented for all exceptions
+- Self-waiver rate decreases ≥50% over 6 months
+- All self-waivers time-bound with expiration
+- Mitigation plans documented for all exceptions
 
 **Reflexive Training**:
 
-- ✅ RL training uses CAWS metrics in reward function
-- ✅ Agents optimize for compliance, not just completion
-- ✅ System demonstrates compounding CAWS alignment
+- RL training uses CAWS metrics in reward function
+- Agents optimize for compliance, not just completion
+- System demonstrates compounding CAWS alignment
 
 ---
 

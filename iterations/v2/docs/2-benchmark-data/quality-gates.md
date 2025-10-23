@@ -463,21 +463,21 @@ interface QualityDashboard {
 
 **Gate Performance**:
 
-- ✅ ≥95% of data points pass all gates
-- ✅ 0 critical violations
-- ✅ ≥90% RL-ready rate
+- ≥95% of data points pass all gates
+- 0 critical violations
+- ≥90% RL-ready rate
 
 **Privacy Compliance**:
 
-- ✅ 0 PII violations
-- ✅ 100% tenant anonymization
-- ✅ 0 secret leaks
+- 0 PII violations
+- 100% tenant anonymization
+- 0 secret leaks
 
 **RL Training Impact**:
 
-- ✅ Quality-validated data improves training stability
-- ✅ Clean data reduces RL training failures
-- ✅ Privacy compliance enables cross-tenant learning
+- Quality-validated data improves training stability
+- Clean data reduces RL training failures
+- Privacy compliance enables cross-tenant learning
 
 ---
 

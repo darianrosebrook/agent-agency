@@ -21,7 +21,7 @@ V2 is a **self-improving multi-agent system** where an arbiter orchestrator coll
 - Enforces CAWS budgets, quality gates, and provenance
 - Tracks every decision for RL training
 
-📁 `1-core-orchestration/`
+`1-core-orchestration/`
 
 ### 2. Benchmark Data Pools
 
@@ -31,7 +31,7 @@ V2 is a **self-improving multi-agent system** where an arbiter orchestrator coll
 - Validates quality, ensures privacy, anonymizes data
 - Exports RL-ready batches for training
 
-📁 `2-benchmark-data/`
+`2-benchmark-data/`
 
 ### 3. Agent RL Training
 
@@ -42,7 +42,7 @@ V2 is a **self-improving multi-agent system** where an arbiter orchestrator coll
 - Optimizes thinking budgets and tool adoption
 - Deploys improved agents back to arbiter
 
-📁 `3-agent-rl-training/`
+`3-agent-rl-training/`
 
 ---
 

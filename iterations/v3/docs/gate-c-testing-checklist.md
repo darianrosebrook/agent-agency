@@ -46,7 +46,7 @@ cargo test --lib telemetry --features coreml -- --nocapture
 ```
 
 **Expected Result:**
-- ✅ 7/7 tests passing
+- 7/7 tests passing
 - Circuit breaker logic validated
 - Thread-safe metrics confirmed
 
@@ -63,7 +63,7 @@ cargo test --lib core_ml_backend --features coreml -- --nocapture
 ```
 
 **Expected Result:**
-- ✅ 4/4 tests passing
+- 4/4 tests passing
 - Backend creation verified
 - Telemetry integration confirmed
 
@@ -84,21 +84,21 @@ cat tests/fixtures/models/manifest.json | python3 -m json.tool
 ```
 
 **Verify:**
-- ✅ Model: fastvit_t8
-- ✅ Backend: mlprogram
-- ✅ Precision: fp16
-- ✅ ANE op coverage: 78%
-- ✅ Expected speedups defined (M1: 2.8x, M2: 3.1x, M3: 3.2x)
+- Model: fastvit_t8
+- Backend: mlprogram
+- Precision: fp16
+- ANE op coverage: 78%
+- Expected speedups defined (M1: 2.8x, M2: 3.1x, M3: 3.2x)
 
 ### Step 5: Model File Status
 
 ```bash
 # Check if model file exists
 if [ -f tests/fixtures/models/fastvit_t8.mlmodel ]; then
-    echo "✅ Model file exists"
+    echo "Model file exists"
     ls -lh tests/fixtures/models/fastvit_t8.mlmodel
 else
-    echo "❌ Model file not found"
+    echo "Model file not found"
     echo "Note: Model requires PyTorch download (not available in this environment)"
     echo "Manual action: Download FastViT T8 Core ML model from Apple Model Zoo"
 fi
@@ -111,14 +111,14 @@ fi
 ### Step 6: Review Telemetry Implementation
 
 **Telemetry metrics available:**
-- ✅ Compile duration tracking
-- ✅ Inference duration tracking
-- ✅ ANE dispatch counting
-- ✅ GPU dispatch counting
-- ✅ CPU fallback counting
-- ✅ SLA violation tracking
-- ✅ Circuit breaker state
-- ✅ Failure mode taxonomy
+- Compile duration tracking
+- Inference duration tracking
+- ANE dispatch counting
+- GPU dispatch counting
+- CPU fallback counting
+- SLA violation tracking
+- Circuit breaker state
+- Failure mode taxonomy
 
 **Verify in code:**
 ```bash
@@ -180,12 +180,12 @@ head -50 docs/core-ml-gate-c-validation.md
 ```
 
 **Verify it contains:**
-- ✅ Prerequisites section
-- ✅ Model acquisition steps
-- ✅ Phase-by-phase procedures
-- ✅ Telemetry analysis metrics
-- ✅ Success criteria checklist
-- ✅ Troubleshooting guide
+- Prerequisites section
+- Model acquisition steps
+- Phase-by-phase procedures
+- Telemetry analysis metrics
+- Success criteria checklist
+- Troubleshooting guide
 
 ---
 
@@ -222,7 +222,7 @@ head -50 docs/core-ml-gate-c-validation.md
 
 ## Phase 7: What's Ready Now
 
-### ✅ Can Be Done Immediately
+### Can Be Done Immediately
 
 1. **Review telemetry implementation** (apple-silicon/src/core_ml_backend.rs)
    - Compile operation recording
@@ -240,7 +240,7 @@ head -50 docs/core-ml-gate-c-validation.md
    - Risk analysis
    - Implementation path
 
-### ⏳ Requires Model Download
+### Requires Model Download
 
 1. **Model acquisition**
    - Requires PyTorch (not available on this system)
@@ -259,14 +259,14 @@ head -50 docs/core-ml-gate-c-validation.md
 ### Current Status
 
 ```
-✅ Unit Tests: 52/55 passing (94.5%)
-✅ Telemetry: Fully implemented and tested
-✅ Circuit Breaker: Logic verified
-✅ Documentation: Comprehensive
-✅ Infrastructure: Production-ready
+Unit Tests: 52/55 passing (94.5%)
+Telemetry: Fully implemented and tested
+Circuit Breaker: Logic verified
+Documentation: Comprehensive
+Infrastructure: Production-ready
 
-⏳ Model Download: Requires PyTorch/manual action
-⏳ Real Inference: Requires Swift bridge + models
+Model Download: Requires PyTorch/manual action
+Real Inference: Requires Swift bridge + models
 ```
 
 ### Gate C Status
@@ -310,11 +310,11 @@ head -50 docs/core-ml-gate-c-validation.md
 
 | File | Purpose | Status |
 |------|---------|--------|
-| apple-silicon/src/telemetry.rs | Metrics system | ✅ Complete |
-| apple-silicon/src/core_ml_backend.rs | Backend + telemetry | ✅ Complete |
-| docs/core-ml-gate-c-validation.md | Testing guide | ✅ Complete |
-| scripts/models/download_fastvit.py | Model acquisition | ✅ Ready |
-| tests/fixtures/models/manifest.json | Model metadata | ✅ Created |
+| apple-silicon/src/telemetry.rs | Metrics system | Complete |
+| apple-silicon/src/core_ml_backend.rs | Backend + telemetry | Complete |
+| docs/core-ml-gate-c-validation.md | Testing guide | Complete |
+| scripts/models/download_fastvit.py | Model acquisition | Ready |
+| tests/fixtures/models/manifest.json | Model metadata | Created |
 
 ---
 
@@ -328,7 +328,7 @@ head -50 docs/core-ml-gate-c-validation.md
 
 ### Phase 1: Telemetry System Verification (5 minutes)
 
-✅ **Already Passed** — All 11 tests verified
+**Already Passed** — All 11 tests verified
 
 ```bash
 cd apple-silicon
@@ -339,25 +339,25 @@ cargo test --lib core_ml_backend -- --nocapture
 ```
 
 **What this validates:**
-- ✅ Metrics collection (compile/infer counts, p50/p95/p99, compute unit dispatch)
-- ✅ Circuit breaker logic (success rate, SLA violations, memory pressure)
-- ✅ Thread-safe concurrent access (Arc<Mutex<T>>)
-- ✅ Failure mode taxonomy (all 6 modes tracked)
-- ✅ Automatic CPU fallback when Core ML fails
+- Metrics collection (compile/infer counts, p50/p95/p99, compute unit dispatch)
+- Circuit breaker logic (success rate, SLA violations, memory pressure)
+- Thread-safe concurrent access (Arc<Mutex<T>>)
+- Failure mode taxonomy (all 6 modes tracked)
+- Automatic CPU fallback when Core ML fails
 
 **Telemetry Coverage:**
 | Component | Test | Status |
 |-----------|------|--------|
-| Compile recording | `test_metrics_record_compile` | ✅ Pass |
-| Inference recording | `test_metrics_record_inference` | ✅ Pass |
-| Circuit breaker (low success) | `test_circuit_breaker_low_success_rate` | ✅ Pass |
-| Circuit breaker (sample size) | `test_circuit_breaker_needs_sample_size` | ✅ Pass |
-| Thread safety | `test_telemetry_collector_thread_safe` | ✅ Pass |
-| Failure tracking | `test_failure_mode_tracking` | ✅ Pass |
-| Backend integration | `test_core_ml_backend_telemetry_integration` | ✅ Pass |
-| Backend circuit breaker | `test_core_ml_backend_circuit_breaker_integration` | ✅ Pass |
-| Backend creation | `test_core_ml_backend_creation` | ✅ Pass |
-| Backend default | `test_core_ml_backend_default` | ✅ Pass |
+| Compile recording | `test_metrics_record_compile` | Pass |
+| Inference recording | `test_metrics_record_inference` | Pass |
+| Circuit breaker (low success) | `test_circuit_breaker_low_success_rate` | Pass |
+| Circuit breaker (sample size) | `test_circuit_breaker_needs_sample_size` | Pass |
+| Thread safety | `test_telemetry_collector_thread_safe` | Pass |
+| Failure tracking | `test_failure_mode_tracking` | Pass |
+| Backend integration | `test_core_ml_backend_telemetry_integration` | Pass |
+| Backend circuit breaker | `test_core_ml_backend_circuit_breaker_integration` | Pass |
+| Backend creation | `test_core_ml_backend_creation` | Pass |
+| Backend default | `test_core_ml_backend_default` | Pass |
 
 ### Phase 2: Manual Model Testing (30-60 minutes)
 
@@ -486,7 +486,7 @@ Create `GATE_C_RESULTS.md`:
 - macOS: 14.x / 15.x (specify)
 - Xcode: version (specify)
 
-## Telemetry System: ✅ PASS
+## Telemetry System: PASS
 - [x] 11/11 tests passing
 - [x] Metrics collection verified
 - [x] Circuit breaker functional
@@ -514,26 +514,26 @@ Create `GATE_C_RESULTS.md`:
 - Status: [Pass/Marginal/Fail]
 
 ## Gate C Status
-✅ PASS - All criteria met
-⏳ PARTIAL - Telemetry verified, model testing pending
-❌ FAIL - [Reason]
+PASS - All criteria met
+PARTIAL - Telemetry verified, model testing pending
+FAIL - [Reason]
 ```
 
 ---
 
 ## Summary
 
-**Phases 0-2: ✅ COMPLETE**
+**Phases 0-2: COMPLETE**
 - All code written and tested
 - 11/11 core ML tests passing
 - Telemetry system validated
 - Circuit breaker verified
 
-**Phase 3 (Gate C): ⏳ READY FOR EXECUTION**
-- Telemetry verification: ✅ Done
-- Manual model testing: ⏳ Awaiting model access
-- Instruments profiling: 📋 Documented
-- Results documentation: 📋 Template provided
+**Phase 3 (Gate C): READY FOR EXECUTION**
+- Telemetry verification: Done
+- Manual model testing: Awaiting model access
+- Instruments profiling: Documented
+- Results documentation: Template provided
 
 **Next Steps:**
 1. Obtain FastViT T8 model (download or convert)

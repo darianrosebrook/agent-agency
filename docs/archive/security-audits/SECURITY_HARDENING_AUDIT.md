@@ -2,7 +2,7 @@
 
 **Date**: October 19, 2025
 **Status**: In Development → Production Hardening Phase
-**Severity Levels**: 🔴 Critical | 🟠 High | 🟡 Medium | 🟢 Low
+**Severity Levels**: Critical | High | Medium | Low
 
 ---
 
@@ -20,10 +20,10 @@ ARBITER v2 has a solid security foundation with properly implemented:
 
 ---
 
-## 🔴 CRITICAL ISSUES
+## CRITICAL ISSUES
 
 ### Issue 1: Default JWT Secret in Production
-**Severity**: 🔴 CRITICAL
+**Severity**: CRITICAL
 **File**: `src/security/AgentRegistrySecurity.ts:105`
 **Current Code**:
 ```typescript
@@ -55,7 +55,7 @@ NODE_ENV=production JWT_SECRET="$(openssl rand -base64 32)" npm start
 ---
 
 ### Issue 2: Mock Fallbacks in Production Code
-**Severity**: 🔴 CRITICAL
+**Severity**: CRITICAL
 **Files**:
 - `src/orchestrator/ArbiterOrchestrator.ts:1228, 1255, 1288, 1322, 1655`
 - `src/security/AgentRegistrySecurity.ts:164-165`
@@ -66,13 +66,13 @@ NODE_ENV=production JWT_SECRET="$(openssl rand -base64 32)" npm start
 // AgentRegistrySecurity.ts
 if (!this.config.enableJwtValidation) {
   console.warn("JWT validation disabled, using mock authentication");
-  return this.createMockSecurityContext(token);  // 🔴 INSECURE IN PRODUCTION
+  return this.createMockSecurityContext(token);  // INSECURE IN PRODUCTION
 }
 
 // ArbiterOrchestrator.ts
 if (!this.components.agentRegistry.getAgent) {
   // Fallback to mock implementation
-  console.log("Agent registry not available, using mock");  // 🔴 INSECURE
+  console.log("Agent registry not available, using mock");  // INSECURE
   return mockAgentProfile;
 }
 ```
@@ -104,11 +104,11 @@ grep -r "mock\|fallback\|development only" iterations/v2/src/security/ iteration
 ---
 
 ### Issue 3: Insecure Password Handling in Database Config
-**Severity**: 🔴 CRITICAL
+**Severity**: CRITICAL
 **File**: `src/config/AppConfig.ts:135`
 **Current Code**:
 ```typescript
-password: process.env.DB_PASSWORD,  // 🔴 Could be exposed in logs
+password: process.env.DB_PASSWORD,  // Could be exposed in logs
 ```
 
 **Risk**: Database password might be exposed in error logs, stack traces, or debug output
@@ -133,7 +133,7 @@ private loadConfig(): AppConfig {
   };
   
   // NEVER do this:
-  // console.log('Loaded config:', raw);  // 🔴 INSECURE
+  // console.log('Loaded config:', raw);  // INSECURE
   
   // DO this instead:
   this.logger.debug('Database config loaded', { 
@@ -153,7 +153,7 @@ grep -r "password\|secret" iterations/v2/src --include="*.ts" | grep -i "log\|co
 ---
 
 ### Issue 4: Missing Rate Limiting on Authentication
-**Severity**: 🔴 CRITICAL
+**Severity**: CRITICAL
 **File**: `src/security/AgentRegistrySecurity.ts`
 **Issue**: Rate limiting exists but isn't enforced on token validation
 
@@ -188,7 +188,7 @@ async authenticate(token: string): Promise<SecurityContext | null> {
 ---
 
 ### Issue 5: No HTTPS Enforcement in Production
-**Severity**: 🔴 CRITICAL
+**Severity**: CRITICAL
 **Files**: 
 - `src/observer/auth.ts`
 - `src/mcp/arbiter-mcp-server.ts`
@@ -230,7 +230,7 @@ app.use((req, res, next) => {
 ---
 
 ### Issue 6: Insufficient Input Validation in Task Execution
-**Severity**: 🔴 CRITICAL
+**Severity**: CRITICAL
 **File**: `src/orchestrator/TaskOrchestrator.ts`
 **Issue**: Task scripts executed without comprehensive validation
 
@@ -282,10 +282,10 @@ private isValidTask(task: any): task is Task {
 
 ---
 
-## 🟠 HIGH PRIORITY ISSUES
+## HIGH PRIORITY ISSUES
 
 ### Issue 7: Missing CORS and CSRF Protection
-**Severity**: 🟠 HIGH
+**Severity**: HIGH
 **Files**: `src/mcp/arbiter-mcp-server.ts`, API endpoints
 
 **Current State**: No CORS/CSRF headers visible
@@ -312,7 +312,7 @@ app.post('/api/*', csrfProtection, (req, res, next) => {
 ---
 
 ### Issue 8: No Secrets Rotation Policy
-**Severity**: 🟠 HIGH
+**Severity**: HIGH
 **Files**: JWT secret, API keys, database credentials
 
 **Current State**: Secrets are static
@@ -333,7 +333,7 @@ VAULT_ADDR=https://vault.production.example.com
 ---
 
 ### Issue 9: Incomplete Audit Logging
-**Severity**: 🟠 HIGH
+**Severity**: HIGH
 **Files**: Multiple security operations
 
 **Current State**: Audit logging exists but not comprehensive
@@ -367,7 +367,7 @@ private async logSecurityEvent(event: {
 ---
 
 ### Issue 10: Missing Encryption at Rest
-**Severity**: 🟠 HIGH
+**Severity**: HIGH
 **Files**: Database storage, artifact storage
 
 **Current State**: No evidence of encryption for sensitive data at rest
@@ -399,10 +399,10 @@ class AgentRegistry {
 
 ---
 
-## 🟡 MEDIUM PRIORITY ISSUES
+## MEDIUM PRIORITY ISSUES
 
 ### Issue 11: Insufficient Command Injection Prevention
-**Severity**: 🟡 MEDIUM
+**Severity**: MEDIUM
 **File**: `src/security/CommandValidator.ts`
 **Status**: Partially addressed but needs verification
 
@@ -432,7 +432,7 @@ function executeCommand(command: string, args: string[]): void {
 ---
 
 ### Issue 12: Missing API Rate Limiting
-**Severity**: 🟡 MEDIUM
+**Severity**: MEDIUM
 **Files**: All API endpoints
 
 **Current State**: Per-agent rate limiting exists, but global API limits missing
@@ -454,7 +454,7 @@ app.use('/api/', apiLimiter);
 ---
 
 ### Issue 13: Missing Content Security Policy (CSP)
-**Severity**: 🟡 MEDIUM
+**Severity**: MEDIUM
 **Files**: MCP server, Observer endpoints
 
 **Current State**: No CSP headers
@@ -473,10 +473,10 @@ app.use((req, res, next) => {
 
 ---
 
-## 🟢 LOW PRIORITY ISSUES
+## LOW PRIORITY ISSUES
 
 ### Issue 14: Add Security Headers
-**Severity**: 🟢 LOW
+**Severity**: LOW
 **Files**: All HTTP responses
 
 **Recommended Headers**:
@@ -502,7 +502,7 @@ app.use((req, res, next) => {
 ---
 
 ### Issue 15: Improve Error Messages
-**Severity**: 🟢 LOW
+**Severity**: LOW
 **Files**: Error handlers throughout
 
 **Current State**: Error messages sometimes too verbose
@@ -525,7 +525,7 @@ function handleError(error: Error, res: Response): void {
 
 ---
 
-## 📋 Production Hardening Checklist
+## Production Hardening Checklist
 
 ### Phase 1: CRITICAL (Must complete before production)
 - [ ] Fix default JWT secret (Issue 1) - **BLOCKING**
@@ -560,7 +560,7 @@ function handleError(error: Error, res: Response): void {
 
 ---
 
-## 🔍 Verification Commands
+## Verification Commands
 
 ```bash
 # Check for hardcoded secrets
@@ -581,21 +581,21 @@ npm run security:full-audit
 
 ---
 
-## 📊 Security Scorecard
+## Security Scorecard
 
 | Category | Status | Score | Required for |
 |----------|--------|-------|--------------|
-| Authentication | 🟡 Partial | 60% | MVP |
-| Authorization | 🟢 Good | 80% | MVP |
-| Input Validation | 🟡 Partial | 70% | MVP |
-| Encryption | 🔴 Missing | 20% | MVP+1 |
-| Audit Logging | 🟡 Partial | 65% | MVP+1 |
-| Error Handling | 🟢 Good | 75% | MVP |
-| **Overall** | **🟡 DEVELOPMENT** | **62%** | **MVP+1** |
+| Authentication | Partial | 60% | MVP |
+| Authorization | Good | 80% | MVP |
+| Input Validation | Partial | 70% | MVP |
+| Encryption | Missing | 20% | MVP+1 |
+| Audit Logging | Partial | 65% | MVP+1 |
+| Error Handling | Good | 75% | MVP |
+| **Overall** | **DEVELOPMENT** | **62%** | **MVP+1** |
 
 ---
 
-## 🎯 Timeline
+## Timeline
 
 **This Week (Critical)**:
 - Issues 1-6 (4-6 hours)
@@ -611,10 +611,10 @@ npm run security:full-audit
 
 ---
 
-## 🚨 Deployment Gate
+## Deployment Gate
 
 **Do NOT deploy to production until:**
-- [ ] All 🔴 CRITICAL issues fixed (Phase 1)
+- [ ] All CRITICAL issues fixed (Phase 1)
 - [ ] JWT secret properly configured
 - [ ] No mock implementations in production code
 - [ ] Database password masked in all logs
@@ -625,7 +625,7 @@ npm run security:full-audit
 
 ---
 
-## 📞 Questions?
+## Questions?
 
 For security questions:
 1. Check `docs/security/` directory

@@ -201,9 +201,9 @@ ENABLE_METRICS="true"
 ENABLE_TRACING="true"
 EOF
 
-echo "✅ Created .env.production"
+echo "Created .env.production"
 echo "⚠️  Replace REPLACE_ME values with your actual credentials"
-echo "📝 See docs/deployment/ARBITER-006-API-SETUP-GUIDE.md for API key setup"
+echo "See docs/deployment/ARBITER-006-API-SETUP-GUIDE.md for API key setup"
 ```
 
 ---
@@ -231,9 +231,9 @@ for var in "${required_vars[@]}"; do
 done
 
 if [ ${#missing[@]} -eq 0 ]; then
-  echo "✅ All required environment variables are set"
+  echo "All required environment variables are set"
 else
-  echo "❌ Missing required variables:"
+  echo "Missing required variables:"
   printf '   - %s\n' "${missing[@]}"
   exit 1
 fi
@@ -295,5 +295,5 @@ node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 
 **Status**: Template ready for production configuration  
 **Next**: Set up API keys (see ARBITER-006-API-SETUP-GUIDE.md)  
-**Priority**: 🔥 HIGHEST ROI - Start here!
+**Priority**: HIGHEST ROI - Start here!
 

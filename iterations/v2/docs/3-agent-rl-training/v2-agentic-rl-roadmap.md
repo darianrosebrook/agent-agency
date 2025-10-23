@@ -8,7 +8,7 @@
 ## Risk Tier 2 Enhancement Plan
 
 **Version**: 2.0.0
-**Risk Tier**: 🟡 T2 (Features, APIs, data writes)
+**Risk Tier**: T2 (Features, APIs, data writes)
 **Quality Gates**: 80% coverage, 50% mutation, contracts required
 
 ---
@@ -347,10 +347,10 @@ interface ToolRewardSignal {
 
 ### Required V1 Features
 
-- ✅ Multi-tenant memory system
-- ✅ MCP server with tool management
-- ✅ Evaluation orchestrator foundation
-- ✅ Agent orchestrator with task routing
+- Multi-tenant memory system
+- MCP server with tool management
+- Evaluation orchestrator foundation
+- Agent orchestrator with task routing
 
 ### New Dependencies
 

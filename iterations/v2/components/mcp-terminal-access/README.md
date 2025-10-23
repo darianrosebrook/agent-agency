@@ -1,7 +1,7 @@
 # MCP Terminal Access Layer
 
 **Component ID**: INFRA-005  
-**Status**: 📋 Spec Only  
+**Status**: Spec Only  
 **Risk Tier**: 1 (Critical - Command Execution)
 
 ## Overview
@@ -251,25 +251,25 @@ await mcpClient.callTool("terminal_close_session", { sessionId });
 
 ## Current Status
 
-**Implementation Status**: 📋 Spec Only
+**Implementation Status**: Spec Only
 
 **What's Complete**:
 
-- ✅ CAWS working specification (100% validation score)
-- ✅ Component status document
-- ✅ OpenAPI contract definition
-- ✅ Architecture design
-- ✅ Security model defined
+- CAWS working specification (100% validation score)
+- Component status document
+- OpenAPI contract definition
+- Architecture design
+- Security model defined
 
 **What's Pending**:
 
-- ⏳ Core implementation (TerminalSessionManager)
-- ⏳ Command validation logic
-- ⏳ MCP tool handlers
-- ⏳ Unit tests (target: 90% coverage)
-- ⏳ Integration tests
-- ⏳ Security tests
-- ⏳ Documentation
+- Core implementation (TerminalSessionManager)
+- Command validation logic
+- MCP tool handlers
+- Unit tests (target: 90% coverage)
+- Integration tests
+- Security tests
+- Documentation
 
 ## Next Steps
 

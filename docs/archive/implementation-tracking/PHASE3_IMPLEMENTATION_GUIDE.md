@@ -212,7 +212,7 @@ async fn test_pgvector_similarity_search() -> Result<()> {
 
     assert!(!results.is_empty());
     assert_eq!(results[0].0, v1.block_id);
-    println!("✅ pgvector similarity search working!");
+    println!("pgvector similarity search working!");
 
     Ok(())
 }
@@ -660,13 +660,13 @@ impl RAGMetrics {
 
 ## Success Criteria for Phase 3
 
-- ✅ PostgreSQL pgvector queries returning results < 100ms (warm)
-- ✅ Vision Framework extracting text blocks from images
-- ✅ WhisperX producing speaker-aligned transcripts
-- ✅ Council requesting multimodal context with budgets
-- ✅ Claim extraction finding cross-modal evidence
-- ✅ End-to-end: file watch → ingest → enrich → index → retrieve working
-- ✅ All 23+ tests passing + new integration tests
+- PostgreSQL pgvector queries returning results < 100ms (warm)
+- Vision Framework extracting text blocks from images
+- WhisperX producing speaker-aligned transcripts
+- Council requesting multimodal context with budgets
+- Claim extraction finding cross-modal evidence
+- End-to-end: file watch → ingest → enrich → index → retrieve working
+- All 23+ tests passing + new integration tests
 
 ---
 
@@ -674,11 +674,11 @@ impl RAGMetrics {
 
 | Week | Focus | Tests | Status |
 |------|-------|-------|--------|
-| 1 | PostgreSQL pgvector | ✅ 3+ | Priority |
-| 2 | Swift bridges | ✅ 4+ | High |
-| 3 | Python bridges | ✅ 2+ | High |
-| 4 | System integration | ✅ 5+ | Medium |
-| 5 | Performance & polish | ✅ Refine | Final |
+| 1 | PostgreSQL pgvector | 3+ | Priority |
+| 2 | Swift bridges | 4+ | High |
+| 3 | Python bridges | 2+ | High |
+| 4 | System integration | 5+ | Medium |
+| 5 | Performance & polish | Refine | Final |
 
 ---
 

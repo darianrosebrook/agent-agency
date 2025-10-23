@@ -152,12 +152,12 @@ const client = await ConnectionPoolManager.getInstance()
 ```typescript
 // Old: Each client creates its own pool
 class AgentClient {
-  private pool = new Pool({ max: 10 }); // ❌ Wasteful
+  private pool = new Pool({ max: 10 }); // Wasteful
 }
 
 // New: All clients share one pool
 class AgentClient {
-  private poolManager = ConnectionPoolManager.getInstance(); // ✅ Efficient
+  private poolManager = ConnectionPoolManager.getInstance(); // Efficient
 }
 ```
 
@@ -453,15 +453,15 @@ WITH (m = 16, ef_construction = 128); -- Higher = more accurate
 
 ## Next Steps
 
-### ✅ Completed
+### Completed
 
-1. **Connection Pool Migration** - ✅ DONE
+1. **Connection Pool Migration** - DONE
    - All 5 database clients migrated to use `ConnectionPoolManager`
    - Integration tests updated (3/3)
    - Zero errors, perfect code quality
    - 65 connections eliminated (130% of target!)
 
-### 🚀 Optional Future Enhancements
+### Optional Future Enhancements
 
 1. **ESLint Protection** (~30 minutes)
 

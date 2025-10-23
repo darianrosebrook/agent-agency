@@ -11,7 +11,7 @@
 
 ---
 
-## 🎯 **Executive Summary**
+## **Executive Summary**
 
 This document outlines the core capabilities that V2's orchestration layer must implement, derived from POC learnings and validated through benchmark testing. The arbiter system serves as both a CAWS-enforcing orchestrator and a data collection engine for RL training.
 
@@ -21,12 +21,12 @@ This document outlines the core capabilities that V2's orchestration layer must 
 
 ## 🏛️ **Core Capability Categories**
 
-### **1. 🤖 Multi-Turn Feedback & Learning Systems**
+### **1. Multi-Turn Feedback & Learning Systems**
 
 #### **Capability: Iterative Agent Learning**
 
 - **Description**: Enable agents to detect errors, receive structured feedback, and generate improved responses across multiple iterations
-- **POC Validation**: ✅ Implemented and tested with mock error injection
+- **POC Validation**: Implemented and tested with mock error injection
 - **POC Results**: In our POC, we found that multi-turn feedback achieved 100% success rates for text transformation tasks, with agents averaging 2 of 3 maximum iterations before reaching quality thresholds. Mock error injection validated that agents could detect failures, receive structured feedback (e.g., "Remove all banned phrases like 'hey team'"), and generate improved responses that addressed all feedback points.
 - **Key Learnings**:
   - 3 iterations proved optimal balance between improvement and time investment
@@ -58,12 +58,12 @@ This document outlines the core capabilities that V2's orchestration layer must 
 
 ---
 
-### **2. 📁 File System & Workspace Management**
+### **2. File System & Workspace Management**
 
 #### **Capability: Secure File Operations**
 
 - **Description**: Provide secure, sandboxed file system access within project boundaries
-- **POC Implementation**: ✅ `read_file`, `write_file`, `edit_file`, `list_directory` tools fully operational
+- **POC Implementation**: `read_file`, `write_file`, `edit_file`, `list_directory` tools fully operational
 - **POC Results**: In our POC, we validated secure file operations with project-root sandboxing, successfully preventing path traversal attacks and ensuring all operations remained within workspace boundaries. File operations performed reliably across multiple test scenarios with zero security breaches.
 - **Key Learnings**:
   - Path normalization critical for preventing escape attempts
@@ -96,12 +96,12 @@ This document outlines the core capabilities that V2's orchestration layer must 
 
 ---
 
-### **3. 🎯 Intelligent Task Routing & Orchestration**
+### **3. Intelligent Task Routing & Orchestration**
 
 #### **Capability: Memory-Aware Task Assignment**
 
 - **Description**: Route tasks to agents based on capability profiles, performance history, and context relevance
-- **POC Foundation**: ✅ Basic agent registry with performance tracking
+- **POC Foundation**: Basic agent registry with performance tracking
 - **Requirements**:
   - Multi-armed bandit routing algorithms
   - Capability-based agent selection
@@ -128,12 +128,12 @@ This document outlines the core capabilities that V2's orchestration layer must 
 
 ---
 
-### **4. 📊 Performance Tracking & RL Training Data**
+### **4. Performance Tracking & RL Training Data**
 
 #### **Capability: Comprehensive Telemetry Collection**
 
 - **Description**: Capture detailed metrics from every orchestration decision and agent interaction
-- **POC Implementation**: ✅ Comprehensive performance tracking, scalability testing, intelligent caching
+- **POC Implementation**: Comprehensive performance tracking, scalability testing, intelligent caching
 - **POC Results**: In our POC, we successfully collected detailed telemetry across all test scenarios, measuring average response times of 2.1s for text transformation and 25s for code generation. Scalability testing validated the system could handle concurrent operations with intelligent caching reducing redundant computations. Token usage tracking showed the gemma3n:e2b model averaged 36.02 tokens/sec with 9.4s response time.
 - **Key Learnings**:
   - Turn-level tracking enabled precise iteration analysis
@@ -198,7 +198,7 @@ This document outlines the core capabilities that V2's orchestration layer must 
 
 ---
 
-### **6. 🧠 Cross-Agent Learning & Evolution**
+### **6. Cross-Agent Learning & Evolution**
 
 #### **Capability: Capability Profile Management**
 
@@ -221,7 +221,7 @@ This document outlines the core capabilities that V2's orchestration layer must 
 #### **Capability: Federated Learning Integration**
 
 - **Description**: Privacy-preserving cross-agent learning without data exposure
-- **POC Implementation**: ✅ Complete federated learning engine with differential privacy
+- **POC Implementation**: Complete federated learning engine with differential privacy
 - **POC Results**: In our POC, we implemented a fully functional federated learning system that enabled cross-agent knowledge sharing without exposing raw tenant data. The system successfully aggregated learning across multiple agent instances while maintaining strict tenant isolation and differential privacy guarantees.
 - **Key Learnings**:
   - Differential privacy mechanisms preserved privacy without significantly degrading model quality
@@ -237,12 +237,12 @@ This document outlines the core capabilities that V2's orchestration layer must 
 
 ---
 
-### **7. 🔍 Advanced Evaluation Frameworks**
+### **7. Advanced Evaluation Frameworks**
 
 #### **Capability: Multi-Criteria Evaluation**
 
 - **Description**: Sophisticated evaluation systems for different task types
-- **POC Implementation**: ✅ Text transformation, code generation, design token criteria
+- **POC Implementation**: Text transformation, code generation, design token criteria
 - **POC Results**: In our POC, we validated multi-criteria evaluation across three distinct domains: text transformation achieved 100% pass rate with criteria for formal language, structure, and banned phrases; code generation reached 80% pass rate (4/5 tests) with syntax validation, TypeScript compliance, and functionality checks; design token application validated hardcoded value detection and semantic token usage.
 - **Key Learnings**:
   - Domain-specific criteria dramatically improved evaluation accuracy
@@ -281,7 +281,7 @@ This document outlines the core capabilities that V2's orchestration layer must 
 #### **Capability: Circuit Breaker Protection**
 
 - **Description**: Automatic failure prevention and graceful degradation
-- **POC Implementation**: ✅ Basic error recovery mechanisms
+- **POC Implementation**: Basic error recovery mechanisms
 - **Requirements**:
   - Failure pattern detection
   - Automatic service isolation
@@ -308,7 +308,7 @@ This document outlines the core capabilities that V2's orchestration layer must 
 
 ---
 
-### **9. 🔒 Security & Access Control**
+### **9. Security & Access Control**
 
 #### **Capability: Multi-Tenant Isolation**
 
@@ -339,7 +339,7 @@ This document outlines the core capabilities that V2's orchestration layer must 
 
 ---
 
-### **10. 📈 Scalability & Performance**
+### **10. Scalability & Performance**
 
 #### **Capability: Horizontal Scaling**
 
@@ -370,64 +370,64 @@ This document outlines the core capabilities that V2's orchestration layer must 
 
 ---
 
-## 🎯 **Implementation Priority Matrix**
+## **Implementation Priority Matrix**
 
 ### **Phase 1: Core Infrastructure (Weeks 1-4)**
 
-1. ✅ Multi-turn feedback systems
-2. ✅ File system operations with security
-3. ✅ Basic task routing and orchestration
-4. ✅ Performance telemetry collection
+1. Multi-turn feedback systems
+2. File system operations with security
+3. Basic task routing and orchestration
+4. Performance telemetry collection
 
 ### **Phase 2: CAWS Authority (Weeks 5-8)**
 
-1. ✅ Budget enforcement mechanisms
-2. ✅ Quality gate validation
-3. ✅ Waiver management system
-4. ✅ Provenance tracking
+1. Budget enforcement mechanisms
+2. Quality gate validation
+3. Waiver management system
+4. Provenance tracking
 
 ### **Phase 3: Intelligence Layer (Weeks 9-12)**
 
-1. ✅ Advanced routing algorithms
-2. ✅ Cross-agent learning
-3. ✅ Predictive performance modeling
-4. ✅ Training data pipeline
+1. Advanced routing algorithms
+2. Cross-agent learning
+3. Predictive performance modeling
+4. Training data pipeline
 
 ### **Phase 4: Production Hardening (Weeks 13-16)**
 
-1. ✅ System health monitoring
-2. ✅ Self-healing capabilities
-3. ✅ Security and access control
-4. ✅ Scalability optimizations
+1. System health monitoring
+2. Self-healing capabilities
+3. Security and access control
+4. Scalability optimizations
 
 ---
 
-## 📊 **Success Metrics**
+## **Success Metrics**
 
 ### **Functional Completeness**
 
-- ✅ Multi-turn feedback accuracy: ≥90% (POC achieved 100% for text transformation)
-- ✅ File operation security: 100% (POC validated with zero breaches)
-- ✅ Task routing accuracy: ≥85% (target for V2 with multi-armed bandit)
-- ✅ CAWS compliance rate: 100% (enforced in POC)
+- Multi-turn feedback accuracy: ≥90% (POC achieved 100% for text transformation)
+- File operation security: 100% (POC validated with zero breaches)
+- Task routing accuracy: ≥85% (target for V2 with multi-armed bandit)
+- CAWS compliance rate: 100% (enforced in POC)
 
 ### **Performance Targets**
 
-- ✅ Average task latency: ≤30s (POC: 2.1s text, 25s code generation)
-- ✅ Concurrent agent operations: ≥50 (POC validated with load testing)
-- ✅ Memory usage efficiency: ≤2GB per agent (POC: gemma3n:e2b at 5.6GB)
-- ✅ Training data quality: ≥95% (POC achieved comprehensive telemetry collection)
+- Average task latency: ≤30s (POC: 2.1s text, 25s code generation)
+- Concurrent agent operations: ≥50 (POC validated with load testing)
+- Memory usage efficiency: ≤2GB per agent (POC: gemma3n:e2b at 5.6GB)
+- Training data quality: ≥95% (POC achieved comprehensive telemetry collection)
 
 ### **Reliability Goals**
 
-- ✅ System uptime: ≥99.9% (V2 target, POC demonstrated stability)
-- ✅ Error recovery time: ≤5s (POC validated with circuit breakers)
-- ✅ Data consistency: 100% (POC maintained across all operations)
-- ✅ Security incidents: 0 (POC achieved zero breaches)
+- System uptime: ≥99.9% (V2 target, POC demonstrated stability)
+- Error recovery time: ≤5s (POC validated with circuit breakers)
+- Data consistency: 100% (POC maintained across all operations)
+- Security incidents: 0 (POC achieved zero breaches)
 
 ---
 
-## 🔗 **Dependencies & Integrations**
+## **Dependencies & Integrations**
 
 ### **Required Components**
 
@@ -453,7 +453,7 @@ This document outlines the core capabilities that V2's orchestration layer must 
 
 ---
 
-## 🚀 **Innovation Opportunities**
+## **Innovation Opportunities**
 
 ### **Advanced Capabilities to Explore**
 
@@ -471,7 +471,7 @@ This document outlines the core capabilities that V2's orchestration layer must 
 
 ---
 
-## 🔬 **POC Validation Summary**
+## **POC Validation Summary**
 
 Our POC (version 0.2.0) successfully validated the core capabilities required for V2's autonomous agent orchestration system. Key achievements include:
 
