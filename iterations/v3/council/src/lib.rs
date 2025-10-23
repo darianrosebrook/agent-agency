@@ -21,6 +21,8 @@ pub mod evidence_enrichment;
 pub mod resilience;
 pub mod claim_extraction_multimodal;
 pub mod learning;
+pub mod ffi;
+pub mod model_client;
 
 pub use error::{CouncilError, CouncilResult};
 pub use judge::{

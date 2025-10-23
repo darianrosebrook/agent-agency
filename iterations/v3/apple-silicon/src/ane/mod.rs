@@ -19,3 +19,13 @@ pub mod resource_pool;
 pub mod models;
 pub mod infer;
 pub mod metrics;
+pub mod circuit_breaker;
+pub mod monitoring;
+pub mod optimization;
+
+// Re-export Mistral functionality
+pub use models::mistral_model::{MistralModel, MistralCompilationOptions, load_mistral_model, estimate_memory_usage, validate_mistral_compatibility};
+pub use infer::mistral::{MistralInferenceOptions, ConstitutionalVerdict, ComplianceLevel, RiskTier, Verdict, DebateArgument, DebatePosition, ConfidenceLevel, deliberate_constitution, generate_debate_argument, generate_text};
+
+// Re-export circuit breaker
+pub use circuit_breaker::{CircuitBreaker, CircuitBreakerConfig, CircuitState, CircuitBreakerError};

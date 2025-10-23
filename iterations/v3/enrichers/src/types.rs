@@ -14,6 +14,30 @@ pub struct OcrResult {
     pub processing_time_ms: u64,
 }
 
+/// Result of comprehensive vision analysis including OCR and object detection
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VisionAnalysisResult {
+    /// OCR results (text, tables, regions)
+    pub ocr: OcrResult,
+    /// Object detections from YOLO
+    pub detections: Vec<ObjectDetection>,
+    /// Overall processing time including both OCR and detection
+    pub total_processing_time_ms: u64,
+}
+
+/// Object detection result
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ObjectDetection {
+    /// Object class name (e.g., "person", "car", "button")
+    pub class: String,
+    /// Class index in model vocabulary
+    pub class_id: usize,
+    /// Detection confidence (0.0-1.0)
+    pub confidence: f32,
+    /// Bounding box coordinates
+    pub bbox: BoundingBox,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OcrBlock {
     pub id: Uuid,
@@ -79,10 +103,11 @@ pub struct SpeechSegment {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WordTiming {
-    pub t0: f32,
-    pub t1: f32,
-    pub token: String,
-    pub confidence: f32,
+    pub word: String,      // The actual word text
+    pub tokens: Vec<i32>,  // Token IDs for this word
+    pub start: f32,        // Start time in seconds
+    pub end: f32,          // End time in seconds
+    pub probability: f32,  // Confidence score
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

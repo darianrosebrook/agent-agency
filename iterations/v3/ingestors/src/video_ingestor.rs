@@ -115,7 +115,10 @@ impl VideoIngestor {
         let segments = self.create_segments_from_frames(&frames, &scene_boundaries, &sha256)?;
 
         // Extract and transcribe audio (if ASR is available)
+        #[cfg(feature = "asr")]
         let speech_turns = self.extract_audio_transcription(path).await?;
+        #[cfg(not(feature = "asr"))]
+        let speech_turns = None;
 
         Ok(IngestResult {
             document_id: doc_id,

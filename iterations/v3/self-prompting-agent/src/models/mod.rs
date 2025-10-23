@@ -1,8 +1,12 @@
 //! Model abstraction layer for hot-swappable AI providers
 
+pub mod consensus;
+pub mod expert_router;
 pub mod ollama;
 pub mod selection;
 
+pub use consensus::{ConsensusBuilder, ShadowRouter, OfflineEvaluator, VotingStrategy, FallbackStrategy};
+pub use expert_router::{ExpertSelectionRouter, ExpertSelection, RouterBudget, RouterStats, SparseActivationPolicy};
 pub use ollama::OllamaProvider;
 pub use selection::{ModelRegistry, ModelSelectionPolicy};
 

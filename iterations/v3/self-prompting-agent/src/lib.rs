@@ -13,6 +13,7 @@
 
 pub mod agent;
 pub mod caws;
+pub mod context;
 pub mod evaluation;
 pub mod integration;
 pub mod learning_bridge;
@@ -27,11 +28,12 @@ pub mod stubs; // TEMP: stubs for file_ops types
 pub mod types;
 
 pub use agent::SelfPromptingAgent;
+pub use context::{HierarchicalContextManager, ContextBundle, ContextBudget, Allocation, ContextStats};
 pub use evaluation::{EvaluationOrchestrator, Evaluator, EvalReport};
 pub use integration::IntegratedAutonomousAgent;
 pub use learning_bridge::{LearningBridge, LearningSignal, ReflexiveLearningSystem};
 pub use loop_controller::SelfPromptingLoop;
-pub use models::{ModelProvider, ModelRegistry, OllamaProvider};
+pub use models::{ModelProvider, ModelRegistry, OllamaProvider, ExpertSelectionRouter, ConsensusBuilder, ShadowRouter, OfflineEvaluator};
 pub use policy_hooks::{AdaptiveAgent, PolicyManager};
 pub use profiling::{PerformanceProfiler, PerformanceBenchmark, PerformanceReport};
 pub use prompting::{PromptFrame, PatchAction, ToolCallValidator, ToolSchemaError, AdaptivePromptingStrategy, AgentTelemetryCollector};

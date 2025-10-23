@@ -35,7 +35,12 @@ pub use adaptive_resource_manager::{
     AllocationPlan, AllocationPlanner, AllocationRequest, DeviceKind, DeviceSensors, ModelRegistry,
     Precision, Tier, WorkloadHint,
 };
-pub use ane::ANEManager;
+pub use ane::{
+    ANEManager, MistralModel, MistralCompilationOptions, load_mistral_model, estimate_memory_usage,
+    validate_mistral_compatibility, MistralInferenceOptions, ConstitutionalVerdict, ComplianceLevel,
+    RiskTier, Verdict, DebateArgument, DebatePosition, ConfidenceLevel, deliberate_constitution,
+    generate_debate_argument, generate_text,
+};
 pub use async_inference::{
     AsyncConfig, AsyncInferenceEngine, InferenceRequest, InferenceResult, Priority, PriorityQueue,
     QueueStats,

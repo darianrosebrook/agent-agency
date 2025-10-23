@@ -4,13 +4,16 @@ import PackageDescription
 let package = Package(
     name: "CoreMLBridge",
     platforms: [
-        .macOS(.v12)
+        .macOS(.v13)
     ],
     products: [
         .library(
             name: "CoreMLBridge",
-            targets: ["CoreMLBridge", "WhisperAudio", "MistralTokenizer"]
+            targets: ["CoreMLBridge", "WhisperAudio", "MistralTokenizer", "YOLOImage"]
         )
+    ],
+    dependencies: [
+        .package(url: "https://github.com/argmaxinc/whisperkit", from: "0.14.0")
     ],
     targets: [
         .target(
@@ -23,7 +26,9 @@ let package = Package(
         ),
         .target(
             name: "WhisperAudio",
-            dependencies: [],
+            dependencies: [
+                .product(name: "WhisperKit", package: "whisperkit")
+            ],
             linkerSettings: [
                 .linkedFramework("CoreML"),
                 .linkedFramework("Foundation"),
@@ -37,6 +42,16 @@ let package = Package(
             linkerSettings: [
                 .linkedFramework("Foundation"),
                 .linkedFramework("NaturalLanguage")
+            ]
+        ),
+        .target(
+            name: "YOLOImage",
+            dependencies: [],
+            linkerSettings: [
+                .linkedFramework("CoreML"),
+                .linkedFramework("Foundation"),
+                .linkedFramework("CoreGraphics"),
+                .linkedFramework("Accelerate")
             ]
         )
     ]

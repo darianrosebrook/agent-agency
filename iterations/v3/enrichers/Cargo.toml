@@ -20,6 +20,9 @@ sha2 = "0.10"
 tempfile = "3.8"
 email_address = "0.2"
 url = "2.4"
+image = "0.24"
+async-trait = "0.1"
+rand = "0.8"
 
 [build-dependencies]
 [target.'cfg(target_os = "macos")'.build-dependencies]
@@ -27,12 +30,11 @@ cc = "1.0"
 
 [features]
 default = []
+# Enable Swift bridge integration for macOS
+swift-bridge = []
 
 [target.'cfg(target_os = "macos")'.dependencies]
 
-# TODO: Add Swift bridge linking when ready
-# [target.'cfg(target_os = "macos")']
-# rustflags = ["-L", "../coreml-bridge/.build/release", "-l", "WhisperAudio", "-l", "CoreMLBridge", "-F", "/System/Library/Frameworks", "-framework", "CoreML", "-framework", "Foundation", "-framework", "Accelerate", "-framework", "AVFoundation"]
 
 [[bin]]
 name = "enrichers"

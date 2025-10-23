@@ -15,6 +15,8 @@ pub mod communication;
 pub mod progress;
 pub mod validation;
 pub mod integration;
+pub mod orchestrator_bridge;
+pub mod monitoring_bridge;
 pub mod types;
 pub mod error;
 

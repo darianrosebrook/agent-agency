@@ -8,9 +8,15 @@ edition = "2021"
 candle-core = "0.9.1"
 candle-nn = "0.9.1"
 candle-transformers = "0.9.1"
-safetensors = "0.4"
+safetensors = "0.6.2"
 ort = "2.0.0-rc.10"
 protobuf = "3.4"
+
+# macOS Core ML bindings
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "0.5"
+objc2-foundation = "0.2"
+objc2-core-ml = "0.2"
 
 # System dependencies
 sysinfo = "0.30"
@@ -23,6 +29,7 @@ half = "2.4"
 bytemuck = "1.14"
 lru = "0.12"
 ndarray = "0.15"
+image = "0.24"
 
 # Async runtime
 tokio = { version = "1.0", features = ["full"] }
@@ -38,6 +45,8 @@ anyhow = "1.0"
 thiserror = "1.0"
 tracing = "0.1"
 uuid = { version = "1.0", features = ["v4", "serde"] }
+rand = "0.8"
+rand_pcg = "0.3"
 chrono = { version = "0.4", features = ["serde"] }
 
 # ANE-specific dependencies

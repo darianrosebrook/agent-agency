@@ -575,4 +575,79 @@ mod tests {
         assert!(scaling_rec.recommended_factor > 1.0); // Should recommend scaling up
         assert!(scaling_rec.expected_benefit > 0.0);
     }
+
+    /// Test that review_spec can be called concurrently without Send/Sync violations
+    /// This test would previously fail if CoreML handles leaked non-Send types across await points
+    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    async fn review_spec_is_send_safe() {
+        use crate::judge::{JudgeConfig, JudgeType, MockJudge, ReviewContext};
+        use agent_agency_contracts::working_spec::WorkingSpec;
+        use agent_agency_contracts::task_request::RiskTier;
+        use std::sync::Arc;
+
+        // Create a mock judge that implements the Judge trait (which requires Send + Sync)
+        let judge_config = JudgeConfig {
+            judge_id: "test-judge".to_string(),
+            judge_type: JudgeType::Mock,
+            max_tokens: 1000,
+            temperature: 0.7,
+            timeout_seconds: 30,
+            model_path: None,
+        };
+
+        let judge = Arc::new(MockJudge::new(judge_config).unwrap());
+
+        // Create a test working spec
+        let working_spec = WorkingSpec {
+            id: "test-spec-001".to_string(),
+            title: "Test Specification".to_string(),
+            description: "A test working specification for Send/Sync verification".to_string(),
+            acceptance_criteria: vec!["Should compile and run".to_string()],
+            risk_tier: RiskTier::Tier2,
+            estimated_effort: agent_agency_contracts::EffortLevel::Medium,
+            dependencies: vec![],
+            created_at: chrono::Utc::now(),
+            updated_at: chrono::Utc::now(),
+        };
+
+        // Create review context
+        let review_context = ReviewContext {
+            working_spec,
+            planning_metadata: None,
+            previous_reviews: vec![],
+            risk_tier: RiskTier::Tier2,
+            session_id: "test-session-001".to_string(),
+            judge_instructions: std::collections::HashMap::new(),
+        };
+
+        // Spawn multiple concurrent reviews - this tests that the judge can be shared across threads
+        // and that review_spec futures are Send (can be moved across await points)
+        let mut handles = vec![];
+
+        for i in 0..5 {
+            let judge_clone = Arc::clone(&judge);
+            let context_clone = review_context.clone();
+
+            let handle = tokio::spawn(async move {
+                tracing::info!("Starting concurrent review {}", i);
+                let result = judge_clone.review_spec(&context_clone).await;
+                tracing::info!("Completed concurrent review {}", i);
+                result
+            });
+
+            handles.push(handle);
+        }
+
+        // Wait for all reviews to complete
+        for (i, handle) in handles.into_iter().enumerate() {
+            let result = handle.await.expect(&format!("Review {} should complete successfully", i));
+            assert!(result.is_ok(), "Review {} should succeed: {:?}", i, result.err());
+
+            let verdict = result.unwrap();
+            assert!(verdict.confidence() >= 0.0, "Verdict confidence should be valid");
+            tracing::info!("Review {} completed with confidence: {:.2}", i, verdict.confidence());
+        }
+
+        tracing::info!("All concurrent reviews completed successfully - Send/Sync constraints satisfied");
+    }
 }

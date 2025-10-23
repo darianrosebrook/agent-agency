@@ -11,10 +11,12 @@ use crate::types::{AsrResult, EnricherConfig, Speaker, SpeechSegment, WordTiming
 use anyhow::{anyhow, Result};
 use std::path::PathBuf;
 use std::time::Instant;
+use std::io::Write;
+use std::mem::ManuallyDrop;
 use uuid::Uuid;
 
 /// FFI declarations for ASR Bridge
-#[cfg(target_os = "macos")]
+#[cfg(all(target_os = "macos", feature = "swift-bridge"))]
 // TODO: Re-enable when static linking is implemented
 // #[link(name = "ASRBridge", kind = "static")]
 extern "C" {
@@ -67,11 +69,11 @@ mod stubs {
 }
 
 /// Re-export FFI functions for cross-platform compatibility
-#[cfg(target_os = "macos")]
+#[cfg(all(target_os = "macos", feature = "swift-bridge"))]
 use self::speech_recognize_audio as speech_recognize_audio_impl;
-#[cfg(target_os = "macos")]
+#[cfg(all(target_os = "macos", feature = "swift-bridge"))]
 use self::speech_free_string as speech_free_string_impl;
-#[cfg(target_os = "macos")]
+#[cfg(all(target_os = "macos", feature = "swift-bridge"))]
 use self::speech_is_available as speech_is_available_impl;
 
 #[cfg(not(target_os = "macos"))]
@@ -90,10 +92,22 @@ struct SwiftSpeechRecognizer {
 }
 
 /// Whisper-CoreML integration
-#[cfg(target_os = "macos")]
+#[cfg(all(target_os = "macos", feature = "swift-bridge"))]
 // TODO: Re-enable when static linking is implemented
 // #[link(name = "WhisperAudio", kind = "static")]
 extern "C" {
+    fn whisper_transcribe_file(
+        audio_path: *const std::ffi::c_char,
+        language: *const std::ffi::c_char,
+        out_text: *mut *mut std::ffi::c_char,
+        out_segments: *mut *mut std::ffi::c_void,
+        out_confidence: *mut f32,
+        out_error: *mut *mut std::ffi::c_char,
+    ) -> std::ffi::c_int;
+
+    fn whisper_free_string(ptr: *mut std::ffi::c_char);
+    fn whisper_free_object(ptr: *mut std::ffi::c_void);
+
     fn whisper_audio_preprocess_file(
         audioPath: *const std::ffi::c_char,
         outMultiArray: *mut *mut std::ffi::c_void,
@@ -161,6 +175,24 @@ struct SFSpeechAudioBufferRecognitionRequest {
     _language: String,
     _should_report_partial_results: bool,
     _requires_on_device_recognition: bool,
+}
+
+/// Result from Swift WhisperKit bridge
+#[derive(Debug, Clone)]
+pub struct BridgeTranscriptionResult {
+    pub text: String,
+    pub segments: Vec<BridgeTranscriptionSegment>,
+    pub confidence: f32,
+    pub language: String,
+}
+
+/// Segment from Swift WhisperKit bridge
+#[derive(Debug, Clone)]
+pub struct BridgeTranscriptionSegment {
+    pub text: String,
+    pub start_time: f32,
+    pub end_time: f32,
+    pub confidence: f32,
 }
 
 #[derive(Debug, Clone)]
@@ -381,10 +413,11 @@ impl AsrEnricher {
         for word in words {
             let word_end = current_time + word_duration;
             word_timings.push(WordTiming {
-                t0: current_time,
-                t1: word_end,
-                token: word.to_string(),
-                confidence: 0.8, // Default confidence for generated timings
+                word: word.to_string(),
+                tokens: vec![], // TODO: Parse actual tokens
+                start: current_time,
+                end: word_end,
+                probability: 0.8, // Default confidence for generated timings
             });
             current_time = word_end;
         }
@@ -405,30 +438,30 @@ impl AsrEnricher {
         
         // Ensure word timings are within turn boundaries
         for timing in word_timings.iter_mut() {
-            timing.t0 = timing.t0.max(turn_t0);
-            timing.t1 = timing.t1.min(turn_t1);
+            timing.start = timing.start.max(turn_t0);
+            timing.end = timing.end.min(turn_t1);
             
-            // Ensure t0 < t1
-            if timing.t0 >= timing.t1 {
-                timing.t1 = timing.t0 + 0.1; // Minimum word duration
+            // Ensure start < end
+            if timing.start >= timing.end {
+                timing.end = timing.start + 0.1; // Minimum word duration
             }
         }
         
         // Smooth out timing gaps and overlaps
         for i in 1..word_timings.len() {
-            let prev_end = word_timings[i - 1].t1;
-            let current_start = word_timings[i].t0;
+            let prev_end = word_timings[i - 1].end;
+            let current_start = word_timings[i].start;
             
             if current_start < prev_end {
                 // Overlap detected, adjust
-                word_timings[i].t0 = prev_end;
-                if word_timings[i].t1 <= word_timings[i].t0 {
-                    word_timings[i].t1 = word_timings[i].t0 + 0.1;
+                word_timings[i].start = prev_end;
+                if word_timings[i].end <= word_timings[i].start {
+                    word_timings[i].end = word_timings[i].start + 0.1;
                 }
             } else if current_start - prev_end > 0.5 {
                 // Large gap detected, reduce it
                 let gap = current_start - prev_end;
-                word_timings[i].t0 = prev_end + gap * 0.1; // Reduce gap to 10% of original
+                word_timings[i].start = prev_end + gap * 0.1; // Reduce gap to 10% of original
             }
         }
         
@@ -515,7 +548,10 @@ impl AsrEnricher {
         let language_code = language.unwrap_or("en-US");
 
         // Check if speech recognition is available on this platform
+        #[cfg(all(target_os = "macos", feature = "swift-bridge"))]
         let available = unsafe { speech_is_available_impl() != 0 };
+        #[cfg(not(all(target_os = "macos", feature = "swift-bridge")))]
+        let available = false;
         if !available {
             return Err(anyhow!("Speech recognition not available on this platform"));
         }
@@ -718,12 +754,20 @@ impl AsrEnricher {
         let mut out_error: *mut std::ffi::c_char = std::ptr::null_mut();
 
         let result = unsafe {
-            speech_recognize_audio_impl(
-                audio_path_c.as_ptr(),
-                &mut out_text,
-                &mut out_confidence,
-                &mut out_error,
-            )
+            #[cfg(all(target_os = "macos", feature = "swift-bridge"))]
+            {
+                speech_recognize_audio_impl(
+                    audio_path_c.as_ptr(),
+                    &mut out_text,
+                    &mut out_confidence,
+                    &mut out_error,
+                )
+            }
+            #[cfg(not(all(target_os = "macos", feature = "swift-bridge")))]
+            {
+                // Fallback for when Swift bridge is not available
+                -1 // Error code
+            }
         };
 
         if result != 0 {
@@ -731,6 +775,7 @@ impl AsrEnricher {
             let error_msg =             if !out_error.is_null() {
                 unsafe {
                     let error_str = std::ffi::CStr::from_ptr(out_error).to_string_lossy().to_string();
+                    #[cfg(all(target_os = "macos", feature = "swift-bridge"))]
                     speech_free_string_impl(out_error);
                     error_str
                 }
@@ -739,7 +784,10 @@ impl AsrEnricher {
             };
 
             if !out_text.is_null() {
-                unsafe { speech_free_string_impl(out_text); }
+                unsafe {
+                    #[cfg(all(target_os = "macos", feature = "swift-bridge"))]
+                    speech_free_string_impl(out_text);
+                }
             }
 
             return Err(anyhow::anyhow!("ASR failed: {}", error_msg));
@@ -749,6 +797,7 @@ impl AsrEnricher {
         let transcribed_text = if !out_text.is_null() {
             unsafe {
                 let text_str = std::ffi::CStr::from_ptr(out_text).to_string_lossy().to_string();
+                #[cfg(all(target_os = "macos", feature = "swift-bridge"))]
                 speech_free_string_impl(out_text);
                 text_str
             }
@@ -793,14 +842,32 @@ impl AsrEnricher {
 
         let start_time = std::time::Instant::now();
 
-        // TODO: Implement Whisper-CoreML transcription
-        // This would:
-        // 1. Save audio data to temporary file or use in-memory processing
-        // 2. Call Whisper inference with CoreML acceleration
-        // 3. Convert results to AsrResult format
-        // 4. Apply post-processing for diarization and enhancement
+        // Create temporary WAV file from audio data
+        let temp_audio_path = self.create_temp_wav_file(audio_data)?;
+        tracing::debug!("Created temporary audio file: {:?}", temp_audio_path);
 
-        // Placeholder implementation - replace with actual Whisper-CoreML integration
+        // Call Swift WhisperKit bridge for transcription
+        #[cfg(target_os = "macos")]
+        {
+            let transcription_result = self.call_whisper_bridge(&temp_audio_path, language)?;
+            let result = self.convert_whisper_bridge_result_to_asr_result(
+                transcription_result,
+                start_time.elapsed().as_millis() as u64
+            )?;
+            // Cleanup temp file
+            let _ = std::fs::remove_file(&temp_audio_path);
+            return Ok(result);
+        }
+
+        #[cfg(not(target_os = "macos"))]
+        {
+            tracing::debug!("Whisper-CoreML not available on this platform, using placeholder");
+        }
+
+        // Cleanup temp file for non-macOS
+        let _ = std::fs::remove_file(&temp_audio_path);
+
+        // Placeholder implementation for non-macOS platforms
         let result = AsrResult {
             turns: vec![SpeechSegment {
                 id: Uuid::new_v4(),
@@ -810,10 +877,11 @@ impl AsrEnricher {
                 text: "This is a placeholder transcription result from Whisper-CoreML.".to_string(),
                 confidence: 0.95,
                 word_timings: vec![WordTiming {
-                    t0: 0.0,
-                    t1: 0.5,
-                    token: "This".to_string(),
-                    confidence: 0.98,
+                    word: "This".to_string(),
+                    tokens: vec![],
+                    start: 0.0,
+                    end: 0.5,
+                    probability: 0.98,
                 }],
                 language: language.map(|s| s.to_string()),
             }],
@@ -832,6 +900,259 @@ impl AsrEnricher {
                        result.processing_time_ms);
 
         Ok(result)
+    }
+
+    /// Create a temporary WAV file from raw audio data
+    fn create_temp_wav_file(&self, audio_data: &[u8]) -> Result<std::path::PathBuf> {
+        // Create temp directory if it doesn't exist
+        let temp_dir = std::env::temp_dir().join("agent-agency-whisper");
+        std::fs::create_dir_all(&temp_dir)?;
+
+        // Generate unique filename
+        let filename = format!("whisper-input-{}.wav", std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos());
+        let temp_path = temp_dir.join(filename);
+
+        // For now, assume input is raw PCM data and create a basic WAV wrapper
+        // TODO: Implement proper WAV format parsing based on kokoro's approach
+        self.create_wav_from_pcm(audio_data, &temp_path)?;
+
+        Ok(temp_path)
+    }
+
+    /// Create a WAV file from raw PCM audio data
+    fn create_wav_from_pcm(&self, pcm_data: &[u8], output_path: &std::path::Path) -> Result<()> {
+        // Simple WAV header creation (based on kokoro's approach)
+        // This is a basic implementation - assumes 16-bit PCM, 16kHz, mono
+
+        let sample_rate = 16000u32;  // Whisper expects 16kHz
+        let bits_per_sample = 16u16;
+        let num_channels = 1u16;     // Mono
+
+        // Calculate sizes
+        let data_size = pcm_data.len() as u32;
+        let block_align = (bits_per_sample / 8) * num_channels;
+        let byte_rate = sample_rate * block_align as u32;
+        let riff_size = 36 + data_size;  // RIFF header + data
+
+        let mut file = std::fs::File::create(output_path)?;
+
+        // Write WAV header
+        file.write_all(b"RIFF")?;                                    // RIFF marker
+        file.write_all(&riff_size.to_le_bytes())?;                  // File size - 8
+        file.write_all(b"WAVE")?;                                    // WAVE marker
+        file.write_all(b"fmt ")?;                                    // Format chunk marker
+        file.write_all(&16u32.to_le_bytes())?;                       // Format chunk size
+        file.write_all(&1u16.to_le_bytes())?;                        // Audio format (PCM)
+        file.write_all(&num_channels.to_le_bytes())?;               // Number of channels
+        file.write_all(&sample_rate.to_le_bytes())?;                // Sample rate
+        file.write_all(&byte_rate.to_le_bytes())?;                  // Byte rate
+        file.write_all(&block_align.to_le_bytes())?;                // Block align
+        file.write_all(&bits_per_sample.to_le_bytes())?;            // Bits per sample
+        file.write_all(b"data")?;                                    // Data chunk marker
+        file.write_all(&data_size.to_le_bytes())?;                  // Data size
+
+        // Write PCM data
+        file.write_all(pcm_data)?;
+
+        Ok(())
+    }
+
+    /// Call the Swift WhisperKit bridge for transcription
+    #[cfg(target_os = "macos")]
+    fn call_whisper_bridge(
+        &self,
+        audio_path: &std::path::Path,
+        language: Option<&str>,
+    ) -> Result<BridgeTranscriptionResult> {
+        use std::ffi::CString;
+        use std::os::raw::{c_char, c_float};
+
+        // FFI declarations
+        extern "C" {
+            fn whisper_transcribe_file(
+                audio_path: *const c_char,
+                language: *const c_char,
+                out_text: *mut *mut c_char,
+                out_segments: *mut *mut std::ffi::c_void,
+                out_confidence: *mut c_float,
+                out_error: *mut *mut c_char,
+            ) -> std::os::raw::c_int;
+
+            fn whisper_free_string(ptr: *mut c_char);
+            fn whisper_free_object(ptr: *mut std::ffi::c_void);
+        }
+
+        // Prepare C strings
+        let audio_path_c = CString::new(audio_path.to_string_lossy().as_ref())?;
+        let language_c = language
+            .map(|l| CString::new(l))
+            .transpose()?
+            .unwrap_or_else(|| CString::new("").unwrap());
+
+        // Prepare output variables
+        let mut out_text: *mut c_char = std::ptr::null_mut();
+        let mut out_segments: *mut std::ffi::c_void = std::ptr::null_mut();
+        let mut out_confidence: c_float = 0.0;
+        let mut out_error: *mut c_char = std::ptr::null_mut();
+
+        // Call the Swift bridge
+        let result = unsafe {
+            whisper_transcribe_file(
+                audio_path_c.as_ptr(),
+                if language.is_some() { language_c.as_ptr() } else { std::ptr::null() },
+                &mut out_text,
+                &mut out_segments,
+                &mut out_confidence,
+                &mut out_error,
+            )
+        };
+
+        if result != 0 {
+            // Handle error
+            let error_msg = if !out_error.is_null() {
+                unsafe {
+                    let error_str = std::ffi::CStr::from_ptr(out_error).to_string_lossy().into_owned();
+                    whisper_free_string(out_error);
+                    error_str
+                }
+            } else {
+                "Unknown error from Whisper bridge".to_string()
+            };
+
+            return Err(anyhow!("Whisper bridge error: {}", error_msg));
+        }
+
+        // Extract results
+        let text = if !out_text.is_null() {
+            unsafe {
+                let text_str = std::ffi::CStr::from_ptr(out_text).to_string_lossy().into_owned();
+                whisper_free_string(out_text);
+                text_str
+            }
+        } else {
+            String::new()
+        };
+
+        // For now, create basic segments from text since Swift bridge returns simple JSON
+        // TODO: Implement proper JSON parsing when Swift bridge provides structured segment data
+        let segments = self.create_basic_segments_from_text(&text);
+
+        Ok(BridgeTranscriptionResult {
+            text,
+            segments,
+            confidence: out_confidence as f32,
+            language: language.unwrap_or("en").to_string(),
+        })
+    }
+
+    /// Parse JSON segments from WhisperKit output
+    fn parse_whisper_segments_json(&self, segments_json: &str) -> Result<Vec<BridgeTranscriptionSegment>> {
+        // Parse the JSON array of TranscriptionSegment from WhisperKit
+        // WhisperKit segments have: id, seek, start, end, text, tokens, tokenLogProbs, temperature, avgLogprob, compressionRatio, noSpeechProb, words?
+        let segments: Vec<serde_json::Value> = serde_json::from_str(segments_json)
+            .map_err(|e| anyhow!("Failed to parse WhisperKit segments JSON: {}", e))?;
+
+        let mut parsed_segments = Vec::new();
+
+        for segment in segments {
+            let text = segment.get("text")
+                .and_then(|t| t.as_str())
+                .unwrap_or("")
+                .to_string();
+
+            let start_time = segment.get("start")
+                .and_then(|s| s.as_f64())
+                .unwrap_or(0.0) as f32;
+
+            let end_time = segment.get("end")
+                .and_then(|e| e.as_f64())
+                .unwrap_or(0.0) as f32;
+
+            // Use avgLogprob as confidence (WhisperKit doesn't have a simple "confidence" field)
+            let confidence = segment.get("avgLogprob")
+                .and_then(|c| c.as_f64())
+                .unwrap_or(0.0) as f32;
+
+            parsed_segments.push(BridgeTranscriptionSegment {
+                text,
+                start_time,
+                end_time,
+                confidence,
+            });
+        }
+
+        Ok(parsed_segments)
+    }
+
+    /// Create basic segments from transcription text (fallback when JSON parsing fails)
+    fn create_basic_segments_from_text(&self, text: &str) -> Vec<BridgeTranscriptionSegment> {
+        let words: Vec<&str> = text.split_whitespace().collect();
+        if words.is_empty() {
+            return vec![];
+        }
+
+        let duration_per_word = 30.0 / words.len() as f32; // Assume 30 second audio
+
+        words.iter().enumerate().map(|(i, word)| {
+            let start_time = i as f32 * duration_per_word;
+            let end_time = (i + 1) as f32 * duration_per_word;
+
+            BridgeTranscriptionSegment {
+                text: word.to_string(),
+                start_time,
+                end_time,
+                confidence: 0.95,
+            }
+        }).collect()
+    }
+
+    /// Convert bridge result to AsrResult format
+    fn convert_whisper_bridge_result_to_asr_result(
+        &self,
+        bridge_result: BridgeTranscriptionResult,
+        processing_time_ms: u64,
+    ) -> Result<AsrResult> {
+        // Convert segments
+        let turns: Vec<SpeechSegment> = bridge_result.segments.into_iter()
+            .map(|segment| {
+                let text_clone = segment.text.clone();
+                SpeechSegment {
+                    id: Uuid::new_v4(),
+                    speaker_id: Some("speaker1".to_string()), // TODO: Implement speaker diarization
+                    t0: segment.start_time,
+                    t1: segment.end_time,
+                    text: segment.text,
+                    confidence: segment.confidence,
+                    word_timings: vec![WordTiming {
+                        word: text_clone,
+                        tokens: vec![], // TODO: Parse actual tokens from WhisperKit segments
+                        start: segment.start_time,
+                        end: segment.end_time,
+                        probability: segment.confidence,
+                    }],
+                    language: Some(bridge_result.language.clone()),
+                }
+            })
+            .collect();
+
+        // Create speakers (simplified - single speaker for now)
+        let speakers = vec![Speaker {
+            speaker_id: "speaker1".to_string(),
+            name: None,
+            turn_count: turns.len(),
+            total_duration_ms: (turns.iter().map(|t| (t.t1 - t.t0) * 1000.0).sum::<f32>()) as u64,
+        }];
+
+        Ok(AsrResult {
+            turns,
+            speakers,
+            language: Some(bridge_result.language),
+            confidence: bridge_result.confidence,
+            processing_time_ms,
+        })
     }
 }
 
@@ -895,15 +1216,188 @@ mod tests {
             circuit_breaker_threshold: 5,
             circuit_breaker_timeout_ms: 1000,
         };
-        
+
         let enricher = AsrEnricher::new(config);
-        
+
         // Test supported languages
         assert!(enricher.is_language_supported("en-US"));
         assert!(enricher.is_language_supported("es-ES"));
         assert!(enricher.is_language_supported("fr-FR"));
-        
+
         // Test unsupported language
         assert!(!enricher.is_language_supported("unsupported-lang"));
+    }
+
+    #[tokio::test]
+    async fn test_whisper_coreml_transcription() {
+        let config = EnricherConfig {
+            vision_timeout_ms: 5000,
+            asr_provider: "whisper-coreml".to_string(),
+            entity_ner_enabled: true,
+            caption_max_tokens: 50,
+            circuit_breaker_threshold: 5,
+            circuit_breaker_timeout_ms: 1000,
+        };
+
+        let enricher = AsrEnricher::new(config);
+
+        // Create some test audio data (dummy 16-bit PCM)
+        let audio_data = vec![0u8; 16000 * 2]; // 1 second at 16kHz, 16-bit
+
+        let result = enricher.transcribe_with_diarization(&audio_data, Some("en")).await;
+
+        // Should succeed even with placeholder implementation
+        assert!(result.is_ok());
+
+        let asr_result = result.unwrap();
+        assert!(asr_result.processing_time_ms > 0);
+        assert!(!asr_result.turns.is_empty());
+        assert_eq!(asr_result.turns[0].text, "This is a placeholder transcription result from Whisper-CoreML.".to_string());
+    }
+
+    #[test]
+    fn test_wav_file_creation() {
+        let config = EnricherConfig {
+            vision_timeout_ms: 5000,
+            asr_provider: "whisper-coreml".to_string(),
+            entity_ner_enabled: true,
+            caption_max_tokens: 50,
+            circuit_breaker_threshold: 5,
+            circuit_breaker_timeout_ms: 1000,
+        };
+
+        let enricher = AsrEnricher::new(config);
+
+        // Test with empty audio data
+        let audio_data = vec![0u8; 100];
+        let result = enricher.create_temp_wav_file(&audio_data);
+
+        assert!(result.is_ok());
+        let wav_path = result.unwrap();
+
+        // Check that file was created
+        assert!(wav_path.exists());
+
+        // Check file extension
+        assert_eq!(wav_path.extension().unwrap(), "wav");
+
+        // Clean up
+        let _ = std::fs::remove_file(&wav_path);
+    }
+
+    #[test]
+    fn test_wav_header_creation() {
+        let config = EnricherConfig {
+            vision_timeout_ms: 5000,
+            asr_provider: "whisper-coreml".to_string(),
+            entity_ner_enabled: true,
+            caption_max_tokens: 50,
+            circuit_breaker_threshold: 5,
+            circuit_breaker_timeout_ms: 1000,
+        };
+
+        let enricher = AsrEnricher::new(config);
+
+        // Test WAV header creation with sample data
+        let pcm_data = vec![0u8; 16000 * 2]; // 1 second of 16-bit audio
+        let temp_dir = std::env::temp_dir();
+        let test_path = temp_dir.join("test_whisper.wav");
+
+        let result = enricher.create_wav_from_pcm(&pcm_data, &test_path);
+        assert!(result.is_ok());
+
+        // Verify file was created
+        assert!(test_path.exists());
+
+        // Read first 44 bytes (WAV header)
+        let header_data = std::fs::read(&test_path).unwrap();
+        assert!(header_data.len() >= 44);
+
+        // Check RIFF header
+        assert_eq!(&header_data[0..4], b"RIFF");
+        // Check WAVE marker
+        assert_eq!(&header_data[8..12], b"WAVE");
+        // Check fmt chunk
+        assert_eq!(&header_data[12..16], b"fmt ");
+        // Check data chunk
+        assert_eq!(&header_data[36..40], b"data");
+
+        // Clean up
+        let _ = std::fs::remove_file(&test_path);
+    }
+
+    #[test]
+    fn test_basic_segments_creation() {
+        let config = EnricherConfig {
+            vision_timeout_ms: 5000,
+            asr_provider: "whisper-coreml".to_string(),
+            entity_ner_enabled: true,
+            caption_max_tokens: 50,
+            circuit_breaker_threshold: 5,
+            circuit_breaker_timeout_ms: 1000,
+        };
+
+        let enricher = AsrEnricher::new(config);
+
+        let test_text = "This is a test transcription.";
+        let segments = enricher.create_basic_segments_from_text(test_text);
+
+        // Should create segments for each word
+        let words: Vec<&str> = test_text.split_whitespace().collect();
+        assert_eq!(segments.len(), words.len());
+
+        // Check first segment
+        assert_eq!(segments[0].text, "This");
+        assert_eq!(segments[0].start_time, 0.0);
+        assert!(segments[0].end_time > 0.0);
+        assert_eq!(segments[0].confidence, 0.95);
+
+        // Check timing distribution
+        for (i, segment) in segments.iter().enumerate() {
+            let expected_start = i as f32 * (30.0 / words.len() as f32);
+            assert_eq!(segment.start_time, expected_start);
+        }
+    }
+
+    #[test]
+    fn test_bridge_result_conversion() {
+        let config = EnricherConfig {
+            vision_timeout_ms: 5000,
+            asr_provider: "whisper-coreml".to_string(),
+            entity_ner_enabled: true,
+            caption_max_tokens: 50,
+            circuit_breaker_threshold: 5,
+            circuit_breaker_timeout_ms: 1000,
+        };
+
+        let enricher = AsrEnricher::new(config);
+
+        let bridge_result = BridgeTranscriptionResult {
+            text: "Test transcription".to_string(),
+            segments: vec![
+                BridgeTranscriptionSegment {
+                    text: "Test".to_string(),
+                    start_time: 0.0,
+                    end_time: 1.0,
+                    confidence: 0.9,
+                }
+            ],
+            confidence: 0.95,
+            language: "en".to_string(),
+        };
+
+        let asr_result = enricher.convert_whisper_bridge_result_to_asr_result(
+            bridge_result,
+            100
+        ).unwrap();
+
+        // Verify conversion
+        assert_eq!(asr_result.turns.len(), 1);
+        assert_eq!(asr_result.turns[0].text, "Test");
+        assert_eq!(asr_result.turns[0].t0, 0.0);
+        assert_eq!(asr_result.turns[0].t1, 1.0);
+        assert_eq!(asr_result.confidence, 0.95);
+        assert_eq!(asr_result.language, Some("en".to_string()));
+        assert_eq!(asr_result.processing_time_ms, 100);
     }
 }

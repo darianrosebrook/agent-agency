@@ -5,6 +5,8 @@
 
 pub mod execute;
 pub mod whisper;
+pub mod yolo;
+pub mod mistral;
 
 // Re-export commonly used types
 pub use execute::{
@@ -15,4 +17,16 @@ pub use execute::{
 // Re-export Whisper inference
 pub use whisper::{
     WhisperInferenceExecutor, create_whisper_executor,
+};
+
+// Re-export YOLO inference
+pub use yolo::{
+    YOLOInferenceExecutor, create_yolo_executor,
+};
+
+// Re-export Mistral inference
+pub use mistral::{
+    MistralInferenceOptions, ConstitutionalVerdict, ComplianceLevel, RiskTier, Verdict,
+    DebateArgument, DebatePosition, ConfidenceLevel, deliberate_constitution,
+    generate_debate_argument, generate_text,
 };

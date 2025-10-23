@@ -7,7 +7,7 @@
 //! - DetectLensSmudgeRequest: Image quality assessment
 
 use crate::circuit_breaker::{CircuitBreaker, CircuitBreakerConfig};
-use crate::types::{OcrResult, OcrBlock, BoundingBox, Table, TableCell, TextRegion, EnricherConfig};
+use crate::types::{OcrResult, OcrBlock, BoundingBox, Table, TableCell, TextRegion, EnricherConfig, VisionAnalysisResult, ObjectDetection};
 use anyhow::{anyhow, Result};
 use std::io::Write;
 use std::path::PathBuf;
@@ -106,9 +106,58 @@ struct VNRectangleObservation {
     _bottom_right: (f32, f32),
 }
 
+/// Trait for YOLO object detection execution
+#[async_trait::async_trait]
+pub trait YOLOExecutorTrait: Send + Sync {
+    async fn detect_objects(
+        &mut self,
+        image: &image::DynamicImage,
+        options: &YOLOInferenceOptions,
+    ) -> Result<YOLODetectionResult>;
+}
+
+/// YOLO detection result (mirrored from apple_silicon crate)
+#[derive(Debug, Clone)]
+pub struct YOLODetectionResult {
+    pub detections: Vec<Detection>,
+    pub processing_time_ms: f64,
+    pub num_detections: usize,
+    pub image_size: (u32, u32),
+}
+
+/// Detection result (mirrored from apple_silicon crate)
+#[derive(Debug, Clone)]
+pub struct Detection {
+    pub class: String,
+    pub class_id: usize,
+    pub confidence: f32,
+    pub bbox: crate::types::BoundingBox,
+}
+
+/// YOLO inference options (mirrored from apple_silicon crate)
+#[derive(Debug, Clone)]
+pub struct YOLOInferenceOptions {
+    pub confidence_threshold: Option<f32>,
+    pub iou_threshold: Option<f32>,
+    pub max_detections: Option<usize>,
+    pub timeout_ms: u64,
+}
+
+impl Default for YOLOInferenceOptions {
+    fn default() -> Self {
+        Self {
+            confidence_threshold: None,
+            iou_threshold: None,
+            max_detections: None,
+            timeout_ms: 5000,
+        }
+    }
+}
+
 pub struct VisionEnricher {
     circuit_breaker: CircuitBreaker,
     _config: EnricherConfig,
+    yolo_executor: Option<Box<dyn YOLOExecutorTrait>>,
 }
 
 impl VisionEnricher {
@@ -122,6 +171,93 @@ impl VisionEnricher {
         Self {
             circuit_breaker: CircuitBreaker::new(cb_config),
             _config: config,
+            yolo_executor: None,
+        }
+    }
+
+    /// Set YOLO executor for object detection
+    pub fn with_yolo_executor(mut self, executor: Box<dyn YOLOExecutorTrait>) -> Self {
+        self.yolo_executor = Some(executor);
+        self
+    }
+
+    /// Comprehensive vision analysis including OCR and object detection
+    ///
+    /// # Arguments
+    /// * `image_data` - JPEG or PNG image bytes
+    /// * `timeout_ms` - Processing timeout in milliseconds
+    ///
+    /// # Returns
+    /// VisionAnalysisResult with OCR results and object detections
+    pub async fn analyze_image(
+        &mut self,
+        image_data: &[u8],
+        timeout_ms: Option<u64>,
+    ) -> Result<VisionAnalysisResult> {
+        // Check circuit breaker before attempting
+        if !self.circuit_breaker.is_available() {
+            return Err(anyhow!(
+                "Vision enricher circuit breaker is open - service temporarily unavailable"
+            ));
+        }
+
+        let timeout = timeout_ms.unwrap_or(self._config.vision_timeout_ms);
+        let start_time = Instant::now();
+
+        // Perform OCR analysis
+        let ocr_result = self.analyze_document(image_data, Some(timeout)).await?;
+
+        // Perform object detection if YOLO is available
+        let detections = self.detect_objects(image_data, timeout).await?;
+
+        let total_processing_time = start_time.elapsed().as_millis() as u64;
+
+        tracing::debug!("Comprehensive vision analysis completed: OCR ({}ms) + {} detections ({}ms total)",
+                       ocr_result.processing_time_ms, detections.len(), total_processing_time);
+
+        Ok(VisionAnalysisResult {
+            ocr: ocr_result,
+            detections,
+            total_processing_time_ms: total_processing_time,
+        })
+    }
+
+    /// Detect objects in image using YOLO (if available)
+    async fn detect_objects(&mut self, image_data: &[u8], timeout_ms: u64) -> Result<Vec<ObjectDetection>> {
+        if let Some(ref mut executor) = self.yolo_executor {
+            // Load image for YOLO processing
+            let image = image::load_from_memory(image_data)
+                .map_err(|e| anyhow!("Failed to load image for object detection: {}", e))?;
+
+            // Configure detection options
+            let options = YOLOInferenceOptions {
+                confidence_threshold: Some(0.5),
+                iou_threshold: Some(0.45),
+                max_detections: Some(50),
+                timeout_ms,
+            };
+
+            // Run object detection
+            let result = executor.detect_objects(&image, &options).await
+                .map_err(|e| anyhow!("YOLO object detection failed: {}", e))?;
+
+            // Convert to our ObjectDetection format
+            let detections: Vec<ObjectDetection> = result.detections.into_iter()
+                .map(|det| ObjectDetection {
+                    class: det.class,
+                    class_id: det.class_id,
+                    confidence: det.confidence,
+                    bbox: det.bbox,
+                })
+                .collect();
+
+            tracing::debug!("YOLO detected {} objects in {}ms",
+                           detections.len(), result.processing_time_ms);
+
+            Ok(detections)
+        } else {
+            tracing::debug!("YOLO executor not available, skipping object detection");
+            Ok(vec![])
         }
     }
 

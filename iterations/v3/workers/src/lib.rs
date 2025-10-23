@@ -10,6 +10,7 @@ pub mod executor;
 pub mod manager;
 pub mod multimodal_scheduler;
 pub mod router;
+pub mod specialized_workers;
 pub mod types;
 
 pub use autonomous_executor::{AutonomousExecutor, AutonomousExecutorConfig, ExecutionResult, ArbiterMediatedResult};
@@ -21,6 +22,7 @@ pub use multimodal_scheduler::{
     MultimodalJobStatus, JobPriority, SchedulerStats,
 };
 pub use router::TaskRouter;
+pub use specialized_workers::*;
 pub use types::*;
 
 /// Worker pool configuration

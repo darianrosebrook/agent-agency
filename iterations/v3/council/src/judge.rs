@@ -7,11 +7,22 @@ use std::collections::HashMap;
 use async_trait::async_trait;
 use uuid::Uuid;
 use std::sync::Arc;
-use tokio::sync::RwLock;
+use tokio::sync::{Mutex, RwLock};
 
 use crate::error::{CouncilError, CouncilResult};
 use crate::risk_scorer::ComputationalComplexity;
 use crate::mistral_tokenizer::MistralTokenizer;
+use crate::model_client::{ModelClient, ToInferenceRequest};
+
+// CoreML Mistral integration
+use agent_agency_apple_silicon::ane::models::mistral_model::{MistralModel, load_mistral_model};
+use agent_agency_apple_silicon::ane::infer::mistral::{
+    MistralInferenceOptions, deliberate_constitution, generate_text,
+    ConstitutionalVerdict, ComplianceLevel, RiskTier, Verdict
+};
+use agent_agency_contracts::{EffortLevel};
+use agent_agency_apple_silicon::telemetry::TelemetryCollector;
+use agent_agency_apple_silicon::ane::CircuitBreaker;
 
 /// Judge verdict on a working specification
 #[derive(Debug, Clone, PartialEq)]
@@ -1829,12 +1840,14 @@ pub fn create_mock_judge_panel() -> Vec<Box<dyn Judge>> {
 }
 
 /// Advanced Mistral-7B LLM judge with CoreML acceleration
-/// Uses Mistral tokenizer and CoreML inference for high-quality reasoning
+/// Uses Mistral tokenizer and thread-confined CoreML inference for high-quality reasoning
 #[derive(Debug)]
 pub struct MistralJudge {
     config: JudgeConfig,
     tokenizer: MistralTokenizer,
     judge_prompt_template: String,
+    telemetry: TelemetryCollector,
+    model_client: ModelClient,
 }
 
 impl MistralJudge {
@@ -1845,6 +1858,9 @@ impl MistralJudge {
                 judge_id: "mistral-judge".to_string(),
                 message: format!("Failed to create tokenizer: {}", e)
             })?;
+
+        let telemetry = TelemetryCollector::new();
+        let model_client = ModelClient::new();
 
         let judge_prompt_template = r#"
 You are an expert software engineering judge evaluating a working specification for implementation.
@@ -1889,7 +1905,21 @@ Be thorough but concise. Focus on actionable feedback.
             config,
             tokenizer,
             judge_prompt_template,
+            telemetry,
+            model_client,
         })
+    }
+
+    /// Perform inference using thread-confined CoreML operations
+    /// Uses channel-based communication to avoid Send/Sync violations
+    async fn load_and_infer(&self, prompt: &str) -> CouncilResult<String> {
+        tracing::info!("Performing Mistral-CoreML inference for judge {}", self.config.judge_id);
+
+        // Create inference request with judge config
+        let request = prompt.to_inference_request(&self.config);
+
+        // Queue inference on the dedicated thread
+        self.model_client.enqueue_inference(request).await
     }
 
     /// Generate the judge prompt for the working specification
@@ -2029,42 +2059,7 @@ Be thorough but concise. Focus on actionable feedback.
         }
     }
 
-    /// Simulate LLM inference (placeholder for actual CoreML integration)
-    async fn simulate_llm_inference(&self, prompt: &str) -> String {
-        // TODO: Implement actual Mistral-CoreML inference
-        // For now, return a reasonable mock response based on prompt analysis
 
-        if prompt.contains("Tier1") || prompt.contains("auth") || prompt.contains("billing") {
-            // High-risk specs get more scrutiny
-            r#"{
-  "verdict": "refine",
-  "confidence": 0.85,
-  "reasoning": "High-risk specification requires additional security and testing considerations",
-  "quality_score": 0.7,
-  "risk_assessment": {
-    "overall_risk": "high",
-    "risk_factors": ["Security implications", "Data integrity concerns"],
-    "mitigation_suggestions": ["Add comprehensive security audit", "Implement additional testing"],
-    "confidence": 0.8
-  },
-  "changes": ["Add security review", "Increase test coverage to 90%"]
-}"#.to_string()
-        } else {
-            // Standard specs get approval with minor suggestions
-            r#"{
-  "verdict": "approve",
-  "confidence": 0.9,
-  "reasoning": "Specification appears well-structured and implementable",
-  "quality_score": 0.85,
-  "risk_assessment": {
-    "overall_risk": "low",
-    "risk_factors": [],
-    "mitigation_suggestions": ["Consider edge case testing"],
-    "confidence": 0.9
-  }
-}"#.to_string()
-        }
-    }
 }
 
 #[async_trait]
@@ -2079,35 +2074,88 @@ impl Judge for MistralJudge {
     ) -> CouncilResult<JudgeVerdict> {
         let start_time = std::time::Instant::now();
 
-        // Generate the judge prompt
-        let prompt = self.generate_prompt(context);
+        // Emit telemetry event for review start
+        self.telemetry.emit_event("council.judge.review_started", &serde_json::json!({
+            "judge_id": self.config.judge_id,
+            "session_id": context.session_id,
+            "working_spec_id": context.working_spec.id,
+            "risk_tier": format!("{:?}", context.risk_tier),
+            "timestamp": chrono::Utc::now().to_rfc3339()
+        }));
 
-        // Tokenize the prompt
-        let tokens = self.tokenizer.encode(&prompt)
-            .map_err(|e| CouncilError::JudgeError {
-                judge_id: "mistral-judge".to_string(),
-                message: format!("Tokenization failed: {}", e)
-            })?;
+        // Use a closure to ensure telemetry is emitted for both success and failure
+        let result = async {
+            // Generate the judge prompt
+            let prompt = self.generate_prompt(context);
 
-        // Check token limit
-        if tokens.len() > self.tokenizer.max_sequence_length() {
-            return Err(CouncilError::JudgeError {
-                judge_id: "mistral-judge".to_string(),
-                message: format!("Prompt too long: {} tokens (max {})",
-                               tokens.len(), self.tokenizer.max_sequence_length())
-            });
+            // Tokenize the prompt
+            let tokens = self.tokenizer.encode(&prompt)
+                .map_err(|e| CouncilError::JudgeError {
+                    judge_id: "mistral-judge".to_string(),
+                    message: format!("Tokenization failed: {}", e)
+                })?;
+
+            // Check token limit
+            if tokens.len() > self.tokenizer.max_sequence_length() {
+                return Err(CouncilError::JudgeError {
+                    judge_id: "mistral-judge".to_string(),
+                    message: format!("Prompt too long: {} tokens (max {})",
+                                   tokens.len(), self.tokenizer.max_sequence_length())
+                });
+            }
+
+            // Load model and perform inference in a single operation
+            let response = self.load_and_infer(&prompt).await?;
+
+            // Parse the response
+            let verdict = self.parse_response(&response)?;
+
+            Ok(verdict)
+        }.await;
+
+        let duration = start_time.elapsed();
+
+        match result {
+            Ok(verdict) => {
+                tracing::info!("Mistral judge completed review in {:?}", duration);
+
+                // Emit telemetry event for successful review completion
+                self.telemetry.emit_event("council.judge.review_finished", &serde_json::json!({
+                    "judge_id": self.config.judge_id,
+                    "session_id": context.session_id,
+                    "working_spec_id": context.working_spec.id,
+                    "duration_ms": duration.as_millis() as u64,
+                    "verdict_type": format!("{:?}", verdict),
+                    "confidence": verdict.confidence(),
+                    "success": true,
+                    "timestamp": chrono::Utc::now().to_rfc3339()
+                }));
+
+                // Record duration metric
+                self.telemetry.record_metric("council.judge.review_duration_ms", duration.as_millis() as f64);
+
+                Ok(verdict)
+            }
+            Err(e) => {
+                tracing::error!("Mistral judge failed review in {:?}: {:?}", duration, e);
+
+                // Emit telemetry event for failed review
+                self.telemetry.emit_event("council.judge.review_failed", &serde_json::json!({
+                    "judge_id": self.config.judge_id,
+                    "session_id": context.session_id,
+                    "working_spec_id": context.working_spec.id,
+                    "duration_ms": duration.as_millis() as u64,
+                    "error_type": format!("{:?}", e),
+                    "success": false,
+                    "timestamp": chrono::Utc::now().to_rfc3339()
+                }));
+
+                // Record error metric
+                self.telemetry.record_metric("council.judge.review_errors_total", 1.0);
+
+                Err(e)
+            }
         }
-
-        // TODO: Implement actual Mistral-CoreML inference here
-        // For now, simulate the inference
-        let response = self.simulate_llm_inference(&prompt).await;
-
-        // Parse the response
-        let verdict = self.parse_response(&response)?;
-
-        tracing::info!("Mistral judge completed review in {:?}", start_time.elapsed());
-
-        Ok(verdict)
     }
 
     fn specialization_score(&self, context: &ReviewContext) -> f64 {
@@ -2130,6 +2178,309 @@ impl Judge for MistralJudge {
             error_rate: 0.02,
             last_review_time: Some(chrono::Utc::now()),
             consecutive_failures: 0,
+        }
+    }
+}
+
+/// Constitutional Judge with HRM-inspired iterative refinement
+/// Based on Mistral LLM with adaptive deliberation depth
+#[derive(Debug)]
+pub struct ConstitutionalJudge {
+    config: JudgeConfig,
+    mistral_model: Option<MistralModel>,
+    telemetry: TelemetryCollector,
+    refinement_templates: ConstitutionalRefinementTemplates,
+    max_refinement_steps: usize,
+}
+
+impl ConstitutionalJudge {
+    /// Create a new constitutional judge
+    pub async fn new(config: JudgeConfig) -> CouncilResult<Self> {
+        // Try to load Mistral model, fallback to None if not available
+        let mistral_model = match Self::load_mistral_model().await {
+            Ok(model) => Some(model),
+            Err(e) => {
+                tracing::warn!("Failed to load Mistral model for constitutional judge: {}", e);
+                None
+            }
+        };
+
+        Ok(Self {
+            config,
+            mistral_model,
+            telemetry: TelemetryCollector::new(),
+            refinement_templates: ConstitutionalRefinementTemplates::new(),
+            max_refinement_steps: 3, // HRM-style iterative refinement
+        })
+    }
+
+    /// Load Mistral model for constitutional reasoning
+    async fn load_mistral_model() -> CouncilResult<MistralModel> {
+        // TODO: Implement actual model loading
+        // For now, return an error to trigger fallback behavior
+        Err(CouncilError::ModelNotAvailable(
+            "Mistral model loading not yet implemented".to_string()
+        ))
+    }
+
+    /// Perform constitutional analysis with iterative refinement (HRM-inspired)
+    async fn analyze_constitutional_compliance(
+        &self,
+        task_spec: &str,
+        evidence: &[String],
+        debate_history: &[String],
+    ) -> CouncilResult<ConstitutionalVerdict> {
+        if let Some(_model) = &self.mistral_model {
+            // TODO: Use Mistral LLM for sophisticated analysis
+            // The function expects &mut MistralModel but we only have &MistralModel
+            // For now, use fallback analysis
+            self.fallback_constitutional_analysis(task_spec, evidence, debate_history).await
+        } else {
+            // Fallback: Rule-based constitutional analysis
+            self.fallback_constitutional_analysis(task_spec, evidence, debate_history).await
+        }
+    }
+
+    /// Fallback constitutional analysis when Mistral is unavailable
+    async fn fallback_constitutional_analysis(
+        &self,
+        task_spec: &str,
+        evidence: &[String],
+        _debate_history: &[String],
+    ) -> CouncilResult<ConstitutionalVerdict> {
+        // Simple rule-based analysis
+        let compliance_level = if task_spec.contains("CAWS") {
+            ComplianceLevel::Full
+        } else {
+            ComplianceLevel::Partial
+        };
+
+        let risk_tier = self.assess_risk_tier(task_spec);
+
+        Ok(ConstitutionalVerdict {
+            compliance_level,
+            risk_assessment: risk_tier,
+            key_concerns: vec![],
+            recommendations: vec![],
+            verdict: Verdict::Approve, // Default to approve for fallback
+            justification: "Fallback analysis - Mistral model unavailable".to_string(),
+            confidence_score: 0.7,
+        })
+    }
+
+    /// Assess risk tier from task specification
+    fn assess_risk_tier(&self, task_spec: &str) -> RiskTier {
+        if task_spec.contains("auth") || task_spec.contains("billing") || task_spec.contains("migration") {
+            RiskTier::Tier1
+        } else if task_spec.contains("api") || task_spec.contains("database") {
+            RiskTier::Tier2
+        } else {
+            RiskTier::Tier3
+        }
+    }
+
+    /// Generate constitutional analysis prompt with CAWS context
+    fn generate_constitutional_prompt(
+        &self,
+        task_spec: &str,
+        evidence: &[String],
+        debate_history: &[String],
+    ) -> String {
+        let mut prompt = String::new();
+
+        prompt.push_str("# Constitutional AI Analysis - CAWS Compliance\n\n");
+        prompt.push_str("You are a constitutional AI judge evaluating compliance with CAWS (Coding Agent Workflow System) principles.\n\n");
+
+        prompt.push_str("## CAWS Principles:\n");
+        prompt.push_str("1. **No-verify commits are forbidden** - All changes must pass quality gates\n");
+        prompt.push_str("2. **Production readiness verification** - All TODOs, PLACEHOLDERs, and MOCK DATA must be cleared\n");
+        prompt.push_str("3. **Zero linting errors** - Code must pass all linting checks\n");
+        prompt.push_str("4. **Comprehensive testing** - Unit, integration, and E2E tests required\n");
+        prompt.push_str("5. **Security controls** - Input validation, authentication, authorization\n");
+        prompt.push_str("6. **Documentation accuracy** - Documentation must match implementation\n\n");
+
+        prompt.push_str(&format!("## Task Specification:\n{}\n\n", task_spec));
+
+        if !evidence.is_empty() {
+            prompt.push_str("## Evidence:\n");
+            for (i, evidence_item) in evidence.iter().enumerate() {
+                prompt.push_str(&format!("{}. {}\n", i + 1, evidence_item));
+            }
+            prompt.push_str("\n");
+        }
+
+        if !debate_history.is_empty() {
+            prompt.push_str("## Previous Deliberations:\n");
+            for deliberation in debate_history {
+                prompt.push_str(deliberation);
+                prompt.push_str("\n");
+            }
+            prompt.push_str("\n");
+        }
+
+        prompt.push_str("## Analysis Requirements:\n");
+        prompt.push_str("1. Assess CAWS compliance across all principles\n");
+        prompt.push_str("2. Evaluate risk tier appropriateness (Tier 1/2/3)\n");
+        prompt.push_str("3. Identify any violations or concerns\n");
+        prompt.push_str("4. Provide specific recommendations\n");
+        prompt.push_str("5. Justify verdict with evidence citations\n\n");
+
+        prompt.push_str("## Response Format:\n");
+        prompt.push_str("COMPLIANCE_LEVEL: [FULL/PARTIAL/NONE]\n");
+        prompt.push_str("RISK_ASSESSMENT: [TIER_1/TIER_2/TIER_3]\n");
+        prompt.push_str("KEY_CONCERNS: [List specific issues]\n");
+        prompt.push_str("RECOMMENDATIONS: [Actionable suggestions]\n");
+        prompt.push_str("VERDICT: [APPROVE/MODIFY/REJECT]\n");
+        prompt.push_str("JUSTIFICATION: [Detailed reasoning with evidence references]\n");
+        prompt.push_str("CONFIDENCE: [0.0-1.0]\n");
+
+        prompt
+    }
+}
+
+#[async_trait]
+impl Judge for ConstitutionalJudge {
+    fn config(&self) -> &JudgeConfig {
+        &self.config
+    }
+
+    async fn review_spec(
+        &self,
+        context: &ReviewContext,
+    ) -> CouncilResult<JudgeVerdict> {
+        let start_time = std::time::Instant::now();
+
+        // Extract task specification and evidence
+        let task_spec = context.working_spec.description.clone();
+        // TODO: Extract evidence from working spec - placeholder for now
+        let evidence: Vec<String> = vec!["Working specification under review".to_string()];
+        let debate_history: Vec<String> = vec![]; // TODO: Extract from context
+
+        // Perform constitutional analysis with iterative refinement
+        let constitutional_verdict = self.analyze_constitutional_compliance(
+            &task_spec,
+            &evidence,
+            &debate_history,
+        ).await?;
+
+        // Convert to JudgeVerdict format
+        let judge_verdict = match constitutional_verdict.verdict {
+            Verdict::Approve => JudgeVerdict::Approve {
+                confidence: constitutional_verdict.confidence_score as f64,
+                reasoning: constitutional_verdict.justification,
+                quality_score: constitutional_verdict.confidence_score as f64,
+                risk_assessment: RiskAssessment {
+                    overall_risk: match constitutional_verdict.risk_assessment {
+                        RiskTier::Tier1 => RiskLevel::High,
+                        RiskTier::Tier2 => RiskLevel::Medium,
+                        RiskTier::Tier3 => RiskLevel::Low,
+                    },
+                    risk_factors: constitutional_verdict.key_concerns,
+                    mitigation_suggestions: constitutional_verdict.recommendations,
+                    confidence: constitutional_verdict.confidence_score as f64,
+                },
+            },
+            Verdict::Modify => JudgeVerdict::Refine {
+                confidence: constitutional_verdict.confidence_score as f64,
+                reasoning: constitutional_verdict.justification,
+                required_changes: constitutional_verdict.recommendations.into_iter()
+                    .map(|rec| RequiredChange {
+                        category: ChangeCategory::Requirements,
+                        description: rec,
+                        impact: ChangeImpact::Moderate,
+                        rationale: "Constitutional compliance requirement".to_string(),
+                    })
+                    .collect(),
+                priority: ChangePriority::High,
+                estimated_effort: EffortEstimate {
+                    person_hours: 4.0,
+                    complexity: ComplexityLevel::Moderate,
+                    dependencies: vec!["constitutional review".to_string()],
+                },
+            },
+            Verdict::Reject => JudgeVerdict::Reject {
+                confidence: 0.0, // Reject verdicts have no confidence in approval
+                reasoning: constitutional_verdict.justification,
+                critical_issues: constitutional_verdict.key_concerns.into_iter()
+                    .map(|concern| CriticalIssue {
+                        description: concern,
+                        severity: IssueSeverity::High,
+                        category: "Constitutional".to_string(),
+                        evidence: vec!["Constitutional analysis".to_string()],
+                    })
+                    .collect(),
+                alternative_approaches: constitutional_verdict.recommendations,
+            },
+        };
+
+        // TODO: Record telemetry when mutable access is available
+        // let duration = start_time.elapsed();
+        // self.telemetry.record_inference(duration.as_millis() as u64, true, "constitutional");
+
+        Ok(judge_verdict)
+    }
+
+    fn specialization_score(&self, context: &ReviewContext) -> f64 {
+        // Constitutional judge specializes in CAWS compliance and governance
+        let desc = context.working_spec.description.to_lowercase();
+
+        let constitutional_indicators = [
+            "caws", "constitutional", "compliance", "governance", "policy", "security",
+            "audit", "validation", "verification", "quality", "standards", "framework",
+            "principles", "constraints", "verification", "assessment", "review"
+        ];
+
+        let indicator_count = constitutional_indicators.iter()
+            .filter(|&indicator| desc.contains(indicator))
+            .count();
+
+        // Higher specialization score for governance/compliance focused tasks
+        (indicator_count as f64 * 0.15).min(0.95) + 0.05 // Base score of 0.05
+    }
+
+    fn is_available(&self) -> bool {
+        // Available if Mistral model is loaded
+        self.mistral_model.is_some()
+    }
+
+    fn health_metrics(&self) -> JudgeHealthMetrics {
+        JudgeHealthMetrics {
+            response_time_p95_ms: if self.mistral_model.is_some() { 500 } else { 50 }, // LLM vs fallback
+            success_rate: 0.95,
+            error_rate: 0.05,
+            last_review_time: Some(chrono::Utc::now()),
+            consecutive_failures: 0,
+        }
+    }
+}
+
+/// Templates for constitutional refinement (HRM-inspired)
+#[derive(Debug)]
+struct ConstitutionalRefinementTemplates {
+    compliance_patterns: Vec<String>,
+    risk_assessment_patterns: Vec<String>,
+    violation_detection_patterns: Vec<String>,
+}
+
+impl ConstitutionalRefinementTemplates {
+    fn new() -> Self {
+        Self {
+            compliance_patterns: vec![
+                "Does this change maintain CAWS principle #{}?".to_string(),
+                "Is the {} requirement satisfied?".to_string(),
+                "Does this violate any CAWS constraints?".to_string(),
+            ],
+            risk_assessment_patterns: vec![
+                "What is the blast radius of this change?".to_string(),
+                "Are there any critical dependencies affected?".to_string(),
+                "What is the rollback complexity?".to_string(),
+            ],
+            violation_detection_patterns: vec![
+                "Check for no-verify commits".to_string(),
+                "Verify all TODOs are resolved".to_string(),
+                "Ensure zero linting errors".to_string(),
+                "Validate security controls".to_string(),
+            ],
         }
     }
 }

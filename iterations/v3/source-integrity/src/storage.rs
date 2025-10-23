@@ -145,11 +145,11 @@ impl SourceIntegrityStorage for PostgresSourceIntegrityStorage {
                 integrity_status: IntegrityStatus::from_string(&row.try_get::<String, _>("integrity_status")?).map_err(|e| anyhow::anyhow!("Invalid integrity status: {}", e))?,
                 tampering_indicators,
                 verification_metadata,
-                first_seen_at: chrono::DateTime::parse_from_rfc3339(row.get("first_seen_at").unwrap())?,
-                last_verified_at: row.get("last_verified_at").and_then(|v| v.as_str()).map(|s| chrono::DateTime::parse_from_rfc3339(s).unwrap().into()),
-                verification_count: row.get("verification_count").unwrap().as_i64().unwrap() as i32,
-                created_at: chrono::DateTime::parse_from_rfc3339(row.get("created_at").unwrap())?.into(),
-                updated_at: chrono::DateTime::parse_from_rfc3339(row.get("updated_at").unwrap())?.into(),
+                first_seen_at: chrono::DateTime::parse_from_rfc3339(row.get::<&str, _>("first_seen_at"))?.into(),
+                last_verified_at: row.get::<Option<&str>, _>("last_verified_at").map(|s| chrono::DateTime::parse_from_rfc3339(s).unwrap().into()),
+                verification_count: row.get::<i64, _>("verification_count") as i32,
+                created_at: chrono::DateTime::parse_from_rfc3339(row.get::<&str, _>("created_at"))?.into(),
+                updated_at: chrono::DateTime::parse_from_rfc3339(row.get::<&str, _>("updated_at"))?.into(),
             }))
         } else {
             Ok(None)
@@ -193,11 +193,11 @@ impl SourceIntegrityStorage for PostgresSourceIntegrityStorage {
                 integrity_status: IntegrityStatus::from_string(&row.try_get::<String, _>("integrity_status")?).map_err(|e| anyhow::anyhow!("Invalid integrity status: {}", e))?,
                 tampering_indicators,
                 verification_metadata,
-                first_seen_at: chrono::DateTime::parse_from_rfc3339(row.get("first_seen_at").unwrap())?,
-                last_verified_at: row.get("last_verified_at").and_then(|v| v.as_str()).map(|s| chrono::DateTime::parse_from_rfc3339(s).unwrap().into()),
-                verification_count: row.get("verification_count").unwrap().as_i64().unwrap() as i32,
-                created_at: chrono::DateTime::parse_from_rfc3339(row.get("created_at").unwrap())?.into(),
-                updated_at: chrono::DateTime::parse_from_rfc3339(row.get("updated_at").unwrap())?.into(),
+                first_seen_at: chrono::DateTime::parse_from_rfc3339(row.get::<&str, _>("first_seen_at"))?.into(),
+                last_verified_at: row.get::<Option<&str>, _>("last_verified_at").map(|s| chrono::DateTime::parse_from_rfc3339(s).unwrap().into()),
+                verification_count: row.get::<i64, _>("verification_count") as i32,
+                created_at: chrono::DateTime::parse_from_rfc3339(row.get::<&str, _>("created_at"))?.into(),
+                updated_at: chrono::DateTime::parse_from_rfc3339(row.get::<&str, _>("updated_at"))?.into(),
             }))
         } else {
             Ok(None)
@@ -324,11 +324,11 @@ impl SourceIntegrityStorage for PostgresSourceIntegrityStorage {
                 calculated_hash: row.try_get::<String, _>("calculated_hash")?,
                 stored_hash: row.try_get::<String, _>("stored_hash")?,
                 hash_match: row.try_get::<bool, _>("hash_match")?,
-                tampering_detected: row.get("tampering_detected").unwrap().as_bool().unwrap_or(false),
+                tampering_detected: row.get::<bool, _>("tampering_detected"),
                 verification_details,
-                verified_by: row.get("verified_by").and_then(|v| v.as_str()).map(|s| s.to_string()),
-                verification_duration_ms: row.get("verification_duration_ms").and_then(|v| v.as_i64()).map(|i| i as i32),
-                created_at: chrono::DateTime::parse_from_rfc3339(row.get("created_at").unwrap())?.into(),
+                verified_by: row.get::<Option<&str>, _>("verified_by").map(|s| s.to_string()),
+                verification_duration_ms: row.get::<Option<i64>, _>("verification_duration_ms").map(|i| i as i32),
+                created_at: chrono::DateTime::parse_from_rfc3339(row.get::<&str, _>("created_at"))?.into(),
             });
         }
 
@@ -373,12 +373,12 @@ impl SourceIntegrityStorage for PostgresSourceIntegrityStorage {
                 alert_message: row.try_get::<String, _>("alert_message")?,
                 alert_data,
                 acknowledged: row.try_get::<bool, _>("acknowledged")?,
-                acknowledged_by: row.get::<Option<String>, _>("acknowledged_by").unwrap().unwrap_or_default(),
-                acknowledged_at: row.get("acknowledged_at").and_then(|v| v.as_str()).map(|s| chrono::DateTime::parse_from_rfc3339(s).unwrap().into()),
-                resolved: row.get("resolved").unwrap().as_bool().unwrap(),
-                resolved_by: row.get("resolved_by").and_then(|v| v.as_str()).map(|s| s.to_string()),
-                resolved_at: row.get("resolved_at").and_then(|v| v.as_str()).map(|s| chrono::DateTime::parse_from_rfc3339(s).unwrap().into()),
-                created_at: chrono::DateTime::parse_from_rfc3339(row.get("created_at").unwrap())?.into(),
+                acknowledged_by: row.get::<Option<String>, _>("acknowledged_by"),
+                acknowledged_at: row.get::<Option<&str>, _>("acknowledged_at").map(|s| chrono::DateTime::parse_from_rfc3339(s).unwrap().into()),
+                resolved: row.get::<bool, _>("resolved"),
+                resolved_by: row.get::<Option<&str>, _>("resolved_by").map(|s| s.to_string()),
+                resolved_at: row.get::<Option<&str>, _>("resolved_at").map(|s| chrono::DateTime::parse_from_rfc3339(s).unwrap().into()),
+                created_at: chrono::DateTime::parse_from_rfc3339(row.get::<&str, _>("created_at"))?.into(),
             });
         }
 

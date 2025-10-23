@@ -18,7 +18,7 @@ pub enum FailureMode {
 }
 
 /// Telemetry collector
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TelemetryCollector {
     metrics: CoreMLMetrics,
 }

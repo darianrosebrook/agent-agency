@@ -91,7 +91,7 @@ pub trait PreparedModel: Send + Sync + Debug {
     fn cache_key(&self) -> &str;
     fn io_schema(&self) -> &IoSchema;
     fn sla_estimate(&self) -> Duration;
-    fn as_any(&self) -> &(dyn std::any::Any + '_) { self }
+    fn as_any(&self) -> &dyn std::any::Any;
 }
 
 /// Inference engine trait
@@ -155,5 +155,9 @@ impl PreparedModel for PreparedCandleModel {
 
     fn sla_estimate(&self) -> Duration {
         Duration::from_millis(100)
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
     }
 }

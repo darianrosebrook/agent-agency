@@ -43,6 +43,12 @@ pub enum CouncilError {
 
     #[error("Invalid input: {message}")]
     InvalidInput { message: String },
+
+    #[error("Model not available: {0}")]
+    ModelNotAvailable(String),
+
+    #[error("Inference failed: {0}")]
+    InferenceFailed(String),
 }
 
 impl CouncilError {
@@ -81,6 +87,8 @@ impl CouncilError {
             CouncilError::QuorumFailure { .. } => "quorum",
             CouncilError::UnresolvedDissent { .. } => "dissent",
             CouncilError::InvalidInput { .. } => "input",
+            CouncilError::ModelNotAvailable(_) => "model",
+            CouncilError::InferenceFailed(_) => "inference",
         }
     }
 }

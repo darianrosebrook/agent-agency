@@ -3392,7 +3392,7 @@ impl ConsensusCoordinator {
         let efficiency_metrics = self.calculate_efficiency_metrics(&queue_tracker);
         
         // 3. Queue optimization: Optimize queue processing and management
-        let optimization_strategies = self.implement_optimization_strategies(&queue_tracker);
+        let _optimization_strategies = self.implement_optimization_strategies(&queue_tracker);
         let prioritization = self.handle_queue_prioritization(&queue_tracker);
         let load_balancing = self.implement_load_balancing(&queue_tracker);
         

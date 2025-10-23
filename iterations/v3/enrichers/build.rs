@@ -1,46 +1,22 @@
-#[cfg(target_os = "macos")]
-use std::process::Command;
-use std::path::Path;
-
 fn main() {
-    // Build Swift CoreML bridge on macOS
-    #[cfg(target_os = "macos")]
+    // Only link Swift bridge libraries when the feature is enabled
+    // Note: We don't link during tests to avoid issues with cross-compilation
+    #[cfg(all(target_os = "macos", feature = "swift-bridge", not(test)))]
     {
-        println!("cargo:rerun-if-changed=../coreml-bridge/");
-
-        // Build CoreML Bridge (optional - will use mock implementations if it fails)
-        let coreml_bridge_path = Path::new("../coreml-bridge");
-        if coreml_bridge_path.exists() {
-            println!("Building CoreML Bridge...");
-            let status = Command::new("swift")
-                .args(&["build", "--configuration", "release"])
-                .current_dir(coreml_bridge_path)
-                .status()
-                .expect("Failed to execute Swift build");
-
-            if !status.success() {
-                println!("CoreML Bridge build failed, using mock implementations");
-            } else {
-                println!("CoreML Bridge built successfully");
-                // Note: Swift Package Manager doesn't produce traditional static libs
-                // We'll use subprocess calls or dynamic linking for now
-            }
-        }
-
-        // Link system frameworks for CoreML (when available)
+        println!("cargo:warning=Building with Swift bridge enabled");
+        // Target ARM64 architecture for Apple Silicon
+        let current_dir = std::env::current_dir().unwrap();
+        let lib_path = current_dir.join("../coreml-bridge/.build/arm64-apple-macosx/release");
+        println!("cargo:rustc-link-search=native={}", lib_path.display());
+        println!("cargo:rustc-link-lib=static=CoreMLBridge");
         println!("cargo:rustc-link-lib=framework=CoreML");
         println!("cargo:rustc-link-lib=framework=Foundation");
         println!("cargo:rustc-link-lib=framework=Accelerate");
         println!("cargo:rustc-link-lib=framework=AVFoundation");
-
-        // Fallback frameworks for compatibility
-        println!("cargo:rustc-link-lib=framework=Speech");
-        println!("cargo:rustc-link-lib=framework=Vision");
+        println!("cargo:warning=Swift bridge linking configured");
     }
-
-    #[cfg(not(target_os = "macos"))]
+    #[cfg(not(all(target_os = "macos", feature = "swift-bridge", not(test))))]
     {
-        // On non-macOS platforms, provide stub implementations
-        println!("cargo:rustc-cfg=stub_bridges");
+        println!("cargo:warning=Swift bridge NOT enabled - conditions not met");
     }
 }

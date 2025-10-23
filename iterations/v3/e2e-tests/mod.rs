@@ -9,6 +9,6 @@ pub mod assertions;
 pub mod fixtures;
 
 pub use scenarios::{E2eTestScenarios, TestScenario};
-pub use harness::{E2eTestHarness, TestEnvironment};
+pub use harness::{E2eTestHarness, TestEnvironmentState};
 pub use assertions::E2eAssertions;
 pub use fixtures::TestFixtures;

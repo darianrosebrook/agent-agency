@@ -41,6 +41,7 @@ ordered-float = "4.0"  # Ordered floating point comparisons
 
 # Local crates
 agent-agency-contracts = { path = "../agent-agency-contracts" }
+agent-agency-interfaces = { path = "../interfaces" }
 agent-agency-observability = { path = "../observability" }
 agent-agency-database = { path = "../database" }
 uuid.workspace = true

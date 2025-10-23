@@ -20,7 +20,7 @@ futures = "0.3"
 # Local crates
 agent-agency-contracts = { path = "../agent-agency-contracts" }
 agent-agency-database = { path = "../database" }
-# agent-agency-apple-silicon = { path = "../apple-silicon", optional = true }  # Disabled - torch compilation works but is slow under Rosetta
+agent-agency-apple-silicon = { path = "../apple-silicon" }  # Enabled for CoreML Mistral integration
 
 # Additional dependencies
 anyhow = "1.0"

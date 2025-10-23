@@ -8,7 +8,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("🚀 Starting Parallel Worker System Demo");
 
     // Create a parallel coordinator
-    let coordinator = new_coordinator();
+    let mut coordinator = new_coordinator();
     println!("✅ Coordinator created");
 
     // Create a simple task that can benefit from parallel execution
@@ -52,7 +52,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             // Show worker breakdown
             println!("👷 Worker Breakdown:");
             for breakdown in &result.worker_breakdown {
-                println!("   - {}: {:.2}s, {} files, {} lines",
+                println!("   - {:?}: {:.2}s, {} files, {} lines",
                         breakdown.specialty,
                         breakdown.execution_time.as_secs_f32(),
                         breakdown.files_modified,

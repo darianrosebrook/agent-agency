@@ -535,7 +535,9 @@ impl QuantileEstimator {
             }
             QuantileAlgorithm::CKMS => {
                 if let Some(ckms) = &self.ckms_state {
-                    Ok(ckms.query(quantile))
+                    ckms.query(quantile).map(|(_, value)| value).ok_or_else(|| {
+                        ObservabilityError::QuantileEstimationError("CKMS query failed".to_string())
+                    })
                 } else {
                     Err(ObservabilityError::QuantileEstimationError("CKMS estimator not initialized".to_string()))
                 }
@@ -1051,7 +1053,7 @@ impl Default for QuantileConfig {
     }
 }
 
-impl MetricsCollector {
+impl QuantileConfig {
     /// Create quantile estimator storage
     fn new() -> Self {
         // This would be implemented in the actual MetricsCollector

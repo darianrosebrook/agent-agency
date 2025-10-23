@@ -5,7 +5,7 @@ use std::path::PathBuf;
 
 #[tokio::test]
 async fn test_simple_parallel_execution() {
-    let coordinator = new_coordinator();
+    let mut coordinator = new_coordinator();
 
     // Create a simple task that can be decomposed
     let task = ComplexTask {
@@ -38,7 +38,7 @@ async fn test_simple_parallel_execution() {
 
 #[tokio::test]
 async fn test_coordinator_creation() {
-    let coordinator = new_coordinator();
+    let _coordinator = new_coordinator();
 
     // Just verify it can be created without panicking
     assert!(true); // If we get here, creation succeeded

@@ -6,6 +6,5 @@
 pub mod coreml;
 pub mod iokit;
 
-// Re-export commonly used types
-pub use coreml::{CoreMLModel, InferenceOptions, ModelMetadata, CoreMLCapabilities};
+// Note: CoreML safe API types are available in coreml module
 pub use iokit::{ThermalStatus, PowerStatus, DeviceInfo, ThermalCapabilities};

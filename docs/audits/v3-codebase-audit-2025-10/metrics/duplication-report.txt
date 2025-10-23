@@ -1,5 +1,5 @@
 === Duplication Detection Report ===
-Generated: Wed Oct 22 11:41:28 PDT 2025
+Generated: Wed Oct 22 17:11:23 PDT 2025
 
 Duplicate filenames across crates:
 agent.rs
@@ -7,16 +7,25 @@ alerts.rs
 api.rs
 audit.rs
 autonomous_executor.rs
+budget.rs
 caws_integration.rs
 circuit_breaker.rs
 cli.rs
 config.rs
+context.rs
 context_builder.rs
 coordinator.rs
 coreml.rs
+coreml_model.rs
+dashboard.rs
 error.rs
 errors.rs
+ewma.rs
+execute.rs
+executor.rs
+gates.rs
 integration.rs
+iokit.rs
 javascript.rs
 lib.rs
 logging.rs
@@ -28,6 +37,8 @@ models.rs
 progress_tracker.rs
 quantization.rs
 rate_limiting.rs
+resource_pool.rs
+runner.rs
 rust.rs
 satisficing.rs
 service.rs
@@ -42,10 +53,23 @@ validation.rs
 websocket.rs
 
 Duplicate struct names:
+ANECapabilities {
+ANEConfig {
+ANEDeviceCapabilities {
+ANEDeviceConfig {
+ANEDeviceStatus {
 ANEManager {
+ANEModel {
+ANEPerformanceMetrics {
+ANEPowerConfig {
+ANEResourcePool {
+ANESymbols {
+ANEThermalConfig {
+ANETokenizers {
 AcceptanceCriterion {
 AdaptivePromptingStrategy;
 AdaptiveResourceAllocator {
+Admission {
 AdvancedQuantizationEngine {
 AgentPerformanceMetrics {
 AgentPerformanceSnapshot {
@@ -57,6 +81,7 @@ AggregationResult {
 AlertManager {
 AlertRule {
 AlertStatistics {
+Allocation {
 AmbiguityAnalysis {
 AnomalyDetectionResult {
 AnomalyDetector {
@@ -89,7 +114,6 @@ CacheMetadata {
 CacheStats {
 CandleBackend {
 CandleModel {
-CandlePreparedModel {
 CapabilityReport {
 CawsChecker {
 CawsChecklist {
@@ -112,7 +136,6 @@ ChunkList {
 ChunkedExecutor {
 CircuitBreaker {
 CircuitBreakerConfig {
-CircuitBreakerState {
 CircuitBreakerStats {
 ClaimExtractionResult {
 ClaimExtractor {
@@ -123,6 +146,9 @@ Cli {
 CliConfig {
 CommandArtifact {
 Commit {
+CommunicationHub {
+CompilationSpecialist {
+CompilationValidator;
 ComplexityMetrics {
 ComplianceRequirements {
 ComplianceSnapshot {
@@ -135,15 +161,17 @@ ConsistencyCheckResult {
 ConstitutionalReference {
 Constraint {
 ContentOverride {
+ContextBudget {
 ContextBuilder {
 ContextMetadata {
 ContextPerformanceData {
 ContextPreservationEngine {
+ContextStats {
 ContextSynthesisConfig {
+ContextUtility {
 CoordinationMetrics {
 CoreMLMetrics {
 CoreMLModel {
-CoreMLProvider {
 CoreferenceResolution {
 CouncilConfig {
 CouncilMetrics {
@@ -166,6 +194,10 @@ DebateRound {
 DebateSession {
 DeduplicationMetrics {
 Dependency {
+Detection {
+DeviceInfo {
+DiagramData {
+DiagramEntity {
 DiffAnalysisResult {
 DiffAnalyzer {
 DiffGenerator {
@@ -176,6 +208,7 @@ DiffStats {
 Digest(pub [u8; 32]);
 DisambiguationResult {
 DissentingOpinion {
+DocumentationSpecialist {
 DummyEmbeddingProvider {
 EmbeddingCache {
 EmbeddingConfig {
@@ -192,10 +225,12 @@ Evidence {
 EvidenceItem {
 EvidenceManifest {
 EvidenceReference {
+Ewma;
 ExecutionArtifacts {
 ExecutionChunk {
 ExecutionContext {
 ExecutionMetrics {
+ExecutionProgress {
 ExecutionResult {
 ExecutionStats {
 ExpectedOutcome {
@@ -207,6 +242,7 @@ FileEvent {
 FileModification {
 FileStorage {
 FinalVerdict {
+GateResult {
 GenerationRequest {
 GenerationResponse {
 HealthCheckConfig {
@@ -216,6 +252,7 @@ HfTokenizer {
 HistoricalData {
 Hunk {
 IndexStats {
+InferenceMetrics {
 InferenceOptions {
 InferenceRequest {
 InferenceResult {
@@ -241,8 +278,12 @@ MaintenanceTask {
 MemoryConfig {
 MemoryManager {
 MemoryStorage {
+MessageFilter {
+MetricAlphas {
+MetricCounts {
 MetricsCollector {
 MitigationStrategy {
+MockTask {
 ModelInfo {
 ModelMetadata {
 ModelMetrics {
@@ -277,6 +318,7 @@ PasswordPolicy {
 Patch {
 PatchArtifact {
 PatternUpdate {
+PerformanceAlert {
 PerformanceAnalysis {
 PerformanceBenchmark {
 PerformanceConfig {
@@ -291,27 +333,35 @@ PerformanceReport {
 PerformanceRequirement {
 PerformanceRequirements {
 PerformanceSnapshot {
+PerformanceStats {
 PerformanceSummary {
 PerformanceTracker {
 PerformanceTrends {
 PipelineMetrics {
 PlanningAgent {
 PlanningMetadata {
+Pool {
+PoolBuilder {
+PoolConfig {
 PoolStats {
 PostgresSourceIntegrityStorage {
+PowerStatus {
 PredictiveLearningSystem {
 PrepareOptions {
 ProcessingContext {
 ProcessingMetadata {
 ProcessingStats {
+ProgressSnapshot {
 ProgressTracker {
 ProvenanceConfig {
 ProvenanceRecord {
 QualityAnalysis {
 QualityGate {
+QualityGateResult {
 QualityGateValidator {
 QualityMetrics {
 QualityReport {
+QualityRequirements {
 QualityThresholds {
 QuantizationConfig {
 QuantizationManager {
@@ -328,6 +378,7 @@ RecoveryMetrics {
 RecoveryObjectives {
 RedisCircuitBreaker {
 RedisConfig {
+RefactoringSpecialist {
 RefinementDecision {
 RefinementDirective {
 ReflexiveLearningSystem {
@@ -369,6 +420,7 @@ Secret {
 SecretMetadata {
 SecurityConfig {
 SecurityRequirements {
+SecurityValidator;
 SecurityViolation {
 SelfAssessment {
 SelfPromptingAgent {
@@ -383,11 +435,13 @@ Speaker {
 SpecialTokens {
 SpecializationScore {
 SpeechSegment {
+SpeechTurn {
 StorageMetrics {
 StrategyOptimizer {
 StrategyRecommendation {
 StreamingHasher {
 StructuredLogger {
+StubOrchestratorHandle;
 SuccessCriterion {
 SystemClock;
 SystemDashboard {
@@ -407,6 +461,7 @@ TaskProgress {
 TaskRequest {
 TaskRequirements {
 TaskResponse {
+TaskResult {
 TaskScope {
 TaskSpec {
 TechStack {
@@ -420,10 +475,12 @@ TestResult {
 TestResults {
 TestScenario {
 TestSuiteResults {
+TestingSpecialist {
+ThermalCapabilities {
 ThermalConfig {
 ThermalStatus {
 TokenUsage {
-TokenizerConfig {
+ToolChain {
 ToolChainStep {
 ToolDiscoveryConfig {
 ToolExecutionResult {
@@ -439,6 +496,8 @@ ValidationConfig {
 ValidationContext {
 ValidationIssue {
 ValidationMetrics {
+ValidationPipeline {
+ValidationReport {
 ValidationResult {
 ValidationResults {
 ValidationRule {
@@ -451,6 +510,7 @@ VerificationSummary {
 Violation {
 ViolationCodeMapper {
 ViolationStats {
+VisionAnalysisResult {
 VoteEntry {
 Waiver {
 WaiverApprovalRequest {
@@ -463,10 +523,12 @@ WebSocketStats {
 WordTiming {
 Worker {
 WorkerAssignment {
+WorkerManager {
 WorkerMetadata {
 WorkerOutput {
 WorkerOutputContract {
 WorkerPerformanceMetrics {
+WorkerPoolStats {
 WorkingSpec {
 WorkingSpecScope {
 WorkloadSpec {
@@ -475,13 +537,16 @@ ZeroKnowledgeProof {
 
 Duplicate trait names:
 ArtifactStorage: Send + Sync {
+Converter: Send + Sync {
 EmbeddingProvider: Send + Sync {
 HealthCheck: Send + Sync {
 InferenceEngine: Send + Sync {
+IntoANEError {
 JudgeEvaluator: Send + Sync {
 LanguageAnalyzer: Send + Sync + std::fmt::Debug {
+MessageHandler: Send + Sync {
 MetricsBackend: Send + Sync {
-ModelProvider: Send + Sync {
+OrchestratorHandle: Send + Sync {
 PreparedModel: Send + Sync {
 ProvenanceEmitter: Send + Sync + std::fmt::Debug {
 ResearchAgent: Send + Sync {

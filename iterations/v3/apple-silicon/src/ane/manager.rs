@@ -4,23 +4,30 @@
 //! functionality for Apple Neural Engine operations.
 
 use std::collections::HashMap;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use tokio::sync::RwLock;
 use parking_lot::RwLock as SyncRwLock;
 
 // Import our new modules
 use crate::ane::errors::{ANEError, Result};
-use crate::ane::compat::{coreml, iokit};
+use crate::ane::compat::{coreml::coreml, iokit};
 use crate::ane::resource_pool::{Pool, PoolBuilder, PoolStats};
-use crate::ane::models::coreml_model::{LoadedCoreMLModel, CompilationOptions, estimate_memory_usage};
+use crate::ane::models::coreml_model::{LoadedCoreMLModel, CompilationOptions, estimate_memory_usage as estimate_coreml_memory_usage, compile_if_needed};
+use crate::ane::models::mistral_model::{estimate_memory_usage as estimate_mistral_memory_usage};
+use crate::ane::models::mistral_model::{MistralModel, MistralCompilationOptions, SafeModelHandle, SafeMistralTokenizer, KVCache, ModelSchema};
+use crate::ane::circuit_breaker::{CircuitBreaker, CircuitBreakerConfig};
+use crate::telemetry::TelemetryCollector;
 use crate::ane::infer::execute::{execute_inference, InferenceOptions as ExecuteOptions, InferenceResult};
+use crate::ane::infer::mistral::{deliberate_constitution, generate_debate_argument, generate_text, MistralInferenceOptions, ConstitutionalVerdict, DebateArgument};
 use crate::ane::metrics::ewma::{Ewma, PerformanceTracker, PerformanceSummary};
 
 /// Apple Neural Engine manager for ANE-accelerated inference
 #[derive(Debug)]
 pub struct ANEManager {
-    /// Loaded ANE models
-    loaded_models: Arc<RwLock<HashMap<String, ANEModel>>>,
+    /// Loaded Core ML models
+    loaded_coreml_models: Arc<RwLock<HashMap<String, LoadedCoreMLModel>>>,
+    /// Loaded Mistral models
+    loaded_mistral_models: Arc<RwLock<HashMap<String, MistralModel>>>,
     /// ANE resource pool for memory and concurrency control
     resource_pool: Arc<Pool>,
     /// Performance metrics
@@ -193,7 +200,8 @@ impl ANEManager {
             .build()?;
         
         Ok(Self {
-            loaded_models: Arc::new(RwLock::new(HashMap::new())),
+            loaded_coreml_models: Arc::new(RwLock::new(HashMap::new())),
+            loaded_mistral_models: Arc::new(RwLock::new(HashMap::new())),
             resource_pool: Arc::new(resource_pool),
             performance_metrics: Arc::new(RwLock::new(HashMap::new())),
             device_capabilities: ANEDeviceCapabilities {
@@ -224,7 +232,8 @@ impl ANEManager {
             .build()?;
         
         Ok(Self {
-            loaded_models: Arc::new(RwLock::new(HashMap::new())),
+            loaded_coreml_models: Arc::new(RwLock::new(HashMap::new())),
+            loaded_mistral_models: Arc::new(RwLock::new(HashMap::new())),
             resource_pool: Arc::new(resource_pool),
             performance_metrics: Arc::new(RwLock::new(HashMap::new())),
             device_capabilities: capabilities,
@@ -241,7 +250,7 @@ impl ANEManager {
     /// Detect ANE capabilities for this system
     pub async fn detect_capabilities() -> crate::ANECapabilities {
         // Check if ANE is available through Core ML
-        let is_available = coreml::coreml::is_ane_available();
+        let is_available = crate::ane::compat::coreml::coreml::is_ane_available();
         
         if !is_available {
             return crate::ANECapabilities {
@@ -253,7 +262,7 @@ impl ANEManager {
         }
         
         // Get Core ML capabilities
-        let coreml_caps = crate::ane::compat::coreml::detect_coreml_capabilities();
+        let coreml_caps = crate::ane::compat::coreml::coreml::detect_coreml_capabilities();
         
         crate::ANECapabilities {
             is_available: true,
@@ -276,7 +285,7 @@ impl ANEManager {
         
         // Check if model is already loaded
         {
-            let models = self.loaded_models.read().await;
+            let models = self.loaded_coreml_models.read().await;
             if models.contains_key(model_path) {
                 return Err(ANEError::ModelAlreadyLoaded(model_path.to_string()));
             }
@@ -291,29 +300,17 @@ impl ANEManager {
         crate::ane::models::coreml_model::validate_ane_compatibility(&loaded_model)?;
         
         // Estimate memory usage
-        let memory_cost_mb = estimate_memory_usage(&loaded_model);
+        let memory_cost_mb = estimate_coreml_memory_usage(&loaded_model);
         
         // Request admission to resource pool
         let _admission = self.resource_pool.admit(memory_cost_mb).await?;
         
         // Register model
         let model_id = loaded_model.model_id.clone();
-        let ane_model = ANEModel {
-            model_id: model_id.clone(),
-            model_path: loaded_model.compiled_path.display().to_string(),
-            input_shape: loaded_model.schema.inputs.first()
-                .map(|input| input.shape.clone())
-                .unwrap_or_default(),
-            output_shape: loaded_model.schema.outputs.first()
-                .map(|output| output.shape.clone())
-                .unwrap_or_default(),
-            is_loaded: true,
-            last_used: std::time::Instant::now(),
-        };
-        
+
         {
-            let mut models = self.loaded_models.write().await;
-            models.insert(model_path.to_string_lossy().to_string(), ane_model);
+            let mut models = self.loaded_coreml_models.write().await;
+            models.insert(model_path.to_string_lossy().to_string(), loaded_model);
         }
         
         // Initialize performance metrics
@@ -343,7 +340,7 @@ impl ANEManager {
     pub async fn execute_inference(&self, model_id: &str, input: &[f32]) -> Result<Vec<f32>> {
         // Find the model
         let model = {
-            let models = self.loaded_models.read().await;
+            let models = self.loaded_coreml_models.read().await;
             models.values()
                 .find(|m| m.model_id == model_id)
                 .cloned()
@@ -362,9 +359,9 @@ impl ANEManager {
         // Create a mock loaded model for inference
         let loaded_model = LoadedCoreMLModel {
             model_id: model_id.to_string(),
-            compiled_path: std::path::PathBuf::from(&model.model_path),
+            compiled_path: std::path::PathBuf::from(&model.compiled_path),
             metadata: crate::ane::models::coreml_model::ModelMetadata {
-                path: std::path::PathBuf::from(&model.model_path),
+                path: std::path::PathBuf::from(&model.compiled_path),
                 size_bytes: 1024,
                 format: "mlmodelc".to_string(),
                 version: None,
@@ -375,13 +372,13 @@ impl ANEManager {
             schema: crate::ane::models::coreml_model::ModelSchema {
                 inputs: vec![crate::ane::models::coreml_model::IOTensorSpec {
                     name: "input".to_string(),
-                    shape: model.input_shape.clone(),
+                    shape: model.schema.inputs.first().map(|i| i.shape.clone()).unwrap_or_default(),
                     dtype: crate::ane::models::coreml_model::DType::F32,
                     optional: false,
                 }],
                 outputs: vec![crate::ane::models::coreml_model::IOTensorSpec {
                     name: "output".to_string(),
-                    shape: model.output_shape.clone(),
+                    shape: model.schema.outputs.first().map(|o| o.shape.clone()).unwrap_or_default(),
                     dtype: crate::ane::models::coreml_model::DType::F32,
                     optional: false,
                 }],
@@ -431,7 +428,7 @@ impl ANEManager {
     pub async fn get_device_status(&self) -> ANEDeviceStatus {
         let (used_mb, total_mb, active_models) = {
             let pool_stats = self.resource_pool.stats();
-            let models = self.loaded_models.read().await;
+            let models = self.loaded_coreml_models.read().await;
             (
                 pool_stats.peak_memory_usage_mb as u32,
                 self.resource_pool.config().mem_total_mb as u32,
@@ -444,7 +441,7 @@ impl ANEManager {
         let power_status = iokit::iokit::power_status();
         
         ANEDeviceStatus {
-            is_available: coreml::coreml::is_ane_available(),
+            is_available: crate::ane::compat::coreml::coreml::is_ane_available(),
             memory_used_mb: used_mb,
             memory_total_mb: total_mb,
             active_models,
@@ -468,16 +465,16 @@ impl ANEManager {
     /// Unload a model
     pub async fn unload_model(&self, model_id: &str) -> Result<()> {
         let _model_path = {
-            let models = self.loaded_models.read().await;
+            let models = self.loaded_coreml_models.read().await;
             models.values()
                 .find(|m| m.model_id == model_id)
-                .map(|m| m.model_path.clone())
+                .map(|m| m.compiled_path.clone())
                 .ok_or_else(|| ANEError::ModelNotFound(model_id.to_string()))?
         };
         
         // Remove from loaded models
         {
-            let mut models = self.loaded_models.write().await;
+            let mut models = self.loaded_coreml_models.write().await;
             models.retain(|_, m| m.model_id != model_id);
         }
         
@@ -488,6 +485,228 @@ impl ANEManager {
         }
         
         Ok(())
+    }
+
+    /// Load a Mistral model for constitutional reasoning
+    ///
+    /// # Arguments
+    /// * `model_path` - Path to the Mistral model file
+    /// * `options` - Compilation options for the model
+    ///
+    /// # Returns
+    /// * `Ok(String)` - Model ID for tracking
+    /// * `Err(ANEError)` - If loading fails
+    pub async fn load_mistral_model(
+        &self,
+        model_path: &str,
+        options: MistralCompilationOptions,
+    ) -> Result<String> {
+        use std::path::Path;
+
+        let model_path = Path::new(model_path);
+
+        // Check if model is already loaded
+        // TODO: Add path tracking to MistralModel to enable duplicate detection
+        // {
+        //     let models = self.loaded_mistral_models.read().await;
+        //     for (id, model) in models.iter() {
+        //         if model.metadata.path == model_path {
+        //             return Err(ANEError::ModelAlreadyLoaded(model_path.display().to_string()));
+        //         }
+        //     }
+        // }
+
+        // Check memory availability
+        let estimated_memory = estimate_mistral_memory_usage(&MistralModel {
+            handle: SafeModelHandle::new(std::ptr::null_mut()),
+            schema: crate::ane::models::mistral_model::ModelSchema {
+                inputs: vec![],
+                outputs: vec![],
+                context_length: options.context_length.unwrap_or(4096),
+            },
+            tokenizer: SafeMistralTokenizer::new(std::ptr::null_mut()),
+            kv_cache: Arc::new(Mutex::new(KVCache::new(4096))),
+            telemetry: TelemetryCollector::new(),
+            circuit_breaker: CircuitBreaker::new(CircuitBreakerConfig::default()),
+            loaded_at: std::time::Instant::now(),
+            last_accessed: Arc::new(Mutex::new(std::time::Instant::now())),
+        });
+
+        if estimated_memory > self.device_capabilities.max_memory_mb {
+            return Err(ANEError::InsufficientMemory(
+                format!("Model requires {}MB, only {}MB available",
+                    estimated_memory, self.device_capabilities.max_memory_mb)
+            ));
+        }
+
+        // Load and compile Mistral model
+        let model_path = Path::new(model_path);
+        // TODO: Implement Mistral-specific compilation
+        let compiled_path = model_path.to_path_buf(); // Placeholder
+
+        // Load model through CoreML bridge (placeholder)
+        let handle = std::ptr::null_mut(); // TODO: Implement actual CoreML loading
+
+        // Create Mistral model
+        let model = MistralModel {
+            handle: SafeModelHandle::new(handle),
+            schema: crate::ane::models::mistral_model::ModelSchema {
+                inputs: vec![],
+                outputs: vec![],
+                context_length: options.context_length.unwrap_or(4096),
+            },
+            tokenizer: SafeMistralTokenizer::new(std::ptr::null_mut()),
+            kv_cache: Arc::new(Mutex::new(KVCache::new(4096))),
+            telemetry: TelemetryCollector::new(),
+            circuit_breaker: CircuitBreaker::new(CircuitBreakerConfig::default()),
+            loaded_at: std::time::Instant::now(),
+            last_accessed: Arc::new(Mutex::new(std::time::Instant::now())),
+        };
+
+        // Generate model ID
+        let model_id = format!("mistral:{}", model_path.display());
+
+        // Store model
+        {
+            let mut models = self.loaded_mistral_models.write().await;
+            models.insert(model_id.clone(), model);
+        }
+
+        Ok(model_id)
+    }
+
+    /// Execute constitutional deliberation with a loaded Mistral model
+    ///
+    /// # Arguments
+    /// * `model_id` - ID of the loaded Mistral model
+    /// * `task_spec` - Task specification string
+    /// * `evidence` - List of evidence strings
+    /// * `debate_history` - Previous debate arguments
+    ///
+    /// # Returns
+    /// * `Ok(ConstitutionalVerdict)` - Structured constitutional analysis
+    /// * `Err(ANEError)` - If deliberation fails
+    pub async fn deliberate_constitution(
+        &self,
+        model_id: &str,
+        task_spec: &str,
+        evidence: &[String],
+        debate_history: &[String],
+    ) -> Result<ConstitutionalVerdict> {
+        // Get model reference
+        let mut models = self.loaded_mistral_models.write().await;
+        let model = models.get_mut(model_id)
+            .ok_or_else(|| ANEError::ModelNotFound(model_id.to_string()))?;
+
+        // Execute deliberation
+        let options = MistralInferenceOptions::default();
+        let result = deliberate_constitution(
+            model,
+            task_spec,
+            evidence,
+            debate_history,
+            &options,
+        ).await?;
+
+        Ok(result)
+    }
+
+    /// Generate debate argument with a loaded Mistral model
+    ///
+    /// # Arguments
+    /// * `model_id` - ID of the loaded Mistral model
+    /// * `debate_topic` - Topic being debated
+    /// * `previous_arguments` - Previous arguments in the debate
+    /// * `evidence` - Supporting evidence
+    ///
+    /// # Returns
+    /// * `Ok(DebateArgument)` - Structured debate argument
+    /// * `Err(ANEError)` - If generation fails
+    pub async fn generate_debate_argument(
+        &self,
+        model_id: &str,
+        debate_topic: &str,
+        previous_arguments: &[String],
+        evidence: &[String],
+    ) -> Result<DebateArgument> {
+        // Get model reference
+        let mut models = self.loaded_mistral_models.write().await;
+        let model = models.get_mut(model_id)
+            .ok_or_else(|| ANEError::ModelNotFound(model_id.to_string()))?;
+
+        // Generate argument
+        let options = MistralInferenceOptions::default();
+        let result = generate_debate_argument(
+            model,
+            debate_topic,
+            previous_arguments,
+            evidence,
+            &options,
+        ).await?;
+
+        Ok(result)
+    }
+
+    /// Generate text with a loaded Mistral model
+    ///
+    /// # Arguments
+    /// * `model_id` - ID of the loaded Mistral model
+    /// * `prompt` - Text prompt for generation
+    ///
+    /// # Returns
+    /// * `Ok(String)` - Generated text
+    /// * `Err(ANEError)` - If generation fails
+    pub async fn generate_text(
+        &self,
+        model_id: &str,
+        prompt: &str,
+    ) -> Result<String> {
+        // Get model reference
+        let mut models = self.loaded_mistral_models.write().await;
+        let model = models.get_mut(model_id)
+            .ok_or_else(|| ANEError::ModelNotFound(model_id.to_string()))?;
+
+        // Generate text
+        let options = MistralInferenceOptions::default();
+        let result = crate::ane::infer::mistral::generate_text(model, prompt, &options).await?;
+
+        Ok(result)
+    }
+
+    /// Unload a Mistral model
+    ///
+    /// # Arguments
+    /// * `model_id` - ID of the model to unload
+    ///
+    /// # Returns
+    /// * `Ok(())` - If unloading succeeds
+    /// * `Err(ANEError)` - If model not found
+    pub async fn unload_mistral_model(&self, model_id: &str) -> Result<()> {
+        let mut models = self.loaded_mistral_models.write().await;
+        models.remove(model_id)
+            .ok_or_else(|| ANEError::ModelNotFound(model_id.to_string()))?;
+
+        Ok(())
+    }
+
+    /// Get information about loaded Mistral models
+    ///
+    /// # Returns
+    /// * `Vec<String>` - List of loaded Mistral model IDs
+    pub async fn list_mistral_models(&self) -> Vec<String> {
+        let models = self.loaded_mistral_models.read().await;
+        models.keys().cloned().collect()
+    }
+
+    /// Get Mistral model memory usage statistics
+    ///
+    /// # Returns
+    /// * `HashMap<String, usize>` - Model ID to memory usage in MB
+    pub async fn get_mistral_memory_usage(&self) -> HashMap<String, usize> {
+        let models = self.loaded_mistral_models.read().await;
+        models.iter()
+            .map(|(id, model)| (id.clone(), estimate_mistral_memory_usage(model)))
+            .collect()
     }
 }
 

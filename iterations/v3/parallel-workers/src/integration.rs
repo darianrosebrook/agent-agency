@@ -14,8 +14,12 @@ pub fn should_route_to_parallel(
         return false;
     }
 
-    // Check if complexity exceeds threshold
-    if complexity_score < config.complexity_threshold {
+    // Recalculate complexity including keyword analysis for routing decision
+    let keyword_boost = estimate_parallelization_benefit(description, None);
+    let effective_complexity = complexity_score.max(keyword_boost);
+
+    // Check if effective complexity exceeds threshold
+    if effective_complexity < config.complexity_threshold {
         return false;
     }
 
@@ -110,9 +114,12 @@ mod tests {
     fn test_should_route_to_parallel() {
         let config = ParallelCoordinatorConfig {
             enabled: true,
-            complexity_threshold: 0.6,
             max_concurrent_workers: 8,
             max_subtasks_per_task: 20,
+            task_timeout_seconds: 300,
+            complexity_threshold: 0.6,
+            enable_quality_gates: true,
+            enable_dependency_resolution: true,
         };
 
         // High complexity should route to parallel

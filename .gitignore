@@ -77,11 +77,6 @@ target/
 **/*.rs.bk
 **/.rustc_info.json
 
-# Build directories (Xcode, Swift, general)
-.build/
-**/.build/
-DerivedData/
-
 # Swift Package Manager
 Package.resolved
 
@@ -99,6 +94,81 @@ xcuserdata/
 *.xccheckout
 *.xcscmblueprint
 
+# Swift build artifacts
+.swiftpm/
+*.xcodeproj/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcuserdata/
+
+# Swift intermediate build files
+*.d
+*.dia
+*.o
+*.swift.o
+*.build/
+**/*.build/
+include/
+*.modulemap
+.dat.nosync*
+
+# CoreML generated code and models
+**/CoreMLGenerated/
+**/CreateML.json
+*.mlmodelc/
+*.mlpackage/
+*.mlarchive/
+
+# macOS development
+*.dSYM/
+*.dSYM.zip
+
+# Test artifacts and generated files
+*_test.rs
+test_*.rs
+*_demo.rs
+simple_*_demo.rs
+validate_*_integration.rs
+
+# Third-party repositories and external dependencies
+*-repo/
+whisperkit-repo/
+third-party/
+external/
+vendor/
+
+# Downloaded packages and libraries
+*.pkg
+*.dmg
+*.deb
+*.rpm
+
+# Python cache and bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Jupyter notebook outputs
+.ipynb_checkpoints
+*/.ipynb_checkpoints/*
+
+# IDE and editor files
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+*~
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
 # Temporary files
 *.tmp
 *.temp
@@ -108,12 +178,74 @@ xcuserdata/
 recovered_work/
 recovery_analyzer.py
 recovery_output/
-recovery_report.jsonn 
-libtorch-2.2.0.zip
-libtorch/  libtorch-2.2.0.zip
+recovery_report.json
 
-# CoreML Models (large binary files)
+# ML/AI Models and datasets (large binary files)
 models/
 *.mlpackage/
 *.mlmodelc/
+*.mlmodelc.zip
+*.bin
+*.safetensors
+*.gguf
+*.ggml
+datasets/
+*.h5
+*.hdf5
+*.pkl
+*.pickle
+*.joblib
+
+# LibTorch and PyTorch distributions
+libtorch*/
+torch/
+torch-*.whl
+
+# Conda environments and packages
+envs/
+pkgs/
+conda-bld/
+*.conda
+*.tar.bz2
+Miniconda*.sh
+Anaconda*.sh
+
+# Python virtual environments
+venv/
+env/
+ENV/
+.venv/
+.env*/
+!requirements*.txt
+
+# Jupyter notebooks checkpoints and outputs
+.ipynb_checkpoints/
+*.ipynb_checkpoints/
+
+# ML training artifacts
+checkpoints/
+runs/
+wandb/
+tensorboard/
+logs/
+*.tfevents*
+
+# Demo executables and test artifacts
+simple_*_demo
+test_*_demo
+validate_*_integration
+test-image*.png
+*.jpg
+*.jpeg
+*.gif
+*.bmp
+*.tiff
+
+# Large archive files (models, datasets, etc.)
+*.zip
+*.tar.gz
+*.tar.bz2
+*.7z
+*.rar
+!*.zip.keep
 

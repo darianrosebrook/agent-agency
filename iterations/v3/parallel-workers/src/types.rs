@@ -91,7 +91,7 @@ pub struct SubTask {
 }
 
 /// Task priority levels
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum Priority {
     Low,
     Medium,

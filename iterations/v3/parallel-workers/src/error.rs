@@ -78,7 +78,7 @@ pub enum DecompositionError {
 }
 
 /// Error type for worker operations
-#[derive(Error, Debug)]
+#[derive(Error, Debug, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
 pub enum WorkerError {
     #[error("Worker not found")]
@@ -120,8 +120,56 @@ pub enum WorkerError {
     #[error("I/O error: {message}")]
     Io {
         message: String,
+        #[serde(skip)]
         source: Option<Box<dyn std::error::Error + Send + Sync>>,
     },
+}
+
+impl Clone for WorkerError {
+    fn clone(&self) -> Self {
+        match self {
+            WorkerError::WorkerNotFound { worker_id } => WorkerError::WorkerNotFound {
+                worker_id: worker_id.clone(),
+            },
+            WorkerError::NoSpecializedWorkerAvailable { specialty } => WorkerError::NoSpecializedWorkerAvailable {
+                specialty: specialty.clone(),
+            },
+            WorkerError::Initialization { message } => WorkerError::Initialization {
+                message: message.clone(),
+            },
+            WorkerError::SpecialtyMismatch { expected, actual } => WorkerError::SpecialtyMismatch {
+                expected: expected.clone(),
+                actual: actual.clone(),
+            },
+            WorkerError::IsolationFailure { message } => WorkerError::IsolationFailure {
+                message: message.clone(),
+            },
+            WorkerError::CleanupFailure { message } => WorkerError::CleanupFailure {
+                message: message.clone(),
+            },
+            WorkerError::WorkerPanic { message } => WorkerError::WorkerPanic {
+                message: message.clone(),
+            },
+            WorkerError::NotImplemented(msg) => WorkerError::NotImplemented(msg.clone()),
+            WorkerError::ExecutionFailed { worker_id, message } => WorkerError::ExecutionFailed {
+                worker_id: worker_id.clone(),
+                message: message.clone(),
+            },
+            WorkerError::Io { message, .. } => WorkerError::Io {
+                message: message.clone(),
+                source: None, // Skip cloning the source to avoid Box<dyn Error> Clone issues
+            },
+            WorkerError::ExecutionTimeout { timeout_secs } => WorkerError::ExecutionTimeout {
+                timeout_secs: *timeout_secs,
+            },
+            WorkerError::Communication { message } => WorkerError::Communication {
+                message: message.clone(),
+            },
+            WorkerError::ResourceLimitsExceeded { resource_type } => WorkerError::ResourceLimitsExceeded {
+                resource_type: resource_type.clone(),
+            },
+        }
+    }
 }
 
 /// Error type for progress tracking operations

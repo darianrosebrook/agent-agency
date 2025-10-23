@@ -1187,7 +1187,7 @@ impl AdvancedGoalAnalyzer {
 
     /// Score sentence as potential goal (0.0-1.0)
     fn score_sentence_as_goal(&self, sentence: &str) -> f64 {
-        let mut score = 0.0;
+        let mut score: f64 = 0.0;
 
         // Goal indicators (+0.4)
         if self.pattern_matches("goal_indicators", sentence) {

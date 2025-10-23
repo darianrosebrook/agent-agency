@@ -6,6 +6,8 @@ use crate::decomposition::{DecompositionEngine, TaskAnalysis};
 use crate::worker::{WorkerManager, DefaultWorkerPool};
 use crate::progress::{ProgressAggregator, ProgressSynthesizer};
 use crate::validation::{ValidationRunner, ValidationContext};
+use crate::orchestrator_bridge::{OrchestrationQualityBridge, StubOrchestrationQualityHandle, ExecutionArtifacts};
+use crate::monitoring_bridge::{OrchestrationMonitoringBridge, StubOrchestrationMonitoringHandle, ExecutionStatus};
 use crate::communication::hub::CommunicationHub;
 use std::sync::Arc;
 
@@ -48,12 +50,15 @@ pub struct ParallelCoordinator {
     communication_hub: CommunicationHub,
     config: ParallelCoordinatorConfig,
     orchestrator_handle: Option<Arc<dyn OrchestratorHandle>>, // Integration point
+    quality_bridge: OrchestrationQualityBridge,
+    monitoring_bridge: OrchestrationMonitoringBridge,
 }
 
 #[derive(Debug, Clone)]
 pub struct ParallelCoordinatorConfig {
     pub enabled: bool,
     pub max_concurrent_workers: usize,
+    pub max_subtasks_per_task: usize,
     pub task_timeout_seconds: u64,
     pub complexity_threshold: f32,
     pub enable_quality_gates: bool,
@@ -65,6 +70,7 @@ impl Default for ParallelCoordinatorConfig {
         Self {
             enabled: true,
             max_concurrent_workers: 8,
+            max_subtasks_per_task: 20,
             task_timeout_seconds: 300,
             complexity_threshold: 0.6,
             enable_quality_gates: true,
@@ -78,6 +84,8 @@ impl ParallelCoordinator {
     pub fn new(config: ParallelCoordinatorConfig) -> Self {
         let worker_pool = Arc::new(DefaultWorkerPool::new());
         let communication_hub = CommunicationHub::new(Default::default());
+        let quality_bridge = OrchestrationQualityBridge::new(Arc::new(StubOrchestrationQualityHandle));
+        let monitoring_bridge = OrchestrationMonitoringBridge::new(Arc::new(StubOrchestrationMonitoringHandle));
 
         Self {
             decomposition_engine: DecompositionEngine::new(),
@@ -88,6 +96,8 @@ impl ParallelCoordinator {
             communication_hub,
             config,
             orchestrator_handle: None,
+            quality_bridge,
+            monitoring_bridge,
         }
     }
 
@@ -102,13 +112,61 @@ impl ParallelCoordinator {
         // 1. Analyze task complexity and determine if parallel execution is beneficial
         let analysis = self.analyze_task(&task).await?;
 
+        // Publish analysis event
+        self.monitoring_bridge.publish_event(
+            task.id.clone(),
+            "task_analysis_completed".to_string(),
+            serde_json::json!({
+                "complexity_score": analysis.subtask_scores.parallelization_score,
+                "should_parallelize": analysis.subtask_scores.parallelization_score > 0.6,
+                "estimated_workers": analysis.recommended_workers,
+            }),
+        ).await.ok(); // Don't fail execution if monitoring fails
+
         if !self.should_execute_parallel(&analysis) {
+            // Update status to sequential execution
+            self.monitoring_bridge.update_task_progress(
+                &task.id,
+                ExecutionStatus::Running,
+                0.0,
+                Some("sequential_fallback".to_string()),
+                std::collections::HashMap::new(),
+            ).await.ok();
+
             // Fall back to sequential execution
             return self.execute_sequential(task).await;
         }
 
+        // Update status to parallel execution
+        self.monitoring_bridge.update_task_progress(
+            &task.id,
+            ExecutionStatus::Running,
+            0.1,
+            Some("decomposition".to_string()),
+            std::collections::HashMap::new(),
+        ).await.ok();
+
         // 2. Decompose the task into subtasks
         let subtasks = self.decomposition_engine.decompose(analysis)?;
+
+        // Publish decomposition event
+        self.monitoring_bridge.publish_event(
+            task.id.clone(),
+            "task_decomposed".to_string(),
+            serde_json::json!({
+                "subtask_count": subtasks.len(),
+                "total_estimated_effort": subtasks.iter().map(|s| s.estimated_effort.as_secs()).sum::<u64>(),
+            }),
+        ).await.ok();
+
+        // Update progress to execution phase
+        self.monitoring_bridge.update_task_progress(
+            &task.id,
+            ExecutionStatus::Running,
+            0.2,
+            Some("execution".to_string()),
+            std::collections::HashMap::new(),
+        ).await.ok();
 
         // 3. Initialize progress tracking
         self.progress_aggregator = ProgressAggregator::new(task.id.clone());
@@ -116,13 +174,43 @@ impl ParallelCoordinator {
         // 4. Execute subtasks in parallel
         let results = self.execute_subtasks_parallel(subtasks).await?;
 
+        // Publish execution completion event
+        let successful_results = results.iter().filter(|r| r.success).count();
+        self.monitoring_bridge.publish_event(
+            task.id.clone(),
+            "parallel_execution_completed".to_string(),
+            serde_json::json!({
+                "total_subtasks": results.len(),
+                "successful_subtasks": successful_results,
+                "failed_subtasks": results.len() - successful_results,
+            }),
+        ).await.ok();
+
+        // Update progress to validation phase
+        self.monitoring_bridge.update_task_progress(
+            &task.id,
+            ExecutionStatus::Running,
+            0.8,
+            Some("validation".to_string()),
+            std::collections::HashMap::new(),
+        ).await.ok();
+
         // 5. Validate quality gates (if enabled)
         if self.config.enable_quality_gates {
-            self.validate_results(&results).await?;
+            self.validate_results(&task.id, &results).await?;
         }
 
         // 6. Synthesize final result
         let task_result = self.progress_synthesizer.synthesize_results(results)?;
+
+        // Update final progress
+        self.monitoring_bridge.update_task_progress(
+            &task.id,
+            ExecutionStatus::Completed,
+            1.0,
+            Some("completed".to_string()),
+            std::collections::HashMap::new(),
+        ).await.ok();
 
         Ok(task_result)
     }
@@ -198,7 +286,7 @@ impl ParallelCoordinator {
     }
 
     /// Validate results against quality gates
-    async fn validate_results(&self, results: &[WorkerResult]) -> ParallelResult<()> {
+    async fn validate_results(&self, task_id: &TaskId, results: &[WorkerResult]) -> ParallelResult<()> {
         tracing::info!("Running quality gate validation");
 
         // Create validation context
@@ -218,16 +306,58 @@ impl ParallelCoordinator {
 
         if !report.passed() {
             return Err(ParallelError::Validation {
-                message: format!("Quality gates failed: {}", report.summary.failed_gates),
+                message: format!("Internal quality gates failed: {}", report.summary.failed_gates),
                 source: None,
             });
         }
 
-        tracing::info!("Quality gates passed: {}/{} gates successful",
+        // Run orchestration quality gates for additional validation
+        tracing::info!("Running orchestration quality gates");
+
+        // Convert results to execution artifacts for orchestration validation
+        let artifacts = self.convert_results_to_artifacts(results);
+
+        let orchestration_validation = self.quality_bridge.validate_with_orchestration_gates(
+            task_id,
+            &artifacts,
+            &QualityRequirements::default(), // TODO: Extract from task
+        ).await?;
+
+        match orchestration_validation {
+            crate::ValidationResult::Pass { .. } => {
+                tracing::info!("Orchestration quality gates passed");
+            }
+            crate::ValidationResult::Fail { details, .. } => {
+                return Err(ParallelError::Validation {
+                    message: format!("Orchestration quality gates failed: {}", details),
+                    source: None,
+                });
+            }
+            crate::ValidationResult::Warning { details, .. } => {
+                tracing::warn!("Orchestration quality gates warning: {}", details);
+                // Warnings don't fail execution, just log
+            }
+        }
+
+        tracing::info!("All quality gates passed: {}/{} internal gates successful",
                       report.summary.passed_gates,
                       report.summary.total_gates);
 
         Ok(())
+    }
+
+    /// Convert worker results to execution artifacts for orchestration validation
+    fn convert_results_to_artifacts(&self, _results: &[WorkerResult]) -> ExecutionArtifacts {
+        // TODO: Implement proper artifact conversion from worker results
+        // For now, return minimal artifacts
+        ExecutionArtifacts {
+            test_results: None,
+            coverage_report: None,
+            lint_report: None,
+            type_check_report: None,
+            mutation_report: None,
+            provenance_record: None,
+        }
     }
 
     /// Fall back to sequential execution

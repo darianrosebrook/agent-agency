@@ -221,11 +221,11 @@ impl E2eTestHarness {
         // }
 
         // Initialize CLI interface
-        let cli_config = interfaces::CliConfig {
+        let cli_config = agent_agency_interfaces::CliConfig {
             host: "localhost".to_string(),
             port: 3000,
             api_key: None,
-            format: interfaces::cli::OutputFormat::Json,
+            format: agent_agency_interfaces::cli::OutputFormat::Json,
             verbose: false,
             no_interactive: true,
         };

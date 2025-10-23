@@ -55,6 +55,17 @@ pub use arbiter::{
     WorkerOutput, EvidenceManifest, DebateResult, ArbiterError,
 };
 
+// Kimi K2 Enhanced Executor
+pub use kimi_k2_enhanced_executor::{
+    KimiK2EnhancedExecutor, EnhancementConfig, EnhancementStats, EnhancementError,
+};
+
+// Kimi K2 Multimodal Orchestrator
+pub use kimi_k2_multimodal_orchestrator::{
+    KimiK2MultimodalOrchestrator, MultimodalTask, MultimodalProcessingResult,
+    OrchestratorConfig, OrchestratorPerformanceStats, OrchestratorError,
+};
+
 // Re-export API functions
 pub use api::{
     get_tasks, get_task_detail, get_task_events, cancel_task,

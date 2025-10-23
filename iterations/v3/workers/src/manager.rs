@@ -984,29 +984,66 @@ impl WorkerPoolManager {
         &self,
         specialty: WorkerSpecialty,
     ) -> Result<Arc<dyn ParallelSpecializedWorker>> {
-        // For now, create workers on demand based on specialty
-        // In the future, this could pool and reuse specialized workers
+        // Create specialized workers that integrate with existing worker pool infrastructure
 
         match specialty {
-            WorkerSpecialty::CompilationErrors { .. } => {
+            WorkerSpecialty::CompilationErrors { error_codes } => {
                 // Create a compilation specialist worker
-                // This would integrate with existing worker infrastructure
-                Err(anyhow::anyhow!("Specialized workers not yet integrated with existing pool"))
+                let worker = CompilationSpecialist::new(
+                    error_codes,
+                    self.task_executor.clone(),
+                    self.task_router.clone(),
+                );
+                Ok(Arc::new(worker))
             }
-            WorkerSpecialty::Refactoring { .. } => {
-                Err(anyhow::anyhow!("Specialized workers not yet integrated with existing pool"))
+            WorkerSpecialty::Refactoring { strategies } => {
+                let worker = RefactoringSpecialist::new(
+                    strategies,
+                    self.task_executor.clone(),
+                    self.task_router.clone(),
+                );
+                Ok(Arc::new(worker))
             }
-            WorkerSpecialty::Testing { .. } => {
-                Err(anyhow::anyhow!("Specialized workers not yet integrated with existing pool"))
+            WorkerSpecialty::Testing { frameworks } => {
+                let worker = TestingSpecialist::new(
+                    frameworks,
+                    self.task_executor.clone(),
+                    self.task_router.clone(),
+                );
+                Ok(Arc::new(worker))
             }
-            WorkerSpecialty::Documentation { .. } => {
-                Err(anyhow::anyhow!("Specialized workers not yet integrated with existing pool"))
+            WorkerSpecialty::Documentation { formats } => {
+                let worker = DocumentationSpecialist::new(
+                    formats,
+                    self.task_executor.clone(),
+                    self.task_router.clone(),
+                );
+                Ok(Arc::new(worker))
             }
-            WorkerSpecialty::Custom { .. } => {
-                Err(anyhow::anyhow!("Custom specialized workers not supported"))
+            WorkerSpecialty::TypeSystem { domains } => {
+                let worker = TypeSystemSpecialist::new(
+                    domains,
+                    self.task_executor.clone(),
+                    self.task_router.clone(),
+                );
+                Ok(Arc::new(worker))
             }
-            WorkerSpecialty::TypeSystem { .. } | WorkerSpecialty::AsyncPatterns { .. } => {
-                Err(anyhow::anyhow!("Advanced specialty types not yet supported"))
+            WorkerSpecialty::AsyncPatterns { patterns } => {
+                let worker = AsyncPatternsSpecialist::new(
+                    patterns,
+                    self.task_executor.clone(),
+                    self.task_router.clone(),
+                );
+                Ok(Arc::new(worker))
+            }
+            WorkerSpecialty::Custom { domain, capabilities } => {
+                let worker = CustomSpecialist::new(
+                    domain,
+                    capabilities,
+                    self.task_executor.clone(),
+                    self.task_router.clone(),
+                );
+                Ok(Arc::new(worker))
             }
         }
     }

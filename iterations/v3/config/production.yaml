@@ -120,13 +120,45 @@ performance:
     min_connections: 5
     connection_timeout: 30
     idle_timeout: 600
-    
+
+  # Parallel Workers - Scalable task decomposition system
+  parallel_workers:
+    enabled: true
+    max_concurrent_workers: 8
+    max_subtasks_per_task: 20
+    task_timeout_seconds: 300
+    complexity_threshold: 0.6  # Tasks with complexity > 0.6 route to parallel execution
+
+    # Quality gates
+    quality_gates:
+      enabled: true
+      require_orchestration_validation: true
+      coverage_min: 0.8
+      mutation_score_min: 0.5
+      lint_errors_max: 10
+
+    # Monitoring integration
+    monitoring:
+      enabled: true
+      progress_update_interval_ms: 500
+      event_buffer_size: 1000
+
+    # Worker specialization
+    worker_specialties:
+      compilation_errors: true
+      refactoring: true
+      testing: true
+      documentation: true
+      type_system: true
+      async_patterns: true
+      custom_domains: true
+
   # Caching
   cache:
     enabled: true
     ttl: 3600
     max_size: "1GB"
-    
+
   # Compression
   compression:
     enabled: true

@@ -1411,7 +1411,7 @@ fn parse_contribution_verdict(&self, contribution: &ParticipantContribution) -> 
     /// Calculate constitutional compliance score
     fn calculate_constitutional_score(&self, verdicts: &[PlanJudgeVerdict]) -> Result<f64> {
         let constitutional_verdicts: Vec<_> = verdicts.iter()
-            .filter(|v| matches!(v.judge_type, JudgeType::Constitutional))
+            .filter(|v| matches!(v.judge_type, crate::judge::JudgeType::Constitutional))
             .collect();
 
         if constitutional_verdicts.is_empty() {

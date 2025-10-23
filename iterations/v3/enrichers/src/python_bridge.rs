@@ -216,10 +216,11 @@ except Exception as e:
 
             for word in segment.words {
                 word_timings.push(crate::types::WordTiming {
-                    t0: word.start,
-                    t1: word.end,
-                    token: word.word,
-                    confidence: word.score,
+                    word: word.word,
+                    tokens: vec![], // TODO: Parse actual tokens
+                    start: word.start,
+                    end: word.end,
+                    probability: word.score,
                 });
             }
 

@@ -4,6 +4,7 @@
 //! including model lifecycle, inference, capability detection, and resource management.
 
 use thiserror::Error;
+use crate::ane::circuit_breaker::CircuitBreakerError;
 
 /// Comprehensive error types for ANE operations
 #[derive(Debug, Error)]
@@ -60,6 +61,10 @@ pub enum ANEError {
     #[error("Memory allocation failed: {0}")]
     MemoryAllocationFailed(String),
     
+    /// Insufficient memory available
+    #[error("Insufficient memory: {0}")]
+    InsufficientMemory(String),
+
     /// Device capability mismatch
     #[error("Device capability mismatch: {0}")]
     CapabilityMismatch(String),
@@ -67,6 +72,18 @@ pub enum ANEError {
     /// Configuration validation failed
     #[error("Configuration validation failed: {0}")]
     ConfigurationError(String),
+    
+    /// Operation not implemented
+    #[error("Not implemented: {0}")]
+    NotImplemented(String),
+    
+    /// Invalid input provided
+    #[error("Invalid input: {0}")]
+    InvalidInput(String),
+    
+    /// Model load failed
+    #[error("Model load failed: {0}")]
+    ModelLoadFailed(String),
 }
 
 /// Result type alias for ANE operations
@@ -90,6 +107,16 @@ impl From<anyhow::Error> for ANEError {
 impl From<serde_json::Error> for ANEError {
     fn from(_err: serde_json::Error) -> Self {
         ANEError::Internal("JSON error")
+    }
+}
+
+/// Convert from CircuitBreakerError to ANEError
+impl From<CircuitBreakerError> for ANEError {
+    fn from(err: CircuitBreakerError) -> Self {
+        match err {
+            CircuitBreakerError::CircuitOpen => ANEError::ResourceLimit("Circuit breaker open".to_string()),
+            CircuitBreakerError::OperationFailed(e) => ANEError::Internal("Circuit breaker operation failed"),
+        }
     }
 }
 
@@ -140,8 +167,12 @@ impl ANEError {
             ANEError::CompilationFailed(_) => ErrorSeverity::High,
             ANEError::InferenceFailed(_) => ErrorSeverity::High,
             ANEError::MemoryAllocationFailed(_) => ErrorSeverity::Critical,
+            ANEError::InsufficientMemory(_) => ErrorSeverity::High,
             ANEError::CapabilityMismatch(_) => ErrorSeverity::Medium,
             ANEError::ConfigurationError(_) => ErrorSeverity::Medium,
+            ANEError::NotImplemented(_) => ErrorSeverity::Medium,
+            ANEError::InvalidInput(_) => ErrorSeverity::Medium,
+            ANEError::ModelLoadFailed(_) => ErrorSeverity::High,
         }
     }
     
@@ -171,8 +202,12 @@ impl ANEError {
             ANEError::CompilationFailed(msg) => format!("Model compilation failed: {}", msg),
             ANEError::InferenceFailed(msg) => format!("Inference execution failed: {}", msg),
             ANEError::MemoryAllocationFailed(msg) => format!("Memory allocation failed: {}", msg),
+            ANEError::InsufficientMemory(msg) => format!("Insufficient memory available: {}", msg),
             ANEError::CapabilityMismatch(msg) => format!("Device capability mismatch: {}", msg),
             ANEError::ConfigurationError(msg) => format!("Configuration error: {}", msg),
+            ANEError::NotImplemented(msg) => format!("Not implemented: {}", msg),
+            ANEError::InvalidInput(msg) => format!("Invalid input: {}", msg),
+            ANEError::ModelLoadFailed(msg) => format!("Model load failed: {}", msg),
         }
     }
 }
