@@ -317,11 +317,14 @@ impl ParameterDashboardManager {
         
         let hypervolume = self.calculate_hypervolume(&points);
         
+        let dominated_count = points.iter().filter(|p| p.dominated).count() as u32;
+        let non_dominated_count = points.iter().filter(|p| !p.dominated).count() as u32;
+        
         Ok(ParetoFront {
             task_type: task_type.to_string(),
             points,
-            dominated_count: points.iter().filter(|p| p.dominated).count() as u32,
-            non_dominated_count: points.iter().filter(|p| !p.dominated).count() as u32,
+            dominated_count,
+            non_dominated_count,
             hypervolume,
         })
     }
@@ -371,6 +374,7 @@ impl ParameterDashboardManager {
             let drift_direction = self.determine_drift_direction(historical, recent);
             let affected_parameters = self.identify_affected_parameters(historical, recent);
             
+            let drift_direction_clone = drift_direction.clone();
             Ok(Some(DriftDetection {
                 task_type: task_type.to_string(),
                 drift_score,
@@ -378,7 +382,7 @@ impl ParameterDashboardManager {
                 affected_parameters,
                 detection_time: Utc::now(),
                 confidence: drift_score,
-                recommended_action: self.generate_drift_recommendation(&drift_direction),
+                recommended_action: self.generate_drift_recommendation(&drift_direction_clone),
             }))
         } else {
             Ok(None)
@@ -392,7 +396,8 @@ impl ParameterDashboardManager {
         
         // Keep only last 1000 alerts
         if alerts.len() > 1000 {
-            alerts.drain(0..alerts.len() - 1000);
+            let len = alerts.len();
+            alerts.drain(0..len - 1000);
         }
         
         Ok(())

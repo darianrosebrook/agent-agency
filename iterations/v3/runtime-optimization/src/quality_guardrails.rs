@@ -393,6 +393,23 @@ impl QualityGuardrails {
             }
         }).collect()
     }
+
+    /// Establish baseline performance metrics
+    pub async fn establish_baseline(&self, _metrics: crate::performance_monitor::PerformanceMetrics) -> Result<()> {
+        // Stub implementation for baseline establishment
+        Ok(())
+    }
+
+    /// Validate compliance with optimization results
+    pub async fn validate_compliance(&self, _optimization_result: &crate::bayesian_optimizer::OptimizationResult) -> Result<crate::ComplianceStatus> {
+        // Stub implementation for compliance validation
+        Ok(crate::ComplianceStatus {
+            caws_compliance: 1.0,
+            quality_threshold: 1.0,
+            trade_off_score: 1.0,
+            last_checked: chrono::Utc::now(),
+        })
+    }
 }
 
 /// Compliance checker for regulatory requirements

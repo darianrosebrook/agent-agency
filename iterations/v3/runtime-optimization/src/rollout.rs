@@ -162,12 +162,13 @@ impl RolloutManager {
                     }
                 };
                 
+                let old_phase = rollout_state.phase;
                 rollout_state.phase = new_phase;
                 rollout_state.traffic_percentage = self.get_traffic_percentage_for_phase(new_phase);
                 state.insert(task_type.to_string(), rollout_state);
                 
                 Ok(PhaseTransition::Advanced {
-                    from: rollout_state.phase,
+                    from: old_phase,
                     to: new_phase,
                 })
             }

@@ -409,10 +409,18 @@ impl CanaryTestSuite {
     /// Generate test task features
     fn generate_test_task_features(&self, scenario: &CanaryTestScenario) -> TaskFeatures {
         TaskFeatures {
-            model_name: "test-model".to_string(),
-            prompt_tokens: 100,
-            prior_failures: 0,
+            model_name: Some("test-model".to_string()),
+            prompt_tokens: Some(100),
+            prior_failures: Some(0),
             risk_tier: 2,
+            title_length: 0,
+            description_length: 0,
+            acceptance_criteria_count: 0,
+            scope_files_count: 0,
+            max_files: 0,
+            max_loc: 0,
+            has_external_deps: false,
+            complexity_indicators: vec![],
         }
     }
 
@@ -787,7 +795,7 @@ impl CanaryTestSuite {
                 canary_latency: 200,
                 latency_delta: 0,
                 baseline_tokens: scenario.baseline_parameters.max_tokens as u32,
-                canary_tokens: scenario.test_parameters.max_tokens,
+                canary_tokens: scenario.test_parameters.max_tokens as u32,
                 token_delta: 0,
                 baseline_reward: 0.0,
                 canary_reward: 0.0,

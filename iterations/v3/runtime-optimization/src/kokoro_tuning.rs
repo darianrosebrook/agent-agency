@@ -30,6 +30,7 @@ impl Default for KokoroConfig {
 }
 
 /// Kokoro tuner for hyper-parameter optimization
+#[derive(Debug)]
 pub struct KokoroTuner {
     optimizer: BayesianOptimizer,
     thermal_manager: ThermalManager,
@@ -50,6 +51,8 @@ pub struct TuningResult {
     pub timestamp: chrono::DateTime<chrono::Utc>,
     /// Whether this result improved performance
     pub improvement: bool,
+    /// Optimal parameters for the tuning result
+    pub optimal_parameters: HashMap<String, f64>,
 }
 
 /// Performance metrics from tuning
@@ -67,9 +70,14 @@ pub struct TuningMetrics {
     pub thermal_throttling_events: usize,
     /// Accuracy/quality score (0.0-1.0)
     pub accuracy_score: f32,
+    /// Quality degradation percentage
+    pub quality_degradation: f32,
+    /// Throughput improvement percentage
+    pub throughput_improvement: f32,
 }
 
 /// Bayesian optimizer for hyper-parameter search
+#[derive(Debug)]
 struct BayesianOptimizer {
     parameter_space: HashMap<String, ParameterRange>,
     observations: Vec<(HashMap<String, f32>, f32)>, // (params, score)
@@ -77,6 +85,7 @@ struct BayesianOptimizer {
 }
 
 /// Thermal manager for preventing overheating
+#[derive(Debug)]
 struct ThermalManager {
     thermal_limits: HashMap<String, f32>,
     current_temps: Arc<RwLock<HashMap<String, f32>>>,
@@ -84,6 +93,7 @@ struct ThermalManager {
 }
 
 /// Performance tracker for monitoring improvements
+#[derive(Debug)]
 struct PerformanceTracker {
     baseline_metrics: TuningMetrics,
     best_metrics: Arc<RwLock<TuningMetrics>>,
@@ -101,8 +111,52 @@ impl KokoroTuner {
         }
     }
 
+    /// Create a new Kokoro tuner with custom configuration
+    pub fn new_with_config(config: KokoroConfig) -> Self {
+        Self {
+            optimizer: BayesianOptimizer::new(),
+            thermal_manager: ThermalManager::new(),
+            performance_tracker: PerformanceTracker::new(),
+            tuning_history: Arc::new(RwLock::new(Vec::new())),
+        }
+    }
+
+    /// Enable Apple Silicon orchestration for enhanced performance
+    pub async fn with_apple_silicon_orchestration(mut self) -> Result<Self> {
+        // Stub implementation for Apple Silicon orchestration
+        Ok(self)
+    }
+
+    /// Establish baseline performance metrics
+    pub async fn establish_baseline(&self, _metrics: crate::performance_monitor::PerformanceMetrics) -> Result<()> {
+        // Stub implementation for baseline establishment
+        Ok(())
+    }
+
+    /// Perform final tuning with optimization results
+    pub async fn final_tune(&self, _optimization_result: &crate::OptimizationResult) -> Result<TuningResult> {
+        // Stub implementation for final tuning
+        Ok(TuningResult {
+            session_id: "stub_session".to_string(),
+            parameters: std::collections::HashMap::new(),
+            metrics: TuningMetrics {
+                throughput_ops_per_sec: 100.0,
+                latency_p95_ms: 50.0,
+                memory_usage_mb: 1024,
+                cpu_utilization_percent: 70.0,
+                thermal_throttling_events: 0,
+                accuracy_score: 0.85,
+                throughput_improvement: 1.0,
+                quality_degradation: 0.0,
+            },
+            timestamp: chrono::Utc::now(),
+            improvement: false,
+            optimal_parameters: std::collections::HashMap::new(),
+        })
+    }
+
     /// Run a full tuning cycle with the given workload
-    pub async fn tune_model(&self, workload: &WorkloadSpec) -> Result<TuningResult> {
+    pub async fn tune_model(&mut self, workload: &WorkloadSpec) -> Result<TuningResult> {
         info!("Starting Kokoro tuning cycle for workload: {}", workload.name);
 
         // Generate candidate parameters using Bayesian optimization
@@ -127,6 +181,7 @@ impl KokoroTuner {
             metrics: metrics.clone(),
             timestamp: chrono::Utc::now(),
             improvement,
+            optimal_parameters: candidate_params.iter().map(|(k, v)| (k.clone(), *v as f64)).collect(),
         };
 
         // Update optimizer with new observation
@@ -172,6 +227,8 @@ impl KokoroTuner {
             cpu_utilization_percent: cpu,
             thermal_throttling_events: thermal_events,
             accuracy_score: accuracy,
+            throughput_improvement: 1.0,
+            quality_degradation: 0.0,
         })
     }
 
@@ -183,6 +240,7 @@ impl KokoroTuner {
             metrics: self.performance_tracker.baseline_metrics.clone(),
             timestamp: chrono::Utc::now(),
             improvement: false,
+            optimal_parameters: std::collections::HashMap::new(),
         })
     }
 
@@ -306,6 +364,8 @@ impl PerformanceTracker {
                 cpu_utilization_percent: 70.0,
                 thermal_throttling_events: 0,
                 accuracy_score: 0.85,
+                throughput_improvement: 1.0,
+                quality_degradation: 0.0,
             },
             best_metrics: Arc::new(RwLock::new(TuningMetrics {
                 throughput_ops_per_sec: 100.0,
@@ -314,6 +374,8 @@ impl PerformanceTracker {
                 cpu_utilization_percent: 70.0,
                 thermal_throttling_events: 0,
                 accuracy_score: 0.85,
+                throughput_improvement: 1.0,
+                quality_degradation: 0.0,
             })),
             improvement_threshold: 0.05, // 5% improvement required
         }

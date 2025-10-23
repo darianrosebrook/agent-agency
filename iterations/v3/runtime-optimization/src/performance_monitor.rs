@@ -96,6 +96,7 @@ pub struct SLAMetrics {
 }
 
 /// Performance monitor for real-time metrics collection
+#[derive(Debug)]
 pub struct PerformanceMonitor {
     config: MonitorConfig,
     /// Current metrics
@@ -149,7 +150,7 @@ impl PerformanceMonitor {
 
                         // Add to history
                         let mut history = history_clone.write().await;
-                        history.push(metrics);
+                        history.push(metrics.clone());
 
                         // Trim old metrics based on retention period
                         let cutoff = chrono::Utc::now() - chrono::Duration::seconds(config.retention_period_secs as i64);
@@ -411,6 +412,7 @@ impl PerformanceMonitor {
             timestamp: window.last().unwrap().timestamp,
         }
     }
+
 }
 
 /// Performance regression detection

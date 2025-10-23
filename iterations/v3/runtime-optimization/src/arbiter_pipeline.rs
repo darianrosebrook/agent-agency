@@ -38,6 +38,7 @@ impl Default for DecisionPipelineConfig {
 }
 
 /// Arbiter pipeline optimizer for sub-50ms decisions
+#[derive(Debug)]
 pub struct ArbiterPipelineOptimizer {
     config: DecisionPipelineConfig,
     /// Decision cache for frequently seen task patterns

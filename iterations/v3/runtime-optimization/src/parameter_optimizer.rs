@@ -194,13 +194,13 @@ impl LLMParameterOptimizer {
         let param_set = ParameterSet {
             temperature: parameters.temperature,
             max_tokens: parameters.max_tokens,
-            top_p: parameters.top_p,
+            top_p: Some(parameters.top_p),
             frequency_penalty: parameters.frequency_penalty,
             presence_penalty: parameters.presence_penalty,
             stop_sequences: parameters.stop_sequences,
             seed: parameters.seed,
             origin: parameters.origin,
-            policy_version: parameters.policy_version,
+            policy_version: parameters.policy_version.clone(),
             created_at: parameters.created_at,
         };
         
@@ -221,7 +221,7 @@ impl LLMParameterOptimizer {
             TaskFeatures::default(), // Would use actual features
             param_set.clone(),
             log_propensity,
-            outcome,
+            outcome.clone(),
             parameters.policy_version,
         ).await?;
         
@@ -283,12 +283,12 @@ impl LLMParameterOptimizer {
                     .max(1).min(constraints.max_tokens as i32) as u32;
                 
                 // Check trust region constraints
-                if (new_temp - baseline.temperature).abs() <= constraints.max_delta_temperature
+                if (new_temp - baseline.temperature).abs() <= constraints.max_delta_temperature as f64
                     && (new_tokens as i32 - baseline.max_tokens as i32).abs() <= constraints.max_delta_max_tokens as i32
                 {
                     let mut candidate = baseline.clone();
                     candidate.temperature = new_temp;
-                    candidate.max_tokens = new_tokens;
+                    candidate.max_tokens = new_tokens as usize;
                     candidate.origin = "optimizer".to_string();
                     candidate.created_at = Utc::now();
                     candidates.push(candidate);
@@ -330,7 +330,7 @@ impl QualityGateValidator {
         constraints: &OptimizationConstraints,
     ) -> Result<ValidationResult> {
         // Simplified validation
-        if proposed.max_tokens > constraints.max_tokens {
+        if proposed.max_tokens > constraints.max_tokens as usize {
             return Ok(ValidationResult::Rejected {
                 reason: format!("Token limit {} exceeds constraint {}", 
                                 proposed.max_tokens, constraints.max_tokens),

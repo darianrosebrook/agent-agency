@@ -230,10 +230,10 @@ impl LLMParameterFeedbackExample {
         use chrono::Utc;
         
         UsedParameters {
-            model_name: "gpt-4".to_string(),
+            model_name: Some("gpt-4".to_string()),
             temperature: params.temperature,
             max_tokens: params.max_tokens,
-            top_p: params.top_p,
+            top_p: params.top_p.unwrap_or(0.9),
             frequency_penalty: params.frequency_penalty,
             presence_penalty: params.presence_penalty,
             stop_sequences: params.stop_sequences.clone(),
@@ -242,6 +242,7 @@ impl LLMParameterFeedbackExample {
             origin: params.origin.clone(),
             policy_version: params.policy_version.clone(),
             timestamp: params.created_at,
+            created_at: params.created_at,
         }
     }
 

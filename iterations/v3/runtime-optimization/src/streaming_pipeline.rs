@@ -629,6 +629,18 @@ impl StreamingPipeline {
         // In practice, this would analyze processing time vs. expected time
         0.85 // 85% efficiency
     }
+
+    /// Tune pipeline with optimization results
+    pub async fn tune_pipeline(&self, _optimization_result: &crate::bayesian_optimizer::OptimizationResult) -> Result<()> {
+        // Stub implementation for pipeline tuning
+        Ok(())
+    }
+
+    /// Apply optimized parameters to pipeline
+    pub async fn apply_parameters(&self, _parameters: &HashMap<String, f64>) -> Result<()> {
+        // Stub implementation for parameter application
+        Ok(())
+    }
 }
 
 impl Default for StreamConfig {
