@@ -788,7 +788,7 @@ mod tests {
             performance_monitoring: true,
         };
 
-        let router = InferenceRouter::new(config);
+        let router = InferenceRouter::new(config).await.unwrap();
         assert!(router.config.load_balancing);
     }
 
@@ -804,7 +804,7 @@ mod tests {
             model_preferences: HashMap::new(),
             load_balancing: true,
             performance_monitoring: true,
-        });
+        }).await.unwrap();
 
         let capabilities = SystemCapabilities::default();
         let resource_usage = ResourceUsage::default();
@@ -830,7 +830,7 @@ mod tests {
             model_preferences: HashMap::new(),
             load_balancing: true,
             performance_monitoring: true,
-        });
+        }).await.unwrap();
 
         let request = InferenceRequest {
             id: Uuid::new_v4(),
@@ -865,7 +865,7 @@ mod tests {
             model_preferences: HashMap::new(),
             load_balancing: true,
             performance_monitoring: true,
-        });
+        }).await.unwrap();
 
         let request = InferenceRequest {
             id: Uuid::new_v4(),
@@ -902,7 +902,7 @@ mod tests {
             model_preferences: HashMap::new(),
             load_balancing: true,
             performance_monitoring: true,
-        });
+        }).await.unwrap();
 
         let request = InferenceRequest {
             id: Uuid::new_v4(),

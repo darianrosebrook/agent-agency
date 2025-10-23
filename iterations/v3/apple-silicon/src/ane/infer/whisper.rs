@@ -356,7 +356,7 @@ mod tests {
     use super::*;
     use crate::ane::models::whisper_model::{WhisperConfig, load_whisper_model};
     use crate::telemetry::TelemetryCollector;
-    use crate::circuit_breaker::{CircuitBreaker, CircuitBreakerConfig};
+    use crate::ane::circuit_breaker::{CircuitBreaker, CircuitBreakerConfig};
     use std::path::PathBuf;
 
     #[tokio::test]

@@ -1034,11 +1034,13 @@ mod tests {
             gpu_percent: 50.0,
             ane_percent: 75.0,
             memory_used_mb: 8192,
+            memory_total_mb: 16384,
+            thermal_celsius: 45.0,
+            power_watts: 15.0,
+            timestamp: chrono::Utc::now(),
             gpu_memory: None,
             ane_stats: None,
             thermal_stats: None,
-            power_watts: 0.0,
-            timestamp: chrono::Utc::now(),
         };
 
         assert_eq!(usage.cpu_percent, 25.0);

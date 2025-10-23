@@ -16566,5 +16566,39 @@
     },
     "previous_hash": "6c1ef8c2b4eb041131bace50ce1e7b6ec8d3afd7df9ed41cdf0dcb4057df7f7a",
     "hash": "95c1d01e13d36caae6b95979a2da0d81ea8657fe1342bf2beb607d41a1838f87"
+  },
+  {
+    "id": "prov-1761180932857",
+    "timestamp": "2025-10-23T00:55:32.857Z",
+    "commit": {
+      "hash": "cf1309449b4e7c20e62ded41d52bd637d0dec171",
+      "message": "feat: implement safe CoreML integration with Send/Sync compliance",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "AGENT-001",
+      "title": "P0 Blockers: Truthful System Loop with Auditability and Control",
+      "risk_tier": 1,
+      "mode": "feature",
+      "waiver_ids": []
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-23T00:55:32.858Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "95c1d01e13d36caae6b95979a2da0d81ea8657fe1342bf2beb607d41a1838f87",
+    "hash": "631560b10b06c317b83184ca0415c0b166259e21a29c2a5abb047e976b3a51d8"
   }
 ]

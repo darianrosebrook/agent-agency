@@ -380,7 +380,7 @@ mod tests {
     #[tokio::test]
     async fn test_dashboard_creation() {
         let telemetry = TelemetryCollector::new();
-        let dashboard = YOLOPerformanceDashboard::new(telemetry);
+        let mut dashboard = YOLOPerformanceDashboard::new(telemetry);
 
         let metrics = dashboard.get_real_time_metrics();
         assert_eq!(metrics.total_inferences, 0);

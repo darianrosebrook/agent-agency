@@ -90,12 +90,12 @@ async fn load_diffusion_model(
     println!("   Precision: FP16");
     println!("   Target: Apple Silicon ANE");
 
-    // This would actually load the model from disk
-    // let model_path = Path::new("models/diffusion/CoreML-Anything-V3.1.mlpackage");
-    // let model = DiffusionModel::load(&model_path, telemetry.clone(), circuit_breaker).await?;
+    // Load the actual CoreML-Anything model from disk
+    let model_path = Path::new("../../models/diffusion/anything-v3-1_split-einsum");
+    let model = DiffusionModel::load(&model_path, telemetry.clone(), circuit_breaker).await?;
 
-    // Return mock model for demonstration
-    Err("Model loading not yet implemented - requires actual CoreML-Anything model file".into())
+    println!("✅ CoreML-Anything model loaded successfully");
+    Ok(model)
 }
 
 /// Save generated diagram to documentation assets

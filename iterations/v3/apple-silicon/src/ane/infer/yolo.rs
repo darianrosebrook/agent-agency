@@ -286,14 +286,15 @@ pub fn create_yolo_executor(model: LoadedYOLOModel) -> YOLOInferenceExecutor {
 mod tests {
     use super::*;
     use crate::telemetry::TelemetryCollector;
-    use crate::ane::manager::CircuitBreaker;
+    use crate::ane::circuit_breaker::{CircuitBreaker, CircuitBreakerConfig};
+    use crate::ane::models::YOLOConfig;
 
     #[tokio::test]
     async fn test_yolo_executor_creation() {
         // This test would require a mock model setup
         // For now, just test that the executor can be created with minimal setup
         let telemetry = TelemetryCollector::new();
-        let circuit_breaker = CircuitBreaker::new();
+        let circuit_breaker = CircuitBreaker::new(CircuitBreakerConfig::default());
 
         // Create minimal model config for testing
         let config = YOLOConfig::default();

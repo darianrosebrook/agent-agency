@@ -345,7 +345,7 @@ mod tests {
 
     #[test]
     fn test_optimizer_creation() {
-        let optimizer = ANEOptimizer::new(ANEOptimizationStrategy::Balanced);
+        let mut optimizer = ANEOptimizer::new(ANEOptimizationStrategy::Balanced);
         let params = optimizer.get_optimization_params("test_model");
 
         assert_eq!(params.batch_size, 1);

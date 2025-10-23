@@ -1,5 +1,5 @@
 === Duplication Detection Report ===
-Generated: Wed Oct 22 17:11:23 PDT 2025
+Generated: Wed Oct 22 19:22:59 PDT 2025
 
 Duplicate filenames across crates:
 agent.rs
@@ -12,17 +12,18 @@ caws_integration.rs
 circuit_breaker.rs
 cli.rs
 config.rs
-context.rs
 context_builder.rs
+context.rs
 coordinator.rs
-coreml.rs
 coreml_model.rs
+coreml.rs
 dashboard.rs
 error.rs
 errors.rs
 ewma.rs
 execute.rs
 executor.rs
+ffi.rs
 gates.rs
 integration.rs
 iokit.rs
@@ -53,19 +54,6 @@ validation.rs
 websocket.rs
 
 Duplicate struct names:
-ANECapabilities {
-ANEConfig {
-ANEDeviceCapabilities {
-ANEDeviceConfig {
-ANEDeviceStatus {
-ANEManager {
-ANEModel {
-ANEPerformanceMetrics {
-ANEPowerConfig {
-ANEResourcePool {
-ANESymbols {
-ANEThermalConfig {
-ANETokenizers {
 AcceptanceCriterion {
 AdaptivePromptingStrategy;
 AdaptiveResourceAllocator {
@@ -83,6 +71,19 @@ AlertRule {
 AlertStatistics {
 Allocation {
 AmbiguityAnalysis {
+ANECapabilities {
+ANEConfig {
+ANEDeviceCapabilities {
+ANEDeviceConfig {
+ANEDeviceStatus {
+ANEManager {
+ANEModel {
+ANEPerformanceMetrics {
+ANEPowerConfig {
+ANEResourcePool {
+ANESymbols {
+ANEThermalConfig {
+ANETokenizers {
 AnomalyDetectionResult {
 AnomalyDetector {
 AppleSiliconConfig {
@@ -102,13 +103,13 @@ BenchmarkResult {
 BenchmarkRunner {
 BoundingBox {
 BudgetAdherence {
-BudgetCheckResult {
 BudgetChecker {
+BudgetCheckResult {
 BudgetComplianceResult {
 BudgetLimits {
+Budgets {
 BudgetState {
 BudgetViolation {
-Budgets {
 CacheConfig {
 CacheMetadata {
 CacheStats {
@@ -132,8 +133,8 @@ CawsWaiver {
 ChangeComplexity {
 ChangeSet {
 ChunkConfig {
-ChunkList {
 ChunkedExecutor {
+ChunkList {
 CircuitBreaker {
 CircuitBreakerConfig {
 CircuitBreakerStats {
@@ -170,9 +171,9 @@ ContextStats {
 ContextSynthesisConfig {
 ContextUtility {
 CoordinationMetrics {
+CoreferenceResolution {
 CoreMLMetrics {
 CoreMLModel {
-CoreferenceResolution {
 CouncilConfig {
 CouncilMetrics {
 CouncilVerdict {
@@ -193,6 +194,7 @@ DebateArgument {
 DebateRound {
 DebateSession {
 DeduplicationMetrics {
+DefaultCoreMlInvoker;
 Dependency {
 Detection {
 DeviceInfo {
@@ -271,10 +273,9 @@ LanguageWarning {
 LearningUpdate {
 LogEntry {
 LoggingConfig {
+MaintenanceTask {
 MCPConfig {
 MCPServer {
-MLModel {
-MaintenanceTask {
 MemoryConfig {
 MemoryManager {
 MemoryStorage {
@@ -283,6 +284,7 @@ MetricAlphas {
 MetricCounts {
 MetricsCollector {
 MitigationStrategy {
+MLModel {
 MockTask {
 ModelInfo {
 ModelMetadata {
@@ -296,8 +298,8 @@ MultimodalContext {
 MultimodalSearchResult {
 MyComponent {
 NamedEntity {
-NoOpMetricsBackend;
 NoopEmitter;
+NoOpMetricsBackend;
 ObjectiveWeights {
 OnnxEmbeddingProvider {
 OnnxPreparedModel {
@@ -370,8 +372,8 @@ QuantizationResult {
 QuantizationStats {
 QueryMetrics {
 RateLimitConfig {
-RateLimitMiddleware {
 RateLimiter {
+RateLimitMiddleware {
 Recommendation {
 RecoveryConfig {
 RecoveryMetrics {
@@ -409,7 +411,6 @@ RoutingDecision {
 RoutingRecommendation {
 RoutingStats {
 RustAnalyzer;
-SLAMetrics {
 SatisficingConfig {
 SatisficingEvaluator {
 ScalingRecommendation {
@@ -426,14 +427,15 @@ SelfAssessment {
 SelfPromptingAgent {
 SelfPromptingResult {
 ServerConfig {
+SLAMetrics {
 SlaValidationResult {
 SourceIntegrityAlert {
 SourceIntegrityRecord {
 SourceIntegrityVerification {
 SourceLocation {
 Speaker {
-SpecialTokens {
 SpecializationScore {
+SpecialTokens {
 SpeechSegment {
 SpeechTurn {
 StorageMetrics {
@@ -469,13 +471,13 @@ TelemetryCollector {
 TensorSpec {
 TestDataGenerator;
 TestFixtures;
+TestingSpecialist {
 TestPerformanceMetrics {
 TestPlan {
 TestResult {
 TestResults {
 TestScenario {
 TestSuiteResults {
-TestingSpecialist {
 ThermalCapabilities {
 ThermalConfig {
 ThermalStatus {
@@ -538,6 +540,7 @@ ZeroKnowledgeProof {
 Duplicate trait names:
 ArtifactStorage: Send + Sync {
 Converter: Send + Sync {
+CoreMlInvoker {
 EmbeddingProvider: Send + Sync {
 HealthCheck: Send + Sync {
 InferenceEngine: Send + Sync {
