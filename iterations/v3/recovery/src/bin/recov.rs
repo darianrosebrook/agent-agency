@@ -1,12 +1,9 @@
 use clap::{Parser, Subcommand};
 use recovery::{
-    api::RecoveryStore,
-    cas::BlobStore,
     index::RecoveryIndex,
     journal::WriteAheadLog,
-    merkle::{Commit, FileTree},
     policy::{
-        CawsPolicy, PolicyEnforcer, RetentionPolicy, 
+        CawsPolicy, RetentionPolicy, 
         CompressionPolicy, ChunkingPolicy, RedactionPolicy, RedactionRule,
         ProvenancePolicy, RecoveryPolicy, StoragePolicy, ChunkingMode,
         RedactionRuleType, CheckpointFrequency

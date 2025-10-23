@@ -3,7 +3,7 @@
 //! Production-ready integration of YOLO object detection with comprehensive
 //! monitoring, optimization, and error handling for the Council system.
 
-use crate::types::{EnricherConfig, VisionAnalysisResult, ObjectDetection, BoundingBox};
+use crate::types::{EnricherConfig, VisionAnalysisResult, BoundingBox};
 use crate::vision_enricher::{VisionEnricher, YOLOExecutorTrait, YOLODetectionResult, Detection, YOLOInferenceOptions};
 use image::DynamicImage;
 use async_trait::async_trait;
@@ -16,6 +16,12 @@ pub struct ProductionYOLOExecutor {
     // Mock implementation for now - would integrate with apple-silicon crate
     model_loaded: bool,
     performance_monitor: Arc<RwLock<Option<crate::circuit_breaker::CircuitBreaker>>>, // Placeholder
+}
+
+impl Default for ProductionYOLOExecutor {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl ProductionYOLOExecutor {
@@ -96,7 +102,7 @@ impl YOLOExecutorTrait for ProductionYOLOExecutor {
             detections: detections_vec.clone(),
             processing_time_ms,
             num_detections: detections_vec.len(),
-            image_size: (image.width() as u32, image.height() as u32),
+            image_size: (image.width(), image.height()),
         })
     }
 }
@@ -188,7 +194,7 @@ impl ProductionVisionEnricher {
         }
 
         // Object detection quality
-        if analysis.detections.len() > 0 {
+        if !analysis.detections.is_empty() {
             score += 0.3;
             if analysis.detections.iter().any(|d| d.confidence > 0.8) {
                 score += 0.3;

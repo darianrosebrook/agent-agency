@@ -12,7 +12,6 @@ use anyhow::{anyhow, Result};
 use std::path::PathBuf;
 use std::time::Instant;
 use std::io::Write;
-use std::mem::ManuallyDrop;
 use uuid::Uuid;
 
 /// FFI declarations for ASR Bridge
@@ -749,9 +748,9 @@ impl AsrEnricher {
         let audio_path_c = std::ffi::CString::new(recognition_request._audio_file.to_string_lossy().as_ref())
             .map_err(|e| anyhow!("Invalid audio path: {}", e))?;
 
-        let mut out_text: *mut std::ffi::c_char = std::ptr::null_mut();
-        let mut out_confidence: f32 = 0.0;
-        let mut out_error: *mut std::ffi::c_char = std::ptr::null_mut();
+        let out_text: *mut std::ffi::c_char = std::ptr::null_mut();
+        let out_confidence: f32 = 0.0;
+        let out_error: *mut std::ffi::c_char = std::ptr::null_mut();
 
         let result = unsafe {
             #[cfg(all(target_os = "macos", feature = "swift-bridge"))]
@@ -988,7 +987,7 @@ impl AsrEnricher {
         // Prepare C strings
         let audio_path_c = CString::new(audio_path.to_string_lossy().as_ref())?;
         let language_c = language
-            .map(|l| CString::new(l))
+            .map(CString::new)
             .transpose()?
             .unwrap_or_else(|| CString::new("").unwrap());
 

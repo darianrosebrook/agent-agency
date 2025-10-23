@@ -518,7 +518,7 @@ impl ANEManager {
 
         // Check memory availability
         let estimated_memory = estimate_mistral_memory_usage(&MistralModel {
-            handle: SafeModelHandle::new(std::ptr::null_mut()),
+            handle: SafeModelHandle::new(crate::ane::compat::coreml::coreml::ModelRef::new()), // Mock ref for estimation
             schema: crate::ane::models::mistral_model::ModelSchema {
                 inputs: vec![],
                 outputs: vec![],
@@ -545,11 +545,11 @@ impl ANEManager {
         let compiled_path = model_path.to_path_buf(); // Placeholder
 
         // Load model through CoreML bridge (placeholder)
-        let handle = std::ptr::null_mut(); // TODO: Implement actual CoreML loading
+        let model_ref = crate::ane::compat::coreml::coreml::ModelRef::new(); // TODO: Implement actual CoreML loading
 
         // Create Mistral model
         let model = MistralModel {
-            handle: SafeModelHandle::new(handle),
+            handle: SafeModelHandle::new(model_ref),
             schema: crate::ane::models::mistral_model::ModelSchema {
                 inputs: vec![],
                 outputs: vec![],

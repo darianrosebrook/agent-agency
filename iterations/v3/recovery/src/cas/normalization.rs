@@ -96,6 +96,12 @@ pub struct TextNormalizer {
     eol_cache: HashMap<String, Eol>,
 }
 
+impl Default for TextNormalizer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl TextNormalizer {
     /// Create a new text normalizer with default configuration
     pub fn new() -> Self {
@@ -134,7 +140,7 @@ impl TextNormalizer {
         }
 
         // Normalize content
-        let normalized_content = self.normalize_content(content, original_eol.clone())?;
+        let normalized_content = self.normalize_content(content, original_eol)?;
         let was_normalized = normalized_content != content;
 
         Ok(NormalizationResult {
@@ -144,9 +150,9 @@ impl TextNormalizer {
             } else {
                 None
             },
-            target_eol: self.config.target_eol.clone(),
+            target_eol: self.config.target_eol,
             was_normalized,
-            line_count: self.count_lines(&normalized_content, self.config.target_eol.clone()),
+            line_count: self.count_lines(&normalized_content, self.config.target_eol),
         })
     }
 
@@ -217,7 +223,7 @@ impl TextNormalizer {
         // Check if content is mostly printable ASCII
         let printable_count = content
             .iter()
-            .filter(|&&b| b >= 32 && b <= 126 || b == b'\n' || b == b'\r' || b == b'\t')
+            .filter(|&&b| (32..=126).contains(&b) || b == b'\n' || b == b'\r' || b == b'\t')
             .count();
         
         let printable_ratio = printable_count as f64 / content.len() as f64;

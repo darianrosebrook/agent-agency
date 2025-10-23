@@ -2074,14 +2074,7 @@ impl Judge for MistralJudge {
     ) -> CouncilResult<JudgeVerdict> {
         let start_time = std::time::Instant::now();
 
-        // Emit telemetry event for review start
-        self.telemetry.emit_event("council.judge.review_started", &serde_json::json!({
-            "judge_id": self.config.judge_id,
-            "session_id": context.session_id,
-            "working_spec_id": context.working_spec.id,
-            "risk_tier": format!("{:?}", context.risk_tier),
-            "timestamp": chrono::Utc::now().to_rfc3339()
-        }));
+        // Telemetry recording would go here when available
 
         // Use a closure to ensure telemetry is emitted for both success and failure
         let result = async {
@@ -2119,39 +2112,10 @@ impl Judge for MistralJudge {
             Ok(verdict) => {
                 tracing::info!("Mistral judge completed review in {:?}", duration);
 
-                // Emit telemetry event for successful review completion
-                self.telemetry.emit_event("council.judge.review_finished", &serde_json::json!({
-                    "judge_id": self.config.judge_id,
-                    "session_id": context.session_id,
-                    "working_spec_id": context.working_spec.id,
-                    "duration_ms": duration.as_millis() as u64,
-                    "verdict_type": format!("{:?}", verdict),
-                    "confidence": verdict.confidence(),
-                    "success": true,
-                    "timestamp": chrono::Utc::now().to_rfc3339()
-                }));
-
-                // Record duration metric
-                self.telemetry.record_metric("council.judge.review_duration_ms", duration.as_millis() as f64);
-
                 Ok(verdict)
             }
             Err(e) => {
                 tracing::error!("Mistral judge failed review in {:?}: {:?}", duration, e);
-
-                // Emit telemetry event for failed review
-                self.telemetry.emit_event("council.judge.review_failed", &serde_json::json!({
-                    "judge_id": self.config.judge_id,
-                    "session_id": context.session_id,
-                    "working_spec_id": context.working_spec.id,
-                    "duration_ms": duration.as_millis() as u64,
-                    "error_type": format!("{:?}", e),
-                    "success": false,
-                    "timestamp": chrono::Utc::now().to_rfc3339()
-                }));
-
-                // Record error metric
-                self.telemetry.record_metric("council.judge.review_errors_total", 1.0);
 
                 Err(e)
             }
@@ -2415,6 +2379,7 @@ impl Judge for ConstitutionalJudge {
 
         // TODO: Record telemetry when mutable access is available
         // let duration = start_time.elapsed();
+        // TODO: Record telemetry when methods are available
         // self.telemetry.record_inference(duration.as_millis() as u64, true, "constitutional");
 
         Ok(judge_verdict)

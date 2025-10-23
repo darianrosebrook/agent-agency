@@ -3,20 +3,13 @@
 //! Provides integration between the system health monitor and agent telemetry
 //! for comprehensive monitoring of agent performance and coordination effectiveness.
 
-use crate::types::*;
-use crate::SystemHealthMonitor;
 #[cfg(feature = "agent-agency-observability")]
 use agent_agency_observability::{
     agent_telemetry::{AgentPerformanceMetrics, AgentTelemetryCollector, AgentType, BusinessMetrics,
     CoordinationMetrics, SystemDashboard},
     alerts::{AlertType, Alert as SystemAlert},
 };
-use anyhow::Result;
-use chrono::Utc;
 use std::collections::VecDeque;
-use std::sync::Arc;
-use tokio::sync::RwLock;
-use tracing::{error, info, warn};
 
 /// Task completion record for throughput calculation
 #[derive(Debug, Clone)]

@@ -1,7 +1,6 @@
 //! Quality validators implementation
 
 use crate::types::*;
-use crate::error::*;
 use async_trait::async_trait;
 
 /// Compilation validator - ensures code compiles
@@ -12,7 +11,7 @@ impl super::gates::QualityValidatorTrait for CompilationValidator {
     async fn validate(&self, context: &ValidationContext) -> ValidationResult {
         // Run cargo check on the package
         let output = match tokio::process::Command::new("cargo")
-            .args(&["check", "--package", &context.package_name])
+            .args(["check", "--package", &context.package_name])
             .current_dir(&context.workspace_root)
             .output()
             .await {
@@ -64,7 +63,7 @@ impl super::gates::QualityValidatorTrait for TestValidator {
     async fn validate(&self, context: &ValidationContext) -> ValidationResult {
         // Run tests
         let test_output = match tokio::process::Command::new("cargo")
-            .args(&["test", "--package", &context.package_name])
+            .args(["test", "--package", &context.package_name])
             .current_dir(&context.workspace_root)
             .output()
             .await {
@@ -130,7 +129,7 @@ impl super::gates::QualityValidatorTrait for LintValidator {
     async fn validate(&self, context: &ValidationContext) -> ValidationResult {
         // Run clippy
         let output = match tokio::process::Command::new("cargo")
-            .args(&["clippy", "--package", &context.package_name, "--", "-D", "warnings"])
+            .args(["clippy", "--package", &context.package_name, "--", "-D", "warnings"])
             .current_dir(&context.workspace_root)
             .output()
             .await {
@@ -177,7 +176,7 @@ impl super::gates::QualityValidatorTrait for SecurityValidator {
     async fn validate(&self, context: &ValidationContext) -> ValidationResult {
         // Run cargo audit if available
         match tokio::process::Command::new("cargo")
-            .args(&["audit"])
+            .args(["audit"])
             .current_dir(&context.workspace_root)
             .output()
             .await
@@ -272,7 +271,7 @@ impl super::gates::QualityValidatorTrait for DocumentationValidator {
     async fn validate(&self, context: &ValidationContext) -> ValidationResult {
         // Run cargo doc to check documentation
         let output = match tokio::process::Command::new("cargo")
-            .args(&["doc", "--package", &context.package_name, "--no-deps"])
+            .args(["doc", "--package", &context.package_name, "--no-deps"])
             .current_dir(&context.workspace_root)
             .output()
             .await {
@@ -335,7 +334,7 @@ fn extract_compilation_suggestions(stderr: &str) -> Vec<String> {
 async fn get_test_coverage(workspace_root: &std::path::Path, package_name: &str) -> std::result::Result<f32, anyhow::Error> {
     // Try to run tarpaulin for coverage
     let output = tokio::process::Command::new("cargo")
-        .args(&["tarpaulin", "--packages", package_name, "--out", "Json"])
+        .args(["tarpaulin", "--packages", package_name, "--out", "Json"])
         .current_dir(workspace_root)
         .output()
         .await?;

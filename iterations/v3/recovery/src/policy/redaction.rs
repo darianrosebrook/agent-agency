@@ -45,6 +45,12 @@ pub struct SecretRedactor {
     compiled_patterns: HashMap<String, Vec<Regex>>,
 }
 
+impl Default for SecretRedactor {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SecretRedactor {
     /// Create a new secret redactor with default patterns
     pub fn new() -> Self {
@@ -137,6 +143,12 @@ impl SecretRedactor {
 pub struct PreAdmissionScanner {
     redactor: SecretRedactor,
     blocked_extensions: Vec<String>,
+}
+
+impl Default for PreAdmissionScanner {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl PreAdmissionScanner {

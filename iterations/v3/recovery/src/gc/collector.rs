@@ -1,10 +1,9 @@
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::types::{Digest, ObjectRef, ChunkRef};
-use crate::types::Digest as SourceDigest;
+use crate::types::{Digest, ObjectRef};
 
 /// Garbage collector for managing object lifecycle
 pub struct GarbageCollector {
@@ -99,6 +98,12 @@ pub struct GracePeriodTracker {
     pub grace_objects: HashMap<Digest, u64>,
     /// Grace period duration
     pub grace_duration: u64,
+}
+
+impl Default for GarbageCollector {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl GarbageCollector {

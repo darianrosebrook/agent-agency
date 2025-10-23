@@ -282,6 +282,12 @@ pub struct SessionRef {
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct ChangeId(pub String);
 
+impl Default for ChangeId {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ChangeId {
     pub fn new() -> Self {
         Self(uuid::Uuid::new_v4().to_string())

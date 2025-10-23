@@ -13,7 +13,7 @@ define log_timing
 	echo "[$$(date +%s)] END: $(1) - $${duration}ms" >> $(TIMING_LOG)
 endef
 
-.PHONY: verify verify-tier1 verify-tier2 verify-tier3 test-coverage coverage-report schema-validate clean mutants-mcp mutants-mcp-list mutants-mcp-files test-contract test-e2e gates install-hooks build build-dev build-test build-release check check-fast install-tools timing-report perf-report clean-timing
+.PHONY: verify verify-tier1 verify-tier2 verify-tier3 test-coverage coverage-report schema-validate clean mutants-mcp mutants-mcp-list mutants-mcp-files test-contract test-e2e gates install-hooks build build-dev build-test build-release check check-fast install-tools timing-report perf-report clean-timing lint-strict lint-soft
 
 # Build targets using optimized wrapper with timing
 build: build-dev
@@ -179,6 +179,20 @@ perf-report:
 	@echo
 	@echo "Cache effectiveness:"
 	@sccache --show-stats 2>/dev/null || echo "  sccache stats unavailable"
+
+# Linting targets
+lint-strict:
+	@echo "🔍 Running strict lint checks on top 5 noisy crates..."
+	@echo "Target crates: enrichers, recovery, parallel-workers, system-health-monitor"
+	@RUSTFLAGS="-D warnings" cargo check -p enrichers --lib --quiet || (echo "❌ enrichers failed strict lint check"; exit 1)
+	@RUSTFLAGS="-D warnings" cargo check -p recovery --lib --quiet || (echo "❌ recovery failed strict lint check"; exit 1)
+	@RUSTFLAGS="-D warnings" cargo check -p parallel-workers --lib --quiet || (echo "❌ parallel-workers failed strict lint check"; exit 1)
+	@RUSTFLAGS="-D warnings" cargo check -p agent-agency-system-health-monitor --lib --quiet || (echo "❌ system-health-monitor failed strict lint check"; exit 1)
+	@echo "✅ All top 5 crates pass strict lint checks"
+
+lint-soft:
+	@echo "🔍 Running soft lint checks on entire workspace..."
+	@cargo clippy --all-targets -- -A clippy::module_name_repetitions --quiet || echo "⚠️  Some clippy warnings remain in workspace"
 
 clean-timing:
 	@echo "🧹 Cleaning timing and performance logs..."

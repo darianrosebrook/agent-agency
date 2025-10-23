@@ -117,6 +117,12 @@ pub struct MessageRouter {
     routes: std::collections::HashMap<MessageType, Vec<Box<dyn MessageHandler>>>,
 }
 
+impl Default for MessageRouter {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl MessageRouter {
     pub fn new() -> Self {
         Self {
@@ -130,7 +136,7 @@ impl MessageRouter {
         message_type: MessageType,
         handler: H,
     ) {
-        self.routes.entry(message_type).or_insert_with(Vec::new).push(Box::new(handler));
+        self.routes.entry(message_type).or_default().push(Box::new(handler));
     }
 
     /// Route a message to all registered handlers for its type
@@ -204,6 +210,12 @@ pub struct MessageFilter {
     pub worker_ids: Option<Vec<WorkerId>>,
     pub subtask_ids: Option<Vec<SubTaskId>>,
     pub message_types: Option<Vec<MessageType>>,
+}
+
+impl Default for MessageFilter {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl MessageFilter {

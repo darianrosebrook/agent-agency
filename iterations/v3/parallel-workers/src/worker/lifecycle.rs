@@ -175,8 +175,8 @@ impl WorkerManager {
         let total_workers = active_workers.len();
 
         let mut running = 0;
-        let mut completed = 0;
-        let mut failed = 0;
+        let completed = 0;
+        let failed = 0;
 
         // Note: This is a simplified check - in practice we'd need to poll the join handles
         // For now, assume all are running
@@ -251,6 +251,12 @@ pub struct WorkerStatistics {
 /// Worker pool implementation using the existing worker infrastructure
 pub struct DefaultWorkerPool {
     factory: WorkerFactory,
+}
+
+impl Default for DefaultWorkerPool {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl DefaultWorkerPool {

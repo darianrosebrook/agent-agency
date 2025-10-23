@@ -93,6 +93,12 @@ impl Default for ConcurrencyConfig {
     }
 }
 
+impl Default for ConcurrencyManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ConcurrencyManager {
     /// Create a new concurrency manager
     pub fn new() -> Self {
@@ -362,6 +368,12 @@ pub struct ConflictPattern {
     pub class: ConflictClass,
     /// Resolution strategy
     pub resolution: ConflictResolution,
+}
+
+impl Default for ConflictDetector {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl ConflictDetector {

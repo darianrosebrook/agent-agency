@@ -2,7 +2,6 @@
 
 use std::path::PathBuf;
 use thiserror::Error;
-use serde::{Deserialize, Serialize};
 use crate::types::{TaskId, SubTaskId, WorkerId, WorkerSpecialty};
 
 /// Main error type for the parallel worker system

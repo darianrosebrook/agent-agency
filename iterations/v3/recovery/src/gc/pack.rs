@@ -1,12 +1,11 @@
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::fs::{File, OpenOptions};
-use std::io::{self, BufReader, BufWriter, Read, Seek, SeekFrom, Write};
-use std::path::{Path, PathBuf};
+use std::fs::File;
+use std::io::{BufReader, BufWriter, Read, Seek, SeekFrom, Write};
+use std::path::PathBuf;
 
-use crate::types::{Digest, ObjectRef, ChunkRef};
-use crate::types::{Digest as SourceDigest, StreamingHasher};
+use crate::types::Digest;
 
 /// Pack file format for storing multiple objects efficiently
 pub struct PackFile {
@@ -551,7 +550,7 @@ impl PackManager {
 
     /// Close all active packs
     pub fn close_all_packs(&mut self) -> Result<()> {
-        for (_, pack) in &mut self.active_packs {
+        for pack in self.active_packs.values_mut() {
             pack.close()?;
         }
         self.active_packs.clear();

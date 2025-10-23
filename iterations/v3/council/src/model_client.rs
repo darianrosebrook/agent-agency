@@ -7,9 +7,54 @@ use std::sync::Arc;
 use tokio::sync::oneshot;
 use crossbeam::channel::{self, Receiver, Sender};
 
-use crate::ffi::coreml::{CoreMlInvoker, InferenceRequest, InferenceResult};
 use crate::error::{CouncilError, CouncilResult};
 use crate::judge::JudgeVerdict;
+
+/// Opaque model reference that can be sent across threads
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct ModelRef(u64);
+
+impl ModelRef {
+    /// Create a new unique model reference
+    pub fn new() -> Self {
+        use std::sync::atomic::{AtomicU64, Ordering};
+        static NEXT_ID: AtomicU64 = AtomicU64::new(1);
+        Self(NEXT_ID.fetch_add(1, Ordering::Relaxed))
+    }
+}
+
+/// Request for CoreML inference operation
+#[derive(Debug, Clone)]
+pub struct InferenceRequest {
+    pub prompt: String,
+    pub model_path: std::path::PathBuf,
+    pub judge_config: crate::judge::JudgeConfig,
+    pub model_ref: Option<ModelRef>,
+}
+
+/// Result of CoreML inference operation
+#[derive(Debug)]
+pub enum InferenceResult {
+    Success(String),
+    Error(String),
+}
+
+/// Trait for CoreML inference operations
+pub trait CoreMlInvoker {
+    fn invoke_inference(&mut self, request: InferenceRequest) -> InferenceResult;
+}
+
+/// Default placeholder implementation for CoreML operations
+/// This will be replaced with actual CoreML integration
+pub struct DefaultCoreMlInvoker;
+
+impl CoreMlInvoker for DefaultCoreMlInvoker {
+    fn invoke_inference(&mut self, request: InferenceRequest) -> InferenceResult {
+        // Placeholder implementation - return a mock response
+        tracing::warn!("Using placeholder CoreML inference for prompt: {}", request.prompt);
+        InferenceResult::Success("Mock CoreML response - integration pending".to_string())
+    }
+}
 
 /// Channel message for inference operations
 pub struct InferenceMessage {
@@ -19,7 +64,7 @@ pub struct InferenceMessage {
 
 /// Thread-safe client for CoreML inference operations.
 /// All operations are delegated to a dedicated thread via channels.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ModelClient {
     tx: Sender<InferenceMessage>,
 }
@@ -35,7 +80,7 @@ impl ModelClient {
     /// Spawn the dedicated thread that handles CoreML operations
     fn spawn_invoker_thread(rx: Receiver<InferenceMessage>) {
         std::thread::spawn(move || {
-            let mut invoker = crate::ffi::coreml::DefaultCoreMlInvoker;
+            let mut invoker = DefaultCoreMlInvoker;
             tracing::info!("CoreML invoker thread started");
 
             while let Ok(message) = rx.recv() {
@@ -105,8 +150,8 @@ impl ToInferenceRequest for &str {
             prompt: self.to_string(),
             model_path: std::path::Path::new("models/mistral/Mistral-7B-Instruct-v0.3.mlpackage")
                 .to_path_buf(),
-            options: Default::default(),
             judge_config: judge_config.clone(),
+            model_ref: None, // Will be set when model is loaded
         }
     }
 }

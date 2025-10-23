@@ -317,10 +317,10 @@ impl ExecutionSandbox {
         // Execute with timeout
         match tokio::time::timeout(self.resource_limits.time_limit, cmd.output()).await {
             Ok(result) => result.map_err(|e| WorkerError::ExecutionTimeout {
-                timeout_secs: self.resource_limits.time_limit.as_secs() as u64,
+                timeout_secs: self.resource_limits.time_limit.as_secs(),
             }),
             Err(_) => Err(WorkerError::ExecutionTimeout {
-                timeout_secs: self.resource_limits.time_limit.as_secs() as u64,
+                timeout_secs: self.resource_limits.time_limit.as_secs(),
             }),
         }
     }

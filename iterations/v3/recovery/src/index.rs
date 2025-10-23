@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use serde_json;
 use sqlx::{SqlitePool, Row};
 use std::path::Path;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, info};
 
 use crate::types::*;
 use crate::types::Digest;
@@ -376,7 +376,7 @@ impl RecoveryIndex {
             for entry in entries {
                 let entry = entry?;
                 if entry.path().is_file() {
-                    if let Ok(commit_id_hex) = std::fs::read_to_string(&entry.path()) {
+                    if let Ok(commit_id_hex) = std::fs::read_to_string(entry.path()) {
                         if let Ok(commit_id) = Digest::from_hex(commit_id_hex.trim()) {
                             match self.rebuild_commit_from_tree(&commit_id, refs_dir).await {
                                 Ok(()) => {

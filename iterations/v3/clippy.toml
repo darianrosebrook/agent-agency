@@ -1,0 +1,166 @@
+# Clippy Configuration for Agent Agency V3
+# This configuration allows certain transitional rules while enforcing stricter standards
+
+# Allow module name repetitions in imports (common in large codebases)
+# This is allowed because module names often need to be repeated for clarity
+allow = [
+    "clippy::module_name_repetitions",
+
+    # Allow ambiguous glob re-exports (common pattern in Rust libraries)
+    # These are often intentional for API design
+    "clippy::ambiguous_glob_reexports",
+
+    # Allow manual clamp patterns (clamp function may not be available in older Rust)
+    # This is transitional until all code uses modern clamp methods
+    "clippy::manual_clamp",
+
+    # Allow unnecessary unsafe blocks (sometimes needed for FFI safety)
+    # This is allowed for FFI code where unsafe blocks are semantically meaningful
+    "clippy::unnecessary_unsafe",
+
+    # Allow ptr_arg patterns (sometimes more efficient than slices)
+    # This is allowed where performance is critical over ergonomics
+    "clippy::ptr_arg",
+
+    # Allow needless range loops (sometimes clearer than iterators)
+    # This is allowed where readability is preferred over conciseness
+    "clippy::needless_range_loop",
+
+    # Allow if_same_then_else (sometimes clearer than other patterns)
+    # This is allowed where the symmetry makes the code more readable
+    "clippy::if_same_then_else",
+
+    # Allow single match patterns (sometimes needed for future extensibility)
+    # This is allowed to prepare for future pattern additions
+    "clippy::single_match",
+
+    # Allow await_holding_lock (sometimes necessary with current async limitations)
+    # This is transitional until better async mutex patterns are available
+    "clippy::await_holding_lock",
+
+    # Allow unwrap_or_default (sometimes more readable than or_default)
+    # This is allowed for readability in complex expressions
+    "clippy::unwrap_or_default",
+
+    # Allow not_unsafe_ptr_arg_deref (sometimes needed for FFI ergonomics)
+    # This is allowed for FFI functions where unsafe is expected
+    "clippy::not_unsafe_ptr_arg_deref",
+
+    # Allow empty_line_after_doc_comments (sometimes needed for formatting)
+    # This is allowed for documentation formatting preferences
+    "clippy::empty_line_after_doc_comments",
+
+    # Allow unused_doc_comments (sometimes needed for rustdoc generation)
+    # This is allowed for extern blocks and macro-generated code
+    "clippy::unused_doc_comments",
+
+    # Allow unreachable_code (sometimes needed for conditional compilation)
+    # This is allowed in stub implementations and feature-gated code
+    "clippy::unreachable_code",
+
+    # Allow unused_mut (sometimes needed for future extensibility)
+    # This is allowed where mut may be needed later
+    "clippy::unused_mut",
+
+    # Allow unused_assignments (sometimes needed for debugging)
+    # This is allowed during development and debugging phases
+    "clippy::unused_assignments",
+
+    # Allow unexpected_cfgs (feature flags may not be defined yet)
+    # This is transitional until all features are properly declared
+    "clippy::unexpected_cfgs",
+
+    # Allow unused_variables (sometimes needed for future extensibility)
+    # This is transitional - will be denied at crate level where appropriate
+    "clippy::unused_variables",
+
+    # Allow dead_code (sometimes needed for future extensibility)
+    # This is transitional - will be warned at crate level where appropriate
+    "clippy::dead_code",
+
+    # Allow unused_imports (sometimes needed for future extensibility)
+    # This is transitional - will be denied at crate level where appropriate
+    "clippy::unused_imports",
+
+    # Allow unused_must_use (sometimes needed for future extensibility)
+    # This is transitional - will be denied at crate level where appropriate
+    "clippy::unused_must_use",
+]
+
+# Warn about these issues (default behavior)
+# Note: These are handled by crate-local directives where strict linting is desired
+warn = []
+
+# Deny these issues (strict enforcement)
+# Note: These are handled by crate-local directives where strict linting is desired
+deny = []
+
+# Documentation for allowed rules:
+#
+# module_name_repetitions: Allows patterns like `use foo::bar; use baz::bar;`
+#   - Common in large codebases with similar module structures
+#   - Often needed for API clarity and namespacing
+#
+# ambiguous_glob_reexports: Allows `pub use foo::*; pub use bar::*;` with conflicts
+#   - Common library pattern for re-exporting multiple modules
+#   - Intentional API design choice in many cases
+#
+# manual_clamp: Allows `x.max(min).min(max)` instead of `x.clamp(min, max)`
+#   - Transitional for older codebases
+#   - clamp() may not be available in all Rust versions
+#
+# unnecessary_unsafe: Allows redundant unsafe blocks in unsafe contexts
+#   - Sometimes semantically meaningful for FFI safety documentation
+#   - May be needed for future-proofing
+#
+# ptr_arg: Allows `&Vec<T>` instead of `&[T]`
+#   - Sometimes more efficient for certain use cases
+#   - Performance-critical code may prefer this
+#
+# needless_range_loop: Allows `for i in 0..n { vec[i] }` instead of iterators
+#   - Sometimes clearer than iterator chains
+#   - May be more readable in some contexts
+#
+# if_same_then_else: Allows `if cond { x } else { x }`
+#   - Sometimes clearer than other refactoring patterns
+#   - May be preparing for future different behavior
+#
+# single_match: Allows `match x { A => foo, _ => {} }` instead of `if let`
+#   - Sometimes needed for future pattern additions
+#   - More extensible than if-let patterns
+#
+# await_holding_lock: Allows holding locks across await points
+#   - Sometimes necessary with current async limitations
+#   - Transitional until better patterns emerge
+#
+# unwrap_or_default: Allows `.unwrap_or(Default::default())` over `.or_default()`
+#   - Sometimes more readable in complex expressions
+#   - May be clearer than method chaining
+#
+# not_unsafe_ptr_arg_deref: Allows dereferencing pointers in non-unsafe functions
+#   - Common in FFI code where unsafe is expected
+#   - External API expectations may require this
+#
+# empty_line_after_doc_comments: Allows blank lines after /// comments
+#   - Sometimes needed for documentation formatting
+#   - Code style preference in some projects
+#
+# unused_doc_comments: Allows unused documentation comments
+#   - Needed for extern blocks and macro-generated code
+#   - rustdoc may still use these comments
+#
+# unreachable_code: Allows unreachable code after returns/panics
+#   - Common in stub implementations and feature-gated code
+#   - May be intentional for future development
+#
+# unused_mut: Allows unused mut qualifiers
+#   - Sometimes needed for future extensibility
+#   - May be required later during development
+#
+# unused_assignments: Allows variables assigned but not used
+#   - Common during debugging and development phases
+#   - May be used later or for side effects
+#
+# unexpected_cfgs: Allows undefined cfg conditions
+#   - Transitional for feature flags not yet declared
+#   - Common during active development

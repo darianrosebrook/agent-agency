@@ -1,6 +1,5 @@
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
-use similar::{ChangeTag, udiff::UnifiedDiff};
 use std::collections::HashMap;
 
 use crate::types::Digest;
@@ -66,6 +65,12 @@ impl Default for DiffConfig {
             include_file_headers: true,
             normalize_line_endings: true,
         }
+    }
+}
+
+impl Default for DiffGenerator {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -363,6 +368,12 @@ struct HunkInfo {
 pub struct DiffStore {
     /// Storage for diff objects
     diffs: HashMap<Digest, LineagedDiff>,
+}
+
+impl Default for DiffStore {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl DiffStore {

@@ -1,7 +1,6 @@
 //! Quality gates and validation framework
 
 use crate::types::*;
-use crate::error::*;
 use async_trait::async_trait;
 
 /// Quality gate definition

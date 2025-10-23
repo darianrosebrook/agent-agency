@@ -4,11 +4,16 @@
 
 use anyhow::Result;
 use crate::api::*;
-use crate::types::*;
 
 /// Filesystem checker implementation
 pub struct Fsck {
     // Implementation details will be added in later phases
+}
+
+impl Default for Fsck {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Fsck {

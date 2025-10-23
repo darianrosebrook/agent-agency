@@ -204,6 +204,7 @@ dependencies = [
  "chrono",
  "comrak",
  "console 0.16.1",
+ "crossbeam",
  "fastrand",
  "futures",
  "indicatif 0.16.2",

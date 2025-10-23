@@ -296,7 +296,7 @@ impl ContentStrategy {
         // Check if content is mostly printable ASCII
         let printable_count = content
             .iter()
-            .filter(|&&b| b >= 32 && b <= 126 || b == b'\n' || b == b'\r' || b == b'\t')
+            .filter(|&&b| (32..=126).contains(&b) || b == b'\n' || b == b'\r' || b == b'\t')
             .count();
         
         let printable_ratio = printable_count as f64 / content.len() as f64;

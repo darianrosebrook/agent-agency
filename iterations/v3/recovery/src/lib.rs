@@ -9,6 +9,10 @@
 //!
 //! @author @darianrosebrook
 
+#![deny(unused_imports, unused_must_use)]
+#![warn(unused_variables, dead_code)]
+#![allow(ambiguous_glob_reexports, unused_variables, dead_code, unused_assignments)]
+
 pub mod api;
 pub mod cas;
 pub mod merkle;

@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::types::{Digest, RestorePlan, RestoreAction, RestoreResult, RestoreFilters, SessionRef};
-use crate::cas::{AtomicRestore, RestoreConfig, RestoredFile, FailedRestore};
+use crate::cas::{AtomicRestore, RestoredFile};
 use crate::merkle::{Commit as MerkleCommit, FileTree as MerkleTree};
 use crate::policy::{CawsPolicy, PolicyEnforcer};
 
@@ -58,6 +58,7 @@ impl Default for WorkerRecoveryConfig {
 
 /// Worker recovery statistics
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct WorkerRecoveryStats {
     /// Total restores performed
     pub total_restores: usize,
@@ -73,18 +74,6 @@ pub struct WorkerRecoveryStats {
     pub last_restore: Option<u64>,
 }
 
-impl Default for WorkerRecoveryStats {
-    fn default() -> Self {
-        Self {
-            total_restores: 0,
-            successful_restores: 0,
-            failed_restores: 0,
-            total_bytes_restored: 0,
-            avg_restore_time_ms: 0,
-            last_restore: None,
-        }
-    }
-}
 
 impl WorkerRecovery {
     /// Create a new worker recovery integration
@@ -123,7 +112,7 @@ impl WorkerRecovery {
         let tree = commit.tree();
         
         // Create restore actions from tree
-        let mut actions = Vec::new();
+        let actions = Vec::new();
         // TODO: Implement tree traversal to create restore actions
         // For now, return empty actions
         
@@ -299,7 +288,7 @@ impl WorkerRecovery {
     /// Perform dry run restore
     fn dry_run_restore(&self, plan: &RestorePlan) -> Result<RestoreResult> {
         let mut restored_files = Vec::new();
-        let mut failed_files: Vec<String> = Vec::new();
+        let failed_files: Vec<String> = Vec::new();
         let mut total_bytes = 0u64;
 
         for action in &plan.actions {
@@ -389,6 +378,12 @@ pub struct RestorePreview {
 /// Worker recovery builder for configuration
 pub struct WorkerRecoveryBuilder {
     config: WorkerRecoveryConfig,
+}
+
+impl Default for WorkerRecoveryBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl WorkerRecoveryBuilder {

@@ -245,7 +245,7 @@ impl CommitBuilder {
         let session_id = self.session_id.ok_or_else(|| anyhow::anyhow!("Session ID is required"))?;
         let author = self.author.ok_or_else(|| anyhow::anyhow!("Author is required"))?;
         let message = self.message;
-        let stats = self.stats.unwrap_or_else(|| ChangeStats {
+        let stats = self.stats.unwrap_or(ChangeStats {
             files_added: 0,
             files_changed: 0,
             files_deleted: 0,

@@ -32,12 +32,12 @@ impl ProgressSynthesizer {
         let start_time = results.iter()
             .map(|r| r.metrics.start_time)
             .min()
-            .unwrap_or_else(|| chrono::Utc::now());
+            .unwrap_or_else(chrono::Utc::now);
 
         let end_time = results.iter()
             .map(|r| r.metrics.end_time)
             .max()
-            .unwrap_or_else(|| chrono::Utc::now());
+            .unwrap_or_else(chrono::Utc::now);
 
         let execution_time = end_time.signed_duration_since(start_time).to_std()
             .unwrap_or(std::time::Duration::from_secs(0));
@@ -206,7 +206,7 @@ impl ProgressSynthesizer {
         F: Fn(&WorkerResult) -> Option<f32>,
     {
         let values: Vec<f32> = results.iter()
-            .filter_map(|r| extractor(r))
+            .filter_map(extractor)
             .collect();
 
         if values.is_empty() {

@@ -245,7 +245,7 @@ impl ChannelRegistry {
 
     /// Get channel statistics
     pub fn get_stats(&self) -> ChannelStats {
-        let mut total_pending = 0;
+        let total_pending = 0;
         let mut healthy_channels = 0;
 
         for channel in self.channels.iter() {

@@ -29,6 +29,12 @@ pub struct CompilationSpecialist {
     capabilities: Vec<String>,
 }
 
+impl Default for CompilationSpecialist {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl CompilationSpecialist {
     pub fn new() -> Self {
         Self {
@@ -132,6 +138,12 @@ pub struct RefactoringSpecialist {
     capabilities: Vec<String>,
 }
 
+impl Default for RefactoringSpecialist {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl RefactoringSpecialist {
     pub fn new() -> Self {
         Self {
@@ -228,6 +240,12 @@ pub struct TestingSpecialist {
     capabilities: Vec<String>,
 }
 
+impl Default for TestingSpecialist {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl TestingSpecialist {
     pub fn new() -> Self {
         Self {
@@ -321,6 +339,12 @@ impl SpecializedWorker for TestingSpecialist {
 pub struct DocumentationSpecialist {
     supported_formats: Vec<String>,
     capabilities: Vec<String>,
+}
+
+impl Default for DocumentationSpecialist {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl DocumentationSpecialist {

@@ -34,6 +34,7 @@ strsim = "0.11"  # String similarity algorithms for semantic analysis
 once_cell = "1.5"  # Lazy initialization
 fastrand = "2.0"  # Fast random number generation
 md5 = "0.7"  # MD5 hashing
+crossbeam = "0.8"  # Cross-thread channels
 
 # NLP and text processing for position extraction
 rust-bert = { version = "0.21", optional = true }  # BERT models for semantic understanding

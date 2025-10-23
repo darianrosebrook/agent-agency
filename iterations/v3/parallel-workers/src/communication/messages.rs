@@ -134,6 +134,12 @@ impl From<&WorkerMessage> for MessageType {
     }
 }
 
+impl Default for MessageFilter {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl MessageFilter {
     /// Create a new message filter
     pub fn new() -> Self {
@@ -208,6 +214,12 @@ impl MessageFilter {
 pub struct MessageProcessor {
     filters: Vec<MessageFilter>,
     handlers: Vec<Box<dyn MessageHandler>>,
+}
+
+impl Default for MessageProcessor {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl MessageProcessor {

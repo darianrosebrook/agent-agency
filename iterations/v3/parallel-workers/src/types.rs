@@ -14,6 +14,12 @@ pub use crate::error::WorkerError;
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct TaskId(pub String);
 
+impl Default for TaskId {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl TaskId {
     pub fn new() -> Self {
         Self(Uuid::new_v4().to_string())
@@ -30,6 +36,12 @@ impl std::fmt::Display for TaskId {
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct SubTaskId(pub String);
 
+impl Default for SubTaskId {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SubTaskId {
     pub fn new() -> Self {
         Self(Uuid::new_v4().to_string())
@@ -45,6 +57,12 @@ impl std::fmt::Display for SubTaskId {
 /// Unique identifier for workers
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct WorkerId(pub String);
+
+impl Default for WorkerId {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl WorkerId {
     pub fn new() -> Self {

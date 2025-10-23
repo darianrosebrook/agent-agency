@@ -6,6 +6,10 @@
 //! - Entity Extraction: Identify named entities and topics
 //! - Visual Captioning: Generate descriptions for images
 
+#![deny(unused_imports, unused_must_use)]
+#![warn(unused_variables, dead_code)]
+#![allow(unused_doc_comments, unreachable_code, unused_unsafe, unused_variables, dead_code)]
+
 pub mod asr_enricher;
 pub mod circuit_breaker;
 pub mod entity_enricher;

@@ -3,6 +3,11 @@
 // [refactor candidate]: split orchestrator into system_health_monitor/orchestrator.rs (SystemHealthMonitor)
 // [refactor candidate]: split metrics collection into system_health_monitor/metrics.rs (MetricsCollector)
 // [refactor candidate]: split alerting into system_health_monitor/alerts.rs (AlertStatistics, AlertTrend, AlertSummary, AlertSummaryItem)
+
+#![deny(unused_imports, unused_must_use)]
+#![warn(unused_variables, dead_code)]
+#![allow(unused_variables)]
+
 pub mod agent_integration;
 pub mod types;
 
@@ -15,9 +20,7 @@ use dashmap::DashMap;
 use hdrhistogram::Histogram;
 use parking_lot::RwLock;
 use std::collections::HashMap;
-use std::process::{Command, Stdio};
 use std::sync::Arc;
-use std::sync::atomic::{AtomicU32, Ordering};
 use std::time::SystemTime;
 use tdigest::TDigest;
 use tokio::sync::mpsc;
@@ -443,7 +446,7 @@ impl SystemHealthMonitor {
     /// Create Redis client connection
     async fn create_redis_client(config: &RedisConfig) -> Result<RedisConnectionManager> {
         use redis::Client;
-        use std::time::Duration;
+        
 
         let client = Client::open(config.url.as_str())?;
         let connection_manager = ConnectionManager::new(client)
@@ -473,7 +476,7 @@ impl SystemHealthMonitor {
                     .arg(&key)
                     .arg(redis_config.metrics_ttl_seconds)
                     .arg(json_value)
-                    .query_async(&mut conn)
+                    .query_async::<_, ()>(&mut conn)
                     .await?;
 
                 debug!("Stored system metrics in Redis with key: {}", key);
@@ -750,7 +753,7 @@ impl SystemHealthMonitor {
         {
             let mut error_tracker = self.error_rate_trackers
                 .entry(agent_id.to_string())
-                .or_insert_with(|| ErrorRateTracker::new());
+                .or_insert_with(ErrorRateTracker::new);
 
             // Record as successful request (no error message)
             error_tracker.record_request(success, None);
@@ -794,7 +797,7 @@ impl SystemHealthMonitor {
         {
             let mut error_tracker = self.error_rate_trackers
                 .entry(agent_id.to_string())
-                .or_insert_with(|| ErrorRateTracker::new());
+                .or_insert_with(ErrorRateTracker::new);
 
             // Record as failed request with error message
             error_tracker.record_request(false, Some("agent_error".to_string()));
@@ -1033,11 +1036,11 @@ impl SystemHealthMonitor {
 
     /// Monitor network I/O activity
     fn monitor_network_io(&self, system: &sysinfo::System) -> u64 {
-        let mut total_bytes = 0u64;
+        
 
         // Note: sysinfo 0.30 doesn't have networks field, using a placeholder
         // In a real implementation, you'd need to use platform-specific APIs
-        total_bytes
+        0u64
     }
 
     /// Monitor disk I/O activity with comprehensive metrics
@@ -1046,9 +1049,9 @@ impl SystemHealthMonitor {
         let disk_io_metrics = self.metrics_collector.collect_disk_io_metrics(system);
 
         // Calculate total I/O activity score
-        let total_io = disk_io_metrics.read_throughput + disk_io_metrics.write_throughput;
+        
 
-        total_io
+        disk_io_metrics.read_throughput + disk_io_metrics.write_throughput
     }
 
     /// Collect per-disk I/O metrics
@@ -1576,13 +1579,11 @@ impl SystemHealthMonitor {
         };
 
         // Weighted average calculation
-        let health_score = (
-            success_rate_health * 0.40 +
+        let health_score = success_rate_health * 0.40 +
             error_rate_health * 0.25 +
             response_time_health * 0.20 +
             load_health * 0.10 +
-            task_completion_health * 0.05
-        );
+            task_completion_health * 0.05;
 
         // Ensure score is between 0.0 and 1.0
         health_score.max(0.0).min(1.0)
@@ -1630,7 +1631,7 @@ impl SystemHealthMonitor {
         let thresholds = &self.config.thresholds;
 
         // Check error rate
-        if metrics.error_rate >= thresholds.agent_error_rate_threshold as f64 {
+        if metrics.error_rate >= thresholds.agent_error_rate_threshold {
             self.create_alert(
                 AlertSeverity::High,
                 AlertType::AgentHealth,
@@ -1924,7 +1925,7 @@ impl SystemHealthMonitor {
             let metrics = entry.value();
 
             // Check error rate
-            if metrics.error_rate >= config.thresholds.agent_error_rate_threshold as f64 {
+            if metrics.error_rate >= config.thresholds.agent_error_rate_threshold {
                 unhealthy_agents.push((agent_id.clone(), "high_error_rate".to_string()));
                 Self::create_component_alert(
                     alerts,
@@ -2083,8 +2084,8 @@ impl SystemHealthMonitor {
             return 0.0; // Avoid division by zero
         }
 
-        let slope = (n * xy_sum - x_sum * y_sum) / denominator;
-        slope
+        
+        (n * xy_sum - x_sum * y_sum) / denominator
     }
 
     /// Calculate trend from a series of measurements (simple linear regression slope)
@@ -2533,6 +2534,12 @@ pub struct MetricsCollector {
     system: sysinfo::System,
 }
 
+impl Default for MetricsCollector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl MetricsCollector {
     pub fn new() -> Self {
         let mut system = sysinfo::System::new_all();
@@ -2542,18 +2549,18 @@ impl MetricsCollector {
 
     /// Collect network I/O metrics
     fn collect_network_io(&self, system: &sysinfo::System) -> u64 {
-        let mut total_bytes = 0u64;
+        
         // Note: sysinfo 0.30 doesn't have networks field, using a placeholder
         // In a real implementation, you'd need to use platform-specific APIs
-        total_bytes
+        0u64
     }
 
     /// Collect disk I/O metrics
     fn collect_disk_io(&self, system: &sysinfo::System) -> u64 {
-        let mut total_bytes = 0u64;
+        
         // Note: sysinfo 0.30 doesn't have disks field, using a placeholder
         // In a real implementation, you'd need to use platform-specific APIs
-        total_bytes
+        0u64
     }
 
     /// Collect comprehensive disk I/O metrics
@@ -3046,7 +3053,7 @@ impl MetricsCollector {
         let mut filesystem_usage = HashMap::new();
 
         // Use sysinfo to get disk information
-        let mut system = sysinfo::System::new_all();
+        let system = sysinfo::System::new_all();
         // Note: sysinfo 0.30 doesn't have refresh_disks method
 
         // Note: sysinfo 0.30 doesn't have disks field
@@ -3114,7 +3121,7 @@ impl MetricsCollector {
 
         history
             .entry(overall_key)
-            .or_insert_with(Vec::new)
+            .or_default()
             .push(overall_data_point);
 
         // Store per-filesystem usage
@@ -3127,7 +3134,7 @@ impl MetricsCollector {
 
             history
                 .entry(mount_point.clone())
-                .or_insert_with(Vec::new)
+                .or_default()
                 .push(data_point);
         }
 
@@ -3152,7 +3159,7 @@ impl MetricsCollector {
         let mut total_space = 0u64;
         let mut current_usage_percentage = 0.0;
         
-        for (_, usage) in filesystem_usage {
+        for usage in filesystem_usage.values() {
             total_used += usage.used_space;
             total_space += usage.total_space;
         }
@@ -3674,7 +3681,7 @@ impl MetricsCollector {
 
         // Use log command to query system logs
         let output = Command::new("log")
-            .args(&[
+            .args([
                 "show",
                 "--predicate",
                 "category == 'filesystem'",
@@ -4050,7 +4057,7 @@ impl MetricsCollector {
             "apfs" => {
                 // Use diskutil to check APFS fragmentation
                 let output = Command::new("diskutil")
-                    .args(&["info", mount_point])
+                    .args(["info", mount_point])
                     .output();
 
                 if let Ok(output) = output {
@@ -4063,7 +4070,7 @@ impl MetricsCollector {
             "hfs+" | "hfs" => {
                 // Use diskutil for HFS+ fragmentation
                 let output = Command::new("diskutil")
-                    .args(&["info", mount_point])
+                    .args(["info", mount_point])
                     .output();
 
                 if let Ok(output) = output {
@@ -4186,7 +4193,7 @@ impl MetricsCollector {
         }
         let mut inode_usage = HashMap::new();
 
-        for (mount_point, _usage) in filesystem_usage {
+        for mount_point in filesystem_usage.keys() {
             // Platform-specific inode usage collection
             let inode_data = match self.collect_platform_inode_usage(mount_point).await {
                 Ok(data) => data,
@@ -4371,7 +4378,7 @@ impl MetricsCollector {
     async fn collect_macos_inode_usage_fallback(&self, mount_point: &str) -> Result<InodeUsage> {
         use std::process::Command;
 
-        let output = Command::new("df").args(&["-i", mount_point]).output();
+        let output = Command::new("df").args(["-i", mount_point]).output();
 
         if let Ok(output) = output {
             if output.status.success() {

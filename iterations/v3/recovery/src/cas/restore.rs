@@ -51,6 +51,7 @@ impl Default for RestoreConfig {
 
 /// Statistics for restore operations
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct RestoreStats {
     /// Total number of files restored
     pub files_restored: usize,
@@ -64,15 +65,10 @@ pub struct RestoreStats {
     pub total_time_ms: u64,
 }
 
-impl Default for RestoreStats {
+
+impl Default for AtomicRestore {
     fn default() -> Self {
-        Self {
-            files_restored: 0,
-            bytes_restored: 0,
-            failed_restores: 0,
-            digest_mismatches: 0,
-            total_time_ms: 0,
-        }
+        Self::new()
     }
 }
 

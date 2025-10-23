@@ -16,6 +16,12 @@ pub trait DecompositionStrategy: Send + Sync {
 /// Compilation error decomposition strategy
 pub struct CompilationErrorStrategy;
 
+impl Default for CompilationErrorStrategy {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl CompilationErrorStrategy {
     pub fn new() -> Self {
         Self
@@ -96,6 +102,12 @@ impl DecompositionStrategy for CompilationErrorStrategy {
 
 /// Refactoring decomposition strategy
 pub struct RefactoringStrategy;
+
+impl Default for RefactoringStrategy {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl RefactoringStrategy {
     pub fn new() -> Self {
@@ -180,6 +192,12 @@ impl DecompositionStrategy for RefactoringStrategy {
 
 /// Testing decomposition strategy
 pub struct TestingStrategy;
+
+impl Default for TestingStrategy {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl TestingStrategy {
     pub fn new() -> Self {
@@ -296,6 +314,12 @@ impl DecompositionStrategy for TestingStrategy {
 
 /// Documentation decomposition strategy
 pub struct DocumentationStrategy;
+
+impl Default for DocumentationStrategy {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl DocumentationStrategy {
     pub fn new() -> Self {

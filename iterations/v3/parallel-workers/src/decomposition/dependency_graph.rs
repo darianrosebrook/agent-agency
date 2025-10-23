@@ -253,13 +253,13 @@ impl DependencyGraph {
     pub fn add_subtask(&mut self, subtask: SubTask) {
         let subtask_id = subtask.id.clone();
         self.nodes.insert(subtask_id.clone(), subtask);
-        self.edges.entry(subtask_id).or_insert_with(Vec::new);
+        self.edges.entry(subtask_id).or_default();
     }
 
     /// Add a dependency between subtasks
     pub fn add_dependency(&mut self, dependency: Dependency) {
         self.edges.entry(dependency.from_subtask.clone())
-            .or_insert_with(Vec::new)
+            .or_default()
             .push(dependency);
     }
 
@@ -351,11 +351,10 @@ impl DependencyGraph {
         let mut visiting = HashSet::new();
 
         for subtask_id in self.nodes.keys() {
-            if !visited.contains(subtask_id) {
-                if self.has_cycle(subtask_id, &mut visited, &mut visiting) {
+            if !visited.contains(subtask_id)
+                && self.has_cycle(subtask_id, &mut visited, &mut visiting) {
                     return true;
                 }
-            }
         }
 
         false

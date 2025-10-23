@@ -1,5 +1,5 @@
 use anyhow::{anyhow, Result};
-use fastcdc::v2020::{ChunkData, FastCDC};
+use fastcdc::v2020::FastCDC;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -66,6 +66,12 @@ pub struct CdcChunker {
     chunk_cache: HashMap<Digest, Chunk>,
 }
 
+impl Default for CdcChunker {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl CdcChunker {
     /// Create a new CDC chunker with default configuration
     pub fn new() -> Self {
@@ -127,8 +133,8 @@ impl CdcChunker {
 
     /// Create a chunk from chunk data
     fn create_chunk(&mut self, chunk_data: &fastcdc::v2020::Chunk, content: &[u8]) -> Result<ChunkRef> {
-        let offset = chunk_data.offset as usize;
-        let length = chunk_data.length as usize;
+        let offset = chunk_data.offset;
+        let length = chunk_data.length;
         let data = content[offset..offset + length].to_vec();
 
         // Compute chunk digest
@@ -321,6 +327,12 @@ pub struct ChunkStore {
     chunks: HashMap<Digest, Chunk>,
     /// Statistics
     stats: ChunkStats,
+}
+
+impl Default for ChunkStore {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl ChunkStore {

@@ -41,6 +41,8 @@ pub use ane::{
     RiskTier, Verdict, DebateArgument, DebatePosition, ConfidenceLevel, deliberate_constitution,
     generate_debate_argument, generate_text,
 };
+// Re-export CoreML compatibility types
+pub use ane::compat::coreml::coreml::{CoreMlHandle, ModelRef, load_model};
 pub use async_inference::{
     AsyncConfig, AsyncInferenceEngine, InferenceRequest, InferenceResult, Priority, PriorityQueue,
     QueueStats,
