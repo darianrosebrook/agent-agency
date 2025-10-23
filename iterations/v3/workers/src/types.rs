@@ -786,14 +786,6 @@ pub struct TaskContext {
     pub metadata: std::collections::HashMap<String, serde_json::Value>,
 }
 
-/// Worker assignment for task execution
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct WorkerAssignment {
-    pub worker_id: Uuid,
-    pub priority: TaskPriority,
-    pub estimated_completion_time: DateTime<Utc>,
-    pub confidence_score: f32,
-}
 
 /// Task specification for workers
 #[derive(Debug, Clone, Serialize, Deserialize)]

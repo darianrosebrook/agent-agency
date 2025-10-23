@@ -154,6 +154,7 @@ pub enum EvidenceType {
     UserFeedback,            // User-provided feedback
     Measurement,
     LogicalAnalysis,
+    Supporting,
 }
 
 /// Source of evidence

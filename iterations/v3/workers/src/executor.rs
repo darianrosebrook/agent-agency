@@ -2,11 +2,13 @@
 //!
 //! Executes tasks by communicating with worker models and handling the execution lifecycle.
 
-use crate::types::{*, SystemClock, UuidGenerator};
+use crate::types::{*, UuidGenerator};
 use agent_agency_council::models::{RiskTier, TaskContext as CouncilTaskContext, TaskSpec};
-use agent_agency_resilience::{retry_with_backoff, CircuitBreaker, RetryConfig};
+use agent_agency_resilience::{CircuitBreaker, RetryConfig};
 use anyhow::{Context, Result};
+use chrono::Utc;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::sync::Arc;
 use tracing::{info, warn};
 use uuid::Uuid;

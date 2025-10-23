@@ -249,7 +249,7 @@ pub struct TestOutput {
 }
 
 /// Individual test result
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct TestResult {
     pub name: String,
     pub passed: bool,

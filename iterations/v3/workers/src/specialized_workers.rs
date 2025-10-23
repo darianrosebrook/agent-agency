@@ -5,7 +5,6 @@
 
 use crate::{TaskExecutor, TaskRouter};
 use async_trait::async_trait;
-use parallel_workers::{WorkerSpecialty, SpecializedWorker, WorkerContext, WorkerResult};
 use anyhow::Result;
 use std::sync::Arc;
 
@@ -41,7 +40,7 @@ impl SpecializedWorker for CompilationSpecialist {
         // TODO: Implement actual compilation error fixing logic
         // This would integrate with the existing TaskExecutor to execute compilation tasks
 
-        Ok(parallel_workers::WorkerResult {
+        Ok(crate::types::WorkerOutput {
             subtask_id: context.subtask.id,
             success: true,
             output: "Compilation errors addressed".to_string(),
@@ -81,7 +80,7 @@ impl SpecializedWorker for RefactoringSpecialist {
 
     async fn execute_subtask(&self, context: WorkerContext) -> Result<WorkerResult> {
         // TODO: Implement refactoring logic using existing TaskExecutor
-        Ok(parallel_workers::WorkerResult {
+        Ok(crate::types::WorkerOutput {
             subtask_id: context.subtask.id,
             success: true,
             output: "Refactoring completed".to_string(),
@@ -121,7 +120,7 @@ impl SpecializedWorker for TestingSpecialist {
 
     async fn execute_subtask(&self, context: WorkerContext) -> Result<WorkerResult> {
         // TODO: Implement testing logic using existing TaskExecutor
-        Ok(parallel_workers::WorkerResult {
+        Ok(crate::types::WorkerOutput {
             subtask_id: context.subtask.id,
             success: true,
             output: "Tests created and executed".to_string(),
@@ -161,7 +160,7 @@ impl SpecializedWorker for DocumentationSpecialist {
 
     async fn execute_subtask(&self, context: WorkerContext) -> Result<WorkerResult> {
         // TODO: Implement documentation logic using existing TaskExecutor
-        Ok(parallel_workers::WorkerResult {
+        Ok(crate::types::WorkerOutput {
             subtask_id: context.subtask.id,
             success: true,
             output: "Documentation generated".to_string(),
@@ -201,7 +200,7 @@ impl SpecializedWorker for TypeSystemSpecialist {
 
     async fn execute_subtask(&self, context: WorkerContext) -> Result<WorkerResult> {
         // TODO: Implement type system logic using existing TaskExecutor
-        Ok(parallel_workers::WorkerResult {
+        Ok(crate::types::WorkerOutput {
             subtask_id: context.subtask.id,
             success: true,
             output: "Type system issues resolved".to_string(),
@@ -241,7 +240,7 @@ impl SpecializedWorker for AsyncPatternsSpecialist {
 
     async fn execute_subtask(&self, context: WorkerContext) -> Result<WorkerResult> {
         // TODO: Implement async patterns logic using existing TaskExecutor
-        Ok(parallel_workers::WorkerResult {
+        Ok(crate::types::WorkerOutput {
             subtask_id: context.subtask.id,
             success: true,
             output: "Async patterns implemented".to_string(),
@@ -284,7 +283,7 @@ impl SpecializedWorker for CustomSpecialist {
 
     async fn execute_subtask(&self, context: WorkerContext) -> Result<WorkerResult> {
         // TODO: Implement custom domain logic using existing TaskExecutor
-        Ok(parallel_workers::WorkerResult {
+        Ok(crate::types::WorkerOutput {
             subtask_id: context.subtask.id,
             success: true,
             output: format!("Custom {} operations completed", self.domain),

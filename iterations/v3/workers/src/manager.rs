@@ -18,7 +18,6 @@ use tracing::{debug, error, info, warn};
 use uuid::Uuid;
 
 // Parallel workers integration
-use parallel_workers::{WorkerSpecialty, SpecializedWorker as ParallelSpecializedWorker};
 
 /// Main worker pool manager
 #[derive(Debug)]
@@ -544,6 +543,12 @@ impl WorkerPoolManager {
                             WorkerStatus::Available | WorkerStatus::Busy
                         );
 
+                        // Measure actual response time and collect worker metrics
+                        let check_start = std::time::Instant::now();
+                        let metrics_url = format!("{}/metrics", worker.endpoint.trim_end_matches('/'));
+                        let actual_metrics = self.collect_worker_metrics(&metrics_url).await;
+                        let response_time_ms = check_start.elapsed().as_millis() as u64;
+
                         if is_healthy {
                             debug!("Worker {} health check passed", worker_id);
                         } else {
@@ -562,10 +567,6 @@ impl WorkerPoolManager {
                             };
 
                             // Measure actual response time and collect worker metrics
-                            let check_start = std::time::Instant::now();
-                            let metrics_url = format!("{}/metrics", worker.endpoint.trim_end_matches('/'));
-                            let actual_metrics = self.collect_worker_metrics(&metrics_url).await;
-                            let response_time_ms = check_start.elapsed().as_millis() as u64;
 
                             // Create health metrics with actual measurements
                             let health_metrics = WorkerHealthMetrics {
@@ -989,7 +990,7 @@ impl WorkerPoolManager {
         match specialty {
             WorkerSpecialty::CompilationErrors { error_codes } => {
                 // Create a compilation specialist worker
-                let worker = CompilationSpecialist::new(
+                let worker = crate::specialized_workers::CompilationSpecialist::new(
                     error_codes,
                     self.task_executor.clone(),
                     self.task_router.clone(),
@@ -997,7 +998,7 @@ impl WorkerPoolManager {
                 Ok(Arc::new(worker))
             }
             WorkerSpecialty::Refactoring { strategies } => {
-                let worker = RefactoringSpecialist::new(
+                let worker = crate::specialized_workers::RefactoringSpecialist::new(
                     strategies,
                     self.task_executor.clone(),
                     self.task_router.clone(),

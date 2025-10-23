@@ -772,7 +772,7 @@ impl ContextBracketAdder {
                         contextual_brackets: vec![], // TODO: Add contextual brackets
                         subject: Some(triple.subject.clone()),
                         predicate: Some(triple.predicate.clone()),
-                        object: triple.object.clone(),
+                        object: Some(triple.object.clone()),
                         context_brackets: self.add_contextual_brackets_v2(clause, context),
                         verification_requirements: self.determine_verification_requirements(&triple, context),
                         position: (0, clause.len()), // Approximate position in original sentence
@@ -819,7 +819,7 @@ impl ContextBracketAdder {
                 return Some(SubjectPredicateObject {
                     subject,
                     predicate: verb,
-                    object,
+                    object: object?,
                     confidence: 0.8, // Default confidence for extracted triples
                 });
             }
@@ -983,7 +983,7 @@ impl ContextBracketAdder {
 
         requirements.push(VerificationRequirement {
             requirement_type: "code_verification".to_string(),
-            description: format!("Verify that {} is implemented correctly", predicate),
+            description: format!("Verify that {} is implemented correctly", triple.predicate),
             priority: VerificationPriority::High,
             evidence_needed: vec!["code_analysis".to_string(), "test_results".to_string()],
         });
@@ -1045,7 +1045,7 @@ impl ContextBracketAdder {
             confidence += 0.1;
         }
 
-        confidence.min(1.0)
+        confidence.min(1.0f64)
     }
 
     /// Fallback atomic claim extraction (V2 compatibility)

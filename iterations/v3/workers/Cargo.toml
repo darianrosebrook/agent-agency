@@ -32,6 +32,7 @@ agent-agency-council = { path = "../council" }
 agent-agency-resilience = { path = "../resilience" }
 agent-agency-contracts = { path = "../agent-agency-contracts" }
 agent-agency-database = { path = "../database" }
+# orchestration = { path = "../orchestration" }  # Circular dependency
 # claim-extraction = { path = "../claim-extraction" }  # Temporarily commented to resolve circular dependency
 
 # Multimodal RAG integration dependencies

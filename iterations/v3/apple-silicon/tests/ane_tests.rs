@@ -11,14 +11,14 @@
 
 #[cfg(test)]
 mod tests {
-    use apple_silicon::ane::errors::{ANEError, Result};
-    use apple_silicon::ane::resource_pool::{Pool, PoolBuilder, PoolStats};
-    use apple_silicon::ane::compat::{coreml, iokit};
-    use apple_silicon::ane::models::coreml_model::{
+    use agent_agency_apple_silicon::ane::errors::{ANEError, Result};
+    use agent_agency_apple_silicon::ane::resource_pool::{Pool, PoolBuilder, PoolStats};
+    use agent_agency_apple_silicon::ane::compat::{coreml, iokit};
+    use agent_agency_apple_silicon::ane::models::coreml_model::{
         LoadedCoreMLModel, ModelMetadata, ModelSchema, IOTensorSpec, DType, CompilationOptions
     };
-    use apple_silicon::ane::infer::execute::{execute_inference, InferenceOptions, InferenceResult};
-    use apple_silicon::ane::metrics::ewma::{Ewma, PerformanceTracker, PerformanceSummary};
+    use agent_agency_apple_silicon::ane::infer::execute::{execute_inference, InferenceOptions, InferenceResult};
+    use agent_agency_apple_silicon::ane::metrics::ewma::{Ewma, PerformanceTracker, PerformanceSummary};
     use std::path::Path;
     use std::time::{Duration, Instant};
 
@@ -58,7 +58,7 @@ mod tests {
 
         #[test]
         fn test_into_ane_error_trait() {
-            use apple_silicon::ane::errors::IntoANEError;
+            use agent_agency_apple_silicon::ane::errors::IntoANEError;
 
             let err: ANEError = "test string".into_ane_error();
             assert!(err.to_string().contains("test string"));
@@ -126,7 +126,7 @@ mod tests {
             let pool = Pool::new(2, 1024);
             let stats = pool.stats();
             assert_eq!(stats.total_admissions, 0);
-            assert_eq!(stats.total_rejections, 0);
+            assert_eq!(stats.admission_failures, 0);
         }
     }
 
@@ -143,20 +143,20 @@ mod tests {
             // On macOS, check that we get some capabilities
             #[cfg(target_os = "macos")]
             {
-                let caps = coreml::detect_coreml_capabilities();
+                let caps = agent_agency_apple_silicon::ane::compat::coreml::detect_coreml_capabilities();
                 assert!(!caps.supported_precisions.is_empty());
             }
         }
 
         #[test]
         fn test_iokit_thermal_status() {
-            let status = iokit::thermal_status();
+            let status = agent_agency_apple_silicon::ane::compat::iokit::thermal_status();
             assert!(status.system_temperature >= 0.0);
         }
 
         #[test]
         fn test_iokit_power_status() {
-            let status = iokit::power_status();
+            let status = agent_agency_apple_silicon::ane::compat::iokit::power_status();
             assert!(status.system_power >= 0.0);
         }
     }
@@ -164,7 +164,7 @@ mod tests {
     /// Test Core ML model handling
     mod model_tests {
         use super::*;
-        use apple_silicon::ane::models::coreml_model;
+        use agent_agency_apple_silicon::ane::models::coreml_model;
 
         #[test]
         fn test_compilation_options() {
@@ -232,11 +232,10 @@ mod tests {
                 metadata,
                 schema,
                 loaded_at: Instant::now(),
-                last_accessed: Instant::now(),
-                raw_model: std::ptr::null_mut(),
+                last_accessed: Instant::now(), 
             };
 
-            let mem_mb = coreml_model::estimate_memory_usage(&model);
+            let mem_mb = agent_agency_apple_silicon::ane::models::coreml_model::estimate_memory_usage(&model);
             assert!(mem_mb > 0);
         }
     }
@@ -291,8 +290,7 @@ mod tests {
                 },
                 schema,
                 loaded_at: Instant::now(),
-                last_accessed: Instant::now(),
-                raw_model: std::ptr::null_mut(),
+                last_accessed: Instant::now(), 
             };
 
             // Test with input that should work
@@ -363,7 +361,7 @@ mod tests {
     /// Test ANEManager integration
     mod manager_tests {
         use super::*;
-        use apple_silicon::ane::manager::ANEManager;
+        use agent_agency_apple_silicon::ane::manager::ANEManager;
 
         #[tokio::test]
         async fn test_manager_creation() {
@@ -373,20 +371,20 @@ mod tests {
 
         #[tokio::test]
         async fn test_manager_with_config() {
-            let config = apple_silicon::ane::manager::ANEConfig {
+            let config = agent_agency_apple_silicon::ane::manager::ANEConfig {
                 max_concurrent_operations: 2,
                 memory_pool_mb: 1024,
                 default_timeout_ms: 5000,
             };
 
-            let manager = ANEManager::with_config(config);
+            let manager = ANEManager::with_config(config, None, None);
             assert!(manager.is_ok());
         }
 
         #[tokio::test]
         async fn test_manager_capabilities() {
             let manager = ANEManager::new().expect("Manager creation failed");
-            let caps = manager.detect_capabilities().await;
+            let caps = manager.get_capabilities().await;
 
             // On macOS aarch64, should be available
             #[cfg(all(target_os = "macos", target_arch = "aarch64"))]

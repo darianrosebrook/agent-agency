@@ -10,9 +10,18 @@ use crate::ProcessingContext;
 /// Context resolver for disambiguating ambiguities
 pub struct ContextResolver {
     domain_context: HashMap<String, String>,
+    confidence_threshold: f64,
     embedding_provider: Option<Arc<dyn EmbeddingProvider>>,
     knowledge_base: Option<Arc<dyn KnowledgeBase>>,
     knowledge_ingest: Option<Arc<dyn KnowledgeIngest>>,
+}
+
+impl std::fmt::Debug for ContextResolver {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ContextResolver")
+            .field("confidence_threshold", &self.confidence_threshold)
+            .finish()
+    }
 }
 
 impl ContextResolver {
@@ -25,6 +34,7 @@ impl ContextResolver {
 
         Self {
             domain_context,
+            confidence_threshold: 0.7,
             embedding_provider: None,
             knowledge_base: None,
             knowledge_ingest: None,

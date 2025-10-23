@@ -145,7 +145,7 @@ impl EntityDisambiguator {
                                 text: matched_text.to_string(),
                                 entity_type: entity.entity_type.clone(),
                                 confidence: similarity,
-                                position: capture.range(),
+                                position: (capture.start(), capture.end()),
                                 metadata: HashMap::from([
                                     ("pattern".to_string(), pattern.to_string()),
                                     ("context_match".to_string(), "true".to_string()),

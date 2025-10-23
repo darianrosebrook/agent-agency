@@ -27,12 +27,12 @@ impl FsUtils {
     }
 
     /// Read file content safely
-    pub fn read_file_content<P: AsRef<Path>>(path: P) -> Result<String> {
-        std::fs::read_to_string(path)
+    pub fn read_file_content<P: AsRef<Path>>(path: P) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+        Ok(std::fs::read_to_string(path)?)
     }
 
     /// Search for keyword in file content
-    pub fn search_in_file<P: AsRef<Path>>(path: P, keyword: &str) -> Result<Vec<(usize, String)>> {
+    pub fn search_in_file<P: AsRef<Path>>(path: P, keyword: &str) -> Result<Vec<(usize, String)>, Box<dyn std::error::Error + Send + Sync>> {
         let content = Self::read_file_content(path)?;
         let mut results = Vec::new();
 

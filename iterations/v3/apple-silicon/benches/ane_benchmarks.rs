@@ -7,12 +7,12 @@
 //! - Inference execution overhead
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use apple_silicon::ane::resource_pool::{Pool, PoolBuilder};
-use apple_silicon::ane::metrics::ewma::{Ewma, PerformanceTracker};
-use apple_silicon::ane::models::coreml_model::{
+use agent_agency_apple_silicon::ane::resource_pool::{Pool, PoolBuilder};
+use agent_agency_apple_silicon::ane::metrics::ewma::{Ewma, PerformanceTracker};
+use agent_agency_apple_silicon::ane::models::coreml_model::{
     LoadedCoreMLModel, ModelMetadata, ModelSchema, IOTensorSpec, DType
 };
-use apple_silicon::ane::infer::execute::InferenceOptions;
+use agent_agency_apple_silicon::ane::infer::execute::InferenceOptions;
 use std::path::Path;
 use std::time::Instant;
 
@@ -123,13 +123,12 @@ fn bench_memory_estimation(c: &mut Criterion) {
         metadata,
         schema,
         loaded_at: Instant::now(),
-        last_accessed: Instant::now(),
-        raw_model: std::ptr::null_mut(),
+        last_accessed: Instant::now(), 
     };
 
     c.bench_function("memory_estimation", |b| {
         b.iter(|| {
-            let _memory_mb = apple_silicon::ane::models::coreml_model::estimate_memory_usage(
+            let _memory_mb = agent_agency_apple_silicon::ane::models::coreml_model::estimate_memory_usage(
                 black_box(&model)
             );
         });
@@ -153,14 +152,14 @@ fn bench_inference_options_creation(c: &mut Criterion) {
 fn bench_error_creation(c: &mut Criterion) {
     c.bench_function("ane_error_creation", |b| {
         b.iter(|| {
-            let _err = apple_silicon::ane::errors::ANEError::ModelNotFound(
+            let _err = agent_agency_apple_silicon::ane::errors::ANEError::ModelNotFound(
                 black_box("test_model".to_string())
             );
         });
     });
 
     c.bench_function("ane_error_display", |b| {
-        let err = apple_silicon::ane::errors::ANEError::Timeout(5000);
+        let err = agent_agency_apple_silicon::ane::errors::ANEError::Timeout(5000);
         b.iter(|| {
             let _display = black_box(format!("{}", err));
         });

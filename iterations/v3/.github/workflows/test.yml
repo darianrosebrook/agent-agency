@@ -305,10 +305,34 @@ jobs:
             job_name="${job%%:*}"
             display_name="${job##*:}"
 
-            if [ "${{ needs[\"$job_name\"][\"result\"] }}" = "success" ]; then
-              echo " $display_name: PASSED" >> $GITHUB_STEP_SUMMARY
+            case "$job_name" in
+              "unit-tests")
+                job_result="${{ needs.unit-tests.result }}"
+                ;;
+              "integration-tests")
+                job_result="${{ needs.integration-tests.result }}"
+                ;;
+              "e2e-tests")
+                job_result="${{ needs.e2e-tests.result }}"
+                ;;
+              "performance-tests")
+                job_result="${{ needs.performance-tests.result }}"
+                ;;
+              "security-tests")
+                job_result="${{ needs.security-tests.result }}"
+                ;;
+              "lint-and-format")
+                job_result="${{ needs.lint-and-format.result }}"
+                ;;
+              "playground-tests")
+                job_result="${{ needs.playground-tests.result }}"
+                ;;
+            esac
+
+            if [ "$job_result" = "success" ]; then
+              echo "$display_name: PASSED" >> $GITHUB_STEP_SUMMARY
             else
-              echo " $display_name: FAILED" >> $GITHUB_STEP_SUMMARY
+              echo "$display_name: FAILED" >> $GITHUB_STEP_SUMMARY
               all_passed=false
             fi
           done
@@ -319,7 +343,7 @@ jobs:
             echo "##  All Tests Passed!" >> $GITHUB_STEP_SUMMARY
             echo "Self-governing agent system is ready for deployment." >> $GITHUB_STEP_SUMMARY
           else
-            echo "##  Some Tests Failed" >> $GITHUB_STEP_SUMMARY
+            echo "## ⚠️ Some Tests Failed" >> $GITHUB_STEP_SUMMARY
             echo "Please review the failed tests and fix issues before deployment." >> $GITHUB_STEP_SUMMARY
             exit 1
           fi

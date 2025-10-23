@@ -27,6 +27,7 @@ fastrand = "2.0"  # Fast random number generation
 lru = "0.12"  # LRU cache for coreference resolution
 once_cell = "1.5"  # Lazy static initialization
 md5 = "0.7"  # MD5 hashing for cache keys
+futures = "0.3"  # Future utilities
 
 
 # Embedding service integration

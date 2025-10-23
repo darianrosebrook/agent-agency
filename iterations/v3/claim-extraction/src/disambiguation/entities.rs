@@ -6,6 +6,7 @@ use tokio::sync::RwLock;
 use anyhow::Result;
 use async_trait::async_trait;
 use crate::disambiguation::types::*;
+use crate::types::Entity;
 use crate::ProcessingContext;
 use crate::disambiguation::patterns::EntityPatterns;
 
@@ -17,6 +18,15 @@ pub struct NamedEntityRecognizer {
     embedding_provider: Option<Arc<dyn EmbeddingProvider>>,
     knowledge_base: Option<Arc<dyn KnowledgeBase>>,
     knowledge_ingest: Option<Arc<dyn KnowledgeIngest>>,
+}
+
+impl std::fmt::Debug for NamedEntityRecognizer {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("NamedEntityRecognizer")
+            .field("confidence_threshold", &self.confidence_threshold)
+            .field("entity_patterns", &self.entity_patterns)
+            .finish()
+    }
 }
 
 impl NamedEntityRecognizer {
@@ -294,7 +304,7 @@ impl NamedEntityRecognizer {
         _context: &ProcessingContext,
     ) -> Result<Vec<NamedEntity>> {
         // Simple deduplication by text and type
-        let mut seen: HashMap<String, Entity> = HashMap::new();
+        let mut seen: HashMap<(String, EntityType), NamedEntity> = HashMap::new();
         let mut deduplicated = Vec::new();
 
         for entity in entities {

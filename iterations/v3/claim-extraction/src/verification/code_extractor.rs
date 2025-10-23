@@ -5,7 +5,7 @@
 use regex::Regex;
 use std::collections::HashMap;
 use crate::verification::types::*;
-use crate::types::AtomicClaim;
+use crate::types::{AtomicClaim, VerifiabilityLevel, ClaimScope, DataImpact};
 use anyhow::Result;
 
 /// Code claim extractor
@@ -46,7 +46,7 @@ impl CodeExtractor {
     /// Check code comment consistency
     pub async fn check_code_comment_consistency(&self, code_output: &CodeOutput) -> Result<CodeCommentConsistency> {
         let mut issues = Vec::new();
-        let mut score: f32 = 1.0;
+        let mut score: f64 = 1.0;
 
         // Parse code structure
         let code_structure = self.parse_code_structure(code_output)?;
@@ -182,7 +182,7 @@ impl CodeExtractor {
     /// Check comment consistency
     fn check_comment_consistency(&self, content: &str) -> Result<CommentConsistency> {
         let mut issues = Vec::new();
-        let mut score: f32 = 1.0;
+        let mut score: f64 = 1.0;
 
         // Check for outdated TODO comments
         let todo_re = Regex::new(r"//?\s*TODO:?\s*(.*)")?;
@@ -219,7 +219,7 @@ impl CodeExtractor {
 
     /// Check comment style consistency
     fn check_comment_style(&self, content: &str) -> Result<f64> {
-        let mut score: f32 = 1.0;
+        let mut score: f64 = 1.0;
         let lines: Vec<&str> = content.lines().collect();
 
         // Check for consistent comment style

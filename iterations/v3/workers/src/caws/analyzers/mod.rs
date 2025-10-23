@@ -13,6 +13,8 @@ pub use typescript::TypeScriptAnalyzer;
 pub use javascript::JavaScriptAnalyzer;
 
 use crate::caws::language_types::{LanguageAnalysisResult, ProgrammingLanguage};
+use crate::types::FileModification as CouncilFileModification;
+use crate::caws::diff_analysis::ChangeComplexity;
 
 /// Trait for language-specific analysis
 pub trait LanguageAnalyzer: Send + Sync + std::fmt::Debug {

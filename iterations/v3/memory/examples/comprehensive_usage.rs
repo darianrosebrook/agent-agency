@@ -67,7 +67,7 @@ async fn setup_object_pools(memory_manager: &Arc<MemoryManager>) {
             created_at: std::time::Instant::now(),
         },
         20
-    ).await;
+    ).await?;
 
     // LLM client pool
     memory_manager.create_pool(
@@ -80,7 +80,7 @@ async fn setup_object_pools(memory_manager: &Arc<MemoryManager>) {
             request_count: 0,
         },
         10
-    ).await;
+    ).await?;
 
     // HTTP client pool
     memory_manager.create_pool(

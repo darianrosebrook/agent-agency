@@ -7,7 +7,6 @@ use anyhow::Result;
 use chrono::{DateTime, Utc};
 use indexers::{
     database::{IndexingJob, IndexingJobStatus},
-    types::IndexerConfig,
 };
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -510,7 +509,10 @@ impl MultimodalJobScheduler {
     /// - [ ] Implement cross-modal anomaly detection and correction
     /// - [ ] Add confidence scoring for cross-modal relationships
     /// - [ ] Support multimodal data integrity and corruption detection
+    async fn some_method(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         tokio::time::sleep(tokio::time::Duration::from_millis(300)).await;
+        Ok(())
+    }
         
         Ok(JobPerformanceMetrics {
             processing_time_ms: 300,

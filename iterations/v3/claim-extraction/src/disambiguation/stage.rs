@@ -10,11 +10,21 @@ use crate::disambiguation::context::ContextResolver;
 use crate::disambiguation::entities::NamedEntityRecognizer;
 
 /// Main disambiguation stage that orchestrates the entire process
-#[derive(Debug)]
+// #[derive(Debug)] // Removed due to trait object issues
 pub struct DisambiguationStage {
     detector: AmbiguityDetector,
     resolver: ContextResolver,
     recognizer: NamedEntityRecognizer,
+}
+
+impl std::fmt::Debug for DisambiguationStage {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("DisambiguationStage")
+            .field("detector", &"AmbiguityDetector")
+            .field("resolver", &"ContextResolver")
+            .field("recognizer", &"NamedEntityRecognizer")
+            .finish()
+    }
 }
 
 impl DisambiguationStage {

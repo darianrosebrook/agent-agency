@@ -14,7 +14,7 @@ pub struct ClaimExtractionProcessor {
     disambiguation_stage: DisambiguationStage,
     qualification_stage: QualificationStage,
     decomposition_stage: DecompositionStage,
-    verification_stage: VerificationStage,
+    verification_stage: MultiModalVerificationEngine,
     multi_modal_verifier: MultiModalVerificationEngine,
 }
 
@@ -25,7 +25,7 @@ impl ClaimExtractionProcessor {
             disambiguation_stage: DisambiguationStage::minimal(),
             qualification_stage: QualificationStage::new(),
             decomposition_stage: DecompositionStage::new(),
-            verification_stage: VerificationStage::new(),
+            verification_stage: MultiModalVerificationEngine::new(),
             multi_modal_verifier: MultiModalVerificationEngine::new(),
         }
     }
@@ -69,7 +69,7 @@ impl ClaimExtractionProcessor {
         debug!("Stage 4: Verification");
         let verification_result = self
             .verification_stage
-            .process_v2(&decomposition_result.atomic_claims, ctx)
+            .verify_claims(&decomposition_result.atomic_claims)
             .await
             .map_err(|e| ClaimExtractionError::VerificationFailed(e.to_string()))?;
 
@@ -91,7 +91,7 @@ impl ClaimExtractionProcessor {
         info!("Claim extraction completed in {}ms", processing_time);
 
         // Combine evidence from both verification stages
-        let mut all_evidence = verification_result.evidence;
+        let mut all_evidence = Vec::new();
 
         // Add evidence from multi-modal verification
         for verified_claim in &verified_claims.verified_claims {

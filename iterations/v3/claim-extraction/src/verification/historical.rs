@@ -42,11 +42,11 @@ impl HistoricalLookup {
     /// Query database for historical claims
     async fn query_database_for_historical_claims(&self, db_client: &DatabaseClient, search_term: &str) -> Result<Vec<HistoricalClaim>, Box<dyn std::error::Error + Send + Sync>> {
         // Use the find_similar_claims function we created in the migration
-        let result = db_client.execute_parameterized_query(
+        let result = db_client.query(
             r#"
             SELECT * FROM find_similar_claims($1, 0.6, 5, 0.5)
             "#,
-            vec![serde_json::Value::from(search_term)],
+            &[&search_term],
         ).await;
 
         match result {
@@ -55,17 +55,23 @@ impl HistoricalLookup {
                 for row in rows {
                     // Parse database row into HistoricalClaim
                     let claim = HistoricalClaim {
-                        id: row.get("id").unwrap_or_else(|| Uuid::new_v4().to_string()),
-                        claim_text: row.get("claim_text").unwrap_or_else(|| "Unknown claim".to_string()),
-                        verification_status: row.get("verification_status").unwrap_or(VerificationStatus::Unverified),
+                        id: row.get::<&str, _>("id").unwrap_or("").to_string(),
+                        claim_text: row.get::<&str, _>("claim_text").unwrap_or("Unknown claim").to_string(),
+                        verification_status: row.get::<&str, _>("verification_status")
+                            .map(|s| match s {
+                                "Verified" => VerificationStatus::Verified,
+                                "Unverified" => VerificationStatus::Unverified,
+                                _ => VerificationStatus::Unverified,
+                            })
+                            .unwrap_or(VerificationStatus::Unverified),
                         evidence: vec![],
                         confidence_score: row.get("confidence_score").unwrap_or(0.5),
                         timestamp: chrono::Utc::now(),
                         source_count: row.get("source_count"),
-                        last_verified: row.get("last_verified_at"),
+                        last_verified: row.get::<Option<chrono::DateTime<chrono::Utc>>, _>("last_verified_at").unwrap_or(None),
                         related_entities: row.get("related_entities"),
                         claim_type: row.get("claim_type"),
-                        created_at: row.get("created_at"),
+                        created_at: row.get::<Option<chrono::DateTime<chrono::Utc>>, _>("created_at").unwrap_or(None),
                         updated_at: None, // Not returned by function
                         metadata: None, // Not returned by function
                         source_references: row.get("source_references"),

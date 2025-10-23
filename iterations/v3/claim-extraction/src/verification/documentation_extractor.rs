@@ -5,7 +5,7 @@
 use regex::Regex;
 use std::collections::HashMap;
 use crate::verification::types::*;
-use crate::types::AtomicClaim;
+use crate::types::{AtomicClaim, VerifiabilityLevel, ClaimScope, DataImpact};
 use anyhow::Result;
 
 /// Documentation claim extractor

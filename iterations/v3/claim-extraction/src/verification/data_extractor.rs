@@ -4,14 +4,15 @@
 
 use regex::Regex;
 use crate::verification::types::*;
-use crate::{AtomicClaim, ClaimType};
+use crate::{AtomicClaim, ClaimType, VerifiabilityLevel, ClaimScope, DataImpact};
+use anyhow::Result;
 
 /// Data claim extractor
 pub struct DataExtractor;
 
 impl DataExtractor {
     /// Extract claims from data analysis output
-    pub async fn extract_data_claims(&self, analysis_output: &DataAnalysisOutput, data_schema: &DataSchema) -> Result<Vec<AtomicClaim>> {
+    pub async fn extract_data_claims(&self, analysis_output: &DataAnalysisOutput, data_schema: &DataSchema) -> Result<Vec<AtomicClaim>, Box<dyn std::error::Error + Send + Sync>> {
         let mut claims = Vec::new();
 
         // Parse data analysis results
@@ -42,7 +43,7 @@ impl DataExtractor {
     }
 
     /// Parse data analysis results from raw text or structured data
-    pub fn parse_data_analysis_results(&self, analysis_output: &DataAnalysisOutput) -> Result<DataAnalysisResults> {
+    pub fn parse_data_analysis_results(&self, analysis_output: &DataAnalysisOutput) -> Result<DataAnalysisResults, Box<dyn std::error::Error + Send + Sync>> {
         let mut results = DataAnalysisResults {
             statistics: analysis_output.results.clone(),
             correlations: analysis_output.correlations.clone(),
@@ -68,7 +69,7 @@ impl DataExtractor {
     }
 
     /// Parse statistical output from raw text
-    fn parse_statistical_output(&self, text: &str) -> Result<Vec<StatisticalResult>> {
+    fn parse_statistical_output(&self, text: &str) -> Result<Vec<StatisticalResult>, Box<dyn std::error::Error + Send + Sync>> {
         let re = Regex::new(r"(?i)(\w+)\s+(mean|median|std_dev|p_value)\s*=\s*([\-0-9.]+)")?;
         Ok(re.captures_iter(text)
           .filter_map(|c| Some(StatisticalResult {
@@ -81,7 +82,7 @@ impl DataExtractor {
     }
 
     /// Parse correlation output from raw text
-    fn parse_correlation_output(&self, text: &str) -> Result<Vec<CorrelationResult>> {
+    fn parse_correlation_output(&self, text: &str) -> Result<Vec<CorrelationResult>, Box<dyn std::error::Error + Send + Sync>> {
         let re = Regex::new(r"(?i)corr\((\w+),\s*(\w+)\)\s*=\s*([\-0-9.]+),\s*p\s*=\s*([0-9.]+)")?;
         Ok(re.captures_iter(text)
           .filter_map(|c| Some(CorrelationResult {
@@ -93,7 +94,7 @@ impl DataExtractor {
     }
 
     /// Parse mixed analysis output
-    fn parse_mixed_analysis_output(&self, text: &str) -> Result<DataAnalysisResults> {
+    fn parse_mixed_analysis_output(&self, text: &str) -> Result<DataAnalysisResults, Box<dyn std::error::Error + Send + Sync>> {
         let mut results = DataAnalysisResults {
             statistics: vec![],
             correlations: vec![],

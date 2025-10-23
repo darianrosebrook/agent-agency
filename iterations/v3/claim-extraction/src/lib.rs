@@ -38,7 +38,7 @@ pub struct ClaimExtractionAndVerificationProcessor {
     disambiguation_stage: disambiguation::DisambiguationStage,
     qualification_stage: qualification::QualificationStage,
     decomposition_stage: decomposition::DecompositionStage,
-    verification_stage: verification::VerificationStage,
+    verification_stage: verification::MultiModalVerificationEngine,
 }
 
 impl ClaimExtractionAndVerificationProcessor {
@@ -127,6 +127,9 @@ impl ClaimExtractionAndVerificationProcessor {
                         }
                         UnverifiableReason::EmotionalContent => {
                             unverifiable_breakdown.emotional_content += 1
+                        }
+                        UnverifiableReason::ImprovementClaim => {
+                            unverifiable_breakdown.improvement_claim += 1
                         }
                     }
                 }

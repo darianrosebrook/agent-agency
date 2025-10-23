@@ -8,20 +8,81 @@ use std::sync::Arc;
 use tokio::sync::mpsc;
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
+use tracing::{debug, warn};
 
 use crate::manager::WorkerPoolManager;
 use crate::types::{TaskSpec, WorkerAssignment, TaskExecutionResult};
+use agent_agency_contracts::RiskTier;
 use agent_agency_resilience::{CircuitBreaker, CircuitBreakerConfig};
+use caws_runtime_validator::integration::{OrchestrationValidationResult, WorkingSpec as RuntimeWorkingSpec, TaskDescriptor as RuntimeTaskDescriptor, ExecutionMode, DiffStats as RuntimeDiffStats};
 
-use super::super::orchestration::planning::types::{WorkingSpec, ExecutionArtifacts, ExecutionEvent};
-// DEPRECATED: Legacy CAWS runtime validator (being migrated to runtime-validator)
-use super::super::orchestration::caws_runtime::{CawsRuntimeValidator, DiffStats, TaskDescriptor};
+// Local types defined above to avoid circular dependency
 
 // NEW: Runtime-validator integration
 use caws_runtime_validator::{
     CawsValidator,
     integration::{OrchestrationIntegration, DefaultOrchestrationIntegration},
 };
+
+// Local type definitions to avoid circular dependency with orchestration crate
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WorkingSpec {
+    pub id: String,
+    pub title: String,
+    pub description: String,
+    pub risk_tier: u8,
+    pub scope: Option<WorkingSpecScope>,
+    pub acceptance_criteria: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WorkingSpecScope {
+    pub included: Vec<String>,
+    pub excluded: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExecutionArtifacts {
+    pub id: Uuid,
+    pub task_id: Uuid,
+    pub code_changes: Vec<CodeChange>,
+    pub test_results: Option<TestResults>,
+    pub performance_metrics: Option<PerformanceMetrics>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CodeChange {
+    pub file_path: String,
+    pub lines_changed: usize,
+    pub change_type: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TestResults {
+    pub total_tests: u32,
+    pub passed_tests: u32,
+    pub failed_tests: u32,
+    pub skipped_tests: u32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PerformanceMetrics {
+    pub response_time_ms: u64,
+    pub memory_usage_mb: f64,
+    pub cpu_usage_percent: f32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ExecutionEvent {
+    ExecutionStarted { task_id: Uuid, working_spec_id: String, timestamp: DateTime<Utc> },
+    ExecutionCompleted { task_id: Uuid, success: bool, artifacts: ExecutionArtifacts, execution_time_ms: u64 },
+    ExecutionFailed { task_id: Uuid, error: String, working_spec_id: String, artifacts: ExecutionArtifacts },
+    WorkerAssigned { task_id: Uuid, worker_id: Uuid, estimated_completion_time: DateTime<Utc> },
+    QualityCheckCompleted { task_id: Uuid, check_type: String, passed: bool },
+    ExecutionPhaseStarted { task_id: Uuid, phase: String, timestamp: DateTime<Utc> },
+    ExecutionPhaseCompleted { task_id: Uuid, phase: String, duration_ms: u64 },
+    ExecutionProgress { task_id: Uuid, phase: String, progress_percent: f32 },
+}
 use super::super::orchestration::arbiter::{ArbiterOrchestrator, ArbiterVerdict, VerdictStatus, WorkerOutput};
 
 // Optional self-prompting agent integration
@@ -769,9 +830,9 @@ impl AutonomousExecutor {
         working_spec: &WorkingSpec,
         artifacts: &ExecutionArtifacts,
         task_id: Uuid,
-    ) -> Result<caws_runtime_validator::OrchestrationValidationResult, AutonomousExecutionError> {
+    ) -> Result<OrchestrationValidationResult, AutonomousExecutionError> {
         // Create runtime-validator types
-        let runtime_spec = caws_runtime_validator::WorkingSpec {
+        let runtime_spec = RuntimeWorkingSpec {
             risk_tier: working_spec.risk_tier as u8,
             scope_in: working_spec.scope.as_ref()
                 .and_then(|s| s.included.clone())
@@ -780,16 +841,16 @@ impl AutonomousExecutor {
             change_budget_max_loc: self.config.change_budget_max_loc,
         };
 
-        let runtime_task_desc = caws_runtime_validator::TaskDescriptor {
+        let runtime_task_desc = RuntimeTaskDescriptor {
             task_id: format!("checkpoint-{}", task_id),
             scope_in: working_spec.scope.as_ref()
                 .and_then(|s| s.included.clone())
                 .unwrap_or_default(),
             risk_tier: working_spec.risk_tier as u8,
-            execution_mode: caws_runtime_validator::ExecutionMode::Auto,
+            execution_mode: ExecutionMode::Auto,
         };
 
-        let runtime_diff_stats = caws_runtime_validator::DiffStats {
+        let runtime_diff_stats = RuntimeDiffStats {
             files_changed: artifacts.code_changes.len() as u32,
             lines_added: artifacts.code_changes.iter()
                 .map(|c| c.lines_added as i32)
@@ -825,7 +886,7 @@ impl AutonomousExecutor {
         working_spec: &WorkingSpec,
         artifacts: &ExecutionArtifacts,
         task_id: Uuid,
-    ) -> Result<super::super::orchestration::caws_runtime::ValidationResult, AutonomousExecutionError> {
+    ) -> Result<crate::orchestration::caws_runtime::ValidationResult, AutonomousExecutionError> {
         // Create a mock task descriptor for validation
         let task_desc = TaskDescriptor {
             task_id: format!("checkpoint-{}", task_id),
@@ -858,7 +919,7 @@ impl AutonomousExecutor {
 
         // DEPRECATED: Legacy validation (kept for backward compatibility)
         let _legacy_result = self.validator.validate(
-            &super::super::orchestration::caws_runtime::WorkingSpec {
+            &crate::orchestration::caws_runtime::WorkingSpec {
                 risk_tier: working_spec.risk_tier as u8,
                 scope_in: working_spec.scope.as_ref()
                     .and_then(|s| s.included.clone())
@@ -876,7 +937,7 @@ impl AutonomousExecutor {
         ).await?;
 
         // NEW: Primary validation using runtime-validator
-        let runtime_spec = caws_runtime_validator::WorkingSpec {
+        let runtime_spec = RuntimeWorkingSpec {
             risk_tier: working_spec.risk_tier as u8,
             scope_in: working_spec.scope.as_ref()
                 .and_then(|s| s.included.clone())
@@ -885,14 +946,14 @@ impl AutonomousExecutor {
             change_budget_max_loc: self.config.change_budget_max_loc,
         };
 
-        let runtime_task_desc = caws_runtime_validator::TaskDescriptor {
+        let runtime_task_desc = RuntimeTaskDescriptor {
             task_id: task_desc.task_id,
             scope_in: task_desc.scope_in,
             risk_tier: task_desc.risk_tier,
-            execution_mode: caws_runtime_validator::ExecutionMode::Auto,
+            execution_mode: ExecutionMode::Auto,
         };
 
-        let runtime_diff_stats = caws_runtime_validator::DiffStats {
+        let runtime_diff_stats = RuntimeDiffStats {
             files_changed: diff_stats.files_changed,
             lines_added: diff_stats.lines_changed as i32,
             lines_removed: 0, // Simplified - could be enhanced
@@ -911,27 +972,27 @@ impl AutonomousExecutor {
         ).await?;
 
         // Convert runtime result to legacy format for compatibility
-        let result = super::super::orchestration::caws_runtime::ValidationResult {
+        let result = crate::orchestration::caws_runtime::ValidationResult {
             task_id: runtime_result.task_id,
-            snapshot: super::super::orchestration::caws_runtime::ComplianceSnapshot {
+            snapshot: crate::orchestration::caws_runtime::ComplianceSnapshot {
                 within_scope: runtime_result.snapshot.within_scope,
                 within_budget: runtime_result.snapshot.within_budget,
                 tests_added: runtime_result.snapshot.tests_added,
                 deterministic: runtime_result.snapshot.deterministic,
             },
             violations: runtime_result.violations.into_iter().map(|v| {
-                super::super::orchestration::caws_runtime::Violation {
+                crate::orchestration::caws_runtime::Violation {
                     code: match v.code {
-                        caws_runtime_validator::ViolationCode::OutOfScope => 
-                            super::super::orchestration::caws_runtime::ViolationCode::OutOfScope,
-                        caws_runtime_validator::ViolationCode::BudgetExceeded => 
-                            super::super::orchestration::caws_runtime::ViolationCode::BudgetExceeded,
-                        caws_runtime_validator::ViolationCode::MissingTests => 
-                            super::super::orchestration::caws_runtime::ViolationCode::MissingTests,
-                        caws_runtime_validator::ViolationCode::NonDeterministic => 
-                            super::super::orchestration::caws_runtime::ViolationCode::NonDeterministic,
-                        caws_runtime_validator::ViolationCode::DisallowedTool => 
-                            super::super::orchestration::caws_runtime::ViolationCode::DisallowedTool,
+                        caws_runtime_validator::ViolationCode::OutOfScope =>
+                            ViolationCode::OutOfScope,
+                        caws_runtime_validator::ViolationCode::BudgetExceeded =>
+                            ViolationCode::BudgetExceeded,
+                        caws_runtime_validator::ViolationCode::MissingTests =>
+                            ViolationCode::MissingTests,
+                        caws_runtime_validator::ViolationCode::NonDeterministic =>
+                            ViolationCode::NonDeterministic,
+                        caws_runtime_validator::ViolationCode::DisallowedTool =>
+                            ViolationCode::DisallowedTool,
                     },
                     message: v.message,
                     remediation: v.remediation,
@@ -965,10 +1026,10 @@ impl AutonomousExecutor {
                     .join("\n")
             ),
             risk_tier: match working_spec.risk_tier {
-                1 => crate::models::RiskTier::Critical,
-                2 => crate::models::RiskTier::High,
-                3 => crate::models::RiskTier::Standard,
-                _ => crate::models::RiskTier::Standard,
+                 1 => agent_agency_contracts::RiskTier::Critical,
+                2 => agent_agency_contracts::RiskTier::High,
+                3 => agent_agency_contracts::RiskTier::Standard,
+                _ => agent_agency_contracts::RiskTier::Standard,
             },
             scope_in: working_spec.scope.as_ref()
                 .and_then(|s| s.included.clone())

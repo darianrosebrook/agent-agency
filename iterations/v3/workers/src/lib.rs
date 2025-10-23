@@ -14,9 +14,10 @@ pub mod specialized_workers;
 pub mod types;
 
 pub use autonomous_executor::{AutonomousExecutor, AutonomousExecutorConfig, ExecutionResult, ArbiterMediatedResult};
-pub use caws_checker::{CawsChecker, ChangeComplexity};
+pub use caws_checker::CawsChecker;
 pub use executor::TaskExecutor;
 pub use manager::WorkerPoolManager;
+pub use specialized_workers::{CompilationSpecialist, RefactoringSpecialist, TestingSpecialist, DocumentationSpecialist, TypeSystemSpecialist, AsyncPatternsSpecialist, CustomSpecialist};
 pub use multimodal_scheduler::{
     MultimodalJobScheduler, MultimodalSchedulerConfig, MultimodalJob, MultimodalJobType,
     MultimodalJobStatus, JobPriority, SchedulerStats,

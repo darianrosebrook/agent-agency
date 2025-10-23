@@ -1655,6 +1655,7 @@ dependencies = [
  "chrono",
  "embedding-service",
  "fastrand",
+ "futures",
  "knowledge-ingestor",
  "lru",
  "md5",

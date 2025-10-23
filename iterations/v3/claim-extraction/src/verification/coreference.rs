@@ -158,7 +158,7 @@ impl CoreferenceResolver {
         entities: &[Entity],
         pronouns: &[(String, (usize, usize))],
     ) -> Result<Vec<CoreferenceChain>> {
-        let mut chains = Vec::new();
+        let mut chains: Vec<CoreferenceChain> = Vec::new();
 
         for (pronoun, pronoun_pos) in pronouns {
             // Find potential antecedents within reasonable distance
