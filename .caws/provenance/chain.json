@@ -17178,5 +17178,39 @@
     },
     "previous_hash": "ef72b7621eea033e22753c061eaf0a5ec07d3671c5bb300b1994d61cb37a3cc9",
     "hash": "98ceea41d9ec319e539c5525b464d11450b80c0525f29dcfe281daedeeb24584"
+  },
+  {
+    "id": "prov-1761249270586",
+    "timestamp": "2025-10-23T19:54:30.586Z",
+    "commit": {
+      "hash": "13afb30afd90e30e18e7c772a654e6d0db0a35d4",
+      "message": "docs: clean up documentation to remove superiority claims and temporal content",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "AGENT-001",
+      "title": "P0 Blockers: Truthful System Loop with Auditability and Control",
+      "risk_tier": 1,
+      "mode": "feature",
+      "waiver_ids": []
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-23T19:54:30.588Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "98ceea41d9ec319e539c5525b464d11450b80c0525f29dcfe281daedeeb24584",
+    "hash": "23aa43dde2ff13403ad6cc91050f5ba3b9a34d0eabc6e5cac73b504ad95911ef"
   }
 ]

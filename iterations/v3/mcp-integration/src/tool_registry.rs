@@ -3,6 +3,7 @@
 //! Manages registration, execution, and lifecycle of MCP tools.
 
 use crate::types::*;
+use crate::tools::DocQualityValidator;
 use anyhow::Result;
 use dashmap::DashMap;
 use std::process::Stdio;
@@ -19,6 +20,7 @@ pub struct ToolRegistry {
     execution_queue: Arc<RwLock<Vec<ToolExecutionRequest>>>,
     execution_history: Arc<RwLock<Vec<ToolExecutionResult>>>,
     statistics: Arc<RwLock<ToolRegistryStats>>,
+    doc_quality_validator: Arc<DocQualityValidator>,
 }
 
 impl ToolRegistry {
@@ -38,6 +40,7 @@ impl ToolRegistry {
                 most_used_tools: Vec::new(),
                 last_updated: chrono::Utc::now(),
             })),
+            doc_quality_validator: Arc::new(DocQualityValidator::new()),
         }
     }
 
@@ -66,6 +69,11 @@ impl ToolRegistry {
                 last_updated: chrono::Utc::now(),
             };
         }
+        
+        // Register the documentation quality validator tool
+        let doc_quality_tool = self.doc_quality_validator.get_tool_definition();
+        self.register_tool(doc_quality_tool).await?;
+        
         Ok(())
     }
 
@@ -249,6 +257,11 @@ impl ToolRegistry {
         tool: &MCPTool,
         request: &ToolExecutionRequest,
     ) -> Result<serde_json::Value> {
+        // Special handling for documentation quality validator
+        if tool.name == "doc_quality_validator" {
+            return self.execute_doc_quality_validator(tool, request).await;
+        }
+        
         // Route based on tool capabilities
         if tool
             .capabilities
@@ -266,6 +279,57 @@ impl ToolRegistry {
             // Default to sandboxed execution for general tools
             self.execute_sandboxed_tool(tool, request).await
         }
+    }
+
+    /// Execute documentation quality validator
+    async fn execute_doc_quality_validator(
+        &self,
+        _tool: &MCPTool,
+        request: &ToolExecutionRequest,
+    ) -> Result<serde_json::Value> {
+        info!("Executing documentation quality validator");
+        
+        // Parse parameters
+        let content = request
+            .parameters
+            .get("content")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| anyhow::anyhow!("Missing required parameter: content"))?;
+        
+        let content_type = request
+            .parameters
+            .get("content_type")
+            .and_then(|v| v.as_str())
+            .unwrap_or("markdown");
+        
+        let file_path = request
+            .parameters
+            .get("file_path")
+            .and_then(|v| v.as_str());
+        
+        let validation_level = request
+            .parameters
+            .get("validation_level")
+            .and_then(|v| v.as_str())
+            .unwrap_or("moderate");
+        
+        let include_suggestions = request
+            .parameters
+            .get("include_suggestions")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(true);
+        
+        // Execute validation
+        let result = self.doc_quality_validator.validate_quality(
+            content,
+            content_type,
+            file_path,
+            validation_level,
+            include_suggestions,
+        ).await?;
+        
+        // Convert result to JSON
+        Ok(serde_json::to_value(result)?)
     }
 
     /// Execute a command-based tool with sandboxing

@@ -17,6 +17,28 @@ fn sample_tool() -> MCPTool {
             constraints: vec![],
         },
         output_schema: serde_json::json!({}),
+        endpoint: "/tools/echo".to_string(),
+        manifest: ToolManifest {
+            name: "echo".to_string(),
+            version: "1.0.0".to_string(),
+            description: "echo tool".to_string(),
+            author: "ai".to_string(),
+            tool_type: ToolType::Utility,
+            entry_point: "echo".to_string(),
+            dependencies: vec![],
+            capabilities: vec![ToolCapability::TextProcessing],
+            parameters: ToolParameters {
+                required: vec![],
+                optional: vec![],
+                constraints: vec![],
+            },
+            output_schema: serde_json::json!({
+                "type": "object"
+            }),
+            endpoint: Some("/tools/echo".to_string()),
+            caws_compliance: None,
+            metadata: std::collections::HashMap::new(),
+        },
         caws_compliance: CawsComplianceStatus::Unknown,
         registration_time: chrono::Utc::now(),
         last_updated: chrono::Utc::now(),

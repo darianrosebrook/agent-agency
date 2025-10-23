@@ -7,6 +7,7 @@ pub mod caws_integration;
 pub mod server;
 pub mod tool_discovery;
 pub mod tool_registry;
+pub mod tools;
 pub mod types;
 
 pub use caws_integration::CawsIntegration;
