@@ -901,10 +901,10 @@ impl AutonomousExecutor {
     ) -> Result<OrchestrationValidationResult, AutonomousExecutionError> {
         // Create runtime-validator types
         let runtime_spec = RuntimeWorkingSpec {
-            risk_tier: working_spec.risk_tier as u8,
+            risk_tier: working_spec.risk_tier,
             scope_in: vec![], // Default empty scope since WorkingSpec doesn't have scope info
-            change_budget_max_files: self.config.change_budget_max_files,
-            change_budget_max_loc: self.config.change_budget_max_loc,
+            change_budget_max_files: self.config.change_budget_max_files as u32,
+            change_budget_max_loc: self.config.change_budget_max_loc as u32,
         };
 
         let runtime_task_desc = RuntimeTaskDescriptor {
@@ -912,6 +912,14 @@ impl AutonomousExecutor {
             scope_in: vec![], // Default empty scope since WorkingSpec doesn't have scope info
             risk_tier: working_spec.risk_tier as u8,
             execution_mode: ExecutionMode::Auto,
+            acceptance: Some(working_spec.acceptance_criteria.iter()
+                .map(|ac| format!("Given {}, When {}, Then {}", ac.given, ac.when, ac.then))
+                .collect()),
+            metadata: working_spec.metadata.as_ref().map(|m| {
+                m.iter()
+                    .map(|(k, v)| (k.clone(), v.to_string()))
+                    .collect()
+            }),
         };
 
         let runtime_diff_stats = RuntimeDiffStats {
@@ -931,7 +939,7 @@ impl AutonomousExecutor {
             &runtime_diff_stats,
             &[], // patches
             &[], // language_hints
-            artifacts.test_results.total > 0, // tests_added
+            artifacts.test_results.total_tests > 0, // tests_added
             is_deterministic,
             vec![], // waivers
         ).await?;
@@ -951,7 +959,7 @@ impl AutonomousExecutor {
         let task_desc = TaskDescriptor {
             task_id: format!("checkpoint-{}", task_id),
             scope_in: vec![], // Default empty scope since WorkingSpec doesn't have scope info
-            risk_tier: working_spec.risk_tier as u8,
+            risk_tier: working_spec.risk_tier,
             acceptance: Some(working_spec.acceptance_criteria.iter()
                 .map(|ac| format!("Given {}, When {}, Then {}", ac.given, ac.when, ac.then))
                 .collect()),
@@ -963,13 +971,11 @@ impl AutonomousExecutor {
 
         // Create diff stats based on artifacts
         let diff_stats = DiffStats {
-            files_changed: artifacts.code_changes.len() as u32,
-            lines_changed: artifacts.code_changes.iter()
-                .map(|c| c.lines_added + c.lines_removed)
-                .sum(),
-            touched_paths: artifacts.code_changes.iter()
-                .map(|c| c.file_path.clone())
-                .collect(),
+            files_changed: artifacts.code_changes.statistics.files_modified as usize,
+            insertions: artifacts.code_changes.statistics.lines_added as usize,
+            deletions: artifacts.code_changes.statistics.lines_removed as usize,
+            violations: 0, // Could be populated from validation results
+            total_lines: artifacts.code_changes.statistics.total_loc as usize,
         };
 
         // Implement determinism validation and verification
@@ -978,12 +984,12 @@ impl AutonomousExecutor {
         // DEPRECATED: Legacy validation (kept for backward compatibility)
         let _legacy_result = self.validator.validate(
             &WorkingSpec {
-                risk_tier: working_spec.risk_tier as u8,
+                risk_tier: working_spec.risk_tier,
                 scope_in: working_spec.scope.as_ref()
                     .and_then(|s| s.included.clone())
                     .unwrap_or_default(),
-                change_budget_max_files: self.config.change_budget_max_files,
-                change_budget_max_loc: self.config.change_budget_max_loc,
+                change_budget_max_files: self.config.change_budget_max_files as u32,
+                change_budget_max_loc: self.config.change_budget_max_loc as u32,
             },
             &task_desc,
             &diff_stats,
@@ -996,10 +1002,10 @@ impl AutonomousExecutor {
 
         // NEW: Primary validation using runtime-validator
         let runtime_spec = RuntimeWorkingSpec {
-            risk_tier: working_spec.risk_tier as u8,
+            risk_tier: working_spec.risk_tier,
             scope_in: vec![], // Default empty scope since WorkingSpec doesn't have scope info
-            change_budget_max_files: self.config.change_budget_max_files,
-            change_budget_max_loc: self.config.change_budget_max_loc,
+            change_budget_max_files: self.config.change_budget_max_files as u32,
+            change_budget_max_loc: self.config.change_budget_max_loc as u32,
         };
 
         let runtime_task_desc = RuntimeTaskDescriptor {
@@ -1022,7 +1028,7 @@ impl AutonomousExecutor {
             &runtime_diff_stats,
             &[], // patches
             &[], // language_hints
-            artifacts.test_results.total > 0, // tests_added
+            artifacts.test_results.total_tests > 0, // tests_added
             is_deterministic,
             vec![], // waivers
         ).await?;
