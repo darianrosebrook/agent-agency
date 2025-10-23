@@ -941,37 +941,9 @@ impl AsyncInferenceEngine {
             .as_ref()
             .ok_or_else(|| anyhow::anyhow!("Model does not have Core ML backend"))?;
 
-        // Convert inputs from async_inference::Tensor to candle_core::Tensor
-        let mut candle_inputs = HashMap::new();
-        for (name, tensor) in inputs {
-            // Convert our Tensor to candle Tensor
-            let shape: &[usize] = &tensor.shape;
-            let candle_tensor = candle_core::Tensor::from_vec(
-                tensor.data.clone(),
-                shape,
-                &candle_core::Device::Cpu,
-            )?;
-            candle_inputs.insert(name.clone(), candle_tensor);
-        }
-
         // Execute prediction with timeout using safe wrapper
         let timeout_ms = self.inner.config.inference_timeout.as_millis() as u64;
-        let candle_outputs = coreml_model.predict(candle_inputs, timeout_ms).await?;
-
-        // Convert outputs back from candle_core::Tensor to async_inference::Tensor
-        let mut outputs = HashMap::new();
-        for (name, candle_tensor) in candle_outputs {
-            let shape = candle_tensor.shape().dims().to_vec();
-            let tensor = Tensor {
-                data: candle_tensor.flatten_all()?.to_vec1()?,
-                shape,
-                dtype: TensorDataType::F32, // Assume F32 for now
-                device: TensorDevice::Cpu,
-                layout: TensorLayout::RowMajor,
-                metadata: None,
-            };
-            outputs.insert(name, tensor);
-        }
+        let outputs = coreml_model.predict(inputs.clone(), timeout_ms).await?;
 
         debug!("Core ML inference completed successfully with {} outputs", outputs.len());
         Ok(outputs)

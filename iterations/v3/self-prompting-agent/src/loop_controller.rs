@@ -996,7 +996,7 @@ impl SelfPromptingLoop {
 
                     // Basic error handling and recovery
                     // Log error for analysis and continue with next iteration
-                    tracing::warn!("Error in iteration {}, continuing: {:?}", i, error);
+                    tracing::warn!("ActionRequest validation failed in iteration {}, continuing", iteration);
                     continue;
                 }
             }
@@ -1112,22 +1112,11 @@ impl SelfPromptingLoop {
                 .sum::<usize>())
             .unwrap_or(0);
 
-        // Calculate test pass rate delta (simplified - would need actual test results)
-        let test_pass_rate_delta = if let Some(prev) = previous_report {
-            // This would need access to actual test results from the evaluation
-            // For now, use a proxy based on score improvement
-            (current_report.score - prev.score) * 0.1 // Simplified approximation
-        } else {
-            0.0
-        };
+        // Calculate test pass rate delta based on test-related thresholds
+        let test_pass_rate_delta = self.calculate_test_pass_rate_delta(current_report, previous_report);
 
-        // Calculate lint errors delta (simplified - would need lint results)
-        let lint_errors_delta = if let Some(prev) = previous_report {
-            // Simplified: assume fewer thresholds_met means more errors
-            (prev.thresholds_met.len() as i32 - current_report.thresholds_met.len() as i32)
-        } else {
-            0
-        };
+        // Calculate lint errors delta based on code quality thresholds
+        let lint_errors_delta = self.calculate_lint_errors_delta(current_report, previous_report);
 
         let score_improvement = if let Some(prev) = previous_report {
             current_report.score - prev.score
@@ -1142,6 +1131,83 @@ impl SelfPromptingLoop {
             lint_errors_delta,
             score_improvement,
             timestamp: chrono::Utc::now(),
+        }
+    }
+
+    /// Calculate test pass rate delta by analyzing test-related thresholds
+    fn calculate_test_pass_rate_delta(&self, current: &EvalReport, previous: Option<&EvalReport>) -> f64 {
+        let current_test_thresholds = current.thresholds_met.iter()
+            .filter(|t| t.to_lowercase().contains("test") || t.to_lowercase().contains("coverage"))
+            .count();
+
+        let current_total_thresholds = current.thresholds_met.len() + current.thresholds_missed.len();
+
+        if current_total_thresholds == 0 {
+            return 0.0;
+        }
+
+        let current_test_rate = current_test_thresholds as f64 / current_total_thresholds as f64;
+
+        if let Some(prev) = previous {
+            let prev_test_thresholds = prev.thresholds_met.iter()
+                .filter(|t| t.to_lowercase().contains("test") || t.to_lowercase().contains("coverage"))
+                .count();
+
+            let prev_total_thresholds = prev.thresholds_met.len() + prev.thresholds_missed.len();
+
+            if prev_total_thresholds == 0 {
+                return current_test_rate;
+            }
+
+            let prev_test_rate = prev_test_thresholds as f64 / prev_total_thresholds as f64;
+            current_test_rate - prev_test_rate
+        } else {
+            current_test_rate
+        }
+    }
+
+    /// Calculate lint errors delta by analyzing code quality thresholds
+    fn calculate_lint_errors_delta(&self, current: &EvalReport, previous: Option<&EvalReport>) -> i32 {
+        // Count code quality related thresholds (lint, style, quality, etc.)
+        let current_quality_thresholds = current.thresholds_met.iter()
+            .filter(|t| {
+                let t_lower = t.to_lowercase();
+                t_lower.contains("lint") || t_lower.contains("style") ||
+                t_lower.contains("quality") || t_lower.contains("format")
+            })
+            .count();
+
+        let current_quality_missed = current.thresholds_missed.iter()
+            .filter(|t| {
+                let t_lower = t.to_lowercase();
+                t_lower.contains("lint") || t_lower.contains("style") ||
+                t_lower.contains("quality") || t_lower.contains("format")
+            })
+            .count();
+
+        let current_quality_score = current_quality_thresholds as i32 - current_quality_missed as i32;
+
+        if let Some(prev) = previous {
+            let prev_quality_thresholds = prev.thresholds_met.iter()
+                .filter(|t| {
+                    let t_lower = t.to_lowercase();
+                    t_lower.contains("lint") || t_lower.contains("style") ||
+                    t_lower.contains("quality") || t_lower.contains("format")
+                })
+                .count();
+
+            let prev_quality_missed = prev.thresholds_missed.iter()
+                .filter(|t| {
+                    let t_lower = t.to_lowercase();
+                    t_lower.contains("lint") || t_lower.contains("style") ||
+                    t_lower.contains("quality") || t_lower.contains("format")
+                })
+                .count();
+
+            let prev_quality_score = prev_quality_thresholds as i32 - prev_quality_missed as i32;
+            current_quality_score - prev_quality_score
+        } else {
+            current_quality_score
         }
     }
 
@@ -1628,7 +1694,7 @@ impl SelfPromptingLoop {
 
         for (manager, args) in &package_managers {
             if self.is_package_manager_available(manager) {
-                match self.run_package_manager_command(manager, args, &workspace_root) {
+                match self.run_package_manager_command(manager, args, &workspace_root).await {
                     Ok(success) if success => {
                         info!("Successfully installed dependencies using {}", manager);
                         return true;
@@ -1665,7 +1731,7 @@ impl SelfPromptingLoop {
 
         for (tool, args) in &clean_commands {
             if self.is_package_manager_available(tool) {
-                match self.run_package_manager_command(tool, args, &workspace_root) {
+                match self.run_package_manager_command(tool, args, &workspace_root).await {
                     Ok(success) if success => {
                         info!("Successfully cleaned build artifacts with {}", tool);
                         any_success = true;
@@ -1742,8 +1808,8 @@ impl SelfPromptingLoop {
         // Reset to default configurations for common files
         if workspace_root.join("package.json").exists() {
             // For Node.js projects, try to reset npm/yarn config
-            let _ = self.run_package_manager_command("npm", &["config", "delete"], &workspace_root);
-            let _ = self.run_package_manager_command("yarn", &["config", "delete"], &workspace_root);
+            let _ = self.run_package_manager_command("npm", &["config", "delete"], &workspace_root).await;
+            let _ = self.run_package_manager_command("yarn", &["config", "delete"], &workspace_root).await;
         }
 
         any_success
@@ -1851,14 +1917,20 @@ impl SelfPromptingLoop {
     }
 
     /// Run a package manager command and return success status
-    fn run_package_manager_command(&self, manager: &str, args: &[&str], cwd: &std::path::Path) -> Result<bool, std::io::Error> {
-        use std::process::Command;
+    async fn run_package_manager_command(&self, manager: &str, args: &[&str], cwd: &std::path::Path) -> Result<bool, SelfPromptingError> {
+        use tokio::process::Command;
+        use tokio::time::{timeout, Duration};
 
         let mut command = Command::new(manager);
         command.args(args).current_dir(cwd);
 
-        // Set a timeout for the command (simplified - would need tokio for real timeout)
-        let output = command.output()?;
+        // Set a timeout for the command (30 seconds for package manager operations)
+        let timeout_duration = Duration::from_secs(30);
+
+        let output = timeout(timeout_duration, command.output())
+            .await
+            .map_err(|_| SelfPromptingError::Timeout("Package manager command timed out".to_string()))?
+            .map_err(|e| SelfPromptingError::Io(e))?;
 
         Ok(output.status.success())
     }

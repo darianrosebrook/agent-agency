@@ -1,0 +1,341 @@
+# Improved Hidden TODO Analysis Report (v2.0)
+============================================================
+
+## Summary
+- Total files: 42367
+- Non-ignored files: 798
+- Ignored files: 41569
+- Files with hidden TODOs: 247
+- Total hidden TODOs found: 789
+- Code stub detections: 0
+- High confidence TODOs (≥0.9): 783
+- Medium confidence TODOs (≥0.6): 6
+- Low confidence TODOs (<0.6): 0
+- Minimum confidence threshold: 0.7
+
+## Files by Language
+- **cpp**: 1 files
+- **javascript**: 28 files
+- **python**: 2 files
+- **rust**: 603 files
+- **shell**: 16 files
+- **typescript**: 130 files
+- **yaml**: 18 files
+
+## Pattern Statistics
+- `\bTODO\b(?!(_|\.|anal|\sanal|s))`: 317 occurrences
+- `\bTODO\b.*?:`: 305 occurrences
+- `\bsimplified\b(?!(_|\.|anal|\sanal|s))`: 166 occurrences
+- `\bfor\s+now\b(?!(_|\.|anal|\sanal|s))`: 157 occurrences
+- `\bin\s+a\s+real\b(?!(_|\.|anal|\sanal|s))`: 76 occurrences
+- `\bin\s+a\s+real\s+implementation\b`: 69 occurrences
+- `\bplaceholder\s+implementation\b`: 31 occurrences
+- `\bstub\s+implementation\b`: 19 occurrences
+- `\bwill\s+be\b.*?(implemented|added|fixed)`: 9 occurrences
+- `\bwould\s+be\b.*?(implemented|added|fixed)`: 7 occurrences
+- `\bwill\s+be\s+implemented\b`: 6 occurrences
+- `\bshould\s+be\b.*?(implemented|added|fixed)`: 5 occurrences
+- `\bcould\s+be\b.*?(implemented|added|fixed)`: 4 occurrences
+- `\bto\s+be\s+implemented\b`: 2 occurrences
+- `\bin\s+production\b.*?(implement|add|fix)`: 2 occurrences
+- `\bnot\s+yet\s+implemented\b`: 2 occurrences
+- `\bTEMP\b.*?:.*?(implement|fix|replace|complete|add)`: 1 occurrences
+- `\bpatch\b.*?(fix|solution)`: 1 occurrences
+- `\bbasic\s+implementation\b.*?(improve|enhance|replace)`: 1 occurrences
+- `\bworkaround\b`: 1 occurrences
+- `\bplaceholder\s+value\b`: 1 occurrences
+- `\bmagic\s+number\b`: 1 occurrences
+
+## Files with High-Confidence Hidden TODOs
+- `iterations/v3/observability/src/analytics_dashboard.rs` (rust): 19 high-confidence TODOs
+- `iterations/v3/parallel-workers/src/coordinator.rs` (rust): 17 high-confidence TODOs
+- `iterations/v3/parallel-workers/src/learning/persistence.rs` (rust): 17 high-confidence TODOs
+- `iterations/v3/self-prompting-agent/src/loop_controller.rs` (rust): 16 high-confidence TODOs
+- `iterations/v3/caching/src/lib.rs` (rust): 15 high-confidence TODOs
+- `iterations/v3/apple-silicon/src/ane/compat/iokit.rs` (rust): 14 high-confidence TODOs
+- `iterations/v3/parallel-workers/src/worker/lifecycle.rs` (rust): 13 high-confidence TODOs
+- `iterations/v3/caching/src/integration.rs` (rust): 11 high-confidence TODOs
+- `iterations/v3/embedding-service/src/multimodal_indexer.rs` (rust): 11 high-confidence TODOs
+- `iterations/v3/embedding-service/src/provider.rs` (rust): 10 high-confidence TODOs
+- `iterations/v3/tool-ecosystem/src/schema_registry.rs` (rust): 10 high-confidence TODOs
+- `iterations/v3/tool-ecosystem/src/evidence_collection_tools.rs` (rust): 10 high-confidence TODOs
+- `iterations/v3/council/src/learning.rs` (rust): 10 high-confidence TODOs
+- `iterations/v3/production/observability.rs` (rust): 9 high-confidence TODOs
+- `iterations/v3/interfaces/cli.rs` (rust): 9 high-confidence TODOs
+- `iterations/v3/memory/src/lib.rs` (rust): 9 high-confidence TODOs
+- `iterations/v3/ingestors/src/diagrams_ingestor.rs` (rust): 9 high-confidence TODOs
+- `iterations/v3/enrichers/src/asr_enricher.rs` (rust): 9 high-confidence TODOs
+- `iterations/v3/validate_implementations.rs` (rust): 8 high-confidence TODOs
+- `iterations/v3/workers/src/executor.rs` (rust): 8 high-confidence TODOs
+- `iterations/v3/planning-agent/src/planner.rs` (rust): 8 high-confidence TODOs
+- `iterations/v3/apple-silicon/src/ane/compat/coreml.rs` (rust): 8 high-confidence TODOs
+- `iterations/v3/runtime-optimization/src/bayesian_optimizer.rs` (rust): 8 high-confidence TODOs
+- `iterations/v3/system-health-monitor/src/metrics.rs` (rust): 8 high-confidence TODOs
+- `iterations/v3/context-preservation-engine/src/multi_tenant.rs` (rust): 8 high-confidence TODOs
+- `iterations/v3/enrichers/src/vision_enricher.rs` (rust): 8 high-confidence TODOs
+- `iterations/v3/workers/src/specialized_workers.rs` (rust): 7 high-confidence TODOs
+- `iterations/v3/apple-silicon/src/ane/infer/whisper.rs` (rust): 7 high-confidence TODOs
+- `iterations/v3/file_ops/src/temp_workspace.rs` (rust): 7 high-confidence TODOs
+- `iterations/v3/recovery/src/integration/self_prompting.rs` (rust): 7 high-confidence TODOs
+- `iterations/v3/recovery/src/gc/collector.rs` (rust): 7 high-confidence TODOs
+- `iterations/v3/council/src/judge.rs` (rust): 7 high-confidence TODOs
+- `iterations/v3/api-server/src/alerts.rs` (rust): 7 high-confidence TODOs
+- `iterations/v3/research/src/multimodal_retriever.rs` (rust): 7 high-confidence TODOs
+- `iterations/v3/claim-extraction/src/evidence.rs` (rust): 7 high-confidence TODOs
+- `iterations/v3/claim-extraction/src/verification/verifier.rs` (rust): 7 high-confidence TODOs
+- `iterations/v3/interfaces/api.rs` (rust): 6 high-confidence TODOs
+- `iterations/v3/apple-silicon/src/core_ml_bridge.rs` (rust): 6 high-confidence TODOs
+- `iterations/v3/apple-silicon/src/memory/manager.rs` (rust): 6 high-confidence TODOs
+- `iterations/v3/apple-silicon/src/metal/core.rs` (rust): 6 high-confidence TODOs
+- `iterations/v3/apple-silicon/src/ane/infer/execute.rs` (rust): 6 high-confidence TODOs
+- `iterations/v3/system-health-monitor/src/agent_integration.rs` (rust): 6 high-confidence TODOs
+- `iterations/v3/council/src/claim_extraction_multimodal.rs` (rust): 6 high-confidence TODOs
+- `iterations/v3/parallel-workers/src/monitoring_bridge.rs` (rust): 5 high-confidence TODOs
+- `iterations/v3/parallel-workers/src/worker/specialization.rs` (rust): 5 high-confidence TODOs
+- `iterations/v3/tool-ecosystem/src/lib.rs` (rust): 5 high-confidence TODOs
+- `iterations/v3/runtime-optimization/src/bandit_policy.rs` (rust): 5 high-confidence TODOs
+- `iterations/v3/reflexive-learning/src/coordinator.rs` (rust): 5 high-confidence TODOs
+- `iterations/v3/council/src/coordinator/orchestrator.rs` (rust): 5 high-confidence TODOs
+- `iterations/v3/api-server/src/rto_rpo_monitor.rs` (rust): 5 high-confidence TODOs
+- `iterations/v3/database/src/data_consistency.rs` (rust): 5 high-confidence TODOs
+- `iterations/v3/claim-extraction/src/qualification.rs` (rust): 5 high-confidence TODOs
+- `iterations/v3/mcp-integration/src/tool_discovery.rs` (rust): 4 high-confidence TODOs
+- `iterations/v3/orchestration/src/arbiter.rs` (rust): 4 high-confidence TODOs
+- `iterations/v3/orchestration/src/planning/context_builder.rs` (rust): 4 high-confidence TODOs
+- `iterations/v3/parallel-workers/src/learning/council_bridge.rs` (rust): 4 high-confidence TODOs
+- `iterations/v3/parallel-workers/src/decomposition/mod.rs` (rust): 4 high-confidence TODOs
+- `iterations/v3/tool-ecosystem/src/conflict_resolution_tools.rs` (rust): 4 high-confidence TODOs
+- `iterations/v3/tool-ecosystem/src/tool_execution.rs` (rust): 4 high-confidence TODOs
+- `iterations/v3/model-benchmarking/src/lib.rs` (rust): 4 high-confidence TODOs
+- `iterations/v3/apple-silicon/src/types.rs` (rust): 4 high-confidence TODOs
+- `iterations/v3/apple-silicon/src/compat/mps.rs` (rust): 4 high-confidence TODOs
+- `iterations/v3/apple-silicon/src/ane/infer/mistral.rs` (rust): 4 high-confidence TODOs
+- `iterations/v3/runtime-optimization/src/performance_monitor.rs` (rust): 4 high-confidence TODOs
+- `iterations/v3/runtime-optimization/src/llm_parameter_feedback_example.rs` (rust): 4 high-confidence TODOs
+- `iterations/v3/federated-learning/src/participant.rs` (rust): 4 high-confidence TODOs
+- `iterations/v3/recovery/src/integration/worker.rs` (rust): 4 high-confidence TODOs
+- `iterations/v3/ingestors/src/video_ingestor.rs` (rust): 4 high-confidence TODOs
+- `iterations/v3/api-server/src/main.rs` (rust): 4 high-confidence TODOs
+- `iterations/v3/database/src/backup_recovery.rs` (rust): 4 high-confidence TODOs
+- `iterations/v3/apps/tools/caws/security-provenance.ts` (typescript): 4 high-confidence TODOs
+- `iterations/v3/mcp-integration/src/server.rs` (rust): 3 high-confidence TODOs
+- `iterations/v3/model-hotswap/src/version_manager.rs` (rust): 3 high-confidence TODOs
+- `iterations/v3/orchestration/src/frontier.rs` (rust): 3 high-confidence TODOs
+- `iterations/v3/orchestration/src/main.rs` (rust): 3 high-confidence TODOs
+- `iterations/v3/orchestration/src/planning/clarification.rs` (rust): 3 high-confidence TODOs
+- `iterations/v3/parallel-workers/src/integration.rs` (rust): 3 high-confidence TODOs
+- `iterations/v3/parallel-workers/src/orchestrator_bridge.rs` (rust): 3 high-confidence TODOs
+- `iterations/v3/parallel-workers/src/worker/context.rs` (rust): 3 high-confidence TODOs
+- `iterations/v3/tool-ecosystem/src/tool_chain_planner.rs` (rust): 3 high-confidence TODOs
+- `iterations/v3/model-benchmarking/src/benchmark_runner.rs` (rust): 3 high-confidence TODOs
+- `iterations/v3/apple-silicon/src/ane/infer/yolo.rs` (rust): 3 high-confidence TODOs
+- `iterations/v3/runtime-optimization/src/arbiter_pipeline.rs` (rust): 3 high-confidence TODOs
+- `iterations/v3/runtime-optimization/src/reward.rs` (rust): 3 high-confidence TODOs
+- `iterations/v3/runtime-optimization/src/parameter_optimizer.rs` (rust): 3 high-confidence TODOs
+- `iterations/v3/recovery/src/cas/concurrency.rs` (rust): 3 high-confidence TODOs
+- `iterations/v3/council/src/council.rs` (rust): 3 high-confidence TODOs
+- `iterations/v3/council/src/decision_making.rs` (rust): 3 high-confidence TODOs
+- `iterations/v3/council/src/coordinator/extraction.rs` (rust): 3 high-confidence TODOs
+- `iterations/v3/database/src/backup_validator.rs` (rust): 3 high-confidence TODOs
+- `iterations/v3/apps/tools/caws/modules/compliance-checker.js` (javascript): 3 high-confidence TODOs
+- `iterations/v3/apps/tools/caws/modules/data-generator.js` (javascript): 3 high-confidence TODOs
+- `iterations/v3/self-prompting-agent/src/policy_hooks.rs` (rust): 2 high-confidence TODOs
+- `iterations/v3/self-prompting-agent/src/context/ingestor_integration.rs` (rust): 2 high-confidence TODOs
+- `iterations/v3/self-prompting-agent/src/caws/council_approval.rs` (rust): 2 high-confidence TODOs
+- `iterations/v3/self-prompting-agent/src/prompting/adaptive.rs` (rust): 2 high-confidence TODOs
+- `iterations/v3/self-prompting-agent/src/evaluation/text_evaluator.rs` (rust): 2 high-confidence TODOs
+- `iterations/v3/worker/src/main.rs` (rust): 2 high-confidence TODOs
+- `iterations/v3/knowledge-ingestor/src/on_demand.rs` (rust): 2 high-confidence TODOs
+- `iterations/v3/model-hotswap/src/load_balancer.rs` (rust): 2 high-confidence TODOs
+- `iterations/v3/model-hotswap/src/rollback_manager.rs` (rust): 2 high-confidence TODOs
+- `iterations/v3/model-hotswap/src/traffic_splitter.rs` (rust): 2 high-confidence TODOs
+- `iterations/v3/workers/src/autonomous_executor.rs` (rust): 2 high-confidence TODOs
+- `iterations/v3/workers/src/multimodal_scheduler.rs` (rust): 2 high-confidence TODOs
+- `iterations/v3/workers/src/caws/checker.rs` (rust): 2 high-confidence TODOs
+- `iterations/v3/orchestration/src/kimi_k2_enhanced_executor.rs` (rust): 2 high-confidence TODOs
+- `iterations/v3/orchestration/src/planning/agent.rs` (rust): 2 high-confidence TODOs
+- `iterations/v3/planning-agent/src/caws_integration.rs` (rust): 2 high-confidence TODOs
+- `iterations/v3/tool-ecosystem/src/tool_bandits.rs` (rust): 2 high-confidence TODOs
+- `iterations/v3/tool-ecosystem/src/tool_coordinator.rs` (rust): 2 high-confidence TODOs
+- `iterations/v3/tool-ecosystem/src/tool_discovery.rs` (rust): 2 high-confidence TODOs
+- `iterations/v3/apple-silicon/src/tokenization.rs` (rust): 2 high-confidence TODOs
+- `iterations/v3/apple-silicon/src/buffer_pool.rs` (rust): 2 high-confidence TODOs
+- `iterations/v3/apple-silicon/src/ane/filesystem.rs` (rust): 2 high-confidence TODOs
+- `iterations/v3/apple-silicon/src/ane/manager.rs` (rust): 2 high-confidence TODOs
+- `iterations/v3/runtime-optimization/src/quality_gate_validator.rs` (rust): 2 high-confidence TODOs
+- `iterations/v3/runtime-optimization/src/counterfactual_log.rs` (rust): 2 high-confidence TODOs
+- `iterations/v3/runtime-optimization/src/kokoro_tuning.rs` (rust): 2 high-confidence TODOs
+- `iterations/v3/runtime-optimization/src/streaming_pipeline.rs` (rust): 2 high-confidence TODOs
+- `iterations/v3/runtime-optimization/src/rollout.rs` (rust): 2 high-confidence TODOs
+- `iterations/v3/runtime-optimization/src/planning_agent_integration.rs` (rust): 2 high-confidence TODOs
+- `iterations/v3/reflexive-learning/src/learning_algorithms.rs` (rust): 2 high-confidence TODOs
+- `iterations/v3/federated-learning/src/security.rs` (rust): 2 high-confidence TODOs
+- `iterations/v3/federated-learning/src/differential_privacy.rs` (rust): 2 high-confidence TODOs
+- `iterations/v3/recovery/src/cas/mod.rs` (rust): 2 high-confidence TODOs
+- `iterations/v3/recovery/src/journal/wal.rs` (rust): 2 high-confidence TODOs
+- `iterations/v3/recovery/src/refs/mod.rs` (rust): 2 high-confidence TODOs
+- `iterations/v3/security/src/secret_manager.rs` (rust): 2 high-confidence TODOs
+- `iterations/v3/council/src/debate.rs` (rust): 2 high-confidence TODOs
+- `iterations/v3/council/src/predictive_learning_system.rs` (rust): 2 high-confidence TODOs
+- `iterations/v3/caws/runtime-validator/src/integration.rs` (rust): 2 high-confidence TODOs
+- `iterations/v3/ingestors/src/slides_ingestor.rs` (rust): 2 high-confidence TODOs
+- `iterations/v3/api-server/src/service_failover.rs` (rust): 2 high-confidence TODOs
+- `iterations/v3/database/src/optimization.rs` (rust): 2 high-confidence TODOs
+- `iterations/v3/database/src/client.rs` (rust): 2 high-confidence TODOs
+- `iterations/v3/indexers/src/hnsw_indexer.rs` (rust): 2 high-confidence TODOs
+- `iterations/v3/claim-extraction/src/disambiguation/stage.rs` (rust): 2 high-confidence TODOs
+- `iterations/v3/claim-extraction/src/disambiguation/entities.rs` (rust): 2 high-confidence TODOs
+- `iterations/v3/claim-extraction/src/verification/semantic_analyzer.rs` (rust): 2 high-confidence TODOs
+- `iterations/v3/claim-extraction/src/verification/code_extractor.rs` (rust): 2 high-confidence TODOs
+- `iterations/v3/apps/web-dashboard/src/hooks/useVoiceChat.ts` (typescript): 2 high-confidence TODOs
+- `iterations/v3/apps/web-dashboard/src/lib/api-client.ts` (typescript): 2 high-confidence TODOs
+- `iterations/v3/apps/tools/caws/legacy-assessment.ts` (typescript): 2 high-confidence TODOs
+- `iterations/v3/test_yolo_e2e.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/production/error_handling.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/interfaces/src/mcp.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/mcp-integration/src/caws_integration.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/self-prompting-agent/evaluations/swe_bench_evaluations.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/self-prompting-agent/src/profiling.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/self-prompting-agent/src/agent.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/self-prompting-agent/src/stubs.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/self-prompting-agent/src/context/budget.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/self-prompting-agent/src/caws/budget_checker.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/self-prompting-agent/src/sandbox/workspace_manager.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/self-prompting-agent/src/evaluation/code_evaluator.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/model-hotswap/src/lib.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/model-hotswap/src/model_registry.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/model-hotswap/src/performance_router.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/demo_app/src/demo_runner.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/workers/src/caws/diff_analysis.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/workers/src/caws/analyzers/typescript.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/workers/src/caws/analyzers/rust.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/workers/src/caws/analyzers/javascript.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/orchestration/src/autonomous_executor.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/orchestration/src/orchestrate.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/orchestration/src/kimi_k2_multimodal_orchestrator.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/orchestration/src/caws_runtime.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/orchestration/src/multimodal_orchestration.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/orchestration/src/api.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/orchestration/src/planning/acceptance_criteria_extractor.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/orchestration/src/refinement/feedback_loop.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/orchestration/src/tracking/websocket.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/embedding-service/src/model_loading.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/parallel-workers/src/types.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/parallel-workers/src/metrics/quantiles.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/parallel-workers/src/progress/aggregator.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/parallel-workers/src/learning/drift.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/parallel-workers/src/learning/adaptive_selector.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/parallel-workers/src/decomposition/analyzer.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/parallel-workers/src/validation/gates.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/tool-ecosystem/src/parallel_integration.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/model-benchmarking/src/performance_tracker.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/apple-silicon/src/async_inference.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/apple-silicon/src/lib.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/apple-silicon/src/operator_fusion.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/apple-silicon/src/vision_bridge.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/apple-silicon/src/speech_bridge.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/apple-silicon/src/quantization_lab.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/apple-silicon/src/model_router.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/apple-silicon/src/model_pool.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/apple-silicon/src/memory/quantization.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/minimal-diff-evaluator/src/ast_analyzer.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/security-policy-enforcer/src/enforcer.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/observability/src/tracing.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/observability/src/slo.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/observability/src/analytics.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/observability/src/diff_observability.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/runtime-optimization/src/thermal_scheduler.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/runtime-optimization/src/lib.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/runtime-optimization/src/chunked_executor.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/runtime-optimization/src/parameter_dashboard.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/runtime-optimization/src/precision_engineering.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/runtime-optimization/src/caws_integration.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/file_ops/src/git_workspace.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/source-integrity/src/tampering_detector.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/source-integrity/src/hasher.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/federated-learning/src/aggregation.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/federated-learning/src/coordinator.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/federated-learning/src/validation.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/federated-learning/src/model_updates.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/recovery/src/metrics.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/recovery/src/cas/restore.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/recovery/src/gc/pack.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/recovery/src/policy/content_strategy.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/security/src/rate_limiting.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/security/src/circuit_breaker.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/council/src/model_client.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/council/src/mistral_integration_demo.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/council/src/verdict_aggregation.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/council/src/plan_review.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/council/src/advanced_monitoring.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/caws/runtime-validator/src/waiver.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/caws/runtime-validator/src/analyzers/typescript.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/caws/runtime-validator/src/analyzers/rust.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/caws/runtime-validator/src/analyzers/javascript.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/api-server/src/rate_limiter.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/database/src/health.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/database/src/vector_store.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/enrichers/src/entity_enricher.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/enrichers/src/vision_stubs.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/enrichers/src/production_yolo_integration.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/research/src/knowledge_seeker.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/claim-extraction/src/disambiguation/types.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/claim-extraction/src/disambiguation/detection.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/claim-extraction/src/verification/spec_analysis.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/claim-extraction/src/verification/historical.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/claim-extraction/src/verification/authority_validator.rs` (rust): 1 high-confidence TODOs
+- `iterations/v3/apps/tools/caws/modules/mutation-analysis.js` (javascript): 1 high-confidence TODOs
+- `iterations/v3/apps/web-dashboard/src/hooks/useVoiceRecording.ts` (typescript): 1 high-confidence TODOs
+- `iterations/v3/apps/web-dashboard/src/app/api/chat/ws/[sessionId]/route.ts` (typescript): 1 high-confidence TODOs
+- `iterations/v3/apps/web-dashboard/src/app/api/chat/ws/%5BsessionId%5D/route.ts` (typescript): 1 high-confidence TODOs
+- `iterations/v3/apps/web-dashboard/src/app/api/proxy/[...path]/route.ts` (typescript): 1 high-confidence TODOs
+- `iterations/v3/apps/tools/caws/perf-budgets.ts` (typescript): 1 high-confidence TODOs
+- `iterations/v3/apps/tools/caws/shared/gate-checker.ts` (typescript): 1 high-confidence TODOs
+- `iterations/v3/apps/web-dashboard/src/components/database/TableViewer.tsx` (typescript): 1 high-confidence TODOs
+- `iterations/v3/apps/web-dashboard/src/components/tasks/ModelPerformanceChart.tsx` (typescript): 1 high-confidence TODOs
+
+## Pattern Categories by Confidence
+### Future Improvements (96 items)
+#### High Confidence (91 items)
+- `iterations/v3/test_yolo_e2e.rs:91` (rust, conf: 0.9 (context: 0.0)): Test model loading (would be implemented in real scenario)...
+- `iterations/v3/interfaces/cli.rs:838` (rust, conf: 1.0 (context: 0.0)): In a real implementation, this would submit to the API...
+- `iterations/v3/interfaces/cli.rs:879` (rust, conf: 1.0 (context: 0.0)): In a real implementation, this would submit to the API...
+- ... and 88 more high-confidence items
+#### Medium Confidence (5 items)
+- `iterations/v3/production/observability.rs:1059` (rust, conf: 0.9 (context: -0.2)): This would be implemented in the actual MetricsCollector...
+- `iterations/v3/recovery/src/fsck.rs:10` (rust, conf: 0.9 (context: -0.2)): Implementation details will be added in later phases...
+- ... and 3 more medium-confidence items
+
+### Explicit Todos (708 items)
+#### High Confidence (708 items)
+- `iterations/v3/validate_implementations.rs:10` (rust, conf: 1.0 (context: 0.3)): / Detect TODO/FIXME markers while avoiding false positives...
+- `iterations/v3/validate_implementations.rs:12` (rust, conf: 1.0 (context: 0.3)): / - Comments containing "example TODO" or similar documentation...
+- `iterations/v3/validate_implementations.rs:13` (rust, conf: 1.0 (context: 0.3)): / - String literals with TODO...
+- ... and 705 more high-confidence items
+
+### Placeholder Code (51 items)
+#### High Confidence (50 items)
+- `iterations/v3/interfaces/cli.rs:809` (rust, conf: 0.9 (context: 0.0)): Placeholder implementation...
+- `iterations/v3/mcp-integration/src/server.rs:619` (rust, conf: 0.9 (context: 0.0)): Set SLO status gauge (stub implementation)...
+- `iterations/v3/self-prompting-agent/src/loop_controller.rs:940` (rust, conf: 0.9 (context: 0.0)): Basic sandbox integration - placeholder implementation...
+- ... and 47 more high-confidence items
+#### Medium Confidence (1 items)
+- `iterations/v3/apple-silicon/src/compat/mps.rs:148` (rust, conf: 0.9 (context: -0.2)): Stub implementation...
+
+### Incomplete Implementation (10 items)
+#### High Confidence (9 items)
+- `iterations/v3/caching/src/integration.rs:230` (rust, conf: 1.0 (context: 0.3)): Store in cache (this would need to be implemented based on your cache interface)...
+- `iterations/v3/tool-ecosystem/src/lib.rs:354` (rust, conf: 0.9 (context: 0.0)): Policy enforcement tools, governance tools, quality gate tools not yet implement...
+- `iterations/v3/tool-ecosystem/src/lib.rs:355` (rust, conf: 0.9 (context: 0.0)): Reasoning tools, workflow tools not yet implemented...
+- ... and 6 more high-confidence items
+#### Medium Confidence (1 items)
+- `iterations/v3/apps/web-dashboard/src/lib/api-client.ts:242` (typescript, conf: 0.9 (context: -0.2)): These will be implemented as the backend endpoints become available...
+
+### Temporary Solutions (2 items)
+#### High Confidence (2 items)
+- `iterations/v3/model-hotswap/src/model_registry.rs:129` (rust, conf: 0.9 (context: 0.0)): / Patch version with bug fixes...
+- `iterations/v3/parallel-workers/src/validation/gates.rs:32` (rust, conf: 0.9 (context: 0.0)): / Dummy validator for cloning - this is a workaround...
+
+### Hardcoded Values (1 items)
+#### High Confidence (1 items)
+- `iterations/v3/recovery/src/gc/pack.rs:25` (rust, conf: 0.9 (context: 0.0)): / Magic number for pack files...

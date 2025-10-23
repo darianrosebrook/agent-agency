@@ -443,21 +443,30 @@ impl AuditedOrchestrator {
                     .record_error_recovery_attempt(
                         "planning_error",
                         "retry_with_simplification",
-                        // TODO: Implement error recovery success tracking
-                        // - Track actual success/failure of recovery attempts
-                        // - Implement recovery strategy effectiveness metrics
-                        // - Add recovery attempt categorization and analysis
-                        // - Support recovery attempt retry limits
-                        // - Implement recovery success prediction
-                        // - Add recovery outcome validation
-                        false, // PLACEHOLDER: Assuming failure for now
-                        planning_start.elapsed(),
-                        {
-                            let mut context = HashMap::new();
-                            context.insert("original_error".to_string(), serde_json::Value::String(e.to_string()));
-                            context
+                // Track actual success/failure of recovery attempts
+                let recovery_success = match &result {
+                    Ok(_) => {
+                        info!("Planning recovery succeeded on attempt {}", attempt + 1);
+                        true
+                    }
+                    Err(_) => {
+                        warn!("Planning recovery failed on attempt {}: {}", attempt + 1, e);
+                        false
+                    }
+                };
+
+                recovery_success,
+                planning_start.elapsed(),
+                {
+                    let mut context = HashMap::new();
+                    context.insert("original_error".to_string(), serde_json::Value::String(e.to_string()));
+                    context.insert("attempt_number".to_string(), serde_json::Value::Number((attempt + 1).into()));
+                    context
                         }
                     ).await?;
+
+                // Correlate recovery events to root failures and compute SLO impact
+                self.correlate_recovery_to_failure(&operation_id, recovery_success, planning_start.elapsed()).await?;
 
                 Err(AuditError::Config(e.to_string()))
             }
@@ -853,6 +862,92 @@ impl AuditedOrchestrator {
             ).await?;
 
         Ok(())
+    }
+
+    /// Correlate recovery events to root failures and compute SLO impact
+    async fn correlate_recovery_to_failure(
+        &self,
+        operation_id: &str,
+        recovery_success: bool,
+        recovery_duration: Duration,
+    ) -> Result<(), AuditError> {
+        // Query for the original failure event
+        let failure_events = self.audit_manager.search_events(AuditQuery {
+            category: Some(AuditCategory::Error),
+            operation: Some("plan_task".to_string()),
+            time_range: Some((
+                Utc::now() - chrono::Duration::hours(1), // Look back 1 hour
+                Utc::now()
+            )),
+            limit: Some(10),
+            ..Default::default()
+        }).await?;
+
+        // Find the most recent failure for this operation
+        if let Some(failure_event) = failure_events.into_iter()
+            .filter(|e| {
+                e.context.get("operation_id")
+                    .and_then(|v| v.as_str())
+                    .map(|id| id == operation_id)
+                    .unwrap_or(false)
+            })
+            .max_by_key(|e| e.timestamp)
+        {
+            // Compute SLO impact based on recovery time and success
+            let slo_impact = self.compute_slo_impact(&failure_event, recovery_success, recovery_duration);
+
+            // Record the correlation
+            self.audit_manager.error_recovery_auditor()
+                .record_recovery_correlation(
+                    operation_id,
+                    &failure_event.id.to_string(),
+                    recovery_success,
+                    slo_impact,
+                    {
+                        let mut context = HashMap::new();
+                        context.insert("root_failure_timestamp".to_string(),
+                            serde_json::Value::String(failure_event.timestamp.to_rfc3339()));
+                        context.insert("recovery_duration_ms".to_string(),
+                            serde_json::Value::Number(recovery_duration.as_millis().into()));
+                        context
+                    }
+                ).await?;
+        }
+
+        Ok(())
+    }
+
+    /// Compute SLO impact from recovery attempt
+    fn compute_slo_impact(
+        &self,
+        failure_event: &AuditEvent,
+        recovery_success: bool,
+        recovery_duration: Duration,
+    ) -> f64 {
+        let base_impact = if recovery_success {
+            // Successful recovery has minimal impact if quick
+            if recovery_duration < Duration::from_secs(30) {
+                0.1 // Low impact for fast recovery
+            } else if recovery_duration < Duration::from_secs(120) {
+                0.3 // Moderate impact for slower recovery
+            } else {
+                0.6 // Higher impact for slow but successful recovery
+            }
+        } else {
+            // Failed recovery has high impact
+            0.8
+        };
+
+        // Adjust based on failure severity
+        let severity_multiplier = match failure_event.severity {
+            AuditSeverity::Critical => 1.5,
+            AuditSeverity::High => 1.2,
+            AuditSeverity::Medium => 1.0,
+            AuditSeverity::Low => 0.8,
+            AuditSeverity::Info => 0.5,
+        };
+
+        (base_impact * severity_multiplier).min(1.0)
     }
 }
 

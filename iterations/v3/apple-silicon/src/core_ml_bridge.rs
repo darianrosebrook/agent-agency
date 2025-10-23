@@ -3,8 +3,9 @@
 //! Provides a safe wrapper around Core ML functionality using candle-coreml
 //! for Apple Silicon acceleration with proper error handling and resource management.
 
+use crate::async_inference::{Tensor, TensorDataType, TensorDevice, TensorLayout};
 use anyhow::{anyhow, Result};
-use candle_core::{Device, Tensor};
+use candle_core::{Device, Tensor as CandleTensor};
 use candle_coreml::CoreMLModel as CandleCoreMLModel;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -161,10 +162,9 @@ impl CoreMLModel {
     ) -> Result<HashMap<String, Tensor>> {
         let timeout_duration = Duration::from_millis(timeout_ms);
 
-        // For now, implement a basic placeholder that simulates inference
-        // This should be replaced with actual candle-coreml predict when the API is available
+        // Execute real Core ML inference using candle-coreml
         let outputs = timeout(timeout_duration, async {
-            self.simulate_inference(&inputs).await
+            self.execute_real_inference(&inputs).await
         })
         .await
         .map_err(|_| anyhow!("Core ML inference timed out after {}ms", timeout_ms))??;
@@ -173,9 +173,78 @@ impl CoreMLModel {
         Ok(outputs)
     }
 
-    /// Simulate inference for now - replace with actual candle-coreml predict
-    async fn simulate_inference(
+    /// Execute real Core ML inference using candle-coreml
+    async fn execute_real_inference(
         &self,
+        inputs: &HashMap<String, Tensor>,
+    ) -> Result<HashMap<String, Tensor>> {
+        use candle_core::Tensor as CandleTensor;
+
+        // Convert our Tensor format to candle_core::Tensor and collect in order
+        // candle-coreml expects inputs as &[&Tensor], so we need to maintain order
+        let mut candle_inputs: Vec<CandleTensor> = Vec::new();
+        let mut input_names: Vec<String> = Vec::new();
+
+        for (name, input_tensor) in inputs {
+            // Convert from our Tensor (Vec<f32> + shape) to candle_core::Tensor
+            let candle_tensor = CandleTensor::from_vec(
+                input_tensor.data.clone(),
+                &input_tensor.shape[..],
+                &candle_core::Device::Cpu,
+            )
+            .map_err(|e| anyhow!("Failed to convert input tensor '{}': {}", name, e))?;
+
+            candle_inputs.push(candle_tensor);
+            input_names.push(name.clone());
+        }
+
+        // Convert to slice of references as expected by candle-coreml
+        let input_refs: Vec<&CandleTensor> = candle_inputs.iter().collect();
+
+        // Call candle-coreml forward method
+        let candle_output = (&*self.model)
+            .forward(&input_refs)
+            .map_err(|e| anyhow!("Core ML inference failed: {}", e))?;
+
+        // candle-coreml returns a single tensor, so we need to determine how to map it back
+        // For now, assume the output corresponds to the first input's name with "_output" suffix
+        let output_name = if !input_names.is_empty() {
+            format!("{}_output", input_names[0])
+        } else {
+            "output".to_string()
+        };
+
+        // Convert output back to our Tensor format
+        let shape: Vec<usize> = candle_output.shape().dims().to_vec();
+        let data = candle_output
+            .flatten_all()?
+            .to_vec1::<f32>()
+            .map_err(|e| anyhow!("Failed to extract tensor data: {}", e))?;
+
+        let output_tensor = Tensor {
+            data,
+            shape,
+            dtype: TensorDataType::F32,
+            device: TensorDevice::Cpu,
+            layout: TensorLayout::RowMajor,
+            metadata: None,
+        };
+
+        let mut result = HashMap::new();
+        result.insert(output_name, output_tensor);
+
+        debug!("Core ML inference completed successfully with {} outputs", result.len());
+        Ok(result)
+    }
+
+
+    /// Check if the model supports a specific compute unit
+    pub fn supports_compute_unit(&self, unit: &ComputeUnit) -> bool {
+        self.metadata.compute_units.contains(unit)
+    }
+
+    /// Fallback inference implementation using simulation
+    async fn fallback_inference(
         inputs: &HashMap<String, Tensor>,
     ) -> Result<HashMap<String, Tensor>> {
         use candle_core::Tensor as CandleTensor;
@@ -184,28 +253,31 @@ impl CoreMLModel {
 
         // For each input, create a corresponding output with the expected shape
         for (name, input_tensor) in inputs {
-            // Get the expected output shape from metadata
-            if let Some(output_spec) = self.metadata.outputs.first() {
-                let shape = &output_spec.shape;
-                let data_len: usize = shape.iter().product();
+            // Get the expected output shape from metadata (simplified - use input shape)
+            let shape = &input_tensor.shape;
+            let data_len: usize = shape.iter().product();
 
-                // Create mock output data (this should be replaced with real inference)
-                let mock_data: Vec<f32> = (0..data_len).map(|i| (i as f32) * 0.01).collect();
+            // Create mock output data (this should be replaced with real inference)
+            let mock_data: Vec<f32> = (0..data_len).map(|i| (i as f32) * 0.01).collect();
 
-                // Create candle tensor
-                let shape_slice: &[usize] = shape;
-                let candle_tensor = CandleTensor::from_vec(mock_data, shape_slice, &self.device)?;
+            // Create candle tensor
+            let shape_slice: &[usize] = shape;
+            let candle_tensor = CandleTensor::from_vec(mock_data, shape_slice, &candle_core::Device::Cpu)?;
 
-                outputs.insert(format!("{}_output", name), candle_tensor);
-            }
+            // Convert back to our Tensor format
+            let output_tensor = Tensor {
+                data: candle_tensor.flatten_all()?.to_vec1()?,
+                shape: shape.clone(),
+                dtype: TensorDataType::F32,
+                device: TensorDevice::Cpu,
+                layout: TensorLayout::RowMajor,
+                metadata: None,
+            };
+
+            outputs.insert(format!("{}_output", name), output_tensor);
         }
 
         Ok(outputs)
-    }
-
-    /// Check if the model supports a specific compute unit
-    pub fn supports_compute_unit(&self, unit: &ComputeUnit) -> bool {
-        self.metadata.compute_units.contains(unit)
     }
 
     /// Get the device being used

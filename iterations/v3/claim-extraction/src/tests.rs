@@ -18,7 +18,7 @@ mod disambiguation_tests {
     /// Test pronoun resolution in disambiguation stage
     #[tokio::test]
     async fn test_pronoun_resolution() -> Result<()> {
-        let disambiguation = DisambiguationStage::new();
+        let disambiguation = DisambiguationStage::minimal();
 
         // Test case with ambiguous pronouns
         let sentence = "The system should handle user requests. It must be secure and reliable.";
@@ -31,6 +31,7 @@ mod disambiguation_tests {
             domain_hints: vec!["authentication".to_string()],
             metadata: HashMap::new(),
             input_text: sentence.to_string(),
+            language: Some(Language::English),
         };
 
         let result = disambiguation.process(sentence, &context).await?;
@@ -58,7 +59,7 @@ mod disambiguation_tests {
     /// Test technical term detection in disambiguation stage
     #[tokio::test]
     async fn test_technical_term_detection() -> Result<()> {
-        let disambiguation = DisambiguationStage::new();
+        let disambiguation = DisambiguationStage::minimal();
 
         // Test case with technical terms
         let technical_input = ClaimExtractionInput {
@@ -99,7 +100,7 @@ mod disambiguation_tests {
     /// Test context-aware disambiguation
     #[tokio::test]
     async fn test_context_aware_disambiguation() -> Result<()> {
-        let disambiguation = DisambiguationStage::new();
+        let disambiguation = DisambiguationStage::minimal();
 
         // Test case with context-dependent ambiguity
         let context_input = ClaimExtractionInput {
@@ -571,7 +572,7 @@ mod pipeline_integration_tests {
     #[tokio::test]
     async fn test_end_to_end_pipeline_processing() -> Result<()> {
         // Create a complete pipeline
-        let disambiguation = DisambiguationStage::new();
+        let disambiguation = DisambiguationStage::minimal();
         let qualification = QualificationStage::new();
         let decomposition = DecompositionStage::new();
         let verification = VerificationStage::new();
@@ -645,7 +646,7 @@ mod pipeline_integration_tests {
     /// Test error handling and recovery
     #[tokio::test]
     async fn test_error_handling_and_recovery() -> Result<()> {
-        let disambiguation = DisambiguationStage::new();
+        let disambiguation = DisambiguationStage::minimal();
 
         // Test case with malformed input
         let malformed_input = ClaimExtractionInput {
@@ -680,7 +681,7 @@ mod pipeline_integration_tests {
     /// Test metadata tracking validation
     #[tokio::test]
     async fn test_metadata_tracking_validation() -> Result<()> {
-        let disambiguation = DisambiguationStage::new();
+        let disambiguation = DisambiguationStage::minimal();
 
         // Test case with metadata
         let input = ClaimExtractionInput {

@@ -1,7 +1,7 @@
 //! Memory manager implementation
 //!
 //! This module contains the core MemoryManager struct and its implementation
-//! for monitoring and controlling memory usage.
+//! for monitoring and controlling memory usage, including multi-tenant support.
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -13,9 +13,98 @@ use chrono;
 use tch::{Tensor, Device, Kind, Cuda};
 use candle_core::{Tensor as CandleTensor, DType};
 use sysinfo::System;
+use uuid::Uuid;
 
 use super::compression::ModelUsageStats;
 
+/// Tenant identifier
+pub type TenantId = Uuid;
+
+/// Tenant configuration for memory allocation
+#[derive(Debug, Clone)]
+pub struct TenantMemoryConfig {
+    pub tenant_id: TenantId,
+    pub max_memory_mb: u64,
+    pub priority: TenantPriority,
+    pub guaranteed_memory_mb: u64,
+    pub burst_limit_mb: Option<u64>,
+    pub isolation_level: IsolationLevel,
+}
+
+/// Tenant priority for resource allocation
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub enum TenantPriority {
+    Low = 1,
+    Normal = 2,
+    High = 3,
+    Critical = 4,
+}
+
+/// Memory isolation levels
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum IsolationLevel {
+    /// No isolation - tenants can share resources freely
+    None,
+    /// Soft isolation - tenants have quotas but can borrow from others
+    Soft,
+    /// Hard isolation - tenants are strictly limited to their quotas
+    Hard,
+}
+
+/// Tenant memory usage tracking
+#[derive(Debug, Clone)]
+pub struct TenantMemoryUsage {
+    pub tenant_id: TenantId,
+    pub allocated_memory_mb: u64,
+    pub used_memory_mb: u64,
+    pub model_count: usize,
+    pub last_activity: chrono::DateTime<chrono::Utc>,
+    pub memory_pressure: crate::MemoryPressure,
+}
+
+/// Multi-tenant memory manager
+#[derive(Debug)]
+pub struct MultiTenantMemoryManager {
+    config: crate::MemoryConfig,
+    tenant_configs: Arc<RwLock<HashMap<TenantId, TenantMemoryConfig>>>,
+    tenant_usage: Arc<RwLock<HashMap<TenantId, TenantMemoryUsage>>>,
+    global_status: Arc<RwLock<crate::MemoryStatus>>,
+    monitoring_active: Arc<RwLock<bool>>,
+    model_usage: Arc<RwLock<HashMap<String, ModelUsageStats>>>,
+    model_inactivity_threshold_secs: u64,
+}
+
+/// Memory allocation request
+#[derive(Debug, Clone)]
+pub struct MemoryAllocationRequest {
+    pub tenant_id: TenantId,
+    pub requested_memory_mb: u64,
+    pub model_name: String,
+    pub allocation_type: AllocationType,
+}
+
+/// Memory allocation response
+#[derive(Debug)]
+pub enum MemoryAllocationResponse {
+    Granted { allocation_id: String },
+    Denied { reason: String, available_memory_mb: u64 },
+    Queued { estimated_wait_time_secs: u64 },
+}
+
+/// Allocation types for different use cases
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum AllocationType {
+    /// Model loading - persistent allocation
+    ModelLoad,
+    /// Inference execution - temporary allocation
+    Inference,
+    /// Caching - may be evicted under pressure
+    Cache,
+    /// Background processing - low priority
+    Background,
+}
+
+/// Legacy single-tenant memory manager for backward compatibility
 /// Memory manager for monitoring and controlling memory usage
 #[derive(Debug)]
 pub struct MemoryManager {
@@ -320,6 +409,474 @@ impl MemoryManager {
 }
 
 impl Default for MemoryManager {
+    fn default() -> Self {
+        Self::new(crate::MemoryConfig::default())
+    }
+}
+
+impl MultiTenantMemoryManager {
+    /// Create a new multi-tenant memory manager
+    pub fn new(config: crate::MemoryConfig) -> Self {
+        let total_memory = config.max_memory_mb as u64;
+        Self {
+            config,
+            tenant_configs: Arc::new(RwLock::new(HashMap::new())),
+            tenant_usage: Arc::new(RwLock::new(HashMap::new())),
+            global_status: Arc::new(RwLock::new(crate::MemoryStatus {
+                total_memory_mb: total_memory,
+                used_memory_mb: 0,
+                available_memory_mb: total_memory,
+                memory_pressure: crate::MemoryPressure::Normal,
+                cache_size_mb: 0,
+                model_memory_mb: 0,
+                timestamp: chrono::Utc::now(),
+            })),
+            monitoring_active: Arc::new(RwLock::new(false)),
+            model_usage: Arc::new(RwLock::new(HashMap::new())),
+            model_inactivity_threshold_secs: 300, // 5 minutes default
+        }
+    }
+
+    /// Register a tenant with memory configuration
+    pub async fn register_tenant(&self, config: TenantMemoryConfig) -> Result<()> {
+        let mut tenant_configs = self.tenant_configs.write().await;
+
+        // Validate configuration
+        if config.guaranteed_memory_mb > config.max_memory_mb {
+            return Err(anyhow::anyhow!("Guaranteed memory cannot exceed max memory"));
+        }
+
+        if let Some(burst_limit) = config.burst_limit_mb {
+            if burst_limit < config.max_memory_mb {
+                return Err(anyhow::anyhow!("Burst limit must be >= max memory"));
+            }
+        }
+
+        tenant_configs.insert(config.tenant_id, config.clone());
+
+        // Initialize tenant usage tracking
+        let mut tenant_usage = self.tenant_usage.write().await;
+        tenant_usage.insert(config.tenant_id, TenantMemoryUsage {
+            tenant_id: config.tenant_id,
+            allocated_memory_mb: 0,
+            used_memory_mb: 0,
+            model_count: 0,
+            last_activity: chrono::Utc::now(),
+            memory_pressure: crate::MemoryPressure::Normal,
+        });
+
+        info!("Registered tenant {} with {} MB max memory",
+              config.tenant_id, config.max_memory_mb);
+        Ok(())
+    }
+
+    /// Unregister a tenant
+    pub async fn unregister_tenant(&self, tenant_id: TenantId) -> Result<()> {
+        let mut tenant_configs = self.tenant_configs.write().await;
+        let mut tenant_usage = self.tenant_usage.write().await;
+
+        if tenant_configs.remove(&tenant_id).is_none() {
+            return Err(anyhow::anyhow!("Tenant {} not found", tenant_id));
+        }
+
+        if let Some(usage) = tenant_usage.remove(&tenant_id) {
+            if usage.allocated_memory_mb > 0 {
+                warn!("Unregistering tenant {} with {} MB still allocated",
+                      tenant_id, usage.allocated_memory_mb);
+            }
+        }
+
+        info!("Unregistered tenant {}", tenant_id);
+        Ok(())
+    }
+
+    /// Request memory allocation for a tenant
+    pub async fn request_allocation(
+        &self,
+        request: MemoryAllocationRequest
+    ) -> Result<MemoryAllocationResponse> {
+        let tenant_configs = self.tenant_configs.read().await;
+        let mut tenant_usage = self.tenant_usage.write().await;
+        let global_status = self.global_status.read().await;
+
+        // Get tenant configuration
+        let tenant_config = tenant_configs.get(&request.tenant_id)
+            .ok_or_else(|| anyhow::anyhow!("Tenant {} not found", request.tenant_id))?;
+
+        // Get current tenant usage
+        let tenant_usage_entry = tenant_usage.get_mut(&request.tenant_id)
+            .ok_or_else(|| anyhow::anyhow!("Tenant usage tracking not found"))?;
+
+        // Check tenant-specific limits
+        let current_allocation = tenant_usage_entry.allocated_memory_mb;
+        let max_allocation = match request.allocation_type {
+            AllocationType::ModelLoad | AllocationType::Inference => tenant_config.max_memory_mb,
+            AllocationType::Cache => tenant_config.burst_limit_mb.unwrap_or(tenant_config.max_memory_mb),
+            AllocationType::Background => tenant_config.guaranteed_memory_mb,
+        };
+
+        if current_allocation + request.requested_memory_mb > max_allocation {
+            let available_for_tenant = max_allocation.saturating_sub(current_allocation);
+            return Ok(MemoryAllocationResponse::Denied {
+                reason: format!("Tenant memory limit exceeded. Requested: {} MB, Available: {} MB",
+                               request.requested_memory_mb, available_for_tenant),
+                available_memory_mb: available_for_tenant,
+            });
+        }
+
+        // Check global memory availability based on isolation level
+        match tenant_config.isolation_level {
+            IsolationLevel::Hard => {
+                // Hard isolation - strict per-tenant limits only
+                // Already checked above, so we can proceed
+            }
+            IsolationLevel::Soft | IsolationLevel::None => {
+                // Check global memory pressure
+                if global_status.memory_pressure == crate::MemoryPressure::Critical {
+                    let available_global = global_status.available_memory_mb;
+                    if available_global < request.requested_memory_mb {
+                        return Ok(MemoryAllocationResponse::Denied {
+                            reason: format!("Global memory pressure critical. Available: {} MB",
+                                           available_global),
+                            available_memory_mb: available_global.min(max_allocation - current_allocation),
+                        });
+                    }
+                }
+            }
+        }
+
+        // Allocation granted - update tracking
+        tenant_usage_entry.allocated_memory_mb += request.requested_memory_mb;
+        tenant_usage_entry.used_memory_mb += request.requested_memory_mb;
+        tenant_usage_entry.last_activity = chrono::Utc::now();
+
+        if matches!(request.allocation_type, AllocationType::ModelLoad) {
+            tenant_usage_entry.model_count += 1;
+        }
+
+        // Generate allocation ID
+        let allocation_id = format!("alloc_{}_{}_{}",
+                                   request.tenant_id.simple(),
+                                   request.model_name,
+                                   chrono::Utc::now().timestamp());
+
+        info!("Granted {} MB allocation for tenant {} ({:?})",
+              request.requested_memory_mb, request.tenant_id, request.allocation_type);
+
+        Ok(MemoryAllocationResponse::Granted { allocation_id })
+    }
+
+    /// Release memory allocation
+    pub async fn release_allocation(
+        &self,
+        tenant_id: TenantId,
+        allocation_id: &str,
+        released_memory_mb: u64
+    ) -> Result<()> {
+        let mut tenant_usage = self.tenant_usage.write().await;
+
+        let tenant_usage_entry = tenant_usage.get_mut(&tenant_id)
+            .ok_or_else(|| anyhow::anyhow!("Tenant {} not found", tenant_id))?;
+
+        if released_memory_mb > tenant_usage_entry.allocated_memory_mb {
+            return Err(anyhow::anyhow!("Cannot release more memory than allocated"));
+        }
+
+        tenant_usage_entry.allocated_memory_mb = tenant_usage_entry.allocated_memory_mb.saturating_sub(released_memory_mb);
+        tenant_usage_entry.used_memory_mb = tenant_usage_entry.used_memory_mb.saturating_sub(released_memory_mb);
+
+        debug!("Released {} MB for tenant {}", released_memory_mb, tenant_id);
+        Ok(())
+    }
+
+    /// Get tenant memory usage statistics
+    pub async fn get_tenant_usage(&self, tenant_id: TenantId) -> Result<TenantMemoryUsage> {
+        let tenant_usage = self.tenant_usage.read().await;
+        tenant_usage.get(&tenant_id)
+            .cloned()
+            .ok_or_else(|| anyhow::anyhow!("Tenant {} not found", tenant_id))
+    }
+
+    /// Get all tenant usage statistics
+    pub async fn get_all_tenant_usage(&self) -> Result<HashMap<TenantId, TenantMemoryUsage>> {
+        let tenant_usage = self.tenant_usage.read().await;
+        Ok(tenant_usage.clone())
+    }
+
+    /// Perform memory balancing across tenants
+    pub async fn balance_memory(&self) -> Result<()> {
+        let tenant_configs = self.tenant_configs.read().await;
+        let mut tenant_usage = self.tenant_usage.write().await;
+        let global_status = self.global_status.read().await;
+
+        // Skip balancing if memory pressure is normal
+        if global_status.memory_pressure == crate::MemoryPressure::Normal {
+            return Ok(());
+        }
+
+        // Sort tenants by priority for eviction preference
+        let mut tenant_ids_by_priority: Vec<TenantId> = tenant_configs.keys()
+            .filter(|id| tenant_usage.contains_key(id))
+            .cloned()
+            .collect();
+
+        tenant_ids_by_priority.sort_by(|a, b| {
+            let a_priority = &tenant_configs.get(a).unwrap().priority;
+            let b_priority = &tenant_configs.get(b).unwrap().priority;
+            a_priority.cmp(b_priority)
+        });
+
+        // Calculate total over-allocation
+        let total_allocated: u64 = tenant_usage.values()
+            .map(|usage| usage.allocated_memory_mb)
+            .sum();
+
+        let target_reduction = if global_status.memory_pressure == crate::MemoryPressure::High {
+            (total_allocated as f64 * 0.2) as u64 // Reduce by 20%
+        } else {
+            (total_allocated as f64 * 0.4) as u64 // Reduce by 40%
+        };
+
+        let mut total_reduced = 0u64;
+
+        // Evict from lowest priority tenants first
+        for tenant_id in tenant_ids_by_priority {
+            if total_reduced >= target_reduction {
+                break;
+            }
+
+            let tenant_config = tenant_configs.get(&tenant_id).unwrap();
+            let tenant_usage_entry = tenant_usage.get_mut(&tenant_id).unwrap();
+
+            // Calculate how much we can evict from this tenant
+            let guaranteed = tenant_config.guaranteed_memory_mb;
+            let current = tenant_usage_entry.allocated_memory_mb;
+
+            if current > guaranteed {
+                let evict_amount = (current - guaranteed).min(target_reduction - total_reduced);
+
+                tenant_usage_entry.allocated_memory_mb = tenant_usage_entry.allocated_memory_mb.saturating_sub(evict_amount);
+                tenant_usage_entry.used_memory_mb = tenant_usage_entry.used_memory_mb.saturating_sub(evict_amount);
+
+                total_reduced += evict_amount;
+
+                warn!("Evicted {} MB from tenant {} due to memory pressure",
+                      evict_amount, tenant_id);
+            }
+        }
+
+        info!("Memory balancing completed: reduced {} MB total allocation", total_reduced);
+        Ok(())
+    }
+
+    /// Update tenant memory pressure indicators
+    pub async fn update_tenant_pressure_indicators(&self) -> Result<()> {
+        let tenant_configs = self.tenant_configs.read().await;
+        let mut tenant_usage = self.tenant_usage.write().await;
+        let global_status = self.global_status.read().await;
+
+        for (tenant_id, config) in tenant_configs.iter() {
+            if let Some(usage) = tenant_usage.get_mut(tenant_id) {
+                // Calculate tenant-specific pressure
+                let utilization_ratio = if config.max_memory_mb > 0 {
+                    usage.allocated_memory_mb as f64 / config.max_memory_mb as f64
+                } else {
+                    0.0
+                };
+
+                // Factor in global pressure
+                let global_pressure_factor = match global_status.memory_pressure {
+                    crate::MemoryPressure::Normal => 1.0,
+                    crate::MemoryPressure::Warning => 1.05,
+                    crate::MemoryPressure::Medium => 1.1,
+                    crate::MemoryPressure::High => 1.2,
+                    crate::MemoryPressure::Critical => 1.5,
+                };
+
+                let adjusted_ratio = utilization_ratio * global_pressure_factor;
+
+                usage.memory_pressure = if adjusted_ratio < 0.7 {
+                    crate::MemoryPressure::Normal
+                } else if adjusted_ratio < 0.9 {
+                    crate::MemoryPressure::High
+                } else {
+                    crate::MemoryPressure::Critical
+                };
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Start monitoring for multi-tenant memory manager
+    pub async fn start_monitoring(&self) -> Result<()> {
+        let mut monitoring_active = self.monitoring_active.write().await;
+        if *monitoring_active {
+            return Ok(());
+        }
+
+        *monitoring_active = true;
+
+        let monitoring_active_clone = self.monitoring_active.clone();
+        let tenant_usage_clone = self.tenant_usage.clone();
+        let global_status_clone = self.global_status.clone();
+        let model_usage_clone = self.model_usage.clone();
+        let inactivity_threshold = self.model_inactivity_threshold_secs;
+
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(std::time::Duration::from_secs(30));
+
+            loop {
+                interval.tick().await;
+
+                // Check if monitoring is still active
+                {
+                    let active = monitoring_active_clone.read().await;
+                    if !*active {
+                        break;
+                    }
+                }
+
+                // Update tenant pressure indicators
+                // (This would call update_tenant_pressure_indicators if we had access to self)
+
+                // Clean up inactive models
+                let mut model_usage = model_usage_clone.write().await;
+                let now = std::time::Instant::now();
+                let threshold_duration = std::time::Duration::from_secs(inactivity_threshold);
+
+                model_usage.retain(|model_name, usage| {
+                    let inactive_duration = now.duration_since(usage.last_accessed);
+                    if inactive_duration > threshold_duration {
+                        warn!("Removing inactive model: {} (inactive for {:.1}s)",
+                              model_name, inactive_duration.as_secs_f64());
+                        false
+                    } else {
+                        true
+                    }
+                });
+            }
+        });
+
+        info!("Multi-tenant memory monitoring started");
+        Ok(())
+    }
+
+    /// Stop monitoring
+    pub async fn stop_monitoring(&self) -> Result<()> {
+        let mut monitoring_active = self.monitoring_active.write().await;
+        *monitoring_active = false;
+        info!("Multi-tenant memory monitoring stopped");
+        Ok(())
+    }
+
+    /// Get comprehensive tenant dashboard
+    pub async fn get_tenant_dashboard(&self) -> Result<TenantDashboard> {
+        let tenant_configs = self.tenant_configs.read().await;
+        let tenant_usage = self.tenant_usage.read().await;
+        let global_status = self.global_status.read().await;
+
+        let mut tenant_summaries = Vec::new();
+        let mut total_allocated = 0u64;
+        let mut total_used = 0u64;
+        let mut critical_tenants = 0;
+
+        for (tenant_id, config) in tenant_configs.iter() {
+            if let Some(usage) = tenant_usage.get(tenant_id) {
+                let summary = TenantSummary {
+                    tenant_id: *tenant_id,
+                    name: format!("Tenant-{}", tenant_id.simple()),
+                    priority: config.priority.clone(),
+                    allocated_memory_mb: usage.allocated_memory_mb,
+                    used_memory_mb: usage.used_memory_mb,
+                    max_memory_mb: config.max_memory_mb,
+                    guaranteed_memory_mb: config.guaranteed_memory_mb,
+                    utilization_percentage: if config.max_memory_mb > 0 {
+                        (usage.allocated_memory_mb as f64 / config.max_memory_mb as f64 * 100.0) as u32
+                    } else {
+                        0
+                    },
+                    memory_pressure: usage.memory_pressure.clone(),
+                    model_count: usage.model_count,
+                    last_activity: usage.last_activity,
+                    isolation_level: config.isolation_level.clone(),
+                };
+
+                if usage.memory_pressure == crate::MemoryPressure::Critical {
+                    critical_tenants += 1;
+                }
+
+                total_allocated += usage.allocated_memory_mb;
+                total_used += usage.used_memory_mb;
+
+                tenant_summaries.push(summary);
+            }
+        }
+
+        // Sort by priority and then by utilization
+        tenant_summaries.sort_by(|a, b| {
+            b.priority.cmp(&a.priority)
+                .then_with(|| b.utilization_percentage.cmp(&a.utilization_percentage))
+        });
+
+        Ok(TenantDashboard {
+            global_memory_status: global_status.clone(),
+            tenant_summaries,
+            summary: DashboardSummary {
+                total_tenants: tenant_configs.len(),
+                active_tenants: tenant_usage.len(),
+                total_allocated_memory_mb: total_allocated,
+                total_used_memory_mb: total_used,
+                critical_tenants,
+                memory_efficiency: if total_allocated > 0 {
+                    (total_used as f64 / total_allocated as f64 * 100.0) as u32
+                } else {
+                    100
+                },
+                last_updated: chrono::Utc::now(),
+            },
+        })
+    }
+}
+
+/// Tenant dashboard for monitoring
+#[derive(Debug, Clone)]
+pub struct TenantDashboard {
+    pub global_memory_status: crate::MemoryStatus,
+    pub tenant_summaries: Vec<TenantSummary>,
+    pub summary: DashboardSummary,
+}
+
+/// Individual tenant summary
+#[derive(Debug, Clone)]
+pub struct TenantSummary {
+    pub tenant_id: TenantId,
+    pub name: String,
+    pub priority: TenantPriority,
+    pub allocated_memory_mb: u64,
+    pub used_memory_mb: u64,
+    pub max_memory_mb: u64,
+    pub guaranteed_memory_mb: u64,
+    pub utilization_percentage: u32,
+    pub memory_pressure: crate::MemoryPressure,
+    pub model_count: usize,
+    pub last_activity: chrono::DateTime<chrono::Utc>,
+    pub isolation_level: IsolationLevel,
+}
+
+/// Dashboard summary statistics
+#[derive(Debug, Clone)]
+pub struct DashboardSummary {
+    pub total_tenants: usize,
+    pub active_tenants: usize,
+    pub total_allocated_memory_mb: u64,
+    pub total_used_memory_mb: u64,
+    pub critical_tenants: u32,
+    pub memory_efficiency: u32,
+    pub last_updated: chrono::DateTime<chrono::Utc>,
+}
+
+impl Default for MultiTenantMemoryManager {
     fn default() -> Self {
         Self::new(crate::MemoryConfig::default())
     }

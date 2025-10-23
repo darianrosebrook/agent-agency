@@ -14,6 +14,7 @@
 
 pub mod conflict_resolution_tools;
 pub mod evidence_collection_tools;
+pub mod multi_modal_verification;
 pub mod tool_chain_planner;
 pub mod tool_coordinator;
 pub mod tool_discovery;
@@ -22,6 +23,7 @@ pub mod tool_registry;
 
 pub use conflict_resolution_tools::{ConflictResolutionTool, DebateOrchestrator, ConsensusBuilder};
 pub use evidence_collection_tools::{EvidenceCollectionTool}; // FactVerificationTool, SourceValidationTool - not implemented yet
+pub use multi_modal_verification::{MultimodalVerificationTool};
 // pub use governance_tools::{GovernanceTool, AuditLogger, ProvenanceTracker}; // Module not implemented yet
 // pub use quality_gate_tools::{QualityGateTool, CodeAnalysisTool, PerformanceValidator}; // Module not implemented yet
 // pub use reasoning_tools::{ReasoningTool, LogicValidator, InferenceEngine}; // Module not implemented yet
@@ -136,6 +138,7 @@ impl ToolEcosystem {
         let conflict_tools = Arc::new(ConflictResolutionTool::new().await?);
         let evidence_tools = Arc::new(EvidenceCollectionTool::new().await?);
         // TODO: Implement missing tool modules
+        let multimodal_verification = Arc::new(MultimodalVerificationTool::new().await?);
         // let governance_tools = Arc::new(GovernanceTool::new(config.enable_auditing).await?);
         // let quality_tools = Arc::new(QualityGateTool::new().await?);
         // let reasoning_tools = Arc::new(ReasoningTool::new().await?);
@@ -349,6 +352,9 @@ impl ToolEcosystem {
         registry.register_tool(evidence_tools.claim_extractor.clone()).await?;
         registry.register_tool(evidence_tools.fact_verifier.clone()).await?;
         registry.register_tool(evidence_tools.source_validator.clone()).await?;
+        registry.register_tool(multimodal_verification.correlation_engine.clone()).await?;
+        registry.register_tool(multimodal_verification.fusion_validator.clone()).await?;
+        registry.register_tool(multimodal_verification.semantic_integrator.clone()).await?;
 
         // TODO: Implement missing tool registrations
         // Policy enforcement tools, governance tools, quality gate tools not yet implemented

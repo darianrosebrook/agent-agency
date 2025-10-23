@@ -3,13 +3,198 @@
 //! Provides integration between the system health monitor and agent telemetry
 //! for comprehensive monitoring of agent performance and coordination effectiveness.
 
-#[cfg(feature = "agent-agency-observability")]
-use agent_agency_observability::{
-    agent_telemetry::{AgentPerformanceMetrics, AgentTelemetryCollector, AgentType, BusinessMetrics,
-    CoordinationMetrics, SystemDashboard},
-    alerts::{AlertType, Alert as SystemAlert},
-};
+// Note: agent_agency_observability integration is placeholder
+// For now, we implement local agent tracking types
 use std::collections::VecDeque;
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
+use std::sync::Arc;
+use tokio::sync::RwLock;
+
+use crate::orchestrator::SystemHealthMonitor;
+
+/// Agent types for performance tracking
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum AgentType {
+    /// Reasoning and planning agent
+    Reasoner,
+    /// Tool execution agent
+    Executor,
+    /// Coordination and orchestration agent
+    Coordinator,
+    /// Memory and context management agent
+    MemoryManager,
+    /// Learning and adaptation agent
+    Learner,
+}
+
+/// Performance metrics for an individual agent
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AgentPerformanceMetrics {
+    /// Agent identifier
+    pub agent_id: String,
+    /// Agent type
+    pub agent_type: AgentType,
+    /// Total tasks completed
+    pub total_tasks_completed: u64,
+    /// Total tasks failed
+    pub total_tasks_failed: u64,
+    /// Average response time in milliseconds
+    pub average_response_time_ms: f64,
+    /// Success rate (0.0 to 1.0)
+    pub success_rate: f64,
+    /// Last activity timestamp
+    pub last_activity: DateTime<Utc>,
+    /// Current active tasks
+    pub active_tasks: u32,
+}
+
+/// Business metrics for the overall system
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BusinessMetrics {
+    /// Total tasks processed per hour
+    pub throughput_tasks_per_hour: f64,
+    /// System availability percentage (0.0 to 100.0)
+    pub system_availability: f64,
+    /// Average task completion time in milliseconds
+    pub average_task_completion_time_ms: f64,
+    /// Error rate (0.0 to 1.0)
+    pub error_rate: f64,
+}
+
+/// Coordination metrics for multi-agent interactions
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CoordinationMetrics {
+    /// Average time to form consensus in milliseconds
+    pub average_consensus_formation_time_ms: f64,
+    /// Consensus success rate (0.0 to 1.0)
+    pub consensus_success_rate: f64,
+    /// Percentage of tasks requiring debate (0.0 to 1.0)
+    pub debate_required_percentage: f64,
+}
+
+/// Availability SLA tracking and breach detection
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AvailabilitySLA {
+    /// Current overall availability percentage (0.0 to 100.0)
+    pub overall_availability: f64,
+    /// Target availability percentage
+    pub target_availability: f64,
+    /// Whether current availability is breaching SLA
+    pub is_breaching_sla: bool,
+    /// Estimated downtime in minutes over last 24 hours
+    pub downtime_minutes_last_24h: u32,
+}
+
+/// System dashboard with comprehensive metrics
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SystemDashboard {
+    /// System health metrics
+    pub system_health: SystemHealth,
+    /// Agent performance metrics
+    pub agent_metrics: std::collections::HashMap<String, AgentPerformanceMetrics>,
+    /// Coordination metrics
+    pub coordination_metrics: CoordinationMetrics,
+    /// Business metrics
+    pub business_metrics: BusinessMetrics,
+}
+
+/// Simplified system health enum
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum SystemHealth {
+    Healthy,
+    Degraded,
+    Critical,
+    Unknown,
+}
+
+/// Placeholder alert types
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum AlertType {
+    System,
+    Agent,
+    Coordination,
+}
+
+/// Placeholder alert struct
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SystemAlert {
+    pub alert_type: AlertType,
+    pub message: String,
+    pub severity: String,
+}
+
+/// Placeholder agent telemetry collector
+#[derive(Debug)]
+pub struct AgentTelemetryCollector {
+    agent_metrics: Arc<RwLock<std::collections::HashMap<String, AgentPerformanceMetrics>>>,
+    coordination_metrics: Arc<RwLock<CoordinationMetrics>>,
+    business_metrics: Arc<RwLock<BusinessMetrics>>,
+}
+
+impl AgentTelemetryCollector {
+    pub fn new() -> Self {
+        Self {
+            agent_metrics: Arc::new(RwLock::new(std::collections::HashMap::new())),
+            coordination_metrics: Arc::new(RwLock::new(CoordinationMetrics {
+                average_consensus_formation_time_ms: 0.0,
+                consensus_success_rate: 0.0,
+                debate_required_percentage: 0.0,
+            })),
+            business_metrics: Arc::new(RwLock::new(BusinessMetrics {
+                throughput_tasks_per_hour: 0.0,
+                system_availability: 0.0,
+                average_task_completion_time_ms: 0.0,
+                error_rate: 0.0,
+            })),
+        }
+    }
+
+    pub async fn get_agent_metrics(&self, agent_id: &str) -> Option<AgentPerformanceMetrics> {
+        let metrics = self.agent_metrics.read().await;
+        metrics.get(agent_id).cloned()
+    }
+
+    pub async fn get_all_agent_metrics(&self) -> std::collections::HashMap<String, AgentPerformanceMetrics> {
+        let metrics = self.agent_metrics.read().await;
+        metrics.clone()
+    }
+
+    pub async fn get_coordination_metrics(&self) -> CoordinationMetrics {
+        let metrics = self.coordination_metrics.read().await;
+        metrics.clone()
+    }
+
+    pub async fn get_business_metrics(&self) -> BusinessMetrics {
+        let metrics = self.business_metrics.read().await;
+        metrics.clone()
+    }
+
+    pub async fn get_dashboard(&self) -> SystemDashboard {
+        let agent_metrics = self.get_all_agent_metrics().await;
+        let coordination_metrics = self.get_coordination_metrics().await;
+        let business_metrics = self.get_business_metrics().await;
+
+        SystemDashboard {
+            system_health: SystemHealth::Healthy, // Placeholder
+            agent_metrics,
+            coordination_metrics,
+            business_metrics,
+        }
+    }
+
+    pub async fn update_business_metrics(&self, metrics: BusinessMetrics) -> anyhow::Result<()> {
+        let mut business_metrics = self.business_metrics.write().await;
+        *business_metrics = metrics;
+        Ok(())
+    }
+
+    pub async fn update_agent_metrics(&self, agent_id: String, metrics: AgentPerformanceMetrics) -> anyhow::Result<()> {
+        let mut agent_metrics = self.agent_metrics.write().await;
+        agent_metrics.insert(agent_id, metrics);
+        Ok(())
+    }
+}
 
 /// Task completion record for throughput calculation
 #[derive(Debug, Clone)]
@@ -110,21 +295,108 @@ impl TaskThroughputTracker {
     }
 }
 
+/// Tracks performance metrics for individual agents
+#[derive(Debug)]
+pub struct AgentPerformanceTracker {
+    /// Agent identifier
+    agent_id: String,
+    /// Agent type
+    agent_type: AgentType,
+    /// Total tasks completed successfully
+    total_tasks_completed: u64,
+    /// Total tasks failed
+    total_tasks_failed: u64,
+    /// Response times for calculating averages
+    response_times: VecDeque<u64>,
+    /// Last activity timestamp
+    last_activity: DateTime<Utc>,
+    /// Current active tasks
+    active_tasks: u32,
+    /// Maximum response times to keep for averaging
+    max_response_samples: usize,
+}
+
+impl AgentPerformanceTracker {
+    /// Create a new agent performance tracker
+    pub fn new(agent_id: String, agent_type: AgentType) -> Self {
+        Self {
+            agent_id,
+            agent_type,
+            total_tasks_completed: 0,
+            total_tasks_failed: 0,
+            response_times: VecDeque::with_capacity(100), // Keep last 100 samples
+            last_activity: Utc::now(),
+            active_tasks: 0,
+            max_response_samples: 100,
+        }
+    }
+
+    /// Record a successful task completion
+    pub async fn record_task_completion(&mut self, response_time_ms: u64) -> anyhow::Result<()> {
+        self.total_tasks_completed += 1;
+        self.last_activity = Utc::now();
+        self.active_tasks = self.active_tasks.saturating_sub(1);
+
+        // Add response time to rolling average
+        self.response_times.push_back(response_time_ms);
+        if self.response_times.len() > self.max_response_samples {
+            self.response_times.pop_front();
+        }
+
+        Ok(())
+    }
+
+    /// Record a task failure
+    pub async fn record_task_failure(&mut self, _error: &str) -> anyhow::Result<()> {
+        self.total_tasks_failed += 1;
+        self.last_activity = Utc::now();
+        self.active_tasks = self.active_tasks.saturating_sub(1);
+        Ok(())
+    }
+
+    /// Record the start of a new task
+    pub fn record_task_start(&mut self) {
+        self.active_tasks += 1;
+        self.last_activity = Utc::now();
+    }
+
+    /// Get current performance metrics
+    pub fn get_metrics(&self) -> AgentPerformanceMetrics {
+        let total_tasks = self.total_tasks_completed + self.total_tasks_failed;
+        let success_rate = if total_tasks > 0 {
+            self.total_tasks_completed as f64 / total_tasks as f64
+        } else {
+            0.0
+        };
+
+        let average_response_time_ms = if !self.response_times.is_empty() {
+            self.response_times.iter().sum::<u64>() as f64 / self.response_times.len() as f64
+        } else {
+            0.0
+        };
+
+        AgentPerformanceMetrics {
+            agent_id: self.agent_id.clone(),
+            agent_type: self.agent_type.clone(),
+            total_tasks_completed: self.total_tasks_completed,
+            total_tasks_failed: self.total_tasks_failed,
+            average_response_time_ms,
+            success_rate,
+            last_activity: self.last_activity,
+            active_tasks: self.active_tasks,
+        }
+    }
+}
+
 /// Enhanced system health monitor with agent telemetry integration
-#[cfg(feature = "agent-agency-observability")]
 #[derive(Debug)]
 pub struct AgentIntegratedHealthMonitor {
     /// Base system health monitor
     base_monitor: SystemHealthMonitor,
-    /// Agent telemetry collector
+    /// Agent telemetry collector (placeholder)
     telemetry_collector: Arc<AgentTelemetryCollector>,
     /// Agent performance tracking
-    // TODO: Implement AgentPerformanceTracker type
-    // agent_performance_trackers: Arc<
-    //     RwLock<
-    //         std::collections::HashMap<String, AgentPerformanceTracker>,
-    //     >,
-    // >,
+    agent_performance_trackers: Arc<RwLock<std::collections::HashMap<String, AgentPerformanceTracker>>>,
     /// Task throughput tracker for accurate business metrics
     task_throughput_tracker: Arc<RwLock<TaskThroughputTracker>>,
     /// Integration configuration
@@ -165,16 +437,7 @@ impl AgentIntegratedHealthMonitor {
         base_config: SystemHealthMonitorConfig,
         integration_config: AgentIntegrationConfig,
     ) -> Self {
-        let telemetry_config = TelemetryConfig {
-            collection_interval_seconds: integration_config.performance_collection_interval,
-            history_retention_hours: 24,
-            alert_retention_hours: 168,
-            enable_real_time_streaming: true,
-            enable_business_metrics: integration_config.enable_business_metrics,
-            enable_coordination_metrics: integration_config.enable_coordination_metrics,
-        };
-
-        let telemetry_collector = Arc::new(AgentTelemetryCollector::new(telemetry_config));
+        let telemetry_collector = Arc::new(AgentTelemetryCollector::new());
 
         Self {
             base_monitor: SystemHealthMonitor::new(base_config),
@@ -207,7 +470,6 @@ impl AgentIntegratedHealthMonitor {
         let tracker = AgentPerformanceTracker::new(
             agent_id.clone(),
             agent_type,
-            Arc::clone(&self.telemetry_collector),
         );
 
         let mut trackers = self.agent_performance_trackers.write().await;
@@ -346,7 +608,14 @@ impl AgentIntegratedHealthMonitor {
         // The hourly throughput is stored in throughput_tasks_per_hour
         // Daily throughput can be calculated as needed
 
-        // TODO: Implement availability SLA tracking and breach detection
+        // Calculate availability SLA metrics
+        // For now, use a simple heuristic based on error rate
+        // In production, this would track actual uptime windows
+        let availability_sla = self.calculate_availability_sla().await;
+
+        // Update metrics with SLA information
+        current_metrics.system_availability = availability_sla.overall_availability;
+
         // TODO: Implement business-hours vs 24/7 availability distinction
         // TODO: Support multi-dimensional availability metrics (by service, region, etc.)
         // TODO: Add availability trend analysis and prediction
@@ -355,6 +624,32 @@ impl AgentIntegratedHealthMonitor {
             .update_business_metrics(current_metrics)
             .await?;
         Ok(())
+    }
+
+    /// Calculate availability SLA metrics
+    async fn calculate_availability_sla(&self) -> AvailabilitySLA {
+        // Get current error rate from business metrics
+        let business_metrics = self.get_business_metrics().await;
+
+        // Simple availability calculation based on error rate
+        // In production, this would track actual uptime/downtime windows
+        let error_rate = business_metrics.error_rate;
+        let overall_availability = (1.0 - error_rate) * 100.0;
+
+        // Target 99.9% availability (8.77 hours downtime per year)
+        let target_availability = 99.9;
+        let is_breaching_sla = overall_availability < target_availability;
+
+        AvailabilitySLA {
+            overall_availability,
+            target_availability,
+            is_breaching_sla,
+            downtime_minutes_last_24h: if is_breaching_sla {
+                ((100.0 - overall_availability) / 100.0 * 1440.0) as u32 // 24h in minutes
+            } else {
+                0
+            },
+        }
     }
 
     /// Get comprehensive system dashboard

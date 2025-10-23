@@ -48,11 +48,13 @@ use tokio::sync::RwLock;
 use serde::{Serialize, Deserialize};
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
+use sqlx::{PgPool, postgres::PgPoolOptions};
 
 /// Central audit trail manager coordinating all audit operations
 #[derive(Debug)]
 pub struct AuditTrailManager {
     config: AuditConfig,
+    db_pool: Option<PgPool>,
     file_auditor: Arc<FileOperationsAuditor>,
     terminal_auditor: Arc<TerminalAuditor>,
     council_auditor: Arc<CouncilAuditor>,
@@ -235,6 +237,21 @@ pub struct AuditPerformance {
 impl AuditTrailManager {
     /// Create a new audit trail manager
     pub fn new(config: AuditConfig) -> Self {
+        Self::with_db_pool(config, None)
+    }
+
+    /// Create a new audit trail manager with database persistence
+    pub async fn with_db_pool(config: AuditConfig, db_url: Option<&str>) -> Self {
+        let db_pool = if let Some(url) = db_url {
+            Some(PgPoolOptions::new()
+                .max_connections(5)
+                .connect(url)
+                .await
+                .expect("Failed to connect to database for audit logging"))
+        } else {
+            None
+        };
+
         let global_stats = Arc::new(RwLock::new(GlobalAuditStats {
             total_events: 0,
             events_by_category: HashMap::new(),
@@ -250,6 +267,7 @@ impl AuditTrailManager {
 
         Self {
             config: config.clone(),
+            db_pool,
             file_auditor: Arc::new(FileOperationsAuditor::new(config.clone(), global_stats.clone())),
             terminal_auditor: Arc::new(TerminalAuditor::new(config.clone(), global_stats.clone())),
             council_auditor: Arc::new(CouncilAuditor::new(config.clone(), global_stats.clone())),
@@ -303,22 +321,329 @@ impl AuditTrailManager {
 
     /// Export audit trail for analysis
     pub async fn export_audit_trail(&self, format: AuditOutputFormat, time_range: Option<(DateTime<Utc>, DateTime<Utc>)>) -> Result<String, AuditError> {
-        // Implementation would collect and format audit events
-        // This is a placeholder for the actual implementation
-        Ok("Audit trail export not yet implemented".to_string())
+        if let Some(ref pool) = self.db_pool {
+            let mut query = "SELECT * FROM audit_events".to_string();
+            let mut params: Vec<serde_json::Value> = Vec::new();
+
+            if let Some((start, end)) = time_range {
+                query.push_str(" WHERE timestamp >= $1 AND timestamp <= $2");
+                params.push(serde_json::to_value(start)?);
+                params.push(serde_json::to_value(end)?);
+            }
+
+            query.push_str(" ORDER BY timestamp ASC");
+
+            let mut query_builder = sqlx::query_as::<_, AuditEventRow>(&query);
+            for param in params {
+                query_builder = query_builder.bind(param);
+            }
+
+            let rows = query_builder
+                .fetch_all(pool)
+                .await
+                .map_err(|e| AuditError::StorageError(format!("Failed to export audit events: {}", e)))?;
+
+            let events = rows.into_iter()
+                .map(|row| row.into_audit_event())
+                .collect::<Result<Vec<_>, _>>()?;
+
+            // Format based on requested output format
+            match format {
+                AuditOutputFormat::Json => {
+                    serde_json::to_string_pretty(&events)
+                        .map_err(|e| AuditError::StorageError(format!("Failed to serialize audit events: {}", e)))
+                }
+                AuditOutputFormat::Csv => {
+                    self.format_audit_events_as_csv(&events)
+                }
+                AuditOutputFormat::Text => {
+                    Ok(self.format_audit_events_as_text(&events))
+                }
+            }
+        } else {
+            Err(AuditError::StorageError("Database not configured for audit export".to_string()))
+        }
+    }
+
+    /// Format audit events as CSV
+    fn format_audit_events_as_csv(&self, events: &[AuditEvent]) -> Result<String, AuditError> {
+        let mut csv = String::from("timestamp,category,severity,actor,operation,target,result,tags\n");
+
+        for event in events {
+            let result_str = match &event.result {
+                AuditResult::Success { .. } => "SUCCESS".to_string(),
+                AuditResult::Failure { .. } => "FAILURE".to_string(),
+                AuditResult::Partial { .. } => "PARTIAL".to_string(),
+            };
+
+            let tags_str = event.tags.join(";");
+
+            csv.push_str(&format!(
+                "{},{:?},{:?},{},{},{},{},{}\n",
+                event.timestamp.to_rfc3339(),
+                event.category,
+                event.severity,
+                event.actor,
+                event.operation,
+                event.target.as_deref().unwrap_or(""),
+                result_str,
+                tags_str
+            ));
+        }
+
+        Ok(csv)
+    }
+
+    /// Format audit events as human-readable text
+    fn format_audit_events_as_text(&self, events: &[AuditEvent]) -> String {
+        let mut text = format!("Audit Trail Export - {} events\n", events.len());
+        text.push_str("=".repeat(80).as_str());
+        text.push('\n');
+
+        for event in events {
+            text.push_str(&format!(
+                "[{}] {}: {} - {} ({:?})\n",
+                event.timestamp.format("%Y-%m-%d %H:%M:%S"),
+                event.actor,
+                event.operation,
+                event.target.as_deref().unwrap_or("N/A"),
+                event.result
+            ));
+
+            if !event.tags.is_empty() {
+                text.push_str(&format!("  Tags: {}\n", event.tags.join(", ")));
+            }
+
+            text.push('\n');
+        }
+
+        text
     }
 
     /// Search audit events
     pub async fn search_events(&self, query: AuditQuery) -> Result<Vec<AuditEvent>, AuditError> {
-        // Implementation would search through audit logs
-        // This is a placeholder for the actual implementation
-        Ok(vec![])
+        if let Some(ref pool) = self.db_pool {
+            // Build dynamic query based on provided filters
+            let mut sql = "SELECT * FROM audit_events WHERE 1=1".to_string();
+            let mut params: Vec<serde_json::Value> = Vec::new();
+            let mut param_count = 0;
+
+            if let Some(category) = &query.category {
+                param_count += 1;
+                sql.push_str(&format!(" AND category @> ${}", param_count));
+                params.push(serde_json::to_value(category)?);
+            }
+
+            if let Some(severity) = &query.severity {
+                param_count += 1;
+                sql.push_str(&format!(" AND severity @> ${}", param_count));
+                params.push(serde_json::to_value(severity)?);
+            }
+
+            if let Some(actor) = &query.actor {
+                param_count += 1;
+                sql.push_str(&format!(" AND actor = ${}", param_count));
+                params.push(serde_json::to_value(actor)?);
+            }
+
+            if let Some(operation) = &query.operation {
+                param_count += 1;
+                sql.push_str(&format!(" AND operation = ${}", param_count));
+                params.push(serde_json::to_value(operation)?);
+            }
+
+            if let Some((start, end)) = &query.time_range {
+                param_count += 1;
+                sql.push_str(&format!(" AND timestamp >= ${}", param_count));
+                params.push(serde_json::to_value(start)?);
+
+                param_count += 1;
+                sql.push_str(&format!(" AND timestamp <= ${}", param_count));
+                params.push(serde_json::to_value(end)?);
+            }
+
+            sql.push_str(" ORDER BY timestamp DESC");
+
+            if let Some(limit) = query.limit {
+                sql.push_str(&format!(" LIMIT {}", limit));
+            }
+
+            // Execute query with dynamic parameters
+            let mut query_builder = sqlx::query_as::<_, AuditEventRow>(&sql);
+
+            for param in params {
+                query_builder = query_builder.bind(param);
+            }
+
+            let rows = query_builder
+                .fetch_all(pool)
+                .await
+                .map_err(|e| AuditError::StorageError(format!("Failed to search audit events: {}", e)))?;
+
+            // Convert to AuditEvents
+            let events = rows.into_iter()
+                .map(|row| row.into_audit_event())
+                .collect::<Result<Vec<_>, _>>()?;
+
+            Ok(events)
+        } else {
+            Err(AuditError::StorageError("Database not configured for audit searches".to_string()))
+        }
     }
 
     /// Clean up old audit logs based on retention policy
     pub async fn cleanup_old_logs(&self) -> Result<u64, AuditError> {
-        // Implementation would remove logs older than retention_days
-        Ok(0)
+        if let Some(ref pool) = self.db_pool {
+            let cutoff_date = Utc::now() - chrono::Duration::days(self.config.retention_days as i64);
+
+            let result = sqlx::query("DELETE FROM audit_events WHERE timestamp < $1")
+                .bind(cutoff_date)
+                .execute(pool)
+                .await
+                .map_err(|e| AuditError::StorageError(format!("Failed to cleanup old audit logs: {}", e)))?;
+
+            let deleted_count = result.rows_affected();
+
+            info!("Cleaned up {} audit events older than {} days", deleted_count, self.config.retention_days);
+
+            Ok(deleted_count)
+        } else {
+            Ok(0) // No database configured, nothing to clean up
+        }
+    }
+
+    /// Persist audit event to database
+    async fn persist_audit_event(&self, pool: &PgPool, event: &AuditEvent) -> Result<(), AuditError> {
+        // Create audit_events table if it doesn't exist
+        self.ensure_audit_table_exists(pool).await?;
+
+        // Insert audit event
+        sqlx::query(
+            r#"
+            INSERT INTO audit_events (
+                id, timestamp, category, severity, actor, operation, target,
+                parameters, result, performance, context, tags
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+            "#
+        )
+        .bind(event.id)
+        .bind(event.timestamp)
+        .bind(serde_json::to_value(&event.category)?)
+        .bind(serde_json::to_value(&event.severity)?)
+        .bind(&event.actor)
+        .bind(&event.operation)
+        .bind(&event.target)
+        .bind(serde_json::to_value(&event.parameters)?)
+        .bind(serde_json::to_value(&event.result)?)
+        .bind(event.performance.as_ref().map(|p| serde_json::to_value(p)).transpose()?)
+        .bind(serde_json::to_value(&event.context)?)
+        .bind(&event.tags)
+        .execute(pool)
+        .await
+        .map_err(|e| AuditError::StorageError(format!("Failed to insert audit event: {}", e)))?;
+
+        Ok(())
+    }
+
+    /// Ensure audit_events table exists
+    async fn ensure_audit_table_exists(&self, pool: &PgPool) -> Result<(), AuditError> {
+        sqlx::query(
+            r#"
+            CREATE TABLE IF NOT EXISTS audit_events (
+                id UUID PRIMARY KEY,
+                timestamp TIMESTAMPTZ NOT NULL,
+                category JSONB NOT NULL,
+                severity JSONB NOT NULL,
+                actor TEXT NOT NULL,
+                operation TEXT NOT NULL,
+                target TEXT,
+                parameters JSONB NOT NULL,
+                result JSONB NOT NULL,
+                performance JSONB,
+                context JSONB NOT NULL,
+                tags TEXT[] NOT NULL,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            );
+
+            -- Create indexes for efficient querying
+            CREATE INDEX IF NOT EXISTS idx_audit_events_timestamp ON audit_events (timestamp);
+            CREATE INDEX IF NOT EXISTS idx_audit_events_category ON audit_events USING GIN (category);
+            CREATE INDEX IF NOT EXISTS idx_audit_events_actor ON audit_events (actor);
+            CREATE INDEX IF NOT EXISTS idx_audit_events_operation ON audit_events (operation);
+            CREATE INDEX IF NOT EXISTS idx_audit_events_tags ON audit_events USING GIN (tags);
+            "#
+        )
+        .execute(pool)
+        .await
+        .map_err(|e| AuditError::StorageError(format!("Failed to create audit table: {}", e)))?;
+
+        Ok(())
+    }
+
+    /// Query audit events for deterministic replays
+    pub async fn query_events_for_replay(&self, task_id: &str) -> Result<Vec<AuditEvent>, AuditError> {
+        if let Some(ref pool) = self.db_pool {
+            let events = sqlx::query_as::<_, AuditEventRow>(
+                "SELECT * FROM audit_events WHERE context->>'task_id' = $1 ORDER BY timestamp ASC"
+            )
+            .bind(task_id)
+            .fetch_all(pool)
+            .await
+            .map_err(|e| AuditError::StorageError(format!("Failed to query audit events: {}", e)))?;
+
+            // Convert rows back to AuditEvent
+            let audit_events = events.into_iter()
+                .map(|row| row.into_audit_event())
+                .collect::<Result<Vec<_>, _>>()?;
+
+            Ok(audit_events)
+        } else {
+            Err(AuditError::StorageError("Database not configured for audit queries".to_string()))
+        }
+    }
+}
+
+/// Database row representation of audit event
+#[derive(sqlx::FromRow)]
+struct AuditEventRow {
+    id: uuid::Uuid,
+    timestamp: chrono::DateTime<chrono::Utc>,
+    category: serde_json::Value,
+    severity: serde_json::Value,
+    actor: String,
+    operation: String,
+    target: Option<String>,
+    parameters: serde_json::Value,
+    result: serde_json::Value,
+    performance: Option<serde_json::Value>,
+    context: serde_json::Value,
+    tags: Vec<String>,
+}
+
+impl AuditEventRow {
+    /// Convert database row back to AuditEvent
+    fn into_audit_event(self) -> Result<AuditEvent, AuditError> {
+        Ok(AuditEvent {
+            id: self.id,
+            timestamp: self.timestamp,
+            category: serde_json::from_value(self.category)
+                .map_err(|e| AuditError::StorageError(format!("Failed to deserialize category: {}", e)))?,
+            severity: serde_json::from_value(self.severity)
+                .map_err(|e| AuditError::StorageError(format!("Failed to deserialize severity: {}", e)))?,
+            actor: self.actor,
+            operation: self.operation,
+            target: self.target,
+            parameters: serde_json::from_value(self.parameters)
+                .map_err(|e| AuditError::StorageError(format!("Failed to deserialize parameters: {}", e)))?,
+            result: serde_json::from_value(self.result)
+                .map_err(|e| AuditError::StorageError(format!("Failed to deserialize result: {}", e)))?,
+            performance: self.performance.map(|p| serde_json::from_value(p))
+                .transpose()
+                .map_err(|e| AuditError::StorageError(format!("Failed to deserialize performance: {}", e)))?,
+            context: serde_json::from_value(self.context)
+                .map_err(|e| AuditError::StorageError(format!("Failed to deserialize context: {}", e)))?,
+            tags: self.tags,
+        })
     }
 }
 
@@ -461,12 +786,13 @@ mod auditors {
             stats.total_events += 1;
             *stats.events_by_category.entry(event.category.clone()).or_insert(0) += 1;
 
-            // TODO: Implement persistent audit log storage system
-            // - [ ] Set up database schema for audit log storage
-            // - [ ] Implement audit log writing with proper indexing
-            // - [ ] Add audit log retention and cleanup policies
-            // - [ ] Implement audit log querying and search capabilities
-            // - [ ] Add audit log integrity and tamper detection
+            // Persist audit event to database if available
+            if let Some(ref pool) = self.db_pool {
+                if let Err(e) = self.persist_audit_event(pool, &event).await {
+                    eprintln!("Failed to persist audit event: {}", e);
+                }
+            }
+
             if self.config.log_level != AuditLogLevel::Minimal {
                 println!("📁 FILE AUDIT: {} {} {:?}", event.operation, event.target.as_deref().unwrap_or(""), event.result);
             }
@@ -981,6 +1307,39 @@ mod auditors {
                 }),
                 context,
                 tags: vec!["error_recovery".to_string()],
+            };
+
+            self.write_event(event).await
+        }
+
+        /// Record correlation between recovery event and root failure
+        pub async fn record_recovery_correlation(
+            &self,
+            operation_id: &str,
+            failure_event_id: &str,
+            recovery_success: bool,
+            slo_impact: f64,
+            context: HashMap<String, serde_json::Value>,
+        ) -> Result<(), AuditError> {
+            let mut parameters = HashMap::new();
+            parameters.insert("operation_id".to_string(), serde_json::Value::String(operation_id.to_string()));
+            parameters.insert("failure_event_id".to_string(), serde_json::Value::String(failure_event_id.to_string()));
+            parameters.insert("recovery_success".to_string(), serde_json::Value::Bool(recovery_success));
+            parameters.insert("slo_impact".to_string(), serde_json::Value::Number(serde_json::Number::from_f64(slo_impact).unwrap()));
+
+            let event = AuditEvent {
+                id: Uuid::new_v4(),
+                timestamp: Utc::now(),
+                category: AuditCategory::ErrorRecovery,
+                severity: if slo_impact > 0.5 { AuditSeverity::High } else { AuditSeverity::Medium },
+                actor: "slo_monitor".to_string(),
+                operation: "recovery_correlation".to_string(),
+                target: Some(operation_id.to_string()),
+                parameters,
+                result: AuditResult::Success { data: None },
+                performance: None,
+                context,
+                tags: vec!["slo".to_string(), "correlation".to_string()],
             };
 
             self.write_event(event).await
