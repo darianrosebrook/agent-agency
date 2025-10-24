@@ -18,7 +18,6 @@ use crate::tool_registry::{ToolRegistry, RegisteredTool};
 use crate::tool_execution::{ToolExecutor, ToolInvocation, ToolResult};
 
 /// Tool chain planner with typed DAG support
-#[derive(Debug)]
 pub struct ToolChainPlanner {
     tool_registry: Arc<ToolRegistry>,
     schema_registry: Arc<SchemaRegistry>,
@@ -65,7 +64,7 @@ pub struct ToolEdge {
 }
 
 /// Complete tool chain as a DAG
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug)]
 pub struct ToolChain {
     pub dag: Graph<ToolNode, ToolEdge>,
     pub roots: Vec<NodeIndex>,
@@ -97,7 +96,7 @@ pub struct RetryPolicy {
 }
 
 /// Chain execution result
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug)]
 pub struct ChainResult {
     pub chain_hash: u64,
     pub success: bool,
@@ -174,7 +173,7 @@ impl ToolChainPlanner {
         &self,
         context: &PlanningContext,
         constraints: &PlanningConstraints,
-    ) -> Result<ToolChain> {
+    ) -> Result<ToolChain, anyhow::Error> {
         info!("Planning tool chain for task: {}", context.task_description);
 
         // Check cache first
@@ -208,7 +207,7 @@ impl ToolChainPlanner {
         &self,
         context: &PlanningContext,
         constraints: &PlanningConstraints,
-    ) -> Result<Vec<ToolChain>> {
+    ) -> Result<Vec<ToolChain>, anyhow::Error> {
         let mut candidates = Vec::new();
         let available_tools = self.get_relevant_tools(context).await?;
 
@@ -220,7 +219,7 @@ impl ToolChainPlanner {
 
         // Extend with multi-step chains using A* search
         let mut extended = self.extend_chains_with_astar(
-            candidates,
+            candidates.clone(), // Clone candidates for extension
             &available_tools,
             context,
             constraints
@@ -237,7 +236,7 @@ impl ToolChainPlanner {
         &self,
         tool: &RegisteredTool,
         context: &PlanningContext,
-    ) -> Result<ToolChain> {
+    ) -> Result<ToolChain, anyhow::Error> {
         let mut dag = Graph::new();
         let node = self.tool_to_node(tool, context)?;
         let node_idx = dag.add_node(node);
@@ -251,15 +250,15 @@ impl ToolChainPlanner {
             confidence: 0.7, // Base confidence
             plan_hash: 0, // Will be computed
             metadata: ChainMetadata {
-                name: format!("single_{}", tool.name),
-                description: format!("Single step chain using {}", tool.name),
+                name: format!("single_{}", tool.metadata.name),
+                description: format!("Single step chain using {}", tool.metadata.name),
                 created_at: chrono::Utc::now(),
                 version: "1.0".to_string(),
                 author: "planner".to_string(),
             },
         };
 
-        let chain = self.compute_plan_hash(chain);
+        let chain = ToolChainPlanner::compute_plan_hash(chain);
         Ok(chain)
     }
 
@@ -270,7 +269,7 @@ impl ToolChainPlanner {
         available_tools: &[RegisteredTool],
         context: &PlanningContext,
         constraints: &PlanningConstraints,
-    ) -> Result<Vec<ToolChain>> {
+    ) -> Result<Vec<ToolChain>, anyhow::Error> {
         let mut extended_chains = Vec::new();
 
         for base_chain in base_chains {
@@ -302,16 +301,17 @@ impl ToolChainPlanner {
         new_tool: &RegisteredTool,
         context: &PlanningContext,
         constraints: &PlanningConstraints,
-    ) -> Result<Option<ToolChain>> {
+    ) -> Result<Option<ToolChain>, anyhow::Error> {
         let mut new_dag = base_chain.dag.clone();
         let new_node = self.tool_to_node(new_tool, context)?;
+        let new_node_clone = new_node.clone();
         let new_node_idx = new_dag.add_node(new_node);
 
         // Try to connect the new node to existing nodes
         let connections_made = self.connect_node_to_chain(
             &mut new_dag,
             new_node_idx,
-            &new_node,
+            &new_node_clone,
             base_chain,
             context,
         )?;
@@ -331,13 +331,13 @@ impl ToolChainPlanner {
             dag: new_dag,
             roots,
             sinks,
-            estimated_cost: base_chain.estimated_cost + new_node.cost_hint,
-            estimated_time_ms: base_chain.estimated_time_ms + new_node.sla_ms,
-            confidence: self.compute_chain_confidence(&base_chain, &new_node),
+            estimated_cost: base_chain.estimated_cost + new_node_clone.cost_hint,
+            estimated_time_ms: base_chain.estimated_time_ms + new_node_clone.sla_ms,
+            confidence: self.compute_chain_confidence(&base_chain, &new_node_clone),
             plan_hash: 0,
             metadata: ChainMetadata {
                 name: format!("extended_{}", base_chain.metadata.name),
-                description: format!("Extended chain with {}", new_tool.name),
+                description: format!("Extended chain with {}", new_tool.metadata.name),
                 created_at: chrono::Utc::now(),
                 version: "1.0".to_string(),
                 author: "planner".to_string(),
@@ -350,7 +350,7 @@ impl ToolChainPlanner {
             return Ok(None);
         }
 
-        let extended_chain = self.compute_plan_hash(extended_chain);
+        let extended_chain = ToolChainPlanner::compute_plan_hash(extended_chain);
         Ok(Some(extended_chain))
     }
 
@@ -362,7 +362,7 @@ impl ToolChainPlanner {
         new_node: &ToolNode,
         base_chain: &ToolChain,
         context: &PlanningContext,
-    ) -> Result<usize> {
+    ) -> Result<usize, anyhow::Error> {
         let mut connections = 0;
 
         // Try to connect inputs to existing outputs
@@ -391,7 +391,7 @@ impl ToolChainPlanner {
     }
 
     /// Check if two port schemas are compatible
-    fn schemas_compatible(&self, input: &PortSchemaRef, output: &PortSchemaRef) -> Result<bool> {
+    fn schemas_compatible(&self, input: &PortSchemaRef, output: &PortSchemaRef) -> Result<bool, anyhow::Error> {
         // For now, simple string matching on registry keys
         // In a full implementation, this would check schema compatibility
         Ok(input.registry_key == output.registry_key ||
@@ -399,13 +399,13 @@ impl ToolChainPlanner {
     }
 
     /// Convert a registered tool to a DAG node
-    fn tool_to_node(&self, tool: &RegisteredTool, context: &PlanningContext) -> Result<ToolNode> {
+    fn tool_to_node(&self, tool: &RegisteredTool, context: &PlanningContext) -> Result<ToolNode, anyhow::Error> {
         // Extract port information from tool metadata
         let inputs = self.extract_tool_ports(tool, true)?;
         let outputs = self.extract_tool_ports(tool, false)?;
 
         Ok(ToolNode {
-            tool_id: tool.name.clone(),
+            tool_id: tool.metadata.name.clone(),
             inputs,
             outputs,
             params: Value::Object(serde_json::Map::new()),
@@ -417,13 +417,13 @@ impl ToolChainPlanner {
     }
 
     /// Extract port information from tool metadata
-    fn extract_tool_ports(&self, tool: &RegisteredTool, is_input: bool) -> Result<Vec<ToolPort>> {
+    fn extract_tool_ports(&self, tool: &RegisteredTool, is_input: bool) -> Result<Vec<ToolPort>, anyhow::Error> {
         let mut ports = Vec::new();
 
         // This would extract from tool's JSON schema
         // For now, create generic ports
         let port_name = if is_input { "input" } else { "output" };
-        let schema_key = format!("{}.{}.default@v1", tool.category, port_name);
+        let schema_key = format!("{}.{}.default@v1", tool.metadata.category, port_name);
 
         ports.push(ToolPort {
             name: port_name.to_string(),
@@ -439,7 +439,7 @@ impl ToolChainPlanner {
     /// Estimate tool latency based on historical data
     fn estimate_tool_latency(&self, tool: &RegisteredTool, context: &PlanningContext) -> u64 {
         // Base latency by tool category
-        let base_latency = match tool.category.as_str() {
+        let base_latency = match tool.metadata.category.as_str() {
             "evidence_collection" => 2000,
             "conflict_resolution" => 5000,
             "policy_enforcement" => 1000,
@@ -461,7 +461,7 @@ impl ToolChainPlanner {
     /// Estimate tool cost
     fn estimate_tool_cost(&self, tool: &RegisteredTool, context: &PlanningContext) -> f64 {
         // Base cost by tool category (in cents)
-        let base_cost = match tool.category.as_str() {
+        let base_cost = match tool.metadata.category.as_str() {
             "evidence_collection" => 1.0,
             "conflict_resolution" => 2.0,
             "policy_enforcement" => 0.5,
@@ -480,15 +480,16 @@ impl ToolChainPlanner {
     }
 
     /// Get tools relevant to the planning context
-    async fn get_relevant_tools(&self, context: &PlanningContext) -> Result<Vec<RegisteredTool>> {
-        let all_tools = self.tool_registry.get_all_tools().await?;
+    async fn get_relevant_tools(&self, context: &PlanningContext) -> Result<Vec<RegisteredTool>, anyhow::Error> {
+        let all_tools = self.tool_registry.get_all_tools().await;
 
         // Filter by required capabilities
         let relevant_tools: Vec<RegisteredTool> = all_tools.into_iter()
-            .filter(|tool| {
+            .filter(|(_, tool)| {
                 context.required_capabilities.iter()
-                    .any(|cap| tool.capabilities.contains(cap))
+                    .any(|cap| tool.metadata.capabilities.contains(cap))
             })
+            .map(|(_, tool)| tool)
             .collect();
 
         Ok(relevant_tools)
@@ -500,7 +501,7 @@ impl ToolChainPlanner {
         candidates: Vec<ToolChain>,
         context: &PlanningContext,
         constraints: &PlanningConstraints,
-    ) -> Result<ToolChain> {
+    ) -> Result<ToolChain, anyhow::Error> {
         if candidates.is_empty() {
             return Err(anyhow::anyhow!("No valid tool chains found"));
         }
@@ -602,15 +603,14 @@ impl ToolChainPlanner {
     fn create_cache_key(&self, context: &PlanningContext) -> String {
         format!("{}_{}_{:?}_{:?}",
             context.task_type,
-            context.complexity as u8,
+            context.complexity.clone() as u8,
             context.required_capabilities,
-            context.risk_tolerance as u8
+            context.risk_tolerance.clone() as u8
         )
     }
 }
 
 /// Schema registry for tool I/O validation and conversion
-#[derive(Debug)]
 pub struct SchemaRegistry {
     schemas: HashMap<String, serde_json::Value>,
     converters: HashMap<String, Box<dyn Converter>>,
@@ -618,7 +618,7 @@ pub struct SchemaRegistry {
 
 #[async_trait::async_trait]
 pub trait Converter: Send + Sync {
-    async fn convert(&self, value: Value) -> Result<Value>;
+    async fn convert(&self, value: Value) -> Result<Value, anyhow::Error>;
 }
 
 impl SchemaRegistry {
@@ -639,7 +639,7 @@ impl SchemaRegistry {
         self.converters.contains_key(&converter_key)
     }
 
-    pub async fn convert(&self, converter_key: &str, value: Value) -> Result<Value> {
+    pub async fn convert(&self, converter_key: &str, value: Value) -> Result<Value, anyhow::Error> {
         if let Some(converter) = self.converters.get(converter_key) {
             converter.convert(value).await
         } else {

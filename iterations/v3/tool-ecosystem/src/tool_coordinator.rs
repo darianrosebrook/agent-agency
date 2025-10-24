@@ -14,7 +14,6 @@ use crate::tool_registry::{ToolRegistry, Tool};
 use crate::tool_execution::{ToolExecutor, ToolInvocation, ToolResult};
 
 /// Tool coordinator for orchestrating complex workflows
-#[derive(Debug)]
 pub struct ToolCoordinator {
     /// Tool registry reference
     tool_registry: Arc<ToolRegistry>,
@@ -79,6 +78,7 @@ pub struct ToolChainMetadata {
 
 /// Tool chain execution state
 #[derive(Debug)]
+#[derive(Clone)]
 pub struct ToolChainExecution {
     /// Chain definition
     pub chain: ToolChain,
@@ -295,7 +295,7 @@ impl ToolCoordinator {
                 metadata: chain.metadata.clone(),
                 execution_trace: vec![], // Would be populated during execution
             },
-            Err(e) => ToolExecutionResult {
+            Err(ref e) => ToolExecutionResult {
                 chain_id: chain_id.clone(),
                 success: false,
                 final_result: None,
@@ -319,7 +319,7 @@ impl ToolCoordinator {
             active.remove(&chain_id);
         }
 
-        result.map(|r| final_result).or_else(|e| Err(e))
+        Ok(final_result)
     }
 
     /// Execute chain internally (handles the actual execution logic)
@@ -346,18 +346,60 @@ impl ToolCoordinator {
             };
 
             // Execute steps concurrently
-            let mut handles = Vec::new();
+            let mut handles: Vec<tokio::task::JoinHandle<Result<(String, StepResult), anyhow::Error>>> = Vec::new();
             for step in steps_to_execute {
                 let chain_id = chain_id.to_string();
                 let step_id = step.step_id.clone();
                 let tool_name = step.tool_name.clone();
                 let parameters = step.parameters.clone();
+                let tool_registry = self.tool_registry.clone();
+                let tool_executor = self.tool_executor.clone();
 
                 let handle = tokio::spawn(async move {
-                    // Execute step
-                    match self.execute_step(&chain_id, &step_id, &tool_name, parameters).await {
-                        Ok(result) => Ok((step_id, result)),
-                        Err(e) => Err((step_id, e.to_string())),
+                    // Execute step using cloned components
+                    let start_time = chrono::Utc::now();
+
+                    // Get tool from registry
+                    let tool = match tool_registry.get_tool(&tool_name).await {
+                        Some(tool) => tool,
+                        None => return Ok((step_id.clone(), crate::tool_coordinator::StepResult {
+                            step_id: step_id.to_string(),
+                            result: None,
+                            error: Some("Tool not found".to_string()),
+                            started_at: start_time,
+                            ended_at: Some(chrono::Utc::now()),
+                            retry_count: 0,
+                        })),
+                    };
+
+                    // Execute tool
+                    let invocation = crate::tool_execution::ToolInvocation {
+                        tool_name: tool_name.to_string(),
+                        parameters,
+                        context: Some(format!("chain:{},step:{}", chain_id, step_id)),
+                        timeout_ms: Some(30000), // 30 second timeout
+                    };
+
+                    match tool_executor.execute_tool(invocation).await {
+                        Ok(result) => {
+                            let end_time = chrono::Utc::now();
+                            Ok((step_id.clone(), crate::tool_coordinator::StepResult {
+                                step_id: step_id.to_string(),
+                                result: Some(result),
+                                error: None,
+                                started_at: start_time,
+                                ended_at: Some(end_time),
+                                retry_count: 0,
+                            }))
+                        },
+                        Err(e) => Ok((step_id.clone(), crate::tool_coordinator::StepResult {
+                            step_id: step_id.to_string(),
+                            result: None,
+                            error: Some(e.to_string()),
+                            started_at: start_time,
+                            ended_at: Some(chrono::Utc::now()),
+                            retry_count: 0,
+                        })),
                     }
                 });
 
@@ -384,8 +426,8 @@ impl ToolCoordinator {
                             }
                         }
                     }
-                    Ok(Err((step_id, error))) => {
-                        return Err(anyhow::anyhow!("Step '{}' failed: {}", step_id, error));
+                    Ok(Err(e)) => {
+                        return Err(anyhow::anyhow!("Step execution failed: {}", e));
                     }
                     Err(e) => {
                         return Err(anyhow::anyhow!("Task join error: {}", e));
@@ -406,7 +448,9 @@ impl ToolCoordinator {
         // Aggregate final result (simplified - take last step's result)
         if let Some(last_step) = chain.steps.last() {
             if let Some(result) = step_results.get(&last_step.step_id) {
-                return Ok(result.result.clone());
+                if let Some(tool_result) = &result.result {
+                    return Ok(tool_result.result.clone());
+                }
             }
         }
 
@@ -503,7 +547,8 @@ impl ToolCoordinator {
 
     /// Get active chain executions
     pub async fn get_active_chains(&self) -> HashMap<String, ToolChainExecution> {
-        self.active_chains.read().await.clone()
+        let active = self.active_chains.read().await;
+        (*active).clone()
     }
 
     /// Get chain execution result

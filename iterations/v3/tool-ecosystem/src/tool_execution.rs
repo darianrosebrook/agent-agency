@@ -269,7 +269,7 @@ impl ToolExecutor {
         Ok(serde_json::json!({
             "valid": is_valid,
             "compliant": is_valid,
-            "issues": if is_valid { [] } else { ["Missing risk_tier or scope"] }
+            "issues": if is_valid { Vec::<String>::new() } else { vec!["Missing risk_tier or scope".to_string()] }
         }))
     }
 

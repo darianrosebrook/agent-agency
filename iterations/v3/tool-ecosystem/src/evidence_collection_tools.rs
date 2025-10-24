@@ -25,15 +25,20 @@ pub struct EvidenceCollectionTool {
 impl EvidenceCollectionTool {
     /// Create a new evidence collection tool
     pub async fn new() -> Result<Self> {
-        let claim_extractor = Arc::new(ClaimExtractor::new());
-        let fact_verifier = Arc::new(FactVerifier::new());
-        let source_validator = Arc::new(SourceValidator::new());
+        let claim_extractor = Arc::new(ClaimExtractor::new().await?);
+        let fact_verifier = Arc::new(FactVerifier::new().await?);
+        let source_validator = Arc::new(SourceValidator::new().await?);
 
         Ok(Self {
             claim_extractor,
             fact_verifier,
             source_validator,
         })
+    }
+
+    /// Stub implementation for evidence collection
+    pub async fn collect_evidence(&self, _tasks: &[serde_json::Value], _context: &str) -> Result<Vec<serde_json::Value>> {
+        Ok(vec![]) // Stub: no evidence collected
     }
 }
 
@@ -125,7 +130,7 @@ impl ClaimExtractor {
         Ok(ClaimExtractionResult {
             original_content: content.to_string(),
             disambiguated_content: disambiguated,
-            atomic_claims: claims,
+            atomic_claims: claims.clone(),
             verification_requirements,
             extraction_metadata: ExtractionMetadata {
                 content_type: content_type.to_string(),
@@ -171,13 +176,13 @@ impl ClaimExtractor {
         for sentence in sentences {
             if self.is_verifiable(&sentence, pattern) {
                 verifiable_parts.push(VerifiablePart {
-                    content: sentence,
+                    content: sentence.clone(),
                     verification_type: self.determine_verification_type(&sentence),
                     confidence: self.calculate_verifiability_confidence(&sentence),
                 });
             } else {
                 unverifiable_parts.push(UnverifiablePart {
-                    content: sentence,
+                    content: sentence.clone(),
                     reason: self.determine_unverifiable_reason(&sentence),
                     suggested_rewrite: self.suggest_rewrite(&sentence),
                 });
@@ -252,7 +257,7 @@ impl ClaimExtractor {
 
     /// Calculate verifiability confidence
     fn calculate_verifiability_confidence(&self, sentence: &str) -> f64 {
-        let mut confidence = 0.5; // Base confidence
+        let mut confidence: f64 = 0.5; // Base confidence
 
         // Boost confidence for specific, measurable claims
         if sentence.contains("must") || sentence.contains("shall") {
@@ -276,7 +281,7 @@ impl ClaimExtractor {
             confidence -= 0.15;
         }
 
-        confidence.max(0.0).min(1.0)
+        confidence.max(0.0f64).min(1.0f64)
     }
 
     /// Determine why content is unverifiable
@@ -310,10 +315,17 @@ impl ClaimExtractor {
     async fn apply_decomposition_rules(&self, content: &str, rules: &[DecompositionRule]) -> Result<Vec<AtomicClaim>> {
         let mut claims = vec![AtomicClaim {
             id: format!("claim_{}", uuid::Uuid::new_v4()),
+            claim_text: content.to_string(),
             statement: content.to_string(),
             confidence: 0.8,
             source_context: "original".to_string(),
+            source_location: "unknown".to_string(),
+            metadata: serde_json::Value::Object(serde_json::Map::new()),
+            extracted_at: chrono::Utc::now(),
+            evidence_requirements: Vec::new(),
             verification_requirements: Vec::new(),
+            dependencies: Vec::new(),
+            claim_type: ClaimType::Factual,
         }];
 
         for rule in rules {
@@ -374,10 +386,17 @@ impl ClaimExtractor {
                     c.statement.split(&format!(" {}", operator))
                         .map(|part| AtomicClaim {
                             id: format!("claim_{}", uuid::Uuid::new_v4()),
+                            claim_text: part.trim().to_string(),
                             statement: part.trim().to_string(),
                             confidence: c.confidence * 0.9, // Slightly reduced confidence for split claims
                             source_context: c.source_context.clone(),
+                            source_location: c.source_location.clone(),
+                            metadata: c.metadata.clone(),
+                            extracted_at: chrono::Utc::now(),
+                            evidence_requirements: c.evidence_requirements.clone(),
                             verification_requirements: c.verification_requirements.clone(),
+                            dependencies: c.dependencies.clone(),
+                            claim_type: c.claim_type.clone(),
                         })
                         .collect::<Vec<_>>()
                 } else {
@@ -407,13 +426,16 @@ impl ClaimExtractor {
                     extracted_claims.push(AtomicClaim {
                         id: format!("{}_func_name", claim.id),
                         claim_text: format!("Function '{}' exists", function_name),
-                        claim_type: ClaimType::Functional,
+                        statement: format!("Function '{}' exists", function_name),
                         confidence: claim.confidence,
+                        source_context: claim.source_context.clone(),
                         source_location: claim.source_location.clone(),
-                        evidence_requirements: vec![EvidenceType::CodeAnalysis],
-                        dependencies: vec![claim.id.clone()],
+                        metadata: serde_json::Value::Object(serde_json::Map::new()),
                         extracted_at: chrono::Utc::now(),
-                        metadata: HashMap::new(),
+                        evidence_requirements: vec!["CodeAnalysis".to_string()],
+                        verification_requirements: Vec::new(),
+                        dependencies: vec![claim.id.clone()],
+                        claim_type: ClaimType::Functional,
                     });
                 }
             }
@@ -427,13 +449,16 @@ impl ClaimExtractor {
                         extracted_claims.push(AtomicClaim {
                             id: format!("{}_params", claim.id),
                             claim_text: format!("Function accepts parameters: {}", params_str),
-                            claim_type: ClaimType::Functional,
+                            statement: format!("Function accepts parameters: {}", params_str),
                             confidence: claim.confidence * 0.9, // Slightly lower confidence for derived claims
+                            source_context: claim.source_context.clone(),
                             source_location: claim.source_location.clone(),
-                            evidence_requirements: vec![EvidenceType::CodeAnalysis],
-                            dependencies: vec![claim.id.clone()],
+                            metadata: serde_json::Value::Object(serde_json::Map::new()),
                             extracted_at: chrono::Utc::now(),
-                            metadata: HashMap::new(),
+                            evidence_requirements: vec!["CodeAnalysis".to_string()],
+                            verification_requirements: Vec::new(),
+                            dependencies: vec![claim.id.clone()],
+                            claim_type: ClaimType::Functional,
                         });
                     }
                 }
@@ -446,13 +471,16 @@ impl ClaimExtractor {
                     extracted_claims.push(AtomicClaim {
                         id: format!("{}_return", claim.id),
                         claim_text: format!("Function returns type: {}", return_type),
-                        claim_type: ClaimType::Functional,
+                        statement: format!("Function returns type: {}", return_type),
                         confidence: claim.confidence * 0.9,
+                        source_context: claim.source_context.clone(),
                         source_location: claim.source_location.clone(),
-                        evidence_requirements: vec![EvidenceType::CodeAnalysis],
-                        dependencies: vec![claim.id.clone()],
+                        metadata: serde_json::Value::Object(serde_json::Map::new()),
                         extracted_at: chrono::Utc::now(),
-                        metadata: HashMap::new(),
+                        evidence_requirements: vec!["CodeAnalysis".to_string()],
+                        verification_requirements: Vec::new(),
+                        dependencies: vec![claim.id.clone()],
+                        claim_type: ClaimType::Functional,
                     });
                 }
             }
@@ -506,22 +534,25 @@ impl ClaimExtractor {
                 for (i, metric) in metrics_found.into_iter().enumerate() {
                     performance_claims.push(AtomicClaim {
                         id: format!("{}_perf_{}", claim.id, i),
-                        claim_text: metric,
-                        claim_type: ClaimType::Performance,
+                        claim_text: metric.clone(),
+                        statement: metric,
                         confidence: claim.confidence * 0.85, // Performance claims need verification
+                        source_context: claim.source_context.clone(),
                         source_location: claim.source_location.clone(),
-                        evidence_requirements: vec![
-                            EvidenceType::Benchmarking,
-                            EvidenceType::Profiling,
-                            EvidenceType::LoadTesting
-                        ],
-                        dependencies: vec![claim.id.clone()],
-                        extracted_at: chrono::Utc::now(),
                         metadata: {
-                            let mut meta = HashMap::new();
-                            meta.insert("performance_category".to_string(), "extracted_metric".to_string());
-                            meta
+                            let mut meta = serde_json::Map::new();
+                            meta.insert("performance_category".to_string(), serde_json::Value::String("extracted_metric".to_string()));
+                            serde_json::Value::Object(meta)
                         },
+                        extracted_at: chrono::Utc::now(),
+                        evidence_requirements: vec![
+                            "Benchmarking".to_string(),
+                            "Profiling".to_string(),
+                            "LoadTesting".to_string()
+                        ],
+                        verification_requirements: Vec::new(),
+                        dependencies: vec![claim.id.clone()],
+                        claim_type: ClaimType::Performance,
                     });
                 }
             } else {
@@ -529,20 +560,23 @@ impl ClaimExtractor {
                 performance_claims.push(AtomicClaim {
                     id: format!("{}_perf_general", claim.id),
                     claim_text: format!("Performance-related claim: {}", text),
-                    claim_type: ClaimType::Performance,
+                    statement: format!("Performance-related claim: {}", text),
                     confidence: claim.confidence * 0.7, // Lower confidence for generic claims
+                    source_context: claim.source_context.clone(),
                     source_location: claim.source_location.clone(),
-                    evidence_requirements: vec![
-                        EvidenceType::Benchmarking,
-                        EvidenceType::Profiling
-                    ],
-                    dependencies: vec![claim.id.clone()],
-                    extracted_at: chrono::Utc::now(),
                     metadata: {
-                        let mut meta = HashMap::new();
-                        meta.insert("performance_category".to_string(), "general_claim".to_string());
-                        meta
+                        let mut meta = serde_json::Map::new();
+                        meta.insert("performance_category".to_string(), serde_json::Value::String("general_claim".to_string()));
+                        serde_json::Value::Object(meta)
                     },
+                    extracted_at: chrono::Utc::now(),
+                    evidence_requirements: vec![
+                        "Benchmarking".to_string(),
+                        "Profiling".to_string()
+                    ],
+                    verification_requirements: Vec::new(),
+                    dependencies: vec![claim.id.clone()],
+                    claim_type: ClaimType::Performance,
                 });
             }
         }
@@ -770,6 +804,33 @@ impl FactVerifier {
         }
     }
 
+    /// Extract time measurements from claim text
+    fn extract_time_measurements(&self, claim_text: &str) -> Option<String> {
+        if claim_text.contains("ms") || claim_text.contains("seconds") || claim_text.contains("latency") {
+            Some(claim_text.to_string())
+        } else {
+            None
+        }
+    }
+
+    /// Extract throughput measurements from claim text
+    fn extract_throughput_measurements(&self, claim_text: &str) -> Option<String> {
+        if claim_text.contains("throughput") || claim_text.contains("requests per second") || claim_text.contains("RPS") {
+            Some(claim_text.to_string())
+        } else {
+            None
+        }
+    }
+
+    /// Extract resource measurements from claim text
+    fn extract_resource_measurements(&self, claim_text: &str) -> Option<String> {
+        if claim_text.contains("memory") || claim_text.contains("CPU") || claim_text.contains("resource") {
+            Some(claim_text.to_string())
+        } else {
+            None
+        }
+    }
+
     /// Verify by source cross-reference
     async fn verify_by_source_cross_reference(&self, claim: &AtomicClaim, evidence: &[EvidenceItem], _context: &ProcessingContext) -> Result<VerificationResult> {
         let mut supporting_evidence = Vec::new();
@@ -794,8 +855,8 @@ impl FactVerifier {
             claim_id: claim.id.clone(),
             verified: confidence > 0.7,
             confidence,
-            supporting_evidence,
-            contradicting_evidence,
+            supporting_evidence: supporting_evidence.clone(),
+            contradicting_evidence: contradicting_evidence.clone(),
             verification_method: "source_cross_reference".to_string(),
             details: format!("Support: {}, Contradict: {}", supporting_evidence.len(), contradicting_evidence.len()),
         })
@@ -893,8 +954,8 @@ impl FactVerifier {
             claim_id: claim.id.clone(),
             verified,
             confidence: average_confidence,
-            supporting_evidence,
-            contradicting_evidence,
+            supporting_evidence: supporting_evidence.clone(),
+            contradicting_evidence: contradicting_evidence.clone(),
             verification_method: "empirical_testing".to_string(),
             details: format!("Performance verification: {} tests passed, {} tests failed",
                            supporting_evidence.len(), contradicting_evidence.len()),
@@ -980,8 +1041,8 @@ impl FactVerifier {
                 claim_id: claim.id.clone(),
                 verified,
                 confidence,
-                supporting_evidence,
-                contradicting_evidence,
+                supporting_evidence: supporting_evidence.clone(),
+                contradicting_evidence: contradicting_evidence.clone(),
                 verification_method: "security_audit".to_string(),
                 details: format!("Security audit: {} checks passed, {} checks failed",
                                supporting_evidence.len(), contradicting_evidence.len()),
@@ -1070,8 +1131,8 @@ impl FactVerifier {
                 claim_id: claim.id.clone(),
                 verified,
                 confidence,
-                supporting_evidence,
-                contradicting_evidence,
+                supporting_evidence: supporting_evidence.clone(),
+                contradicting_evidence: contradicting_evidence.clone(),
                 verification_method: "standards_check".to_string(),
                 details: format!("Standards compliance: {} standards verified, {} standards missing",
                                supporting_evidence.len(), contradicting_evidence.len()),
@@ -1180,8 +1241,8 @@ impl FactVerifier {
                 claim_id: claim.id.clone(),
                 verified,
                 confidence,
-                supporting_evidence,
-                contradicting_evidence,
+                supporting_evidence: supporting_evidence.clone(),
+                contradicting_evidence: contradicting_evidence.clone(),
                 verification_method: "code_verification".to_string(),
                 details: format!("Code verification: {} checks passed, {} checks failed",
                                supporting_evidence.len(), contradicting_evidence.len()),
@@ -1203,11 +1264,13 @@ impl FactVerifier {
     /// Check if evidence supports claim
     fn evidence_supports_claim(&self, claim: &AtomicClaim, evidence: &EvidenceItem) -> bool {
         // Simplified text similarity check
-        let claim_words: std::collections::HashSet<_> = claim.statement.to_lowercase()
+        let claim_lower = claim.statement.to_lowercase();
+        let claim_words: std::collections::HashSet<_> = claim_lower
             .split_whitespace()
             .collect();
 
-        let evidence_words: std::collections::HashSet<_> = evidence.content.to_lowercase()
+        let evidence_lower = evidence.content.to_lowercase();
+        let evidence_words: std::collections::HashSet<_> = evidence_lower
             .split_whitespace()
             .collect();
 
@@ -1455,14 +1518,34 @@ pub struct ExtractionMetadata {
     pub processing_time_ms: u64,
 }
 
+/// Claim type enumeration
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+pub enum ClaimType {
+    Functional,
+    Performance,
+    Security,
+    Compliance,
+    Documentation,
+    Research,
+    Opinion,
+    Factual,
+}
+
 /// Atomic claim
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AtomicClaim {
     pub id: String,
+    pub claim_text: String,
     pub statement: String,
     pub confidence: f64,
     pub source_context: String,
+    pub source_location: String,
+    pub metadata: serde_json::Value,
+    pub extracted_at: chrono::DateTime<chrono::Utc>,
+    pub evidence_requirements: Vec<String>,
     pub verification_requirements: Vec<String>,
+    pub dependencies: Vec<String>,
+    pub claim_type: ClaimType,
 }
 
 /// Verification requirement
@@ -1550,7 +1633,7 @@ pub enum UnverifiableReason {
 }
 
 /// Evidence item
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Copy)]
 pub enum EvidenceType {
     CodeAnalysis,
     StandardsCompliance,
@@ -1562,6 +1645,7 @@ pub enum EvidenceType {
     SecurityAudit,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct EvidenceItem {
     pub id: String,
     pub content: String,
@@ -1569,6 +1653,7 @@ pub struct EvidenceItem {
     pub tags: Vec<String>,
     pub timestamp: chrono::DateTime<chrono::Utc>,
     pub evidence_type: EvidenceType,
+    pub confidence: f64,
 }
 
 /// Verification result

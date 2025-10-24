@@ -24,8 +24,7 @@ members = [
     "iterations/v3/database",
     "iterations/v3/caching",
     "iterations/v3/memory",
-    "iterations/v3/integration-tests",
-    "iterations/v3/pytorch-wrapper"
+    "iterations/v3/integration-tests"
 ]
 
 [workspace.package]
@@ -35,7 +34,6 @@ authors = ["Darian Rosebrook <darian@example.com>"]
 license = "MIT"
 
 [workspace.dependencies]
-agent-agency-pytorch-wrapper = { path = "iterations/v3/pytorch-wrapper", default-features = false }
 # Core async runtime
 tokio = { version = "1.0", features = ["full"] }
 async-trait = "0.1"

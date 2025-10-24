@@ -106,9 +106,9 @@ impl CrossModalCorrelationEngine {
                     if let Some(related_evidence) = evidence_by_type.get(related_type) {
                         for primary_item in primary_evidence {
                             for related_item in related_evidence {
-                                if let Some(correlation) = self.correlate_items(primary_item, related_item).await? {
-                                    correlations.push(correlation);
-                                    overall_confidence += correlation.confidence;
+                    if let Some(correlation) = self.correlate_items(primary_item, related_item).await? {
+                        overall_confidence += correlation.confidence;
+                        correlations.push(correlation);
                                     correlation_count += 1;
                                 }
                             }
@@ -125,7 +125,7 @@ impl CrossModalCorrelationEngine {
         };
 
         Ok(CorrelationResult {
-            correlations,
+            correlations: correlations.clone(),
             overall_confidence: average_confidence,
             correlation_strength: self.assess_correlation_strength(&correlations),
             timestamp: Utc::now(),
@@ -161,10 +161,12 @@ impl CrossModalCorrelationEngine {
     /// Calculate semantic similarity between two text contents
     fn calculate_semantic_similarity(&self, content1: &str, content2: &str) -> Result<f64> {
         // Simple semantic similarity based on word overlap and length similarity
-        let words1: std::collections::HashSet<_> = content1.to_lowercase()
+        let content1_lower = content1.to_lowercase();
+        let words1: std::collections::HashSet<_> = content1_lower
             .split_whitespace()
             .collect();
-        let words2: std::collections::HashSet<_> = content2.to_lowercase()
+        let content2_lower = content2.to_lowercase();
+        let words2: std::collections::HashSet<_> = content2_lower
             .split_whitespace()
             .collect();
 
@@ -196,7 +198,7 @@ impl CrossModalCorrelationEngine {
 
     /// Calculate contextual confidence based on evidence metadata
     fn calculate_contextual_confidence(&self, item1: &EvidenceItem, item2: &EvidenceItem) -> f64 {
-        let mut confidence = 0.8; // Base confidence
+        let mut confidence: f64 = 0.8; // Base confidence
 
         // Same source increases confidence
         if item1.source == item2.source {
@@ -211,7 +213,7 @@ impl CrossModalCorrelationEngine {
             confidence += 0.05;
         }
 
-        confidence.min(1.0)
+        confidence.min(1.0f64)
     }
 
     /// Extract factors that support the correlation
@@ -285,7 +287,7 @@ impl EvidenceFusionValidator {
         }
 
         let strategy = self.select_fusion_strategy(evidence_set);
-        let fused_confidence = self.apply_fusion_strategy(strategy, evidence_set)?;
+        let fused_confidence = self.apply_fusion_strategy(strategy.clone(), evidence_set)?;
         let contradictions = self.detect_contradictions(evidence_set)?;
 
         Ok(FusionResult {
@@ -330,9 +332,9 @@ impl EvidenceFusionValidator {
                 Ok(weighted_sum / total_weight)
             }
             FusionStrategy::HighestConfidence => {
-                evidence_set.iter()
+                Ok(evidence_set.iter()
                     .map(|e| e.confidence)
-                    .fold(0.0f64, f64::max)
+                    .fold(0.0f64, f64::max))
             }
             FusionStrategy::Consensus => {
                 let avg_confidence = evidence_set.iter()
@@ -340,15 +342,15 @@ impl EvidenceFusionValidator {
                     .sum::<f64>() / evidence_set.len() as f64;
                 let consensus_threshold = 0.8;
                 if evidence_set.iter().all(|e| e.confidence >= consensus_threshold) {
-                    avg_confidence
+                    Ok(avg_confidence)
                 } else {
-                    avg_confidence * 0.8 // Penalty for lack of consensus
+                    Ok(avg_confidence * 0.8) // Penalty for lack of consensus
                 }
             }
             FusionStrategy::Strictest => {
-                evidence_set.iter()
+                Ok(evidence_set.iter()
                     .map(|e| e.confidence)
-                    .fold(1.0f64, f64::min)
+                    .fold(1.0f64, f64::min))
             }
         }
     }
@@ -476,8 +478,8 @@ impl SemanticIntegrator {
 
         for (concept, mappings) in &self.semantic_concepts {
             if let Some(alignment) = self.align_concept(concept, mappings, evidence_set).await? {
-                concept_alignments.push(alignment);
                 overall_alignment_score += alignment.alignment_score;
+                concept_alignments.push(alignment);
             }
         }
 
@@ -488,7 +490,7 @@ impl SemanticIntegrator {
         };
 
         Ok(SemanticAlignmentResult {
-            concept_alignments,
+            concept_alignments: concept_alignments.clone(),
             overall_alignment_score: average_alignment,
             modality_coverage: self.calculate_modality_coverage(evidence_set),
             semantic_consistency: self.assess_semantic_consistency(&concept_alignments),
@@ -526,7 +528,7 @@ impl SemanticIntegrator {
 
         Ok(Some(ConceptAlignment {
             concept: concept.to_string(),
-            modality_evidence,
+            modality_evidence: modality_evidence.clone(),
             alignment_score,
             cross_modal_consistency: self.check_cross_modal_consistency(&modality_evidence),
         }))
@@ -606,17 +608,24 @@ impl Tool for CrossModalCorrelationEngine {
             description: "Correlates evidence across different modalities for comprehensive verification".to_string(),
             category: ToolCategory::Analysis,
             version: "1.0.0".to_string(),
+            input_schema: None,
+            output_schema: None,
+            permissions: vec![],
             capabilities: vec![
                 "evidence_correlation".to_string(),
                 "modality_mapping".to_string(),
                 "semantic_similarity".to_string(),
             ],
+            cost_estimate: Some(0.5),
+            timeout_ms: Some(5000),
+            author: "system".to_string(),
+            license: "MIT".to_string(),
         }
     }
 
-    async fn execute(&self, input: serde_json::Value) -> Result<serde_json::Value> {
+    async fn execute(&self, parameters: serde_json::Value, context: Option<&str>) -> Result<serde_json::Value> {
         // Parse evidence set from input
-        let evidence_set: Vec<EvidenceItem> = serde_json::from_value(input)?;
+        let evidence_set: Vec<EvidenceItem> = serde_json::from_value(parameters)?;
         let result = self.correlate_evidence(&evidence_set).await?;
         Ok(serde_json::to_value(result)?)
     }
@@ -636,11 +645,30 @@ impl Tool for EvidenceFusionValidator {
                 "contradiction_detection".to_string(),
                 "consensus_analysis".to_string(),
             ],
+            author: "Tool Ecosystem".to_string(),
+            cost_estimate: Some(0.5),
+            input_schema: Some(serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "evidence_sources": {"type": "array", "items": {"type": "object"}},
+                    "fusion_strategy": {"type": "string"}
+                }
+            })),
+            output_schema: Some(serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "fused_result": {"type": "object"},
+                    "confidence": {"type": "number"}
+                }
+            })),
+            permissions: vec!["read_evidence".to_string()],
+            timeout_ms: Some(5000),
+            license: "MIT".to_string(),
         }
     }
 
-    async fn execute(&self, input: serde_json::Value) -> Result<serde_json::Value> {
-        let (evidence_set, claim): (Vec<EvidenceItem>, AtomicClaim) = serde_json::from_value(input)?;
+    async fn execute(&self, parameters: serde_json::Value, context: Option<&str>) -> Result<serde_json::Value> {
+        let (evidence_set, claim): (Vec<EvidenceItem>, AtomicClaim) = serde_json::from_value(parameters)?;
         let result = self.fuse_evidence(&evidence_set, &claim).await?;
         Ok(serde_json::to_value(result)?)
     }
@@ -660,11 +688,30 @@ impl Tool for SemanticIntegrator {
                 "modality_integration".to_string(),
                 "concept_mapping".to_string(),
             ],
+            author: "Tool Ecosystem".to_string(),
+            cost_estimate: Some(0.3),
+            input_schema: Some(serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "modalities": {"type": "array", "items": {"type": "object"}},
+                    "integration_strategy": {"type": "string"}
+                }
+            })),
+            output_schema: Some(serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "integrated_result": {"type": "object"},
+                    "alignment_score": {"type": "number"}
+                }
+            })),
+            permissions: vec!["read_modalities".to_string()],
+            timeout_ms: Some(3000),
+            license: "MIT".to_string(),
         }
     }
 
-    async fn execute(&self, input: serde_json::Value) -> Result<serde_json::Value> {
-        let evidence_set: Vec<EvidenceItem> = serde_json::from_value(input)?;
+    async fn execute(&self, parameters: serde_json::Value, context: Option<&str>) -> Result<serde_json::Value> {
+        let evidence_set: Vec<EvidenceItem> = serde_json::from_value(parameters)?;
         let result = self.align_semantics(&evidence_set).await?;
         Ok(serde_json::to_value(result)?)
     }

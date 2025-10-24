@@ -27,15 +27,20 @@ pub struct ConflictResolutionTool {
 impl ConflictResolutionTool {
     /// Create a new conflict resolution tool
     pub async fn new() -> Result<Self> {
-        let debate_orchestrator = Arc::new(DebateOrchestrator::new(10, 0.7));
-        let consensus_builder = Arc::new(ConsensusBuilder::new());
-        let evidence_synthesizer = Arc::new(EvidenceSynthesizer::new());
+        let debate_orchestrator = Arc::new(DebateOrchestrator::new().await?);
+        let consensus_builder = Arc::new(ConsensusBuilder::new().await?);
+        let evidence_synthesizer = Arc::new(EvidenceSynthesizer::new().await?);
 
         Ok(Self {
             debate_orchestrator,
             consensus_builder,
             evidence_synthesizer,
         })
+    }
+
+    /// Stub implementation for conflict resolution
+    pub async fn resolve_conflicts(&self, _conflicts: &serde_json::Value) -> Result<serde_json::Value> {
+        Ok(_conflicts.clone()) // Stub: return unchanged
     }
 }
 
@@ -250,9 +255,9 @@ impl DebateOrchestrator {
 
         // Boost confidence if we have diverse evidence coverage
         let total_evidence: usize = arguments.iter().map(|a| a.evidence_references.len()).sum();
-        let evidence_boost = (total_evidence as f64 / arguments.len() as f64).min(2.0) * 0.1;
+        let evidence_boost = (total_evidence as f64 / arguments.len() as f64).min(2.0f64) * 0.1;
 
-        Ok((avg_confidence + evidence_boost).min(1.0))
+        Ok((avg_confidence + evidence_boost).min(1.0f64))
     }
 
     /// Conclude a debate
@@ -522,7 +527,7 @@ impl EvidenceSynthesizer {
     /// Calculate source reliability weight
     async fn calculate_source_reliability(&self, evidence: &EvidenceItem) -> Result<f64> {
         // Simplified reliability calculation
-        let mut reliability = 0.5; // Base reliability
+        let mut reliability: f64 = 0.5; // Base reliability
 
         if evidence.tags.contains(&"verified".to_string()) {
             reliability += 0.3;
@@ -534,7 +539,7 @@ impl EvidenceSynthesizer {
             reliability += 0.1;
         }
 
-        Ok(reliability.min(1.0))
+        Ok(reliability.min(1.0f64))
     }
 
     /// Calculate recency weight
@@ -582,7 +587,7 @@ impl EvidenceSynthesizer {
         }
 
         Ok(ConflictAnalysis {
-            conflicts,
+            conflicts: conflicts.clone(),
             resolved,
             unresolved: conflicts.len(),
         })
@@ -602,7 +607,7 @@ impl EvidenceSynthesizer {
         let a_has_positive = positive_indicators.iter().any(|&word| a_text.contains(word));
         let a_has_negative = negative_indicators.iter().any(|&word| a_text.contains(word));
         let b_has_positive = positive_indicators.iter().any(|&word| b_text.contains(word));
-        let b_has_negative = negative_indicators.iter().any(|&&word| b_text.contains(word));
+        let b_has_negative = negative_indicators.iter().any(|&word| b_text.contains(word));
 
         (a_has_positive && b_has_negative) || (a_has_negative && b_has_positive)
     }
@@ -638,7 +643,7 @@ impl EvidenceSynthesizer {
         let avg_weight = if weights.is_empty() { 0.0 } else { total_weight / weights.len() as f64 };
         let conflict_penalty = conflicts.unresolved as f64 * 0.1; // 10% penalty per unresolved conflict
 
-        Ok((avg_weight - conflict_penalty).max(0.0).min(1.0))
+        Ok((avg_weight - conflict_penalty).max(0.0f64).min(1.0f64))
     }
 }
 
@@ -699,6 +704,18 @@ pub enum DebateStance {
     QualityFocus,
     SystemCoherence,
     Balanced,
+}
+
+impl std::fmt::Display for DebateStance {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            DebateStance::StrictCompliance => write!(f, "Strict Compliance"),
+            DebateStance::TechnicalMerit => write!(f, "Technical Merit"),
+            DebateStance::QualityFocus => write!(f, "Quality Focus"),
+            DebateStance::SystemCoherence => write!(f, "System Coherence"),
+            DebateStance::Balanced => write!(f, "Balanced"),
+        }
+    }
 }
 
 /// Debate status

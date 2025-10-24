@@ -11,7 +11,6 @@ use tokio::sync::RwLock;
 use tracing::{debug, info, warn};
 
 /// Central tool registry
-#[derive(Debug)]
 pub struct ToolRegistry {
     /// Registered tools by name
     tools: Arc<RwLock<HashMap<String, RegisteredTool>>>,
@@ -22,7 +21,7 @@ pub struct ToolRegistry {
 }
 
 /// A registered tool in the ecosystem
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct RegisteredTool {
     /// Tool metadata
     pub metadata: ToolMetadata,
@@ -39,6 +38,8 @@ pub struct RegisteredTool {
 /// Tool metadata for discovery and documentation
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ToolMetadata {
+    /// Tool ID (unique identifier)
+    pub id: String,
     /// Tool name (unique identifier)
     pub name: String,
     /// Human-readable description
@@ -82,6 +83,42 @@ pub enum ToolCategory {
     Reasoning,
     /// Workflow and orchestration
     Workflow,
+    /// Analysis and data processing
+    Analysis,
+    /// Validation and verification
+    Validation,
+}
+
+impl std::fmt::Display for ToolCategory {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ToolCategory::Policy => write!(f, "Policy"),
+            ToolCategory::ConflictResolution => write!(f, "ConflictResolution"),
+            ToolCategory::EvidenceCollection => write!(f, "EvidenceCollection"),
+            ToolCategory::Governance => write!(f, "Governance"),
+            ToolCategory::QualityGate => write!(f, "QualityGate"),
+            ToolCategory::Reasoning => write!(f, "Reasoning"),
+            ToolCategory::Workflow => write!(f, "Workflow"),
+            ToolCategory::Analysis => write!(f, "Analysis"),
+            ToolCategory::Validation => write!(f, "Validation"),
+        }
+    }
+}
+
+impl ToolCategory {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            ToolCategory::Policy => "Policy",
+            ToolCategory::ConflictResolution => "ConflictResolution",
+            ToolCategory::EvidenceCollection => "EvidenceCollection",
+            ToolCategory::Governance => "Governance",
+            ToolCategory::QualityGate => "QualityGate",
+            ToolCategory::Reasoning => "Reasoning",
+            ToolCategory::Workflow => "Workflow",
+            ToolCategory::Analysis => "Analysis",
+            ToolCategory::Validation => "Validation",
+        }
+    }
 }
 
 /// Tool registration information
@@ -127,7 +164,7 @@ pub struct ToolHealth {
 #[async_trait::async_trait]
 pub trait Tool: Send + Sync {
     /// Get tool metadata
-    fn metadata(&self) -> &ToolMetadata;
+    fn metadata(&self) -> ToolMetadata;
 
     /// Execute the tool
     async fn execute(&self, parameters: serde_json::Value, context: Option<&str>) -> Result<serde_json::Value>;
@@ -140,7 +177,7 @@ pub trait Tool: Send + Sync {
                 .map_err(|e| anyhow::anyhow!("Invalid schema: {}", e))?;
 
             compiled.validate(parameters)
-                .map_err(|e| anyhow::anyhow!("Parameter validation failed: {:?}", e))?;
+                .map_err(|e| anyhow::anyhow!("Parameter validation failed: {}", e.map(|err| format!("{:?}", err)).collect::<Vec<_>>().join(", ")))?;
         }
 
         Ok(())

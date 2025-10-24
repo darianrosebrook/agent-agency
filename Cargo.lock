@@ -59,7 +59,6 @@ dependencies = [
 name = "agent-agency-apple-silicon"
 version = "0.1.0"
 dependencies = [
- "agent-agency-pytorch-wrapper",
  "anyhow",
  "async-trait",
  "bytemuck",
@@ -391,23 +390,6 @@ dependencies = [
  "tokio-test",
  "tracing",
  "uuid",
-]
-
-[[package]]
-name = "agent-agency-pytorch-wrapper"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "ndarray 0.15.6",
- "num_cpus",
- "serde",
- "serde_json",
- "tch",
- "thiserror 1.0.69",
- "tokio",
- "torch-sys",
- "tracing",
 ]
 
 [[package]]
@@ -10998,6 +10980,7 @@ dependencies = [
  "jsonschema",
  "model-benchmarking",
  "petgraph",
+ "rand 0.8.5",
  "regex",
  "reqwest 0.11.27",
  "serde",

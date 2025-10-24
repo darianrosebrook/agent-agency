@@ -17348,5 +17348,39 @@
     },
     "previous_hash": "0094292cc761d1e50495f3c3cb132b9431229eabbf8c749adc97adc31ad37ff6",
     "hash": "10de9e4472bf96ec3020c4658d565667b2c4d284aab6e82f8047e53fc43519e1"
+  },
+  {
+    "id": "prov-1761261382104",
+    "timestamp": "2025-10-23T23:16:22.104Z",
+    "commit": {
+      "hash": "2149df7c472e44f9b1a216c269f11607fdf5e7ee",
+      "message": "🚀 MAJOR COMPILATION FIXES - Core Crates Now Compile!",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "AGENT-001",
+      "title": "P0 Blockers: Truthful System Loop with Auditability and Control",
+      "risk_tier": 1,
+      "mode": "feature",
+      "waiver_ids": []
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-23T23:16:22.104Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "10de9e4472bf96ec3020c4658d565667b2c4d284aab6e82f8047e53fc43519e1",
+    "hash": "7b1b0688d7ca85591c2d8d6a33abba69759da9e58cbf289faa7c3ed9f5da8aae"
   }
 ]

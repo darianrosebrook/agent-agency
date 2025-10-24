@@ -13,7 +13,6 @@ use tracing::{info, debug, warn};
 use crate::tool_registry::{ToolMetadata, ToolCategory};
 
 /// Tool discovery engine
-#[derive(Debug)]
 pub struct ToolDiscoveryEngine {
     /// Discovered capabilities cache
     discovered_capabilities: Arc<RwLock<HashMap<String, ToolCapability>>>,
@@ -326,24 +325,29 @@ impl ToolDiscoveryEngine {
         let capabilities = self.get_cached_capabilities().await;
         let mut recommendations = Vec::new();
 
-        for (name, capability) in capabilities {
+        // Collect capabilities that meet minimum threshold first
+        let mut candidate_capabilities = Vec::new();
+        for (_name, capability) in &capabilities {
             let match_score = self.calculate_match_score(&capability, requirements).await?;
-            let risk_assessment = self.assess_risks(&capability, requirements).await?;
-
             if match_score > 0.3 { // Minimum threshold for consideration
-                let reasons = self.generate_recommendation_reasons(&capability, requirements, match_score).await;
-
-                // Find alternatives
-                let alternatives = self.find_alternatives(&capability, &capabilities).await;
-
-                recommendations.push(ToolRecommendation {
-                    tool: capability,
-                    match_score,
-                    reasons,
-                    alternatives,
-                    risk_assessment,
-                });
+                candidate_capabilities.push((capability.clone(), match_score));
             }
+        }
+
+        for (capability, match_score) in candidate_capabilities {
+            let risk_assessment = self.assess_risks(&capability, requirements).await?;
+            let reasons = self.generate_recommendation_reasons(&capability, requirements, match_score).await;
+
+            // Find alternatives
+            let alternatives = self.find_alternatives(&capability, &capabilities).await;
+
+            recommendations.push(ToolRecommendation {
+                tool: capability,
+                match_score,
+                reasons,
+                alternatives,
+                risk_assessment,
+            });
         }
 
         // Sort by match score (highest first)
@@ -506,6 +510,17 @@ impl ToolDiscoveryEngine {
     /// Add custom discovery source
     pub fn add_discovery_source(&mut self, source: Arc<dyn DiscoverySource>) {
         self.discovery_sources.push(source);
+    }
+
+    /// Get coverage rate for discovered tools
+    pub async fn get_coverage_rate(&self) -> f64 {
+        let capabilities = self.discovered_capabilities.read().await;
+        if capabilities.is_empty() {
+            0.0
+        } else {
+            // Simplified: return percentage of expected capabilities found
+            (capabilities.len() as f64 / 100.0).min(1.0) // Cap at 100%
+        }
     }
 }
 
