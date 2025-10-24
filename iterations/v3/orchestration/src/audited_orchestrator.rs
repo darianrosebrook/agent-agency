@@ -93,6 +93,8 @@ impl AuditedOrchestrator {
     /// Create a new audited orchestrator
     pub fn new(config: AuditedOrchestratorConfig) -> Self {
         let audit_manager = Arc::new(AuditTrailManager::new(config.audit_config));
+        let progress_tracker = Arc::new(crate::tracking::progress_tracker::ProgressTracker::new());
+        let db_client = config.db_client.clone();
         let orchestrator = Arc::new(Orchestrator::new_with_dependencies(
             config.orchestrator_config,
             progress_tracker,
