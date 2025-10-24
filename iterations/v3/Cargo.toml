@@ -1,10 +1,9 @@
 [workspace]
 resolver = "2"
-members = [ 
+members = [
     "apple-silicon",  # Re-enabled after fixing torch integration and type imports
     "caws/runtime-validator",  # Consolidated CAWS validation service
-    "parallel-workers",  # Parallel task execution system
-    "workers",
+    "agent-workers",  # 🔄 NEW: Consolidated MCP-based worker system
     "research",
     "agent-mcp",  # Consolidated MCP implementation
     "provenance",
@@ -21,6 +20,7 @@ members = [
     "observability",  # Re-enabled - compiles successfully
     "interfaces",  # MCP interface implementation
     "source-integrity",  # Re-enabled - compiles successfully
+    "agent-memory",  # 🧠 NEW: Agent memory system with knowledge graphs and embeddings
     "config",
     "database",
     "recovery",

@@ -1,146 +1,131 @@
 //! MCP Integration for Workers
 //!
-//! Provides the bridge between workers and MCP tools, enabling
-//! tool discovery, registration, and execution.
+//! Provides the bridge between workers and the agent-mcp crate's tool registry.
+//! Services register their capabilities as MCP tools that workers can discover and use.
 
-use crate::types::*;
-use agent_mcp::{MCPServer, ToolExecutionRequest, ToolExecutionResult};
-use std::collections::HashMap;
+use agent_mcp::{ToolRegistry, MCPTool, ToolExecutionRequest, ToolExecutionResult, ToolType, ToolCapability, ToolParameters, ParameterDefinition, ParameterConstraint};
 use std::sync::Arc;
-use tokio::sync::RwLock;
-use tracing::{info, warn};
 
-/// Registry for MCP tools available to workers
-pub struct MCPToolRegistry {
-    tools: Arc<RwLock<HashMap<ToolId, ToolMetadata>>>,
-    mcp_server: Option<Arc<MCPServer>>,
+/// MCP integration layer for workers
+pub struct MCPIntegration {
+    tool_registry: Arc<ToolRegistry>,
 }
 
-impl MCPToolRegistry {
-    /// Create a new empty tool registry
-    pub fn new() -> Self {
-        Self {
-            tools: Arc::new(RwLock::new(HashMap::new())),
-            mcp_server: None,
+impl MCPIntegration {
+    /// Create new MCP integration with a tool registry
+    pub fn new(tool_registry: Arc<ToolRegistry>) -> Self {
+        Self { tool_registry }
+    }
+
+    /// Get access to the underlying tool registry
+    pub fn registry(&self) -> Arc<ToolRegistry> {
+        Arc::clone(&self.tool_registry)
+    }
+
+    /// Register a service's tools with the MCP registry
+    pub async fn register_service_tools(&self, service_name: &str, tools: Vec<MCPTool>) -> Result<(), MCPIntegrationError> {
+        for tool in tools {
+            self.tool_registry.register_tool(tool)
+                .await
+                .map_err(|e| MCPIntegrationError::ToolRegistrationFailed(format!("{}: {}", service_name, e)))?;
         }
+        Ok(())
     }
 
-    /// Create a registry with an MCP server connection
-    pub fn with_server(mcp_server: Arc<MCPServer>) -> Self {
-        Self {
-            tools: Arc::new(RwLock::new(HashMap::new())),
-            mcp_server: Some(mcp_server),
-        }
-    }
-
-    /// Register a tool in the registry
-    pub async fn register_tool(&self, metadata: ToolMetadata) {
-        let mut tools = self.tools.write().await;
-        tools.insert(metadata.id.clone(), metadata.clone());
-        info!("Registered MCP tool: {} ({})", metadata.name, metadata.id);
-    }
-
-    /// Check if a tool is available
-    pub async fn has_tool(&self, tool_id: &ToolId) -> bool {
-        let tools = self.tools.read().await;
-        tools.contains_key(tool_id)
-    }
-
-    /// Get tool metadata
-    pub async fn get_tool(&self, tool_id: &ToolId) -> Option<ToolMetadata> {
-        let tools = self.tools.read().await;
-        tools.get(tool_id).cloned()
-    }
-
-    /// Discover tools from MCP server
-    pub async fn discover_tools(&self) -> Result<Vec<ToolMetadata>, MCPIntegrationError> {
-        if let Some(server) = &self.mcp_server {
-            // In a real implementation, this would query the MCP server
-            // For now, return mock tools
-            Ok(vec![
-                ToolMetadata {
-                    id: "react-generator".to_string(),
-                    name: "React Component Generator".to_string(),
-                    description: "Generates React components with TypeScript and SCSS modules".to_string(),
-                    version: "1.0.0".to_string(),
-                    capabilities: vec!["react".to_string(), "typescript".to_string(), "scss".to_string()],
-                    parameters: HashMap::new(),
-                },
-                ToolMetadata {
-                    id: "file-editor".to_string(),
-                    name: "File Editor".to_string(),
-                    description: "Edits files with context-aware changes".to_string(),
-                    version: "1.0.0".to_string(),
-                    capabilities: vec!["file-editing".to_string(), "context-aware".to_string()],
-                    parameters: HashMap::new(),
-                },
-                ToolMetadata {
-                    id: "research-assistant".to_string(),
-                    name: "Research Assistant".to_string(),
-                    description: "Gathers and synthesizes research information".to_string(),
-                    version: "1.0.0".to_string(),
-                    capabilities: vec!["research".to_string(), "synthesis".to_string()],
-                    parameters: HashMap::new(),
-                },
-            ])
-        } else {
-            Err(MCPIntegrationError::NoMCPServer)
-        }
+    /// Execute a tool using the MCP registry
+    pub async fn execute_tool(&self, request: ToolExecutionRequest) -> Result<ToolExecutionResult, MCPIntegrationError> {
+        self.tool_registry.execute_tool(request)
+            .await
+            .map_err(|e| MCPIntegrationError::ExecutionFailed(e.to_string()))
     }
 
     /// Get all available tools
-    pub async fn get_available_tools(&self) -> Vec<ToolMetadata> {
-        let tools = self.tools.read().await;
-        tools.values().cloned().collect()
+    pub async fn list_tools(&self) -> Vec<MCPTool> {
+        self.tool_registry.get_all_tools().await
     }
 
-    /// Get tools by capability
-    pub async fn get_tools_by_capability(&self, capability: &str) -> Vec<ToolMetadata> {
-        let tools = self.tools.read().await;
-        tools.values()
-            .filter(|tool| tool.capabilities.contains(&capability.to_string()))
-            .cloned()
-            .collect()
+    /// Check if a tool is available
+    pub async fn has_tool(&self, tool_id: uuid::Uuid) -> bool {
+        self.tool_registry.get_tool(tool_id).await.is_some()
     }
-}
-
-/// Tool capabilities and requirements
-#[derive(Debug, Clone)]
-pub struct ToolCapabilities {
-    pub supported_tasks: Vec<String>,
-    pub input_formats: Vec<String>,
-    pub output_formats: Vec<String>,
-    pub performance_characteristics: ToolPerformance,
-}
-
-/// Performance characteristics of a tool
-#[derive(Debug, Clone)]
-pub struct ToolPerformance {
-    pub average_execution_time_ms: f64,
-    pub success_rate: f64,
-    pub resource_usage: ResourceUsage,
-}
-
-/// Resource usage metrics
-#[derive(Debug, Clone)]
-pub struct ResourceUsage {
-    pub cpu_percent: f64,
-    pub memory_mb: f64,
-    pub network_bytes: u64,
 }
 
 /// Errors from MCP integration
 #[derive(Debug, thiserror::Error)]
 pub enum MCPIntegrationError {
-    #[error("No MCP server configured")]
-    NoMCPServer,
-
-    #[error("Tool discovery failed: {0}")]
-    ToolDiscoveryFailed(String),
-
     #[error("Tool registration failed: {0}")]
     ToolRegistrationFailed(String),
 
-    #[error("MCP protocol error: {0}")]
-    MCPProtocolError(String),
+    #[error("Tool execution failed: {0}")]
+    ExecutionFailed(String),
+
+    #[error("Service not available: {0}")]
+    ServiceUnavailable(String),
+}
+
+/// Helper function to create a tool definition with proper schema
+pub fn create_tool_definition(
+    name: &str,
+    description: &str,
+    tool_type: ToolType,
+    capabilities: Vec<ToolCapability>,
+    required_params: Vec<ParameterDefinition>,
+    optional_params: Vec<ParameterDefinition>,
+) -> MCPTool {
+    use chrono::Utc;
+    use std::collections::HashMap;
+
+    MCPTool {
+        id: uuid::Uuid::new_v4(),
+        name: name.to_string(),
+        description: description.to_string(),
+        version: "1.0.0".to_string(),
+        author: "agent-agency".to_string(),
+        tool_type,
+        capabilities,
+        parameters: ToolParameters {
+            required: required_params,
+            optional: optional_params,
+            constraints: vec![], // Can be extended later
+        },
+        output_schema: serde_json::json!({
+            "type": "object",
+            "properties": {
+                "success": {"type": "boolean"},
+                "result": {"type": "object"},
+                "execution_time_ms": {"type": "number"}
+            }
+        }),
+        endpoint: format!("/tools/{}", name),
+        manifest: agent_mcp::ToolManifest {
+            format_version: "1.0".to_string(),
+            tool_version: "1.0.0".to_string(),
+            dependencies: vec![],
+            security_requirements: vec![],
+            performance_requirements: Default::default(),
+        },
+        caws_compliance: agent_mcp::CawsComplianceStatus::Compliant,
+        registration_time: Utc::now(),
+        last_updated: Utc::now(),
+        usage_count: 0,
+        metadata: HashMap::new(),
+    }
+}
+
+/// Helper to create a parameter definition
+pub fn create_parameter(
+    name: &str,
+    description: &str,
+    param_type: &str,
+    required: bool,
+    default_value: Option<serde_json::Value>,
+) -> ParameterDefinition {
+    ParameterDefinition {
+        name: name.to_string(),
+        description: description.to_string(),
+        param_type: param_type.to_string(),
+        required,
+        default_value,
+        validation_rules: vec![], // Can be extended
+    }
 }

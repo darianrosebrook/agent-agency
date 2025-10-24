@@ -42,17 +42,6 @@ agent-agency/
 ├── iterations/
 │   ├── v2/               # TypeScript multi-component agent orchestration
 │   ├── v3/               # Rust-based advanced AI capabilities
-│   │   ├── config/       # Configuration files (API, Rust, environment)
-│   │   ├── scripts/      # Organized automation scripts (build/test/deploy)
-│   │   ├── demo/         # Demonstration and prototype code
-│   │   ├── languages/    # Non-Rust components (Swift, Python)
-│   │   ├── temp/         # Temporary development files
-│   │   ├── environments/ # Isolated development environments
-│   │   ├── build/        # Build artifacts
-│   │   ├── docs/         # Documentation and logs
-│   │   ├── models/       # ML models and assets
-│   │   ├── tools/        # Development tools and installers
-│   │   └── [40+ crates]  # Core Rust functionality
 │   ├── poc/              # Multi-tenant memory systems reference
 │   ├── main/             # Reserved for stable research artifacts
 │   └── arbiter-poc/      # Arbiter-specific research experiments

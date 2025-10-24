@@ -4,6 +4,9 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
 
+// Import memory types for core integration
+use agent_memory::{MemoryConfig, ContextConfig, OffloadStrategy};
+
 /// Unique identifier for workers
 pub type WorkerId = Uuid;
 
@@ -101,6 +104,26 @@ pub struct WorkerCapabilities {
     pub max_concurrent_tasks: usize,
     pub health_status: WorkerHealth,
     pub performance_metrics: WorkerPerformance,
+    /// Core memory system - every agent has memory capabilities
+    pub memory_config: WorkerMemoryConfig,
+}
+
+impl Default for WorkerCapabilities {
+    fn default() -> Self {
+        Self {
+            specialties: vec![WorkerSpecialty::General],
+            available_tools: vec![],
+            max_concurrent_tasks: 5,
+            health_status: WorkerHealth::Healthy,
+            performance_metrics: WorkerPerformance {
+                tasks_completed: 0,
+                tasks_failed: 0,
+                average_execution_time_ms: 0.0,
+                success_rate: 0.0,
+            },
+            memory_config: WorkerMemoryConfig::default(),
+        }
+    }
 }
 
 /// Worker performance metrics
@@ -110,6 +133,47 @@ pub struct WorkerPerformance {
     pub tasks_failed: u64,
     pub average_execution_time_ms: f64,
     pub success_rate: f64,
+}
+
+/// Memory configuration for workers - core agent capability
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WorkerMemoryConfig {
+    /// Maximum episodic memories to retain
+    pub max_episodic_memories: usize,
+    /// Maximum semantic memories to retain
+    pub max_semantic_memories: usize,
+    /// Memory decay factor (0.0-1.0, lower = faster forgetting)
+    pub decay_factor: f32,
+    /// Importance threshold for memory consolidation
+    pub consolidation_threshold: f32,
+    /// Working memory context limit
+    pub working_memory_limit: usize,
+    /// Enable multi-hop reasoning
+    pub enable_reasoning: bool,
+    /// Maximum reasoning depth
+    pub max_reasoning_depth: usize,
+}
+
+impl Default for WorkerMemoryConfig {
+    fn default() -> Self {
+        Self {
+            max_episodic_memories: 1000,
+            max_semantic_memories: 5000,
+            decay_factor: 0.95, // 5% daily decay
+            consolidation_threshold: 0.7, // Consolidate important memories
+            working_memory_limit: 10, // Keep 10 active contexts
+            enable_reasoning: true, // Enable multi-hop reasoning
+            max_reasoning_depth: 3, // 3-hop reasoning limit
+        }
+    }
+}
+
+impl From<WorkerMemoryConfig> for agent_memory::MemoryConfig {
+    fn from(_worker_config: WorkerMemoryConfig) -> Self {
+        // For shared memory system, all agents use the same global config
+        // Individual worker memory configs are used for access permissions, not storage config
+        agent_memory::MemoryConfig::default()
+    }
 }
 
 /// Task execution context

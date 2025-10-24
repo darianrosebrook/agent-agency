@@ -31,6 +31,9 @@ agent-agency-resilience = { path = "../resilience" }
 # Database client
 agent-agency-database = { path = "../database" }
 
+# Core memory system - every agent has memory
+agent-memory = { path = "../agent-memory" }
+
 # Additional utilities
 dashmap = "5.5"
 parking_lot = "0.12"

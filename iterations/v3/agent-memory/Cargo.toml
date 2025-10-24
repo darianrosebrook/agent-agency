@@ -1,0 +1,73 @@
+[package]
+name = "agent-memory"
+version = "0.1.0"
+edition = "2021"
+authors = ["Darian Rosebrook <darian@example.com>"]
+description = "Enterprise-grade agent memory system with knowledge graphs, vector embeddings, and temporal reasoning"
+license = "MIT"
+
+[dependencies]
+# Core async runtime
+tokio = { workspace = true, features = ["full"] }
+async-trait = { workspace = true }
+
+# Serialization
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+
+# Database
+sqlx = { workspace = true, features = ["runtime-tokio-rustls", "postgres", "chrono", "uuid"] }
+chrono = { workspace = true, features = ["serde"] }
+
+# HTTP and web
+reqwest = { workspace = true, features = ["json", "stream"] }
+
+# Logging and observability
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true, features = ["env-filter"] }
+
+# Error handling
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+
+# Utilities
+uuid = { workspace = true, features = ["v4", "serde"] }
+regex = "1.10"
+
+# Concurrent data structures
+dashmap = { workspace = true }
+
+# Half-precision floating point for embeddings
+half = { workspace = true }
+
+# Vector operations for embeddings
+ndarray = { workspace = true }
+
+# Random number generation
+rand = { workspace = true, features = ["std"] }
+
+# Compression for context offloading
+flate2 = "1.0"
+
+# Hashing for content integrity
+sha2 = "0.10"
+
+# Configuration
+config = { workspace = true }
+
+# Integration with existing services
+agent-agency-database = { path = "../database" }
+embedding-service = { path = "../embedding-service", optional = true }
+
+[dev-dependencies]
+tokio-test = "0.4"
+tempfile = "3.8"
+criterion = { version = "0.5", features = ["html_reports"] }
+
+[features]
+default = ["embeddings", "graph-reasoning"]
+embeddings = ["embedding-service"]
+graph-reasoning = []
+temporal-analysis = []
+context-offloading = []
+provenance-tracking = []

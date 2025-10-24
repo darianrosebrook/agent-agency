@@ -7,6 +7,7 @@ use tracing::{info, warn};
 use validator::Validate;
 
 use super::environment::secure_loader;
+use agent_memory::MemoryConfig;
 
 /// Main application configuration
 #[derive(Debug, Clone, Serialize, Deserialize, Validate)]
@@ -148,6 +149,8 @@ pub struct ComponentConfigs {
     pub parallel_workers: ParallelWorkersConfig,
     pub provenance: ProvenanceConfig,
     pub apple_silicon: AppleSiliconConfig,
+    /// Core memory system configuration - every agent has memory
+    pub memory: MemoryConfig,
 }
 
 /// Orchestration configuration
@@ -584,6 +587,7 @@ impl AppConfig {
                     max_cpu_cores: 8,
                     max_memory_gb: 16,
                 },
+                memory: MemoryConfig::default(),
             },
             environment: EnvironmentConfig {
                 development: Some(EnvironmentOverrides {

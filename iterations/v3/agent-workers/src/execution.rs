@@ -27,45 +27,125 @@ impl ToolExecutor {
             return Err(ExecutionError::ToolNotFound(context.tool_id));
         }
 
-        // Simulate MCP tool execution based on tool type
+        // Execute generic MCP tools that can be composed by workers
         let result = match context.tool_id.as_str() {
-            "react-generator" => self.execute_react_generator(&context).await,
-            "file-editor" => self.execute_file_editor(&context).await,
-            "research-assistant" => self.execute_research_assistant(&context).await,
+            "file_writer" => self.execute_file_writer(&context).await,
+            "file_reader" => self.execute_file_reader(&context).await,
+            "code_generator" => self.execute_code_generator(&context).await,
+            "search_tool" => self.execute_search_tool(&context).await,
+            "validator" => self.execute_validator(&context).await,
             _ => Err(ExecutionError::UnknownTool(context.tool_id)),
         }?;
 
         Ok(result)
     }
 
-    /// Execute React component generation
-    async fn execute_react_generator(&self, context: &TaskContext) -> Result<ExecutionResult, ExecutionError> {
-        let component_name = context.parameters
-            .get("componentName")
+    /// Execute file writer tool
+    async fn execute_file_writer(&self, context: &TaskContext) -> Result<ExecutionResult, ExecutionError> {
+        let file_path = context.parameters
+            .get("file_path")
             .and_then(|v| v.as_str())
-            .unwrap_or("MyComponent");
+            .ok_or_else(|| ExecutionError::InvalidParameters("file_path required".to_string()))?;
 
-        let component_code = format!(
-            "import React from 'react';\n\
-             import styles from './{}.module.scss';\n\
-             \n\
-             interface {}Props {{\n\
-             \tchildren?: React.ReactNode;\n\
-             }}\n\
-             \n\
-             export const {}: React.FC<{}Props> = ({{ children }}) => {{\n\
-             \treturn (\n\
-             \t\t<div className={{styles.container}}>\n\
-             \t\t\t{{children}}\n\
-             \t\t</div>\n\
-             \t);\n\
-             }};",
-            component_name.to_lowercase(), component_name, component_name, component_name
-        );
+        let content = context.parameters
+            .get("content")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| ExecutionError::InvalidParameters("content required".to_string()))?;
+
+        // In a real MCP implementation, this would write to the actual file system
+        // For now, simulate successful file writing
+        let output = serde_json::json!({
+            "file_path": file_path,
+            "content_length": content.len(),
+            "written": true
+        });
+
+        Ok(ExecutionResult {
+            success: true,
+            output: Some(output),
+            error_message: None,
+            execution_time_ms: 10,
+            tool_id: context.tool_id.clone(),
+        })
+    }
+
+    /// Execute file reader tool
+    async fn execute_file_reader(&self, context: &TaskContext) -> Result<ExecutionResult, ExecutionError> {
+        let file_path = context.parameters
+            .get("file_path")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| ExecutionError::InvalidParameters("file_path required".to_string()))?;
+
+        // In a real MCP implementation, this would read from the actual file system
+        // For now, simulate reading a file
+        let simulated_content = format!("// Contents of {}\nconsole.log('Hello from {}');\n", file_path, file_path);
 
         let output = serde_json::json!({
-            "component": component_code,
-            "files": [format!("{}.tsx", component_name)]
+            "file_path": file_path,
+            "content": simulated_content,
+            "read": true
+        });
+
+        Ok(ExecutionResult {
+            success: true,
+            output: Some(output),
+            error_message: None,
+            execution_time_ms: 5,
+            tool_id: context.tool_id.clone(),
+        })
+    }
+
+    /// Execute code generator tool
+    async fn execute_code_generator(&self, context: &TaskContext) -> Result<ExecutionResult, ExecutionError> {
+        let prompt = context.parameters
+            .get("prompt")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| ExecutionError::InvalidParameters("prompt required".to_string()))?;
+
+        let language = context.parameters
+            .get("language")
+            .and_then(|v| v.as_str())
+            .unwrap_or("typescript");
+
+        // In a real MCP implementation, this would use an AI model to generate code
+        // For now, simulate code generation based on the prompt
+        let generated_code = self.generate_code_from_prompt(prompt, language);
+
+        let output = serde_json::json!({
+            "prompt": prompt,
+            "language": language,
+            "generated_code": generated_code,
+            "confidence": 0.85
+        });
+
+        Ok(ExecutionResult {
+            success: true,
+            output: Some(output),
+            error_message: None,
+            execution_time_ms: 150,
+            tool_id: context.tool_id.clone(),
+        })
+    }
+
+    /// Execute search tool
+    async fn execute_search_tool(&self, context: &TaskContext) -> Result<ExecutionResult, ExecutionError> {
+        let query = context.parameters
+            .get("query")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| ExecutionError::InvalidParameters("query required".to_string()))?;
+
+        // In a real MCP implementation, this would search external sources
+        // For now, simulate search results
+        let results = vec![
+            format!("Result 1 for '{}': Found relevant documentation", query),
+            format!("Result 2 for '{}': Stack Overflow answer", query),
+            format!("Result 3 for '{}': GitHub repository example", query),
+        ];
+
+        let output = serde_json::json!({
+            "query": query,
+            "results": results,
+            "total_results": results.len()
         });
 
         Ok(ExecutionResult {
@@ -77,36 +157,61 @@ impl ToolExecutor {
         })
     }
 
-    /// Execute file editing
-    async fn execute_file_editor(&self, context: &TaskContext) -> Result<ExecutionResult, ExecutionError> {
+    /// Execute validator tool
+    async fn execute_validator(&self, context: &TaskContext) -> Result<ExecutionResult, ExecutionError> {
+        let content = context.parameters
+            .get("content")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| ExecutionError::InvalidParameters("content required".to_string()))?;
+
+        let validation_type = context.parameters
+            .get("type")
+            .and_then(|v| v.as_str())
+            .unwrap_or("syntax");
+
+        // In a real MCP implementation, this would validate code/output
+        // For now, simulate validation
+        let is_valid = !content.contains("ERROR") && !content.contains("TODO");
+        let issues = if !is_valid {
+            vec!["Found ERROR marker".to_string(), "Found TODO marker".to_string()]
+        } else {
+            vec![]
+        };
+
         let output = serde_json::json!({
-            "file_edited": true,
-            "changes_applied": "simulated changes"
+            "content_length": content.len(),
+            "validation_type": validation_type,
+            "is_valid": is_valid,
+            "issues": issues
         });
 
         Ok(ExecutionResult {
             success: true,
             output: Some(output),
             error_message: None,
-            execution_time_ms: 50,
+            execution_time_ms: 20,
             tool_id: context.tool_id.clone(),
         })
     }
 
-    /// Execute research assistant
-    async fn execute_research_assistant(&self, context: &TaskContext) -> Result<ExecutionResult, ExecutionError> {
-        let output = serde_json::json!({
-            "research_completed": true,
-            "findings": ["Key insight 1", "Key insight 2"]
-        });
-
-        Ok(ExecutionResult {
-            success: true,
-            output: Some(output),
-            error_message: None,
-            execution_time_ms: 200,
-            tool_id: context.tool_id.clone(),
-        })
+    /// Generate code from a prompt (simplified implementation)
+    fn generate_code_from_prompt(&self, prompt: &str, language: &str) -> String {
+        if prompt.to_lowercase().contains("react") && prompt.to_lowercase().contains("component") {
+            format!("// Generated {} React component from prompt: {}\n\
+                     import React from 'react';\n\
+                     \n\
+                     export const MyComponent: React.FC = () => {{\n\
+                     \treturn <div>Hello from generated component!</div>;\n\
+                     }};", language, prompt)
+        } else if prompt.to_lowercase().contains("function") {
+            format!("// Generated {} function from prompt: {}\n\
+                     export function generatedFunction() {{\n\
+                     \tconsole.log('Generated function executed');\n\
+                     }}", language, prompt)
+        } else {
+            format!("// Generated {} code from prompt: {}\n\
+                     console.log('Generated code for: {}');", language, prompt, prompt)
+        }
     }
 }
 
@@ -128,4 +233,7 @@ pub enum ExecutionError {
 
     #[error("Unknown tool: {0}")]
     UnknownTool(String),
+
+    #[error("Invalid parameters: {0}")]
+    InvalidParameters(String),
 }

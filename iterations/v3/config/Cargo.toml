@@ -17,6 +17,9 @@ tracing.workspace = true
 chrono.workspace = true
 uuid.workspace = true
 
+# Core memory system - every agent has memory
+agent-memory = { path = "../agent-memory" }
+
 # Configuration-specific dependencies
 config = "0.14"
 figment = "0.10"

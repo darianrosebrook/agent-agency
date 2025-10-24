@@ -23,6 +23,7 @@
 pub mod core;
 pub mod execution;
 pub mod mcp_integration;
+pub mod services;
 pub mod types;
 
 // Re-export main types
@@ -31,15 +32,18 @@ pub use execution::{ToolExecutor, ExecutionResult};
 pub use mcp_integration::MCPToolRegistry;
 pub use types::*;
 
-// Factory functions
-pub use core::create_worker_pool;
+// Factory functions (async due to memory initialization)
 
 /// Create a new MCP-based worker pool with default configuration
-pub fn new_worker_pool() -> MCPWorkerPool {
-    MCPWorkerPool::new(WorkerPoolConfig::default())
+pub async fn new_worker_pool() -> MCPWorkerPool {
+    MCPWorkerPool::new(WorkerPoolConfig::default()).await
 }
 
-/// Create a worker pool with custom MCP tool registry
-pub fn new_worker_pool_with_tools(tools: MCPToolRegistry) -> MCPWorkerPool {
-    MCPWorkerPool::with_tools(WorkerPoolConfig::default(), tools)
+/// Create a worker pool with custom MCP tool registry and shared memory
+pub async fn new_worker_pool_with_registry(tool_registry: std::sync::Arc<agent_mcp::ToolRegistry>) -> MCPWorkerPool {
+    // Initialize shared memory system for the worker pool
+    let memory_config = agent_memory::MemoryConfig::default();
+    let shared_memory = std::sync::Arc::new(agent_memory::MemorySystem::init(memory_config).await.unwrap());
+
+    MCPWorkerPool::new_with_registry(WorkerPoolConfig::default(), tool_registry, shared_memory)
 }
