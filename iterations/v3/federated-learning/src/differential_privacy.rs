@@ -18,7 +18,7 @@ pub struct DifferentialPrivacyEngine {
 }
 
 /// Privacy parameters for differential privacy
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct PrivacyParameters {
     /// Privacy budget (epsilon)
     pub epsilon: f32,
@@ -202,6 +202,23 @@ impl DifferentialPrivacyEngine {
                 Ok(self.rng.gen_range(-0.1..0.1))
             }
         }
+    }
+
+    /// Validate privacy properties of a contribution
+    pub async fn validate_privacy(&self, contribution: &ParticipantContribution) -> Result<()> {
+        // Check that the contribution meets privacy requirements
+        if contribution.model_update.is_empty() {
+            return Err(anyhow::anyhow!("Empty contribution violates privacy requirements"));
+        }
+
+        // Check noise level if available
+        if let Some(noise_level) = contribution.metadata.get("noise_level") {
+            if noise_level.as_f64().unwrap_or(0.0) < self.parameters.epsilon {
+                warn!("Contribution noise level below privacy threshold");
+            }
+        }
+
+        Ok(())
     }
 }
 

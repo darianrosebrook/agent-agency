@@ -323,6 +323,13 @@ impl UpdateAggregator {
             average_quality_score: avg_quality_score,
         }
     }
+
+    /// Clear any cached aggregation data
+    pub async fn clear_cache(&self) -> Result<()> {
+        // No cache to clear in this implementation
+        info!("Update aggregator cache cleared");
+        Ok(())
+    }
 }
 
 /// Result of validating an update

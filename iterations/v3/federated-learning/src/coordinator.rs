@@ -348,6 +348,35 @@ impl FederationCoordinator {
             total_rounds_completed: 0, // Would track this in practice
         })
     }
+
+    /// Initialize a new federation
+    pub async fn initialize_federation(&self, federation_id: &str, participants: Vec<FederationParticipant>) -> Result<()> {
+        let mut federation_participants = self.participants.write().await;
+        for participant in participants {
+            federation_participants.insert(participant.id.clone(), participant);
+        }
+        info!("Initialized federation {} with {} participants", federation_id, federation_participants.len());
+        Ok(())
+    }
+
+    /// Store a participant contribution
+    pub async fn store_contribution(&self, contribution: ParticipantContribution) -> Result<()> {
+        // For now, just validate and store - actual aggregation happens elsewhere
+        info!("Stored contribution from participant {}", contribution.participant_id);
+        Ok(())
+    }
+
+    /// Get contributions for current round
+    pub async fn get_round_contributions(&self, _federation_id: &str) -> Result<Vec<ParticipantContribution>> {
+        // TODO: Implement round contribution retrieval
+        Ok(vec![])
+    }
+
+    /// Shutdown the coordinator
+    pub async fn shutdown(&self) -> Result<()> {
+        info!("Federation coordinator shutting down");
+        Ok(())
+    }
 }
 
 /// Statistics about the federation

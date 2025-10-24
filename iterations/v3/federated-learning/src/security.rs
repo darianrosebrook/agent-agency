@@ -93,6 +93,24 @@ impl SecurityValidator {
         let first_byte = data[0];
         data.iter().all(|&byte| byte == first_byte)
     }
+
+    /// Validate a contribution for security
+    pub async fn validate_contribution(&self, contribution: &ParticipantContribution) -> Result<()> {
+        // Basic validation - check size, format, etc.
+        if contribution.model_update.is_empty() {
+            return Err(anyhow::anyhow!("Empty model update"));
+        }
+        Ok(())
+    }
+
+    /// Validate aggregation result
+    pub async fn validate_aggregation(&self, aggregated_update: &[u8]) -> Result<()> {
+        // Basic validation of aggregated result
+        if aggregated_update.is_empty() {
+            return Err(anyhow::anyhow!("Empty aggregated update"));
+        }
+        Ok(())
+    }
 }
 
 /// Security violation detected
