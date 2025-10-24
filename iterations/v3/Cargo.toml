@@ -25,7 +25,7 @@ members = [
     "config",
     "database",
     "recovery",
-    # "integration-tests",  # TODO: Re-enable when compilation issues resolved
+    "integration-tests",  # Re-enabled - checking compilation status
     "council",  # Re-enabled - compiles successfully
     "caching",  # Re-enabled - compiles successfully
     "planning-agent",  # Re-enabled - application layer

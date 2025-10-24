@@ -4,7 +4,7 @@
 //! for safe, concurrent tool chain execution with circuit breakers.
 
 use petgraph::graph::{Graph, NodeIndex};
-use petgraph::visit::Topo;
+use petgraph::visit::{Topo, EdgeRef};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::Arc;

@@ -6,6 +6,55 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use uuid::Uuid;
 
+// Stub implementations for disabled crates
+#[derive(Debug, Clone)]
+pub struct OrchestratorHandle;
+
+impl OrchestratorHandle {
+    pub fn new() -> Self {
+        Self
+    }
+}
+
+pub mod parallel_integration {
+    use super::*;
+
+    #[derive(Debug)]
+    pub struct ParallelToolCoordinator;
+
+    impl ParallelToolCoordinator {
+        pub async fn new() -> Result<Self> {
+            Ok(Self)
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct ArtifactStorageError;
+
+pub mod orchestrate {
+    use super::*;
+
+    #[derive(Debug)]
+    pub struct OrchestrationResult;
+
+    #[derive(Debug)]
+    pub struct OrchestrationContext;
+}
+
+pub mod audited_orchestrator {
+    use super::*;
+
+    #[derive(Debug)]
+    pub struct AuditedOrchestratorConfig;
+
+    impl AuditedOrchestratorConfig {
+        pub fn default() -> Self {
+            Self
+        }
+    }
+}
+
 /// Mock database for testing
 pub struct MockDatabase {
     data: Arc<RwLock<HashMap<String, serde_json::Value>>>,

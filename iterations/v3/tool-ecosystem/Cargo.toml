@@ -50,5 +50,14 @@ regex = "1.10"
 # Random number generation
 rand = "0.8.5"
 
+# Parallel workers integration
+parallel-workers = { path = "../parallel-workers" }
+
+# Additional async utilities
+tokio-util = { version = "0.7", features = ["time"] }
+
+# URL parsing
+url = "2.5"
+
 [dev-dependencies]
 tokio-test = "0.4"

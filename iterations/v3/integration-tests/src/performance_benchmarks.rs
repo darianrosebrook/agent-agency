@@ -13,14 +13,43 @@ use tokio::sync::mpsc;
 use uuid::Uuid;
 use chrono::Utc;
 
-use agent_agency_v3::{
-    self_prompting_agent::{SelfPromptingLoop, SelfPromptingConfig, Task, TaskBuilder},
-    workers::{WorkerPoolManager, AutonomousExecutor, AutonomousExecutorConfig},
-    orchestration::arbiter::{ArbiterOrchestrator, ArbiterConfig},
-    claim_extraction::ClaimExtractionProcessor,
-    file_ops::{WorkspaceFactory, AllowList, Budgets},
-    config::{AppConfig, WorkerConfig, ArbiterConfig},
-};
+// Use local crate imports instead of external agent_agency_v3
+use orchestration::arbiter::{ArbiterOrchestrator, ArbiterConfig};
+use claim_extraction::ClaimExtractionProcessor;
+use file_ops::{WorkspaceFactory, AllowList, Budgets};
+use agent_agency_workers::{WorkerPoolManager, AutonomousExecutor, AutonomousExecutorConfig};
+use agent_agency_config::{AppConfig, WorkerConfig};
+
+// Stub implementations for disabled crates
+#[derive(Debug)]
+pub struct SelfPromptingLoop;
+#[derive(Debug)]
+pub struct SelfPromptingConfig;
+#[derive(Debug)]
+pub struct Task;
+#[derive(Debug)]
+pub struct TaskBuilder;
+
+impl SelfPromptingLoop {
+    pub async fn new(_config: SelfPromptingConfig) -> Result<Self> {
+        Ok(Self)
+    }
+}
+
+impl SelfPromptingConfig {
+    pub fn new() -> Self {
+        Self
+    }
+}
+
+impl TaskBuilder {
+    pub fn new() -> Self {
+        Self
+    }
+    pub fn build(self) -> Task {
+        Task
+    }
+}
 
 use crate::helpers::*;
 use crate::fixtures::*;

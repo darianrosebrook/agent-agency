@@ -29,7 +29,7 @@ pub mod learning;
 // Coordinator types are re-exported above
 
 // Re-export main types and structs for public API
-pub use coordinator::{ParallelCoordinator, ParallelCoordinatorConfig};
+pub use coordinator::{ParallelCoordinator, ParallelCoordinatorConfig, OrchestratorHandle, StubOrchestratorHandle};
 pub use decomposition::{DecompositionEngine, TaskAnalysis, TaskPattern, Dependency};
 pub use worker::{WorkerManager, WorkerHandle, SpecializedWorker};
 pub use communication::hub::CommunicationHub;

@@ -14,7 +14,10 @@
 
 pub mod conflict_resolution_tools;
 pub mod evidence_collection_tools;
+pub mod executor;
 pub mod multi_modal_verification;
+pub mod parallel_integration;
+pub mod schema_registry;
 pub mod tool_chain_planner;
 pub mod tool_coordinator;
 pub mod tool_discovery;
@@ -23,7 +26,9 @@ pub mod tool_registry;
 
 pub use conflict_resolution_tools::{ConflictResolutionTool, DebateOrchestrator, ConsensusBuilder};
 pub use evidence_collection_tools::{EvidenceCollectionTool}; // FactVerificationTool, SourceValidationTool - not implemented yet
+pub use executor::{ChainExecutor, ExecutionResult};
 pub use multi_modal_verification::{MultimodalVerificationTool};
+pub use parallel_integration::{ParallelToolCoordinator};
 // pub use governance_tools::{GovernanceTool, AuditLogger, ProvenanceTracker}; // Module not implemented yet
 // pub use quality_gate_tools::{QualityGateTool, CodeAnalysisTool, PerformanceValidator}; // Module not implemented yet
 // pub use reasoning_tools::{ReasoningTool, LogicValidator, InferenceEngine}; // Module not implemented yet

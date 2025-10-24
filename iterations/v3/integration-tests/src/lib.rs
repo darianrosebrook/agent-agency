@@ -11,6 +11,9 @@ pub mod helpers;
 pub mod mocks;
 pub mod test_utils;
 
+// Re-export mocks for use in tests
+pub use mocks::*;
+
 pub mod autonomous_pipeline_test;
 pub mod caws_end_to_end_tests;
 pub mod caws_migration_comparison_tests;

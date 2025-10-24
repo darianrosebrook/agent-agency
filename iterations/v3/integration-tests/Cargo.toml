@@ -10,7 +10,7 @@ license.workspace = true
 agent-agency-council = { path = "../council" }
 agent-agency-research = { path = "../research" }
 orchestration = { path = "../orchestration" }
-# claim-extraction = { path = "../claim-extraction" }  # TODO: Re-enable when compilation issues resolved
+claim-extraction = { path = "../claim-extraction" }
 embedding-service = { path = "../embedding-service", optional = true }
 agent-agency-apple-silicon = { path = "../apple-silicon", optional = true }
 agent-agency-resilience = { path = "../resilience" }
@@ -22,6 +22,10 @@ agent-agency-observability = { path = "../observability" }
 # CAWS Runtime Validator and MCP Integration
 caws-runtime-validator = { path = "../caws/runtime-validator" }
 agent-agency-mcp = { path = "../mcp-integration" }
+
+# Tool ecosystem and parallel workers
+tool-ecosystem = { path = "../tool-ecosystem" }
+parallel-workers = { path = "../parallel-workers" }
 
 # Test framework and utilities
 tokio = { version = "1.0", features = ["full"] }
@@ -58,6 +62,9 @@ parking_lot = "0.12"
 # Test data generation
 fake = { version = "2.9", features = ["derive"] }
 rand = "0.8"
+
+# Additional utilities
+tokio-util = { version = "0.7", features = ["time"] }
 
 [dev-dependencies]
 criterion = { version = "0.5", features = ["html_reports"] }
