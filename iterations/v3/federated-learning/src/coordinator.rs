@@ -11,6 +11,7 @@ use tokio::sync::{RwLock, mpsc};
 use tracing::{debug, info, warn, error};
 
 /// Federation coordinator that manages the entire federated learning process
+#[derive(Debug)]
 pub struct FederationCoordinator {
     config: FederationConfig,
     participants: Arc<RwLock<HashMap<String, FederationParticipant>>>,

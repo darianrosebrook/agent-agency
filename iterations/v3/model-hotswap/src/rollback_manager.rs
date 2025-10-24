@@ -4,6 +4,7 @@
 //! ensuring data consistency and performance stability.
 
 use anyhow::Result;
+use tracing::info;
 use serde::{Deserialize, Serialize};
 
 /// Rollback strategy options
@@ -44,6 +45,12 @@ impl RollbackManager {
     pub async fn execute_rollback(&self, model_id: &str) -> Result<()> {
         // TODO: Implement rollback logic
         Ok(())
+    }
+
+    /// Perform rollback with reason
+    pub async fn perform_rollback(&self, model_id: &str, reason: String) -> Result<()> {
+        info!("Performing rollback for model {}: {}", model_id, reason);
+        self.execute_rollback(model_id).await
     }
 
     /// Validate rollback safety

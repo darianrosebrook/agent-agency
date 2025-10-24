@@ -18,6 +18,8 @@ thiserror = "1.0"
 # Cryptography for secure aggregation
 ring = "0.17"
 rust-crypto = "0.2"
+hmac = "0.12"
+sha2 = "0.10"
 
 # Model handling
 model-benchmarking = { path = "../model-benchmarking" }
@@ -37,6 +39,7 @@ futures-util = "0.3"
 
 # Random number generation for differential privacy
 rand = "0.8"
+rand_distr = "0.4"
 
 [dev-dependencies]
 tokio-test = "0.4"

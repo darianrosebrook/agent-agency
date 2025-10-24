@@ -250,10 +250,10 @@ impl UpdateValidator {
 
         for violation in violations {
             let severity = match violation.severity {
-                crate::security::Severity::Low => Severity::Low,
-                crate::security::Severity::Medium => Severity::Medium,
-                crate::security::Severity::High => Severity::High,
-                crate::security::Severity::Critical => Severity::Critical,
+                SecuritySeverity::Low => Severity::Low,
+                SecuritySeverity::Medium => Severity::Medium,
+                SecuritySeverity::High => Severity::High,
+                SecuritySeverity::Critical => Severity::Critical,
             };
 
             issues.push(ValidationIssue {
@@ -354,7 +354,7 @@ pub struct ValidationStatistics {
 
 // Placeholder types for dependencies that will be implemented in other modules
 use crate::model_updates::ModelUpdate;
-use crate::security::{SecurityValidator, Severity};
+use crate::security::{SecurityValidator, Severity as SecuritySeverity};
 
 #[cfg(test)]
 mod tests {

@@ -54,6 +54,7 @@ pub struct UpdateQualityMetrics {
 }
 
 /// Update aggregator for combining model updates
+#[derive(Debug)]
 pub struct UpdateAggregator {
     validation_engine: UpdateValidator,
     quality_thresholds: QualityThresholds,

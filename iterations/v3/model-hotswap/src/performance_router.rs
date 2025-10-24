@@ -11,6 +11,7 @@ use tokio::sync::RwLock;
 use tracing::{debug, info, warn};
 
 /// Performance-based router for intelligent model selection
+#[derive(Debug)]
 pub struct PerformanceRouter {
     /// Performance metrics for each model
     performance_metrics: Arc<RwLock<HashMap<String, ModelMetrics>>>,

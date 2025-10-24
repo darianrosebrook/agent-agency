@@ -8,9 +8,10 @@ use serde::{Deserialize, Serialize};
 use rand::prelude::*;
 use rand_distr::{Normal, Distribution};
 use std::collections::HashMap;
-use tracing::{debug, info};
+use tracing::{debug, info, warn};
 
 /// Differential privacy engine for adding noise to model updates
+#[derive(Debug)]
 pub struct DifferentialPrivacyEngine {
     parameters: PrivacyParameters,
     rng: ThreadRng,

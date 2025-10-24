@@ -4,13 +4,15 @@
 /// during hot-swapping operations.
 
 use anyhow::Result;
+use tracing::info;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{debug, info, warn};
+use tracing::{debug, warn};
 
 /// Load balancer for model traffic distribution
+#[derive(Debug)]
 pub struct LoadBalancer {
     /// Current traffic distribution
     traffic_distribution: Arc<RwLock<TrafficDistribution>>,
@@ -216,6 +218,24 @@ impl LoadBalancer {
         Ok(())
     }
 
+    /// Update traffic allocation for a specific model
+    pub async fn update_traffic_allocation(&self, model_id: &str, allocation: f32) -> Result<()> {
+        let mut distribution = self.traffic_distribution.write().await;
+        distribution.distribution.insert(model_id.to_string(), allocation);
+        distribution.last_updated = chrono::Utc::now();
+
+        // Normalize the distribution to ensure it sums to 1.0
+        let total: f32 = distribution.distribution.values().sum();
+        if total > 0.0 {
+            for percentage in distribution.distribution.values_mut() {
+                *percentage /= total;
+            }
+        }
+
+        info!("Updated traffic allocation for model {} to {:.2}%", model_id, allocation * 100.0);
+        Ok(())
+    }
+
     /// TODO: Implement sophisticated model selection and load balancing algorithms
     /// - Support multiple load balancing strategies (round-robin, least-loaded, response-time-weighted)
     /// - Implement request-aware routing based on input characteristics
@@ -271,6 +291,7 @@ impl LoadBalancer {
 }
 
 /// Health monitor for model instances
+#[derive(Debug)]
 struct HealthMonitor {
     health_status: Arc<RwLock<HashMap<String, ModelHealth>>>,
 }
@@ -288,6 +309,7 @@ impl HealthMonitor {
 }
 
 /// Circuit breaker for failing models
+#[derive(Debug)]
 struct CircuitBreaker {
     failure_counts: Arc<RwLock<HashMap<String, usize>>>,
     failure_threshold: usize,

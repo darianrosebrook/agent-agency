@@ -38,6 +38,12 @@ impl VersionManager {
         Ok(from_version < to_version)
     }
 
+    /// Check if a version exists for a model
+    pub async fn version_exists(&self, _model_id: &str, _version: &str) -> Result<bool> {
+        // TODO: Implement version existence checking
+        Ok(true)
+    }
+
     /// Get version information
     pub async fn get_version_info(&self, model_id: &str) -> Result<VersionInfo> {
         // TODO: Implement version info retrieval

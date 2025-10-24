@@ -189,10 +189,47 @@ impl FederatedLearningSystem {
     pub async fn new(config: FederatedConfig) -> Result<Self> {
         info!("Initializing federated learning system with security level: {:?}", config.security_level);
 
-        let coordinator = Arc::new(FederationCoordinator::new(config.clone()).await?);
-        let security_validator = Arc::new(SecurityValidator::new(config.security_level).await?);
-        let update_aggregator = Arc::new(UpdateAggregator::new(config.privacy_params.clone()).await?);
-        let privacy_engine = Arc::new(DifferentialPrivacyEngine::new(config.privacy_params.clone()).await?);
+        let security_validator = Arc::new(SecurityValidator::new());
+        let quality_thresholds = crate::model_updates::QualityThresholds {
+            min_gradient_norm: 1e-6,
+            max_gradient_norm: 10.0,
+            min_stability_score: 0.8,
+            max_update_magnitude: 1.0,
+        };
+        let update_aggregator = Arc::new(UpdateAggregator::new(quality_thresholds));
+        let privacy_engine = Arc::new(DifferentialPrivacyEngine::new(config.privacy_params.clone()));
+
+        // Create encryption scheme and secure aggregator
+        let encryption_scheme = Arc::new(crate::encryption::PlaceholderHomomorphicEncryption);
+        let secure_aggregator = Arc::new(crate::aggregation::SecureAggregator::new(
+            encryption_scheme,
+            privacy_engine.clone(),
+            security_validator.clone(),
+        ));
+
+        // Create federation protocol
+        let protocol = Arc::new(crate::protocol::FederationProtocol::new());
+
+        let federation_config = crate::coordinator::FederationConfig {
+            min_participants: config.min_participants,
+            max_participants: config.max_participants,
+            round_timeout_seconds: 300, // 5 minutes
+            aggregation_timeout_seconds: config.aggregation_timeout_secs,
+            privacy_parameters: config.privacy_params.clone(),
+            security_requirements: crate::coordinator::SecurityRequirements {
+                encryption_required: true,
+                authentication_required: true,
+                audit_required: true,
+            },
+            quality_thresholds: crate::coordinator::QualityThresholds {
+                min_accuracy: 0.8,
+                max_staleness: 10,
+                min_contribution_size: 1000,
+                max_contribution_size: 100000,
+            },
+        };
+
+        let coordinator = Arc::new(FederationCoordinator::new(federation_config, secure_aggregator, protocol));
 
         let active_federations = Arc::new(RwLock::new(HashMap::new()));
 

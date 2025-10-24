@@ -10,6 +10,7 @@ use tokio::sync::RwLock;
 use tracing::{debug, info};
 
 /// Model registry for tracking model versions and metadata
+#[derive(Debug)]
 pub struct ModelRegistry {
     models: Arc<RwLock<HashMap<String, ModelEntry>>>,
     version_history: Arc<RwLock<Vec<ModelVersion>>>,
@@ -217,6 +218,36 @@ impl ModelRegistry {
             .filter(|model| matches!(model.status, DeploymentStatus::Active))
             .cloned()
             .collect()
+    }
+
+    /// Check if a model exists
+    pub async fn model_exists(&self, model_id: &str) -> Result<bool> {
+        let models = self.models.read().await;
+        Ok(models.contains_key(model_id))
+    }
+
+    /// Check if a specific version exists for a model
+    pub async fn version_exists(&self, model_id: &str, version: &str) -> Result<bool> {
+        let history = self.version_history.read().await;
+        Ok(history.iter().any(|v| v.model_id == model_id && v.version == version))
+    }
+
+    /// Deploy models side by side for comparison
+    pub async fn deploy_side_by_side(&self, _model_id: &str, _new_version: &str) -> Result<()> {
+        // TODO: Implement side-by-side deployment
+        Ok(())
+    }
+
+    /// Promote blue-green deployment
+    pub async fn promote_blue_green(&self, _model_id: &str) -> Result<()> {
+        // TODO: Implement blue-green promotion
+        Ok(())
+    }
+
+    /// Rollback blue-green deployment
+    pub async fn rollback_blue_green(&self, _model_id: &str) -> Result<()> {
+        // TODO: Implement blue-green rollback
+        Ok(())
     }
 
     /// Deprecate a model version

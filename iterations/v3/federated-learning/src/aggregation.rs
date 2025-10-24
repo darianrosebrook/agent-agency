@@ -14,6 +14,7 @@ use tracing::{debug, info};
 pub struct SecureAggregator {
     encryption_scheme: Arc<dyn HomomorphicEncryption>,
     privacy_engine: Arc<DifferentialPrivacyEngine>,
+    security_validator: Arc<SecurityValidator>,
     participants: Arc<RwLock<HashMap<String, ParticipantState>>>,
     aggregation_round: Arc<RwLock<AggregationRound>>,
 }
@@ -87,10 +88,12 @@ impl SecureAggregator {
     pub fn new(
         encryption_scheme: Arc<dyn HomomorphicEncryption>,
         privacy_engine: Arc<DifferentialPrivacyEngine>,
+        security_validator: Arc<SecurityValidator>,
     ) -> Self {
         Self {
             encryption_scheme,
             privacy_engine,
+            security_validator,
             participants: Arc::new(RwLock::new(HashMap::new())),
             aggregation_round: Arc::new(RwLock::new(AggregationRound {
                 round_id: 0,
@@ -133,7 +136,7 @@ impl SecureAggregator {
         self.security_validator.verify_proof(zero_knowledge_proof).await?;
 
         // Decrypt and aggregate the update (in practice, this would be homomorphic)
-        let decrypted_update = self.encryption_scheme.decrypt(&encrypted_update)?;
+        let decrypted_update = self.encryption_scheme.decrypt(&encrypted_update).await?;
         let noise_added_update = self.privacy_engine.add_noise(decrypted_update)?;
 
         // Add to aggregation

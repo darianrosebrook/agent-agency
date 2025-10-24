@@ -9,6 +9,7 @@ use std::collections::HashMap;
 use tracing::{debug, info};
 
 /// Security validator for federation operations
+#[derive(Debug)]
 pub struct SecurityValidator;
 
 /// Zero-knowledge proof implementation

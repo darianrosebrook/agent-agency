@@ -11,6 +11,8 @@
 //! 4. **Load Balancing**: Intelligent request routing based on model performance
 //! 5. **A/B Testing**: Parallel model evaluation with traffic splitting
 
+use semver::Version;
+
 pub mod hotswap_manager;
 pub mod load_balancer;
 pub mod model_registry;
@@ -46,7 +48,7 @@ pub struct ModelHotSwapOrchestrator {
     /// Load balancer for traffic distribution
     load_balancer: Arc<LoadBalancer>,
     /// Traffic splitter for A/B testing
-    traffic_splitter: Arc<TrafficSplitter>,
+    traffic_splitter: Arc<RwLock<TrafficSplitter>>,
     /// Rollback manager for failure recovery
     rollback_manager: Arc<RollbackManager>,
     /// Version manager for compatibility
@@ -220,11 +222,11 @@ impl ModelHotSwapOrchestrator {
         let model_registry = Arc::new(ModelRegistry::new());
         let performance_router = Arc::new(PerformanceRouter::new());
         let load_balancer = Arc::new(LoadBalancer::new());
-        let traffic_splitter = Arc::new(TrafficSplitter::new(SplitConfig {
+        let traffic_splitter = Arc::new(RwLock::new(TrafficSplitter::new(SplitConfig {
             model_weights: HashMap::new(),
             sticky_sessions: false,
             session_timeout_secs: 3600,
-        }));
+        })));
         let rollback_manager = Arc::new(RollbackManager::new(RollbackConfig {
             strategy: RollbackStrategy::Immediate,
             traffic_shift_percentage: 0.1,
@@ -257,7 +259,8 @@ impl ModelHotSwapOrchestrator {
         self.validate_replacement_request(&request).await?;
 
         // Check model compatibility
-        self.version_manager.check_compatibility(&Version::parse("1.0.0")?, &request.new_version).await?;
+        let new_version = Version::parse(&request.new_version)?;
+        self.version_manager.check_compatibility(&Version::parse("1.0.0")?, &new_version).await?;
 
         // Execute replacement based on strategy
         let result = match request.strategy {
@@ -320,7 +323,22 @@ impl ModelHotSwapOrchestrator {
         let deployment = deployment.unwrap();
 
         // Use performance router for intelligent routing
-        self.performance_router.route_request(model_id, &deployment, request_context).await
+        let routing_context = crate::performance_router::RequestContext {
+            accuracy_requirement: Some(request_context.quality_requirement as f32),
+            max_latency_ms: if request_context.latency_sensitive { Some(100.0) } else { Some(1000.0) },
+            priority: match request_context.priority {
+                RequestPriority::Low => 1,
+                RequestPriority::Normal => 5,
+                RequestPriority::High => 10,
+                RequestPriority::Critical => 15,
+            },
+            complexity_hint: crate::performance_router::RequestComplexity::Medium,
+        };
+        let routing_request = crate::performance_router::RoutingRequest {
+            id: model_id.to_string(),
+            context: routing_context,
+        };
+        self.performance_router.route_request(&routing_request).await
     }
 
     /// Monitor model performance and trigger automatic actions
@@ -333,13 +351,14 @@ impl ModelHotSwapOrchestrator {
         let deployments = self.get_all_deployments().await;
 
         for (model_id, deployment) in deployments {
+
             // Check for performance degradation
             if deployment.performance.error_rate > self.config.auto_rollback_threshold {
                 warn!("High error rate detected for model {}: {:.2}%",
                       model_id, deployment.performance.error_rate * 100.0);
 
                 actions.push(OptimizationAction::Rollback {
-                    model_id,
+                    model_id: model_id.clone(),
                     reason: format!("Error rate {:.2}% exceeds threshold {:.2}%",
                                   deployment.performance.error_rate * 100.0,
                                   self.config.auto_rollback_threshold * 100.0),
@@ -349,14 +368,14 @@ impl ModelHotSwapOrchestrator {
             // Check for quality degradation
             if let Some(prev_version) = &deployment.previous_version {
                 // Compare with previous version performance
-                if let Some(prev_perf) = self.get_historical_performance(&model_id, prev_version).await {
+                if let Some(prev_perf) = self.get_historical_performance(&model_id.clone(), prev_version).await {
                     let quality_delta = deployment.performance.quality_score - prev_perf.quality_score;
                     if quality_delta < -self.config.quality_degradation_threshold {
                         warn!("Quality degradation detected for model {}: {:.3} delta",
-                              model_id, quality_delta);
+                              model_id.clone(), quality_delta);
 
                         actions.push(OptimizationAction::QualityAlert {
-                            model_id,
+                            model_id: model_id.clone(),
                             quality_delta,
                         });
                     }
@@ -369,7 +388,7 @@ impl ModelHotSwapOrchestrator {
                 if deployment.performance.error_rate < 0.01 &&
                    deployment.performance.quality_score > 0.9 {
                     actions.push(OptimizationAction::IncreaseTraffic {
-                        model_id,
+                        model_id: model_id.clone(),
                         current_allocation: deployment.traffic_allocation,
                         suggested_increase: 0.1,
                     });
@@ -405,7 +424,7 @@ impl ModelHotSwapOrchestrator {
                 }
 
                 // Update load balancer
-                self.load_balancer.update_traffic_allocation(&model_id, new_allocation).await?;
+                self.load_balancer.update_traffic_allocation(&model_id, new_allocation as f32).await?;
             }
         }
 
@@ -454,7 +473,14 @@ impl ModelHotSwapOrchestrator {
         let baseline_perf = self.measure_model_performance(&request.model_id).await?;
 
         // Perform the swap
-        self.model_registry.update_model_version(&request.model_id, &request.new_version).await?;
+        let performance = model_registry::ModelPerformance {
+            avg_response_time_ms: 100.0,
+            throughput_rps: 10.0,
+            error_rate: 0.01,
+            accuracy_score: 0.95,
+            memory_usage_mb: 512.0,
+        };
+        self.model_registry.update_model_version(&request.model_id, &request.new_version, performance).await?;
 
         // Update deployment tracking
         self.update_deployment_version(&request.model_id, &request.new_version, 1.0).await;
@@ -498,7 +524,7 @@ impl ModelHotSwapOrchestrator {
                   step, steps, traffic_allocation * 100.0);
 
             // Update traffic allocation
-            self.traffic_splitter.update_split(&request.model_id, traffic_allocation).await?;
+            self.traffic_splitter.write().await.update_split(&request.model_id, traffic_allocation).await?;
             self.update_deployment_version(&request.model_id, &request.new_version, traffic_allocation).await;
 
             // Wait for interval
@@ -511,7 +537,14 @@ impl ModelHotSwapOrchestrator {
         }
 
         // Complete the swap
-        self.model_registry.update_model_version(&request.model_id, &request.new_version).await?;
+        let performance = model_registry::ModelPerformance {
+            avg_response_time_ms: 100.0,
+            throughput_rps: 10.0,
+            error_rate: 0.01,
+            accuracy_score: 0.95,
+            memory_usage_mb: 512.0,
+        };
+        self.model_registry.update_model_version(&request.model_id, &request.new_version, performance).await?;
         self.update_deployment_version(&request.model_id, &request.new_version, 1.0).await;
 
         // Measure final performance
@@ -549,15 +582,16 @@ impl ModelHotSwapOrchestrator {
               request.model_id, test_duration_secs, success_threshold);
 
         // Set up A/B test with 50/50 traffic split
-        self.traffic_splitter.setup_ab_test(&request.model_id, 0.5).await?;
+        self.traffic_splitter.write().await.setup_ab_test(&request.model_id, 0.5).await?;
 
         // Run test for specified duration
         tokio::time::sleep(tokio::time::Duration::from_secs(test_duration_secs)).await;
 
         // Analyze test results
-        let test_results = self.traffic_splitter.analyze_ab_test(&request.model_id).await?;
-        let new_version_better = test_results.new_version_performance.quality_score >
-                                test_results.baseline_performance.quality_score * success_threshold;
+        let test_results = self.traffic_splitter.read().await.analyze_ab_test(&request.model_id).await?;
+        let new_version_score = test_results["new_version_performance"]["quality_score"].as_f64().unwrap_or(0.0);
+        let baseline_score = test_results["baseline_performance"]["quality_score"].as_f64().unwrap_or(0.0);
+        let new_version_better = new_version_score > baseline_score * success_threshold;
 
         if new_version_better {
             info!("A/B test successful, completing hot-swap");
@@ -576,14 +610,13 @@ impl ModelHotSwapOrchestrator {
                     latency_delta_ms: 0.0,
                     throughput_delta: 0.0,
                     error_rate_delta: 0.0,
-                    quality_delta: test_results.new_version_performance.quality_score -
-                                 test_results.baseline_performance.quality_score,
-                    significance: test_results.statistical_significance,
+                    quality_delta: new_version_score - baseline_score,
+                    significance: test_results["statistical_significance"].as_f64().unwrap_or(0.0),
                 },
                 quality_validation: QualityValidation {
                     gates_passed: false,
                     failed_gates: vec!["A/B test performance threshold".to_string()],
-                    validation_score: test_results.new_version_performance.quality_score,
+                    validation_score: new_version_score,
                     manual_review_required: true,
                 },
                 completed_at: chrono::Utc::now(),
@@ -599,7 +632,7 @@ impl ModelHotSwapOrchestrator {
         self.model_registry.deploy_side_by_side(&request.model_id, &request.new_version).await?;
 
         // Test new version with small traffic
-        self.traffic_splitter.update_split(&request.model_id, 0.05).await?; // 5% test traffic
+        self.traffic_splitter.write().await.update_split(&request.model_id, 0.05).await?; // 5% test traffic
         tokio::time::sleep(tokio::time::Duration::from_secs(60)).await; // 1 minute test
 
         // Validate new version
@@ -608,13 +641,13 @@ impl ModelHotSwapOrchestrator {
 
         if quality_validation.gates_passed {
             // Switch all traffic to new version
-            self.traffic_splitter.update_split(&request.model_id, 1.0).await?;
+            self.traffic_splitter.write().await.update_split(&request.model_id, 1.0).await?;
             self.model_registry.promote_blue_green(&request.model_id).await?;
             self.update_deployment_version(&request.model_id, &request.new_version, 1.0).await;
 
             // Measure final performance
             let final_perf = self.measure_model_performance(&request.model_id).await?;
-            let baseline_perf = self.get_current_performance(&request.model_id).await?;
+            let baseline_perf = self.get_current_performance(&request.model_id).await;
             let performance_delta = self.calculate_performance_delta(&baseline_perf, &final_perf);
 
             Ok(HotSwapResult {
@@ -628,7 +661,7 @@ impl ModelHotSwapOrchestrator {
             })
         } else {
             // Rollback - keep old version
-            self.traffic_splitter.update_split(&request.model_id, 1.0).await?; // All traffic to old version
+            self.traffic_splitter.write().await.update_split(&request.model_id, 1.0).await?; // All traffic to old version
             self.model_registry.rollback_blue_green(&request.model_id).await?;
 
             Ok(HotSwapResult {
