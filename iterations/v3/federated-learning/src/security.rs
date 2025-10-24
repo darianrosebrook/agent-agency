@@ -8,6 +8,9 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tracing::{debug, info};
 
+// Import types from lib.rs
+use crate::ParticipantContribution;
+
 /// Security validator for federation operations
 #[derive(Debug)]
 pub struct SecurityValidator;

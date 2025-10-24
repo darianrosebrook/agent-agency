@@ -10,6 +10,9 @@ use rand_distr::{Normal, Distribution};
 use std::collections::HashMap;
 use tracing::{debug, info, warn};
 
+// Import types from lib.rs
+use crate::ParticipantContribution;
+
 /// Differential privacy engine for adding noise to model updates
 #[derive(Debug)]
 pub struct DifferentialPrivacyEngine {

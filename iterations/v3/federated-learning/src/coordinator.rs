@@ -138,8 +138,9 @@ impl FederationCoordinator {
             return Err(anyhow::anyhow!("Participant already registered"));
         }
 
-        participants.insert(participant.id.clone(), participant);
-        info!("Registered participant {}", participant.id);
+        let participant_id = participant.id.clone();
+        participants.insert(participant_id.clone(), participant);
+        info!("Registered participant {}", participant_id);
 
         Ok(())
     }
@@ -148,7 +149,7 @@ impl FederationCoordinator {
     pub async fn start_round(&self) -> Result<u64> {
         let participants = self.participants.read().await;
         let active_participants: Vec<_> = participants.values()
-            .filter(|p| p.is_active)
+            .filter(|p| p.is_active())
             .collect();
 
         if active_participants.len() < self.config.min_participants {
@@ -262,7 +263,7 @@ impl FederationCoordinator {
             .ok_or_else(|| anyhow::anyhow!("Unknown participant"))?;
 
         // Check if participant is active
-        if !participant.is_active {
+        if !participant.is_active() {
             return Err(anyhow::anyhow!("Participant is not active"));
         }
 
@@ -332,7 +333,7 @@ impl FederationCoordinator {
         let current_round = self.current_round.read().await;
 
         let total_participants = participants.len();
-        let active_participants = participants.values().filter(|p| p.is_active).count();
+        let active_participants = participants.values().filter(|p| p.is_active()).count();
 
         let current_round_info = current_round.as_ref().map(|round| RoundInfo {
             round_id: round.round_id,
