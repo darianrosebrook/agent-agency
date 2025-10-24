@@ -35,7 +35,7 @@ members = [
     "knowledge-ingestor",  # Re-enabled - application layer
     "file_ops",  # Re-enabled - simple implementation
     "cli",  # Re-enabled - application layer
-    # "api-server",  # Disabled - has 117 compilation errors
+    "api-server",  # Re-enabled - checking compilation status
     "worker",  # Re-enabled - application layer
     "runtime-optimization",  # Re-enabled - advanced services
     "tool-ecosystem",  # Re-enabled - advanced services

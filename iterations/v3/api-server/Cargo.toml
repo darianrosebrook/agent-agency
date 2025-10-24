@@ -53,3 +53,11 @@ agent-agency-database = { path = "../database" }
 
 # System health monitoring for real metrics (basic features only)
 agent-agency-system-health-monitor = { path = "../system-health-monitor", default-features = true }
+
+# Additional dependencies for API functionality
+async-trait = "0.1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Agent agency interfaces (placeholder - may need external crate)
+# agent_agency_interfaces = { path = "../interfaces" }

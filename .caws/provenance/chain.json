@@ -17416,5 +17416,39 @@
     },
     "previous_hash": "7b1b0688d7ca85591c2d8d6a33abba69759da9e58cbf289faa7c3ed9f5da8aae",
     "hash": "c14d5710241c923af579c08002915f69ef973ff151fea03ce6607db26bd0b288"
+  },
+  {
+    "id": "prov-1761272267630",
+    "timestamp": "2025-10-24T02:17:47.630Z",
+    "commit": {
+      "hash": "817478019d81cbb35510409ad36d97dc1252c036",
+      "message": "feat: re-enable integration-tests crate with stub implementations",
+      "author": "darianrosebrook <hello@darianrosebrook.com>"
+    },
+    "working_spec": {
+      "id": "AGENT-001",
+      "title": "P0 Blockers: Truthful System Loop with Auditability and Control",
+      "risk_tier": 1,
+      "mode": "feature",
+      "waiver_ids": []
+    },
+    "quality_gates": {
+      "status": "unknown",
+      "last_validated": "2025-10-24T02:17:47.631Z"
+    },
+    "agent": {
+      "type": "human",
+      "confidence_level": null
+    },
+    "cursor_tracking": {
+      "available": false,
+      "reason": "Cursor tracking API not configured"
+    },
+    "checkpoints": {
+      "available": false,
+      "reason": "Cursor checkpoint API not configured"
+    },
+    "previous_hash": "c14d5710241c923af579c08002915f69ef973ff151fea03ce6607db26bd0b288",
+    "hash": "665cc5d3c5de13e7d65a8fa28182c8e09ef0b5590a9480f6f321ee78fa908a1c"
   }
 ]
