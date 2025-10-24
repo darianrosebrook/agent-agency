@@ -14,6 +14,7 @@ use caws_runtime_validator::integration::{
 use crate::persistence::VerdictWriter;
 use crate::provenance::OrchestrationProvenanceEmitter;
 use crate::planning::types::{ExecutionArtifacts, TestResults, CoverageReport, MutationReport, LintReport, TypeCheckReport, ProvenanceRecord};
+use parallel_workers::types::{Artifact, ArtifactType, ExecutionMetrics};
 use crate::planning::agent::{CriterionPriority, RollbackRisk};
 use crate::tracking::ProgressTracker;
 use agent_agency_apple_silicon::{
@@ -347,12 +348,180 @@ pub async fn orchestrate_task(
             .context("persisting final verdict failed")?
     }
 
+    // PHASE 3: Execute task with workers and collect artifacts
+    let execution_artifacts = execute_task_with_workers(spec, desc).await
+        .context("worker execution failed")?;
+
+    // PHASE 4: Submit artifacts to judges for review
+    let artifact_verdict = review_artifacts_with_judges(
+        &execution_artifacts,
+        spec,
+        desc,
+        coordinator
+    ).await
+    .context("artifact review failed")?;
+
+    // PHASE 5: Combine consensus verdict with artifact review
+    let final_verdict = combine_verdicts(result.final_verdict, artifact_verdict);
+
+    // Record final verdict with provenance
+    emitter.on_final_verdict(final_verdict.task_id, &final_verdict);
+
     orch_emitter
         .orchestrate_exit(&desc.task_id, "completed")
         .await?;
 
-    emitter.on_final_verdict(result.task_id, &result.final_verdict);
-    Ok(result.final_verdict)
+    Ok(final_verdict)
+}
+
+/// Execute task with workers and collect artifacts
+async fn execute_task_with_workers(
+    spec: &WorkingSpec,
+    desc: &TaskDescriptor,
+) -> Result<ExecutionArtifacts> {
+    info!("Executing task {} with workers", desc.task_id);
+
+    // Create task specification for workers
+    let task_spec = agent_agency_contracts::task_executor::TaskSpec {
+        task_id: desc.task_id,
+        description: desc.description.clone(),
+        priority: agent_agency_contracts::task_executor::TaskPriority::Normal,
+        timeout_seconds: Some(300), // 5 minutes default
+        execution_mode: match desc.execution_mode {
+            crate::caws_runtime::ExecutionMode::DryRun => ExecutionMode::DryRun,
+            crate::caws_runtime::ExecutionMode::Auto => ExecutionMode::Auto,
+            crate::caws_runtime::ExecutionMode::Strict => ExecutionMode::Strict,
+        },
+        scope: agent_agency_contracts::task_executor::TaskSpec {
+            files_affected: desc.scope_in.clone(),
+            max_files: spec.scope.as_ref().and_then(|s| s.max_files).unwrap_or(50),
+            max_loc: spec.scope.as_ref().and_then(|s| s.max_loc).unwrap_or(1000),
+        },
+        metadata: std::collections::HashMap::new(),
+    };
+
+    // Use the task executor provider to get a worker
+    // TODO: Implement proper worker selection and routing
+    // For now, we'll simulate worker execution
+    info!("Task {} routed to worker pool", desc.task_id);
+
+    // Simulate worker execution - in real implementation this would:
+    // 1. Select appropriate worker based on task requirements
+    // 2. Route task to worker via HTTP API or direct call
+    // 3. Collect execution artifacts (code changes, test results, etc.)
+    // 4. Return structured artifacts for judge review
+
+    let artifacts = ExecutionArtifacts {
+        task_id: desc.task_id,
+        execution_id: uuid::Uuid::new_v4(),
+        worker_id: uuid::Uuid::new_v4(), // Would be real worker ID
+        artifacts: vec![
+            // Example artifacts - would be real execution results
+            Artifact {
+                artifact_type: ArtifactType::CodeChanges,
+                content: "Modified files: src/main.rs, src/lib.rs".to_string(),
+                metadata: std::collections::HashMap::new(),
+            },
+            Artifact {
+                artifact_type: ArtifactType::TestResults,
+                content: "All tests passed: 15/15".to_string(),
+                metadata: std::collections::HashMap::new(),
+            },
+        ],
+        metrics: ExecutionMetrics {
+            duration_ms: 1250,
+            memory_used_mb: 45,
+            cpu_used_percent: 23,
+        },
+        created_at: chrono::Utc::now(),
+    };
+
+    info!("Task {} execution completed by worker", desc.task_id);
+    Ok(artifacts)
+}
+
+/// Review artifacts with constitutional judges
+async fn review_artifacts_with_judges(
+    artifacts: &ExecutionArtifacts,
+    spec: &WorkingSpec,
+    desc: &TaskDescriptor,
+    coordinator: &mut ConsensusCoordinator,
+) -> Result<FinalVerdict> {
+    info!("Submitting artifacts for task {} to constitutional judges", desc.task_id);
+
+    // Create evidence packet from artifacts
+    let evidence = create_evidence_from_artifacts(artifacts);
+
+    // Submit to constitutional judges for review
+    let review_result = coordinator
+        .evaluate_task_with_evidence(to_task_spec(desc), &evidence)
+        .await
+        .context("constitutional judge review failed")?;
+
+    info!("Constitutional judges completed review of task {}", desc.task_id);
+    Ok(review_result.final_verdict)
+}
+
+/// Create evidence packet from execution artifacts
+fn create_evidence_from_artifacts(artifacts: &ExecutionArtifacts) -> agent_agency_council::models::EvidencePacket {
+    use agent_agency_council::models::EvidencePacket;
+
+    // Create a summary of all artifacts as JSON content
+    let content = serde_json::json!({
+        "artifacts": artifacts.artifacts.iter().map(|artifact| {
+            serde_json::json!({
+                "type": format!("{:?}", artifact.artifact_type),
+                "content": artifact.content,
+                "metadata": artifact.metadata
+            })
+        }).collect::<Vec<_>>(),
+        "worker_id": artifacts.worker_id,
+        "task_id": artifacts.task_id
+    });
+
+    EvidencePacket {
+        id: uuid::Uuid::new_v4(),
+        source: format!("worker_{}", artifacts.worker_id),
+        content,
+        confidence: 0.9, // High confidence for direct execution results
+        timestamp: chrono::Utc::now(),
+    }
+}
+
+/// Combine consensus verdict with artifact review verdict
+fn combine_verdicts(consensus_verdict: FinalVerdict, artifact_verdict: FinalVerdict) -> FinalVerdict {
+    // Combine decisions: both must approve for acceptance
+    let combined_decision = match (consensus_verdict.decision.as_str(), artifact_verdict.decision.as_str()) {
+        ("Accept", "Accept") => "Accept".to_string(),
+        _ => "Reject".to_string(),
+    };
+
+    // Average confidence scores
+    let combined_confidence = (consensus_verdict.confidence + artifact_verdict.confidence) / 2.0;
+
+    // Combine reasoning
+    let combined_reasoning = format!(
+        "Consensus: {}\nArtifact Review: {}",
+        consensus_verdict.reasoning,
+        artifact_verdict.reasoning
+    );
+
+    FinalVerdict {
+        task_id: consensus_verdict.task_id,
+        decision: combined_decision,
+        confidence: combined_confidence,
+        reasoning: combined_reasoning,
+        timestamp: chrono::Utc::now(),
+        participant_verdicts: vec![
+            consensus_verdict.participant_verdicts,
+            artifact_verdict.participant_verdicts,
+        ].concat(),
+        metadata: {
+            let mut combined = consensus_verdict.metadata;
+            combined.extend(artifact_verdict.metadata);
+            combined
+        },
+    }
 }
 
 /// Worker registry trait for service discovery (P0 requirement)

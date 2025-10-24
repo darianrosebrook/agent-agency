@@ -473,7 +473,7 @@ impl ArbiterOrchestrator {
         &self,
         working_spec: &WorkingSpec,
         worker_outputs: &[WorkerOutput],
-    ) -> Result<ExaminationResult, ArbiterError> {
+    ) -> Result<ValidationResult, ArbiterError> {
         let mut violations = Vec::new();
 
         for output in worker_outputs {
@@ -525,7 +525,7 @@ impl ArbiterOrchestrator {
             }
         }
 
-        Ok(ExaminationResult {
+        Ok(ValidationResult {
             overall_compliant: violations.is_empty(),
             violations,
             examined_outputs: worker_outputs.len(),

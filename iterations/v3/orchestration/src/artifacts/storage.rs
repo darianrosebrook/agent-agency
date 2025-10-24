@@ -10,7 +10,7 @@ use chrono::{DateTime, Utc};
 use tokio::sync::RwLock;
 use uuid::Uuid;
 
-use super::manager::{ArtifactId, ArtifactMetadata, ArtifactStorageError};
+use super::manager::{ArtifactId, ArtifactMetadata};
 use crate::planning::types::ExecutionArtifacts;
 use agent_agency_database::{DatabaseClient, DatabaseArtifactStorage};
 

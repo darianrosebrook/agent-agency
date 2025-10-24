@@ -1,0 +1,21 @@
+{
+  "name": "agent-agency-v3-web",
+  "version": "0.1.0",
+  "description": "Web interface for Agent Agency V3 orchestration platform",
+  "main": "index.html",
+  "scripts": {
+    "start": "python3 server.py",
+    "dev": "python3 server.py 3000",
+    "build": "echo 'Static HTML - no build needed'",
+    "serve": "python3 server.py",
+    "test:api": "node test-api.js"
+  },
+  "keywords": [
+    "ai",
+    "orchestration",
+    "agents",
+    "automation"
+  ],
+  "author": "Agent Agency Team",
+  "license": "MIT"
+}

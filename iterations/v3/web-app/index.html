@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Agency V3 - AI Orchestration Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <style>
+        .animate-pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .5; }
+        }
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+    <div id="app">
+        <!-- Header -->
+        <header class="bg-gray-800 border-b border-gray-700 p-4">
+            <div class="max-w-7xl mx-auto flex justify-between items-center">
+                <div class="flex items-center space-x-3">
+                    <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                        <i data-lucide="cpu" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold">Agent Agency V3</h1>
+                        <p class="text-sm text-gray-400">Enterprise AI Orchestration Platform</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <div id="system-status" class="flex items-center space-x-2">
+                        <div class="w-2 h-2 bg-gray-500 rounded-full"></div>
+                        <span class="text-sm text-gray-400">Connecting...</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="max-w-7xl mx-auto p-6">
+            <!-- Dashboard Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-400 text-sm">Total Workers</p>
+                            <p id="total-workers" class="text-2xl font-bold">-</p>
+                        </div>
+                        <div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+                            <i data-lucide="users" class="w-5 h-5"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-400 text-sm">Active Tasks</p>
+                            <p id="active-tasks" class="text-2xl font-bold">-</p>
+                        </div>
+                        <div class="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center">
+                            <i data-lucide="play-circle" class="w-5 h-5"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-400 text-sm">Completed Tasks</p>
+                            <p id="completed-tasks" class="text-2xl font-bold">-</p>
+                        </div>
+                        <div class="w-10 h-10 bg-purple-600 rounded-lg flex items-center justify-center">
+                            <i data-lucide="check-circle" class="w-5 h-5"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-400 text-sm">System Health</p>
+                            <p id="system-health" class="text-2xl font-bold">-</p>
+                        </div>
+                        <div class="w-10 h-10 bg-yellow-600 rounded-lg flex items-center justify-center">
+                            <i data-lucide="activity" class="w-5 h-5"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Interface -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Task Management -->
+                <div class="lg:col-span-2">
+                    <div class="bg-gray-800 rounded-lg border border-gray-700">
+                        <div class="p-6 border-b border-gray-700">
+                            <h2 class="text-lg font-semibold flex items-center space-x-2">
+                                <i data-lucide="list-todo" class="w-5 h-5"></i>
+                                <span>Task Management</span>
+                            </h2>
+                        </div>
+                        <div class="p-6">
+                            <!-- Task Creation -->
+                            <div class="mb-6">
+                                <h3 class="text-md font-medium mb-4">Create New Task</h3>
+                                <form id="task-form" class="space-y-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-300 mb-2">Task Description</label>
+                                        <textarea
+                                            id="task-description"
+                                            class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            rows="3"
+                                            placeholder="Describe what you want the AI agents to accomplish..."
+                                        ></textarea>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-300 mb-2">Risk Tier</label>
+                                            <select
+                                                id="task-risk-tier"
+                                                class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            >
+                                                <option value="1">Tier 1 - Critical</option>
+                                                <option value="2" selected>Tier 2 - Standard</option>
+                                                <option value="3">Tier 3 - Low Risk</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-300 mb-2">Scope</label>
+                                            <input
+                                                id="task-scope"
+                                                type="text"
+                                                class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                placeholder="src/, tests/"
+                                                value="src/"
+                                            >
+                                        </div>
+                                    </div>
+                                    <button
+                                        type="submit"
+                                        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition-colors duration-200 flex items-center justify-center space-x-2"
+                                    >
+                                        <i data-lucide="play" class="w-4 h-4"></i>
+                                        <span>Execute Task</span>
+                                    </button>
+                                </form>
+                            </div>
+
+                            <!-- Active Tasks -->
+                            <div>
+                                <h3 class="text-md font-medium mb-4">Active Tasks</h3>
+                                <div id="active-tasks-list" class="space-y-3">
+                                    <div class="text-center text-gray-400 py-8">
+                                        <i data-lucide="clock" class="w-12 h-12 mx-auto mb-4 opacity-50"></i>
+                                        <p>No active tasks</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- System Status & Workers -->
+                <div class="space-y-6">
+                    <!-- Workers -->
+                    <div class="bg-gray-800 rounded-lg border border-gray-700">
+                        <div class="p-6 border-b border-gray-700">
+                            <h2 class="text-lg font-semibold flex items-center space-x-2">
+                                <i data-lucide="server" class="w-5 h-5"></i>
+                                <span>Worker Pool</span>
+                            </h2>
+                        </div>
+                        <div class="p-6">
+                            <div id="workers-list" class="space-y-3">
+                                <div class="text-center text-gray-400 py-4">
+                                    <i data-lucide="users" class="w-8 h-8 mx-auto mb-2 opacity-50"></i>
+                                    <p>No workers registered</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- System Logs -->
+                    <div class="bg-gray-800 rounded-lg border border-gray-700">
+                        <div class="p-6 border-b border-gray-700">
+                            <h2 class="text-lg font-semibold flex items-center space-x-2">
+                                <i data-lucide="terminal" class="w-5 h-5"></i>
+                                <span>System Logs</span>
+                            </h2>
+                        </div>
+                        <div class="p-6">
+                            <div id="system-logs" class="space-y-2 max-h-64 overflow-y-auto scrollbar-hide">
+                                <div class="text-center text-gray-400 py-4">
+                                    <i data-lucide="file-text" class="w-8 h-8 mx-auto mb-2 opacity-50"></i>
+                                    <p>No recent activity</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // API Configuration
+        const API_BASE = 'http://localhost:8080/api';
+        let systemStatus = 'disconnected';
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            lucide.createIcons();
+            initializeApp();
+        });
+
+        async function initializeApp() {
+            updateSystemStatus('connecting');
+
+            // Check API connectivity
+            try {
+                const health = await fetchSystemHealth();
+                updateDashboard(health);
+                updateSystemStatus('connected');
+                addLog('System initialized successfully', 'success');
+            } catch (error) {
+                updateSystemStatus('error');
+                addLog('Failed to connect to API server: ' + error.message, 'error');
+                return;
+            }
+
+            // Set up form handlers
+            setupTaskForm();
+
+            // Start periodic updates
+            setInterval(updateDashboardData, 5000);
+        }
+
+        function setupTaskForm() {
+            const form = document.getElementById('task-form');
+            form.addEventListener('submit', async function(e) {
+                e.preventDefault();
+
+                const description = document.getElementById('task-description').value.trim();
+                const riskTier = parseInt(document.getElementById('task-risk-tier').value);
+                const scope = document.getElementById('task-scope').value.split(',').map(s => s.trim());
+
+                if (!description) {
+                    addLog('Task description is required', 'error');
+                    return;
+                }
+
+                try {
+                    const taskId = await submitTask(description, riskTier, scope);
+                    addLog(`Task ${taskId} submitted successfully`, 'success');
+                    form.reset();
+                    updateDashboardData();
+                } catch (error) {
+                    addLog('Failed to submit task: ' + error.message, 'error');
+                }
+            });
+        }
+
+        async function fetchSystemHealth() {
+            const response = await fetch(`${API_BASE}/health`);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            return await response.json();
+        }
+
+        async function fetchActiveTasks() {
+            const response = await fetch(`${API_BASE}/tasks/active`);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            return await response.json();
+        }
+
+        async function submitTask(description, riskTier, scope) {
+            // Generate a task ID
+            const taskId = crypto.randomUUID();
+
+            // Create task descriptor
+            const taskDescriptor = {
+                task_id: taskId,
+                description: description,
+                risk_tier: riskTier,
+                scope_in: scope,
+                scope_out: [],
+                acceptance: ["Task completed successfully"],
+                metadata: {}
+            };
+
+            const response = await fetch(`${API_BASE}/tasks/${taskId}/execute`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    task_descriptor: taskDescriptor,
+                    worker_id: crypto.randomUUID(),
+                    requested_at: new Date().toISOString()
+                })
+            });
+
+            if (!response.ok) {
+                const error = await response.text();
+                throw new Error(error);
+            }
+
+            return taskId;
+        }
+
+        function updateDashboard(health) {
+            document.getElementById('total-workers').textContent = health.total_workers || 0;
+            document.getElementById('active-tasks').textContent = health.active_tasks || 0;
+            document.getElementById('completed-tasks').textContent = health.completed_tasks || 0;
+            document.getElementById('system-health').textContent = health.healthy_workers || 0;
+        }
+
+        async function updateDashboardData() {
+            try {
+                const health = await fetchSystemHealth();
+                updateDashboard(health);
+
+                const activeTasks = await fetchActiveTasks();
+                updateActiveTasks(activeTasks);
+            } catch (error) {
+                console.error('Failed to update dashboard:', error);
+            }
+        }
+
+        function updateActiveTasks(tasks) {
+            const container = document.getElementById('active-tasks-list');
+
+            if (!tasks || tasks.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center text-gray-400 py-8">
+                        <i data-lucide="clock" class="w-12 h-12 mx-auto mb-4 opacity-50"></i>
+                        <p>No active tasks</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = tasks.map(task => `
+                <div class="bg-gray-700 rounded-lg p-4 border border-gray-600">
+                    <div class="flex justify-between items-start mb-2">
+                        <h4 class="font-medium text-sm truncate">${task.description}</h4>
+                        <span class="px-2 py-1 bg-blue-600 text-xs rounded-full">Tier ${task.risk_tier}</span>
+                    </div>
+                    <div class="flex items-center justify-between text-sm text-gray-400">
+                        <span>Task ${task.task_id.slice(0, 8)}...</span>
+                        <span class="flex items-center space-x-1">
+                            <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                            <span>Running</span>
+                        </span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updateSystemStatus(status) {
+            systemStatus = status;
+            const statusElement = document.getElementById('system-status');
+
+            const statusConfig = {
+                connecting: { color: 'bg-yellow-500', text: 'Connecting...' },
+                connected: { color: 'bg-green-500', text: 'Connected' },
+                error: { color: 'bg-red-500', text: 'Connection Failed' },
+                disconnected: { color: 'bg-gray-500', text: 'Disconnected' }
+            };
+
+            const config = statusConfig[status] || statusConfig.disconnected;
+
+            statusElement.innerHTML = `
+                <div class="w-2 h-2 ${config.color} rounded-full"></div>
+                <span class="text-sm text-gray-400">${config.text}</span>
+            `;
+        }
+
+        function addLog(message, type = 'info') {
+            const logsContainer = document.getElementById('system-logs');
+            const timestamp = new Date().toLocaleTimeString();
+
+            const logColors = {
+                info: 'text-blue-400',
+                success: 'text-green-400',
+                warning: 'text-yellow-400',
+                error: 'text-red-400'
+            };
+
+            const logEntry = document.createElement('div');
+            logEntry.className = `text-sm ${logColors[type] || logColors.info}`;
+            logEntry.innerHTML = `<span class="text-gray-500">[${timestamp}]</span> ${message}`;
+
+            logsContainer.appendChild(logEntry);
+            logsContainer.scrollTop = logsContainer.scrollHeight;
+
+            // Keep only last 50 logs
+            while (logsContainer.children.length > 50) {
+                logsContainer.removeChild(logsContainer.firstChild);
+            }
+        }
+
+        // Global error handler
+        window.addEventListener('unhandledrejection', function(event) {
+            addLog('Unhandled promise rejection: ' + event.reason, 'error');
+        });
+
+        window.addEventListener('error', function(event) {
+            addLog('JavaScript error: ' + event.error.message, 'error');
+        });
+    </script>
+</body>
+</html>

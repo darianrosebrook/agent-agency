@@ -47,7 +47,7 @@ pub use audit_trail::{
 
 // Audited orchestrator exports
 pub use audited_orchestrator::{
-    AuditedOrchestrator, AuditedOrchestratorConfig, AuditStatistics,
+    AuditedOrchestrator, AuditStatistics,
 };
 
 // Frontier exports
@@ -61,10 +61,10 @@ pub use arbiter::{
     WorkerOutput, EvidenceManifest, DebateResult, ArbiterError,
 };
 
-// Kimi K2 Enhanced Executor
-pub use kimi_k2_enhanced_executor::{
-    KimiK2EnhancedExecutor, EnhancementConfig, EnhancementStats, EnhancementError,
-};
+// Kimi K2 Enhanced Executor - TODO: Implement when crate exists
+// pub use kimi_k2_enhanced_executor::{
+//     KimiK2EnhancedExecutor, EnhancementConfig, EnhancementStats, EnhancementError,
+// };
 
 // Kimi K2 Multimodal Orchestrator
 pub use kimi_k2_multimodal_orchestrator::{
@@ -72,12 +72,14 @@ pub use kimi_k2_multimodal_orchestrator::{
     OrchestratorConfig, OrchestratorPerformanceStats, OrchestratorError,
 };
 
+#[cfg(feature = "api-server")]
 // Re-export API functions
 pub use api::{
     get_tasks, get_task_detail, get_task_events, cancel_task,
     TaskResponse, TaskDetail, TaskEvent, TaskApiError,
 };
 
+#[cfg(feature = "api-server")]
 // Re-export CQRS router functions
 pub use cqrs_router::{
     create_cqrs_router, create_legacy_router, create_combined_router,

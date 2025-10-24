@@ -1,7 +1,6 @@
 [workspace]
 resolver = "2"
-members = [
-    # "self-prompting-agent",  # Removed from workspace due to fundamental compilation hangs - working as standalone
+members = [ 
     "apple-silicon",  # Re-enabled after fixing torch integration and type imports
     "caws/runtime-validator",  # Consolidated CAWS validation service
     "parallel-workers",  # Parallel task execution system
@@ -42,8 +41,9 @@ members = [
     "federated-learning",  # Re-enabled - advanced services
     "model-hotswap",  # Re-enabled - advanced services
     "production",  # Re-enabled - advanced services
-    "e2e-tests"
-, "self-prompting-agent"]
+    "e2e-tests",
+    "self-prompting-agent"
+    ]
 
 [workspace.package]
 version = "0.1.0"
@@ -68,9 +68,11 @@ chrono = { version = "0.4", features = ["serde"] }
 
 # HTTP and web
 reqwest = { version = "0.11", features = ["json", "stream"] }
-axum = { version = "0.7", features = ["json", "ws"] }
+axum = { version = "0.7", features = ["json", "ws", "macros"] }
 tower = "0.4"
 tower-http = { version = "0.5", features = ["cors", "trace"] }
+utoipa = { version = "4.0", features = ["axum_extras"] }
+utoipa-swagger-ui = { version = "6.0", features = ["axum"] }
 
 # Logging and observability
 tracing = "0.1"

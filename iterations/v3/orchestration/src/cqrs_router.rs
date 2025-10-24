@@ -3,6 +3,7 @@
 //! This module provides Axum routers for CQRS-based API endpoints,
 //! separating command operations (writes) from query operations (reads).
 
+#[cfg(feature = "api-server")]
 use axum::{
     routing::{get, post},
     Router,
@@ -12,12 +13,13 @@ use std::sync::Arc;
 use crate::cqrs::CqrsBus;
 use crate::api::*;
 
+#[cfg(feature = "api-server")]
 /// Create CQRS-based API router
 pub fn create_cqrs_router(cqrs_bus: Arc<CqrsBus>) -> Router {
     Router::new()
         // Command endpoints (writes)
         .route("/api/tasks/{task_id}/execute", post(execute_task_cqrs))
-        .route("/api/tasks/{task_id}/cancel", post(cancel_task_cqrs))
+        .route("/api/tasks/{task_id}/cancel", post(cancel_task_with_cqrs))
         .route("/api/tasks/{task_id}/progress", post(update_task_progress_cqrs))
         .route("/api/workers/register", post(register_worker_cqrs))
         .route("/api/workers/{worker_id}/health", post(update_worker_health_cqrs))
@@ -31,6 +33,7 @@ pub fn create_cqrs_router(cqrs_bus: Arc<CqrsBus>) -> Router {
         .layer(axum::Extension(cqrs_bus))
 }
 
+#[cfg(feature = "api-server")]
 /// Create legacy database-direct API router (for backward compatibility)
 pub fn create_legacy_router(pool: agent_agency_database::PgPool) -> Router {
     Router::new()
@@ -43,6 +46,7 @@ pub fn create_legacy_router(pool: agent_agency_database::PgPool) -> Router {
         .layer(axum::Extension(pool))
 }
 
+#[cfg(feature = "api-server")]
 /// Create combined router with both CQRS and legacy endpoints
 /// The CQRS endpoints take precedence for new development
 pub fn create_combined_router(

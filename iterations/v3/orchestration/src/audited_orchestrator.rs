@@ -8,6 +8,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
+use serde::{Serialize, Deserialize};
 use uuid::Uuid;
 use chrono::Utc;
 
@@ -17,7 +18,7 @@ use crate::audit_trail::{
     PerformanceAuditor, ErrorRecoveryAuditor, LearningAuditor,
     AuditEvent, AuditCategory, AuditSeverity, AuditResult, AuditPerformance,
 };
-use crate::orchestrate::{Orchestrator, OrchestratorConfig, OrchestrationResult, OrchestrationContext};
+use crate::orchestrate::{Orchestrator, OrchestratorConfig};
 use crate::planning::agent::PlanningAgent;
 use crate::frontier::{Frontier, FrontierConfig, FrontierError};
 use file_ops::{validate_changeset_with_waiver, WaiverRequest, apply_waiver};
@@ -56,24 +57,6 @@ pub struct AuditedOrchestrator {
     db_client: Arc<DatabaseClient>,
 }
 
-impl AuditedOrchestrator {
-    /// Create a task audit event (P0 requirement: persist audit trail + surface it on tasks)
-    async fn create_task_audit_event(
-        &self,
-        task_id: Uuid,
-        category: &str,
-        actor: &str,
-        action: &str,
-        payload: serde_json::Value,
-    ) -> Result<(), AuditError> {
-        self.db_client
-            .create_task_audit_event(task_id, category, actor, action, payload)
-            .await
-            .map_err(|e| AuditError::Config(format!("Failed to create task audit event: {}", e)))?;
-        Ok(())
-    }
-
-
 /// Configuration for the audited orchestrator
 #[derive(Debug, Clone)]
 pub struct AuditedOrchestratorConfig {
@@ -92,6 +75,21 @@ pub struct AuditedOrchestratorConfig {
 }
 
 impl AuditedOrchestrator {
+    /// Create a task audit event (P0 requirement: persist audit trail + surface it on tasks)
+    async fn create_task_audit_event(
+        &self,
+        task_id: Uuid,
+        category: &str,
+        actor: &str,
+        action: &str,
+        payload: serde_json::Value,
+    ) -> Result<(), AuditError> {
+        self.db_client
+            .create_task_audit_event(task_id, category, actor, action, payload)
+            .await
+            .map_err(|e| AuditError::Config(format!("Failed to create task audit event: {}", e)))?;
+        Ok(())
+    }
     /// Create a new audited orchestrator
     pub fn new(config: AuditedOrchestratorConfig) -> Self {
         let audit_manager = Arc::new(AuditTrailManager::new(config.audit_config));
@@ -944,4 +942,4 @@ impl From<String> for AuditError {
 
 // Re-export key types for convenience
 pub use crate::audit_trail::AuditQuery;
-pub use crate::orchestrate::{OrchestrationResult, OrchestrationContext};
+// pub use crate::orchestrate::{OrchestrationResult, OrchestrationContext};

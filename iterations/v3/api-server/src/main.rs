@@ -977,11 +977,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/chat/message/:session_id", post(send_chat_message))
     .route("/metrics", get(get_api_metrics))
     .route("/metrics/stream", get(metrics_stream))
-    .route("/alerts", get(get_active_alerts))
-    .route("/alerts/:alert_id/acknowledge", post(acknowledge_alert))
-    .route("/alerts/:alert_id/resolve", post(resolve_alert))
-    .route("/alerts/history", get(get_alert_history))
-    .route("/alerts/statistics", get(get_alert_statistics))
+        .route("/alerts", get(|state: State<AppState>| async move {
+            get_active_alerts(state).await
+        }))
+        .route("/alerts/:alert_id/acknowledge", post(|state: State<AppState>, path: Path<String>| async move {
+            acknowledge_alert(state, path).await
+        }))
+        .route("/alerts/:alert_id/resolve", post(|state: State<AppState>, path: Path<String>| async move {
+            resolve_alert(state, path).await
+        }))
+        .route("/alerts/history", get(|state: State<AppState>| async move {
+            get_alert_history(state).await
+        }))
+        .route("/alerts/statistics", get(|state: State<AppState>| async move {
+            get_alert_statistics(state).await
+        }))
     .with_state(app_state);
 
     // Create main router

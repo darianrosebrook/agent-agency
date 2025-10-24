@@ -49,6 +49,7 @@ use serde::{Serialize, Deserialize};
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
 use sqlx::{PgPool, postgres::PgPoolOptions};
+use tracing::info;
 
 /// Central audit trail manager coordinating all audit operations
 #[derive(Debug)]

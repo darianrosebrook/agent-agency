@@ -26,8 +26,6 @@ use agent_agency_council::coordinator::ConsensusCoordinator;
 use agent_agency_council::types::{ConsensusResult, FinalVerdict};
 use agent_agency_observability::cache::CacheBackend;
 use agent_agency_observability::metrics::MetricsBackend;
-use agent_agency_contracts::task_executor::TaskExecutor;
-use agent_agency_contracts::task_executor_provider::TaskExecutorProvider;
 
 /// Configuration for the autonomous executor
 #[derive(Debug, Clone)]
@@ -67,7 +65,7 @@ pub struct TaskExecutionState {
 pub struct AutonomousExecutor {
     config: AutonomousExecutorConfig,
     progress_tracker: Arc<ProgressTracker>,
-    runtime_validator: Arc<CawsRuntimeValidator>,
+    runtime_validator: Arc<dyn CawsRuntimeValidator>,
     consensus_coordinator: Option<Arc<ConsensusCoordinator>>,
     verdict_writer: Arc<dyn VerdictWriter>,
     provenance_emitter: Arc<OrchestrationProvenanceEmitter>,
@@ -84,7 +82,7 @@ impl AutonomousExecutor {
     pub fn new(
         config: AutonomousExecutorConfig,
         progress_tracker: Arc<ProgressTracker>,
-        runtime_validator: Arc<CawsRuntimeValidator>,
+        runtime_validator: Arc<dyn CawsRuntimeValidator>,
         consensus_coordinator: Option<Arc<ConsensusCoordinator>>,
         verdict_writer: Arc<dyn VerdictWriter>,
         provenance_emitter: Arc<OrchestrationProvenanceEmitter>,
@@ -273,14 +271,11 @@ impl AutonomousExecutor {
             crate::caws_runtime::ExecutionMode::DryRun => {
                 tracing::info!("Dry-run mode: Skipping actual orchestration, simulating results");
                 // Create a mock verdict for dry-run
-                crate::council::types::FinalVerdict {
-                    task_id: task_descriptor.task_id.clone(),
-                    decision: crate::council::types::ConsensusDecision::Accept,
+                agent_agency_council::types::FinalVerdict {
+                    decision: "Accept".to_string(),
                     confidence: 0.95,
-                    reasoning: "Dry-run simulation - no actual changes made".to_string(),
-                    timestamp: Utc::now(),
-                    participant_verdicts: vec![],
-                    metadata: std::collections::BTreeMap::new(),
+                    summary: "Dry-run simulation - no actual changes made".to_string(),
+                    metadata: std::collections::HashMap::new(),
                 }
             }
             _ => {

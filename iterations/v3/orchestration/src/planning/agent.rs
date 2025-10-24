@@ -97,7 +97,7 @@ impl CachedLLMClient {
 }
 
 /// Task context for planning
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Hash, Serialize, Deserialize)]
 pub struct TaskContext {
     /// Repository information
     pub repo_info: RepositoryInfo,

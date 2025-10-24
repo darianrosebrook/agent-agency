@@ -3,6 +3,7 @@
 //! Coordinates storage and retrieval of execution artifacts with versioning support.
 
 use std::path::Path;
+use std::collections::HashMap;
 use std::sync::Arc;
 use uuid::Uuid;
 use chrono::{DateTime, Utc};

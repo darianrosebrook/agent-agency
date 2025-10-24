@@ -381,15 +381,15 @@ impl MultimodalOrchestrator {
         for block in blocks {
             // Apply appropriate enrichers based on block type
             let enriched = match block.content_type {
-                ingestors::types::ContentType::Text => {
+                ContentType::Text => {
                     // Use entity enricher for text
                     self.entity_enricher.enrich(block).await?
                 }
-                ingestors::types::ContentType::Image => {
+                ContentType::Image => {
                     // Use vision enricher for images
                     self.vision_enricher.enrich(block).await?
                 }
-                ingestors::types::ContentType::Video => {
+                ContentType::Video => {
                     // Use ASR enricher for video
                     self.asr_enricher.enrich(block).await?
                 }

@@ -7,6 +7,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{mpsc, RwLock};
 use uuid::Uuid;
+#[cfg(feature = "api-server")]
 use axum::{
     extract::{Path, Query},
     response::Response,
@@ -71,6 +72,7 @@ impl WebSocketHandler {
         }
     }
 
+    #[cfg(feature = "api-server")]
     /// Handle WebSocket upgrade for task events
     pub async fn handle_task_events(
         ws: WebSocketUpgrade,

@@ -79,7 +79,7 @@ use agent_agency_observability::cache::CacheBackend;
 use agent_agency_observability::metrics::MetricsBackend;
 // Stub TaskExecutor since workers crate has circular dependency
 #[derive(Clone)]
-struct TaskExecutor;
+struct StubTaskExecutor;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -117,7 +117,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     ));
 
     // Initialize task executor for worker communication
-    let task_executor = Arc::new(TaskExecutor::new());
+    let task_executor = Arc::new(StubTaskExecutor);
 
     // Initialize consensus coordinator (simplified for demo)
     let consensus_coordinator = Some(Arc::new(agent_agency_council::coordinator::ConsensusCoordinator::new(

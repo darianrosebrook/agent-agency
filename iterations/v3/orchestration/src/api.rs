@@ -5,6 +5,7 @@
 //! separation of concerns and business logic encapsulation.
 
 use agent_agency_database::PgPool;
+#[cfg(feature = "api-server")]
 use axum::{
     extract::{Path, Query},
     http::StatusCode,
@@ -26,7 +27,7 @@ use crate::cqrs::{
 
 // Re-export CQRS API functions for use in routing
 pub use execute_task_cqrs as execute_task;
-pub use cancel_task_cqrs as cancel_task;
+pub use cancel_task_with_cqrs as cancel_task;
 pub use update_task_progress_cqrs as update_task_progress;
 pub use register_worker_cqrs as register_worker;
 pub use update_worker_health_cqrs as update_worker_health;
@@ -52,6 +53,7 @@ impl fmt::Display for TaskApiError {
     }
 }
 
+#[cfg(feature = "api-server")]
 impl IntoResponse for TaskApiError {
     fn into_response(self) -> Response {
         let (status, message) = match self {
@@ -114,6 +116,7 @@ pub struct TaskListQuery {
 /// * `query` - Optional query parameters (state filter, pagination)
 ///
 /// # Returns
+#[cfg(feature = "api-server")]
 /// List of tasks or error
 pub async fn get_tasks(
     Extension(pool): Extension<PgPool>,
@@ -169,6 +172,7 @@ pub async fn get_tasks(
 ///
 /// # Returns
 /// Task detail with spec, metadata, and audit trail
+#[cfg(feature = "api-server")]
 pub async fn get_task_detail(
     Extension(pool): Extension<PgPool>,
     Path(task_id): Path<Uuid>,
@@ -203,6 +207,7 @@ pub async fn get_task_detail(
 ///
 /// # Returns
 /// List of audit events for the task
+#[cfg(feature = "api-server")]
 pub async fn get_task_events(
     Extension(pool): Extension<PgPool>,
     Path(task_id): Path<Uuid>,
@@ -245,6 +250,7 @@ pub async fn get_task_events(
 ///
 /// # Returns
 /// Updated task state
+#[cfg(feature = "api-server")]
 pub async fn pause_task(
     Extension(pool): Extension<PgPool>,
     Path(task_id): Path<Uuid>,
@@ -401,6 +407,7 @@ pub async fn pause_task(
 ///
 /// # Returns
 /// Updated task state
+#[cfg(feature = "api-server")]
 pub async fn resume_task(
     Extension(pool): Extension<PgPool>,
     Path(task_id): Path<Uuid>,
@@ -556,8 +563,9 @@ pub async fn resume_task(
 /// * `task_id` - UUID of task to cancel
 ///
 /// # Returns
+#[cfg(feature = "api-server")]
 /// Updated task state
-pub async fn cancel_task(
+pub async fn cancel_task_legacy(
     Extension(pool): Extension<PgPool>,
     Path(task_id): Path<Uuid>,
 ) -> Result<Json<TaskResponse>, TaskApiError> {
@@ -720,6 +728,7 @@ pub async fn cancel_task(
 // CQRS-BASED API ENDPOINTS
 // ============================================================================
 
+#[cfg(feature = "api-server")]
 /// CQRS-based task execution endpoint
 #[utoipa::path(
     post,
@@ -756,6 +765,7 @@ pub async fn execute_task_cqrs(
     }))
 }
 
+#[cfg(feature = "api-server")]
 /// CQRS-based task cancellation endpoint
 #[utoipa::path(
     post,
@@ -768,7 +778,7 @@ pub async fn execute_task_cqrs(
         (status = 500, description = "Internal server error")
     )
 )]
-pub async fn cancel_task_cqrs(
+pub async fn cancel_task_with_cqrs(
     Extension(cqrs_bus): Extension<Arc<CqrsBus>>,
     Path(task_id): Path<Uuid>,
     Json(request): Json<CancelTaskRequest>,
@@ -791,6 +801,7 @@ pub async fn cancel_task_cqrs(
     }))
 }
 
+#[cfg(feature = "api-server")]
 /// CQRS-based task progress update endpoint
 #[utoipa::path(
     post,
@@ -827,6 +838,7 @@ pub async fn update_task_progress_cqrs(
     }))
 }
 
+#[cfg(feature = "api-server")]
 /// CQRS-based worker registration endpoint
 #[utoipa::path(
     post,
@@ -861,6 +873,7 @@ pub async fn register_worker_cqrs(
     }))
 }
 
+#[cfg(feature = "api-server")]
 /// CQRS-based worker health update endpoint
 #[utoipa::path(
     post,
@@ -896,6 +909,7 @@ pub async fn update_worker_health_cqrs(
     }))
 }
 
+#[cfg(feature = "api-server")]
 /// CQRS-based task status query endpoint
 #[utoipa::path(
     get,
@@ -932,6 +946,7 @@ pub async fn get_task_status_cqrs(
     }
 }
 
+#[cfg(feature = "api-server")]
 /// CQRS-based system health query endpoint
 #[utoipa::path(
     get,
@@ -965,6 +980,7 @@ pub async fn get_system_health_cqrs(
     }))
 }
 
+#[cfg(feature = "api-server")]
 /// CQRS-based active tasks query endpoint
 #[utoipa::path(
     get,
