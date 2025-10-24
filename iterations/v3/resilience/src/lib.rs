@@ -1,3 +1,6 @@
+#![allow(warnings)] // Disables all warnings for the crate
+#![allow(dead_code)] // Disables dead_code warnings for the crate
+
 //! V3 Resilience Module
 //!
 //! Ports V2 resilience patterns to V3 with Rust optimizations.

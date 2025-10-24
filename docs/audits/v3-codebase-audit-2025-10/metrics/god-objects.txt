@@ -1,100 +1,87 @@
 === God Object Detection Report ===
-Generated: Wed Oct 22 19:22:46 PDT 2025
+Generated: Thu Oct 23 19:49:29 PDT 2025
 
 Files >1000 LOC:
     6348 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/council/src/intelligent_edge_case_testing.rs
-    4878 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/system-health-monitor/src/lib.rs
-    4088 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/council/src/coordinator.rs
-    3930 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/apple-silicon/src/metal_gpu.rs
-    3726 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/claim-extraction/src/multi_modal_verification.rs
-    3551 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/claim-extraction/src/disambiguation.rs
+    3537 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/observability/src/analytics_dashboard.rs
+    3482 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/claim-extraction/src/evidence.rs
     3457 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/database/src/client.rs
-    3166 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/observability/src/analytics_dashboard.rs
-    2983 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/reflexive-learning/src/coordinator.rs
+    2986 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/reflexive-learning/src/coordinator.rs
     2962 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/embedding-service/src/multimodal_indexer.rs
-    2930 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/claim-extraction/src/evidence.rs
+    2691 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/council/src/coordinator/orchestrator.rs
     2562 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/council/src/predictive_learning_system.rs
-    2477 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/self-prompting-agent/src/loop_controller.rs
-    2451 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/council/src/judge.rs
-    2445 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/orchestration/src/planning/agent.rs
+    2549 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/self-prompting-agent/src/loop_controller.rs
+    2452 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/council/src/judge.rs
+    2446 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/orchestration/src/planning/agent.rs
     2395 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/context-preservation-engine/src/multi_tenant.rs
-    2369 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/research/src/knowledge_seeker.rs
-    2105 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/council/src/learning.rs
+    2394 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/research/src/knowledge_seeker.rs
+    2112 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/council/src/learning.rs
     2098 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/research/src/multimodal_retriever.rs
+    2049 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/workers/src/autonomous_executor.rs
     1913 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/claim-extraction/src/decomposition.rs
-    1856 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/claim-extraction/src/verification.rs
-    1842 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/caching/src/lib.rs
-    1827 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/workers/src/autonomous_executor.rs
+    1899 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/caching/src/lib.rs
     1794 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/planning-agent/src/planner.rs
-    1761 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/workers/src/executor.rs
     1714 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/enrichers/src/entity_enricher.rs
+    1710 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/tool-ecosystem/src/evidence_collection_tools.rs
     1710 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/observability/src/tracing.rs
     1667 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/council/src/plan_review.rs
     1658 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/council/src/verdicts.rs
     1623 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/context-preservation-engine/src/engine.rs
-    1599 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/workspace-state-manager/src/storage.rs
-    1586 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/council/src/verdict_aggregation.rs
-    1532 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/council/src/todo_analyzer.rs
+    1607 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/council/src/verdict_aggregation.rs
+    1544 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/council/src/todo_analyzer.rs
     1485 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/integration-tests/src/test_utils.rs
     1479 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/api-server/src/alerts.rs
+    1474 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/workspace-state-manager/src/storage.rs
+    1472 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/orchestration/src/audit_trail.rs
     1455 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/council/src/debate.rs
-    1454 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/database/src/artifact_store.rs
     1402 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/enrichers/src/asr_enricher.rs
+    1400 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/database/src/artifact_store.rs
     1381 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/council/src/claim_extraction.rs
     1366 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/integration-tests/src/performance_tests.rs
-    1334 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/mcp-integration/src/server.rs
+    1344 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/mcp-integration/src/server.rs
+    1285 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/orchestration/src/orchestrate.rs
     1282 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/ingestors/src/slides_ingestor.rs
-    1265 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/orchestration/src/orchestrate.rs
     1259 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/research/src/vector_search.rs
-    1257 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/apple-silicon/src/async_inference.rs
-    1234 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/mcp-integration/src/tool_discovery.rs
+    1235 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/mcp-integration/src/tool_discovery.rs
     1194 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/file_ops/src/temp_workspace.rs
-    1185 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/workers/src/router.rs
-    1176 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/workers/src/manager.rs
+    1194 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/apple-silicon/src/async_inference.rs
+    1178 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/source-integrity/src/storage.rs
+    1165 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/runtime-optimization/src/lib.rs
     1163 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/council/src/predictive_quality_assessor.rs
-    1133 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/source-integrity/src/storage.rs
+    1147 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/workers/src/router.rs
+    1124 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/api-server/src/main.rs
     1119 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/council/src/error_handling.rs
     1115 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/apple-silicon/src/types.rs
-    1113 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/orchestration/src/audit_trail.rs
     1108 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/observability/src/analytics.rs
     1090 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/context-preservation-engine/src/context_manager.rs
-    1069 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/api-server/src/main.rs
+    1087 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/reflexive-learning/src/learning_algorithms.rs
     1065 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/integration-tests/src/council_tests.rs
-    1046 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/tool-ecosystem/src/evidence_collection_tools.rs
-    1045 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/cli/src/main.rs
+    1048 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/cli/src/main.rs
+    1044 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/caching/src/integration.rs
     1042 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/integration-tests/src/fixtures.rs
-    1042 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/caching/src/integration.rs
     1030 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/workspace-state-manager/src/manager.rs
     1012 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/context-preservation-engine/src/context_store.rs
-    1003 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/workers/src/types.rs
 
 Files >2000 LOC (Critical God Objects):
     6348 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/council/src/intelligent_edge_case_testing.rs
-    4878 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/system-health-monitor/src/lib.rs
-    4088 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/council/src/coordinator.rs
-    3930 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/apple-silicon/src/metal_gpu.rs
-    3726 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/claim-extraction/src/multi_modal_verification.rs
-    3551 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/claim-extraction/src/disambiguation.rs
+    3537 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/observability/src/analytics_dashboard.rs
+    3482 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/claim-extraction/src/evidence.rs
     3457 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/database/src/client.rs
-    3166 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/observability/src/analytics_dashboard.rs
-    2983 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/reflexive-learning/src/coordinator.rs
+    2986 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/reflexive-learning/src/coordinator.rs
     2962 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/embedding-service/src/multimodal_indexer.rs
-    2930 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/claim-extraction/src/evidence.rs
+    2691 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/council/src/coordinator/orchestrator.rs
     2562 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/council/src/predictive_learning_system.rs
-    2477 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/self-prompting-agent/src/loop_controller.rs
-    2451 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/council/src/judge.rs
-    2445 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/orchestration/src/planning/agent.rs
+    2549 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/self-prompting-agent/src/loop_controller.rs
+    2452 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/council/src/judge.rs
+    2446 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/orchestration/src/planning/agent.rs
     2395 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/context-preservation-engine/src/multi_tenant.rs
-    2369 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/research/src/knowledge_seeker.rs
-    2105 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/council/src/learning.rs
+    2394 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/research/src/knowledge_seeker.rs
+    2112 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/council/src/learning.rs
     2098 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/research/src/multimodal_retriever.rs
+    2049 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/workers/src/autonomous_executor.rs
 
 Files >3000 LOC (Severe God Objects):
     6348 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/council/src/intelligent_edge_case_testing.rs
-    4878 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/system-health-monitor/src/lib.rs
-    4088 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/council/src/coordinator.rs
-    3930 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/apple-silicon/src/metal_gpu.rs
-    3726 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/claim-extraction/src/multi_modal_verification.rs
-    3551 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/claim-extraction/src/disambiguation.rs
+    3537 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/observability/src/analytics_dashboard.rs
+    3482 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/claim-extraction/src/evidence.rs
     3457 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/database/src/client.rs
-    3166 /Users/darianrosebrook/Desktop/Projects/agent-agency/iterations/v3/observability/src/analytics_dashboard.rs

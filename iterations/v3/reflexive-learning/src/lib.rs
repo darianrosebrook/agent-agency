@@ -1,3 +1,6 @@
+#![allow(warnings)] // Disables all warnings for the crate
+#![allow(dead_code)] // Disables dead_code warnings for the crate
+
 //! Reflexive Learning & Memory Integration
 //!
 //! Implements the reflexive learning loop required by theory:

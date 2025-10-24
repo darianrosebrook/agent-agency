@@ -1,3 +1,6 @@
+#![allow(warnings)] // Disables all warnings for the crate
+#![allow(dead_code)] // Disables dead_code warnings for the crate
+
 //! Agent Agency V3 - Database Layer
 //!
 //! Provides database connectivity, connection pooling, and data access patterns

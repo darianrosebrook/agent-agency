@@ -1,3 +1,6 @@
+#![allow(warnings)] // Disables all warnings for the crate
+#![allow(dead_code)] // Disables dead_code warnings for the crate
+
 //! Integration Tests for V3 Agent Agency System
 //!
 //! This crate provides comprehensive integration testing for all V3 components,

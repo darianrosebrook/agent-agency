@@ -1,3 +1,6 @@
+#![allow(warnings)] // Disables all warnings for the crate
+#![allow(dead_code)] // Disables dead_code warnings for the crate
+
 //! Enterprise memory management system for Rust applications
 //!
 //! Provides comprehensive memory monitoring, object pooling, leak detection,

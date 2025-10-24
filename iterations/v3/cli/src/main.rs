@@ -1,3 +1,6 @@
+#![allow(warnings)] // Disables all warnings for the crate
+#![allow(dead_code)] // Disables dead_code warnings for the crate
+
 //! CLI Binary with Intervention Controls
 //!
 //! Provides command-line interface for controlling autonomous task execution

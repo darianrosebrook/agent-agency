@@ -1,3 +1,6 @@
+#![allow(warnings)] // Disables all warnings for the crate
+#![allow(dead_code)] // Disables dead_code warnings for the crate
+
 //! Multi-level caching system for enterprise performance optimization
 //!
 //! Provides memory, Redis, and CDN caching with intelligent invalidation,

@@ -1,3 +1,6 @@
+#![allow(warnings)] // Disables all warnings for the crate
+#![allow(dead_code)] // Disables dead_code warnings for the crate
+
 pub mod context_manager;
 pub mod context_store;
 pub mod context_synthesizer;

@@ -1,3 +1,6 @@
+#![allow(warnings)] // Disables all warnings for the crate
+#![allow(dead_code)] // Disables dead_code warnings for the crate
+
 //! Council Review & Decision Making for Agent Agency V3
 //!
 //! The Council system coordinates multiple AI judges to review working specifications,

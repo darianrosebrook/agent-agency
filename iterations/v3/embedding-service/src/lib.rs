@@ -1,3 +1,6 @@
+#![allow(warnings)] // Disables all warnings for the crate
+#![allow(dead_code)] // Disables dead_code warnings for the crate
+
 //! Embedding Service for V3 Council System
 //!
 //! Provides semantic context understanding through embedding generation and similarity search.

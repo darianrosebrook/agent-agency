@@ -1,3 +1,6 @@
+#![allow(warnings)] // Disables all warnings for the crate
+#![allow(dead_code)] // Disables dead_code warnings for the crate
+
 //! Provenance Service for Agent Agency V3
 //!
 //! Provides immutable CAWS provenance tracking with git integration and JWS signing

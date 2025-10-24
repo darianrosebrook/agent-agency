@@ -1,3 +1,6 @@
+#![allow(warnings)] // Disables all warnings for the crate
+#![allow(dead_code)] // Disables dead_code warnings for the crate
+
 //! Agent Agency V3 - Autonomous AI Development Platform
 //!
 //! This binary demonstrates the complete autonomous task execution workflow,

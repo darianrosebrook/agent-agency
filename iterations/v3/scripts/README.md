@@ -1,100 +1,96 @@
-# Hidden TODO Analyzer
+# Scripts Directory
 
-A comprehensive tool for analyzing hidden TODO patterns across multiple programming languages.
+This directory contains automation scripts for the Agent Agency V3 system, organized by purpose.
 
-## Features
+## Organization
 
-- **Multi-language support**: Rust, TypeScript, JavaScript, Python, Go, Java, C#, C++, C, PHP, Ruby, Shell, YAML, Markdown
-- **Comprehensive file filtering**: Automatically ignores build artifacts, test files, generated code, and other non-implementation files
-- **Universal pattern detection**: Identifies placeholder implementations, temporary code, and incomplete features
-- **Detailed reporting**: Generates JSON and Markdown reports with language breakdown and pattern analysis
+- **`build/`** - Build automation and compilation scripts
+- **`test/`** - Testing, coverage, and quality assurance scripts
+- **`deploy/`** - Deployment and production management scripts
+- **`setup/`** - Environment setup and bootstrapping scripts
+- **`analysis/`** - Code analysis, reporting, and metrics scripts
+- **`ci/`** - Continuous integration and development workflow scripts
+- **`models/`** - ML model management and conversion scripts
 
 ## Usage
 
-### Basic Usage
+### Quick Commands
 
 ```bash
-python3 todo_analyzer.py
+# Run all tests
+./scripts/test/run-comprehensive-tests.sh
+
+# Deploy to production
+./scripts/deploy/deploy-production.sh
+
+# Setup development environment
+./scripts/setup/setup-rust-env.sh
+
+# Analyze code quality
+./scripts/analysis/todo_analyzer.py
+
+# Build with optimizations
+./scripts/build/build-wrapper.sh
 ```
 
-### Analyze Specific Languages
+### CI/CD Integration
+
+Scripts in the `ci/` directory are designed for automated pipelines:
 
 ```bash
-python3 todo_analyzer.py --languages rust typescript javascript
+# Pre-commit checks
+./scripts/ci/lint.sh
+./scripts/ci/verify.sh
+
+# Automated fixes
+./scripts/ci/fix.sh
 ```
 
-### Analyze Specific Directory
+## Script Categories
 
-```bash
-python3 todo_analyzer.py --root /path/to/project
-```
+### Build Scripts (`build/`)
+- `build-wrapper.sh` - Main build orchestration
+- `cargo-agent-wrapper.sh` - Cargo-specific build wrapper
+- `analyze-build-performance.sh` - Build performance analysis
 
-### Generate Reports
+### Test Scripts (`test/`)
+- `run-comprehensive-tests.sh` - Full test suite
+- `run-integration-tests.sh` - Integration tests only
+- `run-e2e-tests.sh` - End-to-end tests
+- `check-coverage.js` - Coverage analysis
+- `coverage-summary.sh` - Coverage reporting
 
-```bash
-python3 todo_analyzer.py --output-json analysis.json --output-md report.md
-```
+### Deployment Scripts (`deploy/`)
+- `deploy-production.sh` - Production deployment
+- `disaster-recovery/` - Recovery procedures
 
-### Full Options
+### Setup Scripts (`setup/`)
+- `setup-*.sh` - Environment-specific setup
+- `bootstrap-agent.sh` - Initial project setup
+- `install-git-hooks.sh` - Git integration
 
-```bash
-python3 todo_analyzer.py --help
-```
+### Analysis Scripts (`analysis/`)
+- `todo_analyzer.py` - TODO and task analysis
+- `provenance-report.js` - Build provenance reporting
 
-## Output
+### CI Scripts (`ci/`)
+- `lint.sh` - Code linting
+- `verify.sh` - Verification checks
+- `fix.sh` - Automated code fixes
 
-The analyzer provides:
+## Contributing
 
-- **Summary statistics**: Total files, hidden TODOs found, language breakdown
-- **Pattern analysis**: Categorizes hidden TODOs by type (temporal, placeholder, simulation, etc.)
-- **File prioritization**: Lists files with most hidden TODOs for conversion planning
-- **Detailed results**: JSON output with complete analysis data
+When adding new scripts:
 
-## Pattern Categories
+1. Place in appropriate subdirectory
+2. Add executable permissions: `chmod +x script.sh`
+3. Document purpose in this README
+4. Include usage examples
+5. Test on clean environment
 
-- **Temporal**: "for now", "simplified", "basic", "temporary"
-- **Future**: "would be", "in production", "eventually"
-- **Placeholder**: "placeholder", "mock", "stub", "dummy"
-- **Simulation**: "simulate", "simulating", "simulation"
-- **Performance**: "optimize", "efficient", "performance"
-- **Error Handling**: "error handling", "exception handling", "retry logic"
-- **Database**: "database implementation", "persistence layer"
-- **API/Network**: "api endpoint", "http client", "rest interface"
-- **Security**: "security validation", "auth implementation"
-- **And many more...**
+## Security
 
-## Examples
-
-### Analyze Rust Files Only
-
-```bash
-python3 todo_analyzer.py --languages rust --output-json rust_todos.json
-```
-
-### Analyze TypeScript and JavaScript
-
-```bash
-python3 todo_analyzer.py --languages typescript javascript --output-md ts_js_report.md
-```
-
-### Full Project Analysis
-
-```bash
-python3 todo_analyzer.py --root . --output-json full_analysis.json --output-md full_report.md
-```
-
-## Integration
-
-The analyzer can be integrated into:
-
-- **CI/CD pipelines**: Automated TODO detection in build processes
-- **Code review workflows**: Identify hidden work before merging
-- **Project planning**: Comprehensive TODO inventory for sprint planning
-- **Quality assurance**: Ensure no hidden implementation debt
-
-## Performance
-
-- **Efficient filtering**: 99.1% of files properly ignored (build artifacts, tests, etc.)
-- **Fast analysis**: Processes thousands of files in seconds
-- **Memory efficient**: Streams file processing for large codebases
-- **Cross-platform**: Works on Linux, macOS, and Windows
+- Scripts may execute with elevated permissions
+- Review code before running unfamiliar scripts
+- Use absolute paths where possible
+- Validate inputs and sanitize outputs

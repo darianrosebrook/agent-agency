@@ -1,5 +1,5 @@
 === Duplication Detection Report ===
-Generated: Wed Oct 22 19:22:59 PDT 2025
+Generated: Thu Oct 23 19:49:24 PDT 2025
 
 Duplicate filenames across crates:
 agent.rs
@@ -8,16 +8,20 @@ api.rs
 audit.rs
 autonomous_executor.rs
 budget.rs
+cache.rs
 caws_integration.rs
 circuit_breaker.rs
 cli.rs
 config.rs
-context_builder.rs
 context.rs
+context_builder.rs
 coordinator.rs
-coreml_model.rs
+core.rs
 coreml.rs
+coreml_model.rs
 dashboard.rs
+debate.rs
+embeddings.rs
 error.rs
 errors.rs
 ewma.rs
@@ -33,15 +37,21 @@ logging.rs
 main.rs
 manager.rs
 metrics.rs
+metrics_collector.rs
 mod.rs
 models.rs
+orchestrator.rs
+persistence.rs
+plan_review.rs
 progress_tracker.rs
 quantization.rs
 rate_limiting.rs
 resource_pool.rs
+reward.rs
 runner.rs
 rust.rs
 satisficing.rs
+schema.rs
 service.rs
 storage.rs
 tests.rs
@@ -54,23 +64,6 @@ validation.rs
 websocket.rs
 
 Duplicate struct names:
-AcceptanceCriterion {
-AdaptivePromptingStrategy;
-AdaptiveResourceAllocator {
-Admission {
-AdvancedQuantizationEngine {
-AgentPerformanceMetrics {
-AgentPerformanceSnapshot {
-AgentStatus {
-AgentTelemetryCollector {
-AggregatedMetrics {
-AggregationMetadata {
-AggregationResult {
-AlertManager {
-AlertRule {
-AlertStatistics {
-Allocation {
-AmbiguityAnalysis {
 ANECapabilities {
 ANEConfig {
 ANEDeviceCapabilities {
@@ -84,9 +77,33 @@ ANEResourcePool {
 ANESymbols {
 ANEThermalConfig {
 ANETokenizers {
+AcceptanceCriterion {
+AdaptivePromptingStrategy;
+AdaptiveResourceAllocator {
+Admission {
+AdvancedQuantizationEngine {
+AgentAgencyAPI {
+AgentPerformanceMetrics {
+AgentPerformanceSnapshot {
+AgentPerformanceTracker {
+AgentStatus {
+AgentTelemetryCollector {
+AggregatedMetrics {
+AggregationMetadata {
+AggregationResult {
+AlertManager {
+AlertRule {
+AlertStatistics {
+AlgorithmConfig {
+AlgorithmPerformance {
+Allocation {
+Ambiguity {
+AmbiguityAnalysis {
 AnomalyDetectionResult {
 AnomalyDetector {
 AppleSiliconConfig {
+ArbiterOrchestrator {
+ArbiterVerdict {
 Artifact {
 ArtifactMetadata {
 AtomicClaim {
@@ -95,7 +112,9 @@ AuditLogEntry {
 AuditTrailEntry {
 AutonomousExecutor {
 AutonomousExecutorConfig {
+BackendWorker {
 BackupConfig {
+BackupManager {
 BaselineComparison {
 BaselineMetrics {
 BenchmarkConfig {
@@ -103,13 +122,14 @@ BenchmarkResult {
 BenchmarkRunner {
 BoundingBox {
 BudgetAdherence {
-BudgetChecker {
 BudgetCheckResult {
+BudgetChecker {
 BudgetComplianceResult {
 BudgetLimits {
-Budgets {
 BudgetState {
 BudgetViolation {
+Budgets {
+BusinessMetrics {
 CacheConfig {
 CacheMetadata {
 CacheStats {
@@ -121,7 +141,6 @@ CawsChecklist {
 CawsComplianceResult {
 CawsIntegration {
 CawsIntegrationConfig {
-CawsMetadata {
 CawsPolicy {
 CawsRule {
 CawsSpec {
@@ -133,8 +152,8 @@ CawsWaiver {
 ChangeComplexity {
 ChangeSet {
 ChunkConfig {
-ChunkedExecutor {
 ChunkList {
+ChunkedExecutor {
 CircuitBreaker {
 CircuitBreakerConfig {
 CircuitBreakerStats {
@@ -145,16 +164,18 @@ ClarificationQuestion {
 ClarificationResponse {
 Cli {
 CliConfig {
+CodeOutput {
+CodeSpecification {
 CommandArtifact {
 Commit {
 CommunicationHub {
 CompilationSpecialist {
 CompilationValidator;
 ComplexityMetrics {
-ComplianceRequirements {
 ComplianceSnapshot {
 ComplianceStatus {
 ComplianceValidationResult {
+ComponentContribution {
 Conflict {
 ConsensusCoordinator {
 ConsensusResult {
@@ -162,6 +183,7 @@ ConsistencyCheckResult {
 ConstitutionalReference {
 Constraint {
 ContentOverride {
+ContextAwareDisambiguation {
 ContextBudget {
 ContextBuilder {
 ContextMetadata {
@@ -171,10 +193,15 @@ ContextStats {
 ContextSynthesisConfig {
 ContextUtility {
 CoordinationMetrics {
-CoreferenceResolution {
+CoreMLManager {
 CoreMLMetrics {
 CoreMLModel {
+CoreferenceChain {
+CoreferenceResolution {
+CorrelationResult {
 CouncilConfig {
+CouncilCoordinator {
+CouncilIntegrationConfig {
 CouncilMetrics {
 CouncilVerdict {
 CoverageAnalysis {
@@ -184,12 +211,14 @@ CreateSourceIntegrityRecord {
 CreateSourceIntegrityVerification {
 CreditAssigner {
 CrossReference {
-DatabaseArtifactStorage {
+DataAnalysisOutput {
+DataSchema {
 DatabaseClient {
 DatabaseConfig {
 DatabaseHealthChecker {
 DatabaseStats {
 DatabaseStorage {
+DatabaseSystem {
 DebateArgument {
 DebateRound {
 DebateSession {
@@ -210,15 +239,25 @@ DiffStats {
 Digest(pub [u8; 32]);
 DisambiguationResult {
 DissentingOpinion {
+DocQualityResult {
+DocQualityValidator {
+DocumentationOutput {
 DocumentationSpecialist {
+DocumentationStandards {
+DomainIntegration {
 DummyEmbeddingProvider {
 EmbeddingCache {
 EmbeddingConfig {
 EmbeddingMetrics {
 EmbeddingModel {
 EmbeddingRequest {
+EnsembleAnalytics {
+EnsembleComponentStatistics {
 Entity {
 EntityCandidate {
+EntityDisambiguation {
+EntityMatch {
+EntityRelationship {
 EnvironmentConfig {
 ErrorMetrics {
 EvalReport {
@@ -235,15 +274,19 @@ ExecutionMetrics {
 ExecutionProgress {
 ExecutionResult {
 ExecutionStats {
+ExpectedImpact {
 ExpectedOutcome {
-ExtractionMetadata {
+ExternalKnowledgeEntity {
 FailureAnalysis {
 FailurePattern {
 FileChange {
 FileEvent {
 FileModification {
 FileStorage {
+FileSystemStorage {
 FinalVerdict {
+FrontendWorker {
+FusionResult {
 GateResult {
 GenerationRequest {
 GenerationResponse {
@@ -252,7 +295,9 @@ HealthCheckResult {
 HealthStatus {
 HfTokenizer {
 HistoricalData {
+HistoricalEntityAnalysis {
 Hunk {
+InMemoryWriter;
 IndexStats {
 InferenceMetrics {
 InferenceOptions {
@@ -263,19 +308,28 @@ IoSchema {
 JavaScriptAnalyzer;
 JudgeContribution {
 JudgeEvaluation {
-JudgeRanking {
 JudgeVerdict {
+KMeansClustering {
+KeywordMatch {
 KnowledgeEntry {
 KnowledgeSeeker {
 LanguageAnalysisResult {
 LanguageViolation {
 LanguageWarning {
+LearningAlgorithms {
+LearningConfig {
+LearningOrchestrator {
+LearningPersistenceConfig {
+LearningSystemHealth {
 LearningUpdate {
+LinearRegressionModel {
 LogEntry {
 LoggingConfig {
-MaintenanceTask {
 MCPConfig {
+MCPIntegrationServer {
 MCPServer {
+MLModel {
+MaintenanceTask {
 MemoryConfig {
 MemoryManager {
 MemoryStorage {
@@ -284,8 +338,8 @@ MetricAlphas {
 MetricCounts {
 MetricsCollector {
 MitigationStrategy {
-MLModel {
 MockTask {
+ModalityEvidence {
 ModelInfo {
 ModelMetadata {
 ModelMetrics {
@@ -294,15 +348,19 @@ ModelPerformanceMetrics {
 ModelPool {
 ModelPrediction {
 ModelRegistry {
+MultiModalVerificationEngine {
 MultimodalContext {
 MultimodalSearchResult {
 MyComponent {
 NamedEntity {
-NoopEmitter;
 NoOpMetricsBackend;
+NoopEmitter;
 ObjectiveWeights {
+ObservabilityManager {
+ObservabilitySystem {
 OnnxEmbeddingProvider {
 OnnxPreparedModel {
+OptimalConfig {
 OptimizationConfig {
 OptimizationConstraints {
 OptimizationResult {
@@ -316,18 +374,18 @@ ParsedOperation {
 ParsedTensor {
 PartialResults {
 ParticipantContribution {
-PasswordPolicy {
 Patch {
 PatchArtifact {
+PatternCache {
 PatternUpdate {
 PerformanceAlert {
 PerformanceAnalysis {
 PerformanceBenchmark {
 PerformanceConfig {
 PerformanceDelta {
-PerformanceMetric {
 PerformanceMetrics {
 PerformanceOptimization {
+PerformanceOptimizer {
 PerformancePrediction {
 PerformancePredictor {
 PerformanceRegression {
@@ -340,6 +398,7 @@ PerformanceSummary {
 PerformanceTracker {
 PerformanceTrends {
 PipelineMetrics {
+PlanReviewVerdict {
 PlanningAgent {
 PlanningMetadata {
 Pool {
@@ -350,6 +409,7 @@ PostgresSourceIntegrityStorage {
 PowerStatus {
 PredictiveLearningSystem {
 PrepareOptions {
+ProblemCharacteristics {
 ProcessingContext {
 ProcessingMetadata {
 ProcessingStats {
@@ -357,10 +417,13 @@ ProgressSnapshot {
 ProgressTracker {
 ProvenanceConfig {
 ProvenanceRecord {
+QTable {
 QualityAnalysis {
+QualityDataPoint {
 QualityGate {
 QualityGateResult {
 QualityGateValidator {
+QualityIssue {
 QualityMetrics {
 QualityReport {
 QualityRequirements {
@@ -372,8 +435,8 @@ QuantizationResult {
 QuantizationStats {
 QueryMetrics {
 RateLimitConfig {
-RateLimiter {
 RateLimitMiddleware {
+RateLimiter {
 Recommendation {
 RecoveryConfig {
 RecoveryMetrics {
@@ -381,25 +444,27 @@ RecoveryObjectives {
 RedisCircuitBreaker {
 RedisConfig {
 RefactoringSpecialist {
+ReferentInfo {
 RefinementDecision {
 RefinementDirective {
 ReflexiveLearningSystem {
 RegistryStatistics {
 RequestContext {
 RequiredChange {
+ResearchAgent {
 ResearchCapabilities {
 ResearchConfig {
+ResolvedEntity {
 ResourceAllocation {
 ResourceConstraints {
 ResourcePrediction {
 ResourcePredictor {
 ResourceRequirements {
 ResourceThresholds {
-ResourceTrend {
 ResourceUsage {
+ResourceUsageMetrics {
 ResourceUtilization {
 RestoreFilters {
-RetentionPolicy {
 RetryConfig {
 RetryExecutor {
 RiskAssessment {
@@ -411,30 +476,39 @@ RoutingDecision {
 RoutingRecommendation {
 RoutingStats {
 RustAnalyzer;
+SLAMetrics {
+SLOAlert {
+SLOAlertThresholds {
+SLOMeasurement {
+SLOStatus {
+SLOTracker {
 SatisficingConfig {
 SatisficingEvaluator {
 ScalingRecommendation {
+SchemaRegistry {
 ScopeRestrictions {
 SearchResult {
 SeasonalPattern {
 Secret {
 SecretMetadata {
 SecurityConfig {
+SecurityManager {
 SecurityRequirements {
 SecurityValidator;
 SecurityViolation {
 SelfAssessment {
 SelfPromptingAgent {
 SelfPromptingResult {
+SemanticAnalysis {
+SemanticKnowledgeBase {
 ServerConfig {
-SLAMetrics {
 SlaValidationResult {
+SnapshotMetadata {
 SourceIntegrityAlert {
 SourceIntegrityRecord {
 SourceIntegrityVerification {
 SourceLocation {
 Speaker {
-SpecializationScore {
 SpecialTokens {
 SpeechSegment {
 SpeechTurn {
@@ -445,7 +519,8 @@ StreamingHasher {
 StructuredLogger {
 StubOrchestratorHandle;
 SuccessCriterion {
-SystemClock;
+SuccessPattern {
+SystemAlert {
 SystemDashboard {
 SystemHealthMonitor {
 SystemHealthSnapshot {
@@ -458,6 +533,7 @@ TaskDescriptor {
 TaskError {
 TaskExecutionResult {
 TaskFeatures {
+TaskOrchestrator {
 TaskOutcome {
 TaskProgress {
 TaskRequest {
@@ -468,16 +544,21 @@ TaskScope {
 TaskSpec {
 TechStack {
 TelemetryCollector {
+TenantMemoryConfig {
 TensorSpec {
+TestConsistency {
+TestCoverage {
 TestDataGenerator;
 TestFixtures;
-TestingSpecialist {
 TestPerformanceMetrics {
 TestPlan {
+TestQuality {
+TestRelevance {
 TestResult {
 TestResults {
 TestScenario {
 TestSuiteResults {
+TestingSpecialist {
 ThermalCapabilities {
 ThermalConfig {
 ThermalStatus {
@@ -525,27 +606,36 @@ WebSocketStats {
 WordTiming {
 Worker {
 WorkerAssignment {
+WorkerContext {
 WorkerManager {
 WorkerMetadata {
 WorkerOutput {
 WorkerOutputContract {
 WorkerPerformanceMetrics {
+WorkerPoolManager {
 WorkerPoolStats {
+WorkerResult {
+WorkerUpdate {
+Workflow {
 WorkingSpec {
 WorkingSpecScope {
 WorkloadSpec {
 WorkspaceFactory;
+WorkspaceStateManager {
 ZeroKnowledgeProof {
 
 Duplicate trait names:
 ArtifactStorage: Send + Sync {
+CawsRuntimeValidator: Send + Sync {
 Converter: Send + Sync {
 CoreMlInvoker {
 EmbeddingProvider: Send + Sync {
 HealthCheck: Send + Sync {
 InferenceEngine: Send + Sync {
 IntoANEError {
+Judge {
 JudgeEvaluator: Send + Sync {
+KnowledgeBase {
 LanguageAnalyzer: Send + Sync + std::fmt::Debug {
 MessageHandler: Send + Sync {
 MetricsBackend: Send + Sync {
@@ -554,4 +644,5 @@ PreparedModel: Send + Sync {
 ProvenanceEmitter: Send + Sync + std::fmt::Debug {
 ResearchAgent: Send + Sync {
 SourceIntegrityStorage: Send + Sync {
+Worker {
 Workspace: Send + Sync {

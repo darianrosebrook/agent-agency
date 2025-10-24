@@ -121,6 +121,81 @@ V3 provides functional infrastructure with operational core components:
 - **AllowList Enforcement**: Path and content restrictions for safe editing
 - **Budget Controls**: Resource limits and waiver system for constraint management
 
+## Project Structure
+
+The V3 codebase is organized for clarity and maintainability:
+
+```
+iterations/v3/
+├── config/                           # Configuration files
+│   ├── api/                         # API server configurations
+│   ├── rust/                        # Rust toolchain configs (clippy, rustfmt, etc.)
+│   ├── environment/                 # Environment variables and secrets
+│   └── production.yaml              # Production deployment config
+│
+├── scripts/                         # Automation scripts (organized)
+│   ├── build/                       # Build and compilation scripts
+│   ├── test/                        # Testing and coverage scripts
+│   ├── deploy/                      # Deployment and operations scripts
+│   ├── setup/                       # Environment setup scripts
+│   ├── analysis/                    # Code analysis and reporting
+│   ├── ci/                          # CI/CD and development workflow
+│   └── models/                      # ML model management
+│
+├── demo/                           # Demonstration code
+│   ├── rust/                       # Rust prototypes and examples
+│   ├── js/                         # JavaScript demos
+│   └── apps/                       # Demo applications
+│
+├── languages/                      # Non-Rust components
+│   ├── swift/                      # Swift bridges and components
+│   └── python/                     # Python utilities and PyTorch
+│
+├── temp/                           # Temporary development files
+│   └── *.rs                        # Experimental code (safe to delete)
+│
+├── environments/                   # Isolated development environments
+│   ├── whisper_conversion_env/     # Whisper model processing
+│   └── whisper-coreml-env/         # Core ML integration
+│
+├── build/                          # Build artifacts
+│   └── artifacts/                  # Generated binaries and caches
+│
+├── docs/                           # Documentation and logs
+│   ├── SYSTEM_STATUS.md           # Current system assessment
+│   ├── methods.txt                # API documentation
+│   └── build_errors.log           # Build logs
+│
+├── models/                         # ML models and assets
+│   └── coreml/                     # Core ML models and packages
+│
+├── tools/                          # Development tools
+│   └── installers/                 # Installation scripts and packages
+│
+├── Cargo.toml, Cargo.lock          # Rust workspace configuration
+├── docker-compose.yml              # Container orchestration
+├── package.json                    # Node.js dependencies
+└── [40+ Rust crates]               # Core functionality
+    ├── council/                    # Constitutional governance
+    ├── orchestration/              # Task coordination
+    ├── workers/                    # Parallel execution
+    ├── database/                   # Persistence layer
+    ├── observability/              # Monitoring and metrics
+    └── [35+ more crates]          # Specialized components
+```
+
+### Directory Purposes
+
+- **`config/`** - All configuration files (API, environment, tooling)
+- **`scripts/`** - Organized automation by function (build/test/deploy)
+- **`demo/`** - Prototypes, examples, and demonstrations
+- **`languages/`** - Non-Rust components (Swift, Python, etc.)
+- **`temp/`** - Temporary files (safe to clean regularly)
+- **`environments/`** - Isolated development environments
+- **`docs/`** - Documentation, logs, and status reports
+- **`models/`** - ML models, weights, and assets
+- **`tools/`** - Development utilities and installers
+
 ## Getting Started
 
 ### Prerequisites

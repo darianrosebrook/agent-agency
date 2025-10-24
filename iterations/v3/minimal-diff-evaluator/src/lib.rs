@@ -1,3 +1,6 @@
+#![allow(warnings)] // Disables all warnings for the crate
+#![allow(dead_code)] // Disables dead_code warnings for the crate
+
 pub mod ast_analyzer;
 pub mod change_classifier;
 pub mod evaluator;

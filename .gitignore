@@ -7,6 +7,7 @@
 .agent/cache/
 .caws/.cache/
 .caws/tmp/
+.caws/provenance/chain.json
 
 # CAWS workspace state snapshots (auto-generated)
 .caws/workspace-state/**/snapshot-*.json
@@ -19,6 +20,8 @@ iterations/*/current_*.txt
 # Build outputs (common patterns)
 dist/
 build/
+build/artifacts/
+temp/
 *.tsbuildinfo
 .next/
 .nuxt/
@@ -76,6 +79,21 @@ libtorch
 target/
 **/*.rs.bk
 **/.rustc_info.json
+
+# Temporal project management documentation
+docs-status/
+
+# Analysis and report files (generated)
+*_analysis_report.md
+final_analysis_*.md
+torch_dependency_graph.md
+fixed_todo_analysis_report.md
+v3_todo_priority_manifest.yaml
+
+# Corrupted/temporary files
+scripts/cargo.,toml
+scripts/cargo.%2Ctoml
+Cargo.toml.bak
 
 # Swift Package Manager
 Package.resolved
@@ -216,6 +234,9 @@ env/
 ENV/
 .venv/
 .env*/
+environments/*/venv/
+environments/*/env/
+environments/*/.venv/
 !requirements*.txt
 
 # Jupyter notebooks checkpoints and outputs
@@ -234,6 +255,10 @@ logs/
 simple_*_demo
 test_*_demo
 validate_*_integration
+demo/rust/simple_*_demo
+demo/rust/test_*_demo
+temp/test
+temp/validate_*_integration
 test-image*.png
 *.jpg
 *.jpeg
