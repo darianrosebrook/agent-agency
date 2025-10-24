@@ -1,0 +1,43 @@
+[package]
+name = "agent-workers"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+# Workspace dependencies
+tokio.workspace = true
+async-trait.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+anyhow.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+uuid.workspace = true
+
+# MCP integration - our newly consolidated system
+agent-mcp = { path = "../agent-mcp" }
+
+# Contracts for task definitions
+agent-agency-contracts = { path = "../agent-agency-contracts" }
+
+# Council for security and compliance
+agent-agency-council = { path = "../council" }
+
+# Resilience patterns
+agent-agency-resilience = { path = "../resilience" }
+
+# Database client
+agent-agency-database = { path = "../database" }
+
+# Additional utilities
+dashmap = "5.5"
+parking_lot = "0.12"
+
+[features]
+default = []
+test-utils = []
+
+[dev-dependencies]
+tokio-test = "0.4"
