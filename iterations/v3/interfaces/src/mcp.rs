@@ -3,16 +3,30 @@
 //! Provides a clean interface layer for MCP (Model Context Protocol) server functionality,
 //! bridging the sophisticated MCP integration with the rest of the Agent Agency system.
 
-use agent_agency_mcp_integration::{
-    types::*,
-    server::MCPServer as InnerMCPServer,
-    tool_discovery::ToolDiscovery,
-    tool_registry::ToolRegistry,
-    caws_integration::CawsIntegration,
+use agent_agency_mcp::{
+    MCPServer as InnerMCPServer,
+    MCPConfig,
+    ServerConfig,
+    ToolDiscoveryConfig,
+    CawsIntegrationConfig,
+    ToolRegistryConfig,
+    PerformanceConfig,
+    ValidationStrictness,
+    MCPServerStatus,
+    ToolExecutionRequest,
+    ToolExecutionResult,
+    MCPTool,
+    ToolDiscoveryResult,
+    ToolRegistryStats,
+    CawsComplianceResult,
+    server::CircuitBreakerStats,
+    server::AuthRateLimitStats,
+    MCPConnection,
 };
 use agent_agency_database::DatabaseClient;
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
@@ -238,7 +252,7 @@ impl McpServer {
     }
 
     /// Get circuit breaker statistics
-    pub async fn get_circuit_breaker_stats(&self) -> Result<HashMap<String, agent_agency_mcp_integration::server::CircuitBreakerStats>> {
+    pub async fn get_circuit_breaker_stats(&self) -> Result<HashMap<String, CircuitBreakerStats>> {
         let inner = self.inner.read().await;
         Ok(inner.get_circuit_breaker_stats().await)
     }

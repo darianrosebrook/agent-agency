@@ -754,7 +754,7 @@ impl QualityGate for TypeCheckGate {
     }
 }
 
-pub type Result<T> = std::result::Result<T, QualityGateError>;
+pub type Result<T, E = QualityGateError> = std::result::Result<T, E>;
 
 #[derive(Debug, thiserror::Error)]
 pub enum QualityGateError {

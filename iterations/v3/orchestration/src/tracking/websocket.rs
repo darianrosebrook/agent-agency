@@ -303,7 +303,7 @@ pub struct WebSocketStats {
     pub connections_per_task: HashMap<Uuid, usize>,
 }
 
-pub type Result<T> = std::result::Result<T, WebSocketError>;
+pub type Result<T, E = WebSocketError> = std::result::Result<T, E>;
 
 #[derive(Debug, thiserror::Error)]
 pub enum WebSocketError {

@@ -248,9 +248,9 @@ impl Frontier {
     fn calculate_priority(&self, task: &Task, parent_id: &str) -> f64 {
         // Base priority from task type
         let base_priority = match task.task_type {
-            crate::planning::types::TaskType::CriticalFix => 1.0,
-            crate::planning::types::TaskType::SecurityIssue => 0.9,
-            crate::planning::types::TaskType::Performance => 0.8,
+            crate::planning::types::TaskType::BugFix => 1.0,
+            crate::planning::types::TaskType::Security => 0.9,
+            crate::planning::types::TaskType::Optimization => 0.8,
             crate::planning::types::TaskType::Feature => 0.6,
             crate::planning::types::TaskType::Refactor => 0.4,
             crate::planning::types::TaskType::Documentation => 0.2,
@@ -430,7 +430,7 @@ mod tests {
     fn test_frontier_push_pop() {
         let mut frontier = Frontier::new();
 
-        let task1 = create_test_task("task1", TaskType::CriticalFix, vec!["src/main.rs".to_string()]);
+        let task1 = create_test_task("task1", TaskType::BugFix, vec!["src/main.rs".to_string()]);
         let task2 = create_test_task("task2", TaskType::Feature, vec!["src/utils.rs".to_string()]);
 
         frontier.push(task1.clone(), "parent1").unwrap();
@@ -529,7 +529,7 @@ mod tests {
         let mut frontier = Frontier::new();
 
         // Add tasks with different priorities
-        let critical = create_test_task("critical", TaskType::CriticalFix, vec!["src/main.rs".to_string()]);
+        let critical = create_test_task("critical", TaskType::BugFix, vec!["src/main.rs".to_string()]);
         let feature = create_test_task("feature", TaskType::Feature, vec!["src/utils.rs".to_string()]);
         let refactor = create_test_task("refactor", TaskType::Refactor, vec!["src/old.rs".to_string()]);
 

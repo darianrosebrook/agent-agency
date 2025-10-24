@@ -399,4 +399,4 @@ impl LLMClient for OllamaClient {
     }
 }
 
-pub type Result<T> = std::result::Result<T, anyhow::Error>;
+pub type Result<T, E = anyhow::Error> = std::result::Result<T, E>;

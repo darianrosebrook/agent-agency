@@ -8,7 +8,7 @@ use ingestors::{FileWatcher, VideoIngestor, SlidesIngestor, DiagramsIngestor, Ca
 use enrichers::{VisionEnricher, AsrEnricher, EntityEnricher, VisualCaptionEnricher, CircuitBreaker};
 use crate::enrichers::types::EnrichedBlock;
 use indexers::{Bm25Indexer, HnswIndexer, JobScheduler};
-use agent_agency_research::KnowledgeSeeker;
+use agent_agency_research::{KnowledgeSeeker, ContentType};
 use agent_agency_council::coordinator::ConsensusCoordinator;
 use crate::audit_trail::AuditTrailManager;
 use std::path::Path;

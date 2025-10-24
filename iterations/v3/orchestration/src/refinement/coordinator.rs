@@ -526,7 +526,7 @@ struct CouncilStrategyDecision {
     council_recommendations: Vec<String>,
 }
 
-pub type Result<T> = std::result::Result<T, RefinementCoordinatorError>;
+pub type Result<T, E = RefinementCoordinatorError> = std::result::Result<T, E>;
 
 #[derive(Debug, thiserror::Error)]
 pub enum RefinementCoordinatorError {

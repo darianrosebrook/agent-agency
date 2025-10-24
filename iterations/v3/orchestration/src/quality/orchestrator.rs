@@ -447,7 +447,7 @@ impl Default for QualityGateOrchestratorBuilder {
     }
 }
 
-pub type Result<T> = std::result::Result<T, QualityGateOrchestratorError>;
+pub type Result<T, E = QualityGateOrchestratorError> = std::result::Result<T, E>;
 
 #[derive(Debug, thiserror::Error)]
 pub enum QualityGateOrchestratorError {

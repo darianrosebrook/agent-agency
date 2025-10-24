@@ -12,6 +12,9 @@ use tokio::time;
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
 
+use agent_agency_contracts::task_executor::{TaskExecutionResult, TaskExecutor};
+use agent_agency_contracts::task_executor_provider::TaskExecutorProvider;
+
 use crate::orchestrate::{orchestrate_task, to_task_spec};
 use crate::caws_runtime::{CawsRuntimeValidator, TaskDescriptor, WorkingSpec};
 use crate::persistence::VerdictWriter;
@@ -23,6 +26,8 @@ use agent_agency_council::coordinator::ConsensusCoordinator;
 use agent_agency_council::types::{ConsensusResult, FinalVerdict};
 use agent_agency_observability::cache::CacheBackend;
 use agent_agency_observability::metrics::MetricsBackend;
+use agent_agency_contracts::task_executor::TaskExecutor;
+use agent_agency_contracts::task_executor_provider::TaskExecutorProvider;
 
 /// Configuration for the autonomous executor
 #[derive(Debug, Clone)]
@@ -68,7 +73,7 @@ pub struct AutonomousExecutor {
     provenance_emitter: Arc<OrchestrationProvenanceEmitter>,
     cache: Option<Arc<dyn CacheBackend>>,
     metrics: Option<Arc<dyn MetricsBackend>>,
-    task_executor: Arc<agent_agency_workers::TaskExecutor>,
+    task_executor_provider: TaskExecutorProvider,
     active_tasks: Arc<RwLock<HashMap<Uuid, TaskExecutionState>>>,
     task_queue: mpsc::UnboundedSender<TaskDescriptor>,
     task_receiver: Arc<RwLock<mpsc::UnboundedReceiver<TaskDescriptor>>>,
@@ -85,7 +90,7 @@ impl AutonomousExecutor {
         provenance_emitter: Arc<OrchestrationProvenanceEmitter>,
         cache: Option<Arc<dyn CacheBackend>>,
         metrics: Option<Arc<dyn MetricsBackend>>,
-        task_executor: Arc<agent_agency_workers::TaskExecutor>,
+        task_executor_provider: TaskExecutorProvider,
     ) -> Self {
         let (task_sender, task_receiver) = mpsc::unbounded_channel();
 
@@ -98,7 +103,7 @@ impl AutonomousExecutor {
             provenance_emitter,
             cache,
             metrics,
-            task_executor,
+            task_executor_provider,
             active_tasks: Arc::new(RwLock::new(HashMap::new())),
             task_queue: task_sender,
             task_receiver: Arc::new(RwLock::new(task_receiver)),
@@ -113,7 +118,12 @@ impl AutonomousExecutor {
         let execution_state = TaskExecutionState {
             task_id,
             task_descriptor: task_descriptor.clone(),
-            working_spec: WorkingSpec::default(), // Will be filled during planning
+            working_spec: WorkingSpec {
+                risk_tier: 1, // Low risk default
+                scope_in: vec![],
+                change_budget_max_files: 50,
+                change_budget_max_loc: 1000,
+            }, // Will be filled during planning
             start_time: Utc::now(),
             status: ExecutionStatus::Pending,
             retry_count: 0,
@@ -307,9 +317,9 @@ impl AutonomousExecutor {
             title: format!("Autonomous Task {}", task_descriptor.task_id),
             description: task_descriptor.description.clone(),
             risk_tier: match task_descriptor.risk_tier {
-                1 => agent_agency_council::models::RiskTier::Tier1,
-                2 => agent_agency_council::models::RiskTier::Tier2,
-                _ => agent_agency_council::models::RiskTier::Tier3,
+                1 => agent_agency_council::models::RiskTier::Low,
+                2 => agent_agency_council::models::RiskTier::Medium,
+                _ => agent_agency_council::models::RiskTier::High,
             },
             scope_in: task_descriptor.scope_in.clone(),
             scope_out: task_descriptor.scope_out.clone(),
@@ -557,7 +567,7 @@ impl AutonomousExecutor {
 
             // Try to cancel on the worker if we have a worker_id
             if let Some(worker_id) = state.worker_id {
-                if let Err(e) = self.task_executor.cancel_task_execution(task_id, worker_id).await {
+                if let Err(e) = self.task_executor_provider.create_executor().cancel_task_execution(task_id, worker_id).await {
                     tracing::warn!("Failed to cancel task {} on worker {}: {}", task_id, worker_id, e);
                     // Continue with local cancellation even if worker cancel fails
                 }

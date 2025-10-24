@@ -1,7 +1,8 @@
 //! Task API Endpoints
-//! 
+//!
 //! Provides REST API for task management, including task listing, detail retrieval,
-//! and lifecycle operations. All endpoints integrate with the persistent database layer.
+//! and lifecycle operations. Endpoints use CQRS commands and queries for proper
+//! separation of concerns and business logic encapsulation.
 
 use agent_agency_database::PgPool;
 use axum::{
@@ -14,6 +15,24 @@ use serde::{Deserialize, Serialize};
 use sqlx::Row;
 use uuid::Uuid;
 use std::fmt;
+use std::sync::Arc;
+
+// CQRS imports
+use crate::cqrs::{
+    CqrsBus,
+    commands::*,
+    queries::*,
+};
+
+// Re-export CQRS API functions for use in routing
+pub use execute_task_cqrs as execute_task;
+pub use cancel_task_cqrs as cancel_task;
+pub use update_task_progress_cqrs as update_task_progress;
+pub use register_worker_cqrs as register_worker;
+pub use update_worker_health_cqrs as update_worker_health;
+pub use get_task_status_cqrs as get_task_status;
+pub use get_system_health_cqrs as get_system_health;
+pub use get_active_tasks_cqrs as get_active_tasks;
 
 /// Task API error types
 #[derive(Debug)]
@@ -189,9 +208,9 @@ pub async fn get_task_events(
     Path(task_id): Path<Uuid>,
 ) -> Result<Json<Vec<TaskEvent>>, TaskApiError> {
     // Use the new task audit logs table (P0 requirement: persist audit trail + surface it on tasks)
-    let events = sqlx::query_as::<_, TaskEvent>(
+    let events = sqlx::query(
         r#"
-        SELECT id, task_id, ts, category, actor, action, payload, idx
+        SELECT id, task_id, created_at, category, actor, action, payload, idx
         FROM task_audit_logs
         WHERE task_id = $1
         ORDER BY idx DESC
@@ -201,7 +220,19 @@ pub async fn get_task_events(
     .bind(&task_id)
     .fetch_all(&pool)
     .await
-    .map_err(|e| TaskApiError::DatabaseError(e.to_string()))?;
+    .map_err(|e| TaskApiError::DatabaseError(e.to_string()))?
+    .into_iter()
+    .map(|row: sqlx::postgres::PgRow| TaskEvent {
+        id: row.get("id"),
+        task_id: row.get("task_id"),
+        ts: row.get("created_at"),
+        category: row.get("category"),
+        actor: row.get("actor"),
+        action: row.get("action"),
+        payload: row.get("payload"),
+        idx: row.get("idx"),
+    })
+    .collect::<Vec<_>>();
 
     Ok(Json(events))
 }
@@ -301,8 +332,26 @@ pub async fn pause_task(
                 .map_err(|e| TaskApiError::DatabaseError(e.to_string()))?;
             }
         }
-        Ok(Err(e)) | Err(e) => {
-            // Timeout or network error, but task is still marked as paused
+        Ok(Err(e)) => {
+            // Network error from worker request
+            sqlx::query(
+                r#"
+                INSERT INTO task_audit_logs (task_id, category, actor, action, payload)
+                VALUES ($1, 'orchestration', 'system', 'pause_network_error', $2)
+                "#,
+            )
+            .bind(&task_id)
+            .bind(serde_json::json!({
+                "outcome": "network_error",
+                "error": e.to_string(),
+                "stage": "pause_with_network_error"
+            }))
+            .execute(&pool)
+            .await
+            .map_err(|e| TaskApiError::DatabaseError(e.to_string()))?;
+        }
+        Err(_) => {
+            // Timeout waiting for worker response
             sqlx::query(
                 r#"
                 INSERT INTO task_audit_logs (task_id, category, actor, action, payload)
@@ -334,13 +383,13 @@ pub async fn pause_task(
             let task = TaskResponse {
                 id: row.get("id"),
                 state: row.get("state"),
-                created_at: row.get::<_, chrono::DateTime<chrono::Utc>>("created_at").to_rfc3339(),
-                updated_at: row.get::<_, chrono::DateTime<chrono::Utc>>("updated_at").to_rfc3339(),
+                created_at: row.get("created_at"),
+                updated_at: row.get("updated_at"),
                 created_by: row.get("created_by"),
             };
             Ok(Json(task))
         }
-        None => Err(TaskApiError::TaskNotFound(task_id)),
+        None => Err(TaskApiError::NotFound),
     }
 }
 
@@ -439,8 +488,26 @@ pub async fn resume_task(
                 .map_err(|e| TaskApiError::DatabaseError(e.to_string()))?;
             }
         }
-        Ok(Err(e)) | Err(e) => {
-            // Timeout or network error, but task is still marked as executing
+        Ok(Err(e)) => {
+            // Network error from worker request
+            sqlx::query(
+                r#"
+                INSERT INTO task_audit_logs (task_id, category, actor, action, payload)
+                VALUES ($1, 'orchestration', 'system', 'resume_network_error', $2)
+                "#,
+            )
+            .bind(&task_id)
+            .bind(serde_json::json!({
+                "outcome": "network_error",
+                "error": e.to_string(),
+                "stage": "resume_with_network_error"
+            }))
+            .execute(&pool)
+            .await
+            .map_err(|e| TaskApiError::DatabaseError(e.to_string()))?;
+        }
+        Err(_) => {
+            // Timeout waiting for worker response
             sqlx::query(
                 r#"
                 INSERT INTO task_audit_logs (task_id, category, actor, action, payload)
@@ -472,13 +539,13 @@ pub async fn resume_task(
             let task = TaskResponse {
                 id: row.get("id"),
                 state: row.get("state"),
-                created_at: row.get::<_, chrono::DateTime<chrono::Utc>>("created_at").to_rfc3339(),
-                updated_at: row.get::<_, chrono::DateTime<chrono::Utc>>("updated_at").to_rfc3339(),
+                created_at: row.get("created_at"),
+                updated_at: row.get("updated_at"),
                 created_by: row.get("created_by"),
             };
             Ok(Json(task))
         }
-        None => Err(TaskApiError::TaskNotFound(task_id)),
+        None => Err(TaskApiError::NotFound),
     }
 }
 
@@ -647,6 +714,413 @@ pub async fn cancel_task(
         updated_at: row.get::<chrono::DateTime<chrono::Utc>, _>("updated_at").to_rfc3339(),
         created_by: row.get::<Option<String>, _>("created_by"),
     }))
+}
+
+// ============================================================================
+// CQRS-BASED API ENDPOINTS
+// ============================================================================
+
+/// CQRS-based task execution endpoint
+#[utoipa::path(
+    post,
+    path = "/api/tasks/{task_id}/execute",
+    params(("task_id" = Uuid, Path, description = "Task ID to execute")),
+    request_body = ExecuteTaskRequest,
+    responses(
+        (status = 200, description = "Task execution started", body = ExecuteTaskResponse),
+        (status = 400, description = "Invalid request"),
+        (status = 500, description = "Internal server error")
+    )
+)]
+pub async fn execute_task_cqrs(
+    Extension(cqrs_bus): Extension<Arc<CqrsBus>>,
+    Path(task_id): Path<Uuid>,
+    Json(request): Json<ExecuteTaskRequest>,
+) -> Result<Json<ExecuteTaskResponse>, TaskApiError> {
+    // Create CQRS command
+    let command = ExecuteTaskCommand {
+        task_descriptor: request.task_descriptor,
+        worker_id: request.worker_id,
+        requested_at: chrono::Utc::now(),
+    };
+
+    // Execute command via CQRS bus
+    let execution_id = cqrs_bus.execute_command(command).await
+        .map_err(|e| TaskApiError::DatabaseError(format!("Command execution failed: {:?}", e)))?;
+
+    Ok(Json(ExecuteTaskResponse {
+        execution_id,
+        task_id,
+        status: "queued".to_string(),
+        message: "Task queued for execution".to_string(),
+    }))
+}
+
+/// CQRS-based task cancellation endpoint
+#[utoipa::path(
+    post,
+    path = "/api/tasks/{task_id}/cancel",
+    params(("task_id" = Uuid, Path, description = "Task ID to cancel")),
+    request_body = CancelTaskRequest,
+    responses(
+        (status = 200, description = "Task cancellation initiated"),
+        (status = 400, description = "Invalid request"),
+        (status = 500, description = "Internal server error")
+    )
+)]
+pub async fn cancel_task_cqrs(
+    Extension(cqrs_bus): Extension<Arc<CqrsBus>>,
+    Path(task_id): Path<Uuid>,
+    Json(request): Json<CancelTaskRequest>,
+) -> Result<Json<CancelTaskResponse>, TaskApiError> {
+    // Create CQRS command
+    let command = CancelTaskCommand {
+        task_id,
+        worker_id: request.worker_id,
+        reason: request.reason,
+    };
+
+    // Execute command via CQRS bus
+    cqrs_bus.execute_command(command).await
+        .map_err(|e| TaskApiError::DatabaseError(format!("Command execution failed: {:?}", e)))?;
+
+    Ok(Json(CancelTaskResponse {
+        task_id,
+        status: "cancelled".to_string(),
+        message: "Task cancellation initiated".to_string(),
+    }))
+}
+
+/// CQRS-based task progress update endpoint
+#[utoipa::path(
+    post,
+    path = "/api/tasks/{task_id}/progress",
+    params(("task_id" = Uuid, Path, description = "Task ID to update")),
+    request_body = UpdateProgressRequest,
+    responses(
+        (status = 200, description = "Progress updated successfully"),
+        (status = 400, description = "Invalid progress value"),
+        (status = 500, description = "Internal server error")
+    )
+)]
+pub async fn update_task_progress_cqrs(
+    Extension(cqrs_bus): Extension<Arc<CqrsBus>>,
+    Path(task_id): Path<Uuid>,
+    Json(request): Json<UpdateProgressRequest>,
+) -> Result<Json<UpdateProgressResponse>, TaskApiError> {
+    // Create CQRS command
+    let command = UpdateTaskProgressCommand {
+        task_id,
+        progress_percentage: request.progress_percentage,
+        status_message: request.status_message,
+    };
+
+    // Execute command via CQRS bus
+    cqrs_bus.execute_command(command).await
+        .map_err(|e| TaskApiError::DatabaseError(format!("Command execution failed: {:?}", e)))?;
+
+    Ok(Json(UpdateProgressResponse {
+        task_id,
+        progress_percentage: request.progress_percentage,
+        status: "updated".to_string(),
+        message: "Task progress updated".to_string(),
+    }))
+}
+
+/// CQRS-based worker registration endpoint
+#[utoipa::path(
+    post,
+    path = "/api/workers/register",
+    request_body = RegisterWorkerRequest,
+    responses(
+        (status = 200, description = "Worker registered successfully", body = RegisterWorkerResponse),
+        (status = 400, description = "Invalid capabilities or request"),
+        (status = 500, description = "Internal server error")
+    )
+)]
+pub async fn register_worker_cqrs(
+    Extension(cqrs_bus): Extension<Arc<CqrsBus>>,
+    Json(request): Json<RegisterWorkerRequest>,
+) -> Result<Json<RegisterWorkerResponse>, TaskApiError> {
+    // Create CQRS command
+    let command = RegisterWorkerCommand {
+        worker_id: request.worker_id,
+        capabilities: request.capabilities,
+        metadata: request.metadata,
+    };
+
+    // Execute command via CQRS bus
+    let registration_id = cqrs_bus.execute_command(command).await
+        .map_err(|e| TaskApiError::DatabaseError(format!("Command execution failed: {:?}", e)))?;
+
+    Ok(Json(RegisterWorkerResponse {
+        registration_id,
+        worker_id: request.worker_id,
+        status: "registered".to_string(),
+        message: "Worker registered successfully".to_string(),
+    }))
+}
+
+/// CQRS-based worker health update endpoint
+#[utoipa::path(
+    post,
+    path = "/api/workers/{worker_id}/health",
+    params(("worker_id" = Uuid, Path, description = "Worker ID to update")),
+    request_body = UpdateHealthRequest,
+    responses(
+        (status = 200, description = "Worker health updated"),
+        (status = 500, description = "Internal server error")
+    )
+)]
+pub async fn update_worker_health_cqrs(
+    Extension(cqrs_bus): Extension<Arc<CqrsBus>>,
+    Path(worker_id): Path<Uuid>,
+    Json(request): Json<UpdateHealthRequest>,
+) -> Result<Json<UpdateHealthResponse>, TaskApiError> {
+    // Create CQRS command
+    let command = UpdateWorkerHealthCommand {
+        worker_id,
+        is_healthy: request.is_healthy,
+        last_seen: request.last_seen,
+    };
+
+    // Execute command via CQRS bus
+    cqrs_bus.execute_command(command).await
+        .map_err(|e| TaskApiError::DatabaseError(format!("Command execution failed: {:?}", e)))?;
+
+    Ok(Json(UpdateHealthResponse {
+        worker_id,
+        is_healthy: request.is_healthy,
+        status: "updated".to_string(),
+        message: "Worker health updated".to_string(),
+    }))
+}
+
+/// CQRS-based task status query endpoint
+#[utoipa::path(
+    get,
+    path = "/api/tasks/{task_id}/status",
+    params(("task_id" = Uuid, Path, description = "Task ID to query")),
+    responses(
+        (status = 200, description = "Task status retrieved", body = TaskStatusResponse),
+        (status = 404, description = "Task not found"),
+        (status = 500, description = "Internal server error")
+    )
+)]
+pub async fn get_task_status_cqrs(
+    Extension(cqrs_bus): Extension<Arc<CqrsBus>>,
+    Path(task_id): Path<Uuid>,
+) -> Result<Json<TaskStatusResponse>, TaskApiError> {
+    // Create CQRS query
+    let query = GetTaskStatusQuery { task_id };
+
+    // Execute query via CQRS bus
+    let task_status = cqrs_bus.execute_query(query).await
+        .map_err(|e| TaskApiError::DatabaseError(format!("Query execution failed: {:?}", e)))?;
+
+    match task_status {
+        Some(status) => Ok(Json(TaskStatusResponse {
+            task_id: status.task_id,
+            status: format!("{:?}", status.status).to_lowercase(),
+            progress_percentage: status.progress_percentage,
+            started_at: status.started_at,
+            completed_at: status.completed_at,
+            worker_id: status.worker_id,
+            error_message: status.error_message,
+        })),
+        None => Err(TaskApiError::NotFound),
+    }
+}
+
+/// CQRS-based system health query endpoint
+#[utoipa::path(
+    get,
+    path = "/api/health",
+    responses(
+        (status = 200, description = "System health retrieved", body = SystemHealthResponse),
+        (status = 500, description = "Internal server error")
+    )
+)]
+pub async fn get_system_health_cqrs(
+    Extension(cqrs_bus): Extension<Arc<CqrsBus>>,
+) -> Result<Json<SystemHealthResponse>, TaskApiError> {
+    // Create CQRS query
+    let query = GetSystemHealthQuery;
+
+    // Execute query via CQRS bus
+    let health = cqrs_bus.execute_query(query).await
+        .map_err(|e| TaskApiError::DatabaseError(format!("Query execution failed: {:?}", e)))?;
+
+    Ok(Json(SystemHealthResponse {
+        total_workers: health.total_workers,
+        active_workers: health.active_workers,
+        healthy_workers: health.healthy_workers,
+        total_tasks: health.total_tasks,
+        active_tasks: health.active_tasks,
+        completed_tasks: health.completed_tasks,
+        failed_tasks: health.failed_tasks,
+        average_task_duration_ms: health.average_task_duration_ms,
+        uptime_seconds: health.uptime_seconds,
+        timestamp: chrono::Utc::now(),
+    }))
+}
+
+/// CQRS-based active tasks query endpoint
+#[utoipa::path(
+    get,
+    path = "/api/tasks/active",
+    params(("limit" = Option<usize>, Query, description = "Maximum number of tasks to return")),
+    params(("offset" = Option<usize>, Query, description = "Number of tasks to skip")),
+    responses(
+        (status = 200, description = "Active tasks retrieved", body = Vec<TaskStatusResponse>),
+        (status = 500, description = "Internal server error")
+    )
+)]
+pub async fn get_active_tasks_cqrs(
+    Extension(cqrs_bus): Extension<Arc<CqrsBus>>,
+    Query(params): Query<ActiveTasksQueryParams>,
+) -> Result<Json<Vec<TaskStatusResponse>>, TaskApiError> {
+    // Create CQRS query
+    let query = ListActiveTasksQuery {
+        limit: params.limit,
+        offset: params.offset,
+    };
+
+    // Execute query via CQRS bus
+    let tasks = cqrs_bus.execute_query(query).await
+        .map_err(|e| TaskApiError::DatabaseError(format!("Query execution failed: {:?}", e)))?;
+
+    let responses = tasks.into_iter()
+        .map(|task| TaskStatusResponse {
+            task_id: task.task_id,
+            status: format!("{:?}", task.status).to_lowercase(),
+            progress_percentage: task.progress_percentage,
+            started_at: task.started_at,
+            completed_at: task.completed_at,
+            worker_id: task.worker_id,
+            error_message: task.error_message,
+        })
+        .collect();
+
+    Ok(Json(responses))
+}
+
+// ============================================================================
+// CQRS API REQUEST/RESPONSE MODELS
+// ============================================================================
+
+/// Execute task request
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExecuteTaskRequest {
+    pub task_descriptor: crate::caws_runtime::TaskDescriptor,
+    pub worker_id: Uuid,
+}
+
+/// Execute task response
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExecuteTaskResponse {
+    pub execution_id: Uuid,
+    pub task_id: Uuid,
+    pub status: String,
+    pub message: String,
+}
+
+/// Cancel task request
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CancelTaskRequest {
+    pub worker_id: Uuid,
+    pub reason: String,
+}
+
+/// Cancel task response
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CancelTaskResponse {
+    pub task_id: Uuid,
+    pub status: String,
+    pub message: String,
+}
+
+/// Update progress request
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdateProgressRequest {
+    pub progress_percentage: u8,
+    pub status_message: Option<String>,
+}
+
+/// Update progress response
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdateProgressResponse {
+    pub task_id: Uuid,
+    pub progress_percentage: u8,
+    pub status: String,
+    pub message: String,
+}
+
+/// Register worker request
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RegisterWorkerRequest {
+    pub worker_id: Uuid,
+    pub capabilities: Vec<String>,
+    pub metadata: std::collections::HashMap<String, String>,
+}
+
+/// Register worker response
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RegisterWorkerResponse {
+    pub registration_id: Uuid,
+    pub worker_id: Uuid,
+    pub status: String,
+    pub message: String,
+}
+
+/// Update health request
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdateHealthRequest {
+    pub is_healthy: bool,
+    pub last_seen: chrono::DateTime<chrono::Utc>,
+}
+
+/// Update health response
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdateHealthResponse {
+    pub worker_id: Uuid,
+    pub is_healthy: bool,
+    pub status: String,
+    pub message: String,
+}
+
+/// Task status response
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TaskStatusResponse {
+    pub task_id: Uuid,
+    pub status: String,
+    pub progress_percentage: u8,
+    pub started_at: Option<chrono::DateTime<chrono::Utc>>,
+    pub completed_at: Option<chrono::DateTime<chrono::Utc>>,
+    pub worker_id: Option<Uuid>,
+    pub error_message: Option<String>,
+}
+
+/// System health response
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SystemHealthResponse {
+    pub total_workers: u64,
+    pub active_workers: u64,
+    pub healthy_workers: u64,
+    pub total_tasks: u64,
+    pub active_tasks: u64,
+    pub completed_tasks: u64,
+    pub failed_tasks: u64,
+    pub average_task_duration_ms: f64,
+    pub uptime_seconds: u64,
+    pub timestamp: chrono::DateTime<chrono::Utc>,
+}
+
+/// Active tasks query parameters
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ActiveTasksQueryParams {
+    pub limit: Option<usize>,
+    pub offset: Option<usize>,
 }
 
 #[cfg(test)]

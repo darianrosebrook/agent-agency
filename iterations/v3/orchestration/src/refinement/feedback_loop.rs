@@ -417,7 +417,7 @@ pub struct OutcomePrediction {
     pub based_on_samples: usize,
 }
 
-pub type Result<T> = std::result::Result<T, FeedbackLoopError>;
+pub type Result<T, E = FeedbackLoopError> = std::result::Result<T, E>;
 
 #[derive(Debug, thiserror::Error)]
 pub enum FeedbackLoopError {

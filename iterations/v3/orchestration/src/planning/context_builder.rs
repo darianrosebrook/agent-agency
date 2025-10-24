@@ -7,6 +7,7 @@ use chrono::{DateTime, Utc};
 use crate::planning::agent::{
     TaskContext, RepositoryInfo, Incident, TechStack, HistoricalData, TaskHistory
 };
+use agent_agency_council::learning::TrendDirection;
 
 /// Quality trend analysis result
 #[derive(Debug, Clone)]
@@ -724,7 +725,7 @@ impl ContextBuilder {
     }
 }
 
-pub type Result<T> = std::result::Result<T, ContextBuilderError>;
+pub type Result<T, E = ContextBuilderError> = std::result::Result<T, E>;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ContextBuilderError {

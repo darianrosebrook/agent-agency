@@ -18,6 +18,8 @@ pub mod working_spec;
 pub mod worker_output;
 pub mod worker_types;
 pub mod execution_events;
+pub mod task_executor;
+pub mod task_executor_provider;
 
 pub use error::{ContractError, ContractKind, ValidationIssue};
 pub use execution_artifacts::{
@@ -83,4 +85,10 @@ pub use worker_types::{
 };
 pub use execution_events::{
     ExecutionEvent, WorkingSpecScope,
+};
+pub use task_executor::{
+    TaskExecutor, TaskExecutionResult,
+};
+pub use task_executor_provider::{
+    TaskExecutorProvider, TaskExecutorFactory,
 };

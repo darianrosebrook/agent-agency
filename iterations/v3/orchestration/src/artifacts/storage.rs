@@ -574,37 +574,15 @@ impl ArtifactStorage for DatabaseStorage {
     }
 
     async fn count_artifacts(&self) -> Result<usize, ArtifactStorageError> {
-        // Count total artifacts
-        let result = self.db_client.execute_parameterized_query(
-            "SELECT COUNT(*) as count FROM execution_artifacts",
-            &[],
-        ).await;
-
-        match result {
-            Ok(rows) if !rows.is_empty() => {
-                let count: i64 = rows[0].get("count");
-                Ok(count as usize)
-            }
-            Ok(_) => Ok(0),
-            Err(e) => Err(ArtifactStorageError::DatabaseError(format!("Failed to count artifacts: {}", e))),
-        }
+        // Delegate to database implementation
+        self.db_storage.count_artifacts().await
+            .map_err(|e| ArtifactStorageError::DatabaseError(e.to_string()))
     }
 
     async fn total_size(&self) -> Result<u64, ArtifactStorageError> {
-        // Calculate total size of all artifacts
-        let result = self.db_client.execute_parameterized_query(
-            "SELECT COALESCE(SUM(size_bytes), 0) as total_size FROM execution_artifacts",
-            &[],
-        ).await;
-
-        match result {
-            Ok(rows) if !rows.is_empty() => {
-                let total_size: i64 = rows[0].get("total_size");
-                Ok(total_size as u64)
-            }
-            Ok(_) => Ok(0),
-            Err(e) => Err(ArtifactStorageError::DatabaseError(format!("Failed to calculate total size: {}", e))),
-        }
+        // Delegate to database implementation
+        self.db_storage.total_size().await
+            .map_err(|e| ArtifactStorageError::DatabaseError(e.to_string()))
     }
 }
 
@@ -677,7 +655,7 @@ impl ArtifactStorage for OrchestrationDatabaseArtifactStorage {
     }
 }
 
-pub type Result<T> = std::result::Result<T, ArtifactStorageError>;
+pub type Result<T, E = ArtifactStorageError> = std::result::Result<T, E>;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ArtifactStorageError {

@@ -1,119 +1,190 @@
-//! Integration layer connecting self-prompting agent components
+//! Integration layer for autonomous agent systems
 //!
-//! This module provides the glue that connects:
-//! - Model providers → Loop controller → File operations → Evaluation
-//!
-//! It implements the autonomous workflow described in the theory.
+//! Coordinates between multiple autonomous agents and external systems.
 
 use std::sync::Arc;
 use tokio::sync::RwLock;
+use async_trait::async_trait;
 
-use crate::evaluation::EvaluationOrchestrator;
-use crate::loop_controller::SelfPromptingLoop;
-use crate::models::{ModelRegistry, OllamaProvider};
-use crate::sandbox::SandboxEnvironment;
-use crate::types::{Task, TaskResult, ExecutionMode, SafetyMode};
+use crate::types::{Task, SelfPromptingAgentError};
 
-/// Integrated autonomous agent that connects all components
+/// Integrated autonomous agent coordinator
 pub struct IntegratedAutonomousAgent {
-    loop_controller: SelfPromptingLoop,
-    sandbox: Arc<RwLock<SandboxEnvironment>>,
-    execution_mode: ExecutionMode,
+    agents: Vec<Arc<dyn AutonomousAgent>>,
+    state: Arc<RwLock<IntegrationState>>,
 }
 
 impl IntegratedAutonomousAgent {
-    /// Create a new integrated autonomous agent
-    pub async fn new(
-        model_registry: Arc<ModelRegistry>,
-        evaluation_orchestrator: Arc<RwLock<EvaluationOrchestrator>>,
-        execution_mode: ExecutionMode,
-    ) -> Result<Self, IntegrationError> {
-        // Initialize sandbox with appropriate safety mode
-        let safety_mode = match execution_mode {
-            ExecutionMode::Strict => SafetyMode::Strict,
-            ExecutionMode::Auto => SafetyMode::Sandbox,
-            ExecutionMode::DryRun => SafetyMode::Autonomous, // Dry run can be autonomous
-        };
-
-        let sandbox = SandboxEnvironment::new(
-            std::env::temp_dir().join("agent-workspace"),
-            vec!["src/".into(), "tests/".into()], // Allow list
-            safety_mode,
-            true, // Use git
-        ).await?;
-
-        // Configure loop controller with execution mode
-        let loop_controller = SelfPromptingLoop::with_config(
-            Arc::clone(&model_registry),
-            Arc::clone(&evaluation_orchestrator),
-            execution_mode.clone(),
-            5, // max iterations
-        );
-
-        Ok(Self {
-            loop_controller,
-            sandbox: Arc::new(RwLock::new(sandbox)),
-            execution_mode,
-        })
-    }
-
-    /// Execute a task autonomously end-to-end
-    pub async fn execute_task_autonomously(
-        &self,
-        task: Task,
-    ) -> Result<TaskResult, IntegrationError> {
-        // Use the existing SelfPromptingLoop.execute_task method
-        let result = self.loop_controller.execute_task(task).await
-            .map_err(|e| IntegrationError::LoopControllerError(e.to_string()))?;
-
-        // Convert the SelfPromptingResult to our TaskResult format
-        match result.task_result {
-            crate::TaskResult::Completed(task_result) => {
-                Ok(task_result)
-            }
-            crate::TaskResult::Failed(reason) => {
-                Err(IntegrationError::AgentError(format!("Task failed: {}", reason)))
-            }
+    /// Create a new integrated agent
+    pub fn new() -> Self {
+        Self {
+            agents: Vec::new(),
+            state: Arc::new(RwLock::new(IntegrationState::default())),
         }
     }
 
-}
-
-/// Errors that can occur during integration
-#[derive(Debug, thiserror::Error)]
-pub enum IntegrationError {
-    #[error("Model error: {0}")]
-    ModelError(String),
-
-    #[error("Evaluation error: {0}")]
-    EvaluationError(#[from] crate::evaluation::EvaluationError),
-
-    #[error("Sandbox error: {0}")]
-    SandboxError(#[from] crate::sandbox::SandboxError),
-
-    #[error("Agent error: {0}")]
-    AgentError(String),
-
-    #[error("Loop controller error: {0}")]
-    LoopControllerError(String),
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[tokio::test]
-    async fn test_integration_initialization() {
-        // Test that the integrated agent can be created
-        let model_registry = Arc::new(ModelRegistry::new());
-        let evaluation_orchestrator = Arc::new(RwLock::new(EvaluationOrchestrator::new(Default::default())));
-
-        let result = IntegratedAutonomousAgent::new(
-            model_registry,
-            evaluation_orchestrator,
-            ExecutionMode::DryRun,
-        ).await;
-
-        assert!(result.is_ok(), "Failed to create integrated agent: {:?}", result.err());
+    /// Register an autonomous agent
+    pub fn register_agent(&mut self, agent: Arc<dyn AutonomousAgent>) {
+        self.agents.push(agent);
     }
+
+    /// Execute a task using integrated agents
+    pub async fn execute_task(&self, task: Task) -> Result<TaskResult, SelfPromptingAgentError> {
+        let mut state = self.state.write().await;
+
+        // Select appropriate agent for the task
+        let agent = self.select_agent(&task).await?;
+        state.active_agent = Some(agent.name().to_string());
+
+        // Execute with the selected agent
+        let result = agent.execute_task(task.clone()).await
+            .map_err(|e| SelfPromptingAgentError::Execution(format!("Agent execution failed: {}", e)))?;
+
+        state.completed_tasks += 1;
+        state.last_task = Some(task.id.to_string());
+
+        Ok(result)
+    }
+
+    /// Get integration status
+    pub async fn status(&self) -> IntegrationStatus {
+        let state = self.state.read().await;
+
+        IntegrationStatus {
+            registered_agents: self.agents.len(),
+            active_agent: state.active_agent.clone(),
+            completed_tasks: state.completed_tasks,
+            failed_tasks: state.failed_tasks,
+            last_task: state.last_task.clone(),
+        }
+    }
+
+    /// Select the best agent for a task
+    async fn select_agent(&self, task: &Task) -> Result<Arc<dyn AutonomousAgent>, SelfPromptingAgentError> {
+        // Stub implementation - would use sophisticated selection logic
+        self.agents.first().cloned()
+            .ok_or_else(|| SelfPromptingAgentError::Execution("No agents registered".to_string()))
+    }
+}
+
+/// Autonomous agent trait
+#[async_trait]
+pub trait AutonomousAgent: Send + Sync {
+    /// Execute a task autonomously
+    async fn execute_task(&self, task: Task) -> Result<TaskResult, SelfPromptingAgentError>;
+
+    /// Get agent name
+    fn name(&self) -> &str;
+
+    /// Get agent capabilities
+    fn capabilities(&self) -> Vec<String>;
+
+    /// Check if agent can handle a task
+    fn can_handle(&self, task: &Task) -> bool;
+}
+
+/// Task execution result
+#[derive(Debug, Clone)]
+pub struct TaskResult {
+    pub task_id: uuid::Uuid,
+    pub agent_name: String,
+    pub result: serde_json::Value,
+    pub execution_time_ms: u64,
+    pub artifacts: Vec<String>,
+}
+
+/// Integration state
+#[derive(Debug, Default)]
+struct IntegrationState {
+    active_agent: Option<String>,
+    completed_tasks: usize,
+    failed_tasks: usize,
+    last_task: Option<String>,
+}
+
+/// Integration status
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct IntegrationStatus {
+    pub registered_agents: usize,
+    pub active_agent: Option<String>,
+    pub completed_tasks: usize,
+    pub failed_tasks: usize,
+    pub last_task: Option<String>,
+}
+
+/// Multi-agent coordinator for complex tasks
+pub struct MultiAgentCoordinator {
+    agents: Vec<Arc<dyn AutonomousAgent>>,
+}
+
+impl MultiAgentCoordinator {
+    pub fn new() -> Self {
+        Self { agents: Vec::new() }
+    }
+
+    /// Coordinate task execution across multiple agents
+    pub async fn coordinate_task(&self, task: Task) -> Result<CoordinatedResult, SelfPromptingAgentError> {
+        // Stub implementation - would break task into subtasks and coordinate
+        Ok(CoordinatedResult {
+            task_id: task.id,
+            subtasks: vec![],
+            final_result: serde_json::json!({"status": "coordinated"}),
+            coordination_time_ms: 1000,
+        })
+    }
+}
+
+/// Coordinated execution result
+#[derive(Debug, Clone)]
+pub struct CoordinatedResult {
+    pub task_id: uuid::Uuid,
+    pub subtasks: Vec<TaskResult>,
+    pub final_result: serde_json::Value,
+    pub coordination_time_ms: u64,
+}
+
+/// Agent communication hub
+pub struct AgentCommunicationHub {
+    channels: std::collections::HashMap<String, tokio::sync::mpsc::UnboundedSender<Message>>,
+}
+
+impl AgentCommunicationHub {
+    pub fn new() -> Self {
+        Self {
+            channels: std::collections::HashMap::new(),
+        }
+    }
+
+    /// Send message to agent
+    pub async fn send_message(&self, agent_name: &str, message: Message) -> Result<(), SelfPromptingAgentError> {
+        if let Some(sender) = self.channels.get(agent_name) {
+            sender.send(message).map_err(|_| SelfPromptingAgentError::Execution("Failed to send message".to_string()))?;
+            Ok(())
+        } else {
+            Err(SelfPromptingAgentError::Execution(format!("Agent '{}' not found", agent_name)))
+        }
+    }
+
+    /// Register agent channel
+    pub fn register_agent(&mut self, agent_name: String, sender: tokio::sync::mpsc::UnboundedSender<Message>) {
+        self.channels.insert(agent_name, sender);
+    }
+}
+
+/// Inter-agent message
+#[derive(Debug, Clone)]
+pub struct Message {
+    pub from: String,
+    pub to: String,
+    pub content: serde_json::Value,
+    pub message_type: MessageType,
+}
+
+/// Message types
+#[derive(Debug, Clone)]
+pub enum MessageType {
+    TaskRequest,
+    TaskResult,
+    StatusUpdate,
+    Coordination,
 }

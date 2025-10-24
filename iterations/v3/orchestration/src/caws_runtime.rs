@@ -63,6 +63,7 @@ pub enum ExecutionMode {
     DryRun,
 }
 
+#[derive(Debug, Clone)]
 pub struct TaskDescriptor {
     pub task_id: String,
     pub scope_in: Vec<String>,

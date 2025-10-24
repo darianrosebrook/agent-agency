@@ -103,7 +103,7 @@ impl SchemaRegistry for JsonSchemaRegistry {
                 .map_err(|e| SchemaError::Compilation(e.to_string()))?;
 
             compiled.validate(value)
-                .map_err(|e| SchemaError::Validation(e.to_string()))?;
+                .map_err(|e| SchemaError::Validation(format!("Validation errors: {:?}", e.collect::<Vec<_>>())))?;
 
             Ok(())
         } else {
@@ -243,11 +243,12 @@ impl CachedSchemaRegistry {
             })),
         ];
 
+        let schema_count = common_schemas.len();
         for (key, schema) in common_schemas {
             self.schema_cache.write().await.insert(key.to_string(), schema);
         }
 
-        debug!("Warmed up schema cache with {} schemas", common_schemas.len());
+        debug!("Warmed up schema cache with {} schemas", schema_count);
         Ok(())
     }
 }

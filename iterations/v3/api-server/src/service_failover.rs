@@ -26,7 +26,7 @@ pub enum ServiceType {
 }
 
 /// Service instance information
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct ServiceInstance {
     pub id: String,
     pub service_type: ServiceType,
@@ -65,6 +65,19 @@ pub struct FailoverConfig {
     pub enable_auto_failover: bool,
     /// Regions for cross-region failover
     pub regions: Vec<String>,
+}
+
+impl Default for FailoverConfig {
+    fn default() -> Self {
+        Self {
+            health_check_interval_secs: 30,
+            failure_threshold: 3,
+            recovery_time_secs: 300,
+            max_failovers_per_hour: 5,
+            enable_auto_failover: true,
+            regions: vec!["us-east-1".to_string(), "us-west-2".to_string()],
+        }
+    }
 }
 
 /// Failover event types
@@ -128,11 +141,12 @@ impl ServiceFailoverManager {
 
         // Create circuit breaker for this service
         let cb_config = CircuitBreakerConfig {
-            failure_threshold: self.config.failure_threshold,
+            failure_threshold: self.config.failure_threshold as u64,
             recovery_timeout_secs: self.config.recovery_time_secs,
             ..Default::default()
         };
         let circuit_breaker = CircuitBreaker::with_config(cb_config);
+        let service_type = service.service_type;
 
         {
             let mut services = self.services.write().await;
@@ -141,10 +155,10 @@ impl ServiceFailoverManager {
 
         {
             let mut circuit_breakers = self.circuit_breakers.write().await;
-            circuit_breakers.insert(service_id, circuit_breaker);
+            circuit_breakers.insert(service_id.to_string(), circuit_breaker);
         }
 
-        info!("Registered service: {} ({:?})", service_id, service.service_type);
+        info!("Registered service: {} ({:?})", service_id, service_type);
         Ok(())
     }
 
@@ -164,17 +178,17 @@ impl ServiceFailoverManager {
     }
 
     /// Start health monitoring and failover coordination
-    pub async fn start_monitoring(&self) -> Result<(), String> {
+    pub async fn start_monitoring(self: Arc<Self>) -> Result<(), String> {
         info!("Starting service failover monitoring");
 
         // Start health check loop
-        let manager = Arc::new(self.clone());
+        let manager = Arc::clone(&self);
         tokio::spawn(async move {
             manager.health_check_loop().await;
         });
 
         // Start failover coordination loop
-        let manager = Arc::new(self.clone());
+        let manager = Arc::clone(&self);
         tokio::spawn(async move {
             manager.failover_coordination_loop().await;
         });
@@ -592,8 +606,11 @@ impl ServiceFailoverManager {
     /// Get circuit breaker status for a service
     pub async fn get_circuit_breaker_status(&self, service_id: &str) -> Option<crate::circuit_breaker::CircuitBreakerMetrics> {
         let circuit_breakers = self.circuit_breakers.read().await;
-        circuit_breakers.get(service_id)
-            .map(|cb| cb.metrics())
+        if let Some(cb) = circuit_breakers.get(service_id) {
+            Some(cb.metrics().await)
+        } else {
+            None
+        }
     }
 }
 
@@ -628,7 +645,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_failover_history() {
-        let manager = ServiceFailoverManager::new(FailoverConfig::default());
+        let manager = Arc::new(ServiceFailoverManager::new(FailoverConfig::default()));
+
+        // Start monitoring to begin event processing
+        manager.clone().start_monitoring().await.unwrap();
+
+        // Give the monitoring loop time to start
+        sleep(Duration::from_millis(5)).await;
 
         // Add some mock events
         let event = FailoverEvent::ServiceFailure {
@@ -640,7 +663,7 @@ mod tests {
         let _ = manager.event_sender.send(event);
 
         // Give some time for event processing
-        sleep(Duration::from_millis(10)).await;
+        sleep(Duration::from_millis(20)).await;
 
         let history = manager.get_failover_history(10).await;
         assert!(!history.is_empty());

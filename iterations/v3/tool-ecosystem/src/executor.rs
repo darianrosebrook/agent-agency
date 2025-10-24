@@ -33,7 +33,7 @@ pub struct ExecutionResult {
 #[derive(Clone)]
 pub struct ChainExecutor {
     tool_executor: Arc<ToolExecutor>,
-    schema_registry: Arc<SchemaRegistry>,
+    schema_registry: Arc<dyn SchemaRegistry>,
     concurrency_limit: usize,
     semaphore: Arc<Semaphore>,
     default_timeout_ms: u64,
@@ -43,7 +43,7 @@ impl ChainExecutor {
     /// Create a new chain executor
     pub fn new(
         tool_executor: Arc<ToolExecutor>,
-        schema_registry: Arc<SchemaRegistry>,
+        schema_registry: Arc<dyn SchemaRegistry>,
         concurrency_limit: usize,
         default_timeout_ms: u64,
     ) -> Self {
@@ -93,7 +93,7 @@ impl ChainExecutor {
             let inputs = self.gather_inputs(&chain, node_idx, &results).await?;
 
             // Execute the step
-            match self.execute_step(node, inputs, cancel.clone()).await {
+            match self.execute_step(node, inputs.clone(), cancel.clone()).await {
                 Ok(result) => {
                     debug!("Step {} completed successfully", node_name);
                     results.insert(node_idx, result);
@@ -170,8 +170,7 @@ impl ChainExecutor {
             let to_port = &edge_meta.to_port;
             let node = &chain.dag[node_idx];
             if let Some(target_port) = node.inputs.iter().find(|p| p.name == *to_port) {
-                self.schema_registry.validate(&target_port.schema.registry_key, &processed_value)
-                    .map_err(ChainExecutionError::SchemaValidation)?;
+                self.schema_registry.validate(&target_port.schema.registry_key, &processed_value)?;
             }
 
             inputs.insert(to_port.clone(), processed_value);
@@ -209,8 +208,7 @@ impl ChainExecutor {
 
         // Validate output schema
         for output in &node.outputs {
-            self.schema_registry.validate(&output.schema.registry_key, &result.result)
-                .map_err(ChainExecutionError::SchemaValidation)?;
+            self.schema_registry.validate(&output.schema.registry_key, &result.result)?;
         }
 
         Ok(result.result)
@@ -252,8 +250,7 @@ impl ChainExecutor {
         let to_schema = format!("codec_output_{}", to_port);
 
         self.schema_registry.convert(&from_schema, &to_schema, value)
-            .await
-            .map_err(ChainExecutionError::CodecError)
+            .map_err(|e| ChainExecutionError::CodecError(Box::new(e)))
     }
 
     /// Get human-readable node name
@@ -269,13 +266,13 @@ pub enum ChainExecutionError {
     MissingDependency(String),
 
     #[error("Schema validation failed: {0}")]
-    SchemaValidation(#[from] Box<dyn std::error::Error + Send + Sync>),
+    SchemaValidation(Box<dyn std::error::Error + Send + Sync>),
 
     #[error("Codec transformation failed: {0}")]
-    CodecError(#[from] Box<dyn std::error::Error + Send + Sync>),
+    CodecError(Box<dyn std::error::Error + Send + Sync>),
 
     #[error("Tool execution failed: {0}")]
-    ToolExecution(#[from] Box<dyn std::error::Error + Send + Sync>),
+    ToolExecution(Box<dyn std::error::Error + Send + Sync>),
 
     #[error("Execution timeout after {0}ms")]
     Timeout(u64),
@@ -286,11 +283,20 @@ pub enum ChainExecutionError {
     #[error("Concurrency limit exceeded")]
     ConcurrencyError,
 
+    #[error("General execution error: {0}")]
+    General(#[from] anyhow::Error),
+
     #[error("Circuit breaker open for tool: {0}")]
     CircuitBreakerOpen(String),
 
     #[error("Resource limit exceeded: {0}")]
     ResourceLimit(String),
+}
+
+impl From<crate::schema_registry::SchemaError> for ChainExecutionError {
+    fn from(error: crate::schema_registry::SchemaError) -> Self {
+        ChainExecutionError::SchemaValidation(Box::new(error))
+    }
 }
 
 /// Circuit breaker for tool reliability

@@ -1,0 +1,11 @@
+[package]
+name = "self-prompting-agent"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Test with no dependencies
+
+[[example]]
+name = "playground_test"
+path = "examples/playground_test.rs"

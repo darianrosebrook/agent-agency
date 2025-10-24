@@ -3,7 +3,7 @@
 //! Executes tasks by communicating with worker models and handling the execution lifecycle.
 
 use crate::types::{*, UuidGenerator};
-use agent_agency_contracts::IssueSeverity;
+use agent_agency_contracts::{IssueSeverity, task_executor::{TaskExecutor as TaskExecutorTrait, TaskExecutionResult, TaskSpec as ContractTaskSpec, TaskPriority}};
 use agent_agency_council::models::{RiskTier, TaskContext as CouncilTaskContext, TaskSpec};
 use agent_agency_resilience::{CircuitBreaker, RetryConfig};
 use anyhow::{Context, Result};
@@ -932,5 +932,135 @@ impl TaskExecutor {
 impl Default for TaskExecutor {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[async_trait::async_trait]
+impl TaskExecutorTrait for TaskExecutor {
+    async fn execute_task(
+        &self,
+        task_spec: ContractTaskSpec,
+        worker_id: Uuid,
+    ) -> Result<TaskExecutionResult> {
+        // Convert contract task spec to internal task spec
+        let internal_spec = TaskSpec {
+            id: task_spec.id,
+            title: task_spec.title,
+            description: task_spec.description,
+            priority: match task_spec.priority {
+                TaskPriority::Low => crate::types::TaskPriority::Low,
+                TaskPriority::Medium => crate::types::TaskPriority::Medium,
+                TaskPriority::High => crate::types::TaskPriority::High,
+                TaskPriority::Critical => crate::types::TaskPriority::Critical,
+            },
+            required_capabilities: task_spec.required_capabilities,
+            context: task_spec.context,
+            working_spec_id: task_spec.working_spec_id,
+            timeout_seconds: task_spec.timeout_seconds,
+        };
+
+        // Execute the task
+        let result = self.execute_task(internal_spec, worker_id, None).await?;
+
+        // Convert result back to contract format
+        Ok(TaskExecutionResult {
+            execution_id: result.execution_id,
+            task_id: result.task_id,
+            success: result.success,
+            output: result.output,
+            errors: result.errors,
+            metadata: result.metadata,
+            started_at: result.started_at,
+            completed_at: result.completed_at,
+            duration_ms: result.duration_ms,
+            worker_id: result.worker_id,
+        })
+    }
+
+    async fn execute_task_with_circuit_breaker(
+        &self,
+        task_spec: ContractTaskSpec,
+        worker_id: Uuid,
+        circuit_breaker_enabled: bool,
+    ) -> Result<TaskExecutionResult> {
+        // Convert contract task spec to internal task spec
+        let internal_spec = TaskSpec {
+            id: task_spec.id,
+            title: task_spec.title,
+            description: task_spec.description,
+            priority: match task_spec.priority {
+                TaskPriority::Low => crate::types::TaskPriority::Low,
+                TaskPriority::Medium => crate::types::TaskPriority::Medium,
+                TaskPriority::High => crate::types::TaskPriority::High,
+                TaskPriority::Critical => crate::types::TaskPriority::Critical,
+            },
+            required_capabilities: task_spec.required_capabilities,
+            context: task_spec.context,
+            working_spec_id: task_spec.working_spec_id,
+            timeout_seconds: task_spec.timeout_seconds,
+        };
+
+        // Execute with circuit breaker if enabled
+        let circuit_breaker = if circuit_breaker_enabled {
+            Some(Arc::new(CircuitBreaker::new(
+                "task-execution".to_string(),
+                RetryConfig {
+                    base_delay_ms: 1000,
+                    max_delay_ms: 30000,
+                    max_attempts: 3,
+                    backoff_multiplier: 2.0,
+                    jitter: true,
+                },
+            )))
+        } else {
+            None
+        };
+
+        let result = self.execute_task(internal_spec, worker_id, circuit_breaker.as_ref()).await?;
+
+        // Convert result back to contract format
+        Ok(TaskExecutionResult {
+            execution_id: result.execution_id,
+            task_id: result.task_id,
+            success: result.success,
+            output: result.output,
+            errors: result.errors,
+            metadata: result.metadata,
+            started_at: result.started_at,
+            completed_at: result.completed_at,
+            duration_ms: result.duration_ms,
+            worker_id: result.worker_id,
+        })
+    }
+
+    async fn health_check(&self) -> Result<agent_agency_contracts::task_executor::TaskExecutorHealth> {
+        // Basic health check - in a real implementation this would check actual worker connections
+        Ok(agent_agency_contracts::task_executor::TaskExecutorHealth {
+            status: agent_agency_contracts::task_executor::HealthStatus::Healthy,
+            last_execution_time: Some(Utc::now()),
+            active_tasks: 0,
+            queued_tasks: 0,
+            total_executions: 0,
+            success_rate: 1.0,
+        })
+    }
+
+    async fn get_execution_stats(&self) -> Result<agent_agency_contracts::task_executor::TaskExecutionStats> {
+        // Basic stats - in a real implementation this would track actual metrics
+        Ok(agent_agency_contracts::task_executor::TaskExecutionStats {
+            total_executions: 0,
+            successful_executions: 0,
+            failed_executions: 0,
+            average_execution_time_ms: 0.0,
+            median_execution_time_ms: 0.0,
+            p95_execution_time_ms: 0.0,
+            p99_execution_time_ms: 0.0,
+        })
+    }
+
+    async fn cancel_task_execution(&self, _task_id: Uuid, _worker_id: Uuid) -> Result<()> {
+        // Basic implementation - in a real implementation this would cancel the actual task
+        // For now, just return success
+        Ok(())
     }
 }

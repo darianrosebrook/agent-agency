@@ -48,17 +48,22 @@ serde.workspace = true
 # UUID handling
 uuid.workspace = true
 
-# Database client - temporarily disabled for compilation
-# agent-agency-database = { path = "../database" }
+# Database client - enabled for core persistence
+agent-agency-database = { path = "../database" }
 
-# System health monitoring for real metrics (basic features only) - temporarily disabled
-# agent-agency-system-health-monitor = { path = "../system-health-monitor", default-features = true }
+# System health monitoring for real metrics (basic features only)
+agent-agency-system-health-monitor = { path = "../system-health-monitor", default-features = true }
 
 # Additional dependencies for API functionality
 async-trait = "0.1"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-tokio-postgres = "0.7"
+anyhow = "1.0"
 
 # Agent agency interfaces (placeholder - may need external crate)
 # agent_agency_interfaces = { path = "../interfaces" }
+
+[dev-dependencies]
+# Testing utilities
+tower = { version = "0.4", features = ["util"] }
+hyper = { version = "0.14", features = ["full"] }

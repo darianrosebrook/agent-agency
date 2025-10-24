@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use crate::caws_runtime::WorkingSpec as CawsWorkingSpec;
 use crate::planning::agent::{TaskContext, AcceptanceCriterion, TestPlan, RollbackPlan, CriterionPriority, RollbackRisk};
 use crate::planning::llm_client::{LLMClient, Message, MessageRole, GenerationRequest};
+use agent_agency_contracts::WorkingSpecScope;
 
 /// Spec generator configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -193,7 +194,7 @@ constraints:
 
         // Convert to CAWS WorkingSpec
         let scope = if let (Some(scope_in), Some(scope_out)) = (spec_data.scope_in, spec_data.scope_out) {
-            Some(crate::caws_runtime::WorkingSpecScope {
+            Some(WorkingSpecScope {
                 r#in: Some(scope_in),
                 out: Some(scope_out),
             })
@@ -319,7 +320,7 @@ impl From<RollbackPlanData> for RollbackPlan {
     }
 }
 
-pub type Result<T> = std::result::Result<T, SpecGeneratorError>;
+pub type Result<T, E = SpecGeneratorError> = std::result::Result<T, E>;
 
 #[derive(Debug, thiserror::Error)]
 pub enum SpecGeneratorError {

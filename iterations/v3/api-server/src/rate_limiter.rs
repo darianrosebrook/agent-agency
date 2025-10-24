@@ -8,6 +8,13 @@ use std::net::IpAddr;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
+use axum::{
+    body::Body,
+    extract::ConnectInfo,
+    http::{Request, Response, StatusCode},
+    middleware::Next,
+};
+use std::net::SocketAddr;
 
 /// Rate limit configuration
 #[derive(Debug, Clone)]
@@ -119,7 +126,8 @@ impl RateLimiter {
         let now = Instant::now();
         let window_duration = Duration::from_secs(self.config.window_secs);
 
-        let client_requests = requests.get(&client_ip).unwrap_or(&vec![]);
+        let empty_vec = Vec::new();
+        let client_requests = requests.get(&client_ip).unwrap_or(&empty_vec);
         let recent_requests: Vec<_> = client_requests.iter()
             .filter(|r| now.duration_since(r.timestamp) < window_duration)
             .collect();
@@ -170,7 +178,7 @@ pub struct RateLimitStatus {
 /// Rate limiting errors
 #[derive(Debug, thiserror::Error)]
 pub enum RateLimitError {
-    #[error("Rate limit exceeded - resets in {reset_time:?}, max {max_requests} requests per {window_secs}s window")]
+    #[error("Rate limit exceeded - resets in {reset_time:?}, max {max_requests} requests per window")]
     LimitExceeded {
         reset_time: Instant,
         max_requests: u32,
@@ -201,10 +209,10 @@ pub mod middleware {
     use std::net::SocketAddr;
 
     /// Rate limiting middleware
-    pub async fn rate_limit<B>(
+    pub async fn rate_limit(
         ConnectInfo(addr): ConnectInfo<SocketAddr>,
-        request: Request<B>,
-        next: Next<B>,
+        request: Request<Body>,
+        next: Next,
     ) -> Result<Response, StatusCode> {
         // Get rate limiter from request extensions
         // In a real implementation, this would be injected via middleware setup

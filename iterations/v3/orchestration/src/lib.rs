@@ -2,9 +2,11 @@
 pub mod adapter;
 pub mod api;
 pub mod arbiter;
+pub mod cqrs_router;
 pub mod artifacts;
 pub mod autonomous_executor;
 pub mod caws_runtime;
+pub mod cqrs;
 pub mod db;
 pub mod frontier;
 pub mod orchestrate;
@@ -74,4 +76,9 @@ pub use kimi_k2_multimodal_orchestrator::{
 pub use api::{
     get_tasks, get_task_detail, get_task_events, cancel_task,
     TaskResponse, TaskDetail, TaskEvent, TaskApiError,
+};
+
+// Re-export CQRS router functions
+pub use cqrs_router::{
+    create_cqrs_router, create_legacy_router, create_combined_router,
 };

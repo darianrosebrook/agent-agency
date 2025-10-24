@@ -1,7 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
-    # "self-prompting-agent",  # Disabled due to fundamental compilation hangs - requires architectural redesign
+    # "self-prompting-agent",  # Removed from workspace due to fundamental compilation hangs - working as standalone
     "apple-silicon",  # Re-enabled after fixing torch integration and type imports
     "caws/runtime-validator",  # Consolidated CAWS validation service
     "parallel-workers",  # Parallel task execution system
@@ -43,7 +43,7 @@ members = [
     "model-hotswap",  # Re-enabled - advanced services
     "production",  # Re-enabled - advanced services
     "e2e-tests"
-]
+, "self-prompting-agent"]
 
 [workspace.package]
 version = "0.1.0"

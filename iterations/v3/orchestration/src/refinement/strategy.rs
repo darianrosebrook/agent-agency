@@ -556,7 +556,7 @@ impl DefaultStrategyExecutor {
     }
 }
 
-pub type Result<T> = std::result::Result<T, StrategyExecutionError>;
+pub type Result<T, E = StrategyExecutionError> = std::result::Result<T, E>;
 
 #[derive(Debug, thiserror::Error)]
 pub enum StrategyExecutionError {

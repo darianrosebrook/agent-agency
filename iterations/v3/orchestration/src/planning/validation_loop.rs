@@ -269,7 +269,7 @@ struct RepairData {
     change_budget_max_loc: Option<u32>,
 }
 
-pub type Result<T> = std::result::Result<T, ValidationLoopError>;
+pub type Result<T, E = ValidationLoopError> = std::result::Result<T, E>;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ValidationLoopError {

@@ -6,6 +6,8 @@
 //! Manages a pool of specialized AI workers for task execution, with intelligent
 //! routing, CAWS compliance checking, and performance tracking.
 
+use std::sync::Arc;
+
 pub mod autonomous_executor;
 pub mod caws;
 pub mod caws_checker;
@@ -19,6 +21,19 @@ pub mod types;
 pub use autonomous_executor::{AutonomousExecutor, AutonomousExecutorConfig, ExecutionResult, ArbiterMediatedResult};
 pub use caws_checker::CawsChecker;
 pub use executor::TaskExecutor;
+
+// Re-export the trait for use by orchestration
+pub use agent_agency_contracts::task_executor::{TaskExecutor as TaskExecutorTrait, TaskExecutionResult};
+
+/// Create a new TaskExecutor instance that implements the TaskExecutor trait
+pub fn create_task_executor() -> Arc<dyn TaskExecutorTrait> {
+    Arc::new(TaskExecutor::new())
+}
+
+/// Create a factory function that can be used to configure TaskExecutorProvider
+pub fn task_executor_factory() -> agent_agency_contracts::task_executor_provider::TaskExecutorFactory {
+    create_task_executor
+}
 pub use manager::WorkerPoolManager;
 pub use specialized_workers::{CompilationSpecialist, RefactoringSpecialist, TestingSpecialist, DocumentationSpecialist, TypeSystemSpecialist, AsyncPatternsSpecialist, CustomSpecialist};
 pub use multimodal_scheduler::{

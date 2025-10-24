@@ -1,20 +1,85 @@
-//! Agent Agency V3 CLI - Autonomous Task Execution
+//! Agent Agency V3 CLI and API Server - Autonomous Task Execution
 //!
-//! Command-line interface for submitting tasks to the autonomous AI development platform.
+//! Command-line interface and HTTP API server for submitting tasks to the autonomous AI development platform.
 
 use std::io::{self, Write};
 use std::sync::Arc;
 use clap::Parser;
 
-use crate::orchestration::autonomous_executor::{AutonomousExecutor, AutonomousExecutorConfig};
-use crate::orchestration::tracking::ProgressTracker;
-use crate::orchestration::caws_runtime::CawsRuntimeValidator;
-use crate::orchestration::persistence::VerdictWriter;
-use crate::orchestration::provenance::OrchestrationProvenanceEmitter;
-use crate::interfaces::cli::{Cli, CliConfig, Commands};
+use crate::autonomous_executor::{AutonomousExecutor, AutonomousExecutorConfig};
+use crate::tracking::ProgressTracker;
+use crate::caws_runtime::CawsRuntimeValidator;
+use crate::persistence::VerdictWriter;
+use crate::provenance::OrchestrationProvenanceEmitter;
+// Define CLI structures inline for now
+use clap::{Parser, Subcommand};
+
+// API server imports
+#[cfg(feature = "api-server")]
+use axum::{Router, Server};
+#[cfg(feature = "api-server")]
+use std::net::SocketAddr;
+#[cfg(feature = "api-server")]
+use crate::cqrs_router::create_combined_router;
+#[cfg(feature = "api-server")]
+use crate::cqrs::CqrsBus;
+#[cfg(feature = "api-server")]
+use agent_agency_database::{DatabaseClient, DatabaseConfig};
+
+#[derive(Parser)]
+#[command(name = "agent-agency")]
+#[command(about = "Autonomous AI development platform")]
+struct Cli {
+    #[command(subcommand)]
+    command: Commands,
+}
+
+#[derive(Subcommand)]
+enum Commands {
+    /// Submit a task for autonomous execution
+    Submit {
+        /// Task description
+        description: String,
+        /// Risk tier (1-3)
+        #[arg(short, long, default_value = "2")]
+        risk_tier: Option<u8>,
+        /// Watch execution progress
+        #[arg(short, long)]
+        watch: bool,
+    },
+    /// Check status of a task
+    Status {
+        /// Task ID
+        task_id: String,
+        /// Watch for updates
+        #[arg(short, long)]
+        watch: bool,
+    },
+    /// List recent tasks
+    List,
+    /// Cancel a running task
+    Cancel {
+        /// Task ID
+        task_id: String,
+    },
+    /// Start the API server
+    #[cfg(feature = "api-server")]
+    Serve {
+        /// Port to listen on
+        #[arg(short, long, default_value = "8080")]
+        port: u16,
+        /// Database URL
+        #[arg(long, env = "DATABASE_URL")]
+        database_url: String,
+    },
+    /// Show task logs
+    Logs,
+}
 use agent_agency_observability::cache::CacheBackend;
 use agent_agency_observability::metrics::MetricsBackend;
-use agent_agency_workers::TaskExecutor;
+// Stub TaskExecutor since workers crate has circular dependency
+#[derive(Clone)]
+struct TaskExecutor;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -235,6 +300,57 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!(" Task Logs:");
             // In a real implementation, this would show logs
             println!("   (Log viewing not implemented in demo)");
+        }
+
+        #[cfg(feature = "api-server")]
+        Commands::Serve { port, database_url } => {
+            println!(" Starting Agent Agency V3 API Server...");
+            println!(" Port: {}", port);
+            println!(" Database: {}", database_url);
+            println!();
+
+            // Initialize database connection
+            let db_config = DatabaseConfig {
+                database_url: database_url.clone(),
+                max_connections: 10,
+                connection_timeout_seconds: 30,
+                enable_ssl: false,
+            };
+
+            let db_client = Arc::new(DatabaseClient::new(db_config).await
+                .map_err(|e| {
+                    eprintln!("Failed to connect to database: {}", e);
+                    std::process::exit(1);
+                })?);
+
+            // Create CQRS bus
+            let cqrs_bus = Arc::new(CqrsBus::new());
+
+            // Create combined router (CQRS + legacy)
+            let app = create_combined_router(cqrs_bus, db_client.pool().clone())
+                .layer(tower_http::cors::CorsLayer::permissive()); // Enable CORS for development
+
+            // Start server
+            let addr = SocketAddr::from(([127, 0, 0, 1], port));
+            println!(" Server listening on http://{}", addr);
+            println!(" API Documentation:");
+            println!("   POST /api/tasks/{{task_id}}/execute - Execute a task");
+            println!("   POST /api/tasks/{{task_id}}/cancel - Cancel a task");
+            println!("   POST /api/tasks/{{task_id}}/progress - Update progress");
+            println!("   POST /api/workers/register - Register a worker");
+            println!("   POST /api/workers/{{worker_id}}/health - Update worker health");
+            println!("   GET /api/tasks/{{task_id}}/status - Get task status");
+            println!("   GET /api/health - Get system health");
+            println!("   GET /api/tasks/active - List active tasks");
+            println!();
+
+            Server::bind(&addr)
+                .serve(app.into_make_service())
+                .await
+                .map_err(|e| {
+                    eprintln!("Server error: {}", e);
+                    std::process::exit(1);
+                })?;
         }
     }
 

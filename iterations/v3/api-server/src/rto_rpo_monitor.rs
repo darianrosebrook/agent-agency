@@ -119,6 +119,20 @@ pub struct AlertConfig {
     pub pager_duty_integration: bool,
 }
 
+impl Default for AlertConfig {
+    fn default() -> Self {
+        Self {
+            rto_violation_threshold_seconds: 3600, // 1 hour
+            rpo_violation_threshold_seconds: 1800, // 30 minutes
+            max_violations_before_alert: 3,
+            alert_cooldown_minutes: 15,
+            email_alerts_enabled: true,
+            slack_alerts_enabled: false,
+            pager_duty_integration: false,
+        }
+    }
+}
+
 /// RTO/RPO monitoring system
 pub struct RtoRpoMonitor {
     objectives: RecoveryObjectives,
@@ -195,19 +209,22 @@ impl RtoRpoMonitor {
     }
 
     /// Start monitoring loop
-    pub async fn start_monitoring(&self) -> Result<(), String> {
+    pub async fn start_monitoring(self) -> Result<(), String> {
         info!("Starting RTO/RPO monitoring");
 
+        // Create Arc to share between tasks
+        let monitor = Arc::new(self);
+
         // Start compliance check loop
-        let monitor = Arc::new(self.clone());
+        let compliance_monitor = Arc::clone(&monitor);
         tokio::spawn(async move {
-            monitor.compliance_check_loop().await;
+            compliance_monitor.compliance_check_loop().await;
         });
 
         // Start alert processing loop
-        let monitor = Arc::new(self.clone());
+        let alert_monitor = Arc::clone(&monitor);
         tokio::spawn(async move {
-            monitor.alert_processing_loop().await;
+            alert_monitor.alert_processing_loop().await;
         });
 
         Ok(())
@@ -252,12 +269,13 @@ impl RtoRpoMonitor {
                 ServiceType::ExternalApi
             };
 
+            let default_objectives = ServiceRecoveryObjectives {
+                rto_seconds: self.objectives.rto_seconds,
+                rpo_seconds: self.objectives.rpo_seconds,
+                critical_service: false,
+            };
             let service_objectives = self.objectives.service_objectives.get(&service_type)
-                .unwrap_or(&ServiceRecoveryObjectives {
-                    rto_seconds: self.objectives.rto_seconds,
-                    rpo_seconds: self.objectives.rpo_seconds,
-                    critical_service: false,
-                });
+                .unwrap_or(&default_objectives);
 
             // Calculate current RTO (from failover history)
             let recent_failovers: Vec<_> = failover_history.iter()
@@ -273,7 +291,7 @@ impl RtoRpoMonitor {
             };
 
             // Check for service unavailability
-            let service_available = *status == ServiceStatus::Healthy;
+            let service_available = status == ServiceStatus::Healthy;
             if !service_available {
                 violations.push(ComplianceViolation {
                     id: format!("violation_{}", Utc::now().timestamp()),
@@ -522,7 +540,7 @@ pub struct ServiceComplianceSummary {
 }
 
 impl ComplianceAlert {
-    fn alert_type_as_string(&self) -> &'static str {
+    pub fn alert_type_as_string(&self) -> &'static str {
         match self.alert_type {
             AlertType::RTOViolation => "RTO Violation",
             AlertType::RPOViolation => "RPO Violation",

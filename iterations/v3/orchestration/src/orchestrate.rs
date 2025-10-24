@@ -14,10 +14,51 @@ use caws_runtime_validator::integration::{
 use crate::persistence::VerdictWriter;
 use crate::provenance::OrchestrationProvenanceEmitter;
 use crate::planning::types::{ExecutionArtifacts, TestResults, CoverageReport, MutationReport, LintReport, TypeCheckReport, ProvenanceRecord};
+use crate::planning::agent::{CriterionPriority, RollbackRisk};
 use crate::tracking::ProgressTracker;
 use agent_agency_apple_silicon::{
     AllocationPlanner, AllocationRequest, AllocationPlan, DeviceKind, DeviceSensors,
 };
+
+// Stub for SystemSensors until apple_silicon provides it
+#[derive(Debug, Clone)]
+struct SystemSensors;
+
+impl SystemSensors {
+    fn detect() -> Self {
+        Self
+    }
+}
+
+// Stub for AppleModelRegistry until apple_silicon provides it
+#[derive(Debug, Clone)]
+struct AppleModelRegistry;
+
+impl AppleModelRegistry {
+    fn from_path(_path: &std::path::Path) -> Option<Self> {
+        Some(Self)
+    }
+
+    fn from_config(_config: AppleModelRegistryConfig) -> Self {
+        Self
+    }
+}
+
+// Stub for AppleModelRegistryConfig
+#[derive(Debug, Clone)]
+struct AppleModelRegistryConfig {
+    models: HashMap<String, String>,
+}
+
+// Stub for SimplePlanner
+#[derive(Debug, Clone)]
+struct SimplePlanner;
+
+impl SimplePlanner {
+    fn new(_sensors: SystemSensors, _registry: AppleModelRegistry) -> Self {
+        Self
+    }
+}
 
 /// Task scope definition for orchestration boundaries
 #[derive(Debug, Clone)]
@@ -67,10 +108,10 @@ use parallel_workers::{
 
 fn map_risk_tier(tier: u8) -> CouncilRiskTier {
     match tier {
-        1 => CouncilRiskTier::Tier1,
-        2 => CouncilRiskTier::Tier2,
-        3 => CouncilRiskTier::Tier3,
-        _ => CouncilRiskTier::Tier3,
+        1 => CouncilRiskTier::Low,
+        2 => CouncilRiskTier::Medium,
+        3 => CouncilRiskTier::High,
+        _ => CouncilRiskTier::High,
     }
 }
 
@@ -123,9 +164,9 @@ pub fn to_task_spec(desc: &TaskDescriptor) -> CouncilTaskSpec {
 
 fn record_arm_plan(desc: &TaskDescriptor) {
     let tier = match desc.risk_tier {
-        1 => agent_agency_apple_silicon::Tier::T1,
-        2 => agent_agency_apple_silicon::Tier::T2,
-        _ => agent_agency_apple_silicon::Tier::T3,
+        1 => agent_agency_apple_silicon::Tier::HighEfficiency,
+        2 => agent_agency_apple_silicon::Tier::Balanced,
+        _ => agent_agency_apple_silicon::Tier::HighPerformance,
     };
 
     let sensors = SystemSensors::detect();
@@ -149,14 +190,14 @@ fn record_arm_plan(desc: &TaskDescriptor) {
         preferred_devices: vec![],
         tier,
         latency_slo_ms: match tier {
-            agent_agency_apple_silicon::Tier::T1 => 30,
-            agent_agency_apple_silicon::Tier::T2 => 100,
-            agent_agency_apple_silicon::Tier::T3 => 200,
+            agent_agency_apple_silicon::Tier::HighEfficiency => 30,
+            agent_agency_apple_silicon::Tier::Balanced => 100,
+            agent_agency_apple_silicon::Tier::HighPerformance => 200,
         },
         max_batch_size: match tier {
-            agent_agency_apple_silicon::Tier::T1 => 2,
-            agent_agency_apple_silicon::Tier::T2 => 8,
-            agent_agency_apple_silicon::Tier::T3 => 16,
+            agent_agency_apple_silicon::Tier::HighEfficiency => 2,
+            agent_agency_apple_silicon::Tier::Balanced => 8,
+            agent_agency_apple_silicon::Tier::HighPerformance => 16,
         },
         workload_hint: agent_agency_apple_silicon::WorkloadHint::JudgeLatencySensitive,
     };
@@ -347,6 +388,7 @@ impl WorkerRegistry for StaticWorkerRegistry {
 }
 
 /// Orchestrator that routes tasks to workers (P0: real worker execution path)
+#[derive(Debug)]
 pub struct Orchestrator {
     client: reqwest::Client,
     worker_registry: Arc<dyn WorkerRegistry>,
@@ -684,7 +726,7 @@ impl Orchestrator {
                 let name = obj.get("name").and_then(|v| v.as_str()).unwrap_or("unknown").to_string();
                 let path = obj.get("path").and_then(|v| v.as_str()).unwrap_or("").to_string();
                 let artifact_type = obj.get("type").and_then(|v| v.as_str()).unwrap_or("unknown").to_string();
-                ExecutionArtifact {
+                ExecutionArtifacts {
                     name,
                     path: std::path::PathBuf::from(path),
                     artifact_type,

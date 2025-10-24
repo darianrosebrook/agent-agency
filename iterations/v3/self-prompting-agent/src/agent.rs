@@ -2,13 +2,13 @@
 
 use std::sync::Arc;
 use tokio::sync::mpsc;
-use tracing::{info, error};
+use tracing::info;
 
 use crate::evaluation::EvaluationOrchestrator;
 use crate::loop_controller::{SelfPromptingLoop, SelfPromptingResult, SelfPromptingEvent};
 use crate::models::ModelRegistry;
 use crate::sandbox::SandboxEnvironment;
-use crate::types::Task;
+use crate::types::{Task, SelfPromptingAgentError, ExecutionMode, SafetyMode};
 
 /// Configuration for the self-prompting agent
 #[derive(Debug, Clone)]
@@ -17,6 +17,8 @@ pub struct SelfPromptingAgentConfig {
     pub enable_sandbox: bool,
     pub sandbox_path: Option<String>,
     pub enable_git_snapshots: bool,
+    pub execution_mode: ExecutionMode,
+    pub safety_mode: SafetyMode,
 }
 
 impl Default for SelfPromptingAgentConfig {
@@ -26,6 +28,8 @@ impl Default for SelfPromptingAgentConfig {
             enable_sandbox: true,
             sandbox_path: None,
             enable_git_snapshots: true,
+            execution_mode: ExecutionMode::Auto,
+            safety_mode: SafetyMode::Sandbox,
         }
     }
 }
@@ -48,48 +52,21 @@ impl SelfPromptingAgent {
         evaluator: Arc<EvaluationOrchestrator>,
     ) -> Result<Self, SelfPromptingAgentError> {
         // Create event channel
-        let (event_sender, event_receiver) = mpsc::unbounded_channel();
+        let (event_tx, _event_rx) = mpsc::unbounded_channel();
 
         // Create loop controller
-        let loop_controller = SelfPromptingLoop::with_config(
-            model_registry.clone(),
-            evaluator.clone(),
+        let loop_controller = SelfPromptingLoop::new(
             config.max_iterations,
-            Some(event_sender.clone()),
-        );
+            event_tx.clone(),
+        ).await.map_err(|e| SelfPromptingAgentError::Configuration(e.to_string()))?;
 
         // Create sandbox if enabled
         let sandbox = if config.enable_sandbox {
-            let sandbox_path = config.sandbox_path
-                .clone()
-                .unwrap_or_else(|| "./.agent-sandbox".to_string());
-
-            Some(SandboxEnvironment::new(
-                std::path::PathBuf::from(sandbox_path),
-                // TODO: Implement path-based security sandboxing
-                // - Define allowed path patterns and restrictions
-                // - Implement path validation and sanitization
-                // - Add configurable security policies per task
-                // - Support path-based access control lists
-                // - Implement path traversal attack prevention
-                // - Add security audit logging for path access
-                // PLACEHOLDER: Implement proper path allowlist
-                // - Define specific allowed directories and file patterns
-                // - Implement path validation against security policies
-                // - Add path-based access control with user permissions
-                // - Support path traversal protection and canonicalization
-                // - Implement path audit logging and monitoring
-                // - Add configurable path restrictions per agent type
-                vec![], // PLACEHOLDER: Allowing all paths for now
-                crate::sandbox::SafetyMode::Sandbox,
-                config.enable_git_snapshots,
-            ).await?)
+            Some(SandboxEnvironment::new(config.sandbox_path.clone())
+                .map_err(|e| SelfPromptingAgentError::Sandbox(e.to_string()))?)
         } else {
             None
         };
-
-        // Start event handler
-        tokio::spawn(Self::handle_events(event_receiver));
 
         Ok(Self {
             config,
@@ -97,113 +74,73 @@ impl SelfPromptingAgent {
             evaluator,
             loop_controller,
             sandbox,
-            event_sender: Some(event_sender),
+            event_sender: Some(event_tx),
         })
     }
 
-    /// Execute a task using the self-prompting agent
+    /// Execute a task with self-prompting
     pub async fn execute_task(&self, task: Task) -> Result<SelfPromptingResult, SelfPromptingAgentError> {
-        info!("Self-prompting agent executing task: {}", task.description);
+        info!("Starting self-prompting execution for task: {}", task.description);
 
-        match &self.sandbox {
-            Some(sandbox) => {
-                // Execute with sandbox environment
-                let mut sandbox_clone = sandbox.clone(); // Clone for mutability
-                self.loop_controller.execute_with_sandbox(task, &mut sandbox_clone).await
-                    .map_err(SelfPromptingAgentError::LoopError)
-            }
-            None => {
-                // Execute without sandbox
-                self.loop_controller.execute_task(task).await
-                    .map_err(SelfPromptingAgentError::LoopError)
-            }
+        // Validate task
+        self.validate_task(&task).await?;
+
+        // Execute the self-prompting loop
+        let result = self.loop_controller.execute_task(task, self.model_registry.clone(), self.evaluator.clone()).await
+            .map_err(|e| SelfPromptingAgentError::Execution(e.to_string()))?;
+
+        info!("Self-prompting execution completed with {} iterations", result.iterations);
+
+        Ok(result)
+    }
+
+    /// Validate task before execution
+    async fn validate_task(&self, task: &Task) -> Result<(), SelfPromptingAgentError> {
+        if task.description.trim().is_empty() {
+            return Err(SelfPromptingAgentError::Validation("Task description cannot be empty".to_string()));
         }
-    }
 
-    /// Get available models
-    pub fn available_models(&self) -> Vec<String> {
-        self.model_registry.list_providers()
-    }
+        if task.description.len() > 10000 {
+            return Err(SelfPromptingAgentError::Validation("Task description too long".to_string()));
+        }
 
-    /// Hot-swap a model
-    pub async fn hot_swap_model(
-        &mut self,
-        id: &str,
-        new_provider: Box<dyn crate::models::ModelProvider>,
-    ) -> Result<(), SelfPromptingAgentError> {
-        self.model_registry.hot_swap_provider(id, new_provider)
-            .map_err(|e| SelfPromptingAgentError::ModelError(e.to_string()))?;
+        // Additional validation can be added here
 
-        info!("Hot-swapped model: {}", id);
-        Ok(())
-    }
-
-    /// Register a new model provider
-    pub async fn register_model(
-        &mut self,
-        id: String,
-        provider: Box<dyn crate::models::ModelProvider>,
-    ) -> Result<(), SelfPromptingAgentError> {
-        self.model_registry.register_provider(id.clone(), provider)
-            .map_err(|e| SelfPromptingAgentError::ModelError(e.to_string()))?;
-
-        info!("Registered new model: {}", id);
         Ok(())
     }
 
     /// Get agent status
-    pub fn status(&self) -> AgentStatus {
-        AgentStatus {
-            models_available: self.available_models().len(),
-            sandbox_enabled: self.sandbox.is_some(),
-            max_iterations: self.config.max_iterations,
-        }
-    }
-
-    /// Handle events from the self-prompting loop
-    async fn handle_events(mut receiver: mpsc::UnboundedReceiver<SelfPromptingEvent>) {
-        while let Some(event) = receiver.recv().await {
-            match event {
-                SelfPromptingEvent::IterationStarted { task_id, iteration, .. } => {
-                    info!("Task {}: Started iteration {}", task_id, iteration);
-                }
-                SelfPromptingEvent::EvaluationCompleted { task_id, iteration, score, status, .. } => {
-                    info!("Task {}: Iteration {} completed with score {:.2} ({:?})",
-                        task_id, iteration, score, status);
-                }
-                SelfPromptingEvent::ModelSwapped { task_id, old_model, new_model, reason, .. } => {
-                    info!("Task {}: Swapped model from {} to {} ({})",
-                        task_id, old_model, new_model, reason);
-                }
-                SelfPromptingEvent::LoopCompleted { task_id, total_iterations, final_score, stop_reason, .. } => {
-                    info!("Task {}: Completed after {} iterations with final score {:.2} (reason: {:?})",
-                        task_id, total_iterations, final_score, stop_reason);
-                }
+    pub async fn status(&self) -> serde_json::Value {
+        serde_json::json!({
+            "status": "operational",
+            "config": {
+                "max_iterations": self.config.max_iterations,
+                "execution_mode": format!("{:?}", self.config.execution_mode),
+                "safety_mode": format!("{:?}", self.config.safety_mode),
+                "sandbox_enabled": self.config.enable_sandbox,
+                "git_snapshots": self.config.enable_git_snapshots
+            },
+            "capabilities": {
+                "model_providers": true,
+                "evaluation_framework": true,
+                "sandbox_environment": self.sandbox.is_some(),
+                "loop_controller": true
             }
-        }
+        })
     }
-}
 
-/// Agent status information
-#[derive(Debug, Clone, serde::Serialize)]
-pub struct AgentStatus {
-    pub models_available: usize,
-    pub sandbox_enabled: bool,
-    pub max_iterations: usize,
-}
+    /// Shutdown the agent
+    pub async fn shutdown(&self) -> Result<(), SelfPromptingAgentError> {
+        info!("Shutting down self-prompting agent");
 
-/// Errors from self-prompting agent operations
-#[derive(Debug, thiserror::Error)]
-pub enum SelfPromptingAgentError {
-    #[error("Sandbox initialization failed: {0}")]
-    SandboxError(#[from] crate::sandbox::SandboxError),
+        if let Some(ref sandbox) = self.sandbox {
+            sandbox.cleanup().await
+                .map_err(|e| SelfPromptingAgentError::Sandbox(e.to_string()))?;
+        }
 
-    #[error("Model registry error: {0}")]
-    ModelError(String),
+        self.loop_controller.shutdown().await
+            .map_err(|e| SelfPromptingAgentError::Execution(e.to_string()))?;
 
-    #[error("Loop execution error: {0}")]
-    LoopError(#[from] crate::loop_controller::SelfPromptingError),
-
-    #[error("Configuration error: {0}")]
-    ConfigError(String),
+        Ok(())
+    }
 }

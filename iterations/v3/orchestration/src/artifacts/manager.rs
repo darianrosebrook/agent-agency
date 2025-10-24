@@ -404,7 +404,7 @@ pub struct ArtifactStatistics {
     pub versioning_enabled: bool,
 }
 
-pub type Result<T> = std::result::Result<T, ArtifactError>;
+pub type Result<T, E = ArtifactError> = std::result::Result<T, E>;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ArtifactError {
@@ -434,4 +434,18 @@ pub enum ArtifactError {
 
     #[error("Serialization failed: {0}")]
     SerializationError(String),
+}
+
+impl From<crate::artifacts::storage::ArtifactStorageError> for ArtifactError {
+    fn from(error: crate::artifacts::storage::ArtifactStorageError) -> Self {
+        match error {
+            crate::artifacts::storage::ArtifactStorageError::NotFound(id) => {
+                ArtifactError::ArtifactNotFound(id)
+            }
+            crate::artifacts::storage::ArtifactStorageError::SerializationError(e) => {
+                ArtifactError::SerializationError(e.to_string())
+            }
+            _ => ArtifactError::StorageError(format!("Storage error: {:?}", error)),
+        }
+    }
 }

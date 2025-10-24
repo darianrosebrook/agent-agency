@@ -443,7 +443,7 @@ impl Default for SatisficingEvaluatorBuilder {
     }
 }
 
-pub type Result<T> = std::result::Result<T, SatisficingError>;
+pub type Result<T, E = SatisficingError> = std::result::Result<T, E>;
 
 #[derive(Debug, thiserror::Error)]
 pub enum SatisficingError {

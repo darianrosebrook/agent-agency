@@ -10,7 +10,7 @@ use uuid::Uuid;
 use chrono::{DateTime, Utc};
 
 use crate::planning::types::ExecutionEvent;
-use agent_agency_observability::metrics::MetricsCollector;
+use agent_agency_observability::metrics::{MetricsCollector, MetricsBackend};
 
 /// Progress tracking configuration
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -54,16 +54,17 @@ pub enum ExecutionStatus {
 }
 
 /// Progress tracker for autonomous execution
+#[derive(Debug)]
 pub struct ProgressTracker {
     config: ProgressTrackerConfig,
     executions: Arc<RwLock<HashMap<Uuid, ExecutionProgress>>>,
-    metrics_collector: Option<Arc<dyn MetricsCollector>>,
+    metrics_collector: Option<Arc<dyn MetricsBackend>>,
 }
 
 impl ProgressTracker {
     pub fn new(
         config: ProgressTrackerConfig,
-        metrics_collector: Option<Arc<dyn MetricsCollector>>,
+        metrics_collector: Option<Arc<dyn MetricsBackend>>,
     ) -> Self {
         Self {
             config,
@@ -358,7 +359,7 @@ impl ProgressTracker {
     }
 }
 
-pub type Result<T> = std::result::Result<T, ProgressTrackerError>;
+pub type Result<T, E = ProgressTrackerError> = std::result::Result<T, E>;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ProgressTrackerError {

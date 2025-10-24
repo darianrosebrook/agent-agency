@@ -203,7 +203,7 @@ impl Drop for EventSubscription {
     }
 }
 
-pub type Result<T> = std::result::Result<T, EventBusError>;
+pub type Result<T, E = EventBusError> = std::result::Result<T, E>;
 
 #[derive(Debug, thiserror::Error)]
 pub enum EventBusError {
