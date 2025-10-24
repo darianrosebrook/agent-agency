@@ -1,8 +1,8 @@
-use agent_agency_mcp::types::{
+use agent_mcp::types::{
     CawsIntegrationConfig as CConfig, ConnectionStatus, ConnectionType, MCPConfig, MCPConnection,
     ServerConfig as SConfig, ToolDiscoveryConfig as TDConfig, ValidationStrictness,
 };
-use agent_agency_mcp::MCPServer;
+use agent_mcp::MCPServer;
 use agent_agency_database::DatabaseClient;
 use chrono::Utc;
 use futures_util::{SinkExt, StreamExt};
@@ -120,31 +120,31 @@ async fn http_tools_and_validate_methods_work() {
     let port = 18091;
     let db_client = create_test_db_client();
     let srv = std::sync::Arc::new(MCPServer::new(test_config(port), db_client));
-    let tool = agent_agency_mcp::types::MCPTool {
+    let tool = agent_mcp::types::MCPTool {
         id: uuid::Uuid::new_v4(),
         name: "validator".into(),
         description: "test".into(),
         version: "1.0.0".into(),
         author: "ai".into(),
-        tool_type: agent_agency_mcp::types::ToolType::Utility,
-        capabilities: vec![agent_agency_mcp::types::ToolCapability::TextProcessing],
-        parameters: agent_agency_mcp::types::ToolParameters {
+        tool_type: agent_mcp::types::ToolType::Utility,
+        capabilities: vec![agent_mcp::types::ToolCapability::TextProcessing],
+        parameters: agent_mcp::types::ToolParameters {
             required: vec![],
             optional: vec![],
             constraints: vec![],
         },
         output_schema: serde_json::json!({}),
         endpoint: "/tools/validator".to_string(),
-        manifest: agent_agency_mcp::types::ToolManifest {
+        manifest: agent_mcp::types::ToolManifest {
             name: "validator".to_string(),
             version: "1.0.0".to_string(),
             description: "test".to_string(),
             author: "ai".to_string(),
-            tool_type: agent_agency_mcp::types::ToolType::Utility,
+            tool_type: agent_mcp::types::ToolType::Utility,
             entry_point: "validator".to_string(),
             dependencies: vec![],
-            capabilities: vec![agent_agency_mcp::types::ToolCapability::TextProcessing],
-            parameters: agent_agency_mcp::types::ToolParameters {
+            capabilities: vec![agent_mcp::types::ToolCapability::TextProcessing],
+            parameters: agent_mcp::types::ToolParameters {
                 required: vec![],
                 optional: vec![],
                 constraints: vec![],
@@ -156,7 +156,7 @@ async fn http_tools_and_validate_methods_work() {
             caws_compliance: None,
             metadata: std::collections::HashMap::new(),
         },
-        caws_compliance: agent_agency_mcp::types::CawsComplianceStatus::Unknown,
+        caws_compliance: agent_mcp::types::CawsComplianceStatus::Unknown,
         registration_time: chrono::Utc::now(),
         last_updated: chrono::Utc::now(),
         usage_count: 0,

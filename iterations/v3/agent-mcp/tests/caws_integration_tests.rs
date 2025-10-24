@@ -1,5 +1,5 @@
-use agent_agency_mcp::caws_integration::CawsIntegration;
-use agent_agency_mcp::types::*;
+use agent_mcp::caws_integration::CawsIntegration;
+use agent_mcp::types::*;
 use uuid::Uuid;
 
 fn tmp_rulebook_json() -> tempfile::NamedTempFile {

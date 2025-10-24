@@ -6,7 +6,7 @@ members = [
     "parallel-workers",  # Parallel task execution system
     "workers",
     "research",
-    "mcp-integration",  # MCP integration server
+    "agent-mcp",  # Consolidated MCP implementation
     "provenance",
     "claim-extraction",
     # "reflexive-learning",  # Temporarily disabled - syntax error in learning_algorithms.rs (will fix later)

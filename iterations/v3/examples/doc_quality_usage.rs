@@ -3,7 +3,7 @@
 //! Demonstrates how to use the documentation quality validator
 //! in the V3 Rust architecture.
 
-use agent_agency_mcp::{
+use agent_mcp::{
     tools::DocQualityValidator,
     types::*,
     ToolRegistry,

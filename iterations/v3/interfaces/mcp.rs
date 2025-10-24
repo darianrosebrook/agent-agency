@@ -2,7 +2,7 @@
 //!
 //! Provides Model Context Protocol (MCP) server interface for external tool integration.
 
-use agent_agency_mcp::{MCPServer, MCPConfig};
+use agent_mcp::{MCPServer, MCPConfig};
 use agent_agency_database::DatabaseClient;
 use agent_agency_observability::metrics::MetricsBackend;
 use anyhow::Result;

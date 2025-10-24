@@ -21,7 +21,7 @@ agent-agency-observability = { path = "../observability" }
 
 # CAWS Runtime Validator and MCP Integration
 caws-runtime-validator = { path = "../caws/runtime-validator" }
-agent-agency-mcp = { path = "../mcp-integration" }
+agent-mcp = { path = "../agent-mcp" }
 
 # Tool ecosystem and parallel workers
 tool-ecosystem = { path = "../tool-ecosystem" }

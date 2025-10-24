@@ -34,12 +34,12 @@ use caws_runtime_validator::{
 };
 
 // Legacy CAWS implementations (for comparison)
-use agent_agency_mcp::caws_integration::CawsIntegration as LegacyMcpCawsIntegration;
+use agent_mcp::caws_integration::CawsIntegration as LegacyMcpCawsIntegration;
 use orchestration::caws_runtime::{CawsRuntimeValidator, DefaultValidator as LegacyOrchestrationValidator};
 use agent_agency_workers::caws::checker::CawsChecker as LegacyWorkersCawsChecker;
 
 // Common types
-use agent_agency_mcp::types::{ToolManifest, ToolCapability, ToolParameter};
+use agent_mcp::types::{ToolManifest, ToolCapability, ToolParameter};
 
 /// Test fixtures for migration comparison tests
 pub struct MigrationComparisonFixtures {

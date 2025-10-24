@@ -14,10 +14,21 @@ pub mod tools;
 pub mod types;
 
 pub use caws_integration::CawsIntegration;
-pub use server::MCPServer;
+pub use server::{MCPServer, AuthRateLimitStats};
+pub use agent_agency_council::error_handling::CircuitBreakerStats;
 pub use tool_discovery::ToolDiscovery;
 pub use tool_registry::ToolRegistry;
-pub use types::*;
+pub use tools::*;
+pub use types::{
+    MCPTool,
+    ToolExecutionRequest,
+    ToolExecutionResult,
+    ToolDiscoveryResult,
+    ToolRegistryStats,
+    CawsComplianceResult,
+    MCPConnection,
+    MCPServerStatus,
+};
 
 /// MCP integration configuration
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]

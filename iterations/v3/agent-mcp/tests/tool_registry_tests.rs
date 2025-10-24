@@ -1,5 +1,5 @@
-use agent_agency_mcp::tool_registry::ToolRegistry;
-use agent_agency_mcp::types::*;
+use agent_mcp::tool_registry::ToolRegistry;
+use agent_mcp::types::*;
 use uuid::Uuid;
 
 fn sample_tool() -> MCPTool {

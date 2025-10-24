@@ -24,5 +24,8 @@ tower-http = { version = "0.5", features = ["cors"] }
 # Database integration
 agent-agency-database = { path = "../database" }
 
+# Council package provides security functionality
+agent-agency-council = { path = "../council" }
+
 # MCP integration
-agent-agency-mcp = { path = "../mcp-integration" }
+agent-mcp = { path = "../agent-mcp" }

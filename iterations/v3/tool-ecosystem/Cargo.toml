@@ -16,7 +16,7 @@ tracing = "0.1"
 thiserror = "1.0"
 
 # MCP integration
-agent-agency-mcp = { path = "../mcp-integration" }
+agent-mcp = { path = "../agent-mcp" }
 
 # CAWS integration
 # caws-runtime-validator = { path = "../caws/runtime-validator" } # PLACEHOLDER: crate not yet implemented

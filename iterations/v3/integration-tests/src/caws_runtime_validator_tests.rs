@@ -34,7 +34,7 @@ use caws_runtime_validator::{
 };
 
 // MCP Integration imports
-use agent_agency_mcp::{
+use agent_mcp::{
     server::MCPServer,
     caws_integration::CawsIntegration,
     types::{ToolManifest, ToolCapability, ToolParameter},

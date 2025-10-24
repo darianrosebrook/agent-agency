@@ -1,5 +1,5 @@
-use agent_agency_mcp::tool_discovery::ToolDiscovery;
-use agent_agency_mcp::types::*;
+use agent_mcp::tool_discovery::ToolDiscovery;
+use agent_mcp::types::*;
 
 fn write_manifest(
     dir: &tempfile::TempDir,
