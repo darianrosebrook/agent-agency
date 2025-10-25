@@ -43,7 +43,7 @@ export function SkeletonText({ lines = 1, className }: { lines?: number; classNa
           key={i}
           variant="text"
           height={16}
-          className={styles.textLine}
+          className={styles.textLine || ''}
         />
       ))}
     </div>

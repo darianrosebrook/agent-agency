@@ -1,10 +1,11 @@
 === Duplication Detection Report ===
-Generated: Sat Oct 25 10:53:01 PDT 2025
+Generated: Sat Oct 25 12:47:50 PDT 2025
 
 Duplicate filenames across crates:
 agent.rs
 alerts.rs
 analysis.rs
+analyzer.rs
 api.rs
 audit.rs
 budget.rs
@@ -13,6 +14,7 @@ caws_integration.rs
 caws.rs
 circuit_breaker.rs
 cli.rs
+collector.rs
 config.rs
 context_builder.rs
 context.rs
@@ -28,6 +30,8 @@ embeddings.rs
 ensemble.rs
 error.rs
 errors.rs
+ethics.rs
+evaluation.rs
 ewma.rs
 execute.rs
 executor.rs
@@ -55,16 +59,20 @@ plan_review.rs
 policy_hooks.rs
 profiling.rs
 progress_tracker.rs
+quality.rs
 quantization.rs
 queries.rs
 rate_limiting.rs
 reinforcement.rs
 resource_pool.rs
+resources.rs
 reward.rs
 rl_signals.rs
+routing.rs
 runner.rs
 satisficing.rs
 schema.rs
+security.rs
 service.rs
 storage.rs
 strategy.rs
@@ -82,7 +90,6 @@ versioning.rs
 websocket.rs
 
 Duplicate struct names:
-AcceptanceCriteriaFramework {
 AcceptanceCriterion {
 AdaptivePromptingStrategy;
 AdaptiveResourceAllocator {
@@ -94,6 +101,7 @@ AgentPerformanceMetrics {
 AgentPerformanceTracker {
 AgentStatus {
 AgentTelemetryCollector {
+AggregatedJudgeData {
 AggregatedMetrics {
 AggregationMetadata {
 AggregationResult {
@@ -108,7 +116,9 @@ AllowList {
 Ambiguity {
 AmbiguityAnalysis {
 AnalyticsDashboard {
+AnalyticsDashboardConfig {
 AnalyticsDashboardData {
+AnalyticsEngine;
 AnalyticsInsight {
 AnalyticsRealTimeUpdate {
 AnalyticsSystemOverview {
@@ -135,8 +145,8 @@ ArtifactMetadata {
 AtomicClaim {
 AuditEvent {
 AuditLogEntry {
+AuditStatistics {
 AuditTrailEntry {
-AutomaticRecovery {
 BackendWorker {
 BackupConfig {
 BackupManager {
@@ -239,10 +249,7 @@ CouncilMetrics {
 CouncilVerdict {
 CoverageAnalysis {
 CoverageAnalyzer {
-CoverageBreakdown {
 CoverageGap {
-CoverageRecommendation {
-CoverageTrend {
 CpuMeasurement {
 CpuStatistics {
 CreateSourceIntegrityAlert {
@@ -255,12 +262,16 @@ CulturalConsideration {
 DataAnalysisOutput {
 DatabaseClient {
 DatabaseConfig {
-DatabaseHealthChecker {
+DatabaseHealthStatus {
+DatabaseMetrics {
 DatabaseStats {
 DatabaseStorage {
 DatabaseSystem {
+DatabaseVerdictStorage {
 DataPoint {
 DataSchema {
+DeadpoolSqlxBridge {
+DeadpoolSqlxConnection {
 DebateArgument {
 DebateContext {
 DebateResult {
@@ -271,7 +282,6 @@ DeepQLearning {
 DefaultCoreMlInvoker;
 Dependency {
 DeploymentComplexity {
-DetectedError {
 Detection {
 DeviceInfo {
 DiagramData {
@@ -293,17 +303,18 @@ DynamicTestGenerator {
 DynamicTestResults {
 EdgeCaseAnalysis {
 EdgeCaseAnalyzer {
-EdgeCaseDetection {
 EdgeCaseReport {
-EdgeCaseRequirement {
 EdgeCaseTest {
 EdgeCaseTestResult {
+EfficiencyWeights {
 EffortEstimate {
 EmbeddingCache {
 EmbeddingConfig {
 EmbeddingMetrics {
 EmbeddingModel {
+EmbeddingRecord {
 EmbeddingRequest {
+EmbeddingVector {
 EnsembleAnalytics {
 EnsembleComponentStatistics {
 Entity {
@@ -313,18 +324,7 @@ EntityEnricher {
 EntityMatch {
 EntityRelationship {
 EnvironmentConfig {
-ErrorClassification {
-ErrorClassificationResult {
-ErrorDetection {
-ErrorHandlingResult {
-ErrorImpact {
 ErrorMetrics {
-ErrorPriority {
-ErrorRecovery {
-ErrorRecoveryResult {
-ErrorReporting {
-ErrorSeverity {
-ErrorType {
 EthicalAssessment {
 EthicalConcern {
 EthicalConcernCategory {
@@ -335,6 +335,8 @@ EvalReport {
 EvaluationMetrics {
 EvaluationOrchestrator {
 Evidence {
+EvidenceCollector {
+EvidenceCollectorConfig {
 EvidenceItem {
 EvidenceManifest {
 EvidenceReference {
@@ -347,14 +349,14 @@ ExecutionProgress {
 ExecutionRecord {
 ExecutionResult {
 ExecutionStats {
+ExecutorProgress {
 ExitStrategy {
 ExpectedImpact {
 ExpectedOutcome {
 ExternalKnowledgeEntity {
 FailureAnalysis {
+FailureHeuristics {
 FailurePattern {
-FailureScenario {
-FallbackStrategy {
 FileChange {
 FileEvent {
 FileModification {
@@ -369,18 +371,21 @@ GaussianMixture {
 GeneratedTest {
 GenerationRequest {
 GenerationResponse {
-GrowthProjection {
-HealthCheckConfig {
+GraphEdge {
+GraphIndexer {
+GraphQuery {
+HealthAlert {
 HealthCheckResult {
-HealthMetrics {
 HealthStatus {
 HfTokenizer {
 HierarchicalContextManager {
 HistoricalEntityAnalysis {
+HistoricalResourceData {
+HistoricalResourceEntry {
+HnswMetadata {
 Hunk {
-IdentifiedEdgeCase {
 IncidentResponseAssessment {
-IncidentSeverityLevels {
+IndexStatistics {
 IndexStats {
 InferenceMetrics {
 InferenceOptions {
@@ -399,7 +404,11 @@ JudgeConfig {
 JudgeContribution {
 JudgeDissent {
 JudgeEvaluation {
+JudgeHealthMetrics {
 JudgePerformanceAnalysis {
+JudgePerformancePatterns {
+JudgePerformanceStats {
+JudgeRanking {
 JudgeRecommendation {
 JudgeVerdict {
 KeywordMatch {
@@ -419,7 +428,11 @@ LearningEvent {
 LearningFeedback {
 LearningOrchestrator {
 LearningPersistenceConfig {
+LearningProgress {
+LearningRecommendation {
+LearningSession {
 LearningSignal {
+LearningSignalAnalyzer {
 LearningSystemHealth {
 LearningUpdate {
 LinearRegressionModel {
@@ -428,7 +441,6 @@ LoggingConfig {
 LogisticRegression {
 MaintenanceRequirements {
 MaintenanceTask {
-ManualIntervention {
 MarketImpact {
 McpConfig {
 MCPConfig {
@@ -439,6 +451,7 @@ MemoryConfig {
 MemoryManager {
 MemoryStats {
 MemoryStorage {
+MemoryVerdictStorage {
 Message {
 MessageFilter {
 MetaLearningCoordinator {
@@ -463,10 +476,14 @@ ModelRegistry {
 MonitoringRequirements {
 MultiDimensionalRiskAssessment {
 MultimodalContext {
+MultimodalIndexer {
+MultimodalQuery {
 MultimodalSearchResult {
 MultiModalVerificationEngine {
+MultiTurnLearningCoordinator {
 MyComponent {
 NamedEntity {
+NoopEmitter;
 NoOpMetricsBackend;
 ObjectiveWeights {
 ObservabilityManager {
@@ -482,7 +499,6 @@ OptimizationConstraints {
 OptimizationRecommendation {
 OptimizationResult {
 OptimizationStatus {
-OptimizationSuggestion {
 OptimizationUpdates {
 Orchestrator {
 OrchestratorConfig;
@@ -528,10 +544,8 @@ Pool {
 PoolBuilder {
 PoolConfig {
 PoolStats {
-Postcondition {
 PostgresSourceIntegrityStorage {
 PowerStatus {
-Precondition {
 PredictionUpdates {
 PredictiveInsightsSummary {
 PredictiveLearningSystem {
@@ -548,17 +562,21 @@ ProcessingStats {
 ProgressSnapshot {
 ProgressTracker {
 ProvenanceConfig {
+ProvenanceEvent {
 ProvenanceRecord {
 QLearning {
 QTable {
 QualityAnalysis {
+QualityAssessment {
 QualityDataPoint {
 QualityGate {
 QualityGateResult {
 QualityGateRunner {
 QualityGateValidator {
+QualityHeuristics {
 QualityIssue {
 QualityMetrics {
+QualityPatterns {
 QualityReport {
 QualityRequirements {
 QualityThresholds {
@@ -568,16 +586,15 @@ QuantizationManager {
 QuantizationParams {
 QuantizationResult {
 QuantizationStats {
-QueryMetrics {
+QueueManager {
+QueueStats {
 RateLimitConfig {
 RateLimiter {
 RateLimitMiddleware {
 Recommendation {
-RecoveryAttempt {
 RecoveryConfig {
 RecoveryMetrics {
 RecoveryObjectives {
-RecoveryVerification {
 RedisCircuitBreaker {
 RedisConfig {
 ReferentInfo {
@@ -589,7 +606,6 @@ RegulatoryRisk {
 Relationship {
 RequestContext {
 RequiredChange {
-RequirementsManagementSystem {
 ResearchAgent {
 ResearchCapabilities {
 ResearchConfig {
@@ -601,11 +617,15 @@ ResearchValidation {
 ResolvedEntity {
 ResourceAllocation {
 ResourceConstraints {
+ResourceHeuristics {
+ResourceMetrics {
 ResourcePrediction {
 ResourcePredictor {
+ResourceRequirementAnalysis {
 ResourceRequirements {
 ResourceRisk {
 ResourceThresholds {
+ResourceTrend {
 ResourceUsage {
 ResourceUsageMetrics {
 ResourceUtilization {
@@ -620,7 +640,6 @@ RiskFactor {
 RiskInflectionPoint {
 RiskInteraction {
 RiskProjections {
-RiskTrend {
 RollbackManager {
 RollbackPlan {
 RoutingConfig {
@@ -673,6 +692,7 @@ SpeechTurn {
 StakeholderComplexity {
 StakeholderImpact {
 StorageMetrics {
+StorageStats {
 StrategyOptimizer {
 StrategyRecommendation {
 StreamingHasher {
@@ -681,7 +701,6 @@ StubOrchestratorHandle;
 SubTask {
 SuccessCriterion {
 SuccessPattern {
-SyntacticError {
 SystemAlert {
 SystemDashboard {
 SystemHealth {
@@ -691,6 +710,7 @@ SystemResourceMonitor {
 SystemStats {
 Task {
 TaskAnalysis {
+TaskAuditEvent {
 TaskConstraints {
 TaskContext {
 TaskDescriptor {
@@ -732,12 +752,12 @@ TestPerformanceMetrics {
 TestPlan {
 TestQuality {
 TestRelevance {
-TestRequirement {
 TestResult {
 TestResults {
 TestScenario {
 TestSpecification {
 TestSuiteResults {
+TextIndexer {
 ThermalCapabilities {
 ThermalConfig {
 ThermalStatus {
@@ -771,6 +791,9 @@ ValidationResults {
 ValidationRule {
 ValidationSummary {
 VectorSearchMetrics {
+VerdictRecord {
+VerdictStore {
+VerdictStoreStats {
 VerifiabilityAssessment {
 VerificationCriteria {
 VerificationRequirement {
@@ -780,6 +803,7 @@ Violation {
 VisionAnalysisResult {
 VisionEnricher {
 VisualData {
+VisualIndexer {
 VoteEntry {
 Waiver {
 WaiverApprovalRequest {
@@ -817,3 +841,29 @@ WorkspaceStateManager {
 ZeroKnowledgeProof {
 
 Duplicate trait names:
+ArgumentGenerator: Send + Sync {
+ArtifactStorage: Send + Sync {
+Converter: Send + Sync {
+CoreMlInvoker {
+EmbeddingProvider: Send + Sync {
+Evaluator: Send + Sync {
+HealthCheck: Send + Sync {
+InferenceEngine: Send + Sync {
+IntoANEError {
+Judge {
+Judge: Send + Sync + std::fmt::Debug {
+JudgeEvaluator: Send + Sync {
+KnowledgeBase {
+LearningAlgorithm: Send + Sync {
+LearningSignalStorage: Send + Sync + std::fmt::Debug {
+MessageHandler: Send + Sync {
+MetaLearningAlgorithm: Send + Sync {
+MetricsBackend: Send + Sync {
+ModelProvider: Send + Sync {
+OrchestratorHandle: Send + Sync {
+PreparedModel: Send + Sync {
+ResearchAgent: Send + Sync {
+SourceIntegrityStorage: Send + Sync {
+VerdictStorage: Send + Sync + std::fmt::Debug {
+Worker {
+Workspace: Send + Sync {
