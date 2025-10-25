@@ -205,7 +205,7 @@ export default function TableViewer({
             className={styles.refreshButton}
             disabled={state.isLoading}
           >
-            🔄 Refresh
+            Refresh
           </button>
         </div>
       </div>
@@ -251,7 +251,7 @@ export default function TableViewer({
                   className={styles.vectorBadge}
                   title={`Vector dimension: ${column.vector_dimension}`}
                 >
-                  🔍
+                  
                 </span>
               )}
             </label>
@@ -380,7 +380,7 @@ export default function TableViewer({
           </>
         ) : (
           <div className={styles.noData}>
-            <div className={styles.emptyIcon}>📋</div>
+            <div className={styles.emptyIcon}></div>
             <h3>No Data Available</h3>
             <p>Select columns and click refresh to load table data.</p>
             <button

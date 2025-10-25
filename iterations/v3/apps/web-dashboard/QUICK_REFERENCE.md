@@ -1,11 +1,11 @@
-# 🚀 Quick Reference Guide
+# Quick Reference Guide
 
 **Agent Agency V3 Dashboard**  
 **Quick access to common tasks and patterns**
 
 ---
 
-## 📄 Available Pages
+## Available Pages
 
 | Route | Description | Features |
 |---|---|---|
@@ -17,7 +17,7 @@
 
 ---
 
-## 🎨 Using Design System
+## Using Design System
 
 ### Import Components
 ```typescript
@@ -50,7 +50,7 @@ import { DashboardCard } from '@/design-system/composers';
 
 ---
 
-## 🎬 Using Animations
+## Using Animations
 
 ### Import Hooks
 ```typescript
@@ -82,7 +82,7 @@ const card = useGSAPCard();
 
 ---
 
-## 📐 Layout Best Practices
+## Layout Best Practices
 
 ### Prevent CLS
 ```tsx
@@ -119,7 +119,7 @@ const card = useGSAPCard();
 
 ---
 
-## 🧪 Testing Utilities
+## Testing Utilities
 
 ### Browser Console (Dev Mode)
 ```javascript
@@ -140,7 +140,7 @@ window.layoutTest.visualizeShifts()    // See shifts live
 
 ---
 
-## 📱 Responsive Breakpoints
+## Responsive Breakpoints
 
 ```scss
 // Viewport queries (layout)
@@ -156,7 +156,7 @@ window.layoutTest.visualizeShifts()    // See shifts live
 
 ---
 
-## 🎯 Common Tasks
+## Common Tasks
 
 ### Create New Page
 ```bash
@@ -220,7 +220,7 @@ const animation = useScrollAnimation({
 
 ---
 
-## 📚 Documentation Index
+## Documentation Index
 
 **Full guides available:**
 
@@ -233,7 +233,7 @@ const animation = useScrollAnimation({
 
 ---
 
-## 🎯 Quick Wins
+## Quick Wins
 
 **Need to add animations?**
 → See `QUICK_START_ANIMATIONS.md`
@@ -252,7 +252,7 @@ const animation = useScrollAnimation({
 
 ---
 
-## ✨ Key Patterns
+## Key Patterns
 
 **Every page should:**
 1. Use `<DashboardLayout>` wrapper

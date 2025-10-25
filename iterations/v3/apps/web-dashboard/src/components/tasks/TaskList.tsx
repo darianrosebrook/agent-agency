@@ -44,21 +44,21 @@ export default function TaskList({ tasks, onTaskAction, loading = false }: TaskL
   const getPhaseIcon = (phase: Task["phase"]) => {
     switch (phase) {
       case "planning":
-        return "🧠";
+        return "";
       case "analysis":
-        return "🔍";
+        return "";
       case "execution":
-        return "⚡";
+        return "";
       case "validation":
-        return "✅";
+        return "";
       case "refinement":
-        return "🔧";
+        return "";
       case "qa":
-        return "🧪";
+        return "";
       case "finalization":
-        return "🎯";
+        return "";
       default:
-        return "📋";
+        return "";
     }
   };
 
@@ -94,7 +94,7 @@ export default function TaskList({ tasks, onTaskAction, loading = false }: TaskL
   if (tasks.length === 0) {
     return (
       <div className={styles.emptyState}>
-        <div className={styles.emptyIcon}>📋</div>
+        <div className={styles.emptyIcon}></div>
         <h3>No Tasks Found</h3>
         <p>No tasks match your current filters.</p>
       </div>
@@ -188,7 +188,7 @@ export default function TaskList({ tasks, onTaskAction, loading = false }: TaskL
                     className={styles.actionButton}
                     title="Cancel task"
                   >
-                    🛑
+                    
                   </button>
                 )}
                 {canRetry(task.status) && (
@@ -197,7 +197,7 @@ export default function TaskList({ tasks, onTaskAction, loading = false }: TaskL
                     className={styles.actionButton}
                     title="Retry task"
                   >
-                    🔄
+                    
                   </button>
                 )}
               </div>

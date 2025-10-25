@@ -99,7 +99,7 @@ export default function ForecastingChart({
     return (
       <div className={styles.forecastingChart}>
         <div className={styles.noData}>
-          <div className={styles.emptyIcon}>📊</div>
+          <div className={styles.emptyIcon}></div>
           <h3>No Forecast Data</h3>
           <p>Forecast data will be available once prediction models are run.</p>
         </div>

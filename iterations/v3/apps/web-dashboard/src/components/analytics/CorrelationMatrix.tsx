@@ -229,7 +229,7 @@ export default function CorrelationMatrix({
                 Analyzing...
               </>
             ) : (
-              <>🔗 Analyze Correlations</>
+              <>Analyze Correlations</>
             )}
           </button>
         </div>
@@ -426,7 +426,7 @@ export default function CorrelationMatrix({
           </>
         ) : (
           <div className={styles.noCorrelations}>
-            <div className={styles.emptyIcon}>🔗</div>
+            <div className={styles.emptyIcon}></div>
             <h3>No Correlation Data</h3>
             <p>
               Correlation analysis will be available once multiple metrics have

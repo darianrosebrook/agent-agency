@@ -1,10 +1,10 @@
-# 🚀 Quick Start - GSAP Animations
+# Quick Start - GSAP Animations
 
 Fast reference for using animations in the dashboard.
 
 ---
 
-## 📥 Import
+## Import
 
 ```tsx
 import { 
@@ -17,7 +17,7 @@ import {
 
 ---
 
-## 🎬 Common Patterns
+## Common Patterns
 
 ### 1. Fade In Section on Scroll
 ```tsx
@@ -124,7 +124,7 @@ function Metric({ value }: { value: number }) {
 
 ---
 
-## 🎨 Easing Guide
+## Easing Guide
 
 | Easing | Use For | Feel |
 |---|---|---|
@@ -145,23 +145,23 @@ function Metric({ value }: { value: number }) {
 
 ---
 
-## ✅ Best Practices
+## Best Practices
 
 **DO:**
-- ✅ Use `power2.out` or `power3.out` for most animations
-- ✅ Keep durations < 600ms for interactions
-- ✅ Use stagger for lists (creates rhythm)
-- ✅ Animate transform and opacity only (GPU)
+- Use `power2.out` or `power3.out` for most animations
+- Keep durations < 600ms for interactions
+- Use stagger for lists (creates rhythm)
+- Animate transform and opacity only (GPU)
 
 **DON'T:**
-- ❌ Animate width, height, padding (causes reflow)
-- ❌ Use durations > 1s for UI interactions
-- ❌ Forget to clean up tweens
-- ❌ Animate too many elements at once
+- Animate width, height, padding (causes reflow)
+- Use durations > 1s for UI interactions
+- Forget to clean up tweens
+- Animate too many elements at once
 
 ---
 
-## 🎯 Quick Examples
+## Quick Examples
 
 **Fade section:**
 ```tsx

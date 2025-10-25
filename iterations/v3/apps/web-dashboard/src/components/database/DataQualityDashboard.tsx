@@ -96,13 +96,13 @@ export default function DataQualityDashboard({
   const getStatusIcon = (status: DataQualityMetric["status"]) => {
     switch (status) {
       case "good":
-        return "✅";
+        return "";
       case "warning":
         return "⚠️";
       case "error":
-        return "❌";
+        return "";
       default:
-        return "❓";
+        return "";
     }
   };
 
@@ -141,9 +141,9 @@ export default function DataQualityDashboard({
   const getTrendIcon = (trend?: DataQualityMetric["trend"]) => {
     switch (trend) {
       case "up":
-        return "📈";
+        return "";
       case "down":
-        return "📉";
+        return "";
       case "stable":
         return "➡️";
       default:
@@ -166,7 +166,7 @@ export default function DataQualityDashboard({
     return (
       <div className={styles.dataQualityDashboard}>
         <div className={styles.error}>
-          <div className={styles.emptyIcon}>📊</div>
+          <div className={styles.emptyIcon}></div>
           <h3>Failed to load data quality metrics</h3>
           <p>{state.error}</p>
           <button onClick={handleRefresh} className={styles.retryButton}>
@@ -192,7 +192,7 @@ export default function DataQualityDashboard({
             )}
           </div>
           <button onClick={handleRefresh} className={styles.refreshButton}>
-            🔄 Refresh
+            Refresh
           </button>
         </div>
       </div>
@@ -387,7 +387,7 @@ export default function DataQualityDashboard({
               (t) => t.performance.slow_queries > 5
             ) && (
               <div className={styles.insight}>
-                <span className={styles.insightIcon}>🐌</span>
+                <span className={styles.insightIcon}></span>
                 <div className={styles.insightContent}>
                   <h4>Slow Query Alert</h4>
                   <p>
@@ -405,7 +405,7 @@ export default function DataQualityDashboard({
 
             {metrics.cache_hit_ratio < 0.8 && (
               <div className={styles.insight}>
-                <span className={styles.insightIcon}>💾</span>
+                <span className={styles.insightIcon}></span>
                 <div className={styles.insightContent}>
                   <h4>Low Cache Hit Ratio</h4>
                   <p>
@@ -419,7 +419,7 @@ export default function DataQualityDashboard({
 
             {metrics.connections_active > metrics.connections_idle * 2 && (
               <div className={styles.insight}>
-                <span className={styles.insightIcon}>🔗</span>
+                <span className={styles.insightIcon}></span>
                 <div className={styles.insightContent}>
                   <h4>High Connection Usage</h4>
                   <p>

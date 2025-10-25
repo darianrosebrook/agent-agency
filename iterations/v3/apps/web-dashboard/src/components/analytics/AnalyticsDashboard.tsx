@@ -168,7 +168,7 @@ export default function AnalyticsDashboard({
 
       {trend && (
         <div className={`${styles.cardTrend} ${styles[trend]}`}>
-          {trend === "up" ? "📈" : trend === "down" ? "📉" : "➡️"}
+          {trend === "up" ? "" : trend === "down" ? "" : "➡️"}
         </div>
       )}
 
@@ -265,7 +265,7 @@ export default function AnalyticsDashboard({
             className={styles.refreshButton}
             disabled={state.isLoading}
           >
-            {state.isLoading ? "🔄 Loading..." : "🔄 Refresh"}
+            {state.isLoading ? "Loading..." : "Refresh"}
           </button>
         </div>
       </div>
@@ -345,7 +345,7 @@ export default function AnalyticsDashboard({
                         ? "warning"
                         : "error"
                     }
-                    icon="🏥"
+                    icon=""
                     trend={
                       state.summary.system_health_score >= 85
                         ? "up"
@@ -387,7 +387,7 @@ export default function AnalyticsDashboard({
                         ? "warning"
                         : "error"
                     }
-                    icon="🔮"
+                    icon=""
                     trend={
                       state.summary.prediction_accuracy >= 0.75
                         ? "up"
@@ -399,7 +399,7 @@ export default function AnalyticsDashboard({
                   <AnalyticsCard
                     title="Active Metrics"
                     value={state.summary.total_metrics.toString()}
-                    icon="📊"
+                    icon=""
                     trend="stable"
                     description="Total metrics being monitored"
                   />
@@ -448,7 +448,7 @@ export default function AnalyticsDashboard({
                   <div className={styles.insightsList}>
                     {state.summary.key_insights.map((insight, index) => (
                       <div key={index} className={styles.insightItem}>
-                        <span className={styles.insightIcon}>💡</span>
+                        <span className={styles.insightIcon}></span>
                         <span>{insight}</span>
                       </div>
                     ))}
@@ -462,7 +462,7 @@ export default function AnalyticsDashboard({
                     {state.summary.recommendations.map(
                       (recommendation, index) => (
                         <div key={index} className={styles.recommendationItem}>
-                          <span className={styles.recommendationIcon}>🎯</span>
+                          <span className={styles.recommendationIcon}></span>
                           <span>{recommendation}</span>
                         </div>
                       )
@@ -472,7 +472,7 @@ export default function AnalyticsDashboard({
               </>
             ) : (
               <div className={styles.noData}>
-                <div className={styles.emptyIcon}>📊</div>
+                <div className={styles.emptyIcon}></div>
                 <h3>No Analytics Data Available</h3>
                 <p>
                   Analytics data will be available once the V3 analytics APIs

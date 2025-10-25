@@ -1,0 +1,16 @@
+//! {{MODULE_NAME}} module
+//!
+//! {{MODULE_DESCRIPTION}}.
+//!
+//! This module provides {{RESPONSIBILITIES}} following SOLID principles.
+
+{{#each submodules}}
+pub mod {{name}};
+{{/each}}
+
+{{#if has_public_exports}}
+// Re-export main types and functions for easy access
+{{#each exports}}
+pub use {{name}}::*;
+{{/each}}
+{{/if}}

@@ -12,7 +12,7 @@ const V3_HOST = process.env.V3_BACKEND_HOST || 'localhost';
 const V3_PORT = process.env.V3_BACKEND_PORT || 8080;
 const V3_BASE_URL = `http://${V3_HOST}:${V3_PORT}`;
 
-console.log('🔍 Testing Dashboard ↔ V3 Backend Connectivity');
+console.log('Testing Dashboard ↔ V3 Backend Connectivity');
 console.log('================================================');
 console.log(`V3 Backend URL: ${V3_BASE_URL}`);
 console.log();
@@ -55,14 +55,14 @@ async function testHealthEndpoint() {
   try {
     const response = await makeRequest(`${V3_BASE_URL}/health`);
     if (response.status === 200) {
-      console.log('✅ Health endpoint responding');
+      console.log('Health endpoint responding');
       return true;
     } else {
-      console.log(`❌ Health endpoint returned status ${response.status}`);
+      console.log(`Health endpoint returned status ${response.status}`);
       return false;
     }
   } catch (error) {
-    console.log(`❌ Health endpoint error: ${error.message}`);
+    console.log(`Health endpoint error: ${error.message}`);
     return false;
   }
 }
@@ -72,17 +72,17 @@ async function testMetricsEndpoint() {
   try {
     const response = await makeRequest(`${V3_BASE_URL}/api/v1/metrics`);
     if (response.status === 200) {
-      console.log('✅ Metrics endpoint responding');
+      console.log('Metrics endpoint responding');
       if (response.data && response.data.metrics) {
-        console.log(`   📊 Found ${Object.keys(response.data.metrics).length} metric types`);
+        console.log(`   Found ${Object.keys(response.data.metrics).length} metric types`);
       }
       return true;
     } else {
-      console.log(`❌ Metrics endpoint returned status ${response.status}`);
+      console.log(`Metrics endpoint returned status ${response.status}`);
       return false;
     }
   } catch (error) {
-    console.log(`❌ Metrics endpoint error: ${error.message}`);
+    console.log(`Metrics endpoint error: ${error.message}`);
     return false;
   }
 }
@@ -103,12 +103,12 @@ async function testMetricsStream() {
       }
     }, (res) => {
       if (res.statusCode !== 200) {
-        console.log(`❌ Metrics stream returned status ${res.statusCode}`);
+        console.log(`Metrics stream returned status ${res.statusCode}`);
         resolve(false);
         return;
       }
 
-      console.log('✅ Metrics stream connected');
+      console.log('Metrics stream connected');
 
       let buffer = '';
 
@@ -122,9 +122,9 @@ async function testMetricsStream() {
             try {
               const data = JSON.parse(line.substring(6));
               if (data.timestamp && data.metrics) {
-                console.log('✅ Received real-time metrics data');
-                console.log(`   📈 CPU: ${data.metrics.cpu_usage_percent?.toFixed(1) || 'N/A'}%`);
-                console.log(`   🧠 Memory: ${data.metrics.memory_usage_percent?.toFixed(1) || 'N/A'}%`);
+                console.log('Received real-time metrics data');
+                console.log(`   CPU: ${data.metrics.cpu_usage_percent?.toFixed(1) || 'N/A'}%`);
+                console.log(`   Memory: ${data.metrics.memory_usage_percent?.toFixed(1) || 'N/A'}%`);
                 console.log(`   ⚙️ Active Tasks: ${data.metrics.active_tasks || 0}`);
                 receivedData = true;
                 clearTimeout(timeout);
@@ -140,21 +140,21 @@ async function testMetricsStream() {
 
       res.on('end', () => {
         if (!receivedData) {
-          console.log('❌ Metrics stream ended without receiving data');
+          console.log('Metrics stream ended without receiving data');
           resolve(false);
         }
       });
     });
 
     request.on('error', (err) => {
-      console.log(`❌ Metrics stream connection error: ${err.message}`);
+      console.log(`Metrics stream connection error: ${err.message}`);
       resolve(false);
     });
 
     // Set timeout for receiving data
     timeout = setTimeout(() => {
       if (!receivedData) {
-        console.log('❌ Timeout waiting for metrics stream data');
+        console.log('Timeout waiting for metrics stream data');
         request.destroy();
         resolve(false);
       }
@@ -167,17 +167,17 @@ async function testApiTasksEndpoint() {
   try {
     const response = await makeRequest(`${V3_BASE_URL}/api/v1/tasks`);
     if (response.status === 200) {
-      console.log('✅ Tasks API endpoint responding');
+      console.log('Tasks API endpoint responding');
       if (response.data && Array.isArray(response.data.tasks)) {
-        console.log(`   📋 Found ${response.data.tasks.length} tasks`);
+        console.log(`   Found ${response.data.tasks.length} tasks`);
       }
       return true;
     } else {
-      console.log(`❌ Tasks API endpoint returned status ${response.status}`);
+      console.log(`Tasks API endpoint returned status ${response.status}`);
       return false;
     }
   } catch (error) {
-    console.log(`❌ Tasks API endpoint error: ${error.message}`);
+    console.log(`Tasks API endpoint error: ${error.message}`);
     return false;
   }
 }
@@ -192,7 +192,7 @@ async function runTests() {
 
   console.log();
   console.log('================================================');
-  console.log('📊 Test Results Summary');
+  console.log('Test Results Summary');
   console.log('================================================');
 
   const passed = results.filter(r => r).length;
@@ -201,7 +201,7 @@ async function runTests() {
   console.log(`Tests Passed: ${passed}/${total}`);
 
   if (passed === total) {
-    console.log('🎉 All tests passed! Dashboard should work correctly.');
+    console.log('All tests passed! Dashboard should work correctly.');
     console.log();
     console.log('Next steps:');
     console.log('1. Start the dashboard: cd apps/web-dashboard && npm run dev');
@@ -210,7 +210,7 @@ async function runTests() {
     console.log('4. Navigate to the Metrics page to see real-time data');
     process.exit(0);
   } else {
-    console.log('⚠️ Some tests failed. Dashboard may not work correctly.');
+    console.log('Some tests failed. Dashboard may not work correctly.');
     console.log();
     console.log('Troubleshooting:');
     console.log('1. Ensure V3 backend is running on the correct host/port');
@@ -234,6 +234,6 @@ process.on('SIGTERM', () => {
 
 // Run the tests
 runTests().catch((error) => {
-  console.error('💥 Test script failed:', error);
+  console.error('Test script failed:', error);
   process.exit(1);
 });

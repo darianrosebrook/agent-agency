@@ -40,28 +40,28 @@ export default function TaskCard({
   const getPhaseIcon = (phase: Task["phase"]) => {
     switch (phase) {
       case "planning":
-        return "🧠";
+        return "";
       case "analysis":
-        return "🔍";
+        return "";
       case "execution":
-        return "⚡";
+        return "";
       case "validation":
-        return "✅";
+        return "";
       case "refinement":
-        return "🔧";
+        return "";
       case "qa":
-        return "🧪";
+        return "";
       case "finalization":
-        return "🎯";
+        return "";
       default:
-        return "📋";
+        return "";
     }
   };
 
   // const _getAuditIcon = (action: string) => {
   //   switch (action.toLowerCase()) {
   //     case "task_created":
-  //       return "🆕";
+  //       return "";
   //     case "task_started":
   //       return "▶️";
   //     case "task_paused":
@@ -69,52 +69,52 @@ export default function TaskCard({
   //     case "task_resumed":
   //       return "▶️";
   //     case "task_completed":
-  //       return "✅";
+  //       return "";
   //     case "task_failed":
-  //       return "❌";
+  //       return "";
   //     case "task_cancelled":
-  //       return "🛑";
+  //       return "";
   //     case "task_state_change":
-  //       return "🔄";
+  //       return "";
   //     case "waiver_created":
-  //       return "📋";
+  //       return "";
   //     case "waiver_approved":
-  //       return "✅";
+  //       return "";
   //     case "waiver_expired":
-  //       return "⏰";
+  //       return "";
   //     case "quality_gate_passed":
-  //       return "✅";
+  //       return "";
   //     case "quality_gate_failed":
-  //       return "❌";
+  //       return "";
   //     case "quality_gate_waived":
   //       return "⚠️";
   //     case "worker_assigned":
-  //       return "👷";
+  //       return "";
   //     case "worker_completed":
-  //       return "🏁";
+  //       return "";
   //     case "model_switched":
-  //       return "🔄";
+  //       return "";
   //     case "iteration_started":
-  //       return "🔄";
+  //       return "";
   //     case "iteration_completed":
-  //       return "✅";
+  //       return "";
   //     default:
-  //       return "📝";
+  //       return "";
   //   }
   // };
 
   const getPriorityIcon = (priority: Task["priority"]) => {
     switch (priority) {
       case "critical":
-        return "🔴";
+        return "";
       case "high":
-        return "🟠";
+        return "";
       case "medium":
-        return "🟡";
+        return "";
       case "low":
-        return "🟢";
+        return "";
       default:
-        return "⚪";
+        return "";
     }
   };
 
@@ -271,7 +271,7 @@ export default function TaskCard({
               className={`${styles.actionButton} ${styles.cancel}`}
               title="Cancel task"
             >
-              ❌
+              
             </button>
           )}
         </div>
@@ -293,7 +293,7 @@ export default function TaskCard({
 
           {task.artifacts.length > 0 && (
             <span className={styles.artifactCount}>
-              📎 {task.artifacts.length}
+              {task.artifacts.length}
             </span>
           )}
         </div>

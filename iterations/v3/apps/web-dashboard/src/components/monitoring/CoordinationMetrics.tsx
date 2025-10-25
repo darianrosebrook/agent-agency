@@ -89,7 +89,7 @@ export default function CoordinationMetricsComponent({
     return (
       <div className={styles.coordinationMetrics}>
         <div className={styles.emptyState}>
-          <div className={styles.emptyIcon}>🤝</div>
+          <div className={styles.emptyIcon}></div>
           <h3>Coordination Metrics</h3>
           <p>
             Real-time agent coordination monitoring requires V3 coordination
@@ -125,7 +125,7 @@ export default function CoordinationMetricsComponent({
               ? "warning"
               : "error"
           }
-          icon="🎯"
+          icon=""
           format="percentage"
         />
 
@@ -147,7 +147,7 @@ export default function CoordinationMetricsComponent({
           title="Total Decisions"
           value={metrics.total_decisions}
           status="neutral"
-          icon="📊"
+          icon=""
         />
 
         <MetricTile
@@ -160,7 +160,7 @@ export default function CoordinationMetricsComponent({
               ? "warning"
               : "error"
           }
-          icon="❌"
+          icon=""
         />
       </div>
 
@@ -171,7 +171,7 @@ export default function CoordinationMetricsComponent({
             title="Active Tasks"
             value={metrics.active_tasks}
             status={metrics.active_tasks > 0 ? "success" : "neutral"}
-            icon="⚡"
+            icon=""
           />
 
           <MetricTile
@@ -184,7 +184,7 @@ export default function CoordinationMetricsComponent({
                 ? "error"
                 : "success"
             }
-            icon="📋"
+            icon=""
           />
 
           <MetricTile
@@ -197,7 +197,7 @@ export default function CoordinationMetricsComponent({
                 ? "warning"
                 : "error"
             }
-            icon="📈"
+            icon=""
           />
 
           <MetricTile
@@ -227,7 +227,7 @@ export default function CoordinationMetricsComponent({
                 ? "success"
                 : "warning"
             }
-            icon="💬"
+            icon=""
           />
 
           <MetricTile
@@ -240,7 +240,7 @@ export default function CoordinationMetricsComponent({
                 ? "warning"
                 : "error"
             }
-            icon="⚡"
+            icon=""
             format="duration"
           />
 
@@ -254,7 +254,7 @@ export default function CoordinationMetricsComponent({
                 ? "warning"
                 : "error"
             }
-            icon="🔄"
+            icon=""
             format="percentage"
           />
         </div>
@@ -267,10 +267,10 @@ export default function CoordinationMetricsComponent({
             <div className={styles.indicatorLabel}>
               <span className={styles.indicatorIcon}>
                 {metrics.consensus_rate >= 0.9
-                  ? "✅"
+                  ? ""
                   : metrics.consensus_rate >= 0.7
                   ? "⚠️"
-                  : "❌"}
+                  : ""}
               </span>
               <span>Consensus Stability</span>
             </div>
@@ -287,10 +287,10 @@ export default function CoordinationMetricsComponent({
             <div className={styles.indicatorLabel}>
               <span className={styles.indicatorIcon}>
                 {metrics.message_failure_rate < 0.02
-                  ? "✅"
+                  ? ""
                   : metrics.message_failure_rate < 0.1
                   ? "⚠️"
-                  : "❌"}
+                  : ""}
               </span>
               <span>Communication Reliability</span>
             </div>
@@ -307,10 +307,10 @@ export default function CoordinationMetricsComponent({
             <div className={styles.indicatorLabel}>
               <span className={styles.indicatorIcon}>
                 {metrics.average_decision_time_ms < 10000
-                  ? "✅"
+                  ? ""
                   : metrics.average_decision_time_ms < 30000
                   ? "⚠️"
-                  : "❌"}
+                  : ""}
               </span>
               <span>Decision Speed</span>
             </div>
@@ -327,10 +327,10 @@ export default function CoordinationMetricsComponent({
             <div className={styles.indicatorLabel}>
               <span className={styles.indicatorIcon}>
                 {metrics.queued_tasks < 20
-                  ? "✅"
+                  ? ""
                   : metrics.queued_tasks < 100
                   ? "⚠️"
-                  : "❌"}
+                  : ""}
               </span>
               <span>Queue Health</span>
             </div>

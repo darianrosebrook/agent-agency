@@ -2,6 +2,7 @@
 resolver = "2"
 members = [
     "common-types",  # 🏗️ NEW: Shared abstractions and traits to reduce duplication
+    "common-patterns",  # 🛠️ NEW: Shared patterns, traits, and utilities
     "quality-gates",  # 🔍 NEW: Automated quality gates to prevent god objects and duplications
     "agent-data-processing",  # 🗂️ NEW: Unified data processing pipeline consolidating ingestors/enrichers/indexers/knowledge/file-ops
     "apple-silicon",  # Re-enabled after fixing torch integration and type imports
@@ -89,6 +90,7 @@ thiserror = "1.0"
 
 # Utilities
 uuid = { version = "1.0", features = ["v4", "serde"] }
+regex = "1.10"
 
 # Configuration
 config = "0.14"

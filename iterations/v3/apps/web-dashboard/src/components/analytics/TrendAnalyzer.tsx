@@ -190,15 +190,15 @@ export default function TrendAnalyzer({
   const getDirectionIcon = (direction: Trend["direction"]) => {
     switch (direction) {
       case "increasing":
-        return "📈";
+        return "";
       case "decreasing":
-        return "📉";
+        return "";
       case "stable":
         return "➡️";
       case "volatile":
-        return "📊";
+        return "";
       default:
-        return "❓";
+        return "";
     }
   };
 
@@ -253,7 +253,7 @@ export default function TrendAnalyzer({
                 Analyzing...
               </>
             ) : (
-              <>📈 Analyze Trends</>
+              <>Analyze Trends</>
             )}
           </button>
         </div>
@@ -420,7 +420,7 @@ export default function TrendAnalyzer({
           </>
         ) : (
           <div className={styles.noTrends}>
-            <div className={styles.emptyIcon}>📈</div>
+            <div className={styles.emptyIcon}></div>
             <h3>No Trends Detected</h3>
             <p>
               No significant trends were detected in the current time range.

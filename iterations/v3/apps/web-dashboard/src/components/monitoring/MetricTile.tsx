@@ -44,9 +44,9 @@ export default function MetricTile({
 
     switch (trend) {
       case "up":
-        return "📈";
+        return "";
       case "down":
-        return "📉";
+        return "";
       case "stable":
         return "➡️";
       default:

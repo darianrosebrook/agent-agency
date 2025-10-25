@@ -87,13 +87,13 @@ export default function SystemHealthOverview({
   const getComponentIcon = (status: string) => {
     switch (status) {
       case "healthy":
-        return "✅";
+        return "";
       case "degraded":
         return "⚠️";
       case "unhealthy":
-        return "❌";
+        return "";
       default:
-        return "❓";
+        return "";
     }
   };
 
@@ -131,7 +131,7 @@ export default function SystemHealthOverview({
     return (
       <div className={styles.healthOverview}>
         <div className={styles.emptyState}>
-          <div className={styles.emptyIcon}>🏥</div>
+          <div className={styles.emptyIcon}></div>
           <h3>System Health Monitoring</h3>
           <p>Real-time health monitoring requires V3 system health APIs.</p>
           <div className={styles.emptyActions}>
@@ -185,14 +185,14 @@ export default function SystemHealthOverview({
               ? "warning"
               : "error"
           }
-          icon="🔧"
+          icon=""
         />
 
         <MetricTile
           title="Active Alerts"
           value={activeAlerts}
           status={activeAlerts > 0 ? "warning" : "success"}
-          icon="🚨"
+          icon=""
         />
 
         <MetricTile

@@ -104,19 +104,19 @@ export function CliInterventionPanel({
   const getStatusIcon = (status: TaskStatus) => {
     switch (status) {
       case "planning":
-        return "🧠";
+        return "";
       case "executing":
         return "⚙️";
       case "paused":
         return "⏸️";
       case "waiting_approval":
-        return "⏳";
+        return "";
       case "completed":
-        return "✅";
+        return "";
       case "failed":
-        return "❌";
+        return "";
       default:
-        return "❓";
+        return "";
     }
   };
 

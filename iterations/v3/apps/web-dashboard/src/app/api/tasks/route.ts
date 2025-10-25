@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
     if (!response?.ok) {
       const statusCode = response?.status ?? 0;
       console.warn(
-        `⚠️ V3 backend task list failed: ${statusCode} ${response?.statusText ?? "No response"}`
+        `V3 backend task list failed: ${statusCode} ${response?.statusText ?? "No response"}`
       );
       return NextResponse.json({
         error: "backend_error",
@@ -128,9 +128,9 @@ export async function GET(request: NextRequest) {
       errorMessage.includes("ECONNREFUSED");
 
     if (isNetworkError) {
-      console.warn(`⚠️ Backend unreachable for tasks: ${errorMessage}`);
+      console.warn(`Backend unreachable for tasks: ${errorMessage}`);
     } else {
-      console.error("🚫 Task list proxy error:", error);
+      console.error("Task list proxy error:", error);
     }
 
     return NextResponse.json({
@@ -182,7 +182,7 @@ export async function POST(request: NextRequest) {
     if (!response?.ok) {
       const statusCode = response?.status ?? 0;
       console.warn(
-        `⚠️ V3 backend task creation failed: ${statusCode} ${response?.statusText ?? "No response"}`
+        `V3 backend task creation failed: ${statusCode} ${response?.statusText ?? "No response"}`
       );
       const errorData = await response.json().catch(() => ({}));
       return NextResponse.json(
@@ -216,9 +216,9 @@ export async function POST(request: NextRequest) {
       errorMessage.includes("ECONNREFUSED");
 
     if (isNetworkError) {
-      console.warn(`⚠️ Backend unreachable for task creation: ${errorMessage}`);
+      console.warn(`Backend unreachable for task creation: ${errorMessage}`);
     } else {
-      console.error("🚫 Task creation proxy error:", error);
+      console.error("Task creation proxy error:", error);
     }
 
     return NextResponse.json(

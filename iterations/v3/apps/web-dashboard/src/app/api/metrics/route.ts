@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
     if (!response?.ok) {
       const statusCode = response?.status ?? 0;
       console.warn(
-        `⚠️ V3 backend metrics failed: ${statusCode} ${response?.statusText ?? "No response"}`
+        `V3 backend metrics failed: ${statusCode} ${response?.statusText ?? "No response"}`
       );
       return NextResponse.json({
         error: "backend_error",
@@ -130,9 +130,9 @@ export async function GET(request: NextRequest) {
       errorMessage.includes("ECONNREFUSED");
 
     if (isNetworkError) {
-      console.warn(`⚠️ Backend unreachable for metrics: ${errorMessage}`);
+      console.warn(`Backend unreachable for metrics: ${errorMessage}`);
     } else {
-      console.error("🚫 Metrics proxy error:", error);
+      console.error("Metrics proxy error:", error);
     }
 
     return NextResponse.json({

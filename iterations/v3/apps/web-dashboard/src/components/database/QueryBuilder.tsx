@@ -285,13 +285,13 @@ export default function QueryBuilder({
               disabled={!state.sqlQuery.trim()}
               className={styles.saveButton}
             >
-              💾 Save Query
+              Save Query
             </button>
             <button
               onClick={handleAddParameter}
               className={styles.addParameterButton}
             >
-              📝 Add Parameter
+              Add Parameter
             </button>
           </div>
         </div>
@@ -525,7 +525,7 @@ export default function QueryBuilder({
             </div>
           ) : (
             <div className={styles.noResults}>
-              <div className={styles.emptyIcon}>📋</div>
+              <div className={styles.emptyIcon}></div>
               <h3>Query executed successfully</h3>
               <p>
                 {state.executionResult.result?.row_count === 0

@@ -105,7 +105,7 @@ export default function BusinessIntelligence({
     return (
       <div className={styles.businessIntelligence}>
         <div className={styles.emptyState}>
-          <div className={styles.emptyIcon}>📊</div>
+          <div className={styles.emptyIcon}></div>
           <h3>Business Intelligence</h3>
           <p>
             Real-time business metrics and KPIs require V3 business intelligence
@@ -147,14 +147,14 @@ export default function BusinessIntelligence({
           title="Tasks Created"
           value={businessMetrics.total_tasks_created}
           status="neutral"
-          icon="📝"
+          icon=""
         />
 
         <MetricTile
           title="Completed Today"
           value={businessMetrics.tasks_completed_today}
           status="success"
-          icon="✅"
+          icon=""
         />
 
         <MetricTile
@@ -167,7 +167,7 @@ export default function BusinessIntelligence({
               ? "warning"
               : "error"
           }
-          icon="🎯"
+          icon=""
           format="percentage"
         />
 
@@ -193,7 +193,7 @@ export default function BusinessIntelligence({
             title="Quality Checks Passed"
             value={businessMetrics.quality_checks_passed}
             status="success"
-            icon="✅"
+            icon=""
           />
 
           <MetricTile
@@ -206,7 +206,7 @@ export default function BusinessIntelligence({
                 ? "warning"
                 : "error"
             }
-            icon="❌"
+            icon=""
           />
 
           <MetricTile
@@ -219,7 +219,7 @@ export default function BusinessIntelligence({
                 ? "warning"
                 : "error"
             }
-            icon="📊"
+            icon=""
             format="percentage"
           />
         </div>
@@ -238,7 +238,7 @@ export default function BusinessIntelligence({
                 ? "warning"
                 : "error"
             }
-            icon="💰"
+            icon=""
             format="currency"
           />
 
@@ -252,7 +252,7 @@ export default function BusinessIntelligence({
                 ? "warning"
                 : "error"
             }
-            icon="💵"
+            icon=""
             format="currency"
           />
 
@@ -267,7 +267,7 @@ export default function BusinessIntelligence({
                 ? "warning"
                 : "error"
             }
-            icon="📈"
+            icon=""
             format="percentage"
             trend={
               businessMetrics.efficiency_trend > 0
@@ -290,7 +290,7 @@ export default function BusinessIntelligence({
                 title="Active Sessions"
                 value={businessMetrics.active_sessions}
                 status="neutral"
-                icon="👥"
+                icon=""
               />
             )}
 
@@ -320,10 +320,10 @@ export default function BusinessIntelligence({
             <div className={styles.indicatorLabel}>
               <span className={styles.indicatorIcon}>
                 {businessMetrics.task_success_rate >= 0.9
-                  ? "✅"
+                  ? ""
                   : businessMetrics.task_success_rate >= 0.7
                   ? "⚠️"
-                  : "❌"}
+                  : ""}
               </span>
               <span>Task Success Rate</span>
             </div>
@@ -340,10 +340,10 @@ export default function BusinessIntelligence({
             <div className={styles.indicatorLabel}>
               <span className={styles.indicatorIcon}>
                 {businessMetrics.average_task_completion_time_ms < 600000
-                  ? "✅"
+                  ? ""
                   : businessMetrics.average_task_completion_time_ms < 1800000
                   ? "⚠️"
-                  : "❌"}
+                  : ""}
               </span>
               <span>Task Completion Speed</span>
             </div>
@@ -360,10 +360,10 @@ export default function BusinessIntelligence({
             <div className={styles.indicatorLabel}>
               <span className={styles.indicatorIcon}>
                 {businessMetrics.cost_per_task < 20
-                  ? "✅"
+                  ? ""
                   : businessMetrics.cost_per_task < 50
                   ? "⚠️"
-                  : "❌"}
+                  : ""}
               </span>
               <span>Cost Efficiency</span>
             </div>
@@ -380,10 +380,10 @@ export default function BusinessIntelligence({
             <div className={styles.indicatorLabel}>
               <span className={styles.indicatorIcon}>
                 {businessMetrics.quality_checks_failed === 0
-                  ? "✅"
+                  ? ""
                   : businessMetrics.quality_checks_failed < 5
                   ? "⚠️"
-                  : "❌"}
+                  : ""}
               </span>
               <span>Quality Assurance</span>
             </div>

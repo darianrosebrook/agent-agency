@@ -49,15 +49,15 @@ export default function ConnectionStatus({ className }: ConnectionStatusProps) {
   const getStatusIcon = () => {
     switch (connectionState) {
       case "connected":
-        return "🟢";
+        return "";
       case "connecting":
-        return "🟡";
+        return "";
       case "disconnected":
-        return "🔴";
+        return "";
       case "error":
-        return "❌";
+        return "";
       default:
-        return "⚪";
+        return "";
     }
   };
 

@@ -259,14 +259,14 @@ export default function MetricsDashboard() {
             title="System Health"
             value={kpis.systemHealth.value}
             status={kpis.systemHealth.status}
-            icon="🏥"
+            icon=""
             trend="up"
           />
           <MetricTile
             title="Active Agents"
             value={kpis.activeAgents.value}
             status={kpis.activeAgents.status}
-            icon="🤖"
+            icon=""
             trend="up"
           />
           <MetricTile
@@ -280,7 +280,7 @@ export default function MetricsDashboard() {
             title="Avg Response Time"
             value={kpis.avgResponseTime.value}
             status={kpis.avgResponseTime.status}
-            icon="⚡"
+            icon=""
             format="duration"
             trend="down"
           />
@@ -288,14 +288,14 @@ export default function MetricsDashboard() {
             title="Error Rate"
             value={kpis.errorRate.value}
             status={kpis.errorRate.status}
-            icon="🚨"
+            icon=""
             trend="down"
           />
           <MetricTile
             title="Coordination Efficiency"
             value={kpis.coordinationEfficiency.value}
             status={kpis.coordinationEfficiency.status}
-            icon="🤝"
+            icon=""
             trend="up"
           />
         </div>
@@ -372,7 +372,7 @@ export default function MetricsDashboard() {
               }
             }}
           >
-            🔄 Refresh All
+            Refresh All
           </button>
           <button
             className={styles.secondaryButton}
@@ -406,7 +406,7 @@ export default function MetricsDashboard() {
               URL.revokeObjectURL(url);
             }}
           >
-            📥 Export Data
+            Export Data
           </button>
         </div>
         <div className={styles.lastUpdated}>

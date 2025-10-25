@@ -2,7 +2,7 @@
 
 Built on **FlowPress design principles** with Next.js 16 optimization.
 
-## 🎨 Design Tokens
+## Design Tokens
 
 ### Colors
 ```css
@@ -34,7 +34,7 @@ Based on 4px grid: 4px, 8px, 12px, 16px, 24px, 32px, 48px, 64px
 - md: Medium depth
 - lg: High elevation
 
-## 📦 Architecture
+## Architecture
 
 ### Three-Layer System
 
@@ -46,7 +46,7 @@ Compounds (Molecules)
 Composers (Organisms)
 ```
 
-## 🔧 Primitives
+## Primitives
 
 Basic building blocks with single responsibility.
 
@@ -85,7 +85,7 @@ import { Badge } from '@/design-system/primitives';
 <Badge variant="success" size="sm">Active</Badge>
 ```
 
-## 🧩 Compounds
+## Compounds
 
 Combinations of primitives for common patterns.
 
@@ -141,45 +141,45 @@ import { DashboardCard } from '@/design-system/composers';
 </DashboardCard>
 ```
 
-## 🎯 Best Practices
+## Best Practices
 
 ### 1. Use Design Tokens
 ```tsx
-// ✅ Good
+// Good
 style={{ color: 'var(--color-text-primary)' }}
 
-// 🚫 Bad
+// Bad
 style={{ color: '#191919' }}
 ```
 
 ### 2. Maintain Fixed Heights
 ```tsx
-// ✅ Good - Prevents CLS
+// Good - Prevents CLS
 <div style={{ minHeight: '200px', contain: 'layout style' }}>
 
-// 🚫 Bad - Causes layout shift
+// Bad - Causes layout shift
 <div>
 ```
 
 ### 3. Use Primitives First
 ```tsx
-// ✅ Good
+// Good
 <Text variant="h4" weight="medium">Title</Text>
 
-// 🚫 Bad
+// Bad
 <h4 style={{ fontWeight: 500 }}>Title</h4>
 ```
 
 ### 4. Memoize Client Components
 ```tsx
-// ✅ Good
+// Good
 export default memo(MyComponent);
 
-// 🚫 Bad
+// Bad
 export default MyComponent;
 ```
 
-## 📊 Performance
+## Performance
 
 ### Core Web Vitals
 - **CLS**: 0.00 (Perfect)
@@ -193,7 +193,7 @@ export default MyComponent;
 - Suspense boundaries
 - Fixed container heights
 
-## 🚀 Usage Example
+## Usage Example
 
 ```tsx
 import { 
@@ -231,7 +231,7 @@ export default function MyDashboardWidget() {
 }
 ```
 
-## 📝 Notes
+## Notes
 
 - All components use FlowPress color scheme
 - Components maintain fixed dimensions to prevent CLS

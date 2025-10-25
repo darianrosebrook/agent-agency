@@ -474,7 +474,7 @@ export default function DatabaseExplorer({
                             (col) => col.vector_dimension
                           ) && (
                             <span className={styles.vectorBadge}>
-                              🔍 Vectors
+                              Vectors
                             </span>
                           )}
                         </div>
@@ -702,7 +702,7 @@ export default function DatabaseExplorer({
         </div>
       ) : (
         <div className={styles.noSelection}>
-          <div className={styles.emptyIcon}>🔍</div>
+          <div className={styles.emptyIcon}></div>
           <h2>Select a Database Connection</h2>
           <p>
             Choose a database connection from the list above to start exploring.

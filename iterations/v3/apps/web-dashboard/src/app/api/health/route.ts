@@ -53,7 +53,7 @@ export async function GET() {
     if (!response?.ok) {
       const statusCode = response?.status ?? 0;
       console.warn(
-        `⚠️ V3 backend health check failed: ${statusCode} ${response?.statusText ?? "No response"}`
+        `V3 backend health check failed: ${statusCode} ${response?.statusText ?? "No response"}`
       );
       return NextResponse.json(
         {
@@ -89,7 +89,7 @@ export async function GET() {
       }
     } catch (error) {
       parseError = error instanceof Error ? error : new Error(String(error));
-      console.warn("⚠️ Could not parse backend health response:", parseError.message);
+      console.warn("Could not parse backend health response:", parseError.message);
       backendHealth = {
         status: "unknown",
         parse_error: parseError.message,
@@ -128,10 +128,10 @@ export async function GET() {
 
     if (isNetworkError) {
       console.warn(
-        `⚠️ Backend unreachable: ${errorMessage}`
+        `Backend unreachable: ${errorMessage}`
       );
     } else {
-      console.error("🚫 Health check failed with unexpected error:", error);
+      console.error("Health check failed with unexpected error:", error);
     }
 
     return NextResponse.json(

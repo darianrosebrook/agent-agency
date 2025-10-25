@@ -1,0 +1,18 @@
+[package]
+name = "common-patterns"
+version = "0.1.0"
+edition = "2021"
+description = "Shared patterns and utilities for Agent Agency V3"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+chrono.workspace = true
+async-trait.workspace = true
+thiserror.workspace = true
+anyhow.workspace = true
+tracing.workspace = true
+uuid.workspace = true
+regex.workspace = true
+paste = "1.0"

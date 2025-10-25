@@ -14,42 +14,42 @@ export default function ConnectionStatus({ state, onRetry }: ConnectionStatusPro
       case 'connected':
         return {
           label: 'Connected',
-          icon: '🟢',
+          icon: '',
           description: 'Real-time chat active',
           showRetry: false
         };
       case 'connecting':
         return {
           label: 'Connecting',
-          icon: '🟡',
+          icon: '',
           description: 'Establishing connection...',
           showRetry: false
         };
       case 'disconnected':
         return {
           label: 'Disconnected',
-          icon: '🔴',
+          icon: '',
           description: 'Chat unavailable',
           showRetry: true
         };
       case 'reconnecting':
         return {
           label: 'Reconnecting',
-          icon: '🟡',
+          icon: '',
           description: 'Attempting to reconnect...',
           showRetry: false
         };
       case 'error':
         return {
           label: 'Connection Error',
-          icon: '🔴',
+          icon: '',
           description: 'Failed to connect',
           showRetry: true
         };
       default:
         return {
           label: 'Unknown',
-          icon: '⚪',
+          icon: '',
           description: 'Status unknown',
           showRetry: false
         };

@@ -96,10 +96,10 @@ export default function VoicemailHistory({
     return (
       <div className={`${styles.container} ${className}`}>
         <div className={styles.header}>
-          <h3>📬 Voicemail Inbox</h3>
+          <h3>Voicemail Inbox</h3>
         </div>
         <div className={styles.emptyState}>
-          <div className={styles.emptyIcon}>📭</div>
+          <div className={styles.emptyIcon}></div>
           <h4>No voicemails yet</h4>
           <p>
             System notifications and task completion messages will appear here
@@ -113,14 +113,14 @@ export default function VoicemailHistory({
   return (
     <div className={`${styles.container} ${className}`}>
       <div className={styles.header}>
-        <h3>📬 Voicemail Inbox ({voicemails.length})</h3>
+        <h3>Voicemail Inbox ({voicemails.length})</h3>
         <div className={styles.actions}>
           <button
             className={styles.clearButton}
             onClick={clearPlayedAlerts}
             title="Clear all played voicemails"
           >
-            🧹 Clear Played
+            Clear Played
           </button>
         </div>
       </div>
@@ -151,11 +151,11 @@ export default function VoicemailHistory({
                 <div className={styles.playbackStatus}>
                   {voicemail.played ? (
                     <span className={styles.playedStatus}>
-                      ✅ Played {formatTimestamp(voicemail.timestamp)}
+                      Played {formatTimestamp(voicemail.timestamp)}
                     </span>
                   ) : (
                     <span className={styles.unplayedStatus}>
-                      🔴 New voicemail - Click play to listen
+                      New voicemail - Click play to listen
                     </span>
                   )}
                 </div>
@@ -168,7 +168,7 @@ export default function VoicemailHistory({
                     onClick={() => playAlert(voicemail.id)}
                     title="Play voicemail audio"
                   >
-                    🔊 Play
+                    Play
                   </button>
                 )}
 

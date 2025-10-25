@@ -218,7 +218,7 @@ export function enableLayoutShiftVisualization(): () => void {
  * Quick test - run all diagnostics
  */
 export function runLayoutDiagnostics() {
-  console.group('📐 Layout Diagnostics');
+  console.group('Layout Diagnostics');
   
   console.log('Viewport:', getViewportSize());
   
@@ -255,7 +255,7 @@ if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
     visualizeShifts: enableLayoutShiftVisualization,
   };
   
-  console.log('💡 Layout testing utilities available at: window.layoutTest');
+  console.log('Layout testing utilities available at: window.layoutTest');
   console.log('   Run: window.layoutTest.runDiagnostics()');
 }
 

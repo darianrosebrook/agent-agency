@@ -1,0 +1,21 @@
+//! {{CRATE_NAME}} - {{CRATE_DESCRIPTION}}
+//!
+//! {{CRATE_DESCRIPTION}} with {{FEATURES}}.
+//!
+//! This crate provides {{RESPONSIBILITIES}} while maintaining domain separation.
+
+{{#each modules}}
+pub mod {{name}};
+{{/each}}
+
+{{#if has_public_exports}}
+// Re-export main types and functions for easy access
+{{#each exports}}
+pub use {{module}}::{{type}};
+{{/each}}
+{{/if}}
+
+{{#if has_macros}}
+// Re-export macros
+pub use {{crate_name}}_macros::*;
+{{/if}}

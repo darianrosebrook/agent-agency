@@ -193,7 +193,7 @@ export default function PerformancePredictor({
                 Predicting...
               </>
             ) : (
-              <>🔮 Generate Predictions</>
+              <>Generate Predictions</>
             )}
           </button>
         </div>
@@ -301,7 +301,7 @@ export default function PerformancePredictor({
                       onClick={() => handlePredictionSelect(prediction)}
                       className={styles.viewChartButton}
                     >
-                      📊
+                      
                     </button>
                   </div>
 
@@ -406,7 +406,7 @@ export default function PerformancePredictor({
           </>
         ) : (
           <div className={styles.noPredictions}>
-            <div className={styles.emptyIcon}>🔮</div>
+            <div className={styles.emptyIcon}></div>
             <h3>No Performance Predictions Available</h3>
             <p>
               Performance predictions will be available once forecasting models

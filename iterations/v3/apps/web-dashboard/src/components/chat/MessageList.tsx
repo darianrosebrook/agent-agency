@@ -31,7 +31,7 @@ export default function MessageList({
       <div className={styles.messagesContainer}>
         {messages.length === 0 ? (
           <div className={styles.emptyState}>
-            <div className={styles.emptyIcon}>💬</div>
+            <div className={styles.emptyIcon}></div>
             <h3>No messages yet</h3>
             <p>Start a conversation by typing a message below.</p>
           </div>

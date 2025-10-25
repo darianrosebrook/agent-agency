@@ -70,15 +70,15 @@ export default function AttentionAlerts({
   const getAlertIcon = (type: NotificationAlert["type"]) => {
     switch (type) {
       case "attention":
-        return "🚨";
+        return "";
       case "voicemail":
-        return "📬";
+        return "";
       case "task_complete":
-        return "✅";
+        return "";
       case "error":
-        return "❌";
+        return "";
       default:
-        return "🔔";
+        return "";
     }
   };
 
@@ -135,7 +135,7 @@ export default function AttentionAlerts({
           onClick={clearPlayedAlerts}
           title="Clear played alerts"
         >
-          🧹
+          
         </button>
       </div>
 
@@ -163,7 +163,7 @@ export default function AttentionAlerts({
                   onClick={() => playAlert(alert.id)}
                   title="Play audio alert"
                 >
-                  🔊
+                  
                 </button>
               )}
 

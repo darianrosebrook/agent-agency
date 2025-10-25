@@ -122,11 +122,11 @@ export default function AlertsDashboard({ refreshInterval = 30000 }: AlertsDashb
   // Get severity icon
   const getSeverityIcon = (severity: string) => {
     switch (severity) {
-      case "critical": return "🚨";
-      case "error": return "❌";
+      case "critical": return "";
+      case "error": return "";
       case "warning": return "⚠️";
-      case "info": return "ℹ️";
-      default: return "📢";
+      case "info": return "";
+      default: return "";
     }
   };
 
@@ -174,7 +174,7 @@ export default function AlertsDashboard({ refreshInterval = 30000 }: AlertsDashb
           <h2>Alert Management</h2>
         </div>
         <div className={styles.error}>
-          <p>❌ {error}</p>
+          <p>{error}</p>
           <button onClick={fetchAlerts} className={styles.retryButton}>
             Retry
           </button>
@@ -189,7 +189,7 @@ export default function AlertsDashboard({ refreshInterval = 30000 }: AlertsDashb
         <h2>Alert Management</h2>
         <div className={styles.headerActions}>
           <button onClick={fetchAlerts} className={styles.refreshButton}>
-            🔄 Refresh
+            Refresh
           </button>
         </div>
       </div>
@@ -251,20 +251,20 @@ export default function AlertsDashboard({ refreshInterval = 30000 }: AlertsDashb
       <div className={styles.alertsList}>
           {filteredAlerts.length === 0 ? (
             <div className={styles.emptyState}>
-              <div className={styles.emptyIcon}>🔔</div>
+              <div className={styles.emptyIcon}></div>
               <h3>No Alerts Found</h3>
               <p>
                 System alerts help you monitor infrastructure health and application performance.
                 When connected to your API server, you'll see:
               </p>
               <ul className={styles.emptyFeatures}>
-                <li>🚨 <strong>Critical alerts</strong> - System failures and service outages</li>
-                <li>⚠️ <strong>Warning alerts</strong> - Performance degradation and capacity issues</li>
-                <li>📊 <strong>Metric alerts</strong> - Threshold violations and anomalies</li>
-                <li>🔧 <strong>Maintenance alerts</strong> - Scheduled downtime and updates</li>
+                <li><strong>Critical alerts</strong> - System failures and service outages</li>
+                <li><strong>Warning alerts</strong> - Performance degradation and capacity issues</li>
+                <li><strong>Metric alerts</strong> - Threshold violations and anomalies</li>
+                <li><strong>Maintenance alerts</strong> - Scheduled downtime and updates</li>
               </ul>
               <div className={styles.emptyNote}>
-                <span className={styles.noteIcon}>ℹ️</span>
+                <span className={styles.noteIcon}></span>
                 <span>No alerts means your system is running smoothly!</span>
               </div>
             </div>
@@ -337,18 +337,18 @@ export default function AlertsDashboard({ refreshInterval = 30000 }: AlertsDashb
                       onClick={() => acknowledgeAlert(alert.id)}
                       className={`${styles.actionButton} ${styles.acknowledge}`}
                     >
-                      ✅ Acknowledge
+                      Acknowledge
                     </button>
                     <button
                       onClick={() => resolveAlert(alert.id)}
                       className={`${styles.actionButton} ${styles.resolve}`}
                     >
-                      ✅ Resolve
+                      Resolve
                     </button>
                   </>
                 )}
                 <button className={`${styles.actionButton} ${styles.details}`}>
-                  📋 Details
+                  Details
                 </button>
               </div>
             </div>

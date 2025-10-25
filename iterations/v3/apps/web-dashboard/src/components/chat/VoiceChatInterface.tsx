@@ -86,10 +86,10 @@ export default function VoiceChatInterface({
   const getStatusText = () => {
     if (!session.isActive) return "Voice chat inactive";
 
-    if (recording.isRecording) return "🎤 Listening...";
-    if (session.isProcessing) return "⏳ Processing your voice...";
-    if (session.currentSpeaker === "agent") return "🔊 Agent speaking...";
-    if (session.currentSpeaker === "user") return "🎤 Your turn to speak";
+    if (recording.isRecording) return "Listening...";
+    if (session.isProcessing) return "Processing your voice...";
+    if (session.currentSpeaker === "agent") return "Agent speaking...";
+    if (session.currentSpeaker === "user") return "Your turn to speak";
 
     return "🎙️ Ready for voice input";
   };
@@ -139,7 +139,7 @@ export default function VoiceChatInterface({
           ttsAvailable ? "Toggle voice chat mode" : "TTS service unavailable"
         }
       >
-        {session.isActive ? "🎙️" : "🎤"}
+        {session.isActive ? "🎙️" : ""}
         <span className={styles.buttonText}>
           {session.isActive ? "Stop Voice" : "Start Voice"}
         </span>
@@ -180,7 +180,7 @@ export default function VoiceChatInterface({
                     : "Start recording"
                 }
               >
-                {recording.isRecording ? "⏹️" : "🎤"}
+                {recording.isRecording ? "⏹️" : ""}
                 <span className={styles.buttonLabel}>
                   {recording.isRecording ? "Stop" : "Record"}
                 </span>
@@ -192,7 +192,7 @@ export default function VoiceChatInterface({
                   onClick={recording.cancelRecording}
                   title="Cancel recording"
                 >
-                  ❌ Cancel
+                  Cancel
                 </button>
               )}
             </div>
@@ -209,7 +209,7 @@ export default function VoiceChatInterface({
                 }}
                 title="Interrupt agent and take turn"
               >
-                🚫 Interrupt
+                Interrupt
               </button>
             </div>
           )}
@@ -222,7 +222,7 @@ export default function VoiceChatInterface({
           {/* Voice Activity Detection Status */}
           {settings.voiceActivityDetection && (
             <div className={styles.vadStatus}>
-              🎧 Voice Detection:{" "}
+              Voice Detection:{" "}
               {recording.detectVoiceActivity(session.audioLevel)
                 ? "Active"
                 : "Silent"}

@@ -1,0 +1,53 @@
+//! Core types for the {{MODULE_NAME}} module
+
+use serde::{Deserialize, Serialize};
+use chrono::{DateTime, Utc};
+use common_patterns::traits::*;
+
+// Core domain types
+{{#each types}}
+/// {{description}}
+#[derive(Debug, Clone, Serialize, Deserialize{{#if has_traits}}, {{#each traits}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}{{/if}})]
+pub struct {{name}} {
+    {{#each fields}}
+    /// {{description}}
+    pub {{name}}: {{type}},
+    {{/each}}
+}
+
+{{#if has_impl}}
+impl {{name}} {
+    {{#each methods}}
+    /// {{description}}
+    pub fn {{name}}({{params}}) -> {{return_type}} {
+        {{#if body}}
+        {{body}}
+        {{else}}
+        todo!("Implement {{name}}")
+        {{/if}}
+    }
+    {{/each}}
+}
+{{/if}}
+
+{{/each}}
+
+// Enums
+{{#each enums}}
+/// {{description}}
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize{{#if has_traits}}, {{#each traits}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}{{/if}})]
+pub enum {{name}} {
+    {{#each variants}}
+    /// {{description}}
+    {{name}}{{#if has_fields}}{ {{#each fields}}{{name}}: {{type}}{{#unless @last}}, {{/unless}}{{/each}} }{{/if}},
+    {{/each}}
+}
+
+{{/each}}
+
+// Type aliases for external compatibility
+{{#each type_aliases}}
+/// {{description}}
+pub type {{name}} = {{target_type}};
+
+{{/each}}

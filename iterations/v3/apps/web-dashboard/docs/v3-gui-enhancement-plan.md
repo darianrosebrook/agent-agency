@@ -2,11 +2,11 @@
 ## Adopting Continue.dev Patterns
 
 ### Current V3 Dashboard State
-- ✅ **Basic Chat Interface**: Exists but needs enhancement
-- ✅ **Navigation**: Header and sidebar navigation
-- ✅ **Connection Management**: Offline/online status handling
-- ✅ **Accessibility**: WCAG 2.1 AA compliant
-- ✅ **Progressive Enhancement**: Works offline with cached data
+- **Basic Chat Interface**: Exists but needs enhancement
+- **Navigation**: Header and sidebar navigation
+- **Connection Management**: Offline/online status handling
+- **Accessibility**: WCAG 2.1 AA compliant
+- **Progressive Enhancement**: Works offline with cached data
 
 ### Key Continue.dev Patterns to Adopt
 

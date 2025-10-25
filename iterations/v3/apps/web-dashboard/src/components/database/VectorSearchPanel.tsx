@@ -367,7 +367,7 @@ export default function VectorSearchPanel({
               Searching...
             </>
           ) : (
-            <>🔍 Search Vectors</>
+            <>Search Vectors</>
           )}
         </button>
       </div>
@@ -439,7 +439,7 @@ export default function VectorSearchPanel({
       {/* No Results State */}
       {!state.isSearching && state.results.length === 0 && !state.error && (
         <div className={styles.noResults}>
-          <div className={styles.emptyIcon}>🔍</div>
+          <div className={styles.emptyIcon}></div>
           <h3>No Search Results</h3>
           <p>
             Configure your search parameters and click "Search Vectors" to find

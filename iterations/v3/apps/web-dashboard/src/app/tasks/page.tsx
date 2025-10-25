@@ -275,7 +275,7 @@ export default function TasksPage() {
         {error && (
           <div role="alert" className={styles.error}>
             <Text variant="paragraph-medium" color="error">
-              ⚠️ {error}
+              {error}
             </Text>
           </div>
         )}

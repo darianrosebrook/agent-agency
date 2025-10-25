@@ -144,27 +144,27 @@ export default function SLODashboard({ refreshInterval = 60000 }: SLODashboardPr
       {/* Error handling removed for now */}
       {/* {error && (
         <div className={styles.error}>
-          <span>⚠️ {error}</span>
+          <span>{error}</span>
           <button onClick={fetchSlos}>Retry</button>
         </div>
       )} */}
 
       {slos.length === 0 && (
         <div className={styles.emptyState}>
-          <div className={styles.emptyIcon}>📊</div>
+          <div className={styles.emptyIcon}></div>
           <h3>No SLOs Configured</h3>
           <p>
             Service Level Objectives help you monitor system reliability and performance targets.
             When connected to your API server, you'll see:
           </p>
           <ul className={styles.emptyFeatures}>
-            <li>📈 <strong>Reliability metrics</strong> - Uptime percentages and error rates</li>
-            <li>⚡ <strong>Performance targets</strong> - Response time and throughput goals</li>
-            <li>🎯 <strong>Compliance tracking</strong> - Real-time SLO status and budget remaining</li>
-            <li>📊 <strong>Historical data</strong> - Trends and measurement history</li>
+            <li><strong>Reliability metrics</strong> - Uptime percentages and error rates</li>
+            <li><strong>Performance targets</strong> - Response time and throughput goals</li>
+            <li><strong>Compliance tracking</strong> - Real-time SLO status and budget remaining</li>
+            <li><strong>Historical data</strong> - Trends and measurement history</li>
           </ul>
           <div className={styles.emptyNote}>
-            <span className={styles.noteIcon}>ℹ️</span>
+            <span className={styles.noteIcon}></span>
             <span>Connect to your API server to start monitoring SLOs</span>
           </div>
         </div>

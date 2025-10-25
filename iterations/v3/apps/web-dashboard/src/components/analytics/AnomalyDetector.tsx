@@ -234,15 +234,15 @@ export default function AnomalyDetector({
   const getSeverityIcon = (severity: Anomaly["severity"]) => {
     switch (severity) {
       case "critical":
-        return "🚨";
+        return "";
       case "high":
         return "⚠️";
       case "medium":
-        return "🟡";
+        return "";
       case "low":
-        return "ℹ️";
+        return "";
       default:
-        return "❓";
+        return "";
     }
   };
 
@@ -314,7 +314,7 @@ export default function AnomalyDetector({
                 Detecting...
               </>
             ) : (
-              <>🔍 Detect Anomalies</>
+              <>Detect Anomalies</>
             )}
           </button>
         </div>
@@ -463,7 +463,7 @@ export default function AnomalyDetector({
           </>
         ) : (
           <div className={styles.noAnomalies}>
-            <div className={styles.emptyIcon}>✅</div>
+            <div className={styles.emptyIcon}></div>
             <h3>No Anomalies Detected</h3>
             <p>
               The system is operating within normal parameters. No significant

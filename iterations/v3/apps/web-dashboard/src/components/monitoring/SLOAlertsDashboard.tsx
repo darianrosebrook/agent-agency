@@ -157,7 +157,7 @@ export default function SLOAlertsDashboard({ refreshInterval = 30000 }: SLOAlert
 
       {error && (
         <div className={styles.error}>
-          <span>⚠️ {error}</span>
+          <span>{error}</span>
           <button onClick={fetchAlerts}>Retry</button>
         </div>
       )}
@@ -194,20 +194,20 @@ export default function SLOAlertsDashboard({ refreshInterval = 30000 }: SLOAlert
       <div className={styles.alertsList}>
           {filteredAlerts.length === 0 ? (
             <div className={styles.emptyState}>
-              <div className={styles.emptyIcon}>🚨</div>
+              <div className={styles.emptyIcon}></div>
               <h3>No SLO Alerts</h3>
               <p>
                 SLO alerts notify you when service level objectives are at risk or violated.
                 When connected to your API server, you'll see:
               </p>
               <ul className={styles.emptyFeatures}>
-                <li>⚠️ <strong>Violation alerts</strong> - When SLOs are breached or at risk</li>
-                <li>📊 <strong>Budget warnings</strong> - Remaining error budget notifications</li>
-                <li>🎯 <strong>Performance issues</strong> - Response time and availability alerts</li>
-                <li>📈 <strong>Trend analysis</strong> - Historical alert patterns and insights</li>
+                <li><strong>Violation alerts</strong> - When SLOs are breached or at risk</li>
+                <li><strong>Budget warnings</strong> - Remaining error budget notifications</li>
+                <li><strong>Performance issues</strong> - Response time and availability alerts</li>
+                <li><strong>Trend analysis</strong> - Historical alert patterns and insights</li>
               </ul>
               <div className={styles.emptyNote}>
-                <span className={styles.noteIcon}>ℹ️</span>
+                <span className={styles.noteIcon}></span>
                 <span>No alerts is good news! Your services are meeting their SLO targets</span>
               </div>
             </div>

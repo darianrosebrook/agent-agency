@@ -291,7 +291,7 @@ export default function EnhancedChatInterface({
             className={styles.sendButton}
             aria-label="Send message"
           >
-            {isLoading ? "⏳" : "📤"}
+            {isLoading ? "" : ""}
           </button>
         </div>
       </div>

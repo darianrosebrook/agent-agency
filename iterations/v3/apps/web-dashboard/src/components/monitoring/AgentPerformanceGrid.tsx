@@ -59,17 +59,17 @@ export default function AgentPerformanceGrid({
   const getAgentTypeIcon = (type: AgentPerformance["type"]) => {
     switch (type) {
       case "planning":
-        return "🧠";
+        return "";
       case "execution":
-        return "⚡";
+        return "";
       case "coordination":
-        return "🤝";
+        return "";
       case "validation":
-        return "✅";
+        return "";
       case "specialized":
-        return "🔧";
+        return "";
       default:
-        return "🤖";
+        return "";
     }
   };
 
@@ -125,7 +125,7 @@ export default function AgentPerformanceGrid({
     return (
       <div className={styles.agentGrid}>
         <div className={styles.emptyState}>
-          <div className={styles.emptyIcon}>🤖</div>
+          <div className={styles.emptyIcon}></div>
           <h3>Agent Performance Monitoring</h3>
           <p>
             Real-time agent performance metrics require V3 agent monitoring

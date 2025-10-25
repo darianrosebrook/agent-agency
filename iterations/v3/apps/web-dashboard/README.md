@@ -103,12 +103,12 @@ Before starting the dashboard, verify V3 backend connectivity:
 node test-connection.js
 
 # Expected output:
-✅ Health endpoint responding
-✅ Metrics endpoint responding
-✅ Metrics stream connected
-✅ Received real-time metrics data
-📈 CPU: 25.3%
-🧠 Memory: 45.7%
+Health endpoint responding
+Metrics endpoint responding
+Metrics stream connected
+Received real-time metrics data
+CPU: 25.3%
+Memory: 45.7%
 ⚙️ Active Tasks: 3
 ```
 
@@ -138,10 +138,10 @@ The system monitors for various types of issues:
 
 ### Alert Severities
 
-- **Critical** 🚨: Immediate action required (service down, data loss)
-- **Error** ❌: System errors requiring attention
+- **Critical** : Immediate action required (service down, data loss)
+- **Error** : System errors requiring attention
 - **Warning** ⚠️: Potential issues that should be monitored
-- **Info** ℹ️: Informational alerts for awareness
+- **Info** : Informational alerts for awareness
 
 ### Notification Channels
 

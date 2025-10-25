@@ -68,33 +68,33 @@ export default function AuditTrailViewer({
   const getActionIcon = (action: string) => {
     switch (action.toLowerCase()) {
       case "task_created":
-        return "📝";
+        return "";
       case "task_started":
         return "▶️";
       case "task_completed":
-        return "✅";
+        return "";
       case "task_failed":
-        return "❌";
+        return "";
       case "task_paused":
         return "⏸️";
       case "task_cancelled":
-        return "🛑";
+        return "";
       case "task_retried":
-        return "🔄";
+        return "";
       case "state_change":
-        return "🔄";
+        return "";
       case "quality_check":
-        return "🔍";
+        return "";
       case "validation":
-        return "✅";
+        return "";
       case "error_occurred":
         return "⚠️";
       case "user_action":
-        return "👤";
+        return "";
       case "system_action":
-        return "🤖";
+        return "";
       default:
-        return "📋";
+        return "";
     }
   };
 
@@ -146,7 +146,7 @@ export default function AuditTrailViewer({
   if (auditTrail.length === 0) {
     return (
       <div className={styles.emptyState}>
-        <div className={styles.emptyIcon}>📋</div>
+        <div className={styles.emptyIcon}></div>
         <h3>No Audit Trail</h3>
         <p>No audit entries found for this task.</p>
       </div>

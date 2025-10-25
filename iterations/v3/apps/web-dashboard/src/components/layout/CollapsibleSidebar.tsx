@@ -53,8 +53,8 @@ export default function CollapsibleSidebar({
 
   const sidebarSections = [
     { id: "chat", icon: MessageSquare, label: "Chat", component: "chat" },
-    { id: "tasks", icon: "📋", label: "Tasks", component: "tasks" },
-    { id: "workflows", icon: "🔄", label: "Workflows", component: "workflows" },
+    { id: "tasks", icon: "", label: "Tasks", component: "tasks" },
+    { id: "workflows", icon: "", label: "Workflows", component: "workflows" },
     { id: "settings", icon: Settings, label: "Settings", component: "settings" },
   ];
 
@@ -112,14 +112,14 @@ export default function CollapsibleSidebar({
               <h4>Recent Tasks</h4>
               <div className={styles.taskList}>
                 <div className={styles.taskItem}>
-                  <span className={styles.taskIcon}>📝</span>
+                  <span className={styles.taskIcon}></span>
                   <div className={styles.taskInfo}>
                     <div className={styles.taskTitle}>Refactor authentication</div>
                     <div className={styles.taskStatus}>In Progress</div>
                   </div>
                 </div>
                 <div className={styles.taskItem}>
-                  <span className={styles.taskIcon}>🔧</span>
+                  <span className={styles.taskIcon}></span>
                   <div className={styles.taskInfo}>
                     <div className={styles.taskTitle}>Fix API endpoint</div>
                     <div className={styles.taskStatus}>Completed</div>
@@ -141,21 +141,21 @@ export default function CollapsibleSidebar({
               <h4>Workflow Templates</h4>
               <div className={styles.workflowList}>
                 <div className={styles.workflowItem}>
-                  <span className={styles.workflowIcon}>🚀</span>
+                  <span className={styles.workflowIcon}></span>
                   <div className={styles.workflowInfo}>
                     <div className={styles.workflowTitle}>Code Review</div>
                     <div className={styles.workflowDescription}>Automated code review workflow</div>
                   </div>
                 </div>
                 <div className={styles.workflowItem}>
-                  <span className={styles.workflowIcon}>🧪</span>
+                  <span className={styles.workflowIcon}></span>
                   <div className={styles.workflowInfo}>
                     <div className={styles.workflowTitle}>Testing</div>
                     <div className={styles.workflowDescription}>Automated testing workflow</div>
                   </div>
                 </div>
                 <div className={styles.workflowItem}>
-                  <span className={styles.workflowIcon}>📦</span>
+                  <span className={styles.workflowIcon}></span>
                   <div className={styles.workflowInfo}>
                     <div className={styles.workflowTitle}>Deployment</div>
                     <div className={styles.workflowDescription}>Automated deployment workflow</div>

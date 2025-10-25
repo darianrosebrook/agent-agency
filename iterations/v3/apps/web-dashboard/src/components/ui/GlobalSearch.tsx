@@ -167,15 +167,15 @@ export default function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
   const getResultIcon = (type: SearchResult["type"]) => {
     switch (type) {
       case "task":
-        return "📋";
+        return "";
       case "metric":
-        return "📊";
+        return "";
       case "setting":
         return "⚙️";
       case "page":
-        return "📄";
+        return "";
       default:
-        return "🔍";
+        return "";
     }
   };
 

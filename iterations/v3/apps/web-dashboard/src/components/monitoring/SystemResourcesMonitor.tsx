@@ -76,7 +76,7 @@ export default function SystemResourcesMonitor({
           <h3>System Resources</h3>
         </div>
         <div className={styles.error}>
-          <p>⚠️ {error}</p>
+          <p>{error}</p>
         </div>
       </div>
     );
@@ -89,7 +89,7 @@ export default function SystemResourcesMonitor({
           <h3>System Resources</h3>
         </div>
         <div className={styles.emptyState}>
-          <div className={styles.emptyIcon}>📊</div>
+          <div className={styles.emptyIcon}></div>
           <h3>No Resource Data</h3>
           <p>
             System resource monitoring helps you track CPU, memory, and task performance.
@@ -97,12 +97,12 @@ export default function SystemResourcesMonitor({
           </p>
           <ul className={styles.emptyFeatures}>
             <li>🖥️ <strong>CPU Usage</strong> - Real-time processor utilization</li>
-            <li>🧠 <strong>Memory Usage</strong> - RAM consumption and availability</li>
-            <li>📋 <strong>Task Metrics</strong> - Active, completed, and failed tasks</li>
-            <li>⚡ <strong>Performance</strong> - Response times and throughput</li>
+            <li><strong>Memory Usage</strong> - RAM consumption and availability</li>
+            <li><strong>Task Metrics</strong> - Active, completed, and failed tasks</li>
+            <li><strong>Performance</strong> - Response times and throughput</li>
           </ul>
           <div className={styles.emptyNote}>
-            <span className={styles.noteIcon}>ℹ️</span>
+            <span className={styles.noteIcon}></span>
             <span>Connect to your API server to monitor system resources</span>
           </div>
         </div>
@@ -147,7 +147,7 @@ export default function SystemResourcesMonitor({
         {/* Memory Usage */}
         <div className={styles.metric}>
           <div className={styles.metricHeader}>
-            <span className={styles.metricIcon}>🧠</span>
+            <span className={styles.metricIcon}></span>
             <span className={styles.metricLabel}>Memory Usage</span>
             <span
               className={styles.metricValue}
@@ -170,7 +170,7 @@ export default function SystemResourcesMonitor({
         {/* Task Statistics */}
         <div className={styles.metric}>
           <div className={styles.metricHeader}>
-            <span className={styles.metricIcon}>📊</span>
+            <span className={styles.metricIcon}></span>
             <span className={styles.metricLabel}>Active Tasks</span>
             <span className={styles.metricValue}>
               {resources.active_tasks}
@@ -191,7 +191,7 @@ export default function SystemResourcesMonitor({
         {/* Response Time */}
         <div className={styles.metric}>
           <div className={styles.metricHeader}>
-            <span className={styles.metricIcon}>⚡</span>
+            <span className={styles.metricIcon}></span>
             <span className={styles.metricLabel}>Avg Response Time</span>
             <span
               className={styles.metricValue}

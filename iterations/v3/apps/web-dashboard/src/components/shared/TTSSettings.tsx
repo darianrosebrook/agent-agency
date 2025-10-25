@@ -47,7 +47,7 @@ export default function TTSSettingsPanel({
         <div className={styles.unavailable}>
           <h3>Text-to-Speech Settings</h3>
           <p className={styles.warning}>
-            ⚠️ TTS service is currently unavailable. Audio features will be
+            TTS service is currently unavailable. Audio features will be
             disabled.
           </p>
           <div className={styles.serviceCheck}>
@@ -106,7 +106,7 @@ export default function TTSSettingsPanel({
                 disabled={!settings.enabled}
                 title="Test this voice"
               >
-                🔊
+                
               </button>
             )}
           </div>
@@ -222,7 +222,7 @@ export default function TTSSettingsPanel({
             className={styles.testButton}
             onClick={() => onTestVoice?.(settings.voice)}
           >
-            🔊 Test Current Settings
+            Test Current Settings
           </button>
           <p className={styles.testText}>
             "Hey there! This is how your TTS will sound."
