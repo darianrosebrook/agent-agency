@@ -34,7 +34,7 @@ export class ApiClient {
       timeout: config.timeout ?? 30000,
       maxRetries: config.maxRetries ?? 3,
       retryDelay: config.retryDelay ?? 1000,
-      authToken: config.authToken,
+      authToken: config.authToken || "",
     };
   }
 

@@ -25,10 +25,10 @@ export class ChatApiError extends Error {
 }
 
 export class ChatApiClient {
-  private baseUrl: string;
+  // private _baseUrl: string;
 
-  constructor(baseUrl?: string) {
-    this.baseUrl = baseUrl ?? "/api/proxy";
+  constructor(_baseUrl?: string) {
+    // this._baseUrl = baseUrl ?? "/api/proxy";
   }
 
   // Create a new chat session

@@ -564,6 +564,7 @@ pub struct ScopeValidation {
 pub struct WorkingSpec {
     pub id: String,
     pub title: String,
+    pub description: String,
     pub scope: Option<WorkingSpecScope>,
     pub risk_tier: RiskTier,
     pub acceptance_criteria: Vec<AcceptanceCriterion>,

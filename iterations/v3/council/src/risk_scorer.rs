@@ -68,10 +68,10 @@ pub struct BusinessRiskWeights {
 /// Weights for overall risk dimensions
 #[derive(Debug, Clone)]
 pub struct DimensionWeights {
-    pub technical_weight: f32,
-    pub ethical_weight: f32,
-    pub operational_weight: f32,
-    pub business_weight: f32,
+    pub technical_weight: f64,
+    pub ethical_weight: f64,
+    pub operational_weight: f64,
+    pub business_weight: f64,
 }
 
 impl Default for RiskScorer {
@@ -707,36 +707,33 @@ impl RiskScorer {
         // Technical-Ethical interactions
         if technical.feasibility_score < 0.5 && ethical.ethical_score < 0.5 {
             interactions.push(RiskInteraction {
-                primary_dimension: RiskDimension::Technical,
-                secondary_dimension: RiskDimension::Ethical,
-                interaction_type: InteractionType::Compounding,
-                interaction_strength: 0.8,
-                description: "Technical complexity amplifies ethical concerns through reduced oversight capability".to_string(),
-                compounded_risk: RiskLevel::Critical,
+                primary_risk: "Technical".to_string(),
+                secondary_risk: "Ethical".to_string(),
+                interaction_type: RiskInteractionType::Compounding,
+                amplification_factor: 0.8,
+                mitigation_synergies: vec!["Enhanced oversight protocols".to_string()],
             });
         }
 
         // Ethical-Operational interactions
         if ethical.ethical_score < 0.3 && operational.feasibility_score < 0.5 {
             interactions.push(RiskInteraction {
-                primary_dimension: RiskDimension::Ethical,
-                secondary_dimension: RiskDimension::Operational,
-                interaction_type: InteractionType::Amplifying,
-                interaction_strength: 0.7,
-                description: "Ethical requirements increase operational complexity and monitoring needs".to_string(),
-                compounded_risk: RiskLevel::High,
+                primary_risk: "Ethical".to_string(),
+                secondary_risk: "Operational".to_string(),
+                interaction_type: RiskInteractionType::Amplifying,
+                amplification_factor: 0.7,
+                mitigation_synergies: vec!["Automated compliance monitoring".to_string()],
             });
         }
 
         // Technical-Business interactions
         if technical.feasibility_score < 0.6 && business.viability_score < 0.6 {
             interactions.push(RiskInteraction {
-                primary_dimension: RiskDimension::Technical,
-                secondary_dimension: RiskDimension::Business,
-                interaction_type: InteractionType::Compounding,
-                interaction_strength: 0.6,
-                description: "Technical challenges reduce market competitiveness and financial viability".to_string(),
-                compounded_risk: RiskLevel::High,
+                primary_risk: "Technical".to_string(),
+                secondary_risk: "Business".to_string(),
+                interaction_type: RiskInteractionType::Compounding,
+                amplification_factor: 0.6,
+                mitigation_synergies: vec!["Technical debt reduction".to_string()],
             });
         }
 
@@ -910,7 +907,7 @@ impl RiskScorer {
                         (business_confidence * 0.2);
 
         // Adjust for uncertainty factors
-        let uncertainty_penalty = ethical.uncertainty_factors.len() as f32 * 0.05;
+        let uncertainty_penalty = ethical.uncertainty_factors.len() as f64 * 0.05;
         (confidence - uncertainty_penalty).max(0.1) // Minimum confidence of 10%
     }
 }

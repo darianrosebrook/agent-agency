@@ -12,7 +12,7 @@
 import { memo } from 'react';
 import { ClipboardList, MessageSquare, BarChart3, Settings } from 'lucide-react';
 import { DashboardCard } from '@/design-system/composers';
-import { Text } from '@/design-system/primitives';
+// import { Text } from '@/design-system/primitives';
 import { ConnectionAware } from '@/components/providers/ConnectionProvider';
 import styles from '@/app/page.module.scss';
 
@@ -21,7 +21,7 @@ function QuickActions() {
     <DashboardCard
       title="Quick Actions"
       description="Navigate to key features"
-      className={styles.card}
+      className={styles.card || ''}
     >
         <div className={styles.actions}>
           <ConnectionAware

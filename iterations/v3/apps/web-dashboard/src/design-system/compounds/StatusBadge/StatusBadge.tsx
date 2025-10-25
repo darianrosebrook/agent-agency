@@ -120,7 +120,7 @@ export function StatusBadge({
       variant={config.variant}
       size={size}
       icon={showIcon ? config.icon : undefined}
-      className={className}
+      className={className || ""}
     >
       {displayLabel}
     </Badge>

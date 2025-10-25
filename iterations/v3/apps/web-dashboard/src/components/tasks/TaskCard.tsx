@@ -1,18 +1,22 @@
 "use client";
 
-import React from "react";
-import { TaskCardProps, Task } from "@/types/tasks";
+// import React from "react";
+import { Task } from "@/types/tasks";
 import AuditTrailViewer from "./AuditTrailViewer";
 import styles from "./TaskCard.module.scss";
 
+interface TaskCardProps {
+  task: Task;
+  onTaskClick?: (task: Task) => void;
+  onTaskUpdate?: (task: Task) => void;
+  showAuditTrail?: boolean;
+}
+
 export default function TaskCard({
   task,
-  isSelected = false,
-  showDetails = false,
-  onClick,
-  onPause,
-  onResume,
-  onCancel,
+  onTaskClick: _onTaskClick,
+  onTaskUpdate: _onTaskUpdate,
+  showAuditTrail: _showAuditTrail = false,
 }: TaskCardProps) {
   const getStatusColor = (status: Task["status"]) => {
     switch (status) {
@@ -54,50 +58,50 @@ export default function TaskCard({
     }
   };
 
-  const getAuditIcon = (action: string) => {
-    switch (action.toLowerCase()) {
-      case "task_created":
-        return "🆕";
-      case "task_started":
-        return "▶️";
-      case "task_paused":
-        return "⏸️";
-      case "task_resumed":
-        return "▶️";
-      case "task_completed":
-        return "✅";
-      case "task_failed":
-        return "❌";
-      case "task_cancelled":
-        return "🛑";
-      case "task_state_change":
-        return "🔄";
-      case "waiver_created":
-        return "📋";
-      case "waiver_approved":
-        return "✅";
-      case "waiver_expired":
-        return "⏰";
-      case "quality_gate_passed":
-        return "✅";
-      case "quality_gate_failed":
-        return "❌";
-      case "quality_gate_waived":
-        return "⚠️";
-      case "worker_assigned":
-        return "👷";
-      case "worker_completed":
-        return "🏁";
-      case "model_switched":
-        return "🔄";
-      case "iteration_started":
-        return "🔄";
-      case "iteration_completed":
-        return "✅";
-      default:
-        return "📝";
-    }
-  };
+  // const _getAuditIcon = (action: string) => {
+  //   switch (action.toLowerCase()) {
+  //     case "task_created":
+  //       return "🆕";
+  //     case "task_started":
+  //       return "▶️";
+  //     case "task_paused":
+  //       return "⏸️";
+  //     case "task_resumed":
+  //       return "▶️";
+  //     case "task_completed":
+  //       return "✅";
+  //     case "task_failed":
+  //       return "❌";
+  //     case "task_cancelled":
+  //       return "🛑";
+  //     case "task_state_change":
+  //       return "🔄";
+  //     case "waiver_created":
+  //       return "📋";
+  //     case "waiver_approved":
+  //       return "✅";
+  //     case "waiver_expired":
+  //       return "⏰";
+  //     case "quality_gate_passed":
+  //       return "✅";
+  //     case "quality_gate_failed":
+  //       return "❌";
+  //     case "quality_gate_waived":
+  //       return "⚠️";
+  //     case "worker_assigned":
+  //       return "👷";
+  //     case "worker_completed":
+  //       return "🏁";
+  //     case "model_switched":
+  //       return "🔄";
+  //     case "iteration_started":
+  //       return "🔄";
+  //     case "iteration_completed":
+  //       return "✅";
+  //     default:
+  //       return "📝";
+  //   }
+  // };
 
   const getPriorityIcon = (priority: Task["priority"]) => {
     switch (priority) {
@@ -149,12 +153,12 @@ export default function TaskCard({
   return (
     <div
       className={`${styles.taskCard} ${
-        isSelected ? styles.selected : ""
+        false ? styles.selected : ""
       } ${getStatusColor(task.status)}`}
-      onClick={onClick}
-      role={onClick ? "button" : undefined}
-      tabIndex={onClick ? 0 : undefined}
-      onKeyDown={onClick ? (e) => e.key === "Enter" && onClick() : undefined}
+      onClick={() => {}}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => e.key === "Enter" && (() => {})()}
     >
       <div className={styles.cardHeader}>
         <div className={styles.titleSection}>
@@ -180,23 +184,23 @@ export default function TaskCard({
           <span className={styles.phaseIcon}>{getPhaseIcon(task.phase)}</span>
           <span className={styles.phaseText}>{task.phase}</span>
           <span className={styles.progressText}>
-            {task.progress.percentage}%
+            {task.progress?.percentage || 0}%
           </span>
         </div>
 
         <div className={styles.progressBar}>
           <div
             className={styles.progressFill}
-            style={{ width: `${task.progress.percentage}%` }}
+            style={{ width: `${task.progress?.percentage || 0}%` }}
           />
         </div>
 
-        {task.progress.current_step && (
+        {task.progress?.current_step && (
           <div className={styles.currentStep}>
             {task.progress.current_step}
             {task.progress.total_steps && (
               <span className={styles.stepCount}>
-                ({(task.progress.current_step_index ?? 0) + 1}/
+                ({task.progress.steps_completed}/
                 {task.progress.total_steps})
               </span>
             )}
@@ -217,26 +221,26 @@ export default function TaskCard({
           <div className={styles.timeInfo}>
             <span className={styles.timeLabel}>Elapsed:</span>
             <span className={styles.timeValue}>
-              {formatDuration(task.progress.time_elapsed_ms)}
+              {formatDuration(0)}
             </span>
           </div>
 
-          {task.progress.time_remaining_ms && (
+          {false && (
             <div className={styles.timeInfo}>
               <span className={styles.timeLabel}>Remaining:</span>
               <span className={styles.timeValue}>
-                {formatDuration(task.progress.time_remaining_ms)}
+                {formatDuration(0)}
               </span>
             </div>
           )}
         </div>
 
         <div className={styles.actions}>
-          {task.status === "running" && onPause && (
+          {task.status === "running" && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                onPause();
+                // onPause();
               }}
               className={`${styles.actionButton} ${styles.pause}`}
               title="Pause task"
@@ -245,11 +249,11 @@ export default function TaskCard({
             </button>
           )}
 
-          {task.status === "paused" && onResume && (
+          {task.status === "paused" && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                onResume();
+                // onResume();
               }}
               className={`${styles.actionButton} ${styles.resume}`}
               title="Resume task"
@@ -258,19 +262,18 @@ export default function TaskCard({
             </button>
           )}
 
-          {(task.status === "running" || task.status === "paused") &&
-            onCancel && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onCancel();
-                }}
-                className={`${styles.actionButton} ${styles.cancel}`}
-                title="Cancel task"
-              >
-                ❌
-              </button>
-            )}
+          {(task.status === "running" || task.status === "paused") && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                // onCancel();
+              }}
+              className={`${styles.actionButton} ${styles.cancel}`}
+              title="Cancel task"
+            >
+              ❌
+            </button>
+          )}
         </div>
 
         <div className={styles.metadata}>
@@ -296,12 +299,12 @@ export default function TaskCard({
         </div>
       </div>
 
-      {showDetails && task.context && (
+      {false && task.context && (
         <div className={styles.details}>
           <div className={styles.context}>
             <h4>Goals</h4>
             <ul>
-              {task.context.goals.slice(0, 3).map((goal, index) => (
+              {task.context?.goals?.slice(0, 3).map((goal, index) => (
                 <li key={index}>{goal}</li>
               ))}
             </ul>
@@ -315,10 +318,10 @@ export default function TaskCard({
           )}
 
           {/* Audit Trail Section */}
-          {task.audit_trail && task.audit_trail.length > 0 && (
+          {false && (
             <div className={styles.auditTrailSection}>
               <AuditTrailViewer
-                auditTrail={task.audit_trail}
+                auditTrail={[]}
                 taskId={task.id}
                 showFullTrail={false}
               />

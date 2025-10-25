@@ -122,9 +122,12 @@ mod tests {
             required_changes: vec![],
             priority: ChangePriority::Medium,
             estimated_effort: EffortEstimate {
-                developer_hours: 4,
-                complexity: EffortComplexity::Simple,
-                skills_required: vec![],
+                person_hours: 4.0,
+                developer_hours: 4.0,
+                complexity: ComplexityLevel::Simple,
+                effort_complexity: EffortComplexity::Simple,
+                skills_required: vec!["testing".to_string()],
+                dependencies: vec!["test framework".to_string()],
             },
         };
 

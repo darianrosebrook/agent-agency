@@ -13,7 +13,7 @@ interface AuditTrailViewerProps {
 
 export default function AuditTrailViewer({
   auditTrail,
-  taskId,
+  taskId: _taskId,
   showFullTrail = false,
   maxHeight = "400px",
 }: AuditTrailViewerProps) {

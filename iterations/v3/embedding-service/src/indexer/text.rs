@@ -180,9 +180,9 @@ impl TextIndexer {
     }
 
     fn cosine_similarity(&self, a: &EmbeddingVector, b: &EmbeddingVector) -> f64 {
-        let dot_product: f64 = a.values.iter().zip(&b.values).map(|(x, y)| x * y).sum();
-        let norm_a: f64 = a.values.iter().map(|x| x * x).sum::<f64>().sqrt();
-        let norm_b: f64 = b.values.iter().map(|x| x * x).sum::<f64>().sqrt();
+        let dot_product: f64 = a.values.iter().zip(&b.values).map(|(x, y)| (*x as f64) * (*y as f64)).sum();
+        let norm_a: f64 = a.values.iter().map(|x| (*x as f64) * (*x as f64)).sum();
+        let norm_b: f64 = b.values.iter().map(|x| (*x as f64) * (*x as f64)).sum();
 
         if norm_a == 0.0 || norm_b == 0.0 {
             0.0
@@ -257,3 +257,5 @@ pub struct IndexStatistics {
     pub models_indexed: usize,
     pub index_sizes: usize,
 }
+
+

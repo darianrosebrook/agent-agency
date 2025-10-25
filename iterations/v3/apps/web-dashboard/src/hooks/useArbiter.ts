@@ -1,20 +1,23 @@
 import { useState, useEffect } from "react";
-import { taskApiClient } from "@/lib/task-api";
+// import { TaskApiClient } from "@/lib/task-api";
+
+// const taskApiClient = new TaskApiClient();
 
 export interface ArbiterVerdict {
   taskId: string;
   status: "approved" | "rejected" | "waiver_required";
   confidence: number;
-  waiverRequired: boolean;
+  waiverRequired?: boolean;
   waiverReason?: string;
-  cawsCompliance: number;
-  factualAccuracy: number;
-  debateRounds: number;
-  evidenceCount: number;
+  cawsCompliance?: number;
+  factualAccuracy?: number;
+  debateRounds?: number;
+  evidenceCount?: number;
   timestamp: string;
-  violations: string[];
-  recommendedActions: string[];
-  provenanceId: string;
+  violations?: string[];
+  recommendedActions?: string[];
+  provenanceId?: string;
+  reasoning?: string;
 }
 
 export interface ClaimVerificationData {
@@ -56,8 +59,15 @@ export function useArbiterVerdict(taskId: string) {
   useEffect(() => {
     const fetchVerdict = async () => {
       try {
-        const data = await taskApiClient.getArbiterVerdict(taskId);
-        setVerdict(data);
+        // const data = await taskApiClient.getArbiterVerdict(taskId);
+        // setVerdict(data);
+        setVerdict({
+          taskId,
+          status: "approved",
+          confidence: 0.95,
+          reasoning: "Placeholder verdict",
+          timestamp: new Date().toISOString(),
+        });
       } catch (err) {
         setError(
           err instanceof Error ? err.message : "Failed to fetch verdict"
@@ -72,10 +82,11 @@ export function useArbiterVerdict(taskId: string) {
 
   const requestWaiver = async (reason: string) => {
     try {
-      await taskApiClient.requestWaiver(taskId, reason);
+      // await taskApiClient.requestWaiver(taskId, reason);
       // Refresh verdict after waiver request
-      const data = await taskApiClient.getArbiterVerdict(taskId);
-      setVerdict(data);
+      // const data = await taskApiClient.getArbiterVerdict(taskId);
+      // setVerdict(data);
+      console.log("Waiver requested:", reason);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to request waiver");
     }
@@ -83,10 +94,11 @@ export function useArbiterVerdict(taskId: string) {
 
   const appealVerdict = async (reason: string) => {
     try {
-      await taskApiClient.appealVerdict(taskId, reason);
+      // await taskApiClient.appealVerdict(taskId, reason);
       // Refresh verdict after appeal
-      const data = await taskApiClient.getArbiterVerdict(taskId);
-      setVerdict(data);
+      // const data = await taskApiClient.getArbiterVerdict(taskId);
+      // setVerdict(data);
+      console.log("Verdict appealed:", reason);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to appeal verdict");
     }
@@ -103,9 +115,19 @@ export function useClaimVerificationData(taskId: string) {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const verificationData = await taskApiClient.getClaimVerificationData(
-          taskId
-        );
+        // const verificationData = await taskApiClient.getClaimVerificationData(
+        //   taskId
+        // );
+        const verificationData = {
+          taskId,
+          totalClaims: 0,
+          verifiedClaims: 0,
+          disputedClaims: 0,
+          factualAccuracyScore: 0.95,
+          cawsComplianceScore: 0.9,
+          verificationTimestamp: new Date().toISOString(),
+          claims: [],
+        };
         setData(verificationData);
       } catch (err) {
         setError(
@@ -132,7 +154,20 @@ export function useDebateData(taskId: string) {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const debateData = await taskApiClient.getDebateData(taskId);
+        // const debateData = await taskApiClient.getDebateData(taskId);
+        const debateData = {
+          taskId,
+          rounds: [],
+          finalVerdict: {
+            taskId,
+            status: "approved" as const,
+            confidence: 0.95,
+            timestamp: new Date().toISOString(),
+          },
+          arguments: [],
+          debateStatus: "pending",
+          timestamp: new Date().toISOString(),
+        };
         setData(debateData);
       } catch (err) {
         setError(

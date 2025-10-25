@@ -1,61 +1,46 @@
-// Skeleton component styles - FlowPress Design System
-
-// Skeleton component styles
 .skeleton {
-  background: linear-gradient(
-    90deg,
-    var(--color-background-secondary) 25%,
-    var(--color-background-muted) 50%,
-    var(--color-background-secondary) 75%
-  );
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
   background-size: 200% 100%;
-  border-radius: 8px;
+  border-radius: 4px;
   display: inline-block;
   position: relative;
   overflow: hidden;
-  contain: layout style paint;
-  min-height: 1rem;
-  
-  &.animate {
-    animation: skeleton-loading 1.5s ease-in-out infinite;
+
+  &.pulse {
+    animation: pulse 1.5s ease-in-out infinite;
   }
-  
-  // Rounded variants
-  &.rounded-none {
-    border-radius: var(--border-radius-none);
+
+  &.wave {
+    animation: wave 1.5s ease-in-out infinite;
   }
-  
-  &.rounded-sm {
-    border-radius: var(--border-radius-sm);
+
+  &.text {
+    height: 1em;
+    border-radius: 4px;
   }
-  
-  &.rounded-md {
-    border-radius: var(--border-radius-md);
+
+  &.rectangular {
+    border-radius: 8px;
   }
-  
-  &.rounded-lg {
-    border-radius: var(--border-radius-lg);
-  }
-  
-  &.rounded-xl {
-    border-radius: var(--border-radius-xl);
-  }
-  
-  &.rounded-2xl {
-    border-radius: var(--border-radius-2xl);
-  }
-  
-  &.rounded-3xl {
-    border-radius: 1.5rem;
-  }
-  
-  &.rounded-full {
-    border-radius: var(--border-radius-full);
+
+  &.circular {
+    border-radius: 50%;
   }
 }
 
-// Skeleton animation
-@keyframes skeleton-loading {
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes wave {
   0% {
     background-position: -200% 0;
   }
@@ -64,146 +49,51 @@
   }
 }
 
-// Skeleton text component
-.skeletonText {
+.textSkeleton {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-2);
-  
-  .skeletonLine {
-    &:not(:last-child) {
-      margin-bottom: var(--spacing-1);
+  gap: 8px;
+
+  .textLine {
+    &:last-child {
+      width: 60%;
     }
   }
 }
 
-// Skeleton avatar component
-.skeletonAvatar {
-  flex-shrink: 0;
-}
-
-// Skeleton card component
-.skeletonCard {
-  background-color: var(--color-background-primary);
-  border: 0.5px solid var(--color-border-default);
-  border-radius: 14px;
-  padding: var(--spacing-4);
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-4);
-  min-height: 200px;
-  contain: layout style paint;
-}
-
-// Dark mode disabled - Light theme only
-
-.skeletonCardHeaderContent {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-2);
-}
-
-// Dark mode disabled - Light theme only
-
-.skeletonCardFooter {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding-top: var(--spacing-3);
-  border-top: 0.5px solid var(--color-border-default);
-  min-height: 48px;
-}
-
-// Skeleton table component
-.skeletonTable {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-2);
-  background-color: var(--color-background-primary);
-  border: 0.5px solid var(--color-border-default);
-  border-radius: 12px;
+.cardSkeleton {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
   overflow: hidden;
-  min-height: 300px;
-  contain: layout style paint;
-}
+  background: white;
 
-// Dark mode disabled - Light theme only
-
-.skeletonTableRow {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: var(--spacing-4);
-  padding: var(--spacing-4);
-  border-bottom: 0.5px solid var(--color-border-default);
-  min-height: 48px;
-  
-  &:last-child {
-    border-bottom: none;
+  .cardContent {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
   }
 }
 
-// Dark mode disabled - Light theme only
-
-// Responsive design
-@media (max-width: 768px) {
-  .skeletonCard {
-    padding: var(--spacing-3);
+.tableSkeleton {
+  .tableHeader {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 16px;
+    padding: 16px;
+    background: #f5f5f5;
+    border-radius: 8px 8px 0 0;
   }
 
-// Dark mode disabled - Light theme only
-  
-  .skeletonTableHeader,
-  .skeletonTableRow {
-    grid-template-columns: 1fr;
-    gap: var(--spacing-2);
-  }
+  .tableRow {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 16px;
+    padding: 16px;
+    border-bottom: 1px solid #e0e0e0;
 
-// Dark mode disabled - Light theme only
-  
-  .skeletonTableRow {
-    padding: var(--spacing-3);
-  }
-}
-
-// Dark mode disabled - Light theme only
-
-// High contrast mode
-@media (prefers-contrast: high) {
-  .skeleton {
-    background: linear-gradient(
-      90deg,
-      #e5e7eb 25%,
-      #d1d5db 50%,
-      #e5e7eb 75%
-    );
-  }
-
-// Dark mode disabled - Light theme only
-  
-  .skeletonCardHeader {
-    border-color: #000000;
-  }
-
-// Dark mode disabled - Light theme only
-  
-  .skeletonTable {
-    border-color: #000000;
-  }
-
-// Dark mode disabled - Light theme only
-  
-  .skeletonTableRow {
-    border-color: #000000;
-  }
-}
-
-// Reduced motion
-@media (prefers-reduced-motion: reduce) {
-  .skeleton {
-    &.animate {
-      animation: none;
-      background: var(--color-background-secondary);
+    &:last-child {
+      border-bottom: none;
     }
   }
 }

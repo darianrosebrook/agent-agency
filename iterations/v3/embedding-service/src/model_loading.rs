@@ -110,7 +110,7 @@ impl EmbeddingModel for SafeTensorsModel {
             *value /= num_tokens;
         }
 
-        Ok(result)
+        Ok(EmbeddingVector::from_values(result))
     }
 }
 
@@ -131,9 +131,11 @@ impl EmbeddingModel for PlaceholderModel {
     async fn forward(&self, _tokens: &[u32]) -> Result<EmbeddingVector> {
         // Generate a simple placeholder embedding
         // Used when SafeTensors loading fails
-        let embedding: EmbeddingVector = (0..self.dimension)
+        let values: Vec<f32> = (0..self.dimension)
             .map(|i| (i as f32 * 0.1).sin())
             .collect();
+
+        let embedding = EmbeddingVector::new(values, "placeholder".to_string());
 
         Ok(embedding)
     }

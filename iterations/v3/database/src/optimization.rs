@@ -311,11 +311,11 @@ impl DatabasePerformanceMonitor {
 
 /// Database index manager
 pub struct DatabaseIndexManager {
-    client: DatabaseClient,
+    client: Arc<DatabaseClient>,
 }
 
 impl DatabaseIndexManager {
-    pub fn new(client: DatabaseClient) -> Self {
+    pub fn new(client: Arc<DatabaseClient>) -> Self {
         Self { client }
     }
 
@@ -421,7 +421,7 @@ pub struct TableStats {
 
 /// Database optimization manager
 pub struct DatabaseOptimizationManager {
-    client: DatabaseClient,
+    client: Arc<DatabaseClient>,
     monitor: Arc<DatabasePerformanceMonitor>,
     index_manager: DatabaseIndexManager,
     config: DatabaseOptimizationConfig,
@@ -429,7 +429,7 @@ pub struct DatabaseOptimizationManager {
 
 impl DatabaseOptimizationManager {
     pub fn new(
-        client: DatabaseClient,
+        client: Arc<DatabaseClient>,
         config: DatabaseOptimizationConfig,
     ) -> Self {
         let monitor = Arc::new(DatabasePerformanceMonitor::new(config.clone()));

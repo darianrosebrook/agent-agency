@@ -12,7 +12,7 @@
 import { memo } from 'react';
 import { CheckCircle, XCircle, AlertCircle, Loader2, Database, Cpu, Activity, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { DashboardCard } from '@/design-system/composers';
-import { Text, StatusBadge } from '@/design-system';
+// import { Text, StatusBadge } from '@/design-system';
 import { useConnectionContext, OfflineOnly } from '@/components/providers/ConnectionProvider';
 import styles from '@/app/page.module.scss';
 
@@ -23,7 +23,7 @@ function SystemStatusCard() {
     <DashboardCard
       title="System Status"
       description="Real-time health monitoring"
-      className={styles.card}
+      className={styles.card || ''}
     >
         <div className={styles.status}>
           <div className={styles.statusItem}>

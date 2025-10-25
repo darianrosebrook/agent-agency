@@ -1,8 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { TaskFilters } from "@/types/tasks";
 import styles from "./TaskFiltersBar.module.scss";
+
+interface TaskFilters {
+  status?: string[];
+  phase?: string[];
+  priority?: string[];
+  search?: string;
+}
 
 interface TaskFiltersBarProps {
   filters: TaskFilters;
@@ -153,9 +159,9 @@ export default function TaskFiltersBar({
             <label className={styles.filterLabel}>Working Spec ID</label>
             <input
               type="text"
-              value={filters.working_spec_id ?? ""}
+              value=""
               onChange={(e) =>
-                updateFilters({ working_spec_id: e.target.value || undefined })
+                updateFilters({ search: e.target.value || "" })
               }
               placeholder="Enter working spec ID..."
               className={styles.textInput}
@@ -168,13 +174,10 @@ export default function TaskFiltersBar({
             <div className={styles.dateInputs}>
               <input
                 type="date"
-                value={filters.date_range?.start ?? ""}
+                value=""
                 onChange={(e) =>
                   updateFilters({
-                    date_range: {
-                      start: e.target.value,
-                      end: filters.date_range?.end ?? "",
-                    },
+                    search: e.target.value || "",
                   })
                 }
                 className={styles.dateInput}
@@ -182,13 +185,10 @@ export default function TaskFiltersBar({
               <span className={styles.dateSeparator}>to</span>
               <input
                 type="date"
-                value={filters.date_range?.end ?? ""}
+                value=""
                 onChange={(e) =>
                   updateFilters({
-                    date_range: {
-                      start: filters.date_range?.start ?? "",
-                      end: e.target.value,
-                    },
+                    search: e.target.value || "",
                   })
                 }
                 className={styles.dateInput}

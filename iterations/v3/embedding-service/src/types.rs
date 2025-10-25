@@ -4,8 +4,38 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt;
 
-/// Embedding vector type - 768 dimensions for embeddinggemma
-pub type EmbeddingVector = Vec<f32>;
+/// Embedding vector with metadata
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct EmbeddingVector {
+    /// The actual vector values
+    pub values: Vec<f32>,
+    /// Model used to generate this embedding
+    pub model: String,
+    /// Number of dimensions in the vector
+    pub dimensions: usize,
+}
+
+impl EmbeddingVector {
+    /// Create a new embedding vector
+    pub fn new(values: Vec<f32>, model: String) -> Self {
+        let dimensions = values.len();
+        Self {
+            values,
+            model,
+            dimensions,
+        }
+    }
+
+    /// Create from raw vector (defaults model to "unknown")
+    pub fn from_values(values: Vec<f32>) -> Self {
+        let dimensions = values.len();
+        Self {
+            values,
+            model: "unknown".to_string(),
+            dimensions,
+        }
+    }
+}
 
 /// Unique identifier for an embedding
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]

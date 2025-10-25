@@ -438,7 +438,7 @@ impl SLOTracker {
     }
 
     /// Update SLO status snapshot in database
-    async fn update_slo_status_snapshot(&self, slo_id: &uuid::Uuid) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn update_slo_status_snapshot(&self, _slo_id: &uuid::Uuid) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         self.db_client.execute(
             "SELECT update_slo_status_snapshots()",
             &[],

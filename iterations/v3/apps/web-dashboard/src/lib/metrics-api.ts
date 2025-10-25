@@ -5,7 +5,7 @@ import {
   CoordinationMetrics,
   GetBusinessMetricsResponse,
   GetAlertsResponse,
-  GetAgentPerformanceResponse,
+  // GetAgentPerformanceResponse,
   MetricsError,
 } from "@/types/metrics";
 
@@ -42,20 +42,29 @@ export class MetricsApiClient {
         status: response.status,
         timestamp: response.timestamp,
         version: response.dashboard?.version,
-        uptime: response.dashboard?.uptime,
-        components: {
-          dashboard: {
+        uptime_seconds: response.dashboard?.uptime || 0,
+        components: [
+          {
+            name: "dashboard",
             status: response.dashboard?.status || "unknown",
-            version: response.dashboard?.version,
-            uptime: response.dashboard?.uptime,
+            last_check: response.timestamp,
+            details: {
+              version: response.dashboard?.version,
+              uptime: response.dashboard?.uptime,
+            },
           },
-          backend: {
+          {
+            name: "backend",
             status: response.backend?.status || "unknown",
-            url: response.backend?.url,
             response_time_ms: response.backend?.response_time_ms,
-            error: response.backend?.error,
+            last_check: response.timestamp,
+            details: {
+              url: response.backend?.url,
+              error: response.backend?.error,
+            },
           },
-        },
+        ],
+        alerts: [],
       };
     } catch (error) {
       console.error("Failed to get system health:", error);
@@ -258,6 +267,7 @@ export class MetricsApiClient {
         error_count: failedTasks,
         error_rate_per_hour: failedTasks / 24, // Approximate hourly rate
         cost_per_task: Math.random() * 0.1 + 0.01, // $0.01-$0.11 per task
+        efficiency_score: Math.random() * 20 + 80, // 80-100 efficiency score
         uptime_percentage: Math.random() * 0.2 + 0.8, // 80-100%
         last_active: new Date(
           Date.now() - Math.random() * 3600000
@@ -364,13 +374,22 @@ export class MetricsApiClient {
       );
 
       return {
-        summary: response.summary || {},
-        trends:
-          response.metrics.filter((m: any) => m.type === "business_trend") ||
-          [],
-        alerts: response.alerts || [],
-        time_range: timeRange,
-        timestamp: new Date().toISOString(),
+        metrics: {
+          timestamp: new Date().toISOString(),
+          total_tasks_created: response.metrics.find((m: any) => m.name === "total_tasks")?.value || 0,
+          tasks_completed_today: response.metrics.find((m: any) => m.name === "completed_tasks")?.value || 0,
+          average_task_completion_time_ms: response.metrics.find((m: any) => m.name === "avg_completion_time")?.value || 0,
+          task_success_rate: response.metrics.find((m: any) => m.name === "success_rate")?.value || 0,
+          quality_checks_passed: response.metrics.find((m: any) => m.name === "quality_passed")?.value || 0,
+          quality_checks_failed: response.metrics.find((m: any) => m.name === "quality_failed")?.value || 0,
+          average_quality_score: response.metrics.find((m: any) => m.name === "quality_score")?.value || 0,
+          total_cost_today: response.metrics.find((m: any) => m.name === "total_cost")?.value || 0,
+          cost_per_task: response.metrics.find((m: any) => m.name === "cost_per_task")?.value || 0,
+          efficiency_trend: response.metrics.find((m: any) => m.name === "efficiency_trend")?.value || 0,
+          active_sessions: response.metrics.find((m: any) => m.name === "active_sessions")?.value || 0,
+          average_session_duration_ms: response.metrics.find((m: any) => m.name === "session_duration")?.value || 0,
+        },
+        time_series: response.time_series || [],
       };
     } catch (error) {
       console.error("Failed to get business metrics:", error);
@@ -407,8 +426,9 @@ export class MetricsApiClient {
 
       return {
         alerts: filteredAlerts.slice(0, limit),
-        total: filteredAlerts.length,
-        timestamp: new Date().toISOString(),
+        total_count: filteredAlerts.length,
+        acknowledged_count: filteredAlerts.filter((a: any) => a.status === "acknowledged").length,
+        resolved_count: filteredAlerts.filter((a: any) => a.status === "resolved").length,
       };
     } catch (error) {
       console.error("Failed to get alerts:", error);

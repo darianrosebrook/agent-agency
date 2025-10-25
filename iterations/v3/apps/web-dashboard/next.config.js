@@ -4,14 +4,61 @@ const nextConfig = {
 
   // Configure webpack
   webpack: (config, { isServer }) => {
-    // Add custom webpack configuration if needed
+    if (!isServer) {
+      // Optimize bundle splitting for better caching
+      config.optimization.splitChunks = {
+        chunks: 'all',
+        cacheGroups: {
+          // Vendor libraries
+          vendor: {
+            test: /[\\/]node_modules[\\/]/,
+            name: 'vendors',
+            chunks: 'all',
+            priority: 10,
+          },
+          // GSAP specific chunk
+          gsap: {
+            test: /[\\/]node_modules[\\/]gsap[\\/]/,
+            name: 'gsap',
+            chunks: 'all',
+            priority: 20,
+          },
+          // React libraries
+          react: {
+            test: /[\\/]node_modules[\\/](react|react-dom)[\\/]/,
+            name: 'react',
+            chunks: 'all',
+            priority: 15,
+          },
+          // UI libraries
+          ui: {
+            test: /[\\/]node_modules[\\/](lucide-react|class-variance-authority|clsx|tailwind-merge)[\\/]/,
+            name: 'ui',
+            chunks: 'all',
+            priority: 12,
+          },
+          // Common components
+          common: {
+            name: 'common',
+            minChunks: 2,
+            chunks: 'all',
+            priority: 5,
+          },
+        },
+      };
+    }
     return config;
   },
 
   // Configure images
   images: {
     domains: [],
-    formats: ['image/webp', 'image/avif'],
+    formats: ['image/avif', 'image/webp'],
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+    minimumCacheTTL: 60,
+    dangerouslyAllowSVG: true,
+    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
   },
 
   // Configure redirects
@@ -67,6 +114,12 @@ const nextConfig = {
 
   // Configure output
   output: 'standalone',
+  
+  // Performance optimizations
+  experimental: {
+    optimizeCss: true,
+    optimizePackageImports: ['lucide-react', 'gsap'],
+  },
 
   // Configure trailing slash
   trailingSlash: false,

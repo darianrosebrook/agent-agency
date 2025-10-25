@@ -55,7 +55,7 @@ export class SSEClient {
       console.log("Connecting to SSE:", url);
 
       this.eventSource = new EventSource(url, {
-        withCredentials: this.options.withCredentials,
+        withCredentials: this.options.withCredentials || false,
       });
 
       this.eventSource.onopen = () => {
@@ -70,7 +70,7 @@ export class SSEClient {
           const message: SSEMessageEvent = {
             type: event.type || "message",
             data,
-            id: event.lastEventId || undefined,
+            id: event.lastEventId || "",
           };
 
           // Store last event ID for reconnection

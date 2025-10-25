@@ -1,8 +1,8 @@
-import { TaskEvent } from "@/types/tasks";
+import { TaskTimelineEvent } from "@/types/tasks";
 
 export interface TaskEventsClientOptions {
   url: string;
-  onEvent: (event: TaskEvent) => void;
+  onEvent: (event: TaskTimelineEvent) => void;
   onError: (error: Error) => void;
   onOpen?: () => void;
   onClose?: () => void;
@@ -44,7 +44,7 @@ export class TaskEventsClient {
 
       this.eventSource.onmessage = (event) => {
         try {
-          const taskEvent: TaskEvent = JSON.parse(event.data);
+          const taskEvent: TaskTimelineEvent = JSON.parse(event.data);
           this.options.onEvent(taskEvent);
         } catch (parseError) {
           console.error("Failed to parse task event:", parseError, event.data);
@@ -65,7 +65,7 @@ export class TaskEventsClient {
         this.scheduleReconnect();
       };
 
-      this.eventSource.onclose = () => {
+      this.eventSource.onerror = () => {
         console.log("Task events SSE connection closed");
         this.options.onClose?.();
       };

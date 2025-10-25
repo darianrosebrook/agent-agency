@@ -15,6 +15,7 @@ pub mod mistral_integration_demo;
 pub mod council;
 pub mod decision_making;
 pub mod verdict_aggregation;
+pub mod verdict;
 pub mod workflow;
 pub mod risk_scorer;
 pub mod error_handling;
@@ -31,15 +32,15 @@ pub mod intelligent_testing;
 pub mod predictive_learning;
 
 pub use error::{CouncilError, CouncilResult};
-pub use judge::{
+pub use judge_backup::{
     Judge, JudgeConfig, JudgeVerdict, JudgeType, JudgeContribution,
     // Ethical analysis types
-    EthicalAssessment, EthicalConcern, EthicalCategory, EthicalSeverity,
-    StakeholderImpact, ImpactType, ImpactDuration, EthicalTradeoff,
-    ConsequenceAssessment, TimeHorizon, ConsequenceSeverity,
-    CulturalConsideration, CulturalSensitivity,
+    risk::{EthicalAssessment, EthicalConcern, EthicalCategory, EthicalSeverity,
+           StakeholderImpact, EthicalTradeoff, ConsequenceAssessment},
     // Ethics judge
     EthicsJudge,
+    // Mock judge
+    MockJudge,
 };
 pub use council::{Council, CouncilConfig, CouncilSession};
 pub use judge::ReviewContext;
@@ -58,5 +59,6 @@ pub use evidence_enrichment::EvidenceEnrichmentCoordinator;
 pub use resilience::ResilienceManager;
 pub use claim_extraction_multimodal::{MultimodalEvidenceEnricher, ClaimWithMultimodalEvidence};
 pub use advanced_monitoring::{SLOTracker, SLOStatus, SLOAlert, AlertLevel, SLOComponent, SLODashboardSummary};
+pub use verdict::{VerdictStore, VerdictRecord, VerdictStorage, CacheConfig, StorageStats, CacheStats, VerdictStoreStats};
 pub use types::ResourceUsageMetrics;
-pub use coordinator::{ConsensusCoordinator, ProvenanceEmitter};
+pub use coordinator::orchestrator::{ConsensusCoordinator, ProvenanceEmitter};

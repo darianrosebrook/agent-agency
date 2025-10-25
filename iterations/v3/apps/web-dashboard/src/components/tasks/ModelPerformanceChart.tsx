@@ -1,15 +1,20 @@
 import { useMemo } from "react";
-import { ModelPerformanceChartProps } from "../../types/tasks";
 
 import styles from "./ModelPerformanceChart.module.scss";
 
+interface ModelPerformanceChartProps {
+  data: any[];
+  selectedModel?: string;
+  onModelSelect?: (model: string) => void;
+}
+
 export const ModelPerformanceChart: React.FC<ModelPerformanceChartProps> = ({
-  models,
-  timeRange = "24h",
+  data,
+  selectedModel: _selectedModel,
   onModelSelect,
 }) => {
   const chartData = useMemo(() => {
-    return models.map((model) => ({
+    return data.map((model) => ({
       ...model,
       successRate:
         model.performance_stats.total_requests > 0
@@ -22,7 +27,7 @@ export const ModelPerformanceChart: React.FC<ModelPerformanceChartProps> = ({
           ? (1 / model.performance_stats.average_latency_ms) * 1000 // Requests per second efficiency
           : 0,
     }));
-  }, [models]);
+  }, [data]);
 
   const sortedBySuccess = [...chartData].sort(
     (a, b) => b.successRate - a.successRate
@@ -39,7 +44,7 @@ export const ModelPerformanceChart: React.FC<ModelPerformanceChartProps> = ({
         <h3>Model Performance</h3>
         <select
           className={styles.timeRange}
-          value={timeRange}
+          value="24h"
           onChange={() => {
             // TODO: Implement time range filtering
           }}

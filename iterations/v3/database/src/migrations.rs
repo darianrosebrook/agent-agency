@@ -402,10 +402,10 @@ impl MigrationManager {
             .execute_parameterized_query(
                 &query,
                 vec![
-                    serde_json::Value::String(migration.id.to_string()),
-                    serde_json::Value::String(migration.name.clone()),
-                    serde_json::Value::String(checksum.to_string()),
-                    serde_json::Value::String(success.to_string()),
+                    &migration.id.to_string(),
+                    &migration.name,
+                    &checksum.to_string(),
+                    &success.to_string(),
                 ],
             )
             .await?;
@@ -423,7 +423,7 @@ impl MigrationManager {
         self.client
             .execute_parameterized_query(
                 &query,
-                vec![serde_json::Value::String(migration_id.to_string())],
+                vec![&migration_id.to_string()],
             )
             .await?;
 

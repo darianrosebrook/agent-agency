@@ -24,7 +24,7 @@ function RecentTasksCard() {
       title="Recent Tasks"
       description="Latest task activity"
       isLoading={isLoading}
-      className={styles.card}
+      className={styles.card || ''}
     >
         {tasks && tasks.length > 0 ? (
           <div className={styles.taskList}>

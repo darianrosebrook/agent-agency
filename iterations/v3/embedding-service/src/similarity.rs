@@ -3,15 +3,15 @@
 use crate::types::*;
 use anyhow::Result;
 
-/// Calculate cosine similarity between two vectors
-pub fn cosine_similarity(a: &[f32], b: &[f32]) -> Result<f32> {
-    if a.len() != b.len() {
+/// Calculate cosine similarity between two embedding vectors
+pub fn cosine_similarity(a: &EmbeddingVector, b: &EmbeddingVector) -> Result<f32> {
+    if a.dimensions != b.dimensions {
         return Err(anyhow::anyhow!("Vector dimensions must match"));
     }
 
-    let dot_product: f32 = a.iter().zip(b.iter()).map(|(x, y)| x * y).sum();
-    let norm_a: f32 = a.iter().map(|x| x * x).sum::<f32>().sqrt();
-    let norm_b: f32 = b.iter().map(|x| x * x).sum::<f32>().sqrt();
+    let dot_product: f32 = a.values.iter().zip(b.values.iter()).map(|(x, y)| x * y).sum();
+    let norm_a: f32 = a.values.iter().map(|x| x * x).sum::<f32>().sqrt();
+    let norm_b: f32 = b.values.iter().map(|x| x * x).sum::<f32>().sqrt();
 
     if norm_a == 0.0 || norm_b == 0.0 {
         return Ok(0.0);
@@ -48,7 +48,7 @@ pub fn normalize_vector(vector: &mut [f32]) -> Result<()> {
 
 /// Find most similar embeddings to a query vector
 pub fn find_similar_embeddings(
-    query_vector: &[f32],
+    query_vector: &EmbeddingVector,
     embeddings: &[StoredEmbedding],
     limit: usize,
     threshold: f32,
@@ -97,31 +97,35 @@ pub fn average_embedding(embeddings: &[EmbeddingVector]) -> Result<EmbeddingVect
         return Err(anyhow::anyhow!("Cannot average empty embedding collection"));
     }
 
-    let dimension = embeddings[0].len();
+    let dimension = embeddings[0].dimensions;
 
     // Verify all embeddings have the same dimension
     for embedding in embeddings {
-        if embedding.len() != dimension {
+        if embedding.dimensions != dimension {
             return Err(anyhow::anyhow!(
                 "All embeddings must have the same dimension"
             ));
         }
     }
 
-    let mut average = vec![0.0; dimension];
+    let mut average_values = vec![0.0; dimension];
 
     for embedding in embeddings {
-        for (i, value) in embedding.iter().enumerate() {
-            average[i] += value;
+        for (i, value) in embedding.values.iter().enumerate() {
+            average_values[i] += value;
         }
     }
 
     let count = embeddings.len() as f32;
-    for value in average.iter_mut() {
+    for value in average_values.iter_mut() {
         *value /= count;
     }
 
-    Ok(average)
+    Ok(EmbeddingVector {
+        values: average_values,
+        model: "averaged".to_string(),
+        dimensions: dimension,
+    })
 }
 
 #[cfg(test)]
@@ -130,16 +134,16 @@ mod tests {
 
     #[test]
     fn test_cosine_similarity() {
-        let a = vec![1.0, 0.0, 0.0];
-        let b = vec![1.0, 0.0, 0.0];
+        let a = EmbeddingVector::from_values(vec![1.0, 0.0, 0.0]);
+        let b = EmbeddingVector::from_values(vec![1.0, 0.0, 0.0]);
         assert_eq!(cosine_similarity(&a, &b).unwrap(), 1.0);
 
-        let a = vec![1.0, 0.0, 0.0];
-        let b = vec![0.0, 1.0, 0.0];
+        let a = EmbeddingVector::from_values(vec![1.0, 0.0, 0.0]);
+        let b = EmbeddingVector::from_values(vec![0.0, 1.0, 0.0]);
         assert_eq!(cosine_similarity(&a, &b).unwrap(), 0.0);
 
-        let a = vec![1.0, 1.0, 0.0];
-        let b = vec![1.0, 0.0, 0.0];
+        let a = EmbeddingVector::from_values(vec![1.0, 1.0, 0.0]);
+        let b = EmbeddingVector::from_values(vec![1.0, 0.0, 0.0]);
         let similarity = cosine_similarity(&a, &b).unwrap();
         assert!((similarity - 0.707).abs() < 0.01);
     }

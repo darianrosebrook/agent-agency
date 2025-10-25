@@ -94,16 +94,38 @@ async fn test_mistral_judge_basic_functionality() {
     };
 
     let context = ReviewContext {
-        working_spec,
+        working_spec: crate::types::WorkingSpec {
+            id: "test-spec-id".to_string(),
+            title: working_spec.title.clone(),
+            description: working_spec.description.clone(),
+            scope: Some(crate::types::WorkingSpecScope {
+                r#in: Some(vec!["src/".to_string()]),
+                out: Some(vec!["node_modules/".to_string()]),
+            }),
+            risk_tier: crate::types::RiskTier::Tier3,
+            acceptance_criteria: vec![
+                crate::types::AcceptanceCriterion {
+                    id: "A1".to_string(),
+                    description: "System should work".to_string(),
+                    verification_method: crate::types::VerificationMethod::Automated,
+                    priority: crate::types::Priority::Medium,
+                }
+            ],
+        },
         planning_metadata: None,
         previous_reviews: vec![],
-        risk_tier: RiskTier::Tier3,
+        risk_tier: crate::types::RiskTier::Tier3,
         session_id: "test-session".to_string(),
         judge_instructions: HashMap::new(),
     };
 
     // Test review
-    let result = judge.review_spec(&context).await;
+    let result = judge.evaluate(
+        uuid::Uuid::new_v4(),
+        &context.working_spec.title,
+        &context.working_spec.description,
+        &context.working_spec.acceptance_criteria.iter().map(|ac| ac.description.clone()).collect::<Vec<_>>(),
+    ).await;
     assert!(result.is_ok(), "Judge should successfully review spec");
 
     let verdict = result.unwrap();
@@ -192,10 +214,27 @@ async fn test_mistral_judge_specialization() {
     };
 
     let context = ReviewContext {
-        working_spec,
+        working_spec: crate::types::WorkingSpec {
+            id: "test-spec-id-2".to_string(),
+            title: working_spec.title.clone(),
+            description: working_spec.description.clone(),
+            scope: Some(crate::types::WorkingSpecScope {
+                r#in: Some(vec!["src/".to_string()]),
+                out: Some(vec!["node_modules/".to_string()]),
+            }),
+            risk_tier: crate::types::RiskTier::Tier1,
+            acceptance_criteria: vec![
+                crate::types::AcceptanceCriterion {
+                    id: "A1".to_string(),
+                    description: "Critical system should work".to_string(),
+                    verification_method: crate::types::VerificationMethod::Automated,
+                    priority: crate::types::Priority::High,
+                }
+            ],
+        },
         planning_metadata: None,
         previous_reviews: vec![],
-        risk_tier: RiskTier::Tier1,
+        risk_tier: crate::types::RiskTier::Tier1,
         session_id: "test-session".to_string(),
         judge_instructions: HashMap::new(),
     };
@@ -226,7 +265,7 @@ fn test_mistral_judge_health_metrics() {
     let judge = MistralJudge::new(config).unwrap();
     let metrics = judge.health_metrics();
 
-    assert!(metrics.response_time_p95_ms > 0, "Should have positive response time");
+    assert!(metrics.response_time_p95_ms > 0.0, "Should have positive response time");
     assert!(metrics.success_rate >= 0.9, "Should have high success rate");
     assert!(metrics.error_rate <= 0.1, "Should have low error rate");
 }

@@ -11,8 +11,11 @@ use super::config::{AnalyticsDashboardConfig, AnalyticsSession};
 use super::data::{AnalyticsDashboardData, AnalyticsInsight};
 use super::metrics::CachePerformanceMetrics;
 use super::redis_client::RedisClient;
-// AnalyticsEngine defined locally as placeholder
 use crate::errors::ObservabilityError;
+
+// Temporary placeholder types
+#[derive(Debug, Clone)]
+pub struct AnalyticsEngine;
 
 /// Advanced analytics dashboard service
 pub struct AnalyticsDashboard {

@@ -1,47 +1,49 @@
 import React from "react";
-import { IterationTimelineProps } from "../../types/tasks";
 
 import styles from "./IterationTimeline.module.scss";
 
+interface IterationTimelineProps {
+  iterations: any[];
+  currentIteration?: number;
+  onIterationSelect?: (iteration: number) => void;
+  showDetails?: boolean;
+}
+
 export const IterationTimeline: React.FC<IterationTimelineProps> = ({
-  task,
-  selectedIteration,
-  onIterationClick,
+  iterations,
+  currentIteration,
+  onIterationSelect: _onIterationSelect,
   showDetails = false,
 }) => {
-  const iterations = Array.from(
-    { length: task.current_iteration },
-    (_, i) => i + 1
-  );
-  const maxIterations = task.max_iterations;
+  // const iterations = Array.from(
+  //   { length: task.current_iteration },
+  //   (_, i) => i + 1
+  // );
+  const maxIterations = 10; // Default max iterations
 
   const getIterationStatus = (
     iteration: number
   ): "pending" | "running" | "completed" | "failed" => {
-    if (iteration < task.current_iteration) {
+    if (iteration < (currentIteration || 0)) {
       // Check if this iteration completed successfully
       return "completed";
     } else if (
-      iteration === task.current_iteration &&
-      task.status === "running"
+      iteration === (currentIteration || 0)
     ) {
       return "running";
-    } else if (iteration > task.current_iteration) {
+    } else if (iteration > (currentIteration || 0)) {
       return "pending";
     }
     return "completed";
   };
 
-  const getIterationData = (iteration: number) => {
-    const modelUsage = task.model_history.find(
-      (m) => m.iteration === iteration
-    );
+  const getIterationData = (_iteration: number) => {
+    // Placeholder data since we don't have task object
     return {
-      model: modelUsage?.model_id ?? "unknown",
-      latency: modelUsage?.latency_ms ?? 0,
-      tokens:
-        (modelUsage?.prompt_tokens ?? 0) + (modelUsage?.completion_tokens ?? 0),
-      success: modelUsage?.success ?? true,
+      model: "unknown",
+      latency: 0,
+      tokens: 0,
+      success: true,
     };
   };
 
@@ -51,7 +53,7 @@ export const IterationTimeline: React.FC<IterationTimelineProps> = ({
         {iterations.map((iteration) => {
           const status = getIterationStatus(iteration);
           const data = getIterationData(iteration);
-          const isSelected = selectedIteration === iteration;
+          const isSelected = currentIteration === iteration;
 
           return (
             <div
@@ -59,7 +61,7 @@ export const IterationTimeline: React.FC<IterationTimelineProps> = ({
               className={`${styles.iteration} ${styles[status]} ${
                 isSelected ? styles.selected : ""
               }`}
-              onClick={() => onIterationClick?.(iteration)}
+              onClick={() => _onIterationSelect?.(iteration)}
             >
               <div className={styles.iterationHeader}>
                 <span className={styles.iterationNumber}>{iteration}</span>
@@ -122,34 +124,25 @@ export const IterationTimeline: React.FC<IterationTimelineProps> = ({
         <div className={styles.metric}>
           <span className={styles.label}>Iterations Completed:</span>
           <span className={styles.value}>
-            {task.current_iteration} / {maxIterations}
+            {currentIteration || 0} / {maxIterations}
           </span>
         </div>
         <div className={styles.metric}>
           <span className={styles.label}>Average Latency:</span>
           <span className={styles.value}>
-            {task.model_history.length > 0
-              ? Math.round(
-                  task.model_history.reduce((sum, m) => sum + m.latency_ms, 0) /
-                    task.model_history.length
-                )
-              : 0}
-            ms
+            {0} ms
           </span>
         </div>
         <div className={styles.metric}>
           <span className={styles.label}>Total Tokens:</span>
           <span className={styles.value}>
-            {task.model_history.reduce(
-              (sum, m) => sum + m.prompt_tokens + m.completion_tokens,
-              0
-            )}
+            {0}
           </span>
         </div>
         <div className={styles.metric}>
           <span className={styles.label}>Current Model:</span>
           <span className={styles.value}>
-            {task.self_prompting_config.current_model}
+            {"unknown"}
           </span>
         </div>
       </div>

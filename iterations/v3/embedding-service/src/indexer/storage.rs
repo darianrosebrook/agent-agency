@@ -202,3 +202,5 @@ pub struct EmbeddingRecord {
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub updated_at: Option<chrono::DateTime<chrono::Utc>>,
 }
+
+

@@ -6,6 +6,12 @@
  */
 
 import { gsap } from "gsap";
+// Tree-shake specific GSAP plugins for smaller bundle
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { TextPlugin } from "gsap/TextPlugin";
+
+// Register plugins to reduce bundle size
+gsap.registerPlugin(ScrollTrigger, TextPlugin);
 
 /**
  * Easing functions for smooth animations
@@ -82,7 +88,7 @@ export function animateFadeIn(
       duration,
       delay,
       ease: 'power2.out',
-      onComplete,
+      onComplete: onComplete || (() => {}),
     }
   );
 }
@@ -110,7 +116,7 @@ export function animateSlideUp(
       duration,
       delay,
       ease: 'power3.out',
-      onComplete,
+      onComplete: onComplete || (() => {}),
     }
   );
 }
@@ -138,7 +144,7 @@ export function animateScaleIn(
       duration,
       delay,
       ease: 'back.out(1.4)',
-      onComplete,
+      onComplete: onComplete || (() => {}),
     }
   );
 }
@@ -161,7 +167,7 @@ export function animateStagger(
   const { duration = 0.4, stagger = 0.05, delay = 0, direction = 'up', onComplete } = options;
 
   const fromVars: gsap.TweenVars = { opacity: 0 };
-  const toVars: gsap.TweenVars = { opacity: 1, duration, ease: 'power2.out', onComplete };
+  const toVars: gsap.TweenVars = { opacity: 1, duration, ease: 'power2.out', onComplete: onComplete || (() => {}) };
 
   if (direction === 'up') {
     fromVars.y = 20;

@@ -3,7 +3,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import {
   VoiceChatSession,
-  VoiceChatMode,
+  // VoiceChatMode,
   VoiceChatSettings,
   VoiceRecording,
 } from "@/types/chat";
@@ -36,7 +36,7 @@ export function useVoiceChat({
     lastActivity: new Date(),
   });
 
-  const turnTimeoutRef = useRef<NodeJS.Timeout>();
+  const turnTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { generateSpeech, isServiceAvailable: ttsAvailable } = useTTS();
 
   // Handle voice recording events
@@ -102,15 +102,17 @@ export function useVoiceChat({
           settings.mode === "voice_output"
         ) {
           try {
-            const audioResponse = await generateSpeech(responseText);
-            audioUrl = audioResponse.audioUrl;
+            const audioResponse = await generateSpeech(responseText || "");
+            if (audioResponse) {
+              audioUrl = audioResponse.audioUrl;
+            }
           } catch (ttsError) {
             console.warn("TTS generation failed:", ttsError);
             // Continue without audio
           }
         }
 
-        onAgentResponse?.(responseText, audioUrl);
+        onAgentResponse?.(responseText || "", audioUrl);
 
         // Set up turn timeout for auto-advancing to user turn
         turnTimeoutRef.current = setTimeout(() => {

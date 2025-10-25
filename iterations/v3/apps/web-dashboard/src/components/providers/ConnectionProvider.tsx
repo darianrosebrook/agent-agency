@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, ReactNode } from "react";
-import { useConnection, ConnectionStatus } from "@/hooks/useConnection";
+import { useDebouncedConnection, ConnectionStatus } from "@/hooks/useDebouncedConnection";
 
 interface ConnectionContextValue {
   connection: ConnectionStatus;
@@ -20,7 +20,7 @@ interface ConnectionProviderProps {
  * Enables progressive enhancement - features work offline with cached data
  */
 export function ConnectionProvider({ children, apiUrl = "/api/health" }: ConnectionProviderProps) {
-  const { connection, retryConnection } = useConnection(apiUrl);
+  const { connection, retryConnection } = useDebouncedConnection(apiUrl);
 
   return (
     <ConnectionContext.Provider value={{ connection, retryConnection }}>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useState } from "react";
 import { SSEClient } from "@/lib/sse/SSEClient";
 import {
   RealTimeMetricsStreamProps,
@@ -33,6 +33,12 @@ export default function RealTimeMetricsStream({
 }: RealTimeMetricsStreamProps) {
   const sseClientRef = useRef<SSEClient | null>(null);
   const enabledRef = useRef(enabled);
+  const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected' | 'error'>('disconnected');
+  const [lastUpdateTime, setLastUpdateTime] = useState<Date | null>(null);
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const reconnectAttempts = useRef(0);
+  const maxReconnectAttempts = 5;
+  const reconnectDelay = 1000; // Start with 1 second
 
   // Update enabled ref when prop changes
   useEffect(() => {
@@ -93,49 +99,76 @@ export default function RealTimeMetricsStream({
   const handleSSEError = useCallback(
     (error: Event) => {
       console.error("SSE connection error:", error);
+      setConnectionStatus('error');
       onError?.(error);
+      
+      // Attempt reconnection with exponential backoff
+      if (reconnectAttempts.current < maxReconnectAttempts) {
+        const delay = reconnectDelay * Math.pow(2, reconnectAttempts.current);
+        console.log(`Attempting reconnection in ${delay}ms (attempt ${reconnectAttempts.current + 1}/${maxReconnectAttempts})`);
+        
+        reconnectTimeoutRef.current = setTimeout(() => {
+          reconnectAttempts.current++;
+          initializeConnection();
+        }, delay);
+      } else {
+        console.error("Max reconnection attempts reached");
+        setConnectionStatus('disconnected');
+      }
     },
     [onError]
   );
 
   const handleSSEOpen = useCallback(() => {
     console.log("Metrics SSE connection opened");
+    setConnectionStatus('connected');
+    setLastUpdateTime(new Date());
+    reconnectAttempts.current = 0; // Reset on successful connection
   }, []);
 
   const handleSSEClose = useCallback(() => {
     console.log("Metrics SSE connection closed");
+    setConnectionStatus('disconnected');
   }, []);
 
-  // Initialize SSE connection to V3 backend
-  useEffect(() => {
-    if (!enabled) return;
+  // Initialize connection function
+  const initializeConnection = useCallback(() => {
+    if (!enabledRef.current) return;
 
     console.log("Connecting to V3 metrics stream...");
+    setConnectionStatus('connecting');
 
     // Connect to real V3 backend metrics stream
     const streamUrl = `${process.env.V3_BACKEND_HOST ?? 'http://localhost:8080'}/api/v1/metrics/stream`;
 
     sseClientRef.current = new SSEClient({
       url: streamUrl,
-      onMessage: handleMetricsEvent,
+      onMessage: (event) => {
+        handleMetricsEvent(event);
+        setLastUpdateTime(new Date());
+      },
       onError: handleSSEError,
       onOpen: handleSSEOpen,
       onClose: handleSSEClose,
     });
+  }, [handleMetricsEvent, handleSSEError, handleSSEOpen, handleSSEClose]);
+
+  // Initialize SSE connection to V3 backend
+  useEffect(() => {
+    if (!enabled) return;
+
+    initializeConnection();
 
     return () => {
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+      }
       if (sseClientRef.current) {
         sseClientRef.current.destroy();
         sseClientRef.current = null;
       }
     };
-  }, [
-    enabled,
-    handleMetricsEvent,
-    handleSSEError,
-    handleSSEOpen,
-    handleSSEClose,
-  ]);
+  }, [enabled, initializeConnection]);
 
   // Handle enabled/disabled changes
   useEffect(() => {
@@ -150,6 +183,10 @@ export default function RealTimeMetricsStream({
     }
   }, [enabled]);
 
-  // This component doesn't render anything visible - it's a data provider
-  return null;
+  // Return connection status for debugging and monitoring
+  return (
+    <div style={{ display: 'none' }} data-connection-status={connectionStatus} data-last-update={lastUpdateTime?.toISOString()}>
+      {/* Hidden status indicator for debugging */}
+    </div>
+  );
 }

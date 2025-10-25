@@ -7,7 +7,7 @@
  * Provides consistent layout and styling for all dashboard cards.
  */
 
-import React, { ReactNode } from "react";
+import { ReactNode } from "react";
 import Card from "@/components/ui/Card";
 import { Text } from "../../primitives/Text";
 
@@ -46,19 +46,19 @@ export function DashboardCard({
   return (
     <Card
       className={className}
-      onClick={onClick}
-      style={{
-        background: "var(--color-background-primary)",
-        border: "0.5px solid var(--color-border-default)",
-        borderRadius: "14px",
-        padding: "var(--spacing-8)",
-        display: "flex",
-        flexDirection: "column",
-        gap: "var(--spacing-6)",
-        minHeight: "200px",
-        contain: "layout style",
-        position: "relative",
-      }}
+      onClick={onClick || (() => {})}
+      // style={{
+      //   background: "var(--color-background-primary)",
+      //   border: "0.5px solid var(--color-border-default)",
+      //   borderRadius: "14px",
+      //   padding: "var(--spacing-8)",
+      //   display: "flex",
+      //   flexDirection: "column",
+      //   gap: "var(--spacing-6)",
+      //   minHeight: "200px",
+      //   contain: "layout style",
+      //   position: "relative",
+      // }}
     >
       {/* Header */}
       <div style={{ 

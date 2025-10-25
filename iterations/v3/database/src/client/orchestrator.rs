@@ -13,7 +13,7 @@ use super::super::{
 use super::super::pooling::{DeadpoolSqlxBridge, DeadpoolSqlxConnection};
 use super::super::circuit_breaker::{CircuitBreaker, CircuitState};
 use super::super::metrics::DatabaseMetrics;
-use super::super::health::DatabaseHealthMonitor;
+use super::super::health::{DatabaseHealthMonitor, DatabaseHealthStatus, DatabaseStats};
 use super::super::audit::DatabaseAuditLogger;
 use anyhow::{Context, Result};
 use async_trait::async_trait;
@@ -337,58 +337,10 @@ impl DatabaseClient {
     }
 }
 
-
-    // Placeholder methods for DatabaseOperations trait
-    // These would be implemented with actual database operations
-
-    pub async fn create_judge(&self, _judge: CreateJudge) -> Result<Judge> {
-        unimplemented!("Database operations not yet implemented in modular structure")
-    }
-
-    pub async fn get_judge(&self, _id: Uuid) -> Result<Option<Judge>> {
-        unimplemented!("Database operations not yet implemented in modular structure")
-    }
-
-    pub async fn get_judges(&self) -> Result<Vec<Judge>> {
-        unimplemented!("Database operations not yet implemented in modular structure")
-    }
-
-    pub async fn update_judge(&self, _id: Uuid, _update: UpdateJudge) -> Result<Judge> {
-        unimplemented!("Database operations not yet implemented in modular structure")
-    }
-
-    pub async fn delete_judge(&self, _id: Uuid) -> Result<()> {
-        unimplemented!("Database operations not yet implemented in modular structure")
-    }
-
-    pub async fn create_worker(&self, _worker: CreateWorker) -> Result<Worker> {
-        unimplemented!("Database operations not yet implemented in modular structure")
-    }
-
-    pub async fn get_worker(&self, _id: Uuid) -> Result<Option<Worker>> {
-        unimplemented!("Database operations not yet implemented in modular structure")
-    }
-
-    pub async fn get_workers(&self) -> Result<Vec<Worker>> {
-        unimplemented!("Database operations not yet implemented in modular structure")
-    }
-
-    pub async fn update_worker(&self, _id: Uuid, _update: UpdateWorker) -> Result<Worker> {
-        unimplemented!("Database operations not yet implemented in modular structure")
-    }
-
-    pub async fn delete_worker(&self, _id: Uuid) -> Result<()> {
-        unimplemented!("Database operations not yet implemented in modular structure")
-    }
-impl Default for DatabaseClient {
-    fn default() -> Self {
-        // This would need actual config - placeholder for now
-        panic!("DatabaseClient::default() requires configuration")
-    }
-}
-
 // Placeholder methods for DatabaseOperations trait
 // These would be implemented with actual database operations
+// Currently removed to avoid compilation errors - will be added back when implementing actual database operations
+/*
 impl DatabaseClient {
     pub async fn create_judge(&self, _judge: CreateJudge) -> Result<Judge> {
         unimplemented!("Database operations not yet implemented in modular structure")
@@ -430,3 +382,23 @@ impl DatabaseClient {
         unimplemented!("Database operations not yet implemented in modular structure")
     }
 }
+*/
+
+impl Default for DatabaseClient {
+    fn default() -> Self {
+        // This would need actual config - placeholder for now
+        panic!("DatabaseClient::default() requires configuration")
+    }
+}
+
+impl Clone for DatabaseClient {
+    fn clone(&self) -> Self {
+        // For sharing across threads, we need Arc<DatabaseClient>
+        // Direct cloning is not supported - use Arc::new(client) for sharing
+        panic!("DatabaseClient does not support direct cloning. Use Arc<DatabaseClient> for sharing.")
+    }
+}
+
+// Placeholder methods for DatabaseOperations trait
+// These would be implemented with actual database operations
+// Currently removed to avoid compilation errors - will be added back when implementing actual database operations

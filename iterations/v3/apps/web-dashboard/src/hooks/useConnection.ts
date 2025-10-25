@@ -34,8 +34,20 @@ export function useConnection(apiUrl: string = "/api/health"): UseConnectionRetu
     error: "",
   });
 
+  // Debounce mechanism to prevent rapid successive calls
+  const [lastCheckTime, setLastCheckTime] = useState<number>(0);
+  const DEBOUNCE_DELAY = 2000; // 2 seconds minimum between checks
+
   const checkConnection = useCallback(async () => {
-      setConnection(prev => ({ ...prev, state: "checking", error: "" }));
+    const now = Date.now();
+    
+    // Debounce: don't check if we've checked recently
+    if (now - lastCheckTime < DEBOUNCE_DELAY) {
+      return;
+    }
+    
+    setLastCheckTime(now);
+    setConnection(_prev => ({ ..._prev, state: "checking", error: "" }));
 
     try {
       const controller = new AbortController();
@@ -52,7 +64,7 @@ export function useConnection(apiUrl: string = "/api/health"): UseConnectionRetu
       clearTimeout(timeoutId);
 
       const isAvailable = response.ok;
-      setConnection(prev => ({
+      setConnection(_prev => ({
         state: isAvailable ? "online" : "degraded",
         apiAvailable: isAvailable,
         lastChecked: new Date(),
@@ -64,39 +76,62 @@ export function useConnection(apiUrl: string = "/api/health"): UseConnectionRetu
       const isNetworkError = error instanceof TypeError && error.message.includes("fetch");
       const isAbortError = error instanceof Error && error.name === "AbortError";
 
-      setConnection(prev => ({
+      setConnection(_prev => ({
         state: isAbortError ? "degraded" : "offline",
         apiAvailable: false,
         lastChecked: new Date(),
-        retryCount: prev.retryCount + 1,
+        retryCount: _prev.retryCount + 1,
         error: isNetworkError ? "Network unavailable" :
                isAbortError ? "Request timeout" :
                error instanceof Error ? error.message : "Unknown error",
       }));
     }
-  }, [apiUrl]);
+  }, [apiUrl, lastCheckTime]);
 
   const retryConnection = useCallback(async () => {
     await checkConnection();
   }, [checkConnection]);
 
-  // Auto-check connection on mount and periodically
+  // Auto-check connection on mount and periodically with proper debouncing
   useEffect(() => {
+    let intervalId: NodeJS.Timeout;
+    let timeoutId: NodeJS.Timeout;
+    
+    // Initial check
     checkConnection();
-
-    // Check every 30 seconds when online, every 10 seconds when offline
-    const interval = setInterval(() => {
-      checkConnection();
-    }, connection.state === "online" ? 30000 : 10000);
-
-    return () => clearInterval(interval);
-  }, [checkConnection, connection.state]);
+    
+    // Debounced interval setup
+    const setupInterval = () => {
+      // Clear any existing interval
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+      
+      // Set up new interval based on connection state
+      const interval = connection.state === "online" ? 30000 : 10000;
+      intervalId = setInterval(() => {
+        checkConnection();
+      }, interval);
+    };
+    
+    // Debounce interval setup to prevent rapid recreation
+    timeoutId = setTimeout(setupInterval, 100);
+    
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [connection.state, checkConnection]);
 
   // Listen for online/offline events
   useEffect(() => {
     const handleOnline = () => checkConnection();
     const handleOffline = () => {
-      setConnection(prev => ({ ...prev, state: "offline", apiAvailable: false }));
+      setConnection(_prev => ({ ..._prev, state: "offline", apiAvailable: false }));
     };
 
     window.addEventListener("online", handleOnline);

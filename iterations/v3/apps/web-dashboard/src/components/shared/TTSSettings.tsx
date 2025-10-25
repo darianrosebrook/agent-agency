@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+// import React from "react";
 import { TTSVoice, TTSSettings } from "@/types/tts";
 import styles from "./TTSSettings.module.scss";
 

@@ -21,7 +21,7 @@ export interface UseScrollAnimationOptions {
 }
 
 export interface UseScrollAnimationReturn<T extends HTMLElement = HTMLElement> {
-  ref: React.RefObject<T>;
+  ref: React.RefObject<T | null>;
   isVisible: boolean;
   hasAnimated: boolean;
 }
@@ -45,7 +45,7 @@ export function useScrollAnimation<T extends HTMLElement = HTMLElement>(
 
   const [isVisible, setIsVisible] = useState(false);
   const [hasAnimated, setHasAnimated] = useState(false);
-  const ref = useRef<T>(null);
+  const ref = useRef<T | null>(null);
   const tweenRef = useRef<gsap.core.Tween | null>(null);
 
   useEffect(() => {

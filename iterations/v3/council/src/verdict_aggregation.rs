@@ -346,7 +346,7 @@ impl VerdictAggregator {
                 // Constitutional judges handle CAWS compliance and governance
                 if task_description.contains("compliance") || task_description.contains("constitutional") ||
                    task_description.contains("caws") || task_description.contains("governance") ||
-                   context.risk_tier == agent_agency_contracts::task_request::RiskTier::Tier1 {
+                   matches!(context.risk_tier, crate::types::RiskTier::Tier1) {
                     score += 0.4; // High priority for compliance and high-risk tasks
                 }
             },
@@ -379,22 +379,41 @@ impl VerdictAggregator {
                 }
             },
             crate::judge::JudgeType::Compliance => {
-                if context.risk_tier == agent_agency_contracts::task_request::RiskTier::Tier1 {
+                if matches!(context.risk_tier, crate::types::RiskTier::Tier1) {
                     score += 0.4; // High compliance needs for T1 tasks
                 }
             },
             crate::judge::JudgeType::DomainExpert => {
                 // Domain experts get higher scores for complex tasks
-                if context.working_spec.risk_tier > 1 {
+                let risk_level = match context.working_spec.risk_tier {
+                    crate::types::RiskTier::Tier1 => 1,
+                    crate::types::RiskTier::Tier2 => 2,
+                    crate::types::RiskTier::Tier3 => 3,
+                };
+                if risk_level > 1 {
                     score += 0.2;
                 }
             },
             crate::judge::JudgeType::Ethics => {
                 // Ethics judges prioritize high-risk, sensitive tasks
-                if context.risk_tier == agent_agency_contracts::task_request::RiskTier::Tier1 ||
+                if matches!(context.risk_tier, crate::types::RiskTier::Tier1) ||
                    task_description.contains("privacy") || task_description.contains("ethics") ||
                    task_description.contains("bias") || task_description.contains("fair") {
                     score += 0.4;
+                }
+            },
+            crate::judge::JudgeType::Technical => {
+                // Technical judges handle implementation and architecture
+                if task_description.contains("technical") || task_description.contains("implementation") ||
+                   task_description.contains("architecture") {
+                    score += 0.3;
+                }
+            },
+            crate::judge::JudgeType::Quality => {
+                // Quality judges focus on code quality and standards
+                if task_description.contains("quality") || task_description.contains("standards") ||
+                   task_description.contains("code") {
+                    score += 0.25;
                 }
             },
         }
@@ -631,9 +650,9 @@ impl VerdictAggregator {
         for contribution in contributions {
             if let JudgeVerdict::Approve { risk_assessment, .. } = &contribution.verdict {
                 risk_factors.extend(risk_assessment.risk_factors.clone());
-                mitigation_suggestions.extend(risk_assessment.mitigation_suggestions.clone());
+                mitigation_suggestions.extend(risk_assessment.mitigation_strategies.clone());
                 risk_levels.push(risk_assessment.overall_risk);
-                total_confidence += risk_assessment.confidence * contribution.weight;
+                total_confidence += risk_assessment.confidence_score * contribution.weight;
                 total_weight += contribution.weight;
             }
         }
@@ -660,15 +679,43 @@ impl VerdictAggregator {
             },
         };
 
-        // Remove duplicates
-        risk_factors.sort();
-        risk_factors.dedup();
+        // Remove duplicates and sort by severity
+        risk_factors.sort_by(|a, b| {
+            // Sort by severity first (higher severity first)
+            let severity_cmp = match (a.severity, b.severity) {
+                (crate::judge::RiskSeverity::Critical, _) => std::cmp::Ordering::Greater,
+                (_, crate::judge::RiskSeverity::Critical) => std::cmp::Ordering::Less,
+                (crate::judge::RiskSeverity::High, _) => std::cmp::Ordering::Greater,
+                (_, crate::judge::RiskSeverity::High) => std::cmp::Ordering::Less,
+                (crate::judge::RiskSeverity::Medium, _) => std::cmp::Ordering::Greater,
+                (_, crate::judge::RiskSeverity::Medium) => std::cmp::Ordering::Less,
+                _ => std::cmp::Ordering::Equal,
+            };
+
+            if severity_cmp != std::cmp::Ordering::Equal {
+                return severity_cmp;
+            }
+
+            // Then by impact (higher impact first)
+            b.impact.partial_cmp(&a.impact).unwrap_or(std::cmp::Ordering::Equal)
+        });
+        // Remove duplicates by keeping unique combinations (compare non-f64 fields)
+        let mut unique_factors = Vec::new();
+        for factor in risk_factors {
+            if !unique_factors.iter().any(|f: &crate::judge::RiskFactor|
+                f.factor_type == factor.factor_type &&
+                f.severity == factor.severity &&
+                f.description == factor.description) {
+                unique_factors.push(factor);
+            }
+        }
+        risk_factors = unique_factors;
         mitigation_suggestions.sort();
         mitigation_suggestions.dedup();
 
         AggregatedRiskAssessment {
             overall_risk,
-            risk_factors,
+            risk_factors: risk_factors.into_iter().map(|rf| rf.description).collect(),
             mitigation_suggestions,
             confidence: if total_weight > 0.0 { total_confidence / total_weight } else { 0.5 },
         }
@@ -793,12 +840,8 @@ impl VerdictAggregator {
         for contribution in contributions {
             if let JudgeVerdict::Reject { critical_issues, .. } = &contribution.verdict {
                 for issue in critical_issues {
-                    let summary = format!("{:?} ({:?}): {}", 
-                        issue.category, 
-                        issue.severity, 
-                        issue.description);
-                    if !issues.contains(&summary) {
-                        issues.push(summary);
+                    if !issues.contains(issue) {
+                        issues.push(issue.clone());
                     }
                 }
             }
@@ -834,7 +877,12 @@ impl VerdictAggregator {
 
         for (i, contribution) in contributions.iter().enumerate() {
             if i < risk_scores.len() {
-                let confidence_weight = contribution.weight * contribution.verdict.confidence();
+                let confidence = match &contribution.verdict {
+                    JudgeVerdict::Approve { confidence, .. } => *confidence,
+                    JudgeVerdict::Refine { confidence, .. } => *confidence,
+                    JudgeVerdict::Reject { confidence, .. } => *confidence,
+                };
+                let confidence_weight = contribution.weight * confidence;
                 weighted_sum += risk_scores[i] * confidence_weight;
                 total_confidence_weight += confidence_weight;
             }

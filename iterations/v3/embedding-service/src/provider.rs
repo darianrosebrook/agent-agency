@@ -83,16 +83,18 @@ impl EmbeddingProvider for OllamaEmbeddingProvider {
                 .as_array()
                 .ok_or_else(|| anyhow::anyhow!("Invalid embedding response format"))?;
 
-            let embedding: EmbeddingVector = embedding_data
+            let embedding_values: Vec<f32> = embedding_data
                 .iter()
                 .map(|v| v.as_f64().unwrap_or(0.0) as f32)
                 .collect();
 
-            if embedding.len() != self.dimension {
+            let embedding = EmbeddingVector::from_values(embedding_values);
+
+            if embedding.values.len() != self.dimension {
                 return Err(anyhow::anyhow!(
                     "Expected embedding dimension {}, got {}",
                     self.dimension,
-                    embedding.len()
+                    embedding.values.len()
                 ));
             }
 
@@ -148,13 +150,15 @@ impl EmbeddingProvider for DummyEmbeddingProvider {
                 let hash = hasher.finish();
 
                 // Generate deterministic vector from hash
-                (0..self.dimension)
+                let values: Vec<f32> = (0..self.dimension)
                     .map(|i| {
                         let seed = hash.wrapping_add(i as u64);
                         let normalized = (seed % 1000) as f32 / 1000.0;
                         normalized * 2.0 - 1.0 // Scale to [-1, 1]
                     })
-                    .collect()
+                    .collect();
+
+                EmbeddingVector::new(values, "dummy".to_string())
             })
             .collect();
 
@@ -315,7 +319,7 @@ impl OnnxEmbeddingProvider {
                 *val /= norm;
             }
 
-            embeddings.push(embedding);
+            embeddings.push(EmbeddingVector::from_values(embedding));
         }
 
         Ok(embeddings)
@@ -494,13 +498,15 @@ impl ClipEmbeddingProvider {
                 std::hash::Hash::hash(text, &mut hasher);
                 let hash = hasher.finish();
 
-                (0..self.dimension)
+                let values: Vec<f32> = (0..self.dimension)
                     .map(|i| {
                         let seed = hash.wrapping_add(i as u64);
                         let normalized = (seed % 1000) as f32 / 1000.0;
                         normalized * 2.0 - 1.0 // Scale to [-1, 1]
                     })
-                    .collect::<EmbeddingVector>()
+                    .collect();
+
+                EmbeddingVector::new(values, "dummy".to_string())
             })
             .collect();
 

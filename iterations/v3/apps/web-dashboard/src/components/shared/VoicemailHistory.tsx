@@ -55,6 +55,7 @@ export default function VoicemailHistory({
         clearTimeout(timer3);
       };
     }
+    return undefined;
   }, [voicemails.length]);
 
   const getPriorityBadge = (priority: NotificationAlert["priority"]) => {

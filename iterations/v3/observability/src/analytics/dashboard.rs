@@ -10,16 +10,26 @@ use cadence::{StatsdClient, QueuingMetricSink, BufferedUdpMetricSink, UdpMetricS
 use super::data::{AnalyticsDashboardData, AnalyticsInsight};
 use super::metrics::CachePerformanceMetrics;
 use crate::errors::ObservabilityError;
-use std::sync::Arc;
+use agent_agency_database::DatabaseClient;
 
 // Temporary placeholder types
 #[derive(Debug, Clone)]
 pub struct AnalyticsEngine;
 #[derive(Debug, Clone)]
-pub struct AnalyticsDashboardConfig;
+pub struct AnalyticsDashboardConfig {
+    pub enable_real_time_updates: bool,
+}
+
+impl Default for AnalyticsDashboardConfig {
+    fn default() -> Self {
+        Self {
+            enable_real_time_updates: false,
+        }
+    }
+}
 #[derive(Debug, Clone)]
 pub struct AnalyticsSession;
-pub trait RedisClient {}
+pub trait RedisClient: std::fmt::Debug {}
 
 /// Advanced analytics dashboard service
 #[derive(Debug)]
@@ -33,7 +43,7 @@ pub struct AnalyticsDashboard {
     /// Dashboard sessions
     sessions: Arc<RwLock<HashMap<String, AnalyticsSession>>>,
     /// Database client for persistent caching
-    db_client: Option<crate::DatabaseClient>,
+    db_client: Option<DatabaseClient>,
     /// Redis client for distributed caching
     redis_client: Option<Arc<dyn RedisClient + Send + Sync>>,
     /// HTTP client for external metrics collection (Prometheus, etc.)
@@ -72,7 +82,7 @@ impl AnalyticsDashboard {
     pub fn with_database_client(
         analytics_engine: Arc<AnalyticsEngine>,
         config: AnalyticsDashboardConfig,
-        db_client: crate::DatabaseClient,
+        db_client: DatabaseClient,
     ) -> Self {
         Self {
             analytics_engine,

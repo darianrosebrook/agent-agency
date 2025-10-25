@@ -24,7 +24,7 @@ export function useVoiceRecording({
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
-  const animationFrameRef = useRef<number>();
+  const animationFrameRef = useRef<number | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const startTimeRef = useRef<number>(0);
 
@@ -76,7 +76,7 @@ export function useVoiceRecording({
       // - Implement audio level calibration and device compensation
       let sum = 0;
       for (let i = 0; i < bufferLength; i++) {
-        sum += dataArray[i] * dataArray[i];
+        sum += (dataArray[i] || 0) * (dataArray[i] || 0);
       }
       const rms = Math.sqrt(sum / bufferLength);
       const normalizedLevel = Math.min(rms / 128, 1); // Normalize to 0-1
@@ -111,6 +111,9 @@ export function useVoiceRecording({
       analyserRef.current = analyser;
 
       // Set up MediaRecorder
+      if (!streamRef.current) {
+        throw new Error("No media stream available");
+      }
       const mediaRecorder = new MediaRecorder(streamRef.current, {
         mimeType: "audio/webm;codecs=opus",
       });

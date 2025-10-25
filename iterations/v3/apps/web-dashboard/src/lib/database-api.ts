@@ -61,7 +61,7 @@ class _DatabaseApiClient {
     try {
       if (!connectionId) {
         throw new DatabaseApiError(
-          "validation_error",
+          "invalid_query",
           "connectionId is required for table listing",
           false
         );
@@ -163,7 +163,7 @@ class _DatabaseApiClient {
     } catch (error) {
       console.error("Failed to perform vector search:", error);
       throw new DatabaseApiError(
-        "search_failed",
+        "query_failed",
         "Failed to perform vector similarity search",
         true,
         error instanceof Error ? error.message : "Unknown error"

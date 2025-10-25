@@ -29,3 +29,5 @@ pub trait Judge: Send + Sync + std::fmt::Debug {
     /// Get judge health metrics
     fn health_metrics(&self) -> JudgeHealthMetrics;
 }
+
+

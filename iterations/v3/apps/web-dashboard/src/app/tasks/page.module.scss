@@ -1,10 +1,13 @@
-// Tasks Page Styles - FlowPress Design System
+// Tasks Page Styles - Enhanced FlowPress Design System
+// Optimized for performance and smooth animations
 
 .container {
   max-width: 1400px;
   margin: 0 auto;
   padding: var(--spacing-8) var(--spacing-6);
   contain: layout style;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  min-height: 100vh;
 
   @media (max-width: 768px) {
     padding: var(--spacing-6) var(--spacing-4);
@@ -14,6 +17,16 @@
 .header {
   margin-bottom: var(--spacing-8);
   contain: layout style;
+  padding: var(--spacing-6);
+  background: white;
+  border-radius: var(--border-radius-lg);
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  transition: all 0.3s ease;
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  }
   
   .headerContent {
     display: flex;
@@ -68,19 +81,33 @@
   font-weight: 500;
   border-radius: var(--border-radius-lg);
   border: 1px solid var(--color-border-default);
-  background-color: var(--color-background-primary);
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
   color: var(--color-text-primary);
   cursor: pointer;
-  transition:
-    transform var(--transition-duration-base) var(--transition-easing-out),
-    box-shadow var(--transition-duration-base) var(--transition-easing-out),
-    border-color var(--transition-duration-base) var(--transition-easing-out),
-    background-color var(--transition-duration-base) var(--transition-easing-out);
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+    transition: left 0.5s;
+  }
   
   &:hover:not(:disabled) {
-    transform: translateY(-1px);
-    box-shadow: var(--box-shadow-sm);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     border-color: var(--color-brand-accent);
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    
+    &::before {
+      left: 100%;
+    }
   }
   
   &:active:not(:disabled) {

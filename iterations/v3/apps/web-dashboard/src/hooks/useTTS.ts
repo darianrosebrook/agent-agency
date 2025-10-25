@@ -159,7 +159,7 @@ export function useAudioPlayback() {
   const playAudio = useCallback(
     async (audioUrl: string) => {
       try {
-        setState((prev) => ({ ...prev, isLoading: true, error: undefined }));
+        setState((prev) => ({ ...prev, isLoading: true, error: "" }));
 
         if (audioRef.current) {
           audioRef.current.pause();
@@ -197,7 +197,7 @@ export function useAudioPlayback() {
           }));
         });
 
-        audio.addEventListener("error", (e) => {
+        audio.addEventListener("error", (_e) => {
           setState((prev) => ({
             ...prev,
             isPlaying: false,

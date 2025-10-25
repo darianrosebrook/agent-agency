@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
 import React from "react";
 import { ConnectionProvider } from "@/components/providers/ConnectionProvider";
+import ToastProvider from "@/components/providers/ToastProvider";
+import ServiceWorker from "@/components/ServiceWorker";
 import "../styles/globals.css";
 import "../styles/container-queries.css";
 import "../styles/reflow-prevention.scss";
 import "../styles/patterns.scss";
+import "../styles/fonts.css";
 
 export const metadata: Metadata = {
   title: "Agent Agency V3 Dashboard",
@@ -77,11 +80,14 @@ export default function RootLayout({
         <meta name="theme-color" content="#191919" />
         <link rel="manifest" href="/manifest.json" />
       </head>
-      <body className="antialiased">
-        <ConnectionProvider>
-          {children}
-        </ConnectionProvider>
-      </body>
+        <body className="antialiased">
+          <ConnectionProvider>
+            <ToastProvider>
+              {children}
+            </ToastProvider>
+          </ConnectionProvider>
+          <ServiceWorker />
+        </body>
     </html>
   );
 }

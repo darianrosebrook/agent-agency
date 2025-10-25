@@ -1,5 +1,5 @@
 === Duplication Detection Report ===
-Generated: Fri Oct 24 21:39:00 PDT 2025
+Generated: Sat Oct 25 10:53:01 PDT 2025
 
 Duplicate filenames across crates:
 agent.rs
@@ -817,26 +817,3 @@ WorkspaceStateManager {
 ZeroKnowledgeProof {
 
 Duplicate trait names:
-ArgumentGenerator: Send + Sync {
-ArtifactStorage: Send + Sync {
-Converter: Send + Sync {
-CoreMlInvoker {
-EmbeddingProvider: Send + Sync {
-Evaluator: Send + Sync {
-HealthCheck: Send + Sync {
-InferenceEngine: Send + Sync {
-IntoANEError {
-Judge {
-JudgeEvaluator: Send + Sync {
-KnowledgeBase {
-LearningAlgorithm: Send + Sync {
-MessageHandler: Send + Sync {
-MetaLearningAlgorithm: Send + Sync {
-MetricsBackend: Send + Sync {
-ModelProvider: Send + Sync {
-OrchestratorHandle: Send + Sync {
-PreparedModel: Send + Sync {
-ResearchAgent: Send + Sync {
-SourceIntegrityStorage: Send + Sync {
-Worker {
-Workspace: Send + Sync {

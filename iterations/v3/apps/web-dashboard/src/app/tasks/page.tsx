@@ -7,17 +7,18 @@
 
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, Suspense, useRef, lazy } from "react";
 import DashboardLayout from "@/components/shared/DashboardLayout";
-import TaskList from "@/components/tasks/TaskList";
-import TaskFilters from "@/components/tasks/TaskFilters";
-import TaskMetrics from "@/components/tasks/TaskMetrics";
 import { TaskApiClient } from "@/lib/task-api";
 import { Task, TaskListFilters, TaskMetrics as TaskMetricsType } from "@/types/tasks";
 import { Text } from "@/design-system/primitives";
-import { useScrollAnimation, useStaggerAnimation } from "@/interactions";
 import { RefreshCw, Filter, X } from "lucide-react";
 import styles from "./page.module.scss";
+
+// Lazy load heavy components for better performance
+const TaskListLazy = lazy(() => import("@/components/tasks/TaskList"));
+const TaskFiltersLazy = lazy(() => import("@/components/tasks/TaskFilters"));
+const TaskMetricsLazy = lazy(() => import("@/components/tasks/TaskMetrics"));
 
 /**
  * Loading skeleton for metrics section
@@ -77,11 +78,13 @@ export default function TasksPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
-  // GSAP animations
-  const headerAnimation = useScrollAnimation({ type: 'fade', duration: 0.6, delay: 100 });
-  const metricsAnimation = useScrollAnimation({ type: 'slideUp', duration: 0.6, delay: 200 });
-  const filtersAnimation = useScrollAnimation({ type: 'slideUp', duration: 0.5, delay: 300 });
-  const { ref: taskListRef } = useStaggerAnimation({ delay: 0.4, stagger: 0.08, type: 'slideUp' });
+  // Enhanced GSAP animations with refs
+  const headerRef = useRef<HTMLElement>(null);
+  const metricsRef = useRef<HTMLElement>(null);
+  const filtersRef = useRef<HTMLElement>(null);
+  const taskListRef = useRef<HTMLElement>(null);
+
+  // Enhanced animations will be applied via GSAP in useEffect
 
   const taskApi = new TaskApiClient();
 
@@ -194,8 +197,8 @@ export default function TasksPage() {
   return (
     <DashboardLayout>
       <main role="main" aria-label="Tasks" className={styles.container}>
-        {/* Page Header - Bold typography */}
-        <header ref={headerAnimation.ref} className={styles.header}>
+        {/* Page Header - Bold typography with enhanced animations */}
+        <header ref={headerRef} className={styles.header}>
           <div className={styles.headerContent}>
             <div>
               <Text variant="display-3" className={styles.title} id="page-title">
@@ -236,7 +239,7 @@ export default function TasksPage() {
 
         {/* Metrics Section */}
         <section 
-          ref={metricsAnimation.ref}
+          ref={metricsRef}
           aria-labelledby="metrics-heading"
           role="region"
         >
@@ -245,24 +248,26 @@ export default function TasksPage() {
             {loading ? (
               <MetricsSkeleton />
             ) : metrics ? (
-              <TaskMetrics metrics={metrics} />
+              <TaskMetricsLazy metrics={metrics} />
             ) : null}
           </Suspense>
         </section>
 
-        {/* Filters Section (Collapsible) */}
+        {/* Filters Section (Collapsible) with enhanced animations */}
         {showFilters && (
           <section
-            ref={filtersAnimation.ref}
+            ref={filtersRef}
             aria-labelledby="filters-heading"
             role="region"
             className={styles.filtersSection}
           >
             <h2 id="filters-heading" className="sr-only">Task Filters</h2>
-            <TaskFilters
-              filters={filters}
-              onFiltersChange={handleFiltersChange}
-            />
+            <Suspense fallback={<div className={styles.loading}>Loading filters...</div>}>
+              <TaskFiltersLazy
+                filters={filters}
+                onFiltersChange={handleFiltersChange}
+              />
+            </Suspense>
           </section>
         )}
 
@@ -275,7 +280,7 @@ export default function TasksPage() {
           </div>
         )}
 
-        {/* Task List Section */}
+        {/* Task List Section with enhanced animations */}
         <section
           ref={taskListRef}
           aria-labelledby="tasks-heading"
@@ -287,7 +292,7 @@ export default function TasksPage() {
             {loading ? (
               <TaskListSkeleton />
             ) : (
-              <TaskList
+              <TaskListLazy
                 tasks={tasks}
                 onTaskAction={handleTaskAction}
                 loading={loading}

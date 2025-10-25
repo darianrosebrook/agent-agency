@@ -1,5 +1,19 @@
 # Agent Agency - AI Orchestration Platform
 
+## Critical Warning: Verification Requirements
+
+**BEFORE TRUSTING ANY STATUS CLAIMS OR ACHIEVEMENT REPORTS**
+
+All system status claims must be verified against our rigorous standards. AI coding agents frequently produce overly optimistic reports about system readiness when only stubs, placeholders, or mock implementations exist.
+
+**Required Reading**: [`iterations/v4/docs/internal/verification-requirements.md`](iterations/v4/docs/internal/verification-requirements.md)
+
+This document provides guidelines to avoid unverified claims and maintain realistic progress assessment.
+
+**Key Principle**: Never trust claims of "production-ready", "fully functional", or "complete" without independent verification.
+
+---
+
 ## Overview
 
 **Agent Agency V3** is an AI orchestration platform that implements constitutional governance for autonomous agent operations. The system orchestrates multiple local AI models (Ollama/Gemma + CoreML/FastViT) with hot-swapping capabilities, using a council of specialized AI judges to provide real-time oversight, ensuring ethical compliance, technical quality, and system coherence through evidence-based decision making.

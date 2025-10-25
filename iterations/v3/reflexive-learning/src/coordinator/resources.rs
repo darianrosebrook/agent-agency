@@ -216,3 +216,5 @@ pub enum Trend {
     Stable,
     Degrading,
 }
+
+

@@ -1,3 +1,5 @@
+'use client';
+
 // src/design-system/primitives/Checkbox/Checkbox.tsx
 import React, { useState } from "react";
 

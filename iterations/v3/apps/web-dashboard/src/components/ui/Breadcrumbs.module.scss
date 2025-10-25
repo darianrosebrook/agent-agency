@@ -1,0 +1,88 @@
+/**
+ * Breadcrumb Navigation Styles
+ * 
+ * @author @darianrosebrook
+ */
+
+.breadcrumbs {
+  padding: var(--spacing-3) 0;
+  border-bottom: 1px solid var(--color-border-default);
+  background: var(--color-background-primary);
+}
+
+.breadcrumbList {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  flex-wrap: wrap;
+}
+
+.breadcrumbItem {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1);
+}
+
+.separator {
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
+}
+
+.breadcrumbLink {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1);
+  padding: var(--spacing-1) var(--spacing-2);
+  border-radius: var(--border-radius-sm);
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background: var(--color-background-secondary);
+    color: var(--color-text-primary);
+  }
+  
+  &:focus-visible {
+    outline: 2px solid var(--color-border-focus);
+    outline-offset: 2px;
+  }
+}
+
+.currentItem {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1);
+  padding: var(--spacing-1) var(--spacing-2);
+  color: var(--color-text-primary);
+  font-weight: 500;
+}
+
+.homeIcon {
+  color: var(--color-brand-primary);
+  flex-shrink: 0;
+}
+
+// Responsive design
+@media (max-width: 768px) {
+  .breadcrumbs {
+    padding: var(--spacing-2) 0;
+  }
+  
+  .breadcrumbList {
+    gap: var(--spacing-1);
+  }
+  
+  .breadcrumbItem {
+    gap: var(--spacing-1);
+  }
+  
+  .breadcrumbLink,
+  .currentItem {
+    padding: var(--spacing-1);
+    font-size: 0.875rem;
+  }
+}

@@ -12,6 +12,7 @@
 import { ReactNode } from 'react';
 import Header from './Header';
 import Navigation from './Navigation';
+import Breadcrumbs from '@/components/ui/Breadcrumbs';
 import styles from '@/app/page.module.scss';
 
 interface DashboardLayoutProps {
@@ -27,8 +28,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       </a>
       <main role="main" aria-label="Dashboard" className={styles.mainContent}>
         <Header />
-        <Navigation /> 
-          {children} 
+        <Navigation />
+        <Breadcrumbs />
+        {children} 
       </main>
     </section>
   );

@@ -9,20 +9,22 @@
 
 'use client';
 
-import { Suspense, useEffect, useRef } from 'react';
+import { Suspense, useEffect, useRef, lazy } from 'react';
 import { gsap } from 'gsap';
 import DashboardLayout from '@/components/shared/DashboardLayout';
 import ConnectionBanner from '@/components/shared/ConnectionBanner';
-import MetricsSection from '@/components/shared/MetricsSection';
-import QuickActions from '@/components/shared/QuickActions';
-import SystemStatusCard from '@/components/shared/SystemStatusCard';
-import RecentTasksCard from '@/components/shared/RecentTasksCard';
-import SLODashboard from '@/components/monitoring/SLODashboard';
-import SLOAlertsDashboard from '@/components/monitoring/SLOAlertsDashboard';
 import { OnlineOnly } from '@/components/providers/ConnectionProvider';
 import { Text } from '@/design-system/primitives';
 import { useStaggerAnimation } from '@/interactions';
 import styles from './page.module.scss';
+
+// Lazy load heavy components for better performance
+const MetricsSection = lazy(() => import('@/components/shared/MetricsSection'));
+const QuickActions = lazy(() => import('@/components/shared/QuickActions'));
+const SystemStatusCard = lazy(() => import('@/components/shared/SystemStatusCard'));
+const RecentTasksCard = lazy(() => import('@/components/shared/RecentTasksCard'));
+const SLODashboard = lazy(() => import('@/components/monitoring/SLODashboard'));
+const SLOAlertsDashboard = lazy(() => import('@/components/monitoring/SLOAlertsDashboard'));
 
 // Development utilities (tree-shaken in production)
 if (process.env.NODE_ENV === 'development') {

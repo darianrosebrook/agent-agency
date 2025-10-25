@@ -9,7 +9,7 @@ use tokio::sync::RwLock;
 
 /// Redis client trait for cache operations
 #[async_trait::async_trait]
-pub trait RedisClient: Send + Sync {
+pub trait RedisClient: Send + Sync + std::fmt::Debug {
     async fn get(&self, key: &str) -> Result<Option<Vec<u8>>>;
     async fn set(&self, key: &str, value: &[u8], ttl_seconds: u64) -> Result<()>;
     async fn del(&self, key: &str) -> Result<()>;
@@ -122,6 +122,15 @@ pub struct ProductionRedisClient {
     config: RedisConfig,
     connection_pool: Arc<RwLock<Vec<Connection>>>,
     health_check_interval: std::time::Duration,
+}
+
+impl std::fmt::Debug for ProductionRedisClient {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ProductionRedisClient")
+            .field("config", &self.config)
+            .field("health_check_interval", &self.health_check_interval)
+            .finish()
+    }
 }
 
 impl ProductionRedisClient {

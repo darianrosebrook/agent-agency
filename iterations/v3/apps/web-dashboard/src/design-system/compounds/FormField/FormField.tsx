@@ -7,7 +7,7 @@
  * Includes label, input, helper text, and error states.
  */
 
-import React from "react";
+// import React from "react";
 import { Input, type InputProps } from "../../primitives/Input";
 import { Text } from "../../primitives/Text";
 
@@ -70,7 +70,7 @@ export function FormField({
         id={id}
         required={required}
         error={error}
-        className={className}
+        className={className || ""}
       />
 
       {/* Helper Text or Error */}

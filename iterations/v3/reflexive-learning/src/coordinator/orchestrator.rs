@@ -288,3 +288,5 @@ pub struct AlgorithmResult {
     pub success: bool,
     pub improvements: Vec<String>,
 }
+
+

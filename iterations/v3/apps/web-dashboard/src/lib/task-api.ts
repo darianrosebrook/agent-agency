@@ -8,7 +8,7 @@ import type {
   TaskListFilters,
   TaskMetrics,
   AuditLogEntry,
-  ApiError,
+  // ApiError,
 } from "@/types/tasks";
 
 export class TaskApiClient {

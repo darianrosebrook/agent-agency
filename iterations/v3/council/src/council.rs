@@ -736,18 +736,22 @@ impl Council {
         };
 
         let emergency_flags = EmergencyFlags {
-            business_critical: matches!(review_context.risk_tier, agent_agency_contracts::task_request::RiskTier::Tier1),
+            business_critical: matches!(review_context.risk_tier, crate::types::RiskTier::Tier1),
             security_incident: false,
             compliance_deadline: false,
             customer_impact: match review_context.risk_tier {
-                agent_agency_contracts::task_request::RiskTier::Tier1 => ImpactLevel::High,
-                agent_agency_contracts::task_request::RiskTier::Tier2 => ImpactLevel::Medium,
-                agent_agency_contracts::task_request::RiskTier::Tier3 => ImpactLevel::Low,
+                crate::types::RiskTier::Tier1 => ImpactLevel::High,
+                crate::types::RiskTier::Tier2 => ImpactLevel::Medium,
+                crate::types::RiskTier::Tier3 => ImpactLevel::Low,
             },
         };
 
         DecisionContext {
-            risk_tier: review_context.risk_tier.clone(),
+            risk_tier: match review_context.risk_tier {
+                crate::types::RiskTier::Tier1 => agent_agency_contracts::task_request::RiskTier::Tier1,
+                crate::types::RiskTier::Tier2 => agent_agency_contracts::task_request::RiskTier::Tier2,
+                crate::types::RiskTier::Tier3 => agent_agency_contracts::task_request::RiskTier::Tier3,
+            },
             organizational_constraints,
             resource_constraints,
             historical_precedents,
@@ -777,9 +781,9 @@ impl Council {
             .count();
 
         let average_response_time = if !self.available_judges.is_empty() {
-            self.available_judges.iter()
-                .map(|judge| judge.health_metrics().response_time_p95_ms)
-                .sum::<u64>() / self.available_judges.len() as u64
+            (self.available_judges.iter()
+                .map(|judge| judge.health_metrics().response_time_p95_ms as u64)
+                .sum::<u64>() / self.available_judges.len() as u64)
         } else {
             0
         };
@@ -800,8 +804,8 @@ impl Council {
     /// Retrieve relevant historical decisions from memory for decision context
     async fn retrieve_historical_decisions(
         &self,
-        working_spec: &agent_agency_contracts::working_spec::WorkingSpec,
-        risk_tier: &agent_agency_contracts::task_request::RiskTier,
+        working_spec: &crate::types::WorkingSpec,
+        risk_tier: &crate::types::RiskTier,
     ) -> Vec<crate::decision_making::HistoricalDecision> {
         if let Some(ref memory_system) = self.memory_system {
             // Create context for memory retrieval
@@ -819,7 +823,7 @@ impl Council {
                 }),
                 metadata: std::collections::HashMap::from([
                     ("risk_tier".to_string(), serde_json::json!(risk_tier)),
-                    ("spec_goals".to_string(), serde_json::json!(working_spec.goals)),
+                    ("spec_goals".to_string(), serde_json::json!(working_spec.acceptance_criteria.iter().map(|ac| ac.description.clone()).collect::<Vec<_>>())),
                 ]),
             };
 
@@ -1019,20 +1023,36 @@ fn convert_local_to_contract_spec(local_spec: &crate::types::WorkingSpec) -> age
             crate::types::RiskTier::Tier2 => 2,
             crate::types::RiskTier::Tier3 => 3,
         },
-        scope: vec![], // Empty scope for now
         constraints: agent_agency_contracts::working_spec::WorkingSpecConstraints {
-            max_duration_hours: None,
-            max_cost: None,
-            required_skills: vec![],
-            environment_requirements: vec![],
+            budget_limits: None,
+            max_duration_minutes: None,
+            max_iterations: None,
+            scope_restrictions: None,
         },
-        test_plan: None,
-        rollback_plan: None,
+        test_plan: agent_agency_contracts::working_spec::TestPlan {
+            unit_tests: vec![],
+            integration_tests: vec![],
+            coverage_targets: None,
+            e2e_scenarios: vec![],
+        },
+        rollback_plan: agent_agency_contracts::working_spec::RollbackPlan {
+            automated_steps: vec![],
+            manual_steps: vec!["Revert code changes".to_string()],
+            data_impact: agent_agency_contracts::working_spec::DataImpact::None,
+            downtime_required: Some(false),
+            rollback_window_minutes: Some(60),
+            strategy: agent_agency_contracts::working_spec::RollbackStrategy::ManualRevert,
+        },
+        acceptance_criteria: vec![], // Skip complex conversion for now
+        metadata: None,
+        non_functional_requirements: None,
+        validation_results: None,
         context: agent_agency_contracts::working_spec::WorkingSpecContext {
-            created_by: "council".to_string(),
-            created_at: chrono::Utc::now(),
-            updated_at: chrono::Utc::now(),
-            tags: vec![],
+            dependencies: std::collections::HashMap::new(),
+            environment: agent_agency_contracts::task_request::Environment::Development,
+            git_branch: "main".to_string(),
+            recent_changes: vec![],
+            workspace_root: "/tmp".to_string(),
         },
     }
 }
