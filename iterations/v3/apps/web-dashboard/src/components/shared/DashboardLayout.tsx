@@ -5,13 +5,12 @@
  * 
  * @author @darianrosebrook
  * 
- * Wraps dashboard content with Header and Navigation.
+ * Wraps dashboard content with unified header and breadcrumbs.
  * Maintains fixed layout to prevent CLS.
  */
 
 import { ReactNode } from 'react';
-import Header from './Header';
-import Navigation from './Navigation';
+import UnifiedHeader from './UnifiedHeader';
 import Breadcrumbs from '@/components/ui/Breadcrumbs';
 import styles from '@/app/page.module.scss';
 
@@ -27,8 +26,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         Skip to main content
       </a>
       <main role="main" aria-label="Dashboard" className={styles.mainContent}>
-        <Header />
-        <Navigation />
+        <UnifiedHeader />
         <Breadcrumbs />
         {children} 
       </main>
