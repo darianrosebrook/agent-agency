@@ -133,6 +133,9 @@ pkcs8 = "0.10"
 # Security utilities
 security = { path = "security" }
 
+# Common patterns and utilities
+common-patterns = { path = "common-patterns" }
+
 # Observability backends (now in individual crates)
 # redis = { version = "0.24", features = ["tokio-comp", "connection-manager"] }
 # prometheus = "0.13"

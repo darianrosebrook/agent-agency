@@ -16,7 +16,7 @@ export class TaskApiClient {
 
   constructor(baseUrl?: string) {
     this.apiClient = new ApiClient({
-      baseUrl: baseUrl ?? "/api/v1/tasks",
+      baseUrl: baseUrl ?? "/api/tasks",
     });
   }
 

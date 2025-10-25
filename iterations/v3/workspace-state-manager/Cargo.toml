@@ -50,3 +50,6 @@ tempfile = "3.8"
 
 # Pattern matching
 glob = "0.3"
+
+# Common patterns and utilities
+common-patterns.workspace = true

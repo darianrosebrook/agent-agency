@@ -1,158 +1,113 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 /**
- * Health check endpoint for the dashboard
+ * Health Check API endpoint
  * 
- * Returns dashboard health status and optionally checks backend connectivity
+ * Provides system health status and backend connectivity
  * 
  * @author @darianrosebrook
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const targetHost = process.env.V3_BACKEND_HOST ?? null;
-    const requestStart = Date.now();
+    const v3BackendHost = process.env.V3_BACKEND_HOST ?? null;
+    const startTime = Date.now();
 
-    // Dashboard is healthy regardless of backend status
+    // Basic dashboard health
     const dashboardHealth = {
-      status: "healthy" as const,
-      version: process.env.npm_package_version ?? "0.1.0",
-      uptime: Math.floor(process.uptime()),
+      status: "healthy",
+      version: "1.0.0",
+      uptime: process.uptime(),
       node_version: process.version,
+      timestamp: new Date().toISOString(),
     };
 
-    // Early return if backend is not configured - this is not an error
-    if (!targetHost) {
-      return NextResponse.json(
-        {
-          status: "degraded",
-          timestamp: new Date().toISOString(),
-          message: "Dashboard is operational, backend not configured",
-          backend: {
-            status: "unconfigured",
-            url: null,
+    // Check backend connectivity if configured
+    let backendHealth = null;
+    if (v3BackendHost) {
+      try {
+        const backendStartTime = Date.now();
+        const response = await fetch(`${v3BackendHost}/api/v1/health`, {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+            "User-Agent": "web-dashboard-health-check",
           },
-          dashboard: dashboardHealth,
-        },
-        { status: 200 }
-      );
-    }
+          signal: AbortSignal.timeout(5000), // 5 seconds
+        });
 
-    const healthUrl = `${targetHost}/health`;
-    console.log(`Checking V3 backend health at: ${healthUrl}`);
+        const responseTime = Date.now() - backendStartTime;
 
-    const response = await fetch(healthUrl, {
-      method: "GET",
-      headers: {
-        Accept: "application/json",
-        "User-Agent": "web-dashboard-health-check",
-      },
-      // Short timeout for health checks
-      signal: AbortSignal.timeout(5000), // 5 seconds
-    });
-
-    if (!response?.ok) {
-      const statusCode = response?.status ?? 0;
-      console.warn(
-        `V3 backend health check failed: ${statusCode} ${response?.statusText ?? "No response"}`
-      );
-      return NextResponse.json(
-        {
-          status: "degraded",
-          timestamp: new Date().toISOString(),
-          message: "Dashboard operational, backend unavailable",
-          error: `Backend returned ${statusCode}: ${response?.statusText ?? "Connection failed"}`,
-          backend: {
+        if (response.ok) {
+          const backendData = await response.json().catch(() => ({}));
+          backendHealth = {
+            status: "healthy",
+            url: v3BackendHost,
+            response_time_ms: responseTime,
+            ...backendData,
+          };
+        } else {
+          backendHealth = {
             status: "unhealthy",
-            url: targetHost,
-            response_time_ms: Date.now() - requestStart,
-          },
-          dashboard: dashboardHealth,
-        },
-        { status: 200 }
-      );
-    }
-
-    // Try to parse the response as JSON
-    let backendHealth: Record<string, unknown> = {};
-    let parseError: Error | null = null;
-
-    try {
-      const contentType = response.headers.get("content-type");
-      if (contentType?.includes("application/json")) {
-        backendHealth = (await response.json()) as Record<string, unknown>;
-      } else {
-        const textResponse = await response.text();
+            url: v3BackendHost,
+            response_time_ms: responseTime,
+            error: `HTTP ${response.status}: ${response.statusText}`,
+          };
+        }
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
         backendHealth = {
-          status: "healthy",
-          raw_response: textResponse,
+          status: "unreachable",
+          url: v3BackendHost,
+          response_time_ms: Date.now() - startTime,
+          error: errorMessage,
         };
       }
-    } catch (error) {
-      parseError = error instanceof Error ? error : new Error(String(error));
-      console.warn("Could not parse backend health response:", parseError.message);
+    } else {
       backendHealth = {
-        status: "unknown",
-        parse_error: parseError.message,
+        status: "unconfigured",
+        url: null,
+        response_time_ms: 0,
+        message: "V3_BACKEND_HOST environment variable not set",
       };
     }
 
-    const isBackendHealthy = backendHealth.status === "healthy";
-    const overallStatus = isBackendHealthy ? "healthy" : "degraded";
+    const totalResponseTime = Date.now() - startTime;
 
-    // Combine dashboard and backend health
-    const healthResponse = {
-      status: overallStatus,
+    return NextResponse.json({
+      status: "healthy",
       timestamp: new Date().toISOString(),
-      message: isBackendHealthy
-        ? "All systems operational"
-        : "Dashboard operational, backend degraded",
+      response_time_ms: totalResponseTime,
       dashboard: dashboardHealth,
-      backend: {
-        ...backendHealth,
-        url: targetHost,
-        response_time_ms: Date.now() - requestStart,
+      backend: backendHealth,
+      environment: {
+        node_env: process.env.NODE_ENV ?? "development",
+        v3_backend_configured: !!v3BackendHost,
       },
-    };
-
-    return NextResponse.json(healthResponse, { status: 200 });
+    });
   } catch (error) {
-    const errorMessage =
-      error instanceof Error ? error.message : String(error ?? "Unknown error");
-
-    // Determine if this is a network error or other error
-    const isNetworkError =
-      error instanceof TypeError ||
-      errorMessage.includes("fetch") ||
-      errorMessage.includes("network") ||
-      errorMessage.includes("ECONNREFUSED");
-
-    if (isNetworkError) {
-      console.warn(
-        `Backend unreachable: ${errorMessage}`
-      );
-    } else {
-      console.error("Health check failed with unexpected error:", error);
-    }
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    
+    console.error("Health check error:", error);
 
     return NextResponse.json(
       {
-        status: "degraded",
+        status: "unhealthy",
         timestamp: new Date().toISOString(),
-        message: "Dashboard operational, backend check failed",
         error: errorMessage,
         dashboard: {
-          status: "healthy",
-          version: process.env.npm_package_version ?? "0.1.0",
-          uptime: Math.floor(process.uptime()),
+          status: "error",
+          version: "1.0.0",
+          uptime: process.uptime(),
           node_version: process.version,
         },
         backend: {
-          status: "unreachable",
+          status: "unknown",
           url: process.env.V3_BACKEND_HOST ?? null,
-          error: errorMessage,
+          response_time_ms: 0,
+          error: "Health check failed",
         },
       },
-      { status: 200 }
+      { status: 500 }
     );
   }
 }
