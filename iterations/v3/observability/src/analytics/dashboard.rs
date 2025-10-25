@@ -7,12 +7,18 @@ use chrono::{DateTime, Utc};
 use reqwest::Client as HttpClient;
 use cadence::{StatsdClient, QueuingMetricSink, BufferedUdpMetricSink, UdpMetricSink};
 
-use super::config::{AnalyticsDashboardConfig, AnalyticsSession};
 use super::data::{AnalyticsDashboardData, AnalyticsInsight};
 use super::metrics::CachePerformanceMetrics;
-use super::redis_client::RedisClient;
-use crate::analytics::AnalyticsEngine;
 use crate::errors::ObservabilityError;
+
+// Temporary placeholder types
+#[derive(Debug, Clone)]
+pub struct AnalyticsEngine;
+#[derive(Debug, Clone)]
+pub struct AnalyticsDashboardConfig;
+#[derive(Debug, Clone)]
+pub struct AnalyticsSession;
+pub trait RedisClient {}
 
 /// Advanced analytics dashboard service
 #[derive(Debug)]

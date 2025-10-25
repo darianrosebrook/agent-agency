@@ -1,101 +1,215 @@
-// Tasks Page Styles
-.page {
-  min-height: 100vh;
-  background-color: var(--color-background);
-}
+// Tasks Page Styles - FlowPress Design System
 
-// Dark mode disabled - Light theme only
+.container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: var(--spacing-8) var(--spacing-6);
+  contain: layout style;
 
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 2rem;
-  padding-bottom: 1.5rem;
-  border-bottom: 1px solid var(--color-border);
-}
-
-// Dark mode disabled - Light theme only
-
-.title {
-  font-size: 2rem;
-  font-weight: 600;
-  color: var(--color-text-primary);
-  margin: 0 0 0.5rem 0;
-  line-height: 1.2;
-}
-
-// Dark mode disabled - Light theme only
-
-.actions {
-  display: flex;
-  gap: 0.75rem;
-  align-items: center;
-}
-
-// Dark mode disabled - Light theme only
-
-.refreshButton {
-  background-color: var(--color-primary);
-  color: white;
-  border-color: var(--color-primary);
-
-  &:hover:not(:disabled) {
-    background-color: var(--color-primary-dark);
-    border-color: var(--color-primary-dark);
+  @media (max-width: 768px) {
+    padding: var(--spacing-6) var(--spacing-4);
   }
 }
 
-// Dark mode disabled - Light theme only
-
-.metricsSection {
-  margin-bottom: 2rem;
+.header {
+  margin-bottom: var(--spacing-8);
+  contain: layout style;
+  
+  .headerContent {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: var(--spacing-6);
+    
+    @media (max-width: 768px) {
+      flex-direction: column;
+      gap: var(--spacing-4);
+    }
+  }
+  
+  .title {
+    margin: 0 0 var(--spacing-2) 0;
+    color: var(--color-text-primary);
+    font-family: var(--font-family-display);
+    font-weight: 500;
+    letter-spacing: -0.02em;
+  }
+  
+  .subtitle {
+    margin: 0;
+    color: var(--color-text-secondary);
+  }
+  
+  .headerActions {
+    display: flex;
+    gap: var(--spacing-3);
+    align-items: center;
+    
+    @media (max-width: 768px) {
+      width: 100%;
+      
+      button {
+        flex: 1;
+      }
+    }
+  }
 }
 
-// Dark mode disabled - Light theme only
-
-.content {
-  background-color: var(--color-background-secondary);
-  border: 1px solid var(--color-border);
-  border-radius: 0.75rem;
-  box-shadow: var(--shadow-sm);
-  overflow: hidden;
+.filterButton,
+.refreshButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-2);
+  padding: var(--spacing-3) var(--spacing-5);
+  min-height: 44px; /* Touch target minimum */
+  font-family: var(--font-family-base);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  border-radius: var(--border-radius-lg);
+  border: 1px solid var(--color-border-default);
+  background-color: var(--color-background-primary);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  transition:
+    transform var(--transition-duration-base) var(--transition-easing-out),
+    box-shadow var(--transition-duration-base) var(--transition-easing-out),
+    border-color var(--transition-duration-base) var(--transition-easing-out),
+    background-color var(--transition-duration-base) var(--transition-easing-out);
+  
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: var(--box-shadow-sm);
+    border-color: var(--color-brand-accent);
+  }
+  
+  &:active:not(:disabled) {
+    transform: translateY(0);
+  }
+  
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+  
+  &:focus-visible {
+    outline: 2px solid var(--color-brand-primary);
+    outline-offset: 2px;
+  }
 }
 
-// Dark mode disabled - Light theme only
+.refreshButton {
+  background-color: var(--color-brand-primary);
+  color: var(--color-text-inverse);
+  border-color: var(--color-brand-primary);
+  
+  &:hover:not(:disabled) {
+    background-color: var(--color-brand-accent);
+    border-color: var(--color-brand-accent);
+  }
+}
 
-.spinner {
-  width: 2rem;
-  height: 2rem;
-  border: 2px solid var(--color-border);
-  border-top: 2px solid var(--color-primary);
-  border-radius: 50%;
+.spinning {
   animation: spin 1s linear infinite;
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg) translateZ(0);
+  }
+  to {
+    transform: rotate(360deg) translateZ(0);
+  }
 }
 
-// Responsive design
-@media (max-width: 768px) {
+.metricsSection {
+  margin-bottom: var(--spacing-8);
+  contain: layout style;
+}
+
+.filtersSection {
+  margin-bottom: var(--spacing-6);
+  padding: var(--spacing-6);
+  background-color: var(--color-background-secondary);
+  border: 0.5px solid var(--color-border-default);
+  border-radius: var(--border-radius-xl);
+  contain: layout style;
+}
+
+.error {
+  margin-bottom: var(--spacing-6);
+  padding: var(--spacing-4) var(--spacing-5);
+  background-color: var(--color-error-light);
+  border: 1px solid var(--color-error);
+  border-radius: var(--border-radius-lg);
+  color: var(--color-error-dark);
+}
+
+.taskListSection {
+  min-height: 400px;
+  contain: layout style;
+}
+
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-4);
+  min-height: 200px;
+  contain: layout style paint;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--color-border-default);
+  border-top-color: var(--color-brand-primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  will-change: transform;
+  transform: translateZ(0); /* GPU acceleration */
+  backface-visibility: hidden;
+}
+
+/* Screen reader only class */
+:global(.sr-only) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Responsive design */
+@media (max-width: 640px) {
   .container {
-    padding: 1rem;
+    padding: var(--spacing-4) var(--spacing-3);
   }
-
-// Dark mode disabled - Light theme only
-
-  .actions {
-    justify-content: stretch;
-
-    .filterButton,
-    .refreshButton {
-      flex: 1;
-    }
+  
+  .header {
+    margin-bottom: var(--spacing-6);
   }
-
-// Dark mode disabled - Light theme only
+  
+  .metricsSection,
+  .filtersSection {
+    margin-bottom: var(--spacing-4);
+  }
 }
 
-// Dark mode disabled - Light theme only
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .spinner,
+  .spinning {
+    animation: none;
+  }
+  
+  .filterButton,
+  .refreshButton {
+    transition: none;
+  }
+}

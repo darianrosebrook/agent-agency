@@ -1,12 +1,33 @@
+/**
+ * Task Detail Page
+ * Displays detailed task information with tabs
+ * 
+ * @author @darianrosebrook
+ */
+
 "use client";
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import Header from "@/components/shared/Header";
-import Navigation from "@/components/shared/Navigation";
+import DashboardLayout from "@/components/shared/DashboardLayout";
 import { Task, AuditLogEntry } from "@/types/tasks";
 import AuditTrailViewer from "@/components/tasks/AuditTrailViewer";
 import { TaskApiClient } from "@/lib/task-api";
+import { Text } from "@/design-system/primitives";
+import { StatusBadge } from "@/design-system/compounds";
+import { useScrollAnimation } from "@/interactions";
+import { 
+  Brain, 
+  Search, 
+  Zap, 
+  CheckCircle, 
+  Settings, 
+  TestTube, 
+  Target,
+  FileText,
+  Pause,
+  XCircle
+} from "lucide-react";
 import styles from "./page.module.scss";
 
 export default function TaskDetailPage() {
@@ -18,6 +39,11 @@ export default function TaskDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"overview" | "audit" | "artifacts">("overview");
+
+  // GSAP animations
+  const headerAnimation = useScrollAnimation({ type: 'fade', duration: 0.6, delay: 100 });
+  const tabsAnimation = useScrollAnimation({ type: 'slideUp', duration: 0.5, delay: 200 });
+  const contentAnimation = useScrollAnimation({ type: 'slideUp', duration: 0.6, delay: 300 });
 
   const taskApi = new TaskApiClient();
 
@@ -79,110 +105,135 @@ export default function TaskDetailPage() {
   };
 
   const getPhaseIcon = (phase: Task["phase"]) => {
+    const iconProps = { size: 18, className: styles.phaseIcon };
     switch (phase) {
       case "planning":
-        return "🧠";
+        return <Brain {...iconProps} />;
       case "analysis":
-        return "🔍";
+        return <Search {...iconProps} />;
       case "execution":
-        return "⚡";
+        return <Zap {...iconProps} />;
       case "validation":
-        return "✅";
+        return <CheckCircle {...iconProps} />;
       case "refinement":
-        return "🔧";
+        return <Settings {...iconProps} />;
       case "qa":
-        return "🧪";
+        return <TestTube {...iconProps} />;
       case "finalization":
-        return "🎯";
+        return <Target {...iconProps} />;
       default:
-        return "📋";
+        return <FileText {...iconProps} />;
     }
   };
 
   if (loading) {
     return (
-      <div className={styles.page}>
-        <Header />
-        <Navigation />
+      <DashboardLayout>
         <div className={styles.loading}>
-          <div className={styles.spinner}></div>
-          <p>Loading task details...</p>
+          <div className={styles.spinner} aria-hidden="true"></div>
+          <Text variant="paragraph-large" color="secondary">
+            Loading task details...
+          </Text>
         </div>
-      </div>
+      </DashboardLayout>
     );
   }
 
   if (error || !task) {
     return (
-      <div className={styles.page}>
-        <Header />
-        <Navigation />
-        <div className={styles.error}>
-          <h2>Error Loading Task</h2>
-          <p>{error || "Task not found"}</p>
+      <DashboardLayout>
+        <div className={styles.errorContainer} role="alert">
+          <XCircle size={48} className={styles.errorIcon} />
+          <Text variant="h2" align="center">
+            Error Loading Task
+          </Text>
+          <Text variant="paragraph-large" color="secondary" align="center">
+            {error || "Task not found"}
+          </Text>
         </div>
-      </div>
+      </DashboardLayout>
     );
   }
 
   return (
-    <div className={styles.page}>
-      <Header />
-      <Navigation />
-      
-      <div className={styles.container}>
-        <div className={styles.header}>
-          <div className={styles.titleSection}>
-            <h1 className={styles.title}>{task.title}</h1>
-            <div className={styles.meta}>
-              <span className={`${styles.status} ${getStatusColor(task.status)}`}>
-                {task.status}
-              </span>
-              <span className={styles.phase}>
-                {getPhaseIcon(task.phase)} {task.phase}
-              </span>
-              <span className={styles.priority}>
-                Priority: {task.priority}
-              </span>
+    <DashboardLayout>
+      <main role="main" aria-label="Task Details" className={styles.container}>
+        {/* Task Header */}
+        <header ref={headerAnimation.ref} className={styles.header}>
+          <div className={styles.headerContent}>
+            <div className={styles.titleSection}>
+              <Text variant="h1" className={styles.title}>
+                {task.title}
+              </Text>
+              <div className={styles.meta}>
+                <StatusBadge 
+                  status={task.status as any}
+                  size="md"
+                />
+                <span className={styles.phase}>
+                  {getPhaseIcon(task.phase)}
+                  <Text variant="paragraph-small" color="secondary">
+                    {task.phase}
+                  </Text>
+                </span>
+                <Text variant="paragraph-small" color="secondary">
+                  Priority: {task.priority}
+                </Text>
+              </div>
+            </div>
+            
+            <div className={styles.actions}>
+              <button className={styles.actionButton} aria-label="Pause task">
+                <Pause size={18} />
+                <span>Pause</span>
+              </button>
+              <button className={styles.actionButton} aria-label="Cancel task">
+                <XCircle size={18} />
+                <span>Cancel</span>
+              </button>
             </div>
           </div>
-          
-          <div className={styles.actions}>
-            <button className={styles.actionButton}>
-              Pause
-            </button>
-            <button className={styles.actionButton}>
-              Cancel
-            </button>
-          </div>
-        </div>
+        </header>
 
-        <div className={styles.tabs}>
+        {/* Tabs Navigation */}
+        <nav ref={tabsAnimation.ref} className={styles.tabs} role="tablist" aria-label="Task sections">
           <button
+            role="tab"
+            aria-selected={activeTab === "overview"}
+            aria-controls="overview-panel"
             className={`${styles.tab} ${activeTab === "overview" ? styles.active : ""}`}
             onClick={() => setActiveTab("overview")}
           >
             Overview
           </button>
           <button
+            role="tab"
+            aria-selected={activeTab === "audit"}
+            aria-controls="audit-panel"
             className={`${styles.tab} ${activeTab === "audit" ? styles.active : ""}`}
             onClick={() => setActiveTab("audit")}
           >
             Audit Trail ({auditTrail.length})
           </button>
           <button
+            role="tab"
+            aria-selected={activeTab === "artifacts"}
+            aria-controls="artifacts-panel"
             className={`${styles.tab} ${activeTab === "artifacts" ? styles.active : ""}`}
             onClick={() => setActiveTab("artifacts")}
           >
             Artifacts ({task.artifacts.length})
           </button>
-        </div>
+        </nav>
 
-        <div className={styles.content}>
+        {/* Tab Content */}
+        <div ref={contentAnimation.ref} className={styles.content}>
           {activeTab === "overview" && (
-            <div className={styles.overview}>
+            <div id="overview-panel" role="tabpanel" className={styles.overview}>
               <div className={styles.section}>
-                <h3>Task Information</h3>
+                <Text variant="h3" className={styles.sectionTitle}>
+                  Task Information
+                </Text>
                 <div className={styles.infoGrid}>
                   <div className={styles.infoItem}>
                     <label>Task ID</label>
@@ -221,14 +272,20 @@ export default function TaskDetailPage() {
 
               {task.description && (
                 <div className={styles.section}>
-                  <h3>Description</h3>
-                  <p className={styles.description}>{task.description}</p>
+                  <Text variant="h3" className={styles.sectionTitle}>
+                    Description
+                  </Text>
+                  <Text variant="paragraph-medium" className={styles.description}>
+                    {task.description}
+                  </Text>
                 </div>
               )}
 
               {task.context && (
                 <div className={styles.section}>
-                  <h3>Context</h3>
+                  <Text variant="h3" className={styles.sectionTitle}>
+                    Context
+                  </Text>
                   <div className={styles.context}>
                     <div className={styles.goals}>
                       <h4>Goals</h4>
@@ -254,7 +311,9 @@ export default function TaskDetailPage() {
 
               {task.progress && (
                 <div className={styles.section}>
-                  <h3>Progress</h3>
+                  <Text variant="h3" className={styles.sectionTitle}>
+                    Progress
+                  </Text>
                   <div className={styles.progress}>
                     <div className={styles.progressBar}>
                       <div 
@@ -271,7 +330,9 @@ export default function TaskDetailPage() {
 
               {task.quality_report && (
                 <div className={styles.section}>
-                  <h3>Quality Report</h3>
+                  <Text variant="h3" className={styles.sectionTitle}>
+                    Quality Report
+                  </Text>
                   <div className={styles.qualityReport}>
                     <div className={styles.qualityScore}>
                       <span className={styles.score}>
@@ -297,7 +358,9 @@ export default function TaskDetailPage() {
 
               {task.error_message && (
                 <div className={styles.section}>
-                  <h3>Error</h3>
+                  <Text variant="h3" className={styles.sectionTitle}>
+                    Error
+                  </Text>
                   <div className={styles.errorMessage}>
                     <pre>{task.error_message}</pre>
                   </div>
@@ -307,7 +370,7 @@ export default function TaskDetailPage() {
           )}
 
           {activeTab === "audit" && (
-            <div className={styles.auditTab}>
+            <div id="audit-panel" role="tabpanel" className={styles.auditTab}>
               <AuditTrailViewer
                 auditTrail={auditTrail}
                 taskId={task.id}
@@ -317,8 +380,10 @@ export default function TaskDetailPage() {
           )}
 
           {activeTab === "artifacts" && (
-            <div className={styles.artifactsTab}>
-              <h3>Task Artifacts</h3>
+            <div id="artifacts-panel" role="tabpanel" className={styles.artifactsTab}>
+              <Text variant="h3" className={styles.sectionTitle}>
+                Task Artifacts
+              </Text>
               {task.artifacts.length > 0 ? (
                 <div className={styles.artifactsList}>
                   {task.artifacts.map((artifact, index) => (
@@ -340,12 +405,14 @@ export default function TaskDetailPage() {
                   ))}
                 </div>
               ) : (
-                <p className={styles.noArtifacts}>No artifacts found for this task.</p>
+                <Text variant="paragraph-medium" color="secondary" className={styles.noArtifacts}>
+                  No artifacts found for this task.
+                </Text>
               )}
             </div>
           )}
         </div>
-      </div>
-    </div>
+      </main>
+    </DashboardLayout>
   );
 }

@@ -5,8 +5,17 @@
 
 pub mod acceptance_criteria_extractor;
 pub mod agent;
+pub mod ambiguity;
+pub mod cache;
+pub mod complexity;
 pub mod context_builder;
+pub mod domain;
+pub mod feasibility;
 pub mod llm_client;
+pub mod performance;
+pub mod resources;
+pub mod risks;
+pub mod spec_generation;
 pub mod spec_generator;
 pub mod types;
 pub mod validation_loop;
