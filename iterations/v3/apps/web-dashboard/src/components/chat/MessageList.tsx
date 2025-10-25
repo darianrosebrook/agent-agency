@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { MessageListProps, ChatMessage } from "@/types/chat";
 import MessageBubble from "./MessageBubble";
 import styles from "./MessageList.module.scss";

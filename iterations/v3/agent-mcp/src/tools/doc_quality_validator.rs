@@ -181,6 +181,11 @@ impl DocQualityValidator {
                 endpoint: Some("/tools/doc_quality_validator".to_string()),
                 caws_compliance: None,
                 metadata: HashMap::new(),
+                configuration_schema: serde_json::json!({
+                    "type": "object",
+                    "properties": {},
+                    "required": []
+                }),
             },
             caws_compliance: CawsComplianceStatus::Compliant,
             registration_time: Utc::now(),

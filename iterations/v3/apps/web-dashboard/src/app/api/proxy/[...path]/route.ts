@@ -137,13 +137,14 @@ async function handleProxyRequest(
     }
 
     // Forward the request
+    const requestBody = method !== "GET" && method !== "HEAD" 
+      ? await request.text() 
+      : null;
+      
     const response = await fetch(url.toString(), {
       method,
       headers,
-      body:
-        method !== "GET" && method !== "HEAD"
-          ? await request.text()
-          : undefined,
+      body: requestBody,
       // Set reasonable timeout
       signal: AbortSignal.timeout(30000), // 30 seconds
     });

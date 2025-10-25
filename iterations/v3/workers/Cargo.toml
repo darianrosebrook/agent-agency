@@ -37,7 +37,7 @@ orchestration = { path = "../orchestration" }
 # claim-extraction = { path = "../claim-extraction" }  # Temporarily commented to resolve circular dependency
 
 # Multimodal RAG integration dependencies
-indexers = { path = "../indexers" }
+agent-data-processing = { path = "../agent-data-processing" }
 agent-agency-observability = { path = "../observability" }
 
 # Worker-specific dependencies

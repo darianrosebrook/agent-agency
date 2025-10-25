@@ -1,4 +1,4 @@
-@import "../../styles/mixins.scss";
+@use "../../styles/mixins.scss" as *;
 
 .container {
   padding: 1.5rem;
@@ -7,22 +7,7 @@
   border: 1px solid var(--border-color);
 }
 
-.header {
-  margin-bottom: 2rem;
-
-  h2 {
-    margin: 0 0 0.5rem 0;
-    color: var(--text-primary);
-    font-size: 1.5rem;
-    font-weight: 600;
-  }
-
-  p {
-    margin: 0;
-    color: var(--text-secondary);
-    font-size: 0.875rem;
-  }
-}
+// Dark mode disabled - Light theme only
 
 .error {
   display: flex;
@@ -50,12 +35,7 @@
   }
 }
 
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 1rem;
-  margin-bottom: 2rem;
-}
+// Dark mode disabled - Light theme only
 
 .sloCard {
   padding: 1.25rem;
@@ -78,19 +58,7 @@
   }
 }
 
-.sloHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 0.75rem;
-
-  h3 {
-    margin: 0;
-    color: var(--text-primary);
-    font-size: 1.125rem;
-    font-weight: 600;
-  }
-}
+// Dark mode disabled - Light theme only
 
 .statusIndicator {
   width: 12px;
@@ -99,12 +67,7 @@
   flex-shrink: 0;
 }
 
-.description {
-  margin: 0 0 1rem 0;
-  color: var(--text-secondary);
-  font-size: 0.875rem;
-  line-height: 1.4;
-}
+// Dark mode disabled - Light theme only
 
 .metrics {
   display: grid;
@@ -113,25 +76,7 @@
   margin-bottom: 1rem;
 }
 
-.metric {
-  text-align: center;
-
-  .label {
-    display: block;
-    font-size: 0.75rem;
-    color: var(--text-secondary);
-    margin-bottom: 0.25rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-
-  .value {
-    display: block;
-    font-size: 1.125rem;
-    font-weight: 600;
-    color: var(--text-primary);
-  }
-}
+// Dark mode disabled - Light theme only
 
 .labels {
   display: flex;
@@ -139,25 +84,14 @@
   margin-bottom: 0.75rem;
 }
 
-.service,
-.metricType {
-  padding: 0.25rem 0.5rem;
-  font-size: 0.75rem;
-  font-weight: 500;
-  border-radius: 4px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
+// Dark mode disabled - Light theme only
 
 .service {
   background: var(--accent-bg);
   color: var(--accent-text);
 }
 
-.metricType {
-  background: var(--secondary-bg);
-  color: var(--secondary-text);
-}
+// Dark mode disabled - Light theme only
 
 .status {
   font-size: 0.875rem;
@@ -168,20 +102,7 @@
   }
 }
 
-.detailsPanel {
-  margin-top: 2rem;
-  padding: 1.5rem;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-
-  h3 {
-    margin: 0 0 1.5rem 0;
-    color: var(--text-primary);
-    font-size: 1.25rem;
-    font-weight: 600;
-  }
-}
+// Dark mode disabled - Light theme only
 
 .measurements {
   h4 {
@@ -192,10 +113,7 @@
   }
 }
 
-.measurementsList {
-  max-height: 300px;
-  overflow-y: auto;
-}
+// Dark mode disabled - Light theme only
 
 .measurement {
   display: flex;
@@ -211,11 +129,7 @@
     margin-bottom: 0;
   }
 
-  .timestamp {
-    font-size: 0.875rem;
-    color: var(--text-secondary);
-    flex: 1;
-  }
+// Dark mode disabled - Light theme only
 
   .value {
     font-size: 1rem;
@@ -224,26 +138,7 @@
     margin: 0 1rem;
   }
 
-  .samples {
-    font-size: 0.75rem;
-    color: var(--text-secondary);
-  }
+// Dark mode disabled - Light theme only
 }
 
-// Dark mode adjustments
-@media (prefers-color-scheme: dark) {
-  .container {
-    background: var(--bg-primary-dark);
-    border-color: var(--border-color-dark);
-  }
-
-  .sloCard {
-    background: var(--bg-secondary-dark);
-    border-color: var(--border-color-dark);
-  }
-
-  .measurement {
-    background: var(--bg-primary-dark);
-    border-color: var(--border-color-dark);
-  }
-}
+// Dark mode disabled - Light theme only

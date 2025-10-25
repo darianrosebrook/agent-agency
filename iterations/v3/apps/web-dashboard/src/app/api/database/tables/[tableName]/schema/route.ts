@@ -5,11 +5,13 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { tableName: string } }
+  { params }: { params: Promise<{ tableName: string }> }
 ) {
+  const resolvedParams = await params;
+  const tableName = resolvedParams.tableName;
+  
   try {
     const { searchParams } = new URL(request.url);
-    const tableName = params.tableName;
     const v3BackendHost =
       process.env.V3_BACKEND_HOST ?? "http://localhost:8080";
 
@@ -27,13 +29,13 @@ export async function GET(
     }
 
     // Build query parameters
-    const params = new URLSearchParams();
-    params.append("connection_id", connectionId);
-    if (schema) params.append("schema", schema);
+    const queryParams = new URLSearchParams();
+    queryParams.append("connection_id", connectionId);
+    if (schema) queryParams.append("schema", schema);
 
     const schemaUrl = `${v3BackendHost}/api/v1/database/tables/${encodeURIComponent(
       tableName
-    )}/schema?${params}`;
+    )}/schema?${queryParams}`;
 
     console.log(
       `Proxying table schema request for ${tableName} to: ${schemaUrl}`
@@ -80,7 +82,7 @@ export async function GET(
       {
         error: "proxy_error",
         message: `Table schema request failed: ${errorMessage}`,
-        table_name: params.tableName,
+        table_name: tableName,
         columns: [],
         timestamp: new Date().toISOString(),
       },

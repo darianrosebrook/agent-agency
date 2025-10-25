@@ -5,7 +5,7 @@
 
 use anyhow::{Context, Result};
 use indexers::database::{PostgresVectorStore, VectorStore};
-use indexers::types::{BlockVectorRecord, SearchAuditEntry};
+use indexers::types::{BlockVectorRecord, SearchAuditEntry, SearchResult};
 use sqlx::PgPool;
 use std::sync::Arc;
 use tracing::{debug, error, info};
@@ -101,10 +101,10 @@ impl DatabaseVectorStore {
         debug!("Logging search operation: query={}", query);
 
         // Convert results to SearchResult structs with default values
-        let search_results: Vec<indexers::SearchResult> = results
+        let search_results: Vec<SearchResult> = results
             .iter()
             .enumerate()
-            .map(|(i, block_id)| indexers::SearchResult {
+            .map(|(i, block_id)| SearchResult {
                 block_id: *block_id,
                 score: 1.0 - (i as f32 * 0.1), // Decreasing scores for results
                 text_snippet: String::new(),

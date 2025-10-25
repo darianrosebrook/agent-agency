@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import { Bell, HelpCircle } from "lucide-react";
 import ConnectionStatus from "./ConnectionStatus";
 import styles from "./Header.module.scss";
 
@@ -11,7 +12,7 @@ export default function Header() {
       <div className={styles.container}>
         <div className={styles.logo}>
           <Link href="/" className={styles.logoLink}>
-            <div className={styles.logoIcon}>🤖</div>
+            <div className={styles.logoIcon}>AA</div>
             <div className={styles.logoText}>
               <span className={styles.logoTitle}>Agent Agency</span>
               <span className={styles.logoSubtitle}>V3 Dashboard</span>
@@ -39,11 +40,11 @@ export default function Header() {
         </div>
 
         <div className={styles.actions}>
-          <button className={styles.actionButton} title="Notifications">
-            🔔
+          <button className={styles.actionButton} title="Notifications" aria-label="Notifications">
+            <Bell size={20} />
           </button>
-          <button className={styles.actionButton} title="Help">
-            ❓
+          <button className={styles.actionButton} title="Help" aria-label="Help">
+            <HelpCircle size={20} />
           </button>
         </div>
       </div>

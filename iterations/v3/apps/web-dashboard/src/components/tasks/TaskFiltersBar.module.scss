@@ -6,12 +6,7 @@
   background-color: var(--color-bg-secondary);
 }
 
-.filtersHeader {
-  @include flex-between;
-  align-items: center;
-  padding: var(--spacing-md);
-  border-bottom: 1px solid var(--color-border-light);
-}
+// Dark mode disabled - Light theme only
 
 .toggleButton {
   @include flex-center;
@@ -36,13 +31,7 @@
   }
 }
 
-.toggleIcon {
-  font-size: var(--font-size-lg);
-  font-weight: bold;
-  color: var(--color-primary-600);
-  width: 20px;
-  text-align: center;
-}
+// Dark mode disabled - Light theme only
 
 .activeCount {
   background-color: var(--color-primary-600);
@@ -54,19 +43,7 @@
   font-family: var(--font-family-mono);
 }
 
-.clearButton {
-  @include button-secondary;
-  font-size: var(--font-size-sm);
-  padding: var(--spacing-xs) var(--spacing-sm);
-  background: none;
-  border: 1px solid var(--color-error-300);
-  color: var(--color-error-700);
-
-  &:hover {
-    background-color: var(--color-error-50);
-    border-color: var(--color-error-400);
-  }
-}
+// Dark mode disabled - Light theme only
 
 .filtersContent {
   padding: var(--spacing-lg);
@@ -75,11 +52,7 @@
   gap: var(--spacing-lg);
 }
 
-.filterGroup {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-sm);
-}
+// Dark mode disabled - Light theme only
 
 .filterLabel {
   font-size: var(--font-size-sm);
@@ -89,11 +62,7 @@
   letter-spacing: 0.05em;
 }
 
-.filterOptions {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-sm);
-}
+// Dark mode disabled - Light theme only
 
 .checkboxLabel {
   @include flex-center;
@@ -115,11 +84,7 @@
   }
 }
 
-.checkboxText {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-primary);
-  user-select: none;
-}
+// Dark mode disabled - Light theme only
 
 .textInput {
   @include input-base;
@@ -128,10 +93,7 @@
   padding: var(--spacing-sm) var(--spacing-md);
 }
 
-.dateInputs {
-  @include flex-center;
-  gap: var(--spacing-sm);
-}
+// Dark mode disabled - Light theme only
 
 .dateInput {
   @include input-base;
@@ -141,11 +103,7 @@
   min-width: 120px;
 }
 
-.dateSeparator {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
-  font-weight: var(--font-weight-medium);
-}
+// Dark mode disabled - Light theme only
 
 // Responsive design
 @include breakpoint(lg) {
@@ -159,20 +117,13 @@
     grid-template-columns: 1fr;
   }
 
-  .filtersHeader {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: var(--spacing-sm);
-  }
+// Dark mode disabled - Light theme only
 
   .clearButton {
     align-self: stretch;
   }
 
-  .dateInputs {
-    flex-direction: column;
-    align-items: stretch;
-  }
+// Dark mode disabled - Light theme only
 
   .dateSeparator {
     display: none;
@@ -184,7 +135,5 @@
     padding: var(--spacing-md);
   }
 
-  .filterOptions {
-    gap: var(--spacing-xs);
-  }
+// Dark mode disabled - Light theme only
 }

@@ -7,23 +7,7 @@
   padding: var(--spacing-lg);
 }
 
-.panelHeader {
-  margin-bottom: var(--spacing-xl);
-
-  h2 {
-    font-size: var(--font-size-xl);
-    font-weight: var(--font-weight-semibold);
-    color: var(--color-text-primary);
-    margin: 0 0 var(--spacing-sm) 0;
-  }
-
-  .description {
-    font-size: var(--font-size-base);
-    color: var(--color-text-secondary);
-    line-height: var(--line-height-relaxed);
-    margin: 0;
-  }
-}
+// Dark mode disabled - Light theme only
 
 .searchConfig {
   display: flex;
@@ -32,18 +16,7 @@
   margin-bottom: var(--spacing-xl);
 }
 
-.configSection {
-  @include card-base;
-  padding: var(--spacing-lg);
-  background-color: var(--color-bg-secondary);
-
-  h3 {
-    font-size: var(--font-size-lg);
-    font-weight: var(--font-weight-semibold);
-    color: var(--color-text-primary);
-    margin: 0 0 var(--spacing-lg) 0;
-  }
-}
+// Dark mode disabled - Light theme only
 
 .inputGroup {
   display: flex;
@@ -62,27 +35,7 @@
   }
 }
 
-.selectInput {
-  @include button-base;
-  padding: var(--spacing-sm);
-  background-color: var(--color-bg-primary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  font-size: var(--font-size-base);
-  color: var(--color-text-primary);
-  cursor: pointer;
-
-  &:focus {
-    outline: 2px solid var(--color-primary-500);
-    outline-offset: 2px;
-  }
-
-  &:disabled {
-    background-color: var(--color-bg-tertiary);
-    color: var(--color-text-tertiary);
-    cursor: not-allowed;
-  }
-}
+// Dark mode disabled - Light theme only
 
 .vectorInput {
   font-family: var(--font-family-mono);
@@ -110,12 +63,7 @@
   }
 }
 
-.vectorHelpers {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-md);
-  margin-top: var(--spacing-xs);
-}
+// Dark mode disabled - Light theme only
 
 .helperButton {
   @include button-base;
@@ -124,11 +72,7 @@
   font-size: var(--font-size-sm);
 }
 
-.vectorInfo {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
-  font-family: var(--font-family-mono);
-}
+// Dark mode disabled - Light theme only
 
 .parameterGrid {
   display: grid;
@@ -140,22 +84,7 @@
   }
 }
 
-.numberInput {
-  @include button-base;
-  padding: var(--spacing-sm);
-  background-color: var(--color-bg-primary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  font-size: var(--font-size-base);
-  color: var(--color-text-primary);
-  font-family: var(--font-family-mono);
-  width: 100%;
-
-  &:focus {
-    outline: 2px solid var(--color-primary-500);
-    outline-offset: 2px;
-  }
-}
+// Dark mode disabled - Light theme only
 
 .inputHelp {
   font-size: var(--font-size-xs);
@@ -163,26 +92,7 @@
   margin-top: var(--spacing-xs);
 }
 
-.errorBanner {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-md);
-  background-color: var(--color-error-50);
-  border: 1px solid var(--color-error-200);
-  border-radius: var(--radius-md);
-  margin-bottom: var(--spacing-lg);
-
-  .errorIcon {
-    font-size: var(--font-size-lg);
-    color: var(--color-error-600);
-  }
-
-  span {
-    font-size: var(--font-size-sm);
-    color: var(--color-error-800);
-  }
-}
+// Dark mode disabled - Light theme only
 
 .searchActions {
   display: flex;
@@ -190,26 +100,7 @@
   margin-bottom: var(--spacing-xl);
 }
 
-.searchButton {
-  @include button-base;
-  @include button-primary;
-  padding: var(--spacing-md) var(--spacing-xl);
-  font-size: var(--font-size-base);
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  min-width: 200px;
-  justify-content: center;
-
-  .spinner {
-    width: 16px;
-    height: 16px;
-    border: 2px solid var(--color-bg-primary);
-    border-top: 2px solid currentColor;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-  }
-}
+// Dark mode disabled - Light theme only
 
 .resultsSection {
   @include card-base;
@@ -217,30 +108,14 @@
   background-color: var(--color-bg-secondary);
 }
 
-.resultsHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: var(--spacing-lg);
-
-  h3 {
-    font-size: var(--font-size-lg);
-    font-weight: var(--font-weight-semibold);
-    color: var(--color-text-primary);
-    margin: 0;
-  }
-}
+// Dark mode disabled - Light theme only
 
 .resultsMeta {
   font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
 }
 
-.resultsTable {
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  overflow: hidden;
-}
+// Dark mode disabled - Light theme only
 
 .tableHeader {
   display: grid;
@@ -254,22 +129,7 @@
   color: var(--color-text-primary);
 }
 
-.resultRow {
-  display: grid;
-  grid-template-columns: 120px 100px 200px 1fr;
-  gap: var(--spacing-md);
-  padding: var(--spacing-md);
-  border-bottom: 1px solid var(--color-border-light);
-  align-items: center;
-
-  &:last-child {
-    border-bottom: none;
-  }
-
-  &:hover {
-    background-color: var(--color-bg-hover);
-  }
-}
+// Dark mode disabled - Light theme only
 
 .cell {
   font-size: var(--font-size-sm);
@@ -277,11 +137,7 @@
   overflow: hidden;
 }
 
-.idCell {
-  font-family: var(--font-family-mono);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-primary-700);
-}
+// Dark mode disabled - Light theme only
 
 .similarityScore {
   font-family: var(--font-family-mono);
@@ -292,13 +148,7 @@
   gap: var(--spacing-xs);
 }
 
-.similarityBar {
-  width: 60px;
-  height: 4px;
-  background-color: var(--color-bg-tertiary);
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-}
+// Dark mode disabled - Light theme only
 
 .similarityFill {
   height: 100%;
@@ -307,14 +157,7 @@
   transition: width var(--transition-fast);
 }
 
-.vectorPreview {
-  font-family: var(--font-family-mono);
-  font-size: var(--font-size-xs);
-  background-color: var(--color-bg-tertiary);
-  padding: var(--spacing-xs) var(--spacing-sm);
-  border-radius: var(--radius-sm);
-  cursor: help;
-}
+// Dark mode disabled - Light theme only
 
 .dimensionBadge {
   font-size: var(--font-size-xs);
@@ -326,17 +169,7 @@
   margin-top: var(--spacing-xs);
 }
 
-.metadataDetails {
-  summary {
-    cursor: pointer;
-    font-size: var(--font-size-xs);
-    color: var(--color-text-secondary);
-
-    &:hover {
-      color: var(--color-text-primary);
-    }
-  }
-}
+// Dark mode disabled - Light theme only
 
 .metadataContent {
   font-family: var(--font-family-mono);
@@ -350,11 +183,7 @@
   overflow-y: auto;
 }
 
-.noMetadata {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-tertiary);
-  font-style: italic;
-}
+// Dark mode disabled - Light theme only
 
 .noResults {
   text-align: center;

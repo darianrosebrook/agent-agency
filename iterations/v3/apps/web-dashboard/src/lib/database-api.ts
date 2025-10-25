@@ -171,3 +171,7 @@ class _DatabaseApiClient {
     }
   }
 }
+
+// Export singleton instance
+export const DatabaseApiClient = new _DatabaseApiClient();
+export const databaseApiClient = DatabaseApiClient; // Alias for backwards compatibility

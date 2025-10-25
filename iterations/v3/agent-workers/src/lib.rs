@@ -29,7 +29,7 @@ pub mod types;
 // Re-export main types
 pub use core::{MCPWorkerPool, WorkerPoolConfig, WorkerHandle};
 pub use execution::{ToolExecutor, ExecutionResult};
-pub use mcp_integration::MCPToolRegistry;
+pub use agent_mcp::ToolRegistry;
 pub use types::*;
 
 // Factory functions (async due to memory initialization)

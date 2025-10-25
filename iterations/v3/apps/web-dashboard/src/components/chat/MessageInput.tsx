@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback } from "react";
 import { MessageInputProps, ChatMessagePayload } from "@/types/chat";
 import styles from "./MessageInput.module.scss";
 

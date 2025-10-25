@@ -778,3 +778,24 @@ impl TaskSpec {
         }
     }
 }
+
+/// Task outcome for predictive learning
+#[derive(Debug, Clone)]
+pub struct TaskOutcome {
+    pub task_id: Uuid,
+    pub outcome_type: String,
+    pub performance_score: f64,
+    pub duration_ms: u64,
+    pub resource_usage: HashMap<String, f64>,
+    pub timestamp: chrono::DateTime<chrono::Utc>,
+}
+
+/// Learning insights from predictive analysis
+#[derive(Debug, Clone)]
+pub struct LearningInsights {
+    pub performance_prediction: crate::predictive_learning::performance::PerformancePrediction,
+    pub strategy_optimization: crate::predictive_learning::strategy::StrategyOptimization,
+    pub resource_prediction: crate::predictive_learning::resource::ResourcePrediction,
+    pub outcome_prediction: crate::predictive_learning::outcome::OutcomePrediction,
+    pub learning_acceleration: crate::predictive_learning::learning_accelerator::LearningAcceleration,
+}

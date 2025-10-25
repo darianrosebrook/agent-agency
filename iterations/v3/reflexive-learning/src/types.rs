@@ -5,6 +5,353 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
 
+/// Types of learning algorithms supported
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum LearningAlgorithmType {
+    ReinforcementLearning,
+    SupervisedLearning,
+    UnsupervisedLearning,
+    TransferLearning,
+    DeepReinforcementLearning,
+    EnsembleLearning,
+    MetaLearning,
+    OnlineLearning,
+}
+
+/// Configuration for learning algorithms
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AlgorithmConfig {
+    pub learning_rate: f64,
+    pub discount_factor: f64,
+    pub exploration_rate: f64,
+    pub max_iterations: usize,
+    pub convergence_threshold: f64,
+}
+
+impl Default for AlgorithmConfig {
+    fn default() -> Self {
+        Self {
+            learning_rate: 0.1,
+            discount_factor: 0.9,
+            exploration_rate: 0.1,
+            max_iterations: 1000,
+            convergence_threshold: 0.001,
+        }
+    }
+}
+
+/// Q-learning table for reinforcement learning
+#[derive(Debug, Clone)]
+pub struct QTable {
+    q_values: HashMap<String, HashMap<String, f64>>,
+}
+
+impl QTable {
+    pub fn new() -> Self {
+        Self {
+            q_values: HashMap::new(),
+        }
+    }
+
+    pub fn get(&self, state: &str, action: &str) -> f64 {
+        self.q_values
+            .get(state)
+            .and_then(|actions| actions.get(action))
+            .copied()
+            .unwrap_or(0.0)
+    }
+
+    pub fn set(&mut self, state: &str, action: &str, value: f64) {
+        self.q_values
+            .entry(state.to_string())
+            .or_insert_with(HashMap::new)
+            .insert(action.to_string(), value);
+    }
+
+    pub fn get_best_action(&self, state: &str) -> Option<String> {
+        self.q_values
+            .get(state)?
+            .iter()
+            .max_by(|a, b| a.1.partial_cmp(b.1).unwrap())
+            .map(|(action, _)| action.clone())
+    }
+
+    pub fn get_actions(&self, state: &str) -> Vec<String> {
+        self.q_values
+            .get(state)
+            .map(|actions| actions.keys().cloned().collect())
+            .unwrap_or_default()
+    }
+}
+
+impl Default for QTable {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// Statistics for ensemble learning components
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EnsembleComponentStatistics {
+    pub component_id: String,
+    pub accuracy: f64,
+    pub precision: f64,
+    pub recall: f64,
+    pub f1_score: f64,
+    pub training_time_ms: u64,
+    pub prediction_time_ms: u64,
+    pub last_updated: DateTime<Utc>,
+}
+
+/// Contribution of a component to ensemble predictions
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ComponentContribution {
+    pub component_id: String,
+    pub weight: f64,
+    pub confidence: f64,
+    pub prediction: serde_json::Value,
+}
+
+/// Analytics for ensemble learning performance
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EnsembleAnalytics {
+    pub overall_accuracy: f64,
+    pub component_contributions: Vec<ComponentContribution>,
+    pub diversity_score: f64,
+    pub stability_score: f64,
+    pub generated_at: DateTime<Utc>,
+}
+
+/// Characteristics of a learning problem
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProblemCharacteristics {
+    pub feature_count: usize,
+    pub sample_count: usize,
+    pub class_count: Option<usize>,
+    pub has_missing_values: bool,
+    pub is_regression: bool,
+    pub estimated_complexity: f64,
+}
+
+/// Performance metrics for learning algorithms
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AlgorithmPerformance {
+    pub algorithm_type: LearningAlgorithmType,
+    pub accuracy: f64,
+    pub training_time_ms: u64,
+    pub prediction_time_ms: u64,
+    pub memory_usage_mb: f64,
+    pub convergence_iterations: usize,
+    pub measured_at: DateTime<Utc>,
+}
+
+/// Learning data point
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LearningDataPoint {
+    pub input: LearningInput,
+    pub expected_output: LearningOutput,
+    pub context: LearningContext,
+}
+
+/// Learning input
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum LearningInput {
+    TaskPrediction {
+        task_type: TaskType,
+        complexity: TaskComplexity,
+        historical_performance: Option<HistoricalPerformance>,
+    },
+    QualityAssessment {
+        code_sample: String,
+        requirements: Vec<String>,
+    },
+    ResourceEstimation {
+        task_type: TaskType,
+        complexity: TaskComplexity,
+        constraints: Vec<String>,
+    },
+}
+
+/// Learning output
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum LearningOutput {
+    TaskPrediction {
+        success_probability: f64,
+        estimated_quality: f64,
+        recommended_strategy: LearningStrategy,
+    },
+    QualityScore {
+        overall_score: f64,
+        component_scores: HashMap<String, f64>,
+        recommendations: Vec<String>,
+    },
+    ResourceEstimate {
+        cpu_hours: f64,
+        memory_mb: u64,
+        time_estimate_minutes: u64,
+        confidence: f64,
+    },
+}
+
+/// Learning context
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LearningContext {
+    pub domain: String,
+    pub technology_stack: Vec<String>,
+    pub time_pressure: bool,
+    pub quality_requirements: Vec<String>,
+}
+
+/// Learning feedback for algorithm improvement
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LearningFeedback {
+    pub input: LearningInput,
+    pub predicted_output: LearningOutput,
+    pub actual_outcome: TaskOutcome,
+    pub performance_delta: f64,
+    pub lessons_learned: Vec<String>,
+}
+
+/// Learning system health monitor
+#[derive(Debug, Clone)]
+pub struct LearningSystemHealth {
+    pub algorithm_count: usize,
+    pub total_training_sessions: u64,
+    pub average_performance: f64,
+    pub system_uptime_seconds: u64,
+    pub memory_usage_mb: f64,
+    pub last_health_check: DateTime<Utc>,
+}
+
+impl LearningSystemHealth {
+    pub fn new() -> Self {
+        Self {
+            algorithm_count: 0,
+            total_training_sessions: 0,
+            average_performance: 0.0,
+            system_uptime_seconds: 0,
+            memory_usage_mb: 0.0,
+            last_health_check: chrono::Utc::now(),
+        }
+    }
+
+    /// Check if the system is healthy
+    pub fn is_healthy(&self) -> bool {
+        self.algorithm_count > 0 &&
+        self.average_performance > 0.5 &&
+        self.memory_usage_mb < 1000.0 // Less than 1GB
+    }
+
+    /// Get health score (0.0 to 1.0)
+    pub fn health_score(&self) -> f64 {
+        let mut score = 0.0;
+
+        // Algorithm availability (30%)
+        if self.algorithm_count > 0 {
+            score += 0.3 * (self.algorithm_count as f64 / 5.0).min(1.0);
+        }
+
+        // Performance (40%)
+        score += 0.4 * self.average_performance;
+
+        // Memory usage (20%) - lower is better
+        let memory_score = if self.memory_usage_mb < 500.0 {
+            1.0
+        } else if self.memory_usage_mb < 1000.0 {
+            0.5
+        } else {
+            0.0
+        };
+        score += 0.2 * memory_score;
+
+        // Training activity (10%)
+        let training_score = (self.total_training_sessions as f64 / 100.0).min(1.0);
+        score += 0.1 * training_score;
+
+        score.min(1.0)
+    }
+
+    /// Update health metrics
+    pub fn update_metrics(&mut self, algorithm_count: usize, performance_tracker: &AlgorithmPerformanceTracker) {
+        self.algorithm_count = algorithm_count;
+        self.total_training_sessions += 1;
+        self.last_health_check = chrono::Utc::now();
+
+        // Calculate average performance across all algorithms
+        let mut total_performance = 0.0;
+        let mut count = 0;
+
+        for algorithm_type in [
+            LearningAlgorithmType::ReinforcementLearning,
+            LearningAlgorithmType::SupervisedLearning,
+            LearningAlgorithmType::UnsupervisedLearning,
+            LearningAlgorithmType::EnsembleLearning,
+        ].iter() {
+            if let Some(performance) = performance_tracker.get_average_performance(algorithm_type) {
+                total_performance += performance.accuracy;
+                count += 1;
+            }
+        }
+
+        if count > 0 {
+            self.average_performance = total_performance / count as f64;
+        }
+    }
+}
+
+/// Algorithm performance tracker
+#[derive(Debug)]
+pub struct AlgorithmPerformanceTracker {
+    performance_history: HashMap<LearningAlgorithmType, Vec<AlgorithmPerformance>>,
+}
+
+impl AlgorithmPerformanceTracker {
+    pub fn new() -> Self {
+        Self {
+            performance_history: HashMap::new(),
+        }
+    }
+
+    /// Record algorithm performance
+    pub fn record_performance(&mut self, performance: AlgorithmPerformance) {
+        self.performance_history
+            .entry(performance.algorithm_type)
+            .or_insert_with(Vec::new)
+            .push(performance);
+    }
+
+    /// Get recent performance for algorithm type
+    pub fn get_recent_performance(&self, algorithm_type: &LearningAlgorithmType, count: usize) -> Vec<&AlgorithmPerformance> {
+        if let Some(history) = self.performance_history.get(algorithm_type) {
+            history.iter().rev().take(count).collect()
+        } else {
+            Vec::new()
+        }
+    }
+
+    /// Get average performance for algorithm type
+    pub fn get_average_performance(&self, algorithm_type: &LearningAlgorithmType) -> Option<AlgorithmPerformance> {
+        let performances = self.performance_history.get(algorithm_type)?;
+        if performances.is_empty() {
+            return None;
+        }
+
+        let avg_accuracy = performances.iter().map(|p| p.accuracy).sum::<f64>() / performances.len() as f64;
+        let avg_training_time = performances.iter().map(|p| p.training_time_ms).sum::<u64>() / performances.len() as u64;
+        let avg_prediction_time = performances.iter().map(|p| p.prediction_time_ms).sum::<u64>() / performances.len() as u64;
+
+        Some(AlgorithmPerformance {
+            algorithm_type: algorithm_type.clone(),
+            accuracy: avg_accuracy,
+            training_time_ms: avg_training_time,
+            prediction_time_ms: avg_prediction_time,
+            memory_usage_mb: 0.0, // Would need to track this
+            convergence_iterations: performances.iter().map(|p| p.convergence_iterations).max().unwrap_or(0),
+            measured_at: chrono::Utc::now(),
+        })
+    }
+}
+
 /// Learning task for the system
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LearningTask {
@@ -593,6 +940,12 @@ pub enum LearningSystemError {
 
     #[error("Validation failed: {0}")]
     ValidationError(String),
+}
+
+impl From<String> for LearningSystemError {
+    fn from(error: String) -> Self {
+        LearningSystemError::InitializationError(error)
+    }
 }
 
 /// Learning signals from self-prompting agent execution

@@ -98,6 +98,19 @@ use agent_agency_database::DatabaseClient;
 use anyhow::{Context, Result};
 use std::sync::Arc;
 use tracing::{debug, info, instrument, warn};
+
+/// Memory-informed orchestration decision
+#[derive(Debug, Clone)]
+struct MemoryInformedDecision {
+    /// Whether parallel execution is preferred based on historical success
+    prefers_parallel: bool,
+    /// Suggested worker IDs based on past performance
+    suggested_workers: Vec<String>,
+    /// Expected success rate for the preferred strategy
+    expected_success_rate: f32,
+    /// Confidence level in the decision (0.0 to 1.0)
+    confidence: f32,
+}
 use regex::Regex;
 
 // Parallel worker system integration
@@ -566,6 +579,7 @@ pub struct Orchestrator {
     progress_tracker: Arc<ProgressTracker>,
     db_client: Option<Arc<DatabaseClient>>, // Optional for backward compatibility
     parallel_coordinator: Option<Arc<ParallelCoordinator>>, // Optional parallel execution support
+    memory_system: Option<Arc<agent_memory::MemorySystem>>, // Optional memory integration
 }
 
 impl Orchestrator {
@@ -593,6 +607,7 @@ impl Orchestrator {
         retry_config: Option<RetryConfig>,
         db_client: Option<Arc<DatabaseClient>>,
         parallel_coordinator: Option<Arc<ParallelCoordinator>>,
+        memory_system: Option<Arc<agent_memory::MemorySystem>>,
     ) -> Self {
         let client = reqwest::Client::builder()
             .timeout(std::time::Duration::from_secs(30))
@@ -623,6 +638,7 @@ impl Orchestrator {
             progress_tracker,
             db_client,
             parallel_coordinator,
+            memory_system,
         }
     }
 
@@ -632,9 +648,197 @@ impl Orchestrator {
         self
     }
 
+    /// Enable memory system integration for learning and adaptation
+    pub fn with_memory_system(mut self, memory_system: Arc<agent_memory::MemorySystem>) -> Self {
+        self.memory_system = Some(memory_system);
+        self
+    }
+
     /// Check if parallel execution is available
     pub fn has_parallel_support(&self) -> bool {
         self.parallel_coordinator.is_some()
+    }
+
+    /// Check if memory system is available
+    pub fn has_memory_support(&self) -> bool {
+        self.memory_system.is_some()
+    }
+
+    /// Retrieve relevant memories for task execution decisions
+    async fn retrieve_execution_memories(
+        &self,
+        task_description: &str,
+        task_type: &str,
+    ) -> Vec<agent_memory::AgentExperience> {
+        if let Some(ref memory_system) = self.memory_system {
+            // Create context for memory retrieval
+            let task_context = agent_memory::TaskContext {
+                task_id: "orchestrator_decision".to_string(),
+                task_type: task_type.to_string(),
+                description: format!("Making orchestration decision for: {}", task_description),
+                domain: vec!["orchestration".to_string(), "execution".to_string()],
+                entities: vec!["orchestrator".to_string()],
+                temporal_context: Some(agent_memory::TemporalContext {
+                    start_time: chrono::Utc::now(),
+                    deadline: None,
+                    priority: agent_memory::TaskPriority::High,
+                    recurrence_pattern: None,
+                }),
+                metadata: std::collections::HashMap::new(),
+            };
+
+            match memory_system.retrieve_contextual_memories(&task_context, 5).await {
+                Ok(memories) => memories,
+                Err(e) => {
+                    warn!("Failed to retrieve execution memories: {}", e);
+                    vec![]
+                }
+            }
+        } else {
+            vec![]
+        }
+    }
+
+    /// Store execution outcome as memory for future learning
+    async fn store_execution_memory(
+        &self,
+        task_id: String,
+        task_description: String,
+        execution_strategy: String,
+        outcome: agent_memory::ExperienceOutcome,
+    ) {
+        if let Some(ref memory_system) = self.memory_system {
+            let task_context = agent_memory::TaskContext {
+                task_id: task_id.clone(),
+                task_type: "orchestration_execution".to_string(),
+                description: format!("Executed task with strategy: {}", execution_strategy),
+                domain: vec!["orchestration".to_string(), "learning".to_string()],
+                entities: vec!["orchestrator".to_string(), task_id.clone()],
+                temporal_context: Some(agent_memory::TemporalContext {
+                    start_time: chrono::Utc::now(),
+                    deadline: None,
+                    priority: agent_memory::TaskPriority::Medium,
+                    recurrence_pattern: None,
+                }),
+                metadata: std::collections::HashMap::new(),
+            };
+
+            let experience = agent_memory::AgentExperience {
+                id: uuid::Uuid::new_v4(),
+                agent_id: "orchestrator".to_string(),
+                task_id,
+                context: task_context,
+                input: serde_json::json!({
+                    "task_description": task_description,
+                    "execution_strategy": execution_strategy
+                }),
+                output: serde_json::json!({
+                    "outcome": outcome
+                }),
+                outcome,
+                memory_type: agent_memory::MemoryType::Episodic,
+                timestamp: chrono::Utc::now(),
+                metadata: std::collections::HashMap::new(),
+            };
+
+            if let Err(e) = memory_system.store_experience(experience).await {
+                warn!("Failed to store execution memory: {}", e);
+            }
+        }
+    }
+
+    /// Analyze execution memories to inform orchestration decisions
+    fn analyze_execution_memories(
+        &self,
+        memories: &[agent_memory::AgentExperience],
+        task_description: &str,
+    ) -> MemoryInformedDecision {
+        if memories.is_empty() {
+            return MemoryInformedDecision {
+                prefers_parallel: true, // Default to parallel if no memory
+                suggested_workers: vec![],
+                expected_success_rate: 0.8,
+                confidence: 0.0,
+            };
+        }
+
+        // Analyze past execution outcomes
+        let mut parallel_successes = 0;
+        let mut parallel_attempts = 0;
+        let mut sequential_successes = 0;
+        let mut sequential_attempts = 0;
+        let mut worker_performance = std::collections::HashMap::new();
+
+        for memory in memories {
+            if let Some(strategy) = memory.context.metadata.get("execution_strategy") {
+                if strategy == "parallel" {
+                    parallel_attempts += 1;
+                    if memory.outcome.success {
+                        parallel_successes += 1;
+                    }
+                } else if strategy == "sequential" {
+                    sequential_attempts += 1;
+                    if memory.outcome.success {
+                        sequential_successes += 1;
+                    }
+                }
+            }
+
+            // Track worker performance
+            if let Some(worker_id) = memory.context.metadata.get("worker_id") {
+                let performance = memory.outcome.performance_score.unwrap_or(0.5);
+                worker_performance.entry(worker_id.clone())
+                    .or_insert(vec![])
+                    .push(performance);
+            }
+        }
+
+        // Calculate success rates
+        let parallel_success_rate = if parallel_attempts > 0 {
+            parallel_successes as f32 / parallel_attempts as f32
+        } else {
+            0.8 // Default assumption
+        };
+
+        let sequential_success_rate = if sequential_attempts > 0 {
+            sequential_successes as f32 / sequential_attempts as f32
+        } else {
+            0.8 // Default assumption
+        };
+
+        // Determine preference based on historical success
+        let prefers_parallel = parallel_success_rate >= sequential_success_rate;
+
+        // Find best performing workers
+        let mut worker_scores: Vec<_> = worker_performance.into_iter()
+            .map(|(worker_id, scores)| {
+                let avg_score = scores.iter().sum::<f32>() / scores.len() as f32;
+                (worker_id, avg_score)
+            })
+            .collect();
+
+        worker_scores.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+        let suggested_workers = worker_scores.into_iter()
+            .take(3)
+            .map(|(worker_id, _)| worker_id)
+            .collect();
+
+        // Calculate confidence based on sample size
+        let total_attempts = parallel_attempts + sequential_attempts;
+        let confidence = if total_attempts >= 5 {
+            0.9
+        } else if total_attempts >= 2 {
+            0.7
+        } else {
+            0.3
+        };
+
+        MemoryInformedDecision {
+            prefers_parallel,
+            suggested_workers,
+            expected_success_rate: if prefers_parallel { parallel_success_rate } else { sequential_success_rate },
+            confidence,
+        }
     }
 
     /// Analyze task complexity to determine execution strategy
@@ -697,8 +901,14 @@ impl Orchestrator {
 
         // Check if task should be routed to parallel execution
         let complexity_score = self.analyze_task_complexity(description);
+
+        // Retrieve relevant execution memories to inform decision making
+        let execution_memories = self.retrieve_execution_memories(description, "task_execution").await;
+        let memory_informed_decision = self.analyze_execution_memories(&execution_memories, description);
+
         let should_use_parallel = self.parallel_coordinator.is_some() &&
-            should_route_to_parallel(description, complexity_score, &ParallelCoordinatorConfig::default());
+            should_route_to_parallel(description, complexity_score, &ParallelCoordinatorConfig::default()) &&
+            memory_informed_decision.prefers_parallel;
 
         if should_use_parallel {
             info!("Routing task {} to parallel execution (complexity: {:.2})", task_id, complexity_score);
@@ -727,6 +937,31 @@ impl Orchestrator {
 
             return match self.parallel_coordinator.as_ref().unwrap().execute_parallel(complex_task.clone()).await {
                 Ok(result) => {
+                    // Store execution outcome in memory for future learning
+                    let outcome = agent_memory::ExperienceOutcome {
+                        success: result.success,
+                        performance_score: Some(if result.success { 0.9 } else { 0.3 }),
+                        learned_capabilities: vec!["parallel_execution".to_string()],
+                        failure_reasons: if result.success { vec![] } else { vec!["parallel_execution_failed".to_string()] },
+                        success_factors: if result.success { vec!["parallel_strategy".to_string()] } else { vec![] },
+                        execution_time_ms: Some(result.execution_time.as_millis() as u64),
+                        tokens_used: None,
+                        feedback: Some(agent_memory::AgentFeedback {
+                            quality_score: Some(if result.success { 0.85 } else { 0.4 }),
+                            relevance_score: Some(0.9),
+                            accuracy_score: Some(if result.success { 0.9 } else { 0.5 }),
+                            comments: vec![format!("Parallel execution {}", if result.success { "succeeded" } else { "failed" })],
+                            evaluator_id: Some("orchestrator".to_string()),
+                        }),
+                    };
+
+                    self.store_execution_memory(
+                        task_id.to_string(),
+                        description.to_string(),
+                        "parallel".to_string(),
+                        outcome,
+                    ).await;
+
                     // Convert parallel result to orchestration result
                     Ok(TaskExecutionResult {
                         task_id,
@@ -825,6 +1060,31 @@ impl Orchestrator {
 
         // Complete progress tracking
         self.progress_tracker.complete_execution(task_id, success).await?;
+
+        // Store execution outcome in memory for future learning
+        let outcome = agent_memory::ExperienceOutcome {
+            success,
+            performance_score: Some(if success { 0.8 } else { 0.2 }),
+            learned_capabilities: vec!["sequential_execution".to_string()],
+            failure_reasons: if success { vec![] } else { vec!["sequential_execution_failed".to_string()] },
+            success_factors: if success { vec!["sequential_strategy".to_string()] } else { vec![] },
+            execution_time_ms: Some(execution_time_ms),
+            tokens_used: None,
+            feedback: Some(agent_memory::AgentFeedback {
+                quality_score: Some(if success { 0.8 } else { 0.3 }),
+                relevance_score: Some(0.85),
+                accuracy_score: Some(if success { 0.85 } else { 0.4 }),
+                comments: vec![format!("Sequential execution {}", if success { "succeeded" } else { "failed" })],
+                evaluator_id: Some("orchestrator".to_string()),
+            }),
+        };
+
+        self.store_execution_memory(
+            task_id.to_string(),
+            description.to_string(),
+            "sequential".to_string(),
+            outcome,
+        ).await;
 
         Ok(TaskExecutionResult {
             working_spec,

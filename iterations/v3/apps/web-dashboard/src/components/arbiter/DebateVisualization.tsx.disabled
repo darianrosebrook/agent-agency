@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useDebateData } from "@/hooks/useArbiter";
 import { Card, CardHeader, CardTitle, CardContent } from "../shared/Card";
 import { Badge } from "../shared/Badge";

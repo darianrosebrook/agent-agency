@@ -1,21 +1,27 @@
 // Color Variables
+// Design System inspired by FlowPress
 :root {
-  // Primary colors
-  --color-primary: #2563eb;
-  --color-primary-dark: #1d4ed8;
-  --color-primary-light: #3b82f6;
-  --color-primary-50: #eff6ff;
-  --color-primary-100: #dbeafe;
-  --color-primary-500: #3b82f6;
-  --color-primary-600: #2563eb;
-  --color-primary-700: #1d4ed8;
+  // Brand colors
+  --color-brand-primary: #191919;
+  --color-brand-secondary: #5F5E5D;
+  --color-brand-accent: #ABB99E;
+  
+  // Primary colors (backwards compatibility)
+  --color-primary: #191919;
+  --color-primary-dark: #000000;
+  --color-primary-light: #E8E8E8;
+  --color-primary-50: #F4F4F4;
+  --color-primary-100: #E8E8E8;
+  --color-primary-500: #191919;
+  --color-primary-600: #000000;
+  --color-primary-700: #000000;
 
   // Status colors
-  --color-success: #10b981;
-  --color-success-dark: #059669;
-  --color-success-light: #34d399;
-  --color-success-50: #ecfdf5;
-  --color-success-100: #d1fae5;
+  --color-success: #ABB99E;
+  --color-success-dark: #8fa67e;
+  --color-success-light: #d4e2c7;
+  --color-success-50: #ecf3e7;
+  --color-success-100: #d4e2c7;
 
   --color-warning: #f59e0b;
   --color-warning-dark: #d97706;
@@ -29,38 +35,46 @@
   --color-error-50: #fef2f2;
   --color-error-100: #fee2e2;
 
-  --color-info: #06b6d4;
-  --color-info-dark: #0891b2;
-  --color-info-light: #22d3ee;
-  --color-info-50: #ecfeff;
-  --color-info-100: #cffafe;
+  --color-info: #5F5E5D;
+  --color-info-dark: #4a4948;
+  --color-info-light: #d1d5db;
+  --color-info-50: #f3f4f6;
+  --color-info-100: #d1d5db;
 
   // Neutral colors
   --color-gray-50: #f9fafb;
-  --color-gray-100: #f3f4f6;
-  --color-gray-200: #e5e7eb;
+  --color-gray-100: #F4F4F4;
+  --color-gray-200: #E8E8E8;
   --color-gray-300: #d1d5db;
-  --color-gray-400: #9ca3af;
-  --color-gray-500: #6b7280;
+  --color-gray-400: #ABABAB;
+  --color-gray-500: #5F5E5D;
   --color-gray-600: #4b5563;
   --color-gray-700: #374151;
-  --color-gray-800: #1f2937;
-  --color-gray-900: #111827;
+  --color-gray-800: #191919;
+  --color-gray-900: #000000;
 
   // Background colors
-  --color-bg-primary: #ffffff;
-  --color-bg-secondary: #f9fafb;
-  --color-bg-tertiary: #f3f4f6;
+  --color-bg-primary: #FFFFFF;
+  --color-bg-secondary: #F4F4F4;
+  --color-bg-tertiary: #E8E8E8;
+  --color-background-primary: #FFFFFF;
+  --color-background-secondary: #F4F4F4;
+  --color-background-muted: #E8E8E8;
 
   // Text colors
-  --color-text-primary: #111827;
-  --color-text-secondary: #6b7280;
-  --color-text-tertiary: #9ca3af;
+  --color-text-primary: #191919;
+  --color-text-secondary: #5F5E5D;
+  --color-text-tertiary: #ABABAB;
+  --color-text-muted: #ABABAB;
+  --color-text-inverse: #FFFFFF;
 
   // Border colors
-  --color-border: #e5e7eb;
-  --color-border-light: #f3f4f6;
-  --color-border-dark: #d1d5db;
+  --color-border: #E8E8E8;
+  --color-border-light: #F4F4F4;
+  --color-border-dark: #5F5E5D;
+  --color-border-default: #E8E8E8;
+  --color-border-muted: #F4F4F4;
+  --color-border-focus: #5F5E5D;
 
   // Spacing
   --spacing-xs: 0.25rem;    // 4px
@@ -99,8 +113,10 @@
   --z-tooltip: 1070;
 
   // Typography
-  --font-family-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-family-mono: ui-monospace, SFMono-Regular, 'SF Mono', Consolas, monospace;
+  --font-family-display: 'Creato Display', system-ui, sans-serif;
+  --font-family-mono: 'DM Mono', monospace;
+  --font-family-system: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'DM Mono', monospace;
 
   --font-size-xs: 0.75rem;   // 12px
   --font-size-sm: 0.875rem;  // 14px
@@ -130,21 +146,19 @@
   --max-width-2xl: 1536px;
 }
 
-// Dark mode overrides (if needed in future)
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-bg-primary: #1f2937;
-    --color-bg-secondary: #111827;
-    --color-bg-tertiary: #374151;
+//   :root {
+//     --color-bg-primary: #1f2937;
+//     --color-bg-secondary: #111827;
+//     --color-bg-tertiary: #374151;
 
-    --color-text-primary: #f9fafb;
-    --color-text-secondary: #d1d5db;
-    --color-text-tertiary: #9ca3af;
+//     --color-text-primary: #f9fafb;
+//     --color-text-secondary: #d1d5db;
+//     --color-text-tertiary: #9ca3af;
 
-    --color-border: #374151;
-    --color-border-light: #4b5563;
-    --color-border-dark: #1f2937;
-  }
-}
+//     --color-border: #374151;
+//     --color-border-light: #4b5563;
+//     --color-border-dark: #1f2937;
+//   }
+// }
 
 

@@ -5,6 +5,7 @@
 use crate::types::*;
 use crate::{CawsIntegration, ToolDiscovery, ToolRegistry};
 use caws_runtime_validator::integration::McpCawsIntegration;
+use agent_memory::MemorySystem;
 use anyhow::{anyhow, bail, Result};
 use jsonrpc_core::{Error as JsonRpcError, IoHandler, Params, Value};
 use jsonrpc_http_server::hyper::{Body, Response, StatusCode};
@@ -524,11 +525,17 @@ pub struct MCPServer {
     api_rate_limiter: Option<Arc<RateLimitMiddleware>>,
     slo_tracker: Arc<SLOTracker>,
     db_client: Arc<DatabaseClient>,
+    memory_system: Option<Arc<agent_memory::MemorySystem>>,
 }
 
 impl MCPServer {
     /// Create a new MCP server
     pub fn new(config: MCPConfig, db_client: Arc<DatabaseClient>) -> Self {
+        Self::new_with_memory(config, db_client, None)
+    }
+
+    /// Create a new MCP server with memory system
+    pub fn new_with_memory(config: MCPConfig, db_client: Arc<DatabaseClient>, memory_system: Option<Arc<MemorySystem>>) -> Self {
         let rate_limiter = config
             .server
             .requests_per_minute
@@ -574,9 +581,15 @@ impl MCPServer {
             Arc::new(tracker)
         };
 
+        // Create tool registry with memory system if provided
+        let mut tool_registry = ToolRegistry::new();
+        if let Some(ref memory_system) = memory_system {
+            tool_registry.set_memory_system(Arc::clone(memory_system));
+        }
+
         Self {
             config,
-            tool_registry: Arc::new(ToolRegistry::new()),
+            tool_registry: Arc::new(tool_registry),
             tool_discovery: Arc::new(ToolDiscovery::new()),
             // DEPRECATED: Keep legacy integration for backward compatibility
             caws_integration: Arc::new(CawsIntegration::new()),
@@ -591,6 +604,7 @@ impl MCPServer {
             api_rate_limiter,
             slo_tracker: Arc::clone(&slo_tracker),
             db_client,
+            memory_system,
         }
     }
 
@@ -682,6 +696,8 @@ impl MCPServer {
             *status = MCPServerStatus::Starting;
         }
 
+        // Memory system is already set during construction via new_with_memory()
+
         // Initialize components
         self.tool_discovery.initialize().await?;
         self.tool_registry.initialize().await?;
@@ -713,6 +729,7 @@ impl MCPServer {
         );
         Ok(())
     }
+
 
     /// Spawn the MCP HTTP server and return a readiness receiver plus handle.
     async fn spawn_http_server(&self) -> Result<(oneshot::Receiver<()>, HttpServerHandle)> {

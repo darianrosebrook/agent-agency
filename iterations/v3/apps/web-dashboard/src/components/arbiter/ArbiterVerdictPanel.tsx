@@ -1,4 +1,3 @@
-import React from "react";
 import { useArbiterVerdict } from "@/hooks/useArbiter";
 import {
   Clock,

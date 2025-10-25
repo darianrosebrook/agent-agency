@@ -276,7 +276,7 @@ pub enum LogLevel {
     Critical = 5,
 }
 
-/// Performance metrics
+/// Performance metrics - now using common types with compatibility layer
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PerformanceMetrics {
     pub cpu_usage_percent: f32,
@@ -285,6 +285,27 @@ pub struct PerformanceMetrics {
     pub network_io_bytes: u64,
     pub execution_time_ms: u64,
     pub queue_time_ms: u64,
+}
+
+impl From<PerformanceMetrics> for agent_agency_common_types::metrics::CommonResourceUsage {
+    fn from(metrics: PerformanceMetrics) -> Self {
+        Self {
+            cpu_usage_percent: Some(metrics.cpu_usage_percent as f64),
+            memory_usage_mb: Some(metrics.memory_usage_mb),
+            disk_usage_mb: None, // disk_io_bytes is different from disk_usage_mb
+            network_usage_mb: None, // network_io_bytes is different from network_usage_mb
+            active_connections: None,
+            queue_depth: Some(metrics.queue_time_ms as u64), // approximate mapping
+            timestamp: chrono::Utc::now(),
+            metadata: {
+                let mut map = std::collections::HashMap::new();
+                map.insert("disk_io_bytes".to_string(), serde_json::Value::Number(metrics.disk_io_bytes.into()));
+                map.insert("network_io_bytes".to_string(), serde_json::Value::Number(metrics.network_io_bytes.into()));
+                map.insert("execution_time_ms".to_string(), serde_json::Value::Number(metrics.execution_time_ms.into()));
+                map
+            },
+        }
+    }
 }
 
 /// CAWS compliance result
@@ -313,6 +334,7 @@ pub struct ToolManifest {
     pub endpoint: Option<String>,
     pub caws_compliance: Option<CawsComplianceConfig>,
     pub metadata: HashMap<String, serde_json::Value>,
+    pub configuration_schema: serde_json::Value,
 }
 
 /// Dependency definition

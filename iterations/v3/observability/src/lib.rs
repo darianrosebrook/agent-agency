@@ -36,13 +36,19 @@ pub use analytics::{
     EffortLevel, HistoricalData, OptimizationRecommendation, OptimizationType, PredictionType,
     PredictiveModelResult, PriorityLevel, SystemHealthSnapshot, TrendAnalysis, TrendDirection,
 };
+// Analytics dashboard re-exports (now from modular analytics_dashboard crate)
 pub use analytics_dashboard::{
-    AnalyticsAlertPreferences, AnalyticsDashboard, AnalyticsDashboardConfig,
-    AnalyticsDashboardData, AnalyticsInsight, AnalyticsPreferences, AnalyticsRealTimeUpdate,
-    AnalyticsSession, AnalyticsSubscriptionType, AnalyticsSystemOverview, AnomalyDetectionSummary,
-    AnomalyUpdates, ChartConfig, ChartType, DataPoint, InsightSeverity, InsightType,
-    OptimizationUpdates, PredictionUpdates, PredictiveInsightsSummary, TrendAnalysisSummary,
-    TrendUpdates, VisualData,
+    config::{AnalyticsAlertPreferences, AnalyticsDashboardConfig, AnalyticsPreferences, AnalyticsSession, AnalyticsSubscriptionType},
+    dashboard::AnalyticsDashboard,
+    data::{
+        AnalyticsDashboardData, AnalyticsInsight, AnalyticsSystemOverview, AnomalyDetectionSummary,
+        PredictiveInsightsSummary, TrendAnalysisSummary, ChartConfig, ChartType, DataPoint,
+        InsightSeverity, InsightType, VisualData, CpuStatistics, CpuMeasurement, AnalyticsError,
+        OptimizationPriority, ImplementationEffort,
+    },
+    updates::{AnalyticsRealTimeUpdate, TrendUpdates, AnomalyUpdates, PredictionUpdates, OptimizationUpdates},
+    metrics::{SystemMetrics, AgentMetrics, TaskMetrics, ProcessedSystemMetrics, ValidatedPredictions, CachePerformanceMetrics},
+    ml::{MLModel, ModelPrediction, OnnxModelInfo, InferenceResult},
 };
 pub use cache::{RedisCache, CacheBackend, CacheError};
 pub use dashboard::*;

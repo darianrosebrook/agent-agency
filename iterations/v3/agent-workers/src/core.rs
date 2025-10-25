@@ -6,11 +6,11 @@
 use crate::types::*;
 use crate::mcp_integration::MCPIntegration;
 use crate::execution::ToolExecutor;
-use agent_mcp::{ToolRegistry, ToolExecutionRequest};
+use agent_mcp::{ToolRegistry, ToolExecutionRequest, types::{ExecutionStatus, ExecutionContext}};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{info, warn};
+use tracing::{info, warn, debug};
 
 /// Configuration for the MCP worker pool
 #[derive(Debug, Clone)]
@@ -117,6 +117,13 @@ impl MCPWorkerPool {
         // Find suitable worker
         let worker = self.find_suitable_worker(&task).await?;
 
+        // Retrieve relevant execution memories to inform decision making
+        let relevant_memories = self.retrieve_execution_memories(&worker, &task).await;
+        if !relevant_memories.is_empty() {
+            debug!("Retrieved {} relevant execution memories for worker {} on task {}",
+                   relevant_memories.len(), worker.id, task.id);
+        }
+
         // Validate task requirements
         self.validate_task_requirements(&task).await?;
 
@@ -136,11 +143,22 @@ impl MCPWorkerPool {
             tool_id: mcp_tool.id,
             parameters: task.parameters.clone(),
             timeout_seconds: task.timeout_seconds.map(|t| t as u64),
-            context: Some(serde_json::json!({
-                "task_id": task.id,
-                "worker_id": worker.id,
-                "execution_timeout": self.config.worker_timeout_seconds
-            })),
+            context: Some(ExecutionContext {
+                working_directory: None,
+                environment_variables: HashMap::new(),
+                input_files: vec![],
+                output_directory: None,
+                metadata: {
+                    let mut map = HashMap::new();
+                    map.insert("task_id".to_string(), serde_json::json!(task.id));
+                    map.insert("worker_id".to_string(), serde_json::json!(worker.id));
+                    map.insert("execution_timeout".to_string(), serde_json::json!(self.config.worker_timeout_seconds));
+                    map
+                },
+            }),
+            created_at: chrono::Utc::now(),
+            priority: agent_mcp::types::ExecutionPriority::Normal,
+            requested_by: Some("worker_pool".to_string()),
         };
 
         // Execute using MCP integration
@@ -152,23 +170,152 @@ impl MCPWorkerPool {
         let task_result = TaskResult {
             task_id: task.id,
             status: match result.status {
-                agent_mcp::ExecutionStatus::Completed => TaskStatus::Completed,
-                agent_mcp::ExecutionStatus::Failed => TaskStatus::Failed,
-                agent_mcp::ExecutionStatus::Timeout => TaskStatus::Failed,
+                ExecutionStatus::Completed => TaskStatus::Completed,
+                ExecutionStatus::Failed => TaskStatus::Failed,
+                ExecutionStatus::Timeout => TaskStatus::Failed,
                 _ => TaskStatus::Failed,
             },
-            output: result.output,
-            error_message: result.error,
+            output: result.output.clone(),
+            error_message: result.error.clone(),
             execution_time_ms: execution_time,
             tool_used: tool_id.clone(),
             quality_score: None, // Would be calculated by quality validator
         };
+
+        // Memory integration: Store execution experience for learning
+        self.store_worker_memory(&worker, &task, &task_result, &result).await;
 
         // Update statistics
         let mut stats = self.stats.write().await;
         stats.total_tasks_processed += 1;
 
         Ok(task_result)
+    }
+
+    /// Store worker execution experience in memory for future learning
+    async fn store_worker_memory(
+        &self,
+        worker: &WorkerHandle,
+        task: &TaskDefinition,
+        task_result: &TaskResult,
+        mcp_result: &agent_mcp::ToolExecutionResult,
+    ) {
+        // Create task context for memory storage
+        let task_context = agent_memory::TaskContext {
+            task_id: task.id.to_string(),
+            task_type: task.name.clone(),
+            description: task.description.clone(),
+            domain: vec!["worker_execution".to_string(), task.name.clone()],
+            entities: vec![worker.id.to_string(), task.required_tools.first().cloned().unwrap_or_default()],
+            temporal_context: Some(agent_memory::TemporalContext {
+                start_time: chrono::Utc::now() - chrono::Duration::milliseconds(task_result.execution_time_ms as i64),
+                deadline: None,
+                priority: agent_memory::TaskPriority::Medium,
+                recurrence_pattern: None,
+            }),
+            metadata: std::collections::HashMap::from([
+                ("worker_specialty".to_string(), serde_json::json!(worker.specialty)),
+                ("tool_used".to_string(), serde_json::json!(task_result.tool_used)),
+                ("execution_status".to_string(), serde_json::json!(task_result.status)),
+            ]),
+        };
+
+        // Determine success and performance score
+        let success = matches!(task_result.status, TaskStatus::Completed);
+        let performance_score = if success {
+            // Calculate performance based on execution time and tool effectiveness
+            let time_score = if task_result.execution_time_ms < 1000 { 1.0 }
+                           else if task_result.execution_time_ms < 5000 { 0.8 }
+                           else { 0.6 };
+            Some(time_score)
+        } else {
+            Some(0.2) // Low score for failures
+        };
+
+        // Create experience outcome
+        let outcome = agent_memory::ExperienceOutcome {
+            success,
+            performance_score,
+            learned_capabilities: vec![format!("{}_execution", task.name)],
+            failure_reasons: if success { vec![] } else {
+                vec![task_result.error_message.clone().unwrap_or_else(|| "Unknown failure".to_string())]
+            },
+            success_factors: if success {
+                vec![
+                    format!("tool_{}_effective", task_result.tool_used),
+                    format!("worker_{:?}_skilled", worker.specialty),
+                ]
+            } else { vec![] },
+            execution_time_ms: Some(task_result.execution_time_ms as i64),
+            tokens_used: None, // MCP tools don't track tokens directly
+            feedback: Some(agent_memory::AgentFeedback {
+                quality_score: performance_score,
+                relevance_score: Some(0.9),
+                accuracy_score: Some(if success { 0.95 } else { 0.3 }),
+                comments: vec![format!("Worker {} executed {}: {:?}", worker.id, task.name, task_result.status)],
+                evaluator_id: Some("worker_pool_memory_system".to_string()),
+            }),
+        };
+
+        // Create and store the agent experience
+        let experience = agent_memory::AgentExperience {
+            id: uuid::Uuid::new_v4(),
+            agent_id: worker.id.to_string(),
+            task_id: task.id.to_string(),
+            context: task_context,
+            input: serde_json::json!({
+                "task_description": task.description,
+                "tool_id": task.required_tools.first().cloned().unwrap_or_default(),
+                "parameters": task.parameters,
+                "required_tools": task.required_tools
+            }),
+            output: serde_json::json!({
+                "task_result": task_result,
+                "mcp_result": mcp_result
+            }),
+            outcome,
+            memory_type: agent_memory::MemoryType::Episodic,
+            timestamp: chrono::Utc::now(),
+            metadata: std::collections::HashMap::new(),
+        };
+
+        // Store in shared memory system
+        if let Err(e) = worker.memory_access.store_experience(experience).await {
+            warn!("Failed to store worker execution in memory: {}", e);
+        }
+    }
+
+    /// Retrieve relevant execution memories before task execution
+    async fn retrieve_execution_memories(
+        &self,
+        worker: &WorkerHandle,
+        task: &TaskDefinition,
+    ) -> Vec<agent_memory::ContextualMemory> {
+        let task_context = agent_memory::TaskContext {
+            task_id: task.id.to_string(),
+            task_type: task.name.clone(),
+            description: format!("Similar to: {}", task.description),
+            domain: vec![task.name.clone()],
+            entities: vec![task.required_tools.first().cloned().unwrap_or_default()],
+            temporal_context: Some(agent_memory::TemporalContext {
+                start_time: chrono::Utc::now(),
+                deadline: None,
+                priority: agent_memory::TaskPriority::Medium,
+                recurrence_pattern: None,
+            }),
+            metadata: std::collections::HashMap::from([
+                ("tool_id".to_string(), serde_json::json!(task.required_tools.first().cloned().unwrap_or_default())),
+                ("worker_specialty".to_string(), serde_json::json!(worker.specialty)),
+            ]),
+        };
+
+        match worker.memory_access.retrieve_contextual_memories(&task_context, 5).await {
+            Ok(memories) => memories,
+            Err(e) => {
+                warn!("Failed to retrieve execution memories: {}", e);
+                vec![]
+            }
+        }
     }
 
     /// Find a suitable worker for the given task

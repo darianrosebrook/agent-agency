@@ -27,7 +27,7 @@ sha2 = "0.10"  # For checksum calculations
 regex = "1.10"  # For migration parsing
 once_cell = "1.19"  # For static lazy initialization
 
-# Multimodal RAG integration dependencies
+# Keep database functionality separate to avoid circular dependencies
 indexers = { path = "../indexers" }
 embedding-service = { path = "../embedding-service", optional = true }
 

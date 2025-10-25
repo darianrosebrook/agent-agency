@@ -7,14 +7,7 @@
   overflow: hidden;
 }
 
-.messagesContainer {
-  flex: 1;
-  overflow-y: auto;
-  padding: var(--spacing-lg);
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-lg);
-}
+// Dark mode disabled - Light theme only
 
 // Empty state
 .emptyState {
@@ -56,23 +49,7 @@
   font-size: var(--font-size-sm);
 }
 
-.typingIndicator {
-  display: flex;
-  gap: var(--spacing-xs);
-  align-items: center;
-
-  span {
-    width: 4px;
-    height: 4px;
-    border-radius: 50%;
-    background-color: var(--color-gray-400);
-    animation: typing 1.4s infinite;
-
-    &:nth-child(1) { animation-delay: 0s; }
-    &:nth-child(2) { animation-delay: 0.2s; }
-    &:nth-child(3) { animation-delay: 0.4s; }
-  }
-}
+// Dark mode disabled - Light theme only
 
 .loadingText {
   font-style: italic;
@@ -94,15 +71,11 @@
   width: 6px;
 }
 
-.messagesContainer::-webkit-scrollbar-track {
-  background: var(--color-bg-secondary);
-}
+// Dark mode disabled - Light theme only
 
 .messagesContainer::-webkit-scrollbar-thumb {
   background: var(--color-gray-300);
   border-radius: 3px;
 }
 
-.messagesContainer::-webkit-scrollbar-thumb:hover {
-  background: var(--color-gray-400);
-}
+// Dark mode disabled - Light theme only

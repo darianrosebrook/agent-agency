@@ -25,30 +25,21 @@
   }
 }
 
-.statusIndicator {
-  @include flex-center;
-  gap: var(--spacing-xs);
-  font-weight: var(--font-weight-medium);
-}
+// Dark mode disabled - Light theme only
 
 .icon {
   font-size: var(--font-size-sm);
   line-height: 1;
 }
 
-.label {
-  white-space: nowrap;
-}
+// Dark mode disabled - Light theme only
 
 .statusDetails {
   @include flex-center;
   gap: var(--spacing-sm);
 }
 
-.description {
-  font-size: var(--font-size-sm);
-  opacity: 0.8;
-}
+// Dark mode disabled - Light theme only
 
 .retryButton {
   @include button-secondary;
@@ -80,8 +71,5 @@
     padding: var(--spacing-sm);
   }
 
-  .statusDetails {
-    width: 100%;
-    justify-content: space-between;
-  }
+// Dark mode disabled - Light theme only
 }

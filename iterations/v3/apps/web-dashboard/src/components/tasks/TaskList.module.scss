@@ -5,29 +5,14 @@
   width: 100%;
 }
 
-.header {
-  display: grid;
-  grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr;
-  gap: 1rem;
-  padding: 1rem 1.5rem;
-  background-color: var(--color-background);
-  border-bottom: 1px solid var(--color-border);
-  font-weight: 600;
-  font-size: 0.875rem;
-  color: var(--color-text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.025em;
-}
+// Dark mode disabled - Light theme only
 
 .headerCell {
   display: flex;
   align-items: center;
 }
 
-.body {
-  display: flex;
-  flex-direction: column;
-}
+// Dark mode disabled - Light theme only
 
 .taskRow {
   display: grid;
@@ -46,28 +31,14 @@
   }
 }
 
-.taskCell,
-.statusCell,
-.phaseCell,
-.priorityCell,
-.dateCell,
-.actionsCell {
-  display: flex;
-  align-items: center;
-  min-height: 3rem;
-}
+// Dark mode disabled - Light theme only
 
 .taskCell {
   align-items: flex-start;
   padding-top: 0.5rem;
 }
 
-.taskInfo {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  width: 100%;
-}
+// Dark mode disabled - Light theme only
 
 .taskTitle {
   font-size: 1rem;
@@ -83,12 +54,7 @@
   }
 }
 
-.taskDescription {
-  font-size: 0.875rem;
-  color: var(--color-text-secondary);
-  line-height: 1.4;
-  margin: 0;
-}
+// Dark mode disabled - Light theme only
 
 .taskMeta {
   display: flex;
@@ -98,57 +64,14 @@
   color: var(--color-text-tertiary);
 }
 
-.taskId {
-  font-family: var(--font-mono);
-  background-color: var(--color-background);
-  padding: 0.125rem 0.375rem;
-  border-radius: 0.25rem;
-  border: 1px solid var(--color-border);
-}
+// Dark mode disabled - Light theme only
 
 .retryCount {
   color: var(--color-warning);
   font-weight: 500;
 }
 
-.status {
-  padding: 0.25rem 0.75rem;
-  border-radius: 1rem;
-  font-size: 0.75rem;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.025em;
-
-  &.success {
-    background-color: var(--color-success-light);
-    color: var(--color-success-dark);
-  }
-
-  &.primary {
-    background-color: var(--color-primary-light);
-    color: var(--color-primary-dark);
-  }
-
-  &.warning {
-    background-color: var(--color-warning-light);
-    color: var(--color-warning-dark);
-  }
-
-  &.secondary {
-    background-color: var(--color-secondary-light);
-    color: var(--color-secondary-dark);
-  }
-
-  &.error {
-    background-color: var(--color-error-light);
-    color: var(--color-error-dark);
-  }
-
-  &.neutral {
-    background-color: var(--color-neutral-light);
-    color: var(--color-neutral-dark);
-  }
-}
+// Dark mode disabled - Light theme only
 
 .phase {
   display: flex;
@@ -159,34 +82,7 @@
   font-weight: 500;
 }
 
-.priority {
-  padding: 0.25rem 0.5rem;
-  border-radius: 0.25rem;
-  font-size: 0.75rem;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.025em;
-
-  &.critical {
-    background-color: var(--color-error-light);
-    color: var(--color-error-dark);
-  }
-
-  &.high {
-    background-color: var(--color-warning-light);
-    color: var(--color-warning-dark);
-  }
-
-  &.medium {
-    background-color: var(--color-info-light);
-    color: var(--color-info-dark);
-  }
-
-  &.low {
-    background-color: var(--color-neutral-light);
-    color: var(--color-neutral-dark);
-  }
-}
+// Dark mode disabled - Light theme only
 
 .date {
   font-size: 0.875rem;
@@ -194,11 +90,7 @@
   font-family: var(--font-mono);
 }
 
-.actions {
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
-}
+// Dark mode disabled - Light theme only
 
 .actionButton {
   background: none;
@@ -222,19 +114,7 @@
   }
 }
 
-.loading {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 3rem 2rem;
-  gap: 1rem;
-
-  p {
-    color: var(--color-text-secondary);
-    font-size: 0.875rem;
-  }
-}
+// Dark mode disabled - Light theme only
 
 .spinner {
   width: 2rem;
@@ -250,15 +130,7 @@
   100% { transform: rotate(360deg); }
 }
 
-.emptyState {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 3rem 2rem;
-  text-align: center;
-  color: var(--color-text-secondary);
-}
+// Dark mode disabled - Light theme only
 
 .emptyIcon {
   font-size: 3rem;
@@ -266,12 +138,7 @@
   opacity: 0.5;
 }
 
-.emptyState h3 {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: var(--color-text-primary);
-  margin: 0 0 0.5rem 0;
-}
+// Dark mode disabled - Light theme only
 
 .emptyState p {
   margin: 0;
@@ -285,10 +152,7 @@
     grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
   }
 
-  .headerCell:nth-child(3),
-  .taskRow .phaseCell {
-    display: none;
-  }
+// Dark mode disabled - Light theme only
 }
 
 @media (max-width: 768px) {
@@ -298,9 +162,7 @@
     gap: 0.5rem;
   }
 
-  .headerCell {
-    display: none;
-  }
+// Dark mode disabled - Light theme only
 
   .taskRow {
     padding: 1rem;
@@ -310,40 +172,25 @@
     border: 1px solid var(--color-border);
   }
 
-  .taskCell,
-  .statusCell,
-  .phaseCell,
-  .priorityCell,
-  .dateCell,
-  .actionsCell {
-    min-height: auto;
-    padding: 0.25rem 0;
-  }
+// Dark mode disabled - Light theme only
 
   .taskCell {
     order: 1;
   }
 
-  .statusCell {
-    order: 2;
-  }
+// Dark mode disabled - Light theme only
 
   .phaseCell {
     order: 3;
   }
 
-  .priorityCell {
-    order: 4;
-  }
+// Dark mode disabled - Light theme only
 
   .dateCell {
     order: 5;
   }
 
-  .actionsCell {
-    order: 6;
-    justify-content: flex-end;
-  }
+// Dark mode disabled - Light theme only
 
   .taskMeta {
     flex-direction: column;
@@ -351,27 +198,7 @@
     align-items: flex-start;
   }
 
-  .actions {
-    justify-content: flex-end;
-  }
+// Dark mode disabled - Light theme only
 }
 
-// Dark mode support
-@media (prefers-color-scheme: dark) {
-  .taskRow {
-    &:hover {
-      background-color: var(--color-background);
-    }
-  }
-
-  .taskId {
-    background-color: var(--color-background-secondary);
-    border-color: var(--color-border-dark);
-  }
-
-  .actionButton {
-    &:hover {
-      background-color: var(--color-background);
-    }
-  }
-}
+// Dark mode disabled - Light theme only

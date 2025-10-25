@@ -7,33 +7,14 @@
   padding: var(--spacing-lg);
 }
 
-.builderHeader {
-  margin-bottom: var(--spacing-xl);
-
-  h2 {
-    font-size: var(--font-size-xl);
-    font-weight: var(--font-weight-semibold);
-    color: var(--color-text-primary);
-    margin: 0 0 var(--spacing-sm) 0;
-  }
-
-  .description {
-    font-size: var(--font-size-base);
-    color: var(--color-text-secondary);
-    line-height: var(--line-height-relaxed);
-    margin: 0;
-  }
-}
+// Dark mode disabled - Light theme only
 
 .builderLayout {
   display: flex;
   gap: var(--spacing-xl);
 }
 
-.querySection {
-  flex: 1;
-  min-width: 0;
-}
+// Dark mode disabled - Light theme only
 
 .queryHeader {
   display: flex;
@@ -49,11 +30,7 @@
   }
 }
 
-.queryControls {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-md);
-}
+// Dark mode disabled - Light theme only
 
 .readOnlyToggle {
   display: flex;
@@ -67,23 +44,7 @@
   }
 }
 
-.executeButton {
-  @include button-base;
-  @include button-primary;
-  padding: var(--spacing-sm) var(--spacing-lg);
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-
-  .spinner {
-    width: 16px;
-    height: 16px;
-    border: 2px solid var(--color-bg-primary);
-    border-top: 2px solid currentColor;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-  }
-}
+// Dark mode disabled - Light theme only
 
 .queryTextarea {
   width: 100%;
@@ -108,19 +69,7 @@
   }
 }
 
-.parametersSection {
-  margin-top: var(--spacing-lg);
-  padding: var(--spacing-md);
-  background-color: var(--color-bg-secondary);
-  border-radius: var(--radius-md);
-
-  h4 {
-    font-size: var(--font-size-base);
-    font-weight: var(--font-weight-semibold);
-    color: var(--color-text-primary);
-    margin: 0 0 var(--spacing-md) 0;
-  }
-}
+// Dark mode disabled - Light theme only
 
 .parametersList {
   display: flex;
@@ -129,55 +78,7 @@
   margin-bottom: var(--spacing-md);
 }
 
-.parameterItem {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-
-  label {
-    font-size: var(--font-size-sm);
-    font-weight: var(--font-weight-medium);
-    color: var(--color-text-primary);
-    min-width: 30px;
-    text-align: right;
-  }
-
-  .parameterInput {
-    flex: 1;
-    @include button-base;
-    padding: var(--spacing-xs) var(--spacing-sm);
-    font-family: var(--font-family-mono);
-    font-size: var(--font-size-sm);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-sm);
-    background-color: var(--color-bg-primary);
-    color: var(--color-text-primary);
-
-    &:focus {
-      outline: 2px solid var(--color-primary-500);
-      outline-offset: 2px;
-    }
-  }
-
-  .removeParameterButton {
-    @include button-base;
-    @include button-secondary;
-    width: 24px;
-    height: 24px;
-    padding: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: var(--font-size-sm);
-    background-color: var(--color-error-50);
-    color: var(--color-error-700);
-    border-color: var(--color-error-200);
-
-    &:hover {
-      background-color: var(--color-error-100);
-    }
-  }
-}
+// Dark mode disabled - Light theme only
 
 .addParameterButton {
   @include button-base;
@@ -186,11 +87,7 @@
   font-size: var(--font-size-sm);
 }
 
-.queryActions {
-  display: flex;
-  gap: var(--spacing-md);
-  margin-top: var(--spacing-md);
-}
+// Dark mode disabled - Light theme only
 
 .saveButton {
   @include button-base;
@@ -199,105 +96,21 @@
   font-size: var(--font-size-sm);
 }
 
-.addParameterButton {
-  @include button-base;
-  @include button-secondary;
-  padding: var(--spacing-xs) var(--spacing-sm);
-  font-size: var(--font-size-sm);
-}
+// Dark mode disabled - Light theme only
 
 .sidebar {
   width: 300px;
   flex-shrink: 0;
 }
 
-.sidebarSection {
-  margin-bottom: var(--spacing-xl);
-
-  &:last-child {
-    margin-bottom: 0;
-  }
-
-  h3 {
-    font-size: var(--font-size-base);
-    font-weight: var(--font-weight-semibold);
-    color: var(--color-text-primary);
-    margin: 0 0 var(--spacing-md) 0;
-  }
-}
+// Dark mode disabled - Light theme only
 
 .tableList {
   max-height: 400px;
   overflow-y: auto;
 }
 
-.tableItem {
-  margin-bottom: var(--spacing-sm);
-
-  .tableSummary {
-    cursor: pointer;
-    padding: var(--spacing-sm);
-    background-color: var(--color-bg-secondary);
-    border-radius: var(--radius-md);
-    border: 1px solid var(--color-border-light);
-    transition: all var(--transition-fast);
-
-    &:hover {
-      background-color: var(--color-bg-hover);
-      border-color: var(--color-border);
-    }
-
-    &::-webkit-details-marker {
-      display: none;
-    }
-
-    &::marker {
-      display: none;
-    }
-
-    &::before {
-      content: "▶";
-      display: inline-block;
-      margin-right: var(--spacing-sm);
-      transition: transform var(--transition-fast);
-      color: var(--color-text-secondary);
-    }
-  }
-
-  &[open] .tableSummary::before {
-    transform: rotate(90deg);
-  }
-
-  .tableName {
-    font-family: var(--font-family-mono);
-    font-weight: var(--font-weight-medium);
-    color: var(--color-text-primary);
-  }
-
-  .tableType {
-    font-size: var(--font-size-xs);
-    padding: var(--spacing-xs) var(--spacing-sm);
-    border-radius: var(--radius-sm);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    font-weight: var(--font-weight-medium);
-
-    &.table {
-      background-color: var(--color-primary-50);
-      color: var(--color-primary-700);
-    }
-
-    &.view {
-      background-color: var(--color-secondary-50);
-      color: var(--color-secondary-700);
-    }
-
-    &.materialized_view {
-      background-color: var(--color-warning-50);
-      color: var(--color-warning-700);
-    }
-  }
-}
+// Dark mode disabled - Light theme only
 
 .tableDetails {
   margin-top: var(--spacing-sm);
@@ -307,11 +120,7 @@
   border-radius: var(--radius-md);
 }
 
-.tableActions {
-  display: flex;
-  gap: var(--spacing-sm);
-  margin-bottom: var(--spacing-md);
-}
+// Dark mode disabled - Light theme only
 
 .quickSelectButton {
   @include button-base;
@@ -320,12 +129,7 @@
   font-size: var(--font-size-xs);
 }
 
-.insertButton {
-  @include button-base;
-  @include button-secondary;
-  padding: var(--spacing-xs) var(--spacing-sm);
-  font-size: var(--font-size-xs);
-}
+// Dark mode disabled - Light theme only
 
 .columnList {
   h4 {
@@ -338,51 +142,7 @@
   }
 }
 
-.columnItem {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-xs);
-  border-radius: var(--radius-sm);
-
-  &:hover {
-    background-color: var(--color-bg-hover);
-  }
-
-  .columnName {
-    font-family: var(--font-family-mono);
-    font-size: var(--font-size-sm);
-    font-weight: var(--font-weight-medium);
-    color: var(--color-text-primary);
-    flex: 1;
-  }
-
-  .columnType {
-    font-family: var(--font-family-mono);
-    font-size: var(--font-size-xs);
-    color: var(--color-text-secondary);
-    background-color: var(--color-bg-tertiary);
-    padding: var(--spacing-xs) var(--spacing-sm);
-    border-radius: var(--radius-sm);
-  }
-
-  .insertColumnButton {
-    @include button-base;
-    @include button-secondary;
-    width: 20px;
-    height: 20px;
-    padding: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: var(--font-size-xs);
-    opacity: 0;
-
-    .columnItem:hover & {
-      opacity: 1;
-    }
-  }
-}
+// Dark mode disabled - Light theme only
 
 .pkBadge {
   background-color: var(--color-primary-50);
@@ -393,14 +153,7 @@
   font-weight: var(--font-weight-medium);
 }
 
-.fkBadge {
-  background-color: var(--color-secondary-50);
-  color: var(--color-secondary-700);
-  font-size: var(--font-size-xs);
-  padding: var(--spacing-xs) var(--spacing-sm);
-  border-radius: var(--radius-sm);
-  font-weight: var(--font-weight-medium);
-}
+// Dark mode disabled - Light theme only
 
 .savedQueriesList {
   display: flex;
@@ -408,12 +161,7 @@
   gap: var(--spacing-sm);
 }
 
-.savedQueryItem {
-  padding: var(--spacing-sm);
-  background-color: var(--color-bg-secondary);
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-border-light);
-}
+// Dark mode disabled - Light theme only
 
 .savedQueryHeader {
   display: flex;
@@ -426,30 +174,10 @@
     color: var(--color-text-primary);
   }
 
-  .savedQueryDate {
-    font-size: var(--font-size-xs);
-    color: var(--color-text-secondary);
-  }
+// Dark mode disabled - Light theme only
 }
 
-.savedQueryActions {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-
-  .loadQueryButton {
-    @include button-base;
-    @include button-secondary;
-    padding: var(--spacing-xs) var(--spacing-sm);
-    font-size: var(--font-size-xs);
-  }
-
-  .queryStats {
-    font-size: var(--font-size-xs);
-    color: var(--color-text-secondary);
-    font-family: var(--font-family-mono);
-  }
-}
+// Dark mode disabled - Light theme only
 
 .templatesList {
   display: flex;
@@ -457,19 +185,7 @@
   gap: var(--spacing-xs);
 }
 
-.templateButton {
-  @include button-base;
-  @include button-secondary;
-  text-align: left;
-  padding: var(--spacing-sm);
-  font-size: var(--font-size-sm);
-  white-space: normal;
-  line-height: var(--line-height-relaxed);
-
-  &:hover {
-    background-color: var(--color-bg-hover);
-  }
-}
+// Dark mode disabled - Light theme only
 
 .errorBanner {
   display: flex;
@@ -492,12 +208,7 @@
   }
 }
 
-.resultsSection {
-  margin-top: var(--spacing-xl);
-  @include card-base;
-  padding: var(--spacing-lg);
-  background-color: var(--color-bg-secondary);
-}
+// Dark mode disabled - Light theme only
 
 .resultsHeader {
   display: flex;
@@ -513,10 +224,7 @@
   }
 }
 
-.resultsMeta {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
-}
+// Dark mode disabled - Light theme only
 
 .resultsTable {
   border: 1px solid var(--color-border);
@@ -524,31 +232,7 @@
   overflow-x: auto;
 }
 
-.dataTable {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: var(--font-size-sm);
-  background-color: var(--color-bg-primary);
-
-  th, td {
-    padding: var(--spacing-sm) var(--spacing-md);
-    text-align: left;
-    border-bottom: 1px solid var(--color-border-light);
-    white-space: nowrap;
-  }
-
-  th {
-    background-color: var(--color-bg-secondary);
-    font-weight: var(--font-weight-semibold);
-    color: var(--color-text-primary);
-    position: sticky;
-    top: 0;
-  }
-
-  tbody tr:nth-child(even) {
-    background-color: var(--color-bg-secondary);
-  }
-}
+// Dark mode disabled - Light theme only
 
 .resultsNote {
   text-align: center;
@@ -560,18 +244,7 @@
   margin-top: var(--spacing-md);
 }
 
-.modalOverlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
+// Dark mode disabled - Light theme only
 
 .modal {
   background-color: var(--color-bg-primary);
@@ -583,33 +256,13 @@
   overflow-y: auto;
 }
 
-.modal h3 {
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text-primary);
-  margin: 0 0 var(--spacing-lg) 0;
-}
+// Dark mode disabled - Light theme only
 
 .modalContent {
   padding: var(--spacing-lg);
 }
 
-.inputGroup {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-xs);
-  margin-bottom: var(--spacing-md);
-
-  &:last-child {
-    margin-bottom: 0;
-  }
-
-  label {
-    font-size: var(--font-size-sm);
-    font-weight: var(--font-weight-medium);
-    color: var(--color-text-primary);
-  }
-}
+// Dark mode disabled - Light theme only
 
 .modalInput {
   @include button-base;
@@ -627,13 +280,7 @@
   }
 }
 
-.modalActions {
-  display: flex;
-  gap: var(--spacing-md);
-  justify-content: flex-end;
-  padding: var(--spacing-lg);
-  border-top: 1px solid var(--color-border-light);
-}
+// Dark mode disabled - Light theme only
 
 .cancelButton {
   @include button-base;
@@ -641,11 +288,7 @@
   padding: var(--spacing-sm) var(--spacing-lg);
 }
 
-.saveButton {
-  @include button-base;
-  @include button-primary;
-  padding: var(--spacing-sm) var(--spacing-lg);
-}
+// Dark mode disabled - Light theme only
 
 @keyframes spin {
   0% { transform: rotate(0deg); }

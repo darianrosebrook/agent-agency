@@ -18,49 +18,11 @@
         margin-bottom: 0.25rem;
       }
 
-      .metricLabel {
-        font-size: 0.875rem;
-        color: #6b7280;
-      }
+// Dark mode disabled - Light theme only
     }
   }
 
-  .confidenceSection {
-    margin-bottom: 1.5rem;
-
-    .confidenceHeader {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 0.5rem;
-
-      .confidenceLabel {
-        font-size: 0.875rem;
-        font-weight: 500;
-        color: #374151;
-      }
-
-      .confidenceValue {
-        font-size: 0.875rem;
-        color: #6b7280;
-      }
-    }
-
-    .confidenceBar {
-      width: 100%;
-      background-color: #e5e7eb;
-      border-radius: 9999px;
-      height: 0.5rem;
-      margin-bottom: 0.25rem;
-
-      .confidenceFill {
-        background-color: #3b82f6;
-        height: 100%;
-        border-radius: 9999px;
-        transition: width 0.3s ease;
-      }
-    }
-  }
+// Dark mode disabled - Light theme only
 
   .evidenceQuality {
     background-color: #f9fafb;
@@ -80,46 +42,10 @@
         color: #111827;
       }
 
-      .qualityIcon {
-        width: 1rem;
-        height: 1rem;
-        color: #6b7280;
-      }
+// Dark mode disabled - Light theme only
     }
 
-    .qualityMetrics {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 1rem;
-      margin-bottom: 0.75rem;
-
-      .metricItem {
-        .metricLabel {
-          font-size: 0.875rem;
-          color: #6b7280;
-          margin-bottom: 0.5rem;
-        }
-
-        .metricBar {
-          width: 100%;
-          background-color: #e5e7eb;
-          border-radius: 9999px;
-          height: 0.5rem;
-          margin-bottom: 0.25rem;
-
-          .metricFill {
-            background-color: #10b981;
-            height: 100%;
-            border-radius: 9999px;
-          }
-        }
-
-        .metricValue {
-          font-size: 0.75rem;
-          color: #6b7280;
-        }
-      }
-    }
+// Dark mode disabled - Light theme only
 
     .sourcesSection {
       .sourcesLabel {
@@ -128,46 +54,11 @@
         margin-bottom: 0.25rem;
       }
 
-      .sourcesList {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.25rem;
-
-        .sourceBadge {
-          font-size: 0.75rem;
-          padding: 0.125rem 0.375rem;
-          background-color: #f3f4f6;
-          color: #374151;
-          border: 1px solid #d1d5db;
-          border-radius: 0.25rem;
-        }
-      }
+// Dark mode disabled - Light theme only
     }
   }
 
-  .categoriesSection {
-    margin-bottom: 1.5rem;
-
-    .categoriesTitle {
-      font-weight: 500;
-      margin-bottom: 0.5rem;
-    }
-
-    .categoriesList {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-
-      .categoryBadge {
-        font-size: 0.75rem;
-        padding: 0.25rem 0.5rem;
-        background-color: #f3f4f6;
-        color: #374151;
-        border: 1px solid #d1d5db;
-        border-radius: 0.375rem;
-      }
-    }
-  }
+// Dark mode disabled - Light theme only
 
   .claimsTabs {
     width: 100%;
@@ -192,96 +83,7 @@
           border-color: #fecaca;
         }
 
-        .claimHeader {
-          display: flex;
-          align-items: flex-start;
-          justify-content: space-between;
-          margin-bottom: 0.5rem;
-
-          .claimContent {
-            flex: 1;
-
-            .claimStatus {
-              display: flex;
-              align-items: center;
-              gap: 0.5rem;
-              margin-bottom: 0.25rem;
-
-              .statusIcon {
-                width: 1rem;
-                height: 1rem;
-
-                &.verified {
-                  color: #16a34a;
-                }
-
-                &.unverified {
-                  color: #dc2626;
-                }
-              }
-
-              .statusText {
-                font-weight: 500;
-                font-size: 0.875rem;
-
-                &.verified {
-                  color: #166534;
-                }
-
-                &.unverified {
-                  color: #991b1b;
-                }
-              }
-
-              .confidenceBadge {
-                font-size: 0.75rem;
-                padding: 0.125rem 0.375rem;
-                border-radius: 0.25rem;
-
-                &.verified {
-                  background-color: #dcfce7;
-                  color: #166534;
-                }
-
-                &.unverified {
-                  background-color: #fee2e2;
-                  color: #991b1b;
-                }
-              }
-            }
-
-            .claimText {
-              font-size: 0.875rem;
-              color: #374151;
-              line-height: 1.25;
-            }
-          }
-
-          .claimActions {
-            display: flex;
-            gap: 0.25rem;
-            margin-left: 0.5rem;
-
-            .actionButton {
-              padding: 0.25rem;
-              border: none;
-              background: none;
-              color: #6b7280;
-              border-radius: 0.25rem;
-              cursor: pointer;
-              transition: background-color 0.2s;
-
-              &:hover {
-                background-color: #f3f4f6;
-              }
-
-              .actionIcon {
-                width: 0.75rem;
-                height: 0.75rem;
-              }
-            }
-          }
-        }
+// Dark mode disabled - Light theme only
 
         .claimDetails {
           margin-top: 0.75rem;
@@ -300,68 +102,14 @@
               min-width: 4rem;
             }
 
-            .detailValue {
-              flex: 1;
-            }
+// Dark mode disabled - Light theme only
           }
         }
 
-        .claimButtons {
-          display: flex;
-          gap: 0.5rem;
-          margin-top: 0.75rem;
-        }
+// Dark mode disabled - Light theme only
       }
     }
   }
 
-  .insightsSection {
-    background-color: #eff6ff;
-    border: 1px solid #bfdbfe;
-    border-radius: 0.5rem;
-    padding: 1rem;
-
-    .insightsHeader {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      margin-bottom: 0.5rem;
-
-      .insightsTitle {
-        font-weight: 500;
-        color: #1e40af;
-      }
-
-      .insightsIcon {
-        width: 1rem;
-        height: 1rem;
-        color: #3b82f6;
-      }
-    }
-
-    .insightsList {
-      list-style: none;
-      margin: 0;
-      padding: 0;
-
-      .insightItem {
-        font-size: 0.875rem;
-        color: #1e40af;
-        margin-bottom: 0.25rem;
-        display: flex;
-        align-items: flex-start;
-        gap: 0.5rem;
-
-        .insightBullet {
-          color: #3b82f6;
-          margin-top: 0.125rem;
-          flex-shrink: 0;
-        }
-
-        .insightText {
-          flex: 1;
-        }
-      }
-    }
-  }
+// Dark mode disabled - Light theme only
 }

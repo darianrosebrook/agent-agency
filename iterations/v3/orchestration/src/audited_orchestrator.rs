@@ -21,7 +21,7 @@ use crate::audit_trail::{
 use crate::orchestrate::{Orchestrator, OrchestratorConfig};
 use crate::planning::agent::PlanningAgent;
 use crate::frontier::{Frontier, FrontierConfig, FrontierError};
-use file_ops::{validate_changeset_with_waiver, WaiverRequest, apply_waiver};
+use agent_data_processing::operations::{validate_changeset_with_waiver, WaiverRequest, apply_waiver};
 use agent_agency_database::DatabaseClient;
 use agent_agency_resilience::CircuitBreaker;
 
@@ -909,7 +909,6 @@ impl AuditedOrchestrator {
 
         (base_impact * severity_multiplier).min(1.0)
     }
-}
 
 /// Comprehensive audit statistics
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -1,0 +1,18 @@
+[package]
+name = "agent-agency-common-types"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+# Workspace dependencies
+serde.workspace = true
+serde_json.workspace = true
+chrono.workspace = true
+async-trait.workspace = true
+thiserror.workspace = true
+
+[features]
+default = []
+full = []

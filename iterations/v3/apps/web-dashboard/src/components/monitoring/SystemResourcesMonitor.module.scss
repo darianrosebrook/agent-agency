@@ -9,19 +9,7 @@
   height: fit-content;
 }
 
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
-
-  h3 {
-    margin: 0;
-    font-size: 1.25rem;
-    font-weight: 600;
-    color: var(--text-primary);
-  }
-}
+// Dark mode disabled - Light theme only
 
 .timestamp {
   font-size: 0.875rem;
@@ -29,16 +17,7 @@
   font-weight: 400;
 }
 
-.metricsGrid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-
-  @media (min-width: 768px) {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
+// Dark mode disabled - Light theme only
 
 .metric {
   background: var(--background-secondary);
@@ -47,23 +26,13 @@
   border: 1px solid var(--border-color-light);
 }
 
-.metricHeader {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 0.75rem;
-}
+// Dark mode disabled - Light theme only
 
 .metricIcon {
   font-size: 1.25rem;
 }
 
-.metricLabel {
-  flex: 1;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--text-secondary);
-}
+// Dark mode disabled - Light theme only
 
 .metricValue {
   font-size: 1rem;
@@ -71,12 +40,7 @@
   color: var(--text-primary);
 }
 
-.progressBar {
-  height: 6px;
-  background: var(--background-tertiary);
-  border-radius: 3px;
-  overflow: hidden;
-}
+// Dark mode disabled - Light theme only
 
 .progressFill {
   height: 100%;
@@ -84,11 +48,7 @@
   transition: width 0.3s ease, background-color 0.3s ease;
 }
 
-.taskStats {
-  display: flex;
-  gap: 1rem;
-  font-size: 0.875rem;
-}
+// Dark mode disabled - Light theme only
 
 .taskStat {
   display: flex;
@@ -100,19 +60,14 @@
   }
 }
 
-.successText {
-  color: var(--success-color);
-  font-weight: 500;
-}
+// Dark mode disabled - Light theme only
 
 .errorText {
   color: var(--error-color);
   font-weight: 500;
 }
 
-.responseTimeIndicator {
-  margin-top: 0.5rem;
-}
+// Dark mode disabled - Light theme only
 
 .responseTimeBar {
   height: 4px;
@@ -121,27 +76,14 @@
   overflow: hidden;
 }
 
-.responseTimeFill {
-  height: 100%;
-  border-radius: 2px;
-  transition: width 0.3s ease, background-color 0.3s ease;
-}
+// Dark mode disabled - Light theme only
 
 .statusSummary {
   border-top: 1px solid var(--border-color-light);
   padding-top: 1rem;
 }
 
-.statusItem {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.5rem;
-
-  &:last-child {
-    margin-bottom: 0;
-  }
-}
+// Dark mode disabled - Light theme only
 
 .statusLabel {
   font-size: 0.875rem;
@@ -149,11 +91,7 @@
   font-weight: 500;
 }
 
-.statusValue {
-  font-size: 0.875rem;
-  color: var(--text-primary);
-  font-weight: 600;
-}
+// Dark mode disabled - Light theme only
 
 .statusBadge {
   padding: 0.25rem 0.75rem;
@@ -179,19 +117,7 @@
   }
 }
 
-.loading {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 2rem;
-  text-align: center;
-
-  p {
-    margin: 1rem 0 0 0;
-    color: var(--text-secondary);
-  }
-}
+// Dark mode disabled - Light theme only
 
 .spinner {
   width: 32px;
@@ -207,15 +133,7 @@
   100% { transform: rotate(360deg); }
 }
 
-.error {
-  padding: 2rem;
-  text-align: center;
-  color: var(--error-color);
-
-  p {
-    margin: 0;
-  }
-}
+// Dark mode disabled - Light theme only
 
 .noData {
   padding: 2rem;
@@ -227,27 +145,18 @@
   }
 }
 
-// Dark mode adjustments
-@media (prefers-color-scheme: dark) {
-  .container {
-    background: var(--card-background-dark);
-    border-color: var(--border-color-dark);
-  }
+// Dark mode disabled - Light theme only
 
   .metric {
     background: var(--background-secondary-dark);
     border-color: var(--border-color-light-dark);
   }
 
-  .progressBar {
-    background: var(--background-tertiary-dark);
-  }
+// Dark mode disabled - Light theme only
 
   .responseTimeBar {
     background: var(--background-tertiary-dark);
   }
 
-  .statusSummary {
-    border-color: var(--border-color-light-dark);
-  }
+// Dark mode disabled - Light theme only
 }

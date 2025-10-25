@@ -6,23 +6,7 @@
   max-width: none;
 }
 
-.analyzerHeader {
-  margin-bottom: var(--spacing-xl);
-
-  h2 {
-    font-size: var(--font-size-xl);
-    font-weight: var(--font-weight-semibold);
-    color: var(--color-text-primary);
-    margin: 0 0 var(--spacing-sm) 0;
-  }
-
-  .description {
-    font-size: var(--font-size-base);
-    color: var(--color-text-secondary);
-    line-height: var(--line-height-relaxed);
-    margin: 0;
-  }
-}
+// Dark mode disabled - Light theme only
 
 .analyzerControls {
   display: flex;
@@ -33,23 +17,7 @@
   gap: var(--spacing-lg);
 }
 
-.analyzeButton {
-  @include button-base;
-  @include button-primary;
-  padding: var(--spacing-sm) var(--spacing-lg);
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-
-  .spinner {
-    width: 16px;
-    height: 16px;
-    border: 2px solid var(--color-bg-primary);
-    border-top: 2px solid currentColor;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-  }
-}
+// Dark mode disabled - Light theme only
 
 .errorBanner {
   display: flex;
@@ -72,164 +40,7 @@
   }
 }
 
-.trendsSection {
-  .trendsHeader {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: var(--spacing-lg);
-    flex-wrap: wrap;
-    gap: var(--spacing-md);
-
-    h3 {
-      font-size: var(--font-size-lg);
-      font-weight: var(--font-weight-semibold);
-      color: var(--color-text-primary);
-      margin: 0;
-    }
-  }
-
-  .trendsStats {
-    display: flex;
-    gap: var(--spacing-lg);
-    font-size: var(--font-size-sm);
-    color: var(--color-text-secondary);
-  }
-
-  .trendsList {
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-md);
-  }
-
-  .trendCard {
-    @include card-base;
-    padding: var(--spacing-lg);
-    cursor: pointer;
-    transition: all var(--transition-fast);
-    border-left: 4px solid transparent;
-
-    &:hover {
-      transform: translateY(-1px);
-      box-shadow: var(--shadow-md);
-    }
-
-    &.selected {
-      border-left-color: var(--color-primary-500);
-      box-shadow: var(--shadow-lg);
-    }
-  }
-
-  .trendHeader {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: var(--spacing-md);
-  }
-
-  .trendTitle {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-sm);
-  }
-
-  .directionIcon {
-    font-size: var(--font-size-lg);
-  }
-
-  .trendMetric {
-    font-size: var(--font-size-lg);
-    font-weight: var(--font-weight-semibold);
-    color: var(--color-text-primary);
-    font-family: var(--font-family-mono);
-  }
-
-  .directionBadge {
-    font-size: var(--font-size-xs);
-    padding: var(--spacing-xs) var(--spacing-sm);
-    border-radius: var(--radius-sm);
-    font-weight: var(--font-weight-medium);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-
-  .trendDetails {
-    .trendMetrics {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-      gap: var(--spacing-md);
-      margin-bottom: var(--spacing-md);
-    }
-
-    .metricItem {
-      display: flex;
-      flex-direction: column;
-      gap: var(--spacing-xs);
-    }
-
-    .metricLabel {
-      font-size: var(--font-size-xs);
-      font-weight: var(--font-weight-medium);
-      color: var(--color-text-secondary);
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-
-    .metricValue {
-      font-size: var(--font-size-base);
-      font-weight: var(--font-weight-semibold);
-      color: var(--color-text-primary);
-      font-family: var(--font-family-mono);
-    }
-
-    .trendDescription {
-      font-size: var(--font-size-sm);
-      color: var(--color-text-primary);
-      line-height: var(--line-height-relaxed);
-      margin-bottom: var(--spacing-md);
-    }
-
-    .trendForecast {
-      background-color: var(--color-bg-secondary);
-      padding: var(--spacing-md);
-      border-radius: var(--radius-md);
-
-      h4 {
-        font-size: var(--font-size-base);
-        font-weight: var(--font-weight-semibold);
-        color: var(--color-text-primary);
-        margin: 0 0 var(--spacing-sm) 0;
-      }
-
-      .forecastDetails {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: var(--spacing-md);
-      }
-
-      .forecastItem {
-        display: flex;
-        flex-direction: column;
-        gap: var(--spacing-xs);
-      }
-
-      .forecastLabel {
-        font-size: var(--font-size-xs);
-        font-weight: var(--font-weight-medium);
-        color: var(--color-text-secondary);
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-      }
-
-      .forecastValue {
-        font-size: var(--font-size-sm);
-        font-weight: var(--font-weight-semibold);
-        color: var(--color-text-primary);
-        font-family: var(--font-family-mono);
-      }
-    }
-  }
-}
+// Dark mode disabled - Light theme only
 
 .trendSidebar {
   position: fixed;
@@ -244,20 +55,7 @@
   overflow-y: auto;
 }
 
-.sidebarHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--spacing-lg);
-  border-bottom: 1px solid var(--color-border-light);
-
-  h3 {
-    font-size: var(--font-size-lg);
-    font-weight: var(--font-weight-semibold);
-    color: var(--color-text-primary);
-    margin: 0;
-  }
-}
+// Dark mode disabled - Light theme only
 
 .closeSidebar {
   @include button-base;
@@ -271,9 +69,7 @@
   font-size: var(--font-size-lg);
 }
 
-.sidebarContent {
-  padding: var(--spacing-lg);
-}
+// Dark mode disabled - Light theme only
 
 .detailSection {
   margin-bottom: var(--spacing-xl);
@@ -290,11 +86,7 @@
   }
 }
 
-.detailGrid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--spacing-md);
-}
+// Dark mode disabled - Light theme only
 
 .detailItem {
   display: flex;
@@ -302,13 +94,7 @@
   gap: var(--spacing-xs);
 }
 
-.detailLabel {
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
+// Dark mode disabled - Light theme only
 
 .detailValue {
   font-size: var(--font-size-sm);
@@ -317,27 +103,19 @@
   font-family: var(--font-family-mono);
 }
 
-.directionIncreasing {
-  color: var(--color-success-600);
-}
+// Dark mode disabled - Light theme only
 
 .directionDecreasing {
   color: var(--color-error-600);
 }
 
-.directionStable {
-  color: var(--color-text-secondary);
-}
+// Dark mode disabled - Light theme only
 
 .directionVolatile {
   color: var(--color-warning-600);
 }
 
-.forecastGrid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: var(--spacing-md);
-}
+// Dark mode disabled - Light theme only
 
 .forecastItem {
   display: flex;
@@ -345,13 +123,7 @@
   gap: var(--spacing-xs);
 }
 
-.forecastLabel {
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
+// Dark mode disabled - Light theme only
 
 .forecastValue {
   font-size: var(--font-size-sm);
@@ -360,56 +132,7 @@
   font-family: var(--font-family-mono);
 }
 
-.noTrends {
-  text-align: center;
-  padding: var(--spacing-3xl);
-
-  .emptyIcon {
-    font-size: var(--font-size-4xl);
-    margin-bottom: var(--spacing-lg);
-  }
-
-  h3 {
-    font-size: var(--font-size-xl);
-    font-weight: var(--font-weight-semibold);
-    color: var(--color-text-primary);
-    margin: 0 0 var(--spacing-md) 0;
-  }
-
-  p {
-    font-size: var(--font-size-base);
-    color: var(--color-text-secondary);
-    margin: 0 0 var(--spacing-lg) 0;
-    max-width: 600px;
-    margin-left: auto;
-    margin-right: auto;
-  }
-
-  .analysisInfo {
-    text-align: left;
-    max-width: 500px;
-    margin: 0 auto;
-
-    h4 {
-      font-size: var(--font-size-base);
-      font-weight: var(--font-weight-semibold);
-      color: var(--color-text-primary);
-      margin: 0 0 var(--spacing-md) 0;
-    }
-
-    ul {
-      margin: 0;
-      padding-left: var(--spacing-lg);
-    }
-
-    li {
-      font-size: var(--font-size-sm);
-      color: var(--color-text-secondary);
-      margin-bottom: var(--spacing-xs);
-      line-height: var(--line-height-relaxed);
-    }
-  }
-}
+// Dark mode disabled - Light theme only
 
 // Loading and error states
 .loading {

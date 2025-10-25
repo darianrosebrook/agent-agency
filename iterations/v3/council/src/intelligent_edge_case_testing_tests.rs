@@ -4,11 +4,9 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::intelligent_edge_case_testing::{
-        AcceptanceCriterion, CoverageRequirement, CriterionType, EdgeCaseRequirement, EdgeCaseType,
-        IntelligentEdgeCaseTesting, IntelligentTestInsights, PerformanceRequirement, Priority,
-        RequirementType, ResourceUsage, TestExecution, TestOutcome, TestRequirement,
-        TestSpecification,
+    use crate::intelligent_testing::{
+        orchestrator::IntelligentEdgeCaseTesting,
+        types::*,
     };
     use chrono::Utc;
     use uuid::Uuid;

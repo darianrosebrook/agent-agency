@@ -131,18 +131,3 @@
 }
 
 /* Dark mode overrides (if needed in future) */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-bg-primary: #1f2937;
-    --color-bg-secondary: #111827;
-    --color-bg-tertiary: #374151;
-
-    --color-text-primary: #f9fafb;
-    --color-text-secondary: #d1d5db;
-    --color-text-tertiary: #9ca3af;
-
-    --color-border: #374151;
-    --color-border-light: #4b5563;
-    --color-border-dark: #1f2937;
-  }
-}

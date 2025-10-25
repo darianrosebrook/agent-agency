@@ -1,0 +1,228 @@
+// Enhanced Chat Interface Styles
+.chatInterface {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+// Dark mode disabled - Light theme only
+
+.chatActions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+// Dark mode disabled - Light theme only
+
+.connectionStatus {
+  font-size: 1rem;
+  padding: 0.25rem;
+}
+
+// Dark mode disabled - Light theme only
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 2rem;
+  color: var(--color-text-secondary);
+
+  .emptyIcon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+  }
+
+  h4 {
+    margin: 0 0 0.5rem 0;
+    color: var(--color-text-primary);
+  }
+
+  p {
+    margin: 0 0 1rem 0;
+  }
+}
+
+// Dark mode disabled - Light theme only
+
+.message {
+  display: flex;
+  flex-direction: column;
+  max-width: 80%;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  word-wrap: break-word;
+
+  &.user {
+    align-self: flex-end;
+    background: var(--color-primary-light);
+    color: var(--color-primary-dark);
+  }
+
+  &.assistant {
+    align-self: flex-start;
+    background: var(--color-background-secondary);
+    color: var(--color-text-primary);
+  }
+}
+
+// Dark mode disabled - Light theme only
+
+.messageRole {
+  font-weight: 500;
+}
+
+// Dark mode disabled - Light theme only
+
+.messageContent {
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+// Dark mode disabled - Light theme only
+
+.typingIndicator {
+  display: flex;
+  gap: 0.25rem;
+  align-items: center;
+  padding: 0.5rem;
+
+  span {
+    width: 0.5rem;
+    height: 0.5rem;
+    background: var(--color-text-secondary);
+    border-radius: 50%;
+    animation: typing 1.4s infinite ease-in-out;
+
+    &:nth-child(2) {
+      animation-delay: 0.2s;
+    }
+
+    &:nth-child(3) {
+      animation-delay: 0.4s;
+    }
+  }
+}
+
+@keyframes typing {
+  0%, 60%, 100% {
+    transform: translateY(0);
+    opacity: 0.4;
+  }
+  30% {
+    transform: translateY(-0.5rem);
+    opacity: 1;
+  }
+}
+
+// Dark mode disabled - Light theme only
+
+.suggestions {
+  position: absolute;
+  bottom: 100%;
+  left: 1rem;
+  right: 1rem;
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  box-shadow: var(--shadow-lg);
+  z-index: 10;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+// Dark mode disabled - Light theme only
+
+.suggestionText {
+  font-weight: 500;
+  color: var(--color-text-primary);
+  margin-bottom: 0.25rem;
+}
+
+// Dark mode disabled - Light theme only
+
+.suggestionType {
+  font-size: 0.625rem;
+  color: var(--color-primary);
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+// Dark mode disabled - Light theme only
+
+.textInput {
+  flex: 1;
+  min-height: 44px;
+  max-height: 120px;
+  padding: 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  background: var(--color-background);
+  color: var(--color-text-primary);
+  font-family: inherit;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  resize: none;
+  transition: border-color 0.2s ease;
+
+  &:focus {
+    outline: none;
+    border-color: var(--color-primary);
+  }
+
+  &::placeholder {
+    color: var(--color-text-secondary);
+  }
+}
+
+// Dark mode disabled - Light theme only
+
+// Responsive design
+@media (max-width: 768px) {
+  .chatInterface {
+    height: 100vh;
+  }
+
+// Dark mode disabled - Light theme only
+
+  .suggestions {
+    left: 0.5rem;
+    right: 0.5rem;
+  }
+
+// Dark mode disabled - Light theme only
+}
+
+// Dark mode disabled - Light theme only
+
+  .chatHeader {
+    background: var(--color-background-secondary-dark);
+    border-color: var(--color-border-dark);
+  }
+
+// Dark mode disabled - Light theme only
+
+  .chatInput {
+    background: var(--color-background-secondary-dark);
+    border-color: var(--color-border-dark);
+  }
+
+// Dark mode disabled - Light theme only
+
+  .textInput {
+    background: var(--color-background-dark);
+    color: var(--color-text-primary-dark);
+    border-color: var(--color-border-dark);
+  }
+}
+
+
+
+

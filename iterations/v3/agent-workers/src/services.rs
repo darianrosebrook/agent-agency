@@ -28,7 +28,7 @@
 //! ```
 
 use crate::mcp_integration::{MCPIntegration, create_tool_definition, create_parameter};
-use agent_mcp::{MCPTool, ToolType, ToolCapability, ParameterDefinition};
+use agent_mcp::{MCPTool, types::{ToolType, ToolCapability, ParameterDefinition}};
 use std::sync::Arc;
 use tracing::{info, warn};
 
@@ -78,7 +78,7 @@ impl ServiceRegistry {
 
         // Register service tools with MCP
         let tools = service.register_tools();
-        self.mcp_integration.register_service_tools(&service_name, tools).await
+        self.mcp_integration.register_service_tools(&service_name, tools.clone()).await
             .map_err(|e| ServiceError::ToolRegistrationFailed(format!("{}: {}", service_name, e)))?;
 
         // Store the service

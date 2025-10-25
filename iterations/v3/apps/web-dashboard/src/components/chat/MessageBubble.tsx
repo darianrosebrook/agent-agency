@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import { useState } from "react";
+import { Play, Pause, Volume2, Loader2 } from "lucide-react";
 import { ChatMessage } from "@/types/chat";
 import { useTTS, useAudioPlayback } from "@/hooks/useTTS";
 import styles from "./MessageBubble.module.scss";
@@ -21,7 +22,6 @@ export default function MessageBubble({
   const { generateSpeech, isServiceAvailable } = useTTS();
   const {
     playAudio,
-    pauseAudio,
     stopAudio,
     state: playbackState,
   } = useAudioPlayback();
@@ -43,13 +43,13 @@ export default function MessageBubble({
   const getRoleIcon = (role: ChatMessage["role"]) => {
     switch (role) {
       case "user":
-        return "👤";
+        return "User";
       case "assistant":
-        return "🤖";
+        return "AI";
       case "system":
-        return "⚙️";
+        return "SYS";
       default:
-        return "💬";
+        return "MSG";
     }
   };
 
@@ -105,18 +105,18 @@ export default function MessageBubble({
   // Get TTS button icon and tooltip
   const getTTSButtonInfo = () => {
     if (isGeneratingTTS) {
-      return { icon: "⏳", tooltip: "Generating audio..." };
+      return { icon: <Loader2 size={14} className="spinning" />, tooltip: "Generating audio..." };
     }
 
     if (playbackState.isPlaying) {
-      return { icon: "⏸️", tooltip: "Pause audio" };
+      return { icon: <Pause size={14} />, tooltip: "Pause audio" };
     }
 
     if (ttsAudioUrl) {
-      return { icon: "🔊", tooltip: "Play audio" };
+      return { icon: <Volume2 size={14} />, tooltip: "Play audio" };
     }
 
-    return { icon: "🔊", tooltip: "Generate and play audio" };
+    return { icon: <Play size={14} />, tooltip: "Generate and play audio" };
   };
 
   const ttsButton = getTTSButtonInfo();

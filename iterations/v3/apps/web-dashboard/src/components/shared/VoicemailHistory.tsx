@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 import { NotificationAlert } from "@/types/tts";
 import { useNotificationAlerts, triggerGlobalAlert } from "@/hooks/useTTS";
 import styles from "./VoicemailHistory.module.scss";

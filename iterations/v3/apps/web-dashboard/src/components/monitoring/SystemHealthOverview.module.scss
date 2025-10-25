@@ -6,13 +6,7 @@
   gap: var(--spacing-xl);
 }
 
-.header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: var(--spacing-md);
-}
+// Dark mode disabled - Light theme only
 
 .overallStatus {
   display: flex;
@@ -52,11 +46,7 @@
   }
 }
 
-.metricsGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: var(--spacing-lg);
-}
+// Dark mode disabled - Light theme only
 
 .componentsSection {
   h3 {
@@ -67,11 +57,7 @@
   }
 }
 
-.componentsGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: var(--spacing-lg);
-}
+// Dark mode disabled - Light theme only
 
 .componentCard {
   @include card-base;
@@ -97,22 +83,13 @@
   }
 }
 
-.componentHeader {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-}
+// Dark mode disabled - Light theme only
 
 .componentIcon {
   font-size: var(--font-size-xl);
 }
 
-.componentName {
-  font-size: var(--font-size-base);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text-primary);
-  margin: 0;
-}
+// Dark mode disabled - Light theme only
 
 .componentMetrics {
   display: flex;
@@ -120,17 +97,7 @@
   gap: var(--spacing-sm);
 }
 
-.metric {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: var(--spacing-xs) 0;
-  border-bottom: 1px solid var(--color-border-light);
-
-  &:last-child {
-    border-bottom: none;
-  }
-}
+// Dark mode disabled - Light theme only
 
 .metricLabel {
   font-size: var(--font-size-sm);
@@ -138,12 +105,7 @@
   font-weight: var(--font-weight-medium);
 }
 
-.metricValue {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-primary);
-  font-family: var(--font-family-mono);
-  font-weight: var(--font-weight-medium);
-}
+// Dark mode disabled - Light theme only
 
 .alertsSection {
   h3 {
@@ -154,11 +116,7 @@
   }
 }
 
-.alertsList {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-md);
-}
+// Dark mode disabled - Light theme only
 
 .alertItem {
   @include card-base;
@@ -186,12 +144,7 @@
   }
 }
 
-.alertHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: var(--spacing-sm);
-}
+// Dark mode disabled - Light theme only
 
 .alertSeverity {
   font-size: var(--font-size-xs);
@@ -202,11 +155,7 @@
   color: white;
 }
 
-.alertTime {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-tertiary);
-  font-family: var(--font-family-mono);
-}
+// Dark mode disabled - Light theme only
 
 .alertTitle {
   font-size: var(--font-size-base);
@@ -215,12 +164,7 @@
   margin: 0 0 var(--spacing-xs) 0;
 }
 
-.alertDescription {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
-  margin: 0 0 var(--spacing-sm) 0;
-  line-height: var(--line-height-relaxed);
-}
+// Dark mode disabled - Light theme only
 
 .alertComponent {
   font-size: var(--font-size-xs);
@@ -245,16 +189,7 @@
   color: var(--color-text-secondary);
 }
 
-.loading .loadingSpinner,
-.error .loadingSpinner {
-  width: 40px;
-  height: 40px;
-  border: 3px solid var(--color-gray-300);
-  border-top: 3px solid var(--color-primary-600);
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin-bottom: var(--spacing-lg);
-}
+// Dark mode disabled - Light theme only
 
 .loading p,
 .error p {
@@ -262,21 +197,7 @@
   margin-bottom: var(--spacing-xl);
 }
 
-.error {
-  h3 {
-    color: var(--color-error-800);
-    font-size: var(--font-size-lg);
-    font-weight: var(--font-weight-semibold);
-    margin-bottom: var(--spacing-md);
-    margin-top: 0;
-  }
-
-  button {
-    @include button-primary;
-    font-size: var(--font-size-sm);
-    padding: var(--spacing-md) var(--spacing-lg);
-  }
-}
+// Dark mode disabled - Light theme only
 
 .emptyState {
   .emptyIcon {
@@ -299,13 +220,7 @@
     max-width: 400px;
   }
 
-  .emptyActions {
-    .secondaryButton {
-      @include button-secondary;
-      opacity: 0.6;
-      cursor: not-allowed;
-    }
-  }
+// Dark mode disabled - Light theme only
 }
 
 // Responsive design
@@ -314,9 +229,7 @@
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   }
 
-  .componentsGrid {
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  }
+// Dark mode disabled - Light theme only
 }
 
 @include breakpoint(md) {
@@ -326,17 +239,13 @@
     gap: var(--spacing-sm);
   }
 
-  .metricsGrid {
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  }
+// Dark mode disabled - Light theme only
 
   .componentsGrid {
     grid-template-columns: 1fr;
   }
 
-  .componentCard {
-    padding: var(--spacing-md);
-  }
+// Dark mode disabled - Light theme only
 }
 
 @include breakpoint(sm) {
@@ -344,23 +253,17 @@
     grid-template-columns: repeat(2, 1fr);
   }
 
-  .componentsGrid {
-    gap: var(--spacing-md);
-  }
+// Dark mode disabled - Light theme only
 
   .componentMetrics {
     gap: var(--spacing-xs);
   }
 
-  .metric {
-    padding: var(--spacing-xs) 0;
-  }
+// Dark mode disabled - Light theme only
 
   .alertsList {
     gap: var(--spacing-sm);
   }
 
-  .alertItem {
-    padding: var(--spacing-sm);
-  }
+// Dark mode disabled - Light theme only
 }

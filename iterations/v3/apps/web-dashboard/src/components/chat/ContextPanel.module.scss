@@ -6,20 +6,7 @@
   height: 100%;
 }
 
-.header {
-  @include flex-between;
-  align-items: center;
-  padding: var(--spacing-lg);
-  border-bottom: 1px solid var(--color-border-light);
-  background-color: var(--color-bg-primary);
-
-  h3 {
-    font-size: var(--font-size-lg);
-    font-weight: var(--font-weight-semibold);
-    color: var(--color-text-primary);
-    margin: 0;
-  }
-}
+// Dark mode disabled - Light theme only
 
 .editButton,
 .saveButton,
@@ -35,25 +22,14 @@
   }
 }
 
-.editActions {
-  @include flex-center;
-  gap: var(--spacing-sm);
-}
+// Dark mode disabled - Light theme only
 
 .saveButton {
   @include button-primary;
   padding: var(--spacing-sm) var(--spacing-md);
 }
 
-.cancelButton {
-  background: none;
-  border: 1px solid var(--color-gray-300);
-  color: var(--color-gray-700);
-
-  &:hover {
-    background-color: var(--color-gray-50);
-  }
-}
+// Dark mode disabled - Light theme only
 
 .content {
   flex: 1;
@@ -61,13 +37,7 @@
   padding: var(--spacing-lg);
 }
 
-.section {
-  margin-bottom: var(--spacing-xl);
-
-  &:last-child {
-    margin-bottom: 0;
-  }
-}
+// Dark mode disabled - Light theme only
 
 .label {
   display: block;
@@ -79,11 +49,7 @@
   letter-spacing: 0.05em;
 }
 
-.value {
-  font-size: var(--font-size-base);
-  color: var(--color-text-primary);
-  line-height: var(--line-height-relaxed);
-}
+// Dark mode disabled - Light theme only
 
 .input,
 .textarea {
@@ -108,11 +74,7 @@
   }
 }
 
-.textarea {
-  resize: vertical;
-  min-height: 60px;
-  line-height: var(--line-height-normal);
-}
+// Dark mode disabled - Light theme only
 
 .goalsList {
   list-style: none;
@@ -138,11 +100,7 @@
   }
 }
 
-.repoContext {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-md);
-}
+// Dark mode disabled - Light theme only
 
 .repoField,
 .sessionField {
@@ -152,12 +110,7 @@
   gap: var(--spacing-md);
 }
 
-.fieldLabel {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
-  font-weight: var(--font-weight-medium);
-  flex-shrink: 0;
-}
+// Dark mode disabled - Light theme only
 
 .fieldValue {
   font-size: var(--font-size-sm);
@@ -195,12 +148,7 @@
   }
 }
 
-.commitList,
-.fileList {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-xs);
-}
+// Dark mode disabled - Light theme only
 
 .commit,
 .file {
@@ -214,29 +162,21 @@
   word-break: break-all;
 }
 
-.sessionInfo {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-sm);
-}
+// Dark mode disabled - Light theme only
 
 // Scrollbar styling
 .content::-webkit-scrollbar {
   width: 6px;
 }
 
-.content::-webkit-scrollbar-track {
-  background: var(--color-bg-secondary);
-}
+// Dark mode disabled - Light theme only
 
 .content::-webkit-scrollbar-thumb {
   background: var(--color-gray-300);
   border-radius: 3px;
 }
 
-.content::-webkit-scrollbar-thumb:hover {
-  background: var(--color-gray-400);
-}
+// Dark mode disabled - Light theme only
 
 // Responsive design
 @include breakpoint(md) {
@@ -244,9 +184,7 @@
     padding: var(--spacing-md);
   }
 
-  .content {
-    padding: var(--spacing-md);
-  }
+// Dark mode disabled - Light theme only
 
   .repoField,
   .sessionField {
@@ -255,7 +193,5 @@
     gap: var(--spacing-xs);
   }
 
-  .fieldValue {
-    text-align: left;
-  }
+// Dark mode disabled - Light theme only
 }

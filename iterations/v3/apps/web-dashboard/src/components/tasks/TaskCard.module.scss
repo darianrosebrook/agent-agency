@@ -50,25 +50,14 @@
   margin-top: var(--spacing-md);
 }
 
-.cardHeader {
-  @include flex-between;
-  align-items: flex-start;
-  margin-bottom: var(--spacing-md);
-}
+// Dark mode disabled - Light theme only
 
 .titleSection {
   flex: 1;
   min-width: 0;
 }
 
-.title {
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text-primary);
-  margin: 0 0 var(--spacing-xs) 0;
-  word-break: break-word;
-  line-height: var(--line-height-tight);
-}
+// Dark mode disabled - Light theme only
 
 .meta {
   @include flex-center;
@@ -77,13 +66,7 @@
   color: var(--color-text-secondary);
 }
 
-.id {
-  font-family: var(--font-family-mono);
-  background-color: var(--color-bg-secondary);
-  padding: var(--spacing-xs) var(--spacing-sm);
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--color-border);
-}
+// Dark mode disabled - Light theme only
 
 .priority {
   @include flex-center;
@@ -91,9 +74,7 @@
   text-transform: capitalize;
 }
 
-.statusSection {
-  flex-shrink: 0;
-}
+// Dark mode disabled - Light theme only
 
 .status {
   @include flex-center;
@@ -142,10 +123,7 @@
   }
 }
 
-.cardBody {
-  flex: 1;
-  margin-bottom: var(--spacing-md);
-}
+// Dark mode disabled - Light theme only
 
 .phase {
   @include flex-center;
@@ -157,19 +135,13 @@
   text-transform: capitalize;
 }
 
-.phaseIcon {
-  font-size: var(--font-size-lg);
-}
+// Dark mode disabled - Light theme only
 
 .phaseText {
   flex: 1;
 }
 
-.progressText {
-  font-family: var(--font-family-mono);
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
-}
+// Dark mode disabled - Light theme only
 
 .progressBar {
   width: 100%;
@@ -180,12 +152,7 @@
   margin-bottom: var(--spacing-sm);
 }
 
-.progressFill {
-  height: 100%;
-  background-color: var(--color-primary-600);
-  border-radius: var(--radius-sm);
-  transition: width var(--transition-normal);
-}
+// Dark mode disabled - Light theme only
 
 .currentStep {
   font-size: var(--font-size-sm);
@@ -194,10 +161,7 @@
   word-break: break-word;
 }
 
-.stepCount {
-  font-family: var(--font-family-mono);
-  opacity: 0.7;
-}
+// Dark mode disabled - Light theme only
 
 .description {
   font-size: var(--font-size-sm);
@@ -206,10 +170,7 @@
   margin: 0;
 }
 
-.cardFooter {
-  border-top: 1px solid var(--color-border-light);
-  padding-top: var(--spacing-md);
-}
+// Dark mode disabled - Light theme only
 
 .timing {
   display: flex;
@@ -217,20 +178,13 @@
   margin-bottom: var(--spacing-sm);
 }
 
-.timeInfo {
-  @include flex-center;
-  gap: var(--spacing-xs);
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
-}
+// Dark mode disabled - Light theme only
 
 .timeLabel {
   font-weight: var(--font-weight-medium);
 }
 
-.timeValue {
-  font-family: var(--font-family-mono);
-}
+// Dark mode disabled - Light theme only
 
 .actions {
   @include flex-center;
@@ -238,43 +192,7 @@
   margin-bottom: var(--spacing-sm);
 }
 
-.actionButton {
-  @include button-secondary;
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  font-size: var(--font-size-base);
-  border-radius: var(--radius-sm);
-  transition: all var(--transition-fast);
-
-  &:hover {
-    transform: scale(1.05);
-  }
-
-  &.pause {
-    &:hover {
-      background-color: var(--color-warning-50);
-      border-color: var(--color-warning-300);
-      color: var(--color-warning-700);
-    }
-  }
-
-  &.resume {
-    &:hover {
-      background-color: var(--color-success-50);
-      border-color: var(--color-success-300);
-      color: var(--color-success-700);
-    }
-  }
-
-  &.cancel {
-    &:hover {
-      background-color: var(--color-error-50);
-      border-color: var(--color-error-300);
-      color: var(--color-error-700);
-    }
-  }
-}
+// Dark mode disabled - Light theme only
 
 .metadata {
   @include flex-center;
@@ -283,9 +201,7 @@
   color: var(--color-text-tertiary);
 }
 
-.createdAt {
-  font-family: var(--font-family-mono);
-}
+// Dark mode disabled - Light theme only
 
 .qualityScore {
   font-family: var(--font-family-mono);
@@ -300,13 +216,7 @@
   }
 }
 
-.artifactCount {
-  font-family: var(--font-family-mono);
-  background-color: var(--color-bg-secondary);
-  padding: var(--spacing-xs) var(--spacing-sm);
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--color-border);
-}
+// Dark mode disabled - Light theme only
 
 .details {
   border-top: 1px solid var(--color-border-light);
@@ -314,42 +224,7 @@
   margin-top: var(--spacing-md);
 }
 
-.context {
-  h4 {
-    font-size: var(--font-size-sm);
-    font-weight: var(--font-weight-semibold);
-    color: var(--color-text-primary);
-    margin: 0 0 var(--spacing-sm) 0;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-
-  ul {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-
-    li {
-      position: relative;
-      padding-left: var(--spacing-lg);
-      margin-bottom: var(--spacing-xs);
-      font-size: var(--font-size-sm);
-      color: var(--color-text-secondary);
-
-      &::before {
-        content: '•';
-        position: absolute;
-        left: 0;
-        color: var(--color-primary-600);
-        font-weight: bold;
-      }
-
-      &:last-child {
-        margin-bottom: 0;
-      }
-    }
-  }
-}
+// Dark mode disabled - Light theme only
 
 .error {
   h4 {
@@ -380,10 +255,7 @@
     gap: var(--spacing-sm);
   }
 
-  .statusSection {
-    align-self: stretch;
-    text-align: right;
-  }
+// Dark mode disabled - Light theme only
 
   .timing {
     flex-direction: column;
@@ -391,11 +263,7 @@
     align-items: flex-start;
   }
 
-  .metadata {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: var(--spacing-xs);
-  }
+// Dark mode disabled - Light theme only
 }
 
 @include breakpoint(sm) {
@@ -405,10 +273,7 @@
     gap: var(--spacing-xs);
   }
 
-  .actions {
-    align-self: stretch;
-    justify-content: flex-end;
-  }
+// Dark mode disabled - Light theme only
 
   .meta {
     flex-direction: column;

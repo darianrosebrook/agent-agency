@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   DatabaseExplorerProps,
   DatabaseConnection,
@@ -202,7 +202,7 @@ export default function DatabaseExplorer({
   );
 
   // Filter tables based on current filters
-  const filteredTables = React.useMemo(() => {
+  const filteredTables = useMemo(() => {
     return state.tables.filter((table) => {
       if (
         state.filters.schema?.length &&
@@ -387,7 +387,7 @@ export default function DatabaseExplorer({
                             ...prev.filters,
                             schema: e.target.value
                               ? [e.target.value]
-                              : undefined,
+                              : [],
                           },
                         }))
                       }
@@ -413,7 +413,7 @@ export default function DatabaseExplorer({
                             ...prev.filters,
                             type: e.target.value
                               ? [e.target.value as any] // eslint-disable-line @typescript-eslint/no-explicit-any
-                              : undefined,
+                              : [],
                           },
                         }))
                       }

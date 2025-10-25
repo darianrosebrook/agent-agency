@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import { useState, useCallback } from "react";
 import SystemHealthOverview from "../monitoring/SystemHealthOverview";
 import AgentPerformanceGrid from "../monitoring/AgentPerformanceGrid";
 import CoordinationMetrics from "../monitoring/CoordinationMetrics";

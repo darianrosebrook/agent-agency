@@ -37,7 +37,7 @@ embedding-service = { path = "../embedding-service", optional = true }
 agent-agency-database = { path = "../database" }
 
 # Knowledge graph integration
-knowledge-ingestor = { path = "../knowledge-ingestor" }
+agent-data-processing = { path = "../agent-data-processing" }
 
 # Council integration for high-risk claim verification
 agent-agency-council = { path = "../council" }

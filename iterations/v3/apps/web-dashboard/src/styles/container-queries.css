@@ -1,0 +1,314 @@
+/* Container Query Utilities - FlowPress Design System */
+
+/**
+ * Container Query Support for Component-Based Responsive Design
+ * 
+ * Browser Support: Chrome 105+, Safari 16+, Firefox 110+ (92% global)
+ * Fallback: Components gracefully degrade to their default styles
+ */
+
+/* Container Type Utilities */
+.container-inline {
+  container-type: inline-size;
+}
+
+.container-block {
+  container-type: block-size;
+}
+
+.container-size {
+  container-type: size;
+}
+
+/* Named Container Types for Specific Components */
+.card-container {
+  container-type: inline-size;
+  container-name: card;
+}
+
+.metric-container {
+  container-type: inline-size;
+  container-name: metric;
+}
+
+.dashboard-container {
+  container-type: inline-size;
+  container-name: dashboard;
+}
+
+.form-container {
+  container-type: inline-size;
+  container-name: form;
+}
+
+.list-container {
+  container-type: inline-size;
+  container-name: list;
+}
+
+/* Card Container Queries */
+@container card (max-width: 350px) {
+  /* Compact card layout for narrow spaces */
+  .card-content-adaptive {
+    padding: var(--spacing-4);
+  }
+  
+  .card-title-adaptive {
+    font-size: 1.125rem;
+    line-height: 1.3;
+  }
+  
+  .card-description-adaptive {
+    font-size: 0.75rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  
+  .card-actions-adaptive {
+    flex-direction: column;
+    gap: var(--spacing-2);
+  }
+}
+
+@container card (min-width: 351px) and (max-width: 500px) {
+  /* Standard card layout */
+  .card-content-adaptive {
+    padding: var(--spacing-6);
+  }
+  
+  .card-title-adaptive {
+    font-size: 1.25rem;
+  }
+  
+  .card-actions-adaptive {
+    flex-direction: row;
+    gap: var(--spacing-3);
+  }
+}
+
+@container card (min-width: 501px) {
+  /* Expanded card layout for wide spaces */
+  .card-content-adaptive {
+    padding: var(--spacing-8);
+  }
+  
+  .card-title-adaptive {
+    font-size: 1.5rem;
+  }
+  
+  .card-extra-content {
+    display: block; /* Show additional content in wide cards */
+  }
+}
+
+/* Metric Container Queries */
+@container metric (max-width: 180px) {
+  /* Ultra-compact metric - icon only or stacked */
+  .metric-layout-adaptive {
+    flex-direction: column;
+    text-align: center;
+    gap: var(--spacing-1);
+  }
+  
+  .metric-icon-adaptive {
+    font-size: 1.25rem;
+    margin: 0 auto;
+  }
+  
+  .metric-label-adaptive {
+    font-size: 0.625rem;
+    letter-spacing: 0.03em;
+  }
+  
+  .metric-value-adaptive {
+    font-size: 1.125rem;
+    font-weight: var(--font-weight-semibold);
+  }
+  
+  .metric-description-adaptive {
+    display: none; /* Hide description in tight spaces */
+  }
+}
+
+@container metric (min-width: 181px) and (max-width: 280px) {
+  /* Compact metric - vertical layout */
+  .metric-layout-adaptive {
+    flex-direction: column;
+    text-align: left;
+    gap: var(--spacing-2);
+  }
+  
+  .metric-icon-adaptive {
+    font-size: 1.5rem;
+  }
+  
+  .metric-label-adaptive {
+    font-size: 0.75rem;
+  }
+  
+  .metric-value-adaptive {
+    font-size: 1.5rem;
+  }
+}
+
+@container metric (min-width: 281px) {
+  /* Standard metric - horizontal layout */
+  .metric-layout-adaptive {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+  
+  .metric-icon-adaptive {
+    font-size: 2rem;
+  }
+  
+  .metric-label-adaptive {
+    font-size: 0.875rem;
+  }
+  
+  .metric-value-adaptive {
+    font-size: 2rem;
+  }
+  
+  .metric-description-adaptive {
+    display: block;
+    font-size: 0.75rem;
+  }
+}
+
+/* Dashboard Grid Container Queries */
+@container dashboard (max-width: 600px) {
+  /* Mobile dashboard - single column */
+  .dashboard-grid-adaptive {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-4);
+  }
+}
+
+@container dashboard (min-width: 601px) and (max-width: 1024px) {
+  /* Tablet dashboard - 2 columns */
+  .dashboard-grid-adaptive {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--spacing-6);
+  }
+}
+
+@container dashboard (min-width: 1025px) {
+  /* Desktop dashboard - 3 columns */
+  .dashboard-grid-adaptive {
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--spacing-8);
+  }
+}
+
+/* Form Container Queries */
+@container form (max-width: 400px) {
+  /* Compact form - full width inputs */
+  .form-grid-adaptive {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-3);
+  }
+  
+  .form-label-adaptive {
+    font-size: 0.75rem;
+  }
+  
+  .form-input-adaptive {
+    font-size: 0.875rem;
+    padding: 10px 12px;
+  }
+}
+
+@container form (min-width: 401px) {
+  /* Standard form - 2 column grid for compact fields */
+  .form-grid-adaptive {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--spacing-4);
+  }
+  
+  .form-label-adaptive {
+    font-size: 0.875rem;
+  }
+  
+  .form-input-adaptive {
+    font-size: 1rem;
+    padding: 13px 16px;
+  }
+}
+
+/* List Container Queries */
+@container list (max-width: 400px) {
+  /* Compact list - simplified items */
+  .list-item-adaptive {
+    padding: var(--spacing-3);
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-2);
+  }
+  
+  .list-item-meta-adaptive {
+    font-size: 0.75rem;
+  }
+  
+  .list-item-actions-adaptive {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+
+@container list (min-width: 401px) {
+  /* Standard list - horizontal layout */
+  .list-item-adaptive {
+    padding: var(--spacing-4);
+    flex-direction: row;
+    align-items: center;
+    gap: var(--spacing-4);
+  }
+  
+  .list-item-meta-adaptive {
+    font-size: 0.875rem;
+  }
+  
+  .list-item-actions-adaptive {
+    width: auto;
+  }
+}
+
+/* Utility Classes for Container Query Support */
+.hide-in-narrow-container {
+  @container (max-width: 300px) {
+    display: none;
+  }
+}
+
+.show-in-wide-container {
+  display: none;
+  
+  @container (min-width: 500px) {
+    display: block;
+  }
+}
+
+.stack-in-narrow-container {
+  @container (max-width: 400px) {
+    flex-direction: column !important;
+  }
+}
+
+/* Progressive Enhancement - Fallback for browsers without container query support */
+@supports not (container-type: inline-size) {
+  /* Fallback to viewport-based queries */
+  @media (max-width: 640px) {
+    .card-content-adaptive {
+      padding: var(--spacing-4);
+    }
+    
+    .metric-layout-adaptive {
+      flex-direction: column;
+    }
+  }
+}
+

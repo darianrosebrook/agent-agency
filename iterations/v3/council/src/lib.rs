@@ -27,6 +27,8 @@ pub mod claim_extraction_multimodal;
 pub mod learning;
 pub mod model_client;
 pub mod advanced_monitoring;
+pub mod intelligent_testing;
+pub mod predictive_learning;
 
 pub use error::{CouncilError, CouncilResult};
 pub use judge::{

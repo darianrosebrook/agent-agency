@@ -15,6 +15,8 @@ use crate::decision_making::{DecisionEngine, FinalDecision, DecisionContext, Org
 use crate::error_handling::{AgencyError, CircuitBreaker, CircuitBreakerConfig, RecoveryOrchestrator, DegradationManager, DegradationPolicy, DegradationLevel, error_factory};
 use crate::risk_scorer::ComputationalComplexity;
 
+use tracing::{debug, info, instrument, warn};
+
 /// Configuration for the council
 #[derive(Debug, Clone)]
 pub struct CouncilConfig {
@@ -111,6 +113,8 @@ pub struct Council {
     recovery_orchestrator: Option<Arc<RecoveryOrchestrator>>,
     /// Degradation manager for graceful degradation
     degradation_manager: Option<Arc<DegradationManager>>,
+    /// Memory system for learning from past decisions
+    memory_system: Option<Arc<agent_memory::MemorySystem>>,
 }
 
 impl Council {
@@ -120,6 +124,23 @@ impl Council {
         available_judges: Vec<Arc<dyn Judge>>,
         verdict_aggregator: Arc<VerdictAggregator>,
         decision_engine: Box<dyn DecisionEngine>,
+    ) -> Self {
+        Self::new_with_memory(
+            config,
+            available_judges,
+            verdict_aggregator,
+            decision_engine,
+            None, // No memory system by default
+        )
+    }
+
+    /// Create a new council with memory system integration
+    pub fn new_with_memory(
+        config: CouncilConfig,
+        available_judges: Vec<Arc<dyn Judge>>,
+        verdict_aggregator: Arc<VerdictAggregator>,
+        decision_engine: Box<dyn DecisionEngine>,
+        memory_system: Option<Arc<agent_memory::MemorySystem>>,
     ) -> Self {
         let (circuit_breakers, recovery_orchestrator, degradation_manager) =
             Self::initialize_error_handling(&config);
@@ -132,6 +153,7 @@ impl Council {
             circuit_breakers,
             recovery_orchestrator,
             degradation_manager,
+            memory_system,
         }
     }
 
@@ -318,7 +340,15 @@ impl Council {
             session.aggregation_result.as_ref().unwrap(),
             &decision_context,
         ).await?;
-        session.final_decision = Some(final_decision);
+        session.final_decision = Some(final_decision.clone());
+
+        // Store decision outcome in memory for future learning
+        self.store_decision_memory(
+            session.session_id.clone(),
+            &review_context.working_spec,
+            &final_decision,
+            &review_context.risk_tier,
+        ).await;
 
         Ok(())
     }
@@ -648,18 +678,29 @@ impl Council {
             },
         };
 
-        // Mock historical precedents
-        let historical_precedents = vec![
-            HistoricalDecision {
-                decision_id: "hist-001".to_string(),
-                similar_task_features: vec!["api development".to_string(), "data validation".to_string()],
-                outcome: crate::decision_making::DecisionOutcome::Success {
-                    quality_score: 0.85,
-                    time_to_completion: 3600 * 24 * 7, // 1 week
-                },
-                lessons_learned: vec!["Thorough testing pays off".to_string()],
-            }
-        ];
+        // Retrieve historical precedents from memory
+        let historical_precedents = if self.has_memory_support() {
+            // Use async block to call async method in sync context
+            tokio::task::block_in_place(|| {
+                tokio::runtime::Handle::current()
+                    .block_on(async {
+                        self.retrieve_historical_decisions(&review_context.working_spec, &review_context.risk_tier).await
+                    })
+            })
+        } else {
+            // Fallback to minimal historical precedent if no memory
+            vec![
+                HistoricalDecision {
+                    decision_id: "default-001".to_string(),
+                    similar_task_features: vec!["general_development".to_string()],
+                    outcome: crate::decision_making::DecisionOutcome::Success {
+                        quality_score: 0.7,
+                        time_to_completion: 3600 * 24 * 14, // 2 weeks
+                    },
+                    lessons_learned: vec!["Quality requires planning".to_string()],
+                }
+            ]
+        };
 
         let emergency_flags = EmergencyFlags {
             business_critical: matches!(review_context.risk_tier, agent_agency_contracts::task_request::RiskTier::Tier1),
@@ -715,6 +756,180 @@ impl Council {
             available_judges,
             average_response_time_ms: average_response_time,
             quorum_met: available_judges >= self.config.min_judges_required,
+        }
+    }
+
+    /// Check if memory system is available
+    pub fn has_memory_support(&self) -> bool {
+        self.memory_system.is_some()
+    }
+
+    /// Retrieve relevant historical decisions from memory for decision context
+    async fn retrieve_historical_decisions(
+        &self,
+        working_spec: &agent_agency_contracts::working_spec::WorkingSpec,
+        risk_tier: &agent_agency_contracts::task_request::RiskTier,
+    ) -> Vec<crate::decision_making::HistoricalDecision> {
+        if let Some(ref memory_system) = self.memory_system {
+            // Create context for memory retrieval
+            let task_context = agent_memory::TaskContext {
+                task_id: format!("council_decision_{}", working_spec.id),
+                task_type: "council_decision_making".to_string(),
+                description: format!("Making council decision for spec: {}", working_spec.title),
+                domain: vec!["council".to_string(), "decision_making".to_string()],
+                entities: vec!["constitutional_council".to_string()],
+                temporal_context: Some(agent_memory::TemporalContext {
+                    start_time: chrono::Utc::now(),
+                    deadline: None,
+                    priority: agent_memory::TaskPriority::High,
+                    recurrence_pattern: None,
+                }),
+                metadata: std::collections::HashMap::from([
+                    ("risk_tier".to_string(), serde_json::json!(risk_tier)),
+                    ("spec_goals".to_string(), serde_json::json!(working_spec.goals)),
+                ]),
+            };
+
+            match memory_system.retrieve_contextual_memories(&task_context, 10).await {
+                Ok(memories) => {
+                    memories.into_iter()
+                        .filter_map(|memory| self.convert_contextual_memory_to_historical_decision(&memory))
+                        .collect()
+                }
+                Err(e) => {
+                    warn!("Failed to retrieve historical decisions from memory: {}", e);
+                    vec![]
+                }
+            }
+        } else {
+            vec![]
+        }
+    }
+
+    /// Convert a contextual memory to a historical decision
+    fn convert_contextual_memory_to_historical_decision(
+        &self,
+        contextual_memory: &agent_memory::ContextualMemory,
+    ) -> Option<crate::decision_making::HistoricalDecision> {
+        let experience = &contextual_memory.memory;
+
+        // Extract decision outcome from the experience
+        let outcome = match experience.outcome.success {
+            true => {
+                let quality_score = experience.outcome.performance_score.unwrap_or(0.8) as f64;
+                crate::decision_making::DecisionOutcome::Success {
+                    quality_score,
+                    time_to_completion: experience.outcome.execution_time_ms.unwrap_or(0) as u64,
+                }
+            }
+            false => {
+                let reason = experience.outcome.failure_reasons.first()
+                    .cloned()
+                    .unwrap_or_else(|| "Unknown failure".to_string());
+                crate::decision_making::DecisionOutcome::Failure {
+                    reason,
+                    recovery_cost: 0.0, // Could be calculated from metadata
+                }
+            }
+        };
+
+        // Extract similar task features from metadata
+        let similar_task_features = experience.context.metadata.get("spec_goals")
+            .and_then(|v| v.as_array())
+            .map(|arr| arr.iter()
+                .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                .collect()
+            )
+            .unwrap_or_default();
+
+        // Extract lessons learned from success/failure factors
+        let lessons_learned = experience.outcome.success_factors.iter()
+            .chain(experience.outcome.failure_reasons.iter())
+            .cloned()
+            .collect();
+
+        Some(crate::decision_making::HistoricalDecision {
+            decision_id: experience.id.to_string(),
+            similar_task_features,
+            outcome,
+            lessons_learned,
+        })
+    }
+
+    /// Store a council decision outcome as memory for future learning
+    async fn store_decision_memory(
+        &self,
+        decision_id: String,
+        working_spec: &agent_agency_contracts::working_spec::WorkingSpec,
+        final_decision: &crate::decision_making::FinalDecision,
+        risk_tier: &agent_agency_contracts::task_request::RiskTier,
+    ) {
+        if let Some(ref memory_system) = self.memory_system {
+            let task_context = agent_memory::TaskContext {
+                task_id: decision_id.clone(),
+                task_type: "council_decision_outcome".to_string(),
+                description: format!("Council decision outcome for: {}", working_spec.title),
+                domain: vec!["council".to_string(), "decision_making".to_string(), "learning".to_string()],
+                entities: vec!["constitutional_council".to_string()],
+                temporal_context: Some(agent_memory::TemporalContext {
+                    start_time: chrono::Utc::now(),
+                    deadline: None,
+                    priority: agent_memory::TaskPriority::Medium,
+                    recurrence_pattern: None,
+                }),
+                metadata: std::collections::HashMap::from([
+                    ("risk_tier".to_string(), serde_json::json!(risk_tier)),
+                    ("spec_goals".to_string(), serde_json::json!(working_spec.goals)),
+                    ("decision_outcome".to_string(), serde_json::json!(format!("{:?}", final_decision))),
+                ]),
+            };
+
+            // Determine success based on decision
+            let (success, performance_score) = match final_decision {
+                crate::decision_making::FinalDecision::Proceed { confidence, .. } => (true, Some(*confidence)),
+                crate::decision_making::FinalDecision::Refine { .. } => (false, Some(0.3f64)),
+                crate::decision_making::FinalDecision::Reject { .. } => (false, Some(0.0f64)),
+                crate::decision_making::FinalDecision::Escalate { .. } => (false, Some(0.5f64)),
+            };
+
+            let outcome = agent_memory::ExperienceOutcome {
+                success,
+                performance_score: performance_score.map(|s| s as f32),
+                learned_capabilities: vec!["council_decision_making".to_string()],
+                failure_reasons: if success { vec![] } else { vec!["decision_rejected".to_string()] },
+                success_factors: if success { vec!["quality_approved".to_string()] } else { vec![] },
+                execution_time_ms: None, // Council decisions don't have execution time
+                tokens_used: None,
+                feedback: Some(agent_memory::AgentFeedback {
+                    quality_score: performance_score.map(|s| s as f32),
+                    relevance_score: Some(0.9),
+                    accuracy_score: Some(if success { 0.9 } else { 0.4 }),
+                    comments: vec![format!("Council decision: {:?}", final_decision)],
+                    evaluator_id: Some("constitutional_council".to_string()),
+                }),
+            };
+
+            let experience = agent_memory::AgentExperience {
+                id: uuid::Uuid::new_v4(),
+                agent_id: "constitutional_council".to_string(),
+                task_id: decision_id,
+                context: task_context,
+                input: serde_json::json!({
+                    "working_spec": working_spec,
+                    "risk_tier": risk_tier
+                }),
+                output: serde_json::json!({
+                    "final_decision": format!("{:?}", final_decision)
+                }),
+                outcome,
+                memory_type: agent_memory::MemoryType::Episodic,
+                timestamp: chrono::Utc::now(),
+                metadata: std::collections::HashMap::new(),
+            };
+
+            if let Err(e) = memory_system.store_experience(experience).await {
+                warn!("Failed to store council decision in memory: {}", e);
+            }
         }
     }
 }

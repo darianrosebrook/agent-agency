@@ -164,6 +164,116 @@ pub struct MemoryConfig {
     pub decay_config: DecayConfig,
     pub context_config: ContextConfig,
     pub performance_config: PerformanceConfig,
+    pub workspace_config: WorkspaceConfig,
+}
+
+/// Workspace access permissions
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum WorkspaceAccess {
+    /// Full access to workspace memory
+    Enabled,
+    /// Workspace memory disabled
+    Disabled,
+    /// Read-only access to workspace memory
+    ReadOnly,
+    /// Workspace is blocked (no access)
+    Blocked,
+}
+
+/// Workspace registry entry
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WorkspaceEntry {
+    /// Workspace identifier (folder path or UUID)
+    pub id: String,
+    /// Human-readable name
+    pub name: String,
+    /// Absolute path to workspace
+    pub path: std::path::PathBuf,
+    /// Access permission level
+    pub access: WorkspaceAccess,
+    /// When this workspace was first discovered
+    pub discovered_at: chrono::DateTime<chrono::Utc>,
+    /// When this workspace was last accessed
+    pub last_accessed: chrono::DateTime<chrono::Utc>,
+    /// Number of times accessed
+    pub access_count: u64,
+    /// Is this a default workspace (automatically allowed)
+    pub is_default: bool,
+}
+
+/// Workspace access control configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WorkspaceAccessConfig {
+    /// Default workspaces that are always accessible
+    pub default_workspaces: Vec<String>,
+    /// Workspaces that are explicitly blocked
+    pub blocked_workspaces: Vec<String>,
+    /// Auto-discover workspaces in these base paths
+    pub discovery_paths: Vec<std::path::PathBuf>,
+    /// Default access level for newly discovered workspaces
+    pub default_access: WorkspaceAccess,
+    /// Maximum number of workspaces to track
+    pub max_workspaces: usize,
+}
+
+/// Workspace-level memory configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WorkspaceConfig {
+    /// Current workspace ID (None = global system-wide memory)
+    pub current_workspace_id: Option<uuid::Uuid>,
+    /// Allow cross-workspace memory access
+    pub enable_cross_workspace_access: bool,
+    /// Workspace isolation level
+    pub isolation_level: WorkspaceIsolationLevel,
+    /// Workspace access control configuration
+    pub access_config: WorkspaceAccessConfig,
+}
+
+/// Workspace isolation levels
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum WorkspaceIsolationLevel {
+    /// Complete isolation - only workspace memory
+    Strict,
+    /// Primary workspace + global fallback
+    WorkspaceFirst,
+    /// Global + workspace overlay
+    GlobalFirst,
+    /// Full access to all workspaces
+    Unrestricted,
+}
+
+impl Default for WorkspaceAccessConfig {
+    fn default() -> Self {
+        Self {
+            default_workspaces: vec![
+                "/Users".to_string(),
+                "/tmp".to_string(),
+                "/var".to_string(),
+            ],
+            blocked_workspaces: vec![
+                "/root".to_string(),
+                "/etc".to_string(),
+                "/System".to_string(),
+            ],
+            discovery_paths: vec![
+                std::path::PathBuf::from("/Users"),
+                std::path::PathBuf::from("/tmp"),
+            ],
+            default_access: WorkspaceAccess::Enabled,
+            max_workspaces: 1000,
+        }
+    }
+}
+
+impl Default for WorkspaceConfig {
+    fn default() -> Self {
+        Self {
+            current_workspace_id: None, // Global by default
+            enable_cross_workspace_access: true,
+            isolation_level: WorkspaceIsolationLevel::WorkspaceFirst,
+            access_config: WorkspaceAccessConfig::default(),
+        }
+    }
 }
 
 /// Knowledge graph configuration
@@ -410,6 +520,7 @@ impl Default for MemoryConfig {
             decay_config: DecayConfig::default(),
             context_config: ContextConfig::default(),
             performance_config: PerformanceConfig::default(),
+            workspace_config: WorkspaceConfig::default(),
         }
     }
 }

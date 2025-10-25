@@ -272,6 +272,9 @@ CREATE INDEX idx_temporal_events_entity ON temporal_events(entity_type, entity_i
 - **Category-specific rates**: Technical info decays slower than transient data
 - **Use-it-or-lose-it**: Access boosts importance, prevents decay
 - **Consolidation events**: Significant successes strengthen related memories
+- **Workspace-aware decay**: Memories in unused workspaces decay faster
+- **Workspace cleanup**: Automatic cleanup of workspaces not accessed in 90+ days
+- **Access frequency weighting**: Frequently accessed workspaces get decay protection
 
 #### Importance Boosting ✅
 - **Success-driven learning**: Performance scores increase memory importance

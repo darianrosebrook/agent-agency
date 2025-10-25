@@ -40,11 +40,7 @@
   }
 }
 
-.header {
-  @include flex-between;
-  align-items: center;
-  margin-bottom: var(--spacing-sm);
-}
+// Dark mode disabled - Light theme only
 
 .sender {
   @include flex-center;
@@ -54,59 +50,10 @@
     font-size: var(--font-size-sm);
   }
 
-  .name {
-    font-size: var(--font-size-sm);
-    font-weight: var(--font-weight-medium);
-    color: var(--color-text-secondary);
-  }
+// Dark mode disabled - Light theme only
 }
 
-.timestamp {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-tertiary);
-  font-family: var(--font-family-mono);
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-xs);
-
-  .ttsButton {
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 2px 4px;
-    border-radius: var(--radius-sm);
-    font-size: var(--font-size-sm);
-    transition: all var(--transition-fast);
-    opacity: 0.7;
-
-    &:hover {
-      opacity: 1;
-      background-color: var(--color-gray-100);
-    }
-
-    &:focus {
-      outline: 2px solid var(--color-primary-500);
-      outline-offset: 1px;
-    }
-
-    &:disabled {
-      cursor: not-allowed;
-      opacity: 0.5;
-    }
-
-    &.playing {
-      color: var(--color-success-600);
-      background-color: var(--color-success-50);
-      animation: pulse 1s infinite;
-    }
-
-    &.generating {
-      color: var(--color-warning-600);
-      background-color: var(--color-warning-50);
-      animation: spin 1s linear infinite;
-    }
-  }
-}
+// Dark mode disabled - Light theme only
 
 @keyframes pulse {
   0%, 100% {
@@ -126,12 +73,7 @@
   }
 }
 
-.content {
-  color: var(--color-text-primary);
-  line-height: var(--line-height-relaxed);
-  white-space: pre-wrap;
-  word-break: break-word;
-}
+// Dark mode disabled - Light theme only
 
 .metadata {
   margin-top: var(--spacing-md);
@@ -144,28 +86,7 @@
   color: var(--color-text-secondary);
 }
 
-.intent {
-  @include flex-center;
-  gap: var(--spacing-xs);
-  padding: var(--spacing-xs) var(--spacing-sm);
-  background-color: var(--color-info-50);
-  border: 1px solid var(--color-info-200);
-  border-radius: var(--radius-sm);
-  color: var(--color-info-800);
-
-  .intentLabel {
-    font-weight: var(--font-weight-medium);
-  }
-
-  .intentValue {
-    font-family: var(--font-family-mono);
-    text-transform: lowercase;
-  }
-
-  .confidence {
-    opacity: 0.7;
-  }
-}
+// Dark mode disabled - Light theme only
 
 .tokens,
 .processingTime,
@@ -196,9 +117,5 @@
     }
   }
 
-  .metadata {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: var(--spacing-sm);
-  }
+// Dark mode disabled - Light theme only
 }

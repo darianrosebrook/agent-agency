@@ -15,9 +15,26 @@ use tracing::{info, debug, warn};
 pub struct MemoryManager {
     db_client: Arc<DatabaseClient>,
     config: MemoryConfig,
+    workspace_id: Option<uuid::Uuid>,
+    workspace_registry: Option<Arc<crate::workspace_registry::WorkspaceRegistry>>,
 }
 
 impl MemoryManager {
+    /// Get workspace filter for queries based on isolation level
+    fn get_workspace_filter(&self) -> Option<uuid::Uuid> {
+        match self.config.workspace_config.isolation_level {
+            crate::types::WorkspaceIsolationLevel::Strict => self.workspace_id,
+            crate::types::WorkspaceIsolationLevel::WorkspaceFirst => self.workspace_id,
+            crate::types::WorkspaceIsolationLevel::GlobalFirst => None, // Allow global access
+            crate::types::WorkspaceIsolationLevel::Unrestricted => None, // Allow all workspaces
+        }
+    }
+
+    /// Check if cross-workspace access is allowed
+    fn allows_cross_workspace(&self) -> bool {
+        self.config.workspace_config.enable_cross_workspace_access
+    }
+
     /// Create a new memory manager
     pub async fn new(config: MemoryConfig) -> MemoryResult<Self> {
         let db_config = agent_agency_database::DatabaseConfig::default();
@@ -25,7 +42,24 @@ impl MemoryManager {
 
         Ok(Self {
             db_client,
-            config,
+            config: config.clone(),
+            workspace_id: config.workspace_config.current_workspace_id,
+            workspace_registry: None,
+        })
+    }
+
+    pub async fn new_with_registry(
+        config: MemoryConfig,
+        workspace_registry: Arc<crate::workspace_registry::WorkspaceRegistry>
+    ) -> MemoryResult<Self> {
+        let db_config = agent_agency_database::DatabaseConfig::default();
+        let db_client = Arc::new(DatabaseClient::new(db_config).await?);
+
+        Ok(Self {
+            db_client,
+            config: config.clone(),
+            workspace_id: config.workspace_config.current_workspace_id,
+            workspace_registry: Some(workspace_registry),
         })
     }
 
@@ -92,19 +126,24 @@ impl MemoryManager {
 
     /// Search memories by various criteria
     pub async fn search_memories(&self, query: MemoryQuery) -> MemoryResult<Vec<AgentExperience>> {
+        // Apply workspace filtering based on isolation level
+        let workspace_filter = self.get_workspace_filter();
+
         // For now, use a simple query - can be optimized later with proper query builders
         let mut sql_query = sqlx::query(
             r#"
-            SELECT id, agent_id, task_id, context, input, output, outcome,
-                   memory_type, timestamp, metadata
-            FROM agent_experiences
-            WHERE ($1::text IS NULL OR agent_id = $1)
-              AND ($2::text IS NULL OR context->>'task_type' = $2)
-              AND ($3::integer IS NULL OR memory_type = $3)
-              AND ($4::timestamptz IS NULL OR timestamp >= $4)
-              AND ($5::timestamptz IS NULL OR timestamp <= $5)
-            ORDER BY timestamp DESC
-            LIMIT $6
+            SELECT ae.id, ae.agent_id, ae.task_id, ae.context, ae.input, ae.output, ae.outcome,
+                   ae.memory_type, ae.timestamp, ae.metadata
+            FROM agent_experiences ae
+            LEFT JOIN memory_embeddings me ON ae.id = me.memory_id
+            WHERE ($1::text IS NULL OR ae.agent_id = $1)
+              AND ($2::text IS NULL OR ae.context->>'task_type' = $2)
+              AND ($3::integer IS NULL OR ae.memory_type = $3)
+              AND ($4::timestamptz IS NULL OR ae.timestamp >= $4)
+              AND ($5::timestamptz IS NULL OR ae.timestamp <= $5)
+              AND ($6::uuid IS NULL OR me.workspace_id = $6 OR me.workspace_id IS NULL)
+            ORDER BY ae.timestamp DESC
+            LIMIT $7
             "#,
         )
         .bind(&query.agent_id)
@@ -112,6 +151,7 @@ impl MemoryManager {
         .bind(query.memory_type.map(|mt| mt as i32))
         .bind(query.time_range.as_ref().map(|tr| tr.start))
         .bind(query.time_range.as_ref().map(|tr| tr.end))
+        .bind(workspace_filter)
         .bind(query.limit.unwrap_or(100) as i32);
 
         let rows = sql_query.fetch_all(self.db_client.pool()).await?;

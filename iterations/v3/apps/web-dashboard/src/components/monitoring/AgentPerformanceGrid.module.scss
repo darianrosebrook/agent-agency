@@ -6,25 +6,14 @@
   gap: var(--spacing-xl);
 }
 
-.header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: var(--spacing-md);
-}
+// Dark mode disabled - Light theme only
 
 .summary {
   font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
 }
 
-.summaryText {
-  background-color: var(--color-bg-secondary);
-  padding: var(--spacing-xs) var(--spacing-sm);
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--color-border);
-}
+// Dark mode disabled - Light theme only
 
 .agentsList {
   display: flex;
@@ -32,48 +21,7 @@
   gap: var(--spacing-lg);
 }
 
-.agentCard {
-  @include card-base;
-  @include card-hover;
-  padding: var(--spacing-lg);
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-lg);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  border-left: 4px solid var(--color-gray-400);
-
-  &.selected {
-    box-shadow: var(--shadow-lg);
-    transform: translateY(-2px);
-    border-color: var(--color-primary-500);
-  }
-
-  &.active {
-    border-left-color: var(--color-success);
-  }
-
-  &.idle {
-    border-left-color: var(--color-warning);
-  }
-
-  &.error {
-    border-left-color: var(--color-error);
-  }
-
-  &.maintenance {
-    border-left-color: var(--color-gray-500);
-  }
-
-  &.unknown {
-    border-left-color: var(--color-gray-400);
-  }
-
-  &:focus {
-    outline: 2px solid var(--color-primary-500);
-    outline-offset: 2px;
-  }
-}
+// Dark mode disabled - Light theme only
 
 .agentHeader {
   display: flex;
@@ -82,23 +30,14 @@
   gap: var(--spacing-md);
 }
 
-.agentIdentity {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  flex: 1;
-  min-width: 0;
-}
+// Dark mode disabled - Light theme only
 
 .agentIcon {
   font-size: var(--font-size-2xl);
   flex-shrink: 0;
 }
 
-.agentInfo {
-  flex: 1;
-  min-width: 0;
-}
+// Dark mode disabled - Light theme only
 
 .agentName {
   font-size: var(--font-size-lg);
@@ -108,11 +47,7 @@
   word-break: break-word;
 }
 
-.agentType {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
-  text-transform: capitalize;
-}
+// Dark mode disabled - Light theme only
 
 .agentStatus {
   display: flex;
@@ -158,11 +93,7 @@
   }
 }
 
-.agentMetrics {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-lg);
-}
+// Dark mode disabled - Light theme only
 
 .metricsRow {
   display: grid;
@@ -170,13 +101,7 @@
   gap: var(--spacing-md);
 }
 
-.agentStats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: var(--spacing-md);
-  padding-top: var(--spacing-md);
-  border-top: 1px solid var(--color-border-light);
-}
+// Dark mode disabled - Light theme only
 
 .stat {
   display: flex;
@@ -185,13 +110,7 @@
   text-align: center;
 }
 
-.statLabel {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
-  font-weight: var(--font-weight-medium);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
+// Dark mode disabled - Light theme only
 
 .statValue {
   font-size: var(--font-size-base);
@@ -200,46 +119,20 @@
   font-family: var(--font-family-mono);
 }
 
-.errorSection {
-  padding: var(--spacing-md);
-  background-color: var(--color-error-50);
-  border: 1px solid var(--color-error-200);
-  border-radius: var(--radius-md);
-
-  h4 {
-    font-size: var(--font-size-sm);
-    font-weight: var(--font-weight-semibold);
-    color: var(--color-error-800);
-    margin: 0 0 var(--spacing-sm) 0;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-
-  .errorMessage {
-    font-size: var(--font-size-sm);
-    color: var(--color-error-700);
-    margin: 0;
-    font-family: var(--font-family-mono);
-    word-break: break-word;
-  }
-}
+// Dark mode disabled - Light theme only
 
 // Performance color classes
 .excellent {
   border-left-color: var(--color-success);
 }
 
-.good {
-  border-left-color: var(--color-success-600);
-}
+// Dark mode disabled - Light theme only
 
 .fair {
   border-left-color: var(--color-warning);
 }
 
-.poor {
-  border-left-color: var(--color-error);
-}
+// Dark mode disabled - Light theme only
 
 // Loading and error states
 .loading,
@@ -254,16 +147,7 @@
   color: var(--color-text-secondary);
 }
 
-.loading .loadingSpinner,
-.error .loadingSpinner {
-  width: 40px;
-  height: 40px;
-  border: 3px solid var(--color-gray-300);
-  border-top: 3px solid var(--color-primary-600);
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin-bottom: var(--spacing-lg);
-}
+// Dark mode disabled - Light theme only
 
 .loading p,
 .error p {
@@ -271,21 +155,7 @@
   margin-bottom: var(--spacing-xl);
 }
 
-.error {
-  h3 {
-    color: var(--color-error-800);
-    font-size: var(--font-size-lg);
-    font-weight: var(--font-weight-semibold);
-    margin-bottom: var(--spacing-md);
-    margin-top: 0;
-  }
-
-  button {
-    @include button-primary;
-    font-size: var(--font-size-sm);
-    padding: var(--spacing-md) var(--spacing-lg);
-  }
-}
+// Dark mode disabled - Light theme only
 
 .emptyState {
   .emptyIcon {
@@ -308,13 +178,7 @@
     max-width: 400px;
   }
 
-  .emptyActions {
-    .secondaryButton {
-      @include button-secondary;
-      opacity: 0.6;
-      cursor: not-allowed;
-    }
-  }
+// Dark mode disabled - Light theme only
 }
 
 // Responsive design
@@ -323,9 +187,7 @@
     grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
   }
 
-  .agentStats {
-    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-  }
+// Dark mode disabled - Light theme only
 }
 
 @include breakpoint(md) {
@@ -335,18 +197,13 @@
     gap: var(--spacing-sm);
   }
 
-  .agentStatus {
-    align-self: stretch;
-    text-align: center;
-  }
+// Dark mode disabled - Light theme only
 
   .metricsRow {
     grid-template-columns: repeat(2, 1fr);
   }
 
-  .agentStats {
-    grid-template-columns: repeat(2, 1fr);
-  }
+// Dark mode disabled - Light theme only
 
   .agentCard {
     padding: var(--spacing-md);
@@ -360,35 +217,25 @@
     gap: var(--spacing-sm);
   }
 
-  .summary {
-    align-self: stretch;
-    text-align: center;
-  }
+// Dark mode disabled - Light theme only
 
   .agentCard {
     padding: var(--spacing-sm);
   }
 
-  .agentMetrics {
-    gap: var(--spacing-md);
-  }
+// Dark mode disabled - Light theme only
 
   .metricsRow {
     grid-template-columns: 1fr;
   }
 
-  .agentStats {
-    grid-template-columns: repeat(2, 1fr);
-    gap: var(--spacing-sm);
-  }
+// Dark mode disabled - Light theme only
 
   .stat {
     gap: var(--spacing-xs);
   }
 
-  .statLabel {
-    font-size: var(--font-size-xs);
-  }
+// Dark mode disabled - Light theme only
 
   .statValue {
     font-size: var(--font-size-sm);

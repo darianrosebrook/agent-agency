@@ -3,7 +3,7 @@
 /// Implements secure multi-party computation protocols for aggregating
 /// model updates without revealing individual contributions.
 
-use anyhow::Result;
+use anyhow::{Result, Context};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -13,7 +13,7 @@ use tracing::{debug, info};
 /// Secure aggregator for federated learning
 pub struct SecureAggregator {
     encryption_scheme: Arc<dyn HomomorphicEncryption>,
-    privacy_engine: Arc<DifferentialPrivacyEngine>,
+    privacy_engine: Arc<RwLock<DifferentialPrivacyEngine>>,
     security_validator: Arc<SecurityValidator>,
     participants: Arc<RwLock<HashMap<String, ParticipantState>>>,
     aggregation_round: Arc<RwLock<AggregationRound>>,
@@ -92,7 +92,7 @@ impl SecureAggregator {
     ) -> Self {
         Self {
             encryption_scheme,
-            privacy_engine,
+            privacy_engine: Arc::new(RwLock::new(Arc::try_unwrap(privacy_engine).unwrap())),
             security_validator,
             participants: Arc::new(RwLock::new(HashMap::new())),
             aggregation_round: Arc::new(RwLock::new(AggregationRound {
@@ -136,8 +136,11 @@ impl SecureAggregator {
         self.security_validator.verify_proof(zero_knowledge_proof).await?;
 
         // Decrypt and aggregate the update (in practice, this would be homomorphic)
-        let decrypted_update = self.encryption_scheme.decrypt(&encrypted_update).await?;
-        let noise_added_update = self.privacy_engine.add_noise(decrypted_update)?;
+        let decrypted_bytes = self.encryption_scheme.decrypt(&encrypted_update).await?;
+        let model_parameters: Vec<Vec<f32>> = serde_json::from_slice(&decrypted_bytes)
+            .context("Failed to deserialize model parameters")?;
+        let mut privacy_engine = self.privacy_engine.write().await;
+        let noise_added_update = privacy_engine.add_noise(model_parameters)?;
 
         // Add to aggregation
         self.add_to_aggregation(participant_id, noise_added_update).await?;

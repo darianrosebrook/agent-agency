@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import { useState } from "react";
 import { TaskFilters } from "@/types/tasks";
 import styles from "./TaskFiltersBar.module.scss";
 

@@ -6,9 +6,7 @@
   padding: var(--spacing-lg);
 }
 
-.form {
-  width: 100%;
-}
+// Dark mode disabled - Light theme only
 
 .inputContainer {
   @include flex-center;
@@ -25,33 +23,7 @@
   }
 }
 
-.textarea {
-  flex: 1;
-  border: none;
-  background: none;
-  resize: none;
-  outline: none;
-  font-family: var(--font-family-sans);
-  font-size: var(--font-size-base);
-  line-height: var(--line-height-normal);
-  color: var(--color-text-primary);
-  min-height: 20px;
-  max-height: 200px;
-  overflow-y: auto;
-
-  &::placeholder {
-    color: var(--color-text-tertiary);
-  }
-
-  &:disabled {
-    color: var(--color-text-secondary);
-    cursor: not-allowed;
-
-    &::placeholder {
-      color: var(--color-text-secondary);
-    }
-  }
-}
+// Dark mode disabled - Light theme only
 
 .sendButton {
   @include flex-center;
@@ -90,40 +62,27 @@
   }
 }
 
-.inputFooter {
-  @include flex-between;
-  align-items: center;
-  margin-top: var(--spacing-sm);
-  font-size: var(--font-size-xs);
-  color: var(--color-text-tertiary);
-}
+// Dark mode disabled - Light theme only
 
 .characterCount {
   font-family: var(--font-family-mono);
 }
 
-.instructions {
-  font-style: italic;
-  text-align: right;
-}
+// Dark mode disabled - Light theme only
 
 // Scrollbar styling for textarea
 .textarea::-webkit-scrollbar {
   width: 4px;
 }
 
-.textarea::-webkit-scrollbar-track {
-  background: transparent;
-}
+// Dark mode disabled - Light theme only
 
 .textarea::-webkit-scrollbar-thumb {
   background: var(--color-gray-300);
   border-radius: 2px;
 }
 
-.textarea::-webkit-scrollbar-thumb:hover {
-  background: var(--color-gray-400);
-}
+// Dark mode disabled - Light theme only
 
 // Responsive design
 @include breakpoint(sm) {
@@ -131,9 +90,7 @@
     padding: var(--spacing-sm);
   }
 
-  .textarea {
-    font-size: var(--font-size-sm);
-  }
+// Dark mode disabled - Light theme only
 
   .sendButton {
     width: 36px;
@@ -145,11 +102,7 @@
     }
   }
 
-  .inputFooter {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: var(--spacing-xs);
-  }
+// Dark mode disabled - Light theme only
 
   .instructions {
     text-align: left;

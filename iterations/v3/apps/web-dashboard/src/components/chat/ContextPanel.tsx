@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import { useState } from "react";
 import { ContextPanelProps, ChatContext } from "@/types/chat";
 import styles from "./ContextPanel.module.scss";
 

@@ -17,7 +17,7 @@ use crate::ParticipantContribution;
 #[derive(Debug)]
 pub struct DifferentialPrivacyEngine {
     parameters: PrivacyParameters,
-    rng: ThreadRng,
+    rng: StdRng,
 }
 
 /// Privacy parameters for differential privacy
@@ -36,9 +36,10 @@ pub struct PrivacyParameters {
 }
 
 /// Available noise mechanisms
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub enum NoiseMechanism {
     /// Laplace mechanism
+    #[default]
     Laplace,
     /// Gaussian mechanism
     Gaussian,
@@ -51,7 +52,7 @@ impl DifferentialPrivacyEngine {
     pub fn new(parameters: PrivacyParameters) -> Self {
         Self {
             parameters,
-            rng: thread_rng(),
+            rng: StdRng::from_entropy(),
         }
     }
 
@@ -210,15 +211,13 @@ impl DifferentialPrivacyEngine {
     /// Validate privacy properties of a contribution
     pub async fn validate_privacy(&self, contribution: &ParticipantContribution) -> Result<()> {
         // Check that the contribution meets privacy requirements
-        if contribution.model_update.is_empty() {
+        if contribution.update_data.is_empty() {
             return Err(anyhow::anyhow!("Empty contribution violates privacy requirements"));
         }
 
-        // Check noise level if available
-        if let Some(noise_level) = contribution.metadata.get("noise_level") {
-            if noise_level.as_f64().unwrap_or(0.0) < self.parameters.epsilon {
-                warn!("Contribution noise level below privacy threshold");
-            }
+        // Check if differential privacy was applied
+        if !contribution.metadata.dp_noise_added {
+            warn!("Contribution does not have differential privacy noise applied");
         }
 
         Ok(())

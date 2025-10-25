@@ -6,13 +6,7 @@
   gap: var(--spacing-xl);
 }
 
-.header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: var(--spacing-md);
-}
+// Dark mode disabled - Light theme only
 
 .timeRangeSelector {
   display: flex;
@@ -23,26 +17,7 @@
   border: 1px solid var(--color-border);
 }
 
-.timeRangeButton {
-  @include button-secondary;
-  font-size: var(--font-size-sm);
-  padding: var(--spacing-xs) var(--spacing-sm);
-  background: none;
-  border: none;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-
-  &:hover {
-    background-color: var(--color-bg-primary);
-  }
-
-  &.active {
-    background-color: var(--color-primary-600);
-    color: white;
-    box-shadow: var(--shadow-sm);
-  }
-}
+// Dark mode disabled - Light theme only
 
 .kpiGrid {
   display: grid;
@@ -50,16 +25,7 @@
   gap: var(--spacing-lg);
 }
 
-.qualitySection,
-.costSection,
-.engagementSection {
-  h3 {
-    font-size: var(--font-size-lg);
-    font-weight: var(--font-weight-semibold);
-    color: var(--color-text-primary);
-    margin: 0 0 var(--spacing-lg) 0;
-  }
-}
+// Dark mode disabled - Light theme only
 
 .qualityMetrics,
 .costMetrics,
@@ -69,14 +35,7 @@
   gap: var(--spacing-md);
 }
 
-.performanceIndicators {
-  h3 {
-    font-size: var(--font-size-lg);
-    font-weight: var(--font-weight-semibold);
-    color: var(--color-text-primary);
-    margin: 0 0 var(--spacing-lg) 0;
-  }
-}
+// Dark mode disabled - Light theme only
 
 .indicatorsGrid {
   display: grid;
@@ -84,13 +43,7 @@
   gap: var(--spacing-lg);
 }
 
-.indicator {
-  @include card-base;
-  padding: var(--spacing-lg);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
+// Dark mode disabled - Light theme only
 
 .indicatorLabel {
   display: flex;
@@ -99,9 +52,7 @@
   flex: 1;
 }
 
-.indicatorIcon {
-  font-size: var(--font-size-lg);
-}
+// Dark mode disabled - Light theme only
 
 .indicatorValue {
   font-size: var(--font-size-sm);
@@ -123,16 +74,7 @@
   color: var(--color-text-secondary);
 }
 
-.loading .loadingSpinner,
-.error .loadingSpinner {
-  width: 40px;
-  height: 40px;
-  border: 3px solid var(--color-gray-300);
-  border-top: 3px solid var(--color-primary-600);
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin-bottom: var(--spacing-lg);
-}
+// Dark mode disabled - Light theme only
 
 .loading p,
 .error p {
@@ -140,21 +82,7 @@
   margin-bottom: var(--spacing-xl);
 }
 
-.error {
-  h3 {
-    color: var(--color-error-800);
-    font-size: var(--font-size-lg);
-    font-weight: var(--font-weight-semibold);
-    margin-bottom: var(--spacing-md);
-    margin-top: 0;
-  }
-
-  button {
-    @include button-primary;
-    font-size: var(--font-size-sm);
-    padding: var(--spacing-md) var(--spacing-lg);
-  }
-}
+// Dark mode disabled - Light theme only
 
 .emptyState {
   .emptyIcon {
@@ -177,13 +105,7 @@
     max-width: 400px;
   }
 
-  .emptyActions {
-    .secondaryButton {
-      @include button-secondary;
-      opacity: 0.6;
-      cursor: not-allowed;
-    }
-  }
+// Dark mode disabled - Light theme only
 }
 
 // Responsive design
@@ -192,11 +114,7 @@
     grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   }
 
-  .qualityMetrics,
-  .costMetrics,
-  .engagementMetrics {
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  }
+// Dark mode disabled - Light theme only
 
   .indicatorsGrid {
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -210,28 +128,19 @@
     gap: var(--spacing-sm);
   }
 
-  .timeRangeSelector {
-    align-self: stretch;
-    justify-content: center;
-  }
+// Dark mode disabled - Light theme only
 
   .kpiGrid {
     grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   }
 
-  .qualityMetrics,
-  .costMetrics,
-  .engagementMetrics {
-    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-  }
+// Dark mode disabled - Light theme only
 
   .indicatorsGrid {
     grid-template-columns: 1fr;
   }
 
-  .indicator {
-    padding: var(--spacing-md);
-  }
+// Dark mode disabled - Light theme only
 }
 
 @include breakpoint(sm) {
@@ -239,32 +148,20 @@
     grid-template-columns: repeat(2, 1fr);
   }
 
-  .qualityMetrics,
-  .costMetrics,
-  .engagementMetrics {
-    grid-template-columns: 1fr;
-  }
+// Dark mode disabled - Light theme only
 
   .timeRangeSelector {
     flex-wrap: wrap;
     gap: var(--spacing-xs);
   }
 
-  .timeRangeButton {
-    flex: 1;
-    min-width: 60px;
-  }
+// Dark mode disabled - Light theme only
 
   .indicatorsGrid {
     gap: var(--spacing-md);
   }
 
-  .indicator {
-    padding: var(--spacing-sm);
-    flex-direction: column;
-    align-items: flex-start;
-    gap: var(--spacing-sm);
-  }
+// Dark mode disabled - Light theme only
 
   .indicatorLabel {
     flex-direction: column;
@@ -272,8 +169,5 @@
     gap: var(--spacing-xs);
   }
 
-  .indicatorValue {
-    text-align: left;
-    align-self: flex-end;
-  }
+// Dark mode disabled - Light theme only
 }

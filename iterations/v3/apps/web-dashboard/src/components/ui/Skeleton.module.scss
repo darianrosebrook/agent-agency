@@ -1,0 +1,209 @@
+// Skeleton component styles - FlowPress Design System
+
+// Skeleton component styles
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-background-secondary) 25%,
+    var(--color-background-muted) 50%,
+    var(--color-background-secondary) 75%
+  );
+  background-size: 200% 100%;
+  border-radius: 8px;
+  display: inline-block;
+  position: relative;
+  overflow: hidden;
+  contain: layout style paint;
+  min-height: 1rem;
+  
+  &.animate {
+    animation: skeleton-loading 1.5s ease-in-out infinite;
+  }
+  
+  // Rounded variants
+  &.rounded-none {
+    border-radius: var(--border-radius-none);
+  }
+  
+  &.rounded-sm {
+    border-radius: var(--border-radius-sm);
+  }
+  
+  &.rounded-md {
+    border-radius: var(--border-radius-md);
+  }
+  
+  &.rounded-lg {
+    border-radius: var(--border-radius-lg);
+  }
+  
+  &.rounded-xl {
+    border-radius: var(--border-radius-xl);
+  }
+  
+  &.rounded-2xl {
+    border-radius: var(--border-radius-2xl);
+  }
+  
+  &.rounded-3xl {
+    border-radius: 1.5rem;
+  }
+  
+  &.rounded-full {
+    border-radius: var(--border-radius-full);
+  }
+}
+
+// Skeleton animation
+@keyframes skeleton-loading {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+// Skeleton text component
+.skeletonText {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  
+  .skeletonLine {
+    &:not(:last-child) {
+      margin-bottom: var(--spacing-1);
+    }
+  }
+}
+
+// Skeleton avatar component
+.skeletonAvatar {
+  flex-shrink: 0;
+}
+
+// Skeleton card component
+.skeletonCard {
+  background-color: var(--color-background-primary);
+  border: 0.5px solid var(--color-border-default);
+  border-radius: 14px;
+  padding: var(--spacing-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-4);
+  min-height: 200px;
+  contain: layout style paint;
+}
+
+// Dark mode disabled - Light theme only
+
+.skeletonCardHeaderContent {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+// Dark mode disabled - Light theme only
+
+.skeletonCardFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: var(--spacing-3);
+  border-top: 0.5px solid var(--color-border-default);
+  min-height: 48px;
+}
+
+// Skeleton table component
+.skeletonTable {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  background-color: var(--color-background-primary);
+  border: 0.5px solid var(--color-border-default);
+  border-radius: 12px;
+  overflow: hidden;
+  min-height: 300px;
+  contain: layout style paint;
+}
+
+// Dark mode disabled - Light theme only
+
+.skeletonTableRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: var(--spacing-4);
+  padding: var(--spacing-4);
+  border-bottom: 0.5px solid var(--color-border-default);
+  min-height: 48px;
+  
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+// Dark mode disabled - Light theme only
+
+// Responsive design
+@media (max-width: 768px) {
+  .skeletonCard {
+    padding: var(--spacing-3);
+  }
+
+// Dark mode disabled - Light theme only
+  
+  .skeletonTableHeader,
+  .skeletonTableRow {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-2);
+  }
+
+// Dark mode disabled - Light theme only
+  
+  .skeletonTableRow {
+    padding: var(--spacing-3);
+  }
+}
+
+// Dark mode disabled - Light theme only
+
+// High contrast mode
+@media (prefers-contrast: high) {
+  .skeleton {
+    background: linear-gradient(
+      90deg,
+      #e5e7eb 25%,
+      #d1d5db 50%,
+      #e5e7eb 75%
+    );
+  }
+
+// Dark mode disabled - Light theme only
+  
+  .skeletonCardHeader {
+    border-color: #000000;
+  }
+
+// Dark mode disabled - Light theme only
+  
+  .skeletonTable {
+    border-color: #000000;
+  }
+
+// Dark mode disabled - Light theme only
+  
+  .skeletonTableRow {
+    border-color: #000000;
+  }
+}
+
+// Reduced motion
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    &.animate {
+      animation: none;
+      background: var(--color-background-secondary);
+    }
+  }
+}

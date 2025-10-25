@@ -3,17 +3,18 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Home, ClipboardList, BarChart3, MessageSquare, Settings } from "lucide-react";
 import styles from "./Navigation.module.scss";
 
 export default function Navigation() {
   const pathname = usePathname();
 
   const navItems = [
-    { href: "/", label: "Dashboard", icon: "🏠" },
-    { href: "/tasks", label: "Tasks", icon: "📋" },
-    { href: "/metrics", label: "Metrics", icon: "📊" },
-    { href: "/chat", label: "Chat", icon: "💬" },
-    { href: "/settings", label: "Settings", icon: "⚙️" },
+    { href: "/", label: "Dashboard", icon: <Home size={16} /> },
+    { href: "/tasks", label: "Tasks", icon: <ClipboardList size={16} /> },
+    { href: "/metrics", label: "Metrics", icon: <BarChart3 size={16} /> },
+    { href: "/chat", label: "Chat", icon: <MessageSquare size={16} /> },
+    { href: "/settings", label: "Settings", icon: <Settings size={16} /> },
   ];
 
   return (
@@ -30,7 +31,7 @@ export default function Navigation() {
                 href={item.href}
                 className={`${styles.navItem} ${isActive ? styles.active : ""}`}
               >
-                <span className={styles.navIcon}>{item.icon}</span>
+                <span className={styles.navIcon}>{item.icon as React.ReactNode}</span>
                 <span className={styles.navLabel}>{item.label}</span>
               </Link>
             );

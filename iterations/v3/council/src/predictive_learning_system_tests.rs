@@ -4,11 +4,13 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::predictive_learning_system::{
-        LearningAccelerator, LearningInsights, OutcomePredictor, OutcomeType, PerformancePredictor,
-        PredictiveLearningSystem, ResourcePredictor, StrategyOptimizer, TaskOutcome,
-        TrendDirection,
-    };
+    use crate::predictive_learning::PredictiveLearningSystem;
+    use crate::types::{LearningInsights, TaskOutcome};
+    use crate::predictive_learning::performance::{PerformancePredictor, TrendDirection};
+    use crate::predictive_learning::strategy::StrategyOptimizer;
+    use crate::predictive_learning::resource::ResourcePredictor;
+    use crate::predictive_learning::outcome::{OutcomePredictor, OutcomeType};
+    use crate::predictive_learning::learning_accelerator::LearningAccelerator;
     use chrono::Utc;
     use std::collections::HashMap;
     use uuid::Uuid;

@@ -31,7 +31,7 @@ claim-extraction = { path = "../claim-extraction" }
 # self-prompting-agent = { path = "../self-prompting-agent" }  # Circular dependency - commented out
 parallel-workers = { path = "../parallel-workers" }
 tool-ecosystem = { path = "../tool-ecosystem" }
-file_ops = { path = "../file_ops" }
+agent-data-processing = { path = "../agent-data-processing" }
 tracing = "0.1"
 flate2 = "1.0"
 axum = { version = "0.7", optional = true }
@@ -44,10 +44,8 @@ regex = "1.10"
 once_cell = "1.19"
 tokio-util = "0.7"
 
-# Multimodal RAG integration dependencies
-ingestors = { path = "../ingestors" }
-enrichers = { path = "../enrichers" }
-indexers = { path = "../indexers" }
+# Data processing pipeline (unified)
+# Note: agent-data-processing already included above
 agent-agency-research = { path = "../research" }
 reqwest = { workspace = true, features = ["json"] }
 clap = { version = "4.0", features = ["derive"] }

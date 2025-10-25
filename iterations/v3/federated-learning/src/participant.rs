@@ -169,7 +169,7 @@ impl FederationParticipant {
     async fn perform_training(&self) -> Result<ModelUpdate> {
         debug!("Starting local training for participant {}", self.id);
 
-        let start_time = chrono::Utc::now();
+        let start_time = std::time::Instant::now();
         let mut epochs_completed = 0;
         let mut best_loss = f32::INFINITY;
 
@@ -361,6 +361,57 @@ impl FederationParticipant {
             data_samples: self.data_manager.dataset_size,
             device_capabilities: self.config.device_capabilities.clone(),
         })
+    }
+
+    /// Create a basic federation participant with minimal configuration
+    /// Used for federation initialization before full participant registration
+    pub fn new_basic(id: String) -> Self {
+        let config = ParticipantConfig {
+            max_epochs: 10,
+            batch_size: 32,
+            learning_rate: 0.01,
+            privacy_parameters: None,
+            max_training_time_seconds: 300,
+            min_data_samples: 1000,
+            device_capabilities: DeviceCapabilities {
+                has_gpu: false,
+                ram_gb: 8.0,
+                cpu_cores: 4,
+                supports_secure_aggregation: false,
+            },
+        };
+
+        let initial_model = ModelState {
+            parameters: Vec::new(),
+            version: "initial".to_string(),
+            last_updated: chrono::Utc::now(),
+        };
+
+        // Create a dummy communication channel - will be replaced later
+        struct DummyChannel;
+        #[async_trait::async_trait]
+        impl CommunicationChannel for DummyChannel {
+            async fn send_message(&self, _message: ProtocolMessage) -> Result<()> {
+                Ok(())
+            }
+            async fn receive_message(&self) -> Result<ProtocolMessage> {
+                Err(anyhow::anyhow!("Dummy channel - not implemented"))
+            }
+        }
+
+        Self {
+            id: id.clone(),
+            config,
+            local_model: Arc::new(RwLock::new(initial_model)),
+            data_manager: DataManager {
+                dataset_size: 0,
+                data_quality_score: 0.0,
+                last_refresh: chrono::Utc::now(),
+            },
+            communication_channel: Arc::new(DummyChannel),
+            current_round: Arc::new(RwLock::new(None)),
+            privacy_engine: None,
+        }
     }
 }
 

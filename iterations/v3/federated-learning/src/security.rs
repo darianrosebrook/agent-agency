@@ -100,7 +100,7 @@ impl SecurityValidator {
     /// Validate a contribution for security
     pub async fn validate_contribution(&self, contribution: &ParticipantContribution) -> Result<()> {
         // Basic validation - check size, format, etc.
-        if contribution.model_update.is_empty() {
+        if contribution.update_data.is_empty() {
             return Err(anyhow::anyhow!("Empty model update"));
         }
         Ok(())

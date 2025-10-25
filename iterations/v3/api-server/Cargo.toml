@@ -54,6 +54,9 @@ agent-agency-database = { path = "../database" }
 # System health monitoring for real metrics (basic features only)
 agent-agency-system-health-monitor = { path = "../system-health-monitor", default-features = true }
 
+# Common types and abstractions
+agent-agency-common-types = { path = "../common-types" }
+
 # Additional dependencies for API functionality
 async-trait = "0.1"
 tracing = "0.1"

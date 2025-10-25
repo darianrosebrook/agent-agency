@@ -22,6 +22,7 @@ pub mod graph_engine;
 pub mod memory_manager;
 pub mod temporal_reasoning;
 pub mod types;
+pub mod workspace_registry;
 
 #[cfg(feature = "embeddings")]
 pub mod embedding_integration;
@@ -31,6 +32,8 @@ pub mod context_offloading;
 
 #[cfg(feature = "provenance-tracking")]
 pub mod provenance;
+
+use std::sync::Arc;
 
 #[cfg(feature = "observability-integration")]
 pub mod observability;
@@ -119,6 +122,7 @@ pub struct MemorySystem {
     temporal_engine: TemporalReasoningEngine,
     decay_engine: MemoryDecayEngine,
     context_manager: ContextManager,
+    workspace_registry: Arc<workspace_registry::WorkspaceRegistry>,
 }
 
 // Manual Debug implementation to handle non-Debug fields
@@ -130,6 +134,7 @@ impl std::fmt::Debug for MemorySystem {
             .field("temporal_engine", &self.temporal_engine)
             .field("decay_engine", &self.decay_engine)
             .field("context_manager", &self.context_manager)
+            .field("workspace_registry", &self.workspace_registry)
             .finish()
     }
 }
@@ -137,14 +142,29 @@ impl std::fmt::Debug for MemorySystem {
 impl MemorySystem {
     /// Initialize the complete memory system
     pub async fn init(config: MemoryConfig) -> MemoryResult<Self> {
-        let manager = MemoryManager::new(config.clone()).await?;
+        // Create workspace registry first
+        let db_config = agent_agency_database::DatabaseConfig::default();
+        let db_client = Arc::new(agent_agency_database::DatabaseClient::new(db_config).await?);
+        let workspace_registry = Arc::new(workspace_registry::WorkspaceRegistry::new(
+            config.workspace_config.access_config.clone(),
+            db_client,
+        ));
+        workspace_registry.initialize().await?;
+
+        let manager = MemoryManager::new_with_registry(
+            config.clone(),
+            Arc::clone(&workspace_registry)
+        ).await?;
         let graph_engine = KnowledgeGraphEngine::new(&config.graph_config).await?;
 
         #[cfg(feature = "embeddings")]
         let embedding_integration = EmbeddingIntegration::new(&config.embedding_config).await?;
 
         let temporal_engine = TemporalReasoningEngine::new(&config.temporal_config).await?;
-        let decay_engine = MemoryDecayEngine::new(&config.decay_config).await?;
+        let decay_engine = MemoryDecayEngine::new_with_workspace_registry(
+            &config.decay_config,
+            Arc::clone(&workspace_registry)
+        ).await?;
         let context_manager = ContextManager::new(&config.context_config).await?;
 
         Ok(Self {
@@ -155,6 +175,7 @@ impl MemorySystem {
             temporal_engine,
             decay_engine,
             context_manager,
+            workspace_registry,
         })
     }
 
@@ -187,6 +208,11 @@ impl MemorySystem {
     /// Get the context manager
     pub fn context_manager(&self) -> &ContextManager {
         &self.context_manager
+    }
+
+    /// Get the workspace registry
+    pub fn workspace_registry(&self) -> &Arc<workspace_registry::WorkspaceRegistry> {
+        &self.workspace_registry
     }
 
     /// Store an agent experience (episodic memory)

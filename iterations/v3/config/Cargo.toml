@@ -20,6 +20,9 @@ uuid.workspace = true
 # Core memory system - every agent has memory
 agent-memory = { path = "../agent-memory" }
 
+# Common types and abstractions
+agent-agency-common-types = { path = "../common-types" }
+
 # Configuration-specific dependencies
 config = "0.14"
 figment = "0.10"

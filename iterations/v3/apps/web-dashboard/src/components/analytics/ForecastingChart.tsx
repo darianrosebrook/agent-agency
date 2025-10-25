@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { ForecastingChartProps } from "@/types/analytics";
 import styles from "./ForecastingChart.module.scss";
 
@@ -13,13 +13,13 @@ export default function ForecastingChart({
   error,
 }: ForecastingChartProps) {
   // Time range state management
-  const [timeRange, setTimeRange] = React.useState({
+  const [timeRange, setTimeRange] = useState({
     start: "",
     end: "",
   });
 
   // Initialize time range from available data
-  React.useEffect(() => {
+  useEffect(() => {
     if (historicalData?.data && historicalData.data.length > 0) {
       const timestamps = historicalData.data.map((d) => new Date(d.timestamp));
       if (timestamps.length > 0) {

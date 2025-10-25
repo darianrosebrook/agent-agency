@@ -1,12 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Enable experimental features
-  experimental: {
-    // Enable server components
-    serverComponents: true,
-    // Enable app directory
-    appDir: true,
-  },
+  // Next.js 16 configuration
 
   // Configure webpack
   webpack: (config, { isServer }) => {
@@ -68,11 +62,8 @@ const nextConfig = {
     ignoreBuildErrors: false,
   },
 
-  // Configure ESLint
-  eslint: {
-    // Ignore ESLint errors during build
-    ignoreDuringBuilds: false,
-  },
+  // Configure Turbopack (Next.js 16 default)
+  turbopack: {},
 
   // Configure output
   output: 'standalone',

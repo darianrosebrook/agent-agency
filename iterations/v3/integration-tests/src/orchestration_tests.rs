@@ -17,7 +17,7 @@ use crate::test_utils::{TestExecutor, TestResult, DEFAULT_TEST_TIMEOUT};
 // Import orchestration and related components
 use orchestration::coordinator::OrchestrationCoordinator;
 use council::intelligent_edge_case_testing::IntelligentEdgeCaseTester;
-use council::predictive_learning_system::PredictiveLearningSystem;
+use council::predictive_learning::PredictiveLearningSystem;
 
 /// Orchestration integration test suite
 pub struct OrchestrationIntegrationTests {
@@ -561,20 +561,21 @@ fn create_optimized_task_spec(title: &str, priority: &str, resource_focus: &str)
 fn create_task_outcome_from_result(
     task_spec: &orchestration::models::TaskSpec,
     result: &orchestration::models::TaskResult,
-) -> council::predictive_learning_system::TaskOutcome {
-    use council::predictive_learning_system::TaskOutcome;
+) -> council::types::TaskOutcome {
+    use council::types::TaskOutcome;
 
     TaskOutcome {
         task_id: task_spec.id,
-        success: result.success,
-        execution_time_ms: result.execution_time_ms,
-        resource_usage: council::predictive_learning_system::ResourceUsage {
-            cpu_cores_used: task_spec.resource_requirements.cpu_cores,
-            memory_mb_used: task_spec.resource_requirements.memory_mb as f64,
-            network_mbps_used: task_spec.resource_requirements.network_mbps as f64,
+        outcome_type: if result.success { "success".to_string() } else { "failure".to_string() },
+        performance_score: if result.success { 1.0 } else { 0.0 }, // Simple mapping
+        duration_ms: result.execution_time_ms,
+        resource_usage: {
+            let mut usage = std::collections::HashMap::new();
+            usage.insert("cpu_cores".to_string(), task_spec.resource_requirements.cpu_cores as f64);
+            usage.insert("memory_mb".to_string(), task_spec.resource_requirements.memory_mb as f64);
+            usage.insert("network_mbps".to_string(), task_spec.resource_requirements.network_mbps as f64);
+            usage
         },
-        error_message: result.error_message.clone(),
-        retry_count: 0,
         timestamp: chrono::Utc::now(),
     }
 }

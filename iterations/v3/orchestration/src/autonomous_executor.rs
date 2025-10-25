@@ -26,6 +26,7 @@ use agent_agency_council::coordinator::ConsensusCoordinator;
 use agent_agency_council::types::{ConsensusResult, FinalVerdict};
 use agent_agency_observability::cache::CacheBackend;
 use agent_agency_observability::metrics::MetricsBackend;
+use agent_memory::{MemorySystem, AgentExperience, MemoryType};
 
 /// Configuration for the autonomous executor
 #[derive(Debug, Clone)]
@@ -72,6 +73,7 @@ pub struct AutonomousExecutor {
     cache: Option<Arc<dyn CacheBackend>>,
     metrics: Option<Arc<dyn MetricsBackend>>,
     task_executor_provider: TaskExecutorProvider,
+    memory_system: Option<Arc<agent_memory::MemorySystem>>,
     active_tasks: Arc<RwLock<HashMap<Uuid, TaskExecutionState>>>,
     task_queue: mpsc::UnboundedSender<TaskDescriptor>,
     task_receiver: Arc<RwLock<mpsc::UnboundedReceiver<TaskDescriptor>>>,
@@ -89,6 +91,7 @@ impl AutonomousExecutor {
         cache: Option<Arc<dyn CacheBackend>>,
         metrics: Option<Arc<dyn MetricsBackend>>,
         task_executor_provider: TaskExecutorProvider,
+        memory_system: Option<Arc<agent_memory::MemorySystem>>,
     ) -> Self {
         let (task_sender, task_receiver) = mpsc::unbounded_channel();
 
@@ -102,6 +105,7 @@ impl AutonomousExecutor {
             cache,
             metrics,
             task_executor_provider,
+            memory_system,
             active_tasks: Arc::new(RwLock::new(HashMap::new())),
             task_queue: task_sender,
             task_receiver: Arc::new(RwLock::new(task_receiver)),
@@ -402,6 +406,64 @@ impl AutonomousExecutor {
 
         // Write verdict to persistence
         self.verdict_writer.write_verdict(final_verdict).await?;
+
+        // Store execution experience in memory system
+        if let Some(memory_system) = &self.memory_system {
+            self.store_execution_experience(memory_system, final_verdict, task_descriptor).await?;
+        }
+
+        Ok(())
+    }
+
+    /// Store execution experience in memory system
+    async fn store_execution_experience(
+        &self,
+        memory_system: &Arc<MemorySystem>,
+        final_verdict: &FinalVerdict,
+        task_descriptor: &TaskDescriptor,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        // Extract execution details from verdict
+        let success = final_verdict.confidence_score > 0.7; // Consider successful if confidence > 70%
+        let execution_time_ms = final_verdict.execution_stats.execution_time_ms as f64;
+        let performance_score = if success { 0.8 } else { 0.3 }; // Simple scoring
+
+        // Create memory experience
+        let experience = AgentExperience {
+            id: Uuid::new_v4(),
+            agent_id: "orchestrator".to_string(), // System-level agent for orchestration
+            task_id: Some(task_descriptor.task_id.to_string()),
+            context: {
+                let mut ctx = agent_memory::types::AgentExperienceContext::new();
+                ctx.insert("task_type".to_string(), serde_json::Value::String(task_descriptor.task_type.clone()));
+                ctx.insert("execution_mode".to_string(), serde_json::json!(task_descriptor.execution_mode));
+                ctx.insert("risk_tier".to_string(), serde_json::json!(task_descriptor.risk_tier));
+                ctx
+            },
+            input: task_descriptor.description.clone(),
+            output: format!("Task completed with verdict: {}", final_verdict.decision),
+            outcome: serde_json::json!({
+                "success": success,
+                "confidence_score": final_verdict.confidence_score,
+                "execution_time_ms": execution_time_ms,
+                "performance_score": performance_score,
+                "verdict": final_verdict.decision.to_string(),
+                "judge_count": final_verdict.judge_evaluations.len(),
+                "execution_stats": final_verdict.execution_stats
+            }),
+            memory_type: if success { MemoryType::Episodic } else { MemoryType::Procedural },
+            timestamp: chrono::Utc::now(),
+            metadata: serde_json::json!({
+                "orchestrator_version": "v3",
+                "task_category": task_descriptor.task_type,
+                "has_consensus": !final_verdict.judge_evaluations.is_empty()
+            }),
+        };
+
+        // Store in memory system
+        let _memory_id = memory_system.store_experience(experience).await
+            .map_err(|e| format!("Failed to store execution experience: {}", e))?;
+
+        tracing::debug!("Stored execution experience for task {}", task_descriptor.task_id);
 
         Ok(())
     }

@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import React from "react";
+import { ConnectionProvider } from "@/components/providers/ConnectionProvider";
 import "../styles/globals.css";
-
-const inter = Inter({ subsets: ["latin"] });
+import "../styles/container-queries.css";
+import "../styles/reflow-prevention.scss";
+import "../styles/patterns.scss";
 
 export const metadata: Metadata = {
   title: "Agent Agency V3 Dashboard",
@@ -43,14 +44,43 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <meta name="theme-color" content="#3b82f6" />
-        <link rel="icon" href="/favicon.ico" />
+        {/* Preconnect to external domains for performance */}
+        <link href="https://fonts.googleapis.com" rel="preconnect" />
+        <link
+          href="https://fonts.gstatic.com"
+          rel="preconnect"
+          crossOrigin="anonymous"
+        />
+
+        {/* Preload critical fonts to prevent layout shift */}
+        <link
+          rel="preload"
+          href="/fonts/CreatoDisplay-Regular.otf"
+          as="font"
+          type="font/otf"
+          crossOrigin="anonymous"
+        />
+        <link
+          rel="preload"
+          href="/fonts/CreatoDisplay-Medium.otf"
+          as="font"
+          type="font/otf"
+          crossOrigin="anonymous"
+        />
+
+        {/* Favicon and app icons */}
+        <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+        {/* Viewport and other meta tags */}
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="theme-color" content="#191919" />
         <link rel="manifest" href="/manifest.json" />
       </head>
-      <body className={inter.className}>
-        {children}
+      <body className="antialiased">
+        <ConnectionProvider>
+          {children}
+        </ConnectionProvider>
       </body>
     </html>
   );

@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 // Proxies requests to V3 backend task detail and action endpoints
 
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: { taskId: string } }
 ) {
   try {

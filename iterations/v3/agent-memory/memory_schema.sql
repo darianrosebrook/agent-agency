@@ -9,6 +9,7 @@
 CREATE TABLE IF NOT EXISTS memory_embeddings (
     memory_id UUID PRIMARY KEY REFERENCES agent_experiences(id) ON DELETE CASCADE,
     embedding VECTOR(768),  -- pgvector extension for embeddings
+    workspace_id UUID NULL, -- NULL = global memory, UUID = workspace-scoped
     importance_score FLOAT DEFAULT 1.0 CHECK (importance_score >= 0.0 AND importance_score <= 3.0),
     decay_factor FLOAT DEFAULT 1.0 CHECK (decay_factor >= 0.0 AND decay_factor <= 1.0),
     last_accessed TIMESTAMPTZ DEFAULT NOW(),
@@ -21,6 +22,7 @@ CREATE INDEX IF NOT EXISTS idx_memory_embeddings_embedding ON memory_embeddings
 USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
 
 -- Performance indexes
+CREATE INDEX IF NOT EXISTS idx_memory_embeddings_workspace ON memory_embeddings(workspace_id);
 CREATE INDEX IF NOT EXISTS idx_memory_embeddings_importance ON memory_embeddings(importance_score);
 CREATE INDEX IF NOT EXISTS idx_memory_embeddings_decay ON memory_embeddings(decay_factor);
 CREATE INDEX IF NOT EXISTS idx_memory_embeddings_access ON memory_embeddings(last_accessed);
@@ -32,6 +34,7 @@ CREATE INDEX IF NOT EXISTS idx_memory_embeddings_access ON memory_embeddings(las
 -- Core entities in the knowledge graph
 CREATE TABLE IF NOT EXISTS knowledge_graph_entities (
     id VARCHAR(255) PRIMARY KEY,
+    workspace_id UUID NULL, -- NULL = global entity, UUID = workspace-scoped
     entity_type INTEGER NOT NULL,  -- 0=Agent, 1=Task, 2=Capability, etc.
     name VARCHAR(500) NOT NULL,
     description TEXT,
@@ -44,6 +47,7 @@ CREATE TABLE IF NOT EXISTS knowledge_graph_entities (
 );
 
 -- Indexes for knowledge graph entities
+CREATE INDEX IF NOT EXISTS idx_entities_workspace ON knowledge_graph_entities(workspace_id);
 CREATE INDEX IF NOT EXISTS idx_entities_type ON knowledge_graph_entities(entity_type);
 CREATE INDEX IF NOT EXISTS idx_entities_name ON knowledge_graph_entities(name);
 CREATE INDEX IF NOT EXISTS idx_entities_embedding ON knowledge_graph_entities
@@ -55,9 +59,10 @@ CREATE INDEX IF NOT EXISTS idx_entities_updated ON knowledge_graph_entities(upda
 -- KNOWLEDGE GRAPH RELATIONSHIPS
 -- ===========================================
 
--- Relationships between entities
+-- Relationships between entities (can span workspaces via cross-links)
 CREATE TABLE IF NOT EXISTS knowledge_graph_relationships (
     id VARCHAR(255) PRIMARY KEY,
+    workspace_id UUID NULL, -- NULL = global relationship, UUID = workspace-scoped
     source_entity VARCHAR(255) NOT NULL REFERENCES knowledge_graph_entities(id) ON DELETE CASCADE,
     target_entity VARCHAR(255) NOT NULL REFERENCES knowledge_graph_entities(id) ON DELETE CASCADE,
     relationship_type INTEGER NOT NULL,  -- 0=Performs, 1=Requires, etc.
@@ -65,6 +70,7 @@ CREATE TABLE IF NOT EXISTS knowledge_graph_relationships (
     strength FLOAT DEFAULT 1.0 CHECK (strength >= 0.0 AND strength <= 2.0),
     confidence FLOAT DEFAULT 1.0 CHECK (confidence >= 0.0 AND confidence <= 1.0),
     bidirectional BOOLEAN DEFAULT FALSE,
+    cross_workspace BOOLEAN DEFAULT FALSE, -- True for relationships spanning workspaces
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     source_memories UUID[] DEFAULT '{}',
@@ -72,6 +78,8 @@ CREATE TABLE IF NOT EXISTS knowledge_graph_relationships (
 );
 
 -- Indexes for knowledge graph relationships
+CREATE INDEX IF NOT EXISTS idx_relationships_workspace ON knowledge_graph_relationships(workspace_id);
+CREATE INDEX IF NOT EXISTS idx_relationships_cross_workspace ON knowledge_graph_relationships(cross_workspace);
 CREATE INDEX IF NOT EXISTS idx_relationships_source ON knowledge_graph_relationships(source_entity);
 CREATE INDEX IF NOT EXISTS idx_relationships_target ON knowledge_graph_relationships(target_entity);
 CREATE INDEX IF NOT EXISTS idx_relationships_type ON knowledge_graph_relationships(relationship_type);
@@ -86,6 +94,7 @@ CREATE INDEX IF NOT EXISTS idx_relationships_updated ON knowledge_graph_relation
 -- Store results of temporal analysis and trends
 CREATE TABLE IF NOT EXISTS temporal_analysis_results (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    workspace_id UUID NULL, -- NULL = global analysis, UUID = workspace-scoped
     entity_type VARCHAR(50) NOT NULL,  -- 'agent', 'task', 'capability'
     entity_id VARCHAR(255) NOT NULL,
     analysis_type VARCHAR(50) NOT NULL,  -- 'trend', 'change_point', 'causality'
@@ -96,6 +105,7 @@ CREATE TABLE IF NOT EXISTS temporal_analysis_results (
 );
 
 -- Indexes for temporal analysis
+CREATE INDEX IF NOT EXISTS idx_temporal_workspace ON temporal_analysis_results(workspace_id);
 CREATE INDEX IF NOT EXISTS idx_temporal_entity ON temporal_analysis_results(entity_type, entity_id);
 CREATE INDEX IF NOT EXISTS idx_temporal_type ON temporal_analysis_results(analysis_type);
 CREATE INDEX IF NOT EXISTS idx_temporal_range ON temporal_analysis_results(time_range);
@@ -108,6 +118,7 @@ CREATE INDEX IF NOT EXISTS idx_temporal_created ON temporal_analysis_results(cre
 -- Track memory operations for explainability
 CREATE TABLE IF NOT EXISTS memory_provenance (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    workspace_id UUID NULL, -- NULL = global operation, UUID = workspace-scoped
     operation VARCHAR(50) NOT NULL,  -- 'store', 'retrieve', 'search', etc.
     memory_id UUID REFERENCES agent_experiences(id) ON DELETE SET NULL,
     agent_id VARCHAR(255),
@@ -119,6 +130,7 @@ CREATE TABLE IF NOT EXISTS memory_provenance (
 );
 
 -- Indexes for provenance tracking
+CREATE INDEX IF NOT EXISTS idx_provenance_workspace ON memory_provenance(workspace_id);
 CREATE INDEX IF NOT EXISTS idx_provenance_operation ON memory_provenance(operation);
 CREATE INDEX IF NOT EXISTS idx_provenance_memory ON memory_provenance(memory_id);
 CREATE INDEX IF NOT EXISTS idx_provenance_agent ON memory_provenance(agent_id);
@@ -131,6 +143,7 @@ CREATE INDEX IF NOT EXISTS idx_provenance_timestamp ON memory_provenance(timesta
 -- Store offloaded context for memory compression
 CREATE TABLE IF NOT EXISTS offloaded_contexts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    workspace_id UUID NULL, -- NULL = global offload, UUID = workspace-scoped
     original_memory_id UUID REFERENCES agent_experiences(id) ON DELETE CASCADE,
     context_type VARCHAR(50) NOT NULL,  -- 'episodic', 'semantic', 'working'
     compressed_content TEXT NOT NULL,
@@ -142,6 +155,7 @@ CREATE TABLE IF NOT EXISTS offloaded_contexts (
 );
 
 -- Indexes for context offloading
+CREATE INDEX IF NOT EXISTS idx_offloaded_workspace ON offloaded_contexts(workspace_id);
 CREATE INDEX IF NOT EXISTS idx_offloaded_memory ON offloaded_contexts(original_memory_id);
 CREATE INDEX IF NOT EXISTS idx_offloaded_type ON offloaded_contexts(context_type);
 CREATE INDEX IF NOT EXISTS idx_offloaded_expires ON offloaded_contexts(expires_at);
@@ -154,6 +168,7 @@ CREATE INDEX IF NOT EXISTS idx_offloaded_retrieved ON offloaded_contexts(last_re
 -- Track memory system performance and health
 CREATE TABLE IF NOT EXISTS memory_system_metrics (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    workspace_id UUID NULL, -- NULL = global metrics, UUID = workspace-scoped
     metric_name VARCHAR(100) NOT NULL,
     metric_value FLOAT NOT NULL,
     metric_unit VARCHAR(20),
@@ -162,6 +177,7 @@ CREATE TABLE IF NOT EXISTS memory_system_metrics (
 );
 
 -- Indexes for metrics
+CREATE INDEX IF NOT EXISTS idx_metrics_workspace ON memory_system_metrics(workspace_id);
 CREATE INDEX IF NOT EXISTS idx_metrics_name ON memory_system_metrics(metric_name);
 CREATE INDEX IF NOT EXISTS idx_metrics_timestamp ON memory_system_metrics(timestamp);
 CREATE INDEX IF NOT EXISTS idx_metrics_labels ON memory_system_metrics USING gin(labels);
@@ -205,36 +221,41 @@ END $$;
 -- VIEWS FOR COMMON QUERIES
 -- ===========================================
 
--- View for agent performance over time
+-- View for agent performance over time (workspace-scoped)
 CREATE OR REPLACE VIEW agent_performance_trends AS
 SELECT
     ae.agent_id,
+    me.workspace_id,
     DATE_TRUNC('day', ae.timestamp) as date,
     AVG((ae.outcome->>'performance_score')::float) as avg_performance,
     AVG((ae.outcome->>'execution_time_ms')::float) as avg_execution_time,
     COUNT(*) as experience_count,
     COUNT(CASE WHEN ae.outcome->>'success' = 'true' THEN 1 END)::float / COUNT(*)::float as success_rate
 FROM agent_experiences ae
-GROUP BY ae.agent_id, DATE_TRUNC('day', ae.timestamp)
-ORDER BY ae.agent_id, date;
+LEFT JOIN memory_embeddings me ON ae.id = me.memory_id
+GROUP BY ae.agent_id, me.workspace_id, DATE_TRUNC('day', ae.timestamp)
+ORDER BY ae.agent_id, me.workspace_id, date;
 
--- View for capability learning patterns
+-- View for capability learning patterns (workspace-scoped)
 CREATE OR REPLACE VIEW capability_learning_patterns AS
 SELECT
     ae.agent_id,
+    me.workspace_id,
     jsonb_array_elements_text(ae.outcome->'learned_capabilities') as capability,
     DATE_TRUNC('week', ae.timestamp) as week,
     COUNT(*) as learning_events,
     AVG((ae.outcome->>'performance_score')::float) as avg_performance
 FROM agent_experiences ae
+LEFT JOIN memory_embeddings me ON ae.id = me.memory_id
 WHERE jsonb_array_length(ae.outcome->'learned_capabilities') > 0
-GROUP BY ae.agent_id, capability, DATE_TRUNC('week', ae.timestamp)
-ORDER BY ae.agent_id, capability, week;
+GROUP BY ae.agent_id, me.workspace_id, capability, DATE_TRUNC('week', ae.timestamp)
+ORDER BY ae.agent_id, me.workspace_id, capability, week;
 
--- View for memory access patterns
+-- View for memory access patterns (workspace-scoped)
 CREATE OR REPLACE VIEW memory_access_patterns AS
 SELECT
     me.memory_id,
+    me.workspace_id,
     ae.agent_id,
     ae.context->>'task_type' as task_type,
     me.importance_score,
@@ -244,7 +265,7 @@ SELECT
     AGE(NOW(), me.created_at) as memory_age
 FROM memory_embeddings me
 JOIN agent_experiences ae ON me.memory_id = ae.id
-ORDER BY me.last_accessed DESC;
+ORDER BY me.workspace_id, me.last_accessed DESC;
 
 -- ===========================================
 -- UTILITY FUNCTIONS
@@ -265,13 +286,15 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql IMMUTABLE;
 
--- Function to find similar memories by embedding
+-- Function to find similar memories by embedding (with workspace scoping)
 CREATE OR REPLACE FUNCTION find_similar_memories(
     query_embedding VECTOR(768),
+    workspace_filter UUID DEFAULT NULL, -- NULL = search all workspaces
     similarity_threshold FLOAT DEFAULT 0.7,
     max_results INTEGER DEFAULT 10
 ) RETURNS TABLE(
     memory_id UUID,
+    workspace_id UUID,
     similarity_score FLOAT,
     importance_score FLOAT,
     relevance_score FLOAT
@@ -280,6 +303,7 @@ BEGIN
     RETURN QUERY
     SELECT
         me.memory_id,
+        me.workspace_id,
         (1.0 - (me.embedding <=> query_embedding)) as similarity_score,
         me.importance_score,
         calculate_memory_relevance(
@@ -290,6 +314,7 @@ BEGIN
         ) as relevance_score
     FROM memory_embeddings me
     WHERE (1.0 - (me.embedding <=> query_embedding)) >= similarity_threshold
+      AND (workspace_filter IS NULL OR me.workspace_id = workspace_filter OR me.workspace_id IS NULL)
     ORDER BY relevance_score DESC, similarity_score DESC
     LIMIT max_results;
 END;
@@ -375,21 +400,47 @@ WHERE strength > 1.2;
 -- MONITORING AND HEALTH CHECKS
 -- ===========================================
 
--- Function to get memory system health metrics
-CREATE OR REPLACE FUNCTION get_memory_system_health() RETURNS JSONB AS $$
+-- Function to get memory system health metrics (with workspace scoping)
+CREATE OR REPLACE FUNCTION get_memory_system_health(workspace_filter UUID DEFAULT NULL) RETURNS JSONB AS $$
 DECLARE
     result JSONB;
 BEGIN
     SELECT jsonb_build_object(
-        'total_memories', (SELECT COUNT(*) FROM agent_experiences),
-        'embedded_memories', (SELECT COUNT(*) FROM memory_embeddings),
-        'knowledge_entities', (SELECT COUNT(*) FROM knowledge_graph_entities),
-        'knowledge_relationships', (SELECT COUNT(*) FROM knowledge_graph_relationships),
-        'avg_importance', (SELECT AVG(importance_score) FROM memory_embeddings),
-        'avg_decay', (SELECT AVG(decay_factor) FROM memory_embeddings),
-        'oldest_memory', (SELECT MIN(created_at) FROM agent_experiences),
-        'newest_memory', (SELECT MAX(created_at) FROM agent_experiences),
-        'expired_contexts', (SELECT COUNT(*) FROM offloaded_contexts WHERE expires_at < NOW())
+        'workspace_id', workspace_filter,
+        'total_memories', (SELECT COUNT(*) FROM agent_experiences ae
+                          WHERE workspace_filter IS NULL OR ae.id IN (
+                              SELECT me.memory_id FROM memory_embeddings me
+                              WHERE me.workspace_id = workspace_filter OR me.workspace_id IS NULL
+                          )),
+        'embedded_memories', (SELECT COUNT(*) FROM memory_embeddings me
+                             WHERE workspace_filter IS NULL OR me.workspace_id = workspace_filter OR me.workspace_id IS NULL),
+        'workspace_memories', (SELECT COUNT(*) FROM memory_embeddings me
+                              WHERE me.workspace_id = workspace_filter),
+        'global_memories', (SELECT COUNT(*) FROM memory_embeddings me
+                           WHERE me.workspace_id IS NULL),
+        'knowledge_entities', (SELECT COUNT(*) FROM knowledge_graph_entities kge
+                              WHERE workspace_filter IS NULL OR kge.workspace_id = workspace_filter OR kge.workspace_id IS NULL),
+        'knowledge_relationships', (SELECT COUNT(*) FROM knowledge_graph_relationships kgr
+                                   WHERE workspace_filter IS NULL OR kgr.workspace_id = workspace_filter OR kgr.workspace_id IS NULL),
+        'cross_workspace_relationships', (SELECT COUNT(*) FROM knowledge_graph_relationships kgr
+                                        WHERE kgr.cross_workspace = true),
+        'avg_importance', (SELECT AVG(importance_score) FROM memory_embeddings me
+                          WHERE workspace_filter IS NULL OR me.workspace_id = workspace_filter OR me.workspace_id IS NULL),
+        'avg_decay', (SELECT AVG(decay_factor) FROM memory_embeddings me
+                     WHERE workspace_filter IS NULL OR me.workspace_id = workspace_filter OR me.workspace_id IS NULL),
+        'oldest_memory', (SELECT MIN(ae.created_at) FROM agent_experiences ae
+                         WHERE workspace_filter IS NULL OR ae.id IN (
+                             SELECT me.memory_id FROM memory_embeddings me
+                             WHERE me.workspace_id = workspace_filter OR me.workspace_id IS NULL
+                         )),
+        'newest_memory', (SELECT MAX(ae.created_at) FROM agent_experiences ae
+                         WHERE workspace_filter IS NULL OR ae.id IN (
+                             SELECT me.memory_id FROM memory_embeddings me
+                             WHERE me.workspace_id = workspace_filter OR me.workspace_id IS NULL
+                         )),
+        'expired_contexts', (SELECT COUNT(*) FROM offloaded_contexts oc
+                           WHERE oc.expires_at < NOW()
+                           AND (workspace_filter IS NULL OR oc.workspace_id = workspace_filter OR oc.workspace_id IS NULL))
     ) INTO result;
 
     RETURN result;

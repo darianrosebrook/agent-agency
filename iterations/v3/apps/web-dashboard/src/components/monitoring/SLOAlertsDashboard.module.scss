@@ -1,4 +1,4 @@
-@import "../../styles/mixins.scss";
+@use "../../styles/mixins.scss" as *;
 
 .container {
   padding: 1.5rem;
@@ -7,22 +7,7 @@
   border: 1px solid var(--border-color);
 }
 
-.header {
-  margin-bottom: 2rem;
-
-  h2 {
-    margin: 0 0 0.5rem 0;
-    color: var(--text-primary);
-    font-size: 1.5rem;
-    font-weight: 600;
-  }
-
-  p {
-    margin: 0;
-    color: var(--text-secondary);
-    font-size: 0.875rem;
-  }
-}
+// Dark mode disabled - Light theme only
 
 .loading {
   display: flex;
@@ -48,31 +33,7 @@
   100% { transform: rotate(360deg); }
 }
 
-.error {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1rem;
-  margin-bottom: 1rem;
-  background: var(--error-bg);
-  border: 1px solid var(--error-border);
-  border-radius: 6px;
-  color: var(--error-text);
-
-  button {
-    padding: 0.25rem 0.75rem;
-    background: var(--button-primary);
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.875rem;
-
-    &:hover {
-      background: var(--button-primary-hover);
-    }
-  }
-}
+// Dark mode disabled - Light theme only
 
 .filters {
   display: flex;
@@ -81,26 +42,7 @@
   flex-wrap: wrap;
 }
 
-.filterGroup {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-
-  label {
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: var(--text-primary);
-  }
-
-  select {
-    padding: 0.25rem 0.5rem;
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-    background: var(--bg-primary);
-    color: var(--text-primary);
-    font-size: 0.875rem;
-  }
-}
+// Dark mode disabled - Light theme only
 
 .alertsList {
   display: flex;
@@ -108,12 +50,7 @@
   gap: 1rem;
 }
 
-.empty {
-  text-align: center;
-  padding: 3rem;
-  color: var(--text-secondary);
-  font-size: 0.875rem;
-}
+// Dark mode disabled - Light theme only
 
 .alertCard {
   padding: 1.25rem;
@@ -123,28 +60,7 @@
   border-left: 4px solid transparent;
 }
 
-.alertHeader {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  margin-bottom: 0.75rem;
-
-  .titleSection {
-    flex: 1;
-
-    h3 {
-      margin: 0 0 0.5rem 0;
-      color: var(--text-primary);
-      font-size: 1.125rem;
-      font-weight: 600;
-    }
-  }
-
-  .actions {
-    flex-shrink: 0;
-    margin-left: 1rem;
-  }
-}
+// Dark mode disabled - Light theme only
 
 .badges {
   display: flex;
@@ -152,16 +68,7 @@
   flex-wrap: wrap;
 }
 
-.severityBadge,
-.statusBadge {
-  padding: 0.25rem 0.5rem;
-  font-size: 0.75rem;
-  font-weight: 600;
-  border-radius: 4px;
-  color: white;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
+// Dark mode disabled - Light theme only
 
 .acknowledgeBtn {
   padding: 0.375rem 0.75rem;
@@ -179,12 +86,7 @@
   }
 }
 
-.description {
-  margin: 0 0 1rem 0;
-  color: var(--text-secondary);
-  font-size: 0.875rem;
-  line-height: 1.5;
-}
+// Dark mode disabled - Light theme only
 
 .metrics {
   display: flex;
@@ -193,24 +95,7 @@
   flex-wrap: wrap;
 }
 
-.metric {
-  display: flex;
-  flex-direction: column;
-
-  .label {
-    font-size: 0.75rem;
-    color: var(--text-secondary);
-    margin-bottom: 0.25rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-
-  .value {
-    font-size: 1rem;
-    font-weight: 600;
-    color: var(--text-primary);
-  }
-}
+// Dark mode disabled - Light theme only
 
 .footer {
   display: flex;
@@ -220,10 +105,7 @@
   gap: 1rem;
 }
 
-.timestamp {
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-}
+// Dark mode disabled - Light theme only
 
 .labels {
   display: flex;
@@ -231,13 +113,7 @@
   flex-wrap: wrap;
 }
 
-.label {
-  padding: 0.125rem 0.375rem;
-  font-size: 0.75rem;
-  background: var(--secondary-bg);
-  color: var(--secondary-text);
-  border-radius: 3px;
-}
+// Dark mode disabled - Light theme only
 
 // Set border color based on severity
 .alertCard {
@@ -258,21 +134,4 @@
   }
 }
 
-// Dark mode adjustments
-@media (prefers-color-scheme: dark) {
-  .container {
-    background: var(--bg-primary-dark);
-    border-color: var(--border-color-dark);
-  }
-
-  .alertCard {
-    background: var(--bg-secondary-dark);
-    border-color: var(--border-color-dark);
-  }
-
-  .filterGroup select {
-    background: var(--bg-primary-dark);
-    border-color: var(--border-color-dark);
-    color: var(--text-primary);
-  }
-}
+// Dark mode disabled - Light theme only

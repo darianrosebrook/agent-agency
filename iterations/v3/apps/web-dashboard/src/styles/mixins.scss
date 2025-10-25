@@ -133,6 +133,9 @@
 
 @mixin animate-spin {
   animation: spin 1s linear infinite;
+  will-change: transform;
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 // Loading states

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 import { NotificationAlert } from "@/types/tts";
 import { useNotificationAlerts } from "@/hooks/useTTS";
 import styles from "./AttentionAlerts.module.scss";

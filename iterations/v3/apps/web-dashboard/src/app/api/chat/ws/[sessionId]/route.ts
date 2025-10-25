@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 // Proxies WebSocket connections from the frontend to the V3 backend chat service
 
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: { sessionId: string } }
 ) {
   try {

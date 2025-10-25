@@ -19,7 +19,7 @@ pub enum CircuitState {
     HalfOpen,
 }
 
-/// Circuit breaker configuration
+/// Circuit breaker configuration - now using common types with compatibility
 #[derive(Debug, Clone)]
 pub struct CircuitBreakerConfig {
     /// Number of failures before opening the circuit
@@ -39,6 +39,18 @@ impl Default for CircuitBreakerConfig {
             success_threshold: 3,
             recovery_timeout_secs: 30,
             request_timeout_secs: 10,
+        }
+    }
+}
+
+impl From<CircuitBreakerConfig> for agent_agency_common_types::config::CircuitBreakerConfig {
+    fn from(config: CircuitBreakerConfig) -> Self {
+        Self {
+            failure_threshold: config.failure_threshold as u32,
+            recovery_timeout_ms: config.recovery_timeout_secs * 1000,
+            success_threshold: config.success_threshold as u32,
+            timeout_ms: config.request_timeout_secs * 1000,
+            max_concurrent_requests: 10, // Default value
         }
     }
 }

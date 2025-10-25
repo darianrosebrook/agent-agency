@@ -3,7 +3,7 @@
 //! Provides the bridge between workers and the agent-mcp crate's tool registry.
 //! Services register their capabilities as MCP tools that workers can discover and use.
 
-use agent_mcp::{ToolRegistry, MCPTool, ToolExecutionRequest, ToolExecutionResult, ToolType, ToolCapability, ToolParameters, ParameterDefinition, ParameterConstraint};
+use agent_mcp::{ToolRegistry, MCPTool, ToolExecutionRequest, ToolExecutionResult, types::{ToolType, ToolCapability, ToolParameters, ParameterDefinition, ParameterConstraint, ToolManifest, CawsComplianceConfig, CawsComplianceStatus}};
 use std::sync::Arc;
 
 /// MCP integration layer for workers
@@ -97,14 +97,42 @@ pub fn create_tool_definition(
             }
         }),
         endpoint: format!("/tools/{}", name),
-        manifest: agent_mcp::ToolManifest {
-            format_version: "1.0".to_string(),
-            tool_version: "1.0.0".to_string(),
+        manifest: ToolManifest {
+            name: name.to_string(),
+            version: "1.0.0".to_string(),
+            description: description.to_string(),
+            author: "Agent Workers".to_string(),
+            tool_type: ToolType::Utility,
+            entry_point: name.to_string(),
             dependencies: vec![],
-            security_requirements: vec![],
-            performance_requirements: Default::default(),
+            capabilities: vec![ToolCapability::DatabaseAccess],
+            parameters: ToolParameters {
+                required: vec![],
+                optional: vec![],
+                constraints: vec![],
+            },
+            output_schema: serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "result": {"type": "object"},
+                    "execution_time_ms": {"type": "number"}
+                }
+            }),
+            endpoint: Some(format!("/tools/{}", name)),
+            caws_compliance: Some(CawsComplianceConfig {
+                required_rules: vec!["memory_access".to_string()],
+                optional_rules: vec![],
+                strict_mode: false,
+                custom_validations: vec![],
+            }),
+            metadata: HashMap::new(),
+            configuration_schema: serde_json::json!({
+                "type": "object",
+                "properties": {},
+                "required": []
+            }),
         },
-        caws_compliance: agent_mcp::CawsComplianceStatus::Compliant,
+        caws_compliance: CawsComplianceStatus::Compliant,
         registration_time: Utc::now(),
         last_updated: Utc::now(),
         usage_count: 0,
@@ -120,11 +148,20 @@ pub fn create_parameter(
     required: bool,
     default_value: Option<serde_json::Value>,
 ) -> ParameterDefinition {
+    use agent_mcp::types::ParameterType;
+
+    let parameter_type = match param_type {
+        "string" => ParameterType::String,
+        "integer" => ParameterType::Integer,
+        "float" => ParameterType::Float,
+        "boolean" => ParameterType::Boolean,
+        _ => ParameterType::String,
+    };
+
     ParameterDefinition {
         name: name.to_string(),
+        parameter_type,
         description: description.to_string(),
-        param_type: param_type.to_string(),
-        required,
         default_value,
         validation_rules: vec![], // Can be extended
     }

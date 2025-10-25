@@ -23,7 +23,8 @@ pub use config::{AppConfig, AppMetadata, ServerConfig, TlsConfig, DatabaseConfig
 pub use environment::{Environment, EnvironmentConfig, EnvironmentManager};
 pub use loader::{ConfigLoader, ConfigWatcher, ConfigSource, ConfigLoadResult, ConfigLoaderBuilder, MergeStrategy};
 pub use secrets::{SecretsManager, SecretMetadata, SecretValue};
-pub use validation::{ValidationError, ValidationResult};
+pub use validation::ValidationResult;
+pub use agent_agency_common_types::validation::ValidationIssue;
 
 pub use anyhow::Result;
 /// Re-export commonly used types

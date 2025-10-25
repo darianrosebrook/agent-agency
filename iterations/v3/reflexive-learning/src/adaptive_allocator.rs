@@ -418,12 +418,12 @@ impl AdaptiveResourceAllocator {
             return vec![0.0; 5];
         }
 
-        let recent = &history[history.len().saturating_sub(10)..]; // Last 10 measurements
-
-        let avg_cpu = recent.iter().map(|m| m.cpu_usage_percent).sum::<f64>() / recent.len() as f64;
-        let avg_memory = recent.iter().map(|m| m.memory_usage_gb).sum::<f64>() / recent.len() as f64;
+        // Get last 10 measurements from VecDeque
+        let recent_count = history.len().min(10);
+        let avg_cpu = history.iter().rev().take(recent_count).map(|m| m.cpu_usage_percent).sum::<f64>() / recent_count as f64;
+        let avg_memory = history.iter().rev().take(recent_count).map(|m| m.memory_usage_gb).sum::<f64>() / recent_count as f64;
         let task_count = active_allocations.len() as f64;
-        let memory_pressure = avg_memory / recent[0].memory_total_gb;
+        let memory_pressure = avg_memory / history.back().unwrap().memory_total_gb;
         let time_factor = (chrono::Utc::now().timestamp() % 86400) as f64 / 86400.0; // Time of day factor
 
         vec![avg_cpu / 100.0, memory_pressure, task_count / 10.0, time_factor, 1.0]
@@ -461,11 +461,17 @@ impl AdaptiveResourceAllocator {
         start: usize,
         end: usize,
     ) -> Vec<f64> {
-        let window = &history[start..end.min(history.len())];
-        let avg_cpu = window.iter().map(|m| m.cpu_usage_percent).sum::<f64>() / window.len() as f64;
-        let avg_memory = window.iter().map(|m| m.memory_usage_gb).sum::<f64>() / window.len() as f64;
-        let memory_pressure = avg_memory / window[0].memory_total_gb;
-        let time_factor = (window[0].timestamp.timestamp() % 86400) as f64 / 86400.0;
+        let window_size = (end - start).min(history.len().saturating_sub(start));
+        if window_size == 0 {
+            return vec![0.0; 5];
+        }
+
+        // Get the window using iterator methods
+        let window_metrics: Vec<_> = history.iter().skip(start).take(window_size).collect();
+        let avg_cpu = window_metrics.iter().map(|m| m.cpu_usage_percent).sum::<f64>() / window_size as f64;
+        let avg_memory = window_metrics.iter().map(|m| m.memory_usage_gb).sum::<f64>() / window_size as f64;
+        let memory_pressure = avg_memory / window_metrics[0].memory_total_gb;
+        let time_factor = (chrono::Utc::now().timestamp() % 86400) as f64 / 86400.0;
 
         vec![avg_cpu / 100.0, memory_pressure, 0.0, time_factor, 1.0] // Simplified features
     }

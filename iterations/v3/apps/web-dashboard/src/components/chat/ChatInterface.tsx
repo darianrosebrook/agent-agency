@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 
 // Declare window for ESLint - WebSocket support
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -75,7 +75,7 @@ export default function ChatInterface({
         role: "assistant",
         content: text,
         timestamp: new Date().toISOString(),
-        metadata: audioUrl ? { tts_audio_url: audioUrl } : undefined,
+        ...(audioUrl && { metadata: { tts_audio_url: audioUrl } }),
       };
 
       setState((prev) => ({
@@ -139,6 +139,7 @@ export default function ChatInterface({
 
       // Only auto-play assistant messages that don't already have TTS audio
       if (
+        latestMessage &&
         latestMessage.role === "assistant" &&
         !latestMessage.metadata?.tts_audio_url &&
         latestMessage.content.trim().length > 0
@@ -151,12 +152,13 @@ export default function ChatInterface({
           );
 
           if (audioResponse?.audioUrl) {
+            const audioUrl = audioResponse.audioUrl;
             // Update message metadata
-            handleTTSGenerated(latestMessage.id, audioResponse.audioUrl);
+            handleTTSGenerated(latestMessage.id, audioUrl);
 
             // Small delay before playing to avoid overwhelming the user
             setTimeout(() => {
-              playAudio(audioResponse.audioUrl);
+              playAudio(audioUrl);
             }, 500);
           }
         } catch (error) {

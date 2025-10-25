@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { AgentPerformanceGridProps, AgentPerformance } from "@/types/metrics";
 import { metricsApiClient, MetricsApiError } from "@/lib/metrics-api";
 import MetricTile from "./MetricTile";

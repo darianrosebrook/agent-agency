@@ -48,11 +48,7 @@ body {
   flex-direction: column;
 }
 
-.dashboard-body {
-  margin: 0;
-  padding: 0;
-  min-height: 100vh;
-}
+// Dark mode disabled - Light theme only
 
 .dashboard-main {
   flex: 1;
@@ -60,13 +56,7 @@ body {
   flex-direction: column;
 }
 
-.dashboard-content {
-  flex: 1;
-  padding: var(--spacing-2xl);
-  max-width: var(--max-width-2xl);
-  margin: 0 auto;
-  width: 100%;
-}
+// Dark mode disabled - Light theme only
 
 // Section styles
 .section-title {
@@ -108,26 +98,7 @@ body {
   }
 }
 
-.quick-actions {
-  display: flex;
-  gap: var(--spacing-md);
-  flex-wrap: wrap;
-
-  .action-button {
-    @include button-base;
-    font-size: var(--font-size-base);
-    padding: var(--spacing-lg) var(--spacing-xl);
-    min-width: 140px;
-
-    &.primary {
-      @include button-primary;
-    }
-
-    &.secondary {
-      @include button-secondary;
-    }
-  }
-}
+// Dark mode disabled - Light theme only
 
 // Health status indicators
 .health-status {
@@ -166,17 +137,13 @@ body {
       background-color: var(--color-success);
     }
 
-    .degraded &::before {
-      background-color: var(--color-warning);
-    }
+// Dark mode disabled - Light theme only
 
     .unhealthy &::before {
       background-color: var(--color-error);
     }
 
-    .unknown &::before {
-      background-color: var(--color-gray-400);
-    }
+// Dark mode disabled - Light theme only
   }
 }
 
@@ -190,19 +157,7 @@ body {
   border-radius: 50%;
 }
 
-.loading-skeleton {
-  @include loading-skeleton;
-  height: 1rem;
-  border-radius: var(--radius-sm);
-
-  &.large {
-    height: 2rem;
-  }
-
-  &.xl {
-    height: 3rem;
-  }
-}
+// Dark mode disabled - Light theme only
 
 // Error states
 .error-message {
@@ -217,10 +172,7 @@ body {
     margin-bottom: var(--spacing-sm);
   }
 
-  .error-details {
-    font-size: var(--font-size-sm);
-    color: var(--color-error-700);
-  }
+// Dark mode disabled - Light theme only
 }
 
 // Empty states
@@ -232,10 +184,7 @@ body {
   padding: var(--spacing-2xl);
 }
 
-.empty-state-content {
-  max-width: 600px;
-  text-align: center;
-}
+// Dark mode disabled - Light theme only
 
 .empty-state-icon {
   font-size: var(--font-size-4xl);
@@ -243,13 +192,7 @@ body {
   opacity: 0.7;
 }
 
-.empty-state-title {
-  font-size: var(--font-size-2xl);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text-primary);
-  margin-bottom: var(--spacing-md);
-  margin-top: 0;
-}
+// Dark mode disabled - Light theme only
 
 .empty-state-description {
   color: var(--color-text-secondary);
@@ -258,11 +201,7 @@ body {
   margin-bottom: var(--spacing-2xl);
 }
 
-.empty-state-actions {
-  display: flex;
-  justify-content: center;
-  gap: var(--spacing-md);
-}
+// Dark mode disabled - Light theme only
 
 // Form elements
 select {
@@ -281,9 +220,7 @@ select {
   @include sr-only;
 }
 
-.text-truncate {
-  @include text-truncate;
-}
+// Dark mode disabled - Light theme only
 
 .visually-hidden {
   @include sr-only;
@@ -295,9 +232,7 @@ select {
     background: white !important;
   }
 
-  .dashboard-content {
-    padding: 0 !important;
-  }
+// Dark mode disabled - Light theme only
 }
 
 // High contrast mode support

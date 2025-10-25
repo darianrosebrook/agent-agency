@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import { useMemo } from "react";
 import { ModelPerformanceChartProps } from "../../types/tasks";
 
 import styles from "./ModelPerformanceChart.module.scss";

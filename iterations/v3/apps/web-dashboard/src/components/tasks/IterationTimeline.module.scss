@@ -4,14 +4,7 @@
   gap: 1.5rem;
 }
 
-.timeline {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 1rem;
-  overflow-x: auto;
-  min-height: 200px;
-}
+// Dark mode disabled - Light theme only
 
 .iteration {
   display: flex;
@@ -62,13 +55,7 @@
   }
 }
 
-.iterationHeader {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.25rem;
-  margin-bottom: 0.5rem;
-}
+// Dark mode disabled - Light theme only
 
 .iterationNumber {
   font-size: 1.25rem;
@@ -76,13 +63,7 @@
   color: var(--text-primary);
 }
 
-.model {
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-  font-family: monospace;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
+// Dark mode disabled - Light theme only
 
 .iterationMetrics {
   display: flex;
@@ -90,15 +71,7 @@
   margin-bottom: 0.5rem;
 }
 
-.latency,
-.tokens {
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: var(--text-secondary);
-  background: var(--bg-secondary);
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-}
+// Dark mode disabled - Light theme only
 
 .iterationDetails {
   display: flex;
@@ -108,21 +81,14 @@
   font-size: 0.75rem;
 }
 
-.detail {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
+// Dark mode disabled - Light theme only
 
 .label {
   color: var(--text-secondary);
   font-weight: 500;
 }
 
-.value {
-  color: var(--text-primary);
-  font-family: monospace;
-}
+// Dark mode disabled - Light theme only
 
 .connector {
   position: absolute;
@@ -144,14 +110,7 @@
   }
 }
 
-.summary {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1rem;
-  padding: 1rem;
-  background: var(--bg-secondary);
-  border-radius: 8px;
-}
+// Dark mode disabled - Light theme only
 
 .metric {
   display: flex;
@@ -159,11 +118,7 @@
   gap: 0.25rem;
 }
 
-.metric .label {
-  font-size: 0.875rem;
-  color: var(--text-secondary);
-  font-weight: 500;
-}
+// Dark mode disabled - Light theme only
 
 .metric .value {
   font-size: 1.25rem;
@@ -172,10 +127,7 @@
   font-family: monospace;
 }
 
-.metric .threshold {
-  font-size: 0.75rem;
-  color: var(--text-tertiary);
-}
+// Dark mode disabled - Light theme only
 
 // Responsive design
 @media (max-width: 768px) {
@@ -184,24 +136,14 @@
     justify-content: center;
   }
 
-  .iteration {
-    min-width: 100px;
-  }
+// Dark mode disabled - Light theme only
 
   .summary {
     grid-template-columns: 1fr;
   }
 }
 
-// Dark mode support
-@media (prefers-color-scheme: dark) {
-  .iteration {
-    background: var(--dark-bg-primary);
-
-    &.pending {
-      border-color: var(--dark-border-color);
-    }
-  }
+// Dark mode disabled - Light theme only
 
   .latency,
   .tokens {

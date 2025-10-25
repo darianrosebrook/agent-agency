@@ -1,6 +1,5 @@
 'use client'
 
-import React from 'react';
 import { ConnectionState } from '@/types/chat';
 import styles from './ConnectionStatus.module.scss';
 

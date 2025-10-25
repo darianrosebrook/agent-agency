@@ -71,25 +71,23 @@
   --transition-slow: 0.3s ease;
 }
 
-// Dark mode color overrides
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-background: #111827;
-    --color-background-secondary: #1f2937;
-    --color-background-dark: #0f172a;
+//   :root {
+//     --color-background: #111827;
+//     --color-background-secondary: #1f2937;
+//     --color-background-dark: #0f172a;
     
-    --color-text-primary: #f9fafb;
-    --color-text-secondary: #d1d5db;
-    --color-text-tertiary: #9ca3af;
+//     --color-text-primary: #f9fafb;
+//     --color-text-secondary: #d1d5db;
+//     --color-text-tertiary: #9ca3af;
     
-    --color-border: #374151;
-    --color-border-dark: #4b5563;
+//     --color-border: #374151;
+//     --color-border-dark: #4b5563;
     
-    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
-    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.3), 0 2px 4px -2px rgb(0 0 0 / 0.3);
-    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.3), 0 4px 6px -4px rgb(0 0 0 / 0.3);
-  }
-}
+//     --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+//     --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.3), 0 2px 4px -2px rgb(0 0 0 / 0.3);
+//     --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.3), 0 4px 6px -4px rgb(0 0 0 / 0.3);
+//   }
+// }
 
 // Reset and base styles
 * {
@@ -210,591 +208,445 @@ button {
   border: 0;
 }
 
-.text-center {
-  text-align: center;
-}
+// Dark mode disabled - Light theme only
 
 .text-left {
   text-align: left;
 }
 
-.text-right {
-  text-align: right;
-}
+// Dark mode disabled - Light theme only
 
 .font-mono {
   font-family: var(--font-mono);
 }
 
-.font-bold {
-  font-weight: 700;
-}
+// Dark mode disabled - Light theme only
 
 .font-semibold {
   font-weight: 600;
 }
 
-.font-medium {
-  font-weight: 500;
-}
+// Dark mode disabled - Light theme only
 
 .text-sm {
   font-size: 0.875rem;
 }
 
-.text-xs {
-  font-size: 0.75rem;
-}
+// Dark mode disabled - Light theme only
 
 .text-lg {
   font-size: 1.125rem;
 }
 
-.text-xl {
-  font-size: 1.25rem;
-}
+// Dark mode disabled - Light theme only
 
 .text-2xl {
   font-size: 1.5rem;
 }
 
-.text-3xl {
-  font-size: 1.875rem;
-}
+// Dark mode disabled - Light theme only
 
 .text-primary {
   color: var(--color-primary);
 }
 
-.text-secondary {
-  color: var(--color-text-secondary);
-}
+// Dark mode disabled - Light theme only
 
 .text-success {
   color: var(--color-success);
 }
 
-.text-warning {
-  color: var(--color-warning);
-}
+// Dark mode disabled - Light theme only
 
 .text-error {
   color: var(--color-error);
 }
 
-.bg-primary {
-  background-color: var(--color-primary);
-}
+// Dark mode disabled - Light theme only
 
 .bg-secondary {
   background-color: var(--color-secondary);
 }
 
-.bg-success {
-  background-color: var(--color-success);
-}
+// Dark mode disabled - Light theme only
 
 .bg-warning {
   background-color: var(--color-warning);
 }
 
-.bg-error {
-  background-color: var(--color-error);
-}
+// Dark mode disabled - Light theme only
 
 .border {
   border: 1px solid var(--color-border);
 }
 
-.border-primary {
-  border-color: var(--color-primary);
-}
+// Dark mode disabled - Light theme only
 
 .border-success {
   border-color: var(--color-success);
 }
 
-.border-warning {
-  border-color: var(--color-warning);
-}
+// Dark mode disabled - Light theme only
 
 .border-error {
   border-color: var(--color-error);
 }
 
-.rounded {
-  border-radius: var(--radius-md);
-}
+// Dark mode disabled - Light theme only
 
 .rounded-sm {
   border-radius: var(--radius-sm);
 }
 
-.rounded-lg {
-  border-radius: var(--radius-lg);
-}
+// Dark mode disabled - Light theme only
 
 .rounded-xl {
   border-radius: var(--radius-xl);
 }
 
-.rounded-full {
-  border-radius: 9999px;
-}
+// Dark mode disabled - Light theme only
 
 .shadow-sm {
   box-shadow: var(--shadow-sm);
 }
 
-.shadow-md {
-  box-shadow: var(--shadow-md);
-}
+// Dark mode disabled - Light theme only
 
 .shadow-lg {
   box-shadow: var(--shadow-lg);
 }
 
-.p-0 {
-  padding: 0;
-}
+// Dark mode disabled - Light theme only
 
 .p-1 {
   padding: var(--spacing-xs);
 }
 
-.p-2 {
-  padding: var(--spacing-sm);
-}
+// Dark mode disabled - Light theme only
 
 .p-3 {
   padding: var(--spacing-md);
 }
 
-.p-4 {
-  padding: var(--spacing-lg);
-}
+// Dark mode disabled - Light theme only
 
 .p-5 {
   padding: var(--spacing-xl);
 }
 
-.p-6 {
-  padding: var(--spacing-2xl);
-}
+// Dark mode disabled - Light theme only
 
 .m-0 {
   margin: 0;
 }
 
-.m-1 {
-  margin: var(--spacing-xs);
-}
+// Dark mode disabled - Light theme only
 
 .m-2 {
   margin: var(--spacing-sm);
 }
 
-.m-3 {
-  margin: var(--spacing-md);
-}
+// Dark mode disabled - Light theme only
 
 .m-4 {
   margin: var(--spacing-lg);
 }
 
-.m-5 {
-  margin: var(--spacing-xl);
-}
+// Dark mode disabled - Light theme only
 
 .m-6 {
   margin: var(--spacing-2xl);
 }
 
-.mt-0 {
-  margin-top: 0;
-}
+// Dark mode disabled - Light theme only
 
 .mt-1 {
   margin-top: var(--spacing-xs);
 }
 
-.mt-2 {
-  margin-top: var(--spacing-sm);
-}
+// Dark mode disabled - Light theme only
 
 .mt-3 {
   margin-top: var(--spacing-md);
 }
 
-.mt-4 {
-  margin-top: var(--spacing-lg);
-}
+// Dark mode disabled - Light theme only
 
 .mt-5 {
   margin-top: var(--spacing-xl);
 }
 
-.mt-6 {
-  margin-top: var(--spacing-2xl);
-}
+// Dark mode disabled - Light theme only
 
 .mb-0 {
   margin-bottom: 0;
 }
 
-.mb-1 {
-  margin-bottom: var(--spacing-xs);
-}
+// Dark mode disabled - Light theme only
 
 .mb-2 {
   margin-bottom: var(--spacing-sm);
 }
 
-.mb-3 {
-  margin-bottom: var(--spacing-md);
-}
+// Dark mode disabled - Light theme only
 
 .mb-4 {
   margin-bottom: var(--spacing-lg);
 }
 
-.mb-5 {
-  margin-bottom: var(--spacing-xl);
-}
+// Dark mode disabled - Light theme only
 
 .mb-6 {
   margin-bottom: var(--spacing-2xl);
 }
 
-.ml-0 {
-  margin-left: 0;
-}
+// Dark mode disabled - Light theme only
 
 .ml-1 {
   margin-left: var(--spacing-xs);
 }
 
-.ml-2 {
-  margin-left: var(--spacing-sm);
-}
+// Dark mode disabled - Light theme only
 
 .ml-3 {
   margin-left: var(--spacing-md);
 }
 
-.ml-4 {
-  margin-left: var(--spacing-lg);
-}
+// Dark mode disabled - Light theme only
 
 .ml-5 {
   margin-left: var(--spacing-xl);
 }
 
-.ml-6 {
-  margin-left: var(--spacing-2xl);
-}
+// Dark mode disabled - Light theme only
 
 .mr-0 {
   margin-right: 0;
 }
 
-.mr-1 {
-  margin-right: var(--spacing-xs);
-}
+// Dark mode disabled - Light theme only
 
 .mr-2 {
   margin-right: var(--spacing-sm);
 }
 
-.mr-3 {
-  margin-right: var(--spacing-md);
-}
+// Dark mode disabled - Light theme only
 
 .mr-4 {
   margin-right: var(--spacing-lg);
 }
 
-.mr-5 {
-  margin-right: var(--spacing-xl);
-}
+// Dark mode disabled - Light theme only
 
 .mr-6 {
   margin-right: var(--spacing-2xl);
 }
 
-.flex {
-  display: flex;
-}
+// Dark mode disabled - Light theme only
 
 .flex-col {
   flex-direction: column;
 }
 
-.flex-row {
-  flex-direction: row;
-}
+// Dark mode disabled - Light theme only
 
 .items-center {
   align-items: center;
 }
 
-.items-start {
-  align-items: flex-start;
-}
+// Dark mode disabled - Light theme only
 
 .items-end {
   align-items: flex-end;
 }
 
-.justify-center {
-  justify-content: center;
-}
+// Dark mode disabled - Light theme only
 
 .justify-start {
   justify-content: flex-start;
 }
 
-.justify-end {
-  justify-content: flex-end;
-}
+// Dark mode disabled - Light theme only
 
 .justify-between {
   justify-content: space-between;
 }
 
-.justify-around {
-  justify-content: space-around;
-}
+// Dark mode disabled - Light theme only
 
 .gap-1 {
   gap: var(--spacing-xs);
 }
 
-.gap-2 {
-  gap: var(--spacing-sm);
-}
+// Dark mode disabled - Light theme only
 
 .gap-3 {
   gap: var(--spacing-md);
 }
 
-.gap-4 {
-  gap: var(--spacing-lg);
-}
+// Dark mode disabled - Light theme only
 
 .gap-5 {
   gap: var(--spacing-xl);
 }
 
-.gap-6 {
-  gap: var(--spacing-2xl);
-}
+// Dark mode disabled - Light theme only
 
 .w-full {
   width: 100%;
 }
 
-.h-full {
-  height: 100%;
-}
+// Dark mode disabled - Light theme only
 
 .min-h-screen {
   min-height: 100vh;
 }
 
-.overflow-hidden {
-  overflow: hidden;
-}
+// Dark mode disabled - Light theme only
 
 .overflow-auto {
   overflow: auto;
 }
 
-.overflow-x-auto {
-  overflow-x: auto;
-}
+// Dark mode disabled - Light theme only
 
 .overflow-y-auto {
   overflow-y: auto;
 }
 
-.relative {
-  position: relative;
-}
+// Dark mode disabled - Light theme only
 
 .absolute {
   position: absolute;
 }
 
-.fixed {
-  position: fixed;
-}
+// Dark mode disabled - Light theme only
 
 .sticky {
   position: sticky;
 }
 
-.top-0 {
-  top: 0;
-}
+// Dark mode disabled - Light theme only
 
 .bottom-0 {
   bottom: 0;
 }
 
-.left-0 {
-  left: 0;
-}
+// Dark mode disabled - Light theme only
 
 .right-0 {
   right: 0;
 }
 
-.z-10 {
-  z-index: 10;
-}
+// Dark mode disabled - Light theme only
 
 .z-20 {
   z-index: 20;
 }
 
-.z-30 {
-  z-index: 30;
-}
+// Dark mode disabled - Light theme only
 
 .z-40 {
   z-index: 40;
 }
 
-.z-50 {
-  z-index: 50;
-}
+// Dark mode disabled - Light theme only
 
 // Responsive utilities
 @media (max-width: 640px) {
   .sm\:hidden {
     display: none;
   }
-  
-  .sm\:block {
-    display: block;
-  }
+
+// Dark mode disabled - Light theme only
   
   .sm\:flex {
     display: flex;
   }
-  
-  .sm\:flex-col {
-    flex-direction: column;
-  }
+
+// Dark mode disabled - Light theme only
   
   .sm\:text-sm {
     font-size: 0.875rem;
   }
-  
-  .sm\:text-xs {
-    font-size: 0.75rem;
-  }
+
+// Dark mode disabled - Light theme only
   
   .sm\:p-2 {
     padding: var(--spacing-sm);
   }
-  
-  .sm\:p-3 {
-    padding: var(--spacing-md);
-  }
+
+// Dark mode disabled - Light theme only
   
   .sm\:gap-2 {
     gap: var(--spacing-sm);
   }
-  
-  .sm\:gap-3 {
-    gap: var(--spacing-md);
-  }
+
+// Dark mode disabled - Light theme only
 }
 
 @media (max-width: 768px) {
   .md\:hidden {
     display: none;
   }
-  
-  .md\:block {
-    display: block;
-  }
+
+// Dark mode disabled - Light theme only
   
   .md\:flex {
     display: flex;
   }
-  
-  .md\:flex-col {
-    flex-direction: column;
-  }
+
+// Dark mode disabled - Light theme only
   
   .md\:text-lg {
     font-size: 1.125rem;
   }
-  
-  .md\:text-xl {
-    font-size: 1.25rem;
-  }
+
+// Dark mode disabled - Light theme only
   
   .md\:p-4 {
     padding: var(--spacing-lg);
   }
-  
-  .md\:p-5 {
-    padding: var(--spacing-xl);
-  }
+
+// Dark mode disabled - Light theme only
   
   .md\:gap-4 {
     gap: var(--spacing-lg);
   }
-  
-  .md\:gap-5 {
-    gap: var(--spacing-xl);
-  }
+
+// Dark mode disabled - Light theme only
 }
 
 @media (max-width: 1024px) {
   .lg\:hidden {
     display: none;
   }
-  
-  .lg\:block {
-    display: block;
-  }
+
+// Dark mode disabled - Light theme only
   
   .lg\:flex {
     display: flex;
   }
-  
-  .lg\:flex-col {
-    flex-direction: column;
-  }
+
+// Dark mode disabled - Light theme only
   
   .lg\:text-2xl {
     font-size: 1.5rem;
   }
-  
-  .lg\:text-3xl {
-    font-size: 1.875rem;
-  }
+
+// Dark mode disabled - Light theme only
   
   .lg\:p-5 {
     padding: var(--spacing-xl);
   }
-  
-  .lg\:p-6 {
-    padding: var(--spacing-2xl);
-  }
+
+// Dark mode disabled - Light theme only
   
   .lg\:gap-5 {
     gap: var(--spacing-xl);
   }
-  
-  .lg\:gap-6 {
-    gap: var(--spacing-2xl);
-  }
+
+// Dark mode disabled - Light theme only
 }
 
 // Print styles
@@ -802,10 +654,8 @@ button {
   .no-print {
     display: none !important;
   }
-  
-  .print-only {
-    display: block !important;
-  }
+
+// Dark mode disabled - Light theme only
   
   * {
     background: transparent !important;

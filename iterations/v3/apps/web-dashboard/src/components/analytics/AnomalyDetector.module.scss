@@ -6,23 +6,7 @@
   max-width: none;
 }
 
-.detectorHeader {
-  margin-bottom: var(--spacing-xl);
-
-  h2 {
-    font-size: var(--font-size-xl);
-    font-weight: var(--font-weight-semibold);
-    color: var(--color-text-primary);
-    margin: 0 0 var(--spacing-sm) 0;
-  }
-
-  .description {
-    font-size: var(--font-size-base);
-    color: var(--color-text-secondary);
-    line-height: var(--line-height-relaxed);
-    margin: 0;
-  }
-}
+// Dark mode disabled - Light theme only
 
 .detectorControls {
   display: flex;
@@ -33,12 +17,7 @@
   gap: var(--spacing-lg);
 }
 
-.filterControls {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-lg);
-  flex-wrap: wrap;
-}
+// Dark mode disabled - Light theme only
 
 .filterGroup {
   display: flex;
@@ -52,22 +31,7 @@
   }
 }
 
-.confidenceInput {
-  @include button-base;
-  padding: var(--spacing-xs) var(--spacing-sm);
-  font-family: var(--font-family-mono);
-  font-size: var(--font-size-sm);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background-color: var(--color-bg-primary);
-  color: var(--color-text-primary);
-  width: 80px;
-
-  &:focus {
-    outline: 2px solid var(--color-primary-500);
-    outline-offset: 2px;
-  }
-}
+// Dark mode disabled - Light theme only
 
 .detectButton {
   @include button-base;
@@ -87,26 +51,7 @@
   }
 }
 
-.errorBanner {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-md);
-  background-color: var(--color-error-50);
-  border: 1px solid var(--color-error-200);
-  border-radius: var(--radius-md);
-  margin-bottom: var(--spacing-lg);
-
-  .errorIcon {
-    font-size: var(--font-size-lg);
-    color: var(--color-error-600);
-  }
-
-  span {
-    font-size: var(--font-size-sm);
-    color: var(--color-error-800);
-  }
-}
+// Dark mode disabled - Light theme only
 
 .anomaliesSection {
   .anomaliesHeader {
@@ -125,12 +70,7 @@
     }
   }
 
-  .anomaliesStats {
-    display: flex;
-    gap: var(--spacing-lg);
-    font-size: var(--font-size-sm);
-    color: var(--color-text-secondary);
-  }
+// Dark mode disabled - Light theme only
 
   .anomaliesList {
     display: flex;
@@ -138,23 +78,7 @@
     gap: var(--spacing-md);
   }
 
-  .anomalyCard {
-    @include card-base;
-    padding: var(--spacing-lg);
-    cursor: pointer;
-    transition: all var(--transition-fast);
-    border-left: 4px solid transparent;
-
-    &:hover {
-      transform: translateY(-1px);
-      box-shadow: var(--shadow-md);
-    }
-
-    &.selected {
-      border-left-color: var(--color-primary-500);
-      box-shadow: var(--shadow-lg);
-    }
-  }
+// Dark mode disabled - Light theme only
 
   .anomalyHeader {
     display: flex;
@@ -163,22 +87,13 @@
     margin-bottom: var(--spacing-md);
   }
 
-  .anomalyTitle {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-sm);
-  }
+// Dark mode disabled - Light theme only
 
   .severityIcon {
     font-size: var(--font-size-lg);
   }
 
-  .anomalyMetric {
-    font-size: var(--font-size-lg);
-    font-weight: var(--font-weight-semibold);
-    color: var(--color-text-primary);
-    font-family: var(--font-family-mono);
-  }
+// Dark mode disabled - Light theme only
 
   .severityBadge {
     font-size: var(--font-size-xs);
@@ -189,10 +104,7 @@
     letter-spacing: 0.05em;
   }
 
-  .anomalyActions {
-    display: flex;
-    gap: var(--spacing-sm);
-  }
+// Dark mode disabled - Light theme only
 
   .dismissButton {
     @include button-base;
@@ -208,97 +120,10 @@
     }
   }
 
-  .anomalyDetails {
-    .anomalyMetrics {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-      gap: var(--spacing-md);
-      margin-bottom: var(--spacing-md);
-    }
-
-    .metricItem {
-      display: flex;
-      flex-direction: column;
-      gap: var(--spacing-xs);
-    }
-
-    .metricLabel {
-      font-size: var(--font-size-xs);
-      font-weight: var(--font-weight-medium);
-      color: var(--color-text-secondary);
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-
-    .metricValue {
-      font-size: var(--font-size-base);
-      font-weight: var(--font-weight-semibold);
-      color: var(--color-text-primary);
-      font-family: var(--font-family-mono);
-
-      &.deviation {
-        &.positive {
-          color: var(--color-error-600);
-        }
-
-        &.negative {
-          color: var(--color-success-600);
-        }
-      }
-    }
-
-    .anomalyTime {
-      font-size: var(--font-size-sm);
-      color: var(--color-text-secondary);
-      font-family: var(--font-family-mono);
-      margin-bottom: var(--spacing-sm);
-    }
-
-    .anomalyDescription {
-      font-size: var(--font-size-sm);
-      color: var(--color-text-primary);
-      line-height: var(--line-height-relaxed);
-      margin-bottom: var(--spacing-md);
-    }
-
-    .anomalyContext {
-      summary {
-        cursor: pointer;
-        font-size: var(--font-size-sm);
-        color: var(--color-text-secondary);
-        margin-bottom: var(--spacing-sm);
-
-        &:hover {
-          color: var(--color-text-primary);
-        }
-      }
-    }
-
-    .contextData {
-      font-family: var(--font-family-mono);
-      font-size: var(--font-size-xs);
-      background-color: var(--color-bg-tertiary);
-      padding: var(--spacing-sm);
-      border-radius: var(--radius-sm);
-      white-space: pre-wrap;
-      max-height: 200px;
-      overflow-y: auto;
-    }
-  }
+// Dark mode disabled - Light theme only
 }
 
-.anomalySidebar {
-  position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: 400px;
-  background-color: var(--color-bg-primary);
-  border-left: 1px solid var(--color-border);
-  box-shadow: var(--shadow-xl);
-  z-index: 100;
-  overflow-y: auto;
-}
+// Dark mode disabled - Light theme only
 
 .sidebarHeader {
   display: flex;
@@ -315,36 +140,13 @@
   }
 }
 
-.closeSidebar {
-  @include button-base;
-  @include button-secondary;
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: var(--font-size-lg);
-}
+// Dark mode disabled - Light theme only
 
 .sidebarContent {
   padding: var(--spacing-lg);
 }
 
-.detailSection {
-  margin-bottom: var(--spacing-xl);
-
-  &:last-child {
-    margin-bottom: 0;
-  }
-
-  h4 {
-    font-size: var(--font-size-base);
-    font-weight: var(--font-weight-semibold);
-    color: var(--color-text-primary);
-    margin: 0 0 var(--spacing-md) 0;
-  }
-}
+// Dark mode disabled - Light theme only
 
 .detailGrid {
   display: grid;
@@ -352,11 +154,7 @@
   gap: var(--spacing-md);
 }
 
-.detailItem {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-xs);
-}
+// Dark mode disabled - Light theme only
 
 .detailLabel {
   font-size: var(--font-size-xs);
@@ -366,28 +164,19 @@
   letter-spacing: 0.05em;
 }
 
-.detailValue {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-primary);
-  font-family: var(--font-family-mono);
-}
+// Dark mode disabled - Light theme only
 
 .severityCritical {
   color: var(--color-error-600);
 }
 
-.severityHigh {
-  color: var(--color-warning-600);
-}
+// Dark mode disabled - Light theme only
 
 .severityMedium {
   color: var(--color-accent-600);
 }
 
-.severityLow {
-  color: var(--color-success-600);
-}
+// Dark mode disabled - Light theme only
 
 .noAnomalies {
   text-align: center;
@@ -414,30 +203,7 @@
     margin-right: auto;
   }
 
-  .detectionInfo {
-    text-align: left;
-    max-width: 500px;
-    margin: 0 auto;
-
-    h4 {
-      font-size: var(--font-size-base);
-      font-weight: var(--font-weight-semibold);
-      color: var(--color-text-primary);
-      margin: 0 0 var(--spacing-md) 0;
-    }
-
-    ul {
-      margin: 0;
-      padding-left: var(--spacing-lg);
-    }
-
-    li {
-      font-size: var(--font-size-sm);
-      color: var(--color-text-secondary);
-      margin-bottom: var(--spacing-xs);
-      line-height: var(--line-height-relaxed);
-    }
-  }
+// Dark mode disabled - Light theme only
 }
 
 // Loading and error states

@@ -463,11 +463,18 @@ impl ProgressTracker {
         if let Some(state) = self.monitoring_state.get_mut(&session_id) {
             let previous_metrics = state.rolling_metrics.clone();
             let updated_count = state.sample_count.saturating_add(1);
-            state.rolling_metrics = self.combine_metrics(&state.rolling_metrics, new_metrics, updated_count);
+            let combined_metrics = self.combine_metrics(&previous_metrics, new_metrics, updated_count);
+            state.rolling_metrics = combined_metrics;
             state.sample_count = updated_count;
             state.last_snapshot = now;
             state.next_evaluation = now + chrono::Duration::minutes(5);
-            self.update_anomaly_flags(state, new_metrics, &previous_metrics);
+
+            // Release mutable borrow before calling methods that need immutable self
+            drop(state);
+
+            if let Some(state_ref) = self.monitoring_state.get_mut(&session_id) {
+                self.update_anomaly_flags(state_ref, new_metrics, &previous_metrics);
+            }
 
             let analytics = self.build_monitoring_analytics(new_metrics, Some(&previous_metrics));
             self.monitoring_analytics.insert(session_id, analytics);

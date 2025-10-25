@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { TrendAnalyzerProps, Trend, AnalyticsFilters } from "@/types/analytics";
 import { analyticsApiClient, AnalyticsApiError } from "@/lib/analytics-api";
 import styles from "./TrendAnalyzer.module.scss";

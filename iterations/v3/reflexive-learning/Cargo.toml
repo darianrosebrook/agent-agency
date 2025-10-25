@@ -26,6 +26,9 @@ rand = "0.8"      # For random number generation in algorithms
 # Council integration
 agent-agency-council = { path = "../council" }
 
+# Memory system integration
+agent-memory = { path = "../agent-memory" }
+
 # Database for learning persistence
 sqlx.workspace = true
 

@@ -3,7 +3,8 @@
 //! Manages registration, execution, and lifecycle of MCP tools.
 
 use crate::types::*;
-use crate::tools::DocQualityValidator;
+use crate::tools::{DocQualityValidator, create_memory_tools};
+use agent_memory::MemorySystem;
 use anyhow::Result;
 use dashmap::DashMap;
 use std::process::Stdio;
@@ -21,6 +22,7 @@ pub struct ToolRegistry {
     execution_history: Arc<RwLock<Vec<ToolExecutionResult>>>,
     statistics: Arc<RwLock<ToolRegistryStats>>,
     doc_quality_validator: Arc<DocQualityValidator>,
+    memory_system: Option<Arc<MemorySystem>>,
 }
 
 impl ToolRegistry {
@@ -41,7 +43,13 @@ impl ToolRegistry {
                 last_updated: chrono::Utc::now(),
             })),
             doc_quality_validator: Arc::new(DocQualityValidator::new()),
+            memory_system: None,
         }
+    }
+
+    /// Set the memory system for memory tools
+    pub fn set_memory_system(&mut self, memory_system: Arc<MemorySystem>) {
+        self.memory_system = Some(memory_system);
     }
 
     /// Initialize tool registry
@@ -73,7 +81,14 @@ impl ToolRegistry {
         // Register the documentation quality validator tool
         let doc_quality_tool = self.doc_quality_validator.get_tool_definition();
         self.register_tool(doc_quality_tool).await?;
-        
+
+        // Register memory tools
+        let memory_tools = create_memory_tools();
+        for tool in memory_tools {
+            self.register_tool(tool).await?;
+        }
+        info!("Registered memory tools");
+
         Ok(())
     }
 

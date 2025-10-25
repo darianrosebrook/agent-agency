@@ -8,13 +8,7 @@
   max-height: 800px;
 }
 
-.header {
-  @include flex-between;
-  align-items: center;
-  padding: var(--spacing-lg);
-  border-bottom: 1px solid var(--color-border-light);
-  background-color: var(--color-bg-primary);
-}
+// Dark mode disabled - Light theme only
 
 .title {
   font-size: var(--font-size-xl);
@@ -23,11 +17,7 @@
   margin: 0;
 }
 
-.headerControls {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-md);
-}
+// Dark mode disabled - Light theme only
 
 .chatContainer {
   display: flex;
@@ -35,12 +25,7 @@
   overflow: hidden;
 }
 
-.messagesArea {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  border-right: 1px solid var(--color-border-light);
-}
+// Dark mode disabled - Light theme only
 
 .contextArea {
   width: 300px;
@@ -75,35 +60,7 @@
   }
 }
 
-.error {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  flex: 1;
-  text-align: center;
-  padding: var(--spacing-3xl);
-
-  h3 {
-    color: var(--color-error-800);
-    font-size: var(--font-size-lg);
-    font-weight: var(--font-weight-semibold);
-    margin-bottom: var(--spacing-md);
-    margin-top: 0;
-  }
-
-  p {
-    color: var(--color-error-700);
-    font-size: var(--font-size-base);
-    margin-bottom: var(--spacing-xl);
-  }
-
-  button {
-    @include button-primary;
-    font-size: var(--font-size-sm);
-    padding: var(--spacing-md) var(--spacing-lg);
-  }
-}
+// Dark mode disabled - Light theme only
 
 .errorBanner {
   @include flex-between;
@@ -145,10 +102,7 @@
     flex-direction: column;
   }
 
-  .messagesArea {
-    border-right: none;
-    border-bottom: 1px solid var(--color-border-light);
-  }
+// Dark mode disabled - Light theme only
 
   .contextArea {
     width: 100%;
@@ -157,7 +111,5 @@
     max-height: 300px;
   }
 
-  .chatInterface {
-    height: calc(100vh - var(--header-height) - var(--spacing-3xl));
-  }
+// Dark mode disabled - Light theme only
 }

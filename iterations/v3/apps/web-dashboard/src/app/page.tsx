@@ -1,241 +1,200 @@
-"use client";
+/**
+ * Dashboard Page - Next.js 16 Server Component
+ * 
+ * @author @darianrosebrook
+ * 
+ * Modernized dashboard using Server Components, Suspense boundaries,
+ * and FlowPress design system. Optimized for minimal CLS.
+ */
 
-import React from "react";
-import Header from "@/components/shared/Header";
-import Navigation from "@/components/shared/Navigation";
-import TaskMetrics from "@/components/tasks/TaskMetrics";
-import SLODashboard from "@/components/monitoring/SLODashboard";
-import SLOAlertsDashboard from "@/components/monitoring/SLOAlertsDashboard";
-import { TaskApiClient } from "@/lib/task-api";
-import { TaskMetrics as TaskMetricsType } from "@/types/tasks";
-import styles from "./page.module.scss";
+'use client';
 
-export default function DashboardPage() {
-  const [metrics] = React.useState<TaskMetricsType | null>(null);
-  const [loading, setLoading] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
-  const [apiConnected, setApiConnected] = React.useState(false);
+import { Suspense, useEffect } from 'react';
+import DashboardLayout from '@/components/shared/DashboardLayout';
+import ConnectionBanner from '@/components/shared/ConnectionBanner';
+import MetricsSection from '@/components/shared/MetricsSection';
+import QuickActions from '@/components/shared/QuickActions';
+import SystemStatusCard from '@/components/shared/SystemStatusCard';
+import RecentTasksCard from '@/components/shared/RecentTasksCard';
+import SLODashboard from '@/components/monitoring/SLODashboard';
+import SLOAlertsDashboard from '@/components/monitoring/SLOAlertsDashboard';
+import { OnlineOnly } from '@/components/providers/ConnectionProvider';
+import { Text } from '@/design-system/primitives';
+import { useScrollAnimation, useStaggerAnimation } from '@/interactions';
+import styles from './page.module.scss';
 
-  // const taskApi = new TaskApiClient(); // Commented out - no API calls
+// Development utilities (tree-shaken in production)
+if (process.env.NODE_ENV === 'development') {
+  import('@/utils/responsive-test').then((module) => {
+    // Layout testing utilities available in dev mode
+  });
+}
 
-  React.useEffect(() => {
-    const fetchMetrics = async () => {
-      try {
-        setError(null);
-        setLoading(true);
-        setApiConnected(false);
-
-        // const metricsData = await taskApi.getTaskMetrics();
-        // setMetrics(metricsData);
-        // setApiConnected(true);
-        setLoading(false);
-        setApiConnected(false);
-      } catch (err) {
-        console.error("Failed to fetch metrics:", err);
-        let errorMessage = "Failed to load metrics";
-        
-        if (err instanceof Error) {
-          if (err.message.includes("fetch") || err.message.includes("NetworkError")) {
-            errorMessage = "API server is not available. Please ensure the backend server is running on port 8080.";
-          } else {
-            errorMessage = err.message;
-          }
-        }
-        
-        setError(errorMessage);
-        setApiConnected(false);
-        setLoading(false);
-      }
-    };
-
-    fetchMetrics();
-  }, []);
-
-  const handleRetry = () => {
-    setError(null);
-    setLoading(true);
-    setApiConnected(false);
-    
-    const fetchMetrics = async () => {
-      try {
-        // const metricsData = await taskApi.getTaskMetrics();
-        // setMetrics(metricsData);
-        // setApiConnected(true);
-        setLoading(false);
-        setApiConnected(false);
-      } catch (err) {
-        console.error("Retry failed:", err);
-        let errorMessage = "Failed to load metrics";
-        
-        if (err instanceof Error) {
-          if (err.message.includes("fetch") || err.message.includes("NetworkError")) {
-            errorMessage = "API server is not available. Please ensure the backend server is running on port 8080.";
-          } else {
-            errorMessage = err.message;
-          }
-        }
-        
-        setError(errorMessage);
-        setApiConnected(false);
-        setLoading(false);
-      }
-    };
-
-    fetchMetrics();
-  };
-
-  if (loading) {
-    return (
-      <div className={styles.page}>
-        <Header />
-        <Navigation />
-        <div className={styles.loading}>
-          <div className={styles.spinner}></div>
-          <p>Loading dashboard...</p>
-        </div>
-      </div>
-    );
-  }
-
+/**
+ * Skeleton for dashboard cards
+ * Maintains exact dimensions to prevent CLS
+ */
+function CardSkeleton() {
   return (
-    <div className={styles.page}>
-      <Header />
-      <Navigation />
-      
-      <div className={styles.container}>
-        <div className={styles.header}>
-          <h1 className={styles.title}>Dashboard</h1>
-          <p className={styles.subtitle}>
-            Welcome to Agent Agency V3. Monitor task execution and system health.
-          </p>
-        </div>
-
-        {/* Error State */}
-        {error && (
-          <div className={styles.error}>
-            <div className={styles.errorIcon}>⚠️</div>
-            <div className={styles.errorContent}>
-              <h3>Connection Error</h3>
-              <p>{error}</p>
-              <div className={styles.errorActions}>
-                <button onClick={handleRetry} className={styles.retryButton}>
-                  🔄 Retry Connection
-                </button>
-                <button onClick={() => setError(null)} className={styles.dismissButton}>
-                  ✕ Dismiss
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* API Status Indicator */}
-        <div className={styles.apiStatus}>
-          <div className={styles.statusIndicator}>
-            <span className={styles.statusIcon}>
-              {apiConnected ? "🟢" : "🔴"}
-            </span>
-            <span className={styles.statusText}>
-              API Server: {apiConnected ? "Connected" : "Disconnected"}
-            </span>
-          </div>
-        </div>
-
-        {/* Metrics Section - Show if connected or with fallback */}
-        <div className={styles.metricsSection}>
-          {apiConnected && metrics ? (
-            <TaskMetrics metrics={metrics} />
-          ) : (
-            <div className={styles.emptyState}>
-              <div className={styles.emptyIcon}>📊</div>
-              <h3>No Metrics Available</h3>
-              <p>
-                {apiConnected 
-                  ? "No task metrics data available at this time."
-                  : "Connect to API server to view real-time metrics."
-                }
-              </p>
-              {!apiConnected && (
-                <button onClick={handleRetry} className={styles.connectButton}>
-                  🔗 Connect to API
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* SLO Dashboard - Always show with fallback */}
-        <div className={styles.sloSection}>
-          <SLODashboard />
-        </div>
-
-        {/* Alerts Dashboard - Always show with fallback */}
-        <div className={styles.alertsSection}>
-          <SLOAlertsDashboard />
-        </div>
-
-        <div className={styles.content}>
-          <div className={styles.card}>
-            <h2>Quick Actions</h2>
-            <div className={styles.actions}>
-              <a href="/tasks" className={styles.actionButton}>
-                <span className={styles.actionIcon}>📋</span>
-                <span className={styles.actionText}>View Tasks</span>
-              </a>
-              <a href="/chat" className={styles.actionButton}>
-                <span className={styles.actionIcon}>💬</span>
-                <span className={styles.actionText}>Start Chat</span>
-              </a>
-              <a href="/metrics" className={styles.actionButton}>
-                <span className={styles.actionIcon}>📊</span>
-                <span className={styles.actionText}>View Metrics</span>
-              </a>
-              <a href="/settings" className={styles.actionButton}>
-                <span className={styles.actionIcon}>⚙️</span>
-                <span className={styles.actionText}>Settings</span>
-              </a>
-            </div>
-          </div>
-
-          <div className={styles.card}>
-            <h2>System Status</h2>
-            <div className={styles.status}>
-              <div className={styles.statusItem}>
-                <span className={styles.statusLabel}>API Server</span>
-                <span className={styles.statusValue}>
-                  {apiConnected ? "🟢 Connected" : "🔴 Disconnected"}
-                </span>
-              </div>
-              <div className={styles.statusItem}>
-                <span className={styles.statusLabel}>Database</span>
-                <span className={styles.statusValue}>
-                  {apiConnected ? "🟢 Connected" : "🟡 Unknown"}
-                </span>
-                {/* STATIC: Database status inferred from API connection */}
-              </div>
-              <div className={styles.statusItem}>
-                <span className={styles.statusLabel}>Workers</span>
-                <span className={styles.statusValue}>
-                  {apiConnected ? "🟢 Active" : "🟡 Simulated"}
-                </span>
-                {/* STATIC: Worker status inferred from API connection */}
-              </div>
-              <div className={styles.statusItem}>
-                <span className={styles.statusLabel}>Health Monitor</span>
-                <span className={styles.statusValue}>
-                  {apiConnected ? "🟢 Active" : "🟡 Limited"}
-                </span>
-                {/* STATIC: Health monitor status inferred from API connection */}
-              </div>
-            </div>
-            {!apiConnected && (
-              <div className={styles.statusNote}>
-                <p>⚠️ Running in offline mode. Some features may be limited.</p>
-              </div>
-            )}
-          </div>
-        </div>
+    <div 
+      className={styles.card} 
+      style={{ 
+        minHeight: '200px',
+        height: '200px',
+        maxHeight: '200px',
+        contain: 'layout style paint',
+      }} 
+      role="status" 
+      aria-live="polite" 
+      aria-busy="true"
+    >
+      <div className={styles.loading}>
+        <div className={styles.spinner} aria-hidden="true"></div>
+        <span className="sr-only">Loading card content...</span>
       </div>
     </div>
   );
 }
+
+/**
+ * Skeleton for metrics section
+ * Reserves space for metric tiles
+ */
+function MetricsSkeleton() {
+  return (
+    <div 
+      className={styles.metricsSection} 
+      style={{ 
+        minHeight: '400px',
+        height: '400px',
+        maxHeight: '400px',
+        contain: 'layout style paint',
+      }} 
+      role="status" 
+      aria-live="polite" 
+      aria-busy="true"
+    >
+      <div className={styles.loading}>
+        <div className={styles.spinner} aria-hidden="true"></div>
+        <p aria-live="polite">Loading metrics...</p>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Skeleton for SLO section
+ * Maintains consistent height
+ */
+function SLOSkeleton() {
+  return (
+    <div 
+      className={styles.sloSection} 
+      style={{ 
+        minHeight: '300px',
+        height: '300px',
+        maxHeight: '300px',
+        contain: 'layout style paint',
+      }} 
+      role="status" 
+      aria-live="polite" 
+      aria-busy="true"
+    >
+      <div className={styles.loading}>
+        <div className={styles.spinner} aria-hidden="true"></div>
+        <p aria-live="polite">Loading service level objectives...</p>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Main Dashboard Page Component
+ * Uses Suspense boundaries and GSAP animations
+ */
+export default function DashboardPage() {
+  // GSAP scroll animations for sections
+  const headerAnimation = useScrollAnimation({ type: 'fade', duration: 0.6, delay: 100 });
+  const metricsAnimation = useScrollAnimation({ type: 'slideUp', duration: 0.6, delay: 200 });
+  const sloAnimation = useScrollAnimation({ type: 'slideUp', duration: 0.6, delay: 300 });
+  
+  // Stagger animation for card grid
+  const { ref: cardsGridRef } = useStaggerAnimation({
+    delay: 0.4,
+    stagger: 0.1,
+    duration: 0.5,
+    type: 'slideUp',
+  });
+
+  return (
+    <DashboardLayout>
+      <main role="main" aria-label="Dashboard" className={styles.container}>
+        {/* Page Header - Fade in animation */}
+        <header ref={headerAnimation.ref} className={styles.header}>
+          <Text variant="h1" align="center" className={styles.title} id="page-title">
+            Dashboard
+          </Text>
+          <Text variant="paragraph-large" color="secondary" align="center" className={styles.subtitle}>
+            Welcome to Agent Agency V3. Monitor task execution and system health.
+          </Text>
+        </header>
+
+        {/* Connection Status - Client-only */}
+        <section aria-label="Connection status" role="status">
+          <ConnectionBanner />
+        </section>
+
+        {/* Metrics Section with Suspense and animation */}
+        <section ref={metricsAnimation.ref} aria-labelledby="metrics-heading" role="region">
+          <h2 id="metrics-heading" className="sr-only">Task Metrics</h2>
+          <Suspense fallback={<MetricsSkeleton />}>
+            <MetricsSection />
+          </Suspense>
+        </section>
+
+        {/* SLO Dashboard with Suspense and animation */}
+        <section ref={sloAnimation.ref} aria-labelledby="slo-heading" role="region">
+          <h2 id="slo-heading" className="sr-only">Service Level Objectives</h2>
+          <Suspense fallback={<SLOSkeleton />}>
+            <div className={styles.sloSection}>
+              <OnlineOnly fallback={<SLODashboard />}>
+                <SLODashboard />
+              </OnlineOnly>
+            </div>
+          </Suspense>
+        </section>
+
+        {/* Alerts Dashboard with Suspense */}
+        <section aria-labelledby="alerts-heading" role="region">
+          <h2 id="alerts-heading" className="sr-only">Active Alerts</h2>
+          <Suspense fallback={<SLOSkeleton />}>
+            <div className={styles.alertsSection}>
+              <OnlineOnly fallback={<SLOAlertsDashboard />}>
+                <SLOAlertsDashboard />
+              </OnlineOnly>
+            </div>
+          </Suspense>
+        </section>
+
+        {/* Dashboard Cards Grid with stagger animation */}
+        <section aria-labelledby="overview-heading" role="region">
+          <h2 id="overview-heading" className="sr-only">Dashboard Overview</h2>
+          <div ref={cardsGridRef} className={styles.content}>
+            <Suspense fallback={<CardSkeleton />}>
+              <RecentTasksCard />
+            </Suspense>
+
+            <Suspense fallback={<CardSkeleton />}>
+              <QuickActions />
+            </Suspense>
+
+            <Suspense fallback={<CardSkeleton />}>
+              <SystemStatusCard />
+            </Suspense>
+          </div>
+        </section>
+      </main>
+    </DashboardLayout>
+  );
+}
+

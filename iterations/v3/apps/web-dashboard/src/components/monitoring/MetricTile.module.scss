@@ -26,12 +26,7 @@
   }
 }
 
-.tileHeader {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  margin-bottom: var(--spacing-md);
-}
+// Dark mode disabled - Light theme only
 
 .title {
   font-size: var(--font-size-base);
@@ -41,10 +36,7 @@
   flex: 1;
 }
 
-.icon {
-  font-size: var(--font-size-xl);
-  opacity: 0.7;
-}
+// Dark mode disabled - Light theme only
 
 .tileBody {
   flex: 1;
@@ -53,13 +45,7 @@
   justify-content: center;
 }
 
-.value {
-  font-size: var(--font-size-2xl);
-  font-weight: var(--font-weight-bold);
-  color: var(--color-text-primary);
-  margin-bottom: var(--spacing-xs);
-  line-height: var(--line-height-tight);
-}
+// Dark mode disabled - Light theme only
 
 .change {
   display: flex;
@@ -68,30 +54,13 @@
   font-size: var(--font-size-sm);
 }
 
-.changeValue {
-  font-family: var(--font-family-mono);
-  font-weight: var(--font-weight-medium);
-
-  &.positive {
-    color: var(--color-success-700);
-  }
-
-  &.negative {
-    color: var(--color-error-700);
-  }
-
-  &.neutral {
-    color: var(--color-gray-600);
-  }
-}
+// Dark mode disabled - Light theme only
 
 .changeLabel {
   color: var(--color-text-secondary);
 }
 
-.trendIcon {
-  font-size: var(--font-size-base);
-}
+// Dark mode disabled - Light theme only
 
 // Loading state
 .loading {
@@ -101,13 +70,7 @@
     gap: var(--spacing-md);
   }
 
-  .skeletonHeader {
-    height: 20px;
-    background: linear-gradient(90deg, var(--color-gray-200) 25%, var(--color-gray-100) 50%, var(--color-gray-200) 75%);
-    background-size: 200% 100%;
-    animation: loading 1.5s infinite;
-    border-radius: var(--radius-sm);
-  }
+// Dark mode disabled - Light theme only
 
   .skeletonValue {
     height: 32px;
@@ -117,14 +80,7 @@
     border-radius: var(--radius-sm);
   }
 
-  .skeletonChange {
-    height: 16px;
-    width: 60px;
-    background: linear-gradient(90deg, var(--color-gray-200) 25%, var(--color-gray-100) 50%, var(--color-gray-200) 75%);
-    background-size: 200% 100%;
-    animation: loading 1.5s infinite;
-    border-radius: var(--radius-sm);
-  }
+// Dark mode disabled - Light theme only
 }
 
 @keyframes loading {
@@ -143,9 +99,7 @@
     min-height: 100px;
   }
 
-  .title {
-    font-size: var(--font-size-sm);
-  }
+// Dark mode disabled - Light theme only
 
   .value {
     font-size: var(--font-size-xl);
@@ -158,9 +112,7 @@
     min-height: 80px;
   }
 
-  .tileHeader {
-    margin-bottom: var(--spacing-sm);
-  }
+// Dark mode disabled - Light theme only
 
   .value {
     font-size: var(--font-size-lg);

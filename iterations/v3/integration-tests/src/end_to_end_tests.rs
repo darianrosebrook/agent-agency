@@ -14,7 +14,7 @@ use crate::test_utils::{TestExecutor, TestResult, LONG_TEST_TIMEOUT};
 use claim_extraction::multi_modal_verification::MultiModalVerificationEngine;
 use claim_extraction::evidence::EvidenceCollector;
 use council::advanced_arbitration::AdvancedArbitrationEngine;
-use council::predictive_learning_system::PredictiveLearningSystem;
+use council::predictive_learning::PredictiveLearningSystem;
 use council::intelligent_edge_case_testing::IntelligentEdgeCaseTester;
 use apple_silicon::ane::ANEManager;
 use database::client::DatabaseClient;

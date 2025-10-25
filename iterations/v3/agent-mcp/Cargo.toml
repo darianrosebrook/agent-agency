@@ -19,6 +19,12 @@ tracing.workspace = true
 # Council package provides security functionality
 agent-agency-council = { path = "../council" }
 
+# Memory system for memory MCP tools
+agent-memory = { path = "../agent-memory" }
+
+# Common types and abstractions
+agent-agency-common-types = { path = "../common-types" }
+
 # MCP-specific dependencies
 jsonrpc-core = "18.0"
 jsonrpc-derive = "18.0"

@@ -1,6 +1,7 @@
 //! Memory Decay Engine - Importance weighting and decay schedules
 
 use crate::types::*;
+use crate::workspace_registry;
 use crate::MemoryResult;
 use agent_agency_database::{DatabaseClient, DatabaseConfig, Row};
 use std::sync::Arc;
@@ -13,6 +14,7 @@ use tracing::{info, debug, warn};
 pub struct MemoryDecayEngine {
     db_client: Arc<DatabaseClient>,
     config: DecayConfig,
+    workspace_registry: Option<Arc<crate::workspace_registry::WorkspaceRegistry>>,
 }
 
 impl MemoryDecayEngine {
@@ -24,6 +26,22 @@ impl MemoryDecayEngine {
         Ok(Self {
             db_client,
             config: config.clone(),
+            workspace_registry: None,
+        })
+    }
+
+    /// Create a new decay engine with workspace registry
+    pub async fn new_with_workspace_registry(
+        config: &DecayConfig,
+        workspace_registry: Arc<crate::workspace_registry::WorkspaceRegistry>
+    ) -> MemoryResult<Self> {
+        let db_config = agent_agency_database::DatabaseConfig::default();
+        let db_client = Arc::new(DatabaseClient::new(db_config).await?);
+
+        Ok(Self {
+            db_client,
+            config: config.clone(),
+            workspace_registry: Some(workspace_registry),
         })
     }
 
@@ -56,10 +74,136 @@ impl MemoryDecayEngine {
         let consolidated = self.consolidate_important_memories().await?;
         total_updated += consolidated;
 
+        // Apply workspace-aware decay if registry is available
+        if self.workspace_registry.is_some() {
+            let workspace_decayed = self.apply_workspace_aware_decay(now).await?;
+            total_updated += workspace_decayed;
+
+            // Clean up unused workspaces
+            let workspaces_cleaned = self.cleanup_unused_workspaces().await?;
+            info!("Workspace cleanup: {} workspaces cleaned", workspaces_cleaned);
+        }
+
         info!("Decay cycle completed: {} memories updated, {} boosted, {} consolidated",
               total_updated, boosted, consolidated);
 
         Ok(total_updated)
+    }
+
+    /// Apply workspace-aware decay based on workspace access patterns
+    async fn apply_workspace_aware_decay(&self, now: DateTime<Utc>) -> MemoryResult<usize> {
+        let registry = self.workspace_registry.as_ref().unwrap();
+        let mut total_decayed = 0;
+
+        // Get workspace access statistics
+        let workspaces = registry.get_accessible_workspaces().await?;
+
+        for workspace in workspaces {
+            // Calculate workspace decay multiplier based on access patterns
+            let workspace_decay_multiplier = self.calculate_workspace_decay_multiplier(&workspace, now);
+
+            if workspace_decay_multiplier < 1.0 {
+                // Apply accelerated decay to memories in infrequently accessed workspaces
+                let updated = sqlx::query(
+                    r#"
+                    UPDATE memory_embeddings
+                    SET decay_factor = GREATEST(
+                        decay_factor * $2,
+                        $3  -- minimum decay factor
+                    )
+                    WHERE workspace_id = $1
+                      AND last_accessed < $4 - INTERVAL '24 hours'
+                    "#,
+                )
+                .bind(workspace.id)
+                .bind(workspace_decay_multiplier)
+                .bind(self.config.minimum_memory_strength)
+                .bind(now)
+                .execute(self.db_client.pool())
+                .await?;
+
+                total_decayed += updated.rows_affected() as usize;
+
+                debug!("Applied workspace decay multiplier {:.2} to {} memories in workspace {}",
+                       workspace_decay_multiplier, updated.rows_affected(), workspace.name);
+            }
+        }
+
+        Ok(total_decayed)
+    }
+
+    /// Calculate decay multiplier based on workspace access patterns
+    fn calculate_workspace_decay_multiplier(&self, workspace: &crate::types::WorkspaceEntry, now: DateTime<Utc>) -> f64 {
+        let duration_since_access = now.signed_duration_since(workspace.last_accessed);
+        let hours_since_access = duration_since_access.num_hours() as f64;
+        let access_frequency = workspace.access_count as f64;
+
+        // Base decay: more aggressive for workspaces not accessed recently
+        let base_decay = if hours_since_access < 24.0 {
+            1.0 // No extra decay for recently accessed workspaces
+        } else if hours_since_access < 168.0 { // Week
+            0.95 // Slight decay
+        } else if hours_since_access < 720.0 { // Month
+            0.85 // Moderate decay
+        } else {
+            0.7 // Heavy decay for workspaces not accessed in a month
+        };
+
+        // Access frequency boost: frequently accessed workspaces decay slower
+        let frequency_boost = if access_frequency > 100.0 {
+            1.2 // High usage - slower decay
+        } else if access_frequency > 50.0 {
+            1.1 // Moderate usage - slight boost
+        } else if access_frequency > 10.0 {
+            1.0 // Normal decay
+        } else {
+            0.9 // Low usage - slightly faster decay
+        };
+
+        // Default workspaces get protection
+        let default_protection = if workspace.is_default { 1.1 } else { 1.0 };
+
+        f64::min(base_decay * frequency_boost * default_protection, 1.0f64)
+    }
+
+    /// Clean up workspaces that haven't been accessed for extended periods
+    async fn cleanup_unused_workspaces(&self) -> MemoryResult<usize> {
+        let registry = self.workspace_registry.as_ref().unwrap();
+        let cutoff_date = Utc::now() - Duration::days(90); // 90 days of inactivity
+        let mut cleaned_count = 0;
+
+        // Find workspaces that haven't been accessed in 90+ days and aren't default
+        let all_workspaces = registry.get_accessible_workspaces().await?;
+        let unused_workspaces: Vec<_> = all_workspaces.into_iter()
+            .filter(|w| w.last_accessed < cutoff_date && !w.is_default)
+            .collect();
+
+        for workspace in unused_workspaces {
+            if !workspace.is_default {
+                // Mark workspace as disabled
+                registry.update_workspace_access(&workspace.id, crate::types::WorkspaceAccess::Disabled).await?;
+
+                // Aggressively decay memories in unused workspaces
+                let updated = sqlx::query(
+                    r#"
+                    UPDATE memory_embeddings
+                    SET decay_factor = GREATEST(decay_factor * 0.5, $2)
+                    WHERE workspace_id = $1
+                    "#,
+                )
+                .bind(workspace.id)
+                .bind(self.config.minimum_memory_strength)
+                .execute(self.db_client.pool())
+                .await?;
+
+                cleaned_count += 1;
+
+                info!("Cleaned up unused workspace '{}': {} memories decayed",
+                      workspace.name, updated.rows_affected());
+            }
+        }
+
+        Ok(cleaned_count)
     }
 
     /// Apply exponential decay: importance *= (1 - decay_rate) ^ time_elapsed

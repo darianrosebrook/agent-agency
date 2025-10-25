@@ -8,6 +8,7 @@ use crate::planning::agent::{
     TaskContext, RepositoryInfo, Incident, TechStack, HistoricalData, TaskHistory
 };
 use agent_agency_council::learning::TrendDirection;
+use agent_memory;
 
 /// Quality trend analysis result
 #[derive(Debug, Clone)]
@@ -43,11 +44,20 @@ pub struct ContextBuilderConfig {
 /// Builds enriched context for task planning
 pub struct ContextBuilder {
     config: ContextBuilderConfig,
+    memory_system: Option<Arc<agent_memory::MemorySystem>>,
 }
 
 impl ContextBuilder {
     pub fn new(config: ContextBuilderConfig) -> Self {
-        Self { config }
+        Self {
+            config,
+            memory_system: None,
+        }
+    }
+
+    pub fn with_memory_system(mut self, memory_system: Arc<agent_memory::MemorySystem>) -> Self {
+        self.memory_system = Some(memory_system);
+        self
     }
 
     /// Enrich the base task context with additional information
@@ -74,7 +84,70 @@ impl ContextBuilder {
             enriched.recent_incidents = self.analyze_recent_incidents().await?;
         }
 
+        // Retrieve relevant memories from memory system
+        if let Some(memory_system) = &self.memory_system {
+            enriched.task_history = self.retrieve_relevant_memories(memory_system, &enriched).await?;
+        }
+
         Ok(enriched)
+    }
+
+    /// Retrieve relevant memories for context enrichment
+    async fn retrieve_relevant_memories(
+        &self,
+        memory_system: &Arc<agent_memory::MemorySystem>,
+        context: &TaskContext,
+    ) -> Result<TaskHistory> {
+        // Build search query from task context
+        let query_parts = vec![
+            context.task_description.clone(),
+            context.repo_info.name.clone(),
+            context.tech_stack.primary_language.clone(),
+        ];
+
+        let query = query_parts.join(" ");
+        let memory_query = agent_memory::memory_manager::MemoryQuery {
+            agent_id: Some("orchestrator".to_string()), // Look for system-level memories
+            task_type: Some("planning".to_string()), // Look for planning-related memories
+            memory_type: None,
+            time_range: None,
+            limit: Some(5), // Get top 5 relevant memories
+        };
+
+        // Search memories
+        let memories = memory_system.search_memories(memory_query).await
+            .map_err(|e| anyhow::anyhow!("Failed to search memories: {}", e))?;
+
+        // Convert to TaskHistory format
+        let mut task_history = TaskHistory {
+            previous_similar_tasks: Vec::new(),
+            success_patterns: Vec::new(),
+            failure_patterns: Vec::new(),
+            performance_trends: Vec::new(),
+        };
+
+        for memory in memories {
+            // Extract insights from memory outcome
+            if let Some(outcome) = memory.outcome.as_object() {
+                if let Some(success) = outcome.get("success").and_then(|v| v.as_bool()) {
+                    if success {
+                        task_history.success_patterns.push(memory.output);
+                    } else {
+                        task_history.failure_patterns.push(memory.output);
+                    }
+                }
+            }
+
+            // Add as similar task
+            task_history.previous_similar_tasks.push(format!(
+                "Task: {}\nResult: {}\nOutcome: {}",
+                memory.input,
+                memory.output,
+                serde_json::to_string(&memory.outcome).unwrap_or_default()
+            ));
+        }
+
+        Ok(task_history)
     }
 
     /// Analyze repository structure and metadata

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { VoiceChatSettings } from "@/types/chat";
 import { useVoiceChat } from "@/hooks/useVoiceChat";
 import { useAudioPlayback } from "@/hooks/useTTS";

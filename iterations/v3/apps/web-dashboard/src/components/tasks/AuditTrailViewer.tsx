@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { AuditLogEntry } from "@/types/tasks";
 import styles from "./AuditTrailViewer.module.scss";
 

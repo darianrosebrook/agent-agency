@@ -385,8 +385,9 @@ impl LearningPersistenceManager {
         state.timestamp = Utc::now();
 
         // Maintain history size limit
-        if state.task_history.len() > 10000 {
-            state.task_history = state.task_history.split_off(state.task_history.len() - 5000);
+        let history_len = state.task_history.len();
+        if history_len > 10000 {
+            state.task_history = state.task_history.split_off(history_len - 5000);
         }
 
         Ok(())

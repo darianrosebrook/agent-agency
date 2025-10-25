@@ -5,22 +5,7 @@
   gap: 1.5rem;
 }
 
-.header {
-  text-align: center;
-
-  h3 {
-    font-size: 1.5rem;
-    font-weight: 600;
-    color: var(--color-text-primary);
-    margin: 0 0 0.5rem 0;
-  }
-
-  .subtitle {
-    font-size: 0.875rem;
-    color: var(--color-text-secondary);
-    margin: 0;
-  }
-}
+// Dark mode disabled - Light theme only
 
 .metricsGrid {
   display: grid;
@@ -28,22 +13,7 @@
   gap: 1rem;
 }
 
-.metricCard {
-  background-color: var(--color-background);
-  border: 1px solid var(--color-border);
-  border-radius: 0.75rem;
-  padding: 1.5rem;
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  transition: all 0.2s ease;
-
-  &:hover {
-    border-color: var(--color-primary);
-    box-shadow: var(--shadow-sm);
-    transform: translateY(-2px);
-  }
-}
+// Dark mode disabled - Light theme only
 
 .metricIcon {
   font-size: 2rem;
@@ -57,12 +27,7 @@
   flex-shrink: 0;
 }
 
-.metricContent {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  flex: 1;
-}
+// Dark mode disabled - Light theme only
 
 .metricValue {
   font-size: 1.75rem;
@@ -83,13 +48,7 @@
   }
 }
 
-.metricLabel {
-  font-size: 0.875rem;
-  color: var(--color-text-secondary);
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.025em;
-}
+// Dark mode disabled - Light theme only
 
 .summary {
   background-color: var(--color-background);
@@ -101,13 +60,7 @@
   gap: 1rem;
 }
 
-.summaryItem {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.25rem;
-  text-align: center;
-}
+// Dark mode disabled - Light theme only
 
 .summaryLabel {
   font-size: 0.75rem;
@@ -117,11 +70,7 @@
   letter-spacing: 0.025em;
 }
 
-.summaryValue {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: var(--color-text-primary);
-}
+// Dark mode disabled - Light theme only
 
 // Responsive design
 @media (max-width: 768px) {
@@ -130,10 +79,7 @@
     gap: 0.75rem;
   }
 
-  .metricCard {
-    padding: 1rem;
-    gap: 0.75rem;
-  }
+// Dark mode disabled - Light theme only
 
   .metricIcon {
     font-size: 1.5rem;
@@ -141,9 +87,7 @@
     height: 2.5rem;
   }
 
-  .metricValue {
-    font-size: 1.5rem;
-  }
+// Dark mode disabled - Light theme only
 
   .summary {
     flex-direction: column;
@@ -151,39 +95,13 @@
     padding: 1rem;
   }
 
-  .summaryItem {
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
-    text-align: left;
-  }
+// Dark mode disabled - Light theme only
 
   .summaryLabel {
     font-size: 0.875rem;
   }
 
-  .summaryValue {
-    font-size: 1rem;
-  }
+// Dark mode disabled - Light theme only
 }
 
-// Dark mode support
-@media (prefers-color-scheme: dark) {
-  .metricCard {
-    background-color: var(--color-background-secondary);
-    border-color: var(--color-border-dark);
-
-    &:hover {
-      border-color: var(--color-primary);
-    }
-  }
-
-  .metricIcon {
-    background-color: var(--color-background);
-  }
-
-  .summary {
-    background-color: var(--color-background-secondary);
-    border-color: var(--color-border-dark);
-  }
-}
+// Dark mode disabled - Light theme only

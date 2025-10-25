@@ -34,5 +34,5 @@ lazy_static = "1.4"
 # self-prompting-agent = { path = "../self-prompting-agent" }  # Disabled - has compilation errors
 agent-agency-workers = { path = "../workers" }
 orchestration = { path = "../orchestration" }
-file_ops = { path = "../file_ops" }
+agent-data-processing = { path = "../agent-data-processing" }
 agent-agency-config = { path = "../config" }

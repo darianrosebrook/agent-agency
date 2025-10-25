@@ -11,40 +11,14 @@
   overflow-y: auto;
 }
 
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
-
-  h2 {
-    margin: 0;
-    font-size: 1.25rem;
-    font-weight: 600;
-    color: var(--text-primary);
-  }
-}
+// Dark mode disabled - Light theme only
 
 .headerActions {
   display: flex;
   gap: 0.5rem;
 }
 
-.refreshButton,
-.retryButton {
-  padding: 0.5rem 1rem;
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-  background: var(--background-secondary);
-  color: var(--text-primary);
-  cursor: pointer;
-  font-size: 0.875rem;
-  transition: all 0.2s ease;
-
-  &:hover {
-    background: var(--background-tertiary);
-  }
-}
+// Dark mode disabled - Light theme only
 
 .statsOverview {
   display: grid;
@@ -53,26 +27,7 @@
   margin-bottom: 1.5rem;
 }
 
-.statCard {
-  background: var(--background-secondary);
-  border-radius: 8px;
-  padding: 1rem;
-  text-align: center;
-  border: 1px solid var(--border-color-light);
-
-  .statValue {
-    font-size: 2rem;
-    font-weight: 700;
-    color: var(--text-primary);
-    margin-bottom: 0.25rem;
-  }
-
-  .statLabel {
-    font-size: 0.875rem;
-    color: var(--text-secondary);
-    font-weight: 500;
-  }
-}
+// Dark mode disabled - Light theme only
 
 .filters {
   display: flex;
@@ -81,26 +36,7 @@
   flex-wrap: wrap;
 }
 
-.filterGroup {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-
-  label {
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: var(--text-secondary);
-  }
-
-  select {
-    padding: 0.5rem;
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-    background: var(--background-secondary);
-    color: var(--text-primary);
-    font-size: 0.875rem;
-  }
-}
+// Dark mode disabled - Light theme only
 
 .alertsList {
   display: flex;
@@ -108,34 +44,7 @@
   gap: 1rem;
 }
 
-.alertCard {
-  background: var(--background-secondary);
-  border-radius: 8px;
-  border: 1px solid var(--border-color-light);
-  overflow: hidden;
-  transition: all 0.2s ease;
-
-  &:hover {
-    box-shadow: var(--shadow-sm);
-    border-color: var(--border-color);
-  }
-
-  &.critical {
-    border-left: 4px solid #ef4444;
-  }
-
-  &.error {
-    border-left: 4px solid #f97316;
-  }
-
-  &.warning {
-    border-left: 4px solid #eab308;
-  }
-
-  &.info {
-    border-left: 4px solid #3b82f6;
-  }
-}
+// Dark mode disabled - Light theme only
 
 .alertHeader {
   display: flex;
@@ -145,30 +54,7 @@
   border-bottom: 1px solid var(--border-color-light);
 }
 
-.alertTitle {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-
-  .severityIcon {
-    font-size: 1.25rem;
-  }
-
-  .title {
-    font-weight: 600;
-    color: var(--text-primary);
-  }
-
-  .category {
-    font-size: 0.75rem;
-    background: var(--background-tertiary);
-    color: var(--text-secondary);
-    padding: 0.25rem 0.5rem;
-    border-radius: 12px;
-    text-transform: uppercase;
-    letter-spacing: 0.025em;
-  }
-}
+// Dark mode disabled - Light theme only
 
 .alertMeta {
   display: flex;
@@ -176,43 +62,14 @@
   gap: 1rem;
 }
 
-.status {
-  padding: 0.25rem 0.75rem;
-  border-radius: 12px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.025em;
-
-  &.active {
-    background: rgba(239, 68, 68, 0.1);
-    color: var(--error-color);
-  }
-
-  &.acknowledged {
-    background: rgba(245, 158, 11, 0.1);
-    color: var(--warning-color);
-  }
-
-  &.resolved {
-    background: rgba(16, 185, 129, 0.1);
-    color: var(--success-color);
-  }
-
-  &.suppressed {
-    background: rgba(107, 114, 128, 0.1);
-    color: var(--text-secondary);
-  }
-}
+// Dark mode disabled - Light theme only
 
 .time {
   font-size: 0.875rem;
   color: var(--text-secondary);
 }
 
-.alertBody {
-  padding: 1rem;
-}
+// Dark mode disabled - Light theme only
 
 .description {
   margin: 0 0 1rem 0;
@@ -220,19 +77,7 @@
   line-height: 1.5;
 }
 
-.affectedServices {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-  flex-wrap: wrap;
-
-  .label {
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: var(--text-secondary);
-  }
-}
+// Dark mode disabled - Light theme only
 
 .serviceTag {
   font-size: 0.75rem;
@@ -243,11 +88,7 @@
   font-weight: 500;
 }
 
-.alertMetrics {
-  display: flex;
-  gap: 1rem;
-  flex-wrap: wrap;
-}
+// Dark mode disabled - Light theme only
 
 .metric {
   display: flex;
@@ -266,13 +107,7 @@
   }
 }
 
-.alertActions {
-  display: flex;
-  gap: 0.5rem;
-  padding: 1rem;
-  border-top: 1px solid var(--border-color-light);
-  background: var(--background-tertiary);
-}
+// Dark mode disabled - Light theme only
 
 .actionButton {
   padding: 0.5rem 1rem;
@@ -317,15 +152,7 @@
   }
 }
 
-.footer {
-  margin-top: 1.5rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--border-color-light);
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.875rem;
-  color: var(--text-secondary);
-}
+// Dark mode disabled - Light theme only
 
 .loading,
 .error,
@@ -343,25 +170,14 @@
   }
 }
 
-.spinner {
-  width: 32px;
-  height: 32px;
-  border: 3px solid var(--border-color);
-  border-top: 3px solid var(--primary-color);
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
+// Dark mode disabled - Light theme only
 
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
 
-.error {
-  p {
-    color: var(--error-color);
-  }
-}
+// Dark mode disabled - Light theme only
 
 .noAlerts {
   p {
@@ -369,12 +185,7 @@
   }
 }
 
-// Dark mode adjustments
-@media (prefers-color-scheme: dark) {
-  .container {
-    background: var(--card-background-dark);
-    border-color: var(--border-color-dark);
-  }
+// Dark mode disabled - Light theme only
 
   .statCard,
   .alertCard {
@@ -382,10 +193,7 @@
     border-color: var(--border-color-light-dark);
   }
 
-  .alertHeader,
-  .alertActions {
-    border-color: var(--border-color-light-dark);
-  }
+// Dark mode disabled - Light theme only
 
   .footer {
     border-color: var(--border-color-light-dark);
@@ -399,20 +207,13 @@
     max-height: 70vh;
   }
 
-  .header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 1rem;
-  }
+// Dark mode disabled - Light theme only
 
   .statsOverview {
     grid-template-columns: 1fr;
   }
 
-  .filters {
-    flex-direction: column;
-    align-items: stretch;
-  }
+// Dark mode disabled - Light theme only
 
   .alertHeader {
     flex-direction: column;
@@ -420,19 +221,14 @@
     gap: 0.5rem;
   }
 
-  .alertMeta {
-    width: 100%;
-    justify-content: space-between;
-  }
+// Dark mode disabled - Light theme only
 
   .alertMetrics {
     flex-direction: column;
     gap: 0.5rem;
   }
 
-  .alertActions {
-    flex-direction: column;
-  }
+// Dark mode disabled - Light theme only
 
   .footer {
     flex-direction: column;

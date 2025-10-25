@@ -1,9 +1,6 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useArbiterVerdict } from "@/hooks/useArbiter";
-import { Card, CardHeader, CardTitle, CardContent } from "../shared/Card";
-import { Badge } from "../shared/Badge";
-import { Button } from "../shared/Button";
-import { Alert, AlertDescription } from "../shared/Alert";
+import Card, { CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 import { Input } from "../shared/Input";
 import { Textarea } from "../shared/Textarea";
 import {

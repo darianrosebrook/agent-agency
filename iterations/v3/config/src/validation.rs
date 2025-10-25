@@ -1,16 +1,13 @@
 //! Configuration validation and schema enforcement
 
+use agent_agency_common_types::validation::{ValidationIssue, ValidationSeverity, ValidationSummary};
 use anyhow::{anyhow, Result};
+use chrono;
 use std::collections::HashMap;
 use validator::Validate;
 
-/// Configuration validation result
-#[derive(Debug, Clone)]
-pub struct ValidationResult {
-    pub is_valid: bool,
-    pub errors: Vec<ValidationError>,
-    pub warnings: Vec<String>,
-}
+/// Configuration validation result - now using common types
+pub type ValidationResult = ValidationSummary;
 
 /// Configuration validator
 pub struct ConfigValidator {
@@ -338,60 +335,48 @@ impl ConfigValidator {
 
     /// Validate a complete configuration
     pub fn validate_config<T: Validate>(&self, config: &T) -> ValidationResult {
-        let mut errors = Vec::new();
-        let mut warnings = Vec::new();
+        let mut summary = ValidationSummary::new();
 
         // Use the validator crate for automatic validation
         if let Err(validation_errors) = config.validate() {
             for (field, field_errors) in validation_errors.field_errors() {
                 for error in field_errors {
-                    errors.push(ValidationError {
+                    let issue = ValidationIssue {
+                        severity: ValidationSeverity::Error,
                         field: field.to_string(),
+                        code: error.code.clone().into_owned(),
                         message: error
                             .message
                             .clone()
-                            .unwrap_or_else(|| "Validation failed".to_string().into()),
-                        code: error.code.clone(),
-                    });
+                            .unwrap_or_else(|| "Validation failed".into())
+                            .to_string(),
+                        suggestion: None,
+                        details: None,
+                    };
+                    summary.add_issue(issue);
                 }
             }
         }
 
         // Add custom validation logic here if needed
-        if self.strict_mode && !errors.is_empty() {
-            warnings
-                .push("Strict mode enabled - all validation errors must be resolved".to_string());
+        if self.strict_mode && !summary.is_valid {
+            let warning = ValidationIssue {
+                severity: ValidationSeverity::Warning,
+                field: "configuration".to_string(),
+                code: "strict_mode".to_string(),
+                message: "Strict mode enabled - all validation errors must be resolved".to_string(),
+                suggestion: Some("Fix all validation errors or disable strict mode".to_string()),
+                details: None,
+            };
+            summary.add_issue(warning);
         }
 
-        ValidationResult {
-            is_valid: errors.is_empty(),
-            errors,
-            warnings,
-        }
+        summary.validated_at = chrono::Utc::now();
+        summary
     }
 }
 
 
-/// Validation error with additional context
-#[derive(Debug, Clone)]
-pub struct ValidationError {
-    pub field: String,
-    pub message: std::borrow::Cow<'static, str>,
-    pub code: std::borrow::Cow<'static, str>,
-}
-
-impl std::fmt::Display for ValidationError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "Validation error in field '{}': {}",
-            self.field,
-            self.message.as_ref()
-        )
-    }
-}
-
-impl std::error::Error for ValidationError {}
 
 /// Configuration validation utilities
 pub mod utils {

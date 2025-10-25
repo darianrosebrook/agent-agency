@@ -4,18 +4,7 @@
   gap: 2rem;
 }
 
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-
-  h3 {
-    margin: 0;
-    font-size: 1.25rem;
-    font-weight: 600;
-    color: var(--text-primary);
-  }
-}
+// Dark mode disabled - Light theme only
 
 .timeRange {
   padding: 0.5rem;
@@ -31,11 +20,7 @@
   }
 }
 
-.charts {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 2rem;
-}
+// Dark mode disabled - Light theme only
 
 .chart {
   display: flex;
@@ -50,11 +35,7 @@
   }
 }
 
-.barChart {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
+// Dark mode disabled - Light theme only
 
 .bar {
   display: flex;
@@ -76,26 +57,14 @@
   }
 }
 
-.barLabel {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0 1rem;
-  flex: 1;
-  z-index: 2;
-  position: relative;
-}
+// Dark mode disabled - Light theme only
 
 .modelName {
   font-weight: 500;
   color: var(--text-primary);
 }
 
-.value {
-  font-family: monospace;
-  font-weight: 600;
-  color: var(--text-secondary);
-}
+// Dark mode disabled - Light theme only
 
 .barFill {
   position: absolute;
@@ -107,32 +76,7 @@
   transition: width 0.3s ease;
 }
 
-.table {
-  overflow-x: auto;
-
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.875rem;
-
-    th,
-    td {
-      padding: 0.75rem;
-      text-align: left;
-      border-bottom: 1px solid var(--border-color);
-    }
-
-    th {
-      font-weight: 600;
-      color: var(--text-primary);
-      background: var(--bg-secondary);
-    }
-
-    td {
-      color: var(--text-primary);
-    }
-  }
-}
+// Dark mode disabled - Light theme only
 
 .clickable {
   cursor: pointer;
@@ -143,17 +87,13 @@
   }
 }
 
-.good {
-  color: var(--success-color);
-}
+// Dark mode disabled - Light theme only
 
 .warning {
   color: var(--warning-color);
 }
 
-.bad {
-  color: var(--danger-color);
-}
+// Dark mode disabled - Light theme only
 
 .capabilities {
   margin-top: 1rem;
@@ -166,11 +106,7 @@
   }
 }
 
-.capabilityGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 1rem;
-}
+// Dark mode disabled - Light theme only
 
 .capabilityCard {
   padding: 1rem;
@@ -186,11 +122,7 @@
   }
 }
 
-.capabilityList {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
+// Dark mode disabled - Light theme only
 
 .capability {
   display: flex;
@@ -198,10 +130,7 @@
   align-items: center;
 }
 
-.capability .label {
-  font-weight: 500;
-  color: var(--text-secondary);
-}
+// Dark mode disabled - Light theme only
 
 .capability .value {
   font-family: monospace;
@@ -230,9 +159,7 @@
     gap: 1rem;
   }
 
-  .capabilityGrid {
-    grid-template-columns: 1fr;
-  }
+// Dark mode disabled - Light theme only
 
   .table {
     font-size: 0.75rem;
@@ -244,11 +171,7 @@
   }
 }
 
-// Dark mode support
-@media (prefers-color-scheme: dark) {
-  .bar {
-    background: var(--dark-bg-secondary);
-  }
+// Dark mode disabled - Light theme only
 
   .capabilityCard {
     background: var(--dark-bg-primary);

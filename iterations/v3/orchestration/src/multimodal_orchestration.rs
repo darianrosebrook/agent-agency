@@ -4,10 +4,12 @@
 //! with proper error handling, concurrency control, and monitoring.
 
 use anyhow::{Context, Result};
-use ingestors::{FileWatcher, VideoIngestor, SlidesIngestor, DiagramsIngestor, CaptionsIngestor};
-use enrichers::{VisionEnricher, AsrEnricher, EntityEnricher, VisualCaptionEnricher, CircuitBreaker};
-use crate::enrichers::types::EnrichedBlock;
-use indexers::{Bm25Indexer, HnswIndexer, JobScheduler};
+use agent_data_processing::{
+    ingestion::{IngestionStage, FileIngestor, UrlIngestor, StreamIngestor, DatabaseIngestor, ApiIngestor},
+    enrichment::{EnrichmentStage, VisionEnricher, AsrEnricher, EntityEnricher, VisualCaptionEnricher, CircuitBreaker},
+    indexing::{IndexingStage, Bm25Indexer, HnswIndexer, JobScheduler},
+    types::DataInput,
+};
 use agent_agency_research::{KnowledgeSeeker, ContentType};
 use agent_agency_council::coordinator::ConsensusCoordinator;
 use crate::audit_trail::AuditTrailManager;

@@ -11,7 +11,6 @@ use tokio::sync::{RwLock, mpsc};
 use tracing::{debug, info, warn, error};
 
 /// Federation coordinator that manages the entire federated learning process
-#[derive(Debug)]
 pub struct FederationCoordinator {
     config: FederationConfig,
     participants: Arc<RwLock<HashMap<String, FederationParticipant>>>,
@@ -177,18 +176,20 @@ impl FederationCoordinator {
 
         *self.current_round.write().await = Some(round);
 
+        let participant_count = participant_ids.len();
+
         // Send round start messages to participants
-        for participant_id in participant_ids {
+        for participant_id in &participant_ids {
             let message = ProtocolMessage::RoundStart {
                 round_id,
-                expected_participants: participant_ids.len(),
+                expected_participants: participant_count,
                 timeout_seconds: self.config.round_timeout_seconds,
             };
 
-            self.send_message_to_participant(&participant_id, message).await?;
+            self.send_message_to_participant(participant_id, message).await?;
         }
 
-        info!("Started aggregation round {} with {} participants", round_id, participant_ids.len());
+        info!("Started aggregation round {} with {} participants", round_id, participant_count);
         Ok(round_id)
     }
 
@@ -204,10 +205,12 @@ impl FederationCoordinator {
         self.validate_contribution(participant_id, &contribution).await?;
 
         // Forward to aggregator
+        let zkp = contribution.zkp.as_ref()
+            .ok_or_else(|| anyhow::anyhow!("Missing zero-knowledge proof for contribution"))?;
         self.aggregator.accept_encrypted_update(
             participant_id,
-            contribution.encrypted_update,
-            &contribution.zero_knowledge_proof,
+            contribution.update_data,
+            zkp,
         ).await?;
 
         // Update round state
@@ -237,7 +240,12 @@ impl FederationCoordinator {
             let message = ProtocolMessage::RoundComplete {
                 round_id: result.round_id,
                 aggregated_parameters: result.aggregated_parameters.clone(),
-                quality_metrics: result.quality_metrics.clone(),
+                quality_metrics: crate::protocol::QualityMetrics {
+                    convergence_score: result.quality_metrics.convergence_score,
+                    diversity_score: result.quality_metrics.diversity_score,
+                    confidence_score: result.quality_metrics.confidence_score,
+                    privacy_score: result.quality_metrics.privacy_score,
+                },
             };
 
             self.send_message_to_participant(&participant.id, message).await?;
@@ -268,7 +276,7 @@ impl FederationCoordinator {
         }
 
         // Validate contribution size
-        let contribution_size = contribution.encrypted_update.len();
+        let contribution_size = contribution.update_data.len();
         if contribution_size < self.config.quality_thresholds.min_contribution_size ||
            contribution_size > self.config.quality_thresholds.max_contribution_size {
             return Err(anyhow::anyhow!("Invalid contribution size: {}", contribution_size));
@@ -351,10 +359,12 @@ impl FederationCoordinator {
     }
 
     /// Initialize a new federation
-    pub async fn initialize_federation(&self, federation_id: &str, participants: Vec<FederationParticipant>) -> Result<()> {
+    pub async fn initialize_federation(&self, federation_id: &str, participant_ids: Vec<String>) -> Result<()> {
         let mut federation_participants = self.participants.write().await;
-        for participant in participants {
-            federation_participants.insert(participant.id.clone(), participant);
+        for participant_id in participant_ids {
+            // Create basic participant entry - full participant objects will be registered later
+            let participant = FederationParticipant::new_basic(participant_id.clone());
+            federation_participants.insert(participant_id, participant);
         }
         info!("Initialized federation {} with {} participants", federation_id, federation_participants.len());
         Ok(())
@@ -398,18 +408,13 @@ pub struct RoundInfo {
     pub total_participants: usize,
 }
 
-/// Contribution from a participant
-#[derive(Debug, Clone)]
-pub struct ParticipantContribution {
-    pub encrypted_update: Vec<u8>,
-    pub zero_knowledge_proof: ZeroKnowledgeProof,
-}
 
 // Placeholder types for dependencies that will be implemented in other modules
 use crate::aggregation::SecureAggregator;
 use crate::protocol::{FederationProtocol, ProtocolMessage};
 use crate::participant::FederationParticipant;
 use crate::security::ZeroKnowledgeProof;
+use crate::ParticipantContribution;
 use crate::differential_privacy::PrivacyParameters;
 
 
