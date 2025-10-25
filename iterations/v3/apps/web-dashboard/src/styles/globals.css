@@ -97,10 +97,32 @@
   --font-family-mono: 'DM Mono', monospace;
   --font-family-system: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'DM Mono', monospace;
+  --font-family-base: 'Creato Display', system-ui, sans-serif;
 
   --font-weight-regular: 400;
   --font-weight-medium: 500;
   --font-weight-semibold: 600;
+  
+  /* Display Scale - Editorial impact (from FlowPress template) */
+  --font-size-display-1: clamp(3rem, 10vw, 10rem);      /* 48-160px - Massive hero */
+  --font-size-display-2: clamp(2.5rem, 8vw, 6.875rem);  /* 40-110px - Large hero */
+  --font-size-display-3: clamp(2rem, 6vw, 3.875rem);    /* 32-62px - Statement */
+  
+  --line-height-display: 1;        /* 100% - Super tight, editorial */
+  --letter-spacing-display: -0.4px; /* Tight kerning for impact */
+  
+  /* Tighter line-heights for headings (matching template) */
+  --line-height-h1: 1.1;  /* Tighter than before (was 1.2) */
+  --line-height-h2: 1.1;  /* Tighter than before (was 1.3) */
+  --line-height-h3: 1.2;  /* Tighter than before (was 1.4) */
+  --line-height-h4: 1.3;
+  --line-height-h5: 1.3;
+  --line-height-body: 1.4; /* 140% - template's body style */
+  
+  /* Negative letter-spacing for impact */
+  --letter-spacing-h1: -0.4px;
+  --letter-spacing-h2: -0.3px;
+  --letter-spacing-h3: -0.02em;
 
   /* Spacing */
   --spacing-0: 0;

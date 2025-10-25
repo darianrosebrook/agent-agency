@@ -126,11 +126,11 @@ export default function SettingsPage() {
   return (
     <DashboardLayout>
       <main role="main" aria-label="Settings" className={styles.container}>
-        {/* Page Header */}
+        {/* Page Header - Bold typography */}
         <header ref={headerAnimation.ref} className={styles.header}>
           <div className={styles.headerContent}>
             <div>
-              <Text variant="h1" className={styles.title}>
+              <Text variant="display-3" className={styles.title}>
                 Settings
               </Text>
               <Text variant="paragraph-large" color="secondary" className={styles.subtitle}>

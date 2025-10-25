@@ -26,10 +26,10 @@
 }
 
 .errorCode {
-  font-size: clamp(6rem, 15vw, 10rem);
-  font-weight: 700;
-  line-height: 1;
-  letter-spacing: -0.05em;
+  font-size: clamp(6rem, 15vw, 10rem); /* 96-160px - Template display-1 scale */
+  font-weight: 400; /* Light weight like template */
+  line-height: 1; /* 100% - Super tight like template */
+  letter-spacing: -0.4px; /* Template's tight kerning */
   background: linear-gradient(
     135deg,
     var(--color-brand-primary) 0%,

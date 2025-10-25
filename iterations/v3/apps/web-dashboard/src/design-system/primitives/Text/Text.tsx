@@ -11,6 +11,9 @@
 import React from "react";
 
 export type TextVariant =
+  | "display-1"        // NEW: 160px equivalent - Massive editorial
+  | "display-2"        // NEW: 110px equivalent - Large hero
+  | "display-3"        // NEW: 62px equivalent - Bold statement
   | "h1"
   | "h2"
   | "h3"
@@ -50,55 +53,90 @@ export interface TextProps extends React.HTMLAttributes<HTMLElement> {
 }
 
 const variantStyles: Record<TextVariant, React.CSSProperties> = {
-  h1: {
-    fontSize: "3.5rem",
-    lineHeight: "100%",
+  // Display Scale - Editorial impact (160px, 110px, 62px from template)
+  "display-1": {
+    fontSize: "clamp(3rem, 10vw, 10rem)", // 48-160px - Template's massive h1
+    lineHeight: "1",  // 100% - Super tight
     letterSpacing: "-0.4px",
+    fontWeight: 400,
+    fontFamily: "var(--font-family-display)",
+  },
+  "display-2": {
+    fontSize: "clamp(2.5rem, 8vw, 6.875rem)", // 40-110px - Template's large h2
+    lineHeight: "1",  // 100%
+    letterSpacing: "-0.4px",
+    fontWeight: 400,
+    fontFamily: "var(--font-family-display)",
+  },
+  "display-3": {
+    fontSize: "clamp(2rem, 6vw, 3.875rem)", // 32-62px - Template's h3
+    lineHeight: "1.1",  // 110%
+    letterSpacing: "-0.3px",
+    fontWeight: 400,
+    fontFamily: "var(--font-family-display)",
+  },
+  // Functional headings
+  h1: {
+    fontSize: "clamp(2.5rem, 6vw, 4rem)", // 40-64px - Bolder
+    lineHeight: "1.1",  // Template-inspired tightness
+    letterSpacing: "-0.4px",
+    fontWeight: 400,
     fontFamily: "var(--font-family-display)",
   },
   h2: {
-    fontSize: "2.5rem",
-    lineHeight: "100%",
+    fontSize: "clamp(2rem, 5vw, 3rem)", // 32-48px
+    lineHeight: "1.1",
+    letterSpacing: "-0.3px",
+    fontWeight: 400,
     fontFamily: "var(--font-family-display)",
   },
   h3: {
-    fontSize: "2rem",
-    lineHeight: "110%",
+    fontSize: "clamp(1.5rem, 4vw, 2rem)", // 24-32px
+    lineHeight: "1.2",
+    letterSpacing: "-0.02em",
+    fontWeight: 400,
     fontFamily: "var(--font-family-display)",
   },
   h4: {
-    fontSize: "1.5rem",
-    lineHeight: "120%",
+    fontSize: "clamp(1.25rem, 2vw, 1.75rem)", // 20-28px
+    lineHeight: "1.2",
+    fontWeight: 400,
     fontFamily: "var(--font-family-display)",
   },
   h5: {
-    fontSize: "1.25rem",
-    lineHeight: "130%",
+    fontSize: "clamp(1.125rem, 1.5vw, 1.5rem)", // 18-24px
+    lineHeight: "1.3",
+    fontWeight: 400,
     fontFamily: "var(--font-family-display)",
   },
   h6: {
-    fontSize: "1.125rem",
-    lineHeight: "130%",
+    fontSize: "clamp(1rem, 1vw, 1.25rem)", // 16-20px
+    lineHeight: "1.3",
+    fontWeight: 400,
     fontFamily: "var(--font-family-display)",
   },
   "paragraph-large": {
-    fontSize: "1rem",
-    lineHeight: "140%",
+    fontSize: "1.125rem",  // 18px
+    lineHeight: "1.4",  // 140% - Template body style
+    fontWeight: 400,
     fontFamily: "var(--font-family-display)",
   },
   "paragraph-medium": {
-    fontSize: "0.875rem",
-    lineHeight: "140%",
+    fontSize: "1rem",  // 16px - Template body
+    lineHeight: "1.4", // 140% - Template style
+    fontWeight: 400,
     fontFamily: "var(--font-family-display)",
   },
   "paragraph-small": {
-    fontSize: "0.75rem",
-    lineHeight: "140%",
+    fontSize: "0.9375rem",  // 15px
+    lineHeight: "1.4",  // 140%
+    fontWeight: 400,
     fontFamily: "var(--font-family-display)",
   },
   caption: {
-    fontSize: "0.75rem",
-    lineHeight: "130%",
+    fontSize: "0.875rem",  // 14px
+    lineHeight: "1.4",  // 140%
+    fontWeight: 400,
     fontFamily: "var(--font-family-mono)",
   },
 };
@@ -142,8 +180,8 @@ export function Text({
   // Determine the HTML element to use
   const Component =
     as ??
-    (variant.startsWith("h")
-      ? (variant as "h1" | "h2" | "h3" | "h4" | "h5" | "h6")
+    (variant.startsWith("h") || variant.startsWith("display")
+      ? (variant.startsWith("display") ? "h1" : variant as "h1" | "h2" | "h3" | "h4" | "h5" | "h6")
       : "p");
 
   // Build class list

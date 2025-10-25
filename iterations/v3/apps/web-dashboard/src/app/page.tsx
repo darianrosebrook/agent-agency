@@ -129,9 +129,9 @@ export default function DashboardPage() {
   return (
     <DashboardLayout>
       <main role="main" aria-label="Dashboard" className={styles.container}>
-        {/* Page Header - Fade in animation */}
+        {/* Page Header - Fade in animation with bold typography */}
         <header ref={headerAnimation.ref} className={styles.header}>
-          <Text variant="h1" align="center" className={styles.title} id="page-title">
+          <Text variant="display-2" align="center" className={styles.title} id="page-title">
             Dashboard
           </Text>
           <Text variant="paragraph-large" color="secondary" align="center" className={styles.subtitle}>

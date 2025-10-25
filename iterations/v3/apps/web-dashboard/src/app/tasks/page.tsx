@@ -194,11 +194,11 @@ export default function TasksPage() {
   return (
     <DashboardLayout>
       <main role="main" aria-label="Tasks" className={styles.container}>
-        {/* Page Header */}
+        {/* Page Header - Bold typography */}
         <header ref={headerAnimation.ref} className={styles.header}>
           <div className={styles.headerContent}>
             <div>
-              <Text variant="h1" className={styles.title} id="page-title">
+              <Text variant="display-3" className={styles.title} id="page-title">
                 Tasks
               </Text>
               <Text variant="paragraph-large" color="secondary" className={styles.subtitle}>

@@ -26,14 +26,20 @@ export default function NotFound() {
   return (
     <main className={styles.container} role="main" aria-labelledby="error-heading">
       <div ref={contentAnimation.ref} className={styles.content}>
-        {/* Error Code */}
-        <div className={styles.errorCode} aria-hidden="true">
+        {/* Error Code - Massive display typography */}
+        <Text
+          variant="display-1"
+          as="div"
+          align="center"
+          className={styles.errorCode}
+          aria-hidden="true"
+        >
           404
-        </div>
+        </Text>
         
         {/* Error Message */}
         <Text 
-          variant="h1" 
+          variant="display-3"
           align="center" 
           className={styles.title}
           id="error-heading"
