@@ -31,25 +31,19 @@ pub use alerts::{
     AlertStatus as AlertStatusType, AlertType,
 };
 pub use analytics::{
-    AgentPerformanceSnapshot, AnalyticsConfig, AnalyticsEngine, AnomalyDetectionResult,
-    AnomalySeverity, AnomalyType, BusinessMetricsSnapshot, CoordinationMetricsSnapshot,
-    EffortLevel, HistoricalData, OptimizationRecommendation, OptimizationType, PredictionType,
-    PredictiveModelResult, PriorityLevel, SystemHealthSnapshot, TrendAnalysis, TrendDirection,
+    AnalyticsInsight, AnalyticsDashboardData, AnalyticsSystemOverview,
+    TrendAnalysisSummary, AnomalyDetectionSummary, PredictiveInsightsSummary,
+    TrendAnalysis, AnomalyDetectionResult, PredictiveModelResult,
+    OptimizationRecommendation, CachedInsights, CacheMetadata,
+    CpuStatistics, CpuMeasurement, AnalyticsError,
+    InsightType, InsightSeverity, TrendDirection, AnomalySeverity,
+    PredictionType, ConfidenceInterval, OptimizationPriority, ImplementationEffort,
+    AnalyticsRealTimeUpdate, TrendUpdates, AnomalyUpdates, PredictionUpdates, OptimizationUpdates,
+    SystemMetrics, AgentMetrics, TaskMetrics, ProcessedSystemMetrics, ValidatedPredictions, CachePerformanceMetrics,
+    MLModel, ModelPrediction, OnnxModelInfo, InferenceResult,
+    AnalyticsDashboard,
 };
-// Analytics dashboard re-exports (now from modular analytics_dashboard crate)
-pub use analytics_dashboard::{
-    config::{AnalyticsAlertPreferences, AnalyticsDashboardConfig, AnalyticsPreferences, AnalyticsSession, AnalyticsSubscriptionType},
-    dashboard::AnalyticsDashboard,
-    data::{
-        AnalyticsDashboardData, AnalyticsInsight, AnalyticsSystemOverview, AnomalyDetectionSummary,
-        PredictiveInsightsSummary, TrendAnalysisSummary, ChartConfig, ChartType, DataPoint,
-        InsightSeverity, InsightType, VisualData, CpuStatistics, CpuMeasurement, AnalyticsError,
-        OptimizationPriority, ImplementationEffort,
-    },
-    updates::{AnalyticsRealTimeUpdate, TrendUpdates, AnomalyUpdates, PredictionUpdates, OptimizationUpdates},
-    metrics::{SystemMetrics, AgentMetrics, TaskMetrics, ProcessedSystemMetrics, ValidatedPredictions, CachePerformanceMetrics},
-    ml::{MLModel, ModelPrediction, OnnxModelInfo, InferenceResult},
-};
+// Note: Analytics functionality now consolidated in analytics module above
 pub use cache::{RedisCache, CacheBackend, CacheError};
 pub use dashboard::*;
 pub use logging::*;

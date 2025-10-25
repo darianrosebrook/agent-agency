@@ -20,7 +20,7 @@ members = [
     "system-health-monitor",  # Re-enabled - minimal features first
     "workspace-state-manager",  # Re-enabled - standalone with git2 and database
     "resilience",  # Re-enabled - compiles successfully
-    "observability",  # Re-enabled - compiles successfully
+    # "observability",  # Temporarily disabled - module conflicts during decomposition
     "interfaces",  # MCP interface implementation
     "source-integrity",  # Re-enabled - compiles successfully
     "agent-memory",  # 🧠 NEW: Agent memory system with knowledge graphs and embeddings

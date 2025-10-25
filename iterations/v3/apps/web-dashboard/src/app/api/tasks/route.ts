@@ -1,13 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
 
-// Task listing API proxy
-// Proxies requests to V3 backend task management endpoints
-
+/**
+ * Task listing API proxy
+ * 
+ * Proxies requests to V3 backend task management endpoints
+ * Returns empty task list when backend is not configured
+ * 
+ * @author @darianrosebrook
+ */
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const v3BackendHost =
-      process.env.V3_BACKEND_HOST ?? "http://localhost:8080";
+    const v3BackendHost = process.env.V3_BACKEND_HOST ?? null;
+
+    // Early return if backend is not configured
+    if (!v3BackendHost) {
+      return NextResponse.json({
+        tasks: [],
+        total: 0,
+        backend_status: "unconfigured",
+        message: "Backend not configured, no tasks available",
+        timestamp: new Date().toISOString(),
+      });
+    }
 
     // Build query parameters for filtering
     const params = new URLSearchParams();
@@ -65,63 +80,87 @@ export async function GET(request: NextRequest) {
       signal: AbortSignal.timeout(30000), // 30 seconds
     });
 
-    if (!response.ok) {
-      console.warn(`V3 backend task list failed: ${response.status}`);
-      return NextResponse.json(
-        {
-          error: "backend_error",
-          message: `Failed to fetch tasks: ${response.status}`,
-          tasks: [],
-          total: 0,
-        },
-        { status: response.status }
+    if (!response?.ok) {
+      const statusCode = response?.status ?? 0;
+      console.warn(
+        `⚠️ V3 backend task list failed: ${statusCode} ${response?.statusText ?? "No response"}`
       );
+      return NextResponse.json({
+        error: "backend_error",
+        message: `Backend unavailable: ${statusCode}`,
+        tasks: [],
+        total: 0,
+        backend_status: "unavailable",
+        timestamp: new Date().toISOString(),
+      });
     }
 
-    const backendResponse = await response.json();
+    const backendResponse = (await response.json()) as Record<string, unknown>;
 
     // Return standardized response format
     return NextResponse.json({
-      tasks: backendResponse.tasks || [],
-      total: backendResponse.total || 0,
+      tasks: backendResponse.tasks ?? [],
+      total: backendResponse.total ?? 0,
       filters: {
-        status,
-        phase,
-        priority,
-        working_spec_id: workingSpecId,
+        status: status ?? null,
+        phase: phase ?? null,
+        priority: priority ?? null,
+        working_spec_id: workingSpecId ?? null,
         date_range:
           startDate && endDate ? { start: startDate, end: endDate } : null,
       },
       pagination: {
-        limit: limit ? parseInt(limit) : 20,
-        offset: offset ? parseInt(offset) : 0,
-        has_more: backendResponse.has_more || false,
+        limit: limit ? parseInt(limit, 10) : 20,
+        offset: offset ? parseInt(offset, 10) : 0,
+        has_more: backendResponse.has_more ?? false,
       },
+      backend_status: "healthy",
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error("Task list proxy error:", error);
-
     const errorMessage =
-      error instanceof Error ? error.message : "Unknown error";
+      error instanceof Error ? error.message : String(error ?? "Unknown error");
 
-    return NextResponse.json(
-      {
-        error: "proxy_error",
-        message: `Task list request failed: ${errorMessage}`,
-        tasks: [],
-        total: 0,
-        timestamp: new Date().toISOString(),
-      },
-      { status: 503 }
-    );
+    // Determine if this is a network error
+    const isNetworkError =
+      error instanceof TypeError ||
+      errorMessage.includes("fetch") ||
+      errorMessage.includes("ECONNREFUSED");
+
+    if (isNetworkError) {
+      console.warn(`⚠️ Backend unreachable for tasks: ${errorMessage}`);
+    } else {
+      console.error("🚫 Task list proxy error:", error);
+    }
+
+    return NextResponse.json({
+      error: "proxy_error",
+      message: `Backend unreachable: ${errorMessage}`,
+      tasks: [],
+      total: 0,
+      backend_status: "unreachable",
+      timestamp: new Date().toISOString(),
+    });
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const v3BackendHost =
-      process.env.V3_BACKEND_HOST ?? "http://localhost:8080";
+    const v3BackendHost = process.env.V3_BACKEND_HOST ?? null;
+
+    // Early return if backend is not configured
+    if (!v3BackendHost) {
+      return NextResponse.json(
+        {
+          error: "backend_error",
+          message: "Backend not configured, cannot create tasks",
+          backend_status: "unconfigured",
+          timestamp: new Date().toISOString(),
+        },
+        { status: 503 }
+      );
+    }
+
     const body = await request.json();
 
     const createTaskUrl = `${v3BackendHost}/api/v1/tasks`;
@@ -140,36 +179,54 @@ export async function POST(request: NextRequest) {
       signal: AbortSignal.timeout(30000), // 30 seconds
     });
 
-    if (!response.ok) {
-      console.warn(`V3 backend task creation failed: ${response.status}`);
+    if (!response?.ok) {
+      const statusCode = response?.status ?? 0;
+      console.warn(
+        `⚠️ V3 backend task creation failed: ${statusCode} ${response?.statusText ?? "No response"}`
+      );
       const errorData = await response.json().catch(() => ({}));
       return NextResponse.json(
         {
           error: "backend_error",
-          message: `Failed to create task: ${response.status}`,
+          message: `Backend unavailable: ${statusCode}`,
           details: errorData,
+          backend_status: "unavailable",
+          timestamp: new Date().toISOString(),
         },
-        { status: response.status }
+        { status: statusCode || 503 }
       );
     }
 
-    const backendResponse = await response.json();
+    const backendResponse = (await response.json()) as Record<string, unknown>;
 
     return NextResponse.json({
       ...backendResponse,
       created_via_proxy: true,
+      backend_status: "healthy",
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error("Task creation proxy error:", error);
-
     const errorMessage =
-      error instanceof Error ? error.message : "Unknown error";
+      error instanceof Error ? error.message : String(error ?? "Unknown error");
+
+    // Determine if this is a network error
+    const isNetworkError =
+      error instanceof TypeError ||
+      errorMessage.includes("fetch") ||
+      errorMessage.includes("ECONNREFUSED");
+
+    if (isNetworkError) {
+      console.warn(`⚠️ Backend unreachable for task creation: ${errorMessage}`);
+    } else {
+      console.error("🚫 Task creation proxy error:", error);
+    }
 
     return NextResponse.json(
       {
         error: "proxy_error",
-        message: `Task creation failed: ${errorMessage}`,
+        message: `Backend unreachable: ${errorMessage}`,
+        backend_status: "unreachable",
+        timestamp: new Date().toISOString(),
       },
       { status: 503 }
     );

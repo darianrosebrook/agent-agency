@@ -10,6 +10,7 @@ use cadence::{StatsdClient, QueuingMetricSink, BufferedUdpMetricSink, UdpMetricS
 use super::data::{AnalyticsDashboardData, AnalyticsInsight};
 use super::metrics::CachePerformanceMetrics;
 use crate::errors::ObservabilityError;
+use std::sync::Arc;
 
 // Temporary placeholder types
 #[derive(Debug, Clone)]

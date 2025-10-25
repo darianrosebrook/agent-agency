@@ -11,7 +11,7 @@ use super::config::{AnalyticsDashboardConfig, AnalyticsSession};
 use super::data::{AnalyticsDashboardData, AnalyticsInsight};
 use super::metrics::CachePerformanceMetrics;
 use super::redis_client::RedisClient;
-use crate::analytics::AnalyticsEngine;
+// AnalyticsEngine defined locally as placeholder
 use crate::errors::ObservabilityError;
 
 /// Advanced analytics dashboard service
