@@ -44,8 +44,23 @@ impl Judge for MockJudge {
         self.id
     }
 
-    fn judge_type(&self) -> &'static str {
-        "mock"
+    fn judge_type(&self) -> JudgeType {
+        JudgeType::QualityAssurance // Default for mock judge
+    }
+
+    fn config(&self) -> &JudgeConfig {
+        // Create a static config for mock judge
+        static MOCK_CONFIG: std::sync::OnceLock<JudgeConfig> = std::sync::OnceLock::new();
+        MOCK_CONFIG.get_or_init(|| JudgeConfig {
+            judge_id: "mock-judge".to_string(),
+            judge_type: JudgeType::QualityAssurance,
+            model_name: "mock-model".to_string(),
+            temperature: 0.5,
+            max_tokens: 1000,
+            timeout_seconds: 30,
+            expertise_areas: vec!["testing".to_string()],
+            bias_tendencies: std::collections::HashMap::new(),
+        })
     }
 
     async fn evaluate(

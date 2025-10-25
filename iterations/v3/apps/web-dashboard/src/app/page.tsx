@@ -9,7 +9,8 @@
 
 'use client';
 
-import { Suspense, useEffect } from 'react';
+import { Suspense, useEffect, useRef } from 'react';
+import { gsap } from 'gsap';
 import DashboardLayout from '@/components/shared/DashboardLayout';
 import ConnectionBanner from '@/components/shared/ConnectionBanner';
 import MetricsSection from '@/components/shared/MetricsSection';
@@ -20,12 +21,12 @@ import SLODashboard from '@/components/monitoring/SLODashboard';
 import SLOAlertsDashboard from '@/components/monitoring/SLOAlertsDashboard';
 import { OnlineOnly } from '@/components/providers/ConnectionProvider';
 import { Text } from '@/design-system/primitives';
-import { useScrollAnimation, useStaggerAnimation } from '@/interactions';
+import { useStaggerAnimation } from '@/interactions';
 import styles from './page.module.scss';
 
 // Development utilities (tree-shaken in production)
 if (process.env.NODE_ENV === 'development') {
-  import('@/utils/responsive-test').then((module) => {
+  import('@/utils/responsive-test').then(() => {
     // Layout testing utilities available in dev mode
   });
 }
@@ -113,13 +114,59 @@ function SLOSkeleton() {
  * Uses Suspense boundaries and GSAP animations
  */
 export default function DashboardPage() {
-  // GSAP scroll animations for sections
-  const headerAnimation = useScrollAnimation({ type: 'fade', duration: 0.6, delay: 100 });
-  const metricsAnimation = useScrollAnimation({ type: 'slideUp', duration: 0.6, delay: 200 });
-  const sloAnimation = useScrollAnimation({ type: 'slideUp', duration: 0.6, delay: 300 });
+  const headerRef = useRef<HTMLElement>(null);
+  
+  // Immediate fade-in animation for header (always visible at top)
+  useEffect(() => {
+    const header = headerRef.current;
+    if (!header) return;
+
+    // Set initial state
+    gsap.set(header, { opacity: 0, y: -20 });
+
+    // Animate in immediately
+    gsap.to(header, {
+      opacity: 1,
+      y: 0,
+      duration: 0.6,
+      delay: 0.1,
+      ease: 'power3.out',
+    });
+  }, []);
+
+  const metricsRef = useRef<HTMLElement>(null);
+  const sloRef = useRef<HTMLElement>(null);
+
+  // Immediate animations for above-the-fold sections
+  useEffect(() => {
+    const metrics = metricsRef.current;
+    const slo = sloRef.current;
+
+    if (metrics) {
+      gsap.set(metrics, { opacity: 0, y: 30 });
+      gsap.to(metrics, {
+        opacity: 1,
+        y: 0,
+        duration: 0.6,
+        delay: 0.2,
+        ease: 'power3.out',
+      });
+    }
+
+    if (slo) {
+      gsap.set(slo, { opacity: 0, y: 30 });
+      gsap.to(slo, {
+        opacity: 1,
+        y: 0,
+        duration: 0.6,
+        delay: 0.3,
+        ease: 'power3.out',
+      });
+    }
+  }, []);
   
   // Stagger animation for card grid
-  const { ref: cardsGridRef } = useStaggerAnimation({
+  const { ref: cardsGridRef } = useStaggerAnimation<HTMLDivElement>({
     delay: 0.4,
     stagger: 0.1,
     duration: 0.5,
@@ -129,8 +176,8 @@ export default function DashboardPage() {
   return (
     <DashboardLayout>
       <main role="main" aria-label="Dashboard" className={styles.container}>
-        {/* Page Header - Fade in animation with bold typography */}
-        <header ref={headerAnimation.ref} className={styles.header}>
+        {/* Page Header - Immediate fade in animation with bold typography */}
+        <header ref={headerRef} className={styles.header}>
           <Text variant="display-2" align="center" className={styles.title} id="page-title">
             Dashboard
           </Text>
@@ -145,7 +192,7 @@ export default function DashboardPage() {
         </section>
 
         {/* Metrics Section with Suspense and animation */}
-        <section ref={metricsAnimation.ref} aria-labelledby="metrics-heading" role="region">
+        <section ref={metricsRef} aria-labelledby="metrics-heading" role="region">
           <h2 id="metrics-heading" className="sr-only">Task Metrics</h2>
           <Suspense fallback={<MetricsSkeleton />}>
             <MetricsSection />
@@ -153,7 +200,7 @@ export default function DashboardPage() {
         </section>
 
         {/* SLO Dashboard with Suspense and animation */}
-        <section ref={sloAnimation.ref} aria-labelledby="slo-heading" role="region">
+        <section ref={sloRef} aria-labelledby="slo-heading" role="region">
           <h2 id="slo-heading" className="sr-only">Service Level Objectives</h2>
           <Suspense fallback={<SLOSkeleton />}>
             <div className={styles.sloSection}>

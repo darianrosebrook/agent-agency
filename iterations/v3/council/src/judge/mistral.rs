@@ -2,9 +2,10 @@
 
 use async_trait::async_trait;
 use std::collections::HashMap;
+use uuid::Uuid;
 
 use crate::error::{CouncilError, CouncilResult};
-use super::judge_types::{Judge, JudgeVerdict, JudgeConfig, JudgeType};
+use super::judge_types::{Judge, JudgeVerdict, JudgeConfig, JudgeType, RiskAssessment, JudgeCapabilities};
 use crate::model_client::{ModelClient, ToInferenceRequest};
 use crate::mistral_tokenizer::MistralTokenizer;
 use agent_agency_apple_silicon::telemetry::TelemetryCollector;
@@ -93,11 +94,11 @@ impl Judge for MistralJudge {
 
     async fn evaluate(
         &self,
-        _spec_id: &str,
+        _spec_id: Uuid,
         _title: &str,
         _description: &str,
         _acceptance_criteria: &[String],
-    ) -> CouncilResult<JudgeVerdict> {
+    ) -> Result<JudgeVerdict, Box<dyn std::error::Error + Send + Sync>> {
         // Placeholder implementation - in a real scenario this would:
         // 1. Format the prompt with the specification details
         // 2. Send to Mistral model via model_client
@@ -109,7 +110,26 @@ impl Judge for MistralJudge {
             confidence: 0.8,
             reasoning: "Specification meets basic quality standards".to_string(),
             quality_score: 0.85,
-            risk_assessment: Default::default(),
+            risk_assessment: RiskAssessment::default(),
         })
+    }
+
+    fn capabilities(&self) -> JudgeCapabilities {
+        JudgeCapabilities {
+            supported_domains: vec![
+                "quality_assurance".to_string(),
+                "technical_review".to_string(),
+                "compliance".to_string(),
+            ],
+            max_complexity: ComplexityLevel::Complex,
+            supported_languages: vec!["rust".to_string(), "python".to_string()],
+            specialization_score: 0.85,
+            confidence_threshold: 0.7,
+        }
+    }
+
+    async fn health_check(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        // Basic health check - in a real implementation this would test the model connection
+        Ok(())
     }
 }

@@ -46,7 +46,7 @@ pub struct RiskAssessment {
 }
 
 /// Risk levels for assessments
-#[derive(Debug, Clone, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Ord, PartialOrd, Serialize, Deserialize)]
 pub enum RiskLevel {
     Low,
     Medium,
@@ -556,4 +556,391 @@ pub enum CulturalSensitivity {
     Moderate, // Some cultural considerations needed
     High,     // Significant cultural sensitivity required
     Critical, // Culturally sensitive, requires expert consultation
+}
+
+/// Technical risk assessment
+#[derive(Debug, Clone)]
+pub struct TechnicalRiskAssessment {
+    pub feasibility_score: f64,
+    pub complexity_assessment: ComplexityLevel,
+    pub resource_risks: Vec<String>,
+    pub technology_maturity: f64,
+    pub integration_complexity: f64,
+}
+
+/// Ethical risk assessment
+#[derive(Debug, Clone)]
+pub struct EthicalRiskAssessment {
+    pub privacy_risks: Vec<String>,
+    pub bias_risks: Vec<String>,
+    pub fairness_concerns: Vec<String>,
+    pub transparency_issues: Vec<String>,
+    pub accountability_gaps: Vec<String>,
+}
+
+/// Operational risk assessment
+#[derive(Debug, Clone)]
+pub struct OperationalRiskAssessment {
+    pub deployment_complexity: f64,
+    pub maintenance_burden: f64,
+    pub monitoring_requirements: Vec<String>,
+    pub scalability_concerns: Vec<String>,
+    pub reliability_risks: Vec<String>,
+}
+
+/// Business risk assessment
+#[derive(Debug, Clone)]
+pub struct BusinessRiskAssessment {
+    pub market_risks: Vec<String>,
+    pub regulatory_risks: Vec<String>,
+    pub financial_impacts: Vec<String>,
+    pub stakeholder_impacts: Vec<String>,
+    pub competitive_threats: Vec<String>,
+}
+
+/// Multi-dimensional risk assessment combining all dimensions
+#[derive(Debug, Clone)]
+pub struct MultiDimensionalRiskAssessment {
+    pub overall_risk_score: f64,
+    pub technical_risk: TechnicalRiskAssessment,
+    pub ethical_risk: EthicalRiskAssessment,
+    pub operational_risk: OperationalRiskAssessment,
+    pub business_risk: BusinessRiskAssessment,
+}
+
+/// Complexity assessment for technical risk
+#[derive(Debug, Clone)]
+pub struct ComplexityAssessment {
+    pub algorithmic_complexity: f64,
+    pub data_complexity: f64,
+    pub system_integration: f64,
+    pub development_effort: f64,
+}
+
+/// Resource risk assessment
+#[derive(Debug, Clone)]
+pub struct ResourceRisk {
+    pub resource_type: String,
+    pub availability_score: f64,
+    pub cost_impact: f64,
+    pub timeline_impact: f64,
+}
+
+/// Technology maturity assessment
+#[derive(Debug, Clone)]
+pub struct TechnologyMaturity {
+    pub technology_readiness: f64,
+    pub adoption_rate: f64,
+    pub vendor_stability: f64,
+    pub community_support: f64,
+}
+
+/// Integration complexity assessment
+#[derive(Debug, Clone)]
+pub struct IntegrationComplexity {
+    pub api_complexity: f64,
+    pub data_format_complexity: f64,
+    pub protocol_complexity: f64,
+    pub compatibility_score: f64,
+}
+
+/// Performance risk assessment
+#[derive(Debug, Clone)]
+pub struct PerformanceRisk {
+    pub response_time_risk: f64,
+    pub throughput_risk: f64,
+    pub scalability_risk: f64,
+    pub resource_utilization_risk: f64,
+}
+
+/// Ethical concern category
+#[derive(Debug, Clone)]
+pub struct EthicalConcernCategory {
+    pub category: String,
+    pub severity_score: f32,
+    pub affected_population_size: PopulationSize,
+    pub regulatory_implications: bool,
+}
+
+/// Population size for ethical concerns
+#[derive(Debug, Clone)]
+pub enum PopulationSize {
+    Individual,
+    SmallGroup,
+    LargeGroup,
+    Society,
+    Global,
+}
+
+/// Regulatory risk assessment
+#[derive(Debug, Clone)]
+pub struct RegulatoryRisk {
+    pub compliance_burden: f64,
+    pub legal_risk: f64,
+    pub audit_requirements: Vec<String>,
+    pub certification_needs: Vec<String>,
+}
+
+/// Societal impact assessment
+#[derive(Debug, Clone)]
+pub struct SocietalImpact {
+    pub impact_type: SocietalImpactType,
+    pub time_horizon: TimeHorizon,
+    pub magnitude: f64,
+    pub reversibility: Reversibility,
+    pub affected_domains: Vec<String>,
+}
+
+/// Societal impact types
+#[derive(Debug, Clone)]
+pub enum SocietalImpactType {
+    Social,
+    Economic,
+    Environmental,
+    Technological,
+}
+
+/// Reversibility of impacts
+#[derive(Debug, Clone)]
+pub enum Reversibility {
+    Immediate,
+    ShortTerm,
+    MediumTerm,
+    LongTerm,
+    Permanent,
+}
+
+/// Deployment complexity assessment
+#[derive(Debug, Clone)]
+pub struct DeploymentComplexity {
+    pub environment_count: u32,
+    pub infrastructure_requirements: InfrastructureRequirement,
+    pub automation_level: f64,
+    pub rollback_complexity: f64,
+}
+
+/// Infrastructure requirements
+#[derive(Debug, Clone)]
+pub enum InfrastructureRequirement {
+    Minimal,
+    Standard,
+    Extensive,
+    Specialized,
+}
+
+/// Maintenance requirements
+#[derive(Debug, Clone)]
+pub struct MaintenanceRequirements {
+    pub update_frequency: UpdateFrequency,
+    pub monitoring_complexity: f64,
+    pub backup_requirements: Vec<String>,
+    pub disaster_recovery: bool,
+}
+
+/// Update frequency
+#[derive(Debug, Clone)]
+pub enum UpdateFrequency {
+    Daily,
+    Weekly,
+    Monthly,
+    Quarterly,
+}
+
+/// Scalability concern
+#[derive(Debug, Clone)]
+pub struct ScalabilityConcern {
+    pub concern_type: ScalabilityConcernType,
+    pub current_limitations: String,
+    pub growth_projection: GrowthProjection,
+    pub mitigation_strategies: Vec<String>,
+}
+
+/// Scalability concern types
+#[derive(Debug, Clone)]
+pub enum ScalabilityConcernType {
+    UserLoad,
+    DataVolume,
+    ProcessingPower,
+    NetworkBandwidth,
+}
+
+/// Growth projection
+#[derive(Debug, Clone)]
+pub struct GrowthProjection {
+    pub expected_growth_rate: f64,
+    pub time_to_limit: std::time::Duration,
+    pub growth_pattern: GrowthPattern,
+}
+
+/// Growth patterns
+#[derive(Debug, Clone)]
+pub enum GrowthPattern {
+    Linear,
+    Exponential,
+    Seasonal,
+}
+
+/// Monitoring requirements
+#[derive(Debug, Clone)]
+pub struct MonitoringRequirements {
+    pub metrics_collection: Vec<String>,
+    pub alerting_thresholds: Vec<String>,
+    pub log_aggregation: bool,
+    pub performance_monitoring: bool,
+}
+
+/// Incident response assessment
+#[derive(Debug, Clone)]
+pub struct IncidentResponseAssessment {
+    pub severity_classification: IncidentSeverityLevels,
+    pub response_team_requirements: Vec<String>,
+    pub escalation_procedures: Vec<String>,
+    pub recovery_time_objectives: RecoveryObjectives,
+}
+
+/// Incident severity levels
+#[derive(Debug, Clone)]
+pub struct IncidentSeverityLevels {
+    pub critical_threshold: f64,
+    pub high_threshold: f64,
+    pub medium_threshold: f64,
+    pub low_threshold: f64,
+}
+
+/// Recovery objectives
+#[derive(Debug, Clone)]
+pub struct RecoveryObjectives {
+    pub rto_minutes: u32,
+    pub rpo_minutes: u32,
+    pub recovery_automation: f64,
+    pub backup_frequency: String,
+}
+
+/// Market impact assessment
+#[derive(Debug, Clone)]
+pub struct MarketImpact {
+    pub market_size: f64,
+    pub competitive_pressure: f64,
+    pub market_share_impact: f64,
+    pub entry_barrier_changes: Vec<String>,
+}
+
+/// Financial risk assessment
+#[derive(Debug, Clone)]
+pub struct FinancialRisk {
+    pub cost_overrun_probability: f64,
+    pub revenue_impact: f64,
+    pub cash_flow_risk: f64,
+    pub investment_recovery: f64,
+}
+
+/// Stakeholder complexity assessment
+#[derive(Debug, Clone)]
+pub struct StakeholderComplexity {
+    pub stakeholder_count: u32,
+    pub communication_complexity: f64,
+    pub alignment_difficulty: f64,
+    pub influence_distribution: Vec<String>,
+}
+
+/// Competitive positioning assessment
+#[derive(Debug, Clone)]
+pub struct CompetitivePositioning {
+    pub market_position: String,
+    pub differentiation_factors: Vec<String>,
+    pub competitive_advantages: Vec<String>,
+    pub vulnerability_assessment: Vec<String>,
+}
+
+/// Exit strategy assessment
+#[derive(Debug, Clone)]
+pub struct ExitStrategy {
+    pub exit_options: Vec<String>,
+    pub exit_complexity: f64,
+    pub exit_costs: f64,
+    pub stakeholder_impact: f64,
+}
+
+/// Risk interaction between different risk dimensions
+#[derive(Debug, Clone)]
+pub struct RiskInteraction {
+    pub primary_risk: String,
+    pub secondary_risk: String,
+    pub interaction_type: RiskInteractionType,
+    pub amplification_factor: f64,
+    pub mitigation_synergies: Vec<String>,
+}
+
+/// Types of risk interactions
+#[derive(Debug, Clone)]
+pub enum RiskInteractionType {
+    Amplifying,
+    Compounding,
+    Mitigating,
+    Neutral,
+}
+
+/// Risk dimensions for mitigation targeting
+#[derive(Debug, Clone)]
+pub enum RiskDimension {
+    Technical,
+    Ethical,
+    Operational,
+    Business,
+}
+
+/// Mitigation priority levels
+#[derive(Debug, Clone)]
+pub enum MitigationPriorityLevel {
+    Critical,
+    High,
+    Medium,
+    Low,
+}
+
+/// Mitigation priority assessment
+#[derive(Debug, Clone)]
+pub struct MitigationPriority {
+    pub strategy: String,
+    pub target_dimension: RiskDimension,
+    pub priority: MitigationPriorityLevel,
+    pub expected_reduction: f64,
+    pub implementation_complexity: ComplexityLevel,
+    pub timeline_weeks: u32,
+}
+
+/// Risk trend over time
+#[derive(Debug, Clone)]
+pub enum RiskTrend {
+    Increasing,
+    Decreasing,
+    Stable,
+}
+
+/// Risk projections over time
+#[derive(Debug, Clone)]
+pub struct RiskProjections {
+    pub short_term_trend: RiskTrend,
+    pub medium_term_trend: RiskTrend,
+    pub long_term_trend: RiskTrend,
+    pub inflection_points: Vec<RiskInflectionPoint>,
+    pub stabilization_timeline_months: Option<u32>,
+}
+
+/// Types of risk inflection points
+#[derive(Debug, Clone)]
+pub enum InflectionType {
+    RiskReduction,
+    RiskSpike,
+    ExternalChange,
+    InternalChange,
+}
+
+/// Risk inflection point in projections
+#[derive(Debug, Clone)]
+pub struct RiskInflectionPoint {
+    pub timeline_months: u32,
+    pub inflection_type: InflectionType,
+    pub description: String,
+    pub impact_magnitude: f64,
 }

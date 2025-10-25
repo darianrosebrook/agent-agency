@@ -76,43 +76,53 @@ export function useScrollAnimation<T extends HTMLElement = HTMLElement>(
     // Set initial state
     gsap.set(element, fromVars);
 
+    // Helper to animate element in
+    const animateIn = () => {
+      if (!triggerOnce || !hasAnimated) {
+        setIsVisible(true);
+        setHasAnimated(true);
+
+        // Kill any existing animation
+        if (tweenRef.current) {
+          tweenRef.current.kill();
+        }
+
+        // Animate in with GSAP
+        tweenRef.current = gsap.to(element, {
+          opacity: 1,
+          x: 0,
+          y: 0,
+          scale: 1,
+          duration,
+          delay: delay / 1000, // Convert ms to seconds for GSAP
+          ease: 'power3.out',
+        });
+      }
+    };
+
+    // Helper to animate element out
+    const animateOut = () => {
+      setIsVisible(false);
+
+      if (tweenRef.current) {
+        tweenRef.current.kill();
+      }
+
+      tweenRef.current = gsap.to(element, {
+        ...fromVars,
+        duration: duration * 0.5,
+        ease: 'power2.in',
+      });
+    };
+
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
-            if (!triggerOnce || !hasAnimated) {
-              setIsVisible(true);
-              setHasAnimated(true);
-
-              // Kill any existing animation
-              if (tweenRef.current) {
-                tweenRef.current.kill();
-              }
-
-              // Animate in with GSAP
-              tweenRef.current = gsap.to(element, {
-                opacity: 1,
-                x: 0,
-                y: 0,
-                scale: 1,
-                duration,
-                delay: delay / 1000, // Convert ms to seconds for GSAP
-                ease: 'power3.out',
-              });
-            }
+            animateIn();
           } else if (!triggerOnce) {
             // Animate out if not triggerOnce
-            setIsVisible(false);
-
-            if (tweenRef.current) {
-              tweenRef.current.kill();
-            }
-
-            tweenRef.current = gsap.to(element, {
-              ...fromVars,
-              duration: duration * 0.5,
-              ease: 'power2.in',
-            });
+            animateOut();
           }
         });
       },
@@ -122,9 +132,23 @@ export function useScrollAnimation<T extends HTMLElement = HTMLElement>(
       }
     );
 
-    observer.observe(element);
+    // Use requestAnimationFrame to check viewport after layout is complete
+    const rafId = requestAnimationFrame(() => {
+      const rect = element.getBoundingClientRect();
+      const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+      const isAlreadyVisible = rect.top < viewportHeight && rect.bottom > 0;
+
+      if (isAlreadyVisible) {
+        // Trigger animation immediately if already in viewport
+        animateIn();
+      } else {
+        // Only observe if not already visible
+        observer.observe(element);
+      }
+    });
 
     return () => {
+      cancelAnimationFrame(rafId);
       observer.unobserve(element);
       if (tweenRef.current) {
         tweenRef.current.kill();
@@ -176,22 +200,29 @@ export function useStaggerAnimation<T extends HTMLElement = HTMLElement>(
     // Set initial state for all children
     gsap.set(children, fromVars);
 
+    // Helper to animate children in
+    const animateChildren = () => {
+      if (!hasAnimated) {
+        setHasAnimated(true);
+
+        // Stagger animation
+        gsap.to(children, {
+          opacity: 1,
+          y: 0,
+          duration,
+          delay,
+          stagger,
+          ease: 'power2.out',
+        });
+      }
+    };
+
     // Observe container
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          if (entry.isIntersecting && !hasAnimated) {
-            setHasAnimated(true);
-
-            // Stagger animation
-            gsap.to(children, {
-              opacity: 1,
-              y: 0,
-              duration,
-              delay,
-              stagger,
-              ease: 'power2.out',
-            });
+          if (entry.isIntersecting) {
+            animateChildren();
           }
         });
       },
@@ -201,9 +232,23 @@ export function useStaggerAnimation<T extends HTMLElement = HTMLElement>(
       }
     );
 
-    observer.observe(container);
+    // Use requestAnimationFrame to check viewport after layout is complete
+    const rafId = requestAnimationFrame(() => {
+      const rect = container.getBoundingClientRect();
+      const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+      const isAlreadyVisible = rect.top < viewportHeight && rect.bottom > 0;
+
+      if (isAlreadyVisible) {
+        // Trigger animation immediately if already in viewport
+        animateChildren();
+      } else {
+        // Only observe if not already visible
+        observer.observe(container);
+      }
+    });
 
     return () => {
+      cancelAnimationFrame(rafId);
       observer.unobserve(container);
     };
   }, [delay, stagger, duration, type, hasAnimated]);

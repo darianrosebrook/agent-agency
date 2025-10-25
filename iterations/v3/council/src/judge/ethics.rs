@@ -5,7 +5,7 @@ use uuid::Uuid;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
-use super::judge_types::*;
+use super::judge_types::{*, JudgeCapabilities};
 
 /// Ethics-focused judge implementation
 pub struct EthicsJudge {
@@ -155,7 +155,7 @@ impl EthicsJudge {
         description: &str,
         acceptance_criteria: &[String],
     ) -> Result<f32, Box<dyn std::error::Error + Send + Sync>> {
-        let mut score = 1.0;
+        let mut score: f32 = 1.0;
 
         // Check for ethical concerns in description
         for concern in &self.config.ethical_concerns {
@@ -184,7 +184,7 @@ impl EthicsJudge {
         // Simplified compliance evaluation
         let compliance_keywords = ["gdpr", "ccpa", "compliance", "audit", "regulation"];
 
-        let mut score = 0.5; // Base score
+        let mut score: f32 = 0.5; // Base score
 
         for keyword in &compliance_keywords {
             if description.to_lowercase().contains(keyword) {
@@ -193,6 +193,26 @@ impl EthicsJudge {
         }
 
         Ok(score.min(1.0))
+    }
+
+    fn capabilities(&self) -> JudgeCapabilities {
+        JudgeCapabilities {
+            supported_domains: vec![
+                "ethics".to_string(),
+                "compliance".to_string(),
+                "privacy".to_string(),
+                "accountability".to_string(),
+            ],
+            max_complexity: ComplexityLevel::Complex,
+            supported_languages: vec!["all".to_string()],
+            specialization_score: 0.9,
+            confidence_threshold: 0.7,
+        }
+    }
+
+    async fn health_check(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        // Ethics judge is always healthy (no external dependencies)
+        Ok(())
     }
 }
 
