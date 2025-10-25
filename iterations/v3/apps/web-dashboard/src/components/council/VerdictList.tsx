@@ -12,6 +12,17 @@ import { Text } from '@/design-system/primitives';
 import { Button } from '@/design-system/primitives';
 import { Input } from '@/design-system/primitives';
 import { Select } from '@/design-system/primitives';
+import { councilApiClient } from '@/lib/council-api';
+import { useCouncilWebSocket } from '@/hooks/useCouncilWebSocket';
+import {
+  useCouncilStore,
+  useSortedVerdicts,
+  useCouncilActions,
+  useCouncilPagination,
+  useCouncilFilters,
+  useCouncilLoading,
+  useCouncilErrors
+} from '@/stores/council';
 import {
   Search,
   Filter,
@@ -78,24 +89,21 @@ interface VerdictListProps {
 }
 
 export function VerdictList({ className }: VerdictListProps) {
-  // State management
-  const [verdicts, setVerdicts] = useState<Verdict[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [selectedVerdict, setSelectedVerdict] = useState<Verdict | null>(null);
+  // Use Zustand store for state management
+  const sortedVerdicts = useSortedVerdicts();
+  const pagination = useCouncilPagination();
+  const filters = useCouncilFilters();
+  const loading = useCouncilLoading();
+  const errors = useCouncilErrors();
+  const selectedVerdict = useCouncilStore((state) => state.selectedVerdict);
+
+  const actions = useCouncilActions();
+
+  // Local UI state
   const [showFilters, setShowFilters] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
 
-  // Filtering and sorting
-  const [filters, setFilters] = useState<VerdictFilters>({});
-  const [sortField, setSortField] = useState<SortField>('createdAt');
-  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
-  const [searchQuery, setSearchQuery] = useState('');
-
-  // Pagination
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize] = useState(20);
-  const [totalVerdicts, setTotalVerdicts] = useState(0);
+  // WebSocket for real-time updates
+  const { isConnected } = useCouncilWebSocket();
 
   // Fetch verdicts from API
   const fetchVerdicts = async (currentFilters = filters) => {
