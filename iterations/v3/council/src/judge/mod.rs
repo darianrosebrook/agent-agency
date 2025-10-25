@@ -54,7 +54,7 @@ impl JudgeOrchestrator {
         title: &str,
         description: &str,
         acceptance_criteria: &[String],
-    ) -> Result<Vec<VerdictSummary>, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<Vec<JudgeVerdictSummary>, Box<dyn std::error::Error + Send + Sync>> {
         let mut verdicts = Vec::new();
 
         for judge in &self.judges {
@@ -94,7 +94,7 @@ impl JudgeOrchestrator {
     }
 
     /// Get consensus verdict from judge panel
-    pub fn get_consensus_verdict(&self, verdicts: &[VerdictSummary]) -> ConsensusResult {
+    pub fn get_consensus_verdict(&self, verdicts: &[JudgeVerdictSummary]) -> ConsensusResult {
         if verdicts.is_empty() {
             return ConsensusResult::InsufficientData;
         }
@@ -104,8 +104,8 @@ impl JudgeOrchestrator {
         let mut reject_count = 0;
         let mut total_confidence = 0.0;
 
-        for verdict in verdicts {
-            total_confidence += match &verdict.verdict {
+        for verdict_summary in verdicts {
+            total_confidence += match &verdict_summary.verdict {
                 JudgeVerdict::Approve { confidence, .. } => {
                     approve_count += 1;
                     *confidence

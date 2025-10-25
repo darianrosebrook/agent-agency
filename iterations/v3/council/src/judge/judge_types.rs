@@ -228,8 +228,25 @@ pub enum JudgeType {
     Ethics, // Advanced ethical reasoning judge
     Technical,
     Quality,
-    Integration,
-    Unknown,
+}
+
+impl std::fmt::Display for JudgeType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let name = match self {
+            JudgeType::Constitutional => "constitutional",
+            JudgeType::QualityAssurance => "quality_assurance",
+            JudgeType::Security => "security",
+            JudgeType::Performance => "performance",
+            JudgeType::Architecture => "architecture",
+            JudgeType::Testing => "testing",
+            JudgeType::Compliance => "compliance",
+            JudgeType::DomainExpert => "domain_expert",
+            JudgeType::Ethics => "ethics",
+            JudgeType::Technical => "technical",
+            JudgeType::Quality => "quality",
+        };
+        write!(f, "{}", name)
+    }
 }
 
 /// Judge configuration

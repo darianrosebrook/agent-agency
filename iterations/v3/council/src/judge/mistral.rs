@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use uuid::Uuid;
 
 use crate::error::{CouncilError, CouncilResult};
-use super::judge_types::{Judge, JudgeVerdict, JudgeConfig, JudgeType, RiskAssessment, JudgeCapabilities};
+use super::judge_types::{Judge, JudgeVerdict, JudgeConfig, JudgeType, RiskAssessment, JudgeCapabilities, ComplexityLevel};
 use crate::model_client::{ModelClient, ToInferenceRequest};
 use crate::mistral_tokenizer::MistralTokenizer;
 use agent_agency_apple_silicon::telemetry::TelemetryCollector;

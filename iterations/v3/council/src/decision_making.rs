@@ -364,10 +364,18 @@ impl AlgorithmicDecisionEngine {
                 Ok(FinalDecision::Refine {
                     refinement_directive: RefinementDirective {
                         required_changes: required_changes.iter().map(|change| RequiredChange {
-                            category: change.category.clone(),
+                            category: match change.change_type {
+                                crate::judge::ChangeType::SecurityFix => crate::judge::ChangeCategory::Security,
+                                crate::judge::ChangeType::PerformanceOptimization => crate::judge::ChangeCategory::Performance,
+                                crate::judge::ChangeType::CodeQuality => crate::judge::ChangeCategory::Quality,
+                                crate::judge::ChangeType::Documentation => crate::judge::ChangeCategory::Documentation,
+                                crate::judge::ChangeType::Testing => crate::judge::ChangeCategory::Quality,
+                                crate::judge::ChangeType::Architecture => crate::judge::ChangeCategory::Architecture,
+                                crate::judge::ChangeType::Configuration => crate::judge::ChangeCategory::Quality,
+                            },
                             description: change.description.clone(),
-                            rationale: change.rationale.clone(),
-                             acceptance_criteria: Self::extract_acceptance_criteria(&change.description, &change.rationale),
+                            rationale: format!("Required change: {:?}", change.change_type),
+                            acceptance_criteria: format!("Implement: {}", change.description),
                         }).collect(),
                             change_priority: priority.clone(),
                             estimated_effort: estimated_effort.clone(),
@@ -454,13 +462,13 @@ impl AlgorithmicDecisionEngine {
         // Make decisions based on risk assessment
         let risk_level = match &aggregation_result.council_decision {
             crate::verdict_aggregation::CouncilDecision::Approve { risk_assessment, .. } => {
-                risk_assessment.overall_risk
+                risk_assessment.overall_risk.clone()
             },
             _ => crate::judge::RiskLevel::High, // Default to high risk for non-approval
         };
 
         // Check against organizational risk limits
-        let max_allowed_risk = context.organizational_constraints.max_risk_level;
+        let max_allowed_risk = context.organizational_constraints.max_risk_level.clone();
 
         if risk_level <= max_allowed_risk {
             // Risk is acceptable

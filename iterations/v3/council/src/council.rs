@@ -345,9 +345,9 @@ impl Council {
         // Store decision outcome in memory for future learning
         self.store_decision_memory(
             session.session_id.clone(),
-            &review_context.working_spec,
+            &convert_local_to_contract_spec(&review_context.working_spec),
             &final_decision,
-            &review_context.risk_tier,
+            &convert_local_to_contract_risk_tier(&review_context.risk_tier),
         ).await;
 
         Ok(())
@@ -566,7 +566,13 @@ impl Council {
         let verdict_result = if let Some(circuit_breaker) = circuit_breakers.get("llm_service") {
             // Use circuit breaker for LLM-based judges
             circuit_breaker.execute(|| async {
-                judge.review_spec(context).await.map_err(|e| {
+                let spec_id = uuid::Uuid::new_v4(); // Generate a spec ID
+                judge.evaluate(
+                    spec_id,
+                    &context.working_spec.title,
+                    &context.working_spec.title, // Use title as description for now
+                    &context.working_spec.acceptance_criteria.iter().map(|ac| ac.description.clone()).collect::<Vec<_>>(),
+                ).await.map_err(|e| {
                     AgencyError::new(
                         crate::error_handling::ErrorCategory::ExternalService,
                         "JUDGE_REVIEW_FAILED",
@@ -579,7 +585,15 @@ impl Council {
             }).await
         } else {
             // Direct execution for other judges
-            judge.review_spec(context).await.map_err(|e| {
+            {
+    let spec_id = uuid::Uuid::new_v4(); // Generate a spec ID
+    judge.evaluate(
+        spec_id,
+        &context.working_spec.title,
+        &context.working_spec.title, // Use title as description for now
+        &context.working_spec.acceptance_criteria.iter().map(|ac| ac.description.clone()).collect::<Vec<_>>(),
+    ).await
+}.map_err(|e| {
                 AgencyError::new(
                     crate::error_handling::ErrorCategory::ExternalService,
                     "JUDGE_REVIEW_FAILED",
@@ -599,7 +613,15 @@ impl Council {
                     match orchestrator.handle_error(agency_error).await {
                         Ok(_) => {
                             // Recovery successful, try again
-                            judge.review_spec(context).await.map_err(|e| {
+                            {
+    let spec_id = uuid::Uuid::new_v4(); // Generate a spec ID
+    judge.evaluate(
+        spec_id,
+        &context.working_spec.title,
+        &context.working_spec.title, // Use title as description for now
+        &context.working_spec.acceptance_criteria.iter().map(|ac| ac.description.clone()).collect::<Vec<_>>(),
+    ).await
+}.map_err(|e| {
                                 AgencyError::new(
                                     crate::error_handling::ErrorCategory::ExternalService,
                                     "JUDGE_REVIEW_FAILED_AFTER_RECOVERY",
@@ -636,7 +658,18 @@ impl Council {
         context: &ReviewContext,
     ) -> CouncilResult<JudgeContribution> {
         let start_time = std::time::Instant::now();
-        let verdict = judge.review_spec(context).await?;
+        let verdict = {
+            let spec_id = uuid::Uuid::new_v4(); // Generate a spec ID
+            judge.evaluate(
+                spec_id,
+                &context.working_spec.title,
+                &context.working_spec.title, // Use title as description for now
+                &context.working_spec.acceptance_criteria.iter().map(|ac| ac.description.clone()).collect::<Vec<_>>(),
+            ).await
+        }.map_err(|e| CouncilError::JudgeError {
+            judge_id: judge.config().judge_id.clone(),
+            message: format!("Judge evaluation failed: {}", e),
+        })?;
         let processing_time_ms = start_time.elapsed().as_millis() as u64;
 
         Ok(JudgeContribution {
@@ -971,4 +1004,44 @@ pub fn create_default_council() -> CouncilResult<Council> {
     let decision_engine = create_decision_engine();
 
     Ok(Council::new(config, judges, verdict_aggregator, decision_engine))
+}
+
+/// Convert local WorkingSpec to contract WorkingSpec
+fn convert_local_to_contract_spec(local_spec: &crate::types::WorkingSpec) -> agent_agency_contracts::working_spec::WorkingSpec {
+    agent_agency_contracts::working_spec::WorkingSpec {
+        version: "1.0".to_string(),
+        id: local_spec.id.clone(),
+        title: local_spec.title.clone(),
+        description: local_spec.title.clone(), // Use title as description
+        goals: local_spec.acceptance_criteria.iter().map(|ac| ac.description.clone()).collect(),
+        risk_tier: match local_spec.risk_tier {
+            crate::types::RiskTier::Tier1 => 1,
+            crate::types::RiskTier::Tier2 => 2,
+            crate::types::RiskTier::Tier3 => 3,
+        },
+        scope: vec![], // Empty scope for now
+        constraints: agent_agency_contracts::working_spec::WorkingSpecConstraints {
+            max_duration_hours: None,
+            max_cost: None,
+            required_skills: vec![],
+            environment_requirements: vec![],
+        },
+        test_plan: None,
+        rollback_plan: None,
+        context: agent_agency_contracts::working_spec::WorkingSpecContext {
+            created_by: "council".to_string(),
+            created_at: chrono::Utc::now(),
+            updated_at: chrono::Utc::now(),
+            tags: vec![],
+        },
+    }
+}
+
+/// Convert local RiskTier to contract RiskTier
+fn convert_local_to_contract_risk_tier(local_tier: &crate::types::RiskTier) -> agent_agency_contracts::task_request::RiskTier {
+    match local_tier {
+        crate::types::RiskTier::Tier1 => agent_agency_contracts::task_request::RiskTier::Tier1,
+        crate::types::RiskTier::Tier2 => agent_agency_contracts::task_request::RiskTier::Tier2,
+        crate::types::RiskTier::Tier3 => agent_agency_contracts::task_request::RiskTier::Tier3,
+    }
 }
