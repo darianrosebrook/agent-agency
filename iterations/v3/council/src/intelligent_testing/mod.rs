@@ -1,7 +1,7 @@
 //! Intelligent Edge Case Testing Module
 //!
-//! This module provides comprehensive intelligent testing capabilities
-//! broken down into focused, SOLID-compliant components.
+//! This module provides comprehensive edge case testing capabilities
+//! with dynamic test generation, analysis, and optimization.
 
 pub mod types;
 pub mod generation;
@@ -14,7 +14,6 @@ pub mod nlp;
 pub mod errors;
 pub mod orchestrator;
 
-// Re-export main types and orchestrator
-pub use orchestrator::IntelligentEdgeCaseTesting;
+// Re-export main types for convenience
 pub use types::*;
-pub use errors::*;
+pub use orchestrator::*;

@@ -244,9 +244,9 @@ export default function TasksPage() {
           <Suspense fallback={<MetricsSkeleton />}>
             {loading ? (
               <MetricsSkeleton />
-            ) : (
+            ) : metrics ? (
               <TaskMetrics metrics={metrics} />
-            )}
+            ) : null}
           </Suspense>
         </section>
 
@@ -261,7 +261,7 @@ export default function TasksPage() {
             <h2 id="filters-heading" className="sr-only">Task Filters</h2>
             <TaskFilters
               filters={filters}
-              onChange={handleFiltersChange}
+              onFiltersChange={handleFiltersChange}
             />
           </section>
         )}

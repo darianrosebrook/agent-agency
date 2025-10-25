@@ -19,7 +19,7 @@ import styles from '@/app/page.module.scss';
 function MetricsSection() {
   const {
     data: metrics,
-    isLoading,
+    // isLoading,
     error,
     isStale,
     refresh: refreshMetrics

@@ -31,11 +31,7 @@ impl MistralJudge {
 
         let telemetry = TelemetryCollector::new();
 
-        let model_client = ModelClient::new()
-            .map_err(|e| CouncilError::JudgeError {
-                judge_id: "mistral-judge".to_string(),
-                message: format!("Failed to create model client: {}", e),
-            })?;
+        let model_client = ModelClient::new();
 
         let judge_prompt_template = r#"
 You are a specialized AI judge evaluating working specifications for software development tasks.
@@ -121,9 +117,12 @@ impl Judge for MistralJudge {
                 "technical_review".to_string(),
                 "compliance".to_string(),
             ],
+            max_spec_length: 15000,
             max_complexity: ComplexityLevel::Complex,
             supported_languages: vec!["rust".to_string(), "python".to_string()],
             specialization_score: 0.85,
+             requires_network: true,
+            processing_timeout_seconds: 120,
             confidence_threshold: 0.7,
         }
     }

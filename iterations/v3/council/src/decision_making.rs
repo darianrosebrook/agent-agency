@@ -209,7 +209,7 @@ pub struct QualityGate {
 /// Refinement directive
 #[derive(Debug, Clone)]
 pub struct RefinementDirective {
-    pub required_changes: Vec<RequiredChange>,
+    pub required_changes: Vec<RefinementChange>,
     pub change_priority: crate::judge::ChangePriority,
     pub estimated_effort: crate::verdict_aggregation::AggregatedEffort,
     pub acceptance_criteria: Vec<String>,
@@ -218,7 +218,7 @@ pub struct RefinementDirective {
 
 /// Required change specification
 #[derive(Debug, Clone)]
-pub struct RequiredChange {
+pub struct RefinementChange {
     pub category: crate::judge::ChangeCategory,
     pub description: String,
     pub rationale: String,
@@ -363,7 +363,7 @@ impl AlgorithmicDecisionEngine {
                 if *confidence >= 0.4 && context.organizational_constraints.allow_refinements {
                 Ok(FinalDecision::Refine {
                     refinement_directive: RefinementDirective {
-                        required_changes: required_changes.iter().map(|change| RequiredChange {
+                        required_changes: required_changes.iter().map(|change| RefinementChange {
                             category: match change.change_type {
                                 crate::judge::ChangeType::SecurityFix => crate::judge::ChangeCategory::Security,
                                 crate::judge::ChangeType::PerformanceOptimization => crate::judge::ChangeCategory::Performance,

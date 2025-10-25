@@ -41,9 +41,9 @@ export default function TaskDetailPage() {
   const [activeTab, setActiveTab] = useState<"overview" | "audit" | "artifacts">("overview");
 
   // GSAP animations
-  const headerAnimation = useScrollAnimation({ type: 'fade', duration: 0.6, delay: 100 });
-  const tabsAnimation = useScrollAnimation({ type: 'slideUp', duration: 0.5, delay: 200 });
-  const contentAnimation = useScrollAnimation({ type: 'slideUp', duration: 0.6, delay: 300 });
+  const headerAnimation = useScrollAnimation<HTMLDivElement>({ type: 'fade', duration: 0.6, delay: 100 });
+  const tabsAnimation = useScrollAnimation<HTMLDivElement>({ type: 'slideUp', duration: 0.5, delay: 200 });
+  const contentAnimation = useScrollAnimation<HTMLDivElement>({ type: 'slideUp', duration: 0.6, delay: 300 });
 
   const taskApi = new TaskApiClient();
 
@@ -85,24 +85,25 @@ export default function TaskDetailPage() {
     });
   };
 
-  const getStatusColor = (status: Task["status"]) => {
-    switch (status) {
-      case "completed":
-        return styles.success;
-      case "running":
-        return styles.primary;
-      case "pending":
-        return styles.warning;
-      case "paused":
-        return styles.secondary;
-      case "failed":
-        return styles.error;
-      case "cancelled":
-        return styles.neutral;
-      default:
-        return styles.neutral;
-    }
-  };
+  // TODO: Implement status color utility when needed
+  // const getStatusColor = (status: Task["status"]) => {
+  //   switch (status) {
+  //     case "completed":
+  //       return styles.success;
+  //     case "running":
+  //       return styles.primary;
+  //     case "pending":
+  //       return styles.warning;
+  //     case "paused":
+  //       return styles.secondary;
+  //     case "failed":
+  //       return styles.error;
+  //     case "cancelled":
+  //       return styles.neutral;
+  //     default:
+  //       return styles.neutral;
+  //   }
+  // };
 
   const getPhaseIcon = (phase: Task["phase"]) => {
     const iconProps = { size: 18, className: styles.phaseIcon };

@@ -6,6 +6,7 @@ use uuid::Uuid;
 use super::judge_types::*;
 
 /// Mock judge implementation for testing
+#[derive(Debug)]
 pub struct MockJudge {
     id: Uuid,
     name: String,
@@ -77,6 +78,9 @@ impl Judge for MockJudge {
         JudgeCapabilities {
             supported_domains: vec!["testing".to_string(), "mock".to_string()],
             max_spec_length: 100000,
+            max_complexity: ComplexityLevel::VeryComplex,
+            supported_languages: vec!["all".to_string()],
+            specialization_score: 1.0,
             requires_network: false,
             processing_timeout_seconds: 1,
             confidence_threshold: 0.0, // Always returns configured verdict

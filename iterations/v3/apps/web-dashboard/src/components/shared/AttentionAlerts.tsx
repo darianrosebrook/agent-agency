@@ -25,7 +25,7 @@ export default function AttentionAlerts({
         addAlert({
           type: "attention",
           message: "System needs your attention",
-          userName,
+          userName: userName || "System",
           priority: "medium",
         });
       }, 10000);
@@ -64,6 +64,7 @@ export default function AttentionAlerts({
         clearTimeout(timer4);
       };
     }
+    return undefined;
   }, [addAlert, userName]);
 
   const getAlertIcon = (type: NotificationAlert["type"]) => {
@@ -186,7 +187,7 @@ export default function AttentionAlerts({
               addAlert({
                 type: "attention",
                 message: "Hey there! System needs attention.",
-                userName,
+                userName: userName || "System",
                 priority: "high",
               })
             }

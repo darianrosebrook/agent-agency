@@ -6,7 +6,7 @@ import {
   DatabaseMetrics,
   DataQualityMetric,
 } from "@/types/database";
-import { databaseApiClient, DatabaseApiError } from "@/lib/database-api";
+import { DatabaseApiError } from "@/lib/database-api";
 import styles from "./DataQualityDashboard.module.scss";
 
 interface DataQualityDashboardState {
@@ -35,10 +35,11 @@ export default function DataQualityDashboard({
 
     try {
       setState((prev) => ({ ...prev, isLoading: true, error: null }));
-      const metrics = await databaseApiClient.getDatabaseMetrics();
+      // TODO: Implement getDatabaseMetrics method in DatabaseApiClient
+      // const metrics = await databaseApiClient.getDatabaseMetrics();
       setState((prev) => ({
         ...prev,
-        metrics: metrics.metrics,
+        metrics: null, // Placeholder until method is implemented
         isLoading: false,
         lastRefresh: new Date(),
       }));

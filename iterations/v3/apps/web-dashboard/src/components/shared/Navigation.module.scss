@@ -3,21 +3,83 @@
   background-color: var(--color-background-secondary);
   border-bottom: 0.5px solid var(--color-border-default);
   position: sticky;
-  top: 4rem;
+  top: 64px; // Below header (64px)
   z-index: 99;
+  width: 100%; // Full width
+}
+
+// Dark mode disabled - Light theme only
+
+.container {
+  max-width: 1410px; // Match template
+  margin: 0 auto;
+  padding: 0 var(--spacing-6);
+  height: 56px;
+  display: flex;
+  align-items: center;
 }
 
 // Dark mode disabled - Light theme only
 
 .navItems {
   display: flex;
-  gap: 0.5rem;
+  gap: var(--spacing-1); // Tighter gap
   overflow-x: auto;
   scrollbar-width: none;
   -ms-overflow-style: none;
+  width: 100%;
 
   &::-webkit-scrollbar {
     display: none;
+  }
+}
+
+// Dark mode disabled - Light theme only
+
+.navItem {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  padding: var(--spacing-3) var(--spacing-4);
+  font-size: 0.875rem;
+  font-weight: var(--font-weight-medium);
+  font-family: var(--font-family-display);
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  border-radius: var(--radius-md);
+  transition: all var(--transition-duration-fast) var(--transition-easing-out);
+  white-space: nowrap;
+  min-width: 44px;
+  min-height: 44px;
+  position: relative;
+  
+  &:hover {
+    background-color: var(--color-background-primary);
+    color: var(--color-text-primary);
+    box-shadow: var(--box-shadow-sm);
+  }
+  
+  &.active {
+    background-color: var(--color-background-primary);
+    color: var(--color-brand-primary); // Sage green
+    font-weight: var(--font-weight-semibold);
+    border: 0.5px solid var(--color-border-default);
+    
+    &::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: var(--spacing-4);
+      right: var(--spacing-4);
+      height: 2px;
+      background-color: var(--color-brand-primary);
+      border-radius: 2px 2px 0 0;
+    }
+  }
+  
+  &:focus-visible {
+    outline: 2px solid var(--color-border-focus);
+    outline-offset: 2px;
   }
 }
 
@@ -28,6 +90,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
+}
+
+// Dark mode disabled - Light theme only
+
+.navLabel {
+  font-family: var(--font-family-display);
 }
 
 // Dark mode disabled - Light theme only
@@ -35,13 +104,19 @@
 // Responsive design
 @media (max-width: 768px) {
   .container {
-    padding: 0 1rem;
+    padding: 0 var(--spacing-4);
   }
 
 // Dark mode disabled - Light theme only
 
   .navIcon {
     font-size: 0.875rem;
+  }
+  
+// Dark mode disabled - Light theme only
+  
+  .navLabel {
+    font-size: 0.75rem;
   }
 
 // Dark mode disabled - Light theme only

@@ -1,6 +1,5 @@
 //! Core types for intelligent edge case testing
 
-use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
@@ -75,6 +74,16 @@ pub struct TestCase {
     pub priority: u32,
 }
 
+/// Intelligent Edge Case Testing System
+#[derive(Debug)]
+pub struct IntelligentEdgeCaseTesting {
+    pub dynamic_test_generator: std::sync::Arc<super::generation::DynamicTestGenerator>,
+    pub edge_case_analyzer: std::sync::Arc<super::analysis::EdgeCaseAnalyzer>,
+    pub test_optimizer: std::sync::Arc<super::optimization::TestOptimizer>,
+    pub coverage_analyzer: std::sync::Arc<super::performance::CoverageAnalyzer>,
+    pub test_history: std::sync::Arc<tokio::sync::RwLock<HashMap<String, TestHistory>>>,
+}
+
 /// Intelligent test insights from edge case analysis
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct IntelligentTestInsights {
@@ -107,32 +116,45 @@ pub struct GeneratedTest {
     pub confidence_score: f64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum TestType {
     Unit,
     Integration,
-    System,
+    EdgeCase,
+    Boundary,
     Performance,
     Security,
-    EdgeCase,
 }
 
+/// Test scenario enumeration
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+pub enum TestScenario {
+    HappyPath,
+    EdgeCase,
+    ErrorCondition,
+    BoundaryValue,
+    InvalidInput,
+    Concurrency,
+    Performance,
+    Security,
+}
 
+/// Edge case type enumeration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum EdgeCaseType {
     BoundaryValue,
     InvalidInput,
-    NullEmpty,
+    NullUndefined,
     LargeData,
     SpecialCharacters,
-    ConcurrentAccess,
-    ResourceLimits,
-    NetworkIssues,
-    DataTypeMismatch,
-    TimingIssues,
+    Concurrency,
+    RaceCondition,
+    MemoryLeak,
+    PerformanceDegradation,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Hash, Eq, PartialEq)]
+/// Risk level for edge cases
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum RiskLevel {
     Low,
     Medium,
@@ -140,432 +162,144 @@ pub enum RiskLevel {
     Critical,
 }
 
+/// Expected outcome enumeration
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum TestOutcome {
-    Pass,
-    Fail,
-    Skip,
-    Error,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum DataType {
-    String,
-    Integer,
-    Float,
-    Boolean,
-    Array,
-    Object,
-    Null,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum ConstraintType {
-    MinValue,
-    MaxValue,
-    Length,
-    Pattern,
-    Required,
-    Unique,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum EdgeCaseFlag {
-    Boundary,
-    Invalid,
-    Null,
-    Empty,
-    Large,
-    SpecialChars,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum TestEnvironment {
-    Development,
-    Staging,
-    Production,
-    Testing,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum DependencyType {
-    Library,
-    Service,
-    Database,
-    File,
-    Network,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum ConditionType {
-    StateCheck,
-    DataValidation,
-    ResourceCheck,
-    TimeCheck,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum OutcomeType {
+pub enum ExpectedOutcome {
     Success,
-    Failure,
-    Partial,
-    Timeout,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum CriterionType {
-    ExactMatch,
-    RangeCheck,
-    PatternMatch,
-    PerformanceThreshold,
-    ResourceUsage,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum FailureType {
+    Error,
     Exception,
     Timeout,
-    Assertion,
-    ResourceExhaustion,
-    DataError,
+    PerformanceDegradation,
 }
 
-/// Test scenario with full context
+/// Test data enumeration
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TestScenario {
-    pub scenario_name: String,
-    pub input_data: HashMap<String, TestDataWithMetadata>,
-    pub execution_context: ExecutionContext,
-    pub preconditions: Vec<Precondition>,
-    pub postconditions: Vec<Postcondition>,
+pub enum TestData {
+    String(String),
+    Integer(i64),
+    Float(f64),
+    Boolean(bool),
+    Array(Vec<TestData>),
+    Object(HashMap<String, TestData>),
 }
 
-/// Test data with metadata for intelligent processing
+/// Test data with metadata
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TestDataWithMetadata {
+    pub data: TestData,
     pub data_type: DataType,
-    pub value: serde_json::Value,
-    pub constraints: Vec<Constraint>,
-    pub edge_case_flags: Vec<EdgeCaseFlag>,
+    pub generation_method: String,
+    pub edge_case_reason: Option<String>,
 }
 
-/// Data constraint specification
+/// Data type enumeration
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Constraint {
-    pub constraint_type: ConstraintType,
-    pub constraint_value: serde_json::Value,
-    pub description: String,
+pub enum DataType {
+    Primitive,
+    Complex,
+    Collection,
+    Custom,
 }
 
-/// Test execution context
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ExecutionContext {
-    pub environment: TestEnvironment,
-    pub dependencies: Vec<Dependency>,
-    pub resources: ResourceRequirements,
-    pub timeout_ms: u64,
-}
 
-/// External dependency specification
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Dependency {
-    pub dependency_name: String,
-    pub dependency_type: DependencyType,
-    pub version: String,
-    pub required: bool,
-}
-
-/// Resource requirements for test execution
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ResourceRequirements {
-    pub cpu_cores: u32,
-    pub memory_mb: u64,
-    pub disk_space_mb: u64,
-    pub network_bandwidth_mbps: u64,
-}
-
-/// Pre-execution condition
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Precondition {
-    pub condition_name: String,
-    pub condition_type: ConditionType,
-    pub condition_value: serde_json::Value,
-    pub description: String,
-}
-
-/// Post-execution condition
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Postcondition {
-    pub condition_name: String,
-    pub condition_type: ConditionType,
-    pub expected_value: serde_json::Value,
-    pub description: String,
-}
-
-/// Expected test outcome
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ExpectedOutcome {
-    pub outcome_type: OutcomeType,
-    pub expected_result: serde_json::Value,
-    pub success_criteria: Vec<SuccessCriterion>,
-    pub failure_scenarios: Vec<FailureScenario>,
-}
-
-/// Success validation criterion
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SuccessCriterion {
-    pub criterion_name: String,
-    pub criterion_type: CriterionType,
-    pub expected_value: serde_json::Value,
-    pub tolerance: Option<f64>,
-}
-
-/// Failure scenario specification
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct FailureScenario {
-    pub scenario_name: String,
-    pub failure_type: FailureType,
-    pub expected_error: String,
-    pub error_code: Option<String>,
-}
-
-/// Test specification for component testing
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TestSpecification {
-    pub spec_id: Uuid,
-    pub component_name: String,
-    pub test_requirements: Vec<TestRequirement>,
-    pub edge_case_requirements: Vec<EdgeCaseRequirement>,
-    pub performance_requirements: Vec<PerformanceRequirement>,
-}
-
-/// Test requirement specification
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TestRequirement {
-    pub requirement_id: Uuid,
-    pub requirement_type: String,
-    pub description: String,
-    pub priority: u32,
-}
-
-/// Edge case requirement specification
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EdgeCaseRequirement {
-    pub requirement_id: Uuid,
-    pub edge_case_type: EdgeCaseType,
-    pub description: String,
-    pub test_coverage_required: f64,
-}
-
-/// Performance requirement specification
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PerformanceRequirement {
-    pub requirement_id: Uuid,
-    pub metric_name: String,
-    pub target_value: f64,
-    pub tolerance: f64,
-}
-
-/// Identified edge case from analysis
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct IdentifiedEdgeCase {
-    pub edge_case_id: Uuid,
-    pub edge_case_name: String,
-    pub edge_case_type: EdgeCaseType,
-    pub description: String,
-    pub probability: f64,
-    pub risk_level: RiskLevel,
-    pub mitigation_strategy: Option<String>,
-}
-
-/// Edge case analysis results
+// Result types for analysis
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EdgeCaseAnalysis {
-    pub identified_edge_cases: Vec<IdentifiedEdgeCase>,
-    pub edge_case_coverage: f64,
-    pub analysis_confidence: f64,
-    pub risk_assessment: RiskAssessment,
-    pub mitigation_strategies: Vec<MitigationStrategy>,
+    pub identified_edge_cases: Vec<String>,
+    pub risk_assessment: HashMap<String, f64>,
+    pub recommendations: Vec<String>,
 }
 
-/// Risk assessment for edge cases
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RiskAssessment {
-    pub overall_risk_score: f64,
-    pub risk_distribution: HashMap<RiskLevel, u32>,
-    pub high_risk_areas: Vec<String>,
-    pub risk_trends: Vec<RiskTrend>,
-}
-
-/// Risk trend analysis
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RiskTrend {
-    pub trend_direction: TrendDirection,
-    pub trend_magnitude: f64,
-    pub trend_duration: u64,
-    pub trend_confidence: f64,
-}
-
-/// Mitigation strategy for edge cases
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MitigationStrategy {
-    pub strategy_name: String,
-    pub strategy_type: StrategyType,
-    pub effectiveness: f64,
-    pub implementation_cost: f64,
-    pub description: String,
-}
-
-/// Test optimization results
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TestOptimization {
-    pub optimization_suggestions: Vec<OptimizationSuggestion>,
-    pub efficiency_improvement: f64,
+    pub optimized_tests: Vec<GeneratedTest>,
+    pub efficiency_improvements: HashMap<String, f64>,
     pub redundancy_reduction: f64,
-    pub optimization_confidence: f64,
-    pub prioritized_tests: Vec<PrioritizedTest>,
 }
 
-/// Optimization suggestion
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct OptimizationSuggestion {
-    pub suggestion_type: SuggestionType,
-    pub description: String,
-    pub expected_improvement: f64,
-    pub implementation_effort: ImplementationEffort,
-    pub priority: Priority,
-}
-
-/// Prioritized test
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PrioritizedTest {
-    pub test_id: Uuid,
-    pub priority_score: f64,
-    pub priority_reason: String,
-    pub execution_order: u32,
-    pub estimated_value: f64,
-}
-
-/// Coverage analysis results
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CoverageAnalysis {
-    pub overall_coverage: f64,
-    pub coverage_breakdown: CoverageBreakdown,
-    pub coverage_gaps: Vec<CoverageGap>,
-    pub coverage_trends: Vec<CoverageTrend>,
-    pub improvement_recommendations: Vec<CoverageRecommendation>,
+    pub current_coverage: f64,
+    pub gaps_identified: Vec<String>,
+    pub improvement_suggestions: Vec<String>,
 }
 
-/// Coverage breakdown by type
+// Test history and execution types
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CoverageBreakdown {
-    pub line_coverage: f64,
-    pub branch_coverage: f64,
-    pub function_coverage: f64,
-    pub edge_case_coverage: f64,
-    pub integration_coverage: f64,
+pub struct TestHistory {
+    pub test_id: String,
+    pub executions: Vec<TestExecution>,
+    pub success_rate: f64,
+    pub average_execution_time: f64,
 }
 
-/// Coverage gap identification
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CoverageGap {
-    pub gap_id: Uuid,
-    pub gap_type: GapType,
-    pub gap_description: String,
-    pub gap_severity: GapSeverity,
-    pub affected_components: Vec<String>,
+pub struct TestExecution {
+    pub execution_id: Uuid,
+    pub timestamp: chrono::DateTime<chrono::Utc>,
+    pub result: TestResult,
+    pub execution_time_ms: u64,
+    pub coverage_achieved: f64,
 }
 
-/// Coverage trend analysis
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CoverageTrend {
-    pub trend_direction: TrendDirection,
-    pub trend_magnitude: f64,
-    pub trend_duration: u64,
-    pub trend_confidence: f64,
+pub enum TestResult {
+    Passed,
+    Failed(String),
+    Skipped(String),
+    Error(String),
 }
 
-/// Coverage improvement recommendation
+// Execution context types
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CoverageRecommendation {
-    pub recommendation_type: RecommendationType,
+pub struct ExecutionContext {
+    pub test_suite: String,
+    pub environment: String,
+    pub configuration: HashMap<String, String>,
+    pub timeout_seconds: u64,
+    pub max_concurrency: u32,
+}
+
+impl Default for ExecutionContext {
+    fn default() -> Self {
+        Self {
+            test_suite: "default".to_string(),
+            environment: "development".to_string(),
+            configuration: HashMap::new(),
+            timeout_seconds: 300,
+            max_concurrency: 4,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ResourceRequirements {
+    pub memory_mb: u64,
+    pub cpu_cores: u32,
+    pub disk_space_mb: u64,
+    pub network_bandwidth_mbps: u32,
+}
+
+impl Default for ResourceRequirements {
+    fn default() -> Self {
+        Self {
+            memory_mb: 1024,
+            cpu_cores: 2,
+            disk_space_mb: 1000,
+            network_bandwidth_mbps: 100,
+        }
+    }
+}
+
+// Test specification types
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TestSpecification {
+    pub test_id: String,
     pub description: String,
-    pub expected_coverage_improvement: f64,
-    pub implementation_effort: ImplementationEffort,
-    pub priority: Priority,
-}
-
-/// Trend direction enum
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum TrendDirection {
-    Improving,
-    Declining,
-    Stable,
-}
-
-/// Strategy type enum
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum StrategyType {
-    TestAddition,
-    TestModification,
-    TestRemoval,
-    ProcessImprovement,
-    ToolEnhancement,
-}
-
-/// Suggestion type enum
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum SuggestionType {
-    AddTestCase,
-    RemoveRedundantTest,
-    OptimizeTestExecution,
-    ImproveTestData,
-    EnhanceAssertions,
-}
-
-/// Implementation effort enum
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum ImplementationEffort {
-    Low,
-    Medium,
-    High,
-    VeryHigh,
-}
-
-/// Priority enum
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum Priority {
-    Low,
-    Medium,
-    High,
-    Critical,
-}
-
-/// Gap type enum
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum GapType {
-    LineCoverage,
-    BranchCoverage,
-    EdgeCaseCoverage,
-    IntegrationCoverage,
-    PerformanceCoverage,
-}
-
-/// Gap severity enum
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum GapSeverity {
-    Low,
-    Medium,
-    High,
-    Critical,
-}
-
-/// Recommendation type enum
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum RecommendationType {
-    AddUnitTests,
-    AddIntegrationTests,
-    AddEdgeCaseTests,
-    ImproveTestQuality,
-    OptimizeTestSuite,
+    pub inputs: Vec<TestInput>,
+    pub expected_outputs: Vec<String>,
+    pub execution_context: ExecutionContext,
+    pub resource_requirements: ResourceRequirements,
+    pub priority: u32,
+    pub tags: Vec<String>,
 }

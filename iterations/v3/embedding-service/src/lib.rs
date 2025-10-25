@@ -8,8 +8,8 @@
 
 pub mod cache;
 pub mod context;
+pub mod indexer;
 pub mod model_loading;
-pub mod multimodal_indexer;
 pub mod provider;
 pub mod service;
 pub mod similarity;
@@ -21,10 +21,8 @@ mod tests;
 
 pub use cache::{EmbeddingCache, ModelCache, ModelCacheStats, ModelCacheInfo, ModelCacheError};
 pub use context::*;
+pub use indexer::orchestrator::MultimodalIndexer;
 pub use provider::*;
 pub use service::*;
 pub use similarity::*;
 pub use types::*;
-
-// Explicitly re-export from multimodal_indexer to avoid conflicts
-pub use multimodal_indexer::MultimodalIndexer;

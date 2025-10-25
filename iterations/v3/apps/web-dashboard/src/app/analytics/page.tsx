@@ -45,7 +45,7 @@ export default function AnalyticsPage() {
   // GSAP animations
   const headerAnimation = useScrollAnimation({ type: 'fade', duration: 0.6, delay: 100 });
   const controlsAnimation = useScrollAnimation({ type: 'slideUp', duration: 0.6, delay: 200 });
-  const { ref: metricsGridRef } = useStaggerAnimation({ 
+  const { ref: metricsGridRef } = useStaggerAnimation<HTMLDivElement>({ 
     delay: 0.3, 
     stagger: 0.08, 
     type: 'slideUp' 
@@ -152,40 +152,38 @@ export default function AnalyticsPage() {
           ) : analytics ? (
             <div ref={metricsGridRef} className={styles.metricsGrid}>
               <MetricCard
-                label="Total Tasks"
+                title="Total Tasks"
                 value={analytics.totalTasks.toLocaleString()}
                 icon={<BarChart3 size={24} />}
-                trend="up"
+                trend="positive"
                 trendValue={analytics.trends.tasksChange}
               />
               
               <MetricCard
-                label="Success Rate"
-                value={analytics.successRate}
-                unit="%"
+                title="Success Rate"
+                value={`${analytics.successRate}%`}
                 icon={<CheckCircle size={24} />}
-                trend="up"
+                trend="positive"
                 trendValue={analytics.trends.successRateChange}
               />
               
               <MetricCard
-                label="Avg Execution Time"
-                value={analytics.avgExecutionTime}
-                unit="s"
+                title="Avg Execution Time"
+                value={`${analytics.avgExecutionTime}s`}
                 icon={<Clock size={24} />}
-                trend="down"
+                trend="positive"
                 trendValue={analytics.trends.timeChange}
               />
               
               <MetricCard
-                label="Active Tasks"
+                title="Active Tasks"
                 value={analytics.activeTasks}
                 icon={<Activity size={24} />}
                 trend="neutral"
               />
               
               <MetricCard
-                label="Failed (Last 24h)"
+                title="Failed (Last 24h)"
                 value={analytics.failedTasks}
                 icon={<XCircle size={24} />}
                 trend="neutral"

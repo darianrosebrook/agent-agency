@@ -92,11 +92,7 @@ export default function GlobalError({
                 onClick={reset}
                 variant="primary"
                 size="lg"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                }}
+                className="inline-flex items-center gap-2"
               >
                 <RefreshCw size={20} />
                 <span>Try Again</span>
@@ -106,11 +102,7 @@ export default function GlobalError({
                 onClick={() => window.location.href = '/'}
                 variant="secondary"
                 size="lg"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                }}
+                className="inline-flex items-center gap-2"
               >
                 <Home size={20} />
                 <span>Go Home</span>
@@ -122,4 +114,5 @@ export default function GlobalError({
     </html>
   );
 }
+
 

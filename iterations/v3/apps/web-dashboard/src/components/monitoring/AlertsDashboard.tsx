@@ -35,10 +35,10 @@ interface AlertsDashboardProps {
 }
 
 export default function AlertsDashboard({ refreshInterval = 30000 }: AlertsDashboardProps) {
-  const [alerts, setAlerts] = useState<Alert[]>([]);
-  const [statistics, setStatistics] = useState<AlertStatistics | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [alerts] = useState<Alert[]>([]);
+  const [statistics] = useState<AlertStatistics | null>(null);
+  const [loading] = useState(true);
+  const [error] = useState<string | null>(null);
   const [selectedSeverity, setSelectedSeverity] = useState<string>("all");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
 

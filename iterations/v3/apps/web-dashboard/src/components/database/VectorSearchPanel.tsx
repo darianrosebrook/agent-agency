@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import {
   VectorSearchPanelProps,
   VectorSearchQuery,
@@ -41,7 +41,7 @@ export default function VectorSearchPanel({
   });
 
   // Get vector columns from available tables
-  const vectorColumns = React.useMemo(() => {
+  const vectorColumns = useMemo(() => {
     const columns: { table: string; column: string; dimension: number }[] = [];
     tables.forEach((table) => {
       table.columns.forEach((column) => {
@@ -195,7 +195,7 @@ export default function VectorSearchPanel({
   );
 
   // Update state when external props change
-  React.useEffect(() => {
+  useEffect(() => {
     setState((prev) => ({
       ...prev,
       isSearching: externalSearching ?? prev.isSearching,

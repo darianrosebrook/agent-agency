@@ -39,12 +39,12 @@ interface SLODashboardProps {
 }
 
 export default function SLODashboard({ refreshInterval = 60000 }: SLODashboardProps) {
-  const [slos, setSlos] = useState<SLODefinition[]>([]);
-  const [sloStatuses, setSloStatuses] = useState<Record<string, SLOStatus>>({});
+  const [slos] = useState<SLODefinition[]>([]);
+  const [sloStatuses] = useState<Record<string, SLOStatus>>({});
   const [selectedSlo, setSelectedSlo] = useState<string | null>(null);
-  const [measurements, setMeasurements] = useState<SLOMeasurement[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [measurements] = useState<SLOMeasurement[]>([]);
+  // const [loading] = useState(true);
+  // const [error] = useState<string | null>(null);
 
   // Fetch SLOs data
   const fetchSlos = useCallback(async () => {
@@ -62,7 +62,7 @@ export default function SLODashboard({ refreshInterval = 60000 }: SLODashboardPr
   }, []);
 
   // Fetch SLO status
-  const fetchSloStatus = useCallback(async (sloName: string) => {
+  const fetchSloStatus = useCallback(async (_sloName: string) => {
     // try {
     //   const response = await fetch(`/api/slos/${sloName}/status`);
     //   if (!response.ok) {
@@ -79,7 +79,7 @@ export default function SLODashboard({ refreshInterval = 60000 }: SLODashboardPr
   }, []);
 
   // Fetch SLO measurements
-  const fetchMeasurements = useCallback(async (sloName: string) => {
+  const fetchMeasurements = useCallback(async (_sloName: string) => {
     // try {
     //   const response = await fetch(`/api/slos/${sloName}/measurements?limit=50`);
     //   if (!response.ok) {
@@ -141,14 +141,15 @@ export default function SLODashboard({ refreshInterval = 60000 }: SLODashboardPr
         <p>Monitor service reliability and performance targets</p>
       </div>
 
-      {error && (
+      {/* Error handling removed for now */}
+      {/* {error && (
         <div className={styles.error}>
           <span>⚠️ {error}</span>
           <button onClick={fetchSlos}>Retry</button>
         </div>
-      )}
+      )} */}
 
-      {slos.length === 0 && !error && (
+      {slos.length === 0 && (
         <div className={styles.emptyState}>
           <div className={styles.emptyIcon}>📊</div>
           <h3>No SLOs Configured</h3>

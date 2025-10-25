@@ -20,19 +20,17 @@ interface DashboardLayoutProps {
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   return (
-    <div className={styles.page}>
+    <section className={styles.page}>
       {/* Skip to main content link for keyboard navigation */}
       <a href="#main-content" className="skip-link">
         Skip to main content
       </a>
-      <div className={styles.mainContent}>
+      <main role="main" aria-label="Dashboard" className={styles.mainContent}>
         <Header />
-        <Navigation />
-        <div id="main-content">
-          {children}
-        </div>
-      </div>
-    </div>
+        <Navigation /> 
+          {children} 
+      </main>
+    </section>
   );
 }
 

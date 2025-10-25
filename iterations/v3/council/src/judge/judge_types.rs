@@ -37,7 +37,7 @@ pub enum JudgeVerdict {
 }
 
 /// Risk assessment for working specifications
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct RiskAssessment {
     pub overall_risk: RiskLevel,
     pub risk_factors: Vec<RiskFactor>,
@@ -65,7 +65,7 @@ pub struct RiskFactor {
 }
 
 /// Types of risk factors
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum RiskFactorType {
     Security,
     Performance,
@@ -76,7 +76,7 @@ pub enum RiskFactorType {
 }
 
 /// Severity levels for risk factors
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum RiskSeverity {
     Low,
     Medium,
@@ -92,10 +92,12 @@ pub struct RequiredChange {
     pub affected_components: Vec<String>,
     pub breaking_change: bool,
     pub test_required: bool,
+    pub category: ChangeCategory,
+    pub impact: ChangeImpact,
 }
 
 /// Types of changes that can be required
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ChangeType {
     SecurityFix,
     PerformanceOptimization,
@@ -110,7 +112,7 @@ pub enum ChangeType {
 
 /// Judge trait for different types of judges
 #[async_trait::async_trait]
-pub trait Judge: Send + Sync {
+pub trait Judge: Send + Sync + std::fmt::Debug {
     /// Get the judge's unique identifier
     fn id(&self) -> Uuid;
 
@@ -177,6 +179,9 @@ pub struct HealthMetrics {
 pub struct JudgeCapabilities {
     pub supported_domains: Vec<String>,
     pub max_spec_length: usize,
+    pub max_complexity: ComplexityLevel,
+    pub supported_languages: Vec<String>,
+    pub specialization_score: f64,
     pub requires_network: bool,
     pub processing_timeout_seconds: u64,
     pub confidence_threshold: f64,
@@ -250,7 +255,7 @@ impl std::fmt::Display for JudgeType {
 }
 
 /// Judge configuration
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JudgeConfig {
     pub judge_id: String,
     pub judge_type: JudgeType,
@@ -330,7 +335,7 @@ pub enum VerdictSummary {
 }
 
 /// Change impact on the system
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum ChangeImpact {
     Minor,
     Moderate,
@@ -339,7 +344,7 @@ pub enum ChangeImpact {
 }
 
 /// Change priority
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum ChangePriority {
     Low,
     Medium,
@@ -347,16 +352,29 @@ pub enum ChangePriority {
     Critical,
 }
 
+/// Effort complexity levels
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum EffortComplexity {
+    Trivial,
+    Simple,
+    Moderate,
+    Complex,
+    VeryComplex,
+}
+
 /// Effort estimate for changes
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct EffortEstimate {
     pub person_hours: f64,
+    pub developer_hours: f64,
     pub complexity: ComplexityLevel,
+    pub effort_complexity: EffortComplexity,
+    pub skills_required: Vec<String>,
     pub dependencies: Vec<String>,
 }
 
 /// Complexity level
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum ComplexityLevel {
     Simple,
     Moderate,
@@ -364,8 +382,20 @@ pub enum ComplexityLevel {
     VeryComplex,
 }
 
+/// Computational complexity levels
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum ComputationalComplexity {
+    Constant,
+    Logarithmic,
+    Linear,
+    LogLinear,
+    Polynomial,
+    Exponential,
+    Factorial,
+}
+
 /// Change category for required changes
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum ChangeCategory {
     Quality,
     Security,
@@ -583,11 +613,18 @@ pub struct TechnicalRiskAssessment {
     pub resource_risks: Vec<String>,
     pub technology_maturity: f64,
     pub integration_complexity: f64,
+    pub performance_risks: Vec<PerformanceRisk>,
 }
 
 /// Ethical risk assessment
 #[derive(Debug, Clone)]
 pub struct EthicalRiskAssessment {
+    pub ethical_score: f64,
+    pub concern_categories: Vec<EthicalConcernCategory>,
+    pub stakeholder_impacts: Vec<StakeholderImpact>,
+    pub regulatory_risks: Vec<RegulatoryRisk>,
+    pub societal_impacts: Vec<SocietalImpact>,
+    pub uncertainty_factors: Vec<String>,
     pub privacy_risks: Vec<String>,
     pub bias_risks: Vec<String>,
     pub fairness_concerns: Vec<String>,
@@ -598,16 +635,23 @@ pub struct EthicalRiskAssessment {
 /// Operational risk assessment
 #[derive(Debug, Clone)]
 pub struct OperationalRiskAssessment {
-    pub deployment_complexity: f64,
-    pub maintenance_burden: f64,
-    pub monitoring_requirements: Vec<String>,
-    pub scalability_concerns: Vec<String>,
-    pub reliability_risks: Vec<String>,
+    pub feasibility_score: f64,
+    pub deployment_complexity: DeploymentComplexity,
+    pub maintenance_requirements: MaintenanceRequirements,
+    pub monitoring_requirements: MonitoringRequirements,
+    pub scalability_concerns: Vec<ScalabilityConcern>,
+    pub incident_response: IncidentResponseAssessment,
 }
 
 /// Business risk assessment
 #[derive(Debug, Clone)]
 pub struct BusinessRiskAssessment {
+    pub viability_score: f64,
+    pub market_impact: MarketImpact,
+    pub financial_risks: Vec<FinancialRisk>,
+    pub stakeholder_complexity: StakeholderComplexity,
+    pub competitive_positioning: CompetitivePositioning,
+    pub exit_strategy: ExitStrategy,
     pub market_risks: Vec<String>,
     pub regulatory_risks: Vec<String>,
     pub financial_impacts: Vec<String>,
@@ -623,31 +667,47 @@ pub struct MultiDimensionalRiskAssessment {
     pub ethical_risk: EthicalRiskAssessment,
     pub operational_risk: OperationalRiskAssessment,
     pub business_risk: BusinessRiskAssessment,
+    pub risk_interactions: Vec<RiskInteraction>,
+    pub mitigation_priorities: Vec<MitigationPriority>,
+    pub risk_projections: RiskProjections,
+    pub assessment_confidence: f64,
 }
 
 /// Complexity assessment for technical risk
 #[derive(Debug, Clone)]
 pub struct ComplexityAssessment {
-    pub algorithmic_complexity: f64,
-    pub data_complexity: f64,
-    pub system_integration: f64,
-    pub development_effort: f64,
+    pub algorithmic_complexity: ComputationalComplexity,
+    pub integration_points: u32,
+    pub external_dependencies: u32,
+    pub novelty_factor: f64,
+    pub team_experience_level: f64,
 }
 
 /// Resource risk assessment
 #[derive(Debug, Clone)]
 pub struct ResourceRisk {
-    pub resource_type: String,
-    pub availability_score: f64,
-    pub cost_impact: f64,
-    pub timeline_impact: f64,
+    pub availability_risk: f64,
+    pub cost_volatility: f64,
+    pub alternative_sources: Vec<String>,
+    pub description: String,
+}
+
+/// Technology maturity level enum
+#[derive(Debug, Clone, PartialEq)]
+pub enum TechnologyMaturityLevel {
+    Experimental,
+    EarlyAdopter,
+    Mature,
+    Legacy,
 }
 
 /// Technology maturity assessment
 #[derive(Debug, Clone)]
 pub struct TechnologyMaturity {
-    pub technology_readiness: f64,
-    pub adoption_rate: f64,
+    pub maturity_level: TechnologyMaturityLevel,
+    pub stability_score: f64,
+    pub vendor_support: f64,
+    pub community_size: f64,
     pub vendor_stability: f64,
     pub community_support: f64,
 }
@@ -655,25 +715,38 @@ pub struct TechnologyMaturity {
 /// Integration complexity assessment
 #[derive(Debug, Clone)]
 pub struct IntegrationComplexity {
-    pub api_complexity: f64,
-    pub data_format_complexity: f64,
-    pub protocol_complexity: f64,
-    pub compatibility_score: f64,
+    pub api_integrations: u32,
+    pub protocol_diversity: f64,
+    pub legacy_system_interfaces: u32,
+    pub real_time_requirements: bool,
+}
+
+/// Performance risk type enum
+#[derive(Debug, Clone, PartialEq)]
+pub enum PerformanceRiskType {
+    ResponseTime,
+    Throughput,
+    Scalability,
+    ResourceUtilization,
+    MemoryLeak,
+    CpuOverload,
+    LatencyViolation,
+    ScalabilityBottleneck,
 }
 
 /// Performance risk assessment
 #[derive(Debug, Clone)]
 pub struct PerformanceRisk {
-    pub response_time_risk: f64,
-    pub throughput_risk: f64,
-    pub scalability_risk: f64,
-    pub resource_utilization_risk: f64,
+    pub risk_type: PerformanceRiskType,
+    pub severity: f64,
+    pub likelihood: f64,
+    pub mitigation_complexity: f64,
 }
 
 /// Ethical concern category
 #[derive(Debug, Clone)]
 pub struct EthicalConcernCategory {
-    pub category: String,
+    pub category: EthicalCategory,
     pub severity_score: f32,
     pub affected_population_size: PopulationSize,
     pub regulatory_implications: bool,
@@ -686,12 +759,41 @@ pub enum PopulationSize {
     SmallGroup,
     LargeGroup,
     Society,
+    SocietyWide,
     Global,
+}
+
+/// Regulation type enum
+#[derive(Debug, Clone, PartialEq)]
+pub enum RegulationType {
+    GDPR,
+    HIPAA,
+    SOX,
+    PCI,
+    DataPrivacy,
+    IndustrySpecific,
+    Custom,
+}
+
+/// Audit frequency enum
+#[derive(Debug, Clone, PartialEq)]
+pub enum AuditFrequency {
+    Continuous,
+    Daily,
+    Weekly,
+    Monthly,
+    Quarterly,
+    Annual,
 }
 
 /// Regulatory risk assessment
 #[derive(Debug, Clone)]
 pub struct RegulatoryRisk {
+    pub jurisdiction: String,
+    pub regulation_type: RegulationType,
+    pub compliance_complexity: f64,
+    pub penalty_severity: f64,
+    pub audit_frequency: AuditFrequency,
     pub compliance_burden: f64,
     pub legal_risk: f64,
     pub audit_requirements: Vec<String>,
@@ -734,15 +836,30 @@ pub struct DeploymentComplexity {
     pub infrastructure_requirements: InfrastructureRequirement,
     pub automation_level: f64,
     pub rollback_complexity: f64,
+    pub configuration_complexity: f64,
+    pub zero_downtime_requirement: bool,
 }
 
 /// Infrastructure requirements
 #[derive(Debug, Clone)]
 pub enum InfrastructureRequirement {
     Minimal,
+    Moderate,
     Standard,
     Extensive,
     Specialized,
+}
+
+/// Monitoring intensity levels
+#[derive(Debug, Clone, PartialEq)]
+pub enum MonitoringIntensity {
+    Minimal,
+    Basic,
+    Moderate,
+    Comprehensive,
+    Intensive,
+    Critical,
+    Continuous,
 }
 
 /// Maintenance requirements
@@ -750,6 +867,10 @@ pub enum InfrastructureRequirement {
 pub struct MaintenanceRequirements {
     pub update_frequency: UpdateFrequency,
     pub monitoring_complexity: f64,
+    pub monitoring_intensity: MonitoringIntensity,
+    pub support_staffing: f64,
+    pub emergency_response_time: std::time::Duration,
+    pub cost_per_month: f64,
     pub backup_requirements: Vec<String>,
     pub disaster_recovery: bool,
 }
@@ -769,6 +890,7 @@ pub struct ScalabilityConcern {
     pub concern_type: ScalabilityConcernType,
     pub current_limitations: String,
     pub growth_projection: GrowthProjection,
+    pub mitigation_complexity: f64,
     pub mitigation_strategies: Vec<String>,
 }
 
@@ -797,9 +919,41 @@ pub enum GrowthPattern {
     Seasonal,
 }
 
+/// Dashboard complexity levels
+#[derive(Debug, Clone, PartialEq)]
+pub enum DashboardComplexity {
+    Simple,
+    Moderate,
+    Complex,
+    Advanced,
+}
+
+/// Log volume levels
+#[derive(Debug, Clone, PartialEq)]
+pub enum LogVolume {
+    Low,
+    Moderate,
+    High,
+    Extreme,
+}
+
+/// Escalation complexity levels
+#[derive(Debug, Clone, PartialEq)]
+pub enum EscalationComplexity {
+    Simple,
+    Moderate,
+    MultiLevel,
+    Enterprise,
+}
+
 /// Monitoring requirements
 #[derive(Debug, Clone)]
 pub struct MonitoringRequirements {
+    pub metrics_count: u32,
+    pub alert_count: u32,
+    pub dashboard_complexity: DashboardComplexity,
+    pub log_volume: LogVolume,
+    pub real_time_requirements: bool,
     pub metrics_collection: Vec<String>,
     pub alerting_thresholds: Vec<String>,
     pub log_aggregation: bool,
@@ -810,6 +964,7 @@ pub struct MonitoringRequirements {
 #[derive(Debug, Clone)]
 pub struct IncidentResponseAssessment {
     pub severity_classification: IncidentSeverityLevels,
+    pub response_time_sla: std::time::Duration,
     pub response_team_requirements: Vec<String>,
     pub escalation_procedures: Vec<String>,
     pub recovery_time_objectives: RecoveryObjectives,
@@ -822,6 +977,10 @@ pub struct IncidentSeverityLevels {
     pub high_threshold: f64,
     pub medium_threshold: f64,
     pub low_threshold: f64,
+    pub critical_incidents: u32,
+    pub high_incidents: u32,
+    pub medium_incidents: u32,
+    pub low_incidents: u32,
 }
 
 /// Recovery objectives
@@ -833,6 +992,16 @@ pub struct RecoveryObjectives {
     pub backup_frequency: String,
 }
 
+/// Industry transformation levels
+#[derive(Debug, Clone, PartialEq)]
+pub enum IndustryTransformation {
+    Incremental,
+    Moderate,
+    Significant,
+    Disruptive,
+    Revolutionary,
+}
+
 /// Market impact assessment
 #[derive(Debug, Clone)]
 pub struct MarketImpact {
@@ -840,15 +1009,59 @@ pub struct MarketImpact {
     pub competitive_pressure: f64,
     pub market_share_impact: f64,
     pub entry_barrier_changes: Vec<String>,
+    pub market_disruption: f64,
+    pub competitive_advantage: f64,
+    pub market_share_potential: f64,
+    pub industry_transformation: IndustryTransformation,
+}
+
+/// Financial risk types
+#[derive(Debug, Clone, PartialEq)]
+pub enum FinancialRiskType {
+    CostOverrun,
+    RevenueLoss,
+    CashFlow,
+    Investment,
+    MarketRisk,
+    DevelopmentCostOverrun,
+    MarketPenetrationFailure,
 }
 
 /// Financial risk assessment
 #[derive(Debug, Clone)]
 pub struct FinancialRisk {
+    pub risk_type: FinancialRiskType,
+    pub amount_at_risk: f64,
+    pub probability: f64,
+    pub time_horizon_months: u32,
     pub cost_overrun_probability: f64,
     pub revenue_impact: f64,
     pub cash_flow_risk: f64,
     pub investment_recovery: f64,
+}
+
+/// Engagement level enum
+#[derive(Debug, Clone, PartialEq)]
+pub enum EngagementLevel {
+    Minimal,
+    Basic,
+    Moderate,
+    Intensive,
+    Critical,
+    Comprehensive,
+}
+
+/// Market position enum
+#[derive(Debug, Clone, PartialEq)]
+pub enum MarketPosition {
+    Dominant,
+    Leader,
+    MarketLeader,
+    Challenger,
+    Follower,
+    Niche,
+    NichePlayer,
+    Emerging,
 }
 
 /// Stakeholder complexity assessment
@@ -858,6 +1071,29 @@ pub struct StakeholderComplexity {
     pub communication_complexity: f64,
     pub alignment_difficulty: f64,
     pub influence_distribution: Vec<String>,
+    pub stakeholder_diversity: f64,
+    pub communication_channels: u32,
+    pub conflict_potential: f64,
+    pub engagement_required: EngagementLevel,
+}
+
+/// Barrier strength enum
+#[derive(Debug, Clone, PartialEq)]
+pub enum BarrierStrength {
+    Low,
+    Moderate,
+    High,
+    Strong,
+    VeryHigh,
+}
+
+/// Moat strength enum
+#[derive(Debug, Clone, PartialEq)]
+pub enum MoatStrength {
+    Weak,
+    Moderate,
+    Strong,
+    VeryStrong,
 }
 
 /// Competitive positioning assessment
@@ -867,11 +1103,29 @@ pub struct CompetitivePositioning {
     pub differentiation_factors: Vec<String>,
     pub competitive_advantages: Vec<String>,
     pub vulnerability_assessment: Vec<String>,
+    pub barrier_to_entry: BarrierStrength,
+    pub sustainability_score: f64,
+    pub moat_strength: MoatStrength,
+}
+
+/// Exit strategy type enum
+#[derive(Debug, Clone, PartialEq)]
+pub enum ExitStrategyType {
+    IPO,
+    Acquisition,
+    ManagementBuyout,
+    Liquidation,
+    Merger,
 }
 
 /// Exit strategy assessment
 #[derive(Debug, Clone)]
 pub struct ExitStrategy {
+    pub strategy_type: String,
+    pub feasibility_score: f64,
+    pub timeline_months: u32,
+    pub expected_return: f64,
+    pub complexity: f64,
     pub exit_options: Vec<String>,
     pub exit_complexity: f64,
     pub exit_costs: f64,

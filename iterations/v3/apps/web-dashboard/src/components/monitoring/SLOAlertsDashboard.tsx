@@ -22,8 +22,8 @@ interface SLOAlertsDashboardProps {
 
 export default function SLOAlertsDashboard({ refreshInterval = 30000 }: SLOAlertsDashboardProps) {
   const [alerts, setAlerts] = useState<SLOAlert[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [loading] = useState(false);
+  const [error] = useState<string | null>(null);
   const [selectedSeverity, setSelectedSeverity] = useState<string>("all");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
 

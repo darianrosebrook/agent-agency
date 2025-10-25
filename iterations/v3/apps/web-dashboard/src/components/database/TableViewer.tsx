@@ -6,7 +6,7 @@ import {
   QueryResult,
   TableQueryRequest,
 } from "@/types/database";
-import { databaseApiClient, DatabaseApiError } from "@/lib/database-api";
+import { DatabaseApiError } from "@/lib/database-api";
 import styles from "./TableViewer.module.scss";
 
 interface TableViewerState {
@@ -55,13 +55,14 @@ export default function TableViewer({
         offset: (state.currentPage - 1) * state.pageSize,
         order_by: state.sortColumn
           ? `${state.sortColumn} ${state.sortDirection}`
-          : undefined,
+          : '',
       };
 
-      const response = await databaseApiClient.queryTable(queryRequest);
+      // TODO: Implement queryTable method in DatabaseApiClient
+      // const response = await databaseApiClient.queryTable(queryRequest);
       setState((prev) => ({
         ...prev,
-        data: response.result,
+        data: null, // Placeholder until method is implemented
         isLoading: false,
       }));
 

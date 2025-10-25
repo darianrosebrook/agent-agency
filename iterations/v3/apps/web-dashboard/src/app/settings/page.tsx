@@ -11,7 +11,7 @@ import { useState } from "react";
 import DashboardLayout from "@/components/shared/DashboardLayout";
 import { Text, Button, Input } from "@/design-system/primitives";
 import { useScrollAnimation } from "@/interactions";
-import { Save, RotateCcw, Settings as SettingsIcon, Bell, Database, Palette, Shield } from "lucide-react";
+import { Save, RotateCcw, Settings as SettingsIcon, Bell, Database, Palette } from "lucide-react";
 import styles from "./page.module.scss";
 
 interface SettingsState {

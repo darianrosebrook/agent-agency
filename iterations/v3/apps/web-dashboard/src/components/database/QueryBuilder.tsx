@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   QueryBuilderProps,
   QueryRequest,
@@ -56,7 +56,7 @@ export default function QueryBuilder({
 
       const queryRequest: QueryRequest = {
         sql: state.sqlQuery,
-        parameters: state.parameters.length > 0 ? state.parameters : undefined,
+        parameters: state.parameters.length > 0 ? state.parameters : [],
         read_only: state.isReadOnly,
       };
 
@@ -91,7 +91,7 @@ export default function QueryBuilder({
 
     const queryRequest: QueryRequest = {
       sql: state.sqlQuery,
-      parameters: state.parameters.length > 0 ? state.parameters : undefined,
+      parameters: state.parameters.length > 0 ? state.parameters : [],
       read_only: state.isReadOnly,
     };
 
@@ -176,7 +176,7 @@ export default function QueryBuilder({
   }, []);
 
   // Update state when external props change
-  React.useEffect(() => {
+  useEffect(() => {
     setState((prev) => ({
       ...prev,
       isExecuting: externalExecuting ?? prev.isExecuting,
@@ -382,7 +382,7 @@ export default function QueryBuilder({
                         Load
                       </button>
                       <span className={styles.queryStats}>
-                        Used {query.use_count} times
+                        Created {new Date(query.created_at).toLocaleDateString()}
                       </span>
                     </div>
                   </div>

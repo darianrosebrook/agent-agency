@@ -1,15 +1,15 @@
 import { useState, useEffect } from "react";
 import { useArbiterVerdict } from "@/hooks/useArbiter";
 import Card, { CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
-import { Input } from "../shared/Input";
-import { Textarea } from "../shared/Textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../shared/Select";
+import { Input, Badge, Button } from "@/design-system/primitives";
+// TODO: Implement Select component or use native select
+// import {
+//   Select,
+//   SelectContent,
+//   SelectItem,
+//   SelectTrigger,
+//   SelectValue,
+// } from "../shared/Select";
 import {
   Play,
   Pause,
@@ -60,7 +60,10 @@ export function CliInterventionPanel({
     let index = 0;
 
     const interval = setInterval(() => {
-      setTaskStatus(statusSequence[index % statusSequence.length]);
+      const nextStatus = statusSequence[index % statusSequence.length];
+      if (nextStatus) {
+        setTaskStatus(nextStatus);
+      }
       index++;
     }, 10000); // Change status every 10 seconds for demo
 
@@ -139,21 +142,15 @@ export function CliInterventionPanel({
           </div>
           <div className="text-right">
             <div className="text-sm text-gray-600">Intervention Mode</div>
-            <Select
+            <select
               value={interventionMode}
-              onValueChange={(value: InterventionMode) =>
-                setInterventionMode(value)
-              }
+              onChange={(e) => setInterventionMode(e.target.value as InterventionMode)}
+              className="w-32 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <SelectTrigger className="w-32">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="strict">Strict</SelectItem>
-                <SelectItem value="auto">Auto</SelectItem>
-                <SelectItem value="dry-run">Dry Run</SelectItem>
-              </SelectContent>
-            </Select>
+              <option value="strict">Strict</option>
+              <option value="auto">Auto</option>
+              <option value="dry-run">Dry Run</option>
+            </select>
           </div>
         </div>
 
@@ -173,7 +170,7 @@ export function CliInterventionPanel({
             {taskStatus === "executing" && (
               <Button
                 onClick={() => handleIntervention("pause")}
-                variant="outline"
+                variant="secondary"
                 className="flex items-center gap-2"
               >
                 <Pause className="w-4 h-4" />
@@ -182,7 +179,7 @@ export function CliInterventionPanel({
             )}
             <Button
               onClick={() => handleIntervention("abort")}
-              variant="destructive"
+              variant="danger"
               className="flex items-center gap-2"
             >
               <Square className="w-4 h-4" />
@@ -204,18 +201,15 @@ export function CliInterventionPanel({
                     Override Arbiter Verdict
                   </label>
                   <div className="flex gap-2">
-                    <Select
+                    <select
                       value={overrideVerdict}
-                      onValueChange={setOverrideVerdict}
+                      onChange={(e) => setOverrideVerdict(e.target.value as "approve" | "reject")}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
-                      <SelectTrigger className="flex-1">
-                        <SelectValue placeholder="Select verdict" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="approve">Approve</SelectItem>
-                        <SelectItem value="reject">Reject</SelectItem>
-                      </SelectContent>
-                    </Select>
+                      <option value="">Select verdict</option>
+                      <option value="approve">Approve</option>
+                      <option value="reject">Reject</option>
+                    </select>
                     <Button
                       onClick={() =>
                         handleIntervention("override_verdict", {
@@ -229,11 +223,11 @@ export function CliInterventionPanel({
                       Override
                     </Button>
                   </div>
-                  <Textarea
+                  <textarea
                     placeholder="Reason for override..."
                     value={overrideReason}
                     onChange={(e) => setOverrideReason(e.target.value)}
-                    className="mt-2"
+                    className="mt-2 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
               ))}
@@ -247,7 +241,7 @@ export function CliInterventionPanel({
                       reason: "Manual waiver request via CLI",
                     })
                   }
-                  variant="outline"
+                  variant="secondary"
                   className="w-full"
                 >
                   Request Waiver
@@ -279,7 +273,7 @@ export function CliInterventionPanel({
               })
             }
             disabled={!parameterName || !parameterValue}
-            variant="outline"
+            variant="secondary"
             className="w-full"
           >
             Modify Parameter
@@ -292,11 +286,12 @@ export function CliInterventionPanel({
             <MessageSquare className="w-4 h-4" />
             Guidance Injection
           </h3>
-          <Textarea
+          <textarea
             placeholder="Provide specific guidance for the agent..."
             value={guidanceText}
             onChange={(e) => setGuidanceText(e.target.value)}
             rows={4}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <Button
             onClick={() =>
@@ -310,9 +305,9 @@ export function CliInterventionPanel({
         </div>
 
         {/* Mode-Specific Information */}
-        <Alert>
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>
+        <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4 flex items-start gap-3">
+          <AlertTriangle className="h-4 w-4 text-yellow-600 mt-0.5" />
+          <div>
             <strong>Current Mode:</strong> {interventionMode.toUpperCase()}
             {interventionMode === "strict" &&
               " - Manual approval required for all changes"}
@@ -320,8 +315,8 @@ export function CliInterventionPanel({
               " - Automatic execution with quality gates"}
             {interventionMode === "dry-run" &&
               " - No actual changes will be applied"}
-          </AlertDescription>
-        </Alert>
+          </div>
+        </div>
 
         {/* Intervention History */}
         <div className="space-y-2">

@@ -17,7 +17,7 @@ export default function NotFound() {
   const router = useRouter();
   
   // GSAP animations
-  const contentAnimation = useScrollAnimation({ 
+  const contentAnimation = useScrollAnimation<HTMLDivElement>({ 
     type: 'scale', 
     duration: 0.6, 
     delay: 100 
@@ -62,7 +62,7 @@ export default function NotFound() {
             onClick={() => router.back()}
             variant="secondary"
             size="lg"
-            className={styles.button}
+            className={styles.button || ''}
             aria-label="Go back to previous page"
           >
             <ArrowLeft size={20} />
@@ -73,7 +73,7 @@ export default function NotFound() {
             onClick={() => router.push('/')}
             variant="primary"
             size="lg"
-            className={styles.button}
+            className={styles.button || ''}
             aria-label="Go to dashboard home"
           >
             <Home size={20} />

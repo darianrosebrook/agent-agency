@@ -1554,10 +1554,13 @@ impl ChangeDeduplicationEngine {
         };
 
         Ok(RequiredChange {
-            category: merged_category,
+            change_type: crate::judge::ChangeType::CodeQuality, // Default for merged changes
             description: merged_description,
+            affected_components: vec![],
+            breaking_change: false,
+            test_required: true,
+            category: merged_category,
             impact: max_impact,
-            rationale: format!("Merged from {} similar changes", indices.len()),
         })
     }
 

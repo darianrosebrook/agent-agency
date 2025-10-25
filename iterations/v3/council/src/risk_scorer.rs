@@ -8,24 +8,6 @@ use crate::judge::*;
 use crate::error::{CouncilError, CouncilResult};
 use agent_agency_contracts::working_spec::WorkingSpec;
 
-/// Computational complexity classes
-#[derive(Debug, Clone, PartialEq)]
-pub enum ComputationalComplexity {
-    /// O(1) - constant time
-    Constant,
-    /// O(log n) - logarithmic time
-    Logarithmic,
-    /// O(n) - linear time
-    Linear,
-    /// O(n log n) - linearithmic time
-    Linearithmic,
-    /// O(n^k) - polynomial time
-    Polynomial,
-    /// O(k^n) - exponential time
-    Exponential,
-    /// O(n!) - factorial time
-    Factorial,
-}
 
 /// Multi-dimensional risk scorer
 #[derive(Debug)]
@@ -253,17 +235,15 @@ impl RiskScorer {
         // Assess resource risks
         let resource_risks = vec![
             ResourceRisk {
-                resource_type: "Compute".to_string(),
                 availability_risk: if desc.contains("gpu") || desc.contains("high-performance") { 0.7 } else { 0.2 },
                 cost_volatility: 0.4,
-                alternative_sources: 3,
+                alternative_sources: vec!["AWS EC2".to_string(), "Google Cloud".to_string(), "Azure".to_string()],
                 description: "Computational resource requirements and availability".to_string(),
             },
             ResourceRisk {
-                resource_type: "Storage".to_string(),
                 availability_risk: if desc.contains("big data") || desc.contains("large dataset") { 0.6 } else { 0.1 },
                 cost_volatility: 0.3,
-                alternative_sources: 5,
+                alternative_sources: vec!["AWS S3".to_string(), "Google Cloud Storage".to_string(), "Azure Blob".to_string(), "MinIO".to_string(), "Local".to_string()],
                 description: "Data storage requirements and scalability".to_string(),
             },
         ];
@@ -277,17 +257,17 @@ impl RiskScorer {
             } else {
                 TechnologyMaturityLevel::Mature
             },
-            adoption_rate: 0.6,
             stability_score: if desc.contains("experimental") { 0.4 } else { 0.8 },
             vendor_support: 0.7,
-            community_size: "Large".to_string(),
+            community_size: if desc.contains("popular") || desc.contains("widely") { 0.9 } else { 0.6 },
+            vendor_stability: 0.8,
+            community_support: 0.7,
         };
 
         // Assess integration complexity
         let integration_complexity = IntegrationComplexity {
             api_integrations: desc.matches("api").count() as u32,
-            data_format_complexity: if desc.contains("multiple formats") || desc.contains("legacy systems") { 0.8 } else { 0.4 },
-            protocol_diversity: desc.matches("protocol").count() as u32 + 1,
+            protocol_diversity: (desc.matches("protocol").count() as u32 + 1) as f64,
             legacy_system_interfaces: desc.matches("legacy").count() as u32,
             real_time_requirements: desc.contains("real-time") || desc.contains("streaming"),
         };
@@ -298,22 +278,22 @@ impl RiskScorer {
                 risk_type: PerformanceRiskType::LatencyViolation,
                 severity: if desc.contains("real-time") { 0.8 } else { 0.3 },
                 likelihood: 0.4,
-                mitigation_complexity: ComplexityLevel::Moderate,
+                mitigation_complexity: 0.6, // Moderate complexity
             },
             PerformanceRisk {
                 risk_type: PerformanceRiskType::ScalabilityBottleneck,
                 severity: if desc.contains("high-scale") || desc.contains("million users") { 0.7 } else { 0.2 },
                 likelihood: 0.5,
-                mitigation_complexity: ComplexityLevel::Complex,
+                mitigation_complexity: 0.8, // Complex mitigation
             },
         ];
 
         Ok(TechnicalRiskAssessment {
             feasibility_score,
-            complexity_assessment,
-            resource_risks,
-            technology_maturity,
-            integration_complexity,
+            complexity_assessment: ComplexityLevel::Moderate, // TODO: derive from complexity_assessment
+            resource_risks: resource_risks.into_iter().map(|r| r.description).collect(),
+            technology_maturity: technology_maturity.stability_score,
+            integration_complexity: integration_complexity.protocol_diversity,
             performance_risks,
         })
     }
@@ -382,6 +362,10 @@ impl RiskScorer {
                 compliance_complexity: if desc.contains("global") { 0.8 } else { 0.5 },
                 penalty_severity: 0.9,
                 audit_frequency: AuditFrequency::Continuous,
+                compliance_burden: 0.7,
+                legal_risk: 0.8,
+                audit_requirements: vec!["Annual compliance audit".to_string(), "Data processing records".to_string()],
+                certification_needs: vec!["GDPR compliance certification".to_string()],
             },
         ];
 
@@ -409,6 +393,11 @@ impl RiskScorer {
             regulatory_risks,
             societal_impacts,
             uncertainty_factors,
+            privacy_risks: vec!["Data collection privacy".to_string()],
+            bias_risks: vec!["Algorithmic bias".to_string()],
+            fairness_concerns: vec!["Equal treatment".to_string()],
+            transparency_issues: vec!["Decision explainability".to_string()],
+            accountability_gaps: vec!["Oversight mechanisms".to_string()],
         })
     }
 
@@ -435,6 +424,7 @@ impl RiskScorer {
             } else {
                 InfrastructureRequirement::Moderate
             },
+            automation_level: if desc.contains("ci/cd") || desc.contains("automated") { 0.9 } else { 0.5 },
             configuration_complexity: if desc.contains("complex") { 0.8 } else { 0.4 },
             rollback_complexity: if desc.contains("zero-downtime") { 0.9 } else { 0.5 },
             zero_downtime_requirement: desc.contains("24/7") || desc.contains("mission-critical"),
@@ -447,6 +437,7 @@ impl RiskScorer {
             } else {
                 UpdateFrequency::Monthly
             },
+            monitoring_complexity: if desc.contains("complex") { 0.8 } else { 0.4 },
             monitoring_intensity: if desc.contains("mission-critical") {
                 MonitoringIntensity::Critical
             } else if desc.contains("high-availability") {
@@ -456,7 +447,9 @@ impl RiskScorer {
             },
             support_staffing: if desc.contains("enterprise") { 3.0 } else { 1.0 },
             emergency_response_time: std::time::Duration::from_secs(if desc.contains("critical") { 1 * 3600 } else { 4 * 3600 }),
-            cost_per_month: Some(if desc.contains("enterprise") { 50000.0 } else { 5000.0 }),
+            cost_per_month: if desc.contains("enterprise") { 50000.0 } else { 5000.0 },
+            backup_requirements: vec!["Daily backups".to_string(), "Offsite storage".to_string()],
+            disaster_recovery: desc.contains("mission-critical") || desc.contains("high-availability"),
         };
 
         // Scalability concerns
@@ -470,7 +463,12 @@ impl RiskScorer {
                         time_to_limit: std::time::Duration::from_secs(60 * 60 * 24 * 90), // 90 days
                         growth_pattern: GrowthPattern::Exponential,
                     },
-                    mitigation_complexity: ComplexityLevel::Complex,
+                    mitigation_complexity: 0.8,
+                    mitigation_strategies: vec![
+                        "Implement horizontal scaling".to_string(),
+                        "Add load balancing".to_string(),
+                        "Optimize database queries".to_string(),
+                    ],
                 },
             ]
         } else {
@@ -484,25 +482,36 @@ impl RiskScorer {
             dashboard_complexity: if desc.contains("enterprise") { DashboardComplexity::Advanced } else { DashboardComplexity::Moderate },
             log_volume: if desc.contains("high-traffic") { LogVolume::High } else { LogVolume::Moderate },
             real_time_requirements: desc.contains("real-time") || desc.contains("monitoring"),
+            metrics_collection: vec!["CPU usage".to_string(), "Memory usage".to_string(), "Response time".to_string()],
+            alerting_thresholds: vec!["CPU > 80%".to_string(), "Memory > 90%".to_string(), "Errors > 5/min".to_string()],
+            log_aggregation: true,
+            performance_monitoring: true,
         };
 
         // Incident response
         let incident_response = IncidentResponseAssessment {
             response_time_sla: std::time::Duration::from_secs(if desc.contains("critical") { 15 * 60 } else { 60 * 60 }),
             severity_classification: IncidentSeverityLevels {
-                critical_incidents: true,
-                high_incidents: true,
-                medium_incidents: true,
-                low_incidents: desc.contains("enterprise"),
+                critical_threshold: 0.9,
+                high_threshold: 0.7,
+                medium_threshold: 0.4,
+                low_threshold: 0.1,
+                critical_incidents: if desc.contains("critical") { 5 } else { 2 },
+                high_incidents: if desc.contains("high-availability") { 10 } else { 5 },
+                medium_incidents: 15,
+                low_incidents: if desc.contains("enterprise") { 50 } else { 25 },
             },
-            escalation_procedures: if desc.contains("enterprise") { EscalationComplexity::MultiLevel } else { EscalationComplexity::Moderate },
+            response_team_requirements: vec!["DevOps engineer".to_string(), "Security specialist".to_string()],
+            escalation_procedures: if desc.contains("enterprise") {
+                vec!["Level 1: On-call engineer".to_string(), "Level 2: Senior engineer".to_string(), "Level 3: Engineering manager".to_string()]
+            } else {
+                vec!["Primary contact".to_string(), "Backup contact".to_string()]
+            },
             recovery_time_objectives: RecoveryObjectives {
-                rto_critical: std::time::Duration::from_secs(4 * 3600),
-                rto_high: std::time::Duration::from_secs(8 * 3600),
-                rto_medium: std::time::Duration::from_secs(24 * 3600),
-                rpo_critical: std::time::Duration::from_secs(15 * 60),
-                rpo_high: std::time::Duration::from_secs(1 * 3600),
-                rpo_medium: std::time::Duration::from_secs(4 * 3600),
+                rto_minutes: if desc.contains("critical") { 240 } else { 480 }, // 4-8 hours in minutes
+                rpo_minutes: if desc.contains("critical") { 15 } else { 60 }, // 15-60 minutes data loss
+                recovery_automation: if desc.contains("automated") { 0.9 } else { 0.6 },
+                backup_frequency: if desc.contains("critical") { "hourly".to_string() } else { "daily".to_string() },
             },
         };
 
@@ -531,6 +540,10 @@ impl RiskScorer {
 
         // Market impact
         let market_impact = MarketImpact {
+            market_size: if desc.contains("mass-market") || desc.contains("large-scale") { 0.9 } else { 0.5 },
+            competitive_pressure: if desc.contains("competitive") || desc.contains("market-share") { 0.8 } else { 0.4 },
+            market_share_impact: if desc.contains("market-leader") || desc.contains("dominant") { 0.9 } else { 0.5 },
+            entry_barrier_changes: vec!["Technology adoption".to_string(), "Market entry costs".to_string()],
             market_disruption: if desc.contains("disruptive") || desc.contains("transformative") { 0.8 } else { 0.3 },
             competitive_advantage: if desc.contains("unique") || desc.contains("differentiated") { 0.8 } else { 0.5 },
             market_share_potential: if desc.contains("mass-market") { 0.7 } else { 0.4 },
@@ -547,21 +560,32 @@ impl RiskScorer {
         let financial_risks = vec![
             FinancialRisk {
                 risk_type: FinancialRiskType::DevelopmentCostOverrun,
-                amount_at_risk: Some(100000.0),
+                amount_at_risk: 100000.0,
                 probability: if desc.contains("complex") { 0.7 } else { 0.4 },
                 time_horizon_months: 6,
+                cost_overrun_probability: 0.6,
+                revenue_impact: 0.3,
+                cash_flow_risk: 0.4,
+                investment_recovery: 0.5,
             },
             FinancialRisk {
                 risk_type: FinancialRiskType::MarketPenetrationFailure,
-                amount_at_risk: Some(500000.0),
+                amount_at_risk: 500000.0,
                 probability: if desc.contains("novel") { 0.8 } else { 0.3 },
                 time_horizon_months: 12,
+                cost_overrun_probability: 0.2,
+                revenue_impact: 0.8,
+                cash_flow_risk: 0.6,
+                investment_recovery: 0.3,
             },
         ];
 
         // Stakeholder complexity
         let stakeholder_complexity = StakeholderComplexity {
             stakeholder_count: if desc.contains("enterprise") { 15 } else { 5 },
+            communication_complexity: if desc.contains("complex") { 0.8 } else { 0.4 },
+            alignment_difficulty: if desc.contains("controversial") { 0.9 } else { 0.5 },
+            influence_distribution: vec!["Technical leads".to_string(), "Product managers".to_string(), "Executives".to_string()],
             stakeholder_diversity: if desc.contains("global") { 0.9 } else { 0.6 },
             communication_channels: if desc.contains("distributed") { 8 } else { 3 },
             conflict_potential: if desc.contains("controversial") { 0.8 } else { 0.3 },
@@ -577,16 +601,26 @@ impl RiskScorer {
         // Competitive positioning
         let competitive_positioning = CompetitivePositioning {
             market_position: if desc.contains("market-leader") {
-                MarketPosition::MarketLeader
+                "Market Leader".to_string()
             } else if desc.contains("challenger") {
-                MarketPosition::Challenger
+                "Challenger".to_string()
             } else {
-                MarketPosition::NichePlayer
+                "Niche Player".to_string()
             },
             differentiation_factors: vec![
                 "Technical innovation".to_string(),
                 "User experience".to_string(),
                 "Cost effectiveness".to_string(),
+            ],
+            competitive_advantages: vec![
+                "First mover advantage".to_string(),
+                "Superior technology".to_string(),
+                "Strong brand".to_string(),
+            ],
+            vulnerability_assessment: vec![
+                "Competitor response".to_string(),
+                "Technology changes".to_string(),
+                "Regulatory changes".to_string(),
             ],
             barrier_to_entry: if desc.contains("patented") {
                 BarrierStrength::Strong
@@ -604,16 +638,24 @@ impl RiskScorer {
         // Exit strategy
         let exit_strategy = ExitStrategy {
             strategy_type: if desc.contains("acquisition-target") {
-                ExitStrategyType::Acquisition
+                "Acquisition".to_string()
             } else if desc.contains("ipo") {
-                ExitStrategyType::IPO
+                "IPO".to_string()
             } else {
-                ExitStrategyType::StrategicPartnership
+                "Merger".to_string()
             },
             feasibility_score: if desc.contains("attractive") { 0.9 } else { 0.6 },
-            timeline_months: Some(if desc.contains("quick-exit") { 18 } else { 36 }),
-            expected_return: Some(if desc.contains("high-growth") { 5000000.0 } else { 2000000.0 }),
-            complexity: if desc.contains("complex") { ComplexityLevel::Complex } else { ComplexityLevel::Moderate },
+            timeline_months: if desc.contains("quick-exit") { 18 } else { 36 },
+            expected_return: if desc.contains("high-growth") { 5000000.0 } else { 2000000.0 },
+            complexity: if desc.contains("complex") { 0.8 } else { 0.5 },
+            exit_options: vec![
+                "Strategic acquisition".to_string(),
+                "IPO".to_string(),
+                "Management buyout".to_string(),
+            ],
+            exit_complexity: if desc.contains("complex") { 0.8 } else { 0.4 },
+            exit_costs: if desc.contains("expensive") { 1000000.0 } else { 100000.0 },
+            stakeholder_impact: if desc.contains("disruptive") { 0.8 } else { 0.3 },
         };
 
         Ok(BusinessRiskAssessment {
@@ -623,6 +665,11 @@ impl RiskScorer {
             stakeholder_complexity,
             competitive_positioning,
             exit_strategy,
+            market_risks: vec!["Market saturation".to_string(), "Competitor entry".to_string()],
+            regulatory_risks: vec!["Compliance costs".to_string(), "Regulatory changes".to_string()],
+            financial_impacts: vec!["Revenue uncertainty".to_string(), "Cost overruns".to_string()],
+            stakeholder_impacts: vec!["Customer dissatisfaction".to_string(), "Partner conflicts".to_string()],
+            competitive_threats: vec!["New market entrants".to_string(), "Technology disruption".to_string()],
         })
     }
 
@@ -633,7 +680,7 @@ impl RiskScorer {
         ethical: &EthicalRiskAssessment,
         operational: &OperationalRiskAssessment,
         business: &BusinessRiskAssessment,
-    ) -> f32 {
+    ) -> f64 {
         // Convert dimension scores to risk scores (lower score = lower risk)
         let technical_risk = 1.0 - technical.feasibility_score;
         let ethical_risk = 1.0 - ethical.ethical_score;
@@ -703,7 +750,7 @@ impl RiskScorer {
         ethical: &EthicalRiskAssessment,
         operational: &OperationalRiskAssessment,
         business: &BusinessRiskAssessment,
-        overall_risk: f32,
+        overall_risk: f64,
     ) -> Vec<MitigationPriority> {
         let mut priorities = Vec::new();
 
@@ -849,7 +896,7 @@ impl RiskScorer {
         ethical: &EthicalRiskAssessment,
         operational: &OperationalRiskAssessment,
         business: &BusinessRiskAssessment,
-    ) -> f32 {
+    ) -> f64 {
         // Base confidence factors
         let technical_confidence = technical.feasibility_score; // Higher feasibility = higher confidence
         let ethical_confidence = ethical.ethical_score; // Clearer ethics = higher confidence

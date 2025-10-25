@@ -7,26 +7,34 @@
 //! for the council-based arbiter system.
 
 pub mod artifact_store;
+pub mod audit;
 pub mod backup;
 pub mod backup_recovery;
 pub mod backup_validator;
+pub mod circuit_breaker;
 pub mod client;
 pub mod data_consistency;
 pub mod health;
 pub mod knowledge_queries;
+pub mod metrics;
 pub mod migrations;
 pub mod models;
+pub mod pooling;
 pub mod queries;
 pub mod vector_store;
 pub mod optimization;
 
 pub use artifact_store::{DatabaseArtifactStorage, VersionMetadata, VersionDiff};
+pub use audit::{DatabaseAuditLogger, DatabaseAuditEvent, AuditEventType, AuditStatistics};
 pub use backup::{BackupManager, BackupResult};
 pub use backup_recovery::{DisasterRecoveryManager, BackupConfig, RecoveryConfig, BackupMetadata, RecoveryStatus, RtoRpoStatus};
 pub use backup_validator::{BackupValidator, BackupValidationConfig, ValidationResult, BackupHealthMetrics};
-pub use client::{DatabaseClient, DatabaseHealthStatus};
+pub use circuit_breaker::{CircuitBreaker, CircuitState, CircuitBreakerError};
+pub use client::{DatabaseClient};
 pub use data_consistency::{DataConsistencyManager, ConsistencyLevel, DistributedTransaction, ConsistencyCheckResult};
-pub use health::{DatabaseHealthChecker, HealthCheckResult};
+pub use health::{DatabaseHealthMonitor, DatabaseHealthStatus, HealthStatus, DatabaseStats, HealthReport};
+pub use metrics::{DatabaseMetrics, DatabaseMetricsSnapshot};
+pub use pooling::{DeadpoolSqlxBridge, DeadpoolSqlxConnection};
 pub use optimization::{
     DatabaseOptimizationManager, DatabaseOptimizationConfig, ReadWriteSplitClient,
     DatabasePerformanceMonitor, DatabaseIndexManager, MonitoredQueryExecutor,

@@ -16,6 +16,24 @@
   box-shadow: var(--box-shadow-sm);
   contain: layout style; /* Prevent layout thrashing */
   
+  // FlowPress-style gradient top border (appears on hover)
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--color-brand-primary), var(--color-brand-accent));
+    opacity: 0;
+    transition: opacity var(--transition-duration-base) var(--transition-easing-out);
+    z-index: 1;
+  }
+  
+  &:hover::before {
+    opacity: 1;
+  }
+  
   // Variant styles
   &.variant-default {
     background-color: var(--color-background-primary);
@@ -128,17 +146,18 @@
     box-shadow: var(--box-shadow-xl);
   }
   
-  // Interactive states
+  // Interactive states - FlowPress lift effect
   &.hover:hover {
-    transform: translateY(-2px);
+    transform: translateY(-4px); // More dramatic lift
     box-shadow: var(--box-shadow-lg);
+    border-color: var(--color-border-focus);
   }
   
   &.interactive {
     cursor: pointer;
     
     &:hover {
-      transform: translateY(-1px);
+      transform: translateY(-3px); // Template-style lift
       box-shadow: var(--box-shadow-md);
       border-color: var(--color-brand-accent);
     }
@@ -159,7 +178,7 @@
     user-select: none;
     
     &:hover {
-      transform: translateY(-1px);
+      transform: translateY(-3px); // Template-style lift
       box-shadow: var(--box-shadow-md);
       border-color: var(--color-brand-accent);
     }

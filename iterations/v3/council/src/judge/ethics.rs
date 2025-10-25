@@ -8,6 +8,7 @@ use tokio::sync::Mutex;
 use super::judge_types::{*, JudgeCapabilities};
 
 /// Ethics-focused judge implementation
+#[derive(Debug)]
 pub struct EthicsJudge {
     id: Uuid,
     name: String,
@@ -98,14 +99,14 @@ impl Judge for EthicsJudge {
 
         if overall_score >= 0.8 {
             Ok(JudgeVerdict::Approve {
-                confidence: overall_score.min(0.95),
+                confidence: overall_score.min(0.95) as f64,
                 reasoning: "Specification meets ethical standards and compliance requirements".to_string(),
-                quality_score: overall_score,
+                quality_score: overall_score as f64,
                 risk_assessment: RiskAssessment::default(),
             })
         } else if overall_score >= 0.6 {
             Ok(JudgeVerdict::Refine {
-                confidence: overall_score,
+                confidence: overall_score as f64,
                 reasoning: "Specification needs ethical refinements".to_string(),
                 required_changes: vec![
                     RequiredChange {
@@ -114,18 +115,23 @@ impl Judge for EthicsJudge {
                         affected_components: vec!["ethics".to_string()],
                         breaking_change: false,
                         test_required: true,
+                        category: ChangeCategory::Requirements,
+                        impact: ChangeImpact::Moderate,
                     }
                 ],
                 priority: ChangePriority::High,
                 estimated_effort: EffortEstimate {
-                    developer_hours: 8,
-                    complexity: EffortComplexity::Moderate,
+                    person_hours: 8.0,
+                    developer_hours: 8.0,
+                    complexity: ComplexityLevel::Moderate,
+                    effort_complexity: EffortComplexity::Moderate,
                     skills_required: vec!["ethics".to_string()],
+                    dependencies: vec!["ethics review".to_string()],
                 },
             })
         } else {
             Ok(JudgeVerdict::Reject {
-                confidence: overall_score,
+                confidence: overall_score as f64,
                 reasoning: "Specification violates ethical standards".to_string(),
                 critical_issues: vec!["Ethical violations detected".to_string()],
                 compliance_violations: vec!["Ethical compliance requirements not met".to_string()],
@@ -137,6 +143,9 @@ impl Judge for EthicsJudge {
         JudgeCapabilities {
             supported_domains: vec!["ethics".to_string(), "compliance".to_string(), "governance".to_string()],
             max_spec_length: 10000,
+            max_complexity: ComplexityLevel::Complex,
+            supported_languages: vec!["English".to_string()],
+            specialization_score: 0.9,
             requires_network: false,
             processing_timeout_seconds: 30,
             confidence_threshold: 0.7,
@@ -203,9 +212,12 @@ impl EthicsJudge {
                 "privacy".to_string(),
                 "accountability".to_string(),
             ],
+            max_spec_length: 20000,
             max_complexity: ComplexityLevel::Complex,
             supported_languages: vec!["all".to_string()],
             specialization_score: 0.9,
+            requires_network: false,
+            processing_timeout_seconds: 60,
             confidence_threshold: 0.7,
         }
     }

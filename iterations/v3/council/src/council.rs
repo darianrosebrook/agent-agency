@@ -13,7 +13,7 @@ use crate::judge::{Judge, JudgeContribution, ReviewContext, PreviousReview, Verd
 use crate::verdict_aggregation::{VerdictAggregator, AggregationResult};
 use crate::decision_making::{DecisionEngine, FinalDecision, DecisionContext, OrganizationalConstraints, ResourceConstraints, HistoricalDecision, EmergencyFlags, ConsensusStrategy, RiskThresholds, TaskPriority, ImpactLevel};
 use crate::error_handling::{AgencyError, CircuitBreaker, CircuitBreakerConfig, RecoveryOrchestrator, DegradationManager, DegradationPolicy, DegradationLevel, error_factory};
-use crate::risk_scorer::ComputationalComplexity;
+use crate::judge::judge_types::ComputationalComplexity;
 
 use tracing::{debug, info, instrument, warn};
 
@@ -686,9 +686,9 @@ impl Council {
     fn create_decision_context(&self, review_context: &ReviewContext) -> DecisionContext {
         // Create organizational constraints based on risk tier
         let max_risk_level = match review_context.risk_tier {
-            agent_agency_contracts::task_request::RiskTier::Tier1 => crate::judge::RiskLevel::Medium,
-            agent_agency_contracts::task_request::RiskTier::Tier2 => crate::judge::RiskLevel::High,
-            agent_agency_contracts::task_request::RiskTier::Tier3 => crate::judge::RiskLevel::Critical,
+            crate::types::RiskTier::Tier1 => crate::judge::RiskLevel::Medium,
+            crate::types::RiskTier::Tier2 => crate::judge::RiskLevel::High,
+            crate::types::RiskTier::Tier3 => crate::judge::RiskLevel::Critical,
         };
 
         let organizational_constraints = OrganizationalConstraints {

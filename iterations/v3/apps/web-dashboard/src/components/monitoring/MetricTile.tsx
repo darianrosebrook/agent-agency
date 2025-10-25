@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+// import React from "react";
 import { MetricTileProps } from "@/types/metrics";
 import styles from "./MetricTile.module.scss";
 
