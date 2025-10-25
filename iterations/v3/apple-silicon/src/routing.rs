@@ -3,7 +3,10 @@
 //! Routes inference requests to optimal hardware targets (ANE, GPU, CPU)
 //! based on model characteristics, system load, and performance requirements.
 
-use crate::types::*;
+use crate::types::{
+    core::*, routing::*, resources::*, inference::*,
+    optimization::OptimizationTarget,
+};
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -729,8 +732,8 @@ impl Default for InferenceRouter {
     fn default() -> Self {
         Self::new_with_defaults(RoutingConfig {
             enable_routing: true,
-            routing_algorithm: crate::types::RoutingAlgorithm::PerformanceBased,
-            load_balancing_strategy: crate::types::LoadBalancingStrategy::ResourceBased,
+            routing_algorithm: RoutingAlgorithm::PerformanceBased,
+            load_balancing_strategy: LoadBalancingStrategy::ResourceBased,
             max_concurrent_requests: 10,
             request_timeout_ms: 30000,
             enable_performance_monitoring: true,

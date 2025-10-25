@@ -256,8 +256,9 @@ impl ANEManager {
             return crate::ANECapabilities {
                 is_available: false,
                 compute_units: 0,
-                max_memory_mb: 0,
+                max_memory_mb: Some(0),
                 supported_precisions: vec![],
+                ..Default::default()
             };
         }
         
@@ -267,8 +268,9 @@ impl ANEManager {
         crate::ANECapabilities {
             is_available: true,
             compute_units: 16, // Heuristic for Apple Silicon
-            max_memory_mb: 8192, // Conservative estimate
+            max_memory_mb: Some(8192), // Conservative estimate
             supported_precisions: coreml_caps.supported_precisions,
+            ..Default::default()
         }
     }
 

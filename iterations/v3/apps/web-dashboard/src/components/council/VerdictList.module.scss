@@ -1,0 +1,239 @@
+/**
+ * VerdictList Component Styles
+ * Responsive layout for council verdict display with filtering and sorting
+ *
+ * @author @darianrosebrook
+ */
+
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-4);
+  width: 100%;
+}
+
+/* Header */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--spacing-4);
+  padding-bottom: var(--spacing-4);
+  border-bottom: 1px solid var(--color-border);
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--spacing-3);
+  }
+}
+
+.headerLeft {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+
+  @media (max-width: 480px) {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--spacing-2);
+  }
+}
+
+/* Search Box */
+.searchBox {
+  position: relative;
+  display: flex;
+  align-items: center;
+
+  .searchIcon {
+    position: absolute;
+    left: var(--spacing-3);
+    color: var(--color-text-secondary);
+    pointer-events: none;
+  }
+
+  .searchInput {
+    padding-left: calc(var(--spacing-3) + var(--spacing-6));
+    width: 250px;
+
+    @media (max-width: 480px) {
+      width: 100%;
+    }
+  }
+}
+
+/* Filters Panel */
+.filtersPanel {
+  padding: var(--spacing-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.filterRow {
+  display: flex;
+  gap: var(--spacing-4);
+  align-items: end;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--spacing-3);
+  }
+}
+
+.filterGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  min-width: 150px;
+
+  @media (max-width: 768px) {
+    min-width: unset;
+  }
+}
+
+.filterLabel {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+.rangeInputs {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+
+  span {
+    color: var(--color-text-secondary);
+    font-size: 0.875rem;
+  }
+}
+
+/* Sort Controls */
+.sortControls {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  padding: var(--spacing-2) 0;
+  flex-wrap: wrap;
+}
+
+.activeSort {
+  background-color: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+/* Error State */
+.error {
+  padding: var(--spacing-4);
+  background-color: var(--color-error-light);
+  border: 1px solid var(--color-error);
+  border-radius: var(--radius-lg);
+  text-align: center;
+}
+
+/* Verdict List */
+.verdictList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+  min-height: 400px;
+}
+
+/* Loading State */
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-4);
+  padding: var(--spacing-8);
+  color: var(--color-text-secondary);
+}
+
+.spinner {
+  width: 2rem;
+  height: 2rem;
+  border: 2px solid var(--color-border);
+  border-top: 2px solid var(--color-primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+/* Empty State */
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-3);
+  padding: var(--spacing-8);
+  text-align: center;
+  color: var(--color-text-secondary);
+}
+
+/* Pagination */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--spacing-4);
+  padding: var(--spacing-4);
+  border-top: 1px solid var(--color-border);
+  margin-top: var(--spacing-4);
+}
+
+.pageInfo {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
+/* Animations */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Spinning animation for refresh button */
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+/* Focus states */
+button:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* High contrast support */
+@media (prefers-contrast: high) {
+  .filtersPanel {
+    border-width: 2px;
+  }
+
+  .header {
+    border-bottom-width: 2px;
+  }
+
+  .pagination {
+    border-top-width: 2px;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .spinner,
+  .spinning {
+    animation: none;
+  }
+}
