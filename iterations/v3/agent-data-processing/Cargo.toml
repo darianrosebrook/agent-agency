@@ -70,8 +70,8 @@ agent-memory = { path = "../agent-memory", optional = true, features = ["databas
 # Integration with system-resilience
 system-resilience = { path = "../system-resilience", optional = true }
 
-# Embedding service
-embedding-service = { path = "../embedding-service", optional = true }
+# Data infrastructure (includes embedding functionality)
+data-infrastructure = { path = "../data-infrastructure", optional = true }
 
 # Database client (avoid circular dependency - database functionality stays in database crate)
 
@@ -88,7 +88,7 @@ futures = "0.3"
 default = ["workspace-integration", "embeddings"]
 memory-integration = ["agent-memory"]
 workspace-integration = ["system-resilience"]
-embeddings = ["embedding-service"]
+embeddings = ["data-infrastructure"]
 
 [dev-dependencies]
 tokio-test = "0.4"

@@ -43,7 +43,7 @@ statrs = "0.16"
 
 # Secure communication (from federated-learning)
 tokio-tungstenite = "0.20"
-futures-util.workspace = true
+futures-util = "0.3"
 
 # HTTP client (from tool-ecosystem)
 reqwest = { workspace = true, features = ["json"] }

@@ -2,8 +2,8 @@
 resolver = "2"
 members = [
     "agent-data-processing",  # NEW: Unified data processing pipeline consolidating ingestors/enrichers/indexers/knowledge/file-ops
-    "agent-workers",  # NEW: Consolidated MCP-based worker system
-    "agent-mcp",  # Consolidated MCP implementation
+    # "agent-workers",  # NEW: Consolidated MCP-based worker system - temporarily disabled
+    # "agent-mcp",  # Consolidated MCP implementation - temporarily disabled
     "agent-model-management",  # NEW: Unified model lifecycle, inference, and deployment management
     "agent-research",  # NEW: Unified advanced AI research platform (research + reflexive-learning + model-benchmarking + claim-extraction + planning-agent + self-prompting-agent)
     "agent-orchestration",  # NEW: Unified orchestration and council decision-making system

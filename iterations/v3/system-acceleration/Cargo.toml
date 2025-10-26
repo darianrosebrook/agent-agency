@@ -33,15 +33,13 @@ cocoa-foundation = "0.1"
 core-foundation = "0.9"
 core-graphics = "0.22"
 
-# ANE/Core ML support (macOS only)
-coreml = { git = "https://github.com/rust-ml/coreml-rs", optional = true }
+# ANE/Core ML support (macOS only) - TODO: Add when dependency is available
 
 # Local crates
 agent-agency-contracts = { path = "../agent-agency-contracts" }
 
 [features]
 default = []
-coreml = ["coreml"]
 metal = []
 
 [dev-dependencies]

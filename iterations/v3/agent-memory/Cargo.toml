@@ -57,7 +57,6 @@ config = { workspace = true }
 
 # Integration with existing services
 data-infrastructure = { path = "../data-infrastructure", optional = true, default-features = false }
-embedding-service = { path = "../embedding-service", optional = true }
 
 [dev-dependencies]
 tokio-test = "0.4"
@@ -66,7 +65,7 @@ criterion = { version = "0.5", features = ["html_reports"] }
 
 [features]
 default = ["embeddings", "graph-reasoning"]
-embeddings = ["embedding-service"]
+embeddings = ["data-infrastructure"]
 graph-reasoning = []
 temporal-analysis = []
 context-offloading = []
