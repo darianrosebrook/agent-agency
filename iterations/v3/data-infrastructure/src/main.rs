@@ -96,8 +96,14 @@ struct Args {
     #[arg(long, default_value = "postgres")]
     db_user: String,
 
+    // TODO: Remove hardcoded database password default - security vulnerability
+    // - [ ] Remove default_value = "password" from CLI argument
+    // - [ ] Require DATABASE_PASSWORD environment variable with no fallback
+    // - [ ] Add startup validation to ensure password is provided and meets complexity requirements
+    // - [ ] Implement proper secret management (vault, key management service)
+    // - [ ] Add password rotation capabilities and audit logging
+
     /// Database password
-    #[arg(long, default_value = "password")]
     db_password: String,
 
     /// Enable Redis for metrics storage
@@ -1217,6 +1223,14 @@ async fn cancel_task(
     }
 }
 
+// TODO: Refactor submit_task method - currently 142 lines, violates single responsibility principle
+// - [ ] Extract validation logic into validate_task_submission() function
+// - [ ] Extract database persistence into persist_task_to_database() function
+// - [ ] Extract audit logging into log_task_submission_audit() function
+// - [ ] Extract task execution into execute_task_async() function
+// - [ ] Extract response creation into create_task_submission_response() function
+// - [ ] Reduce main method to orchestration only (under 30 lines)
+
 pub async fn submit_task(
     State(state): State<AppState>,
     headers: axum::http::HeaderMap,
@@ -1241,6 +1255,13 @@ pub async fn submit_task(
     let context = request.context;
 
     let task_id = Uuid::new_v4();
+    // TODO: Replace println! with proper structured logging throughout codebase - found 1200+ instances
+    // - [ ] Replace all println! calls with tracing::info!/warn!/error! macros
+    // - [ ] Add structured logging with key-value pairs for better observability
+    // - [ ] Implement log levels (DEBUG, INFO, WARN, ERROR) appropriately
+    // - [ ] Add request IDs and correlation IDs for distributed tracing
+    // - [ ] Configure centralized logging with proper formatters and sinks
+    // - [ ] Add log sampling and rate limiting for high-volume operations
     println!(" Submitting task: {}", description);
 
     // Create task spec JSON for database storage
@@ -1423,6 +1444,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         port: args.db_port,
         database: args.db_name.clone(),
         username: "postgres".to_string(),
+        // TODO: Remove insecure password fallback - critical security vulnerability
+        // - [ ] Remove .unwrap_or_else(|_| "password".to_string()) fallback
+        // - [ ] Require DATABASE_PASSWORD environment variable with proper validation
+        // - [ ] Add startup failure if password is not provided or invalid
+        // - [ ] Implement secure password validation (length, complexity, no common passwords)
+        // - [ ] Add password change detection and connection pool invalidation
         password: std::env::var("DATABASE_PASSWORD").unwrap_or_else(|_| "password".to_string()),
         pool_min: 2,
         pool_max: 20,
