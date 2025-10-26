@@ -20,13 +20,12 @@ members = [
     "system-quality-security",  # NEW: Unified security & quality framework (security + security-policy-enforcer + quality-gates + source-integrity + provenance)
     "system-resilience",  # NEW: Unified fault tolerance & recovery framework (resilience + recovery + workspace-state-manager)
     "system-configuration",  # NEW: Unified configuration & common utilities (config + common-types + common-patterns + common-pipeline)
+    "system-federated-ml",  # NEW: Unified distributed ML & optimization framework (federated-learning + runtime-optimization + tool-ecosystem)
     "minimal-diff-evaluator",  # Differential evaluation and analysis
     "embedding-service",  # AI embedding generation and management
     "agent-memory",  # NEW: Agent memory system with knowledge graphs and embeddings
     "caching",  # Multi-level caching system
     "file_ops",  # Safe file operations with budget controls
-    "runtime-optimization",  # Performance optimization and tuning
-    "tool-ecosystem",  # Tool discovery and orchestration
     "federated-learning",  # Distributed ML capabilities
     ]
 
@@ -124,6 +123,7 @@ system-quality-security = { path = "system-quality-security" }
 agent-research = { path = "agent-research" }
 system-resilience = { path = "system-resilience" }
 system-configuration = { path = "system-configuration" }
+system-federated-ml = { path = "system-federated-ml" }
 
 # Core agent components
 agent-mcp = { path = "agent-mcp" }
@@ -137,9 +137,6 @@ agent-agency-contracts = { path = "agent-agency-contracts" }
 # Infrastructure and services
 embedding-service = { path = "embedding-service" }
 minimal-diff-evaluator = { path = "minimal-diff-evaluator" }
-tool-ecosystem = { path = "tool-ecosystem" }
-runtime-optimization = { path = "runtime-optimization" }
-federated-learning = { path = "federated-learning" }
 caching = { path = "caching" }
 file_ops = { path = "file_ops" }
 

@@ -1,0 +1,86 @@
+[package]
+name = "system-federated-ml"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+# Core async runtime
+tokio.workspace = true
+async-trait.workspace = true
+
+# Serialization
+serde.workspace = true
+serde_json.workspace = true
+
+# Error handling
+anyhow.workspace = true
+thiserror.workspace = true
+
+# Logging
+tracing.workspace = true
+
+# Time handling
+chrono.workspace = true
+
+# Utilities
+uuid.workspace = true
+regex.workspace = true
+rand.workspace = true
+rand_distr = "0.4"
+
+# Cryptography (from federated-learning)
+ring = "0.17"
+rust-crypto = "0.2"
+hmac = "0.12"
+sha2 = "0.10"
+blake3 = "1.5"
+
+# Math operations (from federated-learning + runtime-optimization)
+nalgebra = "0.32"
+statrs = "0.16"
+
+# Secure communication (from federated-learning)
+tokio-tungstenite = "0.20"
+futures-util.workspace = true
+
+# HTTP client (from tool-ecosystem)
+reqwest = { workspace = true, features = ["json"] }
+
+# JSON schema validation (from tool-ecosystem)
+jsonschema = "0.17"
+
+# Graph algorithms (from tool-ecosystem)
+petgraph = "0.6"
+
+# URL parsing (from tool-ecosystem)
+url = "2.5"
+
+# Additional async utilities (from tool-ecosystem)
+tokio-util = { version = "0.7", features = ["time"] }
+
+# LRU cache (from runtime-optimization)
+lru = "0.12"
+
+# Local crate dependencies
+agent-orchestration = { path = "../agent-orchestration" }
+agent-research = { path = "../agent-research" }
+system-observability = { path = "../system-observability" }
+agent-mcp = { path = "../agent-mcp" }
+agent-workers = { path = "../agent-workers" }
+agent-agency-apple-silicon = { path = "../apple-silicon" }
+
+[features]
+default = []
+full_optimization = []
+bayesian_opt = []
+bandit_policy = []
+thermal_scheduler = []
+chunked_execution = []
+precision_engineering = []
+planning_integration = []
+quality_validation = []
+
+[dev-dependencies]
+tokio-test = "0.4"
