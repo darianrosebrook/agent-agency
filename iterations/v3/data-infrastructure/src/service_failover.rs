@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 use tracing::{info, warn, error};
 
 use crate::api_circuit_breaker::CircuitBreaker;
-use agent_agency_common_types::common_config::CircuitBreakerConfig;
+use system_configuration::common_config::CircuitBreakerConfig;
 
 /// Service types in the system
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]

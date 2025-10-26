@@ -38,6 +38,11 @@ pub mod sandbox_api;
 pub mod service_failover;
 pub mod websocket;
 
+// Data infrastructure modules (from consolidated caching, embedding-service, file_ops crates)
+pub mod caching;
+pub mod embedding;
+pub mod file_operations;
+
 // Re-export database types (from consolidated database crate)
 pub use models::{DatabaseConfig, DatabaseClient, Row};
 pub use queries::QueryBuilder;

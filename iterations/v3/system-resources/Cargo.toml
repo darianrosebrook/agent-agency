@@ -18,7 +18,7 @@ chrono.workspace = true
 
 # Local crates
 agent-agency-contracts = { path = "../agent-agency-contracts" }
-agent-agency-common-types = { path = "../common-types" }
+system-configuration = { path = "../system-configuration" }
 
 # Additional dependencies from resource-manager
 anyhow = "1.0"

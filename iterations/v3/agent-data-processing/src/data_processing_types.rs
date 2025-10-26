@@ -8,7 +8,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
-use agent_agency_common_types::BoundingBox;
+use system_configuration::geometry::BoundingBox;
 
 /// Basic data block for processing
 #[derive(Debug, Clone, Serialize, Deserialize)]

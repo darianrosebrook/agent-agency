@@ -70,7 +70,7 @@ embedding-service = { path = "../embedding-service", optional = true }
 data-infrastructure = { path = "../data-infrastructure" }
 agent-data-processing = { path = "../agent-data-processing" }
 agent-agency-contracts = { path = "../agent-agency-contracts" }
-agent-agency-common-types = { path = "../common-types" }
+system-configuration = { path = "../system-configuration" }
 
 [features]
 default = []

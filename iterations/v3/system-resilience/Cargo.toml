@@ -39,7 +39,7 @@ tracing-subscriber = "0.3"
 
 # Local crates
 agent-agency-contracts = { path = "../agent-agency-contracts" }
-agent-agency-common-types = { path = "../common-types" }
+system-configuration = { path = "../system-configuration" }
 
 [features]
 default = []

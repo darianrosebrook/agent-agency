@@ -9,7 +9,7 @@ pub mod metrics;
 pub mod tracing;
 
 // Re-export common types
-pub use agent_agency_common_types::*;
+pub use system_configuration::*;
 
 use serde::{Deserialize, Serialize};
 

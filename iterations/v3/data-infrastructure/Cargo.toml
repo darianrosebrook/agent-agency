@@ -44,15 +44,11 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 # Local crates
 agent-agency-contracts = { path = "../agent-agency-contracts" }
-agent-agency-common-types = { path = "../common-types" }
+system-configuration = { path = "../system-configuration" }
 system-quality-security = { path = "../system-quality-security" }
-
-# Keep database functionality separate to avoid circular dependencies
-embedding-service = { path = "../embedding-service", optional = true }
 
 [features]
 default = []
-embeddings = ["embedding-service"]
 
 [dev-dependencies]
 tokio-test = "0.4"

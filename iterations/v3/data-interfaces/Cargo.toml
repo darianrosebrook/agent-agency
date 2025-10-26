@@ -37,7 +37,7 @@ agent-orchestration = { path = "../agent-orchestration" }
 agent-data-processing = { path = "../agent-data-processing" }
 agent-agency-config = { path = "../config" }
 agent-agency-contracts = { path = "../agent-agency-contracts" }
-agent-agency-common-types = { path = "../common-types" }
+system-configuration = { path = "../system-configuration" }
 
 [dev-dependencies]
 tokio-test = "0.4"

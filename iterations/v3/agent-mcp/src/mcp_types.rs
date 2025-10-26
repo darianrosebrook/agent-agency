@@ -287,7 +287,7 @@ pub struct AgentMcpResourceMetrics {
     pub queue_time_ms: u64,
 }
 
-impl From<AgentMcpResourceMetrics> for agent_agency_common_types::metrics::CommonResourceUsage {
+impl From<AgentMcpResourceMetrics> for system_configuration::common_metrics::CommonResourceUsage {
     fn from(metrics: AgentMcpResourceMetrics) -> Self {
         Self {
             cpu_usage_percent: Some(metrics.cpu_usage_percent as f64),

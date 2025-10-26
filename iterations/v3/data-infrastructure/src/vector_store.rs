@@ -375,7 +375,7 @@ impl VectorStoreStats {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use agent_agency_common_types::agent_data_processing::{BlockVectorRecord, SearchAuditEntry};
+    use system_configuration::result::{BlockVectorRecord, SearchAuditEntry};
     use std::collections::HashMap;
     use uuid::Uuid;
 

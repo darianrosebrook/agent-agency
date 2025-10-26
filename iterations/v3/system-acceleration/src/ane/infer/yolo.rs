@@ -8,7 +8,7 @@ use crate::ane::models::yolo_model::{
     LoadedYOLOModel, YOLODetectionResult, Detection,
     YOLOInferenceOptions,
 };
-use agent_agency_common_types::BoundingBox;
+use system_configuration::geometry::BoundingBox;
 use crate::ane::compat::coreml::coreml;
 use crate::ane::infer::execute::{execute_inference, InferenceOptions, InferenceResult};
 use image::{DynamicImage, ImageBuffer, Rgb};

@@ -76,7 +76,7 @@ embedding-service = { path = "../embedding-service", optional = true }
 # Database client (avoid circular dependency - database functionality stays in database crate)
 
 # Common types
-agent-agency-common-types = { path = "../common-types" }
+system-configuration = { path = "../system-configuration" }
 
 # Context preservation specific
 dashmap.workspace = true

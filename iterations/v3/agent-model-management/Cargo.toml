@@ -35,7 +35,7 @@ tch.workspace = true
 semver = "1.0"
 
 # Common types
-agent-agency-common-types = { path = "../common-types" }
+system-configuration = { path = "../system-configuration" }
 
 [features]
 default = ["inference", "hotswap"]

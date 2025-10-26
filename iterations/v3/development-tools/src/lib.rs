@@ -12,6 +12,8 @@ pub mod validation_budget;
 pub mod waiver;
 pub mod integration;
 pub mod analyzers;
+pub mod codemod;
+pub mod templates;
 
 pub use policy::{CawsPolicy, PolicyValidator};
 pub use validator::{CawsValidator, ValidationResult, Violation};
@@ -23,3 +25,5 @@ pub use analyzers::{
     ProgrammingLanguage, LanguageViolation, LanguageWarning, SourceLocation, ViolationSeverity,
     RustAnalyzer, TypeScriptAnalyzer, JavaScriptAnalyzer,
 };
+pub use codemod::CodeModRunner;
+pub use templates::TemplateManager;

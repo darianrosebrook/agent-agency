@@ -9,7 +9,7 @@ use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
 
 // Use common types instead of local definitions
-use agent_agency_common_types::common_config::CircuitBreakerConfig;
+use system_configuration::common_config::CircuitBreakerConfig;
 
 /// Circuit breaker states
 #[derive(Debug, Clone, Copy, PartialEq)]

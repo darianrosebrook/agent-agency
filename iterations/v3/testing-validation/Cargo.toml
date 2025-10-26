@@ -70,24 +70,21 @@ agent-agency-contracts = { path = "../agent-agency-contracts" }
 agent-orchestration = { path = "../agent-orchestration" }
 agent-research = { path = "../agent-research" }
 system-resilience = { path = "../system-resilience" }
-agent-agency-config = { path = "../config" }
+system-configuration = { path = "../system-configuration" }
 data-infrastructure = { path = "../data-infrastructure" }
 agent-workers = { path = "../agent-workers" }
 system-observability = { path = "../system-observability" }
+system-acceleration = { path = "../system-acceleration" }
+system-federated-ml = { path = "../system-federated-ml" }
+development-tools = { path = "../development-tools" }
 
-# Optional dependencies
-embedding-service = { path = "../embedding-service", optional = true }
-agent-agency-apple-silicon = { path = "../apple-silicon", optional = true }
-
-# CAWS and MCP integration
-caws-runtime-validator = { path = "../caws/runtime-validator" }
+# MCP integration
 agent-mcp = { path = "../agent-mcp" }
-tool-ecosystem = { path = "../tool-ecosystem" }
 
 [features]
 default = []
-embeddings = ["embedding-service"]
-apple-silicon = ["agent-agency-apple-silicon"]
+apple-silicon = ["system-acceleration"]
+federated-ml = ["system-federated-ml"]
 
 [dev-dependencies]
 criterion = { version = "0.5", features = ["html_reports"] }

@@ -26,7 +26,7 @@ data-infrastructure = { path = "../data-infrastructure" }
 agent-memory = { path = "../agent-memory", optional = true }
 
 # Common types and abstractions
-agent-agency-common-types = { path = "../common-types" }
+system-configuration = { path = "../system-configuration" }
 
 # MCP-specific dependencies
 jsonrpc-core = "18.0"

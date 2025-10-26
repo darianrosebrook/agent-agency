@@ -1,32 +1,25 @@
 [workspace]
 resolver = "2"
 members = [
-    "common-types",  # NEW: Shared abstractions and traits to reduce duplication
-    "common-patterns",  # NEW: Shared patterns, traits, and utilities
-    "common-pipeline",  # NEW: Unified pipeline abstractions for all pipeline types
     "agent-data-processing",  # NEW: Unified data processing pipeline consolidating ingestors/enrichers/indexers/knowledge/file-ops
-    "apple-silicon",  # Platform-specific optimizations and ANE/MLX acceleration
     "agent-workers",  # NEW: Consolidated MCP-based worker system
     "agent-mcp",  # Consolidated MCP implementation
     "agent-model-management",  # NEW: Unified model lifecycle, inference, and deployment management
     "agent-research",  # NEW: Unified advanced AI research platform (research + reflexive-learning + model-benchmarking + claim-extraction + planning-agent + self-prompting-agent)
     "agent-orchestration",  # NEW: Unified orchestration and council decision-making system
-    "system-resources",  # NEW: Unified resource management & production services (resource-manager + production)
-    "data-infrastructure",  # NEW: Unified data layer & API services (database + interfaces + api-server)
-    "testing-validation",  # NEW: Unified testing platform & quality assurance (e2e-tests + integration-tests + brittleness-test)
-    "system-observability",  # NEW: Unified monitoring & telemetry services (system-health-monitor + observability + telemetry)
-    "data-interfaces",  # NEW: Unified interface layer & user experience (cli + web-app interfaces)
-    "system-quality-security",  # NEW: Unified security & quality framework (security + security-policy-enforcer + quality-gates + source-integrity + provenance)
-    "system-resilience",  # NEW: Unified fault tolerance & recovery framework (resilience + recovery + workspace-state-manager)
-    "system-configuration",  # NEW: Unified configuration & common utilities (config + common-types + common-patterns + common-pipeline)
-    "system-federated-ml",  # NEW: Unified distributed ML & optimization framework (federated-learning + runtime-optimization + tool-ecosystem)
-    "development-tools",  # NEW: Unified development workflow & quality assurance (caws/runtime-validator + apps/tools/caws + codemod)
-    "minimal-diff-evaluator",  # Differential evaluation and analysis
-    "embedding-service",  # AI embedding generation and management
     "agent-memory",  # NEW: Agent memory system with knowledge graphs and embeddings
-    "caching",  # Multi-level caching system
-    "file_ops",  # Safe file operations with budget controls
-    "federated-learning",  # Distributed ML capabilities
+    "system-acceleration",  # NEW: Unified hardware acceleration framework (apple-silicon + ane-tests)
+    "system-resources",  # NEW: Unified resource management & production services (resource-manager + production)
+    "system-resilience",  # NEW: Unified fault tolerance & recovery framework (resilience + recovery + workspace-state-manager + memory)
+    "system-observability",  # NEW: Unified monitoring & telemetry services (system-health-monitor + observability + telemetry)
+    "system-quality-security",  # NEW: Unified security & quality framework (security + security-policy-enforcer + quality-gates + source-integrity + provenance)
+    "system-federated-ml",  # NEW: Unified distributed ML & optimization framework (federated-learning + runtime-optimization + tool-ecosystem)
+    "system-configuration",  # NEW: Unified configuration & common utilities (config + common-types + common-patterns + common-pipeline)
+    "data-infrastructure",  # NEW: Unified data layer & API services (database + interfaces + api-server + caching + embedding-service + file_ops)
+    "data-interfaces",  # NEW: Unified interface layer & user experience (cli + web-app interfaces)
+    "development-tools",  # NEW: Unified development workflow & quality assurance (caws/runtime-validator + apps/tools/caws + codemod + templates)
+    "testing-validation",  # NEW: Unified testing platform & quality assurance (e2e-tests + integration-tests + brittleness-test + load-testing)
+    "minimal-diff-evaluator",  # Differential evaluation and analysis
     ]
 
 [workspace.package]

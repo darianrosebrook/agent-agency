@@ -18,7 +18,7 @@ use agent_orchestration::arbiter::{ArbiterOrchestrator, ArbiterConfig};
 use claim_extraction::ClaimExtractionProcessor;
 use agent_data_processing::operations::{WorkspaceFactory, AllowList, Budgets};
 use agent_agency_workers::{WorkerPoolManager, AutonomousExecutor, AutonomousExecutorConfig};
-use agent_agency_config::{AppConfig, WorkerConfig};
+use system_configuration::config_config::{AppConfig, WorkerConfig};
 
 // Stub implementations for disabled crates
 #[derive(Debug)]

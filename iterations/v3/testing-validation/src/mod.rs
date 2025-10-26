@@ -7,8 +7,10 @@ pub mod scenarios;
 pub mod harness;
 pub mod assertions;
 pub mod fixtures;
+pub mod load_testing;
 
 pub use scenarios::{E2eTestScenarios, TestScenario};
 pub use harness::{E2eTestHarness, TestEnvironmentState};
 pub use assertions::E2eAssertions;
 pub use fixtures::TestFixtures;
+pub use load_testing::LoadTestRunner;

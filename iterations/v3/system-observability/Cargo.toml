@@ -23,7 +23,7 @@ rand = "0.8"
 data-infrastructure = { path = "../data-infrastructure" }
 
 # Local crates
-agent-agency-common-types = { path = "../common-types" }
+system-configuration = { path = "../system-configuration" }
 
 # System monitoring (from system-health-monitor)
 sysinfo = "0.30"
