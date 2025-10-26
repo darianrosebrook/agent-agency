@@ -17,6 +17,7 @@ members = [
             "data-infrastructure",  # 🗄️ NEW: Unified data layer & API services (database + interfaces + api-server)
             "testing-validation",  # 🧪 NEW: Unified testing platform & quality assurance (e2e-tests + integration-tests + brittleness-test)
             "system-observability",  # 📊 NEW: Unified monitoring & telemetry services (system-health-monitor + observability + telemetry)
+            "data-interfaces",  # 🔌 NEW: Unified interface layer & user experience (cli + web-app interfaces)
     "provenance",
     "claim-extraction",
     "reflexive-learning",
@@ -35,7 +36,6 @@ members = [
     "caching",  # Re-enabled - compiles successfully
     "planning-agent",  # Re-enabled - application layer
     "file_ops",  # Re-enabled - simple implementation
-    "cli",  # Re-enabled - application layer
     "worker",  # Re-enabled - application layer
     "runtime-optimization",  # Re-enabled - advanced services
     "tool-ecosystem",  # Re-enabled - has compilation errors but doesn't cause workspace hangs

@@ -1,3 +1,4 @@
+#![cfg(feature = "database")]
 //! Workspace Registry
 //!
 //! Manages workspace discovery, access controls, and permissions for cross-workspace memory access.
@@ -11,7 +12,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::memory_types::{WorkspaceEntry, WorkspaceAccess, WorkspaceAccessConfig};
 use crate::{MemoryError, MemoryResult};
-use agent_agency_database::DatabaseClient;
+use data_infrastructure::DatabaseClient;
 
 /// Workspace registry for managing workspace access controls
 #[derive(Debug)]

@@ -126,7 +126,7 @@ impl MultimodalRetriever {
 
     /// Create a new multimodal retriever with database pool integration
     pub async fn new_with_database_pool(
-        database_pool: Arc<agent_agency_database::DatabaseClient>,
+        database_pool: Arc<data_infrastructure::DatabaseClient>,
         config: Option<MultimodalRetrieverConfig>,
     ) -> Result<Self> {
         let config = config.unwrap_or_default();

@@ -1,9 +1,10 @@
+#![cfg(feature = "database")]
 //! Embedding Integration - Vector embeddings for memory with decay/importance
 
 use crate::memory_types::*;
 use crate::MemoryResult;
 use embedding_service::{EmbeddingService, EmbeddingConfig as ESConfig, ContentType};
-use agent_agency_database::{DatabaseClient, DatabaseConfig, Row};
+use data_infrastructure::{DatabaseClient, DatabaseConfig, Row};
 use std::sync::Arc;
 use chrono::{DateTime, Utc, Duration};
 use serde::{Deserialize, Serialize};
@@ -45,7 +46,7 @@ impl EmbeddingIntegration {
         // TODO: Get proper provider injection
         let provider = embedding_service::OllamaEmbeddingProvider::new(&es_config);
         let embedding_service = Arc::new(embedding_service::EmbeddingServiceImpl::new(Arc::new(provider), es_config));
-        let db_config = agent_agency_database::DatabaseConfig::default();
+        let db_config = data_infrastructure::DatabaseConfig::default();
         let db_client = Arc::new(DatabaseClient::new(db_config).await?);
 
         Ok(Self {

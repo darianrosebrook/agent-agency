@@ -3,6 +3,7 @@
 //! Provides a clean interface layer for MCP (Model Context Protocol) server functionality,
 //! bridging the sophisticated MCP integration with the rest of the Agent Agency system.
 
+#[cfg(feature = "mcp")]
 use agent_mcp::{
     MCPServer as InnerMCPServer,
     types::*,
@@ -14,8 +15,8 @@ use agent_mcp::{
     CawsIntegration,
     AuthRateLimitStats,
 };
-use agent_agency_council::error_handling::CircuitBreakerStats;
-use agent_agency_database::DatabaseClient;
+use agent_orchestration::error_handling::CircuitBreakerStats;
+use crate::DatabaseClient;
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -24,6 +25,7 @@ use tokio::sync::RwLock;
 
 /// Configuration for the MCP interface
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg(feature = "mcp")]
 pub struct McpConfig {
     /// Server configuration
     pub server: ServerConfig,
@@ -37,6 +39,7 @@ pub struct McpConfig {
     pub performance: PerformanceConfig,
 }
 
+#[cfg(feature = "mcp")]
 impl Default for McpConfig {
     fn default() -> Self {
         Self {
@@ -90,6 +93,7 @@ impl Default for McpConfig {
 }
 
 /// Main MCP server interface
+#[cfg(feature = "mcp")]
 pub struct McpServer {
     /// Inner MCP server implementation
     inner: Arc<RwLock<InnerMCPServer>>,
@@ -103,6 +107,7 @@ pub struct McpServer {
     config: McpConfig,
 }
 
+#[cfg(feature = "mcp")]
 impl McpServer {
     /// Create a new MCP server instance
     pub async fn new(config: McpConfig, db_client: Arc<DatabaseClient>) -> Result<Self> {
@@ -257,6 +262,7 @@ impl McpServer {
     }
 }
 
+#[cfg(feature = "mcp")]
 impl Drop for McpServer {
     fn drop(&mut self) {
         // Note: In a real implementation, we'd want to gracefully shutdown
@@ -266,11 +272,13 @@ impl Drop for McpServer {
 }
 
 /// Builder pattern for MCP server configuration
+#[cfg(feature = "mcp")]
 pub struct McpServerBuilder {
     config: McpConfig,
     db_client: Option<Arc<DatabaseClient>>,
 }
 
+#[cfg(feature = "mcp")]
 impl McpServerBuilder {
     /// Create a new builder with default configuration
     pub fn new() -> Self {

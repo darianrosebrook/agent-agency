@@ -1,9 +1,10 @@
+#![cfg(feature = "database")]
 //! Memory Manager - Central coordinator for all memory operations
 
 use crate::memory_types::*;
 use crate::MemoryResult;
 use crate::MemoryError;
-use agent_agency_database::{DatabaseClient, DatabaseConfig, Row};
+use data_infrastructure::{DatabaseClient, DatabaseConfig, Row};
 use std::sync::Arc;
 use std::collections::HashMap;
 use chrono::{DateTime, Utc, Duration};
@@ -37,7 +38,7 @@ impl MemoryManager {
 
     /// Create a new memory manager
     pub async fn new(config: MemoryConfig) -> MemoryResult<Self> {
-        let db_config = agent_agency_database::DatabaseConfig::default();
+        let db_config = data_infrastructure::DatabaseConfig::default();
         let db_client = Arc::new(DatabaseClient::new(db_config).await?);
 
         Ok(Self {
@@ -52,7 +53,7 @@ impl MemoryManager {
         config: MemoryConfig,
         workspace_registry: Arc<crate::workspace_registry::WorkspaceRegistry>
     ) -> MemoryResult<Self> {
-        let db_config = agent_agency_database::DatabaseConfig::default();
+        let db_config = data_infrastructure::DatabaseConfig::default();
         let db_client = Arc::new(DatabaseClient::new(db_config).await?);
 
         Ok(Self {

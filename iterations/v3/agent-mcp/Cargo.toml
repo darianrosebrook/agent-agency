@@ -16,8 +16,8 @@ anyhow.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
 
-# Council package provides security functionality
-agent-agency-council = { path = "../council" }
+# Orchestration package provides security functionality
+agent-orchestration = { path = "../agent-orchestration" }
 
 # Memory system for memory MCP tools
 agent-memory = { path = "../agent-memory" }

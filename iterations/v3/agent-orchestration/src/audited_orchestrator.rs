@@ -22,7 +22,7 @@ use crate::orchestrate::{Orchestrator, OrchestratorConfig};
 use crate::planning::agent::PlanningAgent;
 use crate::frontier::{Frontier, FrontierConfig, FrontierError};
 use agent_data_processing::operations::{validate_changeset_with_waiver, WaiverRequest, apply_waiver};
-use agent_agency_database::DatabaseClient;
+use data_infrastructure::DatabaseClient;
 use agent_agency_resilience::CircuitBreaker;
 
 /// Context for tracking active operations

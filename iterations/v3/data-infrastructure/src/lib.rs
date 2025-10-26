@@ -38,8 +38,18 @@ pub mod sandbox_api;
 pub mod service_failover;
 pub mod websocket;
 
-// Re-export types and functions from handlers
+// Re-export database types (from consolidated database crate)
+pub use models::{DatabaseConfig, DatabaseClient, Row};
+pub use queries::QueryBuilder;
+pub use migrations::{Migration, MigrationRunner};
+pub use pooling::ConnectionPool;
+pub use vector_store::{VectorStore, VectorQuery, VectorResult};
+pub use backup_recovery::{BackupManager, RecoveryManager};
+pub use audit::{DatabaseAuditor, AuditEvent};
+
+// Re-export API and interface types (from consolidated interfaces and api-server crates)
 pub use handlers::{AppState, PersistedTask, TaskStoreTrait};
 pub use handlers::{health_check, list_tasks, get_task, submit_task, get_api_metrics};
 pub use handlers::{create_chat_session, get_websocket_config, list_waivers, create_waiver};
 pub use handlers::{approve_waiver, get_task_provenance};
+pub use client::orchestrator::DatabaseClient as ApiDatabaseClient;

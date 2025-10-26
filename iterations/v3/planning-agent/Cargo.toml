@@ -18,7 +18,7 @@ chrono.workspace = true
 
 # Local crates
 agent-agency-contracts = { path = "../agent-agency-contracts" }
-agent-agency-database = { path = "../database" }
+data-infrastructure = { path = "../data-infrastructure" }
 
 # Additional dependencies
 anyhow = "1.0"

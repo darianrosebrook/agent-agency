@@ -33,5 +33,5 @@ petgraph = "0.6"
 
 # Integration with existing V3 components
 agent-agency-council = { path = "../council" }
-agent-agency-workers = { path = "../workers" }
+agent-workers = { path = "../agent-workers" }
 agent-agency-security-policy-enforcer = { path = "../security-policy-enforcer" }

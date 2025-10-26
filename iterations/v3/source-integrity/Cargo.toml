@@ -18,8 +18,5 @@ tracing = "0.1"
 uuid = { version = "1.0", features = ["v4", "serde"] }
 regex = "1.0"
 
-[dependencies.agent-agency-database]
-path = "../database"
-
-[dependencies.agent-agency-config]
-path = "../config"
+data-infrastructure = { path = "../data-infrastructure" }
+agent-agency-config = { path = "../config" }

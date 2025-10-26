@@ -25,7 +25,7 @@ sha2 = "0.10"
 model-benchmarking = { path = "../model-benchmarking" }
 
 # Observability
-agent-agency-observability = { path = "../observability" }
+system-observability = { path = "../system-observability" }
 
 # Time utilities
 chrono = { version = "0.4", features = ["serde"] }

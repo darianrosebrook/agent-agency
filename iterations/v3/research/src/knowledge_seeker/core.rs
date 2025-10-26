@@ -14,7 +14,7 @@ use crate::{
     ConfigurationUpdate, ContentProcessor, ContextBuilder, VectorSearchEngine, WebScraper,
 };
 use crate::multimodal_context_provider::MultimodalContext;
-use agent_agency_database::DatabaseClient;
+use data_infrastructure::DatabaseClient;
 
 use super::orchestration::QueryOrchestrator;
 use super::search::SearchCoordinator;

@@ -1,3 +1,4 @@
+#![cfg(feature = "database")]
 #![allow(warnings)] // Disables all warnings for the crate
 #![allow(dead_code)] // Disables dead_code warnings for the crate
 
@@ -156,8 +157,8 @@ impl MemorySystem {
     /// Initialize the complete memory system
     pub async fn init(config: MemoryConfig) -> MemoryResult<Self> {
         // Create workspace registry first
-        let db_config = agent_agency_database::DatabaseConfig::default();
-        let db_client = Arc::new(agent_agency_database::DatabaseClient::new(db_config).await?);
+        let db_config = data_infrastructure::DatabaseConfig::default();
+        let db_client = Arc::new(data_infrastructure::DatabaseClient::new(db_config).await?);
         let workspace_registry = Arc::new(workspace_registry::WorkspaceRegistry::new(
             config.workspace_config.access_config.clone(),
             db_client,

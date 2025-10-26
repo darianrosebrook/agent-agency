@@ -56,7 +56,7 @@ sha2 = "0.10"
 config = { workspace = true }
 
 # Integration with existing services
-data-infrastructure = { path = "../data-infrastructure" }
+data-infrastructure = { path = "../data-infrastructure", optional = true }
 embedding-service = { path = "../embedding-service", optional = true }
 
 [dev-dependencies]
@@ -65,9 +65,10 @@ tempfile = "3.8"
 criterion = { version = "0.5", features = ["html_reports"] }
 
 [features]
-default = ["embeddings", "graph-reasoning"]
+default = ["embeddings", "graph-reasoning", "database"]
 embeddings = ["embedding-service"]
 graph-reasoning = []
 temporal-analysis = []
 context-offloading = []
 provenance-tracking = []
+database = ["data-infrastructure"]

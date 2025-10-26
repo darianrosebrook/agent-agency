@@ -16,7 +16,7 @@ use crate::executor::{ChainExecutor, ExecutionResult};
 use crate::tool_execution::{ToolExecutor, ToolResult};
 use crate::tool_registry::ToolRegistry;
 
-use parallel_workers::{
+use agent_workers::{
     ParallelCoordinator,
     ParallelCoordinatorConfig,
     DecompositionEngine,
@@ -133,9 +133,9 @@ impl ParallelToolCoordinator {
             let edge = chain.dag.edge_weight(edge_idx).unwrap();
 
             dependencies.push(Dependency {
-                from_subtask: parallel_workers::SubTaskId(self.node_id_to_task_id(source)),
-                to_subtask: parallel_workers::SubTaskId(self.node_id_to_task_id(target)),
-                dependency_type: parallel_workers::DependencyType::DataDependency,
+                from_subtask: agent_workers::SubTaskId(self.node_id_to_task_id(source)),
+                to_subtask: agent_workers::SubTaskId(self.node_id_to_task_id(target)),
+                dependency_type: agent_workers::DependencyType::DataDependency,
                 blocking: true,
             });
         }
@@ -146,7 +146,7 @@ impl ParallelToolCoordinator {
         let task_analysis = TaskAnalysis {
             patterns: vec![], // No patterns identified for tool chains
             dependencies,
-            subtask_scores: parallel_workers::SubtaskScores {
+            subtask_scores: agent_workers::SubtaskScores {
                 parallelization_score: if self.can_chain_parallelize(chain) { 0.8 } else { 0.2 },
                 complexity_scores: vec![], // Simplified
                 estimated_durations: vec![], // Simplified
@@ -276,9 +276,9 @@ impl ParallelToolCoordinator {
         communication_hub: Arc<CommunicationHub>,
     ) -> Result<(String, ToolResult), ParallelExecutionError> {
         // Stub: create a mock worker handle
-        let worker = parallel_workers::WorkerHandle {
-            id: parallel_workers::WorkerId::new(),
-            subtask_id: parallel_workers::SubTaskId(task.task_id.clone()),
+        let worker = agent_workers::WorkerHandle {
+            id: agent_workers::WorkerId::new(),
+            subtask_id: agent_workers::SubTaskId(task.task_id.clone()),
             start_time: chrono::Utc::now(),
         };
 
@@ -321,9 +321,9 @@ impl ParallelToolCoordinator {
         communication_hub: Arc<CommunicationHub>,
     ) -> Result<(String, ToolResult), ParallelExecutionError> {
         // Stub: create a mock worker handle
-        let worker = parallel_workers::WorkerHandle {
-            id: parallel_workers::WorkerId::new(),
-            subtask_id: parallel_workers::SubTaskId(task.task_id.clone()),
+        let worker = agent_workers::WorkerHandle {
+            id: agent_workers::WorkerId::new(),
+            subtask_id: agent_workers::SubTaskId(task.task_id.clone()),
             start_time: chrono::Utc::now(),
         };
 

@@ -32,7 +32,7 @@ impl SearchCoordinator {
 
     /// Create a new search coordinator with database integration
     pub async fn new_with_database(
-        database_pool: Arc<agent_agency_database::DatabaseClient>,
+        database_pool: Arc<data_infrastructure::DatabaseClient>,
         config: MultimodalRetrieverConfig,
     ) -> Result<Self> {
         let text_engine = Arc::new(TextSearchEngine::new_with_database(database_pool.clone(), config.clone()).await?);

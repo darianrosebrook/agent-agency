@@ -38,7 +38,7 @@ base64 = "0.22"
 hex = "0.4"
 
 # Council integration for security decisions
-agent-agency-council = { path = "../council" }
+agent-orchestration = { path = "../agent-orchestration" }
 
 # Provenance integration for audit trails
 agent-agency-provenance = { path = "../provenance" }

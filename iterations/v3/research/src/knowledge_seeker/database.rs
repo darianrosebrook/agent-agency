@@ -1,7 +1,7 @@
 //! Database integration for knowledge seeker
 
 use std::sync::Arc;
-use agent_agency_database::DatabaseClient;
+use data_infrastructure::DatabaseClient;
 
 /// Database manager for research operations
 #[derive(Debug)]

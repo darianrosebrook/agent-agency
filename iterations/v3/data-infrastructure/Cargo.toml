@@ -46,9 +46,9 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 agent-agency-contracts = { path = "../agent-agency-contracts" }
 agent-agency-common-types = { path = "../common-types" }
 agent-agency-security = { path = "../security" }
-agent-agency-system-health-monitor = { path = "../system-health-monitor", default-features = true }
-agent-agency-council = { path = "../council" }
-agent-mcp = { path = "../agent-mcp" }
+system-observability = { path = "../system-observability" }
+agent-orchestration = { path = "../agent-orchestration" }
+agent-mcp = { path = "../agent-mcp", optional = true }
 
 # Keep database functionality separate to avoid circular dependencies
 embedding-service = { path = "../embedding-service", optional = true }
@@ -56,6 +56,7 @@ embedding-service = { path = "../embedding-service", optional = true }
 [features]
 default = []
 embeddings = ["embedding-service"]
+mcp = ["agent-mcp"]
 
 [dev-dependencies]
 tokio-test = "0.4"

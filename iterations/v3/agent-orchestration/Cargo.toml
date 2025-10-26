@@ -66,7 +66,7 @@ console = "0.16"
 
 # Local workspace crates
 agent-agency-contracts = { path = "../agent-agency-contracts" }
-agent-agency-database = { path = "../database" }
+data-infrastructure = { path = "../data-infrastructure" }
 agent-agency-apple-silicon = { path = "../apple-silicon" }
 agent-memory = { path = "../agent-memory" }
 agent-agency-provenance = { path = "../provenance" }

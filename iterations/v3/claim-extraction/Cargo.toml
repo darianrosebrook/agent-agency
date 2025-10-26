@@ -34,13 +34,13 @@ futures = "0.3"  # Future utilities
 embedding-service = { path = "../embedding-service", optional = true }
 
 # Database integration
-agent-agency-database = { path = "../database" }
+data-infrastructure = { path = "../data-infrastructure" }
 
 # Knowledge graph integration
 agent-data-processing = { path = "../agent-data-processing" }
 
-# Council integration for high-risk claim verification
-agent-agency-council = { path = "../council" }
+# Orchestration integration for high-risk claim verification
+agent-orchestration = { path = "../agent-orchestration" }
 
 [features]
 default = []

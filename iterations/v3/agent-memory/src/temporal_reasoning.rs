@@ -1,8 +1,9 @@
+#![cfg(feature = "database")]
 //! Temporal Reasoning Engine - Time-based analysis and causality detection
 
 use crate::memory_types::*;
 use crate::MemoryResult;
-use agent_agency_database::{DatabaseClient, DatabaseConfig, Row};
+use data_infrastructure::{DatabaseClient, DatabaseConfig, Row};
 use std::sync::Arc;
 use chrono::{DateTime, Utc, Duration};
 use serde::{Deserialize, Serialize};
@@ -18,7 +19,7 @@ pub struct TemporalReasoningEngine {
 impl TemporalReasoningEngine {
     /// Create a new temporal reasoning engine
     pub async fn new(config: &TemporalConfig) -> MemoryResult<Self> {
-        let db_config = agent_agency_database::DatabaseConfig::default();
+        let db_config = data_infrastructure::DatabaseConfig::default();
         let db_client = Arc::new(DatabaseClient::new(db_config).await?);
 
         Ok(Self {

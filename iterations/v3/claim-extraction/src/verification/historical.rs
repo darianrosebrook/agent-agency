@@ -2,7 +2,7 @@
 //!
 //! This module handles database and simulated historical lookups with fallback.
 
-use agent_agency_database::DatabaseClient;
+use data_infrastructure::DatabaseClient;
 use uuid::Uuid;
 use crate::{HistoricalClaim, VerificationStatus, ValidationOutcome};
 use tracing::warn;

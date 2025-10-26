@@ -19,15 +19,15 @@ tokio = { version = "1", features = ["macros", "rt-multi-thread", "process", "sy
 sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "json", "uuid", "chrono"] }
 tokio-postgres = "0.7"
 parking_lot = "0.12"
-agent-agency-council = { path = "../council" }
+agent-orchestration = { path = "../agent-orchestration" }
 agent-agency-apple-silicon = { path = "../apple-silicon" }
 agent-agency-provenance = { path = "../provenance" }
 agent-agency-resilience = { path = "../resilience" }
-agent-agency-database = { path = "../database" }
+data-infrastructure = { path = "../data-infrastructure" }
 agent-agency-contracts = { path = "../agent-agency-contracts" }
-agent-agency-observability = { path = "../observability" }
+system-observability = { path = "../system-observability" }
 claim-extraction = { path = "../claim-extraction" }
-# agent-agency-workers = { path = "../workers" }  # Use trait interface instead
+# agent-workers = { path = "../agent-workers" }  # Use trait interface instead
 # self-prompting-agent = { path = "../self-prompting-agent" }  # Circular dependency - commented out
 parallel-workers = { path = "../parallel-workers" }
 tool-ecosystem = { path = "../tool-ecosystem" }

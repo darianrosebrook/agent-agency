@@ -1,9 +1,10 @@
+#![cfg(feature = "database")]
 //! Memory Decay Engine - Importance weighting and decay schedules
 
 use crate::memory_types::*;
 use crate::workspace_registry;
 use crate::MemoryResult;
-use agent_agency_database::{DatabaseClient, DatabaseConfig, Row};
+use data_infrastructure::{DatabaseClient, DatabaseConfig, Row};
 use std::sync::Arc;
 use chrono::{DateTime, Utc, Duration};
 use serde::{Deserialize, Serialize};
@@ -20,7 +21,7 @@ pub struct MemoryDecayEngine {
 impl MemoryDecayEngine {
     /// Create a new decay engine
     pub async fn new(config: &DecayConfig) -> MemoryResult<Self> {
-        let db_config = agent_agency_database::DatabaseConfig::default();
+        let db_config = data_infrastructure::DatabaseConfig::default();
         let db_client = Arc::new(DatabaseClient::new(db_config).await?);
 
         Ok(Self {
@@ -35,7 +36,7 @@ impl MemoryDecayEngine {
         config: &DecayConfig,
         workspace_registry: Arc<crate::workspace_registry::WorkspaceRegistry>
     ) -> MemoryResult<Self> {
-        let db_config = agent_agency_database::DatabaseConfig::default();
+        let db_config = data_infrastructure::DatabaseConfig::default();
         let db_client = Arc::new(DatabaseClient::new(db_config).await?);
 
         Ok(Self {

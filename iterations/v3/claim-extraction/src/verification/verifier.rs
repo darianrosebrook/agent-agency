@@ -5,7 +5,7 @@
 
 use std::sync::Arc;
 use lru::LruCache;
-use agent_agency_database::DatabaseClient;
+use data_infrastructure::DatabaseClient;
 use tracing::{info, warn};
 
 use crate::extraction_types::*;

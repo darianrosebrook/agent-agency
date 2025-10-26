@@ -33,7 +33,7 @@ lru = "0.12"
 # Database integration
 sqlx = { version = "0.7", features = ["postgres", "runtime-tokio-rustls", "chrono", "uuid"] }
 deadpool-postgres = "0.11"
-agent-agency-database = { path = "../database" }
+data-infrastructure = { path = "../data-infrastructure" }
 
 # Web scraping and content extraction
 select = "0.6"

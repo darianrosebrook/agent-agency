@@ -23,13 +23,13 @@ agent-mcp = { path = "../agent-mcp" }
 agent-agency-contracts = { path = "../agent-agency-contracts" }
 
 # Council for security and compliance
-agent-agency-council = { path = "../council" }
+agent-orchestration = { path = "../agent-orchestration" }
 
 # Resilience patterns
 agent-agency-resilience = { path = "../resilience" }
 
 # Database client
-agent-agency-database = { path = "../database" }
+data-infrastructure = { path = "../data-infrastructure" }
 
 # Core memory system - every agent has memory
 agent-memory = { path = "../agent-memory" }

@@ -1,0 +1,43 @@
+[package]
+name = "data-interfaces"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+# Workspace dependencies
+tokio.workspace = true
+async-trait.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tracing.workspace = true
+thiserror.workspace = true
+uuid.workspace = true
+chrono.workspace = true
+clap = { version = "4.0", features = ["derive"] }
+
+# Web framework (from cli)
+axum = { version = "0.7", features = ["json", "ws"] }
+tower-http = { version = "0.5", features = ["cors"] }
+futures-util = "0.3"
+
+# HTTP client (from cli)
+reqwest = { version = "0.11", features = ["json"] }
+
+# File watching (from cli)
+notify = "6.0"
+
+# Lazy static initialization (from cli)
+lazy_static = "1.4"
+
+# Local crates
+agent-workers = { path = "../agent-workers" }
+orchestration = { path = "../orchestration" }
+agent-data-processing = { path = "../agent-data-processing" }
+agent-agency-config = { path = "../config" }
+agent-agency-contracts = { path = "../agent-agency-contracts" }
+agent-agency-common-types = { path = "../common-types" }
+
+[dev-dependencies]
+tokio-test = "0.4"

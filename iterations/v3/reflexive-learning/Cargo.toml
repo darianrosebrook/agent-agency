@@ -24,7 +24,7 @@ rayon = "1.8"     # For parallel learning computations
 rand = "0.8"      # For random number generation in algorithms
 
 # Council integration
-agent-agency-council = { path = "../council" }
+agent-orchestration = { path = "../agent-orchestration" }
 
 # Memory system integration
 agent-memory = { path = "../agent-memory" }

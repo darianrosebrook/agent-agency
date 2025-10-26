@@ -20,7 +20,7 @@ futures = "0.3"
 rand = "0.8"
 
 # Database integration
-agent-agency-database = { path = "../database" }
+data-infrastructure = { path = "../data-infrastructure" }
 
 # Local crates
 agent-agency-common-types = { path = "../common-types" }
@@ -64,17 +64,17 @@ windows = { version = "0.52", features = ["Win32_System_Performance", "Win32_Sys
 sqlx = { workspace = true, features = ["postgres", "chrono", "uuid"] }
 
 # Optional integrations (from system-health-monitor)
-agent-agency-council = { path = "../council", optional = true }
+agent-orchestration = { path = "../agent-orchestration", optional = true }
 agent-agency-research = { path = "../research", optional = true }
-agent-agency-workers = { path = "../workers", optional = true }
+agent-workers = { path = "../agent-workers", optional = true }
 agent-data-processing = { path = "../agent-data-processing", optional = true }
 
 [features]
 default = []
 full = [
-    "agent-agency-council",
+    "agent-orchestration",
     "agent-agency-research",
-    "agent-agency-workers",
+    "agent-workers",
     "agent-data-processing"
 ]
 

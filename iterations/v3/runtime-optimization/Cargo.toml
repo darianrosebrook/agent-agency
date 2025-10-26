@@ -19,11 +19,11 @@ thiserror = "1.0"
 agent-agency-apple-silicon = { path = "../apple-silicon" }
 
 # Council and CAWS integration
-agent-agency-council = { path = "../council" }
+agent-orchestration = { path = "../agent-orchestration" }
 # caws-runtime-validator = { path = "../caws/runtime-validator" } # PLACEHOLDER: crate not yet implemented
 
 # Performance monitoring
-agent-agency-observability = { path = "../observability" }
+system-observability = { path = "../system-observability" }
 
 # Model benchmarking for performance feedback
 model-benchmarking = { path = "../model-benchmarking" }

@@ -13,7 +13,7 @@ use jsonrpc_http_server::{RequestMiddlewareAction, ServerBuilder};
 use jsonrpc_ws_server::ws;
 use jsonrpc_ws_server::ServerBuilder as WsServerBuilder;
 // Using council package for security functionality
-use agent_agency_council::error_handling::{CircuitBreaker, CircuitBreakerConfig, CircuitBreakerStats};
+use agent_orchestration::error_handling::{CircuitBreaker, CircuitBreakerConfig, CircuitBreakerStats};
 // use agent_agency_observability as observability; // Not available as dependency
 use std::sync::Arc;
 
@@ -1202,7 +1202,7 @@ impl MCPServer {
     }
 
     /// Get circuit breaker statistics
-    pub async fn get_circuit_breaker_stats(&self) -> HashMap<String, agent_agency_council::error_handling::CircuitBreakerStats> {
+    pub async fn get_circuit_breaker_stats(&self) -> HashMap<String, agent_orchestration::error_handling::CircuitBreakerStats> {
         get_circuit_breaker_registry().get_all_stats()
     }
 

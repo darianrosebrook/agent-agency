@@ -267,7 +267,7 @@ impl TextSearchBridge {
 pub struct TextSearchEngine {
     config: super::core::MultimodalRetrieverConfig,
     search_bridge: TextSearchBridge,
-    database_pool: Option<Arc<agent_agency_database::DatabaseClient>>,
+    database_pool: Option<Arc<data_infrastructure::DatabaseClient>>,
 }
 
 impl TextSearchEngine {
@@ -284,7 +284,7 @@ impl TextSearchEngine {
 
     /// Create a new text search engine with database integration
     pub async fn new_with_database(
-        database_pool: Arc<agent_agency_database::DatabaseClient>,
+        database_pool: Arc<data_infrastructure::DatabaseClient>,
         config: super::core::MultimodalRetrieverConfig,
     ) -> Result<Self> {
         let search_bridge = TextSearchBridge::new(None);

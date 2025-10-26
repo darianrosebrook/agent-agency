@@ -20,11 +20,11 @@ agent-mcp = { path = "../agent-mcp" }
 
 # CAWS integration
 # caws-runtime-validator = { path = "../caws/runtime-validator" } # PLACEHOLDER: crate not yet implemented
-agent-agency-council = { path = "../council" }
+agent-orchestration = { path = "../agent-orchestration" }
 claim-extraction = { path = "../claim-extraction" }
 
 # Tool execution
-agent-agency-observability = { path = "../observability" }
+system-observability = { path = "../system-observability" }
 
 # Model integration for tool reasoning
 model-benchmarking = { path = "../model-benchmarking" }
@@ -50,8 +50,8 @@ regex = "1.10"
 # Random number generation
 rand = "0.8.5"
 
-# Parallel workers integration
-parallel-workers = { path = "../parallel-workers" }
+# Workers integration
+agent-workers = { path = "../agent-workers" }
 
 # Additional async utilities
 tokio-util = { version = "0.7", features = ["time"] }

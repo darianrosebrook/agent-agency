@@ -1,8 +1,9 @@
+#![cfg(feature = "database")]
 //! Knowledge Graph Engine - Entity and relationship management
 
 use crate::memory_types::*;
 use crate::MemoryResult;
-use agent_agency_database::{DatabaseClient, DatabaseConfig, Row};
+use data_infrastructure::{DatabaseClient, DatabaseConfig, Row};
 use std::sync::Arc;
 use regex::Regex;
 use chrono::{DateTime, Utc};
@@ -91,7 +92,7 @@ pub struct KnowledgeGraphEngine {
 impl KnowledgeGraphEngine {
     /// Create a new knowledge graph engine
     pub async fn new(config: &GraphConfig) -> MemoryResult<Self> {
-        let db_config = agent_agency_database::DatabaseConfig::default();
+        let db_config = data_infrastructure::DatabaseConfig::default();
         let db_client = Arc::new(DatabaseClient::new(db_config).await?);
 
         Ok(Self {
