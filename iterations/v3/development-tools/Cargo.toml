@@ -1,0 +1,54 @@
+[package]
+name = "development-tools"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+# Core async runtime
+tokio.workspace = true
+async-trait.workspace = true
+
+# Serialization
+serde.workspace = true
+serde_json.workspace = true
+serde_yaml.workspace = true
+
+# Error handling
+anyhow.workspace = true
+thiserror.workspace = true
+
+# Logging
+tracing.workspace = true
+
+# Time handling
+chrono.workspace = true
+
+# Utilities
+uuid.workspace = true
+
+# File system operations
+walkdir = "2.4"
+
+# Regular expressions
+regex.workspace = true
+
+# JSON schema validation
+jsonschema = "0.17"
+
+# HTTP client for external tool communication
+reqwest = { workspace = true, features = ["json"] }
+
+# Command execution
+tokio-util = { version = "0.7", features = ["process"] }
+
+[features]
+default = []
+full = []
+validation = []
+codemod = []
+
+[dev-dependencies]
+tokio-test = "0.4"
+tempfile = "3.8"

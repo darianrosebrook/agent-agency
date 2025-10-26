@@ -29,6 +29,9 @@ pub mod metrics;
 // Workspace state management (consolidated from workspace-state-manager crate)
 pub mod workspace_state;
 
+// Memory management (consolidated from memory crate)
+pub mod memory;
+
 // Re-export key types for convenience
 pub use recovery_api::*;
 pub use prompting_prompting_recovery_types::*;

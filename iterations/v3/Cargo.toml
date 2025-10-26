@@ -6,7 +6,6 @@ members = [
     "common-pipeline",  # NEW: Unified pipeline abstractions for all pipeline types
     "agent-data-processing",  # NEW: Unified data processing pipeline consolidating ingestors/enrichers/indexers/knowledge/file-ops
     "apple-silicon",  # Platform-specific optimizations and ANE/MLX acceleration
-    "caws/runtime-validator",  # CAWS validation and quality gates
     "agent-workers",  # NEW: Consolidated MCP-based worker system
     "agent-mcp",  # Consolidated MCP implementation
     "agent-model-management",  # NEW: Unified model lifecycle, inference, and deployment management
@@ -21,6 +20,7 @@ members = [
     "system-resilience",  # NEW: Unified fault tolerance & recovery framework (resilience + recovery + workspace-state-manager)
     "system-configuration",  # NEW: Unified configuration & common utilities (config + common-types + common-patterns + common-pipeline)
     "system-federated-ml",  # NEW: Unified distributed ML & optimization framework (federated-learning + runtime-optimization + tool-ecosystem)
+    "development-tools",  # NEW: Unified development workflow & quality assurance (caws/runtime-validator + apps/tools/caws + codemod)
     "minimal-diff-evaluator",  # Differential evaluation and analysis
     "embedding-service",  # AI embedding generation and management
     "agent-memory",  # NEW: Agent memory system with knowledge graphs and embeddings
@@ -124,6 +124,7 @@ agent-research = { path = "agent-research" }
 system-resilience = { path = "system-resilience" }
 system-configuration = { path = "system-configuration" }
 system-federated-ml = { path = "system-federated-ml" }
+development-tools = { path = "development-tools" }
 
 # Core agent components
 agent-mcp = { path = "agent-mcp" }

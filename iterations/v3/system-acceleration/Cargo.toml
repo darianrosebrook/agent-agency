@@ -1,0 +1,49 @@
+[package]
+name = "system-acceleration"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+# Workspace dependencies
+tokio.workspace = true
+async-trait.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tracing.workspace = true
+thiserror.workspace = true
+anyhow.workspace = true
+
+# Acceleration-specific dependencies
+candle-core = "0.6"
+candle-nn = "0.6"
+candle-transformers = "0.6"
+half = "2.2"
+memmap2 = "0.9"
+safetensors = "0.4"
+tokenizers = "0.19"
+hf-hub = "0.3"
+
+# Apple Silicon specific (conditional compilation)
+[target.'cfg(target_os = "macos")'.dependencies]
+metal = "0.27"
+objc = "0.2"
+cocoa-foundation = "0.1"
+core-foundation = "0.9"
+core-graphics = "0.22"
+
+# ANE/Core ML support (macOS only)
+coreml = { git = "https://github.com/rust-ml/coreml-rs", optional = true }
+
+# Local crates
+agent-agency-contracts = { path = "../agent-agency-contracts" }
+
+[features]
+default = []
+coreml = ["coreml"]
+metal = []
+
+[dev-dependencies]
+tokio-test = "0.4"
+tempfile = "3.0"
