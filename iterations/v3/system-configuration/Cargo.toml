@@ -1,0 +1,58 @@
+[package]
+name = "system-configuration"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+# Core async runtime
+tokio.workspace = true
+async-trait.workspace = true
+
+# Serialization
+serde.workspace = true
+serde_json.workspace = true
+
+# Error handling
+anyhow.workspace = true
+thiserror.workspace = true
+
+# Logging
+tracing.workspace = true
+
+# Time handling
+chrono.workspace = true
+
+# Utilities
+uuid.workspace = true
+regex.workspace = true
+
+# Configuration-specific dependencies (from config)
+config = "0.14"
+figment = "0.10"
+once_cell = "1.5"
+validator = { version = "0.18", features = ["derive"] }
+base64 = "0.22"
+hex = "0.4"
+ring = "0.17"  # For encryption
+zeroize = "1.7"  # For secure memory clearing
+hostname = "0.3"
+
+# Pipeline-specific dependencies (from common-pipeline)
+prometheus = "0.13"
+lru = "0.12"
+
+# Pattern-specific dependencies (from common-patterns)
+paste = "1.0"
+
+# Optional dependencies
+agent-memory = { path = "../agent-memory", optional = true }
+
+[features]
+default = []
+memory = ["agent-memory"]
+
+[dev-dependencies]
+tokio-test = "0.4"
+tempfile = "3.8"

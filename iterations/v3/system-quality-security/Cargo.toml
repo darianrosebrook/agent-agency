@@ -65,10 +65,6 @@ sha2 = "0.10"
 sqlx = { workspace = true, features = ["postgres", "chrono", "uuid"] }
 
 # Local crates
-agent-orchestration = { path = "../agent-orchestration" }
-agent-agency-provenance = { path = "../provenance" }
-data-infrastructure = { path = "../data-infrastructure" }
-agent-agency-config = { path = "../config" }
 agent-agency-contracts = { path = "../agent-agency-contracts" }
 agent-agency-common-types = { path = "../common-types" }
 

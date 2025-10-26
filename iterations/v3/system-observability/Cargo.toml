@@ -64,19 +64,11 @@ windows = { version = "0.52", features = ["Win32_System_Performance", "Win32_Sys
 sqlx = { workspace = true, features = ["postgres", "chrono", "uuid"] }
 
 # Optional integrations (from system-health-monitor)
-agent-orchestration = { path = "../agent-orchestration", optional = true }
-agent-agency-research = { path = "../research", optional = true }
-agent-workers = { path = "../agent-workers", optional = true }
-agent-data-processing = { path = "../agent-data-processing", optional = true }
+# agent-workers = { path = "../agent-workers", optional = true }  # Removed to avoid circular dependency
 
 [features]
 default = []
-full = [
-    "agent-orchestration",
-    "agent-agency-research",
-    "agent-workers",
-    "agent-data-processing"
-]
+full = []
 
 [dev-dependencies]
 tokio-test = "0.4"

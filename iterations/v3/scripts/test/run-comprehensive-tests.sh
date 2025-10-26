@@ -94,10 +94,8 @@ run_unit_tests() {
     echo -e "${BLUE} Running Unit Tests...${NC}"
     
     local unit_test_suites=(
-        "council:agent-agency-council"
-        "claim-extraction:agent-agency-claim-extraction"
-        "research:agent-agency-research"
-        "orchestration:agent-agency-orchestration"
+        "orchestration:agent-orchestration"
+        "research:agent-research"
         "embedding-service:agent-agency-embedding-service"
     )
     

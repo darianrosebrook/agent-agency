@@ -33,7 +33,7 @@ lazy_static = "1.4"
 
 # Local crates
 agent-workers = { path = "../agent-workers" }
-orchestration = { path = "../orchestration" }
+agent-orchestration = { path = "../agent-orchestration" }
 agent-data-processing = { path = "../agent-data-processing" }
 agent-agency-config = { path = "../config" }
 agent-agency-contracts = { path = "../agent-agency-contracts" }

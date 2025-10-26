@@ -84,7 +84,7 @@ run_unit_tests() {
 
     # Council unit tests
     run_test "Council Unit Tests" \
-        "cargo test --package agent-agency-council --lib --verbose"
+        "cargo test --package agent-orchestration --lib --verbose"
 
     # Model provider unit tests
     run_test "Model Provider Unit Tests" \

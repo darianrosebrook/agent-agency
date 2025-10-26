@@ -21,13 +21,12 @@ agent-mcp = { path = "../agent-mcp" }
 # CAWS integration
 # caws-runtime-validator = { path = "../caws/runtime-validator" } # PLACEHOLDER: crate not yet implemented
 agent-orchestration = { path = "../agent-orchestration" }
-claim-extraction = { path = "../claim-extraction" }
 
 # Tool execution
 system-observability = { path = "../system-observability" }
 
 # Model integration for tool reasoning
-model-benchmarking = { path = "../model-benchmarking" }
+agent-research = { path = "../agent-research" }
 
 # Time utilities
 chrono = { version = "0.4", features = ["serde"] }

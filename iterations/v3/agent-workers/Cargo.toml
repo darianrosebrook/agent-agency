@@ -26,7 +26,7 @@ agent-agency-contracts = { path = "../agent-agency-contracts" }
 agent-orchestration = { path = "../agent-orchestration" }
 
 # Resilience patterns
-agent-agency-resilience = { path = "../resilience" }
+system-resilience = { path = "../system-resilience" }
 
 # Database client
 data-infrastructure = { path = "../data-infrastructure" }

@@ -3,7 +3,7 @@
 //! Provides hooks to track workspace changes during processing and enable
 //! rollback capabilities for failed or incorrect processing operations.
 
-use workspace_state_manager::{WorkspaceStateManager, WorkspaceViewManager, StateId};
+use system_resilience::workspace_state::{WorkspaceStateManager, WorkspaceViewManager, StateId};
 use crate::{DataProcessingResult, DataProcessingError};
 use std::sync::Arc;
 use std::path::PathBuf;
@@ -30,9 +30,9 @@ impl Default for WorkspaceConfig {
     }
 }
 
-impl From<&WorkspaceConfig> for workspace_state_manager::WorkspaceConfig {
+impl From<&WorkspaceConfig> for system_resilience::workspace_state::WorkspaceConfig {
     fn from(config: &WorkspaceConfig) -> Self {
-        workspace_state_manager::WorkspaceConfig {
+        system_resilience::workspace_state::WorkspaceConfig {
             track_git: config.enable_change_tracking,
             compute_hashes: true,
             max_file_size: 1024 * 1024, // 1MB
@@ -44,7 +44,7 @@ impl From<&WorkspaceConfig> for workspace_state_manager::WorkspaceConfig {
             compress_states: true,
             max_states: 100,
             track_directories: true,
-            default_capture_method: workspace_state_manager::CaptureMethod::FullScan,
+            default_capture_method: system_resilience::workspace_state::CaptureMethod::FullScan,
         }
     }
 }
@@ -61,7 +61,7 @@ impl WorkspaceIntegrationHooks {
     /// Create new workspace integration hooks
     pub async fn new(config: &WorkspaceConfig) -> DataProcessingResult<Self> {
         let workspace_config = config.into();
-        let storage = Box::new(workspace_state_manager::FileStorage::new(&config.workspace_root, false));
+        let storage = Box::new(system_resilience::workspace_state::FileStorage::new(&config.workspace_root, false));
 
         let workspace_manager = Arc::new(
             WorkspaceStateManager::new(&config.workspace_root, workspace_config, storage)

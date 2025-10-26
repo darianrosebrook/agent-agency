@@ -20,6 +20,12 @@ pub mod qualification;
 pub mod extraction_types;
 pub mod verification;
 
+// Planning agent modules (consolidated from planning-agent crate)
+pub mod planning_agent;
+
+// Self-prompting agent modules (consolidated from self-prompting-agent crate)
+pub mod self_prompting_agent;
+
 #[cfg(test)]
 mod tests;
 

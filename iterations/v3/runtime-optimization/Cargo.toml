@@ -26,7 +26,7 @@ agent-orchestration = { path = "../agent-orchestration" }
 system-observability = { path = "../system-observability" }
 
 # Model benchmarking for performance feedback
-model-benchmarking = { path = "../model-benchmarking" }
+agent-research = { path = "../agent-research" }
 
 # Statistical analysis for Bayesian optimization
 statrs = "0.16"

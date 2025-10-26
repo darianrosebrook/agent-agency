@@ -68,9 +68,8 @@ console = { version = "0.16", features = ["std"] }
 # Local crates
 agent-agency-contracts = { path = "../agent-agency-contracts" }
 agent-orchestration = { path = "../agent-orchestration" }
-agent-agency-research = { path = "../research" }
-claim-extraction = { path = "../claim-extraction" }
-agent-agency-resilience = { path = "../resilience" }
+agent-research = { path = "../agent-research" }
+system-resilience = { path = "../system-resilience" }
 agent-agency-config = { path = "../config" }
 data-infrastructure = { path = "../data-infrastructure" }
 agent-workers = { path = "../agent-workers" }

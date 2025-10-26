@@ -19,10 +19,10 @@ members = [
     "data-interfaces",  # NEW: Unified interface layer & user experience (cli + web-app interfaces)
     "system-quality-security",  # NEW: Unified security & quality framework (security + security-policy-enforcer + quality-gates + source-integrity + provenance)
     "system-resilience",  # NEW: Unified fault tolerance & recovery framework (resilience + recovery + workspace-state-manager)
+    "system-configuration",  # NEW: Unified configuration & common utilities (config + common-types + common-patterns + common-pipeline)
     "minimal-diff-evaluator",  # Differential evaluation and analysis
     "embedding-service",  # AI embedding generation and management
     "agent-memory",  # NEW: Agent memory system with knowledge graphs and embeddings
-    "config",  # Configuration management
     "caching",  # Multi-level caching system
     "file_ops",  # Safe file operations with budget controls
     "runtime-optimization",  # Performance optimization and tuning
@@ -123,6 +123,7 @@ data-interfaces = { path = "data-interfaces" }
 system-quality-security = { path = "system-quality-security" }
 agent-research = { path = "agent-research" }
 system-resilience = { path = "system-resilience" }
+system-configuration = { path = "system-configuration" }
 
 # Core agent components
 agent-mcp = { path = "agent-mcp" }
@@ -131,10 +132,7 @@ agent-model-management = { path = "agent-model-management" }
 agent-data-processing = { path = "agent-data-processing" }
 agent-agency-contracts = { path = "agent-agency-contracts" }
 
-# Common utilities
-common-types = { path = "common-types" }
-common-patterns = { path = "common-patterns" }
-common-pipeline = { path = "common-pipeline" }
+# Common utilities now consolidated in system-configuration
 
 # Infrastructure and services
 embedding-service = { path = "embedding-service" }

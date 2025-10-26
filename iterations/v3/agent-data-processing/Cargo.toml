@@ -67,8 +67,8 @@ nonzero_ext = "0.3"
 # Integration with agent-memory (optional to avoid circular dependencies)
 agent-memory = { path = "../agent-memory", optional = true, features = ["database"] }
 
-# Integration with workspace-state-manager
-workspace-state-manager = { path = "../workspace-state-manager", optional = true }
+# Integration with system-resilience
+system-resilience = { path = "../system-resilience", optional = true }
 
 # Embedding service
 embedding-service = { path = "../embedding-service", optional = true }
@@ -87,7 +87,7 @@ futures = "0.3"
 [features]
 default = ["workspace-integration", "embeddings"]
 memory-integration = ["agent-memory"]
-workspace-integration = ["workspace-state-manager"]
+workspace-integration = ["system-resilience"]
 embeddings = ["embedding-service"]
 
 [dev-dependencies]

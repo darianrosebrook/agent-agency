@@ -69,13 +69,8 @@ agent-agency-contracts = { path = "../agent-agency-contracts" }
 data-infrastructure = { path = "../data-infrastructure" }
 agent-agency-apple-silicon = { path = "../apple-silicon" }
 agent-memory = { path = "../agent-memory" }
-agent-agency-provenance = { path = "../provenance" }
-agent-agency-resilience = { path = "../resilience" }
-claim-extraction = { path = "../claim-extraction" }
-parallel-workers = { path = "../parallel-workers" }
-tool-ecosystem = { path = "../tool-ecosystem" }
+system-resilience = { path = "../system-resilience" }
 agent-data-processing = { path = "../agent-data-processing" }
-agent-agency-research = { path = "../research" }
 caws-runtime-validator = { path = "../caws/runtime-validator" }
 
 # Optional observability dependency (may be disabled)

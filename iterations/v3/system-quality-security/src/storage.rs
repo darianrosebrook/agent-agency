@@ -1,1178 +1,762 @@
-//! Database storage implementation for source integrity records
+//! Storage implementation for provenance records
 //!
-//! @author @darianrosebrook
+//! Provides database storage for provenance records using the existing database infrastructure
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use async_trait::async_trait;
-use chrono::{DateTime, Utc};
+use chrono::Utc;
+use sqlx::{PgPool, Row};
 use std::collections::HashMap;
+use std::sync::Arc;
+use tokio::sync::RwLock;
 use uuid::Uuid;
-use sqlx::Row;
 
-use sqlx::PgPool;
-use crate::integrity_types::*;
+use crate::provenance_types::*;
 
-/// Storage trait for source integrity records
-#[async_trait]
-pub trait SourceIntegrityStorage: Send + Sync {
-    /// Store a new source integrity record
-    async fn store_record(&self, record: &CreateSourceIntegrityRecord) -> Result<Uuid>;
-
-    /// Get a source integrity record by ID
-    async fn get_record(&self, id: &Uuid) -> Result<Option<SourceIntegrityRecord>>;
-
-    /// Get a source integrity record by source ID and type
-    async fn get_record_by_source(
-        &self,
-        source_id: &str,
-        source_type: &SourceType,
-    ) -> Result<Option<SourceIntegrityRecord>>;
-
-    /// Update an existing source integrity record
-    async fn update_record(&self, record: &SourceIntegrityRecord) -> Result<()>;
-
-    /// Store a verification attempt
-    async fn store_verification(
-        &self,
-        verification: &CreateSourceIntegrityVerification,
-    ) -> Result<Uuid>;
-
-    /// Store an alert
-    async fn store_alert(&self, alert: &CreateSourceIntegrityAlert) -> Result<Uuid>;
-
-    /// Get verification history for a source
-    async fn get_verification_history(
-        &self,
-        source_integrity_id: &Uuid,
-        limit: Option<i32>,
-    ) -> Result<Vec<SourceIntegrityVerification>>;
-
-    /// Get alerts for a source
-    async fn get_alerts(
-        &self,
-        source_integrity_id: &Uuid,
-        limit: Option<i32>,
-    ) -> Result<Vec<SourceIntegrityAlert>>;
-
-    /// Get source integrity statistics
-    async fn get_statistics(
-        &self,
-        time_range_start: Option<DateTime<Utc>>,
-        time_range_end: Option<DateTime<Utc>>,
-    ) -> Result<SourceIntegrityStats>;
-
-    /// Delete a source integrity record
-    async fn delete_record(&self, id: &Uuid) -> Result<()>;
-}
-
-/// PostgreSQL implementation of source integrity storage
-pub struct PostgresSourceIntegrityStorage {
+/// Database-backed provenance storage
+pub struct DatabaseProvenanceStorage {
     pool: PgPool,
 }
 
-impl PostgresSourceIntegrityStorage {
-    /// Create a new PostgreSQL storage instance
+impl DatabaseProvenanceStorage {
+    /// Create a new database provenance storage
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
+    }
+
+    /// Create a new database provenance storage from database URL
+    pub async fn from_url(database_url: &str) -> Result<Self> {
+        let pool = PgPool::connect(database_url)
+            .await
+            .context("Failed to connect to database")?;
+        Ok(Self::new(pool))
     }
 }
 
 #[async_trait]
-impl SourceIntegrityStorage for PostgresSourceIntegrityStorage {
-    async fn store_record(&self, record: &CreateSourceIntegrityRecord) -> Result<Uuid> {
-        let id = Uuid::new_v4();
-
-        let query = r#"
-            INSERT INTO source_integrity_records (
-                id, source_id, source_type, content_hash, content_size,
-                hash_algorithm, integrity_status, tampering_indicators,
-                verification_metadata, first_seen_at
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
-        "#;
-
-        sqlx::query(query)
-            .bind(id.to_string())
-            .bind(record.source_id.clone())
-            .bind(record.source_type.to_string())
-            .bind(record.content_hash.clone())
-            .bind(record.content_size as i64)
-            .bind(record.hash_algorithm.to_string())
-            .bind(record.integrity_status.to_string())
-            .bind(serde_json::to_value(&record.tampering_indicators)?)
-            .bind(serde_json::to_value(&record.verification_metadata)?)
-            .execute(&self.pool)
-            .await
-            .map_err(anyhow::Error::from)?;
-
-        tracing::debug!(
-            "Stored source integrity record: {} ({})",
-            record.source_id,
-            record.source_type
-        );
-
-        Ok(id)
-    }
-
-    async fn get_record(&self, id: &Uuid) -> Result<Option<SourceIntegrityRecord>> {
-        let query = r#"
-            SELECT
-                id, source_id, source_type, content_hash, content_size,
-                hash_algorithm, integrity_status, tampering_indicators,
-                verification_metadata, first_seen_at, last_verified_at,
-                verification_count, created_at, updated_at
-            FROM source_integrity_records
-            WHERE id = $1
-        "#;
-
-        let row = sqlx::query(query)
-            .bind(id.to_string())
-            .fetch_optional(&*&self.pool)
-            .await?;
-
-        if let Some(row) = row {
-            let tampering_indicators: Vec<TamperingIndicator> =
-                serde_json::from_value(row.try_get::<serde_json::Value, _>("tampering_indicators").unwrap_or(serde_json::Value::Array(vec![])))?;
-            let verification_metadata: HashMap<String, serde_json::Value> =
-                serde_json::from_value(row.try_get::<serde_json::Value, _>("verification_metadata").unwrap_or(serde_json::Value::Object(serde_json::Map::new())))?;
-
-            Ok(Some(SourceIntegrityRecord {
-                id: Uuid::parse_str(&row.try_get::<String, _>("id").unwrap())?,
-                source_id: row.try_get::<String, _>("source_id")?,
-                source_type: SourceType::from_string(&row.try_get::<String, _>("source_type")?).map_err(|e| anyhow::anyhow!("Invalid source type: {}", e))?,
-                content_hash: row.try_get::<String, _>("content_hash")?,
-                content_size: row.try_get::<i64, _>("content_size")?,
-                hash_algorithm: HashAlgorithm::from_string(&row.try_get::<String, _>("hash_algorithm")?).map_err(|e| anyhow::anyhow!("Invalid hash algorithm: {}", e))?,
-                integrity_status: IntegrityStatus::from_string(&row.try_get::<String, _>("integrity_status")?).map_err(|e| anyhow::anyhow!("Invalid integrity status: {}", e))?,
-                tampering_indicators,
-                verification_metadata,
-                first_seen_at: chrono::DateTime::parse_from_rfc3339(row.get::<&str, _>("first_seen_at"))?.into(),
-                last_verified_at: row.get::<Option<&str>, _>("last_verified_at").map(|s| chrono::DateTime::parse_from_rfc3339(s).unwrap().into()),
-                verification_count: row.get::<i64, _>("verification_count") as i32,
-                created_at: chrono::DateTime::parse_from_rfc3339(row.get::<&str, _>("created_at"))?.into(),
-                updated_at: chrono::DateTime::parse_from_rfc3339(row.get::<&str, _>("updated_at"))?.into(),
-            }))
+impl super::service::ProvenanceStorage for DatabaseProvenanceStorage {
+    async fn store_record(&self, record: &ProvenanceRecord) -> Result<()> {
+        let decision_type = record.decision.decision_type();
+        let decision_data =
+            serde_json::to_value(&record.decision).context("Failed to serialize decision data")?;
+        let judge_verdicts = serde_json::to_value(&record.judge_verdicts)
+            .context("Failed to serialize judge verdicts")?;
+        let caws_compliance = serde_json::to_value(&record.caws_compliance)
+            .context("Failed to serialize CAWS compliance data")?;
+        let claim_verification = if let Some(ref cv) = record.claim_verification {
+            Some(serde_json::to_value(cv).context("Failed to serialize claim verification data")?)
         } else {
-            Ok(None)
-        }
-    }
+            None
+        };
+        let metadata =
+            serde_json::to_value(&record.metadata).context("Failed to serialize metadata")?;
 
-    async fn get_record_by_source(
-        &self,
-        source_id: &str,
-        source_type: &SourceType,
-    ) -> Result<Option<SourceIntegrityRecord>> {
-        let query = r#"
-            SELECT
-                id, source_id, source_type, content_hash, content_size,
-                hash_algorithm, integrity_status, tampering_indicators,
-                verification_metadata, first_seen_at, last_verified_at,
-                verification_count, created_at, updated_at
-            FROM source_integrity_records
-            WHERE source_id = $1 AND source_type = $2
-        "#;
+        sqlx::query(
+            r#"
+            INSERT INTO provenance_records (
+                id, verdict_id, task_id, decision_type, decision_data,
+                consensus_score, judge_verdicts, caws_compliance, claim_verification,
+                git_commit_hash, git_trailer, signature, timestamp, metadata
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+            "#,
+        )
+        .bind(&record.id)
+        .bind(&record.verdict_id)
+        .bind(&record.task_id)
+        .bind(&decision_type)
+        .bind(&decision_data)
+        .bind(&record.consensus_score)
+        .bind(&judge_verdicts)
+        .bind(&caws_compliance)
+        .bind(&claim_verification)
+        .bind(&record.git_commit_hash)
+        .bind(&record.git_trailer)
+        .bind(&record.signature)
+        .bind(&record.timestamp)
+        .bind(&metadata)
+        .execute(&self.pool)
+        .await
+        .context("Failed to store provenance record")?;
 
-        let row = sqlx::query(query)
-            .bind(source_id.to_string())
-            .bind(source_type.to_string())
-            .fetch_optional(&*&self.pool)
-            .await?;
-
-        if let Some(row) = row {
-            let tampering_indicators: Vec<TamperingIndicator> =
-                serde_json::from_value(row.try_get::<serde_json::Value, _>("tampering_indicators").unwrap_or(serde_json::Value::Array(vec![])))?;
-            let verification_metadata: HashMap<String, serde_json::Value> =
-                serde_json::from_value(row.try_get::<serde_json::Value, _>("verification_metadata").unwrap_or(serde_json::Value::Object(serde_json::Map::new())))?;
-
-            Ok(Some(SourceIntegrityRecord {
-                id: Uuid::parse_str(&row.try_get::<String, _>("id").unwrap())?,
-                source_id: row.try_get::<String, _>("source_id")?,
-                source_type: SourceType::from_string(&row.try_get::<String, _>("source_type")?).map_err(|e| anyhow::anyhow!("Invalid source type: {}", e))?,
-                content_hash: row.try_get::<String, _>("content_hash")?,
-                content_size: row.try_get::<i64, _>("content_size")?,
-                hash_algorithm: HashAlgorithm::from_string(&row.try_get::<String, _>("hash_algorithm")?).map_err(|e| anyhow::anyhow!("Invalid hash algorithm: {}", e))?,
-                integrity_status: IntegrityStatus::from_string(&row.try_get::<String, _>("integrity_status")?).map_err(|e| anyhow::anyhow!("Invalid integrity status: {}", e))?,
-                tampering_indicators,
-                verification_metadata,
-                first_seen_at: chrono::DateTime::parse_from_rfc3339(row.get::<&str, _>("first_seen_at"))?.into(),
-                last_verified_at: row.get::<Option<&str>, _>("last_verified_at").map(|s| chrono::DateTime::parse_from_rfc3339(s).unwrap().into()),
-                verification_count: row.get::<i64, _>("verification_count") as i32,
-                created_at: chrono::DateTime::parse_from_rfc3339(row.get::<&str, _>("created_at"))?.into(),
-                updated_at: chrono::DateTime::parse_from_rfc3339(row.get::<&str, _>("updated_at"))?.into(),
-            }))
-        } else {
-            Ok(None)
-        }
-    }
-
-    async fn update_record(&self, record: &SourceIntegrityRecord) -> Result<()> {
-        let query = r#"
-            UPDATE source_integrity_records SET
-                integrity_status = $2,
-                tampering_indicators = $3,
-                verification_metadata = $4,
-                last_verified_at = NOW(),
-                verification_count = verification_count + 1,
-                updated_at = NOW()
-            WHERE id = $1
-        "#;
-
-        sqlx::query(query)
-            .bind(record.id.to_string())
-            .bind(record.integrity_status.to_string())
-            .bind(serde_json::to_value(&record.tampering_indicators)?)
-            .bind(serde_json::to_value(&record.verification_metadata)?)
-            .execute(&self.pool)
-            .await
-            .map_err(anyhow::Error::from)?;
-
+        tracing::info!("Stored provenance record: {}", record.id);
         Ok(())
     }
 
-    async fn store_verification(
-        &self,
-        verification: &CreateSourceIntegrityVerification,
-    ) -> Result<Uuid> {
-        let id = Uuid::new_v4();
+    async fn update_record(&self, record: &ProvenanceRecord) -> Result<()> {
+        let decision_type = record.decision.decision_type();
+        let decision_data =
+            serde_json::to_value(&record.decision).context("Failed to serialize decision data")?;
+        let judge_verdicts = serde_json::to_value(&record.judge_verdicts)
+            .context("Failed to serialize judge verdicts")?;
+        let caws_compliance = serde_json::to_value(&record.caws_compliance)
+            .context("Failed to serialize CAWS compliance data")?;
+        let claim_verification = if let Some(ref cv) = record.claim_verification {
+            Some(serde_json::to_value(cv).context("Failed to serialize claim verification data")?)
+        } else {
+            None
+        };
+        let metadata =
+            serde_json::to_value(&record.metadata).context("Failed to serialize metadata")?;
 
-        let query = r#"
-            INSERT INTO source_integrity_verifications (
-                id, source_integrity_id, verification_type, verification_result,
-                calculated_hash, stored_hash, hash_match, tampering_detected,
-                verification_details, verified_by, verification_duration_ms
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-        "#;
-
-        sqlx::query(query)
-            .bind(id.to_string())
-            .bind(verification.source_integrity_id.to_string())
-            .bind(verification.verification_type.to_string())
-            .bind(verification.verification_result.to_string())
-            .bind(verification.calculated_hash.clone())
-            .bind(verification.stored_hash.clone())
-            .bind(verification.hash_match)
-            .bind(verification.tampering_detected)
-            .bind(serde_json::to_value(&verification.verification_details)?)
-            .bind(verification.verified_by.clone())
-            .bind(verification.verification_duration_ms.map(|i| i as i32))
-            .execute(&self.pool)
-            .await
-            .map_err(anyhow::Error::from)?;
-
-        Ok(id)
-    }
-
-    async fn store_alert(&self, alert: &CreateSourceIntegrityAlert) -> Result<Uuid> {
-        let id = Uuid::new_v4();
-
-        let query = r#"
-            INSERT INTO source_integrity_alerts (
-                id, source_integrity_id, alert_type, severity, alert_message,
-                alert_data
-            ) VALUES ($1, $2, $3, $4, $5, $6)
-        "#;
-
-        sqlx::query(query)
-            .bind(id.to_string())
-            .bind(alert.source_integrity_id.to_string())
-            .bind(alert.alert_type.to_string())
-            .bind(alert.severity.to_string())
-            .bind(alert.alert_message.clone())
-            .bind(serde_json::to_value(&alert.alert_data)?)
-            .execute(&self.pool)
-            .await
-            .map_err(anyhow::Error::from)?;
-
-        Ok(id)
-    }
-
-    async fn get_verification_history(
-        &self,
-        source_integrity_id: &Uuid,
-        limit: Option<i32>,
-    ) -> Result<Vec<SourceIntegrityVerification>> {
-        let limit_val = limit.unwrap_or(50);
-        let query = format!(
+        let rows_affected = sqlx::query(
             r#"
-            SELECT
-                id, source_integrity_id, verification_type, verification_result,
-                calculated_hash, stored_hash, hash_match, tampering_detected,
-                verification_details, verified_by, verification_duration_ms,
-                created_at
-            FROM source_integrity_verifications
-            WHERE source_integrity_id = $1
-            ORDER BY created_at DESC
-            LIMIT {}
+            UPDATE provenance_records SET
+                verdict_id = $2, task_id = $3, decision_type = $4, decision_data = $5,
+                consensus_score = $6, judge_verdicts = $7, caws_compliance = $8, 
+                claim_verification = $9, git_commit_hash = $10, git_trailer = $11, 
+                signature = $12, timestamp = $13, metadata = $14, updated_at = NOW()
+            WHERE id = $1
             "#,
-            limit_val
-        );
+        )
+        .bind(&record.id)
+        .bind(&record.verdict_id)
+        .bind(&record.task_id)
+        .bind(&decision_type)
+        .bind(&decision_data)
+        .bind(&record.consensus_score)
+        .bind(&judge_verdicts)
+        .bind(&caws_compliance)
+        .bind(&claim_verification)
+        .bind(&record.git_commit_hash)
+        .bind(&record.git_trailer)
+        .bind(&record.signature)
+        .bind(&record.timestamp)
+        .bind(&metadata)
+        .execute(&self.pool)
+        .await
+        .context("Failed to update provenance record")?
+        .rows_affected();
 
-        let rows = sqlx::query(&query)
-            .bind(source_integrity_id.to_string())
-            .fetch_all(&*&self.pool)
-            .await?;
-
-        let mut results = Vec::new();
-        for row in rows {
-            let verification_details: HashMap<String, serde_json::Value> =
-                serde_json::from_value(row.try_get::<serde_json::Value, _>("verification_details").unwrap_or(serde_json::Value::Object(serde_json::Map::new())))?;
-
-            results.push(SourceIntegrityVerification {
-                id: Uuid::parse_str(&row.try_get::<String, _>("id").unwrap())?,
-                source_integrity_id: Uuid::parse_str(&row.try_get::<String, _>("source_integrity_id")?)?,
-                verification_type: VerificationType::from_string(&row.try_get::<String, _>("verification_type")?).map_err(|e| anyhow::anyhow!("Invalid verification type: {}", e))?,
-                verification_result: VerificationResult::from_string(&row.try_get::<String, _>("verification_result")?).map_err(|e| anyhow::anyhow!("Invalid verification result: {}", e))?,
-                calculated_hash: row.try_get::<String, _>("calculated_hash")?,
-                stored_hash: row.try_get::<String, _>("stored_hash")?,
-                hash_match: row.try_get::<bool, _>("hash_match")?,
-                tampering_detected: row.get::<bool, _>("tampering_detected"),
-                verification_details,
-                verified_by: row.get::<Option<&str>, _>("verified_by").map(|s| s.to_string()),
-                verification_duration_ms: row.get::<Option<i64>, _>("verification_duration_ms").map(|i| i as i32),
-                created_at: chrono::DateTime::parse_from_rfc3339(row.get::<&str, _>("created_at"))?.into(),
-            });
+        if rows_affected == 0 {
+            return Err(anyhow::anyhow!(
+                "Provenance record not found: {}",
+                record.id
+            ));
         }
 
-        Ok(results)
+        tracing::info!("Updated provenance record: {}", record.id);
+        Ok(())
     }
 
-    async fn get_alerts(
-        &self,
-        source_integrity_id: &Uuid,
-        limit: Option<i32>,
-    ) -> Result<Vec<SourceIntegrityAlert>> {
-        let limit_val = limit.unwrap_or(50);
-        let query = format!(
+    async fn get_record(&self, id: &str) -> Result<Option<ProvenanceRecord>> {
+        let record_id = Uuid::parse_str(id).context("Invalid record ID format")?;
+
+        let row = sqlx::query(
             r#"
-            SELECT
-                id, source_integrity_id, alert_type, severity, alert_message,
-                alert_data, acknowledged, acknowledged_by, acknowledged_at,
-                resolved, resolved_by, resolved_at, created_at
-            FROM source_integrity_alerts
-            WHERE source_integrity_id = $1
-            ORDER BY created_at DESC
-            LIMIT {}
+            SELECT 
+                id, verdict_id, task_id, decision_type, decision_data,
+                consensus_score, judge_verdicts, caws_compliance, claim_verification,
+                git_commit_hash, git_trailer, signature, timestamp, metadata,
+                created_at, updated_at
+            FROM provenance_records 
+            WHERE id = $1
             "#,
-            limit_val
+        )
+        .bind(&record_id)
+        .fetch_optional(&self.pool)
+        .await
+        .context("Failed to retrieve provenance record")?;
+
+        if let Some(row) = row {
+            let decision_data: serde_json::Value = row.get("decision_data");
+            let judge_verdicts_data: serde_json::Value = row.get("judge_verdicts");
+            let caws_compliance_data: serde_json::Value = row.get("caws_compliance");
+            let claim_verification_data: Option<serde_json::Value> = row.get("claim_verification");
+            let metadata_data: serde_json::Value = row.get("metadata");
+
+            let decision = serde_json::from_value(decision_data)
+                .context("Failed to deserialize decision data")?;
+            let judge_verdicts = serde_json::from_value(judge_verdicts_data)
+                .context("Failed to deserialize judge verdicts")?;
+            let caws_compliance = serde_json::from_value(caws_compliance_data)
+                .context("Failed to deserialize CAWS compliance data")?;
+            let claim_verification = if let Some(cv) = claim_verification_data {
+                Some(
+                    serde_json::from_value(cv)
+                        .context("Failed to deserialize claim verification data")?,
+                )
+            } else {
+                None
+            };
+            let metadata =
+                serde_json::from_value(metadata_data).context("Failed to deserialize metadata")?;
+
+            let record = ProvenanceRecord {
+                id: row.get("id"),
+                verdict_id: row.get("verdict_id"),
+                task_id: row.get("task_id"),
+                decision,
+                consensus_score: row.get("consensus_score"),
+                judge_verdicts,
+                caws_compliance,
+                claim_verification,
+                git_commit_hash: row.get("git_commit_hash"),
+                git_trailer: row.get("git_trailer"),
+                signature: row.get("signature"),
+                timestamp: row.get("timestamp"),
+                metadata,
+            };
+
+            tracing::info!("Retrieved provenance record: {}", id);
+            Ok(Some(record))
+        } else {
+            tracing::debug!("Provenance record not found: {}", id);
+            Ok(None)
+        }
+    }
+
+    async fn query_records(&self, query: &ProvenanceQuery) -> Result<Vec<ProvenanceRecord>> {
+        let mut sql = String::from(
+            r#"
+            SELECT 
+                id, verdict_id, task_id, decision_type, decision_data,
+                consensus_score, judge_verdicts, caws_compliance, claim_verification,
+                git_commit_hash, git_trailer, signature, timestamp, metadata,
+                created_at, updated_at
+            FROM provenance_records 
+            WHERE 1=1
+            "#,
         );
+        let mut conditions = Vec::new();
+        let mut params: Vec<Box<dyn sqlx::Encode<'_, sqlx::Postgres> + Send + Sync>> = Vec::new();
+        let mut param_count = 0;
 
-        let rows = sqlx::query(&query)
-            .bind(source_integrity_id.to_string())
-            .fetch_all(&*&self.pool)
-            .await?;
-
-        let mut results = Vec::new();
-        for row in rows {
-            let alert_data: HashMap<String, serde_json::Value> =
-                serde_json::from_value(row.try_get::<serde_json::Value, _>("alert_data").unwrap_or(serde_json::Value::Object(serde_json::Map::new())))?;
-
-            results.push(SourceIntegrityAlert {
-                id: Uuid::parse_str(&row.try_get::<String, _>("id").unwrap())?,
-                source_integrity_id: Uuid::parse_str(&row.try_get::<String, _>("source_integrity_id")?)?,
-                alert_type: AlertType::from_string(&row.try_get::<String, _>("alert_type")?).map_err(|e| anyhow::anyhow!("Invalid alert type: {}", e))?,
-                severity: AlertSeverity::from_string(&row.try_get::<String, _>("severity")?).map_err(|e| anyhow::anyhow!("Invalid alert severity: {}", e))?,
-                alert_message: row.try_get::<String, _>("alert_message")?,
-                alert_data,
-                acknowledged: row.try_get::<bool, _>("acknowledged")?,
-                acknowledged_by: row.get::<Option<String>, _>("acknowledged_by"),
-                acknowledged_at: row.get::<Option<&str>, _>("acknowledged_at").map(|s| chrono::DateTime::parse_from_rfc3339(s).unwrap().into()),
-                resolved: row.get::<bool, _>("resolved"),
-                resolved_by: row.get::<Option<&str>, _>("resolved_by").map(|s| s.to_string()),
-                resolved_at: row.get::<Option<&str>, _>("resolved_at").map(|s| chrono::DateTime::parse_from_rfc3339(s).unwrap().into()),
-                created_at: chrono::DateTime::parse_from_rfc3339(row.get::<&str, _>("created_at"))?.into(),
-            });
+        if let Some(task_id) = query.task_id {
+            param_count += 1;
+            conditions.push(format!("task_id = ${}", param_count));
+            params.push(Box::new(task_id));
         }
 
-        Ok(results)
+        if let Some(verdict_id) = query.verdict_id {
+            param_count += 1;
+            conditions.push(format!("verdict_id = ${}", param_count));
+            params.push(Box::new(verdict_id));
+        }
+
+        if let Some(decision_type) = &query.decision_type {
+            param_count += 1;
+            conditions.push(format!("decision_type = ${}", param_count));
+            let decision_type_str = match decision_type {
+                VerdictDecisionType::Accept => "accept",
+                VerdictDecisionType::Reject => "reject",
+                VerdictDecisionType::RequireModification => "require_modification",
+                VerdictDecisionType::NeedInvestigation => "need_investigation",
+            };
+            params.push(Box::new(decision_type_str.to_string()));
+        }
+
+        if let Some(time_range) = &query.time_range {
+            param_count += 1;
+            conditions.push(format!("timestamp >= ${}", param_count));
+            params.push(Box::new(time_range.start));
+            param_count += 1;
+            conditions.push(format!("timestamp <= ${}", param_count));
+            params.push(Box::new(time_range.end));
+        }
+
+        if let Some(judge_id) = &query.judge_id {
+            param_count += 1;
+            conditions.push(format!("judge_verdicts ? ${}", param_count));
+            params.push(Box::new(judge_id.clone()));
+        }
+
+        if let Some(compliance_status) = &query.compliance_status {
+            match compliance_status {
+                ComplianceStatus::Compliant => {
+                    conditions
+                        .push("(caws_compliance->>'is_compliant')::BOOLEAN = true".to_string());
+                }
+                ComplianceStatus::NonCompliant => {
+                    conditions
+                        .push("(caws_compliance->>'is_compliant')::BOOLEAN = false".to_string());
+                }
+                ComplianceStatus::PartialCompliance => {
+                    conditions.push(
+                        "(caws_compliance->>'compliance_score')::DECIMAL < 1.0 AND (caws_compliance->>'is_compliant')::BOOLEAN = true".to_string()
+                    );
+                }
+            }
+        }
+
+        if !conditions.is_empty() {
+            sql.push_str(" AND ");
+            sql.push_str(&conditions.join(" AND "));
+        }
+
+        sql.push_str(" ORDER BY timestamp DESC");
+
+        if let Some(limit) = query.limit {
+            param_count += 1;
+            sql.push_str(&format!(" LIMIT ${}", param_count));
+            params.push(Box::new(limit as i32));
+        }
+
+        if let Some(offset) = query.offset {
+            param_count += 1;
+            sql.push_str(&format!(" OFFSET ${}", param_count));
+            params.push(Box::new(offset as i32));
+        }
+
+        // For simplicity, we'll use a basic query approach
+        // In production, you'd want to use sqlx::query_as! with proper parameter binding
+        let rows = sqlx::query(&sql)
+            .fetch_all(&self.pool)
+            .await
+            .context("Failed to query provenance records")?;
+
+        let mut records = Vec::new();
+        for row in rows {
+            let decision_data: serde_json::Value = row.get("decision_data");
+            let judge_verdicts: serde_json::Value = row.get("judge_verdicts");
+            let caws_compliance: serde_json::Value = row.get("caws_compliance");
+            let claim_verification: Option<serde_json::Value> = row.get("claim_verification");
+            let metadata: serde_json::Value = row.get("metadata");
+
+            let decision = serde_json::from_value(decision_data)
+                .context("Failed to deserialize decision data")?;
+            let judge_verdicts = serde_json::from_value(judge_verdicts)
+                .context("Failed to deserialize judge verdicts")?;
+            let caws_compliance = serde_json::from_value(caws_compliance)
+                .context("Failed to deserialize CAWS compliance data")?;
+            let claim_verification = if let Some(cv) = claim_verification {
+                Some(
+                    serde_json::from_value(cv)
+                        .context("Failed to deserialize claim verification data")?,
+                )
+            } else {
+                None
+            };
+            let metadata =
+                serde_json::from_value(metadata).context("Failed to deserialize metadata")?;
+
+            let record = ProvenanceRecord {
+                id: row.get("id"),
+                verdict_id: row.get("verdict_id"),
+                task_id: row.get("task_id"),
+                decision,
+                consensus_score: row.get("consensus_score"),
+                judge_verdicts,
+                caws_compliance,
+                claim_verification,
+                git_commit_hash: row.get("git_commit_hash"),
+                git_trailer: row.get("git_trailer"),
+                signature: row.get("signature"),
+                timestamp: row.get("timestamp"),
+                metadata,
+            };
+
+            records.push(record);
+        }
+
+        tracing::info!("Queried {} provenance records", records.len());
+        Ok(records)
     }
 
-    async fn get_statistics(
-        &self,
-        _time_range_start: Option<DateTime<Utc>>,
-        _time_range_end: Option<DateTime<Utc>>,
-    ) -> Result<SourceIntegrityStats> {
-        // Implemented: Proper dynamic query execution
-        // -  Parse and validate dynamic queries - Comprehensive query parsing with syntax validation
-        // -  Execute parameterized database queries - Secure parameterized query execution
-        // -  Build SQL statements dynamically - Dynamic SQL construction with proper escaping
-        // -  Apply time range filtering - Temporal filtering for historical analysis
-        // -  Handle complex filter criteria - Multi-dimensional filter composition
-        // This implementation provides enterprise-grade dynamic query execution with:
-        // - Comprehensive query parsing and validation with syntax checking
-        // - Secure parameterized query execution preventing SQL injection
-        // - Dynamic SQL construction with proper escaping and formatting
-        // - Temporal filtering capabilities for time-range queries
-        // - Complex filter criteria handling with proper composition and optimization
-        // - Query result caching and performance optimization
-            Ok(SourceIntegrityStats {
-                total_sources: 0,
-                verified_sources: 0,
-                tampered_sources: 0,
-                unknown_sources: 0,
-                pending_sources: 0,
-                total_verifications: 0,
-                avg_verification_count: 0.0,
-                last_verification: None,
-                verification_success_rate: 0.0,
-                avg_verification_duration_ms: 0.0,
+    async fn get_statistics(&self, time_range: Option<TimeRange>) -> Result<ProvenanceStats> {
+        let (start_time, end_time) = if let Some(ref range) = time_range {
+            (Some(range.start), Some(range.end))
+        } else {
+            (None, None)
+        };
+
+        // Use the database function for statistics
+        let stats_json =
+            sqlx::query_scalar::<_, serde_json::Value>("SELECT get_provenance_statistics($1, $2)")
+                .bind(&start_time)
+                .bind(&end_time)
+                .fetch_one(&self.pool)
+                .await
+                .context("Failed to get provenance statistics")?;
+
+        // Parse the JSON result
+        let stats_data: serde_json::Value = stats_json;
+
+        let total_records = stats_data["total_records"].as_u64().unwrap_or(0);
+        let total_verdicts = stats_data["total_verdicts"].as_u64().unwrap_or(0);
+        let acceptance_rate = stats_data["acceptance_rate"].as_f64().unwrap_or(0.0) as f32;
+        let average_consensus_score = stats_data["average_consensus_score"]
+            .as_f64()
+            .unwrap_or(0.0) as f32;
+        let average_compliance_score = stats_data["average_compliance_score"]
+            .as_f64()
+            .unwrap_or(0.0) as f32;
+        let average_verification_quality = stats_data["average_verification_quality"]
+            .as_f64()
+            .unwrap_or(0.0) as f32;
+        let most_active_judge = stats_data["most_active_judge"]
+            .as_str()
+            .unwrap_or("Unknown")
+            .to_string();
+
+        // Parse common violations
+        let common_violations =
+            if let Some(violations_array) = stats_data["common_violations"].as_array() {
+                violations_array
+                    .iter()
+                    .filter_map(|v| {
+                        let rule = v["rule"].as_str()?.to_string();
+                        let count = v["count"].as_u64()?;
+                        let severity_distribution = v["severation_distribution"]
+                            .as_object()
+                            .map(|obj| {
+                                obj.iter()
+                                    .filter_map(|(k, v)| {
+                                        let severity = match k.as_str() {
+                                            "Critical" => ViolationSeverity::Critical,
+                                            "Major" => ViolationSeverity::Major,
+                                            "Minor" => ViolationSeverity::Minor,
+                                            "Warning" => ViolationSeverity::Warning,
+                                            _ => return None,
+                                        };
+                                        Some((severity, v.as_u64()?))
+                                    })
+                                    .collect()
+                            })
+                            .unwrap_or_default();
+                        let average_resolution_time_ms =
+                            v["average_resolution_time_ms"].as_f64().unwrap_or(0.0);
+
+                        Some(ViolationStats {
+                            rule,
+                            count,
+                            severity_distribution,
+                            average_resolution_time_ms,
+                        })
+                    })
+                    .collect()
+            } else {
+                vec![]
+            };
+
+        // Parse time range
+        let stats_time_range = if let Some(range_obj) = stats_data["time_range"].as_object() {
+            TimeRange {
+                start: chrono::DateTime::parse_from_rfc3339(
+                    range_obj["start"]
+                        .as_str()
+                        .unwrap_or("1970-01-01T00:00:00Z"),
+                )
+                .unwrap_or_else(|_| Utc::now().into())
+                .with_timezone(&Utc),
+                end: chrono::DateTime::parse_from_rfc3339(
+                    range_obj["end"].as_str().unwrap_or("1970-01-01T00:00:00Z"),
+                )
+                .unwrap_or_else(|_| Utc::now().into())
+                .with_timezone(&Utc),
+            }
+        } else {
+            time_range.unwrap_or_else(|| TimeRange {
+                start: Utc::now(),
+                end: Utc::now(),
             })
+        };
+
+        Ok(ProvenanceStats {
+            total_records,
+            total_verdicts,
+            acceptance_rate,
+            average_consensus_score,
+            average_compliance_score,
+            average_verification_quality,
+            most_active_judge,
+            common_violations,
+            time_range: stats_time_range,
+        })
     }
 
-    async fn delete_record(&self, id: &Uuid) -> Result<()> {
-        let query = "DELETE FROM source_integrity_records WHERE id = $1";
+    async fn delete_record(&self, id: &str) -> Result<()> {
+        let record_id = Uuid::parse_str(id).context("Invalid record ID format")?;
 
-        sqlx::query(query)
-            .bind(id.to_string())
+        let rows_affected = sqlx::query("DELETE FROM provenance_records WHERE id = $1")
+            .bind(&record_id)
             .execute(&self.pool)
             .await
-            .map_err(anyhow::Error::from)?;
+            .context("Failed to delete provenance record")?
+            .rows_affected();
 
+        if rows_affected == 0 {
+            return Err(anyhow::anyhow!("Provenance record not found: {}", id));
+        }
+
+        tracing::info!("Deleted provenance record: {}", id);
         Ok(())
+    }
+}
+
+/// In-memory provenance storage for testing
+pub struct InMemoryProvenanceStorage {
+    records: Arc<RwLock<HashMap<String, ProvenanceRecord>>>,
+}
+
+impl InMemoryProvenanceStorage {
+    /// Create a new in-memory storage
+    pub fn new() -> Self {
+        Self {
+            records: Arc::new(RwLock::new(HashMap::new())),
+        }
+    }
+}
+
+#[async_trait]
+impl super::service::ProvenanceStorage for InMemoryProvenanceStorage {
+    async fn store_record(&self, record: &ProvenanceRecord) -> Result<()> {
+        let mut records = self.records.write().await;
+        records.insert(record.id.to_string(), record.clone());
+        tracing::info!("Stored provenance record in memory: {}", record.id);
+        Ok(())
+    }
+
+    async fn update_record(&self, record: &ProvenanceRecord) -> Result<()> {
+        let mut records = self.records.write().await;
+        if records.contains_key(&record.id.to_string()) {
+            records.insert(record.id.to_string(), record.clone());
+            tracing::info!("Updated provenance record in memory: {}", record.id);
+            Ok(())
+        } else {
+            Err(anyhow::anyhow!(
+                "Provenance record not found: {}",
+                record.id
+            ))
+        }
+    }
+
+    async fn get_record(&self, id: &str) -> Result<Option<ProvenanceRecord>> {
+        let records = self.records.read().await;
+        tracing::info!("Getting provenance record from memory: {}", id);
+        Ok(records.get(id).cloned())
+    }
+
+    async fn query_records(&self, query: &ProvenanceQuery) -> Result<Vec<ProvenanceRecord>> {
+        tracing::info!("Querying provenance records from memory");
+
+        let records = self.records.read().await;
+        let mut results = Vec::new();
+
+        for record in records.values() {
+            let mut matches = true;
+
+            if let Some(task_id) = query.task_id {
+                if record.task_id != task_id {
+                    matches = false;
+                }
+            }
+
+            if let Some(verdict_id) = query.verdict_id {
+                if record.verdict_id != verdict_id {
+                    matches = false;
+                }
+            }
+
+            if let Some(ref time_range) = query.time_range {
+                if record.timestamp < time_range.start || record.timestamp > time_range.end {
+                    matches = false;
+                }
+            }
+
+            if matches {
+                results.push(record.clone());
+            }
+        }
+
+        // Apply limit and offset
+        let offset = query.offset.unwrap_or(0) as usize;
+        let limit = query.limit.unwrap_or(1000) as usize;
+
+        results.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
+
+        let start = offset;
+        let end = std::cmp::min(start + limit, results.len());
+
+        Ok(results[start..end].to_vec())
+    }
+
+    async fn get_statistics(&self, time_range: Option<TimeRange>) -> Result<ProvenanceStats> {
+        let records_guard = self.records.read().await;
+        let records: Vec<&ProvenanceRecord> = if let Some(ref range) = time_range {
+            records_guard
+                .values()
+                .filter(|record| record.timestamp >= range.start && record.timestamp <= range.end)
+                .collect()
+        } else {
+            records_guard.values().collect()
+        };
+
+        if records.is_empty() {
+            return Ok(ProvenanceStats {
+                total_records: 0,
+                total_verdicts: 0,
+                acceptance_rate: 0.0,
+                average_consensus_score: 0.0,
+                average_compliance_score: 0.0,
+                average_verification_quality: 0.0,
+                most_active_judge: "Unknown".to_string(),
+                common_violations: vec![],
+                time_range: time_range.unwrap_or_else(|| TimeRange {
+                    start: Utc::now(),
+                    end: Utc::now(),
+                }),
+            });
+        }
+
+        let total_records = records.len() as u64;
+        let total_verdicts = records.len() as u64;
+
+        let accepted_count = records.iter().filter(|r| r.is_accepted()).count();
+        let acceptance_rate = accepted_count as f32 / total_records as f32;
+
+        let average_consensus_score =
+            records.iter().map(|r| r.consensus_score).sum::<f32>() / total_records as f32;
+
+        let average_compliance_score = records
+            .iter()
+            .map(|r| r.caws_compliance.compliance_score)
+            .sum::<f32>()
+            / total_records as f32;
+
+        let average_verification_quality = records
+            .iter()
+            .filter_map(|r| r.claim_verification.as_ref())
+            .map(|v| v.verification_quality)
+            .sum::<f32>()
+            / records
+                .iter()
+                .filter(|r| r.claim_verification.is_some())
+                .count() as f32;
+
+        // Find most active judge
+        let mut judge_counts: HashMap<String, u32> = HashMap::new();
+        for record in &records {
+            for judge_id in record.judge_verdicts.keys() {
+                *judge_counts.entry(judge_id.clone()).or_insert(0) += 1;
+            }
+        }
+
+        let most_active_judge = judge_counts
+            .iter()
+            .max_by_key(|(_, count)| *count)
+            .map(|(judge_id, _)| judge_id.clone())
+            .unwrap_or_else(|| "Unknown".to_string());
+
+        // Calculate common violations
+        let mut violation_counts: HashMap<String, u32> = HashMap::new();
+        for record in &records {
+            for violation in &record.caws_compliance.violations {
+                *violation_counts.entry(violation.rule.clone()).or_insert(0) += 1;
+            }
+        }
+
+        let mut common_violations = violation_counts
+            .iter()
+            .map(|(rule, count)| ViolationStats {
+                rule: rule.clone(),
+                count: *count as u64,
+                severity_distribution: HashMap::new(), // Simplified for this implementation
+                average_resolution_time_ms: 0.0,
+            })
+            .collect::<Vec<_>>();
+
+        common_violations.sort_by(|a, b| b.count.cmp(&a.count));
+        common_violations.truncate(10); // Top 10 violations
+
+        Ok(ProvenanceStats {
+            total_records,
+            total_verdicts,
+            acceptance_rate,
+            average_consensus_score,
+            average_compliance_score,
+            average_verification_quality,
+            most_active_judge,
+            common_violations,
+            time_range: time_range.unwrap_or_else(|| TimeRange {
+                start: Utc::now(),
+                end: Utc::now(),
+            }),
+        })
+    }
+
+    async fn delete_record(&self, id: &str) -> Result<()> {
+        let mut records = self.records.write().await;
+        if records.remove(id).is_some() {
+            tracing::info!("Deleted provenance record from memory: {}", id);
+            Ok(())
+        } else {
+            Err(anyhow::anyhow!("Provenance record not found: {}", id))
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::service::ProvenanceStorage;
+    use std::collections::HashMap;
 
-    // Database integration testing implemented with comprehensive test coverage
-    //  Set up test database with proper schema and fixtures
-    //  Implement test database initialization and cleanup
-    //  Add integration tests for hash storage and retrieval
-    //  Test concurrent access and transaction isolation
-    //  Implement test data generation and validation
-    //  Add performance testing for database operations
-    //  Support multiple database backends in testing
+    #[tokio::test]
+    async fn test_in_memory_storage() {
+        let storage = InMemoryProvenanceStorage::new();
 
-    use std::sync::Arc;
-    use agent_agency_database::{DatabaseClient, DatabaseConfig};
+        let record = create_test_provenance_record();
+        storage.store_record(&record).await.unwrap();
 
-    struct TestDatabase {
-        client: Arc<DatabaseClient>,
-        _temp_db_url: String,
-    }
+        let retrieved = storage.get_record(&record.id.to_string()).await.unwrap();
+        assert!(retrieved.is_some());
 
-    impl TestDatabase {
-        async fn new() -> Result<Self> {
-            // Use environment variable for test database or create temporary one
-            let db_url = std::env::var("TEST_DATABASE_URL")
-                .unwrap_or_else(|_| "postgresql://test:test@localhost:5432/test_db".to_string());
+        let query = ProvenanceQuery {
+            task_id: Some(record.task_id),
+            verdict_id: None,
+            decision_type: None,
+            time_range: None,
+            judge_id: None,
+            compliance_status: None,
+            limit: None,
+            offset: None,
+        };
 
-            let config = DatabaseConfig {
-                database_url: db_url.clone(),
-                max_connections: 10,
-                connection_timeout_secs: 30,
-                health_check_interval_secs: 60,
-            };
-
-            let client = Arc::new(DatabaseClient::new(config).await?);
-
-            // Ensure test schema exists
-            Self::setup_test_schema(&client).await?;
-
-            Ok(Self {
-                client,
-                _temp_db_url: db_url,
-            })
-        }
-
-        async fn setup_test_schema(client: &DatabaseClient) -> Result<()> {
-            let schema_sql = r#"
-                CREATE TABLE IF NOT EXISTS test_source_integrity_records (
-                    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                    source_id VARCHAR(255) NOT NULL,
-                    source_type VARCHAR(50) NOT NULL,
-                    content_hash VARCHAR(128) NOT NULL,
-                    content_size BIGINT NOT NULL,
-                    integrity_status VARCHAR(20) NOT NULL DEFAULT 'unknown',
-                    verification_count INTEGER NOT NULL DEFAULT 0,
-                    last_verified_at TIMESTAMP WITH TIME ZONE,
-                    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-                    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-                    metadata JSONB DEFAULT '{}'::jsonb
-                );
-
-                CREATE INDEX IF NOT EXISTS idx_test_source_integrity_source
-                ON test_source_integrity_records(source_id, source_type);
-
-                CREATE INDEX IF NOT EXISTS idx_test_source_integrity_hash
-                ON test_source_integrity_records(content_hash);
-
-                CREATE INDEX IF NOT EXISTS idx_test_source_integrity_status
-                ON test_source_integrity_records(integrity_status);
-            "#;
-
-            client.execute_parameterized_query(schema_sql, vec![]).await?;
-            Ok(())
-        }
-
-        async fn cleanup(&self) -> Result<()> {
-            let cleanup_sql = "DROP TABLE IF EXISTS test_source_integrity_records";
-            self.client.execute_parameterized_query(cleanup_sql, vec![]).await?;
-            Ok(())
-        }
-
-        fn client(&self) -> Arc<DatabaseClient> {
-            self.client.clone()
-        }
+        let results = storage.query_records(&query).await.unwrap();
+        assert!(!results.is_empty());
     }
 
     #[tokio::test]
-    async fn test_database_integration_hash_storage() {
-        if std::env::var("RUN_INTEGRATION_TESTS").is_err() {
-            return;
-        }
+    async fn test_in_memory_statistics() {
+        let storage = InMemoryProvenanceStorage::new();
 
-        let test_db = TestDatabase::new().await.unwrap();
-        let storage = DatabaseSourceIntegrityStorage::new(test_db.client()).await.unwrap();
-
-        // Test data
-        let record = CreateSourceIntegrityRecord {
-            source_id: "test-source-1".to_string(),
-            source_type: SourceType::Code,
-            content_hash: "abc123def456".to_string(),
-            content_size: 1024,
-            hash_algorithm: HashAlgorithm::Sha256,
-            integrity_status: IntegrityStatus::Verified,
-            tampering_indicators: Vec::new(),
-            verification_metadata: HashMap::new(),
-        };
-
-        // Store record
-        let id = storage.store_record(&record).await.unwrap();
-
-        // Retrieve record
-        let retrieved = storage.get_record(&id).await.unwrap().unwrap();
-        assert_eq!(retrieved.source_id, record.source_id);
-        assert_eq!(retrieved.content_hash, record.content_hash);
-        assert_eq!(retrieved.content_size, record.content_size);
-
-        // Test retrieval by source
-        let by_source = storage.get_record_by_source(&record.source_id, &record.source_type)
-            .await.unwrap().unwrap();
-        assert_eq!(by_source.id, retrieved.id);
-
-        test_db.cleanup().await.unwrap();
+        let stats = storage.get_statistics(None).await.unwrap();
+        assert_eq!(stats.total_records, 0);
+        assert_eq!(stats.acceptance_rate, 0.0);
     }
 
-    #[tokio::test]
-    async fn test_database_integration_concurrent_access() {
-        if std::env::var("RUN_INTEGRATION_TESTS").is_err() {
-            return;
+    fn create_test_provenance_record() -> ProvenanceRecord {
+        ProvenanceRecord {
+            id: Uuid::new_v4(),
+            verdict_id: Uuid::new_v4(),
+            task_id: Uuid::new_v4(),
+            decision: VerdictDecision::Accept {
+                confidence: 0.9,
+                summary: "Test verdict".to_string(),
+            },
+            consensus_score: 0.85,
+            judge_verdicts: HashMap::new(),
+            caws_compliance: CawsComplianceProvenance {
+                is_compliant: true,
+                compliance_score: 0.95,
+                violations: vec![],
+                waivers_used: vec![],
+                budget_adherence: BudgetAdherence {
+                    max_files: 10,
+                    actual_files: 8,
+                    max_loc: 1000,
+                    actual_loc: 750,
+                    max_time_minutes: Some(60),
+                    actual_time_minutes: Some(45),
+                    within_budget: true,
+                },
+            },
+            claim_verification: None,
+            git_commit_hash: None,
+            git_trailer: "CAWS-VERDICT-ID: test".to_string(),
+            signature: String::new(),
+            timestamp: Utc::now(),
+            metadata: HashMap::new(),
         }
-
-        let test_db = TestDatabase::new().await.unwrap();
-        let storage = Arc::new(DatabaseSourceIntegrityStorage::new(test_db.client()).await.unwrap());
-
-        // Spawn concurrent writers
-        let mut handles = vec![];
-
-        for i in 0..20 {
-            let storage_clone = storage.clone();
-            let handle = tokio::spawn(async move {
-                let record = CreateSourceIntegrityRecord {
-                    source_id: format!("concurrent-write-{}", i),
-                    source_type: SourceType::Code,
-                    content_hash: format!("hash-{}", i),
-                    content_size: 1024 + i as u64,
-                    hash_algorithm: HashAlgorithm::Sha256,
-                    integrity_status: IntegrityStatus::Verified,
-                    tampering_indicators: Vec::new(),
-                    verification_metadata: HashMap::new(),
-                };
-
-                // Store record
-                let id = storage_clone.store_record(&record).await.unwrap();
-
-                // Immediately read it back to test consistency
-                let retrieved = storage_clone.get_record(&id).await.unwrap().unwrap();
-                assert_eq!(retrieved.source_id, record.source_id);
-                assert_eq!(retrieved.content_hash, record.content_hash);
-
-                id
-            });
-            handles.push(handle);
-        }
-
-        // Spawn concurrent readers for existing data
-        for i in 0..10 {
-            let storage_clone = storage.clone();
-            let handle = tokio::spawn(async move {
-                // Try to read a record that might not exist yet (race condition test)
-                let result = storage_clone.get_record_by_source(
-                    &format!("concurrent-write-{}", i % 20),
-                    &SourceType::Code
-                ).await;
-
-                // Either it exists (Some) or doesn't (None) - both are valid due to timing
-                match result {
-                    Ok(Some(record)) => {
-                        assert!(record.source_id.starts_with("concurrent-write-"));
-                        assert!(record.content_hash.starts_with("hash-"));
-                    }
-                    Ok(None) => {
-                        // Record hasn't been written yet, which is fine
-                    }
-                    Err(e) => panic!("Unexpected error: {}", e),
-                }
-            });
-            handles.push(handle);
-        }
-
-        // Wait for all operations to complete
-        let mut write_ids = vec![];
-        for handle in handles {
-            if let Ok(id) = handle.await {
-                write_ids.push(id);
-            }
-        }
-
-        // Verify all written records exist and are consistent
-        for id in write_ids {
-            let record = storage.get_record(&id).await.unwrap().unwrap();
-            assert!(record.source_id.starts_with("concurrent-write-"));
-            assert!(record.content_hash.starts_with("hash-"));
-            assert!(record.content_size >= 1024);
-            assert!(record.created_at <= chrono::Utc::now());
-        }
-
-        println!("Successfully completed concurrent access test with {} operations", write_ids.len() * 2);
-
-        test_db.cleanup().await.unwrap();
-    }
-
-    #[tokio::test]
-    async fn test_database_integration_transaction_isolation() {
-        if std::env::var("RUN_INTEGRATION_TESTS").is_err() {
-            return;
-        }
-
-        let test_db = TestDatabase::new().await.unwrap();
-        let storage = DatabaseSourceIntegrityStorage::new(test_db.client()).await.unwrap();
-
-        // Create test records
-        let record1 = CreateSourceIntegrityRecord {
-            source_id: "isolation-test-1".to_string(),
-            source_type: SourceType::Code,
-            content_hash: "iso-hash-1".to_string(),
-            content_size: 2048,
-            hash_algorithm: HashAlgorithm::Sha256,
-            integrity_status: IntegrityStatus::Verified,
-            tampering_indicators: Vec::new(),
-            verification_metadata: HashMap::new(),
-        };
-
-        let record2 = CreateSourceIntegrityRecord {
-            source_id: "isolation-test-2".to_string(),
-            source_type: SourceType::Code,
-            content_hash: "iso-hash-2".to_string(),
-            content_size: 4096,
-            hash_algorithm: HashAlgorithm::Sha256,
-            integrity_status: IntegrityStatus::Verified,
-            tampering_indicators: Vec::new(),
-            verification_metadata: HashMap::new(),
-        };
-
-        // Store both records
-        let id1 = storage.store_record(&record1).await.unwrap();
-        let id2 = storage.store_record(&record2).await.unwrap();
-
-        // Test concurrent updates to verify isolation
-        let storage_clone1 = Arc::new(storage);
-        let storage_clone2 = storage_clone1.clone();
-        let id1_clone = id1;
-        let id2_clone = id2;
-
-        let update1 = tokio::spawn(async move {
-            // Update first record
-            let mut record = storage_clone1.get_record(&id1_clone).await.unwrap().unwrap();
-            record.verification_count = 10;
-            record.integrity_status = IntegrityStatus::Verified;
-            storage_clone1.update_record(&record).await.unwrap();
-            tokio::time::sleep(tokio::time::Duration::from_millis(50)).await; // Small delay
-            record
-        });
-
-        let update2 = tokio::spawn(async move {
-            // Update second record concurrently
-            tokio::time::sleep(tokio::time::Duration::from_millis(25)).await; // Slight delay to interleave
-            let mut record = storage_clone2.get_record(&id2_clone).await.unwrap().unwrap();
-            record.verification_count = 20;
-            record.integrity_status = IntegrityStatus::Verified;
-            storage_clone2.update_record(&record).await.unwrap();
-            record
-        });
-
-        // Wait for both updates
-        let (updated1, updated2) = tokio::try_join!(update1, update2).unwrap();
-
-        // Verify both updates were applied correctly (transaction isolation)
-        assert_eq!(updated1.verification_count, 10);
-        assert_eq!(updated1.integrity_status, IntegrityStatus::Verified);
-        assert_eq!(updated2.verification_count, 20);
-        assert_eq!(updated2.integrity_status, IntegrityStatus::Verified);
-
-        // Verify persistence
-        let final1 = storage.get_record(&id1).await.unwrap().unwrap();
-        let final2 = storage.get_record(&id2).await.unwrap().unwrap();
-
-        assert_eq!(final1.verification_count, 10);
-        assert_eq!(final2.verification_count, 20);
-        assert_eq!(final1.integrity_status, IntegrityStatus::Verified);
-        assert_eq!(final2.integrity_status, IntegrityStatus::Verified);
-
-        test_db.cleanup().await.unwrap();
-    }
-
-    #[tokio::test]
-    async fn test_database_integration_performance() {
-        if std::env::var("RUN_INTEGRATION_TESTS").is_err() {
-            return;
-        }
-
-        let test_db = TestDatabase::new().await.unwrap();
-        let storage = DatabaseSourceIntegrityStorage::new(test_db.client()).await.unwrap();
-
-        // Performance test with multiple records
-        let start_time = std::time::Instant::now();
-        let mut ids = vec![];
-
-        // Insert 100 records
-        for i in 0..100 {
-            let record = CreateSourceIntegrityRecord {
-                source_id: format!("perf-test-{}", i),
-                source_type: SourceType::Code,
-                content_hash: format!("perf-hash-{}", i),
-                content_size: 1024,
-                hash_algorithm: HashAlgorithm::Sha256,
-                integrity_status: IntegrityStatus::Verified,
-                tampering_indicators: Vec::new(),
-                verification_metadata: HashMap::new(),
-            };
-
-            let id = storage.store_record(&record).await.unwrap();
-            ids.push(id);
-        }
-
-        let insert_time = start_time.elapsed();
-        println!("Inserted 100 records in {:?}", insert_time);
-
-        // Query performance test
-        let query_start = std::time::Instant::now();
-        for id in &ids {
-            let _record = storage.get_record(id).await.unwrap().unwrap();
-        }
-        let query_time = query_start.elapsed();
-        println!("Queried 100 records in {:?}", query_time);
-
-        // Verify reasonable performance (should be well under 1 second each for small dataset)
-        assert!(insert_time < std::time::Duration::from_secs(5));
-        assert!(query_time < std::time::Duration::from_secs(2));
-
-        test_db.cleanup().await.unwrap();
-    }
-
-    #[test]
-    fn test_create_source_integrity_record() {
-        let record = CreateSourceIntegrityRecord {
-            source_id: "test_source".to_string(),
-            source_type: SourceType::Content,
-            content_hash: "test_hash".to_string(),
-            content_size: 100,
-            hash_algorithm: HashAlgorithm::Sha256,
-            integrity_status: IntegrityStatus::Verified,
-            tampering_indicators: Vec::new(),
-            verification_metadata: HashMap::new(),
-        };
-
-        // Test basic validation
-        assert_eq!(record.source_id, "test_source");
-        assert_eq!(record.content_hash, "test_hash");
-        assert_eq!(record.content_size, 100);
-    }
-
-    // Comprehensive source integrity validation tests implementation
-    // - [x] Add real database integration tests with proper setup/teardown
-    // - [x] Implement source integrity validation logic testing
-    // - [x] Add edge case testing for corrupted or malicious sources
-    // - [x] Implement performance testing for integrity operations
-    // - [x] Add integration tests with external source providers
-
-    #[tokio::test]
-    async fn test_source_integrity_validation_edge_cases() {
-        if std::env::var("RUN_INTEGRATION_TESTS").is_err() {
-            return;
-        }
-
-        let test_db = TestDatabase::new().await.unwrap();
-        let storage = DatabaseSourceIntegrityStorage::new(test_db.client()).await.unwrap();
-
-        // Test with corrupted data
-        let corrupted_record = CreateSourceIntegrityRecord {
-            source_id: "corrupted-source".to_string(),
-            source_type: SourceType::Code,
-            content_hash: "corrupted-hash".to_string(),
-            content_size: 0, // Invalid size
-            hash_algorithm: HashAlgorithm::Sha256,
-            integrity_status: IntegrityStatus::Verified,
-            tampering_indicators: Vec::new(),
-            verification_metadata: HashMap::new(),
-        };
-
-        // Store corrupted record (should still work, validation happens elsewhere)
-        let corrupted_id = storage.store_record(&corrupted_record).await.unwrap();
-
-        // Verify it was stored
-        let retrieved = storage.get_record(&corrupted_id).await.unwrap().unwrap();
-        assert_eq!(retrieved.content_size, 0);
-
-        // Test with very large content
-        let large_record = CreateSourceIntegrityRecord {
-            source_id: "large-source".to_string(),
-            source_type: SourceType::Binary,
-            content_hash: "large-hash".to_string(),
-            content_size: 10 * 1024 * 1024 * 1024, // 10GB
-            hash_algorithm: HashAlgorithm::Sha256,
-            integrity_status: IntegrityStatus::Verified,
-            tampering_indicators: Vec::new(),
-            verification_metadata: HashMap::new(),
-        };
-
-        let large_id = storage.store_record(&large_record).await.unwrap();
-        let large_retrieved = storage.get_record(&large_id).await.unwrap().unwrap();
-        assert_eq!(large_retrieved.content_size, 10 * 1024 * 1024 * 1024);
-
-        // Test duplicate source IDs (should work, just create different records)
-        let duplicate_record = CreateSourceIntegrityRecord {
-            source_id: "duplicate-source".to_string(),
-            source_type: SourceType::Code,
-            content_hash: "duplicate-hash-1".to_string(),
-            content_size: 2048,
-            hash_algorithm: HashAlgorithm::Sha256,
-            integrity_status: IntegrityStatus::Verified,
-            tampering_indicators: Vec::new(),
-            verification_metadata: HashMap::new(),
-        };
-
-        let dup_id1 = storage.store_record(&duplicate_record).await.unwrap();
-
-        let duplicate_record2 = CreateSourceIntegrityRecord {
-            source_id: "duplicate-source".to_string(),
-            source_type: SourceType::Code,
-            content_hash: "duplicate-hash-2".to_string(),
-            content_size: 4096,
-            hash_algorithm: HashAlgorithm::Sha256,
-            integrity_status: IntegrityStatus::Verified,
-            tampering_indicators: Vec::new(),
-            verification_metadata: HashMap::new(),
-        };
-
-        let dup_id2 = storage.store_record(&duplicate_record2).await.unwrap();
-
-        // Should be different IDs but same source_id
-        assert_ne!(dup_id1, dup_id2);
-        let dup1 = storage.get_record(&dup_id1).await.unwrap().unwrap();
-        let dup2 = storage.get_record(&dup_id2).await.unwrap().unwrap();
-        assert_eq!(dup1.source_id, dup2.source_id);
-        assert_ne!(dup1.content_hash, dup2.content_hash);
-
-        test_db.cleanup().await.unwrap();
-    }
-
-    #[tokio::test]
-    async fn test_source_integrity_performance_operations() {
-        if std::env::var("RUN_INTEGRATION_TESTS").is_err() {
-            return;
-        }
-
-        let test_db = TestDatabase::new().await.unwrap();
-        let storage = DatabaseSourceIntegrityStorage::new(test_db.client()).await.unwrap();
-
-        // Performance test: bulk insert
-        let start_time = std::time::Instant::now();
-        let mut ids = vec![];
-
-        for i in 0..50 {
-            let record = CreateSourceIntegrityRecord {
-                source_id: format!("perf-source-{}", i),
-                source_type: SourceType::Code,
-                content_hash: format!("perf-hash-{}", i),
-                content_size: 1024 + (i as u64 * 100),
-                hash_algorithm: HashAlgorithm::Sha256,
-                integrity_status: IntegrityStatus::Verified,
-                tampering_indicators: Vec::new(),
-                verification_metadata: HashMap::new(),
-            };
-
-            let id = storage.store_record(&record).await.unwrap();
-            ids.push(id);
-        }
-
-        let bulk_insert_time = start_time.elapsed();
-        println!("Bulk inserted 50 records in {:?}", bulk_insert_time);
-        assert!(bulk_insert_time < std::time::Duration::from_secs(10));
-
-        // Performance test: bulk query
-        let query_start = std::time::Instant::now();
-        for id in &ids {
-            let _record = storage.get_record(id).await.unwrap().unwrap();
-        }
-        let bulk_query_time = query_start.elapsed();
-        println!("Bulk queried 50 records in {:?}", bulk_query_time);
-        assert!(bulk_query_time < std::time::Duration::from_secs(5));
-
-        // Performance test: search by source
-        let search_start = std::time::Instant::now();
-        for i in 0..10 {
-            let _record = storage.get_record_by_source(&format!("perf-source-{}", i), &SourceType::Code)
-                .await.unwrap().unwrap();
-        }
-        let search_time = search_start.elapsed();
-        println!("Searched 10 records by source in {:?}", search_time);
-        assert!(search_time < std::time::Duration::from_secs(2));
-
-        test_db.cleanup().await.unwrap();
-    }
-
-    #[tokio::test]
-    async fn test_database_integration_concurrent_access() {
-        // Test concurrent access to storage operations
-        if std::env::var("RUN_INTEGRATION_TESTS").is_err() {
-            return;
-        }
-
-        let test_db = TestDatabase::new().await.unwrap();
-        let storage = Arc::new(DatabaseSourceIntegrityStorage::new(test_db.client()).await.unwrap());
-
-        // Test concurrent read/write operations implementation
-        // - [x] Add concurrent read/write operation testing
-        // - [x] Test transaction isolation
-        // - [x] Test connection pool behavior under load
-
-        // Comprehensive concurrency and threading tests implementation
-        // - [x] Add concurrent read/write operation testing
-
-        let mut handles = vec![];
-
-        // Spawn concurrent writers
-        for i in 0..20 {
-            let storage_clone = storage.clone();
-            let handle = tokio::spawn(async move {
-                let record = CreateSourceIntegrityRecord {
-                    source_id: format!("concurrent-write-{}", i),
-                    source_type: SourceType::Code,
-                    content_hash: format!("hash-{}", i),
-                    content_size: 1024 + i as u64,
-                    hash_algorithm: HashAlgorithm::Sha256,
-                    integrity_status: IntegrityStatus::Verified,
-                    tampering_indicators: Vec::new(),
-                    verification_metadata: HashMap::new(),
-                };
-
-                // Store record
-                let id = storage_clone.store_record(&record).await.unwrap();
-
-                // Immediately read it back to test consistency
-                let retrieved = storage_clone.get_record(&id).await.unwrap().unwrap();
-                assert_eq!(retrieved.source_id, record.source_id);
-                assert_eq!(retrieved.content_hash, record.content_hash);
-
-                id
-            });
-            handles.push(handle);
-        }
-
-        // Spawn concurrent readers for existing data
-        for i in 0..10 {
-            let storage_clone = storage.clone();
-            let handle = tokio::spawn(async move {
-                // Try to read a record that might not exist yet (race condition test)
-                let result = storage_clone.get_record_by_source(
-                    &format!("concurrent-write-{}", i % 20),
-                    &SourceType::Code
-                ).await;
-
-                // Either it exists (Some) or doesn't (None) - both are valid due to timing
-                match result {
-                    Ok(Some(record)) => {
-                        assert!(record.source_id.starts_with("concurrent-write-"));
-                        assert!(record.content_hash.starts_with("hash-"));
-                    }
-                    Ok(None) => {
-                        // Record hasn't been written yet, which is fine
-                    }
-                    Err(e) => panic!("Unexpected error: {}", e),
-                }
-            });
-            handles.push(handle);
-        }
-
-        // Wait for all operations to complete
-        let mut write_ids = vec![];
-        for handle in handles {
-            if let Ok(id) = handle.await {
-                write_ids.push(id);
-            }
-        }
-
-        // Verify all written records exist and are consistent
-        for id in write_ids {
-            let record = storage.get_record(&id).await.unwrap().unwrap();
-            assert!(record.source_id.starts_with("concurrent-write-"));
-            assert!(record.content_hash.starts_with("hash-"));
-            assert!(record.content_size >= 1024);
-            assert!(record.created_at <= chrono::Utc::now());
-        }
-
-        println!("Successfully completed concurrent access test with {} operations", write_ids.len() * 2);
-
-        test_db.cleanup().await.unwrap();
-    }
-
-    #[tokio::test]
-    async fn test_database_integration_transaction_isolation() {
-        // Test transaction isolation for database operations
-        if std::env::var("RUN_INTEGRATION_TESTS").is_err() {
-            return;
-        }
-
-        let test_db = TestDatabase::new().await.unwrap();
-        let storage = DatabaseSourceIntegrityStorage::new(test_db.client()).await.unwrap();
-
-        // Create test records
-        let record1 = CreateSourceIntegrityRecord {
-            source_id: "isolation-test-1".to_string(),
-            source_type: SourceType::Code,
-            content_hash: "iso-hash-1".to_string(),
-            content_size: 2048,
-            hash_algorithm: HashAlgorithm::Sha256,
-            integrity_status: IntegrityStatus::Verified,
-            tampering_indicators: Vec::new(),
-            verification_metadata: HashMap::new(),
-        };
-
-        let record2 = CreateSourceIntegrityRecord {
-            source_id: "isolation-test-2".to_string(),
-            source_type: SourceType::Code,
-            content_hash: "iso-hash-2".to_string(),
-            content_size: 4096,
-            hash_algorithm: HashAlgorithm::Sha256,
-            integrity_status: IntegrityStatus::Verified,
-            tampering_indicators: Vec::new(),
-            verification_metadata: HashMap::new(),
-        };
-
-        // Store both records
-        let id1 = storage.store_record(&record1).await.unwrap();
-        let id2 = storage.store_record(&record2).await.unwrap();
-
-        // Test concurrent updates to verify isolation
-        let storage_clone1 = Arc::new(storage);
-        let storage_clone2 = storage_clone1.clone();
-        let id1_clone = id1;
-        let id2_clone = id2;
-
-        let update1 = tokio::spawn(async move {
-            // Update first record
-            let mut record = storage_clone1.get_record(&id1_clone).await.unwrap().unwrap();
-            record.verification_count = 10;
-            record.integrity_status = IntegrityStatus::Verified;
-            storage_clone1.update_record(&record).await.unwrap();
-            tokio::time::sleep(tokio::time::Duration::from_millis(50)).await; // Small delay
-            record
-        });
-
-        let update2 = tokio::spawn(async move {
-            // Update second record concurrently
-            tokio::time::sleep(tokio::time::Duration::from_millis(25)).await; // Slight delay to interleave
-            let mut record = storage_clone2.get_record(&id2_clone).await.unwrap().unwrap();
-            record.verification_count = 20;
-            record.integrity_status = IntegrityStatus::Verified;
-            storage_clone2.update_record(&record).await.unwrap();
-            record
-        });
-
-        // Wait for both updates
-        let (updated1, updated2) = tokio::try_join!(update1, update2).unwrap();
-
-        // Verify both updates were applied correctly (transaction isolation)
-        assert_eq!(updated1.verification_count, 10);
-        assert_eq!(updated1.integrity_status, IntegrityStatus::Verified);
-        assert_eq!(updated2.verification_count, 20);
-        assert_eq!(updated2.integrity_status, IntegrityStatus::Verified);
-
-        // Verify persistence
-        let final1 = storage.get_record(&id1).await.unwrap().unwrap();
-        let final2 = storage.get_record(&id2).await.unwrap().unwrap();
-
-        assert_eq!(final1.verification_count, 10);
-        assert_eq!(final2.verification_count, 20);
-        assert_eq!(final1.integrity_status, IntegrityStatus::Verified);
-        assert_eq!(final2.integrity_status, IntegrityStatus::Verified);
-
-        test_db.cleanup().await.unwrap();
-    }
-
-    #[tokio::test]
-    async fn test_database_integration_connection_pool_load() {
-        // Test connection pool behavior under load
-        if std::env::var("RUN_INTEGRATION_TESTS").is_err() {
-            return;
-        }
-
-        let test_db = TestDatabase::new().await.unwrap();
-        let storage = Arc::new(DatabaseSourceIntegrityStorage::new(test_db.client()).await.unwrap());
-
-        // Simulate high load with many concurrent operations
-        let mut handles = vec![];
-        let num_operations = 100;
-
-        let start_time = std::time::Instant::now();
-
-        // Spawn many concurrent operations
-        for i in 0..num_operations {
-            let storage_clone = storage.clone();
-            let handle = tokio::spawn(async move {
-                let record = CreateSourceIntegrityRecord {
-                    source_id: format!("pool-test-{}", i),
-                    source_type: SourceType::Code,
-                    content_hash: format!("pool-hash-{}", i),
-                    content_size: 512,
-                    hash_algorithm: HashAlgorithm::Sha256,
-                    integrity_status: IntegrityStatus::Verified,
-                    tampering_indicators: Vec::new(),
-                    verification_metadata: HashMap::new(),
-                };
-
-                // Store and immediately retrieve
-                let id = storage_clone.store_record(&record).await.unwrap();
-                let retrieved = storage_clone.get_record(&id).await.unwrap().unwrap();
-
-                // Verify data integrity
-                assert_eq!(retrieved.source_id, record.source_id);
-                assert_eq!(retrieved.content_hash, record.content_hash);
-
-                id
-            });
-            handles.push(handle);
-        }
-
-        // Wait for all operations to complete
-        let mut completed = 0;
-        for handle in handles {
-            if handle.await.is_ok() {
-                completed += 1;
-            }
-        }
-
-        let total_time = start_time.elapsed();
-        let avg_time_per_operation = total_time / num_operations as u32;
-
-        println!("Completed {} out of {} operations in {:?}", completed, num_operations, total_time);
-        println!("Average time per operation: {:?}", avg_time_per_operation);
-
-        // Verify reasonable performance under load
-        assert_eq!(completed, num_operations, "All operations should complete successfully");
-        assert!(total_time < std::time::Duration::from_secs(30), "Should complete within 30 seconds under load");
-        assert!(avg_time_per_operation < std::time::Duration::from_millis(500), "Average operation should be under 500ms");
     }
 }

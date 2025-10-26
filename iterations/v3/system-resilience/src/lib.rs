@@ -26,6 +26,9 @@ pub mod prompting_types;
 pub mod integration;
 pub mod metrics;
 
+// Workspace state management (consolidated from workspace-state-manager crate)
+pub mod workspace_state;
+
 // Re-export key types for convenience
 pub use recovery_api::*;
 pub use prompting_prompting_recovery_types::*;
