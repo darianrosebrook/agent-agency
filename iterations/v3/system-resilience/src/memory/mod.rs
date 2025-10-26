@@ -11,7 +11,7 @@ pub mod integration;
 use std::alloc::{GlobalAlloc, Layout, System};
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock as AsyncRwLock;
 use tracing::{debug, info, warn, error};
@@ -575,48 +575,50 @@ where
     /// Borrow an object from the pool with timeout
     pub async fn borrow(&self) -> PooledObject<T> {
         self.borrow_with_timeout(Duration::from_secs(30)).await
+            .expect("Failed to borrow object from pool")
     }
 
     /// Borrow an object from the pool with specified timeout
-    pub async fn borrow_with_timeout(&self, timeout: Duration) -> PooledObject<T> {
+    pub async fn borrow_with_timeout(&self, timeout: Duration) -> Result<PooledObject<T>, Box<dyn std::error::Error + Send + Sync>> {
         let start_time = std::time::Instant::now();
 
         loop {
-            let mut objects = self.objects.write().await;
+        let mut objects = self.objects.write().await;
 
-            let obj = if let Some(obj) = objects.pop() {
-                obj
+        let obj = if let Some(obj) = objects.pop() {
+            obj
+        } else {
+            // Create new object if pool is empty and under max size
+            let created = self.created_count.load(Ordering::Relaxed);
+            if created < self.max_size {
+                self.created_count.fetch_add(1, Ordering::Relaxed);
+                (self.factory)()
             } else {
-                // Create new object if pool is empty and under max size
-                let created = self.created_count.load(Ordering::Relaxed);
-                if created < self.max_size {
-                    self.created_count.fetch_add(1, Ordering::Relaxed);
-                    (self.factory)()
-                } else {
                     // Pool exhausted - wait for an object to be returned
                     drop(objects); // Release the lock before waiting
 
                     // Check timeout
                     if start_time.elapsed() >= timeout {
-                        panic!("Object pool timeout - no objects available within {:?}, pool exhausted", timeout);
+                        return Err(format!("Object pool timeout - no objects available within {:?}, pool exhausted", timeout).into());
                     }
 
                     // Wait for notification that an object might be available
                     let notify = Arc::clone(&self.available_notify);
                     tokio::time::timeout(timeout - start_time.elapsed(), notify.notified()).await
-                        .unwrap_or_else(|_| panic!("Object pool timeout - no objects available within {:?}", timeout));
+                        .map_err(|_| format!("Object pool timeout - no objects available within {:?}", timeout))?;
 
                     continue; // Try again after notification
-                }
-            };
+            }
+        };
 
-            self.borrowed_count.fetch_add(1, Ordering::Relaxed);
+        self.borrowed_count.fetch_add(1, Ordering::Relaxed);
 
-        PooledObject {
+            return         Ok(PooledObject {
             object: Some(obj),
             pool: self.objects.clone(),
             borrowed_count: self.borrowed_count.clone(),
             available_notify: self.available_notify.clone(),
+        });
         }
     }
 
@@ -719,12 +721,12 @@ impl<T: Send + Sync + 'static> Drop for PooledObject<T> {
     fn return_to_pool_non_blocking(&self, obj: T) {
         // Strategy 1: Try to spawn async task if tokio runtime is available
         if let Ok(handle) = tokio::runtime::Handle::try_current() {
-            let pool = self.pool.clone();
-            let borrowed_count = self.borrowed_count.clone();
+                    let pool = self.pool.clone();
+                    let borrowed_count = self.borrowed_count.clone();
             let notify = self.available_notify.clone();
 
             // Spawn background task for non-blocking return
-            handle.spawn(async move {
+                    handle.spawn(async move {
                 Self::return_to_pool_async(pool, borrowed_count, notify, obj).await;
             });
             return;
@@ -745,21 +747,21 @@ impl<T: Send + Sync + 'static> Drop for PooledObject<T> {
 
     /// Async pool return operation
     async fn return_to_pool_async(
-        pool: Arc<RwLock<Vec<T>>>,
+        pool: Arc<AsyncRwLock<Vec<T>>>,
         borrowed_count: Arc<AtomicUsize>,
         notify: Arc<tokio::sync::Notify>,
         obj: T,
     ) {
         match tokio::time::timeout(Duration::from_millis(100), async {
-            let mut objects = pool.write().await;
-            objects.push(obj);
-            borrowed_count.fetch_sub(1, Ordering::Relaxed);
+                        let mut objects = pool.write().await;
+                        objects.push(obj);
+                        borrowed_count.fetch_sub(1, Ordering::Relaxed);
             notify.notify_one();
         }).await {
             Ok(_) => {
                 debug!("Object successfully returned to pool asynchronously");
             },
-            Err(_) => {
+                Err(_) => {
                 warn!("Timeout returning object to pool - may indicate pool contention");
                 // In a production system, we might want to implement a retry mechanism here
             }
@@ -1129,7 +1131,7 @@ impl MemoryManager {
                         None
                     }
                 }
-            } else {
+        } else {
                 tracing::error!("Pool '{}' type mismatch - expected ObjectPool<{}>", name, std::any::type_name::<T>());
                 None
             }

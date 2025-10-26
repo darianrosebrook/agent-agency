@@ -1051,7 +1051,7 @@ impl WorkspaceStateManager {
 }
 
 // Implement common patterns traits
-#[async_trait]
+//#[async_trait]
 //impl HealthCheckable for WorkspaceStateManager {
 //    async fn health_check(&self) -> Result<HealthStatus> {
 //        // Perform comprehensive health checks
@@ -1179,6 +1179,7 @@ impl WorkspaceStateManager {
 //                "max_states": self.config.max_states,
 //                "compress_states": self.config.compress_states,
 //                "track_git": self.config.track_git,
-        }))
-    }
-}
+//            }
+//        }))
+//    }
+//}

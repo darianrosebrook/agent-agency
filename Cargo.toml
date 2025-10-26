@@ -34,7 +34,8 @@ license = "MIT"
 [workspace.dependencies]
 # Core async runtime
 tokio = { version = "1.0", features = ["full"] }
-async-trait = "0.1"
+async-trait = "0.1.74"
+futures = "0.3"
 
 # Serialization
 serde = { version = "1.0", features = ["derive"] }
@@ -42,19 +43,16 @@ serde_json = "1.0"
 toml = "0.8"
 
 # Database
-sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "chrono", "uuid"] }
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "sqlite", "chrono", "uuid"] }
 chrono = { version = "0.4", features = ["serde"] }
-uuid = { version = "1.0", features = ["v4", "serde"] }
-pkcs8 = { version = "0.10", features = ["std"] }
 
 # HTTP and web
 reqwest = { version = "0.11", features = ["json", "stream"] }
-
-# Caching
-redis = { version = "0.25", features = ["tokio-comp", "connection-manager"] }
-axum = { version = "0.7", features = ["json", "ws"] }
+axum = { version = "0.7", features = ["json", "ws", "macros"] }
 tower = "0.4"
 tower-http = { version = "0.5", features = ["cors", "trace"] }
+utoipa = { version = "4.0", features = ["axum_extras"] }
+utoipa-swagger-ui = { version = "6.0", features = ["axum"] }
 
 # Logging and observability
 tracing = "0.1"
@@ -62,12 +60,14 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 tracing-opentelemetry = "0.22"
 opentelemetry = { version = "0.21", features = ["trace", "metrics"] }
 
-# Async utilities
-futures = "0.3"
-
 # Error handling
 anyhow = "1.0"
 thiserror = "1.0"
+
+# Utilities
+uuid = { version = "1.0", features = ["v4", "serde"] }
+regex = "1.10"
+
 
 # Configuration
 config = "0.14"
@@ -77,49 +77,29 @@ clap = { version = "4.0", features = ["derive"] }
 core-foundation = "0.9"
 objc = "0.2"
 
-# Vector operations for embeddings
-dashmap = "5.5"
+# Concurrent data structures
 parking_lot = "0.12"
-# Safe PyTorch wrapper (optional PyTorch linking)
+dashmap = "5.5"
+
+# Half-precision floating point
+half = "2.4"
+
+# Additional dependencies for parallel-workers
+tokio-util = { version = "0.7", features = ["time"] }
+path-absolutize = "3.1"
+
+# Vector operations for embeddings
 ndarray = "0.15"
 
-# Half-precision floating point for embeddings
-half = "2.3"
+# Image processing
+image = { version = "0.24", features = ["jpeg", "png", "webp", "tiff", "bmp", "gif"] }
 
-# Random number generation
-rand = { version = "0.8", features = ["std"] }
+# Random number generation - aligned with candle-core requirements
+rand = "0.8.5"
 
-# Compression
-flate2 = "1.0"
+# Force compatible versions to resolve indicatif/console conflicts
+indicatif = "0.17"
+console = { version = "0.15", features = ["std"] }
 
-# Hashing
-sha2 = "0.10"
-
-# Regular expressions
-regex = "1.10"
-
-# Git operations
-git2 = "0.19"
-
-# File system operations
-walkdir = "2.4"
-ignore = "0.4"
-
-# Hashing and checksums
-blake3 = "1.5"
-
-# Compression
-tar = "0.4"
-
-# Path handling
-pathdiff = "0.2"
-
-# Pattern matching
-glob = "0.3"
-
-# Testing
-tempfile = "3.8"
-
-# Utilities
-paste = "1.0"
+pkcs8 = "0.10"
 
