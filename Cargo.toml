@@ -4,28 +4,25 @@
 [workspace]
 resolver = "2"
 members = [
-    "iterations/v3/common-patterns",
-    "iterations/v3/common-types",
-    "iterations/v3/council",
-    "iterations/v3/workers",
-    "iterations/v3/apple-silicon",
-    "iterations/v3/research",
+    "iterations/v3/agent-data-processing",
+    "iterations/v3/agent-workers",
     "iterations/v3/agent-mcp",
-    "iterations/v3/provenance",
-    "iterations/v3/claim-extraction",
-    "iterations/v3/reflexive-learning",
-    "iterations/v3/model-benchmarking",
-    "iterations/v3/security-policy-enforcer",
-    "iterations/v3/minimal-diff-evaluator",
-    "iterations/v3/embedding-service",
-    "iterations/v3/system-health-monitor",
-    "iterations/v3/workspace-state-manager",
-    "iterations/v3/resilience",
-    "iterations/v3/config",
-    "iterations/v3/database",
-    "iterations/v3/caching",
-    "iterations/v3/memory",
-    "iterations/v3/integration-tests"
+    "iterations/v3/agent-model-management",
+    "iterations/v3/agent-research",
+    "iterations/v3/agent-orchestration",
+    "iterations/v3/agent-memory",
+    "iterations/v3/system-acceleration",
+    "iterations/v3/system-resources",
+    "iterations/v3/system-resilience",
+    "iterations/v3/system-observability",
+    "iterations/v3/system-quality-security",
+    "iterations/v3/system-federated-ml",
+    "iterations/v3/system-configuration",
+    "iterations/v3/data-infrastructure",
+    "iterations/v3/data-interfaces",
+    "iterations/v3/development-tools",
+    "iterations/v3/testing-validation",
+    "iterations/v3/agent-agency-contracts"
 ]
 
 [workspace.package]
@@ -126,5 +123,3 @@ tempfile = "3.8"
 # Utilities
 paste = "1.0"
 
-# Common patterns crate
-common-patterns = { path = "iterations/v3/common-patterns" }
