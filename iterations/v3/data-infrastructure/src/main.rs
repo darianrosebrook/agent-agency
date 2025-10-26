@@ -1459,6 +1459,55 @@ impl IntoResponse for ApiError {
     }
 }
 
+impl Args {
+    /// Load required database password from environment with security validation
+    fn load_required_database_password() -> Result<String, Box<dyn std::error::Error>> {
+        let password = std::env::var("DATABASE_PASSWORD")
+            .map_err(|_| "DATABASE_PASSWORD environment variable is required but not set. This is a critical security requirement.")?;
+
+        // Validate password complexity
+        Self::validate_password_complexity(&password)?;
+
+        Ok(password)
+    }
+
+    /// Validate password meets security requirements
+    fn validate_password_complexity(password: &str) -> Result<(), Box<dyn std::error::Error>> {
+        const MIN_LENGTH: usize = 12;
+        const COMMON_PASSWORDS: &[&str] = &[
+            "password", "123456", "qwerty", "admin", "root", "postgres",
+            "letmein", "monkey", "dragon", "trustno1", "welcome"
+        ];
+
+        // Check minimum length
+        if password.len() < MIN_LENGTH {
+            return Err(format!("Database password must be at least {} characters long, got {}", MIN_LENGTH, password.len()).into());
+        }
+
+        // Check for common passwords
+        if COMMON_PASSWORDS.contains(&password.to_lowercase().as_str()) {
+            return Err("Database password cannot be a common password".into());
+        }
+
+        // Check for uppercase, lowercase, and digits
+        let has_uppercase = password.chars().any(|c| c.is_uppercase());
+        let has_lowercase = password.chars().any(|c| c.is_lowercase());
+        let has_digit = password.chars().any(|c| c.is_ascii_digit());
+
+        if !has_uppercase || !has_lowercase || !has_digit {
+            return Err("Database password must contain at least one uppercase letter, one lowercase letter, and one digit".into());
+        }
+
+        // Check for special characters (recommended but not required)
+        let has_special = password.chars().any(|c| !c.is_alphanumeric());
+        if !has_special {
+            eprintln!("Warning: Database password should contain special characters for better security");
+        }
+
+        Ok(())
+    }
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
@@ -1472,13 +1521,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         port: args.db_port,
         database: args.db_name.clone(),
         username: "postgres".to_string(),
-        // TODO: Remove insecure password fallback - critical security vulnerability
-        // - [ ] Remove .unwrap_or_else(|_| "password".to_string()) fallback
-        // - [ ] Require DATABASE_PASSWORD environment variable with proper validation
-        // - [ ] Add startup failure if password is not provided or invalid
-        // - [ ] Implement secure password validation (length, complexity, no common passwords)
-        // - [ ] Add password change detection and connection pool invalidation
-        password: std::env::var("DATABASE_PASSWORD").unwrap_or_else(|_| "password".to_string()),
+        // Secure password handling - no insecure fallbacks
+        password: Self::load_required_database_password()?,
         pool_min: 2,
         pool_max: 20,
         connection_timeout_seconds: 30,
@@ -1493,7 +1537,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize database-backed task store
     let db_client = DatabaseClient::new(db_config.clone()).await.unwrap_or_else(|e| {
         eprintln!(" Failed to initialize database connection: {}", e);
-        eprintln!(" Make sure PostgreSQL is running and DATABASE_PASSWORD is set");
+        eprintln!(" Make sure PostgreSQL is running and DATABASE_PASSWORD environment variable is set with a secure password");
         std::process::exit(1);
     });
 

@@ -413,9 +413,15 @@ pub struct EnvironmentOverrides {
 }
 
 impl AppConfig {
+    // TODO: Update all callers of AppConfig::new() to handle Result instead of panicking
+    // - [ ] Find all places that call AppConfig::new() and add .expect() or proper error handling
+    // - [ ] Update main.rs and other entry points to propagate configuration errors
+    // - [ ] Add graceful degradation for missing environment variables in development
+    // - [ ] Implement configuration validation with helpful error messages
+
     /// Create a new configuration with defaults
-    pub fn new() -> Self {
-        Self {
+    pub fn new() -> Result<Self> {
+        Ok(Self {
             app: AppMetadata {
                 name: "agent-agency-v3".to_string(),
                 version: env!("CARGO_PKG_VERSION").to_string(),
@@ -433,7 +439,7 @@ impl AppConfig {
             },
             database: DatabaseConfig {
                 url: std::env::var("DATABASE_URL")
-                    .unwrap_or_else(|_| panic!("DATABASE_URL environment variable is required")),
+                    .map_err(|_| anyhow::anyhow!("DATABASE_URL environment variable is required"))?,
                 max_connections: 20,
                 min_connections: 5,
                 connection_timeout_seconds: 30,
@@ -443,9 +449,9 @@ impl AppConfig {
             },
             security: SecurityConfig {
                 jwt_secret: secure_loader::load_secure_var("JWT_SECRET")
-                    .unwrap_or_else(|_| panic!("JWT_SECRET environment variable is required and must meet security requirements")),
+                    .map_err(|_| anyhow::anyhow!("JWT_SECRET environment variable is required and must meet security requirements"))?,
                 encryption_key: secure_loader::load_secure_var("ENCRYPTION_KEY")
-                    .unwrap_or_else(|_| panic!("ENCRYPTION_KEY environment variable is required and must meet security requirements")),
+                    .map_err(|_| anyhow::anyhow!("ENCRYPTION_KEY environment variable is required and must meet security requirements"))?,
                 session_timeout_minutes: 60,
                 rate_limit_requests_per_minute: 100,
                 cors_origins: vec!["http://localhost:3000".to_string()],
@@ -653,8 +659,7 @@ impl AppConfig {
                     enable_metrics: Some(true),
                 }),
             },
-        }
-    }
+        })
 
     /// Validate the configuration
     pub fn validate_config(&self) -> Result<()> {
