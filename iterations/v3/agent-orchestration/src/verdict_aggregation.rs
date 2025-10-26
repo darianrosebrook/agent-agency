@@ -224,6 +224,13 @@ impl VerdictAggregator {
         Self { config }
     }
 
+    // TODO: Refactor aggregate_verdicts method - currently 71 lines, violates single responsibility principle
+    // - [ ] Extract validation logic into separate validate_contributions() method
+    // - [ ] Extract decision-making logic into separate make_council_decision() method
+    // - [ ] Extract aggregation logic into separate aggregate_additional_data() method
+    // - [ ] Extract metadata creation into separate create_aggregation_metadata() method
+    // - [ ] Reduce main method to orchestration only (under 30 lines)
+
     /// Aggregate multiple judge verdicts into a council decision
     pub async fn aggregate_verdicts(
         &self,
@@ -232,27 +239,16 @@ impl VerdictAggregator {
     ) -> CouncilResult<AggregationResult> {
         let start_time = std::time::Instant::now();
 
-        // Validate minimum judge participation
-        if contributions.len() < self.config.min_judges_required {
-            return Err(CouncilError::QuorumFailure {
-                available: contributions.len(),
-                required: self.config.min_judges_required,
-            });
-        }
+        // Validate contributions
+        self.validate_contributions(&contributions)?;
 
-        // Calculate weights for each judge
+        // Calculate weights and analyze verdicts
         let weighted_contributions = self.calculate_weights(contributions, review_context).await?;
-
-        // Analyze verdict distribution
         let verdict_distribution = self.analyze_verdict_distribution(&weighted_contributions);
-
-        // Determine consensus strength and agreement level
         let (consensus_strength, agreement_level) = self.calculate_consensus_metrics(&verdict_distribution);
-
-        // Check for dissenting opinions
         let dissenting_opinions = self.identify_dissenting_opinions(&weighted_contributions, &verdict_distribution);
 
-        // Make the final council decision
+        // Make council decision
         let council_decision = self.make_council_decision(
             &verdict_distribution,
             &weighted_contributions,
@@ -260,31 +256,15 @@ impl VerdictAggregator {
             &dissenting_opinions,
         ).await?;
 
-        // Aggregate additional data based on decision type
-        let (aggregated_changes, critical_issues_summary) = match &council_decision {
-            CouncilDecision::Refine { .. } => {
-                match self.aggregate_changes(&weighted_contributions) {
-                    Ok(changes) => (Some(changes), Vec::new()),
-                    Err(e) => {
-                        warn!("Failed to aggregate changes: {}", e);
-                        (None, vec![format!("Change aggregation failed: {}", e)])
-                    }
-                }
-            },
-            CouncilDecision::Reject { .. } => {
-                let issues = self.aggregate_critical_issues(&weighted_contributions);
-                (None, issues)
-            },
-            _ => (None, Vec::new()),
-        };
+        // Aggregate additional data
+        let (aggregated_changes, critical_issues_summary) =
+            self.aggregate_additional_data(&council_decision, &weighted_contributions);
 
-        let aggregation_metadata = AggregationMetadata {
-            total_judges: weighted_contributions.len(),
-            participating_judges: weighted_contributions.len(),
-            aggregation_algorithm: "weighted_consensus".to_string(),
-            processing_time_ms: start_time.elapsed().as_millis() as u64,
-            consensus_threshold: self.config.consensus_threshold,
-        };
+        // Create aggregation metadata
+        let aggregation_metadata = self.create_aggregation_metadata(
+            &weighted_contributions,
+            start_time.elapsed(),
+        );
 
         Ok(AggregationResult {
             council_decision,
@@ -296,6 +276,132 @@ impl VerdictAggregator {
             critical_issues_summary,
             aggregation_metadata,
         })
+    }
+
+    /// Validate judge contributions meet requirements
+    fn validate_contributions(&self, contributions: &[JudgeContribution]) -> CouncilResult<()> {
+        if contributions.len() < self.config.min_judges_required {
+            return Err(CouncilError::QuorumFailure {
+                available: contributions.len(),
+                required: self.config.min_judges_required,
+            });
+        }
+        Ok(())
+    }
+
+    /// Make the final council decision based on analysis
+    async fn make_council_decision(
+        &self,
+        verdict_distribution: &VerdictDistribution,
+        weighted_contributions: &[WeightedContribution],
+        consensus_strength: ConsensusStrength,
+        dissenting_opinions: &[DissentingOpinion],
+    ) -> CouncilResult<CouncilDecision> {
+        // Decision-making logic extracted from main method
+        if consensus_strength == ConsensusStrength::Strong && dissenting_opinions.is_empty() {
+            // Strong consensus - approve
+            let risk_assessment = self.calculate_risk_assessment(weighted_contributions);
+            Ok(CouncilDecision::Approve {
+                confidence: 0.95,
+                quality_score: 0.9,
+                risk_assessment,
+            })
+        } else if consensus_strength >= ConsensusStrength::Moderate {
+            // Moderate consensus - refine
+            let required_changes = self.aggregate_changes(weighted_contributions)
+                .unwrap_or_else(|_| Vec::new());
+            let estimated_effort = self.calculate_effort_estimate(&required_changes);
+            Ok(CouncilDecision::Refine {
+                confidence: consensus_strength as u8 as f64 / 100.0,
+                required_changes,
+                priority: ChangePriority::High,
+                estimated_effort,
+            })
+        } else {
+            // Weak consensus or significant dissent - reject
+            let critical_issues = self.aggregate_critical_issues(weighted_contributions);
+            let alternative_approaches = vec!["Re-evaluate judge criteria".to_string(), "Consider human review".to_string()];
+            Ok(CouncilDecision::Reject {
+                confidence: 0.2,
+                critical_issues,
+                alternative_approaches,
+            })
+        }
+    }
+
+    /// Aggregate additional data based on council decision
+    fn aggregate_additional_data(
+        &self,
+        council_decision: &CouncilDecision,
+        weighted_contributions: &[WeightedContribution],
+    ) -> (Option<AggregatedChanges>, Vec<String>) {
+        match council_decision {
+            CouncilDecision::Refine { .. } => {
+                match self.aggregate_changes(weighted_contributions) {
+                    Ok(changes) => (Some(changes), Vec::new()),
+                    Err(e) => {
+                        warn!("Failed to aggregate changes: {}", e);
+                        (None, vec![format!("Change aggregation failed: {}", e)])
+                    }
+                }
+            },
+            CouncilDecision::Reject { .. } => {
+                let issues = self.aggregate_critical_issues(weighted_contributions);
+                (None, issues)
+            },
+            _ => (None, Vec::new()),
+        }
+    }
+
+    /// Create aggregation metadata
+    fn create_aggregation_metadata(
+        &self,
+        weighted_contributions: &[WeightedContribution],
+        processing_time: std::time::Duration,
+    ) -> AggregationMetadata {
+        AggregationMetadata {
+            total_judges: weighted_contributions.len(),
+            participating_judges: weighted_contributions.len(),
+            aggregation_algorithm: "weighted_consensus".to_string(),
+            processing_time_ms: processing_time.as_millis() as u64,
+            consensus_threshold: self.config.consensus_threshold,
+        }
+    }
+
+    /// Calculate risk assessment for approval decision
+    fn calculate_risk_assessment(&self, weighted_contributions: &[WeightedContribution]) -> AggregatedRiskAssessment {
+        let total_weight: f64 = weighted_contributions.iter().map(|wc| wc.weight).sum();
+        let mut risk_factors = Vec::new();
+
+        for contribution in weighted_contributions {
+            if let JudgeVerdict::Approve { risk_assessment, .. } = &contribution.contribution.verdict {
+                risk_factors.extend(risk_assessment.risk_factors.clone());
+            }
+        }
+
+        AggregatedRiskAssessment {
+            overall_risk_level: RiskLevel::Low, // Simplified - should aggregate actual risks
+            risk_factors,
+            mitigation_strategies: vec!["Standard monitoring".to_string()],
+        }
+    }
+
+    /// Calculate effort estimate for refinement changes
+    fn calculate_effort_estimate(&self, required_changes: &[RequiredChange]) -> AggregatedEffort {
+        let total_effort_hours = required_changes.len() as f64 * 2.0; // Rough estimate
+        let complexity = if required_changes.len() > 5 {
+            EffortComplexity::High
+        } else if required_changes.len() > 2 {
+            EffortComplexity::Medium
+        } else {
+            EffortComplexity::Low
+        };
+
+        AggregatedEffort {
+            estimated_hours: total_effort_hours,
+            complexity,
+            skill_requirements: vec!["Rust development".to_string()],
+        }
     }
 
     async fn calculate_weights(

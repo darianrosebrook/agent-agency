@@ -277,7 +277,12 @@ impl DatabaseTaskStore {
     }
 
     async fn get_task_events(&self, _task_id: String) -> anyhow::Result<Vec<serde_json::Value>> {
-        // TODO: Implement task audit events when DatabaseClient supports it
+        // TODO: Implement task audit events when DatabaseClient supports it with acceptance criteria:
+        // - [ ] Add audit event logging to DatabaseClient for task operations
+        // - [ ] Implement structured audit trail with operation type, user, and timestamp
+        // - [ ] Add configurable audit levels and filtering
+        // - [ ] Ensure audit logs are tamper-proof and compliant
+        // - [ ] Integrate audit events with monitoring and alerting systems
         // For now, return empty events
         Ok(vec![])
     }
@@ -520,6 +525,12 @@ pub async fn create_chat_session(
 
     let session_id_string = session_id.to_string();
     let user_id_string = user_id.to_string();
+    // TODO: Replace unwrap() calls with proper error handling - found 9 unwrap() calls in main.rs
+    // - [ ] Replace serde_json::to_string().unwrap() with proper error handling
+    // - [ ] Replace Uuid::parse_str().unwrap() with proper error handling
+    // - [ ] Replace RwLock operations with proper error propagation
+    // - [ ] Add comprehensive error types and handling throughout main functions
+    // - [ ] Ensure all external API calls handle errors gracefully
     let metadata_json = serde_json::to_string(&metadata).unwrap();
 
     match state.db_client.query(
@@ -1489,6 +1500,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // Initialize alert manager
+    // TODO: Integrate RTO/RPO monitoring with alert manager with acceptance criteria:
+    // - [ ] Implement RTO (Recovery Time Objective) monitoring and alerting
+    // - [ ] Implement RPO (Recovery Point Objective) monitoring and alerting
+    // - [ ] Connect alert manager with RTO/RPO violation detection
+    // - [ ] Add configurable RTO/RPO thresholds and SLA tracking
+    // - [ ] Integrate with incident response and escalation procedures
     let alert_manager = Arc::new(api_alerts::AlertManager::new(None)); // TODO: Pass RTO/RPO monitor when available
     alert_manager.start().await.map_err(|e| format!("Failed to start alert manager: {}", e))?;
     println!(" Alert manager initialized with default definitions");
