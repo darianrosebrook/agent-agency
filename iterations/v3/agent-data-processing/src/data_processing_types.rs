@@ -10,6 +10,88 @@ use uuid::Uuid;
 use chrono::{DateTime, Utc};
 use agent_agency_common_types::BoundingBox;
 
+/// Basic data block for processing
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Block {
+    pub id: ProcessingId,
+    pub content_type: ContentType,
+    pub data: BlockData,
+    pub metadata: HashMap<String, serde_json::Value>,
+}
+
+/// Data contained in a block
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum BlockData {
+    Text(String),
+    Binary(Vec<u8>),
+    Structured(serde_json::Value),
+}
+
+/// Enriched block with additional processing results
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EnrichedBlock {
+    pub block: Block,
+    pub enriched_content: EnrichedContent,
+    pub processing_metadata: ProcessingMetadata,
+}
+
+/// Enriched content from processing stages
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EnrichedContent {
+    pub entities: Vec<ExtractedEntity>,
+    pub visual_elements: Vec<VisualElement>,
+    pub audio_transcript: Option<String>,
+    pub topics: Vec<ExtractedTopic>,
+    pub embeddings: Option<Vec<f32>>,
+}
+
+/// Extracted entity from content
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExtractedEntity {
+    pub id: String,
+    pub name: String,
+    pub entity_type: String,
+    pub confidence: f32,
+    pub positions: Vec<TextPosition>,
+    pub metadata: HashMap<String, serde_json::Value>,
+}
+
+/// Visual element detected in content
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VisualElement {
+    pub element_type: VisualElementType,
+    pub position: BoundingBox,
+    pub confidence: f32,
+    pub text_content: Option<String>,
+    pub description: Option<String>,
+}
+
+/// Type of visual element
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum VisualElementType {
+    Image,
+    Text,
+    Diagram,
+    Chart,
+    Table,
+}
+
+/// Extracted topic from content
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExtractedTopic {
+    pub name: String,
+    pub confidence: f32,
+    pub keywords: Vec<String>,
+}
+
+/// Text position information
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TextPosition {
+    pub start: usize,
+    pub end: usize,
+    pub page: Option<u32>,
+}
+
 /// Unique identifier for data processing operations
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct ProcessingId(pub Uuid);

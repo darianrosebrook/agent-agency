@@ -41,6 +41,7 @@
     "autoprefixer": "^10.4.0",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
+    "critters": "^0.0.23",
     "d3": "^7.9.0",
     "gsap": "^3.13.0",
     "lucide-react": "^0.548.0",
@@ -56,19 +57,25 @@
     "zustand": "^5.0.8"
   },
   "devDependencies": {
+    "@eslint/eslintrc": "^3.3.1",
+    "@eslint/js": "^9.38.0",
     "@next/bundle-analyzer": "^16.0.0",
     "@testing-library/jest-dom": "^6.0.0",
     "@testing-library/react": "^16.0.0",
-    "@typescript-eslint/eslint-plugin": "^8.0.0",
-    "@typescript-eslint/parser": "^8.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.46.2",
+    "@typescript-eslint/parser": "^8.46.2",
     "cross-env": "^10.0.0",
     "eslint": "^9.0.0",
     "eslint-config-next": "^16.0.0",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.0.1",
     "jest": "^30.0.0",
     "jest-environment-jsdom": "^30.0.0",
     "prettier": "^3.0.0",
     "serve": "^14.0.0"
   },
+  "type": "module",
   "engines": {
     "node": ">=20.0.0",
     "npm": ">=10.0.0"

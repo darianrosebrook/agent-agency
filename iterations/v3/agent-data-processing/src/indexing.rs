@@ -10,6 +10,11 @@ use crate::data_processing_types::*;
 use crate::{DataProcessingResult, DataProcessingError};
 use async_trait::async_trait;
 use std::collections::HashMap;
+use serde::{Deserialize, Serialize};
+use uuid::Uuid;
+use tracing::{debug, info, warn};
+use std::sync::Arc;
+use parking_lot::{Mutex, RwLock};
 
 /// Result from indexing operations
 pub type IndexingResult = DataProcessingResult<ProcessingOutput>;
@@ -516,6 +521,797 @@ fn cosine_similarity(a: &[f32], b: &[f32]) -> f64 {
     } else {
         (dot_product / (norm_a * norm_b)) as f64
     }
+}
+
+/// Consolidated indexer implementations from indexers crate
+
+/// Full-text search query
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SearchQuery {
+    pub text: String,
+    pub project_scope: Option<String>,
+    pub k: usize,
+    pub max_tokens: usize,
+}
+
+/// Full-text search result
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SearchResult {
+    pub block_id: Uuid,
+    pub score: f32,
+    pub text_snippet: String,
+    pub modality: String,
+}
+
+/// Vector search query
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VectorQuery {
+    pub vector: Vec<f32>,
+    pub model_id: String,
+    pub k: usize,
+    pub project_scope: Option<String>,
+}
+
+/// Vector search result
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VectorSearchResult {
+    pub block_id: Uuid,
+    pub similarity: f32,
+    pub modality: String,
+}
+
+/// BM25 statistics
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Bm25Stats {
+    pub total_documents: u64,
+    pub total_terms: u64,
+    pub avg_doc_length: f32,
+    pub k1: f32,
+    pub b: f32,
+}
+
+impl Default for Bm25Stats {
+    fn default() -> Self {
+        Self {
+            total_documents: 0,
+            total_terms: 0,
+            avg_doc_length: 0.0,
+            k1: 1.5,
+            b: 0.75,
+        }
+    }
+}
+
+/// HNSW metadata
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HnswMetadata {
+    pub total_vectors: usize,
+    pub dimension: usize,
+    pub max_neighbors: usize,
+    pub ef_construction: usize,
+    pub ef_search: usize,
+}
+
+/// Job types for indexing operations
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum JobType {
+    VideoIngest,
+    SlidesIngest,
+    DiagramIngest,
+    CaptionsIngest,
+    VisionOcr,
+    AsrTranscription,
+    EntityExtraction,
+    VisualCaptioning,
+    Embedding,
+}
+
+impl JobType {
+    /// Get concurrency cap for this job type
+    pub fn concurrency_cap(&self) -> usize {
+        match self {
+            JobType::VideoIngest => 2,
+            JobType::SlidesIngest => 3,
+            JobType::DiagramIngest => 3,
+            JobType::CaptionsIngest => 5,
+            JobType::VisionOcr => 2,
+            JobType::AsrTranscription => 1, // ASR is expensive
+            JobType::EntityExtraction => 4,
+            JobType::VisualCaptioning => 1, // Expensive model inference
+            JobType::Embedding => 2,
+        }
+    }
+
+    /// Get timeout in milliseconds
+    pub fn timeout_ms(&self) -> u64 {
+        match self {
+            JobType::VideoIngest => 300_000,      // 5 minutes
+            JobType::SlidesIngest => 60_000,      // 1 minute
+            JobType::DiagramIngest => 30_000,     // 30 seconds
+            JobType::CaptionsIngest => 15_000,    // 15 seconds
+            JobType::VisionOcr => 10_000,         // 10 seconds
+            JobType::AsrTranscription => 120_000, // 2 minutes
+            JobType::EntityExtraction => 30_000,  // 30 seconds
+            JobType::VisualCaptioning => 30_000,  // 30 seconds
+            JobType::Embedding => 45_000,         // 45 seconds
+        }
+    }
+}
+
+/// Job priority levels
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum JobPriority {
+    Low = 0,
+    Normal = 1,
+    High = 2,
+    Critical = 3,
+}
+
+/// Job status
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum JobStatus {
+    Pending,
+    Running,
+    Completed,
+    Failed,
+    Cancelled,
+}
+
+/// BM25 full-text search indexer
+pub struct Bm25Indexer {
+    documents: Arc<RwLock<HashMap<Uuid, DocumentRecord>>>,
+    inverted_index: Arc<RwLock<HashMap<String, HashMap<Uuid, u32>>>>,
+    stats: Arc<Mutex<Bm25Stats>>,
+}
+
+#[derive(Clone)]
+struct DocumentRecord {
+    text: String,
+    modality: String,
+    term_freqs: HashMap<String, u32>,
+    length: usize,
+}
+
+impl Bm25Indexer {
+    /// Create a new BM25 indexer
+    pub fn new() -> Self {
+        Self {
+            documents: Arc::new(RwLock::new(HashMap::new())),
+            inverted_index: Arc::new(RwLock::new(HashMap::new())),
+            stats: Arc::new(Mutex::new(Bm25Stats::default())),
+        }
+    }
+
+    /// Index a block of text
+    pub async fn index_block(&self, block_id: Uuid, text: &str, modality: &str) -> Result<(), anyhow::Error> {
+        debug!(
+            "Indexing block {} with {} chars in {}",
+            block_id,
+            text.len(),
+            modality
+        );
+
+        // Tokenize and count terms
+        let terms = self.tokenize(text);
+        let mut term_freqs = HashMap::new();
+
+        for term in &terms {
+            *term_freqs.entry(term.clone()).or_insert(0) += 1;
+        }
+
+        let doc_length = terms.len();
+
+        // Store document record
+        let record = DocumentRecord {
+            text: text.to_string(),
+            modality: modality.to_string(),
+            term_freqs: term_freqs.clone(),
+            length: doc_length,
+        };
+
+        self.documents.write().insert(block_id, record);
+
+        // Update inverted index
+        let mut inverted_index = self.inverted_index.write();
+        for (term, freq) in term_freqs {
+            inverted_index
+                .entry(term)
+                .or_insert_with(HashMap::new)
+                .insert(block_id, freq);
+        }
+
+        // Update statistics
+        let mut stats = self.stats.lock();
+        stats.total_documents += 1;
+        stats.total_terms += terms.len() as u64;
+
+        debug!("Indexed block {} with {} unique terms", block_id, term_freqs.len());
+        Ok(())
+    }
+
+    /// Search the index
+    pub async fn search(&self, query: &SearchQuery) -> Result<Vec<SearchResult>, anyhow::Error> {
+        let terms = self.tokenize(&query.text);
+        if terms.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let documents = self.documents.read();
+        let inverted_index = self.inverted_index.read();
+        let stats = self.stats.lock();
+
+        let mut scores = HashMap::new();
+
+        // Calculate BM25 scores for each term
+        for term in &terms {
+            if let Some(doc_freqs) = inverted_index.get(term) {
+                let idf = self.idf(stats.total_documents as usize, doc_freqs.len());
+
+                for (doc_id, term_freq) in doc_freqs {
+                    if let Some(doc) = documents.get(doc_id) {
+                        let tf = *term_freq as f32;
+                        let doc_len = doc.length as f32;
+                        let avg_doc_len = stats.avg_doc_length;
+
+                        let bm25_score = self.bm25_score(tf, doc_len, avg_doc_len, idf, stats.k1, stats.b);
+
+                        *scores.entry(*doc_id).or_insert(0.0) += bm25_score;
+                    }
+                }
+            }
+        }
+
+        // Convert to results and sort
+        let mut results: Vec<SearchResult> = scores
+            .into_iter()
+            .map(|(block_id, score)| {
+                let doc = &documents[&block_id];
+                let snippet = self.extract_snippet(&doc.text, &query.text, query.max_tokens);
+
+                SearchResult {
+                    block_id,
+                    score,
+                    text_snippet: snippet,
+                    modality: doc.modality.clone(),
+                }
+            })
+            .collect();
+
+        results.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
+        results.truncate(query.k);
+
+        Ok(results)
+    }
+
+    /// Get statistics
+    pub fn stats(&self) -> Bm25Stats {
+        self.stats.lock().clone()
+    }
+
+    fn tokenize(&self, text: &str) -> Vec<String> {
+        text.split_whitespace()
+            .map(|word| word.to_lowercase().chars().filter(|c| c.is_alphanumeric()).collect())
+            .filter(|word| !word.is_empty() && word.len() > 2)
+            .collect()
+    }
+
+    fn idf(&self, total_docs: usize, doc_freq: usize) -> f32 {
+        if doc_freq == 0 {
+            return 0.0;
+        }
+        ((total_docs as f32 - doc_freq as f32 + 0.5) / (doc_freq as f32 + 0.5)).ln()
+    }
+
+    fn bm25_score(&self, tf: f32, doc_len: f32, avg_doc_len: f32, idf: f32, k1: f32, b: f32) -> f32 {
+        let numerator = tf * (k1 + 1.0);
+        let denominator = tf + k1 * (1.0 - b + b * (doc_len / avg_doc_len));
+        (numerator / denominator) * idf
+    }
+
+    fn extract_snippet(&self, text: &str, query: &str, max_tokens: usize) -> String {
+        // Simple snippet extraction - find first occurrence of query terms
+        let query_terms: std::collections::HashSet<_> = query.split_whitespace().collect();
+        let words: Vec<&str> = text.split_whitespace().collect();
+
+        for (i, window) in words.windows(max_tokens).enumerate() {
+            let window_set: std::collections::HashSet<_> = window.iter().cloned().collect();
+            if !query_terms.is_disjoint(&window_set) {
+                return window.join(" ");
+            }
+        }
+
+        // Fallback to beginning of text
+        words.iter().take(max_tokens).cloned().collect::<Vec<_>>().join(" ")
+    }
+}
+
+/// HNSW indexer for vector search
+pub struct HnswIndexer {
+    index: Arc<Mutex<SimpleHnswIndex>>,
+    metadata: Arc<Mutex<HnswMetadata>>,
+}
+
+struct SimpleHnswIndex {
+    vectors: Vec<Vec<f32>>,
+    dimension: usize,
+}
+
+impl SimpleHnswIndex {
+    fn new(dimension: usize, _max_neighbors: usize) -> Self {
+        Self {
+            vectors: Vec::new(),
+            dimension,
+        }
+    }
+
+    fn insert(&mut self, vector: &[f32]) -> Result<usize, anyhow::Error> {
+        if vector.len() != self.dimension {
+            return Err(anyhow::anyhow!(
+                "Vector dimension mismatch: expected {}, got {}",
+                self.dimension,
+                vector.len()
+            ));
+        }
+
+        let id = self.vectors.len();
+        self.vectors.push(vector.to_vec());
+        Ok(id)
+    }
+
+    fn search(&self, query: &[f32], k: usize) -> Result<Vec<(usize, f32)>, anyhow::Error> {
+        if query.len() != self.dimension {
+            return Err(anyhow::anyhow!(
+                "Query vector dimension mismatch: expected {}, got {}",
+                self.dimension,
+                query.len()
+            ));
+        }
+
+        let mut similarities: Vec<(usize, f32)> = self
+            .vectors
+            .iter()
+            .enumerate()
+            .map(|(i, v)| (i, Self::cosine_similarity(query, v)))
+            .collect();
+
+        similarities.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+        similarities.truncate(k);
+
+        Ok(similarities)
+    }
+
+    fn cosine_similarity(a: &[f32], b: &[f32]) -> f32 {
+        let dot_product: f32 = a.iter().zip(b.iter()).map(|(x, y)| x * y).sum();
+        let norm_a: f32 = a.iter().map(|x| x * x).sum::<f32>().sqrt();
+        let norm_b: f32 = b.iter().map(|x| x * x).sum::<f32>().sqrt();
+
+        if norm_a == 0.0 || norm_b == 0.0 {
+            0.0
+        } else {
+            dot_product / (norm_a * norm_b)
+        }
+    }
+}
+
+impl HnswIndexer {
+    /// Create a new HNSW indexer
+    pub fn new(dimension: usize, max_neighbors: usize) -> Self {
+        Self {
+            index: Arc::new(Mutex::new(SimpleHnswIndex::new(dimension, max_neighbors))),
+            metadata: Arc::new(Mutex::new(HnswMetadata {
+                total_vectors: 0,
+                dimension,
+                max_neighbors,
+                ef_construction: 200,
+                ef_search: 64,
+            })),
+        }
+    }
+
+    /// Index a vector
+    pub async fn index_vector(&self, vector: &[f32]) -> Result<Uuid, anyhow::Error> {
+        let mut index = self.index.lock();
+        let id = index.insert(vector)?;
+
+        let mut metadata = self.metadata.lock();
+        metadata.total_vectors += 1;
+
+        Ok(Uuid::new_v4()) // Return a UUID for the vector
+    }
+
+    /// Search for similar vectors
+    pub async fn search(&self, query: &VectorQuery) -> Result<Vec<VectorSearchResult>, anyhow::Error> {
+        let index = self.index.lock();
+
+        let similarities = index.search(&query.vector, query.k)?;
+
+        let results: Vec<VectorSearchResult> = similarities
+            .into_iter()
+            .map(|(id, similarity)| VectorSearchResult {
+                block_id: Uuid::new_v4(), // In practice, this would map back to the original ID
+                similarity,
+                modality: "vector".to_string(), // Placeholder
+            })
+            .collect();
+
+        Ok(results)
+    }
+
+    /// Get metadata
+    pub fn metadata(&self) -> HnswMetadata {
+        self.metadata.lock().clone()
+    }
+}
+
+/// Database connection pool for indexers
+pub struct DatabasePool {
+    pool: sqlx::Pool<sqlx::Postgres>,
+}
+
+impl DatabasePool {
+    /// Create a new database pool
+    pub async fn new(database_url: &str, max_connections: u32) -> Result<Self, anyhow::Error> {
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .max_connections(max_connections)
+            .connect(database_url)
+            .await
+            .map_err(|e| anyhow::anyhow!("Failed to create database pool: {}", e))?;
+
+        // Test connection
+        sqlx::query("SELECT 1")
+            .execute(&pool)
+            .await
+            .map_err(|e| anyhow::anyhow!("Failed to connect to database: {}", e))?;
+
+        debug!(
+            "Database pool initialized with max {} connections",
+            max_connections
+        );
+
+        Ok(Self { pool })
+    }
+
+    /// Get number of idle connections
+    pub fn num_idle(&self) -> usize {
+        // This would need to be implemented based on the actual pool type
+        0
+    }
+
+    /// Get pool size
+    pub fn size(&self) -> usize {
+        // This would need to be implemented based on the actual pool type
+        0
+    }
+}
+
+/// Vector store for database persistence
+pub struct VectorStore {
+    pool: DatabasePool,
+}
+
+impl VectorStore {
+    pub fn new(pool: DatabasePool) -> Self {
+        Self { pool }
+    }
+
+    /// Store a vector record
+    pub async fn store_vector(&self, _record: BlockVectorRecord) -> Result<(), anyhow::Error> {
+        // Implementation would store in database
+        Ok(())
+    }
+
+    /// Retrieve vectors by block IDs
+    pub async fn get_vectors(&self, _block_ids: &[Uuid]) -> Result<Vec<BlockVectorRecord>, anyhow::Error> {
+        // Implementation would retrieve from database
+        Ok(Vec::new())
+    }
+
+    /// Search vectors in database
+    pub async fn search_vectors(&self, _query: &VectorQuery) -> Result<Vec<VectorSearchResult>, anyhow::Error> {
+        // Implementation would perform vector search in database
+        Ok(Vec::new())
+    }
+}
+
+/// Vector record for database storage
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BlockVectorRecord {
+    pub block_id: Uuid,
+    pub vector: Vec<f32>,
+    pub model_id: String,
+    pub modality: String,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+}
+
+/// Search audit entry for logging
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SearchAuditEntry {
+    pub query: String,
+    pub query_type: String,
+    pub results_count: usize,
+    pub search_time_ms: u64,
+    pub timestamp: chrono::DateTime<chrono::Utc>,
+}
+
+/// Job scheduler for indexing operations
+pub struct JobScheduler {
+    active_jobs: Arc<Mutex<HashMap<Uuid, IngestionJob>>>,
+    job_queue: Arc<Mutex<Vec<IngestionJob>>>,
+    concurrency_limits: HashMap<JobType, usize>,
+}
+
+#[derive(Debug, Clone)]
+pub struct IngestionJob {
+    pub id: Uuid,
+    pub job_type: JobType,
+    pub priority: JobPriority,
+    pub status: JobStatus,
+    pub payload: serde_json::Value,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    pub started_at: Option<chrono::DateTime<chrono::Utc>>,
+    pub completed_at: Option<chrono::DateTime<chrono::Utc>>,
+    pub timeout_ms: u64,
+}
+
+impl JobScheduler {
+    pub fn new() -> Self {
+        let mut concurrency_limits = HashMap::new();
+
+        // Initialize concurrency limits for each job type
+        for &job_type in &[
+            JobType::VideoIngest,
+            JobType::SlidesIngest,
+            JobType::DiagramIngest,
+            JobType::CaptionsIngest,
+            JobType::VisionOcr,
+            JobType::AsrTranscription,
+            JobType::EntityExtraction,
+            JobType::VisualCaptioning,
+            JobType::Embedding,
+        ] {
+            concurrency_limits.insert(job_type, job_type.concurrency_cap());
+        }
+
+        Self {
+            active_jobs: Arc::new(Mutex::new(HashMap::new())),
+            job_queue: Arc::new(Mutex::new(Vec::new())),
+            concurrency_limits,
+        }
+    }
+
+    /// Submit a job for execution
+    pub async fn submit_job(&self, job_type: JobType, payload: serde_json::Value, priority: JobPriority) -> Result<Uuid, anyhow::Error> {
+        let job = IngestionJob {
+            id: Uuid::new_v4(),
+            job_type,
+            priority,
+            status: JobStatus::Pending,
+            payload,
+            created_at: chrono::Utc::now(),
+            started_at: None,
+            completed_at: None,
+            timeout_ms: job_type.timeout_ms(),
+        };
+
+        self.job_queue.lock().push(job.clone());
+
+        debug!("Submitted job {} of type {:?}", job.id, job_type);
+        Ok(job.id)
+    }
+
+    /// Get next job to execute
+    pub async fn get_next_job(&self) -> Option<IngestionJob> {
+        let mut queue = self.job_queue.lock();
+        let mut active_jobs = self.active_jobs.lock();
+
+        // Sort by priority (highest first)
+        queue.sort_by(|a, b| b.priority.cmp(&a.priority));
+
+        // Find first job that can run within concurrency limits
+        for i in 0..queue.len() {
+            let job = &queue[i];
+            let active_count = active_jobs.values()
+                .filter(|j| j.job_type == job.job_type && j.status == JobStatus::Running)
+                .count();
+
+            if active_count < *self.concurrency_limits.get(&job.job_type).unwrap_or(&1) {
+                let job = queue.remove(i);
+                active_jobs.insert(job.id, job.clone());
+                return Some(job);
+            }
+        }
+
+        None
+    }
+
+    /// Mark job as started
+    pub async fn start_job(&self, job_id: Uuid) -> Result<(), anyhow::Error> {
+        let mut active_jobs = self.active_jobs.lock();
+        if let Some(job) = active_jobs.get_mut(&job_id) {
+            job.status = JobStatus::Running;
+            job.started_at = Some(chrono::Utc::now());
+            Ok(())
+        } else {
+            Err(anyhow::anyhow!("Job {} not found", job_id))
+        }
+    }
+
+    /// Mark job as completed
+    pub async fn complete_job(&self, job_id: Uuid, success: bool) -> Result<(), anyhow::Error> {
+        let mut active_jobs = self.active_jobs.lock();
+        if let Some(job) = active_jobs.get_mut(&job_id) {
+            job.status = if success { JobStatus::Completed } else { JobStatus::Failed };
+            job.completed_at = Some(chrono::Utc::now());
+            Ok(())
+        } else {
+            Err(anyhow::anyhow!("Job {} not found", job_id))
+        }
+    }
+
+    /// Get job status
+    pub async fn get_job_status(&self, job_id: Uuid) -> Option<IngestionJob> {
+        let active_jobs = self.active_jobs.lock();
+        active_jobs.get(&job_id).cloned()
+    }
+
+    /// Get queue statistics
+    pub fn get_stats(&self) -> JobSchedulerStats {
+        let queue = self.job_queue.lock();
+        let active_jobs = self.active_jobs.lock();
+
+        let pending_count = queue.len();
+        let active_count = active_jobs.len();
+        let completed_count = active_jobs.values()
+            .filter(|j| j.status == JobStatus::Completed)
+            .count();
+        let failed_count = active_jobs.values()
+            .filter(|j| j.status == JobStatus::Failed)
+            .count();
+
+        JobSchedulerStats {
+            pending_jobs: pending_count,
+            active_jobs: active_count,
+            completed_jobs: completed_count,
+            failed_jobs: failed_count,
+        }
+    }
+}
+
+/// Job scheduler statistics
+#[derive(Debug, Clone)]
+pub struct JobSchedulerStats {
+    pub pending_jobs: usize,
+    pub active_jobs: usize,
+    pub completed_jobs: usize,
+    pub failed_jobs: usize,
+}
+
+/// Unified indexer combining BM25, HNSW, and database storage
+pub struct UnifiedIndexer {
+    bm25_indexer: Bm25Indexer,
+    hnsw_indexer: HnswIndexer,
+    vector_store: Option<VectorStore>,
+    job_scheduler: JobScheduler,
+}
+
+impl UnifiedIndexer {
+    /// Create a new unified indexer
+    pub fn new(dimension: usize, max_neighbors: usize) -> Self {
+        Self {
+            bm25_indexer: Bm25Indexer::new(),
+            hnsw_indexer: HnswIndexer::new(dimension, max_neighbors),
+            vector_store: None,
+            job_scheduler: JobScheduler::new(),
+        }
+    }
+
+    /// Set vector store for persistence
+    pub fn with_vector_store(mut self, vector_store: VectorStore) -> Self {
+        self.vector_store = Some(vector_store);
+        self
+    }
+
+    /// Index content with both text and vector indexing
+    pub async fn index_content(
+        &self,
+        block_id: Uuid,
+        text: &str,
+        vector: &[f32],
+        modality: &str,
+        model_id: &str,
+    ) -> Result<(), anyhow::Error> {
+        // Index text with BM25
+        self.bm25_indexer.index_block(block_id, text, modality).await?;
+
+        // Index vector with HNSW
+        self.hnsw_indexer.index_vector(vector).await?;
+
+        // Store in database if available
+        if let Some(vector_store) = &self.vector_store {
+            let record = BlockVectorRecord {
+                block_id,
+                vector: vector.to_vec(),
+                model_id: model_id.to_string(),
+                modality: modality.to_string(),
+                created_at: chrono::Utc::now(),
+            };
+            vector_store.store_vector(record).await?;
+        }
+
+        Ok(())
+    }
+
+    /// Search using hybrid approach
+    pub async fn hybrid_search(&self, text_query: &str, vector_query: &[f32], k: usize) -> Result<Vec<HybridSearchResult>, anyhow::Error> {
+        // Perform text search
+        let text_results = self.bm25_indexer.search(&SearchQuery {
+            text: text_query.to_string(),
+            project_scope: None,
+            k,
+            max_tokens: 100,
+        }).await?;
+
+        // Perform vector search
+        let vector_results = self.hnsw_indexer.search(&VectorQuery {
+            vector: vector_query.to_vec(),
+            model_id: "default".to_string(),
+            k,
+            project_scope: None,
+        }).await?;
+
+        // Combine results (simplified - would need proper fusion)
+        let mut hybrid_results = Vec::new();
+
+        for text_result in text_results {
+            hybrid_results.push(HybridSearchResult {
+                block_id: text_result.block_id,
+                text_score: text_result.score,
+                vector_score: 0.0, // Would need to look up
+                combined_score: text_result.score,
+                modality: text_result.modality,
+                text_snippet: text_result.text_snippet,
+            });
+        }
+
+        // Sort by combined score
+        hybrid_results.sort_by(|a, b| b.combined_score.partial_cmp(&a.combined_score).unwrap_or(std::cmp::Ordering::Equal));
+        hybrid_results.truncate(k);
+
+        Ok(hybrid_results)
+    }
+
+    /// Submit indexing job
+    pub async fn submit_indexing_job(&self, job_type: JobType, payload: serde_json::Value) -> Result<Uuid, anyhow::Error> {
+        self.job_scheduler.submit_job(job_type, payload, JobPriority::Normal).await
+    }
+
+    /// Get indexer statistics
+    pub fn get_stats(&self) -> UnifiedIndexerStats {
+        UnifiedIndexerStats {
+            bm25_stats: self.bm25_indexer.stats(),
+            hnsw_metadata: self.hnsw_indexer.metadata(),
+            job_stats: self.job_scheduler.get_stats(),
+        }
+    }
+}
+
+/// Hybrid search result combining text and vector scores
+#[derive(Debug, Clone)]
+pub struct HybridSearchResult {
+    pub block_id: Uuid,
+    pub text_score: f32,
+    pub vector_score: f32,
+    pub combined_score: f32,
+    pub modality: String,
+    pub text_snippet: String,
+}
+
+/// Unified indexer statistics
+#[derive(Debug, Clone)]
+pub struct UnifiedIndexerStats {
+    pub bm25_stats: Bm25Stats,
+    pub hnsw_metadata: HnswMetadata,
+    pub job_stats: JobSchedulerStats,
 }
 
 #[cfg(test)]

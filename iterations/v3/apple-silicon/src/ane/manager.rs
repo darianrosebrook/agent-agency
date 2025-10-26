@@ -9,13 +9,13 @@ use tokio::sync::RwLock;
 use parking_lot::RwLock as SyncRwLock;
 
 // Import our new modules
-use crate::ane::errors::{ANEError, Result};
+use crate::ane::ane_errors::{ANEError, Result};
 use crate::ane::compat::iokit;
 use crate::ane::resource_pool::{Pool, PoolBuilder, PoolStats};
 use crate::ane::models::coreml_model::{LoadedCoreMLModel, CompilationOptions, estimate_memory_usage as estimate_coreml_memory_usage};
 use crate::ane::models::mistral_model::{estimate_memory_usage as estimate_mistral_memory_usage};
 use crate::ane::models::mistral_model::{MistralModel, MistralCompilationOptions, SafeModelHandle, SafeMistralTokenizer, KVCache};
-use crate::ane::circuit_breaker::{CircuitBreaker, CircuitBreakerConfig};
+use crate::ane::ane_circuit_breaker::{CircuitBreaker, CircuitBreakerConfig};
 use crate::telemetry::TelemetryCollector;
 use crate::ane::infer::execute::{execute_inference, InferenceOptions as ExecuteOptions, InferenceResult};
 use crate::ane::infer::mistral::{deliberate_constitution, generate_debate_argument, MistralInferenceOptions, ConstitutionalVerdict, DebateArgument};

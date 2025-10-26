@@ -13,13 +13,13 @@ pub mod filesystem;
 pub mod manager;
 
 // New ANE implementation modules
-pub mod errors;
+pub mod ane_errors;
 pub mod compat;
 pub mod resource_pool;
 pub mod models;
 pub mod infer;
 pub mod metrics;
-pub mod circuit_breaker;
+pub mod ane_circuit_breaker;
 pub mod monitoring;
 pub mod optimization;
 
@@ -28,4 +28,4 @@ pub use models::mistral_model::{MistralModel, MistralCompilationOptions, load_mi
 pub use infer::mistral::{MistralInferenceOptions, ConstitutionalVerdict, ComplianceLevel, RiskTier, Verdict, DebateArgument, DebatePosition, ConfidenceLevel, deliberate_constitution, generate_debate_argument, generate_text};
 
 // Re-export circuit breaker
-pub use circuit_breaker::{CircuitBreaker, CircuitBreakerConfig, CircuitState, CircuitBreakerError};
+pub use crate::ane::ane_circuit_breaker::{CircuitBreaker, CircuitBreakerConfig, CircuitState, CircuitBreakerError};

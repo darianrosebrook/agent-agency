@@ -7,7 +7,7 @@
 pub mod planning_errors;
 pub mod planner;
 pub mod types;
-pub mod caws_integration;
+pub mod planning_caws_integration;
 pub mod validation_pipeline;
 pub mod refinement_engine;
 pub mod validation;
@@ -16,6 +16,6 @@ pub mod spec_generation;
 pub use planning_errors::{PlanningError, PlanningResult};
 pub use planner::PlanningAgent;
 pub use types::{PlanningConfig, PlanningRequest, PlanningResponse};
-pub use caws_integration::{CawsValidator, ValidationContext};
+pub use planning_caws_integration::{CawsValidator, ValidationContext};
 pub use validation_pipeline::{ValidationPipeline, ValidationStage};
 pub use refinement_engine::{RefinementEngine, RefinementSuggestion};

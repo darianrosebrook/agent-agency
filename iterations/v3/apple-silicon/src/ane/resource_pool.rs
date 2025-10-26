@@ -3,7 +3,7 @@
 //! This module provides admission control, memory accounting, and concurrency
 //! limits using semaphores and atomic operations for thread-safe resource management.
 
-use crate::ane::errors::{ANEError, Result};
+use crate::ane::ane_errors::{ANEError, Result};
 use parking_lot::Mutex;
 use std::sync::Arc;
 use std::time::Instant;

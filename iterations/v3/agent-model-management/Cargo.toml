@@ -1,0 +1,44 @@
+[package]
+name = "agent-model-management"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+# Core async runtime
+tokio.workspace = true
+async-trait.workspace = true
+
+# Serialization
+serde.workspace = true
+serde_json.workspace = true
+
+# Error handling
+anyhow.workspace = true
+thiserror.workspace = true
+
+# Logging
+tracing.workspace = true
+
+# HTTP client for external model APIs
+reqwest.workspace = true
+
+# Vector operations and math
+ndarray.workspace = true
+rand.workspace = true
+
+# Model loading and inference
+tch.workspace = true
+
+# Semver for version management
+semver = "1.0"
+
+# Common types
+agent-agency-common-types = { path = "../common-types" }
+
+[features]
+default = ["inference", "hotswap"]
+inference = []
+hotswap = []
+models = []

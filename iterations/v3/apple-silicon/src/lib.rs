@@ -32,7 +32,7 @@ pub mod routing;
 pub mod telemetry;
 pub mod thermal;
 pub mod tokenization;
-pub mod prompting_types;
+pub mod types;
 
 pub use adaptive_resource_manager::{
     AllocationPlan, AllocationPlanner, AllocationRequest, DeviceKind, DeviceSensors, ModelRegistry,
@@ -94,7 +94,6 @@ pub use tokenization::{
     Tokenizer, TokenizerConfig, TokenizerType, HfTokenizer, WordTokenizer, SpecialTokens,
     create_tokenizer,
 };
-pub use prompting_prompting_types::*;
 
 /// Convenience function to plan an allocation using a provided planner.
 pub fn adaptive_plan_for<P: AllocationPlanner>(
@@ -231,5 +230,5 @@ pub use speech_bridge::{
     Speaker, SpeechBridge, SpeechSegment, SpeechTranscriptionResult, WordTiming,
 };
 pub use vision_bridge::{
-    BoundingBox, VisionAnalysisResult, VisionBlock, VisionBridge, VisionTable,
+    VisionBoundingBox as BoundingBox, VisionAnalysisResult, VisionBlock, VisionBridge, VisionTable,
 };

@@ -203,3 +203,4 @@ describe('VerdictList Integration', () => {
     expect(screen.getByText('Task meets all criteria')).toBeInTheDocument();
   });
 });
+

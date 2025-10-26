@@ -4,10 +4,10 @@
 
 pub mod redaction;
 pub mod content_strategy;
-pub mod caws;
+pub mod caws_policy;
 pub mod enforcement;
 
 pub use redaction::*;
 pub use content_strategy::*;
-pub use caws::*;
+pub use caws_policy::*;
 pub use enforcement::*;

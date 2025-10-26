@@ -1,0 +1,92 @@
+[package]
+name = "agent-orchestration"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+# Workspace dependencies
+serde.workspace = true
+serde_json.workspace = true
+serde_yaml = "0.9"
+tokio.workspace = true
+async-trait.workspace = true
+tracing.workspace = true
+thiserror.workspace = true
+uuid.workspace = true
+chrono.workspace = true
+anyhow.workspace = true
+futures = "0.3"
+
+# Database and persistence
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "json", "uuid", "chrono"] }
+tokio-postgres = "0.7"
+parking_lot = "0.12"
+
+# HTTP and web framework
+reqwest = { workspace = true, features = ["json"] }
+axum = { version = "0.7", optional = true }
+axum-extra = { version = "0.9", optional = true }
+tower-http = { version = "0.5", features = ["cors"], optional = true }
+utoipa = { version = "4.0", features = ["axum_extras"], optional = true }
+utoipa-swagger-ui = { version = "6.0", features = ["axum"], optional = true }
+
+# Compression and utilities
+flate2 = "1.0"
+sha2 = "0.10"
+regex = "1.10"
+once_cell = "1.19"
+tokio-util = "0.7"
+rand = "0.8"
+fastrand = "2.0"
+md5 = "0.7"
+crossbeam = "0.8"
+clap = { version = "4.0", features = ["derive"] }
+
+# Machine learning and AI
+linfa = "0.7"
+linfa-linear = "0.7"
+statrs = "0.16"
+lru = "0.12"
+strsim = "0.11"
+rust-bert = { version = "0.21", optional = true }
+tokenizers = "0.19"
+lingua = "1.6"
+whatlang = "0.18"
+comrak = "0.18"
+tree-sitter = "0.20"
+tree-sitter-rust = "0.20"
+pest = "2.7"
+pest_derive = "2.7"
+json5 = "0.4"
+nom = "7.1"
+indicatif = "0.16"
+console = "0.16"
+
+# Local workspace crates
+agent-agency-contracts = { path = "../agent-agency-contracts" }
+agent-agency-database = { path = "../database" }
+agent-agency-apple-silicon = { path = "../apple-silicon" }
+agent-memory = { path = "../agent-memory" }
+agent-agency-provenance = { path = "../provenance" }
+agent-agency-resilience = { path = "../resilience" }
+claim-extraction = { path = "../claim-extraction" }
+parallel-workers = { path = "../parallel-workers" }
+tool-ecosystem = { path = "../tool-ecosystem" }
+agent-data-processing = { path = "../agent-data-processing" }
+agent-agency-research = { path = "../research" }
+caws-runtime-validator = { path = "../caws/runtime-validator" }
+
+# Optional observability dependency (may be disabled)
+# agent-agency-observability = { path = "../observability", optional = true }
+
+[features]
+default = []
+api-server = ["axum", "axum-extra", "tower-http", "utoipa", "utoipa-swagger-ui"]
+full = ["dep:rust-bert"]
+with_bert = ["dep:rust-bert"]
+
+[[bin]]
+name = "agent-orchestration-server"
+path = "src/main.rs"

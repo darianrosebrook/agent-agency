@@ -4,8 +4,8 @@
 //! health checks, and metrics streaming.
 
 // Re-export modules
-pub mod alerts;
-pub mod circuit_breaker;
+pub mod api_alerts;
+pub mod api_circuit_breaker;
 pub mod handlers;
 pub mod rate_limiter;
 pub mod rto_rpo_monitor;

@@ -3,7 +3,7 @@
 //! This module provides optional IOKit integration for hardware telemetry
 //! including temperature, power consumption, and device status monitoring.
 
-use crate::ane::errors::{ANEError, Result};
+use crate::ane::ane_errors::{ANEError, Result};
 use tracing::{info, warn};
 
 /// Target platform detection

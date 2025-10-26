@@ -5,13 +5,13 @@
 
 pub mod types;
 pub mod storage;
-pub mod cache;
+pub mod verdict_cache;
 pub mod store;
 
 // Re-export main types and implementations
 pub use types::*;
 pub use storage::{VerdictStorage, MemoryVerdictStorage, DatabaseVerdictStorage};
-pub use cache::{VerdictCache, CacheManager};
+pub use verdict_cache::{VerdictCache, CacheManager};
 pub use store::VerdictStore;
 
 /// Create a new verdict store with default configuration

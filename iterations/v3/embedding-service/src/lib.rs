@@ -6,7 +6,7 @@
 //! Provides semantic context understanding through embedding generation and similarity search.
 //! Integrates with Ollama embeddinggemma for 768-dimensional vector generation.
 
-pub mod cache;
+pub mod embedding_cache;
 pub mod context;
 pub mod indexer;
 pub mod model_loading;
@@ -19,7 +19,7 @@ pub mod prompting_types;
 #[cfg(test)]
 mod tests;
 
-pub use cache::{EmbeddingCache, ModelCache, ModelCacheStats, ModelCacheInfo, ModelCacheError};
+pub use embedding_cache::{EmbeddingCache, ModelCache, ModelCacheStats, ModelCacheInfo, ModelCacheError};
 pub use context::*;
 pub use indexer::orchestrator::MultimodalIndexer;
 pub use provider::*;

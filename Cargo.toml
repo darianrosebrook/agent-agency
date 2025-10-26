@@ -4,18 +4,19 @@
 [workspace]
 resolver = "2"
 members = [
+    "iterations/v3/common-patterns",
+    "iterations/v3/common-types",
     "iterations/v3/council",
     "iterations/v3/workers",
     "iterations/v3/apple-silicon",
     "iterations/v3/research",
-    "iterations/v3/mcp-integration",
+    "iterations/v3/agent-mcp",
     "iterations/v3/provenance",
     "iterations/v3/claim-extraction",
     "iterations/v3/reflexive-learning",
     "iterations/v3/model-benchmarking",
     "iterations/v3/security-policy-enforcer",
     "iterations/v3/minimal-diff-evaluator",
-    "iterations/v3/context-preservation-engine",
     "iterations/v3/embedding-service",
     "iterations/v3/system-health-monitor",
     "iterations/v3/workspace-state-manager",
@@ -85,4 +86,45 @@ parking_lot = "0.12"
 # Safe PyTorch wrapper (optional PyTorch linking)
 ndarray = "0.15"
 
-# Safe PyTorch wrapper (optional PyTorch linking)
+# Half-precision floating point for embeddings
+half = "2.3"
+
+# Random number generation
+rand = { version = "0.8", features = ["std"] }
+
+# Compression
+flate2 = "1.0"
+
+# Hashing
+sha2 = "0.10"
+
+# Regular expressions
+regex = "1.10"
+
+# Git operations
+git2 = "0.19"
+
+# File system operations
+walkdir = "2.4"
+ignore = "0.4"
+
+# Hashing and checksums
+blake3 = "1.5"
+
+# Compression
+tar = "0.4"
+
+# Path handling
+pathdiff = "0.2"
+
+# Pattern matching
+glob = "0.3"
+
+# Testing
+tempfile = "3.8"
+
+# Utilities
+paste = "1.0"
+
+# Common patterns crate
+common-patterns = { path = "iterations/v3/common-patterns" }

@@ -6,7 +6,7 @@
 pub mod core;
 pub mod embeddings;
 pub mod models;
-pub mod cache;
+pub mod metal_cache;
 pub mod quantization;
 
 #[cfg(test)]
@@ -16,5 +16,5 @@ mod tests;
 pub use core::*;
 pub use embeddings::*;
 pub use models::*;
-pub use cache::*;
+pub use metal_cache::*;
 pub use quantization::*;

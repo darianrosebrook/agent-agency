@@ -4,11 +4,11 @@
 //! tool-agnostic task intake and execution monitoring.
 
 pub mod api;
-pub mod cli;
+pub mod cli_implementation;
 pub mod mcp;
 pub mod websocket;
 
 pub use api::{RestApi, ApiConfig};
-pub use cli::{CliInterface, CliConfig};
+pub use cli_implementation::{CliInterface, CliConfig};
 pub use mcp::{McpServer, McpConfig};
 pub use websocket::{WebSocketApi, WebSocketApiConfig};

@@ -41,9 +41,42 @@ chrono = { version = "0.4", features = ["serde"] }
 reqwest = { version = "0.11", features = ["json"] }
 urlencoding = "2.1"
 
+# Code analysis and complexity metrics (from workers crate)
+syn = { version = "2.0", features = ["full", "extra-traits"] }
+quote = "1.0"
+proc-macro2 = "1.0"
+
+# Concurrent data structures (from parallel-workers)
+crossbeam = "0.8"
+futures = "0.3"
+tokio-stream = "0.1"
+bytes = "1.5"
+rand = "0.8"
+
+# Path handling and utilities (from parallel-workers)
+path-absolutize = "3.1"
+tokio-util = "0.7"
+regex = "1.10"
+
+# Metrics and quantiles (from parallel-workers)
+tdigest = "0.1"
+hyperloglogplus = "0.1"
+ahash = "0.8"
+
+# CLI framework (from worker crate)
+clap = { version = "4.0", features = ["derive"] }
+
+# Web framework (from worker crate)
+axum.workspace = true
+tower-http.workspace = true
+
 [features]
 default = []
 test-utils = []
 
 [dev-dependencies]
 tokio-test = "0.4"
+
+[[bin]]
+name = "agent-workers"
+path = "src/main.rs"

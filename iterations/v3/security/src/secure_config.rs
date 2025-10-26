@@ -1,7 +1,6 @@
 //! Secure configuration management with validated environment variable loading
 
-use crate::secure_loader::*;
-use crate::input_validation::{validate_env_var_name, ValidationResult};
+use crate::input_validation::validate_env_var_name;
 use std::collections::HashMap;
 use std::env;
 

@@ -3,7 +3,7 @@
 //! This module provides the main VerdictStore implementation that combines
 //! caching, persistence, and monitoring capabilities.
 
-use super::cache::{VerdictCache, CacheManager};
+use super::verdict_cache::{VerdictCache, CacheManager};
 use super::storage::{VerdictStorage, MemoryVerdictStorage, DatabaseVerdictStorage};
 use super::types::*;
 use crate::council_types::*;

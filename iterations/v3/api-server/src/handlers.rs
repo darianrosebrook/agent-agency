@@ -72,7 +72,7 @@ pub struct PersistedTask {
 pub struct AppState {
     pub task_store: Arc<dyn TaskStoreTrait + Send + Sync>,
     pub health_monitor: Arc<agent_agency_system_health_monitor::SystemHealthMonitor>,
-    pub alert_manager: Arc<crate::alerts::AlertManager>,
+    pub alert_manager: Arc<crate::api_alerts::AlertManager>,
     pub rate_limiter: Arc<crate::rate_limiter::RateLimiter>,
 }
 

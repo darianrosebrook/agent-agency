@@ -3,7 +3,7 @@
 //! This module provides the core inference logic for Whisper models,
 //! including audio preprocessing, model execution, and result decoding.
 
-use crate::ane::errors::{ANEError, Result};
+use crate::ane::ane_errors::{ANEError, Result};
 use crate::ane::models::whisper_model::{
     LoadedWhisperModel, WhisperTranscription, TranscriptionSegment,
     WordTimestamp, WhisperInferenceOptions, PreprocessedAudio,
@@ -356,7 +356,7 @@ mod tests {
     use super::*;
     use crate::ane::models::whisper_model::{WhisperConfig, load_whisper_model};
     use crate::telemetry::TelemetryCollector;
-    use crate::ane::circuit_breaker::{CircuitBreaker, CircuitBreakerConfig};
+    use crate::ane::ane_circuit_breaker::{CircuitBreaker, CircuitBreakerConfig};
     use std::path::PathBuf;
 
     #[tokio::test]

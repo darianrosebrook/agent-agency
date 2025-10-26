@@ -3,7 +3,7 @@
 //! Provides clean integration points for MCP and orchestration systems.
 
 use crate::validator::{CawsValidator, ValidationResult, ValidationContext};
-use crate::budget::{BudgetChecker, BudgetLimits};
+use crate::validation_budget::{BudgetChecker, BudgetLimits};
 use crate::policy::CawsPolicy;
 // Removed unused waiver imports
 use async_trait::async_trait;
@@ -245,7 +245,7 @@ impl McpCawsIntegration {
         let estimated_cost = self.calculate_tool_execution_cost(context)?;
         
         // Check against budget limits
-        let budget_state = budget_checker.check_budget(&crate::budget::BudgetState {
+        let budget_state = budget_checker.check_budget(&crate::validation_budget::BudgetState {
             files_used: 0,
             loc_used: 0,
             time_used_seconds: 0,
@@ -361,7 +361,7 @@ impl McpIntegration for DefaultMcpIntegration {
         execution_context: ToolExecutionContext,
     ) -> Result<BudgetCheckResult, McpIntegrationError> {
         // Integrate with actual budget checking system
-        let budget_checker = crate::budget::BudgetChecker::new(crate::budget::BudgetLimits {
+        let budget_checker = crate::validation_budget::BudgetChecker::new(crate::validation_budget::BudgetLimits {
             max_files: 100,
             max_loc: 1000,
             max_time_seconds: 3600,
@@ -373,7 +373,7 @@ impl McpIntegration for DefaultMcpIntegration {
         let estimated_cost = calculate_tool_execution_cost(&execution_context)?;
         
         // Check against budget limits
-        let budget_state = budget_checker.check_budget(&crate::budget::BudgetState {
+        let budget_state = budget_checker.check_budget(&crate::validation_budget::BudgetState {
             files_used: 0,
             loc_used: 0,
             time_used_seconds: 0,
@@ -482,7 +482,7 @@ impl OrchestrationIntegration for DefaultOrchestrationIntegration {
         current_usage: ResourceUsage,
     ) -> Result<BudgetComplianceResult, OrchestrationIntegrationError> {
         // Integrate with budget checking system for task-level budget compliance
-        let _budget_checker = crate::budget::BudgetChecker::new(crate::budget::BudgetLimits {
+        let _budget_checker = crate::validation_budget::BudgetChecker::new(crate::validation_budget::BudgetLimits {
             max_files: 100,
             max_loc: 1000,
             max_time_seconds: 3600,

@@ -2,6 +2,7 @@
 //!
 //! Implements streaming task execution with chunked processing and dual-session
 //! execution for overlapping computation, enabling efficient pipelined workflows.
+//! Now uses common-pipeline framework for standardized streaming patterns.
 
 use anyhow::{Result, Context};
 use serde::{Deserialize, Serialize};
@@ -9,6 +10,8 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{mpsc, RwLock};
 use tracing::{debug, info, warn};
+use async_trait::async_trait;
+use common_pipeline::{StreamingPipeline, StreamingPipelineConfig, StreamProcessor as CommonStreamProcessor, StreamEvent as CommonStreamEvent, StreamResult as CommonStreamResult};
 
 #[cfg(feature = "chunked_execution")]
 use crate::chunked_execution::{ChunkedExecutor, ChunkConfig, ExecutionChunk};
@@ -17,8 +20,13 @@ use crate::chunked_execution::{ChunkedExecutor, ChunkConfig, ExecutionChunk};
 use crate::chunked_stubs::{ChunkedExecutor, ChunkConfig, ExecutionChunk};
 
 /// Streaming pipeline configuration
+/// Now wraps StreamingPipelineConfig with domain-specific settings
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StreamConfig {
+    /// Base streaming pipeline configuration
+    #[serde(flatten)]
+    pub base: StreamingPipelineConfig,
+    /// Domain-specific configuration
     /// Maximum concurrent streams
     pub max_concurrent_streams: usize,
     /// Chunk size for task decomposition
@@ -65,9 +73,29 @@ pub enum StreamState {
     Failed(String),
 }
 
+/// Result from streaming pipeline processing
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StreamResult {
+    /// Stream ID
+    pub stream_id: String,
+    /// Success status
+    pub success: bool,
+    /// Processed chunks
+    pub processed_chunks: u32,
+    /// Errors encountered
+    pub errors: Vec<String>,
+    /// Processing time
+    pub processing_time_ms: u64,
+    /// Final output (if any)
+    pub output: Option<serde_json::Value>,
+}
+
 /// Streaming pipeline for efficient task execution
-pub struct StreamingPipeline {
+/// Now wraps common StreamingPipeline with domain-specific functionality
+pub struct StreamingPipelineExecutor {
     config: StreamConfig,
+    /// Common streaming pipeline for standardized execution
+    common_pipeline: Arc<common_pipeline::StreamingPipeline<StreamEvent, StreamResult>>,
     /// Active streams
     active_streams: Arc<RwLock<HashMap<String, StreamExecution>>>,
     /// Stream metrics
@@ -129,7 +157,7 @@ pub enum StreamEvent {
     StreamFailed { id: String, error: String, timestamp: chrono::DateTime<chrono::Utc> },
 }
 
-impl StreamingPipeline {
+impl StreamingPipelineExecutor {
     /// Create new streaming pipeline
     pub fn new(config: StreamConfig) -> Self {
         let (command_sender, command_receiver) = mpsc::unbounded_channel();
@@ -140,6 +168,35 @@ impl StreamingPipeline {
             max_concurrent_chunks: config.max_concurrent_streams,
             enable_dual_session: config.dual_session_enabled,
         }));
+
+        // Create common streaming pipeline
+        let streaming_config = common_pipeline::StreamingPipelineConfig {
+            base: config.clone().base,
+            buffer_size: config.buffer_size,
+            max_concurrent_streams: config.max_concurrent_streams,
+            enable_backpressure: true,
+        };
+
+        let mut common_pipeline = common_pipeline::StreamingPipeline::new(streaming_config);
+
+        // Add stream processors for different stages
+        let chunk_processor = StreamingChunkProcessor {
+            chunked_executor: Arc::clone(&chunked_executor),
+        };
+        let metrics_processor = StreamingMetricsProcessor {
+            metrics: Arc::new(RwLock::new(PipelineMetrics {
+                active_streams: 0,
+                total_streams: 0,
+                avg_throughput: 0.0,
+                pipeline_latency_ms: 0.0,
+                chunk_efficiency: 0.0,
+                dual_session_overlap: 0.0,
+                last_updated: chrono::Utc::now(),
+            })),
+        };
+
+        common_pipeline.add_processor(Box::new(chunk_processor));
+        common_pipeline.add_processor(Box::new(metrics_processor));
 
         // Start pipeline processor
         let active_streams = Arc::new(RwLock::new(HashMap::new()));
@@ -171,6 +228,7 @@ impl StreamingPipeline {
 
         Self {
             config,
+            common_pipeline: Arc::new(common_pipeline),
             active_streams,
             metrics,
             chunked_executor,
@@ -643,9 +701,85 @@ impl StreamingPipeline {
     }
 }
 
+/// Stream processor for chunked execution
+pub struct StreamingChunkProcessor {
+    chunked_executor: Arc<ChunkedExecutor>,
+}
+
+#[async_trait]
+impl CommonStreamProcessor for StreamingChunkProcessor {
+    fn name(&self) -> &str {
+        "chunk_processor"
+    }
+
+    async fn process_stream_event(&self, event: &StreamEvent) -> common_pipeline::PipelineResult<Option<StreamEvent>> {
+        match event {
+            StreamEvent::StreamStarted { id, data, .. } => {
+                // Process chunks through the chunked executor
+                match self.chunked_executor.process_chunks(id.clone(), data.clone()).await {
+                    Ok(chunks) => {
+                        Ok(Some(StreamEvent::StreamChunkProcessed {
+                            id: id.clone(),
+                            chunks,
+                            timestamp: chrono::Utc::now(),
+                        }))
+                    }
+                    Err(e) => {
+                        Ok(Some(StreamEvent::StreamFailed {
+                            id: id.clone(),
+                            error: e.to_string(),
+                            timestamp: chrono::Utc::now(),
+                        }))
+                    }
+                }
+            }
+            _ => Ok(None), // Pass through other events
+        }
+    }
+
+    fn can_process(&self, event: &StreamEvent) -> bool {
+        matches!(event, StreamEvent::StreamStarted { .. })
+    }
+}
+
+/// Stream processor for metrics collection
+pub struct StreamingMetricsProcessor {
+    metrics: Arc<RwLock<PipelineMetrics>>,
+}
+
+#[async_trait]
+impl CommonStreamProcessor for StreamingMetricsProcessor {
+    fn name(&self) -> &str {
+        "metrics_processor"
+    }
+
+    async fn process_stream_event(&self, event: &StreamEvent) -> common_pipeline::PipelineResult<Option<StreamEvent>> {
+        let mut metrics = self.metrics.write().await;
+
+        match event {
+            StreamEvent::StreamStarted { .. } => {
+                metrics.active_streams += 1;
+                metrics.total_streams += 1;
+            }
+            StreamEvent::StreamCompleted { .. } | StreamEvent::StreamFailed { .. } => {
+                metrics.active_streams = metrics.active_streams.saturating_sub(1);
+            }
+            _ => {}
+        }
+
+        metrics.last_updated = chrono::Utc::now();
+        Ok(None) // Metrics processor doesn't emit new events
+    }
+
+    fn can_process(&self, event: &StreamEvent) -> bool {
+        true // Process all events for metrics
+    }
+}
+
 impl Default for StreamConfig {
     fn default() -> Self {
         Self {
+            base: Default::default(),
             max_concurrent_streams: 10,
             chunk_size: 3,
             buffer_size: 100,

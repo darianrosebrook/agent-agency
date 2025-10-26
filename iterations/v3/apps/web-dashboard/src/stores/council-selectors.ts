@@ -174,3 +174,4 @@ export const selectRealTimeStatus = (state: CouncilState) => ({
   lastUpdate: state.lastUpdate,
   isStale: state.lastUpdate ? Date.now() - state.lastUpdate.getTime() > 30000 : false, // 30 seconds
 });
+

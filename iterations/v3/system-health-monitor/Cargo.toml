@@ -52,7 +52,7 @@ sqlx = { workspace = true, features = ["postgres", "chrono", "uuid"] }
 agent-agency-council = { path = "../council", optional = true }
 agent-agency-research = { path = "../research", optional = true }
 agent-agency-workers = { path = "../workers", optional = true }
-agent-agency-context-preservation-engine = { path = "../context-preservation-engine", optional = true }
+agent-data-processing = { path = "../agent-data-processing", optional = true }
 agent-agency-database = { path = "../database", optional = true }
 agent-agency-observability = { path = "../observability", optional = true }
 
@@ -62,7 +62,7 @@ full = [
     "agent-agency-council",
     "agent-agency-research",
     "agent-agency-workers",
-    "agent-agency-context-preservation-engine",
+    "agent-data-processing",
     "agent-agency-database",
     "agent-agency-observability"
 ]

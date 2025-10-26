@@ -1,5 +1,5 @@
 [package]
-name = "agent-agency-production"
+name = "agent_agency_production"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true

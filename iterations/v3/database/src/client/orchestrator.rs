@@ -11,10 +11,10 @@ use super::super::{
     VectorStoreStats,
 };
 use super::super::pooling::{DeadpoolSqlxBridge, DeadpoolSqlxConnection};
-use super::super::circuit_breaker::{CircuitBreaker, CircuitState};
+use crate::database_circuit_breaker::{CircuitBreaker, CircuitState};
 use super::super::database_metrics::DatabaseMetrics;
 use super::super::health::{DatabaseHealthMonitor, DatabaseHealthStatus, DatabaseStats};
-use super::super::audit::DatabaseAuditLogger;
+use crate::database_audit::DatabaseAuditLogger;
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 use chrono::Duration;
@@ -302,7 +302,7 @@ impl DatabaseClient {
     }
 
     /// Get audit statistics
-    pub async fn audit_statistics(&self) -> super::super::audit::AuditStatistics {
+    pub async fn audit_statistics(&self) -> crate::AuditStatistics {
         self.audit_logger.get_statistics().await
     }
 
@@ -319,10 +319,10 @@ impl DatabaseClient {
         self.pool.close().await;
 
         // Log shutdown
-        self.audit_logger.log_operation(super::super::audit::DatabaseAuditEvent {
+        self.audit_logger.log_operation(crate::DatabaseAuditEvent {
             id: Uuid::new_v4(),
             timestamp: chrono::Utc::now(),
-            event_type: super::super::audit::AuditEventType::ConfigurationChange,
+            event_type: crate::AuditEventType::ConfigurationChange,
             actor: "system".to_string(),
             resource: "database_client".to_string(),
             action: "shutdown".to_string(),

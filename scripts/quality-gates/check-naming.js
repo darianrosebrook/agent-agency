@@ -3,8 +3,9 @@
 /**
  * Quality Gate: Naming Convention Checker
  *
- * Enforces CAWS naming conventions and blocks banned modifiers.
- * Based on rules in docs/audits/v3-codebase-audit-2025-10/06-naming-violations.md
+ * Enforces CAWS naming conventions and blocks banned modifiers that indicate duplication.
+ * Focuses on functional duplication prevention, not Rust naming conventions.
+ * Based on rules in .cursor/rules/03-naming-and-refactor.mdc
  */
 
 import fs from "fs";
@@ -12,7 +13,7 @@ import path from "path";
 
 const V3_PATH = path.join(process.cwd(), "iterations/v3");
 
-// Banned modifiers that indicate duplicate/forked files
+// Banned modifiers that indicate duplicate/forked files (functional duplication)
 const BANNED_MODIFIERS = [
   "enhanced",
   "unified",
@@ -24,6 +25,9 @@ const BANNED_MODIFIERS = [
   "revamp",
   "improved",
 ];
+
+// Rust convention files that are expected and should not be flagged
+const RUST_CONVENTION_FILES = ["lib.rs", "mod.rs", "main.rs", "Cargo.toml"];
 
 // Case-insensitive regex for banned modifiers
 const BANNED_REGEX = new RegExp(`\\b(${BANNED_MODIFIERS.join("|")})\\b`, "i");
@@ -47,12 +51,18 @@ function collectRustFiles(dir) {
   }
 }
 
-// Check naming violations
+// Check naming violations (excluding Rust conventions)
 function checkNamingViolations() {
   const violations = [];
 
   for (const filePath of RUST_FILES) {
     const fileName = path.basename(filePath, ".rs");
+    const fullFileName = path.basename(filePath);
+
+    // Skip Rust convention files
+    if (RUST_CONVENTION_FILES.includes(fullFileName)) {
+      continue;
+    }
 
     // Check for banned modifiers in filenames
     if (BANNED_REGEX.test(fileName)) {
@@ -62,7 +72,7 @@ function checkNamingViolations() {
         issue: `Filename contains banned modifier: ${
           fileName.match(BANNED_REGEX)[0]
         }`,
-        rule: 'No duplicate "enhanced/unified/new/final" modules',
+        rule: 'No duplicate "enhanced/unified/new/final" modules - indicates functional duplication',
       });
     }
   }
@@ -113,7 +123,9 @@ function checkStructNaming() {
 }
 
 function main() {
-  console.log("🔍 Checking naming conventions...");
+  console.log(
+    "🔍 Checking for problematic naming patterns (functional duplication indicators)..."
+  );
 
   // Collect files
   collectRustFiles(V3_PATH);
@@ -126,10 +138,15 @@ function main() {
 
   // Report results
   if (allViolations.length === 0) {
-    console.log("✅ No naming violations found");
+    console.log("✅ No problematic naming patterns found");
+    console.log(
+      "ℹ️  Rust convention files (lib.rs, mod.rs) are expected and not flagged"
+    );
     process.exit(0);
   } else {
-    console.log(`🚨 Found ${allViolations.length} naming violations:`);
+    console.log(
+      `🚨 Found ${allViolations.length} problematic naming patterns:`
+    );
     console.log("");
 
     for (const violation of allViolations) {
@@ -145,8 +162,9 @@ function main() {
 
     console.log("🔧 Fix these violations before committing.");
     console.log(
-      "💡 See: docs/audits/v3-codebase-audit-2025-10/06-naming-violations.md"
+      "💡 These patterns indicate functional duplication - use purpose-first canonical names instead."
     );
+    console.log("💡 See: .cursor/rules/03-naming-and-refactor.mdc");
     process.exit(1);
   }
 }

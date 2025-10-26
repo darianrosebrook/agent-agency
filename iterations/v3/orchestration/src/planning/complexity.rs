@@ -1,7 +1,7 @@
 //! Mathematical Complexity Evaluation Module
 
 use serde::{Deserialize, Serialize};
-use super::cache::CachedLLMClient;
+use super::planning_cache::CachedLLMClient;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MathematicalComplexity {

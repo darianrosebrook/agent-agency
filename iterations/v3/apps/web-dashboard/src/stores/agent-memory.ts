@@ -372,7 +372,7 @@ export const useAgentMemoryStore = create<AgentMemoryState & AgentMemoryActions>
       nextOptimizationsPage: () => set((state) => ({
         pagination: {
           ...state.pagination,
-          optimizationsPage: state.optimizationsPage + 1
+          optimizationsPage: state.pagination.optimizationsPage + 1
         }
       })),
       resetPagination: () => set({ pagination: initialState.pagination }),

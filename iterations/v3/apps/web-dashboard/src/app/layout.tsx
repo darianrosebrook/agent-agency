@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import React from "react";
 import { ConnectionProvider } from "@/components/providers/ConnectionProvider";
 import ToastProvider from "@/components/providers/ToastProvider";
@@ -14,11 +14,9 @@ export const metadata: Metadata = {
   description: "Monitor and manage agent task execution with real-time insights",
   keywords: ["agent", "agency", "dashboard", "task", "execution", "monitoring"],
   authors: [{ name: "Agent Agency Team" }],
-  viewport: "width=device-width, initial-scale=1",
-  themeColor: "#3b82f6",
   manifest: "/manifest.json",
   icons: {
-    icon: "/favicon.ico",
+    icon: "/favicon.svg",
     apple: "/apple-touch-icon.png",
   },
   openGraph: {
@@ -37,6 +35,12 @@ export const metadata: Metadata = {
     index: false,
     follow: false,
   },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#3b82f6",
 };
 
 export default function RootLayout({
@@ -72,7 +76,7 @@ export default function RootLayout({
         />
 
         {/* Favicon and app icons */}
-        <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
+        <link rel="shortcut icon" type="image/svg+xml" href="/favicon.svg" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
         {/* Viewport and other meta tags */}

@@ -15,7 +15,7 @@
 //! 5. **Apple Silicon Optimization**: ANE/Core ML integration with thermal-aware scheduling
 
 // Core modules (always available)
-pub mod caws_integration;
+pub mod runtime_caws_integration;
 pub mod canary_test_suite;
 pub mod kokoro_tuning;
 pub mod llm_parameter_feedback_example;
@@ -644,7 +644,7 @@ pub mod orchestration {
 
 // Always available exports
 pub use arbiter_pipeline::{ArbiterPipelineOptimizer, DecisionPipelineConfig};
-pub use caws_integration::{CAWSBudgetTracker, CAWSComplianceValidator, ParameterChangeProvenance};
+pub use runtime_caws_integration::{CAWSBudgetTracker, CAWSComplianceValidator, ParameterChangeProvenance};
 pub use canary_test_suite::{CanaryTestSuite, CanaryTestScenario, SLORequirements, BudgetLimits};
 pub use kokoro_tuning::{KokoroTuner, TuningResult, TuningMetrics};
 pub use llm_parameter_feedback_example::LLMParameterFeedbackExample;

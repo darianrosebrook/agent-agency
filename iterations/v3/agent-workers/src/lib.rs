@@ -1,36 +1,87 @@
-//! Agent Workers - MCP-Based Task Execution System
+//! Agent Workers - Unified MCP-Based Task Execution System
 //!
-//! A unified worker orchestration system that executes tasks using MCP tools
-//! rather than hardcoded implementations. Consolidates workers/, parallel-workers/,
-//! and worker/ into a single, coherent MCP-based architecture.
+//! A comprehensive worker orchestration system that consolidates:
+//! - **agent-workers**: MCP-based task execution
+//! - **workers**: Specialized worker types and routing
+//! - **parallel-workers**: Parallel task decomposition and coordination
+//! - **worker**: CLI application interface
 //!
 //! ## Architecture
 //!
-//! Workers discover and execute tools from the MCP registry:
-//! - **Tool Discovery**: Automatic MCP tool discovery and registration
-//! - **MCP Execution**: Tool-based execution instead of hardcoded logic
+//! The unified system provides:
+//! - **MCP Tool Integration**: Tool-based execution instead of hardcoded logic
+//! - **Parallel Processing**: Task decomposition and coordinated execution
+//! - **Specialized Workers**: Domain-specific execution capabilities
 //! - **Quality Gates**: CAWS compliance and validation throughout
+//! - **Intelligent Routing**: Capability-based task distribution
 //!
 //! ## Key Components
 //!
-//! - **MCPWorkerPool**: Main worker orchestration with MCP tool integration
-//! - **ToolExecutor**: Executes MCP tools with proper error handling
-//! - **MCPToolRegistry**: Registry for available MCP tools
+//! - **MCPWorkerPool**: Main orchestration with MCP tool integration
+//! - **ParallelCoordinator**: Parallel task decomposition and execution
+//! - **Specialized Workers**: Compilation, refactoring, testing, documentation
+//! - **TaskRouter**: Intelligent routing based on capabilities
+//! - **QualityValidator**: CAWS compliance checking
 
 #![allow(warnings)]
 #![allow(dead_code)]
 
+// Core MCP-based worker modules
 pub mod core;
 pub mod execution;
 pub mod mcp_integration;
 pub mod services;
-pub mod prompting_types;
+pub mod worker_types;
 
-// Re-export main types
+// Consolidated from workers/ crate
+pub mod autonomous_executor;
+pub mod caws_checker;
+pub mod executor;
+pub mod manager;
+pub mod multimodal_scheduler;
+pub mod router;
+pub mod specialized_workers;
+
+// Consolidated from parallel-workers/ crate
+pub mod coordinator;
+pub mod decomposition;
+pub mod communication;
+pub mod progress;
+pub mod validation;
+pub mod metrics;
+pub mod learning;
+pub mod worker_errors;
+
+// Consolidated from worker/ crate (CLI interface)
+pub mod cli;
+
+// Re-export main types from core agent-workers
 pub use core::{MCPWorkerPool, WorkerPoolConfig, WorkerHandle};
 pub use execution::{ToolExecutor, ExecutionResult};
 pub use agent_mcp::ToolRegistry;
-pub use prompting_prompting_worker_types::*;
+pub use worker_types::*;
+
+// Re-export types from consolidated workers crate
+pub use autonomous_executor::{AutonomousExecutor, AutonomousExecutorConfig, ExecutionResult as AutoExecutionResult};
+pub use caws_checker::CawsChecker;
+pub use executor::TaskExecutor;
+pub use manager::WorkerPoolManager;
+pub use multimodal_scheduler::{MultimodalJobScheduler, MultimodalSchedulerConfig, MultimodalJob};
+pub use router::TaskRouter;
+pub use specialized_workers::{CompilationSpecialist, RefactoringSpecialist, TestingSpecialist, DocumentationSpecialist};
+
+// Re-export types from consolidated parallel-workers crate
+pub use coordinator::{ParallelCoordinator, ParallelCoordinatorConfig};
+pub use decomposition::{DecompositionEngine, TaskAnalysis, TaskPattern};
+pub use communication::hub::CommunicationHub;
+pub use progress::{WorkerProgressTracker, Progress, WorkerProgress};
+pub use validation::{QualityValidatorTrait, QualityGate, ValidationContext};
+pub use metrics::aggregates::MetricsAggregator;
+pub use learning::adaptive_selector::AdaptiveSelector;
+pub use worker_errors::*;
+
+// Re-export contract traits for compatibility
+pub use agent_agency_contracts::task_executor::{TaskExecutor as TaskExecutorTrait, TaskExecutionResult};
 
 // Factory functions (async due to memory initialization)
 
@@ -46,4 +97,24 @@ pub async fn new_worker_pool_with_registry(tool_registry: std::sync::Arc<agent_m
     let shared_memory = std::sync::Arc::new(agent_memory::MemorySystem::init(memory_config).await.unwrap());
 
     MCPWorkerPool::new_with_registry(WorkerPoolConfig::default(), tool_registry, shared_memory)
+}
+
+/// Create a parallel coordinator for complex task decomposition
+pub fn new_parallel_coordinator() -> ParallelCoordinator {
+    coordinator::new_coordinator()
+}
+
+/// Create a parallel coordinator with custom configuration
+pub fn new_parallel_coordinator_with_config(config: ParallelCoordinatorConfig) -> ParallelCoordinator {
+    coordinator::new_coordinator_with_config(config)
+}
+
+/// Create a task executor that implements the TaskExecutor trait
+pub fn create_task_executor() -> std::sync::Arc<dyn TaskExecutorTrait> {
+    std::sync::Arc::new(executor::TaskExecutor::new())
+}
+
+/// Create a factory function for TaskExecutorProvider
+pub fn task_executor_factory() -> agent_agency_contracts::task_executor_provider::TaskExecutorFactory {
+    create_task_executor
 }

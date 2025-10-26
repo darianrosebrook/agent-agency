@@ -1,5 +1,5 @@
 [package]
-name = "agent-agency-e2e-tests"
+name = "agent_agency_e2e_tests"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true

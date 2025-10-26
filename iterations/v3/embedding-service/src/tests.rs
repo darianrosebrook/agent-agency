@@ -2,7 +2,7 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::cache::*;
+    use crate::embedding_cache::*;
     use crate::provider::*;
     use crate::service::*;
     use crate::similarity::*;

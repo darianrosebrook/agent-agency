@@ -17,7 +17,7 @@ pub enum DType {
     Bool,
     F64,
 }
-pub use crate::ComputeUnit;
+pub use crate::types::ComputeUnit;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;

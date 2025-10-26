@@ -1,49 +1,45 @@
 //! Context Management - Working memory and context folding
 //!
-//! This module implements the context preservation and folding functionality
-//! from the context-preservation-engine, adapted for the agent memory system.
-//! It handles working memory limits, automatic context folding, and retrieval.
+//! This module provides a memory-focused interface to the unified context preservation
+//! system from agent-data-processing. It handles working memory limits, automatic
+//! context folding, and retrieval with memory-specific optimizations.
 
 use crate::memory_types::*;
 use crate::MemoryResult;
 use crate::MemoryError;
-use agent_agency_database::{DatabaseClient, DatabaseConfig, Row};
-use std::sync::Arc;
-use std::collections::HashMap;
+use agent_data_processing::{ContextManager as UnifiedContextManager, ContextConfig, ContextData, ContextMetadata, ContextPreservationRequest, ContextRetrievalRequest, PreservationOptions, RetrievalOptions};
 use chrono::{DateTime, Utc, Duration};
-use serde::{Deserialize, Serialize};
-use flate2::{read::GzDecoder, write::GzEncoder, Compression};
-use sha2::{Digest, Sha256};
+use serde_json;
+use std::sync::Arc;
 use tracing::{debug, info, warn};
+use uuid::Uuid;
 
 /// Context management for working memory and folding
 #[derive(Debug)]
 pub struct ContextManager {
-    db_client: Arc<DatabaseClient>,
-    config: ContextConfig,
+    /// Unified context manager from agent-data-processing
+    unified_manager: Arc<UnifiedContextManager>,
 }
 
 impl ContextManager {
     /// Create a new context manager
     pub async fn new(config: &ContextConfig) -> MemoryResult<Self> {
-        let db_config = agent_agency_database::DatabaseConfig::default();
-        let db_client = Arc::new(DatabaseClient::new(db_config).await?);
+        let unified_manager = Arc::new(UnifiedContextManager::new(config.clone()).await?);
 
         Ok(Self {
-            db_client,
-            config: config.clone(),
+            unified_manager,
         })
     }
 
     /// Manage context lifecycle - fold old contexts, maintain working set
     pub async fn manage_context_lifecycle(&self, context_id: &str) -> MemoryResult<()> {
-        // Check if context should be folded
-        if self.should_fold_context(context_id).await? {
-            self.fold_context(context_id).await?;
-        }
+        // Parse context ID
+        let context_uuid = Uuid::parse_str(context_id)
+            .map_err(|e| MemoryError::Other(format!("Invalid context ID: {}", e)))?;
 
-        // Maintain working memory limits
-        self.enforce_working_memory_limits().await?;
+        // Delegate to unified manager
+        self.unified_manager.manage_context_lifecycle().await
+            .map_err(|e| MemoryError::Other(format!("Context lifecycle management failed: {}", e)))?;
 
         Ok(())
     }
@@ -79,265 +75,156 @@ impl ContextManager {
 
     /// Fold a context using the configured strategy
     pub async fn fold_context(&self, context_id: &str) -> MemoryResult<FoldedContext> {
-        let context = self.retrieve_full_context(context_id).await?;
+        // Parse context ID
+        let context_uuid = Uuid::parse_str(context_id)
+            .map_err(|e| MemoryError::Other(format!("Invalid context ID: {}", e)))?;
 
-        let folded = match self.config.offload_strategy {
-            OffloadStrategy::Compress => self.compress_context(context).await,
-            OffloadStrategy::Summarize => self.summarize_context(context).await,
-            OffloadStrategy::Archive => self.archive_context(context).await,
-            OffloadStrategy::Delete => Ok(FoldedContext::Deleted),
-        };
-
-        // Store folded context
-        if let Ok(folded_context) = &folded {
-            self.store_folded_context(context_id, folded_context).await?;
-            self.update_context_metadata(context_id, folded_context).await?;
+        // Delegate to unified manager
+        match self.unified_manager.fold_context(&context_uuid).await {
+            Ok(folded) => Ok(self.convert_folded_context(folded)),
+            Err(e) => Err(MemoryError::Other(format!("Context folding failed: {}", e))),
         }
-
-        folded
-    }
-
-    /// Compress context using gzip
-    async fn compress_context(&self, context: TaskContext) -> MemoryResult<FoldedContext> {
-        let json_data = serde_json::to_string(&context)?;
-        let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
-        std::io::copy(&mut json_data.as_bytes(), &mut encoder)?;
-        let compressed = encoder.finish()?;
-
-        let compressed_size = compressed.len();
-        let compression_ratio = json_data.len() as f32 / compressed_size as f32;
-
-        Ok(FoldedContext::Compressed {
-            data: compressed.clone(),
-            original_size: json_data.len(),
-            compressed_size,
-            compression_ratio,
-        })
-    }
-
-    /// Summarize context for long-term storage
-    async fn summarize_context(&self, context: TaskContext) -> MemoryResult<FoldedContext> {
-        // Create a summary of the context
-        let summary = ContextSummary {
-            task_type: context.task_type,
-            description: context.description.chars().take(200).collect(),
-            domain: context.domain,
-            entity_count: context.entities.len(),
-            temporal_range: context.temporal_context.as_ref().map(|tc| {
-                TemporalRange {
-                    start: tc.start_time,
-                    end: tc.deadline.unwrap_or(tc.start_time + Duration::hours(1)),
-                }
-            }),
-            key_entities: context.entities.into_iter().take(5).collect(),
-            summary_created: Utc::now(),
-        };
-
-        Ok(FoldedContext::Summarized(summary))
-    }
-
-    /// Archive context for long-term storage
-    async fn archive_context(&self, context: TaskContext) -> MemoryResult<FoldedContext> {
-        let archived = ArchivedContext {
-            context,
-            archived_at: Utc::now(),
-            access_count: 0,
-            last_accessed: None,
-            retention_policy: RetentionPolicy::LongTerm,
-        };
-
-        Ok(FoldedContext::Archived(archived))
     }
 
     /// Retrieve and reconstruct a folded context
     pub async fn reconstruct_context(&self, context_id: &str) -> MemoryResult<TaskContext> {
-        let folded = self.retrieve_folded_context(context_id).await?;
+        // Parse context ID
+        let context_uuid = Uuid::parse_str(context_id)
+            .map_err(|e| MemoryError::Other(format!("Invalid context ID: {}", e)))?;
 
-        match folded {
-            FoldedContext::Compressed { data, original_size, .. } => {
-                let mut decoder = GzDecoder::new(&data[..]);
-                let mut decompressed = Vec::new();
-                std::io::copy(&mut decoder, &mut decompressed)?;
-                let decompressed_str = String::from_utf8(decompressed)?;
-                let context: TaskContext = serde_json::from_str(&decompressed_str)?;
-                Ok(context)
+        // Retrieve from unified manager
+        let request = ContextRetrievalRequest {
+            context_id: context_uuid,
+            options: RetrievalOptions::default(),
+        };
+
+        match self.unified_manager.retrieve_context(request).await {
+            Ok(result) => {
+                if let Some(context_data) = result.context_data {
+                    // Convert ContextData to TaskContext
+                    self.convert_to_task_context(context_data)
+                } else {
+                    Err(MemoryError::NotFound(format!("Context not found: {}", context_id)))
+                }
             }
-            FoldedContext::Summarized(summary) => {
-                // Reconstruct a minimal context from summary
-                Ok(TaskContext {
-                    task_id: context_id.to_string(),
-                    task_type: summary.task_type,
-                    description: summary.description,
-                    domain: summary.domain,
-                    entities: summary.key_entities,
-                    temporal_context: summary.temporal_range.map(|tr| TemporalContext {
-                        start_time: tr.start,
-                        deadline: Some(tr.end),
-                        priority: TaskPriority::Medium, // Default
-                        recurrence_pattern: None,
-                    }),
-                    metadata: HashMap::new(),
+            Err(e) => Err(MemoryError::Other(format!("Context retrieval failed: {}", e))),
+        }
+    }
+
+    /// Store a new context
+    pub async fn store_context(&self, context: &TaskContext) -> MemoryResult<String> {
+        // Convert TaskContext to ContextData
+        let context_data = self.convert_from_task_context(context)?;
+
+        let request = ContextPreservationRequest {
+            context_data,
+            options: PreservationOptions::default(),
+        };
+
+        match self.unified_manager.preserve_context(request).await {
+            Ok(result) => {
+                if result.success {
+                    Ok(result.context_id.unwrap_or(Uuid::new_v4()).to_string())
+                } else {
+                    Err(MemoryError::Other(result.error_message.unwrap_or_else(|| "Unknown error".to_string())))
+                }
+            }
+            Err(e) => Err(MemoryError::Other(format!("Context preservation failed: {}", e))),
+        }
+    }
+
+    /// Retrieve a context by ID
+    pub async fn retrieve_context(&self, context_id: &str) -> MemoryResult<TaskContext> {
+        self.reconstruct_context(context_id).await
+    }
+
+    /// Get context statistics
+    pub async fn get_context_stats(&self) -> MemoryResult<ContextStats> {
+        match self.unified_manager.get_stats().await {
+            Ok(stats) => Ok(self.convert_context_stats(stats)),
+            Err(e) => Err(MemoryError::Other(format!("Failed to get stats: {}", e))),
+        }
+    }
+
+    // Helper methods for type conversion
+
+    fn convert_folded_context(&self, folded: agent_data_processing::FoldedContext) -> FoldedContext {
+        match folded {
+            agent_data_processing::FoldedContext::Compressed(data) => {
+                FoldedContext::Compressed {
+                    data,
+                    original_size: 0, // TODO: track this
+                    compressed_size: data.len(),
+                    compression_ratio: 1.0, // TODO: calculate this
+                }
+            }
+            agent_data_processing::FoldedContext::Summarized(summary) => {
+                FoldedContext::Summarized(ContextSummary {
+                    task_type: "unknown".to_string(),
+                    description: summary,
+                    domain: vec![],
+                    entity_count: 0,
+                    temporal_range: None,
+                    key_entities: vec![],
+                    summary_created: Utc::now(),
                 })
             }
-            FoldedContext::Archived(archived) => {
-                // Update access statistics
-                self.update_archived_access(&archived, context_id).await?;
-                Ok(archived.context)
+            agent_data_processing::FoldedContext::Archived(location) => {
+                FoldedContext::Archived(ArchivedContext {
+                    context: TaskContext::default(), // TODO: reconstruct properly
+                    archived_at: Utc::now(),
+                    access_count: 0,
+                    last_accessed: None,
+                    retention_policy: RetentionPolicy::LongTerm,
+                })
             }
-            FoldedContext::Deleted => {
-                Err(MemoryError::NotFound(format!("Context {} has been deleted", context_id)))
-            }
+            agent_data_processing::FoldedContext::Deleted => FoldedContext::Deleted,
         }
     }
 
-    /// Enforce working memory limits
-    async fn enforce_working_memory_limits(&self) -> MemoryResult<usize> {
-        // Get current working memory contexts
-        let working_contexts = self.get_working_memory_contexts().await?;
+    fn convert_to_task_context(&self, context_data: ContextData) -> MemoryResult<TaskContext> {
+        // Extract task context from generic context data
+        let task_context: TaskContext = serde_json::from_value(context_data.content)
+            .map_err(|e| MemoryError::Other(format!("Failed to deserialize task context: {}", e)))?;
 
-        if working_contexts.len() <= 10 { // Default working memory limit
-            return Ok(0);
+        Ok(task_context)
+    }
+
+    fn convert_from_task_context(&self, task_context: &TaskContext) -> MemoryResult<ContextData> {
+        let content = serde_json::to_value(task_context)
+            .map_err(|e| MemoryError::Other(format!("Failed to serialize task context: {}", e)))?;
+
+        Ok(ContextData {
+            id: Uuid::new_v4(),
+            context_type: "task".to_string(),
+            content,
+            metadata: ContextMetadata {
+                title: Some(format!("Task {}", task_context.task_id)),
+                description: Some(task_context.description.clone()),
+                tags: vec!["task".to_string()],
+                source: Some("agent-memory".to_string()),
+                importance_score: None,
+                custom_fields: Default::default(),
+            },
+            created_at: Utc::now(),
+            last_accessed_at: Utc::now(),
+            access_count: 0,
+            size_bytes: serde_json::to_string(task_context)
+                .map(|s| s.len() as u64)
+                .unwrap_or(1024),
+        })
+    }
+
+    fn convert_context_stats(&self, stats: agent_data_processing::ContextStats) -> ContextStats {
+        ContextStats {
+            total_contexts: stats.total_contexts,
+            total_storage_size: stats.total_storage_size,
+            working_memory_contexts: stats.working_memory_contexts,
+            folded_contexts: stats.folded_contexts,
+            average_context_size: stats.average_context_size,
+            recent_accesses: stats.recent_accesses,
+            oldest_context_age_hours: stats.oldest_context_age_hours,
+            compression_ratio: stats.compression_ratio,
         }
-
-        // Sort by access recency and importance and filter for folding
-        let mut contexts_to_fold = Vec::new();
-        for ctx in working_contexts {
-            if self.should_fold_context(&ctx.task_id).await.unwrap_or(false) {
-                contexts_to_fold.push(ctx);
-            }
-        }
-
-        contexts_to_fold.sort_by(|a, b| {
-            // Sort by importance (lower first) then by access time (older first)
-            a.metadata.get("importance_score")
-                .and_then(|v| v.as_f64())
-                .unwrap_or(0.5)
-                .partial_cmp(&b.metadata.get("importance_score")
-                    .and_then(|v| v.as_f64())
-                    .unwrap_or(0.5))
-                .unwrap()
-        });
-
-        // Fold oldest/lowest importance contexts
-        let mut folded_count = 0;
-        for context in contexts_to_fold.into_iter().take(5) { // Fold up to 5 at a time
-            if let Ok(_) = self.fold_context(&context.task_id).await {
-                folded_count += 1;
-            }
-        }
-
-        if folded_count > 0 {
-            info!("Folded {} contexts to maintain working memory limits", folded_count);
-        }
-
-        Ok(folded_count)
     }
-
-    // Helper methods for context metadata
-    async fn get_context_age(&self, context_id: &str) -> MemoryResult<Duration> {
-        // Query database for context creation time
-        // This would be implemented with actual DB queries
-        Ok(Duration::hours(2)) // Placeholder
-    }
-
-    async fn get_access_frequency(&self, _context_id: &str) -> MemoryResult<f32> {
-        // Calculate access frequency over time window
-        Ok(0.5) // Placeholder
-    }
-
-    async fn get_context_importance(&self, _context_id: &str) -> MemoryResult<f32> {
-        // Get importance score from metadata
-        Ok(0.7) // Placeholder
-    }
-
-    async fn retrieve_full_context(&self, _context_id: &str) -> MemoryResult<TaskContext> {
-        // Retrieve full context from storage
-        // This would be implemented with actual DB queries
-        Err(MemoryError::NotFound("Context not found".to_string())) // Placeholder
-    }
-
-    async fn store_folded_context(&self, _context_id: &str, _folded: &FoldedContext) -> MemoryResult<()> {
-        // Store folded context in database
-        Ok(()) // Placeholder
-    }
-
-    async fn update_context_metadata(&self, _context_id: &str, _folded: &FoldedContext) -> MemoryResult<()> {
-        // Update context metadata with folding information
-        Ok(()) // Placeholder
-    }
-
-    async fn retrieve_folded_context(&self, _context_id: &str) -> MemoryResult<FoldedContext> {
-        // Retrieve folded context from storage
-        Err(MemoryError::NotFound("Folded context not found".to_string())) // Placeholder
-    }
-
-    async fn update_archived_access(&self, _archived: &ArchivedContext, _context_id: &str) -> MemoryResult<()> {
-        // Update access statistics for archived context
-        Ok(()) // Placeholder
-    }
-
-    async fn get_working_memory_contexts(&self) -> MemoryResult<Vec<TaskContext>> {
-        // Get all contexts currently in working memory
-        Ok(vec![]) // Placeholder
-    }
-}
-
-/// Folded context representations
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum FoldedContext {
-    /// Gzip-compressed full context
-    Compressed {
-        data: Vec<u8>,
-        original_size: usize,
-        compressed_size: usize,
-        compression_ratio: f32,
-    },
-    /// Summarized context for quick access
-    Summarized(ContextSummary),
-    /// Archived full context for long-term storage
-    Archived(ArchivedContext),
-    /// Context deleted (no longer available)
-    Deleted,
-}
-
-/// Context summary for folded contexts
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ContextSummary {
-    pub task_type: String,
-    pub description: String,
-    pub domain: Vec<String>,
-    pub entity_count: usize,
-    pub temporal_range: Option<TemporalRange>,
-    pub key_entities: Vec<String>,
-    pub summary_created: DateTime<Utc>,
-}
-
-/// Archived context with metadata
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ArchivedContext {
-    pub context: TaskContext,
-    pub archived_at: DateTime<Utc>,
-    pub access_count: u32,
-    pub last_accessed: Option<DateTime<Utc>>,
-    pub retention_policy: RetentionPolicy,
-}
-
-/// Temporal range for context summaries
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TemporalRange {
-    pub start: DateTime<Utc>,
-    pub end: DateTime<Utc>,
-}
-
-/// Retention policy for archived contexts
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum RetentionPolicy {
-    /// Keep indefinitely
-    Permanent,
-    /// Keep for specified period
-    LongTerm,
-    /// Keep until manually deleted
-    Manual,
-    /// Auto-delete after period
-    Temporary,
 }

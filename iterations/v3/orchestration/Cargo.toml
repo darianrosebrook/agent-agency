@@ -55,5 +55,5 @@ default = []
 api-server = ["axum", "axum-extra", "tower-http", "utoipa", "utoipa-swagger-ui"]
 
 [[bin]]
-name = "agent-agency"
+name = "orchestration-server"
 path = "src/main.rs"

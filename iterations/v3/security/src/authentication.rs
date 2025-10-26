@@ -10,7 +10,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use anyhow::{Context, Result};
 use argon2::{Argon2, PasswordHash, PasswordVerifier, PasswordHasher, Algorithm, Version};
 use password_hash::{SaltString, rand_core::OsRng};
-use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation, Algorithm};
+use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation, Algorithm as JwtAlgorithm};
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 use uuid::Uuid;
@@ -220,7 +220,7 @@ impl AuthService {
         }
 
         let decoding_key = DecodingKey::from_secret(self.config.jwt_secret.as_bytes());
-        let mut validation = Validation::new(Algorithm::HS256);
+        let mut validation = Validation::new(JwtAlgorithm::HS256);
         validation.set_issuer(&["agent-agency"]);
 
         let token_data = decode::<Claims>(token, &decoding_key, &validation)
@@ -330,7 +330,7 @@ impl AuthService {
         };
 
         let encoding_key = EncodingKey::from_secret(self.config.jwt_secret.as_bytes());
-        let header = Header::new(Algorithm::HS256);
+        let header = Header::new(JwtAlgorithm::HS256);
 
         encode(&header, &claims, &encoding_key)
             .context("Failed to encode JWT token")

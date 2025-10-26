@@ -1,6 +1,6 @@
 //! Adaptive resource management for Apple Silicon
 
-use crate::ComputeUnit;
+use crate::core_ml_bridge::ComputeUnit;
 
 /// Allocation request
 #[derive(Debug, Clone)]

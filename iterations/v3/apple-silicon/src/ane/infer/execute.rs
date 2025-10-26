@@ -3,7 +3,7 @@
 //! This module provides async inference execution with proper timeout handling,
 //! performance monitoring, and error recovery for Apple Neural Engine operations.
 
-use crate::ane::errors::{ANEError, Result};
+use crate::ane::ane_errors::{ANEError, Result};
 use crate::ane::models::coreml_model::LoadedCoreMLModel;
 use crate::ane::metrics::ewma::Ewma;
 use std::time::{Duration, Instant};

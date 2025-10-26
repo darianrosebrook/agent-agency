@@ -5,9 +5,10 @@
 /// Used for ground-truth parity validation and as fallback when Core ML unavailable.
 /// Establishes numeric baselines: L∞ < 1e-5, RMSE < 1e-6 (FP32).
 use crate::inference::{
-    CapabilityReport, ComputeUnit, DType, InferenceEngine, IoSchema, ModelArtifact, ModelFmt,
+    CapabilityReport, DType, InferenceEngine, IoSchema, ModelArtifact, ModelFmt,
     PrepareOptions, PreparedModel, TensorMap, TensorSpec,
 };
+use crate::core_ml_bridge::ComputeUnit;
 use anyhow::{anyhow, bail, Context, Result};
 use async_trait::async_trait;
 #[cfg(feature = "candle")]

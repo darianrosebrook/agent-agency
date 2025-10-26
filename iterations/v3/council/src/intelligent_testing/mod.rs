@@ -5,7 +5,7 @@
 
 pub mod types;
 pub mod generation;
-pub mod analysis;
+pub mod testing_analysis;
 pub mod optimization;
 pub mod requirements;
 pub mod versioning;

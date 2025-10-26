@@ -1,0 +1,169 @@
+[workspace]
+resolver = "2"
+members = [
+    "common-types",  # 🏗️ NEW: Shared abstractions and traits to reduce duplication
+    "common-patterns",  # 🛠️ NEW: Shared patterns, traits, and utilities
+    "common-pipeline",  # 🔄 NEW: Unified pipeline abstractions for all pipeline types
+    "quality-gates",  # 🔍 NEW: Automated quality gates to prevent god objects and duplications
+    "agent-data-processing",  # 🗂️ NEW: Unified data processing pipeline consolidating ingestors/enrichers/indexers/knowledge/file-ops
+    "apple-silicon",  # Re-enabled after fixing torch integration and type imports
+    "caws/runtime-validator",  # Consolidated CAWS validation service
+    "agent-workers",  # 🔄 NEW: Consolidated MCP-based worker system
+    "research",
+    "agent-mcp",  # Consolidated MCP implementation
+    "agent-models",  # 🤖 NEW: Consolidated model management, quantization, pooling, and routing
+    "inference-engines",  # 🚀 NEW: Unified inference backends and async inference management
+    "resource-manager",  # 📊 NEW: Centralized resource lifecycle management and adaptive allocation
+    "telemetry",  # 📈 NEW: Unified observability, monitoring, and telemetry services
+    "provenance",
+    "claim-extraction",
+    "reflexive-learning",
+    "model-benchmarking",  # Re-enabled - depends on council ✓, claim-extraction ✓, apple-silicon ✓
+    "security-policy-enforcer",  # Re-enabled - depends on council ✓, provenance ✓
+    "minimal-diff-evaluator",  # Re-enabled - depends on council ✓, workers ✓, security-policy-enforcer ✓
+    "embedding-service",  # Re-enabled - standalone with ONNX/Candle dependencies
+    "system-health-monitor",  # Re-enabled - minimal features first
+    "workspace-state-manager",  # Re-enabled - standalone with git2 and database
+    "resilience",  # Re-enabled - compiles successfully
+    # "observability",  # Temporarily disabled - module conflicts during decomposition
+    "interfaces",  # MCP interface implementation
+    "source-integrity",  # Re-enabled - compiles successfully
+    "agent-memory",  # 🧠 NEW: Agent memory system with knowledge graphs and embeddings
+    "config",
+    "database",
+    "recovery",
+    "integration-tests",  # Re-enabled - checking compilation status
+    "council",  # Re-enabled - compiles successfully
+    "caching",  # Re-enabled - compiles successfully
+    "planning-agent",  # Re-enabled - application layer
+    "file_ops",  # Re-enabled - simple implementation
+    "cli",  # Re-enabled - application layer
+    "api-server",  # Re-enabled - has compilation errors but doesn't cause workspace hangs
+    "worker",  # Re-enabled - application layer
+    "runtime-optimization",  # Re-enabled - advanced services
+    "tool-ecosystem",  # Re-enabled - has compilation errors but doesn't cause workspace hangs
+    "federated-learning",  # Re-enabled - advanced services
+    "model-hotswap",  # Re-enabled - advanced services
+    "production",  # Re-enabled - advanced services
+    "e2e-tests",
+    "self-prompting-agent"
+    ]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["Darian Rosebrook <darian@example.com>"]
+license = "MIT"
+
+[workspace.dependencies]
+# Core async runtime
+tokio = { version = "1.0", features = ["full"] }
+async-trait = "0.1.74"
+futures = "0.3"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+toml = "0.8"
+
+# Database
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "chrono", "uuid"] }
+chrono = { version = "0.4", features = ["serde"] }
+
+# HTTP and web
+reqwest = { version = "0.11", features = ["json", "stream"] }
+axum = { version = "0.7", features = ["json", "ws", "macros"] }
+tower = "0.4"
+tower-http = { version = "0.5", features = ["cors", "trace"] }
+utoipa = { version = "4.0", features = ["axum_extras"] }
+utoipa-swagger-ui = { version = "6.0", features = ["axum"] }
+
+# Logging and observability
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tracing-opentelemetry = "0.22"
+opentelemetry = { version = "0.21", features = ["trace", "metrics"] }
+
+# Error handling
+anyhow = "1.0"
+thiserror = "1.0"
+
+# Utilities
+uuid = { version = "1.0", features = ["v4", "serde"] }
+regex = "1.10"
+
+
+# Configuration
+config = "0.14"
+clap = { version = "4.0", features = ["derive"] }
+
+# Apple Silicon specific
+core-foundation = "0.9"
+objc = "0.2"
+
+# Concurrent data structures
+parking_lot = "0.12"
+dashmap = "5.5"
+
+# Half-precision floating point
+half = "2.4"
+
+# Additional dependencies for parallel-workers
+tokio-util = { version = "0.7", features = ["time"] }
+path-absolutize = "3.1"
+
+# Vector operations for embeddings
+ndarray = "0.15"
+
+# Random number generation
+rand = { version = "0.8", features = ["std"] }
+
+# Force compatible versions to resolve indicatif/console conflicts
+indicatif = "0.17"
+console = { version = "0.15", features = ["std"] }
+
+# PyTorch/ML integration (unified workspace version)
+tch = { version = "0.13", default-features = false }
+torch-sys = { version = "0.13", default-features = false }
+
+# CAWS integration (using Node.js tools, not Rust crate)
+# caws-core = { path = "../../apps/tools/caws" }
+
+pkcs8 = "0.10"
+
+# Security utilities
+security = { path = "security" }
+
+# Common patterns and utilities
+common-patterns = { path = "common-patterns" }
+
+# Observability backends (now in individual crates)
+# redis = { version = "0.24", features = ["tokio-comp", "connection-manager"] }
+# prometheus = "0.13"
+# cadence = "1.4"   # StatsD client
+
+[profile.release]
+opt-level = 3
+debug = 1                  # keep some symbols for backtraces
+incremental = false        # avoid pathological LTO+incremental combos
+codegen-units = 1          # best runtime perf/size
+lto = "thin"               # great perf/size without full-fat link times
+panic = "abort"            # if acceptable for binaries
+strip = "symbols"          # if smaller artifacts help link time/size
+
+[profile.dev]
+opt-level = 0
+debug = 2
+incremental = true
+codegen-units = 256        # maximize parallel codegen for quick rebuilds
+lto = "off"
+debug-assertions = true
+overflow-checks = true
+
+[profile.test]
+opt-level = 0
+debug = 1
+incremental = true
+codegen-units = 256
+lto = "off"
+debug-assertions = true

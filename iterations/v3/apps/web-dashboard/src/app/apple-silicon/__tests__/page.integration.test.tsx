@@ -235,3 +235,4 @@ describe('Apple Silicon Dashboard Integration', () => {
     expect(screen.getByText('elevated')).toBeInTheDocument();
   });
 });
+

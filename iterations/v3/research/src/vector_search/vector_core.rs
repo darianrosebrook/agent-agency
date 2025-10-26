@@ -13,7 +13,7 @@ use uuid::Uuid;
 use lru::LruCache;
 
 use super::vector_metrics::VectorSearchMetrics;
-use super::vector_cache::CacheManager;
+use super::vector_search_cache::CacheManager;
 
 /// Default cache sizes for in-memory LRU caches
 const DEFAULT_SEARCH_CACHE_SIZE: usize = 1000;

@@ -1,7 +1,7 @@
 //! Working Specification Generation Module
 
 use serde::{Deserialize, Serialize};
-use super::cache::CachedLLMClient;
+use super::planning_cache::CachedLLMClient;
 use super::ambiguity::ClarificationResponse;
 use crate::caws_runtime::WorkingSpec;
 

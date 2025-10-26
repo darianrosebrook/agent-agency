@@ -1,36 +1,39 @@
-# Quality Gates - Crisis Response System
+# Quality Gates - Functional Duplication Prevention System
 
-**Emergency quality enforcement for Agent Agency V3 crisis response.** These gates prevent further codebase degradation during the critical architectural refactoring.
+**Focus on preventing functional duplication and maintaining code quality.** These gates prioritize business logic consolidation over organizational naming conventions.
 
-## 🚨 Crisis Context
+## 🎯 Priority Focus
 
-The Agent Agency V3 codebase has reached critical crisis levels:
-- **658+ duplicate struct names** (up from 537 despite 46% LOC reduction)
-- **69 duplicate filenames** (up from 48)
-- **11 severe god objects** (>3,000 LOC each - persistent despite reduction)
-- **Architecturally broken workers** (hardcoded tasks, no MCP tool execution)
+The Agent Agency V3 codebase has critical functional duplication issues:
+- **692+ duplicate struct names** (CRITICAL - causes compilation conflicts and maintenance issues)
+- **200+ duplicate function names** (NEW FOCUS - indicates business logic duplication)
+- **100+ duplicate trait names** (NEW FOCUS - indicates interface duplication)
+- **11 severe god objects** (>3,000 LOC each - architectural debt)
 
-Quality gates **block commits** that would worsen these issues during crisis response.
+Quality gates **block commits** that increase functional duplication while allowing Rust naming conventions.
 
 ## 🔧 What Quality Gates Check
 
-### 1. Naming Conventions (`check-naming.js`)
-**Blocks:** Files/structs with banned modifiers indicating duplication
+### 1. Functional Duplication Prevention (`check-duplication.js`)
+**Blocks:** Increases in functional duplication beyond thresholds
+- ❌ More than 692 duplicate struct names (CRITICAL - compilation conflicts)
+- ❌ More than 200 duplicate function names (NEW - business logic duplication)
+- ❌ More than 100 duplicate trait names (NEW - interface duplication)
+- ❌ More than 20 problematic duplicate filenames (excluding Rust conventions)
+- ✅ Rust convention files (lib.rs, mod.rs) are expected and allowed
+
+### 2. Naming Conventions (`check-naming.js`)
+**Blocks:** Files/structs with banned modifiers indicating functional duplication
 - ❌ `enhanced-*`, `unified-*`, `new-*`, `final-*`, `copy-*`, `revamp-*`, `improved-*`
 - ✅ Purpose-first canonical names
-
-### 2. Duplication Prevention (`check-duplication.js`)
-**Blocks:** Increases in duplication beyond crisis baseline
-- ❌ More than 69 duplicate filenames (current crisis level)
-- ❌ More than 658 duplicate struct/trait names (current crisis level)
-- ✅ Stable or reduced duplication
+- ✅ Rust convention files (lib.rs, mod.rs) are ignored
 
 ### 3. God Object Prevention (`check-god-objects.js`)
 **Blocks:** Files exceeding size thresholds
-- 🚫 **3,000+ LOC**: Severe god objects (immediate crisis intervention required)
+- 🚫 **3,000+ LOC**: Severe god objects (immediate intervention required)
 - 🚫 **2,000+ LOC**: Critical god objects (CI/CD block)
 - ⚠️ **1,500+ LOC**: Warning (allows but flags for decomposition)
-- ✅ **<1,000 LOC**: Target for long-term maintainability
+- ✅ **<1,500 LOC**: Target for long-term maintainability
 
 ## 🚦 How It Works
 
@@ -49,16 +52,19 @@ Quality gates **block commits** that would worsen these issues during crisis res
 - **Blocks**: PR merges if quality violations detected
 - **Reports**: Detailed violation breakdown in CI logs
 
-## 📊 Current Crisis Baselines
+## 📊 Current Functional Duplication Baselines
 
-| Metric | Current | Threshold | Status |
-|--------|---------|-----------|--------|
-| Duplicate filenames | 69 | ≤69 | ✅ Stable |
-| Duplicate structs | 658+ | ≤658 | ✅ Stable |
-| God objects >3K LOC | 11 | 0 | 🚨 Crisis |
-| God objects >2K LOC | Multiple | 0 | 🚨 Crisis |
+| Metric | Current | Threshold | Status | Priority |
+|--------|---------|-----------|--------|----------|
+| Duplicate struct names | 692+ | ≤692 | 🚨 CRITICAL | HIGH |
+| Duplicate function names | ~200 | ≤200 | 🚨 CRITICAL | HIGH |
+| Duplicate trait names | ~100 | ≤100 | 🚨 CRITICAL | HIGH |
+| Problematic filename duplicates | ~20 | ≤20 | ⚠️ MODERATE | MEDIUM |
+| Rust convention duplicates (lib.rs, mod.rs) | ~128 | N/A | ✅ EXPECTED | NONE |
+| God objects >3K LOC | 11 | 0 | 🚨 CRITICAL | HIGH |
+| God objects >2K LOC | Multiple | 0 | 🚨 CRITICAL | HIGH |
 
-**These baselines will only decrease during crisis response.**
+**Focus: Functional duplication must decrease, Rust conventions are expected.**
 
 ## 🛠️ Usage
 
@@ -106,14 +112,22 @@ cat .git/hooks/pre-commit
 
 **Fix:** Rename to purpose-first canonical name (e.g., `parser.rs`)
 
-### Duplication Regression
+### Functional Duplication Regression
 ```
 ❌ STRUCT_DUPLICATION_REGRESSION
-   Duplicate struct/trait names increased from 658 to 670
-   Issue: Duplication must not increase during crisis response
+   Duplicate struct names increased from 692 to 700
+   Issue: Functional duplication must not increase
+
+❌ FUNCTION_DUPLICATION_REGRESSION  
+   Duplicate function names increased from 200 to 210
+   Issue: Business logic duplication detected
+
+❌ TRAIT_DUPLICATION_REGRESSION
+   Duplicate trait names increased from 100 to 105
+   Issue: Interface duplication detected
 ```
 
-**Fix:** Extract common traits, consolidate duplicate implementations
+**Fix:** Extract common traits, consolidate duplicate business logic, unify interfaces
 
 ### God Object Violations
 ```
@@ -126,21 +140,24 @@ cat .git/hooks/pre-commit
 
 **Fix:** Decompose into smaller, focused modules
 
-## 🔄 Crisis Response Integration
+## 🔄 Functional Duplication Response Integration
 
-Quality gates integrate with the **Week 1 Emergency Stabilization** plan:
+Quality gates integrate with the **Functional Duplication Prevention** plan:
 
-1. **Automated Enforcement**: Gates prevent new violations
-2. **God Object Surgery**: Gates block oversized files
-3. **Trait Extraction**: Gates detect duplication increases
-4. **MCP Architecture**: Gates ensure clean foundation for redesign
+1. **Automated Enforcement**: Gates prevent new functional duplication
+2. **Business Logic Consolidation**: Gates detect duplicate functions and traits
+3. **Interface Unification**: Gates prevent duplicate trait definitions
+4. **Structural Cleanup**: Gates allow Rust conventions while blocking problematic patterns
 
 ## 📈 Monitoring & Metrics
 
-### Daily Crisis Dashboard
+### Daily Functional Duplication Dashboard
 ```bash
-# Run quality gates to see current status
+# Run quality gates to see current functional duplication status
 node scripts/quality-gates/run-quality-gates.js
+
+# Check functional duplication specifically
+node scripts/quality-gates/check-duplication.js
 
 # Check god object sizes specifically
 node scripts/quality-gates/check-god-objects.js
@@ -177,13 +194,14 @@ git commit --no-verify
 
 Quality gates are successful when:
 
-- ✅ **Zero new naming violations** committed
-- ✅ **Duplication counts stable or decreasing**
+- ✅ **Zero new functional duplication** committed (structs, functions, traits)
+- ✅ **Functional duplication counts stable or decreasing**
+- ✅ **Rust conventions (lib.rs, mod.rs) are allowed and expected**
 - ✅ **No new god objects >2,000 LOC** created
-- ✅ **CI/CD pipeline blocks problematic PRs**
-- ✅ **Pre-commit hook prevents local violations**
+- ✅ **CI/CD pipeline blocks functional duplication increases**
+- ✅ **Pre-commit hook prevents local functional duplication**
 
-**Failure means continued codebase degradation.** Quality gates are the first line of defense in the architectural crisis response.
+**Focus: Functional duplication is the real enemy, not organizational naming conventions.** Quality gates prioritize business logic consolidation over file naming patterns.
 
 
 

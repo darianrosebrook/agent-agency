@@ -10,7 +10,7 @@
 
 pub mod core;
 pub mod health_metrics;
-pub mod alerts;
+pub mod health_alerts;
 pub mod orchestrator;
 pub mod agent_integration;
 pub mod health_types;
@@ -20,10 +20,10 @@ pub use core::{
     ErrorRateTracker, ErrorStats, RedisConnectionManager, ResponseTimePercentiles, ResponseTimeTracker
 };
 pub use health_metrics::MetricsCollector;
-pub use alerts::{AlertStatistics, AlertSummary, AlertSummaryItem, AlertTrend};
+pub use health_alerts::{AlertStatistics, AlertSummary, AlertSummaryItem, AlertTrend};
 pub use orchestrator::SystemHealthMonitor;
 
 #[cfg(feature = "agent-agency-observability")]
 pub use agent_integration::{AgentIntegratedHealthMonitor, AgentIntegrationConfig, HealthSummary};
 
-pub use health_health_types::*;
+pub use health_types::*;

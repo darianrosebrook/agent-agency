@@ -3,7 +3,7 @@
 //! This module provides a safe interface to Core ML framework functionality
 //! for Apple Neural Engine operations, avoiding direct private framework usage.
 
-use crate::ane::errors::{ANEError, Result};
+use crate::ane::ane_errors::{ANEError, Result};
 use crate::inference::{DType, TensorSpec};
 use std::path::Path;
 use std::marker::PhantomData;

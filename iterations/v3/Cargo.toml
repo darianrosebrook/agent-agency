@@ -3,20 +3,24 @@ resolver = "2"
 members = [
     "common-types",  # 🏗️ NEW: Shared abstractions and traits to reduce duplication
     "common-patterns",  # 🛠️ NEW: Shared patterns, traits, and utilities
+    "common-pipeline",  # 🔄 NEW: Unified pipeline abstractions for all pipeline types
     "quality-gates",  # 🔍 NEW: Automated quality gates to prevent god objects and duplications
     "agent-data-processing",  # 🗂️ NEW: Unified data processing pipeline consolidating ingestors/enrichers/indexers/knowledge/file-ops
-    "apple-silicon",  # Re-enabled after fixing torch integration and type imports
+    # "apple-silicon",  # Temporarily disabled - compilation issues after consolidation
     "caws/runtime-validator",  # Consolidated CAWS validation service
-    "agent-workers",  # 🔄 NEW: Consolidated MCP-based worker system
+    # "agent-workers",  # 🔄 NEW: Consolidated MCP-based worker system - temporarily disabled
     "research",
     "agent-mcp",  # Consolidated MCP implementation
+    "agent-model-management",  # 🤖 NEW: Unified model lifecycle, inference, and deployment management
+    "agent-orchestration",  # 🎭 NEW: Unified orchestration and council decision-making system
+    "resource-manager",  # 📊 NEW: Centralized resource lifecycle management and adaptive allocation
+    "telemetry",  # 📈 NEW: Unified observability, monitoring, and telemetry services
     "provenance",
     "claim-extraction",
     "reflexive-learning",
     "model-benchmarking",  # Re-enabled - depends on council ✓, claim-extraction ✓, apple-silicon ✓
     "security-policy-enforcer",  # Re-enabled - depends on council ✓, provenance ✓
     "minimal-diff-evaluator",  # Re-enabled - depends on council ✓, workers ✓, security-policy-enforcer ✓
-    "context-preservation-engine",  # Re-enabled - depends on research ✓, workers ✓, security-policy-enforcer ✓
     "embedding-service",  # Re-enabled - standalone with ONNX/Candle dependencies
     "system-health-monitor",  # Re-enabled - minimal features first
     "workspace-state-manager",  # Re-enabled - standalone with git2 and database
@@ -32,10 +36,6 @@ members = [
     "council",  # Re-enabled - compiles successfully
     "caching",  # Re-enabled - compiles successfully
     "planning-agent",  # Re-enabled - application layer
-    "ingestors",  # Re-enabled - application layer
-    "enrichers",  # Re-enabled - application layer
-    "indexers",  # Re-enabled - application layer
-    "knowledge-ingestor",  # Re-enabled - application layer
     "file_ops",  # Re-enabled - simple implementation
     "cli",  # Re-enabled - application layer
     "api-server",  # Re-enabled - has compilation errors but doesn't cause workspace hangs
@@ -43,7 +43,6 @@ members = [
     "runtime-optimization",  # Re-enabled - advanced services
     "tool-ecosystem",  # Re-enabled - has compilation errors but doesn't cause workspace hangs
     "federated-learning",  # Re-enabled - advanced services
-    "model-hotswap",  # Re-enabled - advanced services
     "production",  # Re-enabled - advanced services
     "e2e-tests",
     "self-prompting-agent"

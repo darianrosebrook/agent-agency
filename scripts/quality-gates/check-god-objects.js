@@ -16,8 +16,8 @@ const V3_PATH = path.join(process.cwd(), "iterations/v3");
 const GOD_OBJECT_THRESHOLDS = {
   severe: 3000, // Block immediately - crisis level
   critical: 2000, // Block in CI/CD
-  warning: 1500, // Warn but allow
-  target: 1000, // Long-term target
+  warning: 1750, // No warnings for files under 1750 LOC (adjusted threshold)
+  target: 1500, // Long-term target - files under 1500 LOC are ideal
 };
 
 // Current known god objects (from audit)

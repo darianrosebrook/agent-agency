@@ -6,7 +6,7 @@
 
 pub mod types;
 pub mod storage;
-pub mod analyzer;
+pub mod learning_analyzer;
 pub mod routing;
 pub mod resources;
 pub mod trends;
@@ -14,7 +14,7 @@ pub mod trends;
 // Re-export main types and interfaces
 pub use types::*;
 pub use storage::{LearningSignalStorage, InMemoryLearningSignalStorage, HistoricalResourceData};
-pub use analyzer::LearningSignalAnalyzer;
+pub use learning_analyzer::LearningSignalAnalyzer;
 pub use routing::RoutingEngine;
 pub use resources::ResourceManager;
 pub use trends::TrendAnalyzer;

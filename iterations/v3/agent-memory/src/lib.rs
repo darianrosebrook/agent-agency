@@ -24,6 +24,19 @@ pub mod temporal_reasoning;
 pub mod prompting_types;
 pub mod workspace_registry;
 
+// New feature modules for enhanced memory capabilities
+pub mod vector_search;
+pub mod consolidation;
+pub mod long_term_management;
+
+// Enhanced memory system with new capabilities
+pub struct EnhancedMemorySystem {
+    base_system: MemorySystem,
+    vector_search: crate::vector_search::search_engine::InMemoryVectorSearchEngine,
+    consolidation: crate::consolidation::consolidation_engine::MemoryConsolidationEngine,
+    long_term_manager: crate::long_term_management::lifecycle::MemoryLifecycleManager,
+}
+
 #[cfg(feature = "embeddings")]
 pub mod embedding_integration;
 

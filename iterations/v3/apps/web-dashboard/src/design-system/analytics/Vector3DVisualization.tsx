@@ -239,20 +239,29 @@ export function Vector3DVisualization({
 }: Vector3DVisualizationProps) {
   const [selectedVector, setSelectedVector] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [processedVectors, setProcessedVectors] = useState<any[]>([]);
 
   // Process vectors for 3D projection
   useEffect(() => {
     if (vectors.length === 0) {
       setIsLoading(false);
+      setProcessedVectors([]);
       return;
     }
 
-    // Apply dimensionality reduction if needed
-    const processedVectors = vectors.map(vector => ({
-      ...vector,
-      position: projectTo3D(vector.embedding, projection)
-    }));
+    setIsLoading(true);
 
+    // Apply dimensionality reduction if needed
+    const processed = vectors.map(vector => {
+      // Use existing position if available, otherwise project from embedding
+      const position = vector.position || projectTo3D(vector.embedding, projection);
+      return {
+        ...vector,
+        position
+      };
+    });
+
+    setProcessedVectors(processed);
     setIsLoading(false);
   }, [vectors, projection]);
 
@@ -293,17 +302,20 @@ export function Vector3DVisualization({
         )}
 
         <div className={styles.canvasContainer}>
-          <Canvas
-            camera={{ position: [5, 5, 5], fov: 60 }}
-            style={{ width: '100%', height: '100%' }}
-          >
-            <Scene
-              vectors={vectors}
-              clusters={clusters}
-              onVectorClick={handleVectorClick}
-              onVectorHover={handleVectorHover}
-            />
-          </Canvas>
+          {processedVectors.length > 0 && (
+            <Canvas
+              camera={{ position: [5, 5, 5], fov: 60 }}
+              style={{ width: '100%', height: '100%' }}
+              gl={{ antialias: true, alpha: true, preserveDrawingBuffer: true }}
+            >
+              <Scene
+                vectors={processedVectors}
+                clusters={clusters}
+                onVectorClick={handleVectorClick}
+                onVectorHover={handleVectorHover}
+              />
+            </Canvas>
+          )}
         </div>
 
         {/* Vector details panel */}

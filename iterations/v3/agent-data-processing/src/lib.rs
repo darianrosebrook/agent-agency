@@ -9,11 +9,13 @@
 //! 3. **Indexing** - Create searchable indexes (vector, full-text, graph)
 //! 4. **Knowledge** - Integrate with external knowledge sources (Wikidata, WordNet)
 //! 5. **Operations** - Safe file/workspace operations with rollback capabilities
+//! 6. **Context** - Context preservation, working memory management, and lifecycle folding
 //!
 //! ## Integration Hooks
 //!
 //! - **Agent Memory**: Store processed data, retrieve contextual memories, knowledge graphs
 //! - **Workspace State**: Track processing changes, enable rollbacks, manage workspace views
+//! - **Context Management**: Preserve, retrieve, and manage working memory contexts
 //!
 //! ## Architecture
 //!
@@ -29,6 +31,7 @@ pub mod knowledge;
 pub mod operations;
 pub mod pipeline;
 pub mod data_processing_types;
+pub mod context;
 
 #[cfg(feature = "memory-integration")]
 pub mod memory_hooks;
@@ -40,6 +43,10 @@ pub mod workspace_hooks;
 pub use pipeline::{DataPipeline, PipelineConfig, PipelineResult};
 pub use data_processing_types::ProcessingStats;
 pub use data_processing_types::*;
+pub use context::{ContextManager, ContextConfig, ContextData, ContextStats};
+
+// Re-export block and enrichment types for orchestration
+pub use data_processing_types::{Block, BlockData, EnrichedBlock, EnrichedContent, ExtractedEntity, VisualElement, VisualElementType, ExtractedTopic, TextPosition};
 
 // Re-export stage traits and implementations
 pub use enrichment::{EnrichmentStage, EnrichmentResult};
@@ -48,6 +55,28 @@ pub use ingestion::{IngestionStage, IngestionResult};
 pub use data_processing_types::DataSource;
 pub use knowledge::{KnowledgeStage, KnowledgeResult, KnowledgeSource};
 pub use operations::{OperationsStage, OperationResult, FileOperation};
+
+// Consolidated enrichment functionality from enrichers crate
+pub use enrichment::{
+    AsrEnricher, VisionEnricher, EntityEnricher, VisualCaptioningEnricher,
+    CircuitBreaker, CircuitState, EnrichmentCircuitBreakerConfig,
+    AsrEnrichmentResult, VisionEnrichmentResult, EntityExtractionResult, VisualCaptioningResult,
+    UnifiedEnrichmentStage, DefaultEnrichmentStage,
+};
+
+// Consolidated ingestion functionality from ingestors crate
+pub use ingestion::{
+    CaptionsIngestor, DiagramsIngestor, VideoIngestor, SlidesIngestor,
+    FileWatcher, UnifiedIngestor,
+};
+
+// Consolidated indexing functionality from indexers crate
+pub use indexing::{
+    Bm25Indexer, HnswIndexer, DatabasePool, VectorStore, JobScheduler,
+    JobType, JobPriority, JobStatus, UnifiedIndexer, SearchQuery, SearchResult,
+    VectorQuery, VectorSearchResult, HybridSearchResult, UnifiedIndexerStats,
+    IngestionJob, JobSchedulerStats,
+};
 
 /// Unified data processing result type
 pub type DataProcessingResult<T> = Result<T, DataProcessingError>;

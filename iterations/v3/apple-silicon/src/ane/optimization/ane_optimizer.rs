@@ -3,7 +3,7 @@
 //! Provides intelligent optimization for Apple Neural Engine performance,
 //! including model compilation, memory management, and inference tuning.
 
-use crate::ane::errors::{ANEError, Result};
+use crate::ane::ane_errors::{ANEError, Result};
 use crate::ane::monitoring::yolo_monitor::{YOLOPerformanceMonitor, YOLOPerformanceStats, YOLOPerformanceThresholds};
 use crate::telemetry::TelemetryCollector;
 use std::collections::HashMap;

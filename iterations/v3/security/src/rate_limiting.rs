@@ -320,15 +320,6 @@ impl DistributedRateLimiter {
     }
 }
 
-/// Rate limit configuration for different endpoints
-#[derive(Debug, Clone)]
-pub struct RateLimitConfig {
-    pub endpoint: String,
-    pub requests_per_minute: u32,
-    pub burst_limit: u32,
-    pub window_seconds: u64,
-}
-
 impl Default for RateLimitConfig {
     fn default() -> Self {
         Self {

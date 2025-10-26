@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     const type = searchParams.get('type') || 'current'; // current, history, thermal, models
 
     switch (type) {
-      case 'current':
+      case 'current': {
         const currentMetrics = await appleSiliconApiClient.getCurrentMetrics();
 
         // Broadcast metrics update to SSE clients
@@ -34,8 +34,9 @@ export async function GET(request: NextRequest) {
           success: true,
           data: currentMetrics
         });
+      }
 
-      case 'history':
+      case 'history': {
         const period = searchParams.get('period') || '1h';
         const resolution = searchParams.get('resolution') || '5m';
         const historyMetrics = await appleSiliconApiClient.getHistoricalMetrics(period as '1h' | '6h' | '24h' | '7d', resolution as '1s' | '10s' | '1m' | '5m');
@@ -43,8 +44,9 @@ export async function GET(request: NextRequest) {
           success: true,
           data: historyMetrics
         });
+      }
 
-      case 'thermal':
+      case 'thermal': {
         const thermalMetrics = await appleSiliconApiClient.getThermalStatus();
 
         // Broadcast thermal update to SSE clients
@@ -57,13 +59,15 @@ export async function GET(request: NextRequest) {
           success: true,
           data: thermalMetrics
         });
+      }
 
-      case 'models':
+      case 'models': {
         const modelMetrics = await appleSiliconApiClient.getActiveModels();
         return NextResponse.json({
           success: true,
           data: modelMetrics
         });
+      }
 
       default:
         return NextResponse.json(

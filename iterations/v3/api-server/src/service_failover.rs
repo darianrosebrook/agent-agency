@@ -11,7 +11,8 @@ use tokio::time;
 use serde::{Deserialize, Serialize};
 use tracing::{info, warn, error};
 
-use crate::circuit_breaker::{CircuitBreaker, CircuitBreakerConfig};
+use crate::api_circuit_breaker::CircuitBreaker;
+use agent_agency_common_types::common_config::CircuitBreakerConfig;
 
 /// Service types in the system
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -27,7 +28,7 @@ pub enum ServiceType {
 
 /// Service instance information
 #[derive(Debug, Clone)]
-pub struct ApiApiServiceInstance {
+pub struct ApiServiceInstance {
     pub id: String,
     pub service_type: ServiceType,
     pub endpoint: String,
@@ -141,8 +142,8 @@ impl ServiceFailoverManager {
 
         // Create circuit breaker for this service
         let cb_config = CircuitBreakerConfig {
-            failure_threshold: self.config.failure_threshold as u64,
-            recovery_timeout_secs: self.config.recovery_time_secs,
+            failure_threshold: self.config.failure_threshold,
+            recovery_timeout_ms: self.config.recovery_time_secs,
             ..Default::default()
         };
         let circuit_breaker = CircuitBreaker::with_config(cb_config);
@@ -604,7 +605,7 @@ impl ServiceFailoverManager {
     }
 
     /// Get circuit breaker status for a service
-    pub async fn get_circuit_breaker_status(&self, service_id: &str) -> Option<crate::circuit_breaker::CircuitBreakerMetrics> {
+    pub async fn get_circuit_breaker_status(&self, service_id: &str) -> Option<crate::api_circuit_breaker::CircuitBreakerMetrics> {
         let circuit_breakers = self.circuit_breakers.read().await;
         if let Some(cb) = circuit_breakers.get(service_id) {
             Some(cb.metrics().await)

@@ -7,9 +7,8 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Text } from '@/design-system/primitives';
-import { Button } from '@/design-system/primitives';
+import { useState, useEffect, useCallback } from 'react';
+import { Text, Button } from '@/design-system/primitives';
 import { MetricCard, AnalyticsGrid } from '@/design-system/analytics';
 import {
   Activity,
@@ -63,9 +62,9 @@ export default function EnhancedAnalyticsPage() {
   // Fetch initial data
   useEffect(() => {
     fetchAnalyticsData();
-  }, []);
+  }, [fetchAnalyticsData]);
 
-  const fetchAnalyticsData = async () => {
+  const fetchAnalyticsData = useCallback(async () => {
     try {
       setRefreshing(true);
       actions.clearErrors();
@@ -100,7 +99,7 @@ export default function EnhancedAnalyticsPage() {
       actions.setLoading('forecasting', false);
       setRefreshing(false);
     }
-  };
+  }, [actions]);
 
   const handleRefresh = async () => {
     await fetchAnalyticsData();
@@ -278,9 +277,9 @@ export default function EnhancedAnalyticsPage() {
             columns={3}
             gap="md"
           >
-            {overviewMetrics.map((metric, index) => (
+            {overviewMetrics.map((metric) => (
               <MetricCard
-                key={index}
+                key={metric.title}
                 title={metric.title}
                 value={metric.value}
                 subtitle={metric.subtitle}

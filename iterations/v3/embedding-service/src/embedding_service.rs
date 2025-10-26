@@ -1,6 +1,6 @@
 //! Main embedding service implementation
 
-use crate::cache::*;
+use crate::embedding_cache::*;
 use crate::provider::*;
 use crate::similarity::*;
 use crate::embedding_types::*;

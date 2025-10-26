@@ -1,0 +1,184 @@
+//! Agent Model Management - Unified model lifecycle, inference, and deployment
+//!
+//! This crate consolidates model management functionality from agent-models, model-hotswap,
+//! and inference-engines into a unified service for:
+//!
+//! ## Core Capabilities
+//!
+//! 1. **Model Lifecycle Management** - Loading, versioning, and lifecycle management
+//! 2. **Inference Engines** - Backend-agnostic inference execution
+//! 3. **Hot-Swapping & Deployment** - Seamless model replacement and A/B testing
+//! 4. **Performance Monitoring** - Real-time metrics and optimization
+//! 5. **Load Balancing** - Intelligent request routing and traffic management
+//!
+//! ## Architecture
+//!
+//! The crate provides a modular architecture where different concerns are separated:
+//!
+//! - `models/` - Core model lifecycle and metadata management
+//! - `inference/` - Backend implementations and inference execution
+//! - `deployment/` - Hot-swapping, versioning, and traffic management
+//! - `monitoring/` - Performance tracking and optimization
+//!
+//! @author @darianrosebrook
+
+pub mod models;
+pub mod inference;
+pub mod deployment;
+pub mod monitoring;
+pub mod types;
+
+pub use models::*;
+pub use inference::*;
+pub use deployment::*;
+pub use monitoring::*;
+pub use types::*;
+
+// Re-export load balancer for compatibility with existing demos
+pub use deployment::load_balancer::LoadBalancer;
+
+/// Main model management orchestrator
+///
+/// Provides unified access to all model management capabilities
+#[derive(Debug)]
+pub struct ModelManager {
+    /// Model registry and lifecycle management
+    model_registry: models::ModelRegistry,
+
+    /// Inference engine manager
+    inference_manager: inference::InferenceManager,
+
+    /// Deployment and hot-swap orchestrator
+    deployment_orchestrator: deployment::DeploymentOrchestrator,
+
+    /// Performance monitoring
+    performance_monitor: monitoring::PerformanceMonitor,
+}
+
+impl ModelManager {
+    /// Create a new model manager
+    pub async fn new() -> Result<Self, ModelManagementError> {
+        let model_registry = models::ModelRegistry::new();
+        let inference_manager = inference::InferenceManager::new();
+        let deployment_orchestrator = deployment::DeploymentOrchestrator::new().await?;
+        let performance_monitor = monitoring::PerformanceMonitor::new();
+
+        Ok(Self {
+            model_registry,
+            inference_manager,
+            deployment_orchestrator,
+            performance_monitor,
+        })
+    }
+
+    /// Load and prepare a model for inference
+    pub async fn load_model(&self, model_id: &str, config: ModelConfig) -> Result<ModelHandle, ModelManagementError> {
+        // Load model metadata
+        let model_info = self.model_registry.get_model(model_id).await?
+            .ok_or_else(|| ModelManagementError::ModelNotFound(model_id.to_string()))?;
+
+        // Prepare inference backend
+        let backend = self.inference_manager.get_or_create_backend(&model_info.model_type).await?;
+
+        // Register with deployment system
+        self.deployment_orchestrator.register_model(model_id, model_info.clone()).await?;
+
+        Ok(ModelHandle {
+            model_id: model_id.to_string(),
+            backend_id: backend.id().to_string(),
+        })
+    }
+
+    /// Execute inference on a loaded model
+    pub async fn execute_inference(
+        &self,
+        model_handle: &ModelHandle,
+        input: InferenceInput,
+    ) -> Result<InferenceOutput, ModelManagementError> {
+        // Route through deployment system for A/B testing, load balancing, etc.
+        let routed_request = self.deployment_orchestrator.route_inference_request(
+            &model_handle.model_id,
+            input,
+        ).await?;
+
+        // Execute inference
+        let result = self.inference_manager.execute_inference(&routed_request).await?;
+
+        // Record performance metrics
+        self.performance_monitor.record_inference(&model_handle.model_id, &result).await?;
+
+        Ok(result)
+    }
+
+    /// Perform hot-swap of a model
+    pub async fn hot_swap_model(
+        &self,
+        model_id: &str,
+        new_version: &str,
+        strategy: HotSwapStrategy,
+    ) -> Result<HotSwapResult, ModelManagementError> {
+        self.deployment_orchestrator.perform_hot_swap(model_id, new_version, strategy).await
+    }
+
+    /// Get model performance metrics
+    pub async fn get_model_metrics(&self, model_id: &str) -> Result<ModelMetrics, ModelManagementError> {
+        self.performance_monitor.get_model_metrics(model_id).await
+    }
+
+    /// Get deployment status for a model
+    pub async fn get_deployment_status(&self, model_id: &str) -> Result<DeploymentStatus, ModelManagementError> {
+        self.deployment_orchestrator.get_deployment_status(model_id).await
+    }
+}
+
+/// Handle for a loaded model
+#[derive(Debug, Clone)]
+pub struct ModelHandle {
+    /// Model identifier
+    pub model_id: String,
+    /// Backend identifier
+    pub backend_id: String,
+}
+
+/// Comprehensive error type for model management operations
+#[derive(Debug, thiserror::Error)]
+pub enum ModelManagementError {
+    #[error("Model not found: {0}")]
+    ModelNotFound(String),
+
+    #[error("Model already exists: {0}")]
+    ModelAlreadyExists(String),
+
+    #[error("Invalid model configuration: {0}")]
+    InvalidConfiguration(String),
+
+    #[error("Inference backend error: {0}")]
+    InferenceError(String),
+
+    #[error("Deployment error: {0}")]
+    DeploymentError(String),
+
+    #[error("Hot-swap failed: {0}")]
+    HotSwapError(String),
+
+    #[error("Database error: {0}")]
+    Database(#[from] sqlx::Error),
+
+    #[error("I/O error: {0}")]
+    Io(#[from] std::io::Error),
+
+    #[error("Serialization error: {0}")]
+    Serialization(#[from] serde_json::Error),
+
+    #[error("HTTP error: {0}")]
+    Http(String),
+
+    #[error("Unknown model management error: {0}")]
+    Other(String),
+}
+
+impl From<anyhow::Error> for ModelManagementError {
+    fn from(err: anyhow::Error) -> Self {
+        ModelManagementError::Other(err.to_string())
+    }
+}

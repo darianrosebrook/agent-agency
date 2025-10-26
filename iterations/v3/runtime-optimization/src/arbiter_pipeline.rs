@@ -2,6 +2,7 @@
 //!
 //! Optimizes the arbiter's decision pipeline for <50ms classification and routing,
 //! supporting 1000+ tasks/minute sustained throughput while maintaining CAWS compliance.
+//! Now uses common-pipeline framework for standardized patterns.
 
 use anyhow::{Result, Context};
 use serde::{Deserialize, Serialize};
@@ -9,10 +10,17 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, info, warn};
+use async_trait::async_trait;
+use common_pipeline::{SequentialPipeline, SequentialPipelineConfig, PipelineStage as CommonPipelineStage, ExecutablePipeline};
 
 /// Configuration for arbiter decision pipeline optimization
+/// Now wraps SequentialPipelineConfig with domain-specific settings
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DecisionPipelineConfig {
+    /// Base sequential pipeline configuration
+    #[serde(flatten)]
+    pub base: SequentialPipelineConfig,
+    /// Domain-specific configuration
     /// Target decision latency (ms)
     pub target_latency_ms: u64,
     /// Maximum concurrent decisions
@@ -28,6 +36,7 @@ pub struct DecisionPipelineConfig {
 impl Default for DecisionPipelineConfig {
     fn default() -> Self {
         Self {
+            base: SequentialPipelineConfig::default(),
             target_latency_ms: 50,
             max_concurrent_decisions: 100,
             cache_size: 1000,
@@ -38,15 +47,29 @@ impl Default for DecisionPipelineConfig {
 }
 
 /// Arbiter pipeline optimizer for sub-50ms decisions
+/// Now wraps SequentialPipeline with domain-specific decision logic
 #[derive(Debug)]
 pub struct ArbiterPipelineOptimizer {
     config: DecisionPipelineConfig,
+    /// Common sequential pipeline for standardized execution
+    sequential_pipeline: Arc<SequentialPipeline<DecisionInput, DecisionResult>>,
     /// Decision cache for frequently seen task patterns
     decision_cache: Arc<RwLock<lru::LruCache<String, DecisionResult>>>,
     /// Performance metrics
     metrics: Arc<RwLock<PipelineMetrics>>,
     /// Active decision workers
     workers: Vec<tokio::task::JoinHandle<()>>,
+}
+
+/// Input for decision pipeline
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DecisionInput {
+    /// Task description
+    pub task_description: String,
+    /// Task metadata
+    pub metadata: HashMap<String, serde_json::Value>,
+    /// Priority level
+    pub priority: u8,
 }
 
 /// Cached decision result
@@ -62,6 +85,117 @@ pub struct DecisionResult {
     pub confidence: f64,
     /// Cached timestamp
     pub timestamp: chrono::DateTime<chrono::Utc>,
+}
+
+/// Decision pipeline stages
+#[derive(Debug, Clone)]
+pub enum DecisionStage {
+    CacheLookup,
+    Classification,
+    RiskAssessment,
+    WorkerSelection,
+    SpeculativeExecution,
+}
+
+/// Adapter to convert decision stages to common pipeline stages
+pub struct DecisionStageAdapter {
+    stage_type: DecisionStage,
+    cache: Option<Arc<RwLock<lru::LruCache<String, DecisionResult>>>>,
+}
+
+impl DecisionStageAdapter {
+    pub fn new(
+        stage_type: DecisionStage,
+        cache: Option<Arc<RwLock<lru::LruCache<String, DecisionResult>>>>,
+    ) -> Self {
+        Self { stage_type, cache }
+    }
+}
+
+#[async_trait]
+impl CommonPipelineStage<DecisionInput, DecisionResult> for DecisionStageAdapter {
+    fn name(&self) -> &str {
+        match self.stage_type {
+            DecisionStage::CacheLookup => "cache_lookup",
+            DecisionStage::Classification => "classification",
+            DecisionStage::RiskAssessment => "risk_assessment",
+            DecisionStage::WorkerSelection => "worker_selection",
+            DecisionStage::SpeculativeExecution => "speculative_execution",
+        }
+    }
+
+    async fn process(&self, input: DecisionInput) -> common_pipeline::PipelineResult<DecisionResult> {
+        match self.stage_type {
+            DecisionStage::CacheLookup => {
+                if let Some(cache) = &self.cache {
+                    let cache_key = format!("{}:{}", input.task_description, input.priority);
+                    let mut cache = cache.write().await;
+                    if let Some(cached_result) = cache.get(&cache_key) {
+                        return Ok(cached_result.clone());
+                    }
+                }
+                // No cache hit, pass through to next stage
+                Err(common_pipeline::PipelineError::StageError {
+                    stage: "cache_lookup".to_string(),
+                    message: "Cache miss, continue to classification".to_string(),
+                })
+            }
+            DecisionStage::Classification => {
+                // Simple classification based on keywords
+                let task_type = if input.task_description.contains("planning") {
+                    "planning"
+                } else if input.task_description.contains("execution") {
+                    "execution"
+                } else if input.task_description.contains("monitoring") {
+                    "monitoring"
+                } else {
+                    "general"
+                };
+
+                Ok(DecisionResult {
+                    task_type: task_type.to_string(),
+                    risk_tier: "unknown".to_string(),
+                    worker_pool: "default".to_string(),
+                    confidence: 0.5,
+                    timestamp: chrono::Utc::now(),
+                })
+            }
+            DecisionStage::RiskAssessment => {
+                // Placeholder risk assessment - would use actual risk analysis
+                Ok(DecisionResult {
+                    task_type: input.task_description.clone(),
+                    risk_tier: "medium".to_string(),
+                    worker_pool: "default".to_string(),
+                    confidence: 0.7,
+                    timestamp: chrono::Utc::now(),
+                })
+            }
+            DecisionStage::WorkerSelection => {
+                // Placeholder worker selection - would use actual worker matching
+                Ok(DecisionResult {
+                    task_type: input.task_description.clone(),
+                    risk_tier: "medium".to_string(),
+                    worker_pool: "general_pool".to_string(),
+                    confidence: 0.8,
+                    timestamp: chrono::Utc::now(),
+                })
+            }
+            DecisionStage::SpeculativeExecution => {
+                // Placeholder speculative execution - would implement actual speculative logic
+                Ok(DecisionResult {
+                    task_type: input.task_description.clone(),
+                    risk_tier: "medium".to_string(),
+                    worker_pool: "general_pool".to_string(),
+                    confidence: 0.9,
+                    timestamp: chrono::Utc::now(),
+                })
+            }
+        }
+    }
+
+    fn can_handle(&self, _input: &DecisionInput) -> bool {
+        true
+    }
 }
 
 /// Pipeline performance metrics
@@ -97,8 +231,42 @@ impl ArbiterPipelineOptimizer {
             last_updated: chrono::Utc::now(),
         }));
 
+        // Create sequential pipeline with decision stages
+        let sequential_config = config.clone().into();
+        let mut sequential_pipeline = SequentialPipeline::new(sequential_config);
+
+        // Add decision stages
+        let cache_ref = Some(Arc::clone(&decision_cache));
+        sequential_pipeline.add_stage(Box::new(DecisionStageAdapter::new(
+            DecisionStage::CacheLookup,
+            cache_ref,
+        ))).context("Failed to add cache lookup stage")?;
+
+        sequential_pipeline.add_stage(Box::new(DecisionStageAdapter::new(
+            DecisionStage::Classification,
+            None,
+        ))).context("Failed to add classification stage")?;
+
+        sequential_pipeline.add_stage(Box::new(DecisionStageAdapter::new(
+            DecisionStage::RiskAssessment,
+            None,
+        ))).context("Failed to add risk assessment stage")?;
+
+        sequential_pipeline.add_stage(Box::new(DecisionStageAdapter::new(
+            DecisionStage::WorkerSelection,
+            None,
+        ))).context("Failed to add worker selection stage")?;
+
+        if config.speculative_execution {
+            sequential_pipeline.add_stage(Box::new(DecisionStageAdapter::new(
+                DecisionStage::SpeculativeExecution,
+                None,
+            ))).context("Failed to add speculative execution stage")?;
+        }
+
         Ok(Self {
             config,
+            sequential_pipeline: Arc::new(sequential_pipeline),
             decision_cache,
             metrics,
             workers: Vec::new(),
@@ -130,24 +298,21 @@ impl ArbiterPipelineOptimizer {
     pub async fn make_decision(&self, task_description: &str, context: &str) -> Result<DecisionResult> {
         let start_time = std::time::Instant::now();
 
-        // Create cache key from task description
-        let cache_key = self.create_cache_key(task_description, context);
-
-        // Check cache first
-        if let Some(cached_result) = self.check_cache(&cache_key).await {
-            let latency = start_time.elapsed().as_millis() as f64;
-            self.update_metrics(true, latency, cached_result.confidence).await;
-            return Ok(cached_result);
-        }
-
-        // Perform decision with speculative execution if enabled
-        let result = if self.config.speculative_execution {
-            self.make_speculative_decision(task_description, context).await?
-        } else {
-            self.make_standard_decision(task_description, context).await?
+        // Create decision input
+        let input = DecisionInput {
+            task_description: task_description.to_string(),
+            metadata: HashMap::from([
+                ("context".to_string(), serde_json::Value::String(context.to_string())),
+            ]),
+            priority: 1, // Default priority
         };
 
+        // Execute through sequential pipeline
+        let result = self.sequential_pipeline.execute(input).await
+            .map_err(|e| anyhow::anyhow!("Pipeline execution failed: {}", e))?;
+
         // Cache the result
+        let cache_key = self.create_cache_key(task_description, context);
         self.cache_result(cache_key, result.clone()).await;
 
         let latency = start_time.elapsed().as_millis() as f64;

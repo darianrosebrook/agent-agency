@@ -36,7 +36,12 @@ export class ChatApiClient {
     request: CreateSessionRequest = {}
   ): Promise<CreateSessionResponse> {
     try {
-      const response = await apiClient.request<CreateSessionResponse>(
+      const response = await apiClient.request<{
+        sessionId: string;
+        sessionUuid: string;
+        createdAt: string;
+        status: string;
+      }>(
         "/chat/session",
         {
           method: "POST",
@@ -44,18 +49,52 @@ export class ChatApiClient {
         }
       );
 
-      // If no websocket_url provided by backend, construct it
-      if (!response.websocket_url && response.session?.id) {
-        const v3BackendHost = process.env.V3_BACKEND_HOST ?? "http://localhost:8080";
-        response.websocket_url = `ws://${v3BackendHost.replace(/^https?:\/\//, "")}/api/v1/chat/ws/${response.session.id}`;
-      }
+      // Construct the WebSocket URL
+      const v3BackendHost = process.env.V3_BACKEND_HOST ?? "http://localhost:8080";
+      const websocket_url = `ws://${v3BackendHost.replace(/^https?:\/\//, "")}/api/v1/chat/ws/${response.sessionId}`;
 
-      return response;
+      return {
+        session: {
+          id: response.sessionId,
+          uuid: response.sessionUuid,
+          created_at: response.createdAt,
+          status: response.status,
+        },
+        websocket_url,
+        config: {
+          heartbeat_interval: 30000,
+          reconnect_attempts: 5,
+        },
+      };
     } catch (error) {
       console.error("Failed to create chat session:", error);
       throw new ChatApiError(
         "server_error",
         "Failed to create chat session",
+        true
+      );
+    }
+  }
+
+  // Get chat messages for a session
+  async getMessages(
+    sessionId: string,
+    options: { limit?: number; since?: string } = {}
+  ): Promise<{ session_id: string; messages: ChatMessage[]; total_count: number }> {
+    try {
+      const params = new URLSearchParams();
+      if (options.limit) params.set("limit", options.limit.toString());
+      if (options.since) params.set("since", options.since);
+
+      const query = params.toString();
+      const url = `/chat/messages/${sessionId}${query ? `?${query}` : ""}`;
+
+      return await apiClient.request(url);
+    } catch (error) {
+      console.error("Failed to get chat messages:", error);
+      throw new ChatApiError(
+        "server_error",
+        "Failed to retrieve chat messages",
         true
       );
     }

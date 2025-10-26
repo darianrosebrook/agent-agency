@@ -3,11 +3,12 @@
 //! This module provides the core inference logic for YOLO models,
 //! including image preprocessing, model execution, and detection decoding.
 
-use crate::ane::errors::{ANEError, Result};
+use crate::ane::ane_errors::{ANEError, Result};
 use crate::ane::models::yolo_model::{
-    LoadedYOLOModel, YOLODetectionResult, Detection, BoundingBox,
+    LoadedYOLOModel, YOLODetectionResult, Detection,
     YOLOInferenceOptions,
 };
+use agent_agency_common_types::BoundingBox;
 use crate::ane::compat::coreml::coreml;
 use crate::ane::infer::execute::{execute_inference, InferenceOptions, InferenceResult};
 use image::{DynamicImage, ImageBuffer, Rgb};
@@ -286,7 +287,7 @@ pub fn create_yolo_executor(model: LoadedYOLOModel) -> YOLOInferenceExecutor {
 mod tests {
     use super::*;
     use crate::telemetry::TelemetryCollector;
-    use crate::ane::circuit_breaker::{CircuitBreaker, CircuitBreakerConfig};
+    use crate::ane::ane_circuit_breaker::{CircuitBreaker, CircuitBreakerConfig};
     use crate::ane::models::YOLOConfig;
 
     #[tokio::test]

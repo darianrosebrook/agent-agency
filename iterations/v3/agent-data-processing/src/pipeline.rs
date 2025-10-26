@@ -1,32 +1,44 @@
 //! Core data processing pipeline
 //!
 //! Defines the pluggable pipeline architecture where stages can be
-//! composed and executed in sequence.
+//! composed and executed in sequence. Now uses common-pipeline framework
+//! for standardized patterns while maintaining domain-specific functionality.
 
 use crate::data_processing_types::*;
 use crate::{DataProcessingResult, DataProcessingError};
+use common_pipeline::{
+    SequentialPipeline, SequentialPipelineConfig, PipelineStage as CommonPipelineStage,
+    ExecutablePipeline, PipelineResult as CommonPipelineResult, PipelineHealth,
+};
 use std::collections::HashMap;
 use async_trait::async_trait;
+use std::sync::Arc;
 
 /// Configuration for the data processing pipeline
+/// Now wraps SequentialPipelineConfig with domain-specific settings
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct PipelineConfig {
+    /// Base sequential pipeline configuration
+    #[serde(flatten)]
+    pub base: SequentialPipelineConfig,
+    /// Domain-specific configuration
     pub max_concurrent_operations: usize,
-    pub processing_timeout_seconds: u64,
-    pub enable_circuit_breaker: bool,
-    pub enable_metrics: bool,
-    pub enable_tracing: bool,
+    pub enable_domain_specific_features: bool,
 }
 
 impl Default for PipelineConfig {
     fn default() -> Self {
         Self {
+            base: SequentialPipelineConfig::default(),
             max_concurrent_operations: 10,
-            processing_timeout_seconds: 300, // 5 minutes
-            enable_circuit_breaker: true,
-            enable_metrics: true,
-            enable_tracing: true,
+            enable_domain_specific_features: true,
         }
+    }
+}
+
+impl From<PipelineConfig> for SequentialPipelineConfig {
+    fn from(config: PipelineConfig) -> Self {
+        config.base
     }
 }
 
@@ -39,20 +51,145 @@ pub struct PipelineResult {
     pub stats: ProcessingStats,
 }
 
+/// Composite stage that runs all data processing stages in sequence
+pub struct DataProcessingCompositeStage {
+    stages: Vec<Box<dyn PipelineStage>>,
+}
+
+#[async_trait]
+impl CommonPipelineStage<DataInput, ProcessingOutput> for DataProcessingCompositeStage {
+    fn name(&self) -> &str {
+        "data_processing_pipeline"
+    }
+
+    async fn process(&self, input: DataInput) -> common_pipeline::PipelineResult<ProcessingOutput> {
+        use crate::data_processing_types::*;
+        use chrono::Utc;
+
+        let mut current_data = input.clone();
+        let mut accumulated_metadata = HashMap::new();
+        let mut all_entities = Vec::new();
+        let mut all_relationships = Vec::new();
+        let mut all_visual_elements = Vec::new();
+        let mut final_text_content = None;
+        let mut final_structured_data = None;
+        let mut final_embeddings = None;
+        let mut final_audio_transcript = None;
+
+        let start_time = std::time::Instant::now();
+
+        for stage in &self.stages {
+            match stage.process(current_data).await {
+                Ok(output) => {
+                    // Merge metadata from this stage
+                    accumulated_metadata.extend(output.extracted_metadata.clone());
+
+                    // Accumulate content from different stages
+                    if let Some(text) = &output.processed_content.text_content {
+                        final_text_content = Some(text.clone());
+                    }
+                    if let Some(structured) = &output.processed_content.structured_data {
+                        final_structured_data = Some(structured.clone());
+                    }
+                    if let Some(embeddings) = &output.processed_content.embeddings {
+                        final_embeddings = Some(embeddings.clone());
+                    }
+                    if let Some(transcript) = &output.processed_content.audio_transcript {
+                        final_audio_transcript = Some(transcript.clone());
+                    }
+
+                    // Accumulate entities, relationships, and visual elements
+                    all_entities.extend(output.processed_content.entities.clone());
+                    all_relationships.extend(output.processed_content.relationships.clone());
+                    all_visual_elements.extend(output.processed_content.visual_elements.clone());
+
+                    // Create new input for next stage based on output
+                    current_data = DataInput {
+                        id: output.id.clone(),
+                        source: DataSource::Stream(StreamSource {
+                            stream_id: format!("stage_output_{}", stage.name()),
+                            content_type: ContentType::Structured,
+                        }),
+                        content: DataContent::Structured(serde_json::to_value(&output.processed_content)
+                            .map_err(|e| common_pipeline::PipelineError::Serialization(e.to_string()))?),
+                        metadata: output.extracted_metadata.clone(),
+                        priority: input.priority,
+                        processing_options: input.processing_options.clone(),
+                    };
+                }
+                Err(e) => {
+                    return Err(common_pipeline::PipelineError::StageError {
+                        stage: stage.name().to_string(),
+                        message: e.to_string(),
+                    });
+                }
+            }
+        }
+
+        let processing_time = start_time.elapsed();
+
+        // Construct final processing output
+        let final_output = ProcessingOutput {
+            id: ProcessingId::new(),
+            original_input: input,
+            processed_content: ProcessedContent {
+                text_content: final_text_content,
+                structured_data: final_structured_data,
+                embeddings: final_embeddings,
+                entities: all_entities,
+                relationships: all_relationships,
+                visual_elements: all_visual_elements,
+                audio_transcript: final_audio_transcript,
+            },
+            extracted_metadata: accumulated_metadata,
+            processing_stats: ProcessingStats {
+                total_processing_time_ms: processing_time.as_millis() as u64,
+                stages_processed: self.stages.len() as u32,
+                data_size_bytes: 0, // TODO: calculate actual size
+                memory_usage_bytes: 0, // TODO: track memory usage
+                cpu_time_ms: processing_time.as_millis() as u64,
+            },
+            created_at: Utc::now(),
+        };
+
+        Ok(final_output)
+    }
+
+    fn can_handle(&self, _input: &DataInput) -> bool {
+        // Domain-specific validation can be added here
+        true
+    }
+}
+
 /// The main data processing pipeline
+/// Now wraps SequentialPipeline with domain-specific functionality
 pub struct DataPipeline {
     config: PipelineConfig,
-    stages: Vec<Box<dyn PipelineStage>>,
+    sequential_pipeline: Arc<SequentialPipeline<DataInput, ProcessingOutput>>,
+    /// Keep domain-specific stages for backward compatibility
+    domain_stages: Vec<Box<dyn PipelineStage>>,
 }
 
 impl DataPipeline {
     /// Create a new pipeline with the given configuration
     pub async fn new(config: PipelineConfig) -> DataProcessingResult<Self> {
-        let stages = Self::create_default_stages(&config).await?;
+        let sequential_config = config.clone().into();
+
+        // Create domain-specific stages
+        let domain_stages = Self::create_default_stages(&config).await?;
+
+        // Create a single composite stage that wraps all domain stages
+        let composite_stage = DataProcessingCompositeStage {
+            stages: domain_stages.clone(),
+        };
+
+        let mut sequential_pipeline = SequentialPipeline::new(sequential_config);
+        sequential_pipeline.add_stage(Box::new(composite_stage)).await;
 
         Ok(Self {
             config,
-            stages,
+            sequential_pipeline: Arc::new(sequential_pipeline),
+            domain_stages,
         })
     }
 
@@ -80,79 +217,11 @@ impl DataPipeline {
 
     /// Process data through all pipeline stages
     pub async fn process(&self, input: DataInput) -> DataProcessingResult<ProcessingOutput> {
-        let mut current_data = input.clone();
-        let mut accumulated_metadata = HashMap::new();
-        let start_time = std::time::Instant::now();
-
-        for stage in &self.stages {
-            match stage.process(current_data).await {
-                Ok(output) => {
-                    // Merge metadata from this stage
-                    accumulated_metadata.extend(output.extracted_metadata);
-
-                    // Create new input for next stage based on output
-                    current_data = DataInput {
-                        id: output.id,
-                        source: DataSource::Stream(StreamSource {
-                            stream_id: format!("stage_output_{}", stage.name()),
-                            content_type: ContentType::Structured,
-                        }),
-                        content: DataContent::Structured(serde_json::to_value(&output.processed_content)
-                            .unwrap_or(serde_json::Value::Null)),
-                        metadata: accumulated_metadata.clone(),
-                        processing_context: output.original_input.processing_context.clone(),
-                    };
-                }
-                Err(e) => {
-                    let _stats = ProcessingStats {
-                        processing_time_ms: start_time.elapsed().as_millis() as u64,
-                        bytes_processed: 0,
-                        entities_extracted: 0,
-                        relationships_found: 0,
-                        embeddings_generated: 0,
-                        errors_encountered: vec![e.to_string()],
-                    };
-
-                    return Err(DataProcessingError::Other(format!(
-                        "Pipeline stage '{}' failed: {}",
-                        stage.name(),
-                        e
-                    )));
-                }
-            }
+        // Delegate to the sequential pipeline
+        match self.sequential_pipeline.execute(input).await {
+            Ok(output) => Ok(output),
+            Err(e) => Err(crate::DataProcessingError::Other(format!("Pipeline execution failed: {}", e))),
         }
-
-        // Create final output
-        let final_output = ProcessingOutput {
-            id: current_data.id,
-            original_input: input,
-            processed_content: match current_data.content {
-                DataContent::Structured(data) => serde_json::from_value(data)
-                    .map_err(|e| DataProcessingError::Serialization(e))?,
-                _ => ProcessedContent {
-                    text_content: None,
-                    structured_data: None,
-                    embeddings: None,
-                    entities: vec![],
-                    relationships: vec![],
-                    visual_elements: vec![],
-                    audio_transcript: None,
-                }
-            },
-            extracted_metadata: accumulated_metadata,
-            processing_stats: ProcessingStats {
-                processing_time_ms: start_time.elapsed().as_millis() as u64,
-                bytes_processed: 0, // Would be tracked per stage
-                entities_extracted: 0,
-                relationships_found: 0,
-                embeddings_generated: 0,
-                errors_encountered: vec![],
-            },
-            created_at: chrono::Utc::now(),
-        };
-
-        Ok(final_output)
-    }
 
     /// Query processed data across all stages
     pub async fn query(&self, query: DataQuery) -> DataProcessingResult<Vec<RetrievedData>> {

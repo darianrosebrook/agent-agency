@@ -170,19 +170,91 @@ export function useOfflineTasks() {
 
 export function useOfflineMetrics() {
   const fallbackMetrics = {
-    totalTasks: 0,
-    completedTasks: 0,
-    activeTasks: 0,
-    failedTasks: 0,
-    averageCompletionTime: 0,
-    systemHealth: "unknown",
+    total_tasks: 0,
+    active_tasks: 0,
+    completed_tasks: 0,
+    failed_tasks: 0,
+    average_completion_time: 0,
+    success_rate: 0,
+    cpu_usage_percent: 0,
+    memory_usage_percent: 0,
+    network_rx_bytes: 0,
+    network_tx_bytes: 0,
   };
 
   return useOfflineData(
     async () => {
-      const response = await fetch("/api/metrics");
-      if (!response.ok) throw new Error("Failed to fetch metrics");
-      return response.json();
+      // Try SSE connection first for real-time updates
+      try {
+        const { MetricsModule } = await import('@/lib/api/modules/metrics');
+        const apiClient = (await import('@/lib/api-client')).default;
+        const metricsModule = new MetricsModule(apiClient);
+
+        return new Promise((resolve, reject) => {
+          let resolved = false;
+          const timeout = setTimeout(() => {
+            if (!resolved) {
+              reject(new Error("SSE connection timeout"));
+            }
+          }, 5000); // 5 second timeout
+
+          const sseClient = metricsModule.connectRealTimeMetrics(
+            (data) => {
+              if (!resolved) {
+                resolved = true;
+                clearTimeout(timeout);
+                // Transform SSE data to expected format
+                const totalTasks = data.metrics.active_tasks + data.metrics.completed_tasks + data.metrics.failed_tasks;
+                const successRate = totalTasks > 0 ? (data.metrics.completed_tasks / totalTasks) * 100 : 0;
+
+                resolve({
+                  total_tasks: totalTasks,
+                  active_tasks: data.metrics.active_tasks,
+                  completed_tasks: data.metrics.completed_tasks,
+                  failed_tasks: data.metrics.failed_tasks,
+                  average_completion_time: data.metrics.avg_response_time_ms,
+                  success_rate: successRate,
+                  // Include additional real-time system metrics
+                  cpu_usage_percent: data.metrics.cpu_usage_percent,
+                  memory_usage_percent: data.metrics.memory_usage_percent,
+                  network_rx_bytes: data.metrics.network_rx_bytes,
+                  network_tx_bytes: data.metrics.network_tx_bytes,
+                });
+                sseClient.disconnect();
+              }
+            },
+            (error) => {
+              if (!resolved) {
+                resolved = true;
+                clearTimeout(timeout);
+                reject(error);
+              }
+            }
+          );
+        });
+      } catch (sseError) {
+        console.warn("SSE connection failed, falling back to HTTP:", sseError);
+        // Fallback to regular HTTP request
+        const response = await fetch("/api/v1/metrics/stream");
+        if (!response.ok) throw new Error("Failed to fetch metrics");
+        const data = await response.json();
+        // Transform to expected format
+        const totalTasks = data.metrics.active_tasks + data.metrics.completed_tasks + data.metrics.failed_tasks;
+        const successRate = totalTasks > 0 ? (data.metrics.completed_tasks / totalTasks) * 100 : 0;
+
+        return {
+          total_tasks: totalTasks,
+          active_tasks: data.metrics.active_tasks,
+          completed_tasks: data.metrics.completed_tasks,
+          failed_tasks: data.metrics.failed_tasks,
+          average_completion_time: data.metrics.avg_response_time_ms,
+          success_rate: successRate,
+          cpu_usage_percent: data.metrics.cpu_usage_percent,
+          memory_usage_percent: data.metrics.memory_usage_percent,
+          network_rx_bytes: data.metrics.network_rx_bytes,
+          network_tx_bytes: data.metrics.network_tx_bytes,
+        };
+      }
     },
     { key: "metrics", ttl: 2 * 60 * 1000 }, // 2 minutes TTL
     fallbackMetrics

@@ -26,8 +26,8 @@ pub mod enrichers;
 pub mod council;
 pub mod audit_trail;
 pub mod audited_orchestrator;
-pub mod kimi_k2_enhanced_executor;
-pub mod kimi_k2_multimodal_orchestrator;
+pub mod enhanced_executor;
+pub mod multimodal_orchestrator;
 
 // Re-export key components
 pub use multimodal_orchestration::{
@@ -64,13 +64,13 @@ pub use arbiter::{
     WorkerOutput, EvidenceManifest, DebateResult, ArbiterError,
 };
 
-// Kimi K2 Enhanced Executor - TODO: Implement when crate exists
-// pub use kimi_k2_enhanced_executor::{
+// Enhanced Executor - TODO: Implement when crate exists
+// pub use enhanced_executor::{
 //     KimiK2EnhancedExecutor, EnhancementConfig, EnhancementStats, EnhancementError,
 // };
 
-// Kimi K2 Multimodal Orchestrator
-pub use kimi_k2_multimodal_orchestrator::{
+// Multimodal Orchestrator
+pub use multimodal_orchestrator::{
     KimiK2MultimodalOrchestrator, MultimodalTask, MultimodalProcessingResult,
     OrchestratorConfig, OrchestratorPerformanceStats, OrchestratorError,
 };

@@ -11,6 +11,7 @@
 
 import { useEffect } from 'react';
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
+import { Button } from '@/design-system/primitives';
 import styles from './page.module.scss';
 
 export default function Error({
@@ -39,18 +40,24 @@ export default function Error({
                 </p>
               )}
               <div className={styles.errorActions}>
-                <button
+                <Button
+                  variant="primary"
+                  size="md"
                   onClick={reset}
-                  className={styles.retryButton}
+                  leftIcon={<RefreshCw size={16} />}
                   aria-label="Try again to reload dashboard"
                 >
-                  <RefreshCw size={16} />
                   Try Again
-                </button>
-                <a href="/" className={styles.homeButton}>
-                  <Home size={16} />
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="md"
+                  onClick={() => window.location.href = '/'}
+                  leftIcon={<Home size={16} />}
+                  aria-label="Return to dashboard home"
+                >
                   Return Home
-                </a>
+                </Button>
               </div>
             </div>
           </div>

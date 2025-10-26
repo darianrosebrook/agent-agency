@@ -48,8 +48,14 @@ serde.workspace = true
 # UUID handling
 uuid.workspace = true
 
+# Base64 encoding
+base64 = "0.21"
+
 # Database client - enabled for core persistence
 agent-agency-database = { path = "../database" }
+
+# Security utilities for keystore and sandbox
+agent-agency-security = { path = "../security" }
 
 # System health monitoring for real metrics (basic features only)
 agent-agency-system-health-monitor = { path = "../system-health-monitor", default-features = true }

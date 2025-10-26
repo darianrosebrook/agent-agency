@@ -7,11 +7,11 @@
 //! for the council-based arbiter system.
 
 pub mod artifact_store;
-pub mod audit;
+pub mod database_audit;
 pub mod backup;
 pub mod backup_recovery;
 pub mod backup_validator;
-pub mod circuit_breaker;
+pub mod database_circuit_breaker;
 pub mod client;
 pub mod data_consistency;
 pub mod health;
@@ -25,11 +25,11 @@ pub mod vector_store;
 pub mod optimization;
 
 pub use artifact_store::{DatabaseArtifactStorage, VersionMetadata, VersionDiff};
-pub use audit::{DatabaseAuditLogger, DatabaseAuditEvent, AuditEventType, AuditStatistics};
+pub use database_audit::{DatabaseAuditLogger, DatabaseAuditEvent, AuditEventType, AuditStatistics};
 pub use backup::{BackupManager, BackupResult};
 pub use backup_recovery::{DisasterRecoveryManager, BackupConfig, RecoveryConfig, BackupMetadata, RecoveryStatus, RtoRpoStatus};
 pub use backup_validator::{BackupValidator, BackupValidationConfig, ValidationResult, BackupHealthMetrics};
-pub use circuit_breaker::{CircuitBreaker, CircuitState, CircuitBreakerError};
+pub use database_circuit_breaker::{CircuitBreaker, CircuitState, CircuitBreakerError};
 pub use client::{DatabaseClient};
 pub use data_consistency::{DataConsistencyManager, ConsistencyLevel, DistributedTransaction, ConsistencyCheckResult};
 pub use health::{DatabaseHealthMonitor, DatabaseHealthStatus, HealthStatus, DatabaseStats, HealthReport};

@@ -57,5 +57,5 @@ tempfile = "3.0"
 tokio-test = "0.4"
 
 [[bin]]
-name = "recov"
+name = "recovery-cli"
 path = "src/bin/recov.rs"

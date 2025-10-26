@@ -4,7 +4,7 @@
 pub use judge_types::*;
 
 // Re-export cache functionality
-pub use cache::*;
+pub use judge_cache::*;
 
 // Re-export ethics judge
 pub use ethics::*;
@@ -17,7 +17,7 @@ pub use mistral::*;
 
 // Import sub-modules
 pub mod judge_types;
-pub mod cache;
+pub mod judge_cache;
 pub mod ethics;
 pub mod mock_judge;
 pub mod mistral;

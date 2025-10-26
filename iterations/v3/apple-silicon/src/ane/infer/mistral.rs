@@ -3,7 +3,7 @@
 //! This module provides the inference execution logic for Mistral models,
 //! including text generation, constitutional reasoning, and debate protocols.
 
-use crate::ane::errors::{ANEError, Result};
+use crate::ane::ane_errors::{ANEError, Result};
 use crate::ane::models::mistral_model::{MistralModel, reasoning_templates};
 use crate::telemetry::TelemetryCollector;
 use std::time::Instant;

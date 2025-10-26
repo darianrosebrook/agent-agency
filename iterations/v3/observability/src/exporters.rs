@@ -2,7 +2,7 @@
 
 use crate::metrics::MetricsCollector;
 use crate::slo::SLOTracker;
-use crate::alerts::AlertManager;
+use crate::observability_alerts::AlertManager;
 use crate::tracing::TraceCollector;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;

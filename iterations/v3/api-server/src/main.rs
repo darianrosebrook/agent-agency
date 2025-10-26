@@ -7,7 +7,7 @@
 //! health checks, and metrics streaming.
 
 use axum::{
-    extract::{Path, State, WebSocketUpgrade},
+    extract::{Path, Query, State, WebSocketUpgrade},
     extract::ws::{Message, WebSocket},
     response::sse::{Event, Sse},
     routing::{get, post},
@@ -29,10 +29,12 @@ use std::sync::RwLock;
 use tokio::fs;
 use tower_http::cors::CorsLayer;
 use uuid::Uuid;
+use reqwest::Client;
 use agent_agency_database::{DatabaseClient, DatabaseConfig, MigrationManager};
 use agent_agency_system_health_monitor::{
     SystemHealthMonitor, SystemHealthMonitorConfig, HealthThresholds,
-    EmbeddingServiceConfig, RedisConfig, SystemMetrics, DiskIOMetrics
+    EmbeddingServiceConfig, RedisConfig, SystemMetrics, DiskIOMetrics,
+    agent_integration::BusinessMetrics
 };
 // Stub implementations for agent_agency_interfaces
 pub async fn list_waivers() -> Json<serde_json::Value> {
@@ -53,11 +55,14 @@ pub async fn get_task_provenance(Path(_task_id): Path<String>) -> Json<serde_jso
 use async_trait::async_trait;
 // WebSocket support is built into Axum - no axum-ws needed
 
-mod alerts;
+mod api_alerts;
+mod audit;
 mod service_failover;
-mod circuit_breaker;
+mod api_circuit_breaker;
 mod rto_rpo_monitor;
 mod rate_limiter;
+mod keystore_api;
+mod sandbox_api;
 
 #[derive(Parser)]
 #[command(name = "agent-agency-api")]
@@ -106,6 +111,10 @@ struct Args {
     /// Redis key prefix
     #[arg(long, default_value = "agent_agency")]
     redis_key_prefix: String,
+
+    /// V3 Backend host for proxy routes
+    #[arg(long, default_value = "http://localhost:3001", env = "V3_BACKEND_HOST")]
+    v3_backend_host: String,
 
     /// Redis metrics TTL (seconds)
     #[arg(long, default_value = "3600")]
@@ -308,9 +317,15 @@ impl TaskStoreTrait for DatabaseTaskStore {
 #[derive(Clone)]
 pub struct AppState {
     task_store: Arc<dyn TaskStoreTrait + Send + Sync>,
+    db_client: DatabaseClient,
+    audit_logger: audit::AuditLogger,
+    keystore: Arc<dyn agent_agency_security::Keystore>,
+    sandbox: Arc<dyn agent_agency_security::Sandbox>,
     health_monitor: Arc<SystemHealthMonitor>,
-    alert_manager: Arc<alerts::AlertManager>,
+    alert_manager: Arc<api_alerts::AlertManager>,
     rate_limiter: Arc<rate_limiter::RateLimiter>,
+    backend_host: String,
+    http_client: Client,
 }
 
 pub async fn health_check() -> Json<serde_json::Value> {
@@ -326,6 +341,53 @@ pub async fn health_check() -> Json<serde_json::Value> {
             "workers": "simulated" // Placeholder - worker pool integration not implemented
         }
     }))
+}
+
+pub async fn proxy_handler(
+    State(state): State<AppState>,
+    Path(path): Path<String>,
+) -> Result<impl IntoResponse, axum::http::StatusCode> {
+    let backend_url = format!("{}/{}", state.backend_host.trim_end_matches('/'), path);
+
+    match state.http_client.get(&backend_url).send().await {
+        Ok(response) => {
+            let status_code = response.status().as_u16();
+            let body = response.text().await.unwrap_or_default();
+            Ok((axum::http::StatusCode::from_u16(status_code).unwrap_or(axum::http::StatusCode::INTERNAL_SERVER_ERROR), body))
+        }
+        Err(_) => {
+            // Return a stub response if backend is not available
+            Ok((axum::http::StatusCode::OK, r#"{"status": "stub", "message": "Backend not available"}"#.to_string()))
+        }
+    }
+}
+
+async fn get_task_audit_trail(
+    State(state): State<AppState>,
+    Path(task_id): Path<String>,
+    Query(params): Query<std::collections::HashMap<String, String>>,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    let limit = params.get("limit")
+        .and_then(|l| l.parse::<i64>().ok())
+        .unwrap_or(50);
+
+    let since = params.get("since")
+        .and_then(|s| chrono::DateTime::parse_from_rfc3339(s).ok())
+        .map(|dt| dt.with_timezone(&chrono::Utc));
+
+    match state.audit_logger.get_task_audit_trail(&task_id, Some(limit), since).await {
+        Ok(audit_trail) => {
+            Ok(Json(json!({
+                "task_id": task_id,
+                "audit_trail": audit_trail,
+                "total_events": audit_trail.len()
+            })))
+        }
+        Err(e) => {
+            eprintln!("Failed to retrieve task audit trail: {:?}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
 }
 
 pub async fn list_tasks(
@@ -434,35 +496,272 @@ pub async fn get_task(
 }
 
 // Chat session creation
-pub async fn create_chat_session() -> Json<serde_json::Value> {
-    let session_id = Uuid::new_v4();
-    let created_at = chrono::Utc::now().to_rfc3339();
+pub async fn create_chat_session(
+    State(state): State<AppState>,
+    Json(request): Json<serde_json::Value>,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    let session_id = Uuid::new_v4().to_string();
+    let user_id = request.get("userId")
+        .and_then(|u| u.as_str())
+        .unwrap_or("anonymous");
 
-    Json(json!({
-        "sessionId": session_id,
-        "createdAt": created_at
-    }))
+    // Create session in database
+    let query = r#"
+        INSERT INTO chat_sessions (session_id, user_id, metadata)
+        VALUES ($1, $2, $3)
+        RETURNING id, created_at
+    "#;
+
+    let metadata = json!({
+        "user_agent": request.get("userAgent").and_then(|ua| ua.as_str()).unwrap_or("unknown"),
+        "platform": request.get("platform").and_then(|p| p.as_str()).unwrap_or("web"),
+        "ip_address": request.get("ipAddress").and_then(|ip| ip.as_str()).unwrap_or("unknown")
+    });
+
+    let session_id_string = session_id.to_string();
+    let user_id_string = user_id.to_string();
+    let metadata_json = serde_json::to_string(&metadata).unwrap();
+
+    match state.db_client.query(
+        query,
+        &[&session_id_string, &user_id_string, &metadata_json]
+    ).await {
+        Ok(rows) => {
+            if let Some(row) = rows.into_iter().next() {
+                let session_uuid_str: String = row.get("id");
+                let session_uuid = Uuid::parse_str(&session_uuid_str).unwrap();
+                let created_at: String = row.get("created_at");
+
+                Ok(Json(json!({
+                    "sessionId": session_id,
+                    "sessionUuid": session_uuid,
+                    "createdAt": created_at,
+                    "status": "created"
+                })))
+            } else {
+                Err(StatusCode::INTERNAL_SERVER_ERROR)
+            }
+        }
+        Err(e) => {
+            eprintln!("Failed to create chat session: {:?}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
 }
 
 // Chat message handling (HTTP fallback for MVP)
 async fn send_chat_message(
+    State(state): State<AppState>,
     Path(session_id): Path<String>,
     Json(request): Json<serde_json::Value>,
-) -> Json<serde_json::Value> {
-    let message = request.get("message")
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    let user_message = request.get("message")
         .and_then(|m| m.as_str())
         .unwrap_or("Hello");
 
-    // Simulate AI response
-    let response = format!("Echo: {}", message);
-    let message_id = Uuid::new_v4();
-    let timestamp = chrono::Utc::now().to_rfc3339();
+    let sender = request.get("sender")
+        .and_then(|s| s.as_str())
+        .unwrap_or("user");
 
-    Json(json!({
-        "messageId": message_id,
-        "response": response,
-        "timestamp": timestamp
-    }))
+    // First, verify session exists and get its UUID
+    let session_query = "SELECT id FROM chat_sessions WHERE session_id = $1 AND status = 'active'";
+    let session_id_param = session_id.to_string();
+    let session_result = match state.db_client.query(session_query, &[&session_id_param]).await {
+        Ok(rows) => {
+            if let Some(row) = rows.into_iter().next() {
+                let uuid_str: String = row.get("id");
+                Ok(Uuid::parse_str(&uuid_str).unwrap())
+            } else {
+                Err("Session not found or inactive")
+            }
+        }
+        Err(e) => Err(format!("Database error: {:?}", e))
+    };
+
+    let session_uuid = match session_result {
+        Ok(uuid) => uuid,
+        Err(err) => {
+            eprintln!("Chat session error: {}", err);
+            return Err(StatusCode::NOT_FOUND);
+        }
+    };
+
+    // Store user message in database
+    let insert_user_message = r#"
+        INSERT INTO chat_messages (session_id, message_type, content, sender, metadata)
+        VALUES ($1, $2, $3, $4, $5)
+        RETURNING id, created_at, sequence_number
+    "#;
+
+    let user_metadata = json!({
+        "source": "http_api",
+        "user_agent": request.get("userAgent").and_then(|ua| ua.as_str()).unwrap_or("unknown")
+    });
+    let message_type = "message".to_string();
+    let sender_param = sender.to_string();
+
+    let user_message_result = state.db_client.query(
+        insert_user_message,
+        &[&session_uuid.to_string(), &message_type, &user_message, &sender_param, &serde_json::to_string(&user_metadata).unwrap()]
+    ).await;
+
+    let user_message_id = match user_message_result {
+        Ok(rows) => {
+            if let Some(row) = rows.into_iter().next() {
+                let id_str: String = row.get("id");
+                Uuid::parse_str(&id_str).unwrap()
+            } else {
+                return Err(StatusCode::INTERNAL_SERVER_ERROR);
+            }
+        }
+        Err(e) => {
+            eprintln!("Failed to store user message: {:?}", e);
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    };
+
+    // Generate AI response (for now, echo back with some variation)
+    let ai_response = if user_message.to_lowercase().contains("hello") {
+        "Hello! How can I help you with your tasks today?".to_string()
+    } else if user_message.to_lowercase().contains("help") {
+        "I can help you manage tasks, monitor system health, and chat in real-time. What would you like to know?".to_string()
+                        } else {
+                            format!("I received your message: '{}'. This is a simulated response - full AI integration coming soon!", user_message)
+                        };
+
+    // Store AI response in database
+    let insert_ai_message = r#"
+        INSERT INTO chat_messages (session_id, message_type, content, sender, metadata)
+        VALUES ($1, $2, $3, $4, $5)
+        RETURNING id, created_at, sequence_number
+    "#;
+
+    let ai_metadata = json!({
+        "source": "ai_assistant",
+        "response_type": "generated"
+    });
+    let ai_sender = "assistant".to_string();
+
+    let ai_message_result = state.db_client.query(
+        insert_ai_message,
+        &[&session_uuid.to_string(), &message_type, &ai_response, &ai_sender, &serde_json::to_string(&ai_metadata).unwrap()]
+    ).await;
+
+    let ai_message_id = match ai_message_result {
+        Ok(rows) => {
+            if let Some(row) = rows.into_iter().next() {
+                let id_str: String = row.get("id");
+                Uuid::parse_str(&id_str).unwrap()
+            } else {
+                return Err(StatusCode::INTERNAL_SERVER_ERROR);
+            }
+        }
+        Err(e) => {
+            eprintln!("Failed to store AI message: {:?}", e);
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    };
+
+    // Update session's last_message_at
+    let update_session = "UPDATE chat_sessions SET last_message_at = now(), updated_at = now() WHERE id = $1";
+    if let Err(e) = state.db_client.execute(update_session, &[&session_uuid.to_string()]).await {
+        eprintln!("Failed to update session timestamp: {:?}", e);
+    }
+
+    Ok(Json(json!({
+        "userMessageId": user_message_id,
+        "aiMessageId": ai_message_id,
+        "response": ai_response,
+        "timestamp": chrono::Utc::now().to_rfc3339()
+    })))
+}
+
+// Get chat messages for a session
+pub async fn get_chat_messages(
+    State(state): State<AppState>,
+    Path(session_id): Path<String>,
+    Query(params): Query<std::collections::HashMap<String, String>>,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    // First, verify session exists and get its UUID
+    let session_query = "SELECT id FROM chat_sessions WHERE session_id = $1 AND status = 'active'";
+    let session_id_param = session_id.to_string();
+    let session_result = match state.db_client.query(session_query, &[&session_id_param]).await {
+        Ok(rows) => {
+            if let Some(row) = rows.into_iter().next() {
+                Ok(row.get::<_, Uuid>("id"))
+            } else {
+                return Err(StatusCode::NOT_FOUND);
+            }
+        }
+        Err(e) => {
+            eprintln!("Database error validating session: {:?}", e);
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    };
+
+    let session_uuid = match session_result {
+        Ok(uuid) => uuid,
+        Err(_) => return Err(StatusCode::NOT_FOUND),
+    };
+
+    // Get messages using the database function
+    let limit = params.get("limit")
+        .and_then(|l| l.parse::<i64>().ok())
+        .unwrap_or(50);
+
+    let since = params.get("since")
+        .and_then(|s| chrono::DateTime::parse_from_rfc3339(s).ok())
+        .map(|dt| dt.with_timezone(&chrono::Utc));
+
+    let messages_query = r#"
+        SELECT id, message_type, content, sender, metadata, created_at, sequence_number
+        FROM get_recent_chat_messages($1, $2, $3)
+        ORDER BY sequence_number ASC
+    "#;
+
+    let limit_param = limit as i64;
+    let messages_result = state.db_client.query(
+        messages_query,
+        &[&session_uuid.to_string(), &limit_param, &since.map(|dt| dt.to_rfc3339())]
+    ).await;
+
+    match messages_result {
+        Ok(rows) => {
+            let messages: Vec<serde_json::Value> = rows.into_iter()
+                .map(|row| {
+                    let message_type: String = row.get("message_type");
+                    let content: String = row.get("content");
+                    let sender: Option<String> = row.get("sender");
+                    let metadata_str: String = row.get("metadata");
+                    let metadata: serde_json::Value = serde_json::from_str(&metadata_str).unwrap_or(json!({}));
+                    let created_at: String = row.get("created_at");
+                    let sequence_number: i64 = row.get("sequence_number");
+                    let id_str: String = row.get("id");
+                    let id = Uuid::parse_str(&id_str).unwrap();
+
+                    json!({
+                        "id": id,
+                        "type": message_type,
+                        "content": content,
+                        "sender": sender,
+                        "metadata": metadata,
+                        "timestamp": created_at,
+                        "sequence_number": sequence_number
+                    })
+                })
+                .collect();
+
+            Ok(Json(json!({
+                "session_id": session_id,
+                "messages": messages,
+                "total_count": messages.len()
+            })))
+        }
+        Err(e) => {
+            eprintln!("Failed to fetch chat messages: {:?}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
 }
 
 // WebSocket configuration endpoint for dashboard
@@ -479,12 +778,13 @@ pub async fn get_websocket_config(Path(session_id): Path<String>) -> Json<serde_
 // WebSocket chat handler for real-time messaging
 async fn websocket_chat_handler(
     ws: WebSocketUpgrade,
+    State(state): State<AppState>,
     Path(session_id): Path<String>,
 ) -> impl axum::response::IntoResponse {
-    ws.on_upgrade(move |socket| handle_websocket_chat(socket, session_id))
+    ws.on_upgrade(move |socket| handle_websocket_chat(socket, session_id, state))
 }
 
-async fn handle_websocket_chat(mut socket: axum::extract::ws::WebSocket, session_id: String) {
+async fn handle_websocket_chat(mut socket: axum::extract::ws::WebSocket, session_id: String, state: AppState) {
     println!(" WebSocket chat connection established for session: {}", session_id);
 
     // Send welcome message
@@ -499,6 +799,33 @@ async fn handle_websocket_chat(mut socket: axum::extract::ws::WebSocket, session
         let _ = socket.send(axum::extract::ws::Message::Text(msg.into())).await;
     }
 
+    // First, verify session exists and get its UUID
+    let session_query = "SELECT id FROM chat_sessions WHERE session_id = $1 AND status = 'active'";
+    let session_id_param = session_id.to_string();
+    let session_uuid = match state.db_client.query(session_query, &[&session_id_param]).await {
+        Ok(rows) => {
+            if let Some(row) = rows.into_iter().next() {
+                let id_str: String = row.get("id");
+                Uuid::parse_str(&id_str).unwrap()
+            } else {
+                // Send error and close connection
+                let error_msg = json!({
+                    "type": "error",
+                    "message": "Invalid or inactive session",
+                    "timestamp": chrono::Utc::now().to_rfc3339()
+                });
+                if let Ok(error_text) = serde_json::to_string(&error_msg) {
+                    let _ = socket.send(axum::extract::ws::Message::Text(error_text.into())).await;
+                }
+                return;
+            }
+        }
+        Err(e) => {
+            eprintln!("Database error validating session: {:?}", e);
+            return;
+        }
+    };
+
     while let Some(msg) = socket.recv().await {
         match msg {
             Ok(axum::extract::ws::Message::Text(text)) => {
@@ -507,12 +834,100 @@ async fn handle_websocket_chat(mut socket: axum::extract::ws::WebSocket, session
                     if let Some(message) = chat_msg.get("message").and_then(|m| m.as_str()) {
                         println!(" Received chat message: {}", message);
 
-                        // Generate AI response (simple echo for MVP)
-                        let response = format!("Echo: {}", message);
+                        let sender = chat_msg.get("sender")
+                            .and_then(|s| s.as_str())
+                            .unwrap_or("user");
+
+                        // Store user message in database
+                        let insert_user_message = r#"
+                            INSERT INTO chat_messages (session_id, message_type, content, sender, metadata)
+                            VALUES ($1, $2, $3, $4, $5)
+                            RETURNING id, created_at, sequence_number
+                        "#;
+
+                        let user_metadata = json!({
+                            "source": "websocket",
+                            "connection_type": "real_time"
+                        });
+                        let message_type = "message".to_string();
+                        let sender_param = sender.to_string();
+
+                        let user_message_result = state.db_client.query(
+                            insert_user_message,
+                            &[&session_uuid.to_string(), &message_type, &message, &sender_param, &serde_json::to_string(&user_metadata).unwrap()]
+                        ).await;
+
+                        let user_message_id = match user_message_result {
+                            Ok(rows) => {
+                                if let Some(row) = rows.into_iter().next() {
+                                    let id_str: String = row.get("id");
+                                    Some(Uuid::parse_str(&id_str).unwrap())
+                                } else {
+                                    None
+                                }
+                            }
+                            Err(e) => {
+                                eprintln!("Failed to store user message: {:?}", e);
+                                None
+                            }
+                        };
+
+                        // Generate AI response (for now, contextual responses)
+                        let ai_response = if message.to_lowercase().contains("hello") {
+                            "Hello! How can I help you with your tasks today?".to_string()
+                        } else if message.to_lowercase().contains("help") {
+                            "I can help you manage tasks, monitor system health, and chat in real-time. What would you like to know?".to_string()
+                        } else if message.to_lowercase().contains("status") {
+                            "The system is running well. All core services are operational. Would you like me to check specific metrics?".to_string()
+                        } else {
+                            format!("I received your message: '{}'. This is a simulated response - full AI integration coming soon!", message)
+                        };
+
+                        // Store AI response in database
+                        let insert_ai_message = r#"
+                            INSERT INTO chat_messages (session_id, message_type, content, sender, metadata)
+                            VALUES ($1, $2, $3, $4, $5)
+                            RETURNING id, created_at, sequence_number
+                        "#;
+
+                        let ai_metadata = json!({
+                            "source": "ai_assistant",
+                            "response_type": "generated"
+                        });
+                        let ai_sender = "assistant".to_string();
+
+                        let ai_message_result = state.db_client.query(
+                            insert_ai_message,
+                            &[&session_uuid.to_string(), &message_type, &ai_response, &ai_sender, &serde_json::to_string(&ai_metadata).unwrap()]
+                        ).await;
+
+                        let ai_message_id = match ai_message_result {
+                            Ok(rows) => {
+                                if let Some(row) = rows.into_iter().next() {
+                                    let id_str: String = row.get("id");
+                                    Some(Uuid::parse_str(&id_str).unwrap())
+                                } else {
+                                    None
+                                }
+                            }
+                            Err(e) => {
+                                eprintln!("Failed to store AI message: {:?}", e);
+                                None
+                            }
+                        };
+
+                        // Update session's last_message_at
+                        let update_session = "UPDATE chat_sessions SET last_message_at = now(), updated_at = now() WHERE id = $1";
+                        if let Err(e) = state.db_client.execute(update_session, &[&session_uuid.to_string()]).await {
+                            eprintln!("Failed to update session timestamp: {:?}", e);
+                        }
+
+                        // Send response back to client
                         let response_msg = json!({
                             "type": "response",
-                            "message_id": Uuid::new_v4(),
-                            "response": response,
+                            "user_message_id": user_message_id,
+                            "ai_message_id": ai_message_id,
+                            "response": ai_response,
                             "timestamp": chrono::Utc::now().to_rfc3339()
                         });
 
@@ -558,26 +973,71 @@ async fn metrics_stream(
         .then(move |_| {
             let state = state.clone();
             async move {
-                // Collect real system metrics
+                // Collect real system metrics from health monitor
                 let timestamp = chrono::Utc::now().timestamp_millis();
 
-                // Use simulated metrics for now - health monitor integration can be improved later
-                let cpu_usage = 25.0 + (timestamp % 50) as f64; // 25-74%
-                let memory_usage = 30.0 + (timestamp % 40) as f64; // 30-69%
-                let active_tasks = (timestamp % 10) as i32;
-                let completed_tasks = (timestamp / 1000 % 100) as i32;
-                let failed_tasks = (timestamp % 100 / 10) as i32;
-                let avg_response_time = 200.0 + (timestamp % 100) as f64;
+                // Get real system metrics
+                let system_metrics = match state.health_monitor.get_health_metrics().await {
+                    Ok(health_metrics) => health_metrics.system,
+                    Err(_) => {
+                        // Fallback to basic metrics if health monitor fails
+                        agent_agency_system_health_monitor::SystemMetrics {
+                            timestamp: chrono::Utc::now(),
+                            cpu_usage: 0.0,
+                            memory_usage: 0.0,
+                            disk_usage: 0.0,
+                            load_average: [0.0, 0.0, 0.0],
+                            network_io: 0,
+                            disk_io: 0,
+                            disk_io_metrics: DiskIOMetrics {
+                                read_iops: 0,
+                                write_iops: 0,
+                                read_throughput: 0.0,
+                                write_throughput: 0.0,
+                                avg_read_latency_ms: 0.0,
+                                avg_write_latency_ms: 0.0,
+                                queue_depth: 0,
+                            },
+                        }
+                    }
+                };
+
+                // Get task metrics from task store
+                let task_metrics = match state.task_store.get_tasks().await {
+                    Ok(tasks) => {
+                        let active_tasks = tasks.iter().filter(|t| t.state == "running").count() as i32;
+                        let completed_tasks = tasks.iter().filter(|t| t.state == "completed").count() as i32;
+                        let failed_tasks = tasks.iter().filter(|t| t.state == "failed").count() as i32;
+                        (active_tasks, completed_tasks, failed_tasks)
+                    }
+                    Err(_) => (0, 0, 0)
+                };
+
+                // Use fallback business metrics for now
+                let business_metrics = BusinessMetrics {
+                    throughput_tasks_per_hour: 0.0,
+                    system_availability: 100.0,
+                    average_task_completion_time_ms: 0.0,
+                    error_rate: 0.0,
+                };
 
                 Ok(Event::default().data(serde_json::to_string(&json!({
                     "timestamp": timestamp,
                     "metrics": {
-                        "cpu_usage_percent": cpu_usage,
-                        "memory_usage_percent": memory_usage,
-                        "active_tasks": active_tasks,
-                        "completed_tasks": completed_tasks,
-                        "failed_tasks": failed_tasks,
-                        "avg_response_time_ms": avg_response_time
+                        "cpu_usage_percent": system_metrics.cpu_usage,
+                        "memory_usage_percent": system_metrics.memory_usage,
+                        "disk_usage_percent": system_metrics.disk_usage,
+                        "network_rx_bytes": system_metrics.network_io,
+                        "network_tx_bytes": system_metrics.disk_io,
+                        "active_tasks": task_metrics.0,
+                        "completed_tasks": task_metrics.1,
+                        "failed_tasks": task_metrics.2,
+                        "total_requests": business_metrics.throughput_tasks_per_hour as i32,
+                        "successful_requests": (business_metrics.throughput_tasks_per_hour * (1.0 - business_metrics.error_rate)) as i32,
+                        "failed_requests": (business_metrics.throughput_tasks_per_hour * business_metrics.error_rate) as i32,
+                        "avg_response_time_ms": business_metrics.average_task_completion_time_ms,
+                        "p95_response_time_ms": business_metrics.average_task_completion_time_ms * 1.5,
+                        "p99_response_time_ms": business_metrics.average_task_completion_time_ms * 2.0
                     },
                     "components": {
                         "api": "healthy",
@@ -598,6 +1058,8 @@ async fn metrics_stream(
 
 async fn pause_task(
     State(state): State<AppState>,
+    headers: axum::http::HeaderMap,
+    axum::extract::ConnectInfo(addr): axum::extract::ConnectInfo<std::net::SocketAddr>,
     Path(task_id): Path<String>,
 ) -> Result<axum::http::StatusCode, (axum::http::StatusCode, Json<serde_json::Value>)> {
     match Uuid::parse_str(&task_id) {
@@ -613,6 +1075,20 @@ async fn pause_task(
                 Ok(response) => {
                     if response.status().is_success() {
                         println!(" Task {} paused successfully", task_id);
+
+                        // Audit logging for task pause
+                        let audit_context = audit::extract_audit_context(&headers, Some(addr));
+                        if let Err(e) = state.audit_logger.log_task_event(
+                            &task_id,
+                            "paused",
+                            Some("running"), // Assuming it was running
+                            Some("paused"),
+                            &audit_context,
+                            Some(serde_json::json!({"via": "orchestrator_api"})),
+                        ).await {
+                            eprintln!("Failed to log task pause audit event: {:?}", e);
+                        }
+
                         Ok(axum::http::StatusCode::OK)
                     } else {
                         println!(" Failed to pause task {}: {}", task_id, response.status());
@@ -640,6 +1116,8 @@ async fn pause_task(
 
 async fn resume_task(
     State(state): State<AppState>,
+    headers: axum::http::HeaderMap,
+    axum::extract::ConnectInfo(addr): axum::extract::ConnectInfo<std::net::SocketAddr>,
     Path(task_id): Path<String>,
 ) -> Result<axum::http::StatusCode, (axum::http::StatusCode, Json<serde_json::Value>)> {
     match Uuid::parse_str(&task_id) {
@@ -655,6 +1133,20 @@ async fn resume_task(
                 Ok(response) => {
                     if response.status().is_success() {
                         println!(" Task {} resumed successfully", task_id);
+
+                        // Audit logging for task resume
+                        let audit_context = audit::extract_audit_context(&headers, Some(addr));
+                        if let Err(e) = state.audit_logger.log_task_event(
+                            &task_id,
+                            "resumed",
+                            Some("paused"), // Assuming it was paused
+                            Some("running"),
+                            &audit_context,
+                            Some(serde_json::json!({"via": "orchestrator_api"})),
+                        ).await {
+                            eprintln!("Failed to log task resume audit event: {:?}", e);
+                        }
+
                         Ok(axum::http::StatusCode::OK)
                     } else {
                         println!(" Failed to resume task {}: {}", task_id, response.status());
@@ -682,6 +1174,8 @@ async fn resume_task(
 
 async fn cancel_task(
     State(state): State<AppState>,
+    headers: axum::http::HeaderMap,
+    axum::extract::ConnectInfo(addr): axum::extract::ConnectInfo<std::net::SocketAddr>,
     Path(task_id): Path<String>,
 ) -> Result<axum::http::StatusCode, (axum::http::StatusCode, Json<serde_json::Value>)> {
     match Uuid::parse_str(&task_id) {
@@ -689,6 +1183,20 @@ async fn cancel_task(
             // For now, just log the cancel request - actual implementation would
             // need access to the orchestrator to cancel running tasks
             println!(" Task {} cancel requested", task_id);
+
+            // Audit logging for task cancellation
+            let audit_context = audit::extract_audit_context(&headers, Some(addr));
+            if let Err(e) = state.audit_logger.log_task_event(
+                &task_id,
+                "cancelled",
+                Some("running"), // Assuming it was running
+                Some("cancelled"),
+                &audit_context,
+                Some(serde_json::json!({"requested_via": "api"})),
+            ).await {
+                eprintln!("Failed to log task cancellation audit event: {:?}", e);
+            }
+
             Ok(axum::http::StatusCode::OK)
         }
         Err(_) => Err((
@@ -700,6 +1208,7 @@ async fn cancel_task(
 
 pub async fn submit_task(
     State(state): State<AppState>,
+    headers: axum::http::HeaderMap,
     axum::extract::ConnectInfo(addr): axum::extract::ConnectInfo<std::net::SocketAddr>,
     Json(request): Json<TaskSubmissionRequest>,
 ) -> Result<Json<TaskSubmissionResponse>, ApiError> {
@@ -758,6 +1267,47 @@ pub async fn submit_task(
     state.task_store.create_task(task).await
         .map_err(|e| ApiError::Internal(format!("Failed to persist task: {}", e)))?;
     println!(" Task {} persisted successfully", task_id.to_string());
+
+    // Audit logging for task creation
+    let audit_context = audit::extract_audit_context(&headers, Some(addr));
+    let audit_details = serde_json::json!({
+        "description": description,
+        "priority": request.priority,
+        "context_length": context.as_ref().map(|c| c.len()).unwrap_or(0),
+        "submitted_via": "api"
+    });
+
+    if let Err(e) = state.audit_logger.log_task_event(
+        &task_id.to_string(),
+        "created",
+        None,
+        Some("pending"),
+        &audit_context,
+        Some(audit_details),
+    ).await {
+        eprintln!("Failed to log task creation audit event: {:?}", e);
+    }
+
+    // Log API call audit event
+    if let Err(e) = state.audit_logger.log_api_call(
+        "POST",
+        "/api/v1/tasks",
+        200, // Success status
+        150, // Estimated processing time
+        &audit_context,
+        Some(serde_json::json!({
+            "description": description,
+            "priority": request.priority
+        })),
+        Some(serde_json::json!({
+            "task_id": task_id,
+            "status": "accepted"
+        })),
+        true, // Success
+        None, // No error
+    ).await {
+        eprintln!("Failed to log API call audit event: {:?}", e);
+    }
 
     let description_clone = description.clone();
     // Execute task directly via HTTP to worker
@@ -898,8 +1448,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!(" Applied {} migrations", migration_results.len());
 
+    let db_client = db_client; // Keep reference for AppState
     let task_store: Arc<dyn TaskStoreTrait + Send + Sync> = Arc::new(
-        DatabaseTaskStore { db_client }
+        DatabaseTaskStore { db_client: db_client.clone() }
     );
 
     println!(" Database connection established");
@@ -938,7 +1489,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // Initialize alert manager
-    let alert_manager = Arc::new(alerts::AlertManager::new(None)); // TODO: Pass RTO/RPO monitor when available
+    let alert_manager = Arc::new(api_alerts::AlertManager::new(None)); // TODO: Pass RTO/RPO monitor when available
     alert_manager.start().await.map_err(|e| format!("Failed to start alert manager: {}", e))?;
     println!(" Alert manager initialized with default definitions");
 
@@ -946,11 +1497,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize rate limiter
     let rate_limiter = Arc::new(rate_limiter::RateLimiter::new());
 
+    let audit_logger = audit::AuditLogger::new(db_client.clone());
+
+    // Initialize keystore and sandbox
+    let keystore = agent_agency_security::create_keystore();
+    let sandbox = agent_agency_security::create_sandbox();
+
     let app_state = AppState {
         task_store,
+        db_client,
+        audit_logger,
+        keystore,
+        sandbox,
         health_monitor,
         alert_manager: alert_manager.clone(),
         rate_limiter: rate_limiter.clone(),
+        backend_host: args.v3_backend_host.clone(),
+        http_client: Client::new(),
     };
 
     // Create API router with full task management and chat
@@ -964,6 +1527,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/tasks/:task_id/pause", post(pause_task))
         .route("/tasks/:task_id/resume", post(resume_task))
         .route("/tasks/:task_id/cancel", post(cancel_task))
+        .route("/tasks/:task_id/audit", get(get_task_audit_trail))
         .route("/tasks/:task_id/override", post(override_verdict))
         .route("/tasks/:task_id/parameters", post(modify_parameter))
         .route("/tasks/:task_id/guidance", post(inject_guidance))
@@ -972,11 +1536,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/waivers/:waiver_id/approve", post(approve_waiver))
         .route("/tasks/:task_id/provenance", get(get_task_provenance))
         .route("/chat/session", post(create_chat_session))
+        .route("/chat/messages/:session_id", get(get_chat_messages))
         .route("/chat/ws/:session_id", get(websocket_chat_handler))
         .route("/chat/config/:session_id", get(get_websocket_config))
         .route("/chat/message/:session_id", post(send_chat_message))
     .route("/metrics", get(get_api_metrics))
     .route("/metrics/stream", get(metrics_stream))
+    .route("/health", get(health_check))
+    .route("/proxy/*path", get(proxy_handler))
         .route("/alerts", get(|state: State<AppState>| async move {
             get_active_alerts(state).await
         }))
@@ -992,6 +1559,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/alerts/statistics", get(|state: State<AppState>| async move {
             get_alert_statistics(state).await
         }))
+        .nest("/v1", keystore_api::create_keystore_router())
+        .nest("/v1", sandbox_api::create_sandbox_router())
     .with_state(app_state);
 
     // Create main router

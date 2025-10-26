@@ -16,7 +16,7 @@ import styles from './page.module.scss';
 // Loading component for Suspense
 const LoadingSkeleton = () => (
   <div className={styles.loadingSkeleton}>
-    <div className={styles.spinner}></div>
+    <div className={styles.spinner} />
     <p>Loading agent memory management dashboard...</p>
   </div>
 );

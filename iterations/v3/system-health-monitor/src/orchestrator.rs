@@ -13,7 +13,7 @@ use tracing::{info, error};
 use chrono::Utc;
 
 use crate::health_types::*;
-use super::metrics::MetricsCollector;
+use super::health_metrics::MetricsCollector;
 use super::core::{ResponseTimeTracker, ErrorRateTracker, RedisConnectionManager};
 
 #[derive(Debug)]
@@ -175,7 +175,7 @@ impl SystemHealthMonitor {
 
     // ── private helpers ──────────────────────────────────────────────────────
     async fn start_metrics_collection(&self) -> anyhow::Result<()> {
-        let metrics_collector = Arc::clone(&self.metrics_collector);
+        let metrics_collector: Arc<MetricsCollector> = Arc::clone(&self.metrics_collector);
         let metrics_history = Arc::clone(&self.metrics_history);
         let stats = Arc::clone(&self.stats);
         let collection_interval_ms = self.config.collection_interval_ms;

@@ -52,7 +52,7 @@ function CardSkeleton() {
       aria-busy="true"
     >
       <div className={styles.loading}>
-        <div className={styles.spinner} aria-hidden="true"></div>
+        <div className={styles.spinner} aria-hidden="true" />
         <span className="sr-only">Loading card content...</span>
       </div>
     </div>
@@ -78,7 +78,7 @@ function MetricsSkeleton() {
       aria-busy="true"
     >
       <div className={styles.loading}>
-        <div className={styles.spinner} aria-hidden="true"></div>
+        <div className={styles.spinner} aria-hidden="true" />
         <p aria-live="polite">Loading metrics...</p>
       </div>
     </div>
@@ -104,7 +104,7 @@ function SLOSkeleton() {
       aria-busy="true"
     >
       <div className={styles.loading}>
-        <div className={styles.spinner} aria-hidden="true"></div>
+        <div className={styles.spinner} aria-hidden="true" />
         <p aria-live="polite">Loading service level objectives...</p>
       </div>
     </div>

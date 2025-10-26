@@ -12,7 +12,7 @@ pub mod performance;
 pub mod security;
 pub mod constitutional;
 pub mod filtering;
-pub mod analysis;
+pub mod evidence_analysis;
 
 // Re-export main types and functionality
 pub use types::*;

@@ -179,7 +179,7 @@ pub enum SslMode {
     VerifyFull,
 }
 
-/// Circuit breaker configuration pattern
+/// Circuit breaker configuration pattern - base common config
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CircuitBreakerConfig {
     pub failure_threshold: u32,
@@ -187,6 +187,15 @@ pub struct CircuitBreakerConfig {
     pub success_threshold: u32,
     pub timeout_ms: u64,
     pub max_concurrent_requests: u32,
+}
+
+/// Extended circuit breaker config for advanced features
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExtendedCircuitBreakerConfig {
+    pub base: CircuitBreakerConfig,
+    pub name: Option<String>,
+    pub failure_window_ms: Option<u64>,
+    pub reset_timeout_ms: Option<u64>,
 }
 
 impl Default for CircuitBreakerConfig {
@@ -197,6 +206,17 @@ impl Default for CircuitBreakerConfig {
             success_threshold: 3,
             timeout_ms: 30000, // 30 seconds
             max_concurrent_requests: 10,
+        }
+    }
+}
+
+impl Default for ExtendedCircuitBreakerConfig {
+    fn default() -> Self {
+        Self {
+            base: CircuitBreakerConfig::default(),
+            name: None,
+            failure_window_ms: Some(60000), // 1 minute
+            reset_timeout_ms: Some(60000), // 1 minute
         }
     }
 }
@@ -222,5 +242,35 @@ impl Config for CircuitBreakerConfig {
         } else {
             Err(errors)
         }
+    }
+}
+
+impl ExtendedCircuitBreakerConfig {
+    /// Convert from a basic CircuitBreakerConfig
+    pub fn from_base(config: CircuitBreakerConfig) -> Self {
+        Self {
+            base: config,
+            name: None,
+            failure_window_ms: None,
+            reset_timeout_ms: None,
+        }
+    }
+
+    /// Convert to basic CircuitBreakerConfig
+    pub fn to_base(self) -> CircuitBreakerConfig {
+        self.base
+    }
+}
+
+// Conversion implementations for easier migration
+impl From<CircuitBreakerConfig> for ExtendedCircuitBreakerConfig {
+    fn from(config: CircuitBreakerConfig) -> Self {
+        ExtendedCircuitBreakerConfig::from_base(config)
+    }
+}
+
+impl From<ExtendedCircuitBreakerConfig> for CircuitBreakerConfig {
+    fn from(config: ExtendedCircuitBreakerConfig) -> Self {
+        config.to_base()
     }
 }

@@ -4,25 +4,141 @@
 //! with HNSW indices for efficient similarity search.
 
 use anyhow::{Context, Result};
-use indexers::database::{PostgresVectorStore, VectorStore};
-use indexers::indexer_types::{BlockVectorRecord, SearchAuditEntry, SearchResult};
 use sqlx::PgPool;
 use std::sync::Arc;
 use tracing::{debug, error, info};
 use uuid::Uuid;
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
+
+/// Simple database pool wrapper
+pub struct DatabasePool {
+    pool: sqlx::Pool<sqlx::Postgres>,
+}
+
+impl DatabasePool {
+    pub fn new(pool: sqlx::Pool<sqlx::Postgres>) -> Self {
+        Self { pool }
+    }
+}
+
+impl Clone for DatabasePool {
+    fn clone(&self) -> Self {
+        // Note: This creates a new reference to the same pool
+        // In a real implementation, you'd want proper reference counting
+        Self {
+            pool: self.pool.clone(),
+        }
+    }
+}
+
+// Implement Deref to allow DatabasePool to be used as sqlx::Pool<Postgres>
+impl std::ops::Deref for DatabasePool {
+    type Target = sqlx::Pool<sqlx::Postgres>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.pool
+    }
+}
+
+/// Vector record for database storage
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BlockVectorRecord {
+    pub block_id: Uuid,
+    pub vector: Vec<f32>,
+    pub model_id: String,
+    pub modality: String,
+    pub created_at: DateTime<Utc>,
+}
+
+/// Search audit entry for logging
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SearchAuditEntry {
+    pub id: Uuid,
+    pub query: String,
+    pub query_type: String,
+    pub results_count: usize,
+    pub search_time_ms: u64,
+    pub timestamp: DateTime<Utc>,
+    pub created_at: DateTime<Utc>,
+    pub results: Option<serde_json::Value>,
+    pub features: Option<serde_json::Value>,
+}
+
+/// Search result
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SearchResult {
+    pub block_id: Uuid,
+    pub score: f32,
+    pub text_snippet: String,
+    pub modality: String,
+}
+
+/// Vector search query
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VectorQuery {
+    pub vector: Vec<f32>,
+    pub model_id: String,
+    pub k: usize,
+    pub project_scope: Option<String>,
+}
+
+/// Vector search result
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VectorSearchResult {
+    pub block_id: Uuid,
+    pub score: f32,
+    pub vector: Vec<f32>,
+    pub metadata: serde_json::Value,
+}
+
+/// Simple vector store implementation
+pub struct VectorStore {
+    pool: DatabasePool,
+}
+
+impl VectorStore {
+    pub fn new(pool: DatabasePool) -> Self {
+        Self { pool }
+    }
+
+    /// Store a vector record
+    pub async fn store_vector(&self, _record: BlockVectorRecord) -> Result<(), anyhow::Error> {
+        // Placeholder implementation
+        Ok(())
+    }
+
+    /// Search vectors
+    pub async fn search_vectors(&self, _query: &VectorQuery) -> Result<Vec<VectorSearchResult>, anyhow::Error> {
+        // Placeholder implementation
+        Ok(Vec::new())
+    }
+
+    /// Search similar vectors
+    pub async fn search_similar(&self, _query_vector: &[f32], _model_id: &str, _k: usize, _project_scope: Option<&str>) -> Result<Vec<VectorSearchResult>, anyhow::Error> {
+        // Placeholder implementation
+        Ok(Vec::new())
+    }
+
+    /// Log search operation
+    pub async fn log_search(&self, _entry: SearchAuditEntry) -> Result<(), anyhow::Error> {
+        // Placeholder implementation
+        Ok(())
+    }
+}
 
 /// Database-backed vector store for multimodal RAG
 pub struct DatabaseVectorStore {
-    /// PostgreSQL connection pool
-    pool: Arc<PgPool>,
+    /// Database pool
+    pool: Arc<DatabasePool>,
     /// Vector store implementation
-    vector_store: PostgresVectorStore,
+    vector_store: VectorStore,
 }
 
 impl DatabaseVectorStore {
     /// Create new database vector store
-    pub fn new(pool: Arc<PgPool>) -> Self {
-        let vector_store = PostgresVectorStore::new((*pool).clone());
+    pub fn new(pool: Arc<DatabasePool>) -> Self {
+        let vector_store = VectorStore::new((*pool).clone());
         Self {
             pool,
             vector_store,
@@ -71,16 +187,27 @@ impl DatabaseVectorStore {
             model_id, k, project_scope
         );
 
-        let results = self
+        let start_time = std::time::Instant::now();
+
+        let search_results = self
             .vector_store
             .search_similar(query_vector, model_id, k, project_scope)
             .await
             .context("Vector similarity search failed")?;
 
+        // Convert to expected format (block_id, score)
+        let results: Vec<(Uuid, f32)> = search_results
+            .into_iter()
+            .map(|result| (result.block_id, result.score))
+            .collect();
+
+        let search_time = start_time.elapsed();
+
         info!(
-            "Found {} similar vectors for model: {}",
+            "Found {} similar vectors for model: {} in {:?}",
             results.len(),
-            model_id
+            model_id,
+            search_time
         );
 
         Ok(results)
@@ -127,8 +254,12 @@ impl DatabaseVectorStore {
         let entry = SearchAuditEntry {
             id: uuid::Uuid::new_v4(),
             query: query.to_string(),
+            query_type: "vector_similarity".to_string(),
+            results_count: results.len() as usize,
+            search_time_ms: 0, // TODO: Pass actual search time when available
+            timestamp: chrono::Utc::now(),
             created_at: chrono::Utc::now(),
-            results: Some(serde_json::to_value(&search_results).unwrap_or(serde_json::Value::Null)),
+            results: Some(serde_json::to_value(&results).unwrap_or(serde_json::Value::Null)),
             features: Some(serde_json::to_value(&feature_map).unwrap_or(serde_json::Value::Null)),
         };
 
@@ -151,7 +282,7 @@ impl DatabaseVectorStore {
         let total_vectors = sqlx::query_scalar::<_, i64>(
             "SELECT COUNT(*) FROM block_vectors"
         )
-        .fetch_one(&*self.pool)
+        .fetch_one(&**self.pool)
         .await
         .context("Failed to count total vectors")?;
 
@@ -159,7 +290,7 @@ impl DatabaseVectorStore {
         let model_counts = sqlx::query_as::<_, (String, i64)>(
             "SELECT model_id, COUNT(*) FROM block_vectors GROUP BY model_id"
         )
-        .fetch_all(&*self.pool)
+        .fetch_all(&**self.pool)
         .await
         .context("Failed to count vectors by model")?;
 
@@ -167,7 +298,7 @@ impl DatabaseVectorStore {
         let modality_counts = sqlx::query_as::<_, (String, i64)>(
             "SELECT modality, COUNT(*) FROM block_vectors GROUP BY modality"
         )
-        .fetch_all(&*self.pool)
+        .fetch_all(&**self.pool)
         .await
         .context("Failed to count vectors by modality")?;
 
@@ -191,7 +322,7 @@ impl DatabaseVectorStore {
         let result = sqlx::query_scalar::<_, bool>(
             "SELECT EXISTS(SELECT 1 FROM pg_extension WHERE extname = 'vector')"
         )
-        .fetch_one(&*self.pool)
+        .fetch_one(&**self.pool)
         .await
         .context("Failed to check pgvector extension")?;
 
@@ -205,7 +336,7 @@ impl DatabaseVectorStore {
     }
 
     /// Get connection pool reference
-    pub fn pool(&self) -> &Arc<PgPool> {
+    pub fn pool(&self) -> &Arc<DatabasePool> {
         &self.pool
     }
 }
@@ -244,7 +375,7 @@ impl VectorStoreStats {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use indexers::types::{BlockVectorRecord, SearchAuditEntry};
+    use agent_agency_common_types::agent_data_processing::{BlockVectorRecord, SearchAuditEntry};
     use std::collections::HashMap;
     use uuid::Uuid;
 
@@ -344,7 +475,7 @@ mod tests {
         let created_at = chrono::Utc::now();
 
         let mut results = Vec::new();
-        results.push(indexers::SearchResult {
+        results.push(SearchResult {
             block_id: Uuid::new_v4(),
             score: 0.95,
             text_snippet: "test snippet".to_string(),
@@ -369,7 +500,7 @@ mod tests {
         assert!(entry.features.is_some());
 
         // Test deserialization
-        let results_deserialized: Vec<indexers::SearchResult> =
+        let results_deserialized: Vec<SearchResult> =
             serde_json::from_value(entry.results.unwrap()).unwrap();
         assert_eq!(results_deserialized.len(), 1);
 

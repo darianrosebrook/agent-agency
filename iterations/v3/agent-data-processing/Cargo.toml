@@ -47,7 +47,6 @@ pdf = "0.8"
 ndarray = "0.15"
 rand.workspace = true
 priority-queue = "2.0"
-dashmap.workspace = true
 
 # Compression and archiving
 tar = "0.4"
@@ -78,6 +77,12 @@ embedding-service = { path = "../embedding-service", optional = true }
 
 # Common types
 agent-agency-common-types = { path = "../common-types" }
+
+# Context preservation specific
+dashmap.workspace = true
+crossbeam = "0.8"
+parking_lot = "0.12"
+futures = "0.3"
 
 [features]
 default = ["workspace-integration", "embeddings"]

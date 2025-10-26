@@ -1,6 +1,7 @@
 //! Core ML backend for macOS
 
-use crate::{ComputeUnit, TensorMap, TensorSpec};
+use crate::{TensorMap, TensorSpec};
+use crate::core_ml_bridge::ComputeUnit;
 use crate::inference::{DType, IoSchema};
 #[cfg(feature = "candle")]
 use candle_core::DType as CandleDType;

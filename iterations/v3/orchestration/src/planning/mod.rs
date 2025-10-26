@@ -4,9 +4,9 @@
 //! from natural language task descriptions.
 
 pub mod acceptance_criteria_extractor;
-pub mod agent;
+pub mod planning_agent;
 pub mod ambiguity;
-pub mod cache;
+pub mod planning_cache;
 pub mod complexity;
 pub mod context_builder;
 pub mod domain;
@@ -26,7 +26,7 @@ mod tests;
 mod integration_test;
 
 // Re-export main types
-pub use agent::{
+pub use planning_agent::{
     PlanningAgent, PlanningAgentConfig, WorkingSpec, WorkingSpecResult, TaskContext, RepositoryInfo,
     Incident, TechStack, HistoricalData, TaskHistory, AcceptanceCriterion,
     TestPlan, RollbackPlan, CriterionPriority, RollbackRisk,

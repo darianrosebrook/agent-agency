@@ -11,6 +11,8 @@ use crate::data_processing_types::*;
 use crate::{DataProcessingResult, DataProcessingError};
 use std::collections::HashMap;
 use async_trait::async_trait;
+use serde::{Deserialize, Serialize};
+use tracing::{debug, info, warn};
 
 /// Result from enrichment operations
 pub type EnrichmentResult = DataProcessingResult<ProcessingOutput>;
@@ -29,38 +31,631 @@ pub trait EnrichmentStage: Send + Sync {
 
     /// Get supported enrichment types
     fn supported_enrichments(&self) -> &[EnrichmentType];
+
+/// Circuit breaker configuration for enrichment reliability
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EnrichmentCircuitBreakerConfig {
+    pub failure_threshold: u64,
+    pub recovery_timeout_secs: u64,
+    pub success_threshold: u64,
+    pub request_timeout_secs: u64,
+}
+
+/// ASR enrichment result
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AsrEnrichmentResult {
+    pub transcription: String,
+    pub confidence: f32,
+    pub language: Option<String>,
+    pub speakers: Vec<SpeakerSegment>,
+    pub duration: f32,
+}
+
+/// Speaker segment for diarization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SpeakerSegment {
+    pub speaker_id: String,
+    pub start_time: f32,
+    pub end_time: f32,
+    pub text: String,
+}
+
+/// Vision enrichment result
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VisionEnrichmentResult {
+    pub ocr_text: String,
+    pub confidence: f32,
+    pub bounding_boxes: Vec<BoundingBox>,
+    pub layout: DocumentLayout,
+}
+
+/// Bounding box for OCR
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BoundingBox {
+    pub x: f32,
+    pub y: f32,
+    pub width: f32,
+    pub height: f32,
+    pub text: String,
+    pub confidence: f32,
+}
+
+/// Document layout information
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DocumentLayout {
+    pub pages: Vec<PageLayout>,
+    pub structure: DocumentStructure,
+}
+
+/// Page layout
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PageLayout {
+    pub page_number: u32,
+    pub elements: Vec<LayoutElement>,
+}
+
+/// Layout element
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LayoutElement {
+    pub element_type: String,
+    pub bounding_box: BoundingBox,
+    pub content: String,
+}
+
+/// Document structure
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DocumentStructure {
+    pub title: Option<String>,
+    pub headings: Vec<String>,
+    pub paragraphs: Vec<String>,
+    pub tables: Vec<TableStructure>,
+}
+
+/// Table structure
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TableStructure {
+    pub headers: Vec<String>,
+    pub rows: Vec<Vec<String>>,
+}
+
+/// Entity extraction result
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EntityExtractionResult {
+    pub entities: Vec<ExtractedEntity>,
+    pub topics: Vec<ExtractedTopic>,
+}
+
+/// Extracted entity
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExtractedEntity {
+    pub entity_type: String,
+    pub text: String,
+    pub confidence: f32,
+    pub start_offset: usize,
+    pub end_offset: usize,
+    pub metadata: HashMap<String, serde_json::Value>,
+}
+
+/// Extracted topic
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExtractedTopic {
+    pub topic: String,
+    pub confidence: f32,
+    pub keywords: Vec<String>,
+}
+
+/// Visual captioning result
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VisualCaptioningResult {
+    pub caption: String,
+    pub confidence: f32,
+    pub tags: Vec<String>,
+    pub objects: Vec<DetectedObject>,
+}
+
+/// Detected object in image
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DetectedObject {
+    pub object_class: String,
+    pub confidence: f32,
+    pub bounding_box: BoundingBox,
+}
+
+/// ASR Enricher - Consolidated from enrichers crate
+pub struct AsrEnricher {
+    config: EnrichmentCircuitBreakerConfig,
+    circuit_breaker: CircuitBreaker,
+}
+
+impl AsrEnricher {
+    pub fn new(config: EnrichmentCircuitBreakerConfig) -> Self {
+        let circuit_breaker = CircuitBreaker::new(
+            config.failure_threshold,
+            config.recovery_timeout_secs,
+            config.success_threshold,
+            config.request_timeout_secs,
+        );
+        Self { config, circuit_breaker }
+    }
+
+    /// Perform ASR enrichment with circuit breaker protection
+    pub async fn enrich_audio(&self, audio_data: &[u8], content_type: &str) -> EnrichmentResult {
+        if !self.circuit_breaker.can_attempt()? {
+            return Err(DataProcessingError::EnrichmentError(
+                "ASR enricher circuit breaker is open".to_string()
+            ));
+        }
+
+        match self.perform_asr(audio_data, content_type).await {
+            Ok(result) => {
+                self.circuit_breaker.record_success();
+                Ok(ProcessingOutput::EnrichedContent(
+                    serde_json::to_value(result).unwrap_or_default()
+                ))
+            }
+            Err(e) => {
+                self.circuit_breaker.record_failure();
+                Err(DataProcessingError::EnrichmentError(format!("ASR enrichment failed: {}", e)))
+            }
+        }
+    }
+
+    async fn perform_asr(&self, audio_data: &[u8], content_type: &str) -> Result<AsrEnrichmentResult, anyhow::Error> {
+        // Consolidated ASR logic from enrichers crate
+        // This would integrate with Whisper, Azure Speech, or other ASR services
+        info!("Performing ASR enrichment on {} bytes of {} audio", audio_data.len(), content_type);
+
+        // Placeholder implementation - would call actual ASR service
+        Ok(AsrEnrichmentResult {
+            transcription: "This is a placeholder transcription from consolidated ASR enricher.".to_string(),
+            confidence: 0.95,
+            language: Some("en".to_string()),
+            speakers: vec![SpeakerSegment {
+                speaker_id: "speaker_1".to_string(),
+                start_time: 0.0,
+                end_time: 10.0,
+                text: "Consolidated ASR enrichment functionality.".to_string(),
+            }],
+            duration: 10.0,
+        })
+    }
+}
+
+/// Vision Enricher - Consolidated from enrichers crate
+pub struct VisionEnricher {
+    config: EnrichmentCircuitBreakerConfig,
+    circuit_breaker: CircuitBreaker,
+}
+
+impl VisionEnricher {
+    pub fn new(config: EnrichmentCircuitBreakerConfig) -> Self {
+        let circuit_breaker = CircuitBreaker::new(
+            config.failure_threshold,
+            config.recovery_timeout_secs,
+            config.success_threshold,
+            config.request_timeout_secs,
+        );
+        Self { config, circuit_breaker }
+    }
+
+    /// Perform vision enrichment with OCR and object detection
+    pub async fn enrich_image(&self, image_data: &[u8], content_type: &str) -> EnrichmentResult {
+        if !self.circuit_breaker.can_attempt()? {
+            return Err(DataProcessingError::EnrichmentError(
+                "Vision enricher circuit breaker is open".to_string()
+            ));
+        }
+
+        match self.perform_vision_enrichment(image_data, content_type).await {
+            Ok(result) => {
+                self.circuit_breaker.record_success();
+                Ok(ProcessingOutput::EnrichedContent(
+                    serde_json::to_value(result).unwrap_or_default()
+                ))
+            }
+            Err(e) => {
+                self.circuit_breaker.record_failure();
+                Err(DataProcessingError::EnrichmentError(format!("Vision enrichment failed: {}", e)))
+            }
+        }
+    }
+
+    async fn perform_vision_enrichment(&self, image_data: &[u8], content_type: &str) -> Result<VisionEnrichmentResult, anyhow::Error> {
+        // Consolidated vision enrichment logic from enrichers crate
+        info!("Performing vision enrichment on {} bytes of {} image", image_data.len(), content_type);
+
+        // Placeholder implementation - would call OCR and object detection services
+        Ok(VisionEnrichmentResult {
+            ocr_text: "This is placeholder OCR text from consolidated vision enricher.".to_string(),
+            confidence: 0.92,
+            bounding_boxes: vec![BoundingBox {
+                x: 10.0, y: 10.0, width: 100.0, height: 20.0,
+                text: "Sample OCR Text".to_string(),
+                confidence: 0.95,
+            }],
+            layout: DocumentLayout {
+                pages: vec![PageLayout {
+                    page_number: 1,
+                    elements: vec![LayoutElement {
+                        element_type: "text".to_string(),
+                        bounding_box: BoundingBox {
+                            x: 10.0, y: 10.0, width: 100.0, height: 20.0,
+                            text: "Sample Element".to_string(),
+                            confidence: 0.95,
+                        },
+                        content: "Sample content".to_string(),
+                    }],
+                }],
+                structure: DocumentStructure {
+                    title: Some("Consolidated Vision Enrichment".to_string()),
+                    headings: vec![],
+                    paragraphs: vec!["This demonstrates consolidated vision enrichment functionality.".to_string()],
+                    tables: vec![],
+                },
+            },
+        })
+    }
+}
+
+/// Entity Enricher - Consolidated from enrichers crate
+pub struct EntityEnricher {
+    config: EnrichmentCircuitBreakerConfig,
+    circuit_breaker: CircuitBreaker,
+}
+
+impl EntityEnricher {
+    pub fn new(config: EnrichmentCircuitBreakerConfig) -> Self {
+        let circuit_breaker = CircuitBreaker::new(
+            config.failure_threshold,
+            config.recovery_timeout_secs,
+            config.success_threshold,
+            config.request_timeout_secs,
+        );
+        Self { config, circuit_breaker }
+    }
+
+    /// Perform entity extraction and topic modeling
+    pub async fn enrich_text(&self, text: &str) -> EnrichmentResult {
+        if !self.circuit_breaker.can_attempt()? {
+            return Err(DataProcessingError::EnrichmentError(
+                "Entity enricher circuit breaker is open".to_string()
+            ));
+        }
+
+        match self.perform_entity_extraction(text).await {
+            Ok(result) => {
+                self.circuit_breaker.record_success();
+                Ok(ProcessingOutput::EnrichedContent(
+                    serde_json::to_value(result).unwrap_or_default()
+                ))
+            }
+            Err(e) => {
+                self.circuit_breaker.record_failure();
+                Err(DataProcessingError::EnrichmentError(format!("Entity extraction failed: {}", e)))
+            }
+        }
+    }
+
+    async fn perform_entity_extraction(&self, text: &str) -> Result<EntityExtractionResult, anyhow::Error> {
+        // Consolidated entity extraction logic from enrichers crate
+        info!("Performing entity extraction on {} characters of text", text.len());
+
+        // Placeholder implementation - would call NER and topic modeling services
+        Ok(EntityExtractionResult {
+            entities: vec![ExtractedEntity {
+                entity_type: "PERSON".to_string(),
+                text: "Consolidated Entity".to_string(),
+                confidence: 0.88,
+                start_offset: 0,
+                end_offset: 18,
+                metadata: HashMap::new(),
+            }],
+            topics: vec![ExtractedTopic {
+                topic: "Data Processing".to_string(),
+                confidence: 0.75,
+                keywords: vec!["consolidation".to_string(), "enrichment".to_string()],
+            }],
+        })
+    }
+}
+
+/// Visual Captioning Enricher - Consolidated from enrichers crate
+pub struct VisualCaptioningEnricher {
+    config: EnrichmentCircuitBreakerConfig,
+    circuit_breaker: CircuitBreaker,
+}
+
+impl VisualCaptioningEnricher {
+    pub fn new(config: EnrichmentCircuitBreakerConfig) -> Self {
+        let circuit_breaker = CircuitBreaker::new(
+            config.failure_threshold,
+            config.recovery_timeout_secs,
+            config.success_threshold,
+            config.request_timeout_secs,
+        );
+        Self { config, circuit_breaker }
+    }
+
+    /// Generate captions and tags for images
+    pub async fn enrich_visual(&self, image_data: &[u8], content_type: &str) -> EnrichmentResult {
+        if !self.circuit_breaker.can_attempt()? {
+            return Err(DataProcessingError::EnrichmentError(
+                "Visual captioning enricher circuit breaker is open".to_string()
+            ));
+        }
+
+        match self.perform_visual_captioning(image_data, content_type).await {
+            Ok(result) => {
+                self.circuit_breaker.record_success();
+                Ok(ProcessingOutput::EnrichedContent(
+                    serde_json::to_value(result).unwrap_or_default()
+                ))
+            }
+            Err(e) => {
+                self.circuit_breaker.record_failure();
+                Err(DataProcessingError::EnrichmentError(format!("Visual captioning failed: {}", e)))
+            }
+        }
+    }
+
+    async fn perform_visual_captioning(&self, image_data: &[u8], content_type: &str) -> Result<VisualCaptioningResult, anyhow::Error> {
+        // Consolidated visual captioning logic from enrichers crate
+        info!("Performing visual captioning on {} bytes of {} image", image_data.len(), content_type);
+
+        // Placeholder implementation - would call image captioning and tagging services
+        Ok(VisualCaptioningResult {
+            caption: "A consolidated visual captioning enricher demonstrating multimodal processing capabilities.".to_string(),
+            confidence: 0.85,
+            tags: vec!["consolidation".to_string(), "enrichment".to_string(), "multimodal".to_string()],
+            objects: vec![DetectedObject {
+                object_class: "text".to_string(),
+                confidence: 0.90,
+                bounding_box: BoundingBox {
+                    x: 50.0, y: 50.0, width: 200.0, height: 50.0,
+                    text: "Consolidated Processing".to_string(),
+                    confidence: 0.95,
+                },
+            }],
+        })
+    }
+}
+
+/// Circuit breaker for enrichment reliability
+#[derive(Debug)]
+pub struct CircuitBreaker {
+    failure_threshold: u64,
+    recovery_timeout_secs: u64,
+    success_threshold: u64,
+    request_timeout_secs: u64,
+    state: CircuitState,
+    failures: u64,
+    successes: u64,
+    last_failure_time: Option<std::time::Instant>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CircuitState {
+    Closed,
+    Open,
+    HalfOpen,
+}
+
+impl CircuitBreaker {
+    pub fn new(failure_threshold: u64, recovery_timeout_secs: u64, success_threshold: u64, request_timeout_secs: u64) -> Self {
+        Self {
+            failure_threshold,
+            recovery_timeout_secs,
+            success_threshold,
+            request_timeout_secs,
+            state: CircuitState::Closed,
+            failures: 0,
+            successes: 0,
+            last_failure_time: None,
+        }
+    }
+
+    pub fn can_attempt(&self) -> Result<bool, DataProcessingError> {
+        match self.state {
+            CircuitState::Closed => Ok(true),
+            CircuitState::Open => {
+                if let Some(last_failure) = self.last_failure_time {
+                    let elapsed = last_failure.elapsed().as_secs();
+                    if elapsed >= self.recovery_timeout_secs as u64 {
+                        // Transition to half-open
+                        Ok(true)
+                    } else {
+                        Ok(false)
+                    }
+                } else {
+                    Ok(false)
+                }
+            }
+            CircuitState::HalfOpen => Ok(true),
+        }
+    }
+
+    pub fn record_success(&mut self) {
+        match self.state {
+            CircuitState::Closed => {
+                self.failures = 0;
+            }
+            CircuitState::HalfOpen => {
+                self.successes += 1;
+                if self.successes >= self.success_threshold {
+                    self.state = CircuitState::Closed;
+                    self.failures = 0;
+                    self.successes = 0;
+                }
+            }
+            CircuitState::Open => {} // Shouldn't happen
+        }
+    }
+
+    pub fn record_failure(&mut self) {
+        self.failures += 1;
+        self.last_failure_time = Some(std::time::Instant::now());
+
+        match self.state {
+            CircuitState::Closed => {
+                if self.failures >= self.failure_threshold {
+                    self.state = CircuitState::Open;
+                }
+            }
+            CircuitState::HalfOpen => {
+                self.state = CircuitState::Open;
+                self.successes = 0;
+            }
+            CircuitState::Open => {} // Already open
+        }
+    }
+
+    pub fn state(&self) -> CircuitState {
+        self.state
+    }
+}
 }
 
 /// Types of enrichment operations available
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum EnrichmentType {
+    Asr,
+    Vision,
+    Entity,
+    VisualCaptioning,
     VisionOcr,
     AudioTranscription,
     SpeakerDiarization,
     EntityExtraction,
-    VisualCaptioning,
     TopicModeling,
+}
+
+/// Unified enrichment stage combining all enrichers
+pub struct UnifiedEnrichmentStage {
+    asr_enricher: AsrEnricher,
+    vision_enricher: VisionEnricher,
+    entity_enricher: EntityEnricher,
+    visual_captioning_enricher: VisualCaptioningEnricher,
+    circuit_breaker_config: EnrichmentCircuitBreakerConfig,
+}
+
+impl UnifiedEnrichmentStage {
+    pub fn new(circuit_breaker_config: EnrichmentCircuitBreakerConfig) -> Self {
+        Self {
+            asr_enricher: AsrEnricher::new(circuit_breaker_config.clone()),
+            vision_enricher: VisionEnricher::new(circuit_breaker_config.clone()),
+            entity_enricher: EntityEnricher::new(circuit_breaker_config.clone()),
+            visual_captioning_enricher: VisualCaptioningEnricher::new(circuit_breaker_config.clone()),
+            circuit_breaker_config,
+        }
+    }
+}
+
+#[async_trait]
+impl EnrichmentStage for UnifiedEnrichmentStage {
+    fn name(&self) -> &'static str {
+        "unified_enrichment"
+    }
+
+    fn can_enrich(&self, content_type: &ContentType) -> bool {
+        match content_type {
+            ContentType::Audio(_) => true,
+            ContentType::Image(_) => true,
+            ContentType::Video(_) => true,
+            ContentType::Document(_) => true,
+            ContentType::Text => true,
+            _ => false,
+        }
+    }
+
+    async fn enrich(&self, input: DataInput, content: ProcessedContent) -> EnrichmentResult {
+        let mut enriched_results = Vec::new();
+
+        // Enrich based on content type
+        match &content.content_type {
+            ContentType::Audio(_) => {
+                if let Some(audio_data) = self.extract_audio_data(&content) {
+                    let asr_result = self.asr_enricher.enrich_audio(&audio_data, "audio/wav").await?;
+                    enriched_results.push(asr_result);
+                }
+            }
+            ContentType::Image(_) => {
+                if let Some(image_data) = self.extract_image_data(&content) {
+                    let vision_result = self.vision_enricher.enrich_image(&image_data, "image/jpeg").await?;
+                    enriched_results.push(vision_result);
+
+                    let caption_result = self.visual_captioning_enricher.enrich_visual(&image_data, "image/jpeg").await?;
+                    enriched_results.push(caption_result);
+                }
+            }
+            ContentType::Text => {
+                if let Some(text) = self.extract_text_data(&content) {
+                    let entity_result = self.entity_enricher.enrich_text(&text).await?;
+                    enriched_results.push(entity_result);
+                }
+            }
+            _ => {}
+        }
+
+        // Combine results
+        if enriched_results.is_empty() {
+            Ok(ProcessingOutput::EnrichedContent(serde_json::json!({"status": "no_enrichment_applicable"})))
+        } else {
+            // Return the first result for now - in practice would combine them
+            enriched_results.into_iter().next().unwrap()
+        }
+    }
+
+    fn supported_enrichments(&self) -> &[EnrichmentType] {
+        &[
+            EnrichmentType::Asr,
+            EnrichmentType::Vision,
+            EnrichmentType::Entity,
+            EnrichmentType::VisualCaptioning,
+            EnrichmentType::VisionOcr,
+            EnrichmentType::AudioTranscription,
+            EnrichmentType::SpeakerDiarization,
+            EnrichmentType::EntityExtraction,
+            EnrichmentType::TopicModeling,
+        ]
+    }
+}
+
+impl UnifiedEnrichmentStage {
+    fn extract_audio_data(&self, content: &ProcessedContent) -> Option<Vec<u8>> {
+        match &content.data {
+            ProcessedContentData::Binary(data) => Some(data.clone()),
+            _ => None,
+        }
+    }
+
+    fn extract_image_data(&self, content: &ProcessedContent) -> Option<Vec<u8>> {
+        match &content.data {
+            ProcessedContentData::Binary(data) => Some(data.clone()),
+            _ => None,
+        }
+    }
+
+    fn extract_text_data(&self, content: &ProcessedContent) -> Option<String> {
+        match &content.data {
+            ProcessedContentData::Text(text) => Some(text.clone()),
+            ProcessedContentData::Structured(data) => {
+                Some(serde_json::to_string_pretty(data).unwrap_or_default())
+            }
+            _ => None,
+        }
+    }
 }
 
 /// Default implementation combining all enrichment capabilities
 pub struct DefaultEnrichmentStage {
-    vision_enricher: VisionEnricher,
-    audio_enricher: AudioEnricher,
-    entity_enricher: EntityEnricher,
-    visual_captioner: VisualCaptioner,
-    circuit_breaker: CircuitBreaker,
+    unified_stage: UnifiedEnrichmentStage,
 }
 
 impl DefaultEnrichmentStage {
-    /// Create a new default enrichment stage
-    pub async fn new() -> DataProcessingResult<Self> {
-        Ok(Self {
-            vision_enricher: VisionEnricher::new().await?,
-            audio_enricher: AudioEnricher::new().await?,
-            entity_enricher: EntityEnricher::new().await?,
-            visual_captioner: VisualCaptioner::new().await?,
-            circuit_breaker: CircuitBreaker::new(),
-        })
+    pub fn new(circuit_breaker_config: EnrichmentCircuitBreakerConfig) -> Self {
+        Self {
+            unified_stage: UnifiedEnrichmentStage::new(circuit_breaker_config),
+        }
     }
 }
 
@@ -71,485 +666,16 @@ impl EnrichmentStage for DefaultEnrichmentStage {
     }
 
     fn can_enrich(&self, content_type: &ContentType) -> bool {
-        matches!(content_type,
-            ContentType::Image | ContentType::Video | ContentType::Audio |
-            ContentType::Text | ContentType::Pdf | ContentType::Html
-        )
+        self.unified_stage.can_enrich(content_type)
     }
 
-    async fn enrich(&self, input: DataInput, mut content: ProcessedContent) -> EnrichmentResult {
-        // Check circuit breaker
-        if !self.circuit_breaker.can_proceed() {
-            return Err(DataProcessingError::ResourceExhausted(
-                "Circuit breaker open - enrichment services unavailable".to_string()
-            ));
-        }
-
-        let start_time = std::time::Instant::now();
-        let mut entities = Vec::new();
-        let mut visual_elements = Vec::new();
-        let mut audio_transcript = None;
-        let mut errors = Vec::new();
-
-        // Determine content type from input
-        let content_type = match &input.source {
-            DataSource::File(fs) => &fs.content_type,
-            DataSource::Url(us) => us.content_type.as_ref().unwrap_or(&ContentType::Unknown),
-            DataSource::Stream(ss) => &ss.content_type,
-            _ => &ContentType::Unknown,
-        };
-
-        // Apply appropriate enrichments based on content type
-        match content_type {
-            ContentType::Image => {
-                // Vision OCR and captioning
-                match self.vision_enricher.extract_text(&input).await {
-                    Ok(extracted_text) => {
-                        if let Some(text) = extracted_text {
-                            content.text_content = Some(text);
-                        }
-                    }
-                    Err(e) => errors.push(format!("Vision OCR failed: {}", e)),
-                }
-
-                match self.visual_captioner.generate_caption(&input).await {
-                    Ok(caption) => {
-                        if let Some(desc) = caption {
-                            visual_elements.push(VisualElement {
-                                element_type: VisualElementType::Image,
-                                position: BoundingBox { x: 0.0, y: 0.0, width: 1.0, height: 1.0 },
-                                confidence: 0.8,
-                                text_content: Some(desc),
-                                description: Some("AI-generated image caption".to_string()),
-                            });
-                        }
-                    }
-                    Err(e) => errors.push(format!("Visual captioning failed: {}", e)),
-                }
-
-                // Entity extraction from visual content
-                if let Some(text) = &content.text_content {
-                    match self.entity_enricher.extract_entities(text).await {
-                        Ok(extracted_entities) => entities.extend(extracted_entities),
-                        Err(e) => errors.push(format!("Entity extraction failed: {}", e)),
-                    }
-                }
-            }
-
-            ContentType::Video => {
-                // Audio transcription from video
-                match self.audio_enricher.transcribe_audio(&input).await {
-                    Ok(transcript) => {
-                        audio_transcript = transcript;
-                    }
-                    Err(e) => errors.push(format!("Audio transcription failed: {}", e)),
-                }
-
-                // Speaker diarization
-                match self.audio_enricher.identify_speakers(&input).await {
-                    Ok(speakers) => {
-                        // Add speaker information to entities
-                        for speaker in speakers {
-                            entities.push(Entity {
-                                id: format!("speaker_{}", speaker.id),
-                                name: speaker.name,
-                                entity_type: EntityType::Person,
-                                confidence: speaker.confidence,
-                                positions: vec![],
-                                metadata: HashMap::from([
-                                    ("speaker_id".to_string(), speaker.id.into()),
-                                    ("voice_signature".to_string(), serde_json::to_value(&speaker.voice_signature).unwrap_or(serde_json::Value::Null)),
-                                ]),
-                            });
-                        }
-                    }
-                    Err(e) => errors.push(format!("Speaker diarization failed: {}", e)),
-                }
-            }
-
-            ContentType::Audio => {
-                // Audio transcription
-                match self.audio_enricher.transcribe_audio(&input).await {
-                    Ok(transcript) => {
-                        audio_transcript = transcript;
-                    }
-                    Err(e) => errors.push(format!("Audio transcription failed: {}", e)),
-                }
-
-                // Speaker diarization
-                match self.audio_enricher.identify_speakers(&input).await {
-                    Ok(speakers) => {
-                        for speaker in speakers {
-                            entities.push(Entity {
-                                id: format!("speaker_{}", speaker.id),
-                                name: speaker.name,
-                                entity_type: EntityType::Person,
-                                confidence: speaker.confidence,
-                                positions: vec![],
-                                metadata: HashMap::from([
-                                    ("speaker_id".to_string(), speaker.id.into()),
-                                ]),
-                            });
-                        }
-                    }
-                    Err(e) => errors.push(format!("Speaker diarization failed: {}", e)),
-                }
-            }
-
-            ContentType::Text | ContentType::Pdf | ContentType::Html | ContentType::Markdown => {
-                // Entity extraction from text content
-                if let Some(text) = &content.text_content {
-                    match self.entity_enricher.extract_entities(text).await {
-                        Ok(extracted_entities) => entities.extend(extracted_entities),
-                        Err(e) => errors.push(format!("Entity extraction failed: {}", e)),
-                    }
-                }
-
-                // Topic modeling
-                if let Some(text) = &content.text_content {
-                    match self.entity_enricher.extract_topics(text).await {
-                        Ok(topics) => {
-                            for topic in topics {
-                                entities.push(Entity {
-                                    id: format!("topic_{}", topic.name.replace(" ", "_")),
-                                    name: topic.name,
-                                    entity_type: EntityType::Other("Topic".to_string()),
-                                    confidence: topic.confidence,
-                                    positions: vec![],
-                                    metadata: HashMap::from([
-                                        ("topic_score".to_string(), topic.score.into()),
-                                        ("topic_category".to_string(), topic.category.into()),
-                                    ]),
-                                });
-                            }
-                        }
-                        Err(e) => errors.push(format!("Topic modeling failed: {}", e)),
-                    }
-                }
-            }
-
-            _ => {
-                // For other content types, try basic entity extraction if text is available
-                if let Some(text) = &content.text_content {
-                    match self.entity_enricher.extract_entities(text).await {
-                        Ok(extracted_entities) => entities.extend(extracted_entities),
-                        Err(e) => errors.push(format!("Entity extraction failed: {}", e)),
-                    }
-                }
-            }
-        }
-
-        // Update content with enriched data
-        content.entities = entities;
-        content.visual_elements = visual_elements;
-        content.audio_transcript = audio_transcript;
-
-        // Update circuit breaker based on success/failure
-        if errors.is_empty() {
-            self.circuit_breaker.record_success();
-        } else {
-            self.circuit_breaker.record_failure();
-        }
-
-        // Create metadata
-        let mut metadata = input.metadata.clone();
-        metadata.insert("enrichment_errors".to_string(), errors.clone().into());
-
-        let stats = ProcessingStats {
-            processing_time_ms: start_time.elapsed().as_millis() as u64,
-            bytes_processed: 0, // Would track input size
-            entities_extracted: content.entities.len(),
-            relationships_found: 0, // Would be calculated from entities
-            embeddings_generated: 0,
-            errors_encountered: errors,
-        };
-
-                Ok(ProcessingOutput {
-                    id: input.id.clone(),
-                    original_input: input,
-            processed_content: content,
-            extracted_metadata: metadata,
-            processing_stats: stats,
-            created_at: chrono::Utc::now(),
-        })
+    async fn enrich(&self, input: DataInput, content: ProcessedContent) -> EnrichmentResult {
+        self.unified_stage.enrich(input, content).await
     }
 
     fn supported_enrichments(&self) -> &[EnrichmentType] {
-        &[
-            EnrichmentType::VisionOcr,
-            EnrichmentType::AudioTranscription,
-            EnrichmentType::SpeakerDiarization,
-            EnrichmentType::EntityExtraction,
-            EnrichmentType::VisualCaptioning,
-            EnrichmentType::TopicModeling,
-        ]
+        self.unified_stage.supported_enrichments()
     }
 }
-
-#[async_trait]
-impl crate::pipeline::PipelineStage for DefaultEnrichmentStage {
-    fn name(&self) -> &'static str {
-        "enrichment"
-    }
-
-    async fn process(&self, input: DataInput) -> DataProcessingResult<ProcessingOutput> {
-        // For enrichment, we expect the input to contain processed content from ingestion
-        let processed_content = match &input.content {
-            DataContent::Structured(data) => {
-                // Try to deserialize as ProcessedContent
-                match serde_json::from_value(data.clone()) {
-                    Ok(content) => content,
-                    Err(_) => ProcessedContent {
-                        text_content: None,
-                        structured_data: Some(data.clone()),
-                        embeddings: None,
-                        entities: vec![],
-                        relationships: vec![],
-                        visual_elements: vec![],
-                        audio_transcript: None,
-                    }
-                }
-            }
-            DataContent::Text(text) => ProcessedContent {
-                text_content: Some(text.clone()),
-                structured_data: None,
-                embeddings: None,
-                entities: vec![],
-                relationships: vec![],
-                visual_elements: vec![],
-                audio_transcript: None,
-            },
-            _ => ProcessedContent {
-                text_content: None,
-                structured_data: None,
-                embeddings: None,
-                entities: vec![],
-                relationships: vec![],
-                visual_elements: vec![],
-                audio_transcript: None,
-            }
-        };
-
-        self.enrich(input, processed_content).await
-    }
-}
-
-/// Circuit breaker for enrichment service reliability
-pub struct CircuitBreaker {
-    failure_count: std::sync::atomic::AtomicUsize,
-    last_failure_time: std::sync::Mutex<Option<std::time::Instant>>,
-    failure_threshold: usize,
-    recovery_timeout: std::time::Duration,
-}
-
-impl CircuitBreaker {
-    pub fn new() -> Self {
-        Self {
-            failure_count: std::sync::atomic::AtomicUsize::new(0),
-            last_failure_time: std::sync::Mutex::new(None),
-            failure_threshold: 5,
-            recovery_timeout: std::time::Duration::from_secs(60),
-        }
-    }
-
-    pub fn can_proceed(&self) -> bool {
-        let failure_count = self.failure_count.load(std::sync::atomic::Ordering::Relaxed);
-
-        if failure_count >= self.failure_threshold {
-            // Check if recovery timeout has passed
-            if let Ok(last_failure) = self.last_failure_time.lock() {
-                if let Some(time) = *last_failure {
-                    if time.elapsed() >= self.recovery_timeout {
-                        // Reset failure count for recovery attempt
-                        self.failure_count.store(0, std::sync::atomic::Ordering::Relaxed);
-                        return true;
-                    }
-                }
-            }
-            false
-        } else {
-            true
-        }
-    }
-
-    pub fn record_success(&self) {
-        // Reset failure count on success
-        self.failure_count.store(0, std::sync::atomic::Ordering::Relaxed);
-        if let Ok(mut last_failure) = self.last_failure_time.lock() {
-            *last_failure = None;
-        }
-    }
-
-    pub fn record_failure(&self) {
-        let current_count = self.failure_count.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-        if current_count == 0 {
-            // First failure, record time
-            if let Ok(mut last_failure) = self.last_failure_time.lock() {
-                *last_failure = Some(std::time::Instant::now());
-            }
-        }
-    }
-}
-
-/// Vision-based enrichment (OCR, object detection)
-pub struct VisionEnricher {
-    // Would contain vision model configuration
-}
-
-impl VisionEnricher {
-    pub async fn new() -> DataProcessingResult<Self> {
-        Ok(Self {})
-    }
-
-    pub async fn extract_text(&self, _input: &DataInput) -> DataProcessingResult<Option<String>> {
-        // Placeholder - would integrate with vision models
-        Ok(Some("Extracted text from image".to_string()))
-    }
-}
-
-/// Audio processing enrichment (transcription, diarization)
-pub struct AudioEnricher {
-    // Would contain audio model configuration
-}
-
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct Speaker {
-    pub id: String,
-    pub name: String,
-    pub confidence: f64,
-    pub voice_signature: Vec<f32>,
-}
-
-impl AudioEnricher {
-    pub async fn new() -> DataProcessingResult<Self> {
-        Ok(Self {})
-    }
-
-    pub async fn transcribe_audio(&self, _input: &DataInput) -> DataProcessingResult<Option<String>> {
-        // Placeholder - would integrate with speech-to-text models
-        Ok(Some("Transcribed audio content".to_string()))
-    }
-
-    pub async fn identify_speakers(&self, _input: &DataInput) -> DataProcessingResult<Vec<Speaker>> {
-        // Placeholder - would integrate with speaker diarization models
-        Ok(vec![
-            Speaker {
-                id: "speaker_1".to_string(),
-                name: "Speaker 1".to_string(),
-                confidence: 0.95,
-                voice_signature: vec![0.1, 0.2, 0.3],
-            }
-        ])
-    }
-}
-
-/// Entity and topic extraction enrichment
-pub struct EntityEnricher {
-    // Would contain NLP model configuration
-}
-
-#[derive(Debug, Clone)]
-pub struct Topic {
-    pub name: String,
-    pub confidence: f64,
-    pub score: f64,
-    pub category: String,
-}
-
-impl EntityEnricher {
-    pub async fn new() -> DataProcessingResult<Self> {
-        Ok(Self {})
-    }
-
-    pub async fn extract_entities(&self, text: &str) -> DataProcessingResult<Vec<Entity>> {
-        // Placeholder - would integrate with NER models
-        let entities = if text.contains("John") {
-            vec![Entity {
-                id: "entity_john".to_string(),
-                name: "John".to_string(),
-                entity_type: EntityType::Person,
-                confidence: 0.9,
-                positions: vec![TextPosition { start: text.find("John").unwrap_or(0), end: text.find("John").unwrap_or(0) + 4, page: Some(0) }],
-                metadata: HashMap::new(),
-            }]
-        } else {
-            vec![]
-        };
-
-        Ok(entities)
-    }
-
-    pub async fn extract_topics(&self, _text: &str) -> DataProcessingResult<Vec<Topic>> {
-        // Placeholder - would integrate with topic modeling
-        Ok(vec![
-            Topic {
-                name: "Technology".to_string(),
-                confidence: 0.8,
-                score: 0.75,
-                category: "Domain".to_string(),
-            }
-        ])
-    }
-}
-
-/// Visual captioning enrichment
-pub struct VisualCaptioner {
-    // Would contain captioning model configuration
-}
-
-impl VisualCaptioner {
-    pub async fn new() -> DataProcessingResult<Self> {
-        Ok(Self {})
-    }
-
-    pub async fn generate_caption(&self, _input: &DataInput) -> DataProcessingResult<Option<String>> {
-        // Placeholder - would integrate with image captioning models
-        Ok(Some("A description of the visual content".to_string()))
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[tokio::test]
-    async fn test_default_enrichment_stage_creation() {
-        let stage = DefaultEnrichmentStage::new().await;
-        assert!(stage.is_ok());
-    }
-
-    #[test]
-    fn test_circuit_breaker_initial_state() {
-        let breaker = CircuitBreaker::new();
-        assert!(breaker.can_proceed());
-    }
-
-    #[test]
-    fn test_circuit_breaker_failure_handling() {
-        let breaker = CircuitBreaker::new();
-
-        // Record failures
-        for _ in 0..5 {
-            breaker.record_failure();
-        }
-
-        // Should be open
-        assert!(!breaker.can_proceed());
-
-        // Record success
-        breaker.record_success();
-
-        // Should be closed again
-        assert!(breaker.can_proceed());
-    }
-
-    #[tokio::test]
-    async fn test_entity_enricher_basic() {
-        let enricher = EntityEnricher::new().await.unwrap();
-        let entities = enricher.extract_entities("John went to the store").await.unwrap();
-
-        assert!(!entities.is_empty());
-        assert_eq!(entities[0].name, "John");
-        assert_eq!(entities[0].entity_type, EntityType::Person);
-    }
-}
+// Export the consolidated enrichers for external use
+pub use crate::enrichment::{AsrEnricher, VisionEnricher, EntityEnricher, VisualCaptioningEnricher, CircuitBreaker, CircuitState};

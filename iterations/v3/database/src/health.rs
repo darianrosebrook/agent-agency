@@ -3,7 +3,7 @@
 //! Comprehensive health checks, statistics collection, and status monitoring
 //! for database connectivity, performance, and operational health.
 
-use super::circuit_breaker::CircuitState;
+use crate::database_circuit_breaker::CircuitState;
 use super::database_metrics::DatabaseMetrics;
 use anyhow::Result;
 use chrono::{DateTime, Duration, Utc};

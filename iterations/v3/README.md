@@ -142,11 +142,6 @@ iterations/v3/
 │   ├── ci/                          # CI/CD and development workflow
 │   └── models/                      # ML model management
 │
-├── demo/                           # Demonstration code
-│   ├── rust/                       # Rust prototypes and examples
-│   ├── js/                         # JavaScript demos
-│   └── apps/                       # Demo applications
-│
 ├── languages/                      # Non-Rust components
 │   ├── swift/                      # Swift bridges and components
 │   └── python/                     # Python utilities and PyTorch
@@ -188,7 +183,6 @@ iterations/v3/
 
 - **`config/`** - All configuration files (API, environment, tooling)
 - **`scripts/`** - Organized automation by function (build/test/deploy)
-- **`demo/`** - Prototypes, examples, and demonstrations
 - **`languages/`** - Non-Rust components (Swift, Python, etc.)
 - **`temp/`** - Temporary files (safe to clean regularly)
 - **`environments/`** - Isolated development environments

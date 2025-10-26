@@ -5,9 +5,9 @@
 //! and quantization features.
 
 // Re-export public types from submodules
-pub use self::metrics::*;
+pub use self::memory_metrics::*;
 pub use self::compression::*;
-pub use self::analysis::*;
+pub use self::memory_analysis::*;
 pub use self::manager::{
     *,
     // Re-export multi-tenant types
@@ -18,9 +18,9 @@ pub use self::manager::{
 pub use self::quantization::*;
 
 // Submodules
-pub mod metrics;
+pub mod memory_metrics;
 pub mod compression;
-pub mod analysis;
+pub mod memory_analysis;
 pub mod manager;
 pub mod quantization;
 

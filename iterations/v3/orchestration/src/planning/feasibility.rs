@@ -4,7 +4,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use super::cache::CachedLLMClient;
+use super::planning_cache::CachedLLMClient;
 
 /// Technical feasibility assessment result
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -4,7 +4,7 @@
 //! including model lifecycle, inference, capability detection, and resource management.
 
 use thiserror::Error;
-use crate::ane::circuit_breaker::CircuitBreakerError;
+use crate::ane::ane_circuit_breaker::CircuitBreakerError;
 
 /// Comprehensive error types for ANE operations
 #[derive(Debug, Error)]

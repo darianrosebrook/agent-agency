@@ -35,3 +35,4 @@ export const gsap = {
 };
 
 export default gsap;
+

@@ -9,7 +9,7 @@
 //! - Caching backends for performance optimization
 
 pub mod agent_telemetry;
-pub mod alerts;
+pub mod observability_alerts;
 pub mod analytics;
 pub mod analytics_dashboard;
 pub mod cache;
@@ -32,7 +32,7 @@ pub use agent_telemetry::{
     AgentPerformanceMetrics, AgentPerformanceTracker, AgentTelemetryCollector, AgentType,
     BusinessMetrics, CoordinationMetrics, SystemDashboard, SystemAlert, TelemetryConfig,
 };
-pub use alerts::{
+pub use observability_alerts::{
     Alert, AlertCondition, AlertManager, AlertRule, AlertSeverity as AlertSeverityType,
     AlertStatus as AlertStatusType, AlertType,
 };
