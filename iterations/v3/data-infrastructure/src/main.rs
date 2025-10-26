@@ -228,7 +228,26 @@ impl DatabaseTaskStore {
             &[&task.id, &task.spec, &task.state, &task.created_by, &task.metadata],
         ).await?;
 
-        println!(" Created task {} in database", task.id);
+        // Log audit event for task creation
+        let audit_details = serde_json::json!({
+            "task_id": task.id,
+            "task_state": task.state,
+            "created_by": task.created_by,
+            "spec_size": task.spec.len(),
+            "metadata_size": task.metadata.len()
+        });
+
+        if let Err(e) = self.db_client.log_audit_event(
+            "task",
+            &task.id,
+            "created",
+            "api-server",
+            Some(audit_details),
+        ).await {
+            warn!("Failed to log task creation audit event: {:?}", e);
+        }
+
+        info!("Created task {} in database", task.id);
         Ok(())
     }
 
@@ -283,15 +302,62 @@ impl DatabaseTaskStore {
         }
     }
 
-    async fn get_task_events(&self, _task_id: String) -> anyhow::Result<Vec<serde_json::Value>> {
-        // TODO: Implement task audit events when DatabaseClient supports it with acceptance criteria:
-        // - [ ] Add audit event logging to DatabaseClient for task operations
-        // - [ ] Implement structured audit trail with operation type, user, and timestamp
-        // - [ ] Add configurable audit levels and filtering
-        // - [ ] Ensure audit logs are tamper-proof and compliant
-        // - [ ] Integrate audit events with monitoring and alerting systems
-        // For now, return empty events
-        Ok(vec![])
+    async fn get_task_events(&self, task_id: String) -> anyhow::Result<Vec<serde_json::Value>> {
+        // Query audit events for the specified task
+        let query = r#"
+            SELECT
+                id,
+                timestamp,
+                event_type,
+                actor,
+                resource,
+                action,
+                details
+            FROM audit_events
+            WHERE resource = $1
+                AND (details->>'task_id' = $2 OR resource LIKE $3)
+            ORDER BY timestamp DESC
+            LIMIT 100
+        "#;
+
+        let resource_pattern = format!("task:{}", task_id);
+
+        match self.db_client.query(
+            query,
+            &[&"task".to_string(), &task_id, &resource_pattern]
+        ).await {
+            Ok(rows) => {
+                let events = rows.into_iter().map(|row| {
+                    let id: String = row.get("id");
+                    let timestamp: String = row.get("timestamp");
+                    let event_type: String = row.get("event_type");
+                    let actor: String = row.get("actor");
+                    let resource: String = row.get("resource");
+                    let action: String = row.get("action");
+                    let details_str: String = row.get("details");
+
+                    // Parse details JSON
+                    let details: serde_json::Value = serde_json::from_str(&details_str)
+                        .unwrap_or(serde_json::json!({}));
+
+                    serde_json::json!({
+                        "id": id,
+                        "timestamp": timestamp,
+                        "event_type": event_type,
+                        "actor": actor,
+                        "resource": resource,
+                        "action": action,
+                        "details": details
+                    })
+                }).collect();
+
+                Ok(events)
+            }
+            Err(e) => {
+                warn!("Failed to query task audit events for {}: {:?}", task_id, e);
+                Ok(vec![]) // Return empty on error for resilience
+            }
+        }
     }
 }
 

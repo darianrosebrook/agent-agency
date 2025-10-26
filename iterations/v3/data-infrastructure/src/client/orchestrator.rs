@@ -224,6 +224,37 @@ impl DatabaseClient {
         self.health_monitor.perform_health_check().await
     }
 
+    /// Log an audit event for application operations
+    pub async fn log_audit_event(
+        &self,
+        resource: &str,
+        resource_id: &str,
+        action: &str,
+        actor: &str,
+        details: Option<serde_json::Value>,
+    ) -> Result<()> {
+        use crate::database_audit::{AuditEventType, DatabaseAuditEvent};
+
+        let event = DatabaseAuditEvent {
+            id: uuid::Uuid::new_v4(),
+            timestamp: chrono::Utc::now(),
+            event_type: AuditEventType::Application,
+            actor: actor.to_string(),
+            resource: resource.to_string(),
+            action: action.to_string(),
+            details: details.unwrap_or(serde_json::json!({
+                "resource_id": resource_id,
+                "operation": action
+            })),
+            success: true,
+            error_message: None,
+            execution_time_ms: None,
+        };
+
+        self.audit_logger.log_operation(event).await;
+        Ok(())
+    }
+
     /// Get database statistics
     pub async fn get_stats(&self) -> Result<DatabaseStats> {
         let pool_stats = self.pool.size() as u32;
