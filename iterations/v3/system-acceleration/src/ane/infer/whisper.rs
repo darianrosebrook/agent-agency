@@ -231,6 +231,12 @@ impl WhisperInferenceExecutor {
                 &input_shape,
             )?;
 
+            // TODO: Implement proper Whisper decoder integration with acceptance criteria:
+            // - [ ] Integrate Whisper decoder model for token generation from encoder output
+            // - [ ] Implement beam search decoding with configurable beam width
+            // - [ ] Add language model integration for improved transcription accuracy
+            // - [ ] Implement timestamp alignment and segmentation
+            // - [ ] Add confidence scoring and alternative hypothesis generation
             // The encoder output would be used with a decoder in a full implementation
             // For now, return placeholder transcription results
             // In practice, we'd need a decoder model or beam search decoding
@@ -278,6 +284,12 @@ impl WhisperInferenceExecutor {
 
     /// Decode token sequence to text
     fn decode_tokens_to_text(&self, _tokens: &[i32]) -> Result<String> {
+        // TODO: Implement Whisper tokenizer integration with acceptance criteria:
+        // - [ ] Integrate Whisper tokenizer for proper token-to-text conversion
+        // - [ ] Handle special tokens (language, timestamps, task indicators)
+        // - [ ] Implement proper text normalization and post-processing
+        // - [ ] Add support for multiple languages and code-switching detection
+        // - [ ] Implement subword merging and detokenization logic
         // This would use the actual Whisper tokenizer
         // For now, return placeholder text
         Ok("This is a placeholder transcription result.".to_string())

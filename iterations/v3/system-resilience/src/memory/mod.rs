@@ -17,6 +17,11 @@ use tokio::sync::RwLock as AsyncRwLock;
 use tracing::{debug, info, warn, error};
 use serde::{Serialize, Deserialize};
 
+// Global cleanup registry for orphaned objects when tokio runtime is unavailable
+lazy_static::lazy_static! {
+    static ref ORPHANED_OBJECTS: Arc<Mutex<Vec<Box<dyn std::any::Any + Send + Sync>>>> = Arc::new(Mutex::new(Vec::new()));
+}
+
 // Re-export integration utilities
 pub use integration::*;
 

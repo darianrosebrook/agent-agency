@@ -43,6 +43,9 @@ git2 = "0.19"
 # Cryptographic hashing
 sha2 = "0.10"
 
+# Memory management utilities
+lazy_static = "1.4"
+
 # Local crates
 agent-agency-contracts = { path = "../agent-agency-contracts" }
 system-configuration = { path = "../system-configuration" }
