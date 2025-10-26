@@ -14,6 +14,7 @@ members = [
     "agent-model-management",  # 🤖 NEW: Unified model lifecycle, inference, and deployment management
     "agent-orchestration",  # 🎭 NEW: Unified orchestration and council decision-making system
             "system-resources",  # 📊 NEW: Unified resource management & production services (resource-manager + production)
+            "data-infrastructure",  # 🗄️ NEW: Unified data layer & API services (database + interfaces + api-server)
     "telemetry",  # 📈 NEW: Unified observability, monitoring, and telemetry services
     "provenance",
     "claim-extraction",
@@ -26,11 +27,9 @@ members = [
     "workspace-state-manager",  # Re-enabled - standalone with git2 and database
     "resilience",  # Re-enabled - compiles successfully
     # "observability",  # Temporarily disabled - module conflicts during decomposition
-    "interfaces",  # MCP interface implementation
     "source-integrity",  # Re-enabled - compiles successfully
     "agent-memory",  # 🧠 NEW: Agent memory system with knowledge graphs and embeddings
     "config",
-    "database",
     "recovery",
     "integration-tests",  # Re-enabled - checking compilation status
     "council",  # Re-enabled - compiles successfully
@@ -38,7 +37,6 @@ members = [
     "planning-agent",  # Re-enabled - application layer
     "file_ops",  # Re-enabled - simple implementation
     "cli",  # Re-enabled - application layer
-    "api-server",  # Re-enabled - has compilation errors but doesn't cause workspace hangs
     "worker",  # Re-enabled - application layer
     "runtime-optimization",  # Re-enabled - advanced services
     "tool-ecosystem",  # Re-enabled - has compilation errors but doesn't cause workspace hangs
