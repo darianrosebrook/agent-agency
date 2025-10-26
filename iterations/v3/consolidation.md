@@ -379,19 +379,19 @@
 
 ### **Priority Order (by Impact & Dependencies - 14 total consolidations):**
 
-1. **✅ `agent-orchestration/`** - Core orchestration + governance (high dependency) - **IN PROGRESS**
+1. **✅ `agent-orchestration/`** - Core orchestration + governance (high dependency) - **COMPLETED**
 2. **`system-acceleration/`** - Hardware acceleration foundation
 3. **✅ `agent-workers/`** - Enhanced worker system (depends on orchestration) - **COMPLETED**
-4. **`data-infrastructure/`** - Data layer consolidation
-5. **`system-observability/`** - Monitoring and observability
-6. **`data-interfaces/`** - Web interface unification (consider adding cli/interfaces)
-7. **`system-quality-security/`** - Security and quality framework
-8. **`agent-research/`** - Advanced AI capabilities
-9. **`system-resilience/`** - Fault tolerance and recovery (consider adding resource-manager)
-10. **`testing-validation/`** - Comprehensive testing platform (consider adding brittleness-test)
-11. **`system-configuration/`** - Configuration and common utilities
-12. **`system-federated-ml/`** - Distributed ML capabilities
-13. **`system-resources/`** - Resource management and production concerns (NEW)
+4. **✅ `system-resources/`** - Resource management and production concerns (NEW) - **COMPLETED**
+5. **`data-infrastructure/`** - Data layer consolidation
+6. **`system-observability/`** - Monitoring and observability
+7. **`data-interfaces/`** - Web interface unification (consider adding cli/interfaces)
+8. **`system-quality-security/`** - Security and quality framework
+9. **`agent-research/`** - Advanced AI capabilities
+10. **`system-resilience/`** - Fault tolerance and recovery
+11. **`testing-validation/`** - Comprehensive testing platform (consider adding brittleness-test)
+12. **`system-configuration/`** - Configuration and common utilities
+13. **`system-federated-ml/`** - Distributed ML capabilities
 14. **`development-tools/`** - Development tooling ecosystem (NEW - separate from runtime)
 
 **Updated Total Impact:** ~1,400+ files consolidated into 14 focused, category-prefixed crates with clear responsibilities.
@@ -401,6 +401,7 @@
 **✅ COMPLETED CONSOLIDATIONS:**
 1. **agent-orchestration** - Core orchestration + governance (high dependency)
 2. **agent-workers** - Enhanced worker system (depends on orchestration)
+3. **system-resources** - Resource management + production services
 
 **✅ PREVIOUSLY COMPLETED:**
 - agent-data-processing (data processing pipeline)
@@ -409,20 +410,19 @@
 - agent-mcp (MCP implementation)
 
 **📊 CONSOLIDATION IMPACT:**
-- **Files Consolidated**: 240+ files merged into unified crates
-- **Duplicate Crates Eliminated**: 12 crates consolidated into 4 focused systems
+- **Files Consolidated**: 250+ files merged into unified crates
+- **Duplicate Crates Eliminated**: 14 crates consolidated into 7 focused systems
 - **Architecture Quality**: Enterprise-grade modular design achieved
 - **Ready for Development**: Clean foundation established for feature work
 
 **🎯 REMAINING PRIORITIES:**
-4. system-resources (resource management + production concerns)
+4. data-infrastructure (data layer consolidation)
 5. testing-validation (comprehensive testing + brittleness testing)
-6. data-infrastructure (data layer consolidation)
-7. system-observability (monitoring and observability)
-8. data-interfaces (Web interface unification)
-9. system-quality-security (Security and quality framework)
-10. agent-research (Advanced AI capabilities)
-11. system-resilience (Fault tolerance and recovery)
+6. system-observability (monitoring and observability)
+7. data-interfaces (Web interface unification)
+8. system-quality-security (Security and quality framework)
+9. agent-research (Advanced AI capabilities)
+10. system-resilience (Fault tolerance and recovery)
 12. system-configuration (Configuration and common utilities)
 13. system-federated-ml (Distributed ML capabilities)
 14. development-tools (Development tooling ecosystem)
@@ -458,5 +458,32 @@
 - Learning system for worker performance optimization
 - CLI interface with HTTP endpoints
 - Quality assurance and CAWS compliance checking
+
+### **System-Resources Consolidation (Completed)**
+
+**✅ Created `system-resources/` crate consolidating resource management and production services:**
+- **Consolidated resource-manager/** (4 files): Resource lifecycle management, pooling, adaptive allocation, monitoring
+- **Consolidated production/** (7 files): Production hardening, error handling, observability, security, documentation
+- **Unified Architecture**: Enterprise-grade resource management with production hardening capabilities
+- **Resource Management**: Centralized lifecycle management, pooling, and adaptive allocation
+- **Production Services**: Error handling, security, observability, health monitoring, documentation
+- **Integrated Service**: `SystemResourcesService` providing unified API for both resource and production concerns
+
+**Key Features Added:**
+- Unified resource lifecycle management and pooling
+- Production-grade error handling and recovery strategies
+- Security validation and authentication for resource operations
+- Comprehensive metrics collection and health monitoring
+- Production documentation generation and deployment guides
+- Adaptive resource allocation based on usage patterns
+- Security context validation for operations
+- Health status monitoring with component-level granularity
+
+**Architecture Benefits:**
+- **Single Source of Truth**: Combined resource management and production hardening
+- **Simplified Dependencies**: One crate instead of two separate concerns
+- **Enhanced Monitoring**: Resource utilization tied to production health metrics
+- **Security Integration**: Resource operations validated against security policies
+- **Production Readiness**: Error handling and observability built into resource management
 
 ---

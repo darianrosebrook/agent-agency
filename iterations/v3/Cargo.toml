@@ -13,7 +13,7 @@ members = [
     "agent-mcp",  # Consolidated MCP implementation
     "agent-model-management",  # 🤖 NEW: Unified model lifecycle, inference, and deployment management
     "agent-orchestration",  # 🎭 NEW: Unified orchestration and council decision-making system
-    "resource-manager",  # 📊 NEW: Centralized resource lifecycle management and adaptive allocation
+            "system-resources",  # 📊 NEW: Unified resource management & production services (resource-manager + production)
     "telemetry",  # 📈 NEW: Unified observability, monitoring, and telemetry services
     "provenance",
     "claim-extraction",
@@ -43,7 +43,6 @@ members = [
     "runtime-optimization",  # Re-enabled - advanced services
     "tool-ecosystem",  # Re-enabled - has compilation errors but doesn't cause workspace hangs
     "federated-learning",  # Re-enabled - advanced services
-    "production",  # Re-enabled - advanced services
     "e2e-tests",
     "self-prompting-agent"
     ]

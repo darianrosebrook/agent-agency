@@ -1,0 +1,38 @@
+[package]
+name = "system-resources"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+# Workspace dependencies
+serde.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+async-trait.workspace = true
+tracing.workspace = true
+thiserror.workspace = true
+uuid.workspace = true
+chrono.workspace = true
+
+# Local crates
+agent-agency-contracts = { path = "../agent-agency-contracts" }
+agent-agency-common-types = { path = "../common-types" }
+
+# Additional dependencies from resource-manager
+anyhow = "1.0"
+futures = "0.3"
+
+# Additional dependencies from production
+statrs = "0.16"
+quantiles = "0.7"
+ordered-float = "4.2"
+rand = "0.8"
+sampling = "0.1"
+jsonwebtoken = "9.2"
+sha2 = "0.10"
+reqwest = { version = "0.11", features = ["json"] }
+
+[dev-dependencies]
+tokio-test = "0.4"
