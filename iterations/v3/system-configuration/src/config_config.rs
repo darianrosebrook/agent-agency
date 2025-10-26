@@ -7,8 +7,44 @@ use tracing::{info, warn};
 use validator::Validate;
 
 use super::environment::secure_loader;
+
+/// Memory configuration when memory feature is enabled
 #[cfg(feature = "memory")]
-use agent_memory::MemoryConfig;
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
+pub struct MemoryConfig {
+    pub max_heap_mb: usize,
+    pub max_stack_mb: usize,
+    pub warning_threshold_mb: usize,
+    pub critical_threshold_mb: usize,
+    pub enable_gc_pressure: bool,
+    pub gc_pressure_threshold_mb: usize,
+    pub monitoring_interval_ms: u64,
+    pub enable_object_pooling: bool,
+    pub database_connection_pool_size: usize,
+    pub llm_client_pool_size: usize,
+    pub enable_leak_detection: bool,
+    pub leak_detection_threshold_mb: u64,
+}
+
+#[cfg(feature = "memory")]
+impl Default for MemoryConfig {
+    fn default() -> Self {
+        Self {
+            max_heap_mb: 1024,
+            max_stack_mb: 8,
+            warning_threshold_mb: 768,
+            critical_threshold_mb: 896,
+            enable_gc_pressure: true,
+            gc_pressure_threshold_mb: 800,
+            monitoring_interval_ms: 5000,
+            enable_object_pooling: true,
+            database_connection_pool_size: 20,
+            llm_client_pool_size: 10,
+            enable_leak_detection: true,
+            leak_detection_threshold_mb: 100,
+        }
+    }
+}
 
 /// Main application configuration
 #[derive(Debug, Clone, Serialize, Deserialize, Validate)]

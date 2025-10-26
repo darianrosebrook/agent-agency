@@ -9,6 +9,7 @@ license.workspace = true
 # Core async runtime
 tokio.workspace = true
 async-trait.workspace = true
+futures.workspace = true
 
 # Serialization
 serde.workspace = true
@@ -46,12 +47,11 @@ lru = "0.12"
 # Pattern-specific dependencies (from common-patterns)
 paste = "1.0"
 
-# Optional dependencies
-agent-memory = { path = "../agent-memory", optional = true }
+# Optional dependencies for agent-memory are handled at the application level
 
 [features]
 default = []
-memory = ["agent-memory"]
+memory = []
 
 [dev-dependencies]
 tokio-test = "0.4"

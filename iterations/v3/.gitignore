@@ -86,3 +86,37 @@ __pycache__/
 *.pyo
 *.pyd
 FastViTT8F16.mlpackage.zip/models/
+
+# Coverage reports
+*.profraw
+lcov.info
+tarpaulin-report.html
+tarpaulin-final/
+
+# Build artifacts (additional patterns)
+build/
+artifacts/
+
+# Model files and large data
+*.mlpackage
+*.bin
+*.onnx
+models/
+*.zip
+
+# External repositories
+whisperkit-repo/
+
+# Python environments
+ai_venv/
+environments/
+.venv/
+
+# Node.js artifacts
+node_modules/
+*.tsbuildinfo
+
+# Temporary files
+temp/
+*.tmp
+*.swp

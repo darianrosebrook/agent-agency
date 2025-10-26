@@ -65,7 +65,7 @@ futures = "0.3"
 # Local crates
 agent-orchestration = { path = "../agent-orchestration" }
 agent-memory = { path = "../agent-memory" }
-agent-agency-apple-silicon = { path = "../apple-silicon", optional = true }
+system-acceleration = { path = "../system-acceleration", optional = true }
 # embedding-service now consolidated into data-infrastructure
 data-infrastructure = { path = "../data-infrastructure" }
 agent-data-processing = { path = "../agent-data-processing" }
@@ -74,7 +74,7 @@ system-configuration = { path = "../system-configuration" }
 
 [features]
 default = []
-coreml = ["agent-agency-apple-silicon"]
+coreml = ["system-acceleration"]
 
 [dev-dependencies]
 tokio-test = "0.4"

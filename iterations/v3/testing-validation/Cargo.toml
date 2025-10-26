@@ -74,8 +74,8 @@ system-configuration = { path = "../system-configuration" }
 data-infrastructure = { path = "../data-infrastructure" }
 agent-workers = { path = "../agent-workers" }
 system-observability = { path = "../system-observability" }
-system-acceleration = { path = "../system-acceleration" }
-system-federated-ml = { path = "../system-federated-ml" }
+system-acceleration = { path = "../system-acceleration", optional = true }
+system-federated-ml = { path = "../system-federated-ml", optional = true }
 development-tools = { path = "../development-tools" }
 
 # MCP integration

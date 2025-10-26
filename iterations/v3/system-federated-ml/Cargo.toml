@@ -69,7 +69,7 @@ agent-research = { path = "../agent-research" }
 system-observability = { path = "../system-observability" }
 agent-mcp = { path = "../agent-mcp" }
 agent-workers = { path = "../agent-workers" }
-agent-agency-apple-silicon = { path = "../apple-silicon" }
+system-acceleration = { path = "../system-acceleration" }
 
 [features]
 default = []
