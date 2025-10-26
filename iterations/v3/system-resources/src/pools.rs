@@ -121,11 +121,12 @@ impl ResourcePool for MemoryPool {
             // High utilization: implement memory compaction/defagmentation
             tracing::info!("Memory pool '{}' at {:.1}% utilization, performing adaptation", self.name, utilization * 100.0);
 
-            // For now, log that adaptation would occur
-            // In a real implementation, this might:
-            // - Compact fragmented memory allocations
-            // - Rebalance allocations across different memory regions
-            // - Trigger garbage collection for managed allocations
+            // TODO: Implement memory pool adaptation and optimization with acceptance criteria:
+            // - [ ] Implement memory defragmentation and compaction algorithms
+            // - [ ] Add allocation rebalancing across different memory regions
+            // - [ ] Integrate with garbage collection for managed memory cleanup
+            // - [ ] Implement predictive scaling based on allocation patterns
+            // - [ ] Add memory pressure monitoring and proactive optimization
         } else if utilization > 0.7 {
             // Moderate utilization: monitor and prepare for scaling
             tracing::debug!("Memory pool '{}' at {:.1}% utilization, monitoring for scaling", self.name, utilization * 100.0);

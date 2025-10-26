@@ -916,7 +916,12 @@ impl AdvancedGoalAnalyzer {
 
     /// Extract stakeholder requirement from sentence
     fn extract_stakeholder_requirement(&self, sentence: &str) -> Option<String> {
-        // Simple extraction - could be enhanced with NLP
+        // TODO: Enhance stakeholder requirement extraction with NLP with acceptance criteria:
+        // - [ ] Integrate NLP models for semantic understanding of requirements
+        // - [ ] Implement entity recognition for stakeholders and requirements
+        // - [ ] Add requirement classification (functional, non-functional, constraints)
+        // - [ ] Support complex sentence structures and implicit requirements
+        // - [ ] Provide confidence scores for extracted requirements
         if let Some(want_idx) = sentence.to_lowercase().find("want") {
             let after_want = &sentence[want_idx + 4..];
             Some(format!("Stakeholder wants {}", after_want.trim()))
@@ -1223,7 +1228,12 @@ impl GoalDependencyAnalyzer {
             }
         }
 
-        // Simple hierarchy levels (could be enhanced with topological sort)
+        // TODO: Implement topological sort for goal hierarchy with acceptance criteria:
+        // - [ ] Implement proper topological sorting algorithm for dependency resolution
+        // - [ ] Detect and handle circular dependencies in goal hierarchies
+        // - [ ] Generate multi-level dependency hierarchies with proper ordering
+        // - [ ] Add hierarchy validation and cycle detection
+        // - [ ] Support parallel execution of independent goals at same level
         hierarchy_levels.push(root_goals.clone());
 
         // Detect circular dependencies (simplified)

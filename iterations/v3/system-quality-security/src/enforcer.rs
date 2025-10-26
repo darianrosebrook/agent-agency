@@ -562,7 +562,12 @@ impl SecurityPolicyEnforcer {
             }
         }
 
-        // Additional validation could be added here for specific requirements
+        // TODO: Implement comprehensive workspace validation with acceptance criteria:
+        // - [ ] Add file permission and ownership validation
+        // - [ ] Implement workspace size and file count limits
+        // - [ ] Add security scanning for malicious file types
+        // - [ ] Implement workspace integrity verification (checksums, signatures)
+        // - [ ] Add configurable validation rules based on security policies
         true
     }
 

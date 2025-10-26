@@ -132,6 +132,12 @@ where
             }
 
             AggregationStrategy::Weighted => {
+                // TODO: Implement weighted aggregation strategy with acceptance criteria:
+                // - [ ] Define weight assignment mechanism for different pipeline stages
+                // - [ ] Implement weighted scoring algorithm for result aggregation
+                // - [ ] Add configurable weight thresholds for success/failure decisions
+                // - [ ] Support partial success scenarios based on weighted importance
+                // - [ ] Provide weighted aggregation metrics and performance analysis
                 // For now, treat as AllRequired - could be extended with weights
                 if !failures.is_empty() {
                     return Err(PipelineError::Execution("Weighted aggregation not implemented".to_string()));
