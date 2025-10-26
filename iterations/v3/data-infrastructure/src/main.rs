@@ -1683,14 +1683,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!(" System health monitor initialized (Redis disabled)");
     }
 
-    // Initialize alert manager
-    // TODO: Integrate RTO/RPO monitoring with alert manager with acceptance criteria:
-    // - [ ] Implement RTO (Recovery Time Objective) monitoring and alerting
-    // - [ ] Implement RPO (Recovery Point Objective) monitoring and alerting
-    // - [ ] Connect alert manager with RTO/RPO violation detection
-    // - [ ] Add configurable RTO/RPO thresholds and SLA tracking
-    // - [ ] Integrate with incident response and escalation procedures
-    let alert_manager = Arc::new(api_alerts::AlertManager::new(None)); // TODO: Pass RTO/RPO monitor when available
+    // Initialize RTO/RPO monitoring
+    let rto_rpo_objectives = rto_rpo_monitor::RecoveryObjectives {
+        rto_seconds: 300, // 5 minutes RTO
+        rpo_seconds: 60,  // 1 minute RPO
+        service_objectives: std::collections::HashMap::new(), // Add service-specific objectives as needed
+    };
+    let alert_config = rto_rpo_monitor::AlertConfig::default();
+    let failover_manager = Arc::new(service_failover::ServiceFailoverManager::new(service_failover::FailoverConfig::default()));
+    let rto_rpo_monitor = Arc::new(rto_rpo_monitor::RtoRpoMonitor::new(
+        rto_rpo_objectives,
+        alert_config,
+        failover_manager,
+    ));
+
+    // Start RTO/RPO monitoring
+    rto_rpo_monitor.start_monitoring().await.map_err(|e| format!("Failed to start RTO/RPO monitoring: {}", e))?;
+    println!(" RTO/RPO monitoring initialized with 5-minute RTO and 1-minute RPO objectives");
+
+    // Initialize alert manager with RTO/RPO monitoring
+    let alert_manager = Arc::new(api_alerts::AlertManager::new(Some(rto_rpo_monitor.clone())));
     alert_manager.start().await.map_err(|e| format!("Failed to start alert manager: {}", e))?;
     println!(" Alert manager initialized with default definitions");
 
