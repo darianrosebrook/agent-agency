@@ -10,12 +10,12 @@ use crate::{
     metrics::PipelineMetrics,
 };
 use async_trait::async_trait;
-use std::sync::Arc;
+use futures::TryFutureExt;
+use std::sync::{Arc, Mutex};
 use tokio::sync::{mpsc, RwLock};
 use tracing::{debug, info, warn};
 
 /// Streaming pipeline for continuous data processing
-#[derive(Debug)]
 pub struct StreamingPipeline<Input, Output> {
     config: StreamingPipelineConfig,
     /// Processing function for individual items
@@ -23,13 +23,27 @@ pub struct StreamingPipeline<Input, Output> {
     /// Channel for incoming data
     input_sender: mpsc::UnboundedSender<Input>,
     /// Channel for outgoing results
-    output_receiver: Arc<RwLock<Option<mpsc::UnboundedReceiver<Output>>>>,
+    output_receiver: Arc<std::sync::Mutex<Option<mpsc::UnboundedReceiver<Output>>>>,
     /// Active processing tasks
     active_tasks: Arc<RwLock<Vec<tokio::task::JoinHandle<()>>>>,
     /// Pipeline metrics
     metrics: PipelineMetrics,
     /// Stream state
     is_running: Arc<RwLock<bool>>,
+}
+
+impl<Input, Output> std::fmt::Debug for StreamingPipeline<Input, Output> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("StreamingPipeline")
+            .field("config", &self.config)
+            .field("processor", &"<function>")
+            .field("input_sender", &self.input_sender)
+            .field("output_receiver", &"<receiver>")
+            .field("active_tasks", &self.active_tasks)
+            .field("metrics", &self.metrics)
+            .field("is_running", &self.is_running)
+            .finish()
+    }
 }
 
 impl<Input, Output> StreamingPipeline<Input, Output>
@@ -49,7 +63,7 @@ where
             config,
             processor,
             input_sender,
-            output_receiver: Arc::new(RwLock::new(Some(output_receiver))),
+            output_receiver: Arc::new(Mutex::new(Some(output_receiver))),
             active_tasks: Arc::new(RwLock::new(Vec::new())),
             metrics: PipelineMetrics::new(),
             is_running: Arc::new(RwLock::new(false)),
@@ -71,8 +85,8 @@ where
 
     /// Try to receive processed output
     pub async fn try_recv(&self) -> PipelineResult<Option<Output>> {
-        let receiver_guard = self.output_receiver.read().await;
-        if let Some(receiver) = receiver_guard.as_ref() {
+        let mut receiver_guard = self.output_receiver.lock().unwrap();
+        if let Some(receiver) = receiver_guard.as_mut() {
             match receiver.try_recv() {
                 Ok(output) => Ok(Some(output)),
                 Err(mpsc::error::TryRecvError::Empty) => Ok(None),
@@ -87,8 +101,8 @@ where
 
     /// Receive processed output with timeout
     pub async fn recv_timeout(&self, timeout: std::time::Duration) -> PipelineResult<Option<Output>> {
-        let receiver_guard = self.output_receiver.read().await;
-        if let Some(receiver) = receiver_guard.as_ref() {
+        let mut receiver_guard = self.output_receiver.lock().unwrap();
+        if let Some(receiver) = receiver_guard.as_mut() {
             match tokio::time::timeout(timeout, receiver.recv()).await {
                 Ok(Some(output)) => Ok(Some(output)),
                 Ok(None) => Err(PipelineError::ChannelReceiveError("Output channel closed".to_string())),
@@ -232,7 +246,7 @@ where
 
     fn metrics(&self) -> PipelineResult<serde_json::Value> {
         futures::executor::block_on(async {
-            self.metrics.to_json()
+            self.metrics.to_json().await
         }).map_err(|e| PipelineError::Metrics(e.to_string()))
     }
 

@@ -10,6 +10,7 @@ use crate::{
     metrics::PipelineMetrics,
 };
 use async_trait::async_trait;
+use futures::TryFutureExt;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, info, warn};
@@ -45,7 +46,7 @@ where
 
     /// Execute the pipeline sequentially
     async fn execute_internal(&self, input: Input) -> PipelineResult<Output> {
-        let stages = self.stages.read().await.clone();
+        let stages = self.stages.read().await;
         let mut current_input = input;
         let mut final_output = None;
 
@@ -138,7 +139,7 @@ where
     fn metrics(&self) -> PipelineResult<serde_json::Value> {
         // This is a simplified implementation - in practice you'd want async access
         futures::executor::block_on(async {
-            self.metrics.to_json()
+            self.metrics.to_json().await
         }).map_err(|e| PipelineError::Metrics(e.to_string()))
     }
 

@@ -10,7 +10,7 @@ use crate::{
     metrics::PipelineMetrics,
 };
 use async_trait::async_trait;
-use futures::future::join_all;
+use futures::{future::join_all, TryFutureExt};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, info, warn};
@@ -46,7 +46,7 @@ where
 
     /// Execute stages in parallel
     async fn execute_parallel(&self, input: Input) -> PipelineResult<Vec<Output>> {
-        let stages = self.stages.read().await.clone();
+        let stages = self.stages.read().await;
 
         if stages.is_empty() {
             return Err(PipelineError::Execution("No stages configured".to_string()));
@@ -85,20 +85,20 @@ where
                         Ok(Ok(output)) => {
                             self.metrics.record_stage_execution(&stage_name, duration, true).await;
                             debug!("Stage {} (index {}) completed successfully in {}ms",
-                                   stage_name, index, duration);
+                                   &stage_name, index, duration);
                             successful_results.push(output);
                         }
                         Ok(Err(e)) => {
                             self.metrics.record_stage_execution(&stage_name, duration, false).await;
                             self.metrics.record_error(&format!("stage_{}", stage_name)).await;
-                            warn!("Stage {} (index {}) failed: {}", stage_name, index, e);
+                            warn!("Stage {} (index {}) failed: {}", &stage_name, index, e);
                             failures.push(e);
                         }
                         Err(_) => {
                             self.metrics.record_stage_execution(&stage_name, duration, false).await;
                             self.metrics.record_error("stage_timeout").await;
-                            warn!("Stage {} (index {}) timed out", stage_name, index);
-                            failures.push(PipelineError::timeout(format!("Stage {} timed out", stage_name)));
+                            warn!("Stage {} (index {}) timed out", &stage_name, index);
+                            failures.push(PipelineError::timeout(format!("Stage {} timed out", &stage_name)));
                         }
                     }
                 }
@@ -194,7 +194,7 @@ where
 
     fn metrics(&self) -> PipelineResult<serde_json::Value> {
         futures::executor::block_on(async {
-            self.metrics.to_json()
+            self.metrics.to_json().await
         }).map_err(|e| PipelineError::Metrics(e.to_string()))
     }
 

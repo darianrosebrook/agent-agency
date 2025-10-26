@@ -188,18 +188,7 @@ pub enum AggregationStrategy {
     Weighted,
 }
 
-/// Validation severity levels
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
-pub enum ValidationSeverity {
-    /// Informational messages
-    Info,
-    /// Warning messages
-    Warning,
-    /// Error messages
-    Error,
-    /// Critical errors
-    Critical,
-}
+// ValidationSeverity is defined in validation.rs and re-exported here for convenience
 
 /// Resource limits for pipeline execution
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -278,3 +267,6 @@ impl Default for AlertThresholds {
         }
     }
 }
+
+// Re-export ValidationSeverity from validation module for backward compatibility
+pub use crate::validation::ValidationSeverity;

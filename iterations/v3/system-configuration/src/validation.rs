@@ -212,7 +212,7 @@ impl Default for ValidationMetadata {
 
 /// Validation stage trait
 #[async_trait]
-pub trait ValidationStage: Send + Sync {
+pub trait ValidationStage: Send + Sync + std::fmt::Debug {
     /// Get the name of this validation stage
     fn name(&self) -> &str;
 
@@ -368,7 +368,7 @@ impl ExecutablePipeline<serde_json::Value, ValidationResults> for ValidationPipe
 
     fn metrics(&self) -> PipelineResult<serde_json::Value> {
         futures::executor::block_on(async {
-            self.metrics.to_json()
+            self.metrics.to_json().await
         }).map_err(|e| PipelineError::Metrics(e.to_string()))
     }
 

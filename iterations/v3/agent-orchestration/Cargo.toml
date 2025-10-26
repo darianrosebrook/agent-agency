@@ -71,7 +71,7 @@ system-acceleration = { path = "../system-acceleration" }
 agent-memory = { path = "../agent-memory" }
 system-resilience = { path = "../system-resilience" }
 agent-data-processing = { path = "../agent-data-processing" }
-development-tools = { path = "../development-tools" }
+development-tools = { path = "../development-tools", optional = true }
 
 # Optional observability dependency (may be disabled)
 # agent-agency-observability = { path = "../observability", optional = true }
@@ -79,8 +79,9 @@ development-tools = { path = "../development-tools" }
 [features]
 default = []
 api-server = ["axum", "axum-extra", "tower-http", "utoipa", "utoipa-swagger-ui"]
-full = ["dep:rust-bert"]
+full = ["dep:rust-bert", "development-tools"]
 with_bert = ["dep:rust-bert"]
+development = ["development-tools"]
 
 [[bin]]
 name = "agent-orchestration-server"

@@ -39,7 +39,7 @@ pub struct LruPipelineCache<K, V> {
 
 impl<K, V> LruPipelineCache<K, V>
 where
-    K: Clone + Eq + Hash + Send + Sync + 'static,
+    K: Clone + Eq + std::hash::Hash + Send + Sync + 'static,
     V: Clone + Send + Sync + 'static,
 {
     /// Create a new LRU cache
@@ -60,7 +60,7 @@ where
 #[async_trait]
 impl<K, V> PipelineCache<K, V> for LruPipelineCache<K, V>
 where
-    K: Clone + Eq + Hash + Send + Sync + 'static,
+    K: Clone + Eq + std::hash::Hash + Send + Sync + 'static,
     V: Clone + Send + Sync + 'static,
 {
     async fn get(&self, key: &K) -> Option<V> {
