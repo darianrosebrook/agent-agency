@@ -16,17 +16,16 @@ members = [
             "data-infrastructure",  # 🗄️ NEW: Unified data layer & API services (database + interfaces + api-server)
             "testing-validation",  # 🧪 NEW: Unified testing platform & quality assurance (e2e-tests + integration-tests + brittleness-test)
             "system-observability",  # 📊 NEW: Unified monitoring & telemetry services (system-health-monitor + observability + telemetry)
-            "data-interfaces",  # 🔌 NEW: Unified interface layer & user experience (cli + web-app interfaces)
-            "system-quality-security",  # 🔒 NEW: Unified security & quality framework (security + security-policy-enforcer + quality-gates + source-integrity)
+    "data-interfaces",  # 🔌 NEW: Unified interface layer & user experience (cli + web-app interfaces)
+    "system-quality-security",  # 🔒 NEW: Unified security & quality framework (security + security-policy-enforcer + quality-gates + source-integrity)
+    "system-resilience",  # 🛡️ NEW: Unified fault tolerance & recovery framework (resilience + recovery)
     "provenance",
     "minimal-diff-evaluator",  # Re-enabled - depends on council ✓, workers ✓, security-policy-enforcer ✓
     "embedding-service",  # Re-enabled - standalone with ONNX/Candle dependencies
     "workspace-state-manager",  # Re-enabled - standalone with git2 and database
-    "resilience",  # Re-enabled - compiles successfully
     # "observability",  # Temporarily disabled - module conflicts during decomposition
     "agent-memory",  # 🧠 NEW: Agent memory system with knowledge graphs and embeddings
     "config",
-    "recovery",
     "council",  # Re-enabled - compiles successfully
     "caching",  # Re-enabled - compiles successfully
     "planning-agent",  # Re-enabled - application layer
