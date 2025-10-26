@@ -908,7 +908,7 @@ mod tests {
 
     #[test]
     fn test_masked_config() {
-        let config = AppConfig::new();
+        let config = AppConfig::new().expect("Failed to create test config");
 
         // The config should fail validation because secrets aren't set, but masking should still work
         let masked_result = config.get_masked_config();
@@ -944,7 +944,7 @@ mod tests {
 
     #[test]
     fn test_https_enforcement_in_production() {
-        let mut config = AppConfig::new();
+        let mut config = AppConfig::new().expect("Failed to create test config");
         config.app.environment = "production".to_string();
 
         // Should fail validation without TLS in production
