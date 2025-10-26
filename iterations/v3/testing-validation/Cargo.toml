@@ -1,0 +1,100 @@
+[package]
+name = "testing-validation"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+# Workspace dependencies
+tokio.workspace = true
+async-trait.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tracing.workspace = true
+thiserror.workspace = true
+chrono.workspace = true
+uuid.workspace = true
+rand.workspace = true
+
+# Core test framework
+tokio-test = "0.4"
+anyhow = "1.0"
+tempfile = "3.8"
+assert_matches = "1.5"
+proptest = "1.0"
+criterion = { version = "0.5", features = ["html_reports"] }
+
+# Database and storage (from integration-tests)
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "chrono", "uuid"] }
+redis = { version = "0.24", features = ["tokio-comp"] }
+
+# HTTP and networking (from integration-tests)
+reqwest = { version = "0.11", features = ["json"] }
+warp = "0.3"
+tower = "0.4"
+tower-http = { version = "0.5", features = ["cors", "trace"] }
+
+# Async utilities (from integration-tests)
+futures = "0.3"
+dashmap = "5.0"
+parking_lot = "0.12"
+tokio-util = { version = "0.7", features = ["time"] }
+
+# Test data generation (from integration-tests)
+fake = { version = "2.9", features = ["derive"] }
+
+# System monitoring (from e2e-tests)
+sysinfo = "0.30"
+psutil = "3.2"
+nvml-wrapper = "0.9"
+nvml-wrapper-sys = "0.7"
+systemstat = "0.2"
+governor = "0.6"
+crossbeam = "0.8"
+
+# Test data parsing (from e2e-tests)
+serde-xml-rs = "0.6"
+quick-xml = "0.31"
+regex = "1.10"
+statrs = "0.16"
+streaming-stats = "0.2"
+ordered-float = "4.0"
+
+# UI components (from e2e-tests)
+indicatif = "0.17"
+console = { version = "0.16", features = ["std"] }
+
+# Local crates
+agent-agency-contracts = { path = "../agent-agency-contracts" }
+agent-agency-council = { path = "../council" }
+agent-agency-research = { path = "../research" }
+orchestration = { path = "../orchestration" }
+claim-extraction = { path = "../claim-extraction" }
+agent-agency-resilience = { path = "../resilience" }
+agent-agency-config = { path = "../config" }
+agent-agency-database = { path = "../database" }
+agent-agency-workers = { path = "../workers" }
+agent-agency-observability = { path = "../observability" }
+
+# Optional dependencies
+embedding-service = { path = "../embedding-service", optional = true }
+agent-agency-apple-silicon = { path = "../apple-silicon", optional = true }
+
+# CAWS and MCP integration
+caws-runtime-validator = { path = "../caws/runtime-validator" }
+agent-mcp = { path = "../agent-mcp" }
+tool-ecosystem = { path = "../tool-ecosystem" }
+parallel-workers = { path = "../parallel-workers" }
+
+[features]
+default = []
+embeddings = ["embedding-service"]
+apple-silicon = ["agent-agency-apple-silicon"]
+
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+
+# [[bench]]
+# name = "testing_validation_benchmarks"
+# harness = false

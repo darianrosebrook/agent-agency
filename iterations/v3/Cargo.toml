@@ -15,6 +15,7 @@ members = [
     "agent-orchestration",  # 🎭 NEW: Unified orchestration and council decision-making system
             "system-resources",  # 📊 NEW: Unified resource management & production services (resource-manager + production)
             "data-infrastructure",  # 🗄️ NEW: Unified data layer & API services (database + interfaces + api-server)
+            "testing-validation",  # 🧪 NEW: Unified testing platform & quality assurance (e2e-tests + integration-tests + brittleness-test)
     "telemetry",  # 📈 NEW: Unified observability, monitoring, and telemetry services
     "provenance",
     "claim-extraction",
@@ -31,7 +32,6 @@ members = [
     "agent-memory",  # 🧠 NEW: Agent memory system with knowledge graphs and embeddings
     "config",
     "recovery",
-    "integration-tests",  # Re-enabled - checking compilation status
     "council",  # Re-enabled - compiles successfully
     "caching",  # Re-enabled - compiles successfully
     "planning-agent",  # Re-enabled - application layer
@@ -41,7 +41,6 @@ members = [
     "runtime-optimization",  # Re-enabled - advanced services
     "tool-ecosystem",  # Re-enabled - has compilation errors but doesn't cause workspace hangs
     "federated-learning",  # Re-enabled - advanced services
-    "e2e-tests",
     "self-prompting-agent"
     ]
 
