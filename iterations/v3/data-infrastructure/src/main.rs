@@ -697,7 +697,10 @@ async fn send_chat_message(
         Ok(rows) => {
             if let Some(row) = rows.into_iter().next() {
                 let id_str: String = row.get("id");
-                Uuid::parse_str(&id_str).unwrap()
+                Uuid::parse_str(&id_str).map_err(|e| {
+                    error!("Failed to parse AI message UUID '{}': {}", id_str, e);
+                    StatusCode::INTERNAL_SERVER_ERROR
+                })?
             } else {
                 return Err(StatusCode::INTERNAL_SERVER_ERROR);
             }
@@ -783,7 +786,13 @@ pub async fn get_chat_messages(
                     let created_at: String = row.get("created_at");
                     let sequence_number: i64 = row.get("sequence_number");
                     let id_str: String = row.get("id");
-                    let id = Uuid::parse_str(&id_str).unwrap();
+                    let id = match Uuid::parse_str(&id_str) {
+                        Ok(uuid) => uuid,
+                        Err(e) => {
+                            warn!("Failed to parse message UUID '{}': {}, skipping message", id_str, e);
+                            return json!({"error": "invalid_uuid", "id": id_str});
+                        }
+                    };
 
                     json!({
                         "id": id,
@@ -852,7 +861,21 @@ async fn handle_websocket_chat(mut socket: axum::extract::ws::WebSocket, session
         Ok(rows) => {
             if let Some(row) = rows.into_iter().next() {
                 let id_str: String = row.get("id");
-                Uuid::parse_str(&id_str).unwrap()
+                match Uuid::parse_str(&id_str) {
+                    Ok(uuid) => uuid,
+                    Err(e) => {
+                        error!("Failed to parse session UUID '{}': {}", id_str, e);
+                        let error_msg = json!({
+                            "type": "error",
+                            "message": "Session data corrupted",
+                            "timestamp": chrono::Utc::now().to_rfc3339()
+                        });
+                        if let Ok(error_text) = serde_json::to_string(&error_msg) {
+                            let _ = socket.send(axum::extract::ws::Message::Text(error_text.into())).await;
+                        }
+                        return;
+                    }
+                }
             } else {
                 // Send error and close connection
                 let error_msg = json!({
@@ -898,16 +921,30 @@ async fn handle_websocket_chat(mut socket: axum::extract::ws::WebSocket, session
                         let message_type = "message".to_string();
                         let sender_param = sender.to_string();
 
+                        let user_metadata_json = match serde_json::to_string(&user_metadata) {
+                            Ok(json) => json,
+                            Err(e) => {
+                                error!("Failed to serialize user metadata: {}", e);
+                                return;
+                            }
+                        };
+
                         let user_message_result = state.db_client.query(
                             insert_user_message,
-                            &[&session_uuid.to_string(), &message_type, &message, &sender_param, &serde_json::to_string(&user_metadata).unwrap()]
+                            &[&session_uuid.to_string(), &message_type, &message, &sender_param, &user_metadata_json]
                         ).await;
 
                         let user_message_id = match user_message_result {
                             Ok(rows) => {
                                 if let Some(row) = rows.into_iter().next() {
                                     let id_str: String = row.get("id");
-                                    Some(Uuid::parse_str(&id_str).unwrap())
+                                    match Uuid::parse_str(&id_str) {
+                                        Ok(uuid) => Some(uuid),
+                                        Err(e) => {
+                                            warn!("Failed to parse user message UUID '{}': {}", id_str, e);
+                                            None
+                                        }
+                                    }
                                 } else {
                                     None
                                 }
@@ -942,16 +979,30 @@ async fn handle_websocket_chat(mut socket: axum::extract::ws::WebSocket, session
                         });
                         let ai_sender = "assistant".to_string();
 
+                        let ai_metadata_json = match serde_json::to_string(&ai_metadata) {
+                            Ok(json) => json,
+                            Err(e) => {
+                                error!("Failed to serialize AI metadata: {}", e);
+                                return;
+                            }
+                        };
+
                         let ai_message_result = state.db_client.query(
                             insert_ai_message,
-                            &[&session_uuid.to_string(), &message_type, &ai_response, &ai_sender, &serde_json::to_string(&ai_metadata).unwrap()]
+                            &[&session_uuid.to_string(), &message_type, &ai_response, &ai_sender, &ai_metadata_json]
                         ).await;
 
                         let ai_message_id = match ai_message_result {
                             Ok(rows) => {
                                 if let Some(row) = rows.into_iter().next() {
                                     let id_str: String = row.get("id");
-                                    Some(Uuid::parse_str(&id_str).unwrap())
+                                    match Uuid::parse_str(&id_str) {
+                                        Ok(uuid) => Some(uuid),
+                                        Err(e) => {
+                                            warn!("Failed to parse AI message UUID '{}': {}", id_str, e);
+                                            None
+                                        }
+                                    }
                                 } else {
                                     None
                                 }
