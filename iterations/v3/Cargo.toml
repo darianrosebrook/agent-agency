@@ -16,7 +16,7 @@ members = [
             "system-resources",  # 📊 NEW: Unified resource management & production services (resource-manager + production)
             "data-infrastructure",  # 🗄️ NEW: Unified data layer & API services (database + interfaces + api-server)
             "testing-validation",  # 🧪 NEW: Unified testing platform & quality assurance (e2e-tests + integration-tests + brittleness-test)
-    "telemetry",  # 📈 NEW: Unified observability, monitoring, and telemetry services
+            "system-observability",  # 📊 NEW: Unified monitoring & telemetry services (system-health-monitor + observability + telemetry)
     "provenance",
     "claim-extraction",
     "reflexive-learning",
@@ -24,7 +24,6 @@ members = [
     "security-policy-enforcer",  # Re-enabled - depends on council ✓, provenance ✓
     "minimal-diff-evaluator",  # Re-enabled - depends on council ✓, workers ✓, security-policy-enforcer ✓
     "embedding-service",  # Re-enabled - standalone with ONNX/Candle dependencies
-    "system-health-monitor",  # Re-enabled - minimal features first
     "workspace-state-manager",  # Re-enabled - standalone with git2 and database
     "resilience",  # Re-enabled - compiles successfully
     # "observability",  # Temporarily disabled - module conflicts during decomposition

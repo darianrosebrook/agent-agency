@@ -1,15 +1,42 @@
-//! Agent Agency V3 API Server
+//! Data Infrastructure - Unified data layer & API services
 //!
-//! Standalone HTTP API server providing REST endpoints for task management,
-//! health checks, and metrics streaming.
+//! Consolidates database, interfaces, and api-server functionality into
+//! a comprehensive data layer with persistence, API services, and data contracts.
 
-// Re-export modules
+// Database modules (from consolidated database crate)
+pub mod audit;
+pub mod backup;
+pub mod backup_recovery;
+pub mod backup_validator;
+pub mod data_consistency;
+pub mod database_audit;
+pub mod database_circuit_breaker;
+pub mod database_metrics;
+pub mod migrations;
+pub mod models;
+pub mod optimization;
+pub mod pooling;
+pub mod queries;
+pub mod vector_store;
+
+// API and interface modules (from consolidated interfaces and api-server crates)
+pub mod api;
 pub mod api_alerts;
 pub mod api_circuit_breaker;
+pub mod artifact_store;
+pub mod cli_implementation;
+pub mod cli_interface;
+pub mod client;
 pub mod handlers;
+pub mod health;
+pub mod keystore_api;
+pub mod knowledge_queries;
+pub mod mcp;
 pub mod rate_limiter;
 pub mod rto_rpo_monitor;
+pub mod sandbox_api;
 pub mod service_failover;
+pub mod websocket;
 
 // Re-export types and functions from handlers
 pub use handlers::{AppState, PersistedTask, TaskStoreTrait};

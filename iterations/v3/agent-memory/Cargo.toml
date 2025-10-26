@@ -56,7 +56,7 @@ sha2 = "0.10"
 config = { workspace = true }
 
 # Integration with existing services
-agent-agency-database = { path = "../database" }
+data-infrastructure = { path = "../data-infrastructure" }
 embedding-service = { path = "../embedding-service", optional = true }
 
 [dev-dependencies]
