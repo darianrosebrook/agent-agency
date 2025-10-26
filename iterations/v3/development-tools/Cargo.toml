@@ -43,6 +43,23 @@ reqwest = { workspace = true, features = ["json"] }
 # Command execution
 tokio-util = "0.7"
 
+# Diff evaluation specific
+diff = "0.1"
+similar = "2.4"
+
+# AST parsing for language-specific analysis
+syn = { version = "2.0", features = ["full"] }
+quote = "1.0"
+proc-macro2 = "1.0"
+
+# Graph algorithms for change impact analysis
+petgraph = "0.6"
+
+# Integration with existing V3 components
+agent-orchestration = { path = "../agent-orchestration" }
+agent-workers = { path = "../agent-workers" }
+system-quality-security = { path = "../system-quality-security" }
+
 [features]
 default = []
 full = []

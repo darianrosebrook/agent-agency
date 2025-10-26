@@ -24,8 +24,8 @@ pub struct SequentialPipeline<Input, Output> {
 
 impl<Input, Output> SequentialPipeline<Input, Output>
 where
-    Input: Clone + Send + Sync + 'static,
-    Output: Clone + Send + Sync + 'static,
+    Input: Clone + Send + Sync + 'static + std::fmt::Debug,
+    Output: Clone + Send + Sync + 'static + std::fmt::Debug,
 {
     /// Create a new sequential pipeline
     pub fn new(config: SequentialPipelineConfig) -> Self {
@@ -107,8 +107,8 @@ where
 #[async_trait]
 impl<Input, Output> ExecutablePipeline<Input, Output> for SequentialPipeline<Input, Output>
 where
-    Input: Clone + Send + Sync + 'static,
-    Output: Clone + Send + Sync + 'static,
+    Input: Clone + Send + Sync + 'static + std::fmt::Debug,
+    Output: Clone + Send + Sync + 'static + std::fmt::Debug,
 {
     async fn execute(&self, input: Input) -> PipelineResult<Output> {
         let start_time = std::time::Instant::now();
@@ -165,8 +165,8 @@ where
 
 impl<Input, Output> StagedPipeline<Input, Output> for SequentialPipeline<Input, Output>
 where
-    Input: Clone + Send + Sync + 'static,
-    Output: Clone + Send + Sync + 'static,
+    Input: Clone + Send + Sync + 'static + std::fmt::Debug,
+    Output: Clone + Send + Sync + 'static + std::fmt::Debug,
 {
     fn add_stage(&mut self, stage: Box<dyn PipelineStage<Input, Output>>) {
         futures::executor::block_on(async {

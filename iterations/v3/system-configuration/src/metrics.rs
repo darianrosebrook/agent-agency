@@ -9,7 +9,7 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 /// Core metrics collector for pipelines
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct PipelineMetrics {
     /// Metrics data
     data: Arc<RwLock<MetricsData>>,

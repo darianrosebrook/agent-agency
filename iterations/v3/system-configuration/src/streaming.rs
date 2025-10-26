@@ -223,8 +223,8 @@ where
 #[async_trait]
 impl<Input, Output> ExecutablePipeline<Input, ()> for StreamingPipeline<Input, Output>
 where
-    Input: Clone + Send + Sync + 'static,
-    Output: Clone + Send + Sync + 'static,
+    Input: Clone + Send + Sync + 'static + std::fmt::Debug,
+    Output: Clone + Send + Sync + 'static + std::fmt::Debug,
 {
     async fn execute(&self, input: Input) -> PipelineResult<()> {
         self.send(input).await
