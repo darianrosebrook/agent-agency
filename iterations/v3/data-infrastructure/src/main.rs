@@ -537,7 +537,11 @@ pub async fn create_chat_session(
     // - [ ] Replace RwLock operations with proper error propagation
     // - [ ] Add comprehensive error types and handling throughout main functions
     // - [ ] Ensure all external API calls handle errors gracefully
-    let metadata_json = serde_json::to_string(&metadata).unwrap();
+    let metadata_json = serde_json::to_string(&metadata)
+        .map_err(|e| {
+            error!("Failed to serialize session metadata: {}", e);
+            ApiError::Internal("Failed to create session metadata".to_string())
+        })?;
 
     match state.db_client.query(
         query,
@@ -546,7 +550,11 @@ pub async fn create_chat_session(
         Ok(rows) => {
             if let Some(row) = rows.into_iter().next() {
                 let session_uuid_str: String = row.get("id");
-                let session_uuid = Uuid::parse_str(&session_uuid_str).unwrap();
+                let session_uuid = Uuid::parse_str(&session_uuid_str)
+                    .map_err(|e| {
+                        error!("Failed to parse session UUID from database: {} - {}", session_uuid_str, e);
+                        ApiError::Internal("Invalid session UUID format".to_string())
+                    })?;
                 let created_at: String = row.get("created_at");
 
                 Ok(Json(json!({
@@ -587,9 +595,13 @@ async fn send_chat_message(
         Ok(rows) => {
             if let Some(row) = rows.into_iter().next() {
                 let uuid_str: String = row.get("id");
-                Ok(Uuid::parse_str(&uuid_str).unwrap())
+                Uuid::parse_str(&uuid_str)
+                    .map_err(|e| {
+                        error!("Failed to parse session UUID: {} - {}", uuid_str, e);
+                        "Invalid session UUID format".to_string()
+                    })
             } else {
-                Err("Session not found or inactive")
+                Err("Session not found or inactive".to_string())
             }
         }
         Err(e) => Err(format!("Database error: {:?}", e))
@@ -617,16 +629,26 @@ async fn send_chat_message(
     let message_type = "message".to_string();
     let sender_param = sender.to_string();
 
+    let user_metadata_json = serde_json::to_string(&user_metadata)
+        .map_err(|e| {
+            error!("Failed to serialize user message metadata: {}", e);
+            ApiError::Internal("Failed to create message metadata".to_string())
+        })?;
+
     let user_message_result = state.db_client.query(
         insert_user_message,
-        &[&session_uuid.to_string(), &message_type, &user_message, &sender_param, &serde_json::to_string(&user_metadata).unwrap()]
+        &[&session_uuid.to_string(), &message_type, &user_message, &sender_param, &user_metadata_json]
     ).await;
 
     let user_message_id = match user_message_result {
         Ok(rows) => {
             if let Some(row) = rows.into_iter().next() {
                 let id_str: String = row.get("id");
-                Uuid::parse_str(&id_str).unwrap()
+                Uuid::parse_str(&id_str)
+                    .map_err(|e| {
+                        error!("Failed to parse message UUID: {} - {}", id_str, e);
+                        StatusCode::INTERNAL_SERVER_ERROR
+                    })?
             } else {
                 return Err(StatusCode::INTERNAL_SERVER_ERROR);
             }
@@ -659,9 +681,15 @@ async fn send_chat_message(
     });
     let ai_sender = "assistant".to_string();
 
+    let ai_metadata_json = serde_json::to_string(&ai_metadata)
+        .map_err(|e| {
+            error!("Failed to serialize AI message metadata: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
     let ai_message_result = state.db_client.query(
         insert_ai_message,
-        &[&session_uuid.to_string(), &message_type, &ai_response, &ai_sender, &serde_json::to_string(&ai_metadata).unwrap()]
+        &[&session_uuid.to_string(), &message_type, &ai_response, &ai_sender, &ai_metadata_json]
     ).await;
 
     let ai_message_id = match ai_message_result {
