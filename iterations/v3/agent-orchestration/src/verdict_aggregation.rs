@@ -888,20 +888,18 @@ impl VerdictAggregator {
         // -  Implement change merging for compatible modifications
         // -  Add change deduplication performance optimization
 
-        // TODO: Refactor complex async blocking pattern - performance and deadlock risk
-        // - [ ] Replace block_in_place + block_on with proper async/await pattern
-        // - [ ] Make ChangeDeduplicationEngine async-compatible throughout
-        // - [ ] Remove tokio::runtime::Handle::current().block_on() usage
-        // - [ ] Implement proper async deduplication without blocking operations
-        // - [ ] Add timeout handling for deduplication operations
-
-        // Use sophisticated deduplication engine
+        // Async deduplication with timeout protection
         let mut deduplication_engine = ChangeDeduplicationEngine::new();
-        let deduplication_result = tokio::task::block_in_place(|| {
-            tokio::runtime::Handle::current().block_on(
-                deduplication_engine.deduplicate_changes(all_changes)
-            )
-        })?;
+
+        // Add timeout to prevent hanging on deduplication operations
+        let deduplication_result = tokio::time::timeout(
+            Duration::from_secs(30), // 30 second timeout for deduplication
+            deduplication_engine.deduplicate_changes(all_changes)
+        ).await
+        .map_err(|_| CouncilError::Timeout {
+            operation: "change_deduplication".to_string(),
+            timeout_seconds: 30,
+        })??;
 
         let unique_changes = deduplication_result.unique_changes;
 
