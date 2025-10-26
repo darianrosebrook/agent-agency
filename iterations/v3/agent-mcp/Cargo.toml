@@ -19,8 +19,11 @@ tracing.workspace = true
 # Orchestration package provides security functionality
 agent-orchestration = { path = "../agent-orchestration" }
 
+# Data infrastructure for database functionality
+data-infrastructure = { path = "../data-infrastructure" }
+
 # Memory system for memory MCP tools
-agent-memory = { path = "../agent-memory" }
+agent-memory = { path = "../agent-memory", optional = true }
 
 # Common types and abstractions
 agent-agency-common-types = { path = "../common-types" }
@@ -58,7 +61,9 @@ prometheus = "0.13"
 lazy_static = "1.4"
 
 [features]
+default = ["memory"]
 test-utils = []
+memory = ["agent-memory"]
 
 [dev-dependencies]
 tokio-test = "0.4"

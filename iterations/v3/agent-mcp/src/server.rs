@@ -5,6 +5,7 @@
 use crate::mcp_types::*;
 use crate::{CawsIntegration, ToolDiscovery, ToolRegistry};
 use caws_runtime_validator::integration::McpCawsIntegration;
+#[cfg(feature = "memory")]
 use agent_memory::MemorySystem;
 use anyhow::{anyhow, bail, Result};
 use jsonrpc_core::{Error as JsonRpcError, IoHandler, Params, Value};
@@ -187,7 +188,7 @@ fn get_audit_logger() -> Result<StubAuditLogger, String> {
     Ok(StubAuditLogger) // Stub
 }
 // use observability::slo::{SLOTracker, create_default_slos}; // observability crate not available
-// use agent_agency_database::DatabaseClient; // database crate not available
+// use data_infrastructure::DatabaseClient; // database crate not available
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::Mutex;
@@ -525,16 +526,53 @@ pub struct MCPServer {
     api_rate_limiter: Option<Arc<RateLimitMiddleware>>,
     slo_tracker: Arc<SLOTracker>,
     db_client: Arc<DatabaseClient>,
+    #[cfg(feature = "memory")]
     memory_system: Option<Arc<agent_memory::MemorySystem>>,
 }
 
 impl MCPServer {
     /// Create a new MCP server
     pub fn new(config: MCPConfig, db_client: Arc<DatabaseClient>) -> Self {
-        Self::new_with_memory(config, db_client, None)
+        let rate_limiter = config
+            .server
+            .requests_per_minute
+            .map(|limit| Arc::new(Mutex::new(RateLimiter::new(limit))));
+
+        let auth_rate_limiter = config
+            .server
+            .requests_per_minute
+            .map(|limit| Arc::new(AuthRateLimiter::new(limit)));
+
+        let api_rate_limiter = config
+            .server
+            .requests_per_minute
+            .map(|limit| Arc::new(RateLimitMiddleware::new(limit)));
+
+        let slo_tracker = Arc::new(SLOTracker::new());
+
+        // Create tool registry without memory system
+        let tool_registry = ToolRegistry::new();
+
+        Self {
+            config,
+            tool_registry: Arc::new(tool_registry),
+            tool_discovery: Arc::new(ToolDiscovery::new()),
+            status: Arc::new(RwLock::new(MCPServerStatus::Initializing)),
+            connections: Arc::new(RwLock::new(Vec::new())),
+            http_handle: Arc::new(RwLock::new(None)),
+            ws_handle: Arc::new(RwLock::new(None)),
+            rate_limiter,
+            auth_rate_limiter,
+            api_rate_limiter,
+            slo_tracker,
+            db_client,
+            #[cfg(feature = "memory")]
+            memory_system: None,
+        }
     }
 
     /// Create a new MCP server with memory system
+    #[cfg(feature = "memory")]
     pub fn new_with_memory(config: MCPConfig, db_client: Arc<DatabaseClient>, memory_system: Option<Arc<MemorySystem>>) -> Self {
         let rate_limiter = config
             .server
@@ -583,6 +621,7 @@ impl MCPServer {
 
         // Create tool registry with memory system if provided
         let mut tool_registry = ToolRegistry::new();
+        #[cfg(feature = "memory")]
         if let Some(ref memory_system) = memory_system {
             tool_registry.set_memory_system(Arc::clone(memory_system));
         }
@@ -604,6 +643,7 @@ impl MCPServer {
             api_rate_limiter,
             slo_tracker: Arc::clone(&slo_tracker),
             db_client,
+            #[cfg(feature = "memory")]
             memory_system,
         }
     }

@@ -4,6 +4,7 @@
 
 use crate::mcp_types::*;
 use crate::tools::{DocQualityValidator, create_memory_tools};
+#[cfg(feature = "memory")]
 use agent_memory::MemorySystem;
 use anyhow::Result;
 use dashmap::DashMap;

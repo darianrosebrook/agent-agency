@@ -48,7 +48,6 @@ agent-agency-common-types = { path = "../common-types" }
 agent-agency-security = { path = "../security" }
 system-observability = { path = "../system-observability" }
 agent-orchestration = { path = "../agent-orchestration" }
-agent-mcp = { path = "../agent-mcp", optional = true }
 
 # Keep database functionality separate to avoid circular dependencies
 embedding-service = { path = "../embedding-service", optional = true }
@@ -56,7 +55,6 @@ embedding-service = { path = "../embedding-service", optional = true }
 [features]
 default = []
 embeddings = ["embedding-service"]
-mcp = ["agent-mcp"]
 
 [dev-dependencies]
 tokio-test = "0.4"
