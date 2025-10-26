@@ -211,10 +211,12 @@ where
     }
 }
 
-// Note: ParallelPipeline does not implement StagedPipeline due to trait design limitations.
-// The trait expects stages to produce the same type as the pipeline output (Vec<Output>),
-// but parallel stages should produce individual Output items that get collected.
-// This may be addressed in a future trait redesign.
+// TODO: Redesign pipeline traits for better parallel processing support with acceptance criteria:
+// - [ ] Refactor StagedPipeline trait to support different output types per stage
+// - [ ] Implement generic associated types for stage input/output specifications
+// - [ ] Add parallel execution capabilities to base pipeline traits
+// - [ ] Support streaming outputs and incremental result collection
+// - [ ] Maintain backward compatibility with existing sequential pipelines
 
 #[cfg(test)]
 mod tests {
