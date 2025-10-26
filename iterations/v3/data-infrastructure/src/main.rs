@@ -319,8 +319,8 @@ pub struct AppState {
     task_store: Arc<dyn TaskStoreTrait + Send + Sync>,
     db_client: DatabaseClient,
     audit_logger: audit::AuditLogger,
-    keystore: Arc<dyn agent_agency_security::Keystore>,
-    sandbox: Arc<dyn agent_agency_security::Sandbox>,
+    keystore: Arc<dyn system_quality_security::Keystore>,
+    sandbox: Arc<dyn system_quality_security::Sandbox>,
     health_monitor: Arc<SystemHealthMonitor>,
     alert_manager: Arc<api_alerts::AlertManager>,
     rate_limiter: Arc<rate_limiter::RateLimiter>,
@@ -1500,8 +1500,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let audit_logger = audit::AuditLogger::new(db_client.clone());
 
     // Initialize keystore and sandbox
-    let keystore = agent_agency_security::create_keystore();
-    let sandbox = agent_agency_security::create_sandbox();
+    let keystore = system_quality_security::create_keystore();
+    let sandbox = system_quality_security::create_sandbox();
 
     let app_state = AppState {
         task_store,

@@ -65,7 +65,7 @@ governor = "0.6"
 nonzero_ext = "0.3"
 
 # Integration with agent-memory (optional to avoid circular dependencies)
-agent-memory = { path = "../agent-memory", optional = true }
+agent-memory = { path = "../agent-memory", optional = true, features = ["database"] }
 
 # Integration with workspace-state-manager
 workspace-state-manager = { path = "../workspace-state-manager", optional = true }

@@ -18,7 +18,7 @@ use council::predictive_learning::PredictiveLearningSystem;
 use council::intelligent_edge_case_testing::IntelligentEdgeCaseTester;
 use apple_silicon::ane::ANEManager;
 use database::client::DatabaseClient;
-use orchestration::coordinator::OrchestrationCoordinator;
+use agent_orchestration::coordinator::OrchestrationCoordinator;
 use workers::executor::TaskExecutor;
 
 /// End-to-end integration test suite

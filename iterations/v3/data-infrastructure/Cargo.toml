@@ -45,7 +45,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 # Local crates
 agent-agency-contracts = { path = "../agent-agency-contracts" }
 agent-agency-common-types = { path = "../common-types" }
-agent-agency-security = { path = "../security" }
+system-quality-security = { path = "../system-quality-security" }
 system-observability = { path = "../system-observability" }
 agent-orchestration = { path = "../agent-orchestration" }
 

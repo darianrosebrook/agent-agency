@@ -69,7 +69,6 @@ console = { version = "0.16", features = ["std"] }
 agent-agency-contracts = { path = "../agent-agency-contracts" }
 agent-orchestration = { path = "../agent-orchestration" }
 agent-agency-research = { path = "../research" }
-orchestration = { path = "../orchestration" }
 claim-extraction = { path = "../claim-extraction" }
 agent-agency-resilience = { path = "../resilience" }
 agent-agency-config = { path = "../config" }
@@ -85,7 +84,6 @@ agent-agency-apple-silicon = { path = "../apple-silicon", optional = true }
 caws-runtime-validator = { path = "../caws/runtime-validator" }
 agent-mcp = { path = "../agent-mcp" }
 tool-ecosystem = { path = "../tool-ecosystem" }
-parallel-workers = { path = "../parallel-workers" }
 
 [features]
 default = []

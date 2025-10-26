@@ -35,7 +35,7 @@ use caws_runtime_validator::{
 
 // Legacy CAWS implementations (for comparison)
 use agent_mcp::caws_integration::CawsIntegration as LegacyMcpCawsIntegration;
-use orchestration::caws_runtime::{CawsRuntimeValidator, DefaultValidator as LegacyOrchestrationValidator};
+use agent_orchestration::caws_runtime::{CawsRuntimeValidator, DefaultValidator as LegacyOrchestrationValidator};
 use agent_agency_workers::caws::checker::CawsChecker as LegacyWorkersCawsChecker;
 
 // Common types
@@ -223,25 +223,25 @@ pub mod orchestration_migration_comparison {
             .await?;
 
         // Test legacy implementation
-        let legacy_working_spec = orchestration::caws_runtime::WorkingSpec {
+        let legacy_working_spec = agent_orchestration::caws_runtime::WorkingSpec {
             risk_tier: 2,
             scope_in: working_spec.scope_in.clone(),
             change_budget_max_files: working_spec.change_budget_max_files,
             change_budget_max_loc: working_spec.change_budget_max_loc,
         };
 
-        let legacy_task_descriptor = orchestration::caws_runtime::TaskDescriptor {
+        let legacy_task_descriptor = agent_orchestration::caws_runtime::TaskDescriptor {
             task_id: task_descriptor.task_id.clone(),
             scope_in: task_descriptor.scope_in.clone(),
             risk_tier: task_descriptor.risk_tier,
             execution_mode: match task_descriptor.execution_mode {
-                caws_runtime_validator::ExecutionMode::Strict => orchestration::caws_runtime::ExecutionMode::Strict,
-                caws_runtime_validator::ExecutionMode::Auto => orchestration::caws_runtime::ExecutionMode::Auto,
-                caws_runtime_validator::ExecutionMode::DryRun => orchestration::caws_runtime::ExecutionMode::DryRun,
+                caws_runtime_validator::ExecutionMode::Strict => agent_orchestration::caws_runtime::ExecutionMode::Strict,
+                caws_runtime_validator::ExecutionMode::Auto => agent_orchestration::caws_runtime::ExecutionMode::Auto,
+                caws_runtime_validator::ExecutionMode::DryRun => agent_orchestration::caws_runtime::ExecutionMode::DryRun,
             },
         };
 
-        let legacy_diff_stats = orchestration::caws_runtime::DiffStats {
+        let legacy_diff_stats = agent_orchestration::caws_runtime::DiffStats {
             files_changed: diff_stats.files_changed,
             lines_added: diff_stats.lines_added,
             lines_removed: diff_stats.lines_removed,
@@ -318,25 +318,25 @@ pub mod orchestration_migration_comparison {
             .await?;
 
         // Test legacy implementation
-        let legacy_working_spec = orchestration::caws_runtime::WorkingSpec {
+        let legacy_working_spec = agent_orchestration::caws_runtime::WorkingSpec {
             risk_tier: 2,
             scope_in: working_spec.scope_in.clone(),
             change_budget_max_files: working_spec.change_budget_max_files,
             change_budget_max_loc: working_spec.change_budget_max_loc,
         };
 
-        let legacy_task_descriptor = orchestration::caws_runtime::TaskDescriptor {
+        let legacy_task_descriptor = agent_orchestration::caws_runtime::TaskDescriptor {
             task_id: task_descriptor.task_id.clone(),
             scope_in: task_descriptor.scope_in.clone(),
             risk_tier: task_descriptor.risk_tier,
             execution_mode: match task_descriptor.execution_mode {
-                caws_runtime_validator::ExecutionMode::Strict => orchestration::caws_runtime::ExecutionMode::Strict,
-                caws_runtime_validator::ExecutionMode::Auto => orchestration::caws_runtime::ExecutionMode::Auto,
-                caws_runtime_validator::ExecutionMode::DryRun => orchestration::caws_runtime::ExecutionMode::DryRun,
+                caws_runtime_validator::ExecutionMode::Strict => agent_orchestration::caws_runtime::ExecutionMode::Strict,
+                caws_runtime_validator::ExecutionMode::Auto => agent_orchestration::caws_runtime::ExecutionMode::Auto,
+                caws_runtime_validator::ExecutionMode::DryRun => agent_orchestration::caws_runtime::ExecutionMode::DryRun,
             },
         };
 
-        let legacy_diff_stats = orchestration::caws_runtime::DiffStats {
+        let legacy_diff_stats = agent_orchestration::caws_runtime::DiffStats {
             files_changed: diff_stats.files_changed,
             lines_added: diff_stats.lines_added,
             lines_removed: diff_stats.lines_removed,
@@ -511,21 +511,21 @@ pub mod performance_comparison {
         // Test legacy implementation performance
         let legacy_start = std::time::Instant::now();
         for i in 0..iterations {
-            let working_spec = orchestration::caws_runtime::WorkingSpec {
+            let working_spec = agent_orchestration::caws_runtime::WorkingSpec {
                 risk_tier: 2,
                 scope_in: vec!["src/".to_string()],
                 change_budget_max_files: 10,
                 change_budget_max_loc: 500,
             };
 
-            let task_descriptor = orchestration::caws_runtime::TaskDescriptor {
+            let task_descriptor = agent_orchestration::caws_runtime::TaskDescriptor {
                 task_id: format!("task-{}", i),
                 scope_in: vec![format!("src/file{}.rs", i)],
                 risk_tier: 2,
-                execution_mode: orchestration::caws_runtime::ExecutionMode::Strict,
+                execution_mode: agent_orchestration::caws_runtime::ExecutionMode::Strict,
             };
 
-            let diff_stats = orchestration::caws_runtime::DiffStats {
+            let diff_stats = agent_orchestration::caws_runtime::DiffStats {
                 files_changed: 1,
                 lines_added: 10,
                 lines_removed: 5,

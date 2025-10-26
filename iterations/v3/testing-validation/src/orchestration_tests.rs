@@ -15,7 +15,7 @@ use crate::mocks::{
 use crate::test_utils::{TestExecutor, TestResult, DEFAULT_TEST_TIMEOUT};
 
 // Import orchestration and related components
-use orchestration::coordinator::OrchestrationCoordinator;
+use agent_orchestration::coordinator::OrchestrationCoordinator;
 use council::intelligent_edge_case_testing::IntelligentEdgeCaseTester;
 use council::predictive_learning::PredictiveLearningSystem;
 
@@ -460,8 +460,8 @@ impl OrchestrationIntegrationTests {
 }
 
 /// Helper function to create a test task specification
-fn create_test_task_spec(task_id: Uuid) -> orchestration::models::TaskSpec {
-    use orchestration::models::{TaskSpec, TaskPriority, ResourceRequirements};
+fn create_test_task_spec(task_id: Uuid) -> agent_orchestration::models::TaskSpec {
+    use agent_orchestration::models::{TaskSpec, TaskPriority, ResourceRequirements};
 
     TaskSpec {
         id: task_id,
@@ -481,8 +481,8 @@ fn create_test_task_spec(task_id: Uuid) -> orchestration::models::TaskSpec {
 }
 
 /// Helper function to create a failing task specification
-fn create_failing_task_spec(description: &str) -> orchestration::models::TaskSpec {
-    use orchestration::models::{TaskSpec, TaskPriority, ResourceRequirements};
+fn create_failing_task_spec(description: &str) -> agent_orchestration::models::TaskSpec {
+    use agent_orchestration::models::{TaskSpec, TaskPriority, ResourceRequirements};
 
     TaskSpec {
         id: Uuid::new_v4(),
@@ -502,8 +502,8 @@ fn create_failing_task_spec(description: &str) -> orchestration::models::TaskSpe
 }
 
 /// Helper function to create an optimized task specification
-fn create_optimized_task_spec(title: &str, priority: &str, resource_focus: &str) -> orchestration::models::TaskSpec {
-    use orchestration::models::{TaskSpec, TaskPriority, ResourceRequirements};
+fn create_optimized_task_spec(title: &str, priority: &str, resource_focus: &str) -> agent_orchestration::models::TaskSpec {
+    use agent_orchestration::models::{TaskSpec, TaskPriority, ResourceRequirements};
 
     let priority = match priority {
         "high" => TaskPriority::High,
@@ -559,8 +559,8 @@ fn create_optimized_task_spec(title: &str, priority: &str, resource_focus: &str)
 
 /// Helper function to create a task outcome from a result
 fn create_task_outcome_from_result(
-    task_spec: &orchestration::models::TaskSpec,
-    result: &orchestration::models::TaskResult,
+    task_spec: &agent_orchestration::models::TaskSpec,
+    result: &agent_orchestration::models::TaskResult,
 ) -> council::types::TaskOutcome {
     use council::types::TaskOutcome;
 

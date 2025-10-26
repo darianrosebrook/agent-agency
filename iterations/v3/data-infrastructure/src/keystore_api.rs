@@ -17,7 +17,7 @@ use uuid::Uuid;
 
 use crate::AppState;
 use crate::audit::extract_audit_context;
-use agent_agency_security::{Keystore, KeyType, KeyPermission, KeystoreResult, KeyMetadata};
+use system_quality_security::{Keystore, KeyType, KeyPermission, KeystoreResult, KeyMetadata};
 
 /// Request to store a new key
 #[derive(Debug, Deserialize)]

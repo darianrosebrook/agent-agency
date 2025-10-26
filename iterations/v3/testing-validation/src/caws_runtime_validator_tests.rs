@@ -41,7 +41,7 @@ use agent_mcp::{
 };
 
 // Orchestration imports
-use orchestration::{
+use agent_orchestration::{
     caws_runtime::{WorkingSpec, TaskDescriptor, DiffStats},
     types::{Task, TaskStatus, ExecutionMode},
 };

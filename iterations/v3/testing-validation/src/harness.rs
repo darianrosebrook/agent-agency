@@ -10,11 +10,11 @@ use tokio::sync::RwLock;
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
 
-// use orchestration::orchestrate::Orchestrator; // Excluded due to council dependency (torch-sys)
-// use orchestration::tracking::{ProgressTracker, EventBus}; // Excluded due to council dependency (torch-sys)
-// use orchestration::quality::{QualityGateOrchestrator, QualityGateOrchestratorConfig}; // Excluded due to council dependency (torch-sys)
-// use orchestration::refinement::RefinementCoordinator; // Excluded due to council dependency (torch-sys)
-// use orchestration::artifacts::{ArtifactManager, ArtifactManagerConfig}; // Excluded due to council dependency (torch-sys)
+// use agent_orchestration::orchestrate::Orchestrator; // Excluded due to council dependency (torch-sys)
+// use agent_orchestration::tracking::{ProgressTracker, EventBus}; // Excluded due to council dependency (torch-sys)
+// use agent_orchestration::quality::{QualityGateOrchestrator, QualityGateOrchestratorConfig}; // Excluded due to council dependency (torch-sys)
+// use agent_orchestration::refinement::RefinementCoordinator; // Excluded due to council dependency (torch-sys)
+// use agent_orchestration::artifacts::{ArtifactManager, ArtifactManagerConfig}; // Excluded due to council dependency (torch-sys)
 // use agent_agency_council::plan_review::PlanReviewService; // Excluded due to torch-sys
 // use agent_agency_workers::autonomous_executor::{AutonomousExecutor, AutonomousExecutorConfig}; // Excluded due to torch-sys
 use agent_agency_interfaces::{RestApi, CliInterface, McpServer, WebSocketApi};
@@ -132,14 +132,14 @@ impl E2eTestHarness {
         // In practice, these would be real component instances
 
         // Initialize progress tracker and event bus
-        let event_bus = Arc::new(EventBus::new(orchestration::tracking::EventBusConfig {
+        let event_bus = Arc::new(EventBus::new(agent_orchestration::tracking::EventBusConfig {
             buffer_size: 1000,
             max_subscribers_per_task: 10,
             retention_seconds: 3600,
         }));
 
         let progress_tracker = Arc::new(ProgressTracker::new(
-            orchestration::tracking::ProgressTrackerConfig {
+            agent_orchestration::tracking::ProgressTrackerConfig {
                 enabled: true,
                 max_events_per_task: 100,
                 event_retention_seconds: 3600,
@@ -171,12 +171,12 @@ impl E2eTestHarness {
             enable_integrity_checks: true,
         };
 
-        let storage = Arc::new(orchestration::artifacts::FileSystemStorage::new(
+        let storage = Arc::new(agent_orchestration::artifacts::FileSystemStorage::new(
             std::path::PathBuf::from(&artifact_config.base_path),
             artifact_config.enable_compression,
         ));
 
-        let versioning = Arc::new(orchestration::artifacts::GitVersionControl::new(
+        let versioning = Arc::new(agent_orchestration::artifacts::GitVersionControl::new(
             self.config.working_directory.clone(),
             "artifacts".to_string(),
         ));
@@ -270,7 +270,7 @@ impl E2eTestHarness {
 
     /// Simulate task execution for testing
     async fn simulate_task_execution(&self, task_id: Uuid, duration: Duration) -> Result<()> {
-        // use orchestration::planning::types::ExecutionEvent; // Excluded due to council dependency (torch-sys)
+        // use agent_orchestration::planning::types::ExecutionEvent; // Excluded due to council dependency (torch-sys)
 
         // let event_bus = self.event_bus.as_ref().ok_or_else(|| TestHarnessError::ComponentNotInitialized("event_bus"))?; // Excluded due to council dependency (torch-sys)
 

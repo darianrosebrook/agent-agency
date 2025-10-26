@@ -15,8 +15,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::AppState;
 use crate::audit::extract_audit_context;
-use agent_agency_security::{Sandbox, SandboxMode, ResourceLimits, SandboxContext, ExecutionRequest, SandboxResult};
-use agent_agency_security::sandbox::SandboxStatus;
+use system_quality_security::{Sandbox, SandboxMode, ResourceLimits, SandboxContext, ExecutionRequest, SandboxResult};
+use system_quality_security::sandbox::SandboxStatus;
 
 /// Request to create and execute in a sandbox
 #[derive(Debug, Deserialize)]
@@ -51,7 +51,7 @@ pub async fn execute_command(
     let context = SandboxContext {
         id: uuid::Uuid::new_v4(),
         mode: request.sandbox_mode.unwrap_or(SandboxMode::Docker),
-        limits: agent_agency_security::ResourceLimits {
+        limits: system_quality_security::ResourceLimits {
             cpu_cores: request.cpu_limit,
             memory_mb: request.memory_limit_mb,
             disk_mb: Some(100), // Default 100MB disk limit

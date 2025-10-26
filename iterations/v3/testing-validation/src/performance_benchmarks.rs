@@ -14,7 +14,7 @@ use uuid::Uuid;
 use chrono::Utc;
 
 // Use local crate imports instead of external agent_agency_v3
-use orchestration::arbiter::{ArbiterOrchestrator, ArbiterConfig};
+use agent_orchestration::arbiter::{ArbiterOrchestrator, ArbiterConfig};
 use claim_extraction::ClaimExtractionProcessor;
 use agent_data_processing::operations::{WorkspaceFactory, AllowList, Budgets};
 use agent_agency_workers::{WorkerPoolManager, AutonomousExecutor, AutonomousExecutorConfig};
