@@ -1303,25 +1303,8 @@ async fn cancel_task(
     }
 }
 
-// TODO: Refactor submit_task method - currently 142 lines, violates single responsibility principle
-// - [ ] Extract validation logic into validate_task_submission() function
-// - [ ] Extract database persistence into persist_task_to_database() function
-// - [ ] Extract audit logging into log_task_submission_audit() function
-// - [ ] Extract task execution into execute_task_async() function
-// - [ ] Extract response creation into create_task_submission_response() function
-// - [ ] Reduce main method to orchestration only (under 30 lines)
-
-pub async fn submit_task(
-    State(state): State<AppState>,
-    headers: axum::http::HeaderMap,
-    axum::extract::ConnectInfo(addr): axum::extract::ConnectInfo<std::net::SocketAddr>,
-    Json(request): Json<TaskSubmissionRequest>,
-) -> Result<Json<TaskSubmissionResponse>, ApiError> {
-    // Rate limiting check
-    state.rate_limiter.check_rate_limit(addr.ip()).await
-        .map_err(|_| ApiError::RateLimitExceeded)?;
-
-    // Input validation
+/// Validate task submission request
+fn validate_task_submission(request: &TaskSubmissionRequest) -> Result<(), ApiError> {
     if request.description.trim().is_empty() {
         return Err(ApiError::Validation("Task description cannot be empty".to_string()));
     }
@@ -1330,21 +1313,17 @@ pub async fn submit_task(
         return Err(ApiError::Validation("Task description too long (max 1000 characters)".to_string()));
     }
 
-    // Sanitize input (stub implementation)
-    let description = request.description.trim().to_string();
-    let context = request.context;
+    Ok(())
+}
 
-    let task_id = Uuid::new_v4();
-    // TODO: Replace println! with proper structured logging throughout codebase - found 1200+ instances
-    // - [ ] Replace all println! calls with tracing::info!/warn!/error! macros
-    // - [ ] Add structured logging with key-value pairs for better observability
-    // - [ ] Implement log levels (DEBUG, INFO, WARN, ERROR) appropriately
-    // - [ ] Add request IDs and correlation IDs for distributed tracing
-    // - [ ] Configure centralized logging with proper formatters and sinks
-    // - [ ] Add log sampling and rate limiting for high-volume operations
-    println!(" Submitting task: {}", description);
-
-    // Create task spec JSON for database storage
+/// Persist task to database and return the persisted task
+async fn persist_task_to_database(
+    state: &AppState,
+    task_id: Uuid,
+    description: &str,
+    context: &Option<String>,
+    request: &TaskSubmissionRequest,
+) -> Result<(), ApiError> {
     let task_spec = json!({
         "id": task_id,
         "description": description,
@@ -1353,18 +1332,11 @@ pub async fn submit_task(
         "created_at": chrono::Utc::now().to_rfc3339()
     });
 
-    // Persist task to database
-    let insert_query = r#"
-        INSERT INTO tasks (id, spec, state, created_by, metadata)
-        VALUES ($1, $2, 'pending', 'api-server', $3)
-    "#;
-
     let metadata = json!({
         "source": "api",
         "submitted_at": chrono::Utc::now().to_rfc3339()
     });
 
-    // Persist task to storage
     let now = chrono::Utc::now().to_rfc3339();
     let task = PersistedTask {
         id: task_id.to_string(),
@@ -1378,14 +1350,26 @@ pub async fn submit_task(
 
     state.task_store.create_task(task).await
         .map_err(|e| ApiError::Internal(format!("Failed to persist task: {}", e)))?;
-    println!(" Task {} persisted successfully", task_id.to_string());
 
-    // Audit logging for task creation
-    let audit_context = audit::extract_audit_context(&headers, Some(addr));
+    Ok(())
+}
+
+/// Log audit events for task submission
+async fn log_task_submission_audit(
+    state: &AppState,
+    task_id: &Uuid,
+    description: &str,
+    request: &TaskSubmissionRequest,
+    headers: &axum::http::HeaderMap,
+    addr: &std::net::SocketAddr,
+) -> Result<(), ApiError> {
+    let audit_context = audit::extract_audit_context(headers, Some(*addr));
+
+    // Log task creation event
     let audit_details = serde_json::json!({
         "description": description,
         "priority": request.priority,
-        "context_length": context.as_ref().map(|c| c.len()).unwrap_or(0),
+        "context_length": request.context.as_ref().map(|c| c.len()).unwrap_or(0),
         "submitted_via": "api"
     });
 
@@ -1397,15 +1381,15 @@ pub async fn submit_task(
         &audit_context,
         Some(audit_details),
     ).await {
-        eprintln!("Failed to log task creation audit event: {:?}", e);
+        warn!("Failed to log task creation audit event: {:?}", e);
     }
 
-    // Log API call audit event
+    // Log API call event
     if let Err(e) = state.audit_logger.log_api_call(
         "POST",
         "/api/v1/tasks",
-        200, // Success status
-        150, // Estimated processing time
+        200,
+        150,
         &audit_context,
         Some(serde_json::json!({
             "description": description,
@@ -1415,21 +1399,29 @@ pub async fn submit_task(
             "task_id": task_id,
             "status": "accepted"
         })),
-        true, // Success
-        None, // No error
+        true,
+        None,
     ).await {
-        eprintln!("Failed to log API call audit event: {:?}", e);
+        warn!("Failed to log API call audit event: {:?}", e);
     }
 
-    let description_clone = description.clone();
-    // Execute task directly via HTTP to worker
+    Ok(())
+}
+
+/// Execute task asynchronously via HTTP to worker
+fn execute_task_async(
+    task_id: Uuid,
+    description: String,
+    context: Option<String>,
+    request: TaskSubmissionRequest,
+) {
     tokio::spawn(async move {
         let client = reqwest::Client::new();
         let worker_endpoint = "http://localhost:8081/execute";
 
         let request_body = serde_json::json!({
             "task_id": task_id.to_string(),
-            "prompt": description_clone,
+            "prompt": description.clone(),
             "context": context,
             "requirements": request.priority,
             "caws_spec": null
@@ -1444,22 +1436,63 @@ pub async fn submit_task(
         {
             Ok(response) => {
                 if response.status().is_success() {
-                    println!(" Task {} executed successfully", task_id);
+                    info!("Task {} executed successfully", task_id);
                 } else {
-                    println!(" Task {} failed with status: {}", task_id, response.status());
+                    warn!("Task {} failed with status: {}", task_id, response.status());
                 }
             }
             Err(e) => {
-                println!(" Task {} failed to send to worker: {}", task_id, e);
+                error!("Task {} failed to send to worker: {}", task_id, e);
             }
         }
     });
+}
 
-    Ok(Json(TaskSubmissionResponse {
+/// Create task submission response
+fn create_task_submission_response(
+    task_id: Uuid,
+    description: &str,
+) -> Json<TaskSubmissionResponse> {
+    Json(TaskSubmissionResponse {
         task_id,
         status: "submitted".to_string(),
         message: format!("Task '{}' submitted for execution", description),
-    }))
+    })
+}
+
+pub async fn submit_task(
+    State(state): State<AppState>,
+    headers: axum::http::HeaderMap,
+    axum::extract::ConnectInfo(addr): axum::extract::ConnectInfo<std::net::SocketAddr>,
+    Json(request): Json<TaskSubmissionRequest>,
+) -> Result<Json<TaskSubmissionResponse>, ApiError> {
+    // Rate limiting check
+    state.rate_limiter.check_rate_limit(addr.ip()).await
+        .map_err(|_| ApiError::RateLimitExceeded)?;
+
+    // Input validation
+    validate_task_submission(&request)?;
+
+    // Sanitize input
+    let description = request.description.trim().to_string();
+    let context = request.context.clone();
+
+    // Generate task ID and log submission
+    let task_id = Uuid::new_v4();
+    info!("Submitting task: {}", description);
+
+    // Persist task to database
+    persist_task_to_database(&state, task_id, &description, &context, &request).await?;
+    info!("Task {} persisted successfully", task_id);
+
+    // Log audit events
+    log_task_submission_audit(&state, &task_id, &description, &request, &headers, &addr).await?;
+
+    // Execute task asynchronously
+    execute_task_async(task_id, description.clone(), context, request);
+
+    // Return response
+    Ok(create_task_submission_response(task_id, &description))
 }
 
 // Stub implementations for missing endpoints
