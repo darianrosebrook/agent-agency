@@ -1,6 +1,6 @@
 //! Tenant management and validation operations
 
-use crate::types::*;
+use crate::engine_types::*;
 use agent_agency_database::DatabaseClient;
 use anyhow::Result;
 use std::sync::Arc;

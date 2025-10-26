@@ -4,7 +4,7 @@
 //! including in-memory and database-backed storage options.
 
 use super::types::*;
-use crate::types::*;
+use crate::council_types::*;
 use agent_agency_database::DatabaseClient;
 use anyhow::{Context, Result};
 use async_trait::async_trait;

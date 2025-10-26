@@ -1,6 +1,6 @@
 //! Metrics collection for benchmarking
 
-use crate::types::*;
+use crate::benchmark_types::*;
 use anyhow::Result;
 use chrono::{DateTime, Utc};
 use std::collections::HashMap;

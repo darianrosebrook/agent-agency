@@ -3,7 +3,7 @@
 //! Provides parallel task decomposition and coordination capabilities
 //! consolidated from the parallel-workers/ crate.
 
-use crate::types::*;
+use crate::worker_types::*;
 use crate::decomposition::TaskDecomposer;
 use crate::execution::{ToolExecutor, ExecutionContext};
 use std::collections::HashMap;

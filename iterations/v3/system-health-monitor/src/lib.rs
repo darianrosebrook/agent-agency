@@ -9,21 +9,21 @@
 // ──────────────────────────────────────────────────────────────────────────────
 
 pub mod core;
-pub mod metrics;
+pub mod health_metrics;
 pub mod alerts;
 pub mod orchestrator;
 pub mod agent_integration;
-pub mod types;
+pub mod health_types;
 
 // Re-exports for external users of the crate
 pub use core::{
     ErrorRateTracker, ErrorStats, RedisConnectionManager, ResponseTimePercentiles, ResponseTimeTracker
 };
-pub use metrics::MetricsCollector;
+pub use health_metrics::MetricsCollector;
 pub use alerts::{AlertStatistics, AlertSummary, AlertSummaryItem, AlertTrend};
 pub use orchestrator::SystemHealthMonitor;
 
 #[cfg(feature = "agent-agency-observability")]
 pub use agent_integration::{AgentIntegratedHealthMonitor, AgentIntegrationConfig, HealthSummary};
 
-pub use types::*;
+pub use health_health_types::*;

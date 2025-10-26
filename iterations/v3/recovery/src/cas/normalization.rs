@@ -2,7 +2,7 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use crate::types::Eol;
+use crate::recovery_types::Eol;
 
 /// Text normalization configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]

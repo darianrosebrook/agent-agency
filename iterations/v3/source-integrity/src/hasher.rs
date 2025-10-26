@@ -9,7 +9,7 @@ use sha2::{Digest as Sha2Digest, Sha256, Sha512};
 use std::time::Instant;
 use serde::{Deserialize, Serialize};
 
-use crate::types::{HashAlgorithm, TamperingIndicator};
+use crate::integrity_types::{HashAlgorithm, TamperingIndicator};
 
 /// BLAKE3 digest wrapper for content addressing
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]

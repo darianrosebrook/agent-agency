@@ -7,7 +7,7 @@
 //! - DetectLensSmudgeRequest: Image quality assessment
 
 use crate::circuit_breaker::{CircuitBreaker, CircuitBreakerConfig};
-use crate::types::{OcrResult, OcrBlock, BoundingBox, Table, TableCell, TextRegion, EnricherConfig, VisionAnalysisResult, ObjectDetection};
+use crate::enricher_types::{OcrResult, OcrBlock, BoundingBox, Table, TableCell, TextRegion, EnricherConfig, VisionAnalysisResult, ObjectDetection};
 use anyhow::{anyhow, Result};
 use std::io::Write;
 use std::path::PathBuf;
@@ -131,7 +131,7 @@ pub struct Detection {
     pub class: String,
     pub class_id: usize,
     pub confidence: f32,
-    pub bbox: crate::types::BoundingBox,
+    pub bbox: crate::enricher_types::BoundingBox,
 }
 
 /// YOLO inference options (mirrored from apple_silicon crate)

@@ -74,7 +74,7 @@ async fn setup_object_pools(memory_manager: &Arc<MemoryManager>) {
         "llm_clients",
         || LlmClient {
             id: Uuid::new_v4(),
-            api_key: "sk-...".to_string(),
+            api_key: std::env::var("OPENAI_API_KEY").unwrap_or_else(|_| "sk-test-key-for-demo-only".to_string()),
             model: "gpt-4".to_string(),
             created_at: std::time::Instant::now(),
             request_count: 0,

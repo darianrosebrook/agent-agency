@@ -31,7 +31,7 @@ fn test_database_config_creation() {
         port: 5432,
         database: "test_db".to_string(),
         username: "test".to_string(),
-        password: "test".to_string(),
+        password: std::env::var("TEST_DATABASE_PASSWORD").unwrap_or_else(|_| "test".to_string()),
         pool_min: 1,
         pool_max: 5,
         connection_timeout_seconds: 30,
@@ -43,7 +43,7 @@ fn test_database_config_creation() {
     assert_eq!(db_config.port, 5432);
     assert_eq!(db_config.database, "test_db");
     assert_eq!(db_config.username, "test");
-    assert_eq!(db_config.password, "test");
+    assert_eq!(db_config.password, std::env::var("TEST_DATABASE_PASSWORD").unwrap_or_else(|_| "test".to_string()));
     assert_eq!(db_config.pool_min, 1);
     assert_eq!(db_config.pool_max, 5);
 }

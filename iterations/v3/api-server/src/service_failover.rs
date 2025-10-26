@@ -27,7 +27,7 @@ pub enum ServiceType {
 
 /// Service instance information
 #[derive(Debug, Clone)]
-pub struct ServiceInstance {
+pub struct ApiApiServiceInstance {
     pub id: String,
     pub service_type: ServiceType,
     pub endpoint: String,
@@ -113,7 +113,7 @@ pub enum FailoverEvent {
 /// Service failover manager
 pub struct ServiceFailoverManager {
     config: FailoverConfig,
-    services: Arc<RwLock<HashMap<String, ServiceInstance>>>,
+    services: Arc<RwLock<HashMap<String, ApiServiceInstance>>>,
     circuit_breakers: Arc<RwLock<HashMap<String, CircuitBreaker>>>,
     event_sender: mpsc::UnboundedSender<FailoverEvent>,
     event_receiver: Arc<RwLock<Option<mpsc::UnboundedReceiver<FailoverEvent>>>>,
@@ -136,7 +136,7 @@ impl ServiceFailoverManager {
     }
 
     /// Register a service instance
-    pub async fn register_service(&self, service: ServiceInstance) -> Result<(), String> {
+    pub async fn register_service(&self, service: ApiServiceInstance) -> Result<(), String> {
         let service_id = service.id.clone();
 
         // Create circuit breaker for this service
@@ -289,7 +289,7 @@ impl ServiceFailoverManager {
     }
 
     /// Check database health
-    async fn check_database_health(&self, service: &ServiceInstance) -> bool {
+    async fn check_database_health(&self, service: &ApiServiceInstance) -> bool {
         // Simple connection test - in real implementation, this would use actual DB client
         match reqwest::Client::new()
             .get(&format!("{}/health", service.endpoint))
@@ -303,7 +303,7 @@ impl ServiceFailoverManager {
     }
 
     /// Check API server health
-    async fn check_api_health(&self, service: &ServiceInstance) -> bool {
+    async fn check_api_health(&self, service: &ApiServiceInstance) -> bool {
         match reqwest::Client::new()
             .get(&format!("{}/health", service.endpoint))
             .timeout(Duration::from_secs(5))
@@ -316,7 +316,7 @@ impl ServiceFailoverManager {
     }
 
     /// Check worker pool health
-    async fn check_worker_health(&self, service: &ServiceInstance) -> bool {
+    async fn check_worker_health(&self, service: &ApiServiceInstance) -> bool {
         match reqwest::Client::new()
             .get(&format!("{}/status", service.endpoint))
             .timeout(Duration::from_secs(5))
@@ -329,21 +329,21 @@ impl ServiceFailoverManager {
     }
 
     /// Check message queue health
-    async fn check_queue_health(&self, service: &ServiceInstance) -> bool {
+    async fn check_queue_health(&self, service: &ApiServiceInstance) -> bool {
         // Implementation would depend on queue technology (Redis, RabbitMQ, etc.)
         // For now, assume healthy
         true
     }
 
     /// Check cache health
-    async fn check_cache_health(&self, service: &ServiceInstance) -> bool {
+    async fn check_cache_health(&self, service: &ApiServiceInstance) -> bool {
         // Implementation would depend on cache technology (Redis, Memcached, etc.)
         // For now, assume healthy
         true
     }
 
     /// Check file storage health
-    async fn check_storage_health(&self, service: &ServiceInstance) -> bool {
+    async fn check_storage_health(&self, service: &ApiServiceInstance) -> bool {
         // Basic connectivity check
         match reqwest::Client::new()
             .head(&service.endpoint)
@@ -357,7 +357,7 @@ impl ServiceFailoverManager {
     }
 
     /// Check external API health
-    async fn check_external_api_health(&self, service: &ServiceInstance) -> bool {
+    async fn check_external_api_health(&self, service: &ApiServiceInstance) -> bool {
         match reqwest::Client::new()
             .get(&service.endpoint)
             .timeout(Duration::from_secs(10))
@@ -451,7 +451,7 @@ impl ServiceFailoverManager {
     }
 
     /// Find a healthy backup service for failover
-    async fn find_backup_service(&self, failed_service_id: &str, service_type: ServiceType) -> Result<ServiceInstance, String> {
+    async fn find_backup_service(&self, failed_service_id: &str, service_type: ServiceType) -> Result<ApiServiceInstance, String> {
         let services = self.services.read().await;
 
         // Find services of the same type, excluding the failed one
@@ -473,7 +473,7 @@ impl ServiceFailoverManager {
     }
 
     /// Perform the actual service failover
-    async fn perform_failover(&self, backup_service: &ServiceInstance) -> Result<(), String> {
+    async fn perform_failover(&self, backup_service: &ApiServiceInstance) -> Result<(), String> {
         // This would implement service-specific failover logic
         match backup_service.service_type {
             ServiceType::Database => self.failover_database(backup_service).await,
@@ -487,7 +487,7 @@ impl ServiceFailoverManager {
     }
 
     /// Database failover implementation
-    async fn failover_database(&self, backup_service: &ServiceInstance) -> Result<(), String> {
+    async fn failover_database(&self, backup_service: &ApiServiceInstance) -> Result<(), String> {
         // Implementation would:
         // 1. Promote standby database to primary
         // 2. Update connection strings
@@ -497,7 +497,7 @@ impl ServiceFailoverManager {
     }
 
     /// API server failover implementation
-    async fn failover_api_server(&self, backup_service: &ServiceInstance) -> Result<(), String> {
+    async fn failover_api_server(&self, backup_service: &ApiServiceInstance) -> Result<(), String> {
         // Implementation would:
         // 1. Update load balancer configuration
         // 2. Verify backup server is responding
@@ -507,7 +507,7 @@ impl ServiceFailoverManager {
     }
 
     /// Worker pool failover implementation
-    async fn failover_worker_pool(&self, backup_service: &ServiceInstance) -> Result<(), String> {
+    async fn failover_worker_pool(&self, backup_service: &ApiServiceInstance) -> Result<(), String> {
         // Implementation would:
         // 1. Redirect job queue to backup workers
         // 2. Scale up backup worker instances
@@ -517,7 +517,7 @@ impl ServiceFailoverManager {
     }
 
     /// Message queue failover implementation
-    async fn failover_message_queue(&self, backup_service: &ServiceInstance) -> Result<(), String> {
+    async fn failover_message_queue(&self, backup_service: &ApiServiceInstance) -> Result<(), String> {
         // Implementation would:
         // 1. Switch to backup queue cluster
         // 2. Ensure message persistence
@@ -527,7 +527,7 @@ impl ServiceFailoverManager {
     }
 
     /// Cache failover implementation
-    async fn failover_cache(&self, backup_service: &ServiceInstance) -> Result<(), String> {
+    async fn failover_cache(&self, backup_service: &ApiServiceInstance) -> Result<(), String> {
         // Implementation would:
         // 1. Switch cache cluster
         // 2. Warm up cache with hot data
@@ -537,7 +537,7 @@ impl ServiceFailoverManager {
     }
 
     /// File storage failover implementation
-    async fn failover_file_storage(&self, backup_service: &ServiceInstance) -> Result<(), String> {
+    async fn failover_file_storage(&self, backup_service: &ApiServiceInstance) -> Result<(), String> {
         // Implementation would:
         // 1. Switch to backup storage cluster
         // 2. Sync any pending uploads/downloads
@@ -547,7 +547,7 @@ impl ServiceFailoverManager {
     }
 
     /// External API failover implementation
-    async fn failover_external_api(&self, backup_service: &ServiceInstance) -> Result<(), String> {
+    async fn failover_external_api(&self, backup_service: &ApiServiceInstance) -> Result<(), String> {
         // Implementation would:
         // 1. Switch to backup API endpoint
         // 2. Update API keys/credentials if needed
@@ -624,7 +624,7 @@ mod tests {
     async fn test_service_registration() {
         let manager = ServiceFailoverManager::new(FailoverConfig::default());
 
-        let service = ServiceInstance {
+        let service = ApiServiceInstance {
             id: "test-api-1".to_string(),
             service_type: ServiceType::ApiServer,
             endpoint: "http://localhost:8080".to_string(),

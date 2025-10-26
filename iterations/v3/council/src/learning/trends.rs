@@ -54,28 +54,28 @@ impl TrendAnalyzer {
         Ok(PerformanceTrends {
             trends: vec![
                 TrendAnalysis {
-                    trend_type: crate::types::TrendType::Quality,
+                    trend_type: crate::council_types::TrendType::Quality,
                     direction: quality_trend,
                     magnitude: 0.1, // Simplified magnitude calculation
                     confidence: 0.8,
                     time_window,
                 },
                 TrendAnalysis {
-                    trend_type: crate::types::TrendType::Latency,
+                    trend_type: crate::council_types::TrendType::Latency,
                     direction: latency_trend,
                     magnitude: 0.05,
                     confidence: 0.75,
                     time_window,
                 },
                 TrendAnalysis {
-                    trend_type: crate::types::TrendType::Dissent,
+                    trend_type: crate::council_types::TrendType::Dissent,
                     direction: dissent_trend,
                     magnitude: 0.02,
                     confidence: 0.7,
                     time_window,
                 },
                 TrendAnalysis {
-                    trend_type: crate::types::TrendType::ResourceEfficiency,
+                    trend_type: crate::council_types::TrendType::ResourceEfficiency,
                     direction: resource_efficiency_trend,
                     magnitude: 0.08,
                     confidence: 0.8,
@@ -234,7 +234,7 @@ impl TrendAnalyzer {
     /// Monitor resource usage trends and detect anomalies
     pub async fn monitor_resource_trends(
         &self,
-        task_spec: &crate::types::TaskSpec,
+        task_spec: &crate::council_types::TaskSpec,
     ) -> Result<ResourceTrendAnalysis> {
         // Get historical resource data
         let historical_data = self.storage.perform_comprehensive_historical_resource_lookup(task_spec).await?;
@@ -312,7 +312,7 @@ impl TrendAnalyzer {
     /// Generate resource recommendations based on trends and predictions
     fn generate_resource_recommendations(
         &self,
-        trends: &[crate::types::ResourceTrend],
+        trends: &[crate::council_types::ResourceTrend],
         predictions: &[ResourcePrediction],
     ) -> Result<Vec<String>> {
         let mut recommendations = Vec::new();
@@ -320,19 +320,19 @@ impl TrendAnalyzer {
         // Analyze trends for recommendations
         for trend in trends {
             match trend.trend_type {
-                crate::types::TrendType::Increasing => {
+                crate::council_types::TrendType::Increasing => {
                     recommendations.push(format!(
                         "Resource usage increasing - consider scaling resources for {}",
                         trend.resource_type
                     ));
                 },
-                crate::types::TrendType::Decreasing => {
+                crate::council_types::TrendType::Decreasing => {
                     recommendations.push(format!(
                         "Resource usage decreasing - potential for optimization in {}",
                         trend.resource_type
                     ));
                 },
-                crate::types::TrendType::Stable => {
+                crate::council_types::TrendType::Stable => {
                     recommendations.push(format!(
                         "Resource usage stable for {} - maintain current allocation",
                         trend.resource_type
@@ -383,7 +383,7 @@ impl TrendAnalyzer {
 /// Resource trend analysis results
 #[derive(Debug, Clone)]
 pub struct ResourceTrendAnalysis {
-    pub trends: Vec<crate::types::ResourceTrend>,
+    pub trends: Vec<crate::council_types::ResourceTrend>,
     pub anomalies: Vec<String>,
     pub predictions: Vec<ResourcePrediction>,
     pub recommendations: Vec<String>,

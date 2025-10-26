@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
 
-use crate::types::{JudgeId, TaskId, VerdictId, SpecializationScore, TaskType, HistoricalJudgeData, ResourceTrend, TrendType, ResourceUsageMetrics, ResourcePrediction};
+use crate::council_types::{JudgeId, TaskId, VerdictId, SpecializationScore, TaskType, HistoricalJudgeData, ResourceTrend, TrendType, ResourceUsageMetrics, ResourcePrediction};
 
 /// Learning signal capturing task outcomes and judge performance
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -224,7 +224,7 @@ pub struct LearningSignalAnalysis {
 
 /// Performance metrics for learning analysis
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PerformanceMetrics {
+pub struct LearningPerformanceMetrics {
     pub average_latency_ms: u64,
     pub success_rate: f32,
     pub resource_utilization: f32,

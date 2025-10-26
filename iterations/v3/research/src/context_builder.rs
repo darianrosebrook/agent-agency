@@ -3,7 +3,7 @@
 //! Synthesizes context from research results and builds coherent knowledge representations.
 //! Includes cross-reference detection and context synthesis capabilities.
 
-use crate::types::*;
+use crate::research_types::*;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::hash_map::DefaultHasher;

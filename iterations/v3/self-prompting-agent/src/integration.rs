@@ -6,7 +6,7 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use async_trait::async_trait;
 
-use crate::types::{Task, SelfPromptingAgentError};
+use crate::prompting_types::{Task, SelfPromptingAgentError};
 
 /// Integrated autonomous agent coordinator
 pub struct IntegratedAutonomousAgent {

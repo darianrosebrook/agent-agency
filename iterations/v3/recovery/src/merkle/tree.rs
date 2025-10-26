@@ -6,9 +6,9 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
-use crate::types::{Digest, StreamingHasher};
+use crate::recovery_types::{Digest, StreamingHasher};
 
-use crate::types::*;
+use crate::recovery_types::*;
 
 /// Tree entry for file metadata
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

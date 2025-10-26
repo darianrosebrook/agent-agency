@@ -1,6 +1,6 @@
 //! Model evaluator for new model assessment
 
-use crate::types::*;
+use crate::benchmark_types::*;
 use anyhow::Result;
 
 /// Model evaluator for assessing new models

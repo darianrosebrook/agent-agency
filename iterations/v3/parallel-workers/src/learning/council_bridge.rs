@@ -1,6 +1,6 @@
 //! Bridge between parallel worker metrics and council learning system
 
-use crate::types::{TaskId, WorkerId, WorkerSpecialty, TaskPattern};
+use crate::parallel_types::{TaskId, WorkerId, WorkerSpecialty, TaskPattern};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use serde::{Deserialize, Serialize};
@@ -308,7 +308,7 @@ impl SignalAggregator {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::{TaskId, WorkerId, WorkerSpecialty, TaskPattern};
+    use crate::parallel_types::{TaskId, WorkerId, WorkerSpecialty, TaskPattern};
 
     #[tokio::test]
     async fn test_council_bridge() {

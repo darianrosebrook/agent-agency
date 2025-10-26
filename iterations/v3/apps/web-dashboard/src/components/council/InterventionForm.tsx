@@ -1,6 +1,6 @@
 /**
- * InterventionForm Component
- * Form for requesting manual intervention in council verdicts
+ * Intervention Form
+ * Manual override and escalation interface for verdicts
  *
  * @author @darianrosebrook
  */
@@ -10,376 +10,289 @@
 import { useState } from 'react';
 import { Text } from '@/design-system/primitives';
 import { Button } from '@/design-system/primitives';
-import { Textarea } from '@/design-system/primitives';
-import { Select } from '@/design-system/primitives';
-import { Checkbox } from '@/design-system/primitives';
-import { AlertTriangle, Clock, Users } from 'lucide-react';
-import { Verdict } from './VerdictList';
+import {
+  AlertTriangle,
+  Shield,
+  User,
+  MessageSquare,
+  Send,
+  X,
+  CheckCircle,
+  Clock
+} from 'lucide-react';
+import { Verdict } from '@/lib/council-api';
+import { councilApiClient } from '@/lib/council-api';
+import { useCouncilActions } from '@/stores/council';
 import styles from './InterventionForm.module.scss';
 
 interface InterventionFormProps {
   verdict: Verdict;
-  onSubmit: (intervention: InterventionRequest) => void;
-  onCancel: () => void;
+  onClose: () => void;
 }
 
-export interface InterventionRequest {
-  reason: string;
-  priority: 'low' | 'medium' | 'high' | 'critical';
-  requestedBy: string;
-  reviewDeadline?: Date;
-  additionalReviewers: string[];
-  notes: string;
-  overrideDecision?: 'approve' | 'reject';
-  justification?: string;
-}
-
-const PRIORITY_OPTIONS = [
-  { value: 'low', label: 'Low - Review within 24 hours' },
-  { value: 'medium', label: 'Medium - Review within 4 hours' },
-  { value: 'high', label: 'High - Review within 1 hour' },
-  { value: 'critical', label: 'Critical - Immediate review required' },
-];
-
-const REVIEWER_OPTIONS = [
-  'Senior AI Ethics Officer',
-  'Chief Technology Officer',
-  'Legal Counsel',
-  'Product Manager',
-  'External Auditor',
-];
-
-export function InterventionForm({ verdict, onSubmit, onCancel }: InterventionFormProps) {
-  const [formData, setFormData] = useState<Partial<InterventionRequest>>({
-    reason: '',
-    priority: 'medium',
-    requestedBy: '', // Would be populated from user context
-    additionalReviewers: [],
-    notes: '',
-    reviewDeadline: undefined,
-  });
-
-  const [overrideRequested, setOverrideRequested] = useState(false);
+export function InterventionForm({ verdict, onClose }: InterventionFormProps) {
+  const [interventionType, setInterventionType] = useState<'override' | 'escalate'>('override');
+  const [decision, setDecision] = useState<'approve' | 'reject' | 'escalate'>('approve');
+  const [reason, setReason] = useState('');
+  const [operator, setOperator] = useState('admin'); // In real app, get from auth context
+  const [priority, setPriority] = useState<'low' | 'medium' | 'high' | 'critical'>('medium');
+  const [additionalNotes, setAdditionalNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [error, setError] = useState<string | null>(null);
 
-  // Handle form field changes
-  const handleFieldChange = (field: keyof InterventionRequest, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    // Clear error when field is modified
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: undefined }));
-    }
-  };
+  const actions = useCouncilActions();
 
-  // Handle reviewer selection
-  const handleReviewerToggle = (reviewer: string) => {
-    setFormData(prev => ({
-      ...prev,
-      additionalReviewers: prev.additionalReviewers?.includes(reviewer)
-        ? prev.additionalReviewers.filter(r => r !== reviewer)
-        : [...(prev.additionalReviewers || []), reviewer]
-    }));
-  };
-
-  // Validate form
-  const validateForm = (): boolean => {
-    const newErrors: Record<string, string> = {};
-
-    if (!formData.reason?.trim()) {
-      newErrors.reason = 'Intervention reason is required';
-    }
-
-    if (!formData.priority) {
-      newErrors.priority = 'Priority level is required';
-    }
-
-    if (!formData.requestedBy?.trim()) {
-      newErrors.requestedBy = 'Requester name is required';
-    }
-
-    if (overrideRequested && !formData.overrideDecision) {
-      newErrors.overrideDecision = 'Override decision is required when override is requested';
-    }
-
-    if (overrideRequested && !formData.justification?.trim()) {
-      newErrors.justification = 'Justification is required when override is requested';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!validateForm()) {
+    if (!reason.trim()) {
+      setError('Reason is required');
       return;
     }
 
     setIsSubmitting(true);
-    try {
-      const interventionRequest: InterventionRequest = {
-        reason: formData.reason!,
-        priority: formData.priority!,
-        requestedBy: formData.requestedBy!,
-        reviewDeadline: formData.reviewDeadline,
-        additionalReviewers: formData.additionalReviewers || [],
-        notes: formData.notes || '',
-        ...(overrideRequested && {
-          overrideDecision: formData.overrideDecision!,
-          justification: formData.justification!,
-        }),
-      };
+    setError(null);
 
-      onSubmit(interventionRequest);
-    } catch (error) {
-      console.error('Failed to submit intervention request:', error);
+    try {
+      if (interventionType === 'override') {
+        const updatedVerdict = await councilApiClient.overrideVerdict(verdict.id, {
+          decision,
+          reason: reason.trim(),
+          operator
+        });
+        actions.updateVerdict(verdict.id, updatedVerdict);
+      } else {
+        const updatedVerdict = await councilApiClient.escalateVerdict(verdict.id, {
+          reason: reason.trim(),
+          priority,
+          operator
+        });
+        actions.updateVerdict(verdict.id, updatedVerdict);
+      }
+
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Intervention failed');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Calculate review deadline based on priority
-  const getReviewDeadline = (priority: string): Date => {
-    const now = new Date();
-    switch (priority) {
-      case 'critical':
-        return new Date(now.getTime() + 30 * 60 * 1000); // 30 minutes
-      case 'high':
-        return new Date(now.getTime() + 60 * 60 * 1000); // 1 hour
-      case 'medium':
-        return new Date(now.getTime() + 4 * 60 * 60 * 1000); // 4 hours
-      case 'low':
-      default:
-        return new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24 hours
+  const getInterventionIcon = (type: 'override' | 'escalate') => {
+    return type === 'override' ? <Shield size={20} /> : <AlertTriangle size={20} />;
+  };
+
+  const getDecisionIcon = (decision: 'approve' | 'reject' | 'escalate') => {
+    switch (decision) {
+      case 'approve':
+        return <CheckCircle size={16} className={styles.decisionApprove} />;
+      case 'reject':
+        return <X size={16} className={styles.decisionReject} />;
+      case 'escalate':
+        return <AlertTriangle size={16} className={styles.decisionEscalate} />;
     }
   };
 
-  // Update deadline when priority changes
-  const handlePriorityChange = (priority: string) => {
-    handleFieldChange('priority', priority);
-    handleFieldChange('reviewDeadline', getReviewDeadline(priority));
-  };
-
   return (
-    <div className={styles.overlay} role="dialog" aria-modal="true">
-      <div className={styles.modal}>
-        {/* Header */}
-        <div className={styles.header}>
-          <div className={styles.titleSection}>
-            <AlertTriangle size={24} className={styles.warningIcon} />
-            <div>
-              <h2 className={styles.title}>Request Intervention</h2>
-              <Text variant="paragraph-small" color="secondary">
-                Manual review for verdict: {verdict.title}
-              </Text>
-            </div>
-          </div>
+    <div className={styles.interventionForm}>
+      {/* Header */}
+      <div className={styles.formHeader}>
+        <div className={styles.headerIcon}>
+          {getInterventionIcon(interventionType)}
         </div>
+        <div className={styles.headerContent}>
+          <Text variant="h4">
+            {interventionType === 'override' ? 'Manual Override' : 'Escalate for Review'}
+          </Text>
+          <Text variant="paragraph-medium" color="secondary">
+            Verdict: {verdict.id} • Task: {verdict.taskId}
+          </Text>
+        </div>
+      </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className={styles.form}>
-          {/* Reason */}
-          <div className={styles.field}>
-            <label htmlFor="reason" className={styles.label}>
-              Reason for Intervention *
-            </label>
-            <Textarea
-              id="reason"
-              value={formData.reason || ''}
-              onChange={(e) => handleFieldChange('reason', e.target.value)}
-              placeholder="Explain why manual intervention is needed..."
-              rows={3}
-              className={errors.reason ? styles.error : ''}
-            />
-            {errors.reason && (
-              <Text variant="paragraph-small" color="error" className={styles.errorText}>
-                {errors.reason}
-              </Text>
-            )}
-          </div>
-
-          {/* Priority */}
-          <div className={styles.field}>
-            <label htmlFor="priority" className={styles.label}>
-              Priority Level *
-            </label>
-            <Select
-              id="priority"
-              value={formData.priority || 'medium'}
-              onChange={handlePriorityChange}
-              options={PRIORITY_OPTIONS}
-            />
-            {formData.reviewDeadline && (
-              <Text variant="paragraph-small" color="secondary" className={styles.deadlineText}>
-                Review deadline: {formData.reviewDeadline.toLocaleString()}
-              </Text>
-            )}
-          </div>
-
-          {/* Requester */}
-          <div className={styles.field}>
-            <label htmlFor="requester" className={styles.label}>
-              Requested By *
-            </label>
+      {/* Intervention Type Selector */}
+      <div className={styles.typeSelector}>
+        <div className={styles.typeOptions}>
+          <label className={styles.typeOption}>
             <input
-              id="requester"
-              type="text"
-              value={formData.requestedBy || ''}
-              onChange={(e) => handleFieldChange('requestedBy', e.target.value)}
-              placeholder="Your name or identifier"
-              className={`${styles.input} ${errors.requestedBy ? styles.error : ''}`}
+              type="radio"
+              name="interventionType"
+              value="override"
+              checked={interventionType === 'override'}
+              onChange={(e) => setInterventionType(e.target.value as 'override')}
             />
-            {errors.requestedBy && (
-              <Text variant="paragraph-small" color="error" className={styles.errorText}>
-                {errors.requestedBy}
-              </Text>
-            )}
-          </div>
+            <div className={styles.typeContent}>
+              <Shield size={16} />
+              <div>
+                <Text variant="paragraph-medium">Override Decision</Text>
+                <Text variant="paragraph-small" color="secondary">
+                  Manually set the final decision
+                </Text>
+              </div>
+            </div>
+          </label>
 
-          {/* Additional Reviewers */}
-          <div className={styles.field}>
-            <label className={styles.label}>Additional Reviewers</label>
-            <Text variant="paragraph-small" color="secondary" className={styles.fieldHelp}>
-              Select team members who should be notified for review
-            </Text>
-            <div className={styles.reviewerGrid}>
-              {REVIEWER_OPTIONS.map((reviewer) => (
-                <label key={reviewer} className={styles.reviewerOption}>
-                  <Checkbox
-                    checked={formData.additionalReviewers?.includes(reviewer) || false}
-                    onChange={() => handleReviewerToggle(reviewer)}
+          <label className={styles.typeOption}>
+            <input
+              type="radio"
+              name="interventionType"
+              value="escalate"
+              checked={interventionType === 'escalate'}
+              onChange={(e) => setInterventionType(e.target.value as 'escalate')}
+            />
+            <div className={styles.typeContent}>
+              <AlertTriangle size={16} />
+              <div>
+                <Text variant="paragraph-medium">Escalate for Review</Text>
+                <Text variant="paragraph-small" color="secondary">
+                  Flag for human review
+                </Text>
+              </div>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      {/* Form */}
+      <form onSubmit={handleSubmit} className={styles.form}>
+        {/* Decision Selection (for override) */}
+        {interventionType === 'override' && (
+          <div className={styles.formGroup}>
+            <Text variant="label">Final Decision</Text>
+            <div className={styles.decisionOptions}>
+              {(['approve', 'reject', 'escalate'] as const).map((option) => (
+                <label key={option} className={styles.decisionOption}>
+                  <input
+                    type="radio"
+                    name="decision"
+                    value={option}
+                    checked={decision === option}
+                    onChange={(e) => setDecision(e.target.value as typeof decision)}
                   />
-                  <Text variant="paragraph-small">{reviewer}</Text>
+                  <div className={styles.decisionContent}>
+                    {getDecisionIcon(option)}
+                    <span>{option.toUpperCase()}</span>
+                  </div>
                 </label>
               ))}
             </div>
           </div>
+        )}
 
-          {/* Override Request */}
-          <div className={styles.field}>
-            <label className={styles.checkboxLabel}>
-              <Checkbox
-                checked={overrideRequested}
-                onChange={setOverrideRequested}
-              />
-              <Text variant="paragraph-medium">Request immediate override</Text>
-            </label>
-            <Text variant="paragraph-small" color="secondary" className={styles.fieldHelp}>
-              Check this if you need to immediately override the current verdict decision
-            </Text>
+        {/* Priority Selection (for escalation) */}
+        {interventionType === 'escalate' && (
+          <div className={styles.formGroup}>
+            <Text variant="label">Priority Level</Text>
+            <select
+              value={priority}
+              onChange={(e) => setPriority(e.target.value as typeof priority)}
+              className={styles.prioritySelect}
+              required
+            >
+              <option value="low">Low - Standard review timeline</option>
+              <option value="medium">Medium - Within 24 hours</option>
+              <option value="high">High - Within 4 hours</option>
+              <option value="critical">Critical - Immediate attention</option>
+            </select>
           </div>
+        )}
 
-          {/* Override Details */}
-          {overrideRequested && (
-            <>
-              <div className={styles.field}>
-                <label htmlFor="overrideDecision" className={styles.label}>
-                  Override Decision *
-                </label>
-                <Select
-                  id="overrideDecision"
-                  value={formData.overrideDecision || ''}
-                  onChange={(value) => handleFieldChange('overrideDecision', value)}
-                  options={[
-                    { value: 'approve', label: 'Approve the action' },
-                    { value: 'reject', label: 'Reject the action' },
-                  ]}
-                  className={errors.overrideDecision ? styles.error : ''}
-                />
-                {errors.overrideDecision && (
-                  <Text variant="paragraph-small" color="error" className={styles.errorText}>
-                    {errors.overrideDecision}
-                  </Text>
-                )}
-              </div>
+        {/* Reason */}
+        <div className={styles.formGroup}>
+          <Text variant="label">
+            Reason for Intervention <span className={styles.required}>*</span>
+          </Text>
+          <textarea
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            placeholder="Explain the reasoning for this intervention..."
+            className={styles.reasonTextarea}
+            rows={4}
+            required
+          />
+          <Text variant="paragraph-small" color="secondary">
+            This will be logged and may be reviewed for compliance purposes.
+          </Text>
+        </div>
 
-              <div className={styles.field}>
-                <label htmlFor="justification" className={styles.label}>
-                  Override Justification *
-                </label>
-                <Textarea
-                  id="justification"
-                  value={formData.justification || ''}
-                  onChange={(e) => handleFieldChange('justification', e.target.value)}
-                  placeholder="Explain the reasoning for this override decision..."
-                  rows={3}
-                  className={errors.justification ? styles.error : ''}
-                />
-                {errors.justification && (
-                  <Text variant="paragraph-small" color="error" className={styles.errorText}>
-                    {errors.justification}
-                  </Text>
-                )}
-              </div>
-            </>
-          )}
+        {/* Additional Notes */}
+        <div className={styles.formGroup}>
+          <Text variant="label">Additional Notes</Text>
+          <textarea
+            value={additionalNotes}
+            onChange={(e) => setAdditionalNotes(e.target.value)}
+            placeholder="Any additional context or notes..."
+            className={styles.notesTextarea}
+            rows={3}
+          />
+        </div>
 
-          {/* Additional Notes */}
-          <div className={styles.field}>
-            <label htmlFor="notes" className={styles.label}>
-              Additional Notes
-            </label>
-            <Textarea
-              id="notes"
-              value={formData.notes || ''}
-              onChange={(e) => handleFieldChange('notes', e.target.value)}
-              placeholder="Any additional context or information..."
-              rows={2}
+        {/* Operator */}
+        <div className={styles.formGroup}>
+          <Text variant="label">Operator</Text>
+          <div className={styles.operatorField}>
+            <User size={16} />
+            <input
+              type="text"
+              value={operator}
+              onChange={(e) => setOperator(e.target.value)}
+              className={styles.operatorInput}
+              placeholder="Your identifier"
+              required
             />
           </div>
+        </div>
 
-          {/* Verdict Summary */}
-          <div className={styles.verdictSummary}>
-            <Text variant="h5" className={styles.summaryTitle}>
-              <Clock size={18} />
-              Current Verdict Status
-            </Text>
-            <div className={styles.summaryDetails}>
-              <div className={styles.summaryItem}>
-                <Text variant="paragraph-small" color="secondary">Verdict</Text>
-                <Text variant="paragraph-medium">{verdict.title}</Text>
-              </div>
-              <div className={styles.summaryItem}>
-                <Text variant="paragraph-small" color="secondary">Status</Text>
-                <Text variant="paragraph-medium">{verdict.status}</Text>
-              </div>
-              <div className={styles.summaryItem}>
-                <Text variant="paragraph-small" color="secondary">Judges</Text>
-                <div className={styles.judgeCount}>
-                  <Users size={14} />
-                  <Text variant="paragraph-small">{verdict.judgeCount}</Text>
-                </div>
-              </div>
-              <div className={styles.summaryItem}>
-                <Text variant="paragraph-small" color="secondary">Consensus</Text>
-                <Text variant="paragraph-medium">{Math.round(verdict.consensusScore * 100)}%</Text>
-              </div>
-            </div>
+        {/* Error Display */}
+        {error && (
+          <div className={styles.errorMessage}>
+            <AlertTriangle size={16} />
+            <Text variant="paragraph-medium">{error}</Text>
           </div>
+        )}
 
-          {/* Actions */}
-          <div className={styles.actions}>
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={onCancel}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              variant="primary"
-              disabled={isSubmitting}
-              className={styles.submitButton}
-            >
-              {isSubmitting ? 'Submitting...' : 'Submit Intervention Request'}
-            </Button>
-          </div>
-        </form>
+        {/* Actions */}
+        <div className={styles.formActions}>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={onClose}
+            disabled={isSubmitting}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            variant={interventionType === 'override' ? 'danger' : 'warning'}
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? (
+              <>
+                <Clock size={16} className={styles.spinning} />
+                Processing...
+              </>
+            ) : (
+              <>
+                <Send size={16} />
+                {interventionType === 'override' ? 'Override Decision' : 'Escalate for Review'}
+              </>
+            )}
+          </Button>
+        </div>
+      </form>
+
+      {/* Warning */}
+      <div className={styles.warning}>
+        <AlertTriangle size={16} />
+        <div>
+          <Text variant="paragraph-medium">Intervention Notice</Text>
+          <Text variant="paragraph-small" color="secondary">
+            {interventionType === 'override'
+              ? 'Manual overrides bypass the AI decision process and may impact system learning. Ensure proper documentation.'
+              : 'Escalations will notify human reviewers and pause automated processing until reviewed.'
+            }
+          </Text>
+        </div>
       </div>
     </div>
   );

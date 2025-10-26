@@ -2,7 +2,7 @@
 //!
 //! Bridges the gap between self-prompting agent and external learning algorithms.
 
-use crate::types::SelfPromptingAgentError;
+use crate::prompting_types::SelfPromptingAgentError;
 
 /// Learning bridge coordinator
 pub struct LearningBridge;

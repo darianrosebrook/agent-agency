@@ -6,7 +6,7 @@
 use anyhow::Result;
 use std::collections::HashMap;
 
-use crate::types::JudgeId;
+use crate::council_types::JudgeId;
 use super::types::*;
 use super::analyzer::*;
 
@@ -93,7 +93,7 @@ impl RoutingEngine {
     /// Generate routing recommendation for a task
     pub async fn generate_routing_recommendation(
         &self,
-        task_spec: &crate::types::TaskSpec,
+        task_spec: &crate::council_types::TaskSpec,
     ) -> Result<RoutingRecommendation> {
         self.analyzer.analyze_for_routing(task_spec).await
     }
@@ -101,7 +101,7 @@ impl RoutingEngine {
     /// Select optimal judge for a task based on performance history
     pub async fn select_optimal_judge(
         &self,
-        task_spec: &crate::types::TaskSpec,
+        task_spec: &crate::council_types::TaskSpec,
         available_judges: &[JudgeId],
     ) -> Result<JudgeRecommendation> {
         let recommendation = self.generate_routing_recommendation(task_spec).await?;
@@ -126,7 +126,7 @@ impl RoutingEngine {
     /// Calculate resource requirements for a task
     pub async fn calculate_resource_requirements(
         &self,
-        task_spec: &crate::types::TaskSpec,
+        task_spec: &crate::council_types::TaskSpec,
     ) -> Result<ResourceRequirementAnalysis> {
         self.analyzer.analyze_resource_requirements(task_spec).await
     }

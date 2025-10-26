@@ -53,12 +53,12 @@ pub trait ToolProvider: Send + Sync {
 }
 
 /// Service registry for managing tool providers
-pub struct ServiceRegistry {
+pub struct WorkerServiceRegistry {
     mcp_integration: Arc<MCPIntegration>,
     registered_services: std::collections::HashMap<String, Box<dyn ToolProvider>>,
 }
 
-impl ServiceRegistry {
+impl WorkerServiceRegistry {
     /// Create a new service registry
     pub fn new(mcp_integration: Arc<MCPIntegration>) -> Self {
         Self {
@@ -383,8 +383,8 @@ impl ToolProvider for ModelHotswapService {
 }
 
 /// Create a default service registry with common services
-pub async fn create_default_service_registry(mcp_integration: Arc<MCPIntegration>) -> Result<ServiceRegistry, ServiceError> {
-    let mut registry = ServiceRegistry::new(mcp_integration);
+pub async fn create_default_service_registry(mcp_integration: Arc<MCPIntegration>) -> Result<WorkerServiceRegistry, ServiceError> {
+    let mut registry = WorkerServiceRegistry::new(mcp_integration);
 
     // Register core services
     registry.register_service(Box::new(KnowledgeSeekerService)).await?;

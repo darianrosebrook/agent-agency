@@ -4,7 +4,7 @@ use crate::file_access::FileAccessController;
 use crate::policies::SecurityPolicy;
 use crate::rate_limiting::RateLimiter;
 use crate::secrets_detection::SecretsDetector;
-use crate::types::*;
+use crate::policy_types::*;
 
 use anyhow::Result;
 use chrono::Utc;

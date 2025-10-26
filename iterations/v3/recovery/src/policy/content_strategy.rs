@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::Path;
 
-use crate::types::{Codec, Eol, PayloadKind};
+use crate::recovery_types::{Codec, Eol, PayloadKind};
 
 /// Content strategy configuration for determining how to store file changes
 #[derive(Debug, Clone, Serialize, Deserialize)]

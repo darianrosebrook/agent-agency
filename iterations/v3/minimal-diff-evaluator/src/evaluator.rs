@@ -2,7 +2,7 @@ use crate::ast_analyzer::ASTAnalyzer;
 use crate::change_classifier::ChangeClassifier;
 use crate::impact_analyzer::ImpactAnalyzer;
 use crate::language_support::LanguageSupport;
-use crate::types::*;
+use crate::evaluator_types::*;
 
 use anyhow::Result;
 use chrono::Utc;

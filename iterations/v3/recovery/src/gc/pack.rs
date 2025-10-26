@@ -5,7 +5,7 @@ use std::fs::File;
 use std::io::{BufReader, BufWriter, Read, Seek, SeekFrom, Write};
 use std::path::PathBuf;
 
-use crate::types::Digest;
+use crate::recovery_types::Digest;
 
 /// Pack file format for storing multiple objects efficiently
 pub struct PackFile {

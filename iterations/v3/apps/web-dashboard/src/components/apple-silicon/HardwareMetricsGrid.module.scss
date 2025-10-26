@@ -1,0 +1,312 @@
+@use '@/styles/mixins.scss' as *;
+@use '@/styles/variables.scss' as *;
+
+.hardwareMetricsGrid {
+  @include dashboard-section;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+
+  .gridHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--spacing-md);
+    padding-bottom: var(--spacing-md);
+    border-bottom: 1px solid var(--color-border-secondary);
+
+    .headerLeft {
+      h3 {
+        margin: 0;
+        color: var(--color-text-primary);
+      }
+      p {
+        margin-top: var(--spacing-xxs);
+      }
+    }
+
+    .headerRight {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-md);
+      flex-wrap: wrap;
+
+      .timeRangeSelector {
+        .timeRangeSelect {
+          @include input-base;
+          height: 36px;
+          font-size: var(--font-size-sm);
+          min-width: 120px;
+          background-color: var(--color-background-secondary);
+          color: var(--color-text-primary);
+          border: 1px solid var(--color-border-secondary);
+          border-radius: var(--border-radius-sm);
+          padding: 0 var(--spacing-sm);
+
+          &:focus {
+            border-color: var(--color-primary);
+            outline: none;
+          }
+        }
+      }
+
+      .actions {
+        display: flex;
+        gap: var(--spacing-sm);
+      }
+    }
+  }
+
+  .metricsGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: var(--spacing-md);
+
+    .metricCard {
+      @include card-base;
+      padding: var(--spacing-md);
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-sm);
+      border: 1px solid var(--color-border-secondary);
+      transition: all 0.2s ease;
+
+      &:hover {
+        border-color: var(--color-primary);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      }
+
+      .cardHeader {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: var(--spacing-sm);
+        padding-bottom: var(--spacing-sm);
+        border-bottom: 1px solid var(--color-border-tertiary);
+
+        .cardTitle {
+          display: flex;
+          align-items: center;
+          gap: var(--spacing-xs);
+          font-weight: var(--font-weight-medium);
+          color: var(--color-text-primary);
+        }
+
+        .cardIcon {
+          @include flex-center;
+          width: 24px;
+          height: 24px;
+          border-radius: var(--border-radius-sm);
+          background-color: var(--color-background-tertiary);
+          color: var(--color-text-secondary);
+        }
+
+        .cardActions {
+          display: flex;
+          gap: var(--spacing-xs);
+          button {
+            padding: var(--spacing-xxs) var(--spacing-sm);
+            font-size: var(--font-size-sm);
+            svg {
+              margin-right: var(--spacing-xxs);
+            }
+          }
+        }
+      }
+
+      .cardContent {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacing-sm);
+
+        .metricValue {
+          display: flex;
+          align-items: baseline;
+          gap: var(--spacing-xs);
+          font-size: var(--font-size-display-small);
+          font-weight: var(--font-weight-bold);
+          color: var(--color-text-primary);
+
+          .metricUnit {
+            font-size: var(--font-size-sm);
+            font-weight: var(--font-weight-normal);
+            color: var(--color-text-secondary);
+          }
+        }
+
+        .metricTrend {
+          display: flex;
+          align-items: center;
+          gap: var(--spacing-xs);
+          font-size: var(--font-size-sm);
+          font-weight: var(--font-weight-medium);
+
+          &.positive {
+            color: var(--color-green-600);
+            svg {
+              color: var(--color-green-500);
+            }
+          }
+
+          &.negative {
+            color: var(--color-red-600);
+            svg {
+              color: var(--color-red-500);
+            }
+          }
+
+          &.neutral {
+            color: var(--color-text-secondary);
+            svg {
+              color: var(--color-text-muted);
+            }
+          }
+        }
+
+        .metricDescription {
+          font-size: var(--font-size-sm);
+          color: var(--color-text-secondary);
+          line-height: 1.4;
+        }
+      }
+
+      .cardFooter {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: var(--spacing-sm);
+        padding-top: var(--spacing-sm);
+        border-top: 1px solid var(--color-border-tertiary);
+
+        .metricStatus {
+          @include badge-base;
+          display: flex;
+          align-items: center;
+          gap: var(--spacing-xxs);
+          font-size: var(--font-size-xs);
+          padding: 2px 6px;
+          border-radius: var(--border-radius-xs);
+
+          &.healthy { background-color: var(--color-green-100); color: var(--color-green-700); }
+          &.warning { background-color: var(--color-orange-100); color: var(--color-orange-700); }
+          &.critical { background-color: var(--color-red-100); color: var(--color-red-700); }
+        }
+
+        .metricTimestamp {
+          font-size: var(--font-size-xs);
+          color: var(--color-text-muted);
+        }
+      }
+    }
+  }
+
+  .chartSection {
+    @include card-base;
+    padding: var(--spacing-lg);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+
+    .chartHeader {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: var(--spacing-sm);
+      padding-bottom: var(--spacing-md);
+      border-bottom: 1px solid var(--color-border-tertiary);
+
+      h4 {
+        margin: 0;
+        color: var(--color-text-primary);
+      }
+
+      .chartControls {
+        display: flex;
+        gap: var(--spacing-sm);
+        align-items: center;
+        flex-wrap: wrap;
+
+        .chartTypeSelector {
+          .chartTypeSelect {
+            @include input-base;
+            height: 36px;
+            font-size: var(--font-size-sm);
+            min-width: 120px;
+            background-color: var(--color-background-secondary);
+            color: var(--color-text-primary);
+            border: 1px solid var(--color-border-secondary);
+            border-radius: var(--border-radius-sm);
+            padding: 0 var(--spacing-sm);
+
+            &:focus {
+              border-color: var(--color-primary);
+              outline: none;
+            }
+          }
+        }
+
+        .chartActions {
+          display: flex;
+          gap: var(--spacing-sm);
+        }
+      }
+    }
+
+    .chartContent {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-md);
+      min-height: 300px;
+
+      .chartContainer {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacing-sm);
+        background-color: var(--color-background-tertiary);
+        border-radius: var(--border-radius-md);
+        padding: var(--spacing-md);
+        border: 1px solid var(--color-border-secondary);
+
+        .chartCanvas {
+          flex: 1;
+          min-height: 200px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background-color: var(--color-background-primary);
+          border-radius: var(--border-radius-sm);
+          border: 1px solid var(--color-border-tertiary);
+        }
+
+        .chartLegend {
+          display: flex;
+          flex-wrap: wrap;
+          gap: var(--spacing-sm);
+          padding-top: var(--spacing-sm);
+          border-top: 1px solid var(--color-border-tertiary);
+
+          .legendItem {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+            font-size: var(--font-size-sm);
+            color: var(--color-text-secondary);
+
+            .legendColor {
+              width: 12px;
+              height: 12px;
+              border-radius: var(--border-radius-xs);
+            }
+          }
+        }
+      }
+    }
+  }
+}

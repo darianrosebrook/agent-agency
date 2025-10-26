@@ -12,7 +12,7 @@ use uuid::Uuid;
 use tracing::{info, error};
 use chrono::Utc;
 
-use crate::types::*;
+use crate::health_types::*;
 use super::metrics::MetricsCollector;
 use super::core::{ResponseTimeTracker, ErrorRateTracker, RedisConnectionManager};
 

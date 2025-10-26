@@ -1,6 +1,6 @@
 //! Embedding provider trait and implementations
 
-use crate::types::*;
+use crate::embedding_types::*;
 use crate::model_loading::EmbeddingModel;
 use anyhow::Result;
 use async_trait::async_trait;
@@ -16,7 +16,7 @@ use tokenizers::Tokenizer;
 
 /// Trait for embedding providers
 #[async_trait]
-pub trait EmbeddingProvider: Send + Sync {
+pub trait ServiceEmbeddingProvider: Send + Sync {
     /// Generate embeddings for a batch of texts
     async fn generate_embeddings(&self, texts: &[String]) -> Result<Vec<EmbeddingVector>>;
 

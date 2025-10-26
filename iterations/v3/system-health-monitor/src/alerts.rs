@@ -3,7 +3,7 @@
 // system_health_monitor/alerts.rs
 // ──────────────────────────────────────────────────────────────────────────────
 use std::collections::HashMap;
-use crate::types::*;
+use crate::health_types::*;
 
 #[derive(Debug, Clone)]
 pub struct AlertStatistics {

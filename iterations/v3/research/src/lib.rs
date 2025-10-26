@@ -15,7 +15,7 @@ pub mod information_processor;
 pub mod knowledge_seeker;
 pub mod multimodal_context_provider;
 // pub mod multimodal_retriever; // Temporarily disabled due to embedding service dependencies
-pub mod types;
+pub mod prompting_types;
 pub mod vector_search;
 pub mod web_scraper;
 
@@ -33,7 +33,7 @@ pub use knowledge_seeker::KnowledgeSeeker;
 //     Citation, ContextBudget, EvidenceItem, MultimodalContext, MultimodalContextProvider,
 // }; // Temporarily disabled
 // pub use multimodal_retriever::{MultimodalQuery, MultimodalRetriever, MultimodalRetrieverConfig}; // Temporarily disabled
-pub use types::*;
+pub use prompting_prompting_research_types::*;
 pub use vector_search::VectorSearchEngine;
 pub use web_scraper::WebScraper;
 

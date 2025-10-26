@@ -3,7 +3,7 @@ use once_cell::sync::Lazy;
 use serde_json::Value;
 use tracing::debug;
 
-use crate::error::ContractKind;
+use crate::contract_errors::ContractKind;
 
 /// Raw schema sources embedded at compile time.
 pub(crate) static TASK_REQUEST_SCHEMA_RAW: &str =

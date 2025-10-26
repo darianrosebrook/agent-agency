@@ -1,6 +1,6 @@
 //! Multi-dimensional scoring system
 
-use crate::types::*;
+use crate::benchmark_types::*;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
@@ -33,7 +33,7 @@ pub struct MultiDimensionalScoringSystem {
     /// Normalization settings
     normalization_settings: NormalizationSettings,
     /// Performance metrics cache
-    performance_cache: HashMap<String, PerformanceMetrics>,
+    performance_cache: HashMap<String, ModelBenchmarkingMetrics>,
 }
 
 impl MultiDimensionalScoringSystem {
@@ -365,7 +365,7 @@ pub enum NormalizationMethod {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PerformanceMetrics {
+pub struct ModelBenchmarkingMetrics {
     pub accuracy: f64,
     pub speed: f64,
     pub efficiency: f64,

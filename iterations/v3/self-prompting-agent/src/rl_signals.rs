@@ -2,7 +2,7 @@
 //!
 //! Provides signals and policy adjustments for RL-based agent improvement.
 
-use crate::types::SelfPromptingAgentError;
+use crate::prompting_types::SelfPromptingAgentError;
 
 /// RL signal for feedback
 #[derive(Debug, Clone)]

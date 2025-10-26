@@ -284,7 +284,7 @@ rate_limit_requests = 100
 rate_limit_window = 60
 
 [api.auth]
-jwt_secret = "your-secret-key"
+jwt_secret = "${JWT_SECRET:test-jwt-secret-for-e2e-testing-only}"
 jwt_expiration_hours = 24
 refresh_token_expiration_days = 7
 "#);

@@ -4,7 +4,7 @@
 //! including cache management, eviction policies, and performance monitoring.
 
 use super::types::*;
-use crate::types::VerdictId;
+use crate::council_types::VerdictId;
 use anyhow::Result;
 use chrono::{DateTime, Utc, Duration};
 use dashmap::DashMap;

@@ -1,7 +1,7 @@
 //! @darianrosebrook
 //! Diagrams ingestor (SVG/GraphML) with graph extraction
 
-use crate::types::*;
+use crate::ingestor_types::*;
 use anyhow::{anyhow, Context, Result};
 use chrono::Utc;
 use roxmltree::Document;

@@ -8,7 +8,7 @@ use super::metrics::MetricsManager;
 use crate::evidence_enrichment::EvidenceEnrichmentCoordinator;
 use crate::models::{EvidencePacket, ParticipantContribution, RiskTier, TaskSpec};
 use crate::resilience::ResilienceManager;
-use crate::types::{ConsensusResult, FinalVerdict, JudgeVerdict};
+use crate::council_types::{ConsensusResult, FinalVerdict, JudgeVerdict};
 use crate::{MultimodalEvidenceEnricher, ClaimWithMultimodalEvidence};
 use anyhow::Result;
 use std::collections::HashMap;

@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::types::{Digest, RestorePlan, RestoreAction, RestoreResult, RestoreFilters, SessionRef};
+use crate::recovery_types::{Digest, RestorePlan, RestoreAction, RestoreResult, RestoreFilters, SessionRef};
 use crate::cas::{AtomicRestore, RestoredFile};
 use crate::merkle::{Commit as MerkleCommit, FileTree as MerkleTree};
 use crate::policy::{CawsPolicy, PolicyEnforcer};
@@ -496,9 +496,9 @@ mod tests {
             actions: vec![
                 RestoreAction::WriteFile {
                     path: PathBuf::from("test.txt"),
-                    mode: crate::types::FileMode::Regular,
+                    mode: crate::recovery_types::FileMode::Regular,
                     expected: digest,
-                    source: crate::types::ObjectRef {
+                    source: crate::recovery_types::ObjectRef {
                         digest: digest,
                         size: 12,
                     },

@@ -1,6 +1,6 @@
 /**
- * VerdictCard Component
- * Displays a summary of a council verdict with key metrics and status
+ * Verdict Card
+ * Compact display of council verdict information
  *
  * @author @darianrosebrook
  */
@@ -8,184 +8,185 @@
 'use client';
 
 import { Text } from '@/design-system/primitives';
-import { Badge } from '@/design-system/primitives';
 import {
+  Gavel,
   Clock,
   CheckCircle,
   XCircle,
-  AlertCircle,
+  AlertTriangle,
   Users,
   Shield,
-  ChevronRight,
-  Calendar
+  Eye,
+  MoreHorizontal
 } from 'lucide-react';
-import { Verdict, VerdictStatus } from './VerdictList';
+import { Verdict } from '@/lib/council-api';
 import styles from './VerdictCard.module.scss';
 
 interface VerdictCardProps {
   verdict: Verdict;
-  onClick: () => void;
-  className?: string;
+  onClick?: () => void;
+  compact?: boolean;
 }
 
-export function VerdictCard({ verdict, onClick, className }: VerdictCardProps) {
-  // Status configuration
-  const getStatusConfig = (status: VerdictStatus) => {
+export function VerdictCard({ verdict, onClick, compact = false }: VerdictCardProps) {
+  const getStatusConfig = (status: Verdict['status']) => {
     switch (status) {
-      case 'approved':
+      case 'completed':
         return {
-          icon: CheckCircle,
+          icon: <CheckCircle size={16} />,
           color: 'success',
-          label: 'Approved',
-          bgColor: 'var(--color-success-light)',
+          text: 'Completed'
         };
-      case 'rejected':
+      case 'escalated':
         return {
-          icon: XCircle,
+          icon: <AlertTriangle size={16} />,
           color: 'error',
-          label: 'Rejected',
-          bgColor: 'var(--color-error-light)',
+          text: 'Escalated'
         };
-      case 'intervened':
+      case 'in_progress':
         return {
-          icon: AlertCircle,
+          icon: <Clock size={16} />,
           color: 'warning',
-          label: 'Intervened',
-          bgColor: 'var(--color-warning-light)',
+          text: 'In Progress'
+        };
+      case 'pending':
+        return {
+          icon: <Clock size={16} />,
+          color: 'neutral',
+          text: 'Pending'
+        };
+      case 'overridden':
+        return {
+          icon: <XCircle size={16} />,
+          color: 'error',
+          text: 'Overridden'
         };
       default:
         return {
-          icon: Clock,
-          color: 'info',
-          label: 'Pending',
-          bgColor: 'var(--color-info-light)',
+          icon: <Gavel size={16} />,
+          color: 'neutral',
+          text: status
         };
     }
   };
 
+  const getRiskConfig = (risk: Verdict['ethicalAssessment']['overallRisk']) => {
+    switch (risk) {
+      case 'critical':
+        return { color: 'error', text: 'Critical' };
+      case 'high':
+        return { color: 'error', text: 'High' };
+      case 'medium':
+        return { color: 'warning', text: 'Medium' };
+      case 'low':
+        return { color: 'success', text: 'Low' };
+      default:
+        return { color: 'neutral', text: risk };
+    }
+  };
+
   const statusConfig = getStatusConfig(verdict.status);
-  const StatusIcon = statusConfig.icon;
+  const riskConfig = getRiskConfig(verdict.ethicalAssessment.overallRisk);
 
-  // Format relative time
-  const formatRelativeTime = (date: Date) => {
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMinutes = Math.floor(diffMs / (1000 * 60));
-    const diffHours = Math.floor(diffMinutes / 60);
-    const diffDays = Math.floor(diffHours / 24);
-
-    if (diffMinutes < 1) return 'Just now';
-    if (diffMinutes < 60) return `${diffMinutes}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
-
-    return date.toLocaleDateString();
+  const formatDate = (date: Date) => {
+    return new Intl.DateTimeFormat('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(new Date(date));
   };
 
-  // Consensus score color
-  const getConsensusColor = (score: number) => {
-    if (score >= 0.8) return 'success';
-    if (score >= 0.6) return 'warning';
-    return 'error';
-  };
-
-  // Ethical concerns indicator
-  const getEthicalIndicator = (concerns: number) => {
-    if (concerns === 0) return null;
-    if (concerns === 1) return '⚠️';
-    if (concerns === 2) return '⚠️⚠️';
-    return '🚨';
-  };
+  const cardClasses = [
+    styles.verdictCard,
+    compact && styles.compact,
+    styles[`status${statusConfig.color}`],
+    onClick && styles.clickable
+  ].filter(Boolean).join(' ');
 
   return (
-    <div
-      className={`${styles.card} ${className || ''}`}
-      onClick={onClick}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          onClick();
-        }
-      }}
-      aria-label={`Verdict for task ${verdict.taskId}: ${verdict.title}`}
-    >
-      {/* Status Badge */}
-      <div className={styles.statusBadge}>
-        <Badge variant={statusConfig.color as any} size="sm">
-          <StatusIcon size={12} />
-          <span>{statusConfig.label}</span>
-        </Badge>
+    <div className={cardClasses} onClick={onClick}>
+      {/* Header */}
+      <div className={styles.cardHeader}>
+        <div className={styles.statusBadge}>
+          {statusConfig.icon}
+          <span>{statusConfig.text}</span>
+        </div>
+
+        <div className={styles.cardActions}>
+          <button className={styles.actionButton}>
+            <Eye size={14} />
+          </button>
+          <button className={styles.actionButton}>
+            <MoreHorizontal size={14} />
+          </button>
+        </div>
       </div>
 
       {/* Main Content */}
-      <div className={styles.content}>
-        {/* Title and Task ID */}
-        <div className={styles.header}>
-          <Text variant="h4" className={styles.title}>
-            {verdict.title}
+      <div className={styles.cardContent}>
+        <div className={styles.primaryInfo}>
+          <Text variant="h4" className={styles.taskId}>
+            {verdict.taskId}
           </Text>
-          <Text variant="paragraph-small" color="secondary" className={styles.taskId}>
-            Task: {verdict.taskId}
-          </Text>
+
+          <div className={styles.decisionInfo}>
+            <Text variant="paragraph-medium" className={styles.decision}>
+              Decision: <strong>{verdict.consensus.finalDecision.toUpperCase()}</strong>
+            </Text>
+
+            {!compact && (
+              <Text variant="paragraph-small" color="secondary">
+                Confidence: {Math.round(verdict.consensus.confidence * 100)}%
+              </Text>
+            )}
+          </div>
         </div>
 
-        {/* Summary */}
-        <Text variant="paragraph-medium" color="secondary" className={styles.summary}>
-          {verdict.summary}
-        </Text>
-
-        {/* Metrics Row */}
-        <div className={styles.metrics}>
-          <div className={styles.metric}>
-            <Users size={14} className={styles.metricIcon} />
-            <Text variant="paragraph-small">
-              {verdict.judgeCount} judges
-            </Text>
+        <div className={styles.secondaryInfo}>
+          {/* Risk Level */}
+          <div className={styles.riskBadge}>
+            <Shield size={12} />
+            <span className={styles[`risk${riskConfig.color}`]}>
+              {riskConfig.text} Risk
+            </span>
           </div>
 
-          <div className={styles.metric}>
-            <CheckCircle
-              size={14}
-              className={`${styles.metricIcon} ${styles[getConsensusColor(verdict.consensusScore)]}`}
-            />
-            <Text variant="paragraph-small">
-              {Math.round(verdict.consensusScore * 100)}% consensus
-            </Text>
+          {/* Judge Count */}
+          <div className={styles.judgeInfo}>
+            <Users size={12} />
+            <span>{verdict.judges.length} judges</span>
           </div>
 
-          {verdict.ethicalConcerns > 0 && (
-            <div className={styles.metric}>
-              <Shield size={14} className={styles.metricIcon} />
-              <Text variant="paragraph-small">
-                {getEthicalIndicator(verdict.ethicalConcerns)} {verdict.ethicalConcerns} concerns
-              </Text>
+          {/* Evidence Count */}
+          {!compact && (
+            <div className={styles.evidenceInfo}>
+              <span>{verdict.evidence.length} evidence items</span>
             </div>
           )}
-
-          <div className={styles.metric}>
-            <Calendar size={14} className={styles.metricIcon} />
-            <Text variant="paragraph-small">
-              {formatRelativeTime(verdict.createdAt)}
-            </Text>
-          </div>
         </div>
-
-        {/* Evidence Preview */}
-        {verdict.evidence.length > 0 && (
-          <div className={styles.evidence}>
-            <Text variant="paragraph-small" color="secondary">
-              Key evidence: {verdict.evidence.slice(0, 2).map(e => e.title).join(', ')}
-              {verdict.evidence.length > 2 && ` +${verdict.evidence.length - 2} more`}
-            </Text>
-          </div>
-        )}
       </div>
 
-      {/* Action Indicator */}
-      <div className={styles.action}>
-        <ChevronRight size={16} className={styles.chevron} />
+      {/* Footer */}
+      <div className={styles.cardFooter}>
+        <div className={styles.timestamp}>
+          <Text variant="paragraph-small" color="secondary">
+            Created: {formatDate(verdict.createdAt)}
+          </Text>
+
+          {verdict.completedAt && (
+            <Text variant="paragraph-small" color="secondary">
+              Completed: {formatDate(verdict.completedAt)}
+            </Text>
+          )}
+        </div>
+
+        {!compact && verdict.intervention && (
+          <div className={styles.interventionBadge}>
+            <AlertTriangle size={12} />
+            <span>Intervention Required</span>
+          </div>
+        )}
       </div>
     </div>
   );

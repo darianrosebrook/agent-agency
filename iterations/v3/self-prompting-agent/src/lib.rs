@@ -25,7 +25,7 @@ pub mod prompting;
 pub mod rl_signals;
 pub mod sandbox;
 pub mod stubs; // TEMP: stubs for file_ops types
-pub mod types;
+pub mod prompting_types;
 
 pub use agent::SelfPromptingAgent;
 pub use context::{HierarchicalContextManager, ContextBundle, ContextBudget, Allocation, ContextStats};
@@ -39,4 +39,4 @@ pub use profiling::{PerformanceProfiler, PerformanceBenchmark, PerformanceReport
 pub use prompting::{PromptFrame, PatchAction, ToolCallValidator, ToolSchemaError, AdaptivePromptingStrategy, AgentTelemetryCollector};
 pub use rl_signals::{RLSignal, RLSignalGenerator, PolicyAdjustment};
 pub use sandbox::SandboxEnvironment;
-pub use types::*;
+pub use prompting_prompting_types::*;

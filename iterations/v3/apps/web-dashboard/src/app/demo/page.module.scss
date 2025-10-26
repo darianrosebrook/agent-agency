@@ -1,0 +1,266 @@
+/**
+ * Demo Page Styles
+ * Showcase of enhanced analytics capabilities
+ *
+ * @author @darianrosebrook
+ */
+
+.demoPage {
+  padding: var(--spacing-6);
+  max-width: 1600px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-6);
+
+  @media (max-width: 768px) {
+    padding: var(--spacing-4);
+    gap: var(--spacing-4);
+  }
+}
+
+/* Header Section */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--spacing-4);
+  padding-bottom: var(--spacing-4);
+  border-bottom: 1px solid var(--color-border);
+
+  @media (max-width: 1024px) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-3);
+  }
+}
+
+.headerLeft {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  flex: 1;
+}
+
+.headerRight {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+  align-items: flex-end;
+
+  @media (max-width: 1024px) {
+    align-items: flex-start;
+    width: 100%;
+  }
+}
+
+.controls {
+  display: flex;
+  gap: var(--spacing-2);
+  align-items: center;
+
+  @media (max-width: 480px) {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+}
+
+.progress {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+  min-width: 200px;
+
+  @media (max-width: 1024px) {
+    width: 100%;
+  }
+}
+
+.progressBar {
+  width: 100%;
+  height: 4px;
+  background: var(--color-surface-secondary);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: var(--color-primary);
+  border-radius: var(--radius-full);
+  transition: width 0.3s ease;
+}
+
+/* Visualizations Grid */
+.visualizationsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(600px, 1fr));
+  gap: var(--spacing-6);
+
+  @media (max-width: 1200px) {
+    grid-template-columns: 1fr;
+  }
+
+  @media (max-width: 768px) {
+    gap: var(--spacing-4);
+  }
+}
+
+.visualizationCard {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-5);
+  box-shadow: var(--shadow-sm);
+  transition: all 0.2s ease;
+
+  &:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+  }
+
+  @media (max-width: 768px) {
+    padding: var(--spacing-4);
+  }
+}
+
+/* Features Showcase */
+.featuresShowcase {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-6);
+  box-shadow: var(--shadow-sm);
+
+  h3 {
+    margin: 0 0 var(--spacing-4) 0;
+    color: var(--color-text-primary);
+    font-weight: 600;
+  }
+
+  @media (max-width: 768px) {
+    padding: var(--spacing-4);
+  }
+}
+
+.featuresGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: var(--spacing-4);
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.featureCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+  padding: var(--spacing-4);
+  background: var(--color-background-secondary);
+  border-radius: var(--radius-md);
+  text-align: center;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: var(--color-surface-hover);
+    transform: translateY(-2px);
+  }
+}
+
+.featureIcon {
+  width: 3rem;
+  height: 3rem;
+  color: var(--color-primary);
+  margin: 0 auto;
+}
+
+/* Spinning animation */
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .demoPage {
+    padding: var(--spacing-5);
+  }
+}
+
+@media (max-width: 768px) {
+  .demoPage {
+    padding: var(--spacing-4);
+  }
+
+  .header {
+    padding-bottom: var(--spacing-3);
+  }
+
+  .visualizationCard,
+  .featuresShowcase {
+    padding: var(--spacing-4);
+  }
+}
+
+@media (max-width: 480px) {
+  .demoPage {
+    padding: var(--spacing-3);
+  }
+
+  .header {
+    gap: var(--spacing-2);
+  }
+
+  .controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .visualizationCard,
+  .featuresShowcase {
+    padding: var(--spacing-3);
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .demoPage {
+    .header {
+      border-bottom-width: 2px;
+    }
+  }
+
+  .visualizationCard,
+  .featuresShowcase {
+    border-width: 2px;
+  }
+
+  .progressBar {
+    border: 1px solid var(--color-border);
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .visualizationCard,
+  .featureCard {
+    transition: none;
+  }
+
+  .spinning {
+    animation: none;
+  }
+}
+
+/* Dark mode optimizations */
+@media (prefers-color-scheme: dark) {
+  .featureCard {
+    background: var(--color-background);
+  }
+}

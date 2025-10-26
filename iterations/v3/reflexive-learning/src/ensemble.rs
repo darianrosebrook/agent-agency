@@ -1,6 +1,6 @@
 //! Ensemble learning algorithms for reflexive learning
 
-use crate::types::*;
+use crate::reflexive_types::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 

@@ -1,12 +1,11 @@
 === Duplication Detection Report ===
-Generated: Sat Oct 25 12:47:50 PDT 2025
+Generated: Sat Oct 25 19:50:40 PDT 2025
 
 Duplicate filenames across crates:
 agent.rs
 alerts.rs
 analysis.rs
 analyzer.rs
-api.rs
 audit.rs
 budget.rs
 cache.rs
@@ -15,7 +14,6 @@ caws.rs
 circuit_breaker.rs
 cli.rs
 collector.rs
-config.rs
 context_builder.rs
 context.rs
 coordinator.rs
@@ -24,29 +22,35 @@ coreml_model.rs
 coreml.rs
 dashboard.rs
 data.rs
+database.rs
 debate.rs
-decomposition.rs
 embeddings.rs
 ensemble.rs
-error.rs
-errors.rs
 ethics.rs
 evaluation.rs
+events.rs
+evidence_types.rs
 ewma.rs
 execute.rs
+execution.rs
 executor.rs
 ffi.rs
+filesystem.rs
 gates.rs
+health.rs
+helpers.rs
+index.rs
+indexing.rs
+inference.rs
 integration.rs
 iokit.rs
 learning_bridge.rs
+learning_types.rs
 lib.rs
 logging.rs
-loop_controller.rs
 main.rs
 manager.rs
 metrics_collector.rs
-metrics.rs
 mistral.rs
 ml.rs
 mod.rs
@@ -56,9 +60,11 @@ orchestrator.rs
 performance.rs
 persistence.rs
 plan_review.rs
+planning_types.rs
 policy_hooks.rs
 profiling.rs
 progress_tracker.rs
+prompting_types.rs
 quality.rs
 quantization.rs
 queries.rs
@@ -72,29 +78,30 @@ routing.rs
 runner.rs
 satisficing.rs
 schema.rs
+search.rs
 security.rs
-service.rs
+state.rs
 storage.rs
 strategy.rs
 stubs.rs
 supervised.rs
 tests.rs
+thermal.rs
 tokenization.rs
-tool_discovery.rs
 tool_registry.rs
-types.rs
+traits.rs
 unsupervised.rs
 updates.rs
 validation.rs
 versioning.rs
 websocket.rs
+worker_types.rs
 
 Duplicate struct names:
 AcceptanceCriterion {
 AdaptivePromptingStrategy;
 AdaptiveResourceAllocator {
 Admission {
-AdvancedQuantizationEngine {
 AgentAgencyAPI {
 AgentMetrics {
 AgentPerformanceMetrics {
@@ -108,6 +115,7 @@ AggregationResult {
 AlertManager {
 AlertRule {
 AlertStatistics {
+AlertThresholds {
 AlgorithmConfig {
 AlgorithmPerformance {
 AlgorithmPerformanceTracker {
@@ -138,6 +146,7 @@ ANETokenizers {
 AnomalyDetectionResult {
 AnomalyDetectionSummary {
 AnomalyUpdates {
+ApiConfig {
 AppleSiliconConfig {
 AppState {
 Artifact {
@@ -168,6 +177,8 @@ BusinessMetrics {
 BusinessRiskAssessment {
 CacheConfig {
 CachedInsights {
+CacheEntry<T> {
+CacheManager {
 CacheMetadata {
 CachePerformanceMetrics {
 CacheStats {
@@ -187,7 +198,6 @@ CawsValidationResult {
 CawsValidator {
 CawsViolation {
 CawsWaiver {
-ChangePoint {
 ChangeSet {
 ChartConfig {
 ChunkConfig {
@@ -230,10 +240,13 @@ ContextBuilder {
 ContextBundle {
 ContextManager {
 ContextMetadata {
+ContextMetrics {
+ContextMonitor {
 ContextPerformanceData {
 ContextPreservationEngine {
 ContextStats {
 ContextSynthesisConfig {
+ContextSynthesizer {
 ContextUtility {
 CoordinationMetrics {
 CoreferenceChain {
@@ -259,6 +272,9 @@ CreditAssigner {
 CriticalIssue {
 CrossReference {
 CulturalConsideration {
+DashboardDiffSummary {
+DashboardIterationSummary {
+DashboardTaskSummary {
 DataAnalysisOutput {
 DatabaseClient {
 DatabaseConfig {
@@ -276,7 +292,9 @@ DebateArgument {
 DebateContext {
 DebateResult {
 DebateRound {
+DebateRoundResult {
 DebateSession {
+DecompositionResult {
 DeduplicationMetrics {
 DeepQLearning {
 DefaultCoreMlInvoker;
@@ -292,6 +310,8 @@ DiffMetadata {
 DiffStats {
 Digest(pub [u8; 32]);
 DisambiguationResult {
+DiscoveryError {
+DiscoveryStats {
 DissentingOpinion {
 DocQualityResult {
 DocQualityValidator {
@@ -312,6 +332,7 @@ EmbeddingCache {
 EmbeddingConfig {
 EmbeddingMetrics {
 EmbeddingModel {
+EmbeddingProcessor;
 EmbeddingRecord {
 EmbeddingRequest {
 EmbeddingVector {
@@ -324,6 +345,7 @@ EntityEnricher {
 EntityMatch {
 EntityRelationship {
 EnvironmentConfig {
+EnvironmentManager {
 ErrorMetrics {
 EthicalAssessment {
 EthicalConcern {
@@ -376,6 +398,8 @@ GraphIndexer {
 GraphQuery {
 HealthAlert {
 HealthCheckResult {
+HealthMetrics {
+HealthMonitor {
 HealthStatus {
 HfTokenizer {
 HierarchicalContextManager {
@@ -383,6 +407,7 @@ HistoricalEntityAnalysis {
 HistoricalResourceData {
 HistoricalResourceEntry {
 HnswMetadata {
+HttpHealthCheck {
 Hunk {
 IncidentResponseAssessment {
 IndexStatistics {
@@ -398,7 +423,9 @@ IntegrationComplexity {
 IntegrationTestRunner {
 IntelligentEdgeCaseTesting {
 IntelligentTestInsights {
+InvertedIndex {
 IoSchema {
+IterationProgress {
 JobScheduler {
 JudgeConfig {
 JudgeContribution {
@@ -436,6 +463,7 @@ LearningSignalAnalyzer {
 LearningSystemHealth {
 LearningUpdate {
 LinearRegressionModel {
+LinkProvenanceRequest {
 LogEntry {
 LoggingConfig {
 LogisticRegression {
@@ -458,6 +486,7 @@ MetaLearningCoordinator {
 MetricAlphas {
 MetricCounts {
 MetricsCollector {
+MetricsSnapshot {
 MistralJudge {
 MitigationPriority {
 MitigationStrategy {
@@ -501,14 +530,12 @@ OptimizationResult {
 OptimizationStatus {
 OptimizationUpdates {
 Orchestrator {
-OrchestratorConfig;
 OutcomePrediction {
+PaginationParams {
 ParallelCoordinator {
 ParameterConstraint {
 ParameterDefinition {
 ParameterEvaluation {
-ParsedOperation {
-ParsedTensor {
 PartialResults {
 ParticipantContribution {
 Patch {
@@ -521,7 +548,6 @@ PerformanceAnalysis {
 PerformanceBenchmark {
 PerformanceConfig {
 PerformanceDelta {
-PerformanceMetrics {
 PerformanceOptimizer {
 PerformancePrediction {
 PerformancePredictor {
@@ -536,6 +562,7 @@ PerformanceSummary {
 PerformanceTracker {
 PerformanceTrends {
 PersistedTask {
+PersistentEmbeddingRecord {
 PipelineMetrics {
 PlanningAgent {
 PlanningMetadata {
@@ -545,6 +572,7 @@ PoolBuilder {
 PoolConfig {
 PoolStats {
 PostgresSourceIntegrityStorage {
+Posting {
 PowerStatus {
 PredictionUpdates {
 PredictiveInsightsSummary {
@@ -564,6 +592,8 @@ ProgressTracker {
 ProvenanceConfig {
 ProvenanceEvent {
 ProvenanceRecord {
+ProvenanceResponse {
+QdrantClient {
 QLearning {
 QTable {
 QualityAnalysis {
@@ -630,9 +660,11 @@ ResourceUsage {
 ResourceUsageMetrics {
 ResourceUtilization {
 ResponseCache {
+RestApi {
 RestoreFilters {
 RetryConfig {
 RetryExecutor {
+RetryPolicy {
 ReviewContext {
 RidgeRegression {
 RiskAssessment {
@@ -650,10 +682,13 @@ SandboxEnvironment {
 Sarsa {
 SatisficingConfig {
 SatisficingEvaluator {
+SavedQueryResponse {
+SaveQueryRequest {
 ScalabilityConcern {
-ScalingRecommendation {
 SchemaRegistry {
 ScopeRestrictions {
+SearchCoordinator {
+SearchOperations {
 SearchResult {
 SeasonalPattern {
 Secret {
@@ -671,9 +706,7 @@ SelfPromptingResult {
 SemanticAnalysis {
 SemanticKnowledgeBase {
 ServerConfig {
-ServiceRegistry {
 SLAMetrics {
-SlaValidationResult {
 SLOAlert {
 SLOAlertThresholds {
 SLOMeasurement {
@@ -704,9 +737,7 @@ SuccessPattern {
 SystemAlert {
 SystemDashboard {
 SystemHealth {
-SystemHealthMonitor {
 SystemMetrics {
-SystemResourceMonitor {
 SystemStats {
 Task {
 TaskAnalysis {
@@ -725,6 +756,7 @@ TaskRequest {
 TaskRequirements {
 TaskResponse {
 TaskResult {
+TaskResultResponse {
 TaskScope {
 TaskSpec {
 TaskStatusResponse {
@@ -733,7 +765,6 @@ TaskSubmissionResponse {
 TechnicalRiskAssessment {
 TechnologyMaturity {
 TelemetryCollector {
-TemporalContext {
 TenantMemoryConfig {
 TensorSpec {
 TestCase {
@@ -756,8 +787,10 @@ TestResult {
 TestResults {
 TestScenario {
 TestSpecification {
+TestStep {
 TestSuiteResults {
 TextIndexer {
+TextProcessor;
 ThermalCapabilities {
 ThermalConfig {
 ThermalStatus {
@@ -766,6 +799,7 @@ TokenUsage {
 ToolChain {
 ToolChainStep {
 ToolDiscoveryConfig {
+ToolDiscoveryResult {
 ToolExecutionResult {
 ToolExecutor {
 ToolMetadata {
@@ -779,7 +813,6 @@ UnresolvableAmbiguity {
 UpdateMetadata {
 UsedParameters {
 ValidatedPredictions {
-ValidationCheck {
 ValidationConfig {
 ValidationContext {
 ValidationIssue {
@@ -790,13 +823,13 @@ ValidationResult {
 ValidationResults {
 ValidationRule {
 ValidationSummary {
+VectorSearchEngine {
 VectorSearchMetrics {
 VerdictRecord {
 VerdictStore {
 VerdictStoreStats {
 VerifiabilityAssessment {
 VerificationCriteria {
-VerificationRequirement {
 VerificationResult {
 VerificationSummary {
 Violation {
@@ -810,6 +843,7 @@ WaiverApprovalRequest {
 WaiverGenerator {
 WaiverRef {
 WaiverRequest {
+WaiverResponse {
 WebScrapingConfig {
 WebSocketQuery {
 WebSocketStats {
@@ -845,14 +879,10 @@ ArgumentGenerator: Send + Sync {
 ArtifactStorage: Send + Sync {
 Converter: Send + Sync {
 CoreMlInvoker {
-EmbeddingProvider: Send + Sync {
 Evaluator: Send + Sync {
-HealthCheck: Send + Sync {
 InferenceEngine: Send + Sync {
-IntoANEError {
 Judge {
 Judge: Send + Sync + std::fmt::Debug {
-JudgeEvaluator: Send + Sync {
 KnowledgeBase {
 LearningAlgorithm: Send + Sync {
 LearningSignalStorage: Send + Sync + std::fmt::Debug {

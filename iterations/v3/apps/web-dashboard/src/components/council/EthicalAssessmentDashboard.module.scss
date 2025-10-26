@@ -1,0 +1,371 @@
+/**
+ * Ethical Assessment Dashboard Styles
+ * SCSS module for EthicalAssessmentDashboard component
+ *
+ * @author @darianrosebrook
+ */
+
+@use '@/styles/mixins.scss' as *;
+
+.ethicalDashboard {
+  @include card-base;
+  width: 100%;
+  max-width: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.headerLeft {
+  flex: 1;
+  min-width: 0;
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-shrink: 0;
+}
+
+.connectionStatus {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+
+  &.connected {
+    background: var(--color-green-light);
+    color: var(--color-green);
+  }
+
+  &.disconnected {
+    background: var(--color-gray-light);
+    color: var(--color-gray);
+  }
+}
+
+.timeRangeSelector {
+  display: flex;
+  align-items: center;
+}
+
+.timeRangeSelect {
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  color: var(--color-text);
+  cursor: pointer;
+
+  &:focus {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.alertsSection {
+  @include card-base;
+  padding: 1.5rem;
+  background: var(--color-background);
+}
+
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.loadingState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  text-align: center;
+  color: var(--color-text-secondary);
+
+  .spinner {
+    width: 2rem;
+    height: 2rem;
+    border: 2px solid var(--color-border);
+    border-top: 2px solid var(--color-primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 1rem;
+  }
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  text-align: center;
+  color: var(--color-text-secondary);
+
+  svg {
+    margin-bottom: 1rem;
+    opacity: 0.5;
+  }
+}
+
+.alertsList {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.alertCard {
+  @include card-base;
+  padding: 1.5rem;
+  background: var(--color-background);
+  border-left: 4px solid var(--color-border);
+  transition: all 0.2s ease;
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+  }
+}
+
+.alertHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.alertSeverity {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+
+  &.error {
+    background: var(--color-red-light);
+    color: var(--color-red);
+  }
+
+  &.warning {
+    background: var(--color-orange-light);
+    color: var(--color-orange);
+  }
+
+  &.neutral {
+    background: var(--color-gray-light);
+    color: var(--color-gray);
+  }
+}
+
+.alertType {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+}
+
+.alertContent {
+  margin-bottom: 1rem;
+}
+
+.alertActions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.categoriesSection {
+  @include card-base;
+  padding: 1.5rem;
+  background: var(--color-background);
+}
+
+.categoriesGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.categoryCard {
+  @include card-base;
+  padding: 1.5rem;
+  background: var(--color-surface);
+  transition: all 0.2s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+  }
+}
+
+.categoryHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.categoryColor {
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.categoryStats {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.categoryBar {
+  height: 0.5rem;
+  background: var(--color-border);
+  border-radius: 0.25rem;
+  overflow: hidden;
+}
+
+.categoryFill {
+  height: 100%;
+  border-radius: 0.25rem;
+  transition: width 0.3s ease;
+}
+
+.impactSection {
+  @include card-base;
+  padding: 1.5rem;
+  background: var(--color-background);
+}
+
+.impactGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.impactCard {
+  @include card-base;
+  padding: 1.5rem;
+  background: var(--color-surface);
+  transition: all 0.2s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+  }
+}
+
+.impactMetrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.impactMetric {
+  text-align: center;
+  padding: 1rem;
+  background: var(--color-background);
+  border-radius: 0.5rem;
+  border: 1px solid var(--color-border);
+}
+
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+// Responsive design
+@media (max-width: 768px) {
+  .header {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: stretch;
+  }
+
+  .headerRight {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+
+  .actions {
+    justify-content: center;
+  }
+
+  .categoriesGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .impactGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .impactMetrics {
+    grid-template-columns: 1fr;
+  }
+}
+
+// Dark mode adjustments
+@media (prefers-color-scheme: dark) {
+  .ethicalDashboard {
+    background: var(--color-surface-dark);
+    border-color: var(--color-border-dark);
+  }
+
+  .header {
+    background: var(--color-surface-dark);
+    border-color: var(--color-border-dark);
+  }
+
+  .alertsSection,
+  .categoriesSection,
+  .impactSection {
+    background: var(--color-background-dark);
+  }
+
+  .alertCard,
+  .categoryCard,
+  .impactCard {
+    background: var(--color-surface-dark);
+    border-color: var(--color-border-dark);
+  }
+}

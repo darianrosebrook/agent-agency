@@ -7,7 +7,7 @@
 //! aggregate verdicts, and make final decisions on task execution. It implements
 //! sophisticated consensus algorithms and handles dissenting opinions.
 
-pub mod error;
+pub mod council_errors;
 pub mod judge;
 pub mod mistral_tokenizer;
 pub mod mistral_judge_integration_test;
@@ -21,7 +21,7 @@ pub mod risk_scorer;
 pub mod error_handling;
 pub mod coordinator;
 pub mod models;
-pub mod types;
+pub mod prompting_types;
 pub mod evidence_enrichment;
 pub mod resilience;
 pub mod claim_extraction_multimodal;
@@ -31,7 +31,7 @@ pub mod advanced_monitoring;
 pub mod intelligent_testing;
 pub mod predictive_learning;
 
-pub use error::{CouncilError, CouncilResult};
+pub use council_errors::{CouncilError, CouncilResult};
 pub use judge_backup::{
     Judge, JudgeConfig, JudgeVerdict, JudgeType, JudgeContribution,
     // Ethical analysis types
@@ -60,5 +60,5 @@ pub use resilience::ResilienceManager;
 pub use claim_extraction_multimodal::{MultimodalEvidenceEnricher, ClaimWithMultimodalEvidence};
 pub use advanced_monitoring::{SLOTracker, SLOStatus, SLOAlert, AlertLevel, SLOComponent, SLODashboardSummary};
 pub use verdict::{VerdictStore, VerdictRecord, VerdictStorage, CacheConfig, StorageStats, CacheStats, VerdictStoreStats};
-pub use types::ResourceUsageMetrics;
+pub use prompting_council_types::ResourceUsageMetrics;
 pub use coordinator::orchestrator::{ConsensusCoordinator, ProvenanceEmitter};

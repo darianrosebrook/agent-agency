@@ -1,6 +1,6 @@
 //! Embedding cache for performance optimization
 
-use crate::types::*;
+use crate::embedding_types::*;
 use crate::provider::EmbeddingProvider;
 use dashmap::DashMap;
 use lru::LruCache;

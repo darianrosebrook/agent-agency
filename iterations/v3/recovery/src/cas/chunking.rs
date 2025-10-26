@@ -3,7 +3,7 @@ use fastcdc::v2020::FastCDC;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use crate::types::{Digest, StreamingHasher, ChunkRef};
+use crate::recovery_types::{Digest, StreamingHasher, ChunkRef};
 
 /// Content-Defined Chunking configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]

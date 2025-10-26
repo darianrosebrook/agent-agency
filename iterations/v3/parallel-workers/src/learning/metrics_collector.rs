@@ -1,6 +1,6 @@
 //! Performance data collection layer for parallel worker learning
 
-use crate::types::{TaskId, SubTaskId, WorkerId, WorkerSpecialty, ExecutionMetrics};
+use crate::parallel_types::{TaskId, SubTaskId, WorkerId, WorkerSpecialty, ExecutionMetrics};
 use crate::learning::reward::{RewardWeights, Baseline, LearningMode, compute_reward_with_mode};
 use dashmap::DashMap;
 use std::sync::Arc;
@@ -395,7 +395,7 @@ impl ParallelWorkerMetricsCollector {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::ExecutionMetrics;
+    use crate::parallel_types::ExecutionMetrics;
     use chrono::Utc;
 
     fn create_test_metrics() -> ExecutionMetrics {

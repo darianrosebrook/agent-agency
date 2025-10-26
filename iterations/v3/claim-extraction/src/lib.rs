@@ -17,7 +17,7 @@ pub mod disambiguation;
 pub mod evidence;
 pub mod processor;
 pub mod qualification;
-pub mod types;
+pub mod extraction_types;
 pub mod verification;
 
 #[cfg(test)]
@@ -26,7 +26,7 @@ mod tests;
 
 pub use verification::MultiModalVerificationEngine;
 pub use processor::ClaimExtractionProcessor;
-pub use types::*;
+pub use extraction_types::*;
 
 use anyhow::Result;
 use std::time::Instant;

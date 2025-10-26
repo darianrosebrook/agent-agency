@@ -32,7 +32,7 @@ pub mod routing;
 pub mod telemetry;
 pub mod thermal;
 pub mod tokenization;
-pub mod types;
+pub mod prompting_types;
 
 pub use adaptive_resource_manager::{
     AllocationPlan, AllocationPlanner, AllocationRequest, DeviceKind, DeviceSensors, ModelRegistry,
@@ -94,7 +94,7 @@ pub use tokenization::{
     Tokenizer, TokenizerConfig, TokenizerType, HfTokenizer, WordTokenizer, SpecialTokens,
     create_tokenizer,
 };
-pub use types::*;
+pub use prompting_prompting_types::*;
 
 /// Convenience function to plan an allocation using a provided planner.
 pub fn adaptive_plan_for<P: AllocationPlanner>(

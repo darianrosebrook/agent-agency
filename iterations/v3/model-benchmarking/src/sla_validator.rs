@@ -2,7 +2,7 @@
 //!
 //! Validates system performance against defined SLA targets from the working spec.
 
-use crate::types::*;
+use crate::benchmark_types::*;
 use chrono::Utc;
 use std::collections::HashMap;
 

@@ -3,7 +3,7 @@
 //! Provides hooks to store processed data in agent memory and retrieve
 //! contextual memories to enhance data processing.
 
-use crate::types::*;
+use crate::data_processing_types::*;
 use agent_memory::{MemoryManager, AgentExperience, TaskContext, MemoryStats, memory_manager::MemoryQuery};
 use crate::{DataProcessingResult, DataProcessingError};
 use std::sync::Arc;

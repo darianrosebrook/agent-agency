@@ -6,7 +6,7 @@
 use std::sync::Arc;
 use async_trait::async_trait;
 
-use crate::error::{PlanningError, PlanningResult};
+use crate::planning_errors::{PlanningError, PlanningResult};
 
 /// CAWS validation error
 #[derive(Debug, thiserror::Error)]

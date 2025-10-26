@@ -2,7 +2,7 @@
  * @fileoverview Storage implementations for workspace state management
  * @author @darianrosebrook
  */
-use crate::types::*;
+use crate::state_types::*;
 use anyhow::Result;
 use async_trait::async_trait;
 use flate2::{read::GzDecoder, write::GzEncoder, Compression};

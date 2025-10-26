@@ -1,5 +1,5 @@
 use crate::secrets_detection::SecretsDetector;
-use crate::types::*;
+use crate::policy_types::*;
 use anyhow::Result;
 use tracing::{debug, info};
 

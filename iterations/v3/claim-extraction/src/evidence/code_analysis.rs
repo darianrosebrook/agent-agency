@@ -2,7 +2,7 @@
 
 use super::types::*;
 use super::analysis::CodeAnalysisEngine;
-use crate::types::{AtomicClaim, Evidence, EvidenceType, EvidenceSource, ProcessingContext};
+use crate::extraction_types::{AtomicClaim, Evidence, EvidenceType, EvidenceSource, ProcessingContext};
 use anyhow::Result;
 use tracing::debug;
 

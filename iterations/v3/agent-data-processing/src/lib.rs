@@ -28,7 +28,7 @@ pub mod ingestion;
 pub mod knowledge;
 pub mod operations;
 pub mod pipeline;
-pub mod types;
+pub mod data_processing_types;
 
 #[cfg(feature = "memory-integration")]
 pub mod memory_hooks;
@@ -38,14 +38,14 @@ pub mod workspace_hooks;
 
 // Re-export main types
 pub use pipeline::{DataPipeline, PipelineConfig, PipelineResult};
-pub use types::ProcessingStats;
-pub use types::*;
+pub use data_processing_types::ProcessingStats;
+pub use data_processing_types::*;
 
 // Re-export stage traits and implementations
 pub use enrichment::{EnrichmentStage, EnrichmentResult};
 pub use indexing::{IndexingStage, IndexingResult, IndexQuery, IndexResult};
 pub use ingestion::{IngestionStage, IngestionResult};
-pub use types::DataSource;
+pub use data_processing_types::DataSource;
 pub use knowledge::{KnowledgeStage, KnowledgeResult, KnowledgeSource};
 pub use operations::{OperationsStage, OperationResult, FileOperation};
 

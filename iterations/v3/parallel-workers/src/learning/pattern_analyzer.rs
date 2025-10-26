@@ -1,6 +1,6 @@
 //! Pattern recognition engine for learning optimal configurations
 
-use crate::types::{WorkerSpecialty, TaskPattern};
+use crate::parallel_types::{WorkerSpecialty, TaskPattern};
 use crate::learning::metrics_collector::ExecutionRecord;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -328,7 +328,7 @@ mod tests {
                 task_id: TaskId::new(),
                 worker_id: WorkerId::new(),
                 specialty: WorkerSpecialty::Compilation,
-                subtask_id: crate::types::SubTaskId::new(),
+                subtask_id: crate::parallel_types::SubTaskId::new(),
                 metrics: ExecutionMetrics {
                     start_time: Utc::now(),
                     end_time: Utc::now(),
@@ -369,7 +369,7 @@ mod tests {
                 task_id: TaskId::new(),
                 worker_id: WorkerId::new(),
                 specialty: WorkerSpecialty::Compilation,
-                subtask_id: crate::types::SubTaskId::new(),
+                subtask_id: crate::parallel_types::SubTaskId::new(),
                 metrics: ExecutionMetrics {
                     start_time: Utc::now(),
                     end_time: Utc::now(),

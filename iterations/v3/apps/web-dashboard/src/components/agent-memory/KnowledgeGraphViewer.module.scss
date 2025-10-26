@@ -1,0 +1,506 @@
+/**
+ * Knowledge Graph Viewer Styles
+ * Interactive visualization of agent memory relationships and knowledge networks
+ *
+ * @author @darianrosebrook
+ */
+
+.knowledgeGraphViewer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-6);
+}
+
+/* Header Section */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--spacing-4);
+  padding-bottom: var(--spacing-4);
+
+  @media (max-width: 1024px) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-3);
+  }
+}
+
+.headerLeft {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  flex: 1;
+}
+
+.headerRight {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+}
+
+.graphStats {
+  display: flex;
+  gap: var(--spacing-4);
+
+  @media (max-width: 480px) {
+    flex-direction: column;
+    gap: var(--spacing-2);
+  }
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--spacing-3);
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  min-width: 80px;
+}
+
+/* Controls */
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-4);
+  padding: var(--spacing-5);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+
+  @media (max-width: 768px) {
+    padding: var(--spacing-4);
+  }
+
+  @media (max-width: 640px) {
+    flex-direction: column;
+    gap: var(--spacing-3);
+  }
+}
+
+.controlGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  min-width: 150px;
+
+  label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--color-text-primary);
+  }
+
+  @media (max-width: 640px) {
+    min-width: unset;
+  }
+}
+
+.select {
+  padding: var(--spacing-2) var(--spacing-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  background: var(--color-background);
+  color: var(--color-text-primary);
+
+  &:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+}
+
+.slider {
+  width: 100px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--color-border);
+  outline: none;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+
+  &:hover {
+    opacity: 1;
+  }
+
+  &::-webkit-slider-thumb {
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--color-primary);
+    cursor: pointer;
+  }
+
+  &::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--color-primary);
+    cursor: pointer;
+    border: none;
+  }
+}
+
+.sliderValue {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  text-align: center;
+  margin-top: var(--spacing-1);
+}
+
+.numberInput {
+  padding: var(--spacing-2) var(--spacing-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  background: var(--color-background);
+  color: var(--color-text-primary);
+  width: 80px;
+
+  &:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+}
+
+.actionButtons {
+  display: flex;
+  gap: var(--spacing-2);
+
+  @media (max-width: 480px) {
+    justify-content: center;
+  }
+}
+
+/* Graph Container */
+.graphWrapper {
+  position: relative;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  height: 600px;
+  overflow: hidden;
+}
+
+.graphContainer {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.graphControls {
+  position: absolute;
+  top: var(--spacing-4);
+  right: var(--spacing-4);
+  display: flex;
+  gap: var(--spacing-1);
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-1);
+  z-index: 10;
+
+  @media (max-width: 480px) {
+    top: var(--spacing-2);
+    right: var(--spacing-2);
+  }
+}
+
+.zoomLevel {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  min-width: 40px;
+  text-align: center;
+  align-self: center;
+}
+
+.graphSvg {
+  width: 100%;
+  height: 100%;
+  background: var(--color-background);
+
+  .node {
+    transition: r 0.2s ease;
+
+    &:hover {
+      r: calc(attr(r) * 1.2);
+    }
+  }
+
+  .link {
+    transition: stroke-width 0.2s ease;
+
+    &:hover {
+      stroke-width: calc(attr(stroke-width) * 1.5);
+    }
+  }
+}
+
+.emptyGraph {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-4);
+  text-align: center;
+  color: var(--color-text-secondary);
+
+  svg {
+    opacity: 0.5;
+  }
+}
+
+/* Legend */
+.legend {
+  position: absolute;
+  bottom: var(--spacing-4);
+  left: var(--spacing-4);
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-4);
+  border: 1px solid var(--color-border);
+  max-width: 200px;
+
+  h4 {
+    margin: 0 0 var(--spacing-3) 0;
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+
+  @media (max-width: 480px) {
+    bottom: var(--spacing-2);
+    left: var(--spacing-2);
+    max-width: 150px;
+    padding: var(--spacing-3);
+  }
+}
+
+.legendItems {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
+.legendColor {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* Selection Details */
+.selectionDetails {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-5);
+
+  @media (max-width: 768px) {
+    padding: var(--spacing-4);
+  }
+}
+
+.detailCard {
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-4);
+
+  @media (max-width: 480px) {
+    padding: var(--spacing-3);
+  }
+}
+
+.detailHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  margin-bottom: var(--spacing-4);
+  padding-bottom: var(--spacing-3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.nodeIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: var(--radius-md);
+  color: var(--color-primary);
+}
+
+.detailGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--spacing-4);
+}
+
+.detailItem {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+  padding: var(--spacing-3);
+  background: var(--color-surface);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .knowledgeGraphViewer {
+    gap: var(--spacing-5);
+  }
+
+  .controls {
+    gap: var(--spacing-3);
+  }
+}
+
+@media (max-width: 768px) {
+  .knowledgeGraphViewer {
+    gap: var(--spacing-4);
+  }
+
+  .graphWrapper {
+    height: 500px;
+  }
+
+  .controls {
+    padding: var(--spacing-4);
+  }
+}
+
+@media (max-width: 640px) {
+  .knowledgeGraphViewer {
+    gap: var(--spacing-3);
+  }
+
+  .controls {
+    flex-direction: column;
+  }
+
+  .controlGroup {
+    min-width: unset;
+  }
+
+  .actionButtons {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .knowledgeGraphViewer {
+    gap: var(--spacing-3);
+  }
+
+  .header {
+    gap: var(--spacing-2);
+  }
+
+  .graphStats {
+    flex-direction: column;
+    gap: var(--spacing-2);
+  }
+
+  .stat {
+    padding: var(--spacing-2);
+    min-width: unset;
+  }
+
+  .controls {
+    padding: var(--spacing-3);
+  }
+
+  .graphWrapper {
+    height: 400px;
+  }
+
+  .graphControls {
+    top: var(--spacing-2);
+    right: var(--spacing-2);
+  }
+
+  .legend {
+    bottom: var(--spacing-2);
+    left: var(--spacing-2);
+    max-width: 120px;
+    padding: var(--spacing-2);
+  }
+
+  .selectionDetails {
+    padding: var(--spacing-3);
+  }
+
+  .detailGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .graphWrapper {
+    border-width: 2px;
+  }
+
+  .detailCard {
+    border-width: 2px;
+  }
+
+  .detailItem {
+    border-width: 2px;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .graphSvg .node {
+    transition: none;
+
+    &:hover {
+      r: attr(r);
+    }
+  }
+
+  .graphSvg .link {
+    transition: none;
+
+    &:hover {
+      stroke-width: attr(stroke-width);
+    }
+  }
+}
+
+/* Dark mode optimizations */
+@media (prefers-color-scheme: dark) {
+  .graphControls {
+    background: rgba(0, 0, 0, 0.8);
+  }
+
+  .legend {
+    background: rgba(0, 0, 0, 0.8);
+  }
+
+  .graphSvg {
+    background: var(--color-background);
+  }
+
+  .detailCard {
+    background: var(--color-surface);
+  }
+}

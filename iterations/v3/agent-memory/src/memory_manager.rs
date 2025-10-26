@@ -1,6 +1,6 @@
 //! Memory Manager - Central coordinator for all memory operations
 
-use crate::types::*;
+use crate::memory_types::*;
 use crate::MemoryResult;
 use crate::MemoryError;
 use agent_agency_database::{DatabaseClient, DatabaseConfig, Row};
@@ -23,10 +23,10 @@ impl MemoryManager {
     /// Get workspace filter for queries based on isolation level
     fn get_workspace_filter(&self) -> Option<uuid::Uuid> {
         match self.config.workspace_config.isolation_level {
-            crate::types::WorkspaceIsolationLevel::Strict => self.workspace_id,
-            crate::types::WorkspaceIsolationLevel::WorkspaceFirst => self.workspace_id,
-            crate::types::WorkspaceIsolationLevel::GlobalFirst => None, // Allow global access
-            crate::types::WorkspaceIsolationLevel::Unrestricted => None, // Allow all workspaces
+            crate::memory_types::WorkspaceIsolationLevel::Strict => self.workspace_id,
+            crate::memory_types::WorkspaceIsolationLevel::WorkspaceFirst => self.workspace_id,
+            crate::memory_types::WorkspaceIsolationLevel::GlobalFirst => None, // Allow global access
+            crate::memory_types::WorkspaceIsolationLevel::Unrestricted => None, // Allow all workspaces
         }
     }
 

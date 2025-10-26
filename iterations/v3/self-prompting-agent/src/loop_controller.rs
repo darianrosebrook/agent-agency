@@ -8,7 +8,7 @@ use tracing::{info, warn};
 
 use crate::evaluation::EvaluationOrchestrator;
 use crate::models::ModelRegistry;
-use crate::types::{Task, TaskResult, SelfPromptingAgentError};
+use crate::prompting_types::{Task, TaskResult, SelfPromptingAgentError};
 
 /// Self-prompting loop controller
 pub struct SelfPromptingLoop {
@@ -148,7 +148,7 @@ impl SelfPromptingLoop {
         model_registry: &Arc<ModelRegistry>,
     ) -> Result<TaskResult, Box<dyn std::error::Error + Send + Sync>> {
         // Stub implementation - would use model registry to execute task
-        use crate::types::{EvalReport, EvalStatus, Artifact, ArtifactType};
+        use crate::prompting_types::{EvalReport, EvalStatus, Artifact, ArtifactType};
 
         let result = TaskResult {
             task_id: task.id,

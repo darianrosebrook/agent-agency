@@ -1,6 +1,6 @@
 //! Regression detection for model performance
 
-use crate::types::*;
+use crate::benchmark_types::*;
 use anyhow::Result;
 use chrono::Utc;
 use std::collections::HashMap;

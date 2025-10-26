@@ -65,7 +65,7 @@ impl PythonBridge {
     pub async fn transcribe_with_whisperx(
         audio_data: &[u8],
         language: Option<&str>,
-    ) -> Result<crate::types::AsrResult> {
+    ) -> Result<crate::enricher_types::AsrResult> {
         // Write audio to temporary file
         let temp_dir = std::env::temp_dir();
         let audio_path = temp_dir.join(format!("audio_{}.wav", Uuid::new_v4()));
@@ -128,7 +128,7 @@ impl PythonBridge {
     pub async fn caption_with_blip(
         image_data: &[u8],
         context: Option<&str>,
-    ) -> Result<crate::types::CaptionResult> {
+    ) -> Result<crate::enricher_types::CaptionResult> {
         // Write image to temporary file
         let temp_dir = std::env::temp_dir();
         let image_path = temp_dir.join(format!("image_{}.jpg", Uuid::new_v4()));
@@ -196,7 +196,7 @@ except Exception as e:
             .map_err(|e| anyhow!("Failed to parse BLIP JSON: {}", e))?;
 
         // Convert to CaptionResult
-        Ok(crate::types::CaptionResult {
+        Ok(crate::enricher_types::CaptionResult {
             caption: blip_result.caption,
             confidence: blip_result.confidence,
             tags: blip_result.tags,
@@ -205,7 +205,7 @@ except Exception as e:
     }
 
     /// Convert WhisperX output to AsrResult
-    fn convert_whisperx_to_asr_result(whisperx: WhisperXOutput) -> Result<crate::types::AsrResult> {
+    fn convert_whisperx_to_asr_result(whisperx: WhisperXOutput) -> Result<crate::enricher_types::AsrResult> {
         let mut segments = Vec::new();
         let mut speaker_map: std::collections::HashMap<String, usize> =
             std::collections::HashMap::new();
@@ -214,7 +214,7 @@ except Exception as e:
             let mut word_timings = Vec::new();
 
             for word in segment.words {
-                word_timings.push(crate::types::WordTiming {
+                word_timings.push(crate::enricher_types::WordTiming {
                     word: word.word,
                     tokens: vec![], // TODO: Parse actual tokens
                     start: word.start,
@@ -223,7 +223,7 @@ except Exception as e:
                 });
             }
 
-            segments.push(crate::types::SpeechSegment {
+            segments.push(crate::enricher_types::SpeechSegment {
                 id: Uuid::new_v4(),
                 speaker_id: segment.speaker.clone(),
                 t0: segment.start,
@@ -242,9 +242,9 @@ except Exception as e:
         }
 
         // Convert speaker map to Speaker structs
-        let speakers: Vec<crate::types::Speaker> = speaker_map
+        let speakers: Vec<crate::enricher_types::Speaker> = speaker_map
             .into_iter()
-            .map(|(id, turn_count)| crate::types::Speaker {
+            .map(|(id, turn_count)| crate::enricher_types::Speaker {
                 speaker_id: id,
                 name: None,
                 turn_count,
@@ -252,7 +252,7 @@ except Exception as e:
             })
             .collect();
 
-        Ok(crate::types::AsrResult {
+        Ok(crate::enricher_types::AsrResult {
             turns: segments,
             speakers,
             language: Some(whisperx.language),

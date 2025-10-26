@@ -3,7 +3,7 @@
 //! Provides distributed rate limiting capabilities to prevent abuse
 //! and ensure fair resource usage across the system.
 
-use crate::types::*;
+use crate::policy_types::*;
 use anyhow::Result;
 use chrono::{DateTime, Duration, Utc};
 use std::collections::HashMap;

@@ -3,7 +3,7 @@
 //! Consolidates the worker pool orchestration from workers/, parallel-workers/,
 //! and worker/ into a unified MCP-based system.
 
-use crate::types::*;
+use crate::worker_types::*;
 use crate::mcp_integration::MCPIntegration;
 use crate::execution::ToolExecutor;
 use agent_mcp::{ToolRegistry, ToolExecutionRequest, types::{ExecutionStatus, ExecutionContext}};

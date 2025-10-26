@@ -7,7 +7,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
-use crate::types::SelfPromptingAgentError;
+use crate::prompting_types::SelfPromptingAgentError;
 
 /// Unified model provider trait
 #[async_trait]

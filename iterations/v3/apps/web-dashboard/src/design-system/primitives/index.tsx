@@ -12,3 +12,6 @@ export * from "./Input";
 export * from "./Badge";
 export * from "./Checkbox";
 export * from "./Icon";
+export * from "./Progress";
+export * from "./Select";
+export * from "./Textarea";

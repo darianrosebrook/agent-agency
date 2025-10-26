@@ -9,7 +9,7 @@
 //! - Configuration validation and hot-reloading
 //! - Multi-environment support (dev, staging, production)
 
-pub mod config;
+pub mod config_config;
 pub mod environment;
 pub mod loader;
 pub mod secrets;
@@ -19,12 +19,12 @@ pub mod validation;
 mod tests;
 
 // Specific re-exports to avoid ambiguous glob re-exports
-pub use config::{AppConfig, AppMetadata, ServerConfig, TlsConfig, DatabaseConfig, SecurityConfig, MonitoringConfig, RedisConfig, PrometheusConfig, StatsDConfig, ComponentConfigs, OrchestrationConfig, CouncilConfig, ParallelWorkersConfig};
+pub use config_config::{AppConfig, AppMetadata, ServerConfig, TlsConfig, DatabaseConfig, SecurityConfig, MonitoringConfig, RedisConfig, PrometheusConfig, StatsDConfig, ComponentConfigs, OrchestrationConfig, CouncilConfig, ParallelWorkersConfig};
 pub use environment::{Environment, EnvironmentConfig, EnvironmentManager};
 pub use loader::{ConfigLoader, ConfigWatcher, ConfigSource, ConfigLoadResult, ConfigLoaderBuilder, MergeStrategy};
 pub use secrets::{SecretsManager, SecretMetadata, SecretValue};
 pub use validation::ValidationResult;
-pub use agent_agency_common_types::validation::ValidationIssue;
+pub use common_types::validation::ValidationIssue;
 
 pub use anyhow::Result;
 /// Re-export commonly used types

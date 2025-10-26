@@ -50,7 +50,7 @@ export default function ChatPage() {
         }));
         setMessages(parsedMessages);
       } catch (error) {
-        handleError(error, 'Failed to load chat history');
+        handleError(error, { context: 'Failed to load chat history' });
       }
     }
   }, [handleError]);
@@ -68,14 +68,22 @@ export default function ChatPage() {
   }, [messages]);
 
   // Generate smart suggestions based on context
-  const generateSuggestions = () => {
-    const contextSuggestions: ChatSuggestion[] = [
-      { id: '1', text: 'Show me the current system status', category: 'System' },
-      { id: '2', text: 'What tasks are running?', category: 'Tasks' },
-      { id: '3', text: 'Help me with data quality issues', category: 'Data' },
-      { id: '4', text: 'Explain the metrics dashboard', category: 'Analytics' },
-    ];
-    setSuggestions(contextSuggestions);
+  const generateSuggestions = async () => {
+    try {
+      // Try to get suggestions from mock data first
+      const { agentMemoryMockApi } = await import('@/lib/mock-data-loader');
+      const mockSuggestions = await agentMemoryMockApi.getChatSuggestions();
+      setSuggestions(mockSuggestions);
+    } catch (error) {
+      // Fallback to hardcoded suggestions if mock data is not available
+      const contextSuggestions: ChatSuggestion[] = [
+        { id: '1', text: 'Show me the current system status', category: 'System' },
+        { id: '2', text: 'What tasks are running?', category: 'Tasks' },
+        { id: '3', text: 'Help me with data quality issues', category: 'Data' },
+        { id: '4', text: 'Explain the metrics dashboard', category: 'Analytics' },
+      ];
+      setSuggestions(contextSuggestions);
+    }
   };
 
   useEffect(() => {
@@ -116,7 +124,7 @@ export default function ChatPage() {
       setMessages(prev => [...prev, assistantMessage]);
       addToast({ type: 'success', title: 'Message sent', message: 'Your message has been processed' });
     } catch (error) {
-      handleError(error, 'Failed to send message');
+      handleError(error, { context: 'Failed to send message' });
     } finally {
       setIsLoading(false);
     }

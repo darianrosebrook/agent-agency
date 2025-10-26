@@ -1,7 +1,7 @@
 //! Documentation review evidence collection
 
 use super::types::*;
-use crate::types::{AtomicClaim, Evidence, EvidenceType, EvidenceSource, ProcessingContext};
+use crate::extraction_types::{AtomicClaim, Evidence, EvidenceType, EvidenceSource, ProcessingContext};
 use anyhow::Result;
 
 /// Documentation collector

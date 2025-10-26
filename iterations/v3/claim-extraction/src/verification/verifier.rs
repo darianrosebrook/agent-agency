@@ -8,7 +8,7 @@ use lru::LruCache;
 use agent_agency_database::DatabaseClient;
 use tracing::{info, warn};
 
-use crate::types::*;
+use crate::extraction_types::*;
 use crate::verification::types::{CoreferenceResolution as VerificationCoreferenceResolution, *};
 use crate::verification::keyword_matcher::KeywordMatcher;
 use crate::verification::code_extractor::CodeExtractor;

@@ -14,180 +14,13 @@ use priority_queue::PriorityQueue;
 use lru::LruCache;
 use serde::{Deserialize, Serialize};
 
-use crate::error::{PlanningError, PlanningResult};
+use crate::planning_errors::{PlanningError, PlanningResult};
 use crate::caws_integration::CawsValidator;
 use crate::validation_pipeline::ValidationPipeline;
 use crate::refinement_engine::RefinementEngine;
-
-/// Configuration for the planning agent
-#[derive(Debug, Clone)]
-pub struct PlanningConfig {
-    /// Maximum time allowed for planning (in seconds)
-    pub max_planning_time_seconds: u64,
-
-    /// Maximum refinement iterations
-    pub max_refinement_iterations: u32,
-
-    /// Whether to enable automatic refinement
-    pub enable_auto_refinement: bool,
-
-    /// Risk tier escalation thresholds
-    pub risk_escalation_thresholds: RiskEscalationThresholds,
-}
-
-impl Default for PlanningConfig {
-    fn default() -> Self {
-        Self {
-            max_planning_time_seconds: 300, // 5 minutes
-            max_refinement_iterations: 3,
-            enable_auto_refinement: true,
-            risk_escalation_thresholds: RiskEscalationThresholds::default(),
-        }
-    }
-}
-
-/// Risk escalation thresholds
-#[derive(Debug, Clone)]
-pub struct RiskEscalationThresholds {
-    /// Maximum files for T1 tasks before escalation
-    pub t1_max_files: u32,
-
-    /// Maximum LOC for T1 tasks before escalation
-    pub t1_max_loc: u32,
-
-    /// Maximum duration for T1 tasks before escalation
-    pub t1_max_duration_hours: u32,
-}
-
-impl Default for RiskEscalationThresholds {
-    fn default() -> Self {
-        Self {
-            t1_max_files: 25,
-            t1_max_loc: 1000,
-            t1_max_duration_hours: 8,
-        }
-    }
-}
-
-/// Request to the planning agent
-#[derive(Debug, Clone)]
-pub struct PlanningRequest {
-    /// The task request to plan
-    pub task_request: agent_agency_contracts::task_request::TaskRequest,
-
-    /// Planning configuration override (optional)
-    pub config_override: Option<PlanningConfig>,
-}
-
-/// Response from the planning agent
-#[derive(Debug, Clone)]
-pub struct PlanningResponse {
-    /// Generated working specification
-    pub working_spec: agent_agency_contracts::working_spec::WorkingSpec,
-
-    /// Planning metadata
-    pub metadata: PlanningMetadata,
-
-    /// Validation results
-    pub validation_results: ValidationResults,
-
-    /// Refinement history (if any refinements were applied)
-    pub refinement_history: Vec<RefinementRecord>,
-}
-
-/// Planning operation metadata
-#[derive(Debug, Clone)]
-pub struct PlanningMetadata {
-    /// Total planning time
-    pub planning_duration: Duration,
-
-    /// Number of refinement iterations performed
-    pub refinement_iterations: u32,
-
-    /// Whether human intervention was required
-    pub human_intervention_required: bool,
-
-    /// Risk assessment result
-    pub risk_assessment: RiskAssessment,
-}
-
-/// Risk assessment result
-#[derive(Debug, Clone)]
-pub struct RiskAssessment {
-    /// Assessed risk tier
-    pub assessed_tier: agent_agency_contracts::task_request::RiskTier,
-
-    /// Risk factors identified
-    pub risk_factors: Vec<String>,
-
-    /// Whether escalation is recommended
-    pub escalation_recommended: bool,
-}
-
-/// Validation results summary
-#[derive(Debug, Clone)]
-pub struct ValidationResults {
-    /// Overall validation status
-    pub overall_status: ValidationStatus,
-
-    /// CAWS compliance score (0.0-1.0)
-    pub caws_compliance_score: f64,
-
-    /// Individual validation issues
-    pub issues: Vec<ValidationIssue>,
-
-    /// Applied refinements
-    pub applied_refinements: Vec<String>,
-}
-
-/// Validation status
-#[derive(Debug, Clone, PartialEq)]
-pub enum ValidationStatus {
-    Passed,
-    PassedWithRefinements,
-    Failed,
-    EscalationRequired,
-}
-
-/// Individual validation issue
-#[derive(Debug, Clone)]
-pub struct ValidationIssue {
-    /// Issue severity
-    pub severity: IssueSeverity,
-
-    /// Issue category
-    pub category: String,
-
-    /// Human-readable description
-    pub description: String,
-
-    /// Suggested fix
-    pub suggestion: Option<String>,
-}
-
-/// Issue severity levels
-#[derive(Debug, Clone, PartialEq)]
-pub enum IssueSeverity {
-    Error,
-    Warning,
-    Info,
-}
-
-/// Refinement record
-#[derive(Debug, Clone)]
-pub struct RefinementRecord {
-    /// Refinement iteration number
-    pub iteration: u32,
-
-    /// Issues that triggered refinement
-    pub triggering_issues: Vec<String>,
-
-    /// Applied refinement actions
-    pub applied_actions: Vec<String>,
-
-    /// Whether refinement was successful
-    pub successful: bool,
-}
+use crate::types::*;
+use crate::validation::*;
+use crate::spec_generation::*;
 
 /// The main Planning Agent
 pub struct PlanningAgent {
@@ -219,10 +52,10 @@ impl PlanningAgent {
         let config = request.config_override.unwrap_or_else(|| self.config.clone());
 
         // Validate input task request
-        self.validate_task_request(&request.task_request)?;
+        validate_task_request(&request.task_request)?;
 
         // Perform risk assessment
-        let risk_assessment = self.assess_risk(&request.task_request)?;
+        let risk_assessment = assess_risk(&request.task_request)?;
 
         // Check for immediate escalation
         if risk_assessment.escalation_recommended {
@@ -232,7 +65,7 @@ impl PlanningAgent {
         }
 
         // Generate initial working specification
-        let mut working_spec = self.generate_working_spec(&request.task_request).await?;
+        let mut working_spec = generate_working_spec(&request.task_request).await?;
 
         // Run planning pipeline with validation and refinement
         let planning_result = timeout(
@@ -259,150 +92,6 @@ impl PlanningAgent {
         })
     }
 
-    /// Validate the input task request
-    fn validate_task_request(&self, task_request: &agent_agency_contracts::task_request::TaskRequest) -> PlanningResult<()> {
-        // Basic validation - ensure required fields are present
-        if task_request.description.trim().is_empty() {
-            return Err(PlanningError::InvalidTaskRequest("Task description cannot be empty".to_string()));
-        }
-
-        // Validate risk tier constraints
-        match task_request.constraints.as_ref().map(|c| &c.risk_tier) {
-            Some(risk_tier) => {
-                // Additional validation for T1 tasks
-                if matches!(risk_tier, agent_agency_contracts::task_request::RiskTier::Tier1) {
-                    // T1 tasks require explicit budget limits
-                    if let Some(constraints) = &task_request.constraints {
-                        if constraints.budget_limits.is_none() {
-                            return Err(PlanningError::InvalidTaskRequest(
-                                "T1 tasks must specify budget limits".to_string()
-                            ));
-                        }
-                    }
-                }
-            }
-            None => {
-                return Err(PlanningError::InvalidTaskRequest("Risk tier must be specified".to_string()));
-            }
-        }
-
-        Ok(())
-    }
-
-    /// Assess risk level of the task
-    fn assess_risk(&self, task_request: &agent_agency_contracts::task_request::TaskRequest) -> PlanningResult<RiskAssessment> {
-        let mut risk_factors = Vec::new();
-        let mut escalation_recommended = false;
-
-        let risk_tier = task_request.constraints.as_ref()
-            .map(|c| c.risk_tier.clone())
-            .unwrap_or(agent_agency_contracts::task_request::RiskTier::Tier2);
-
-        // Assess based on constraints
-        if let Some(constraints) = &task_request.constraints {
-            if let Some(budget) = &constraints.budget_limits {
-                match risk_tier {
-                    agent_agency_contracts::task_request::RiskTier::Tier1 => {
-                        if budget.max_files.unwrap_or(0) > self.config.risk_escalation_thresholds.t1_max_files {
-                            risk_factors.push(format!("T1 task exceeds max files limit ({})", budget.max_files.unwrap()));
-                            escalation_recommended = true;
-                        }
-                        if budget.max_loc.unwrap_or(0) > self.config.risk_escalation_thresholds.t1_max_loc {
-                            risk_factors.push(format!("T1 task exceeds max LOC limit ({})", budget.max_loc.unwrap()));
-                            escalation_recommended = true;
-                        }
-                    }
-                    _ => {} // Other tiers have more flexibility
-                }
-            }
-
-            if let Some(max_duration) = constraints.max_duration_minutes {
-                let hours = max_duration / 60;
-                if matches!(risk_tier, agent_agency_contracts::task_request::RiskTier::Tier1)
-                    && hours > self.config.risk_escalation_thresholds.t1_max_duration_hours {
-                    risk_factors.push(format!("T1 task exceeds max duration limit ({} hours)", hours));
-                    escalation_recommended = true;
-                }
-            }
-        }
-
-        Ok(RiskAssessment {
-            assessed_tier: risk_tier,
-            risk_factors,
-            escalation_recommended,
-        })
-    }
-
-    /// Generate initial working specification from task request
-    async fn generate_working_spec(&self, task_request: &agent_agency_contracts::task_request::TaskRequest) -> PlanningResult<agent_agency_contracts::working_spec::WorkingSpec> {
-        // Implemented: Sophisticated goal extraction and analysis
-        // -  Add natural language processing for goal identification - Advanced NLP with BERT embeddings, pattern matching, and semantic analysis
-        // -  Implement goal hierarchy and dependency analysis - Multi-level goal decomposition with dependency graphs and conflict resolution
-        // -  Support goal prioritization and ranking algorithms - ML-based prioritization, stakeholder analysis, and business value scoring
-        // -  Add goal validation against project constraints - Constraint checking, feasibility analysis, and risk assessment
-        // -  Implement goal decomposition into actionable tasks - Hierarchical decomposition with SMART criteria and resource estimation
-        // -  Add goal progress tracking and completion criteria - Progress metrics, milestone tracking, and success criteria definition
-        // This implementation provides enterprise-grade goal analysis with:
-        // - Multi-modal goal extraction (explicit/implicit goals, stakeholder goals, system goals)
-        // - Advanced prioritization using ML and business value analysis
-        // - Comprehensive dependency analysis and conflict resolution
-        // - Goal decomposition with actionable task breakdown
-        // - Progress tracking with completion criteria
-        // - Validation against project constraints and feasibility
-
-        let working_spec_id = format!("{}-{}", task_request.id.simple(), Uuid::new_v4().simple());
-
-        // Create advanced goal analyzer
-        let goal_analyzer = AdvancedGoalAnalyzer::new(GoalAnalysisConfig::default());
-
-        // Extract and analyze goals with comprehensive NLP
-        let goal_analysis_result = goal_analyzer.analyze_goals_comprehensive(&task_request.description).await?;
-        let goals = goal_analysis_result.goals.into_iter().map(|goal| goal.text).collect::<Vec<String>>();
-
-        // Generate basic acceptance criteria
-        let acceptance_criteria = self.generate_acceptance_criteria(&task_request.description)?;
-
-        // Determine risk tier
-        let risk_tier = task_request.constraints.as_ref()
-            .map(|c| match c.risk_tier {
-                agent_agency_contracts::task_request::RiskTier::Tier1 => 1,
-                agent_agency_contracts::task_request::RiskTier::Tier2 => 2,
-                agent_agency_contracts::task_request::RiskTier::Tier3 => 3,
-            })
-            .unwrap_or(2);
-
-        // Create working spec constraints
-        let constraints = self.create_working_spec_constraints(task_request)?;
-
-        // Generate test plan
-        let test_plan = self.generate_test_plan(task_request, risk_tier)?;
-
-        // Create rollback plan
-        let rollback_plan = self.generate_rollback_plan(task_request)?;
-
-        Ok(agent_agency_contracts::working_spec::WorkingSpec {
-            version: "1.0.0".to_string(),
-            id: working_spec_id,
-            title: self.generate_title_from_description(&task_request.description),
-            description: task_request.description.clone(),
-            goals,
-            risk_tier,
-            constraints,
-            acceptance_criteria,
-            test_plan,
-            rollback_plan,
-            context: self.create_working_spec_context(task_request)?,
-            non_functional_requirements: None, // TODO: Extract from task request
-            validation_results: None, // Will be filled by CAWS validation
-            metadata: Some(agent_agency_contracts::working_spec::WorkingSpecMetadata {
-                created_at: chrono::Utc::now(),
-                created_by: task_request.metadata.as_ref().and_then(|m| m.requester.clone()),
-                last_modified: None,
-                version: Some(1),
-                tags: task_request.metadata.as_ref().map(|m| m.tags.clone()).unwrap_or_default(),
-            }),
-        })
-    }
 
     /// Run the complete planning pipeline with validation and refinement
     async fn run_planning_pipeline(
@@ -1083,7 +772,7 @@ impl AdvancedGoalAnalyzer {
             if !goals.iter().any(|g| jaro_winkler(&g.text, &sentence) > 0.8) {
                 goal_id_counter += 1;
                 let goal_type = self.classify_goal_type(&sentence);
-                goals.push(self.create_goal_from_text(sentence, goal_type, goal_id_counter));
+                goals.push(self.create_goal_from_text(sentence.to_string(), goal_type, goal_id_counter));
             }
         }
 
@@ -1093,7 +782,7 @@ impl AdvancedGoalAnalyzer {
             for goal_text in stakeholder_goals {
                 if !goals.iter().any(|g| jaro_winkler(&g.text, &goal_text) > 0.8) {
                     goal_id_counter += 1;
-                    goals.push(self.create_goal_from_text(goal_text, GoalType::Business, goal_id_counter));
+                    goals.push(self.create_goal_from_text(goal_text.to_string(), GoalType::Business, goal_id_counter));
                 }
             }
         }

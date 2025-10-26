@@ -1,6 +1,6 @@
 //! Judge evaluation and evidence processing
 
-use crate::types::*;
+use crate::council_types::*;
 use anyhow::Result;
 use std::collections::HashMap;
 use uuid::Uuid;
@@ -24,7 +24,7 @@ impl EvidenceEvaluator {
         &self,
         session_id: Uuid,
         evidence: &[EvidencePacket],
-        judges: &[Box<dyn crate::types::Judge>],
+        judges: &[Box<dyn crate::council_types::Judge>],
     ) -> Result<Vec<JudgeEvaluationResult>> {
         let mut results = Vec::new();
 
@@ -49,7 +49,7 @@ impl EvidenceEvaluator {
     /// Evaluate a single evidence packet with a judge
     async fn evaluate_single_evidence(
         &self,
-        judge: &Box<dyn crate::types::Judge>,
+        judge: &Box<dyn crate::council_types::Judge>,
         evidence: &EvidencePacket,
     ) -> Result<JudgeEvaluation> {
         let start_time = std::time::Instant::now();

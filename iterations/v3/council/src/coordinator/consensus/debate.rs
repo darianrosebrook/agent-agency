@@ -1,6 +1,6 @@
 //! Debate protocol for consensus building
 
-use crate::types::*;
+use crate::council_types::*;
 use anyhow::Result;
 use std::collections::HashMap;
 use uuid::Uuid;

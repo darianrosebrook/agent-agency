@@ -11,7 +11,7 @@ pub mod server;
 pub mod tool_discovery;
 pub mod tool_registry;
 pub mod tools;
-pub mod types;
+pub mod prompting_types;
 
 pub use caws_integration::CawsIntegration;
 pub use server::{MCPServer, AuthRateLimitStats};
@@ -19,7 +19,7 @@ pub use agent_agency_council::error_handling::CircuitBreakerStats;
 pub use tool_discovery::ToolDiscovery;
 pub use tool_registry::ToolRegistry;
 pub use tools::*;
-pub use types::{
+pub use prompting_mcp_types::{
     MCPTool,
     ToolExecutionRequest,
     ToolExecutionResult,

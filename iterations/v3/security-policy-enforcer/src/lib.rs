@@ -8,7 +8,7 @@ pub mod file_access;
 pub mod policies;
 pub mod rate_limiting;
 pub mod secrets_detection;
-pub mod types;
+pub mod prompting_types;
 
 pub use audit::SecurityAuditor;
 pub use command_execution::CommandExecutionController;
@@ -17,4 +17,4 @@ pub use file_access::FileAccessController;
 pub use policies::SecurityPolicy;
 pub use rate_limiting::RateLimiter;
 pub use secrets_detection::SecretsDetector;
-pub use types::*;
+pub use prompting_prompting_policy_types::*;

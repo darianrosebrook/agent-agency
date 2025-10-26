@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use async_trait::async_trait;
 use uuid::Uuid;
 
-use crate::types::*;
+use crate::mcp_types::*;
 
 /// Create all memory-related MCP tools
 pub fn create_memory_tools() -> Vec<MCPTool> {

@@ -9,7 +9,7 @@ use super::core::{HealthStatus, HealthCheckResult};
 
 /// Health check trait for components that can be monitored
 #[async_trait]
-pub trait HealthCheck: Send + Sync {
+pub trait ProductionHealthCheck: Send + Sync {
     /// Perform a health check
     async fn check_health(&self) -> HealthCheckResult;
 

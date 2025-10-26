@@ -1,7 +1,7 @@
 //! @darianrosebrook
 //! BM25 full-text search indexer
 
-use crate::types::{Bm25Stats, SearchQuery, SearchResult};
+use crate::indexer_types::{Bm25Stats, SearchQuery, SearchResult};
 use anyhow::{Context, Result};
 use parking_lot::{Mutex, RwLock};
 use std::collections::HashMap;

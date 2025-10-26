@@ -2,8 +2,8 @@ use crate::decomposition::DecompositionStage;
 use crate::disambiguation::DisambiguationStage;
 use crate::verification::MultiModalVerificationEngine;
 use crate::qualification::QualificationStage;
-use crate::types::VerifiedClaim;
-use crate::types::*;
+use crate::extraction_types::VerifiedClaim;
+use crate::extraction_types::*;
 // VerificationStage is not defined in verification module - removing this import
 use anyhow::Result;
 use std::time::Instant;

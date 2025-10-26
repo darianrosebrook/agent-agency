@@ -15,11 +15,11 @@ mod integration_tests {
         async fn evaluate_task(
             &self,
             _task_spec: crate::models::TaskSpec,
-        ) -> Result<crate::types::ConsensusResult> {
+        ) -> Result<crate::council_types::ConsensusResult> {
             // Mock consensus result with mixed verdicts
-            Ok(crate::types::ConsensusResult {
+            Ok(crate::council_types::ConsensusResult {
                 task_id: uuid::Uuid::new_v4(),
-                final_verdict: crate::types::FinalVerdict::Accept,
+                final_verdict: crate::council_types::FinalVerdict::Accept,
                 confidence_score: 0.85,
                 participant_contributions: vec![
                     crate::models::ParticipantContribution {
@@ -92,26 +92,26 @@ mod integration_tests {
         let review_service = PlanReviewService::new(coordinator, context_provider, config);
 
         // Create a working spec to review
-        let working_spec = crate::types::WorkingSpec {
+        let working_spec = crate::council_types::WorkingSpec {
             id: "SPEC-TEST-001".to_string(),
             title: "Implement User Authentication API".to_string(),
-            scope: Some(crate::types::WorkingSpecScope {
+            scope: Some(crate::council_types::WorkingSpecScope {
                 r#in: Some(vec!["src/api/auth/".to_string(), "tests/api/auth/".to_string()]),
                 out: Some(vec!["src/billing/".to_string(), "node_modules/".to_string()]),
             }),
-            risk_tier: crate::types::RiskTier::High,
+            risk_tier: crate::council_types::RiskTier::High,
             acceptance_criteria: vec![
-                crate::types::AcceptanceCriterion {
+                crate::council_types::AcceptanceCriterion {
                     id: "A1".to_string(),
                     description: "Given user has valid credentials, when POST to /login, then receive JWT token".to_string(),
                     evidence: vec![],
-                    priority: crate::types::CriterionPriority::MustHave,
+                    priority: crate::council_types::CriterionPriority::MustHave,
                 },
-                crate::types::AcceptanceCriterion {
+                crate::council_types::AcceptanceCriterion {
                     id: "A2".to_string(),
                     description: "Given user has invalid credentials, when POST to /login, then receive 401 error".to_string(),
                     evidence: vec![],
-                    priority: crate::types::CriterionPriority::MustHave,
+                    priority: crate::council_types::CriterionPriority::MustHave,
                 },
             ],
         };

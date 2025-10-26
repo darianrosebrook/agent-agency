@@ -3,7 +3,7 @@
 //! Handles the execution of MCP tools with proper error handling,
 //! timeout management, and result processing.
 
-use crate::types::*;
+use crate::worker_types::*;
 use agent_mcp::ToolRegistry;
 use std::sync::Arc;
 

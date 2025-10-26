@@ -5,7 +5,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use crate::types::TaskOutcome;
+use crate::council_types::TaskOutcome;
 
 /// Resource predictor for resource need prediction
 #[derive(Debug)]

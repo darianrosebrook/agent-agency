@@ -7,7 +7,7 @@
 //! - Cross-references between knowledge sources
 //! - On-demand knowledge retrieval
 
-use crate::types::*;
+use crate::data_processing_types::*;
 use crate::{DataProcessingResult, DataProcessingError};
 use async_trait::async_trait;
 use std::collections::HashMap;

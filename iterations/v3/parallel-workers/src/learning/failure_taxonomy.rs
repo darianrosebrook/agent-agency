@@ -1,6 +1,6 @@
 //! Failure taxonomy with RCA classifier
 
-use crate::types::{TaskId, WorkerId, WorkerSpecialty};
+use crate::parallel_types::{TaskId, WorkerId, WorkerSpecialty};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 

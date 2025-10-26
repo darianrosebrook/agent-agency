@@ -20,7 +20,7 @@ pub mod learning_algorithms;
 pub mod persistence;
 pub mod predictive;
 pub mod progress_tracker;
-pub mod types;
+pub mod prompting_types;
 
 pub use coordinator::MultiTurnLearningCoordinator;
 pub use persistence::{LearningPersistenceManager, LearningPersistenceConfig};
@@ -28,7 +28,7 @@ pub use predictive::{
     PerformancePredictor, PredictiveLearningConfig, PredictiveLearningSystem, ResourcePredictor,
     StrategyOptimizer,
 };
-pub use types::*;
+pub use prompting_prompting_reflexive_types::*;
 
 // Memory system integration
 use agent_memory::{
@@ -381,7 +381,7 @@ impl ReflexiveLearningSystem {
     /// Process self-prompting signals from autonomous agent execution
     pub async fn process_self_prompting_signals(
         &mut self,
-        signals: Vec<crate::types::SelfPromptingSignal>,
+        signals: Vec<crate::prompting_reflexive_types::SelfPromptingSignal>,
     ) -> Result<LearningUpdate, LearningSystemError> {
         tracing::info!("Processing {} self-prompting learning signals", signals.len());
 
@@ -389,7 +389,7 @@ impl ReflexiveLearningSystem {
 
         for signal in signals {
             match signal {
-                crate::types::SelfPromptingSignal::IterationEfficiency { iterations, quality, time } => {
+                crate::prompting_reflexive_types::SelfPromptingSignal::IterationEfficiency { iterations, quality, time } => {
                     // Adjust iteration limits and quality thresholds based on efficiency
                     let efficiency_score = quality / (iterations as f64 * time / 1000.0);
 
@@ -421,7 +421,7 @@ impl ReflexiveLearningSystem {
                         });
                     }
                 }
-                crate::types::SelfPromptingSignal::ModelPerformance { model_id, task_type, score } => {
+                crate::prompting_reflexive_types::SelfPromptingSignal::ModelPerformance { model_id, task_type, score } => {
                     // Update model preferences and selection weights
                     changes.push(LearningChange {
                         change_type: ChangeType::StrategyWeight,
@@ -435,7 +435,7 @@ impl ReflexiveLearningSystem {
                         },
                     });
                 }
-                crate::types::SelfPromptingSignal::SatisficingEffectiveness { stopped_early, quality_delta, iterations_saved } => {
+                crate::prompting_reflexive_types::SelfPromptingSignal::SatisficingEffectiveness { stopped_early, quality_delta, iterations_saved } => {
                     // Tune satisficing parameters
                     if stopped_early && quality_delta > 0.05 {
                         // Good satisficing - reinforce early stopping

@@ -2,7 +2,7 @@
 //!
 //! Scrapes web content for research and knowledge gathering.
 
-use crate::types::*;
+use crate::research_types::*;
 use anyhow::{Context, Result};
 use std::sync::Arc;
 use tokio::sync::RwLock;

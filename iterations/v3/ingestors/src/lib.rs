@@ -7,14 +7,14 @@ pub mod captions_ingestor;
 pub mod diagrams_ingestor;
 pub mod file_watcher;
 pub mod slides_ingestor;
-pub mod types;
+pub mod prompting_types;
 pub mod video_ingestor;
 
 pub use captions_ingestor::CaptionsIngestor;
 pub use diagrams_ingestor::DiagramsIngestor;
 pub use file_watcher::FileWatcher;
 pub use slides_ingestor::SlidesIngestor;
-pub use types::*;
+pub use prompting_prompting_ingestor_types::*;
 pub use video_ingestor::VideoIngestor;
 
 use std::path::Path;

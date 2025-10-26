@@ -4,15 +4,17 @@
 //! across the codebase while maintaining domain separation.
 
 pub mod result;
-pub mod errors;
-pub mod metrics;
-pub mod config;
+pub mod common_errors;
+pub mod common_metrics;
+pub mod common_config;
 pub mod context;
 pub mod validation;
+pub mod geometry;
 
 pub use result::*;
-pub use errors::*;
-pub use metrics::*;
-pub use config::*;
+pub use common_errors::*;
+pub use common_metrics::*;
+pub use common_config::*;
 pub use context::*;
 pub use validation::*;
+pub use geometry::*;

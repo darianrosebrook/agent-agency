@@ -1,7 +1,7 @@
 //! Code analysis utilities and engines
 
 use super::types::*;
-use crate::types::AtomicClaim;
+use crate::extraction_types::AtomicClaim;
 use anyhow::Result;
 use std::collections::HashMap;
 use std::fs;

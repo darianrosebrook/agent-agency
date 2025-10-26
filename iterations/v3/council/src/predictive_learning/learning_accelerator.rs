@@ -4,7 +4,7 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::types::TaskOutcome;
+use crate::council_types::TaskOutcome;
 
 /// Learning accelerator for meta-learning capabilities
 #[derive(Debug)]

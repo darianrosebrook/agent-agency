@@ -10,7 +10,7 @@ use uuid::Uuid;
 use sqlx::Row;
 
 use sqlx::PgPool;
-use crate::types::*;
+use crate::integrity_types::*;
 
 /// Storage trait for source integrity records
 #[async_trait]

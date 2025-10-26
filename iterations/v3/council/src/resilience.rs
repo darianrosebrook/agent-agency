@@ -296,7 +296,7 @@ impl HealthChecker {
 
 /// Health check trait (V2 pattern)
 #[async_trait::async_trait]
-pub trait HealthCheck: Send + Sync {
+pub trait CouncilHealthCheck: Send + Sync {
     async fn check_health(&self) -> HealthCheckResult;
 }
 

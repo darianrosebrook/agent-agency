@@ -4,7 +4,7 @@
 //! enabling durable storage and retrieval of learning state, worker improvements,
 //! performance metrics, and configuration across system restarts.
 
-use crate::types::*;
+use crate::reflexive_types::*;
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};

@@ -94,27 +94,27 @@ async fn test_mistral_judge_basic_functionality() {
     };
 
     let context = ReviewContext {
-        working_spec: crate::types::WorkingSpec {
+        working_spec: crate::council_types::WorkingSpec {
             id: "test-spec-id".to_string(),
             title: working_spec.title.clone(),
             description: working_spec.description.clone(),
-            scope: Some(crate::types::WorkingSpecScope {
+            scope: Some(crate::council_types::WorkingSpecScope {
                 r#in: Some(vec!["src/".to_string()]),
                 out: Some(vec!["node_modules/".to_string()]),
             }),
-            risk_tier: crate::types::RiskTier::Tier3,
+            risk_tier: crate::council_types::RiskTier::Tier3,
             acceptance_criteria: vec![
-                crate::types::AcceptanceCriterion {
+                crate::council_types::AcceptanceCriterion {
                     id: "A1".to_string(),
                     description: "System should work".to_string(),
-                    verification_method: crate::types::VerificationMethod::Automated,
-                    priority: crate::types::Priority::Medium,
+                    verification_method: crate::council_types::VerificationMethod::Automated,
+                    priority: crate::council_types::Priority::Medium,
                 }
             ],
         },
         planning_metadata: None,
         previous_reviews: vec![],
-        risk_tier: crate::types::RiskTier::Tier3,
+        risk_tier: crate::council_types::RiskTier::Tier3,
         session_id: "test-session".to_string(),
         judge_instructions: HashMap::new(),
     };
@@ -214,27 +214,27 @@ async fn test_mistral_judge_specialization() {
     };
 
     let context = ReviewContext {
-        working_spec: crate::types::WorkingSpec {
+        working_spec: crate::council_types::WorkingSpec {
             id: "test-spec-id-2".to_string(),
             title: working_spec.title.clone(),
             description: working_spec.description.clone(),
-            scope: Some(crate::types::WorkingSpecScope {
+            scope: Some(crate::council_types::WorkingSpecScope {
                 r#in: Some(vec!["src/".to_string()]),
                 out: Some(vec!["node_modules/".to_string()]),
             }),
-            risk_tier: crate::types::RiskTier::Tier1,
+            risk_tier: crate::council_types::RiskTier::Tier1,
             acceptance_criteria: vec![
-                crate::types::AcceptanceCriterion {
+                crate::council_types::AcceptanceCriterion {
                     id: "A1".to_string(),
                     description: "Critical system should work".to_string(),
-                    verification_method: crate::types::VerificationMethod::Automated,
-                    priority: crate::types::Priority::High,
+                    verification_method: crate::council_types::VerificationMethod::Automated,
+                    priority: crate::council_types::Priority::High,
                 }
             ],
         },
         planning_metadata: None,
         previous_reviews: vec![],
-        risk_tier: crate::types::RiskTier::Tier1,
+        risk_tier: crate::council_types::RiskTier::Tier1,
         session_id: "test-session".to_string(),
         judge_instructions: HashMap::new(),
     };

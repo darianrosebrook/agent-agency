@@ -7,7 +7,7 @@ use chrono::{DateTime, Utc, Duration};
 use uuid::Uuid;
 
 use super::learning_types::*;
-use crate::types::{TaskId, JudgeId, TaskType};
+use crate::council_types::{TaskId, JudgeId, TaskType};
 use agent_agency_database::DatabaseClient;
 
 /// In-memory learning signal storage implementation

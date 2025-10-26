@@ -1,6 +1,6 @@
 //! Individual worker progress tracking
 
-use crate::types::*;
+use crate::parallel_types::*;
 use crate::error::*;
 use std::collections::HashMap;
 use std::sync::Arc;

@@ -5,8 +5,8 @@
 
 use async_trait::async_trait;
 
-use crate::error::PlanningResult;
-use crate::planner::ValidationIssue;
+use crate::planning_errors::PlanningResult;
+use crate::types::ValidationIssue;
 
 /// Refinement suggestion from the engine
 #[derive(Debug, Clone)]

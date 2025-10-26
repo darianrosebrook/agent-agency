@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
 
-use crate::types::{JudgeId, TaskId};
+use crate::council_types::{JudgeId, TaskId};
 use agent_agency_database::DatabaseClient;
 use super::types::*;
 use super::storage::{LearningSignalStorage, HistoricalResourceData};
@@ -93,14 +93,14 @@ impl LearningSignalAnalyzer {
     }
 
     /// Estimate task complexity using multi-factor analysis
-    pub fn estimate_task_complexity(&self, task_spec: &crate::types::TaskSpec) -> TaskComplexity {
+    pub fn estimate_task_complexity(&self, task_spec: &crate::council_types::TaskSpec) -> TaskComplexity {
         let mut complexity_score = 0.0;
 
         // Risk tier factor
         complexity_score += match task_spec.risk_tier {
-            crate::types::RiskTier::Tier1 => 0.8,
-            crate::types::RiskTier::Tier2 => 0.5,
-            crate::types::RiskTier::Tier3 => 0.2,
+            crate::council_types::RiskTier::Tier1 => 0.8,
+            crate::council_types::RiskTier::Tier2 => 0.5,
+            crate::council_types::RiskTier::Tier3 => 0.2,
         };
 
         // Description length factor
@@ -143,7 +143,7 @@ impl LearningSignalAnalyzer {
     /// Analyze signals and generate routing recommendations
     pub async fn analyze_for_routing(
         &self,
-        task_spec: &crate::types::TaskSpec,
+        task_spec: &crate::council_types::TaskSpec,
     ) -> Result<RoutingRecommendation> {
         // Get historical signals for similar tasks
         let similar_signals = self.get_similar_task_signals(task_spec).await?;
@@ -182,13 +182,13 @@ impl LearningSignalAnalyzer {
     }
 
     /// Get similar task signals for analysis
-    async fn get_similar_task_signals(&self, task_spec: &crate::types::TaskSpec) -> Result<Vec<LearningSignal>> {
+    async fn get_similar_task_signals(&self, task_spec: &crate::council_types::TaskSpec) -> Result<Vec<LearningSignal>> {
         // This would implement similarity matching - simplified for now
         Ok(vec![])
     }
 
     /// Analyze judge performance for task type
-    async fn analyze_judge_performance(&self, task_spec: &crate::types::TaskSpec) -> Result<JudgePerformanceAnalysis> {
+    async fn analyze_judge_performance(&self, task_spec: &crate::council_types::TaskSpec) -> Result<JudgePerformanceAnalysis> {
         // Simplified implementation
         Ok(JudgePerformanceAnalysis {
             recommended_judges: vec![],
@@ -199,7 +199,7 @@ impl LearningSignalAnalyzer {
     }
 
     /// Analyze resource requirements
-    async fn analyze_resource_requirements(&self, task_spec: &crate::types::TaskSpec) -> Result<ResourceRequirementAnalysis> {
+    async fn analyze_resource_requirements(&self, task_spec: &crate::council_types::TaskSpec) -> Result<ResourceRequirementAnalysis> {
         // Simplified implementation
         Ok(ResourceRequirementAnalysis {
             optimal_allocation: Some(ResourceAllocation {

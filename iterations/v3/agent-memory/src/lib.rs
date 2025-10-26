@@ -21,7 +21,7 @@ pub mod decay;
 pub mod graph_engine;
 pub mod memory_manager;
 pub mod temporal_reasoning;
-pub mod types;
+pub mod prompting_types;
 pub mod workspace_registry;
 
 #[cfg(feature = "embeddings")]
@@ -47,7 +47,7 @@ pub use decay::{MemoryDecayEngine, DecayStats};
 pub use graph_engine::{KnowledgeGraphEngine, Entity, Relationship, GraphQuery, GraphStats};
 pub use memory_manager::{MemoryManager, MemoryStats};
 pub use temporal_reasoning::{TemporalReasoningEngine};
-pub use types::*;
+pub use prompting_prompting_memory_types::*;
 
 #[cfg(feature = "embeddings")]
 pub use embedding_integration::{EmbeddingIntegration, MemoryEmbedding};

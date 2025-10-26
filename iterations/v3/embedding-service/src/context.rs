@@ -1,7 +1,7 @@
 //! Semantic context generation for tasks and content
 
 use crate::similarity::*;
-use crate::types::*;
+use crate::embedding_types::*;
 use anyhow::Result;
 use std::collections::HashMap;
 

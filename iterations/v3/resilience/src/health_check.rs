@@ -89,7 +89,7 @@ impl Default for HealthCheckConfig {
 
 /// Health check trait
 #[async_trait::async_trait]
-pub trait HealthCheck: Send + Sync {
+pub trait ResilienceHealthCheck: Send + Sync {
     /// Perform the health check
     async fn check(&self) -> Result<HealthCheckResult>;
 

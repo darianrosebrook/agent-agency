@@ -16,7 +16,7 @@ pub mod manager;
 pub mod multimodal_scheduler;
 pub mod router;
 pub mod specialized_workers;
-pub mod types;
+pub mod worker_types;
 
 pub use autonomous_executor::{AutonomousExecutor, AutonomousExecutorConfig, ExecutionResult, ArbiterMediatedResult};
 pub use caws_checker::CawsChecker;
@@ -42,7 +42,7 @@ pub use multimodal_scheduler::{
 };
 pub use router::TaskRouter;
 pub use specialized_workers::*;
-pub use types::*;
+pub use worker_worker_types::*;
 
 /// Worker pool configuration
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]

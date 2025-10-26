@@ -1,6 +1,6 @@
 //! Feature store with lineage tracking and PII policies
 
-use crate::types::TaskId;
+use crate::parallel_types::TaskId;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -96,7 +96,7 @@ impl TaskFeatureExtractor {
     }
     
     /// Extract features from a task
-    pub async fn extract_features(&self, task: &crate::types::ComplexTask) -> anyhow::Result<FeatureVector> {
+    pub async fn extract_features(&self, task: &crate::parallel_types::ComplexTask) -> anyhow::Result<FeatureVector> {
         let complexity = self.calculate_complexity(task);
         let estimated_lines = self.estimate_lines(task);
         let file_count = self.count_files(task);
@@ -116,7 +116,7 @@ impl TaskFeatureExtractor {
     }
     
     /// Calculate task complexity score
-    fn calculate_complexity(&self, task: &crate::types::ComplexTask) -> f64 {
+    fn calculate_complexity(&self, task: &crate::parallel_types::ComplexTask) -> f64 {
         // Simple complexity calculation based on scope and requirements
         let scope_size = task.scope.files.len();
         let requirements_count = task.quality_requirements.required_gates.len();
@@ -126,18 +126,18 @@ impl TaskFeatureExtractor {
     }
     
     /// Estimate lines of code
-    fn estimate_lines(&self, task: &crate::types::ComplexTask) -> f64 {
+    fn estimate_lines(&self, task: &crate::parallel_types::ComplexTask) -> f64 {
         // Rough estimation based on scope
         task.scope.files.len() as f64 * 50.0 // Assume 50 lines per file on average
     }
     
     /// Count files in scope
-    fn count_files(&self, task: &crate::types::ComplexTask) -> f64 {
+    fn count_files(&self, task: &crate::parallel_types::ComplexTask) -> f64 {
         task.scope.files.len() as f64
     }
     
     /// Count errors in task description
-    fn count_errors(&self, task: &crate::types::ComplexTask) -> f64 {
+    fn count_errors(&self, task: &crate::parallel_types::ComplexTask) -> f64 {
         // Simple error count based on description keywords
         let description = task.description.to_lowercase();
         let error_keywords = ["error", "bug", "fix", "issue", "problem", "fail"];
@@ -148,7 +148,7 @@ impl TaskFeatureExtractor {
     }
     
     /// Generate pattern hash for task
-    fn generate_pattern_hash(&self, task: &crate::types::ComplexTask) -> String {
+    fn generate_pattern_hash(&self, task: &crate::parallel_types::ComplexTask) -> String {
         use std::collections::hash_map::DefaultHasher;
         use std::hash::{Hash, Hasher};
         
@@ -160,7 +160,7 @@ impl TaskFeatureExtractor {
     }
     
     /// Extract domain-specific features
-    fn extract_domain_features(&self, task: &crate::types::ComplexTask) -> HashMap<String, f64> {
+    fn extract_domain_features(&self, task: &crate::parallel_types::ComplexTask) -> HashMap<String, f64> {
         let mut features = HashMap::new();
         
         // Analyze file extensions for domain hints
@@ -196,11 +196,11 @@ impl TaskFeatureExtractor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::{ComplexTask, TaskScope, QualityRequirements};
+    use crate::parallel_types::{ComplexTask, TaskScope, QualityRequirements};
 
     fn create_test_task() -> ComplexTask {
         ComplexTask {
-            id: crate::types::TaskId::new(),
+            id: crate::parallel_types::TaskId::new(),
             description: "Fix compilation errors in Rust code".to_string(),
             scope: TaskScope {
                 files: vec!["src/main.rs".to_string(), "src/lib.rs".to_string()],
@@ -210,8 +210,8 @@ mod tests {
                 required_gates: vec!["compilation".to_string(), "tests".to_string()],
                 timeout_seconds: Some(300),
             },
-            priority: crate::types::Priority::Normal,
-            context: crate::types::TaskContext {
+            priority: crate::parallel_types::Priority::Normal,
+            context: crate::parallel_types::TaskContext {
                 timeout: Some(std::time::Duration::from_secs(300)),
             },
         }
@@ -234,7 +234,7 @@ mod tests {
     #[tokio::test]
     async fn test_feature_store() {
         let store = InMemoryFeatureStore::new("1.0.0".to_string());
-        let task_id = crate::types::TaskId::new();
+        let task_id = crate::parallel_types::TaskId::new();
         
         let features = FeatureVector {
             task_complexity: 0.5,

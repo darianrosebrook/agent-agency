@@ -1,6 +1,6 @@
 //! Endpoint management for tool discovery
 
-use crate::types::*;
+use crate::mcp_types::*;
 use super::health::{EndpointType, EndpointHealthCheckResult};
 use anyhow::Result;
 use reqwest::Client;

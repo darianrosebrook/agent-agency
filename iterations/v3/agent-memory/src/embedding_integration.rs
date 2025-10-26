@@ -1,6 +1,6 @@
 //! Embedding Integration - Vector embeddings for memory with decay/importance
 
-use crate::types::*;
+use crate::memory_types::*;
 use crate::MemoryResult;
 use embedding_service::{EmbeddingService, EmbeddingConfig as ESConfig, ContentType};
 use agent_agency_database::{DatabaseClient, DatabaseConfig, Row};

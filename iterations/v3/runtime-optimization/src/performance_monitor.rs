@@ -38,7 +38,7 @@ pub struct AlertThresholds {
 
 /// Performance metrics collected by the monitor
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PerformanceMetrics {
+pub struct RuntimeOptimizationMetrics {
     /// Throughput (requests/second)
     pub throughput: f64,
     /// Average latency (ms)
@@ -61,7 +61,7 @@ pub struct PerformanceMetrics {
     pub timestamp: chrono::DateTime<chrono::Utc>,
 }
 
-impl Default for PerformanceMetrics {
+impl Default for RuntimeOptimizationMetrics {
     fn default() -> Self {
         Self {
             throughput: 0.0,

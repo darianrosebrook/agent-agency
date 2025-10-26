@@ -2,7 +2,7 @@
 //!
 //! Integrates with CAWS for working specs, quality gates, and provenance tracking.
 
-use crate::types::SelfPromptingAgentError;
+use crate::prompting_types::SelfPromptingAgentError;
 
 /// CAWS integration for working specifications
 pub struct CawsIntegration {

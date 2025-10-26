@@ -9,4 +9,4 @@ pub use lifecycle::*;
 pub use context::*;
 
 // Re-export types from types module that are used in worker management
-pub use crate::types::WorkerHandle;
+pub use crate::parallel_types::WorkerHandle;

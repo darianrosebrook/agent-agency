@@ -4,7 +4,7 @@
 //! without requiring the full apple-silicon crate compilation.
 
 #[derive(Debug, Clone)]
-pub struct BoundingBox {
+pub struct DemoBoundingBox {
     pub x: f32,
     pub y: f32,
     pub width: f32,
@@ -16,7 +16,7 @@ pub struct Detection {
     pub class: String,
     pub class_id: usize,
     pub confidence: f32,
-    pub bbox: BoundingBox,
+    pub bbox: DemoBoundingBox,
 }
 
 fn main() {
@@ -39,19 +39,19 @@ fn main() {
             class: "car".to_string(),
             class_id: 2,
             confidence: 0.87,
-            bbox: BoundingBox { x: 150.0, y: 200.0, width: 180.0, height: 120.0 },
+            bbox: DemoBoundingBox { x: 150.0, y: 200.0, width: 180.0, height: 120.0 },
         },
         Detection {
             class: "person".to_string(),
             class_id: 0,
             confidence: 0.92,
-            bbox: BoundingBox { x: 300.0, y: 150.0, width: 60.0, height: 180.0 },
+            bbox: DemoBoundingBox { x: 300.0, y: 150.0, width: 60.0, height: 180.0 },
         },
         Detection {
             class: "traffic light".to_string(),
             class_id: 9,
             confidence: 0.78,
-            bbox: BoundingBox { x: 400.0, y: 50.0, width: 25.0, height: 80.0 },
+            bbox: DemoBoundingBox { x: 400.0, y: 50.0, width: 25.0, height: 80.0 },
         },
     ];
     

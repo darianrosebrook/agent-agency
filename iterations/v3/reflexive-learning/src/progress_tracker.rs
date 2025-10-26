@@ -1,6 +1,6 @@
 //! Progress tracking for learning sessions
 
-use crate::types::*;
+use crate::reflexive_types::*;
 use chrono::{DateTime, Utc};
 use std::collections::HashMap;
 use tracing::{debug, info};
@@ -738,7 +738,7 @@ impl Default for BaselineComparison {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::{
+    use crate::reflexive_types::{
         ContextPreservationState, LearningSession, LearningState, LearningStrategy,
         PerformanceTrends, ProgressMetrics, ResourceUtilization, TaskType, TrendData,
         TrendDirection,

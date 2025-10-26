@@ -75,13 +75,13 @@ pub struct EvaluationSummary {
     pub failed_tasks: usize,
     pub average_tool_optimality: f64,
     pub average_context_relevance: f64,
-    pub performance_by_complexity: HashMap<u8, PerformanceMetrics>,
-    pub performance_by_domain: HashMap<String, PerformanceMetrics>,
+    pub performance_by_complexity: HashMap<u8, SweBenchMetrics>,
+    pub performance_by_domain: HashMap<String, SweBenchMetrics>,
 }
 
 /// Performance metrics for groupings
 #[derive(Clone, Debug)]
-pub struct PerformanceMetrics {
+pub struct SweBenchMetrics {
     pub task_count: usize,
     pub completion_rate: f64,
     pub average_time: f64,
@@ -341,7 +341,7 @@ impl SWEEvaluator {
             by_complexity.entry(result.task_id.parse().unwrap_or(1)).or_default().push(result);
         }
 
-        let performance_by_complexity: HashMap<u8, PerformanceMetrics> = by_complexity.into_iter()
+        let performance_by_complexity: HashMap<u8, SweBenchMetrics> = by_complexity.into_iter()
             .map(|(complexity, tasks)| {
                 let metrics = Self::compute_performance_metrics(&tasks);
                 (complexity, metrics)
@@ -363,13 +363,13 @@ impl SWEEvaluator {
     }
 
     /// Compute performance metrics for a group of tasks
-    fn compute_performance_metrics(tasks: &[&TaskEvaluation]) -> PerformanceMetrics {
+    fn compute_performance_metrics(tasks: &[&TaskEvaluation]) -> SweBenchMetrics {
         let task_count = tasks.len();
         let completion_rate = tasks.iter().filter(|t| t.completed).count() as f64 / task_count as f64;
         let average_time = tasks.iter().map(|t| t.execution_time_ms).sum::<u64>() as f64 / task_count as f64;
         let average_optimality = tasks.iter().map(|t| t.tool_optimality).sum::<f64>() / task_count as f64;
 
-        PerformanceMetrics {
+        SweBenchMetrics {
             task_count,
             completion_rate,
             average_time,

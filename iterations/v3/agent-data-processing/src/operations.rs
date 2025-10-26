@@ -7,7 +7,7 @@
 //! - Waiver system for budget exceedances
 //! - Safe file editing with rollback
 
-use crate::types::*;
+use crate::data_processing_types::*;
 use crate::DataProcessingResult;
 use crate::DataProcessingError;
 use async_trait::async_trait;

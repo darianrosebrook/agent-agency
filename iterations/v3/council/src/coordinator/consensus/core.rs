@@ -1,6 +1,6 @@
 //! Core consensus coordination functionality
 
-use crate::types::*;
+use crate::council_types::*;
 use anyhow::Result;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -212,7 +212,7 @@ impl Default for ConsensusMetrics {
 
 /// Judge evaluator trait
 #[async_trait::async_trait]
-pub trait JudgeEvaluator: Send + Sync {
+pub trait ConsensusJudgeEvaluator: Send + Sync {
     /// Evaluate evidence using judges
     async fn evaluate(&self, session_id: Uuid, evidence: &[EvidencePacket]) -> Result<ConsensusResult>;
 

@@ -4,9 +4,9 @@
 //! used across the codebase to reduce duplication while maintaining domain separation.
 
 pub mod traits;
-pub mod types;
+pub mod pattern_types;
 pub mod validation;
 
 pub use traits::*;
-pub use types::*;
+pub use pattern_types::*;
 pub use validation::*;

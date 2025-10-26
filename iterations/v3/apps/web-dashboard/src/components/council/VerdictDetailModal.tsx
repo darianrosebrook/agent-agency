@@ -1,442 +1,398 @@
 /**
- * VerdictDetailModal Component
- * Comprehensive modal displaying full verdict details, judge rationales, and evidence
+ * Verdict Detail Modal
+ * Comprehensive verdict information display
  *
  * @author @darianrosebrook
  */
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Text } from '@/design-system/primitives';
 import { Button } from '@/design-system/primitives';
-import { Badge } from '@/design-system/primitives';
-import { Progress } from '@/design-system/primitives';
 import {
   X,
-  Clock,
-  CheckCircle,
-  XCircle,
-  AlertCircle,
+  Gavel,
   Users,
   Shield,
   FileText,
-  BarChart3,
+  Clock,
+  CheckCircle,
   AlertTriangle,
-  ExternalLink,
-  ChevronDown,
-  ChevronUp
+  XCircle,
+  Info,
+  ChevronRight,
+  Download,
+  ExternalLink
 } from 'lucide-react';
-import { Verdict } from './VerdictList';
+import { Verdict } from '@/lib/council-api';
+import { EvidenceViewer } from './EvidenceViewer';
 import { InterventionForm } from './InterventionForm';
 import styles from './VerdictDetailModal.module.scss';
 
 interface VerdictDetailModalProps {
   verdict: Verdict;
   onClose: () => void;
-  onIntervention?: (verdictId: string, intervention: any) => void;
 }
 
-export function VerdictDetailModal({
-  verdict,
-  onClose,
-  onIntervention
-}: VerdictDetailModalProps) {
-  const [showInterventionForm, setShowInterventionForm] = useState(false);
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(
-    new Set(['overview', 'judges'])
-  );
+export function VerdictDetailModal({ verdict, onClose }: VerdictDetailModalProps) {
+  const [activeTab, setActiveTab] = useState<'overview' | 'judges' | 'evidence' | 'ethics' | 'intervention'>('overview');
 
-  // Handle escape key
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
-    };
-
-    document.addEventListener('keydown', handleEscape);
-    return () => document.removeEventListener('keydown', handleEscape);
-  }, [onClose]);
-
-  // Handle backdrop click
-  const handleBackdropClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) {
-      onClose();
-    }
-  };
-
-  // Toggle section expansion
-  const toggleSection = (section: string) => {
-    const newExpanded = new Set(expandedSections);
-    if (newExpanded.has(section)) {
-      newExpanded.delete(section);
-    } else {
-      newExpanded.add(section);
-    }
-    setExpandedSections(newExpanded);
-  };
-
-  // Status configuration
-  const getStatusConfig = (status: string) => {
+  const getStatusConfig = (status: Verdict['status']) => {
     switch (status) {
-      case 'approved':
+      case 'completed':
         return {
-          icon: CheckCircle,
-          color: 'success' as const,
-          label: 'Approved',
-          bgColor: 'var(--color-success-light)',
+          icon: <CheckCircle size={20} className={styles.statusCompleted} />,
+          color: 'success',
+          text: 'Completed'
         };
-      case 'rejected':
+      case 'escalated':
         return {
-          icon: XCircle,
-          color: 'error' as const,
-          label: 'Rejected',
-          bgColor: 'var(--color-error-light)',
+          icon: <AlertTriangle size={20} className={styles.statusEscalated} />,
+          color: 'error',
+          text: 'Escalated'
         };
-      case 'intervened':
+      case 'in_progress':
         return {
-          icon: AlertCircle,
-          color: 'warning' as const,
-          label: 'Intervened',
-          bgColor: 'var(--color-warning-light)',
+          icon: <Clock size={20} className={styles.statusInProgress} />,
+          color: 'warning',
+          text: 'In Progress'
+        };
+      case 'pending':
+        return {
+          icon: <Clock size={20} className={styles.statusPending} />,
+          color: 'neutral',
+          text: 'Pending'
+        };
+      case 'overridden':
+        return {
+          icon: <XCircle size={20} className={styles.statusOverridden} />,
+          color: 'error',
+          text: 'Overridden'
         };
       default:
         return {
-          icon: Clock,
-          color: 'info' as const,
-          label: 'Pending',
-          bgColor: 'var(--color-info-light)',
+          icon: <Gavel size={20} />,
+          color: 'neutral',
+          text: status
         };
     }
   };
 
-  const statusConfig = getStatusConfig(verdict.status);
-  const StatusIcon = statusConfig.icon;
-
-  // Judge verdict summary
-  const judgeSummary = verdict.judges.reduce(
-    (acc, judge) => {
-      acc[judge.verdict] = (acc[judge.verdict] || 0) + 1;
-      return acc;
-    },
-    {} as Record<string, number>
-  );
-
-  // Consensus visualization
-  const getConsensusLevel = (score: number) => {
-    if (score >= 0.8) return { level: 'High', color: 'success' };
-    if (score >= 0.6) return { level: 'Medium', color: 'warning' };
-    return { level: 'Low', color: 'error' };
+  const getRiskConfig = (risk: Verdict['ethicalAssessment']['overallRisk']) => {
+    switch (risk) {
+      case 'critical':
+        return { color: 'error', text: 'Critical', severity: 4 };
+      case 'high':
+        return { color: 'error', text: 'High', severity: 3 };
+      case 'medium':
+        return { color: 'warning', text: 'Medium', severity: 2 };
+      case 'low':
+        return { color: 'success', text: 'Low', severity: 1 };
+      default:
+        return { color: 'neutral', text: risk, severity: 1 };
+    }
   };
 
-  const consensusInfo = getConsensusLevel(verdict.consensusScore);
-
-  // Format timestamps
-  const formatDateTime = (date: Date) => {
+  const formatDate = (date: Date) => {
     return new Intl.DateTimeFormat('en-US', {
       year: 'numeric',
-      month: 'short',
+      month: 'long',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
-      second: '2-digit',
-    }).format(date);
+      second: '2-digit'
+    }).format(new Date(date));
   };
 
+  const statusConfig = getStatusConfig(verdict.status);
+  const riskConfig = getRiskConfig(verdict.ethicalAssessment.overallRisk);
+
+  const tabs = [
+    { id: 'overview', label: 'Overview', icon: <Info size={16} /> },
+    { id: 'judges', label: 'Judges', icon: <Users size={16} /> },
+    { id: 'evidence', label: 'Evidence', icon: <FileText size={16} /> },
+    { id: 'ethics', label: 'Ethics', icon: <Shield size={16} /> },
+    { id: 'intervention', label: 'Intervention', icon: <AlertTriangle size={16} />, show: verdict.status === 'escalated' || verdict.intervention }
+  ].filter(tab => tab.show !== false);
+
   return (
-    <div
-      className={styles.overlay}
-      onClick={handleBackdropClick}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="verdict-modal-title"
-    >
-      <div className={styles.modal}>
+    <div className={styles.modalOverlay} onClick={onClose}>
+      <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
         {/* Header */}
-        <div className={styles.header}>
-          <div className={styles.titleSection}>
-            <h2 id="verdict-modal-title" className={styles.title}>
-              {verdict.title}
-            </h2>
-            <div className={styles.subtitle}>
-              <Text variant="paragraph-small" color="secondary">
-                Task ID: {verdict.taskId}
+        <div className={styles.modalHeader}>
+          <div className={styles.headerLeft}>
+            <div className={styles.statusIndicator}>
+              {statusConfig.icon}
+            </div>
+            <div className={styles.headerInfo}>
+              <Text variant="h3">Verdict {verdict.id}</Text>
+              <Text variant="paragraph-medium" color="secondary">
+                Task: {verdict.taskId}
               </Text>
-              <Badge variant={statusConfig.color} size="sm">
-                <StatusIcon size={14} />
-                <span>{statusConfig.label}</span>
-              </Badge>
             </div>
           </div>
 
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onClose}
-            aria-label="Close modal"
-            className={styles.closeButton}
-          >
-            <X size={20} />
-          </Button>
+          <div className={styles.headerRight}>
+            <div className={styles.riskIndicator}>
+              <Shield size={16} />
+              <span className={styles[`risk${riskConfig.color}`]}>
+                {riskConfig.text} Risk
+              </span>
+            </div>
+
+            <Button variant="secondary" size="sm">
+              <Download size={16} />
+              Export
+            </Button>
+
+            <button className={styles.closeButton} onClick={onClose}>
+              <X size={20} />
+            </button>
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div className={styles.modalTabs}>
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              className={`${styles.tabButton} ${activeTab === tab.id ? styles.active : ''}`}
+              onClick={() => setActiveTab(tab.id as any)}
+            >
+              {tab.icon}
+              <span>{tab.label}</span>
+            </button>
+          ))}
         </div>
 
         {/* Content */}
-        <div className={styles.content}>
-          {/* Overview Section */}
-          <section className={styles.section}>
-            <button
-              className={styles.sectionHeader}
-              onClick={() => toggleSection('overview')}
-              aria-expanded={expandedSections.has('overview')}
-            >
-              <div className={styles.sectionTitle}>
-                <BarChart3 size={18} />
-                <Text variant="h4">Overview</Text>
+        <div className={styles.modalBody}>
+          {activeTab === 'overview' && (
+            <div className={styles.overviewTab}>
+              {/* Key Metrics */}
+              <div className={styles.metricsGrid}>
+                <div className={styles.metricCard}>
+                  <Text variant="label">Decision</Text>
+                  <Text variant="h4">{verdict.consensus.finalDecision.toUpperCase()}</Text>
+                  <Text variant="paragraph-small" color="secondary">
+                    Confidence: {Math.round(verdict.consensus.confidence * 100)}%
+                  </Text>
+                </div>
+
+                <div className={styles.metricCard}>
+                  <Text variant="label">Algorithm</Text>
+                  <Text variant="h4">{verdict.consensus.algorithm.replace('_', ' ').toUpperCase()}</Text>
+                  <Text variant="paragraph-small" color="secondary">
+                    {verdict.consensus.participatingJudges} judges participated
+                  </Text>
+                </div>
+
+                <div className={styles.metricCard}>
+                  <Text variant="label">Evidence</Text>
+                  <Text variant="h4">{verdict.evidence.length}</Text>
+                  <Text variant="paragraph-small" color="secondary">
+                    Items reviewed
+                  </Text>
+                </div>
+
+                <div className={styles.metricCard}>
+                  <Text variant="label">Duration</Text>
+                  <Text variant="h4">
+                    {verdict.completedAt
+                      ? `${Math.round((new Date(verdict.completedAt).getTime() - new Date(verdict.createdAt).getTime()) / 1000 / 60)}m`
+                      : 'In Progress'
+                    }
+                  </Text>
+                  <Text variant="paragraph-small" color="secondary">
+                    Created: {formatDate(verdict.createdAt)}
+                  </Text>
+                </div>
               </div>
-              {expandedSections.has('overview') ? (
-                <ChevronUp size={18} />
-              ) : (
-                <ChevronDown size={18} />
-              )}
-            </button>
 
-            {expandedSections.has('overview') && (
-              <div className={styles.sectionContent}>
-                <div className={styles.overviewGrid}>
-                  <div className={styles.overviewItem}>
-                    <Text variant="paragraph-small" color="secondary">Summary</Text>
-                    <Text variant="paragraph-medium">{verdict.summary}</Text>
-                  </div>
+              {/* Consensus Rationale */}
+              <div className={styles.rationaleSection}>
+                <Text variant="h4">Consensus Rationale</Text>
+                <div className={styles.rationaleContent}>
+                  <Text variant="paragraph-medium">
+                    {verdict.consensus.rationale}
+                  </Text>
+                </div>
+              </div>
 
-                  <div className={styles.overviewItem}>
-                    <Text variant="paragraph-small" color="secondary">Status</Text>
-                    <Badge variant={statusConfig.color}>
-                      <StatusIcon size={14} />
-                      <span>{statusConfig.label}</span>
-                    </Badge>
-                  </div>
-
-                  <div className={styles.overviewItem}>
-                    <Text variant="paragraph-small" color="secondary">Consensus Score</Text>
-                    <div className={styles.consensusDisplay}>
-                      <Progress
-                        value={verdict.consensusScore * 100}
-                        className={styles.consensusBar}
-                        variant={consensusInfo.color as any}
-                      />
-                      <Text variant="paragraph-small" className={styles.consensusText}>
-                        {Math.round(verdict.consensusScore * 100)}% ({consensusInfo.level})
-                      </Text>
+              {/* Timeline */}
+              <div className={styles.timelineSection}>
+                <Text variant="h4">Decision Timeline</Text>
+                <div className={styles.timeline}>
+                  <div className={styles.timelineItem}>
+                    <div className={styles.timelineDot}></div>
+                    <div className={styles.timelineContent}>
+                      <Text variant="label">Created</Text>
+                      <Text variant="paragraph-small">{formatDate(verdict.createdAt)}</Text>
                     </div>
                   </div>
 
-                  <div className={styles.overviewItem}>
-                    <Text variant="paragraph-small" color="secondary">Judges</Text>
-                    <div className={styles.judgeSummary}>
-                      <Users size={16} />
-                      <Text variant="paragraph-small">{verdict.judgeCount} total</Text>
+                  {verdict.completedAt && (
+                    <div className={styles.timelineItem}>
+                      <div className={styles.timelineDot}></div>
+                      <div className={styles.timelineContent}>
+                        <Text variant="label">Completed</Text>
+                        <Text variant="paragraph-small">{formatDate(verdict.completedAt)}</Text>
+                      </div>
                     </div>
-                  </div>
+                  )}
 
-                  <div className={styles.overviewItem}>
-                    <Text variant="paragraph-small" color="secondary">Created</Text>
-                    <Text variant="paragraph-small">{formatDateTime(verdict.createdAt)}</Text>
-                  </div>
-
-                  <div className={styles.overviewItem}>
-                    <Text variant="paragraph-small" color="secondary">Last Updated</Text>
-                    <Text variant="paragraph-small">{formatDateTime(verdict.updatedAt)}</Text>
-                  </div>
-
-                  {verdict.ethicalConcerns > 0 && (
-                    <div className={styles.overviewItem}>
-                      <Text variant="paragraph-small" color="secondary">Ethical Concerns</Text>
-                      <div className={styles.ethicalIndicator}>
-                        <Shield size={16} />
-                        <Text variant="paragraph-small">{verdict.ethicalConcerns} flagged</Text>
+                  {verdict.intervention && (
+                    <div className={styles.timelineItem}>
+                      <div className={styles.timelineDot}></div>
+                      <div className={styles.timelineContent}>
+                        <Text variant="label">Intervention</Text>
+                        <Text variant="paragraph-small">{verdict.intervention.reason}</Text>
+                        <Text variant="paragraph-small" color="secondary">
+                          By: {verdict.intervention.operator}
+                        </Text>
                       </div>
                     </div>
                   )}
                 </div>
               </div>
-            )}
-          </section>
+            </div>
+          )}
 
-          {/* Judges Section */}
-          <section className={styles.section}>
-            <button
-              className={styles.sectionHeader}
-              onClick={() => toggleSection('judges')}
-              aria-expanded={expandedSections.has('judges')}
-            >
-              <div className={styles.sectionTitle}>
-                <Users size={18} />
-                <Text variant="h4">Judge Analysis</Text>
-                <Text variant="paragraph-small" color="secondary">
-                  {verdict.judgeCount} judges participated
-                </Text>
-              </div>
-              {expandedSections.has('judges') ? (
-                <ChevronUp size={18} />
-              ) : (
-                <ChevronDown size={18} />
-              )}
-            </button>
-
-            {expandedSections.has('judges') && (
-              <div className={styles.sectionContent}>
-                {/* Judge Summary */}
-                <div className={styles.judgeSummaryGrid}>
-                  {Object.entries(judgeSummary).map(([verdict, count]) => {
-                    const config = getStatusConfig(verdict);
-                    const Icon = config.icon;
-                    return (
-                      <div key={verdict} className={styles.judgeSummaryItem}>
-                        <Icon size={16} className={styles[`statusIcon${verdict.charAt(0).toUpperCase() + verdict.slice(1)}`]} />
-                        <Text variant="paragraph-small">{count} {verdict}</Text>
+          {activeTab === 'judges' && (
+            <div className={styles.judgesTab}>
+              <Text variant="h4">Judge Assignments & Verdicts</Text>
+              <div className={styles.judgesList}>
+                {verdict.judges.map((assignment, index) => (
+                  <div key={assignment.judgeId} className={styles.judgeCard}>
+                    <div className={styles.judgeHeader}>
+                      <Text variant="h5">Judge {assignment.judgeId}</Text>
+                      <div className={styles.judgeRole}>
+                        {assignment.role.replace('_', ' ').toUpperCase()}
                       </div>
-                    );
-                  })}
-                </div>
+                    </div>
 
-                {/* Individual Judges */}
-                <div className={styles.judgesList}>
-                  {verdict.judges.map((judge, index) => {
-                    const judgeStatus = getStatusConfig(judge.verdict);
-                    const JudgeIcon = judgeStatus.icon;
-
-                    return (
-                      <div key={`${judge.id}-${index}`} className={styles.judgeCard}>
-                        <div className={styles.judgeHeader}>
-                          <div className={styles.judgeInfo}>
-                            <Text variant="h5" className={styles.judgeName}>
-                              {judge.name}
-                            </Text>
-                            <Badge variant={judgeStatus.color as any} size="sm">
-                              <JudgeIcon size={12} />
-                              <span>{judgeStatus.label}</span>
-                            </Badge>
-                          </div>
-                          <div className={styles.judgeConfidence}>
-                            <Text variant="paragraph-small" color="secondary">
-                              {Math.round(judge.confidence * 100)}% confidence
-                            </Text>
-                            <Progress
-                              value={judge.confidence * 100}
-                              size="sm"
-                              variant={judge.confidence >= 0.8 ? 'success' : judge.confidence >= 0.6 ? 'warning' : 'error'}
-                            />
-                          </div>
+                    {assignment.verdict && (
+                      <div className={styles.judgeVerdict}>
+                        <div className={styles.verdictDecision}>
+                          <Text variant="label">Decision</Text>
+                          <Text variant="paragraph-medium">
+                            {assignment.verdict.decision.toUpperCase()}
+                          </Text>
                         </div>
 
-                        <div className={styles.judgeReasoning}>
-                          <Text variant="paragraph-medium" color="secondary">
-                            {judge.reasoning}
+                        <div className={styles.verdictConfidence}>
+                          <Text variant="label">Confidence</Text>
+                          <Text variant="paragraph-medium">
+                            {Math.round(assignment.verdict.confidence * 100)}%
+                          </Text>
+                        </div>
+
+                        <div className={styles.verdictRationale}>
+                          <Text variant="label">Rationale</Text>
+                          <Text variant="paragraph-small">
+                            {assignment.verdict.rationale}
                           </Text>
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
+                    )}
+
+                    <div className={styles.judgeStatus}>
+                      <Text variant="paragraph-small" color="secondary">
+                        Status: {assignment.status.replace('_', ' ').toUpperCase()}
+                      </Text>
+                    </div>
+                  </div>
+                ))}
               </div>
-            )}
-          </section>
+            </div>
+          )}
 
-          {/* Evidence Section */}
-          {verdict.evidence.length > 0 && (
-            <section className={styles.section}>
-              <button
-                className={styles.sectionHeader}
-                onClick={() => toggleSection('evidence')}
-                aria-expanded={expandedSections.has('evidence')}
-              >
-                <div className={styles.sectionTitle}>
-                  <FileText size={18} />
-                  <Text variant="h4">Evidence</Text>
-                  <Text variant="paragraph-small" color="secondary">
-                    {verdict.evidence.length} items
-                  </Text>
+          {activeTab === 'evidence' && (
+            <EvidenceViewer evidence={verdict.evidence} />
+          )}
+
+          {activeTab === 'ethics' && (
+            <div className={styles.ethicsTab}>
+              <Text variant="h4">Ethical Assessment</Text>
+
+              {/* Risk Overview */}
+              <div className={styles.riskOverview}>
+                <div className={styles.riskScore}>
+                  <Text variant="h3">{verdict.ethicalAssessment.overallRisk.toUpperCase()}</Text>
+                  <Text variant="paragraph-medium" color="secondary">Overall Risk Level</Text>
                 </div>
-                {expandedSections.has('evidence') ? (
-                  <ChevronUp size={18} />
-                ) : (
-                  <ChevronDown size={18} />
-                )}
-              </button>
 
-              {expandedSections.has('evidence') && (
-                <div className={styles.sectionContent}>
-                  <div className={styles.evidenceList}>
-                    {verdict.evidence.map((evidence, index) => (
-                      <div key={`${evidence.id}-${index}`} className={styles.evidenceItem}>
-                        <div className={styles.evidenceHeader}>
-                          <div className={styles.evidenceInfo}>
-                            <Text variant="h5" className={styles.evidenceTitle}>
-                              {evidence.title}
-                            </Text>
-                            <Badge variant="secondary" size="sm">
-                              {evidence.type}
-                            </Badge>
-                          </div>
-                          <div className={styles.evidenceMeta}>
-                            <Text variant="paragraph-small" color="secondary">
-                              Relevance: {Math.round(evidence.relevance * 100)}%
-                            </Text>
-                            <Button variant="ghost" size="sm" aria-label="View evidence">
-                              <ExternalLink size={14} />
-                            </Button>
-                          </div>
-                        </div>
-
-                        <div className={styles.evidenceSource}>
-                          <Text variant="paragraph-small" color="secondary">
-                            Source: {evidence.source}
-                          </Text>
-                        </div>
-                      </div>
-                    ))}
+                <div className={styles.stakeholderImpact}>
+                  <Text variant="label">Stakeholder Impact</Text>
+                  <div className={styles.impactGrid}>
+                    <div className={styles.impactItem}>
+                      <Text variant="paragraph-medium">{verdict.ethicalAssessment.stakeholderImpact.individuals}</Text>
+                      <Text variant="paragraph-small" color="secondary">Individuals</Text>
+                    </div>
+                    <div className={styles.impactItem}>
+                      <Text variant="paragraph-medium">{verdict.ethicalAssessment.stakeholderImpact.organizations}</Text>
+                      <Text variant="paragraph-small" color="secondary">Organizations</Text>
+                    </div>
+                    <div className={styles.impactItem}>
+                      <Text variant="paragraph-medium">{verdict.ethicalAssessment.stakeholderImpact.society}</Text>
+                      <Text variant="paragraph-small" color="secondary">Society</Text>
+                    </div>
                   </div>
                 </div>
-              )}
-            </section>
+              </div>
+
+              {/* Concerns */}
+              <div className={styles.concernsSection}>
+                <Text variant="h5">Ethical Concerns</Text>
+                <div className={styles.concernsList}>
+                  {verdict.ethicalAssessment.concerns.map((concern, index) => (
+                    <div key={index} className={styles.concernItem}>
+                      <div className={styles.concernHeader}>
+                        <Text variant="paragraph-medium">{concern.description}</Text>
+                        <div className={styles.concernMeta}>
+                          <span className={styles.concernCategory}>
+                            {concern.category.toUpperCase()}
+                          </span>
+                          <span className={styles.concernSeverity}>
+                            {concern.severity.toUpperCase()}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className={styles.concernDetails}>
+                        <Text variant="paragraph-small" color="secondary">
+                          Affected: {concern.affectedParties.join(', ')}
+                        </Text>
+                        {concern.mitigation && (
+                          <Text variant="paragraph-small">
+                            Mitigation: {concern.mitigation}
+                          </Text>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Recommendations */}
+              <div className={styles.recommendationsSection}>
+                <Text variant="h5">Recommendations</Text>
+                <ul className={styles.recommendationsList}>
+                  {verdict.ethicalAssessment.recommendations.map((rec, index) => (
+                    <li key={index}>
+                      <Text variant="paragraph-medium">{rec}</Text>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'intervention' && (
+            <InterventionForm verdict={verdict} onClose={onClose} />
           )}
         </div>
-
-        {/* Footer */}
-        <div className={styles.footer}>
-          <div className={styles.footerLeft}>
-            {verdict.status === 'pending' && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowInterventionForm(true)}
-                className={styles.interventionButton}
-              >
-                <AlertTriangle size={16} />
-                <span>Request Intervention</span>
-              </Button>
-            )}
-          </div>
-
-          <div className={styles.footerRight}>
-            <Button variant="secondary" onClick={onClose}>
-              Close
-            </Button>
-          </div>
-        </div>
-
-        {/* Intervention Form Modal */}
-        {showInterventionForm && (
-          <InterventionForm
-            verdict={verdict}
-            onSubmit={(intervention) => {
-              onIntervention?.(verdict.id, intervention);
-              setShowInterventionForm(false);
-            }}
-            onCancel={() => setShowInterventionForm(false)}
-          />
-        )}
       </div>
     </div>
   );

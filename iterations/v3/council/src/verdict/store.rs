@@ -6,7 +6,7 @@
 use super::cache::{VerdictCache, CacheManager};
 use super::storage::{VerdictStorage, MemoryVerdictStorage, DatabaseVerdictStorage};
 use super::types::*;
-use crate::types::*;
+use crate::council_types::*;
 use agent_agency_database::DatabaseClient;
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};

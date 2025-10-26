@@ -7,10 +7,10 @@
 //! cache warming, and performance monitoring capabilities.
 
 pub mod integration;
-pub mod types;
+pub mod prompting_types;
 
 // Re-export key types
-pub use types::*;
+pub use prompting_prompting_cache_types::*;
 
 // Simple memory cache implementation
 use chrono;

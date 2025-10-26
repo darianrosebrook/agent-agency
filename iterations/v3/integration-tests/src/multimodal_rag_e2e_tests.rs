@@ -14,7 +14,7 @@ pub struct MultimodalRagE2eTests {
 
 /// Performance metrics from test execution
 #[derive(Debug, Clone)]
-pub struct PerformanceMetrics {
+pub struct IntegrationTestMetrics {
     pub test_name: String,
     pub total_time_ms: u64,
     pub ingest_time_ms: u64,
@@ -36,7 +36,7 @@ impl MultimodalRagE2eTests {
     }
 
     /// Run complete workflow test: ingest → enrich → index → retrieve → council
-    pub async fn test_complete_workflow(&self) -> Result<PerformanceMetrics> {
+    pub async fn test_complete_workflow(&self) -> Result<IntegrationTestMetrics> {
         info!("Starting complete workflow test: {}", self.test_name);
 
         let workflow_start = Instant::now();
@@ -79,7 +79,7 @@ impl MultimodalRagE2eTests {
         let total_time = workflow_start.elapsed().as_millis() as u64;
         let throughput = (indexed_count as f64 / total_time as f64) * 1000.0;
 
-        Ok(PerformanceMetrics {
+        Ok(IntegrationTestMetrics {
             test_name: self.test_name.clone(),
             total_time_ms: total_time,
             ingest_time_ms: ingest_time,
@@ -93,7 +93,7 @@ impl MultimodalRagE2eTests {
     }
 
     /// Test multimodal ingestion across all modalities
-    pub async fn test_multimodal_ingestion(&self) -> Result<PerformanceMetrics> {
+    pub async fn test_multimodal_ingestion(&self) -> Result<IntegrationTestMetrics> {
         info!("Testing multimodal ingestion");
 
         let start = Instant::now();
@@ -125,7 +125,7 @@ impl MultimodalRagE2eTests {
         let total_time = start.elapsed().as_millis() as u64;
         let throughput = (total_items as f64 / total_time as f64) * 1000.0;
 
-        Ok(PerformanceMetrics {
+        Ok(IntegrationTestMetrics {
             test_name: format!("{}_multimodal_ingest", self.test_name),
             total_time_ms: total_time,
             ingest_time_ms: total_time,
@@ -378,7 +378,7 @@ impl MultimodalRagE2eTests {
     }
 }
 
-impl PerformanceMetrics {
+impl IntegrationTestMetrics {
     /// Generate performance report
     pub fn generate_report(&self) -> String {
         format!(
@@ -478,7 +478,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_performance_metrics_generation() {
-        let metrics = PerformanceMetrics {
+        let metrics = IntegrationTestMetrics {
             test_name: "test".to_string(),
             total_time_ms: 500,
             ingest_time_ms: 50,

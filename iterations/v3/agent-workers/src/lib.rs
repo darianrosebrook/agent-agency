@@ -24,13 +24,13 @@ pub mod core;
 pub mod execution;
 pub mod mcp_integration;
 pub mod services;
-pub mod types;
+pub mod prompting_types;
 
 // Re-export main types
 pub use core::{MCPWorkerPool, WorkerPoolConfig, WorkerHandle};
 pub use execution::{ToolExecutor, ExecutionResult};
 pub use agent_mcp::ToolRegistry;
-pub use types::*;
+pub use prompting_prompting_worker_types::*;
 
 // Factory functions (async due to memory initialization)
 

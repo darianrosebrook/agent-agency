@@ -52,10 +52,10 @@ macro_rules! define_error {
 macro_rules! impl_component_traits {
     ($struct_name:ident) => {
         impl crate::traits::StatusReporter for $struct_name {
-            fn status(&self) -> crate::types::ComponentStatus {
-                crate::types::ComponentStatus {
+            fn status(&self) -> crate::pattern_types::ComponentStatus {
+                crate::pattern_types::ComponentStatus {
                     name: stringify!($struct_name).to_string(),
-                    health: crate::types::HealthStatus::Healthy,
+                    health: crate::pattern_types::HealthStatus::Healthy,
                     last_checked: chrono::Utc::now(),
                     details: std::collections::HashMap::new(),
                 }
@@ -76,9 +76,9 @@ macro_rules! impl_component_traits {
 macro_rules! impl_validation_traits {
     ($struct_name:ident) => {
         impl crate::traits::Validatable for $struct_name {
-            fn validate(&self) -> anyhow::Result<crate::types::ValidationResult> {
+            fn validate(&self) -> anyhow::Result<crate::pattern_types::ValidationResult> {
                 // Basic validation - override in implementation
-                Ok(crate::types::ValidationResult::success())
+                Ok(crate::pattern_types::ValidationResult::success())
             }
         }
     };
@@ -151,8 +151,8 @@ macro_rules! impl_metrics_provider {
                 }))
             }
 
-            fn get_metrics_snapshot(&self) -> anyhow::Result<crate::types::MetricsSnapshot> {
-                Ok(crate::types::MetricsSnapshot {
+            fn get_metrics_snapshot(&self) -> anyhow::Result<crate::pattern_types::MetricsSnapshot> {
+                Ok(crate::pattern_types::MetricsSnapshot {
                     component: stringify!($struct_name).to_string(),
                     timestamp: chrono::Utc::now(),
                     metrics: std::collections::HashMap::new(),
@@ -253,6 +253,6 @@ macro_rules! define_event {
 #[macro_export]
 macro_rules! define_result_type {
     ($result_name:ident<$data:ident>) => {
-        pub type $result_name = crate::types::OperationResult<$data>;
+        pub type $result_name = crate::pattern_types::OperationResult<$data>;
     };
 }

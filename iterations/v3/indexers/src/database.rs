@@ -1,7 +1,7 @@
 //! @darianrosebrook
 //! Database persistence layer for vector storage and audit logs
 
-use crate::types::{BlockVectorRecord, SearchAuditEntry};
+use crate::indexer_types::{BlockVectorRecord, SearchAuditEntry};
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use sqlx::postgres::PgPoolOptions;

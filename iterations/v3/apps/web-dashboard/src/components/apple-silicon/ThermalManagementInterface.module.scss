@@ -1,0 +1,677 @@
+/**
+ * ThermalManagementInterface Component Styles
+ * Real-time temperature monitoring and cooling system controls
+ *
+ * @author @darianrosebrook
+ */
+
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-6);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--spacing-4);
+  margin-bottom: var(--spacing-4);
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--spacing-3);
+  }
+}
+
+.headerLeft {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+.headerRight {
+  display: flex;
+  gap: var(--spacing-3);
+  align-items: center;
+
+  @media (max-width: 480px) {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--spacing-2);
+  }
+}
+
+.thermalStatus {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  padding: var(--spacing-2) var(--spacing-3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.connectionStatus {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  padding: var(--spacing-2) var(--spacing-3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+
+  .connected {
+    color: var(--color-success);
+  }
+
+  .disconnected {
+    color: var(--color-error);
+  }
+}
+
+/* View Tabs */
+.viewTabs {
+  display: flex;
+  gap: var(--spacing-1);
+  margin-bottom: var(--spacing-6);
+  border-bottom: 1px solid var(--color-border);
+
+  @media (max-width: 480px) {
+    justify-content: center;
+  }
+}
+
+.viewTab {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  padding: var(--spacing-3) var(--spacing-4);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  color: var(--color-text-secondary);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    color: var(--color-text-primary);
+    background-color: var(--color-surface-hover);
+  }
+
+  &.active {
+    color: var(--color-primary);
+    border-bottom-color: var(--color-primary);
+    background-color: var(--color-primary-light);
+  }
+
+  @media (max-width: 480px) {
+    padding: var(--spacing-2) var(--spacing-3);
+    font-size: 0.875rem;
+  }
+}
+
+/* Monitoring View */
+.monitoring {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-6);
+}
+
+.sensorsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--spacing-4);
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.sensorCard {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-5);
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.2s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+  }
+
+  @media (max-width: 480px) {
+    padding: var(--spacing-4);
+  }
+}
+
+.sensorHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--spacing-3);
+  margin-bottom: var(--spacing-4);
+}
+
+.sensorIcon {
+  color: var(--color-primary);
+  width: 1.5rem;
+  height: 1.5rem;
+  flex-shrink: 0;
+  margin-top: var(--spacing-1);
+}
+
+.sensorInfo {
+  flex: 1;
+}
+
+.sensorName {
+  margin: 0 0 var(--spacing-1) 0;
+}
+
+.temperatureDisplay {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+}
+
+.temperatureBar {
+  width: 100%;
+  height: 8px;
+  background: linear-gradient(90deg,
+    var(--color-success) 0%,
+    var(--color-success) 50%,
+    var(--color-warning) 75%,
+    var(--color-error) 90%
+  );
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.temperatureProgress {
+  height: 100%;
+  border-radius: var(--radius-sm);
+  transition: width 0.3s ease;
+}
+
+.temperatureThresholds {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+
+  .warningThreshold {
+    color: var(--color-warning);
+  }
+
+  .criticalThreshold {
+    color: var(--color-error);
+  }
+}
+
+/* Fan Status */
+.fanStatus {
+  margin-bottom: var(--spacing-6);
+}
+
+.fanCard {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-5);
+  box-shadow: var(--shadow-sm);
+}
+
+.fanHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  margin-bottom: var(--spacing-4);
+}
+
+.fanIcon {
+  color: var(--color-primary);
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.fanGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--spacing-4);
+
+  @media (max-width: 480px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.fanItem {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+  padding: var(--spacing-4);
+  background: var(--color-surface-secondary);
+  border-radius: var(--radius-md);
+}
+
+.fanInfo {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.fanName {
+  margin: 0;
+  font-weight: 500;
+}
+
+.fanSpeed {
+  text-align: center;
+}
+
+.fanMode {
+  display: flex;
+  justify-content: center;
+}
+
+.fanProgress {
+  margin-top: var(--spacing-2);
+}
+
+/* Thermal Overview */
+.thermalOverview {
+  margin-top: var(--spacing-6);
+}
+
+.overviewCard {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-5);
+  box-shadow: var(--shadow-sm);
+}
+
+.overviewGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--spacing-4);
+
+  @media (max-width: 480px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.overviewItem {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  padding: var(--spacing-3);
+  background: var(--color-surface-secondary);
+  border-radius: var(--radius-md);
+  text-align: center;
+}
+
+/* Controls View */
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-6);
+}
+
+.controlsCard {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-5);
+  box-shadow: var(--shadow-sm);
+}
+
+.controlSection {
+  margin-bottom: var(--spacing-6);
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.fanControl {
+  margin-bottom: var(--spacing-4);
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.fanControlHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-3);
+}
+
+.fanSpeedDisplay {
+  text-align: right;
+}
+
+.fanSpeedSlider {
+  margin-bottom: var(--spacing-3);
+}
+
+.slider {
+  width: 100%;
+  height: 6px;
+  background: var(--color-border);
+  border-radius: var(--radius-sm);
+  outline: none;
+  appearance: none;
+  cursor: pointer;
+
+  &::-webkit-slider-thumb {
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    background: var(--color-primary);
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: var(--shadow-sm);
+  }
+
+  &::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    background: var(--color-primary);
+    border-radius: 50%;
+    cursor: pointer;
+    border: none;
+    box-shadow: var(--shadow-sm);
+  }
+}
+
+.sliderLabels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: var(--spacing-2);
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+}
+
+.fanModeButtons {
+  display: flex;
+  gap: var(--spacing-2);
+}
+
+.tempLimitControls {
+  display: flex;
+  gap: var(--spacing-3);
+  margin-top: var(--spacing-3);
+
+  @media (max-width: 480px) {
+    flex-direction: column;
+    gap: var(--spacing-2);
+  }
+}
+
+.controlWarning {
+  display: flex;
+  gap: var(--spacing-3);
+  padding: var(--spacing-4);
+  background: var(--color-warning-light);
+  border: 1px solid var(--color-warning);
+  border-radius: var(--radius-md);
+  margin-top: var(--spacing-4);
+}
+
+.warningIcon {
+  color: var(--color-warning);
+  flex-shrink: 0;
+}
+
+.warningTitle {
+  font-weight: 600;
+  color: var(--color-warning);
+  margin: 0 0 var(--spacing-1) 0;
+}
+
+/* Policies View */
+.policies {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-6);
+}
+
+.policiesGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--spacing-4);
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.policyCard {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-5);
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.2s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+  }
+
+  @media (max-width: 480px) {
+    padding: var(--spacing-4);
+  }
+}
+
+.policyHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--spacing-3);
+  margin-bottom: var(--spacing-4);
+}
+
+.policyInfo {
+  flex: 1;
+}
+
+.policyDetails {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--spacing-4);
+  margin-bottom: var(--spacing-4);
+
+  @media (max-width: 480px) {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-3);
+  }
+}
+
+.policyMetric {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+  padding: var(--spacing-3);
+  background: var(--color-surface-secondary);
+  border-radius: var(--radius-md);
+  text-align: center;
+}
+
+.activateButton {
+  width: 100%;
+}
+
+/* Events View */
+.events {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-6);
+}
+
+.eventsCard {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-5);
+  box-shadow: var(--shadow-sm);
+}
+
+.eventsHeader {
+  margin-bottom: var(--spacing-4);
+}
+
+.eventsList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+}
+
+.eventItem {
+  display: flex;
+  gap: var(--spacing-4);
+  padding: var(--spacing-4);
+  background: var(--color-surface-secondary);
+  border-radius: var(--radius-md);
+  transition: background-color 0.2s ease;
+
+  &:hover {
+    background: var(--color-surface-hover);
+  }
+
+  @media (max-width: 480px) {
+    flex-direction: column;
+    gap: var(--spacing-3);
+    padding: var(--spacing-3);
+  }
+}
+
+.eventIcon {
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
+  margin-top: var(--spacing-1);
+
+  @media (max-width: 480px) {
+    align-self: flex-start;
+  }
+}
+
+.eventContent {
+  flex: 1;
+}
+
+.eventHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--spacing-3);
+  margin-bottom: var(--spacing-2);
+
+  @media (max-width: 480px) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-2);
+  }
+}
+
+.eventMessage {
+  margin: 0;
+  flex: 1;
+}
+
+.eventDetails {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--spacing-3);
+
+  @media (max-width: 480px) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-2);
+  }
+}
+
+/* Spinning animation */
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Focus and interaction states */
+.viewTab:focus-visible,
+.slider:focus-visible,
+.activateButton:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .sensorCard,
+  .fanCard,
+  .overviewCard,
+  .controlsCard,
+  .policyCard,
+  .eventsCard,
+  .eventItem {
+    border-width: 2px;
+  }
+
+  .viewTab.active {
+    border-bottom-width: 3px;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .sensorCard,
+  .policyCard,
+  .eventItem,
+  .temperatureProgress {
+    transition: none;
+  }
+
+  .spinning {
+    animation: none;
+  }
+}
+
+/* Custom scrollbar for events list */
+.eventsList {
+  max-height: 400px;
+  overflow-y: auto;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: var(--color-surface-secondary);
+    border-radius: var(--radius-sm);
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: var(--color-border);
+    border-radius: var(--radius-sm);
+
+    &:hover {
+      background: var(--color-text-secondary);
+    }
+  }
+}

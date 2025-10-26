@@ -1,6 +1,6 @@
 //! Worker communication message types and handling
 
-use crate::types::*;
+use crate::parallel_types::*;
 use chrono::{DateTime, Utc};
 
 /// Central message broker for coordinating worker communication

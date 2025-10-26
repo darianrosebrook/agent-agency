@@ -8,7 +8,7 @@ use tracing::{info, warn, error};
 use agent_agency_database::DatabaseClient;
 use redis::Client as RedisClient;
 
-use crate::types::*;
+use crate::engine_types::*;
 use super::types::HealthCheckResult;
 use super::tenant::TenantManager;
 use super::storage::StorageManager;

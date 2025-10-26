@@ -1,6 +1,6 @@
 //! Limits enforcement and rate limiting for multi-tenant operations
 
-use crate::types::*;
+use crate::engine_types::*;
 use anyhow::Result;
 use std::collections::HashMap;
 use std::sync::Mutex;

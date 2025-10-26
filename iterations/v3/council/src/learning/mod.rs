@@ -85,16 +85,16 @@ mod tests {
     async fn test_learning_system_creation() {
         let system = LearningSystem::new();
         // Basic smoke test - system should create without errors
-        assert!(system.analyzer().estimate_task_complexity(&crate::types::TaskSpec {
+        assert!(system.analyzer().estimate_task_complexity(&crate::council_types::TaskSpec {
             id: uuid::Uuid::new_v4(),
             title: "Test Task".to_string(),
             description: "Test description".to_string(),
-            risk_tier: crate::types::RiskTier::Tier3,
-            task_type: crate::types::TaskType::Feature,
+            risk_tier: crate::council_types::RiskTier::Tier3,
+            task_type: crate::council_types::TaskType::Feature,
             acceptance_criteria: vec![],
             created_at: chrono::Utc::now(),
             updated_at: chrono::Utc::now(),
-            status: crate::types::TaskStatus::Pending,
+            status: crate::council_types::TaskStatus::Pending,
             assigned_judge: None,
             metadata: std::collections::HashMap::new(),
         }) == TaskComplexity::Simple);

@@ -1,6 +1,6 @@
 //! Communication hub that orchestrates message passing
 
-use crate::types::*;
+use crate::parallel_types::*;
 use crate::error::*;
 use crate::communication::{MessageBroker, ChannelRegistry, ChannelConfig};
 use super::channels::BidirectionalChannel;

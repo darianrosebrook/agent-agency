@@ -3,7 +3,7 @@
 //! Validates task results against CAWS standards and ensures
 //! quality gates are met before task completion.
 
-use crate::types::*;
+use crate::worker_types::*;
 use crate::execution::ExecutionResult;
 use agent_agency_council::CAWSValidator;
 use std::collections::HashMap;
@@ -30,10 +30,10 @@ impl QualityValidator {
     }
 
     /// Validate the result of a task execution
-    pub async fn validate_result(&self, result: &ExecutionResult) -> Result<crate::types::QualityValidation, QualityError> {
+    pub async fn validate_result(&self, result: &ExecutionResult) -> Result<crate::worker_types::QualityValidation, QualityError> {
         // Check basic success
         if !result.success {
-            return Ok(crate::types::QualityValidation {
+            return Ok(crate::worker_types::QualityValidation {
                 passed: false,
                 score: 0.0,
                 violations: vec!["Task execution failed".to_string()],
@@ -71,7 +71,7 @@ impl QualityValidator {
             ));
         }
 
-        Ok(crate::types::QualityValidation {
+        Ok(crate::worker_types::QualityValidation {
             passed,
             score: overall_score,
             violations,

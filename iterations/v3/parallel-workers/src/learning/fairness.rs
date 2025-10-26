@@ -1,6 +1,6 @@
 //! Fairness constraints and diversity tracking
 
-use crate::types::{WorkerId, WorkerSpecialty};
+use crate::parallel_types::{WorkerId, WorkerSpecialty};
 use std::collections::HashMap;
 use std::time::Duration;
 use serde::{Deserialize, Serialize};
@@ -110,7 +110,7 @@ impl FairnessTracker {
             WorkerSpecialty::Refactoring { strategies: vec!["extract".to_string()] },
             WorkerSpecialty::Testing { frameworks: vec!["cargo".to_string()] },
             WorkerSpecialty::Documentation { formats: vec!["markdown".to_string()] },
-            WorkerSpecialty::TypeSystem { domains: vec![crate::types::TypeDomain::TraitBounds] },
+            WorkerSpecialty::TypeSystem { domains: vec![crate::parallel_types::TypeDomain::TraitBounds] },
             WorkerSpecialty::AsyncPatterns { patterns: vec!["async".to_string()] },
         ] {
             specialty_shares.insert(specialty.clone(), self.get_specialty_share(specialty));

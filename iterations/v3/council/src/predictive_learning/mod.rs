@@ -15,7 +15,7 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::info;
 
-use crate::types::{LearningInsights, TaskOutcome};
+use crate::council_types::{LearningInsights, TaskOutcome};
 use crate::predictive_learning::performance::PerformancePrediction;
 use crate::predictive_learning::strategy::StrategyOptimization;
 use crate::predictive_learning::resource::ResourcePrediction;

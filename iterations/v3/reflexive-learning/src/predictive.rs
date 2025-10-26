@@ -3,7 +3,7 @@
 use std::collections::HashSet;
 use tracing::{debug, instrument};
 
-use crate::types::{
+use crate::reflexive_types::{
     FailureCategory, LearningStrategy, LearningSystemError, PerformancePrediction,
     PredictiveLearningInsights, QualityIndicator, ResourcePrediction, ResourcePressureLevel,
     RiskLevel, StrategyAdjustmentFocus, StrategyAdjustmentSuggestion, StrategyOptimizationPlan,

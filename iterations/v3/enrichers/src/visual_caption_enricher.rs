@@ -7,7 +7,7 @@
 //! - Local models or API fallback
 
 use crate::circuit_breaker::{CircuitBreaker, CircuitBreakerConfig};
-use crate::types::{CaptionResult, EnricherConfig};
+use crate::enricher_types::{CaptionResult, EnricherConfig};
 use anyhow::Result;
 
 pub struct VisualCaptionEnricher {

@@ -1,6 +1,6 @@
 //! Adaptive worker selector with multiple strategies
 
-use crate::types::{TaskId, WorkerId, WorkerSpecialty, TaskPattern};
+use crate::parallel_types::{TaskId, WorkerId, WorkerSpecialty, TaskPattern};
 use crate::learning::metrics_collector::WorkerPerformanceProfile;
 use crate::learning::pattern_analyzer::PatternAnalyzer;
 // use crate::learning::fairness::FairnessMonitor;
@@ -276,8 +276,8 @@ impl AdaptiveWorkerSelector {
     /// Get preferred specialties for a task pattern
     fn get_preferred_specialties(&self, task_pattern: &TaskPattern) -> Vec<WorkerSpecialty> {
         match task_pattern {
-            TaskPattern::CompilationErrors { .. } => vec![WorkerSpecialty::CompilationErrors { error_codes: vec!["E0277".to_string()] }, WorkerSpecialty::TypeSystem { domains: vec![crate::types::TypeDomain::TraitBounds] }],
-            TaskPattern::RefactoringOperations { .. } => vec![WorkerSpecialty::Refactoring { strategies: vec!["extract".to_string()] }, WorkerSpecialty::TypeSystem { domains: vec![crate::types::TypeDomain::TraitBounds] }],
+            TaskPattern::CompilationErrors { .. } => vec![WorkerSpecialty::CompilationErrors { error_codes: vec!["E0277".to_string()] }, WorkerSpecialty::TypeSystem { domains: vec![crate::parallel_types::TypeDomain::TraitBounds] }],
+            TaskPattern::RefactoringOperations { .. } => vec![WorkerSpecialty::Refactoring { strategies: vec!["extract".to_string()] }, WorkerSpecialty::TypeSystem { domains: vec![crate::parallel_types::TypeDomain::TraitBounds] }],
             TaskPattern::TestingGaps { .. } => vec![WorkerSpecialty::Testing { frameworks: vec!["cargo".to_string()] }, WorkerSpecialty::CompilationErrors { error_codes: vec!["E0277".to_string()] }],
             TaskPattern::DocumentationNeeds { .. } => vec![WorkerSpecialty::Documentation { formats: vec!["markdown".to_string()] }],
         }

@@ -2,7 +2,7 @@
 //!
 //! Provides hooks for policy adaptation and reinforcement learning integration.
 
-use crate::types::SelfPromptingAgentError;
+use crate::prompting_types::SelfPromptingAgentError;
 
 /// Adaptive agent with policy hooks
 pub struct AdaptiveAgent;

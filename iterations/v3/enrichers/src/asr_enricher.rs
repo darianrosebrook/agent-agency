@@ -7,7 +7,7 @@
 //! - Cloud providers (optional, off by default)
 
 use crate::circuit_breaker::{CircuitBreaker, CircuitBreakerConfig};
-use crate::types::{AsrResult, EnricherConfig, Speaker, SpeechSegment, WordTiming};
+use crate::enricher_types::{AsrResult, EnricherConfig, Speaker, SpeechSegment, WordTiming};
 use anyhow::{anyhow, Result};
 use std::path::PathBuf;
 use std::time::Instant;

@@ -2,7 +2,7 @@
 //!
 //! Manages registration, execution, and lifecycle of MCP tools.
 
-use crate::types::*;
+use crate::mcp_types::*;
 use crate::tools::{DocQualityValidator, create_memory_tools};
 use agent_memory::MemorySystem;
 use anyhow::Result;

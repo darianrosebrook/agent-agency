@@ -11,10 +11,10 @@ pub mod context;
 pub mod indexer;
 pub mod model_loading;
 pub mod provider;
-pub mod service;
+pub mod embedding_service;
 pub mod similarity;
 pub mod tokenization;
-pub mod types;
+pub mod prompting_types;
 
 #[cfg(test)]
 mod tests;
@@ -23,6 +23,6 @@ pub use cache::{EmbeddingCache, ModelCache, ModelCacheStats, ModelCacheInfo, Mod
 pub use context::*;
 pub use indexer::orchestrator::MultimodalIndexer;
 pub use provider::*;
-pub use service::*;
+pub use embedding_service::*;
 pub use similarity::*;
-pub use types::*;
+pub use prompting_prompting_embedding_types::*;

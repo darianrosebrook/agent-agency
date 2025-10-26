@@ -11,7 +11,7 @@ use super::algorithms::LearningAlgorithms;
 use super::state::{StateManager, LearningSession};
 use crate::predictive::PredictiveLearningSystem;
 use crate::progress_tracker::ProgressSnapshot;
-use crate::types::*;
+use crate::reflexive_types::*;
 use anyhow::Result;
 use std::collections::HashMap;
 use tracing::{debug, info, instrument, warn};

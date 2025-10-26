@@ -686,9 +686,9 @@ impl Council {
     fn create_decision_context(&self, review_context: &ReviewContext) -> DecisionContext {
         // Create organizational constraints based on risk tier
         let max_risk_level = match review_context.risk_tier {
-            crate::types::RiskTier::Tier1 => crate::judge::RiskLevel::Medium,
-            crate::types::RiskTier::Tier2 => crate::judge::RiskLevel::High,
-            crate::types::RiskTier::Tier3 => crate::judge::RiskLevel::Critical,
+            crate::council_types::RiskTier::Tier1 => crate::judge::RiskLevel::Medium,
+            crate::council_types::RiskTier::Tier2 => crate::judge::RiskLevel::High,
+            crate::council_types::RiskTier::Tier3 => crate::judge::RiskLevel::Critical,
         };
 
         let organizational_constraints = OrganizationalConstraints {
@@ -736,21 +736,21 @@ impl Council {
         };
 
         let emergency_flags = EmergencyFlags {
-            business_critical: matches!(review_context.risk_tier, crate::types::RiskTier::Tier1),
+            business_critical: matches!(review_context.risk_tier, crate::council_types::RiskTier::Tier1),
             security_incident: false,
             compliance_deadline: false,
             customer_impact: match review_context.risk_tier {
-                crate::types::RiskTier::Tier1 => ImpactLevel::High,
-                crate::types::RiskTier::Tier2 => ImpactLevel::Medium,
-                crate::types::RiskTier::Tier3 => ImpactLevel::Low,
+                crate::council_types::RiskTier::Tier1 => ImpactLevel::High,
+                crate::council_types::RiskTier::Tier2 => ImpactLevel::Medium,
+                crate::council_types::RiskTier::Tier3 => ImpactLevel::Low,
             },
         };
 
         DecisionContext {
             risk_tier: match review_context.risk_tier {
-                crate::types::RiskTier::Tier1 => agent_agency_contracts::task_request::RiskTier::Tier1,
-                crate::types::RiskTier::Tier2 => agent_agency_contracts::task_request::RiskTier::Tier2,
-                crate::types::RiskTier::Tier3 => agent_agency_contracts::task_request::RiskTier::Tier3,
+                crate::council_types::RiskTier::Tier1 => agent_agency_contracts::task_request::RiskTier::Tier1,
+                crate::council_types::RiskTier::Tier2 => agent_agency_contracts::task_request::RiskTier::Tier2,
+                crate::council_types::RiskTier::Tier3 => agent_agency_contracts::task_request::RiskTier::Tier3,
             },
             organizational_constraints,
             resource_constraints,
@@ -804,8 +804,8 @@ impl Council {
     /// Retrieve relevant historical decisions from memory for decision context
     async fn retrieve_historical_decisions(
         &self,
-        working_spec: &crate::types::WorkingSpec,
-        risk_tier: &crate::types::RiskTier,
+        working_spec: &crate::council_types::WorkingSpec,
+        risk_tier: &crate::council_types::RiskTier,
     ) -> Vec<crate::decision_making::HistoricalDecision> {
         if let Some(ref memory_system) = self.memory_system {
             // Create context for memory retrieval
@@ -1011,7 +1011,7 @@ pub fn create_default_council() -> CouncilResult<Council> {
 }
 
 /// Convert local WorkingSpec to contract WorkingSpec
-fn convert_local_to_contract_spec(local_spec: &crate::types::WorkingSpec) -> agent_agency_contracts::working_spec::WorkingSpec {
+fn convert_local_to_contract_spec(local_spec: &crate::council_types::WorkingSpec) -> agent_agency_contracts::working_spec::WorkingSpec {
     agent_agency_contracts::working_spec::WorkingSpec {
         version: "1.0".to_string(),
         id: local_spec.id.clone(),
@@ -1019,9 +1019,9 @@ fn convert_local_to_contract_spec(local_spec: &crate::types::WorkingSpec) -> age
         description: local_spec.title.clone(), // Use title as description
         goals: local_spec.acceptance_criteria.iter().map(|ac| ac.description.clone()).collect(),
         risk_tier: match local_spec.risk_tier {
-            crate::types::RiskTier::Tier1 => 1,
-            crate::types::RiskTier::Tier2 => 2,
-            crate::types::RiskTier::Tier3 => 3,
+            crate::council_types::RiskTier::Tier1 => 1,
+            crate::council_types::RiskTier::Tier2 => 2,
+            crate::council_types::RiskTier::Tier3 => 3,
         },
         constraints: agent_agency_contracts::working_spec::WorkingSpecConstraints {
             budget_limits: None,
@@ -1058,10 +1058,10 @@ fn convert_local_to_contract_spec(local_spec: &crate::types::WorkingSpec) -> age
 }
 
 /// Convert local RiskTier to contract RiskTier
-fn convert_local_to_contract_risk_tier(local_tier: &crate::types::RiskTier) -> agent_agency_contracts::task_request::RiskTier {
+fn convert_local_to_contract_risk_tier(local_tier: &crate::council_types::RiskTier) -> agent_agency_contracts::task_request::RiskTier {
     match local_tier {
-        crate::types::RiskTier::Tier1 => agent_agency_contracts::task_request::RiskTier::Tier1,
-        crate::types::RiskTier::Tier2 => agent_agency_contracts::task_request::RiskTier::Tier2,
-        crate::types::RiskTier::Tier3 => agent_agency_contracts::task_request::RiskTier::Tier3,
+        crate::council_types::RiskTier::Tier1 => agent_agency_contracts::task_request::RiskTier::Tier1,
+        crate::council_types::RiskTier::Tier2 => agent_agency_contracts::task_request::RiskTier::Tier2,
+        crate::council_types::RiskTier::Tier3 => agent_agency_contracts::task_request::RiskTier::Tier3,
     }
 }

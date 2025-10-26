@@ -10,10 +10,10 @@ pub mod bm25_indexer;
 pub mod database;
 pub mod hnsw_indexer;
 pub mod job_scheduler;
-pub mod types;
+pub mod indexer_types;
 
 pub use bm25_indexer::Bm25Indexer;
 pub use database::{DatabasePool, VectorStore};
 pub use hnsw_indexer::HnswIndexer;
 pub use job_scheduler::{IngestionJob, JobScheduler, JobType};
-pub use types::*;
+pub use indexer_types::*;

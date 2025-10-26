@@ -1,6 +1,6 @@
 //! Worker lifecycle management
 
-use crate::types::*;
+use crate::parallel_types::*;
 use crate::error::{WorkerError, WorkerExecutionResult};
 use crate::worker::specialization::*;
 use crate::progress::WorkerStatus;

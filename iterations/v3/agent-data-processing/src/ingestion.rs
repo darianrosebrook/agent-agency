@@ -7,7 +7,7 @@
 //! - Database record ingestion
 //! - API data ingestion
 
-use crate::types::*;
+use crate::data_processing_types::*;
 use crate::{DataProcessingResult, DataProcessingError};
 use async_trait::async_trait;
 use std::path::Path;

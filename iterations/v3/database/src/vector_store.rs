@@ -5,7 +5,7 @@
 
 use anyhow::{Context, Result};
 use indexers::database::{PostgresVectorStore, VectorStore};
-use indexers::types::{BlockVectorRecord, SearchAuditEntry, SearchResult};
+use indexers::indexer_types::{BlockVectorRecord, SearchAuditEntry, SearchResult};
 use sqlx::PgPool;
 use std::sync::Arc;
 use tracing::{debug, error, info};

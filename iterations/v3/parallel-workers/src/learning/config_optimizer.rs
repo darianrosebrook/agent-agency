@@ -1,6 +1,6 @@
 //! Configuration optimizer for parallel worker system
 
-use crate::types::{WorkerSpecialty, TaskPattern};
+use crate::parallel_types::{WorkerSpecialty, TaskPattern};
 use crate::learning::pattern_analyzer::PatternAnalyzer;
 use crate::learning::metrics_collector::ExecutionRecord;
 use std::collections::HashMap;
@@ -484,7 +484,7 @@ mod tests {
                 task_id: TaskId::new(),
                 worker_id: WorkerId::new(),
                 specialty: WorkerSpecialty::Compilation,
-                subtask_id: crate::types::SubTaskId::new(),
+                subtask_id: crate::parallel_types::SubTaskId::new(),
                 metrics: ExecutionMetrics {
                     start_time: Utc::now(),
                     end_time: Utc::now(),
@@ -518,7 +518,7 @@ mod tests {
                 task_id: TaskId::new(),
                 worker_id: WorkerId::new(),
                 specialty: WorkerSpecialty::Compilation,
-                subtask_id: crate::types::SubTaskId::new(),
+                subtask_id: crate::parallel_types::SubTaskId::new(),
                 metrics: ExecutionMetrics {
                     start_time: Utc::now(),
                     end_time: Utc::now(),

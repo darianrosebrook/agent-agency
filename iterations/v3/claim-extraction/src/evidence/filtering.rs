@@ -1,7 +1,7 @@
 //! Evidence filtering and ranking logic
 
 use super::types::*;
-use crate::types::{AtomicClaim, Evidence, EvidenceType};
+use crate::extraction_types::{AtomicClaim, Evidence, EvidenceType};
 use std::collections::HashMap;
 
 /// Evidence filter and ranking engine

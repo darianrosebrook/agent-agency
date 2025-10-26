@@ -8,15 +8,15 @@
 //! worker outputs are tracked with cryptographic integrity.
 
 pub mod git_integration;
-pub mod service;
+pub mod provenance_service;
 pub mod signer;
 pub mod storage;
-pub mod types;
+pub mod prompting_types;
 
 pub use git_integration::{GitIntegration, GitTrailerManager};
-pub use service::ProvenanceService;
+pub use provenance_service::ProvenanceService;
 pub use signer::{JwsSigner, LocalKeySigner, SignerTrait, SigningAlgorithm};
-pub use types::*;
+pub use prompting_prompting_provenance_types::*;
 
 /// Provenance service configuration
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]

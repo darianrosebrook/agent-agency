@@ -6,11 +6,11 @@ pub mod change_classifier;
 pub mod evaluator;
 pub mod impact_analyzer;
 pub mod language_support;
-pub mod types;
+pub mod prompting_types;
 
 pub use ast_analyzer::ASTAnalyzer;
 pub use change_classifier::ChangeClassifier;
 pub use evaluator::MinimalDiffEvaluator;
 pub use impact_analyzer::ImpactAnalyzer;
 pub use language_support::LanguageSupport;
-pub use types::*;
+pub use prompting_prompting_evaluator_types::*;

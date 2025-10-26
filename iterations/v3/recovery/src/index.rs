@@ -10,8 +10,8 @@ use sqlx::{SqlitePool, Row};
 use std::path::Path;
 use tracing::{debug, info};
 
-use crate::types::*;
-use crate::types::Digest;
+use crate::recovery_types::*;
+use crate::recovery_types::Digest;
 use crate::merkle::AuthorInfo;
 
 /// SQLite index for recovery metadata

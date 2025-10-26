@@ -78,11 +78,11 @@ async fn main() -> Result<()> {
     // Initialize database client
     info!("Connecting to database...");
     let db_config = database::DatabaseConfig {
-        host: "localhost".to_string(),
-        port: 5432,
-        database: "agent_agency".to_string(),
-        username: "postgres".to_string(),
-        password: "password".to_string(),
+        host: std::env::var("DATABASE_HOST").unwrap_or_else(|_| "localhost".to_string()),
+        port: std::env::var("DATABASE_PORT").unwrap_or_else(|_| "5432".to_string()).parse().unwrap_or(5432),
+        database: std::env::var("DATABASE_NAME").unwrap_or_else(|_| "agent_agency".to_string()),
+        username: std::env::var("DATABASE_USER").unwrap_or_else(|_| "postgres".to_string()),
+        password: std::env::var("DATABASE_PASSWORD").unwrap_or_else(|_| "test-password-for-demo-only".to_string()),
         pool_min: 1,
         pool_max: 10,
         connection_timeout_seconds: 30,

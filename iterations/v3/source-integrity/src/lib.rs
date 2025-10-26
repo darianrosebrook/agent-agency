@@ -9,11 +9,11 @@
 //! @author @darianrosebrook
 
 pub mod hasher;
-pub mod service;
+pub mod integrity_service;
 pub mod storage;
 pub mod tampering_detector;
-pub mod types;
+pub mod integrity_types;
 
-pub use service::SourceIntegrityService;
-pub use types::*;
+pub use integrity_service::SourceIntegrityService;
+pub use integrity_integrity_types::*;
 pub use hasher::{Digest, StreamingHasher, MerkleTree, MerkleNode};

@@ -16,7 +16,7 @@ pub struct EmbeddingVector {
 }
 
 #[async_trait]
-pub trait EmbeddingProvider: Send + Sync {
+pub trait ResearchEmbeddingProvider: Send + Sync {
     fn dimension(&self) -> usize;
     async fn embed(&self, inputs: &[String]) -> Result<Vec<EmbeddingVector>>;
 }

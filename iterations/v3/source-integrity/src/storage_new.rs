@@ -9,11 +9,11 @@ use std::collections::HashMap;
 use uuid::Uuid;
 
 use agent_agency_database::DatabaseClient;
-use crate::types::*;
+use crate::integrity_types::*;
 
 /// Storage trait for source integrity records
 #[async_trait]
-pub trait SourceIntegrityStorage: Send + Sync {
+pub trait NewSourceIntegrityStorage: Send + Sync {
     /// Store a new source integrity record
     async fn store_record(&self, record: &CreateSourceIntegrityRecord) -> Result<Uuid>;
 

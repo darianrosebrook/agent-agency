@@ -5,7 +5,7 @@
 
 use crate::coordinator::ConsensusCoordinator;
 use crate::models::{EvidencePacket, ParticipantContribution, RiskTier, TaskSpec};
-use crate::types::{ConsensusResult, FinalVerdict, JudgeVerdict};
+use crate::council_types::{ConsensusResult, FinalVerdict, JudgeVerdict};
 use crate::CouncilConfig;
 use agent_agency_research::{MultimodalContextProvider, MultimodalContext};
 use serde::{Deserialize, Serialize};
@@ -71,7 +71,7 @@ impl PlanReviewService {
     /// Review a generated working spec for constitutional compliance
     pub async fn review_plan(
         &self,
-        working_spec: &crate::types::WorkingSpec,
+        working_spec: &crate::council_types::WorkingSpec,
         task_context: &super::super::planning::agent::TaskContext,
     ) -> Result<PlanReviewVerdict> {
         info!("Starting constitutional review of working spec: {}", working_spec.id);
@@ -96,7 +96,7 @@ impl PlanReviewService {
     /// Convert working spec to task spec format expected by council
     fn working_spec_to_task_spec(
         &self,
-        working_spec: &crate::types::WorkingSpec,
+        working_spec: &crate::council_types::WorkingSpec,
         task_context: &super::super::planning::agent::TaskContext,
     ) -> Result<TaskSpec> {
         // Convert risk tier
@@ -146,7 +146,7 @@ impl PlanReviewService {
     /// Gather multimodal context for plan review
     async fn gather_plan_context(
         &self,
-        working_spec: &crate::types::WorkingSpec,
+        working_spec: &crate::council_types::WorkingSpec,
         task_context: &super::super::planning::agent::TaskContext,
     ) -> Result<MultimodalContext> {
         // Build context from task context and working spec
@@ -196,7 +196,7 @@ impl PlanReviewService {
     fn consensus_to_plan_verdict(
         &self,
         consensus: &ConsensusResult,
-        working_spec: &crate::types::WorkingSpec,
+        working_spec: &crate::council_types::WorkingSpec,
     ) -> Result<PlanReviewVerdict> {
         // Extract individual judge verdicts
         let judge_verdicts = self.extract_judge_verdicts(consensus)?;

@@ -154,7 +154,7 @@ impl PrecisionEngineer {
     }
 
     /// Calculate optimization result metrics
-    async fn calculate_optimization_result(&self, original: &ModelAnalysis, optimized: &PerformanceMetrics) -> Result<OptimizationResult> {
+    async fn calculate_optimization_result(&self, original: &ModelAnalysis, optimized: &PrecisionEngineeringMetrics) -> Result<OptimizationResult> {
         let size_reduction = original.estimated_size_mb / optimized.optimized_size_mb;
         let latency_improvement = optimized.latency_improvement_ms;
         let accuracy_impact = optimized.accuracy_impact;
@@ -352,7 +352,7 @@ struct Buffer {
 /// Apple Silicon bridge trait for hardware-specific optimizations
 #[async_trait::async_trait]
 pub trait AppleSiliconBridge: Send + Sync {
-    async fn deploy_and_measure(&self, model: &MemoryOptimizedModel) -> Result<PerformanceMetrics>;
+    async fn deploy_and_measure(&self, model: &MemoryOptimizedModel) -> Result<PrecisionEngineeringMetrics>;
 }
 
 /// Model analysis results
@@ -395,7 +395,7 @@ struct MemoryOptimizedModel {
 
 /// Performance metrics from deployment
 #[derive(Debug)]
-struct PerformanceMetrics {
+struct PrecisionEngineeringMetrics {
     optimized_size_mb: f32,
     latency_improvement_ms: f32,
     accuracy_impact: f32,

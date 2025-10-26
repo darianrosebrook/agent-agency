@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::types::Codec;
+use crate::recovery_types::Codec;
 use crate::policy::CawsPolicy;
 
 /// CAWS policy enforcement engine

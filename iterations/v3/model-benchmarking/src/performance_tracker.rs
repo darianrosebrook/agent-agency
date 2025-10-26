@@ -1,6 +1,6 @@
 //! Performance tracking for models
 
-use crate::types::*;
+use crate::benchmark_types::*;
 use anyhow::Result;
 use std::collections::HashMap;
 use std::sync::Arc;

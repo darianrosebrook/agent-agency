@@ -5,7 +5,7 @@
 #[cfg(test)]
 mod tests {
     use crate::multi_modal_verification::MultiModalVerificationEngine;
-    use crate::types::*;
+    use crate::extraction_types::*;
     use chrono::Utc;
     use uuid::Uuid;
 

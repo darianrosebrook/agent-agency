@@ -3,7 +3,7 @@
 //! Determines which content can be verified and rewrites unverifiable
 //! content to make it verifiable. Based on V2 qualification logic.
 
-use crate::types::*;
+use crate::extraction_types::*;
 use anyhow::Result;
 use regex::Regex;
 use tracing::debug;

@@ -1,6 +1,6 @@
 //! Reinforcement learning algorithms for reflexive learning
 
-use crate::types::*;
+use crate::reflexive_types::*;
 use rand::prelude::*;
 use std::collections::HashMap;
 

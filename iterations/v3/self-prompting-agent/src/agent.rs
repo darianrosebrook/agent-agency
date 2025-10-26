@@ -8,7 +8,7 @@ use crate::evaluation::EvaluationOrchestrator;
 use crate::loop_controller::{SelfPromptingLoop, SelfPromptingResult, SelfPromptingEvent};
 use crate::models::ModelRegistry;
 use crate::sandbox::SandboxEnvironment;
-use crate::types::{Task, SelfPromptingAgentError, ExecutionMode, SafetyMode};
+use crate::prompting_types::{Task, SelfPromptingAgentError, ExecutionMode, SafetyMode};
 
 /// Configuration for the self-prompting agent
 #[derive(Debug, Clone)]

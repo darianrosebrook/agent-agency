@@ -5,7 +5,7 @@
 use std::collections::HashMap;
 use async_trait::async_trait;
 
-use crate::types::SelfPromptingAgentError;
+use crate::prompting_types::SelfPromptingAgentError;
 
 /// Hierarchical context manager
 pub struct HierarchicalContextManager {

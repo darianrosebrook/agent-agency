@@ -4,7 +4,7 @@
 //! when consensus cannot be reached through simple voting.
 
 use crate::models::*;
-use crate::types::*;
+use crate::council_types::*;
 use crate::{DebateConfig, JudgeSpec};
 use anyhow::{Context, Result};
 use async_trait::async_trait;
@@ -1245,8 +1245,8 @@ impl DebateProtocol {
             enhanced_reasoning.push_str(&format!("\n\nResearch Finding: {}", finding.finding));
 
             // Convert research finding to evidence
-            enhanced_evidence.push(crate::types::Evidence {
-                source: crate::types::EvidenceSource::CodeAnalysis, // PLACEHOLDER: Use appropriate source
+            enhanced_evidence.push(crate::council_types::Evidence {
+                source: crate::council_types::EvidenceSource::CodeAnalysis, // PLACEHOLDER: Use appropriate source
                 content: finding.finding.clone(),
                 relevance: finding.relevance,
                 timestamp: chrono::Utc::now(),

@@ -1,6 +1,6 @@
 //! Dependency analysis and graph construction for task decomposition
 
-use crate::types::*;
+use crate::parallel_types::*;
 use crate::error::*;
 use std::collections::{HashMap, HashSet};
 

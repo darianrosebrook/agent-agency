@@ -6,7 +6,7 @@
 //! - Database persistence with connection pooling
 //! - Job scheduler with concurrency governance
 
-use crate::types::*;
+use crate::data_processing_types::*;
 use crate::{DataProcessingResult, DataProcessingError};
 use async_trait::async_trait;
 use std::collections::HashMap;

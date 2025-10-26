@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::types::{Digest, ChangeId, ChangeSource, SessionMeta, SessionRef};
+use crate::recovery_types::{Digest, ChangeId, ChangeSource, SessionMeta, SessionRef};
 use crate::cas::{ConcurrencyManager, ConcurrencyResult, ConflictInfo, ConflictResolution};
 use crate::merkle::{Commit as MerkleCommit, FileTree as MerkleTree, AuthorInfo};
 use crate::journal::WriteAheadLog;
@@ -273,7 +273,7 @@ impl SelfPromptingRecovery {
 
     /// Compute content digest
     fn compute_content_digest(&self, content: &[u8]) -> Digest {
-        use crate::types::StreamingHasher;
+        use crate::recovery_types::StreamingHasher;
         let mut hasher = StreamingHasher::new();
         hasher.update(content);
         hasher.finalize()
@@ -300,7 +300,7 @@ impl SelfPromptingRecovery {
                 agent_id: Some(session_ref.meta.agent_id.clone().unwrap_or_default()),
             },
             label,
-            crate::types::ChangeStats::default(),
+            crate::recovery_types::ChangeStats::default(),
         );
         Ok(commit)
     }

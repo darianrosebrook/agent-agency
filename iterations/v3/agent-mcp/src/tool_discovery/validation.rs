@@ -1,6 +1,6 @@
 //! Tool validation functionality
 
-use crate::types::*;
+use crate::mcp_types::*;
 use anyhow::Result;
 use std::time::Duration;
 

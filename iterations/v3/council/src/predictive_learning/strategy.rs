@@ -5,7 +5,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::types::TaskOutcome;
+use crate::council_types::TaskOutcome;
 
 /// Strategy optimizer for proactive strategy optimization
 #[derive(Debug)]

@@ -1,6 +1,6 @@
 //! Core tool discovery types and service
 
-use crate::types::*;
+use crate::mcp_types::*;
 use anyhow::Result;
 use std::collections::HashMap;
 use std::sync::Arc;

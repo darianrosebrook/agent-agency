@@ -1,6 +1,6 @@
 //! Atomic claim extraction functionality
 
-use crate::types::*;
+use crate::extraction_types::*;
 use anyhow::Result;
 use regex::Regex;
 use std::collections::HashSet;

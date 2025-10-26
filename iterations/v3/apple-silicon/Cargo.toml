@@ -63,6 +63,9 @@ rand = "0.8"
 rand_pcg = "0.3"
 chrono = { version = "0.4", features = ["serde"] }
 
+# Common types
+agent-agency-common-types = { path = "../common-types" }
+
 # ANE-specific dependencies
 tempfile = "3.0"
 

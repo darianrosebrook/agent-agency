@@ -1,6 +1,6 @@
 //! Decomposition strategies for different types of tasks
 
-use crate::types::*;
+use crate::parallel_types::*;
 use crate::error::*;
 
 /// Decomposition strategy interface

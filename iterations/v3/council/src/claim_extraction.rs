@@ -14,7 +14,7 @@ use tokio::sync::RwLock;
 use tracing::{debug, info};
 use uuid::Uuid;
 
-use crate::types::{
+use crate::council_types::{
     AmbiguityHandler, ArbitrationDecision, AtomicClaim, ClaimBasedArbiter, ClaimBasedEvaluation,
     ClaimDecompositionResult, ClaimExtractionAndVerificationProcessor, ClaimLearningSystem,
     ConversationContext, DisambiguationResult, EvidenceItem, EvidenceManifest, ExtractedClaim,

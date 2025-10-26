@@ -1,6 +1,6 @@
 //! Helper functions and utilities for claim decomposition
 
-use crate::types::*;
+use crate::extraction_types::*;
 use anyhow::Result;
 
 /// Confidence calculation utilities

@@ -1,6 +1,6 @@
 //! Progress synthesis and result combination
 
-use crate::types::*;
+use crate::parallel_types::*;
 use crate::error::*;
 
 /// Synthesizes final results from worker outputs

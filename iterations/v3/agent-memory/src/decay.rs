@@ -1,6 +1,6 @@
 //! Memory Decay Engine - Importance weighting and decay schedules
 
-use crate::types::*;
+use crate::memory_types::*;
 use crate::workspace_registry;
 use crate::MemoryResult;
 use agent_agency_database::{DatabaseClient, DatabaseConfig, Row};
@@ -133,7 +133,7 @@ impl MemoryDecayEngine {
     }
 
     /// Calculate decay multiplier based on workspace access patterns
-    fn calculate_workspace_decay_multiplier(&self, workspace: &crate::types::WorkspaceEntry, now: DateTime<Utc>) -> f64 {
+    fn calculate_workspace_decay_multiplier(&self, workspace: &crate::memory_types::WorkspaceEntry, now: DateTime<Utc>) -> f64 {
         let duration_since_access = now.signed_duration_since(workspace.last_accessed);
         let hours_since_access = duration_since_access.num_hours() as f64;
         let access_frequency = workspace.access_count as f64;
@@ -181,7 +181,7 @@ impl MemoryDecayEngine {
         for workspace in unused_workspaces {
             if !workspace.is_default {
                 // Mark workspace as disabled
-                registry.update_workspace_access(&workspace.id, crate::types::WorkspaceAccess::Disabled).await?;
+                registry.update_workspace_access(&workspace.id, crate::memory_types::WorkspaceAccess::Disabled).await?;
 
                 // Aggressively decay memories in unused workspaces
                 let updated = sqlx::query(

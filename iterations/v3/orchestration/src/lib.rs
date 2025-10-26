@@ -1,6 +1,6 @@
 //! Orchestration core for V3
 pub mod adapter;
-pub mod api;
+pub mod task_api;
 pub mod arbiter;
 pub mod cqrs_router;
 pub mod artifacts;
@@ -10,11 +10,14 @@ pub mod cqrs;
 pub mod db;
 pub mod frontier;
 pub mod orchestrate;
+pub mod orchestration_core;
 pub mod persistence;
 pub mod persistence_postgres;
 pub mod planning;
 pub mod provenance;
 pub mod quality;
+pub mod types;
+pub mod worker_registry;
 // pub mod production;  // Module not found
 pub mod refinement;
 pub mod tracking;
@@ -74,7 +77,7 @@ pub use kimi_k2_multimodal_orchestrator::{
 
 #[cfg(feature = "api-server")]
 // Re-export API functions
-pub use api::{
+pub use task_api::{
     get_tasks, get_task_detail, get_task_events, cancel_task,
     TaskResponse, TaskDetail, TaskEvent, TaskApiError,
 };

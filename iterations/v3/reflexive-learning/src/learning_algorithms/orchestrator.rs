@@ -1,6 +1,6 @@
 //! Learning orchestrator for coordinating algorithm selection and execution
 
-use crate::types::{LearningAlgorithmType, LearningDataPoint, LearningInput, LearningOutput, LearningFeedback, ProblemCharacteristics, AlgorithmPerformance, LearningSystemHealth, EnsembleAnalytics as TypesEnsembleAnalytics, EnsembleComponentStatistics, ComponentContribution, AlgorithmPerformanceTracker, LearningStrategy};
+use crate::reflexive_types::{LearningAlgorithmType, LearningDataPoint, LearningInput, LearningOutput, LearningFeedback, ProblemCharacteristics, AlgorithmPerformance, LearningSystemHealth, EnsembleAnalytics as TypesEnsembleAnalytics, EnsembleComponentStatistics, ComponentContribution, AlgorithmPerformanceTracker, LearningStrategy};
 use super::reinforcement::*;
 use super::supervised::*;
 use super::unsupervised::*;

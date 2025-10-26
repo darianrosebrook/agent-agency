@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
 
-use crate::types::TaskOutcome;
+use crate::council_types::TaskOutcome;
 
 /// Outcome predictor for task outcome prediction
 #[derive(Debug)]

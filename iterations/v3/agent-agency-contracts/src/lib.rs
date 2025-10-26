@@ -4,7 +4,7 @@
 //! so workers, council, orchestration, and provenance components exchange
 //! data safely with deterministic error handling.
 
-pub mod error;
+pub mod contract_errors;
 pub mod execution_artifacts;
 pub mod final_verdict;
 pub mod judge_verdict;
@@ -21,7 +21,7 @@ pub mod execution_events;
 pub mod task_executor;
 pub mod task_executor_provider;
 
-pub use error::{ContractError, ContractKind, ValidationIssue};
+pub use contract_errors::{ContractError, ContractKind, ValidationIssue};
 pub use execution_artifacts::{
     validate_execution_artifacts_value, AuditEvent, CodeChanges, CoverageResults, DiffArtifact,
     DiffHunk, E2eScenarioResult, E2eTestResults, ExecutionArtifacts, ExecutionEnvironment,

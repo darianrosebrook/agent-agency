@@ -1,6 +1,6 @@
 //! Unsupervised learning algorithms for reflexive learning
 
-use crate::types::*;
+use crate::reflexive_types::*;
 use ndarray::{Array1, Array2, ArrayView1, ArrayView2, Axis};
 use rand::prelude::*;
 use std::collections::HashMap;

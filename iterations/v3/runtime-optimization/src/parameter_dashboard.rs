@@ -28,7 +28,7 @@ pub struct ParameterDashboard {
     pub optimization_status: HashMap<String, OptimizationStatus>,
     
     /// Historical performance metrics
-    pub performance_metrics: PerformanceMetrics,
+    pub performance_metrics: ParameterDashboardMetrics,
     
     /// Rollout status across all task types
     pub rollout_status: HashMap<String, RolloutStatus>,
@@ -66,7 +66,7 @@ pub struct PerformanceDelta {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PerformanceMetrics {
+pub struct ParameterDashboardMetrics {
     pub overall_quality: f64,
     pub overall_latency: u64,
     pub overall_tokens: u32,
@@ -236,7 +236,7 @@ pub struct ParameterDashboardManager {
     slo_monitor: Arc<SLOMonitor>,
     budget_tracker: Arc<CAWSBudgetTracker>,
     dashboard_data: Arc<RwLock<ParameterDashboard>>,
-    performance_history: Arc<RwLock<Vec<PerformanceMetrics>>>,
+    performance_history: Arc<RwLock<Vec<ParameterDashboardMetrics>>>,
     alerts: Arc<RwLock<Vec<DashboardAlert>>>,
 }
 
@@ -252,7 +252,7 @@ impl ParameterDashboardManager {
             budget_tracker,
             dashboard_data: Arc::new(RwLock::new(ParameterDashboard {
                 optimization_status: HashMap::new(),
-                performance_metrics: PerformanceMetrics::default(),
+                performance_metrics: ParameterDashboardMetrics::default(),
                 rollout_status: HashMap::new(),
                 budget_status: BudgetStatus::default(),
                 alerts: Vec::new(),
@@ -550,7 +550,7 @@ impl ParameterDashboardManager {
     }
 }
 
-impl Default for PerformanceMetrics {
+impl Default for ParameterDashboardMetrics {
     fn default() -> Self {
         Self {
             overall_quality: 0.0,

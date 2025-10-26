@@ -5,7 +5,7 @@
 use std::sync::Arc;
 use async_trait::async_trait;
 
-use crate::types::{TaskResult, EvalReport, EvalStatus, SelfPromptingAgentError};
+use crate::prompting_types::{TaskResult, EvalReport, EvalStatus, SelfPromptingAgentError};
 
 /// Evaluation orchestrator
 pub struct EvaluationOrchestrator {
@@ -103,7 +103,7 @@ impl Evaluator for CodeQualityEvaluator {
         // Check artifacts
         for artifact in &result.artifacts {
             match artifact.artifact_type {
-                crate::types::ArtifactType::Code => {
+                crate::prompting_types::ArtifactType::Code => {
                     let content = &artifact.content;
 
                     // Basic code quality checks

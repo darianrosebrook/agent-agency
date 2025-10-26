@@ -3,17 +3,22 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { 
-  Bell, 
-  HelpCircle, 
-  Search, 
-  Home, 
-  ClipboardList, 
-  BarChart3, 
-  MessageSquare, 
+import {
+  Bell,
+  HelpCircle,
+  Search,
+  Home,
+  ClipboardList,
+  BarChart3,
+  MessageSquare,
   Settings,
   Menu,
-  X
+  X,
+  Database,
+  Cpu,
+  Users,
+  FolderOpen,
+  Brain
 } from 'lucide-react';
 import ConnectionStatus from './ConnectionStatus';
 import GlobalSearch from '@/components/ui/GlobalSearch';
@@ -36,8 +41,14 @@ export default function UnifiedHeader() {
 
   const navItems = [
     { href: "/", label: "Dashboard", icon: <Home size={16} /> },
+    { href: "/demo", label: "Demo", icon: <BarChart3 size={16} /> },
+    { href: "/analytics", label: "Analytics", icon: <BarChart3 size={16} /> },
+    { href: "/council", label: "Council", icon: <Users size={16} /> },
+    { href: "/apple-silicon", label: "Apple Silicon", icon: <Cpu size={16} /> },
+    { href: "/vector-database", label: "Vector DB", icon: <Database size={16} /> },
+    { href: "/agent-memory", label: "Agent Memory", icon: <Brain size={16} /> },
+    { href: "/workspace", label: "Workspace", icon: <FolderOpen size={16} /> },
     { href: "/tasks", label: "Tasks", icon: <ClipboardList size={16} /> },
-    { href: "/metrics", label: "Metrics", icon: <BarChart3 size={16} /> },
     { href: "/chat", label: "Chat", icon: <MessageSquare size={16} /> },
     { href: "/settings", label: "Settings", icon: <Settings size={16} /> },
   ];

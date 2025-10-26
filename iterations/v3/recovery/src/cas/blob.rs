@@ -9,8 +9,8 @@ use std::io::{Read, Write};
 use std::path::PathBuf;
 use tracing::debug;
 
-use crate::types::*;
-use crate::types::{Digest, StreamingHasher};
+use crate::recovery_types::*;
+use crate::recovery_types::{Digest, StreamingHasher};
 
 /// Blob storage for content-addressable objects
 pub struct BlobStore {

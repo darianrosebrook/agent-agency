@@ -1,6 +1,6 @@
 //! Common validation patterns and utilities
 
-use crate::types::{ValidationResult, ConfigValidationResult, ConfigError};
+use crate::pattern_types::{ValidationResult, ConfigValidationResult, ConfigError};
 use regex::Regex;
 use std::collections::HashSet;
 

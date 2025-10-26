@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::types::{Digest, ObjectRef};
+use crate::recovery_types::{Digest, ObjectRef};
 
 /// Garbage collector for managing object lifecycle
 pub struct GarbageCollector {

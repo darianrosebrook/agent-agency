@@ -5,9 +5,9 @@
 
 use std::sync::Arc;
 
-use crate::error::PlanningResult;
+use crate::planning_errors::{PlanningError, PlanningResult};
 use crate::caws_integration::{CawsValidator, ValidationContext};
-use crate::planner::{ValidationStatus, ValidationResults, ValidationIssue, IssueSeverity};
+use crate::types::{ValidationStatus, ValidationResults, ValidationIssue, IssueSeverity};
 use agent_agency_contracts::ContractKind;
 
 /// Validation stage in the pipeline
@@ -121,7 +121,7 @@ impl ValidationPipeline {
     ) -> PlanningResult<Vec<ValidationIssue>> {
         // Convert to JSON value for schema validation
         let json_value = serde_json::to_value(working_spec)
-            .map_err(|e| crate::error::PlanningError::Serialization(e))?;
+            .map_err(|e| PlanningError::Serialization(e))?;
 
         // Validate against schema
         let result = agent_agency_contracts::validate_working_spec_value(&json_value);
@@ -240,8 +240,8 @@ impl ValidationPipeline {
 
         match result {
             Ok(Ok(caws_result)) => Ok(caws_result),
-            Ok(Err(e)) => Err(crate::error::PlanningError::CawsValidation(e.to_string())),
-            Err(_) => Err(crate::error::PlanningError::ValidationPipeline {
+            Ok(Err(e)) => Err(PlanningError::CawsValidation(e.to_string())),
+            Err(_) => Err(PlanningError::ValidationPipeline {
                 stage: "caws_validation".to_string(),
                 error: format!("CAWS validation timed out after {} seconds", self.config.caws_timeout_seconds),
             }),

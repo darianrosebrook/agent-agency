@@ -1,7 +1,7 @@
 //! @darianrosebrook
 //! Captions ingestor (SRT/VTT) for speech turn extraction
 
-use crate::types::*;
+use crate::ingestor_types::*;
 use anyhow::{anyhow, Context, Result};
 use chrono::Utc;
 use sha2::{Digest, Sha256};

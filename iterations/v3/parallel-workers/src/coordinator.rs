@@ -1,6 +1,6 @@
 //! Parallel coordinator - main orchestrator for parallel task execution
 
-use crate::types::*;
+use crate::parallel_types::*;
 use crate::error::*;
 use crate::decomposition::{DecompositionEngine, TaskAnalysis};
 use crate::worker::{WorkerManager, DefaultWorkerPool};

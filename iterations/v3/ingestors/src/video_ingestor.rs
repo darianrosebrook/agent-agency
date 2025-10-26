@@ -2,7 +2,7 @@
 //! Video ingestor using AVAssetReader via Swift bridge
 //! Enhanced with Whisper-CoreML audio transcription
 
-use crate::types::*;
+use crate::ingestor_types::*;
 use anyhow::{Context, Result};
 use chrono::Utc;
 use image::{DynamicImage, ImageBuffer, Rgb, RgbImage};

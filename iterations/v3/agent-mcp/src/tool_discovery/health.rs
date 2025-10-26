@@ -1,7 +1,7 @@
 //! Health monitoring for tool discovery
 
 use super::core::{HealthStatus, HealthCheckResult};
-use crate::types::*;
+use crate::mcp_types::*;
 use anyhow::Result;
 use std::collections::HashMap;
 use chrono::{DateTime, Utc};

@@ -1,6 +1,6 @@
 //! Channel-based communication infrastructure
 
-use crate::types::*;
+use crate::parallel_types::*;
 use crate::error::*;
 
 /// Channel configuration for communication

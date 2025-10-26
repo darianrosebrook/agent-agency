@@ -7,11 +7,11 @@
 //! - Security issues
 
 pub mod checks;
-pub mod config;
+pub mod gates_config;
 pub mod rules;
 pub mod runner;
 
 pub use checks::*;
-pub use config::*;
+pub use gates_config::*;
 pub use rules::*;
 pub use runner::*;

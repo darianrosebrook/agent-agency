@@ -1,6 +1,6 @@
 //! Reward design and Goodhart guardrails for parallel worker learning
 
-use crate::types::ExecutionMetrics;
+use crate::parallel_types::ExecutionMetrics;
 use serde::{Deserialize, Serialize};
 
 /// Reward weights for composite reward function
@@ -128,7 +128,7 @@ pub fn validate_reward(reward: f64, metrics: &ExecutionMetrics) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::ExecutionMetrics;
+    use crate::parallel_types::ExecutionMetrics;
     use chrono::Utc;
 
     fn create_test_metrics(execution_time_ms: u64, quality_score: f32, tokens: Option<u64>) -> ExecutionMetrics {

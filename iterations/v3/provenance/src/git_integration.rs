@@ -13,7 +13,7 @@ use std::sync::Mutex;
 use tracing::debug;
 use uuid::Uuid;
 
-use crate::types::ProvenanceRecord;
+use crate::provenance_types::ProvenanceRecord;
 
 /// Git commit information
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -492,7 +492,7 @@ mod tests {
     }
 
     fn create_test_provenance_record() -> ProvenanceRecord {
-        use crate::types::*;
+        use crate::provenance_types::*;
         use std::collections::HashMap;
 
         ProvenanceRecord {

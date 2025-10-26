@@ -1,6 +1,6 @@
 //! Core decomposition functionality
 
-use crate::types::*;
+use crate::extraction_types::*;
 use anyhow::Result;
 use std::sync::Arc;
 use tokio::sync::RwLock;

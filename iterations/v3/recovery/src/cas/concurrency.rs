@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::types::{Digest, ChangeSource, ConflictClass};
+use crate::recovery_types::{Digest, ChangeSource, ConflictClass};
 
 /// Optimistic concurrency control for file changes
 #[derive(Debug, Clone, Serialize, Deserialize)]

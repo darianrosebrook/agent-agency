@@ -3,7 +3,7 @@
 //! Defines the pluggable pipeline architecture where stages can be
 //! composed and executed in sequence.
 
-use crate::types::*;
+use crate::data_processing_types::*;
 use crate::{DataProcessingResult, DataProcessingError};
 use std::collections::HashMap;
 use async_trait::async_trait;

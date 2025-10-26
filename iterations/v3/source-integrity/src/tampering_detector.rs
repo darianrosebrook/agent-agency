@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
 use crate::hasher::ContentHasher;
-use crate::types::{HashAlgorithm, SourceType, TamperingIndicator};
+use crate::integrity_types::{HashAlgorithm, SourceType, TamperingIndicator};
 
 /// Advanced tampering detector with multiple detection algorithms
 pub struct TamperingDetector {

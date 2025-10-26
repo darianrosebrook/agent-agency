@@ -24,7 +24,7 @@ use std::path::Path;
 #[cfg(unix)]
 use std::os::unix::fs::OpenOptionsExt;
 
-use crate::types::ProvenanceRecord;
+use crate::provenance_types::ProvenanceRecord;
 
 /// Trait for signing provenance records
 #[async_trait]
@@ -578,7 +578,7 @@ mod tests {
     }
 
     fn create_test_provenance_record() -> ProvenanceRecord {
-        use crate::types::*;
+        use crate::provenance_types::*;
         use std::collections::HashMap;
 
         ProvenanceRecord {

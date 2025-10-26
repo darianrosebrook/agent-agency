@@ -13,7 +13,7 @@
 #![warn(unused_variables, dead_code)]
 #![allow(ambiguous_glob_reexports, unused_variables, dead_code, unused_assignments)]
 
-pub mod api;
+pub mod recovery_api;
 pub mod cas;
 pub mod merkle;
 pub mod journal;
@@ -22,13 +22,13 @@ pub mod policy;
 pub mod gc;
 pub mod fsck;
 pub mod index;
-pub mod types;
+pub mod prompting_types;
 pub mod integration;
 pub mod metrics;
 
 // Re-export key types for convenience
-pub use api::*;
-pub use types::*;
+pub use recovery_api::*;
+pub use prompting_prompting_recovery_types::*;
 pub use integration::*;
 pub use metrics::*;
 // pub use source_integrity::{Digest, StreamingHasher, MerkleTree};  // Temporarily disabled

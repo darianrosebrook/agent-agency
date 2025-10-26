@@ -176,14 +176,14 @@ pub enum TaskPriority {
 }
 
 /// Validate a task request value against the JSON schema
-pub fn validate_task_request_value(value: &serde_json::Value) -> Result<(), crate::error::ContractError> {
-    use crate::error::{ContractError, ContractKind};
+pub fn validate_task_request_value(value: &serde_json::Value) -> Result<(), crate::contract_errors::ContractError> {
+    use crate::contract_errors::{ContractError, ContractKind};
     use crate::schema::TASK_REQUEST_SCHEMA;
 
     TASK_REQUEST_SCHEMA.validate(value).map_err(|errors| {
         let issues = errors
             .into_iter()
-            .map(|error| crate::error::ValidationIssue {
+            .map(|error| crate::contract_errors::ValidationIssue {
                 instance_path: error.instance_path.to_string(),
                 schema_path: error.schema_path.to_string(),
                 message: error.to_string(),

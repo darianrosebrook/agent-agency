@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 use anyhow::Result;
 
-use crate::types::{HealthStatus, MetricsSnapshot, ValidationResult, ComponentStatus};
+use crate::pattern_types::{HealthStatus, MetricsSnapshot, ValidationResult, ComponentStatus};
 
 /// Common trait for components that need health checking
 #[async_trait]

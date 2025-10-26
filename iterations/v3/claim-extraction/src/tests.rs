@@ -5,7 +5,7 @@
 use crate::decomposition::DecompositionStage;
 use crate::disambiguation::DisambiguationStage;
 use crate::qualification::QualificationStage;
-use crate::types::*;
+use crate::extraction_types::*;
 use crate::verification::VerificationStage;
 use anyhow::Result;
 use std::collections::HashMap;

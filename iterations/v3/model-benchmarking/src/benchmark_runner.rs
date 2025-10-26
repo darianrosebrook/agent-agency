@@ -2,7 +2,7 @@
 
 use crate::scoring_system::MultiDimensionalScoringSystem;
 use crate::sla_validator::SlaValidator;
-use crate::types::*;
+use crate::benchmark_types::*;
 use anyhow::Result;
 use std::collections::{HashMap, HashSet};
 use std::time::{Duration, Instant};

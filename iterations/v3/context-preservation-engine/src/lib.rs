@@ -6,7 +6,7 @@ pub mod context_store;
 pub mod context_synthesizer;
 pub mod engine;
 pub mod multi_tenant;
-pub mod types;
+pub mod prompting_types;
 
 #[cfg(test)]
 mod encryption_tests;
@@ -16,4 +16,4 @@ pub use context_store::ContextStore;
 pub use context_synthesizer::ContextSynthesizer;
 pub use engine::ContextPreservationEngine;
 pub use multi_tenant::MultiTenantManager;
-pub use types::*;
+pub use prompting_prompting_engine_types::*;

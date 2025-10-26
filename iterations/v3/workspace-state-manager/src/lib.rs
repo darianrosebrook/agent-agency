@@ -1,20 +1,20 @@
 #![allow(warnings)] // Disables all warnings for the crate
 #![allow(dead_code)] // Disables dead_code warnings for the crate
 
-pub mod manager;
+pub mod state_manager;
 pub mod rollback;
 pub mod storage;
 /**
  * @fileoverview Workspace State Manager - Repository state management with stable views, diffs, and rollback capabilities
  * @author @darianrosebrook
  */
-pub mod types;
+pub mod state_types;
 
 // Re-export main types and functionality
-pub use manager::WorkspaceStateManager;
+pub use state_manager::WorkspaceStateManager;
 pub use rollback::{RollbackManager, RollbackResult, ViewMetadata, WorkspaceViewManager};
 pub use storage::{DatabaseStorage, FileStorage, MemoryStorage};
-pub use types::*;
+pub use state_state_types::*;
 
 /// Create a new workspace state manager with file-based storage
 pub fn create_file_manager(

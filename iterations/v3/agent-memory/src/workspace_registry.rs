@@ -9,7 +9,7 @@ use tokio::sync::RwLock;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use crate::types::{WorkspaceEntry, WorkspaceAccess, WorkspaceAccessConfig};
+use crate::memory_types::{WorkspaceEntry, WorkspaceAccess, WorkspaceAccessConfig};
 use crate::{MemoryError, MemoryResult};
 use agent_agency_database::DatabaseClient;
 

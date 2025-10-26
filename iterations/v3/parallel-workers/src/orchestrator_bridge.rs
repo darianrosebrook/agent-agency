@@ -4,7 +4,7 @@
 //! to leverage the orchestration layer's quality gate system for validation.
 
 use crate::error::{ParallelError, ParallelResult};
-use crate::types::{TaskId, QualityRequirements, ValidationResult as ParallelValidationResult};
+use crate::parallel_types::{TaskId, QualityRequirements, ValidationResult as ParallelValidationResult};
 use async_trait::async_trait;
 use std::sync::Arc;
 

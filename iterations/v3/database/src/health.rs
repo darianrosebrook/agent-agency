@@ -4,7 +4,7 @@
 //! for database connectivity, performance, and operational health.
 
 use super::circuit_breaker::CircuitState;
-use super::metrics::DatabaseMetrics;
+use super::database_metrics::DatabaseMetrics;
 use anyhow::Result;
 use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
@@ -107,7 +107,7 @@ impl DatabaseHealthMonitor {
     }
 
     /// Determine overall health status based on metrics
-    fn determine_overall_health(&self, metrics: &super::metrics::DatabaseMetricsSnapshot) -> HealthStatus {
+    fn determine_overall_health(&self, metrics: &super::database_metrics::DatabaseMetricsSnapshot) -> HealthStatus {
         // Critical conditions
         if metrics.success_rate < 0.5 {
             return HealthStatus::Critical;

@@ -7,7 +7,7 @@ import { NextRequest, NextResponse } from "next/server";
  * 
  * @author @darianrosebrook
  */
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     const v3BackendHost = process.env.V3_BACKEND_HOST ?? null;
     const startTime = Date.now();

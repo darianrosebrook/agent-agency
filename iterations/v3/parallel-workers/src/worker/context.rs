@@ -1,6 +1,6 @@
 //! Worker execution context and isolation
 
-use crate::types::*;
+use crate::parallel_types::*;
 use crate::error::{WorkerError, WorkerExecutionResult};
 
 /// Execution context for a worker

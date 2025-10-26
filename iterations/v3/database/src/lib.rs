@@ -16,7 +16,7 @@ pub mod client;
 pub mod data_consistency;
 pub mod health;
 pub mod knowledge_queries;
-pub mod metrics;
+pub mod database_metrics;
 pub mod migrations;
 pub mod models;
 pub mod pooling;
@@ -33,7 +33,7 @@ pub use circuit_breaker::{CircuitBreaker, CircuitState, CircuitBreakerError};
 pub use client::{DatabaseClient};
 pub use data_consistency::{DataConsistencyManager, ConsistencyLevel, DistributedTransaction, ConsistencyCheckResult};
 pub use health::{DatabaseHealthMonitor, DatabaseHealthStatus, HealthStatus, DatabaseStats, HealthReport};
-pub use metrics::{DatabaseMetrics, DatabaseMetricsSnapshot};
+pub use database_metrics::{DatabaseMetrics, DatabaseMetricsSnapshot};
 pub use pooling::{DeadpoolSqlxBridge, DeadpoolSqlxConnection};
 pub use optimization::{
     DatabaseOptimizationManager, DatabaseOptimizationConfig, ReadWriteSplitClient,

@@ -1,6 +1,6 @@
 //! Contextual bracket extraction and application
 
-use crate::types::*;
+use crate::extraction_types::*;
 use anyhow::Result;
 use regex::Regex;
 use std::collections::HashMap;

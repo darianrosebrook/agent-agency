@@ -15,11 +15,17 @@ pub mod analytics_dashboard;
 pub mod cache;
 pub mod dashboard;
 pub mod diff_observability;
-pub mod errors;
+pub mod health_monitoring;
+pub mod observability_errors;
 pub mod logging;
-pub mod metrics;
+pub mod observability_metrics;
 pub mod multimodal_metrics;
+pub mod otel_integration;
 pub mod slo;
+pub mod span_management;
+pub mod trace_hierarchy;
+pub mod trace_types;
+pub mod tracing;
 
 // Re-export specific types to avoid conflicts
 pub use agent_telemetry::{
@@ -47,13 +53,13 @@ pub use analytics::{
 pub use cache::{RedisCache, CacheBackend, CacheError};
 pub use dashboard::*;
 pub use logging::*;
-pub use metrics::{
+pub use observability_metrics::{
     MetricsBackend, NoOpMetricsBackend, InMemoryMetricsBackend,
     MetricsCollector, MetricValue, MetricsSnapshot,
 };
-pub use metrics::prometheus::PrometheusMetrics;
-pub use metrics::statsd::{StatsDMetrics, StatsDCircuitBreaker};
-pub use metrics::redis::{RedisMetrics, RedisCircuitBreaker, RedisMetricsError as RedisError};
+pub use observability_metrics::prometheus::PrometheusMetrics;
+pub use observability_metrics::statsd::{StatsDMetrics, StatsDCircuitBreaker};
+pub use observability_metrics::redis::{RedisMetrics, RedisCircuitBreaker, RedisMetricsError as RedisError};
 pub use multimodal_metrics::{
     MultimodalMetricsCollector, MultimodalProcessingMetrics, VectorSearchMetrics,
     EmbeddingMetrics, CrossModalValidationMetrics, ContextRetrievalMetrics,
@@ -65,4 +71,4 @@ pub use diff_observability::{
     SideBySideConfig, SideBySideView, ViolationSummary, FileNavigation, ViolationSeverity,
     DiffGeneratorConfig, FileChange, DiffError,
 };
-pub use errors::ObservabilityError;
+pub use observability_errors::ObservabilityError;

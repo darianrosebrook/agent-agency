@@ -1,6 +1,6 @@
 //! Worker specialization system
 
-use crate::types::*;
+use crate::parallel_types::*;
 use crate::error::WorkerError;
 use async_trait::async_trait;
 

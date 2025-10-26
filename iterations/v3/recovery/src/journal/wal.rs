@@ -11,8 +11,8 @@ use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use tracing::debug;
 
-use crate::types::*;
-use crate::types::Digest;
+use crate::recovery_types::*;
+use crate::recovery_types::Digest;
 use crate::policy::DenialReason;
 
 /// Write-ahead log for crash-safe operations
@@ -295,7 +295,7 @@ impl CrashSafeWriter {
 
     /// Calculate digest for payload
     fn calculate_digest(&self, payload: &ChangePayload) -> Result<Digest> {
-        use crate::types::StreamingHasher;
+        use crate::recovery_types::StreamingHasher;
         
         let mut hasher = StreamingHasher::new();
         match payload {

@@ -35,7 +35,7 @@ use memory_stats::memory_stats;
 
 /// Performance profiler for autonomous agent operations
 pub struct PerformanceProfiler {
-    metrics: Arc<RwLock<PerformanceMetrics>>,
+    metrics: Arc<RwLock<SelfPromptingAgentMetrics>>,
     active_timers: HashMap<String, Instant>,
     task_profiles: HashMap<Uuid, TaskProfile>,
     max_history: usize,
@@ -48,7 +48,7 @@ pub struct PerformanceProfiler {
 
 /// Comprehensive performance metrics
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PerformanceMetrics {
+pub struct SelfPromptingAgentMetrics {
     pub total_tasks: usize,
     pub completed_tasks: usize,
     pub failed_tasks: usize,
@@ -141,7 +141,7 @@ pub enum BottleneckSeverity {
 impl Default for PerformanceProfiler {
     fn default() -> Self {
         Self {
-            metrics: Arc::new(RwLock::new(PerformanceMetrics {
+            metrics: Arc::new(RwLock::new(SelfPromptingAgentMetrics {
                 total_tasks: 0,
                 completed_tasks: 0,
                 failed_tasks: 0,
@@ -428,7 +428,7 @@ impl PerformanceProfiler {
     }
 
     /// Get current performance metrics
-    pub async fn get_metrics(&self) -> PerformanceMetrics {
+    pub async fn get_metrics(&self) -> SelfPromptingAgentMetrics {
         self.metrics.read().await.clone()
     }
 
@@ -465,7 +465,7 @@ impl PerformanceProfiler {
     }
 
     /// Generate performance optimization recommendations
-    fn generate_recommendations(&self, metrics: &PerformanceMetrics) -> Vec<String> {
+    fn generate_recommendations(&self, metrics: &SelfPromptingAgentMetrics) -> Vec<String> {
         let mut recommendations = Vec::new();
 
         // Task completion recommendations
@@ -515,7 +515,7 @@ impl PerformanceProfiler {
 /// Comprehensive performance report
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PerformanceReport {
-    pub summary: PerformanceMetrics,
+    pub summary: SelfPromptingAgentMetrics,
     pub top_bottlenecks: Vec<Bottleneck>,
     pub slowest_components: Vec<(String, Duration)>,
     pub recommendations: Vec<String>,

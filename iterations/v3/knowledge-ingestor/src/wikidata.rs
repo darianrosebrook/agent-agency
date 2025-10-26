@@ -5,7 +5,7 @@
 //!
 //! @author @darianrosebrook
 
-use crate::types::*;
+use crate::knowledge_types::*;
 use crate::{IngestionConfig, IngestionStats};
 #[cfg(feature = "embeddings")]
 use crate::KnowledgeIngestor;

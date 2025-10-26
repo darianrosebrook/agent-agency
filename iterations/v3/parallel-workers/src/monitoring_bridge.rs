@@ -4,7 +4,7 @@
 //! to publish progress updates to the orchestration layer's monitoring system.
 
 use crate::error::{ParallelError, ParallelResult};
-use crate::types::{TaskId, WorkerId, Progress};
+use crate::parallel_types::{TaskId, WorkerId, Progress};
 use async_trait::async_trait;
 use std::sync::Arc;
 

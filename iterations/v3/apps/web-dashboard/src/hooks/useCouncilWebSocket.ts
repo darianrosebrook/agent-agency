@@ -1,375 +1,286 @@
 /**
  * Council WebSocket Hook
- * Manages real-time WebSocket connections for council verdict updates
+ * Real-time updates for council oversight operations
  *
  * @author @darianrosebrook
  */
 
-import { useEffect, useRef, useCallback } from 'react';
-import { useCouncilStore } from '@/stores/council';
-import { Verdict, Judge } from '@/components/council/VerdictList';
-import { EthicalAssessment, VerdictIntervention } from '@/lib/council-api';
+import { useEffect, useRef, useState } from 'react';
+import { useCouncilStore, useCouncilActions } from '@/stores/council';
+import { Verdict, Judge, CouncilMetrics, CouncilAlert } from '@/lib/council-api';
 
-// WebSocket message types
-interface WebSocketMessage {
-  type: 'verdict_update' | 'judge_update' | 'ethical_assessment' | 'intervention_update' | 'stats_update';
+interface CouncilWebSocketMessage {
+  type: 'verdict_created' | 'verdict_updated' | 'verdict_completed' | 'judge_updated' | 'metrics_updated' | 'alert_created' | 'alert_acknowledged';
   data: any;
   timestamp: string;
 }
 
-interface VerdictUpdateMessage extends WebSocketMessage {
-  type: 'verdict_update';
-  data: {
-    action: 'created' | 'updated' | 'deleted';
-    verdict: Verdict;
-  };
-}
-
-interface JudgeUpdateMessage extends WebSocketMessage {
-  type: 'judge_update';
-  data: {
-    action: 'status_changed' | 'performance_updated';
-    judge: Judge;
-    performance?: any;
-  };
-}
-
-interface EthicalAssessmentMessage extends WebSocketMessage {
-  type: 'ethical_assessment';
-  data: {
-    action: 'created' | 'updated' | 'reviewed';
-    assessment: EthicalAssessment;
-  };
-}
-
-interface InterventionUpdateMessage extends WebSocketMessage {
-  type: 'intervention_update';
-  data: {
-    action: 'created' | 'status_changed';
-    intervention: VerdictIntervention;
-  };
-}
-
-interface StatsUpdateMessage extends WebSocketMessage {
-  type: 'stats_update';
-  data: {
-    stats: any;
-  };
-}
-
-type CouncilWebSocketMessage =
-  | VerdictUpdateMessage
-  | JudgeUpdateMessage
-  | EthicalAssessmentMessage
-  | InterventionUpdateMessage
-  | StatsUpdateMessage;
-
-/**
- * WebSocket connection manager for council operations
- */
-class CouncilWebSocketManager {
-  private ws: WebSocket | null = null;
-  private reconnectAttempts = 0;
-  private maxReconnectAttempts = 5;
-  private reconnectDelay = 1000; // Start with 1 second
-  private maxReconnectDelay = 30000; // Max 30 seconds
-  private reconnectTimer: NodeJS.Timeout | null = null;
-  private isConnecting = false;
-  private listeners: Set<(message: CouncilWebSocketMessage) => void> = new Set();
-
-  constructor(private baseUrl: string = '/api/council/ws') {}
-
-  /**
-   * Connect to the council WebSocket
-   */
-  async connect(): Promise<void> {
-    if (this.ws?.readyState === WebSocket.OPEN || this.isConnecting) {
-      return;
-    }
-
-    this.isConnecting = true;
-
-    return new Promise((resolve, reject) => {
-      try {
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${protocol}//${window.location.host}${this.baseUrl}`;
-
-        this.ws = new WebSocket(wsUrl);
-
-        this.ws.onopen = () => {
-          console.log('Council WebSocket connected');
-          this.reconnectAttempts = 0;
-          this.reconnectDelay = 1000;
-          this.isConnecting = false;
-          resolve();
-        };
-
-        this.ws.onmessage = (event) => {
-          try {
-            const message: CouncilWebSocketMessage = JSON.parse(event.data);
-            this.handleMessage(message);
-          } catch (error) {
-            console.error('Failed to parse WebSocket message:', error);
-          }
-        };
-
-        this.ws.onclose = (event) => {
-          console.log('Council WebSocket disconnected:', event.code, event.reason);
-          this.isConnecting = false;
-          this.scheduleReconnect();
-        };
-
-        this.ws.onerror = (error) => {
-          console.error('Council WebSocket error:', error);
-          this.isConnecting = false;
-          reject(error);
-        };
-
-        // Connection timeout
-        setTimeout(() => {
-          if (this.ws?.readyState === WebSocket.CONNECTING) {
-            this.ws.close();
-            reject(new Error('WebSocket connection timeout'));
-          }
-        }, 10000);
-
-      } catch (error) {
-        this.isConnecting = false;
-        reject(error);
-      }
-    });
-  }
-
-  /**
-   * Disconnect from the WebSocket
-   */
-  disconnect(): void {
-    if (this.reconnectTimer) {
-      clearTimeout(this.reconnectTimer);
-      this.reconnectTimer = null;
-    }
-
-    if (this.ws) {
-      this.ws.close(1000, 'Client disconnect');
-      this.ws = null;
-    }
-
-    this.listeners.clear();
-    this.isConnecting = false;
-  }
-
-  /**
-   * Add a message listener
-   */
-  addMessageListener(listener: (message: CouncilWebSocketMessage) => void): () => void {
-    this.listeners.add(listener);
-    return () => this.listeners.delete(listener);
-  }
-
-  /**
-   * Send a message through the WebSocket
-   */
-  send(message: any): void {
-    if (this.ws?.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify(message));
-    } else {
-      console.warn('WebSocket not connected, cannot send message:', message);
-    }
-  }
-
-  /**
-   * Get connection status
-   */
-  get isConnected(): boolean {
-    return this.ws?.readyState === WebSocket.OPEN;
-  }
-
-  private handleMessage(message: CouncilWebSocketMessage): void {
-    // Notify all listeners
-    this.listeners.forEach(listener => {
-      try {
-        listener(message);
-      } catch (error) {
-        console.error('Error in WebSocket message listener:', error);
-      }
-    });
-  }
-
-  private scheduleReconnect(): void {
-    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      console.error('Max WebSocket reconnection attempts reached');
-      return;
-    }
-
-    this.reconnectAttempts++;
-    this.reconnectDelay = Math.min(this.reconnectDelay * 2, this.maxReconnectDelay);
-
-    console.log(`Scheduling WebSocket reconnect in ${this.reconnectDelay}ms (attempt ${this.reconnectAttempts})`);
-
-    this.reconnectTimer = setTimeout(() => {
-      this.connect().catch(error => {
-        console.error('WebSocket reconnection failed:', error);
-        this.scheduleReconnect();
-      });
-    }, this.reconnectDelay);
-  }
-}
-
-// Singleton instance
-const councilWebSocketManager = new CouncilWebSocketManager();
-
-/**
- * React hook for council WebSocket connections
- * Provides real-time updates for council data
- */
 export function useCouncilWebSocket() {
-  const store = useCouncilStore();
+  const [isConnected, setIsConnected] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected' | 'error'>('disconnected');
+  const wsRef = useRef<WebSocket | null>(null);
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const reconnectAttempts = useRef(0);
+  const maxReconnectAttempts = 5;
+  const reconnectDelay = 1000; // Start with 1 second
 
-  // Connect on mount, disconnect on unmount
-  useEffect(() => {
-    councilWebSocketManager.connect().catch(error => {
-      console.error('Failed to connect council WebSocket:', error);
-    });
+  const actions = useCouncilActions();
 
-    return () => {
-      councilWebSocketManager.disconnect();
-    };
-  }, []);
+  const connect = () => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      return;
+    }
 
-  // Message handler
-  const handleWebSocketMessage = useCallback((message: CouncilWebSocketMessage) => {
-    console.log('Received WebSocket message:', message.type, message);
+    setConnectionStatus('connecting');
 
-    switch (message.type) {
-      case 'verdict_update':
-        handleVerdictUpdate(message.data);
+    try {
+      const ws = new WebSocket(`${process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8080'}/council`);
+
+      ws.onopen = () => {
+        console.log('Council WebSocket connected');
+        setIsConnected(true);
+        setConnectionStatus('connected');
+        reconnectAttempts.current = 0;
+
+        // Send authentication if needed
+        ws.send(JSON.stringify({
+          type: 'auth',
+          token: localStorage.getItem('auth_token')
+        }));
+
+        // Subscribe to council updates
+        ws.send(JSON.stringify({
+          type: 'subscribe',
+          channels: ['verdicts', 'judges', 'metrics', 'alerts']
+        }));
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const message: CouncilWebSocketMessage = JSON.parse(event.data);
+          handleMessage(message);
+        } catch (error) {
+          console.error('Failed to parse Council WebSocket message:', error);
+        }
+      };
+
+      ws.onclose = (event) => {
+        console.log('Council WebSocket disconnected:', event.code, event.reason);
+        setIsConnected(false);
+        setConnectionStatus('disconnected');
+
+        // Attempt to reconnect if not a manual close
+        if (event.code !== 1000 && reconnectAttempts.current < maxReconnectAttempts) {
+          scheduleReconnect();
+        }
+      };
+
+      ws.onerror = (error) => {
+        console.error('Council WebSocket error:', error);
+        setConnectionStatus('error');
+        setIsConnected(false);
+      };
+
+      wsRef.current = ws;
+    } catch (error) {
+      console.error('Failed to create Council WebSocket connection:', error);
+      setConnectionStatus('error');
+      scheduleReconnect();
+    }
+  };
+
+  const scheduleReconnect = () => {
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+    }
+
+    const delay = reconnectDelay * Math.pow(2, reconnectAttempts.current);
+    reconnectAttempts.current++;
+
+    console.log(`Scheduling Council WebSocket reconnect in ${delay}ms (attempt ${reconnectAttempts.current})`);
+
+    reconnectTimeoutRef.current = setTimeout(() => {
+      connect();
+    }, delay);
+  };
+
+  const disconnect = () => {
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = null;
+    }
+
+    if (wsRef.current) {
+      wsRef.current.close(1000, 'Manual disconnect');
+      wsRef.current = null;
+    }
+
+    setIsConnected(false);
+    setConnectionStatus('disconnected');
+  };
+
+  const handleMessage = (message: CouncilWebSocketMessage) => {
+    const { type, data, timestamp } = message;
+
+    // Update last update timestamp
+    actions.setLastUpdate(new Date(timestamp));
+
+    switch (type) {
+      case 'verdict_created':
+        actions.addVerdict(data as Verdict);
         break;
 
-      case 'judge_update':
-        handleJudgeUpdate(message.data);
+      case 'verdict_updated':
+        actions.updateVerdict(data.id, data.updates);
         break;
 
-      case 'ethical_assessment':
-        handleEthicalAssessmentUpdate(message.data);
+      case 'verdict_completed':
+        actions.updateVerdict(data.id, {
+          ...data,
+          status: 'completed',
+          completedAt: new Date(timestamp)
+        });
         break;
 
-      case 'intervention_update':
-        handleInterventionUpdate(message.data);
+      case 'judge_updated':
+        actions.updateJudge(data.id, data.updates);
         break;
 
-      case 'stats_update':
-        handleStatsUpdate(message.data);
+      case 'metrics_updated':
+        actions.setMetrics(data as CouncilMetrics);
+        actions.setLoading('metrics', false);
+        break;
+
+      case 'alert_created':
+        actions.addAlert(data as CouncilAlert);
+        break;
+
+      case 'alert_acknowledged':
+        actions.acknowledgeAlert(data.alertId);
         break;
 
       default:
-        console.warn('Unknown WebSocket message type:', message.type);
-    }
-  }, []);
-
-  // Set up message listener
-  useEffect(() => {
-    const unsubscribe = councilWebSocketManager.addMessageListener(handleWebSocketMessage);
-    return unsubscribe;
-  }, [handleWebSocketMessage]);
-
-  // Verdict update handlers
-  const handleVerdictUpdate = (data: { action: string; verdict: Verdict }) => {
-    switch (data.action) {
-      case 'created':
-        store.addVerdict(data.verdict);
-        break;
-      case 'updated':
-        store.updateVerdict(data.verdict.id, data.verdict);
-        break;
-      case 'deleted':
-        store.removeVerdict(data.verdict.id);
-        break;
+        console.warn('Unknown Council WebSocket message type:', type);
     }
   };
 
-  const handleJudgeUpdate = (data: { action: string; judge: Judge; performance?: any }) => {
-    switch (data.action) {
-      case 'status_changed':
-        store.updateJudge(data.judge.id, data.judge);
-        break;
-      case 'performance_updated':
-        if (data.performance) {
-          store.updateJudgeMetrics(data.judge.id, data.performance);
-        }
-        break;
+  const sendMessage = (message: any) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify(message));
+    } else {
+      console.warn('Council WebSocket not connected, cannot send message');
     }
   };
 
-  const handleEthicalAssessmentUpdate = (data: { action: string; assessment: EthicalAssessment }) => {
-    switch (data.action) {
-      case 'created':
-        store.addEthicalAssessment(data.assessment);
-        break;
-      case 'updated':
-      case 'reviewed':
-        store.updateEthicalAssessment(data.assessment.id, data.assessment);
-        break;
-    }
-  };
-
-  const handleInterventionUpdate = (data: { action: string; intervention: VerdictIntervention }) => {
-    switch (data.action) {
-      case 'created':
-        store.addIntervention(data.intervention);
-        break;
-      case 'status_changed':
-        store.updateIntervention(data.intervention.id, data.intervention);
-        break;
-    }
-  };
-
-  const handleStatsUpdate = (data: { stats: any }) => {
-    store.setStats(data.stats);
-  };
-
-  // Connection status
-  const isConnected = councilWebSocketManager.isConnected;
-
-  // Manual reconnect function
-  const reconnect = useCallback(() => {
-    councilWebSocketManager.disconnect();
-    councilWebSocketManager.connect().catch(error => {
-      console.error('Manual WebSocket reconnection failed:', error);
+  // Subscribe to specific channels
+  const subscribe = (channels: string[]) => {
+    sendMessage({
+      type: 'subscribe',
+      channels
     });
+  };
+
+  // Unsubscribe from channels
+  const unsubscribe = (channels: string[]) => {
+    sendMessage({
+      type: 'unsubscribe',
+      channels
+    });
+  };
+
+  // Request real-time metrics
+  const requestMetrics = () => {
+    sendMessage({
+      type: 'request_metrics'
+    });
+  };
+
+  // Request active alerts
+  const requestAlerts = () => {
+    sendMessage({
+      type: 'request_alerts'
+    });
+  };
+
+  // Request judge updates
+  const requestJudgeUpdates = () => {
+    sendMessage({
+      type: 'request_judge_updates'
+    });
+  };
+
+  useEffect(() => {
+    connect();
+
+    return () => {
+      disconnect();
+    };
   }, []);
 
   return {
     isConnected,
-    reconnect,
+    connectionStatus,
+    connect,
+    disconnect,
+    sendMessage,
+    subscribe,
+    unsubscribe,
+    requestMetrics,
+    requestAlerts,
+    requestJudgeUpdates,
   };
 }
 
-/**
- * Hook for subscribing to specific WebSocket events
- */
-export function useCouncilWebSocketSubscription(
-  messageType: CouncilWebSocketMessage['type'],
-  callback: (data: any) => void
-) {
-  useEffect(() => {
-    const unsubscribe = councilWebSocketManager.addMessageListener((message) => {
-      if (message.type === messageType) {
-        callback(message.data);
-      }
-    });
+// Hook for real-time verdict monitoring
+export function useRealTimeVerdictMonitoring() {
+  const verdicts = useCouncilStore((state) => state.verdicts);
+  const loading = useCouncilStore((state) => state.loading.verdicts);
 
-    return unsubscribe;
-  }, [messageType, callback]);
+  return {
+    verdicts,
+    loading,
+    totalVerdicts: verdicts.length,
+    pendingVerdicts: verdicts.filter(v => v.status === 'pending').length,
+    inProgressVerdicts: verdicts.filter(v => v.status === 'in_progress').length,
+    completedVerdicts: verdicts.filter(v => v.status === 'completed').length,
+    escalatedVerdicts: verdicts.filter(v => v.status === 'escalated').length,
+    recentVerdicts: verdicts.slice(0, 10), // Most recent 10
+  };
 }
 
-/**
- * Hook for sending WebSocket messages
- */
-export function useCouncilWebSocketSender() {
-  return useCallback((message: Omit<CouncilWebSocketMessage, 'timestamp'>) => {
-    councilWebSocketManager.send({
-      ...message,
-      timestamp: new Date().toISOString(),
-    });
-  }, []);
+// Hook for real-time judge monitoring
+export function useRealTimeJudgeMonitoring() {
+  const judges = useCouncilStore((state) => state.judges);
+  const loading = useCouncilStore((state) => state.loading.judges);
+
+  return {
+    judges,
+    loading,
+    totalJudges: judges.length,
+    activeJudges: judges.filter(j => j.status === 'active').length,
+    inactiveJudges: judges.filter(j => j.status === 'inactive').length,
+    errorJudges: judges.filter(j => j.status === 'error').length,
+    averageAccuracy: judges.length > 0
+      ? judges.reduce((sum, j) => sum + j.performance.accuracy, 0) / judges.length
+      : 0,
+    averageResponseTime: judges.length > 0
+      ? judges.reduce((sum, j) => sum + j.performance.responseTime, 0) / judges.length
+      : 0,
+  };
+}
+
+// Hook for real-time alert monitoring
+export function useRealTimeAlertMonitoring() {
+  const alerts = useCouncilStore((state) => state.alerts);
+  const loading = useCouncilStore((state) => state.loading.alerts);
+
+  return {
+    alerts,
+    loading,
+    totalAlerts: alerts.length,
+    unacknowledgedAlerts: alerts.filter(a => !a.acknowledged).length,
+    criticalAlerts: alerts.filter(a => a.severity === 'critical' && !a.acknowledged).length,
+    highAlerts: alerts.filter(a => a.severity === 'high' && !a.acknowledged).length,
+    recentAlerts: alerts.slice(0, 5), // Most recent 5
+  };
 }

@@ -5,7 +5,7 @@
 //!
 //! @author @darianrosebrook
 
-use crate::types::*;
+use crate::knowledge_types::*;
 #[cfg(feature = "embeddings")]
 use crate::KnowledgeIngestor;
 use agent_agency_database::models::*;

@@ -1,0 +1,330 @@
+/**
+ * System Health Dashboard Styles
+ * Professional system monitoring interface with Grafana integration
+ *
+ * @author @darianrosebrook
+ */
+
+.systemHealthDashboard {
+  padding: var(--spacing-6);
+  max-width: 1800px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-6);
+
+  @media (max-width: 768px) {
+    padding: var(--spacing-4);
+    gap: var(--spacing-4);
+  }
+}
+
+/* Header Section */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--spacing-4);
+  padding-bottom: var(--spacing-4);
+  border-bottom: 1px solid var(--color-border);
+
+  @media (max-width: 1024px) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-3);
+  }
+}
+
+.headerLeft {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  flex: 1;
+}
+
+.healthStatus {
+  margin-top: var(--spacing-2);
+}
+
+.statusIndicator {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  padding: var(--spacing-2) var(--spacing-3);
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  font-weight: 500;
+
+  &.healthy {
+    background: rgba(34, 197, 94, 0.1);
+    color: #22c55e;
+  }
+
+  &.warning {
+    background: rgba(245, 158, 11, 0.1);
+    color: #f59e0b;
+  }
+
+  &.critical {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+  }
+
+  &.unknown {
+    background: rgba(107, 114, 128, 0.1);
+    color: #6b7280;
+  }
+
+  svg {
+    flex-shrink: 0;
+  }
+}
+
+.headerRight {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+  align-items: flex-end;
+
+  @media (max-width: 1024px) {
+    align-items: flex-start;
+    width: 100%;
+  }
+}
+
+.connectionStatus {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  padding: var(--spacing-2) var(--spacing-3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+
+  .connected {
+    color: var(--color-success);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-1);
+  }
+
+  .disconnected {
+    color: var(--color-error);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-1);
+  }
+}
+
+.tabNavigation {
+  display: flex;
+  gap: var(--spacing-1);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-1);
+
+  @media (max-width: 640px) {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+}
+
+.actions {
+  display: flex;
+  gap: var(--spacing-2);
+
+  @media (max-width: 480px) {
+    justify-content: center;
+  }
+}
+
+/* Overview Tab */
+.overview {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-6);
+}
+
+/* Status Summary */
+.statusSummary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--spacing-4);
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.summaryCard {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-5);
+  box-shadow: var(--shadow-sm);
+
+  h4 {
+    margin: 0 0 var(--spacing-4) 0;
+    color: var(--color-text-primary);
+    font-weight: 600;
+  }
+
+  @media (max-width: 768px) {
+    padding: var(--spacing-4);
+  }
+}
+
+.statusGrid,
+.alertPriority,
+.performanceMetrics {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+}
+
+.statusItem,
+.priorityItem,
+.metricItem {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
+.statusDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+
+  &[data-status="healthy"] {
+    background: var(--color-success);
+  }
+
+  &[data-status="warning"] {
+    background: var(--color-warning);
+  }
+
+  &[data-status="critical"] {
+    background: var(--color-error);
+  }
+
+  &[data-status="unknown"] {
+    background: var(--color-neutral);
+  }
+}
+
+.critical {
+  color: var(--color-error);
+}
+
+.high {
+  color: var(--color-warning);
+}
+
+.medium {
+  color: var(--color-warning);
+  opacity: 0.8;
+}
+
+.low {
+  color: var(--color-neutral);
+}
+
+/* Spinning animation */
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .systemHealthDashboard {
+    padding: var(--spacing-5);
+  }
+}
+
+@media (max-width: 768px) {
+  .systemHealthDashboard {
+    padding: var(--spacing-4);
+  }
+
+  .header {
+    padding-bottom: var(--spacing-3);
+  }
+
+  .statusSummary {
+    gap: var(--spacing-3);
+  }
+
+  .summaryCard {
+    padding: var(--spacing-4);
+  }
+}
+
+@media (max-width: 480px) {
+  .systemHealthDashboard {
+    padding: var(--spacing-3);
+  }
+
+  .header {
+    gap: var(--spacing-2);
+  }
+
+  .tabNavigation {
+    padding: var(--spacing-2);
+  }
+
+  .statusSummary {
+    gap: var(--spacing-2);
+  }
+
+  .summaryCard {
+    padding: var(--spacing-3);
+  }
+
+  .statusGrid,
+  .alertPriority,
+  .performanceMetrics {
+    gap: var(--spacing-2);
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .systemHealthDashboard {
+    .header {
+      border-bottom-width: 2px;
+    }
+  }
+
+  .summaryCard {
+    border-width: 2px;
+  }
+
+  .statusIndicator {
+    border: 1px solid currentColor;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .spinning {
+    animation: none;
+  }
+}
+
+/* Dark mode optimizations */
+@media (prefers-color-scheme: dark) {
+  .tabNavigation {
+    background: var(--color-background-secondary);
+  }
+
+  .summaryCard {
+    background: var(--color-surface);
+  }
+}

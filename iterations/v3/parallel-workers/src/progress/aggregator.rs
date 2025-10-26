@@ -1,6 +1,6 @@
 //! Progress aggregation across all workers
 
-use crate::types::*;
+use crate::parallel_types::*;
 use crate::error::*;
 use std::collections::HashMap;
 use std::sync::Arc;

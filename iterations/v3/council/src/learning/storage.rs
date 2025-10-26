@@ -11,7 +11,7 @@ use std::time::Duration;
 use uuid::Uuid;
 use async_trait::async_trait;
 
-use crate::types::{JudgeId, TaskId, VerdictId, ResourceTrend, ResourceUsageMetrics, ResourcePrediction};
+use crate::council_types::{JudgeId, TaskId, VerdictId, ResourceTrend, ResourceUsageMetrics, ResourcePrediction};
 use super::types::*;
 
 /// Learning signal storage and retrieval
@@ -45,16 +45,16 @@ pub trait LearningSignalStorage: Send + Sync + std::fmt::Debug {
     async fn get_learning_recommendations(&self) -> Result<Vec<LearningRecommendation>>;
 
     /// Query database for historical resource data
-    async fn query_database_for_historical_resource_data(&self, task_spec: &crate::types::TaskSpec) -> Result<HistoricalResourceData>;
+    async fn query_database_for_historical_resource_data(&self, task_spec: &crate::council_types::TaskSpec) -> Result<HistoricalResourceData>;
 
     /// Get cached historical resource data
-    async fn get_cached_historical_resource_data(&self, task_spec: &crate::types::TaskSpec) -> Result<Option<HistoricalResourceData>>;
+    async fn get_cached_historical_resource_data(&self, task_spec: &crate::council_types::TaskSpec) -> Result<Option<HistoricalResourceData>>;
 
     /// Aggregate historical resource data
     async fn aggregate_historical_resource_data(&self, db_data: &HistoricalResourceData, cached_data: Option<&HistoricalResourceData>) -> Result<HistoricalResourceData>;
 
     /// Perform comprehensive historical resource lookup
-    async fn perform_comprehensive_historical_resource_lookup(&self, task_spec: &crate::types::TaskSpec) -> Result<HistoricalResourceData>;
+    async fn perform_comprehensive_historical_resource_lookup(&self, task_spec: &crate::council_types::TaskSpec) -> Result<HistoricalResourceData>;
 
     /// Monitor resource data performance
     async fn monitor_resource_data_performance(&self, query_time: Duration, result_count: usize, cache_hit: bool) -> Result<()>;
@@ -66,7 +66,7 @@ pub trait LearningSignalStorage: Send + Sync + std::fmt::Debug {
     async fn generate_resource_usage_predictions(&self, data: &HistoricalResourceData, trends: &[ResourceTrend]) -> Result<Vec<ResourcePrediction>>;
 
     /// Estimate task complexity
-    fn estimate_task_complexity(&self, task_spec: &crate::types::TaskSpec) -> TaskComplexity;
+    fn estimate_task_complexity(&self, task_spec: &crate::council_types::TaskSpec) -> TaskComplexity;
 }
 
 /// Historical resource usage data for trend analysis
@@ -325,12 +325,12 @@ impl LearningSignalStorage for InMemoryLearningSignalStorage {
         Ok(vec![])
     }
 
-    async fn query_database_for_historical_resource_data(&self, _task_spec: &crate::types::TaskSpec) -> Result<HistoricalResourceData> {
+    async fn query_database_for_historical_resource_data(&self, _task_spec: &crate::council_types::TaskSpec) -> Result<HistoricalResourceData> {
         // Not implemented for in-memory storage
         Err(anyhow::anyhow!("Database queries not supported in in-memory storage"))
     }
 
-    async fn get_cached_historical_resource_data(&self, _task_spec: &crate::types::TaskSpec) -> Result<Option<HistoricalResourceData>> {
+    async fn get_cached_historical_resource_data(&self, _task_spec: &crate::council_types::TaskSpec) -> Result<Option<HistoricalResourceData>> {
         // No caching in in-memory storage
         Ok(None)
     }
@@ -340,7 +340,7 @@ impl LearningSignalStorage for InMemoryLearningSignalStorage {
         Ok(db_data.clone())
     }
 
-    async fn perform_comprehensive_historical_resource_lookup(&self, task_spec: &crate::types::TaskSpec) -> Result<HistoricalResourceData> {
+    async fn perform_comprehensive_historical_resource_lookup(&self, task_spec: &crate::council_types::TaskSpec) -> Result<HistoricalResourceData> {
         // Try database first, then cache
         match self.query_database_for_historical_resource_data(task_spec).await {
             Ok(data) => Ok(data),
@@ -368,7 +368,7 @@ impl LearningSignalStorage for InMemoryLearningSignalStorage {
         Ok(vec![])
     }
 
-    fn estimate_task_complexity(&self, _task_spec: &crate::types::TaskSpec) -> TaskComplexity {
+    fn estimate_task_complexity(&self, _task_spec: &crate::council_types::TaskSpec) -> TaskComplexity {
         // Return default complexity for in-memory storage
         TaskComplexity::Moderate
     }

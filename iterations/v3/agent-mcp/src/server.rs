@@ -2,7 +2,7 @@
 //!
 //! Main MCP server implementation for handling tool requests and responses.
 
-use crate::types::*;
+use crate::mcp_types::*;
 use crate::{CawsIntegration, ToolDiscovery, ToolRegistry};
 use caws_runtime_validator::integration::McpCawsIntegration;
 use agent_memory::MemorySystem;
@@ -923,7 +923,7 @@ impl MCPServer {
                 // Sanitize the input
                 let sanitized_value = sanitize_api_input(&v);
 
-                let tool: crate::types::MCPTool =
+                let tool: crate::mcp_types::MCPTool =
                     serde_json::from_value(sanitized_value).map_err(|e| JsonRpcError {
                         code: jsonrpc_core::ErrorCode::InvalidParams,
                         message: "Invalid tool format after sanitization".to_string(),

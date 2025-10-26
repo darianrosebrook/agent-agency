@@ -3,7 +3,7 @@
 //! Analyzes complex tasks and decomposes them into parallel subtasks
 //! for efficient execution across multiple workers.
 
-use crate::types::*;
+use crate::worker_types::*;
 use std::collections::HashMap;
 
 /// Task decomposer that analyzes and breaks down complex tasks

@@ -1,7 +1,7 @@
 //! @darianrosebrook
 //! HNSW (Hierarchical Navigable Small World) approximate nearest neighbor search
 
-use crate::types::{HnswMetadata, VectorQuery, VectorSearchResult};
+use crate::indexer_types::{HnswMetadata, VectorQuery, VectorSearchResult};
 use anyhow::{Context, Result};
 use parking_lot::Mutex;
 use std::collections::HashMap;
@@ -381,7 +381,7 @@ impl HnswIndexer {
             .context("Failed to perform HNSW search")?;
 
         // Convert results to VectorSearchResult
-        let results: Vec<crate::types::VectorSearchResult> = neighbors
+        let results: Vec<crate::indexer_types::VectorSearchResult> = neighbors
             .into_iter()
             .filter_map(|(id, distance)| {
                 // Get UUID from ID mapping

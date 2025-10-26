@@ -346,7 +346,7 @@ impl VerdictAggregator {
                 // Constitutional judges handle CAWS compliance and governance
                 if task_description.contains("compliance") || task_description.contains("constitutional") ||
                    task_description.contains("caws") || task_description.contains("governance") ||
-                   matches!(context.risk_tier, crate::types::RiskTier::Tier1) {
+                   matches!(context.risk_tier, crate::council_types::RiskTier::Tier1) {
                     score += 0.4; // High priority for compliance and high-risk tasks
                 }
             },
@@ -379,16 +379,16 @@ impl VerdictAggregator {
                 }
             },
             crate::judge::JudgeType::Compliance => {
-                if matches!(context.risk_tier, crate::types::RiskTier::Tier1) {
+                if matches!(context.risk_tier, crate::council_types::RiskTier::Tier1) {
                     score += 0.4; // High compliance needs for T1 tasks
                 }
             },
             crate::judge::JudgeType::DomainExpert => {
                 // Domain experts get higher scores for complex tasks
                 let risk_level = match context.working_spec.risk_tier {
-                    crate::types::RiskTier::Tier1 => 1,
-                    crate::types::RiskTier::Tier2 => 2,
-                    crate::types::RiskTier::Tier3 => 3,
+                    crate::council_types::RiskTier::Tier1 => 1,
+                    crate::council_types::RiskTier::Tier2 => 2,
+                    crate::council_types::RiskTier::Tier3 => 3,
                 };
                 if risk_level > 1 {
                     score += 0.2;
@@ -396,7 +396,7 @@ impl VerdictAggregator {
             },
             crate::judge::JudgeType::Ethics => {
                 // Ethics judges prioritize high-risk, sensitive tasks
-                if matches!(context.risk_tier, crate::types::RiskTier::Tier1) ||
+                if matches!(context.risk_tier, crate::council_types::RiskTier::Tier1) ||
                    task_description.contains("privacy") || task_description.contains("ethics") ||
                    task_description.contains("bias") || task_description.contains("fair") {
                     score += 0.4;

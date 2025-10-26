@@ -6,7 +6,7 @@ mod tests {
     use crate::provider::*;
     use crate::service::*;
     use crate::similarity::*;
-    use crate::types::*;
+    use crate::embedding_types::*;
 
     #[tokio::test]
     async fn test_dummy_embedding_provider() {

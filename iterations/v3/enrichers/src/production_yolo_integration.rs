@@ -3,7 +3,7 @@
 //! Production-ready integration of YOLO object detection with comprehensive
 //! monitoring, optimization, and error handling for the Council system.
 
-use crate::types::{EnricherConfig, VisionAnalysisResult, BoundingBox};
+use crate::enricher_types::{EnricherConfig, VisionAnalysisResult, BoundingBox};
 use crate::vision_enricher::{VisionEnricher, YOLOExecutorTrait, YOLODetectionResult, Detection, YOLOInferenceOptions};
 use image::DynamicImage;
 use async_trait::async_trait;
@@ -159,7 +159,7 @@ impl ProductionVisionEnricher {
             base_analysis: base_result.clone(),
             total_processing_time_ms: total_time_ms,
             yolo_enabled: self.yolo_executor.read().await.is_some(),
-            performance_metrics: PerformanceMetrics {
+            performance_metrics: EnricherPerformanceMetrics {
                 ocr_time_ms: base_result.ocr.processing_time_ms,
                 yolo_time_ms: base_result.total_processing_time_ms - base_result.ocr.processing_time_ms,
                 total_time_ms,
@@ -253,7 +253,7 @@ impl ProductionVisionEnricher {
     }
 
     /// Log performance metrics for monitoring
-    async fn log_performance_metrics(&self, metrics: &PerformanceMetrics) {
+    async fn log_performance_metrics(&self, metrics: &EnricherPerformanceMetrics) {
         println!(" Vision Analysis Performance:");
         println!("   OCR Time: {}ms", metrics.ocr_time_ms);
         println!("   YOLO Time: {}ms", metrics.yolo_time_ms);
@@ -283,13 +283,13 @@ pub struct ProductionVisionAnalysisResult {
     pub base_analysis: VisionAnalysisResult,
     pub total_processing_time_ms: u64,
     pub yolo_enabled: bool,
-    pub performance_metrics: PerformanceMetrics,
+    pub performance_metrics: EnricherPerformanceMetrics,
     pub quality_assessment: QualityAssessment,
 }
 
 /// Performance metrics for production monitoring
 #[derive(Debug, Clone)]
-pub struct PerformanceMetrics {
+pub struct EnricherPerformanceMetrics {
     pub ocr_time_ms: u64,
     pub yolo_time_ms: u64,
     pub total_time_ms: u64,
@@ -362,7 +362,7 @@ mod tests {
 
         // Create a mock analysis result
         let mock_result = VisionAnalysisResult {
-            ocr: crate::types::OcrResult {
+            ocr: crate::enricher_types::OcrResult {
                 blocks: vec![],
                 tables: vec![],
                 text_regions: vec![],

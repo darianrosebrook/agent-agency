@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::error::{ContractError, ContractKind, ValidationIssue};
+use crate::contract_errors::{ContractError, ContractKind, ValidationIssue};
 use crate::schema::JUDGE_VERDICT_SCHEMA;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]

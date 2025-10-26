@@ -12,7 +12,7 @@ use super::super::{
 };
 use super::super::pooling::{DeadpoolSqlxBridge, DeadpoolSqlxConnection};
 use super::super::circuit_breaker::{CircuitBreaker, CircuitState};
-use super::super::metrics::DatabaseMetrics;
+use super::super::database_metrics::DatabaseMetrics;
 use super::super::health::{DatabaseHealthMonitor, DatabaseHealthStatus, DatabaseStats};
 use super::super::audit::DatabaseAuditLogger;
 use anyhow::{Context, Result};
@@ -254,7 +254,7 @@ impl DatabaseClient {
     }
 
     /// Get metrics snapshot
-    pub fn metrics_snapshot(&self) -> super::super::metrics::DatabaseMetricsSnapshot {
+    pub fn metrics_snapshot(&self) -> super::super::database_metrics::DatabaseMetricsSnapshot {
         self.metrics.snapshot()
     }
 

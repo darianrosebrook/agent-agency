@@ -7,7 +7,7 @@
 //! - Visual Captioning: Generate descriptions for images
 //! - Circuit breaker pattern for reliability
 
-use crate::types::*;
+use crate::data_processing_types::*;
 use crate::{DataProcessingResult, DataProcessingError};
 use std::collections::HashMap;
 use async_trait::async_trait;

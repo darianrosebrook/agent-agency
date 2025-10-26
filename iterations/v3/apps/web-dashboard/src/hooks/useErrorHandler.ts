@@ -1,87 +1,108 @@
-'use client';
+/**
+ * Error Handler Hook
+ * Provides standardized error handling for React components
+ *
+ * @author @darianrosebrook
+ */
 
 import { useCallback } from 'react';
-import { useToast } from '@/components/providers/ToastProvider';
+import { ApiError, ErrorCode, normalizeError, logError } from '@/lib/errors';
 
 interface ErrorHandlerOptions {
   showToast?: boolean;
   logError?: boolean;
-  fallbackMessage?: string;
+  context?: string;
 }
 
-export function useErrorHandler(options: ErrorHandlerOptions = {}) {
-  const { showToast = true, logError = true, fallbackMessage = 'An unexpected error occurred' } = options;
-  const { addToast } = useToast();
+export function useErrorHandler() {
+  const handleError = useCallback((
+    error: ApiError | any,
+    options: ErrorHandlerOptions = {}
+  ): ApiError => {
+    const {
+      showToast = true,
+      logError: shouldLogError = true,
+      context
+    } = options;
 
-  const handleError = useCallback((error: unknown, context?: string) => {
-    const errorMessage = error instanceof Error ? error.message : fallbackMessage;
-    const fullContext = context ? `${context}: ${errorMessage}` : errorMessage;
+    // Normalize the error
+    const normalizedError = normalizeError(error, context);
 
-    if (logError) {
-      console.error('Error handled:', { error, context, fullContext });
+    // Log the error if requested
+    if (shouldLogError) {
+      logError(normalizedError, context);
     }
 
+    // Show toast notification if requested
     if (showToast) {
-      addToast({ type: 'error', title: 'Error', message: fullContext });
+      showErrorToast(normalizedError);
     }
 
-    return fullContext;
-  }, [addToast, logError, fallbackMessage]);
+    return normalizedError;
+  }, []);
 
-  const handleAsyncError = useCallback(async <T>(
-    asyncFn: () => Promise<T>,
-    context?: string
-  ): Promise<T | null> => {
-    try {
-      return await asyncFn();
-    } catch (error) {
-      handleError(error, context);
-      return null;
+  const createSuccessResponse = useCallback(<T>(data: T) => ({
+    success: true,
+    data,
+    timestamp: new Date().toISOString()
+  }), []);
+
+  const handleApiResponse = useCallback(<T>(
+    response: { success: boolean; data?: T; error?: any },
+    options: ErrorHandlerOptions = {}
+  ): T | null => {
+    if (response.success && response.data) {
+      return response.data;
     }
+
+    if (response.error) {
+      handleError(response.error, options);
+    }
+
+    return null;
   }, [handleError]);
 
   return {
     handleError,
-    handleAsyncError,
+    createSuccessResponse,
+    handleApiResponse,
+    normalizeError
   };
 }
 
-interface RetryOptions {
-  maxRetries?: number;
-  delay?: number;
-  backoff?: boolean;
+/**
+ * Show error toast notification
+ * This is a placeholder - integrate with your toast system
+ */
+function showErrorToast(error: ApiError) {
+  // Placeholder for toast notification
+  // Replace with your actual toast implementation
+  console.warn('Error Toast:', error.message);
+
+  // Example integration with a toast library:
+  // toast.error(error.message, {
+  //   description: error.details?.description,
+  //   duration: getToastDuration(error.severity),
+  //   action: error.retryable ? {
+  //     label: 'Retry',
+  //     onClick: () => retryFunction()
+  //   } : undefined
+  // });
 }
 
-export function useRetryableError(options: RetryOptions = {}) {
-  const { maxRetries = 3, delay = 1000, backoff = true } = options;
-  const { handleError } = useErrorHandler();
-
-  const retry = useCallback(async <T>(
-    asyncFn: () => Promise<T>,
-    context?: string
-  ): Promise<T | null> => {
-    let currentDelay = delay;
-
-    for (let attempt = 0; attempt <= maxRetries; attempt++) {
-      try {
-        return await asyncFn();
-      } catch (error) {
-        
-        if (attempt === maxRetries) {
-          handleError(error, `${context} (failed after ${maxRetries + 1} attempts)`);
-          return null;
-        }
-
-        if (backoff) {
-          currentDelay *= 2;
-        }
-
-        await new Promise(resolve => setTimeout(resolve, currentDelay));
-      }
-    }
-
-    return null;
-  }, [maxRetries, delay, backoff, handleError]);
-
-  return { retry };
+/**
+ * Get toast duration based on error severity
+ */
+function getToastDuration(severity: string): number {
+  switch (severity) {
+    case 'critical':
+      return 10000; // 10 seconds
+    case 'high':
+      return 7000;  // 7 seconds
+    case 'medium':
+      return 5000;  // 5 seconds
+    case 'low':
+    default:
+      return 4000;  // 4 seconds
+  }
 }

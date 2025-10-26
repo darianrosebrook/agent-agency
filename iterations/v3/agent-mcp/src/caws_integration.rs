@@ -12,7 +12,7 @@ pub use caws_runtime_validator::integration::{
     ToolExecutionContext, ToolExecutionRecord, McpIntegrationError, McpCawsIntegration
 };
 
-use crate::types::*;
+use crate::mcp_types::*;
 use anyhow::Result;
 use std::fs;
 use std::path::Path;
@@ -111,21 +111,21 @@ impl CawsIntegration {
     /// Calculate compliance score from violations using consistent scoring logic
     fn calculate_compliance_score(
         &self,
-        violations: &[crate::types::CawsViolation],
+        violations: &[crate::mcp_types::CawsViolation],
         rulebook: &CawsRulebook,
     ) -> (f32, bool) {
         let strict = matches!(
             self.config.validation_strictness,
-            crate::types::ValidationStrictness::Strict
+            crate::mcp_types::ValidationStrictness::Strict
         );
 
         let mut penalty: f32 = 0.0;
         for v in violations {
             penalty += match v.severity {
-                crate::types::ViolationSeverity::Info => 0.02,
-                crate::types::ViolationSeverity::Warning => 0.05,
-                crate::types::ViolationSeverity::Error => 0.2,
-                crate::types::ViolationSeverity::Critical => 0.5,
+                crate::mcp_types::ViolationSeverity::Info => 0.02,
+                crate::mcp_types::ViolationSeverity::Warning => 0.05,
+                crate::mcp_types::ViolationSeverity::Error => 0.2,
+                crate::mcp_types::ViolationSeverity::Critical => 0.5,
             };
         }
 
@@ -170,15 +170,15 @@ impl CawsIntegration {
             .map_err(|e| anyhow::anyhow!("Runtime validator error: {}", e))?;
 
         // Convert runtime-validator result to legacy format
-        let violations: Vec<crate::types::CawsViolation> = runtime_result.violations
+        let violations: Vec<crate::mcp_types::CawsViolation> = runtime_result.violations
             .into_iter()
-            .map(|v| crate::types::CawsViolation {
+            .map(|v| crate::mcp_types::CawsViolation {
                 rule_id: "RUNTIME-VALIDATOR".to_string(),
                 rule_name: "Runtime Validator Check".to_string(),
                 severity: if runtime_result.compliant {
-                    crate::types::ViolationSeverity::Info
+                    crate::mcp_types::ViolationSeverity::Info
                 } else {
-                    crate::types::ViolationSeverity::Error
+                    crate::mcp_types::ViolationSeverity::Error
                 },
                 description: v,
                 suggestion: None,
@@ -219,19 +219,19 @@ impl CawsIntegration {
         );
 
         // Execution-specific validation: timeout presence for network/command tools
-        let mut exec_violations: Vec<crate::types::CawsViolation> = Vec::new();
+        let mut exec_violations: Vec<crate::mcp_types::CawsViolation> = Vec::new();
         if (tool
             .capabilities
-            .contains(&crate::types::ToolCapability::NetworkAccess)
+            .contains(&crate::mcp_types::ToolCapability::NetworkAccess)
             || tool
                 .capabilities
-                .contains(&crate::types::ToolCapability::CommandExecution))
+                .contains(&crate::mcp_types::ToolCapability::CommandExecution))
             && request.timeout_seconds.is_none()
         {
-            exec_violations.push(crate::types::CawsViolation {
+            exec_violations.push(crate::mcp_types::CawsViolation {
                 rule_id: "RUNTIME-001".into(),
                 rule_name: "Dangerous capability requires timeout".into(),
-                severity: crate::types::ViolationSeverity::Error,
+                severity: crate::mcp_types::ViolationSeverity::Error,
                 description: "Execution missing timeout for network/command tool".into(),
                 suggestion: Some("Set an appropriate timeout_seconds".into()),
                 line_number: None,
@@ -286,13 +286,13 @@ impl CawsIntegration {
             serde_yaml::from_str(&content)?
         };
 
-        fn map_sev(s: &str) -> crate::types::ViolationSeverity {
+        fn map_sev(s: &str) -> crate::mcp_types::ViolationSeverity {
             match s.to_lowercase().as_str() {
-                "info" => crate::types::ViolationSeverity::Info,
-                "warning" | "warn" => crate::types::ViolationSeverity::Warning,
-                "error" => crate::types::ViolationSeverity::Error,
-                "critical" => crate::types::ViolationSeverity::Critical,
-                _ => crate::types::ViolationSeverity::Warning,
+                "info" => crate::mcp_types::ViolationSeverity::Info,
+                "warning" | "warn" => crate::mcp_types::ViolationSeverity::Warning,
+                "error" => crate::mcp_types::ViolationSeverity::Error,
+                "critical" => crate::mcp_types::ViolationSeverity::Critical,
+                _ => crate::mcp_types::ViolationSeverity::Warning,
             }
         }
         fn map_cat(s: &str) -> RuleCategory {

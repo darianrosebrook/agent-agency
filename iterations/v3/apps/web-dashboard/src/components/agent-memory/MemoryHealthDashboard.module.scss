@@ -1,0 +1,670 @@
+/**
+ * Memory Health Dashboard Styles
+ * Professional memory health monitoring and optimization interface
+ *
+ * @author @darianrosebrook
+ */
+
+.memoryHealthDashboard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-6);
+}
+
+/* Header Section */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--spacing-4);
+  padding-bottom: var(--spacing-4);
+
+  @media (max-width: 1024px) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-3);
+  }
+}
+
+.headerLeft {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  flex: 1;
+}
+
+.headerRight {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+}
+
+.connectionStatus {
+  margin-top: var(--spacing-2);
+}
+
+.connected {
+  color: var(--color-success);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.disconnected {
+  color: var(--color-error);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.controls {
+  display: flex;
+  gap: var(--spacing-2);
+}
+
+/* Agent Health Section */
+.agentHealthSection,
+.optimizationsSection,
+.alertsSection,
+.actionsSection {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-6);
+
+  @media (max-width: 768px) {
+    padding: var(--spacing-4);
+  }
+}
+
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-4);
+  padding-bottom: var(--spacing-3);
+  border-bottom: 1px solid var(--color-border);
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-2);
+  }
+}
+
+.agentFilter {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+
+  label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--color-text-primary);
+  }
+}
+
+.select {
+  padding: var(--spacing-2) var(--spacing-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  background: var(--color-background);
+  color: var(--color-text-primary);
+  min-width: 200px;
+
+  &:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+}
+
+/* Agent Health Grid */
+.agentHealthGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: var(--spacing-4);
+
+  @media (max-width: 1200px) {
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  }
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.agentHealthCard {
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-5);
+  transition: all 0.2s ease;
+
+  &:hover {
+    border-color: var(--color-primary);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-1px);
+  }
+
+  @media (max-width: 480px) {
+    padding: var(--spacing-4);
+  }
+}
+
+.agentHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--spacing-4);
+
+  @media (max-width: 480px) {
+    flex-direction: column;
+    gap: var(--spacing-2);
+    align-items: flex-start;
+  }
+}
+
+.agentInfo {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+}
+
+.agentStatus {
+  flex-shrink: 0;
+}
+
+.agentMetrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--spacing-3);
+  margin-bottom: var(--spacing-4);
+
+  @media (max-width: 480px) {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-2);
+  }
+}
+
+.metric {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+  padding: var(--spacing-3);
+  background: var(--color-surface);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+}
+
+.agentActions {
+  display: flex;
+  gap: var(--spacing-2);
+
+  @media (max-width: 480px) {
+    flex-direction: column;
+  }
+}
+
+/* Optimizations Grid */
+.optimizationsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  gap: var(--spacing-4);
+
+  @media (max-width: 1200px) {
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  }
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Optimization Cards */
+.optimizationCard {
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-5);
+  transition: all 0.2s ease;
+
+  &:hover {
+    border-color: var(--color-primary);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-1px);
+  }
+
+  @media (max-width: 480px) {
+    padding: var(--spacing-4);
+  }
+}
+
+.optimizationHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--spacing-3);
+
+  @media (max-width: 480px) {
+    flex-direction: column;
+    gap: var(--spacing-2);
+    align-items: flex-start;
+  }
+}
+
+.optimizationInfo {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
+.progressSection {
+  margin-bottom: var(--spacing-3);
+}
+
+.progressBar {
+  width: 100%;
+  height: 8px;
+  background: var(--color-border);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: var(--spacing-2);
+}
+
+.progressFill {
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+.optimizationMeta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--spacing-3);
+  margin-bottom: var(--spacing-3);
+  padding: var(--spacing-3);
+  background: var(--color-surface);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+
+  @media (max-width: 480px) {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-2);
+  }
+}
+
+.metaItem {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+}
+
+.optimizationActions {
+  display: flex;
+  gap: var(--spacing-2);
+  justify-content: flex-end;
+
+  @media (max-width: 480px) {
+    flex-direction: column;
+  }
+}
+
+/* Alerts Section */
+.alertsSummary {
+  display: flex;
+  gap: var(--spacing-4);
+
+  @media (max-width: 480px) {
+    flex-direction: column;
+    gap: var(--spacing-2);
+  }
+}
+
+.alertSummaryItem {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1);
+}
+
+.alertsList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+.alertItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-4);
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  transition: all 0.2s ease;
+
+  &:hover {
+    border-color: var(--color-primary);
+    box-shadow: var(--shadow-sm);
+  }
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-2);
+  }
+}
+
+.alertInfo {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  flex: 1;
+
+  @media (max-width: 480px) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-2);
+  }
+}
+
+.alertValue {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  min-width: 100px;
+
+  @media (max-width: 768px) {
+    align-items: flex-start;
+  }
+}
+
+.noAlerts {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  padding: var(--spacing-4);
+  color: var(--color-text-secondary);
+}
+
+/* Actions Section */
+.actionsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: var(--spacing-4);
+
+  @media (max-width: 1200px) {
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  }
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.actionCard {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-4);
+  padding: var(--spacing-5);
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  transition: all 0.2s ease;
+
+  &:hover {
+    border-color: var(--color-primary);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-1px);
+  }
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: var(--spacing-3);
+  }
+
+  @media (max-width: 480px) {
+    padding: var(--spacing-4);
+  }
+}
+
+.actionIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  background: var(--color-primary);
+  color: white;
+  border-radius: var(--radius-lg);
+  flex-shrink: 0;
+}
+
+.actionInfo {
+  flex: 1;
+}
+
+/* Empty State */
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-8);
+  text-align: center;
+  color: var(--color-text-secondary);
+  grid-column: 1 / -1;
+
+  svg {
+    margin-bottom: var(--spacing-4);
+    opacity: 0.5;
+  }
+}
+
+/* Spinning animation */
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Status Colors */
+.healthy {
+  color: var(--color-success);
+}
+
+.warning {
+  color: var(--color-warning);
+}
+
+.critical {
+  color: var(--color-error);
+}
+
+.running {
+  color: var(--color-primary);
+  animation: spin 2s linear infinite;
+}
+
+.completed {
+  color: var(--color-success);
+}
+
+.failed {
+  color: var(--color-error);
+}
+
+.pending {
+  color: var(--color-neutral);
+}
+
+.resolved {
+  color: var(--color-success);
+}
+
+.high {
+  color: #dc2626;
+}
+
+.medium {
+  color: var(--color-warning);
+}
+
+.low {
+  color: var(--color-neutral);
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .memoryHealthDashboard {
+    gap: var(--spacing-5);
+  }
+
+  .agentHealthGrid,
+  .optimizationsGrid,
+  .actionsGrid {
+    gap: var(--spacing-3);
+  }
+}
+
+@media (max-width: 768px) {
+  .memoryHealthDashboard {
+    gap: var(--spacing-4);
+  }
+
+  .agentHealthCard,
+  .optimizationCard,
+  .actionCard {
+    padding: var(--spacing-4);
+  }
+
+  .agentHealthGrid,
+  .optimizationsGrid,
+  .actionsGrid {
+    gap: var(--spacing-3);
+  }
+}
+
+@media (max-width: 640px) {
+  .memoryHealthDashboard {
+    gap: var(--spacing-3);
+  }
+
+  .sectionHeader {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .agentFilter {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .memoryHealthDashboard {
+    gap: var(--spacing-3);
+  }
+
+  .header {
+    gap: var(--spacing-2);
+  }
+
+  .agentHealthGrid,
+  .optimizationsGrid,
+  .actionsGrid {
+    gap: var(--spacing-2);
+  }
+
+  .agentHealthCard,
+  .optimizationCard,
+  .actionCard {
+    padding: var(--spacing-3);
+  }
+
+  .agentMetrics {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-2);
+  }
+
+  .optimizationMeta {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-2);
+  }
+
+  .alertsSummary {
+    justify-content: center;
+  }
+
+  .alertItem {
+    padding: var(--spacing-3);
+  }
+
+  .agentActions,
+  .optimizationActions {
+    justify-content: center;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .agentHealthCard,
+  .optimizationCard,
+  .actionCard,
+  .alertItem {
+    border-width: 2px;
+
+    &:hover {
+      border-color: var(--color-primary);
+    }
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .agentHealthCard,
+  .optimizationCard,
+  .actionCard,
+  .alertItem {
+    transition: none;
+
+    &:hover {
+      transform: none;
+    }
+  }
+
+  .running {
+    animation: none;
+  }
+
+  .spinning {
+    animation: none;
+  }
+
+  .progressFill {
+    transition: none;
+  }
+}
+
+/* Dark mode optimizations */
+@media (prefers-color-scheme: dark) {
+  .agentHealthCard,
+  .optimizationCard,
+  .actionCard,
+  .alertItem {
+    background: var(--color-surface);
+  }
+
+  .agentMetrics,
+  .optimizationMeta {
+    background: var(--color-background);
+  }
+}

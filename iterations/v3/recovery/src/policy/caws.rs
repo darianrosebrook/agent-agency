@@ -56,7 +56,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-use crate::types::Codec;
+use crate::recovery_types::Codec;
 
 /// CAWS policy configuration for recovery system
 ///

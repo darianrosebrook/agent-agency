@@ -5,9 +5,9 @@
 use anyhow::Result;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use crate::types::{Digest, StreamingHasher};
+use crate::recovery_types::{Digest, StreamingHasher};
 
-use crate::types::*;
+use crate::recovery_types::*;
 // use super::tree::FileTree; // Unused
 
 /// Commit object with Merkle tree root

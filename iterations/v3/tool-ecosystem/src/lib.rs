@@ -12,9 +12,13 @@
 //! 5. **Conflict Resolution Tools**: Debate orchestration, consensus building, evidence synthesis
 //! 6. **Workflow Tools**: Task decomposition, progress tracking, resource allocation
 
+pub mod claim_extraction;
 pub mod conflict_resolution_tools;
 pub mod evidence_collection_tools;
+pub mod evidence_types;
+pub mod fact_verification;
 pub mod executor;
+pub mod source_validation;
 pub mod multi_modal_verification;
 pub mod parallel_integration;
 pub mod schema_registry;

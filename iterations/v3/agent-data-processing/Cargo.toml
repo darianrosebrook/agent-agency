@@ -76,6 +76,9 @@ embedding-service = { path = "../embedding-service", optional = true }
 
 # Database client (avoid circular dependency - database functionality stays in database crate)
 
+# Common types
+agent-agency-common-types = { path = "../common-types" }
+
 [features]
 default = ["workspace-integration", "embeddings"]
 memory-integration = ["agent-memory"]

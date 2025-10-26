@@ -1,6 +1,6 @@
 //! Database persistence layer for learning system
 
-use crate::types::{WorkerId, TaskPattern};
+use crate::parallel_types::{WorkerId, TaskPattern};
 use crate::learning::metrics_collector::{ExecutionRecord, WorkerPerformanceProfile};
 use crate::learning::pattern_analyzer::{SuccessPattern, FailurePattern, OptimalConfig};
 use crate::learning::config_optimizer::{ConfigurationRecommendations, OptimizationEvent};
@@ -335,7 +335,7 @@ mod tests {
             task_id: TaskId::new(),
             worker_id: WorkerId::new(),
             specialty: WorkerSpecialty::Compilation,
-            subtask_id: crate::types::SubTaskId::new(),
+            subtask_id: crate::parallel_types::SubTaskId::new(),
             metrics: ExecutionMetrics {
                 start_time: Utc::now(),
                 end_time: Utc::now(),

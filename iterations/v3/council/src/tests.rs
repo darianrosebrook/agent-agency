@@ -3,7 +3,7 @@
 //! Tests all judge types, consensus coordination, and evidence enrichment
 
 use crate::coordinator::ConsensusCoordinator;
-use crate::types::*;
+use crate::council_types::*;
 use anyhow::Result;
 use std::collections::HashMap;
 use uuid::Uuid;

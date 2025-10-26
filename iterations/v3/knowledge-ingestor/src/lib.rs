@@ -8,7 +8,7 @@
 pub mod core_vocabulary;
 pub mod cross_reference;
 pub mod on_demand;
-pub mod types;
+pub mod prompting_types;
 pub mod wikidata;
 pub mod wordnet;
 

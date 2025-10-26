@@ -3,7 +3,7 @@
 //! Advanced knowledge retrieval and processing system with semantic search,
 //! hybrid search, and confidence management capabilities.
 
-use crate::types::*;
+use crate::research_types::*;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -60,7 +60,7 @@ pub struct EnhancedKnowledgeSeekerStatus {
     pub enabled: bool,
     pub active_queries: usize,
     pub cache_stats: CacheStats,
-    pub performance_metrics: PerformanceMetrics,
+    pub performance_metrics: KnowledgeSeekerMetrics,
     pub last_updated: chrono::DateTime<chrono::Utc>,
 }
 
@@ -74,7 +74,7 @@ pub struct CacheStats {
 
 /// Performance metrics
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PerformanceMetrics {
+pub struct KnowledgeSeekerMetrics {
     pub total_queries_processed: u64,
     pub average_response_time_ms: f64,
     pub error_rate: f64,
@@ -135,7 +135,7 @@ impl EnhancedKnowledgeSeeker {
                 result_cache_size: 0,
                 hit_rate: 0.0,
             },
-            performance_metrics: PerformanceMetrics {
+            performance_metrics: KnowledgeSeekerMetrics {
                 total_queries_processed: 0,
                 average_response_time_ms: 0.0,
                 error_rate: 0.0,

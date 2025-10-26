@@ -1,6 +1,6 @@
 //! Core types for the debate protocol system
 
-use crate::types::{JudgeId, TaskId, VerdictId};
+use crate::council_types::{JudgeId, TaskId, VerdictId};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;

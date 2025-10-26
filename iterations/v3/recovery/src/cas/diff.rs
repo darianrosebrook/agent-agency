@@ -2,7 +2,7 @@ use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use crate::types::Digest;
+use crate::recovery_types::Digest;
 
 /// Unified diff with explicit lineage information
 #[derive(Debug, Clone, Serialize, Deserialize)]

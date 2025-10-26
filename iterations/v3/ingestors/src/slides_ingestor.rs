@@ -1,7 +1,7 @@
 //! @darianrosebrook
 //! Slides ingestor (PDF/Keynote) using PDFKit with Vision OCR fallback
 
-use crate::types::*;
+use crate::ingestor_types::*;
 use anyhow::{anyhow, Context, Result};
 use chrono::Utc;
 use lopdf::{Document, Object};

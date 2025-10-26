@@ -1,0 +1,388 @@
+{
+  "agentPerformance": [
+    {
+      "id": "agent_1",
+      "name": "CodeAnalyzer",
+      "capabilities": {
+        "languages": ["rust", "typescript", "python"],
+        "domains": ["code-analysis", "security", "performance"],
+        "frameworks": ["tokio", "react", "django"]
+      },
+      "performance": {
+        "task_completion_rate": 0.92,
+        "average_response_time_ms": 1200,
+        "error_rate": 0.034,
+        "active_tasks": 2
+      },
+      "status": "active",
+      "lastActive": "2024-01-15T10:30:00Z",
+      "uptime": 99.8
+    },
+    {
+      "id": "agent_2",
+      "name": "TaskCoordinator",
+      "capabilities": {
+        "languages": ["typescript", "go"],
+        "domains": ["orchestration", "task-management"],
+        "frameworks": ["node", "express", "kubernetes"]
+      },
+      "performance": {
+        "task_completion_rate": 0.89,
+        "average_response_time_ms": 950,
+        "error_rate": 0.021,
+        "active_tasks": 0
+      },
+      "status": "active",
+      "lastActive": "2024-01-15T10:25:00Z",
+      "uptime": 99.9
+    },
+    {
+      "id": "agent_3",
+      "name": "SecurityAuditor",
+      "capabilities": {
+        "languages": ["rust", "python"],
+        "domains": ["security", "compliance", "audit"],
+        "frameworks": ["openssl", "cryptography"]
+      },
+      "performance": {
+        "task_completion_rate": 0.95,
+        "average_response_time_ms": 1800,
+        "error_rate": 0.012,
+        "active_tasks": 1
+      },
+      "status": "active",
+      "lastActive": "2024-01-15T10:28:00Z",
+      "uptime": 99.7
+    },
+    {
+      "id": "agent_4",
+      "name": "DataProcessor",
+      "capabilities": {
+        "languages": ["python", "sql"],
+        "domains": ["data-processing", "analytics"],
+        "frameworks": ["pandas", "numpy", "postgresql"]
+      },
+      "performance": {
+        "task_completion_rate": 0.87,
+        "average_response_time_ms": 2100,
+        "error_rate": 0.045,
+        "active_tasks": 3
+      },
+      "status": "active",
+      "lastActive": "2024-01-15T10:20:00Z",
+      "uptime": 99.5
+    },
+    {
+      "id": "agent_5",
+      "name": "APIDesigner",
+      "capabilities": {
+        "languages": ["typescript", "python", "go"],
+        "domains": ["api-design", "microservices", "integration"],
+        "frameworks": ["fastapi", "gin", "express"]
+      },
+      "performance": {
+        "task_completion_rate": 0.91,
+        "average_response_time_ms": 1450,
+        "error_rate": 0.028,
+        "active_tasks": 1
+      },
+      "status": "active",
+      "lastActive": "2024-01-15T10:15:00Z",
+      "uptime": 99.6
+    }
+  ],
+  "systemMetrics": {
+    "totalAgents": 5,
+    "activeAgents": 5,
+    "totalTasks": 1247,
+    "completedTasks": 1089,
+    "failedTasks": 23,
+    "averageTaskDuration": 2.3,
+    "systemUptime": 99.7,
+    "throughput": 47.5,
+    "errorRate": 0.028,
+    "lastUpdated": "2024-01-15T10:30:00Z"
+  },
+  "performanceTrends": [
+    {
+      "timestamp": "2024-01-15T10:30:00Z",
+      "taskCompletionRate": 0.89,
+      "averageResponseTime": 1350,
+      "errorRate": 0.028,
+      "throughput": 47.5,
+      "activeTasks": 7
+    },
+    {
+      "timestamp": "2024-01-15T10:25:00Z",
+      "taskCompletionRate": 0.91,
+      "averageResponseTime": 1280,
+      "errorRate": 0.025,
+      "throughput": 52.3,
+      "activeTasks": 6
+    },
+    {
+      "timestamp": "2024-01-15T10:20:00Z",
+      "taskCompletionRate": 0.87,
+      "averageResponseTime": 1420,
+      "errorRate": 0.032,
+      "throughput": 43.8,
+      "activeTasks": 8
+    }
+  ],
+  "taskDistribution": [
+    {
+      "agentId": "agent_1",
+      "agentName": "CodeAnalyzer",
+      "taskCount": 456,
+      "percentage": 36.6,
+      "averageDuration": 1.8,
+      "successRate": 0.92
+    },
+    {
+      "agentId": "agent_2",
+      "agentName": "TaskCoordinator",
+      "taskCount": 234,
+      "percentage": 18.8,
+      "averageDuration": 2.1,
+      "successRate": 0.89
+    },
+    {
+      "agentId": "agent_3",
+      "agentName": "SecurityAuditor",
+      "taskCount": 189,
+      "percentage": 15.2,
+      "averageDuration": 3.2,
+      "successRate": 0.95
+    },
+    {
+      "agentId": "agent_4",
+      "agentName": "DataProcessor",
+      "taskCount": 156,
+      "percentage": 12.5,
+      "averageDuration": 2.8,
+      "successRate": 0.87
+    },
+    {
+      "agentId": "agent_5",
+      "agentName": "APIDesigner",
+      "taskCount": 98,
+      "percentage": 7.9,
+      "averageDuration": 2.5,
+      "successRate": 0.91
+    }
+  ],
+  "capabilityMetrics": [
+    {
+      "capability": "code-analysis",
+      "usage": 0.78,
+      "agents": 2,
+      "tasks": 456,
+      "averageSuccessRate": 0.92,
+      "trend": "up"
+    },
+    {
+      "capability": "security",
+      "usage": 0.65,
+      "agents": 1,
+      "tasks": 189,
+      "averageSuccessRate": 0.95,
+      "trend": "up"
+    },
+    {
+      "capability": "data-processing",
+      "usage": 0.54,
+      "agents": 1,
+      "tasks": 156,
+      "averageSuccessRate": 0.87,
+      "trend": "stable"
+    },
+    {
+      "capability": "orchestration",
+      "usage": 0.43,
+      "agents": 1,
+      "tasks": 234,
+      "averageSuccessRate": 0.89,
+      "trend": "down"
+    },
+    {
+      "capability": "api-design",
+      "usage": 0.32,
+      "agents": 1,
+      "tasks": 98,
+      "averageSuccessRate": 0.91,
+      "trend": "up"
+    }
+  ],
+  "languageMetrics": [
+    {
+      "language": "typescript",
+      "usage": 0.45,
+      "agents": 3,
+      "tasks": 456,
+      "averageSuccessRate": 0.89,
+      "trend": "up"
+    },
+    {
+      "language": "python",
+      "usage": 0.38,
+      "agents": 3,
+      "tasks": 345,
+      "averageSuccessRate": 0.91,
+      "trend": "stable"
+    },
+    {
+      "language": "rust",
+      "usage": 0.28,
+      "agents": 2,
+      "tasks": 234,
+      "averageSuccessRate": 0.94,
+      "trend": "up"
+    },
+    {
+      "language": "go",
+      "usage": 0.18,
+      "agents": 2,
+      "tasks": 123,
+      "averageSuccessRate": 0.88,
+      "trend": "down"
+    },
+    {
+      "language": "sql",
+      "usage": 0.12,
+      "agents": 1,
+      "tasks": 89,
+      "averageSuccessRate": 0.87,
+      "trend": "stable"
+    }
+  ],
+  "frameworkMetrics": [
+    {
+      "framework": "react",
+      "usage": 0.35,
+      "agents": 1,
+      "tasks": 234,
+      "averageSuccessRate": 0.89,
+      "trend": "up"
+    },
+    {
+      "framework": "tokio",
+      "usage": 0.28,
+      "agents": 1,
+      "tasks": 189,
+      "averageSuccessRate": 0.94,
+      "trend": "up"
+    },
+    {
+      "framework": "pandas",
+      "usage": 0.22,
+      "agents": 1,
+      "tasks": 156,
+      "averageSuccessRate": 0.87,
+      "trend": "stable"
+    },
+    {
+      "framework": "express",
+      "usage": 0.18,
+      "agents": 2,
+      "tasks": 123,
+      "averageSuccessRate": 0.88,
+      "trend": "down"
+    },
+    {
+      "framework": "kubernetes",
+      "usage": 0.15,
+      "agents": 1,
+      "tasks": 98,
+      "averageSuccessRate": 0.89,
+      "trend": "up"
+    }
+  ],
+  "healthChecks": [
+    {
+      "agentId": "agent_1",
+      "status": "healthy",
+      "responseTime": 12,
+      "lastCheck": "2024-01-15T10:30:00Z",
+      "uptime": 99.8,
+      "issues": []
+    },
+    {
+      "agentId": "agent_2",
+      "status": "healthy",
+      "responseTime": 8,
+      "lastCheck": "2024-01-15T10:30:00Z",
+      "uptime": 99.9,
+      "issues": []
+    },
+    {
+      "agentId": "agent_3",
+      "status": "degraded",
+      "responseTime": 45,
+      "lastCheck": "2024-01-15T10:30:00Z",
+      "uptime": 99.7,
+      "issues": ["High memory usage"]
+    },
+    {
+      "agentId": "agent_4",
+      "status": "healthy",
+      "responseTime": 15,
+      "lastCheck": "2024-01-15T10:30:00Z",
+      "uptime": 99.5,
+      "issues": []
+    },
+    {
+      "agentId": "agent_5",
+      "status": "healthy",
+      "responseTime": 10,
+      "lastCheck": "2024-01-15T10:30:00Z",
+      "uptime": 99.6,
+      "issues": []
+    }
+  ],
+  "alerts": [
+    {
+      "id": "alert-001",
+      "type": "performance",
+      "severity": "warning",
+      "agentId": "agent_3",
+      "message": "High memory usage detected",
+      "timestamp": "2024-01-15T10:25:00Z",
+      "status": "active"
+    },
+    {
+      "id": "alert-002",
+      "type": "error",
+      "severity": "critical",
+      "agentId": "agent_4",
+      "message": "Task processing failure rate increased",
+      "timestamp": "2024-01-15T10:20:00Z",
+      "status": "resolved"
+    }
+  ],
+  "insights": [
+    {
+      "id": "insight-001",
+      "type": "performance",
+      "title": "Agent Performance Optimization",
+      "description": "CodeAnalyzer agent shows 15% improvement in task completion rate",
+      "impact": "positive",
+      "confidence": 0.89,
+      "recommendations": [
+        "Continue current optimization strategies",
+        "Apply similar optimizations to other agents"
+      ]
+    },
+    {
+      "id": "insight-002",
+      "type": "capacity",
+      "title": "Load Balancing Opportunity",
+      "description": "Task distribution shows potential for better load balancing",
+      "impact": "neutral",
+      "confidence": 0.76,
+      "recommendations": [
+        "Consider redistributing tasks across agents",
+        "Monitor for performance impact"
+      ]
+    }
+  ]
+}

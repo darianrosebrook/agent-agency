@@ -4,7 +4,7 @@
 //! Integrates with the V3 Rust architecture to provide documentation quality
 //! validation capabilities to AI models and agents.
 
-use crate::types::*;
+use crate::mcp_types::*;
 use anyhow::{Context, Result};
 use chrono::Utc;
 use serde::{Deserialize, Serialize};

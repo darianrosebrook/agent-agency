@@ -3,7 +3,7 @@
 //! Provides isolated execution environment for testing and validation.
 
 use std::path::PathBuf;
-use crate::types::SelfPromptingAgentError;
+use crate::prompting_types::SelfPromptingAgentError;
 
 /// Sandbox environment for isolated execution
 pub struct SandboxEnvironment {

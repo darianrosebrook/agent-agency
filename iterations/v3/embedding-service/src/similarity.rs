@@ -1,6 +1,6 @@
 //! Similarity search and vector operations
 
-use crate::types::*;
+use crate::embedding_types::*;
 use anyhow::Result;
 
 /// Calculate cosine similarity between two embedding vectors

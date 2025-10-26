@@ -1,6 +1,6 @@
 //! Temporal Reasoning Engine - Time-based analysis and causality detection
 
-use crate::types::*;
+use crate::memory_types::*;
 use crate::MemoryResult;
 use agent_agency_database::{DatabaseClient, DatabaseConfig, Row};
 use std::sync::Arc;

@@ -1,417 +1,498 @@
 /**
  * Council API Client
- * Handles all API interactions for council verdict management, judge monitoring, and ethical assessments
+ * API client for council oversight and decision management
  *
  * @author @darianrosebrook
  */
 
 import { ApiClient } from './api-client';
 
-// Re-export types from components for convenience
-export type { Verdict, VerdictStatus, Judge, Evidence } from '@/components/council/VerdictList';
-export type { InterventionRequest } from '@/components/council/InterventionForm';
-
-// Council-specific types
-export interface VerdictListResponse {
-  verdicts: Verdict[];
-  total: number;
-  page: number;
-  pageSize: number;
-  hasMore: boolean;
-}
-
-export interface VerdictFilters {
-  status?: VerdictStatus[];
-  judgeCount?: number;
-  consensusScore?: { min: number; max: number };
-  ethicalConcerns?: number;
-  dateRange?: { start: Date; end: Date };
-  search?: string;
-  sortBy?: 'createdAt' | 'updatedAt' | 'consensusScore' | 'ethicalConcerns';
-  sortOrder?: 'asc' | 'desc';
-}
-
-export interface JudgePerformance {
+export interface Judge {
   id: string;
   name: string;
-  totalVerdicts: number;
-  accuracy: number;
-  averageResponseTime: number;
-  consensusRate: number;
-  ethicalConcernsFlagged: number;
+  role: 'primary' | 'secondary' | 'ethical' | 'domain_expert';
+  model: string;
+  status: 'active' | 'inactive' | 'error';
+  performance: {
+    accuracy: number;
+    responseTime: number;
+    consensusRate: number;
+    biasScore: number;
+  };
   lastActive: Date;
-  status: 'active' | 'idle' | 'error';
-  performanceHistory: PerformancePoint[];
 }
 
-export interface PerformancePoint {
+export interface JudgeAssignment {
+  judgeId: string;
+  role: Judge['role'];
+  assignedAt: Date;
+  status: 'pending' | 'completed' | 'failed';
+  verdict?: JudgeVerdict;
+}
+
+export interface JudgeVerdict {
+  judgeId: string;
+  decision: 'approve' | 'reject' | 'escalate';
+  confidence: number;
+  rationale: string;
   timestamp: Date;
-  accuracy: number;
-  responseTime: number;
-  consensusRate: number;
+  ethicalConcerns?: EthicalConcern[];
+}
+
+export interface EthicalConcern {
+  id: string;
+  category: 'privacy' | 'bias' | 'safety' | 'fairness' | 'transparency' | 'accountability';
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  description: string;
+  affectedParties: string[];
+  mitigation?: string;
+  resolved: boolean;
+  createdAt: Date;
 }
 
 export interface EthicalAssessment {
   id: string;
   verdictId: string;
-  concerns: EthicalConcern[];
   overallRisk: 'low' | 'medium' | 'high' | 'critical';
-  assessmentDate: Date;
-  reviewedBy?: string;
-  reviewDate?: Date;
-  mitigationStrategies?: string[];
+  concerns: EthicalConcern[];
+  stakeholderImpact: {
+    individuals: number;
+    organizations: number;
+    society: number;
+  };
+  recommendations: string[];
+  assessedAt: Date;
 }
 
-export interface EthicalConcern {
+export interface Evidence {
   id: string;
-  category: 'privacy' | 'bias' | 'safety' | 'transparency' | 'fairness' | 'accountability';
-  severity: 'low' | 'medium' | 'high' | 'critical';
-  description: string;
-  evidence: string[];
-  mitigation: string;
-  status: 'identified' | 'mitigated' | 'accepted';
+  type: 'document' | 'data' | 'log' | 'metric' | 'model_output';
+  title: string;
+  content: string;
+  source: string;
+  confidence: number;
+  timestamp: Date;
 }
 
-export interface CouncilStats {
+export interface ConsensusResult {
+  algorithm: 'majority' | 'weighted' | 'supervisory' | 'ethical_override';
+  confidence: number;
+  participatingJudges: number;
+  agreementLevel: number;
+  finalDecision: 'approve' | 'reject' | 'escalate';
+  rationale: string;
+}
+
+export interface Verdict {
+  id: string;
+  taskId: string;
+  status: 'pending' | 'in_progress' | 'completed' | 'overridden' | 'escalated';
+  judges: JudgeAssignment[];
+  consensus: ConsensusResult;
+  ethicalAssessment: EthicalAssessment;
+  evidence: Evidence[];
+  intervention?: {
+    type: 'manual_override' | 'escalation' | 'pause';
+    reason: string;
+    operator: string;
+    timestamp: Date;
+  };
+  createdAt: Date;
+  completedAt?: Date;
+  updatedAt: Date;
+}
+
+export interface CouncilMetrics {
   totalVerdicts: number;
-  pendingVerdicts: number;
-  completedVerdicts: number;
-  intervenedVerdicts: number;
-  activeJudges: number;
-  totalJudges: number;
-  averageConsensus: number;
-  ethicalConcernsCount: number;
-  averageResolutionTime: number;
+  activeVerdicts: number;
+  pendingInterventions: number;
+  averageResponseTime: number;
+  ethicalConcernRate: number;
+  consensusAccuracy: number;
+  judgePerformance: {
+    [judgeId: string]: Judge['performance'];
+  };
+  recentActivity: {
+    timestamp: Date;
+    action: string;
+    verdictId: string;
+  }[];
 }
 
-export interface VerdictIntervention {
+export interface CouncilAlert {
   id: string;
-  verdictId: string;
-  reason: string;
-  priority: 'low' | 'medium' | 'high' | 'critical';
-  requestedBy: string;
-  requestedAt: Date;
-  reviewDeadline: Date;
-  status: 'pending' | 'approved' | 'rejected' | 'escalated';
-  reviewedBy?: string;
-  reviewedAt?: Date;
-  decision?: 'approve' | 'reject';
-  justification?: string;
-  notes?: string;
+  type: 'ethical_concern' | 'judge_failure' | 'consensus_failure' | 'performance_degradation';
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  message: string;
+  verdictId?: string;
+  judgeId?: string;
+  createdAt: Date;
+  acknowledged: boolean;
 }
 
-// Import types from components
-type Verdict = import('@/components/council/VerdictList').Verdict;
-type VerdictStatus = import('@/components/council/VerdictList').VerdictStatus;
-type Judge = import('@/components/council/VerdictList').Judge;
-type Evidence = import('@/components/council/VerdictList').Evidence;
-type InterventionRequest = import('@/components/council/InterventionForm').InterventionRequest;
+export interface VerdictFilter {
+  status?: Verdict['status'][];
+  judgeId?: string;
+  riskLevel?: EthicalAssessment['overallRisk'][];
+  dateRange?: {
+    start: Date;
+    end: Date;
+  };
+  category?: string;
+}
 
-/**
- * Council API Client Class
- * Provides methods for all council-related API operations
- */
+export interface JudgePerformanceReport {
+  judgeId: string;
+  period: {
+    start: Date;
+    end: Date;
+  };
+  metrics: {
+    verdictsParticipated: number;
+    accuracy: number;
+    responseTime: {
+      average: number;
+      p95: number;
+      p99: number;
+    };
+    consensusRate: number;
+    biasScore: number;
+    errorRate: number;
+  };
+  trends: {
+    accuracy: number; // percentage change
+    responseTime: number; // percentage change
+    consensusRate: number; // percentage change
+  };
+}
+
 export class CouncilApiClient {
   private apiClient: ApiClient;
-  private baseUrl: string;
 
-  constructor(baseUrl?: string) {
-    this.baseUrl = baseUrl ?? '/api/council';
-    this.apiClient = new ApiClient({
-      baseUrl: this.baseUrl,
-      timeout: 30000, // 30 second timeout for council operations
-    });
+  constructor(baseUrl: string = '/api/council') {
+    this.apiClient = new ApiClient({ baseUrl });
   }
 
-  // ===== VERDICT MANAGEMENT =====
-
   /**
-   * Get verdicts with filtering, sorting, and pagination
+   * Get verdicts with filtering and pagination
    */
   async getVerdicts(
-    filters: VerdictFilters = {},
-    page = 1,
-    pageSize = 20
-  ): Promise<VerdictListResponse> {
+    filters?: VerdictFilter,
+    page: number = 1,
+    limit: number = 20
+  ): Promise<{
+    verdicts: Verdict[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
     const params = new URLSearchParams({
       page: page.toString(),
-      pageSize: pageSize.toString(),
+      limit: limit.toString(),
     });
 
-    // Add filters
-    if (filters.status?.length) {
-      filters.status.forEach(status => params.append('status', status));
+    if (filters) {
+      if (filters.status) params.append('status', filters.status.join(','));
+      if (filters.judgeId) params.append('judgeId', filters.judgeId);
+      if (filters.riskLevel) params.append('riskLevel', filters.riskLevel.join(','));
+      if (filters.category) params.append('category', filters.category);
+      if (filters.dateRange) {
+        params.append('startDate', filters.dateRange.start.toISOString());
+        params.append('endDate', filters.dateRange.end.toISOString());
+      }
     }
-    if (filters.judgeCount) params.append('judgeCount', filters.judgeCount.toString());
-    if (filters.consensusScore) {
-      params.append('consensusMin', filters.consensusScore.min.toString());
-      params.append('consensusMax', filters.consensusScore.max.toString());
-    }
-    if (filters.ethicalConcerns !== undefined) {
-      params.append('ethicalConcerns', filters.ethicalConcerns.toString());
-    }
-    if (filters.dateRange) {
-      params.append('startDate', filters.dateRange.start.toISOString());
-      params.append('endDate', filters.dateRange.end.toISOString());
-    }
-    if (filters.search) params.append('search', filters.search);
-    if (filters.sortBy) params.append('sortBy', filters.sortBy);
-    if (filters.sortOrder) params.append('sortOrder', filters.sortOrder);
 
-    const response = await this.apiClient.request<VerdictListResponse>(
-      `/verdicts?${params.toString()}`
-    );
+    const response = await this.apiClient.request<{
+      verdicts: Verdict[];
+      total: number;
+      page: number;
+      limit: number;
+    }>(`/verdicts?${params}`);
 
-    if (response.success) {
-      return response.data;
-    }
-    throw new Error(response.error?.message || 'Failed to fetch verdicts');
+    return response;
   }
 
   /**
-   * Get a specific verdict by ID
+   * Get specific verdict details
    */
   async getVerdict(id: string): Promise<Verdict> {
     const response = await this.apiClient.request<Verdict>(`/verdicts/${id}`);
-
-    if (response.success) {
-      return response.data;
-    }
-    throw new Error(response.error?.message || 'Failed to fetch verdict');
+    return response;
   }
 
   /**
-   * Get evidence for a specific verdict
+   * Get verdict evidence
    */
-  async getVerdictEvidence(id: string): Promise<Evidence[]> {
-    const response = await this.apiClient.request<Evidence[]>(`/verdicts/${id}/evidence`);
-
-    if (response.success) {
-      return response.data;
-    }
-    throw new Error(response.error?.message || 'Failed to fetch verdict evidence');
+  async getVerdictEvidence(verdictId: string): Promise<Evidence[]> {
+    const response = await this.apiClient.request<Evidence[]>(`/verdicts/${verdictId}/evidence`);
+    return response;
   }
 
   /**
-   * Override a verdict decision
+   * Override verdict decision
    */
   async overrideVerdict(
-    id: string,
-    decision: 'approve' | 'reject',
-    justification: string,
-    notes?: string
-  ): Promise<Verdict> {
-    const response = await this.apiClient.request<Verdict>(`/verdicts/${id}/override`, {
-      method: 'POST',
-      body: JSON.stringify({
-        decision,
-        justification,
-        notes,
-        overrideTimestamp: new Date().toISOString(),
-      }),
-    });
-
-    if (response.success) {
-      return response.data;
+    verdictId: string,
+    override: {
+      decision: 'approve' | 'reject' | 'escalate';
+      reason: string;
+      operator: string;
     }
-    throw new Error(response.error?.message || 'Failed to override verdict');
+  ): Promise<Verdict> {
+    const response = await this.apiClient.request<Verdict>(`/verdicts/${verdictId}/override`, {
+      method: 'POST',
+      body: JSON.stringify(override)
+    });
+    return response;
   }
 
-  // ===== JUDGE MANAGEMENT =====
+  /**
+   * Escalate verdict for review
+   */
+  async escalateVerdict(
+    verdictId: string,
+    escalation: {
+      reason: string;
+      priority: 'low' | 'medium' | 'high' | 'critical';
+      operator: string;
+    }
+  ): Promise<Verdict> {
+    const response = await this.apiClient.request<Verdict>(`/verdicts/${verdictId}/escalate`, {
+      method: 'POST',
+      body: JSON.stringify(escalation)
+    });
+    return response;
+  }
 
   /**
-   * Get all judges with their current status
+   * Get all judges
    */
   async getJudges(): Promise<Judge[]> {
     const response = await this.apiClient.request<Judge[]>('/judges');
-
-    if (response.success) {
-      return response.data;
-    }
-    throw new Error(response.error?.message || 'Failed to fetch judges');
+    return response;
   }
 
   /**
-   * Get detailed performance metrics for a specific judge
+   * Get judge details
    */
-  async getJudgePerformance(id: string): Promise<JudgePerformance> {
-    const response = await this.apiClient.request<JudgePerformance>(`/judges/${id}/performance`);
-
-    if (response.success) {
-      return response.data;
-    }
-    throw new Error(response.error?.message || 'Failed to fetch judge performance');
+  async getJudge(id: string): Promise<Judge> {
+    const response = await this.apiClient.request<Judge>(`/judges/${id}`);
+    return response;
   }
 
   /**
-   * Get aggregated judge metrics for the dashboard
+   * Get judge performance report
    */
-  async getJudgeMetrics(): Promise<{
-    judges: JudgePerformance[];
-    systemMetrics: {
-      totalJudges: number;
-      activeJudges: number;
-      averageAccuracy: number;
-      averageResponseTime: number;
-      totalVerdictsToday: number;
-      consensusRate: number;
-    };
-  }> {
-    const response = await this.apiClient.request<{
-      judges: JudgePerformance[];
-      systemMetrics: any;
-    }>('/judges/metrics');
+  async getJudgePerformance(
+    judgeId: string,
+    period: { start: Date; end: Date }
+  ): Promise<JudgePerformanceReport> {
+    const params = new URLSearchParams({
+      startDate: period.start.toISOString(),
+      endDate: period.end.toISOString(),
+    });
 
-    if (response.success) {
-      return response.data;
-    }
-    throw new Error(response.error?.message || 'Failed to fetch judge metrics');
+    const response = await this.apiClient.request<JudgePerformanceReport>(
+      `/judges/${judgeId}/performance?${params}`
+    );
+    return response;
   }
 
-  // ===== ETHICAL ASSESSMENTS =====
+  /**
+   * Get council metrics
+   */
+  async getMetrics(): Promise<CouncilMetrics> {
+    const response = await this.apiClient.request<CouncilMetrics>('/metrics');
+    return response;
+  }
 
   /**
-   * Get all ethical assessments
+   * Get active alerts
+   */
+  async getAlerts(
+    acknowledged: boolean = false,
+    limit: number = 50
+  ): Promise<CouncilAlert[]> {
+    const params = new URLSearchParams({
+      acknowledged: acknowledged.toString(),
+      limit: limit.toString(),
+    });
+
+    const response = await this.apiClient.request<CouncilAlert[]>(`/alerts?${params}`);
+    return response;
+  }
+
+  /**
+   * Acknowledge alert
+   */
+  async acknowledgeAlert(alertId: string): Promise<void> {
+    await this.apiClient.request<void>(`/alerts/${alertId}/acknowledge`, {
+      method: 'POST'
+    });
+  }
+
+  /**
+   * Get ethical assessments
    */
   async getEthicalAssessments(
-    status?: 'pending' | 'reviewed',
-    severity?: 'low' | 'medium' | 'high' | 'critical',
-    limit = 50
+    verdictId?: string,
+    riskLevel?: EthicalAssessment['overallRisk'],
+    limit: number = 20
   ): Promise<EthicalAssessment[]> {
-    const params = new URLSearchParams();
-    if (status) params.append('status', status);
-    if (severity) params.append('severity', severity);
-    params.append('limit', limit.toString());
+    const params = new URLSearchParams({
+      limit: limit.toString(),
+    });
+
+    if (verdictId) params.append('verdictId', verdictId);
+    if (riskLevel) params.append('riskLevel', riskLevel);
 
     const response = await this.apiClient.request<EthicalAssessment[]>(
-      `/ethical/assessments?${params.toString()}`
+      `/ethical-assessments?${params}`
     );
-
-    if (response.success) {
-      return response.data;
-    }
-    throw new Error(response.error?.message || 'Failed to fetch ethical assessments');
+    return response;
   }
 
   /**
-   * Review an ethical assessment
+   * Get ethical assessment details
    */
-  async reviewEthicalAssessment(
+  async getEthicalAssessment(id: string): Promise<EthicalAssessment> {
+    const response = await this.apiClient.request<EthicalAssessment>(`/ethical-assessments/${id}`);
+    return response;
+  }
+
+  /**
+   * Update ethical assessment
+   */
+  async updateEthicalAssessment(
     id: string,
-    review: {
-      status: 'approved' | 'requires_action' | 'escalated';
-      reviewerNotes: string;
-      mitigationStrategies?: string[];
-      followUpRequired?: boolean;
-    }
+    updates: Partial<EthicalAssessment>
   ): Promise<EthicalAssessment> {
     const response = await this.apiClient.request<EthicalAssessment>(
-      `/ethical/assessments/${id}/review`,
+      `/ethical-assessments/${id}`,
       {
-        method: 'POST',
-        body: JSON.stringify({
-          ...review,
-          reviewDate: new Date().toISOString(),
-        }),
+        method: 'PATCH',
+        body: JSON.stringify(updates)
       }
     );
-
-    if (response.success) {
-      return response.data;
-    }
-    throw new Error(response.error?.message || 'Failed to review ethical assessment');
+    return response;
   }
 
-  // ===== INTERVENTIONS =====
+  /**
+   * Get decision flow data
+   */
+  async getDecisionFlow(verdictId: string): Promise<{
+    stages: {
+      id: string;
+      name: string;
+      status: 'pending' | 'in_progress' | 'completed';
+      startTime: Date;
+      endTime?: Date;
+      judges: JudgeAssignment[];
+    }[];
+    currentStage: string;
+    progress: number;
+  }> {
+    const response = await this.apiClient.request<{
+      stages: {
+        id: string;
+        name: string;
+        status: 'pending' | 'in_progress' | 'completed';
+        startTime: Date;
+        endTime?: Date;
+        judges: JudgeAssignment[];
+      }[];
+      currentStage: string;
+      progress: number;
+    }>(`/verdicts/${verdictId}/flow`);
+    return response;
+  }
 
   /**
-   * Request manual intervention for a verdict
+   * Get historical verdict data for analytics
    */
-  async requestIntervention(
-    verdictId: string,
-    intervention: InterventionRequest
-  ): Promise<VerdictIntervention> {
-    const response = await this.apiClient.request<VerdictIntervention>(
-      `/verdicts/${verdictId}/intervention`,
-      {
-        method: 'POST',
-        body: JSON.stringify({
-          ...intervention,
-          verdictId,
-          requestedAt: new Date().toISOString(),
-        }),
+  async getVerdictAnalytics(
+    period: { start: Date; end: Date },
+    granularity: 'hour' | 'day' | 'week' | 'month' = 'day'
+  ): Promise<{
+    timeline: {
+      timestamp: Date;
+      verdicts: number;
+      approvals: number;
+      rejections: number;
+      escalations: number;
+    }[];
+    judgePerformance: {
+      judgeId: string;
+      accuracy: number;
+      responseTime: number;
+      consensusRate: number;
+    }[];
+    ethicalTrends: {
+      timestamp: Date;
+      highRiskVerdicts: number;
+      ethicalConcerns: number;
+    }[];
+  }> {
+    const params = new URLSearchParams({
+      startDate: period.start.toISOString(),
+      endDate: period.end.toISOString(),
+      granularity,
+    });
+
+    const response = await this.apiClient.request<{
+      timeline: {
+        timestamp: Date;
+        verdicts: number;
+        approvals: number;
+        rejections: number;
+        escalations: number;
+      }[];
+      judgePerformance: {
+        judgeId: string;
+        accuracy: number;
+        responseTime: number;
+        consensusRate: number;
+      }[];
+      ethicalTrends: {
+        timestamp: Date;
+        highRiskVerdicts: number;
+        ethicalConcerns: number;
+      }[];
+    }>(`/analytics?${params}`);
+    return response;
+  }
+
+  /**
+   * Export verdict data
+   */
+  async exportVerdicts(
+    format: 'json' | 'csv' | 'pdf' = 'json',
+    filters?: VerdictFilter
+  ): Promise<Blob> {
+    const params = new URLSearchParams({ format });
+
+    if (filters) {
+      if (filters.status) params.append('status', filters.status.join(','));
+      if (filters.judgeId) params.append('judgeId', filters.judgeId);
+      if (filters.riskLevel) params.append('riskLevel', filters.riskLevel.join(','));
+      if (filters.dateRange) {
+        params.append('startDate', filters.dateRange.start.toISOString());
+        params.append('endDate', filters.dateRange.end.toISOString());
       }
-    );
-
-    if (response.success) {
-      return response.data;
     }
-    throw new Error(response.error?.message || 'Failed to request intervention');
-  }
 
-  /**
-   * Get intervention requests
-   */
-  async getInterventions(
-    status?: 'pending' | 'approved' | 'rejected' | 'escalated',
-    priority?: 'low' | 'medium' | 'high' | 'critical'
-  ): Promise<VerdictIntervention[]> {
-    const params = new URLSearchParams();
-    if (status) params.append('status', status);
-    if (priority) params.append('priority', priority);
+    const response = await fetch(`${this.apiClient['config'].baseUrl}/export?${params}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${this.apiClient['config'].authToken}`
+      }
+    });
 
-    const response = await this.apiClient.request<VerdictIntervention[]>(
-      `/interventions?${params.toString()}`
-    );
-
-    if (response.success) {
-      return response.data;
+    if (!response.ok) {
+      throw new Error(`Export failed: ${response.statusText}`);
     }
-    throw new Error(response.error?.message || 'Failed to fetch interventions');
-  }
 
-  // ===== DASHBOARD STATS =====
-
-  /**
-   * Get council dashboard statistics
-   */
-  async getCouncilStats(): Promise<CouncilStats> {
-    const response = await this.apiClient.request<CouncilStats>('/stats');
-
-    if (response.success) {
-      return response.data;
-    }
-    throw new Error(response.error?.message || 'Failed to fetch council stats');
-  }
-
-  // ===== STREAMING/REAL-TIME =====
-
-  /**
-   * Get Server-Sent Events stream for real-time verdict updates
-   */
-  getVerdictStream(): EventSource {
-    const eventSource = new EventSource(`${this.baseUrl}/verdicts/stream`);
-
-    eventSource.onerror = (error) => {
-      console.error('Verdict stream error:', error);
-      // Auto-reconnect logic could be added here
-    };
-
-    return eventSource;
-  }
-
-  /**
-   * Get Server-Sent Events stream for real-time judge metrics
-   */
-  getJudgeMetricsStream(): EventSource {
-    return new EventSource(`${this.baseUrl}/judges/metrics/stream`);
-  }
-
-  /**
-   * Get Server-Sent Events stream for ethical assessment updates
-   */
-  getEthicalAssessmentStream(): EventSource {
-    return new EventSource(`${this.baseUrl}/ethical/stream`);
+    return response.blob();
   }
 }
 

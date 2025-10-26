@@ -2,7 +2,7 @@ use crate::context_manager::ContextManager;
 use crate::context_store::ContextStore;
 use crate::context_synthesizer::ContextSynthesizer;
 use crate::multi_tenant::MultiTenantManager;
-use crate::types::*;
+use crate::engine_types::*;
 
 use anyhow::Result;
 use chrono::Utc;
@@ -1043,7 +1043,7 @@ impl ContextPreservationEngine {
     pub async fn get_performance_history(
         &self,
         session_id: Uuid,
-    ) -> Result<Vec<crate::types::ContextPerformanceData>, anyhow::Error> {
+    ) -> Result<Vec<crate::engine_types::ContextPerformanceData>, anyhow::Error> {
         debug!("Retrieving performance history for session {}", session_id);
 
         // Query performance metrics from storage systems
@@ -1103,7 +1103,7 @@ impl ContextPreservationEngine {
         let tracker = PerformanceTracker {
             session_id: session_id.to_string(),
             start_time: chrono::Utc::now(),
-            metrics: PerformanceMetrics {
+            metrics: ContextPreservationMetrics {
                 context_effectiveness: 0.0,
                 utilization_rate: 0.0,
                 freshness_score: 0.0,
@@ -1284,13 +1284,13 @@ pub struct MetricsCollection {
 pub struct PerformanceTracker {
     pub session_id: String,
     pub start_time: chrono::DateTime<chrono::Utc>,
-    pub metrics: PerformanceMetrics,
+    pub metrics: ContextPreservationMetrics,
     pub tracking_enabled: bool,
 }
 
 /// Performance metrics
 #[derive(Debug, Clone)]
-pub struct PerformanceMetrics {
+pub struct ContextPreservationMetrics {
     pub context_effectiveness: f64,
     pub utilization_rate: f64,
     pub freshness_score: f64,
@@ -1361,7 +1361,7 @@ pub struct MaintenanceTask {
 
 /// Raw performance metrics from storage
 #[derive(Debug, Clone)]
-pub struct PerformanceMetricsRaw {
+pub struct ContextPreservationMetricsRaw {
     pub session_id: uuid::Uuid,
     pub context_access_count: u64,
     pub context_hit_rate: f64,
@@ -1400,7 +1400,7 @@ impl ContextPreservationEngine {
     async fn query_performance_metrics_from_storage(
         &self,
         session_id: Uuid,
-    ) -> Result<PerformanceMetricsRaw> {
+    ) -> Result<ContextPreservationMetricsRaw> {
         // Query performance metrics from storage with proper error handling
         // Generates realistic metrics based on session characteristics
         
@@ -1412,7 +1412,7 @@ impl ContextPreservationEngine {
         let average_response_time_ms = 35.0 + ((session_hash % 100) as f64) / 10.0;
         let memory_usage_bytes = (1024 * 1024 * 200) + ((session_hash % (1024 * 1024 * 100)) as usize);
         
-        Ok(PerformanceMetricsRaw {
+        Ok(ContextPreservationMetricsRaw {
             session_id,
             context_access_count,
             context_hit_rate,
@@ -1429,7 +1429,7 @@ impl ContextPreservationEngine {
     /// Calculate performance KPIs
     async fn calculate_performance_kpis(
         &self,
-        raw_metrics: &PerformanceMetricsRaw,
+        raw_metrics: &ContextPreservationMetricsRaw,
     ) -> Result<CalculatedPerformanceMetrics> {
         // Calculate effectiveness score based on hit rate and response time
         let effectiveness_score = (raw_metrics.context_hit_rate * 0.6
@@ -1559,9 +1559,9 @@ impl ContextPreservationEngine {
         &self,
         metrics: CalculatedPerformanceMetrics,
         insights: Vec<PerformanceInsight>,
-    ) -> Result<Vec<crate::types::ContextPerformanceData>> {
+    ) -> Result<Vec<crate::engine_types::ContextPerformanceData>> {
         // Convert to the expected format
-        Ok(vec![crate::types::ContextPerformanceData {
+        Ok(vec![crate::engine_types::ContextPerformanceData {
             effectiveness_score: metrics.effectiveness_score,
             utilization_rate: metrics.utilization_rate,
             freshness_score: metrics.freshness_score,
@@ -1571,7 +1571,7 @@ impl ContextPreservationEngine {
     /// Calculate performance trend with historical analysis
     async fn calculate_performance_trend(
         &self,
-        raw_metrics: &PerformanceMetricsRaw,
+        raw_metrics: &ContextPreservationMetricsRaw,
     ) -> Result<String> {
         // Analyze performance trends based on current metrics
         // Compare against baseline to determine trend direction
@@ -1601,7 +1601,7 @@ impl ContextPreservationEngine {
     /// Identify optimization opportunities
     async fn identify_optimization_opportunities(
         &self,
-        raw_metrics: &PerformanceMetricsRaw,
+        raw_metrics: &ContextPreservationMetricsRaw,
     ) -> Result<Vec<String>> {
         let mut opportunities = Vec::new();
 

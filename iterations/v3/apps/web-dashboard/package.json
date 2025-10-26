@@ -31,12 +31,17 @@
     "serve": "npx serve out"
   },
   "dependencies": {
+    "@react-three/drei": "^10.7.6",
+    "@react-three/fiber": "^9.4.0",
+    "@types/d3": "^7.4.3",
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "@types/three": "^0.180.0",
     "autoprefixer": "^10.4.0",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
+    "d3": "^7.9.0",
     "gsap": "^3.13.0",
     "lucide-react": "^0.548.0",
     "next": "^16.0.0",
@@ -45,6 +50,7 @@
     "react-dom": "^19.0.0",
     "sass": "^1.69.0",
     "tailwind-merge": "^3.3.1",
+    "three": "^0.180.0",
     "typescript": "^5.0.0",
     "web-vitals": "^5.1.0",
     "zustand": "^5.0.8"

@@ -1,6 +1,6 @@
 //! Filesystem-based tool discovery
 
-use crate::types::*;
+use crate::mcp_types::*;
 use super::core::{DiscoveryError, DiscoveryErrorType};
 use anyhow::Result;
 use glob;

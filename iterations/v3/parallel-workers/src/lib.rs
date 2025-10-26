@@ -21,8 +21,8 @@ pub mod validation;
 pub mod integration;
 pub mod orchestrator_bridge;
 pub mod monitoring_bridge;
-pub mod types;
-pub mod error;
+pub mod prompting_types;
+pub mod worker_errors;
 pub mod metrics;
 pub mod learning;
 
@@ -36,9 +36,9 @@ pub use communication::hub::CommunicationHub;
 pub use communication::MessageBroker;
 pub use progress::{WorkerProgressTracker, Progress, WorkerProgress};
 pub use validation::{QualityValidatorTrait, QualityGate, ValidationContext};
-pub use types::ValidationResult;
-pub use types::*;
-pub use error::*;
+pub use parallel_types::ValidationResult;
+pub use parallel_types::*;
+pub use worker_errors::*;
 
 // Re-export async trait for worker implementations
 pub use async_trait::async_trait;

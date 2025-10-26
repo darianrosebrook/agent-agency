@@ -1,6 +1,6 @@
 //! Storage management and quota operations for multi-tenant system
 
-use crate::types::*;
+use crate::engine_types::*;
 use agent_agency_database::DatabaseClient;
 use anyhow::Result;
 use std::sync::Arc;

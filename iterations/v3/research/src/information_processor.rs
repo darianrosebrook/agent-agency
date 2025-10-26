@@ -5,7 +5,7 @@
 //!
 //! Ported from V2 InformationProcessor.ts with Rust optimizations.
 
-use crate::types::*;
+use crate::research_types::*;
 use anyhow::Result;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};

@@ -7,7 +7,7 @@ use anyhow::Result;
 use chrono::{DateTime, Utc};
 use std::time::Duration;
 
-use crate::types::{ResourceTrend, ResourceUsageMetrics, ResourcePrediction};
+use crate::council_types::{ResourceTrend, ResourceUsageMetrics, ResourcePrediction};
 use super::storage::*;
 use super::types::*;
 
@@ -264,7 +264,7 @@ impl ResourceManager {
     /// Generate resource allocation recommendations
     pub async fn generate_resource_allocation_recommendations(
         &self,
-        task_spec: &crate::types::TaskSpec,
+        task_spec: &crate::council_types::TaskSpec,
     ) -> Result<PredictedResourceRequirements> {
         // Get historical data for similar tasks
         let historical_data = self.storage.perform_comprehensive_historical_resource_lookup(task_spec).await?;

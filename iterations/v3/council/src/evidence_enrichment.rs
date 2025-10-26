@@ -5,7 +5,7 @@
 
 // use crate::claim_extraction::ClaimExtractor;  // Temporarily commented to resolve circular dependency
 use crate::models::TaskSpec;
-use crate::types::{
+use crate::council_types::{
     Evidence as CouncilEvidence, EvidenceSource as CouncilEvidenceSource, JudgeVerdict,
 };
 use anyhow::Result;

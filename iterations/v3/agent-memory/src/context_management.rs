@@ -4,7 +4,7 @@
 //! from the context-preservation-engine, adapted for the agent memory system.
 //! It handles working memory limits, automatic context folding, and retrieval.
 
-use crate::types::*;
+use crate::memory_types::*;
 use crate::MemoryResult;
 use crate::MemoryError;
 use agent_agency_database::{DatabaseClient, DatabaseConfig, Row};

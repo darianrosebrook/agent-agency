@@ -2,7 +2,7 @@
 //!
 //! Executes tasks by communicating with worker models and handling the execution lifecycle.
 
-use crate::types::{*, UuidGenerator};
+use crate::worker_types::{*, UuidGenerator};
 use agent_agency_contracts::{IssueSeverity, task_executor::{TaskExecutor as TaskExecutorTrait, TaskExecutionResult, TaskSpec as ContractTaskSpec, TaskPriority}};
 use agent_agency_council::models::{RiskTier, TaskContext as CouncilTaskContext, TaskSpec};
 use agent_agency_resilience::{CircuitBreaker, RetryConfig};
@@ -948,10 +948,10 @@ impl TaskExecutorTrait for TaskExecutor {
             title: task_spec.title,
             description: task_spec.description,
             priority: match task_spec.priority {
-                TaskPriority::Low => crate::types::TaskPriority::Low,
-                TaskPriority::Medium => crate::types::TaskPriority::Medium,
-                TaskPriority::High => crate::types::TaskPriority::High,
-                TaskPriority::Critical => crate::types::TaskPriority::Critical,
+                TaskPriority::Low => crate::worker_types::TaskPriority::Low,
+                TaskPriority::Medium => crate::worker_types::TaskPriority::Medium,
+                TaskPriority::High => crate::worker_types::TaskPriority::High,
+                TaskPriority::Critical => crate::worker_types::TaskPriority::Critical,
             },
             required_capabilities: task_spec.required_capabilities,
             context: task_spec.context,
@@ -989,10 +989,10 @@ impl TaskExecutorTrait for TaskExecutor {
             title: task_spec.title,
             description: task_spec.description,
             priority: match task_spec.priority {
-                TaskPriority::Low => crate::types::TaskPriority::Low,
-                TaskPriority::Medium => crate::types::TaskPriority::Medium,
-                TaskPriority::High => crate::types::TaskPriority::High,
-                TaskPriority::Critical => crate::types::TaskPriority::Critical,
+                TaskPriority::Low => crate::worker_types::TaskPriority::Low,
+                TaskPriority::Medium => crate::worker_types::TaskPriority::Medium,
+                TaskPriority::High => crate::worker_types::TaskPriority::High,
+                TaskPriority::Critical => crate::worker_types::TaskPriority::Critical,
             },
             required_capabilities: task_spec.required_capabilities,
             context: task_spec.context,

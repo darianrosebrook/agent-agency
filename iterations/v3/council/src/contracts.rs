@@ -3,7 +3,7 @@
 //! Defines the interfaces and contracts between council components,
 //! ensuring type safety and clear boundaries between services.
 
-use crate::types::*;
+use crate::council_types::*;
 use anyhow::Result;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
@@ -12,7 +12,7 @@ use uuid::Uuid;
 
 /// Contract for judge evaluation services
 #[async_trait]
-pub trait JudgeEvaluator: Send + Sync {
+pub trait CouncilJudgeEvaluator: Send + Sync {
     /// Evaluate a task and return a verdict
     async fn evaluate(&self, task_spec: &TaskSpec) -> Result<JudgeEvaluation>;
     
@@ -602,7 +602,7 @@ pub trait ConfigurationService: Send + Sync {
 
 /// Service registry for dependency injection
 #[derive(Debug)]
-pub struct ServiceRegistry {
+pub struct CouncilServiceRegistry {
     judge_evaluators: HashMap<String, Box<dyn JudgeEvaluator>>,
     debate_service: Option<Box<dyn DebateService>>,
     verdict_storage: Option<Box<dyn VerdictStorage>>,
@@ -616,7 +616,7 @@ pub struct ServiceRegistry {
     configuration: Option<Box<dyn ConfigurationService>>,
 }
 
-impl ServiceRegistry {
+impl CouncilServiceRegistry {
     /// Create a new service registry
     pub fn new() -> Self {
         Self {
@@ -745,7 +745,7 @@ impl ServiceRegistry {
     }
 }
 
-impl Default for ServiceRegistry {
+impl Default for CouncilServiceRegistry {
     fn default() -> Self {
         Self::new()
     }
@@ -757,7 +757,7 @@ mod tests {
 
     #[test]
     fn test_service_registry_creation() {
-        let registry = ServiceRegistry::new();
+        let registry = CouncilServiceRegistry::new();
         assert!(registry.judge_evaluators.is_empty());
         assert!(registry.debate_service.is_none());
         assert!(registry.verdict_storage.is_none());
