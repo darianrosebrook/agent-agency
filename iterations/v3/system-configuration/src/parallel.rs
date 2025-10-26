@@ -52,9 +52,13 @@ where
             return Err(PipelineError::Execution("No stages configured".to_string()));
         }
 
-        // TODO: Implement true parallel execution
-        // Current implementation executes sequentially due to trait object lifetime issues
-        // with tokio::spawn and Send requirements. This needs a major redesign.
+        // TODO: Implement true parallel execution with acceptance criteria:
+        // - [ ] Resolve trait object lifetime issues with tokio::spawn and Send requirements
+        // - [ ] Design proper async trait bounds for parallel stage execution
+        // - [ ] Implement concurrent stage processing with proper synchronization
+        // - [ ] Add stage dependency management and execution ordering
+        // - [ ] Implement result aggregation from parallel stage executions
+        // - [ ] Add configurable parallelism limits and resource management
 
         let mut successful_results = Vec::new();
         let mut failures = Vec::new();

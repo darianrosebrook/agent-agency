@@ -81,7 +81,12 @@ impl MetricsCollector {
     }
 
     /// Calculate total network IO (bytes sent + received) across all interfaces
-    /// TODO: Implement real network IO calculation using platform-specific APIs
+    /// TODO: Implement real network IO calculation using platform-specific APIs with acceptance criteria:
+    /// - [ ] Use platform-specific network monitoring APIs (getifaddrs, netstat, or similar)
+    /// - [ ] Aggregate network statistics across all active network interfaces
+    /// - [ ] Calculate real-time bytes sent/received with proper error handling
+    /// - [ ] Handle different network interface types (Ethernet, WiFi, virtual)
+    /// - [ ] Implement network utilization monitoring and alerting thresholds
     fn calculate_network_io(&self, _system: &System) -> u64 {
         // Placeholder implementation - real network monitoring needs platform-specific APIs
         0u64 // Placeholder bytes

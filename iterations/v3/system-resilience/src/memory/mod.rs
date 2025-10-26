@@ -816,8 +816,12 @@ impl MemoryManager {
             // downcast without knowing the concrete type T. A better approach would be
             // to use a trait that provides statistics methods.
 
-            // TODO: Refactor to use trait-based statistics collection
-            // This would allow different pool types to implement a common StatsProvider trait
+            // TODO: Refactor to use trait-based statistics collection with acceptance criteria:
+            // - [ ] Define StatsProvider trait with standardized statistics methods
+            // - [ ] Implement trait for different pool types (ObjectPool, MemoryPool, etc.)
+            // - [ ] Add compile-time type safety for statistics collection
+            // - [ ] Implement runtime polymorphism for heterogeneous pool statistics
+            // - [ ] Add trait-based statistics aggregation and reporting
 
             None // Placeholder until trait-based approach is implemented
         } else {

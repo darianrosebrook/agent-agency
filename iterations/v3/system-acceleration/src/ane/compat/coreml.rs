@@ -11,7 +11,12 @@ use std::marker::PhantomData;
 use std::ptr::NonNull;
 
 // Removed unused import: objc2::rc::Retained
-// TODO: Fix objc2 imports when Core ML integration is implemented
+// TODO: Fix objc2 imports when Core ML integration is implemented with acceptance criteria:
+// - [ ] Update objc2 dependencies to compatible versions for Core ML support
+// - [ ] Re-enable objc2_core_ml, objc2_foundation imports with proper feature flags
+// - [ ] Ensure Objective-C runtime integration works with current Rust toolchain
+// - [ ] Test import resolution and compilation on macOS targets
+// - [ ] Verify Core ML framework linking and availability
 // #[cfg(target_os = "macos")]
 // use objc2_core_ml::{MLModel, MLMultiArray, MLPredictionOptions};
 // #[cfg(target_os = "macos")]
@@ -45,8 +50,12 @@ pub mod coreml {
             return Err(ANEError::Internal("Core ML not available on this platform"));
         }
         
-        // TODO: Implement actual Core ML compilation
-        // This would require objc2 bindings to MLModel.compileModelAtURL:error:
+        // TODO: Implement actual Core ML compilation with acceptance criteria:
+        // - [ ] Create objc2 bindings to MLModel.compileModelAtURL:error: method
+        // - [ ] Handle .mlmodel to .mlmodelc conversion with proper error handling
+        // - [ ] Implement model compilation progress tracking and cancellation
+        // - [ ] Add compiled model validation and integrity checking
+        // - [ ] Support compilation optimization flags and configuration options
         let compiled_path = source_path.with_extension("mlmodelc");
         Ok(compiled_path)
     }
@@ -110,8 +119,12 @@ pub mod coreml {
 
     impl Drop for CoreMlHandle {
         fn drop(&mut self) {
-            // TODO: Call appropriate CoreML release function if needed
-            // This would typically call a release function from the CoreML bridge
+            // TODO: Call appropriate CoreML release function if needed with acceptance criteria:
+            // - [ ] Implement proper CoreML model release through objc2 bindings
+            // - [ ] Handle thread-local cleanup for Core ML resources
+            // - [ ] Add resource leak detection and proper cleanup verification
+            // - [ ] Implement graceful degradation when cleanup fails
+            // - [ ] Add cleanup logging and error reporting for debugging
             tracing::debug!("Dropping CoreMlHandle");
         }
     }
@@ -368,8 +381,13 @@ pub mod coreml {
 
         #[cfg(target_os = "macos")]
         {
-            // TODO: Implement actual Core ML inference using handle.as_ptr()
-            // For now, return a placeholder tensor with the expected output shape
+            // TODO: Implement actual Core ML inference using handle.as_ptr() with acceptance criteria:
+            // - [ ] Create objc2 bindings to MLModel.predictionFromFeatures:error: method
+            // - [ ] Implement tensor data conversion between Rust and Core ML formats
+            // - [ ] Handle multi-input/multi-output model configurations
+            // - [ ] Add inference performance monitoring and optimization
+            // - [ ] Implement proper error handling for inference failures
+            // - [ ] Support batched inference for improved throughput
             let output_size = (input_shape.iter().product::<i32>() * 4) as usize; // Rough estimation
             let output_data = vec![0.0f32; output_size.max(1280 * 1500)]; // Placeholder
 
