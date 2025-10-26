@@ -21,8 +21,8 @@ pub trait LogSink: Send + Sync {
 pub struct InMemoryLogSink {
     /// Maximum number of entries to keep
     max_entries: usize,
-    /// Stored log entries
-    entries: VecDeque<LogEntry>,
+    /// Stored log entries with interior mutability for thread-safe access
+    entries: std::sync::Arc<std::sync::Mutex<VecDeque<LogEntry>>>,
 }
 
 impl InMemoryLogSink {
@@ -30,36 +30,48 @@ impl InMemoryLogSink {
     pub fn new(max_entries: usize) -> Self {
         Self {
             max_entries,
-            entries: VecDeque::with_capacity(max_entries),
+            entries: std::sync::Arc::new(std::sync::Mutex::new(VecDeque::with_capacity(max_entries))),
         }
     }
 
     /// Get all stored entries
-    pub fn entries(&self) -> Vec<&LogEntry> {
-        self.entries.iter().collect()
+    pub fn entries(&self) -> Vec<LogEntry> {
+        let entries = self.entries.lock().unwrap();
+        entries.iter().cloned().collect()
     }
 
     /// Get entries by level
-    pub fn entries_by_level(&self, level: LogLevel) -> Vec<&LogEntry> {
-        self.entries.iter().filter(|e| e.level == level).collect()
+    pub fn entries_by_level(&self, level: LogLevel) -> Vec<LogEntry> {
+        let entries = self.entries.lock().unwrap();
+        entries.iter().filter(|e| e.level == level).cloned().collect()
     }
 
     /// Get entries by component
-    pub fn entries_by_component(&self, component: &str) -> Vec<&LogEntry> {
-        self.entries.iter().filter(|e| e.component == component).collect()
+    pub fn entries_by_component(&self, component: &str) -> Vec<LogEntry> {
+        let entries = self.entries.lock().unwrap();
+        entries.iter().filter(|e| e.component == component).cloned().collect()
     }
 
     /// Clear all entries
     pub fn clear(&mut self) {
-        self.entries.clear();
+        let mut entries = self.entries.lock().unwrap();
+        entries.clear();
     }
 }
 
 #[async_trait]
 impl LogSink for InMemoryLogSink {
     async fn write(&self, entry: &LogEntry) -> Result<(), LoggingError> {
-        // This would need interior mutability in a real implementation
-        // For now, just return success
+        let mut entries = self.entries.lock().unwrap();
+
+        // Add new entry
+        entries.push_back(entry.clone());
+
+        // Implement LRU eviction if over capacity
+        while entries.len() > self.max_entries {
+            entries.pop_front(); // Remove oldest entries (LRU)
+        }
+
         Ok(())
     }
 

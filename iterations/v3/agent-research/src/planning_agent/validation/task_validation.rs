@@ -4,7 +4,7 @@
 //! for the planning agent.
 
 use crate::planning_errors::{PlanningError, PlanningResult};
-use crate::types::*;
+use system_configuration::types::*;
 
 /// Validate a task request for basic requirements
 pub fn validate_task_request(task_request: &agent_agency_contracts::task_request::TaskRequest) -> PlanningResult<()> {

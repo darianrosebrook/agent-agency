@@ -45,6 +45,9 @@ walkdir = "2.4"
 ignore = "0.4"
 git2 = "0.19"
 
+# Cryptographic signing
+pkcs8 = "0.10"
+
 # File system and process security (from security-policy-enforcer)
 libc = "0.2"
 nix = "0.28"

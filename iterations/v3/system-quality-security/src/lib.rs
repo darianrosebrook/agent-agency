@@ -33,6 +33,8 @@ pub mod security_circuit_breaker;
 pub mod storage;
 pub mod tampering_detector;
 
+// Configuration and audit modules are included in existing modules
+
 // Provenance modules (consolidated from provenance crate)
 pub mod git_integration;
 pub mod provenance_service;

@@ -3,4 +3,7 @@
 //! Provides efficient memory management for GPU buffers and tensors
 //! across different acceleration backends.
 
-pub use super::buffer_pool::*;
+pub mod buffer_pool;
+
+// Re-export main types
+pub use buffer_pool::*;

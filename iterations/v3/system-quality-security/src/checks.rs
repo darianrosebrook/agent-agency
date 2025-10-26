@@ -1,6 +1,6 @@
 //! Quality gate checks that require global analysis
 
-use crate::config::{QualityGateConfig, QualityViolation, Severity};
+use crate::gates_config::{QualityGateConfig, QualityViolation, Severity};
 use regex::Regex;
 use std::collections::HashMap;
 

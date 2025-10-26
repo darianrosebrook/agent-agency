@@ -14,7 +14,7 @@ members = [
     "system-observability",  # NEW: Unified monitoring & telemetry services (system-health-monitor + observability + telemetry)
     "system-quality-security",  # NEW: Unified security & quality framework (security + security-policy-enforcer + quality-gates + source-integrity + provenance)
     "system-federated-ml",  # NEW: Unified distributed ML & optimization framework (federated-learning + runtime-optimization + tool-ecosystem)
-    "system-configuration",  # NEW: Unified configuration & common utilities (config + common-types + common-patterns + common-pipeline)
+    "system-configuration",  # NEW: Unified configuration & common utilities (config + common-types + common-pipeline)
     "data-infrastructure",  # NEW: Unified data layer & API services (database + interfaces + api-server + caching + embedding-service + file_ops)
     "data-interfaces",  # NEW: Unified interface layer & user experience (cli + web-app interfaces)
     "development-tools",  # NEW: Unified development workflow & quality assurance (caws/runtime-validator + apps/tools/caws + codemod + templates)
@@ -39,7 +39,7 @@ serde_json = "1.0"
 toml = "0.8"
 
 # Database
-sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "chrono", "uuid"] }
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "sqlite", "chrono", "uuid"] }
 chrono = { version = "0.4", features = ["serde"] }
 
 # HTTP and web
@@ -87,16 +87,19 @@ path-absolutize = "3.1"
 # Vector operations for embeddings
 ndarray = "0.15"
 
-# Random number generation
-rand = { version = "0.8", features = ["std"] }
+# Image processing
+image = { version = "0.24", features = ["jpeg", "png", "webp", "tiff", "bmp", "gif"] }
+
+# Random number generation - aligned with candle-core requirements
+rand = "0.8.5"
 
 # Force compatible versions to resolve indicatif/console conflicts
 indicatif = "0.17"
 console = { version = "0.15", features = ["std"] }
 
-# PyTorch/ML integration (unified workspace version)
-tch = { version = "0.13", default-features = false }
-torch-sys = { version = "0.13", default-features = false }
+# PyTorch/ML integration (removed - not currently used)
+# tch = { version = "0.13", default-features = false }
+# torch-sys = { version = "0.13", default-features = false }
 
 # CAWS integration (using Node.js tools, not Rust crate)
 # caws-core = { path = "../../apps/tools/caws" }
@@ -125,14 +128,7 @@ agent-model-management = { path = "agent-model-management" }
 agent-data-processing = { path = "agent-data-processing" }
 agent-agency-contracts = { path = "agent-agency-contracts" }
 
-        # Common utilities now consolidated in system-configuration
-
-        # Infrastructure and services
-        embedding-service = { path = "embedding-service" }
-        caching = { path = "caching" }
-file_ops = { path = "file_ops" }
-
-# Observability backends are now handled by system-observability crate
+# All crates consolidated - no leftover individual dependencies needed
 
 [profile.release]
 opt-level = 3

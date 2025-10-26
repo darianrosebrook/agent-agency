@@ -4,7 +4,8 @@
 //! for Apple Neural Engine operations, avoiding direct private framework usage.
 
 use crate::ane::ane_errors::{ANEError, Result};
-use crate::inference::{DType, TensorSpec};
+use crate::ane::TensorSpec;
+use candle_core::{DType, Tensor};
 use std::path::Path;
 use std::marker::PhantomData;
 use std::ptr::NonNull;
@@ -59,8 +60,12 @@ pub mod coreml {
 
         #[cfg(target_os = "macos")]
         {
-            // TODO: Implement actual Core ML model loading
-            // For now, create a placeholder handle and register it
+            // TODO: Implement actual Core ML model loading with acceptance criteria:
+            // - [ ] Load Core ML model from .mlmodel or .mlpackage files
+            // - [ ] Validate model compatibility with ANE hardware
+            // - [ ] Set up proper model compilation and optimization
+            // - [ ] Handle model input/output specifications and constraints
+            // - [ ] Implement proper memory management for model resources
             let raw_handle = Box::into_raw(Box::new(42u32)) as *mut std::ffi::c_void;
 
             // Wrap in thread-confined handle
@@ -229,10 +234,15 @@ pub mod coreml {
 
         /// Validate tensor schema matches expected I/O specification
         pub fn validate_io_schema(tensor: &Tensor, expected_spec: &TensorSpec) -> Result<()> {
-            // Check data type (for now we only support f32)
-            if expected_spec.dtype != DType::F32 {
+            // TODO: Implement comprehensive data type support with acceptance criteria:
+            // - [ ] Add support for additional Core ML data types (f16, i32, i16, i8, u8, bool)
+            // - [ ] Implement data type conversion and validation logic
+            // - [ ] Handle platform-specific data type limitations (ANE vs CPU/GPU)
+            // - [ ] Add automatic data type conversion when possible
+            // - [ ] Provide clear error messages for unsupported data types
+            if expected_spec.dtype != "F32" {
                 return Err(ANEError::InvalidInput(
-                    format!("Unsupported dtype: {:?}, expected F32", expected_spec.dtype)
+                    format!("Unsupported dtype: {}, expected F32", expected_spec.dtype)
                 ));
             }
 

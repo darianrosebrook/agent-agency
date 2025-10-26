@@ -27,6 +27,14 @@ impl PerformanceMonitor {
 
     /// Record inference performance
     pub async fn record_inference(&self, model_id: &str, output: &InferenceOutput) -> Result<(), ModelManagementError> {
+        // TODO: Implement comprehensive model performance monitoring with acceptance criteria:
+        // - [ ] Calculate real RPS (requests per second) over configurable time windows
+        // - [ ] Track latency percentiles (P50, P95, P99) with proper statistical analysis
+        // - [ ] Monitor error rates and failure patterns across model versions
+        // - [ ] Implement real-time CPU usage tracking with platform-specific APIs
+        // - [ ] Add memory usage monitoring with leak detection and optimization
+        // - [ ] Implement performance regression detection and alerting
+        // - [ ] Add model comparison metrics and A/B testing support
         // Create metrics from inference output
         let metrics = ModelMetrics {
             rps: 1.0, // Simplified - would be calculated over time window

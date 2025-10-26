@@ -2,7 +2,7 @@
  * @fileoverview Storage implementations for workspace state management
  * @author @darianrosebrook
  */
-use crate::state_types::*;
+use super::state_types::*;
 use anyhow::Result;
 use async_trait::async_trait;
 use flate2::{read::GzDecoder, write::GzEncoder, Compression};
@@ -989,7 +989,12 @@ impl StateStorage for MemoryStorage {
         metrics.total_states_stored = states_len;
         metrics.total_diffs_stored = diffs_len;
 
-        // Estimate storage size (rough calculation)
+        // TODO: Implement accurate storage size calculation with acceptance criteria:
+        // - [ ] Use actual object serialization to measure real memory usage
+        // - [ ] Account for different data types and their memory overhead
+        // - [ ] Include metadata and index structures in size calculations
+        // - [ ] Implement compression-aware size estimation
+        // - [ ] Add storage efficiency metrics and optimization recommendations
         metrics.total_storage_size_bytes = (states_len * 1000 + diffs_len * 500) as u64;
 
         debug!(

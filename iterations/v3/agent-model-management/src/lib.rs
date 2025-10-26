@@ -22,11 +22,11 @@
 //!
 //! @author @darianrosebrook
 
+pub mod types;
 pub mod models;
 pub mod inference;
 pub mod deployment;
 pub mod monitoring;
-pub mod types;
 
 pub use models::*;
 pub use inference::*;

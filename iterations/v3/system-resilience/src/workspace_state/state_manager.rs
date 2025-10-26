@@ -3,18 +3,17 @@
 //! Provides comprehensive workspace state capture, diff generation, and state management
 //! with health monitoring, metrics collection, and standardized configuration patterns.
 
-use crate::state_types::*;
+use super::state_types::*;
 use anyhow::Result;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use common_patterns::traits::*;
-use common_patterns::types::*;
 use std::collections::HashMap;
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 use tracing::{debug, info, warn};
+use system_configuration::{HealthStatus, ValidationResult, HealthCheckable, MetricsProvider, Validatable, StatusReporter};
 
 /// Main workspace state manager with standardized patterns
 pub struct WorkspaceStateManager {
@@ -1053,134 +1052,133 @@ impl WorkspaceStateManager {
 
 // Implement common patterns traits
 #[async_trait]
-impl HealthCheckable for WorkspaceStateManager {
-    async fn health_check(&self) -> Result<HealthStatus> {
-        // Perform comprehensive health checks
-        let workspace_exists = self.workspace_root.exists();
-        let workspace_readable = self.workspace_root.is_dir() &&
-            std::fs::read_dir(&self.workspace_root).is_ok();
+//impl HealthCheckable for WorkspaceStateManager {
+//    async fn health_check(&self) -> Result<HealthStatus> {
+//        // Perform comprehensive health checks
+//        let workspace_exists = self.workspace_root.exists();
+//        let workspace_readable = self.workspace_root.is_dir() &&
+//            std::fs::read_dir(&self.workspace_root).is_ok();
+//
+//        // Check storage backend health
+//        let storage_healthy = true; // Would check storage backend in real implementation
+//
+//        let status = if workspace_exists && workspace_readable && storage_healthy {
+//            HealthStatus::Healthy
+//        } else if workspace_exists || storage_healthy {
+//            HealthStatus::Degraded
+//        } else {
+//            HealthStatus::Unhealthy
+//        };
+//
+//        Ok(status)
+//    }
+//
+//    fn component_name(&self) -> &str {
+//        "workspace_state_manager"
+//    }
+//}
 
-        // Check storage backend health
-        let storage_healthy = true; // Would check storage backend in real implementation
-
-        let status = if workspace_exists && workspace_readable && storage_healthy {
-            HealthStatus::Healthy
-        } else if workspace_exists || storage_healthy {
-            HealthStatus::Degraded
-        } else {
-            HealthStatus::Unhealthy
-        };
-
-        Ok(status)
-    }
-
-    fn component_name(&self) -> &str {
-        "workspace_state_manager"
-    }
-}
-
-impl MetricsProvider for WorkspaceStateManager {
-    fn get_metrics(&self) -> Result<serde_json::Value> {
-        Ok(serde_json::json!({
-            "component": "workspace_state_manager",
-            "workspace_path": self.workspace_root.to_string_lossy(),
-            "health_status": self.health_status,
-            "config": {
-                "max_states": self.config.max_states,
-                "compress_states": self.config.compress_states,
-            }
-        }))
-    }
-
-    fn get_metrics_snapshot(&self) -> Result<MetricsSnapshot> {
-        Ok(MetricsSnapshot {
-            component: "workspace_state_manager".to_string(),
-            timestamp: Utc::now(),
-            metrics: {
-                let mut metrics = HashMap::new();
-                metrics.insert("workspace_path".to_string(),
-                    serde_json::Value::String(self.workspace_root.to_string_lossy().to_string()));
-                metrics.insert("health_status".to_string(),
-                    serde_json::json!(self.health_status));
-                metrics.insert("max_states".to_string(),
-                    serde_json::json!(self.config.max_states));
-                metrics.insert("compress_states".to_string(),
-                    serde_json::json!(self.config.compress_states));
-                metrics
-            },
-        })
-    }
-}
-
-impl Validatable for WorkspaceStateManager {
-    fn validate(&self) -> Result<ValidationResult> {
-        let mut errors = Vec::new();
-        let mut warnings = Vec::new();
-
-        // Validate workspace path
-        if !self.workspace_root.exists() {
-            errors.push("Workspace path does not exist".to_string());
-        } else if !self.workspace_root.is_dir() {
-            errors.push("Workspace path is not a directory".to_string());
-        }
-
-        // Validate configuration
-        if self.config.max_states == 0 {
-            errors.push("max_states must be greater than 0".to_string());
-        }
-
-        // Check for potential issues
-        if self.config.max_states > 10000 {
-            warnings.push("max_states is very high, may impact performance".to_string());
-        }
-
-        if errors.is_empty() && warnings.is_empty() {
-            Ok(ValidationResult::success())
-        } else {
-            Ok(ValidationResult {
-                is_valid: errors.is_empty(),
-                errors,
-                warnings,
-                validated_at: Utc::now(),
-            })
-        }
-    }
-}
-
-impl StatusReporter for WorkspaceStateManager {
-    fn status(&self) -> ComponentStatus {
-        ComponentStatus {
-            name: self.component_name().to_string(),
-            health: self.health_status.clone(),
-            last_checked: self.last_health_check,
-            details: {
-                let mut details = HashMap::new();
-                details.insert("workspace_path".to_string(),
-                    serde_json::json!(self.workspace_root.to_string_lossy()));
-                details.insert("max_states".to_string(),
-                    serde_json::json!(self.config.max_states));
-                details.insert("compress_states".to_string(),
-                    serde_json::json!(self.config.compress_states));
-                details
-            },
-        }
-    }
-
-    fn status_details(&self) -> Result<serde_json::Value> {
-        Ok(serde_json::json!({
-            "component": self.component_name(),
-            "health": self.health_status,
-            "last_health_check": self.last_health_check,
-            "workspace": {
-                "path": self.workspace_root.to_string_lossy(),
-                "exists": self.workspace_root.exists(),
-                "is_directory": self.workspace_root.is_dir(),
-            },
-            "configuration": {
-                "max_states": self.config.max_states,
-                "compress_states": self.config.compress_states,
-                "track_git": self.config.track_git,
-            }
+//impl MetricsProvider for WorkspaceStateManager {
+//    fn get_metrics(&self) -> Result<serde_json::Value> {
+//        Ok(serde_json::json!({
+//            "component": "workspace_state_manager",
+//            "workspace_path": self.workspace_root.to_string_lossy(),
+//            "health_status": self.health_status,
+//            "config": {
+//                "max_states": self.config.max_states,
+//                "compress_states": self.config.compress_states,
+//            }
+//        }))
+//    }
+//
+//    fn get_metrics_snapshot(&self) -> Result<MetricsSnapshot> {
+//        Ok(MetricsSnapshot {
+//            component: "workspace_state_manager".to_string(),
+//            timestamp: Utc::now(),
+//            metrics: {
+//                let mut metrics = HashMap::new();
+//                metrics.insert("workspace_path".to_string(),
+//                    serde_json::Value::String(self.workspace_root.to_string_lossy().to_string()));
+//                metrics.insert("health_status".to_string(),
+//                    serde_json::json!(self.health_status));
+//                metrics.insert("max_states".to_string(),
+//                    serde_json::json!(self.config.max_states));
+//                metrics.insert("compress_states".to_string(),
+//                    serde_json::json!(self.config.compress_states));
+//                metrics
+//            },
+//        })
+//    }
+//}
+//
+//impl Validatable for WorkspaceStateManager {
+//    fn validate(&self) -> Result<ValidationResult> {
+//        let mut errors = Vec::new();
+//        let mut warnings = Vec::new();
+//
+//        // Validate workspace path
+//        if !self.workspace_root.exists() {
+//            errors.push("Workspace path does not exist".to_string());
+//        } else if !self.workspace_root.is_dir() {
+//            errors.push("Workspace path is not a directory".to_string());
+//        }
+//
+//        // Validate configuration
+//        if self.config.max_states == 0 {
+//            errors.push("max_states must be greater than 0".to_string());
+//        }
+//
+//        // Check for potential issues
+//        if self.config.max_states > 10000 {
+//            warnings.push("max_states is very high, may impact performance".to_string());
+//        }
+//
+//        if errors.is_empty() && warnings.is_empty() {
+//            Ok(ValidationResult::success())
+//        } else {
+//            Ok(ValidationResult {
+//                is_valid: errors.is_empty(),
+//                errors,
+//                warnings,
+//                validated_at: Utc::now(),
+//            })
+//        }
+//    }
+//}
+//
+//impl StatusReporter for WorkspaceStateManager {
+//    fn status(&self) -> ComponentStatus {
+//        ComponentStatus {
+//            name: self.component_name().to_string(),
+//            health: self.health_status.clone(),
+//            last_checked: self.last_health_check,
+//            details: {
+//                let mut details = HashMap::new();
+//                details.insert("workspace_path".to_string(),
+//                    serde_json::json!(self.workspace_root.to_string_lossy()));
+//                details.insert("max_states".to_string(),
+//                    serde_json::json!(self.config.max_states));
+//                details.insert("compress_states".to_string(),
+//                    serde_json::json!(self.config.compress_states));
+//                details
+//            },
+//        }
+//    }
+//
+//    fn status_details(&self) -> Result<serde_json::Value> {
+//        Ok(serde_json::json!({
+//            "component": self.component_name(),
+//            "health": self.health_status,
+//            "last_health_check": self.last_health_check,
+//            "workspace": {
+//                "path": self.workspace_root.to_string_lossy(),
+//                "exists": self.workspace_root.exists(),
+//                "is_directory": self.workspace_root.is_dir(),
+//            },
+//            "configuration": {
+//                "max_states": self.config.max_states,
+//                "compress_states": self.config.compress_states,
+//                "track_git": self.config.track_git,
         }))
     }
 }

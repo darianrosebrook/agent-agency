@@ -38,7 +38,7 @@ impl YOLOPerformanceDashboard {
     }
 
     /// Record a YOLO inference and update all monitoring systems
-    pub async fn record_inference(&mut self, metrics: crate::ane::monitoring::yolo_monitor::YOLOPerformanceMetrics) -> crate::ane::errors::Result<()> {
+    pub async fn record_inference(&mut self, metrics: crate::ane::monitoring::yolo_monitor::YOLOPerformanceMetrics) -> crate::ane::ane_errors::Result<()> {
         // Record in YOLO monitor
         self.yolo_monitor.record_inference(metrics.clone())?;
 

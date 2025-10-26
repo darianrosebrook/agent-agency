@@ -47,7 +47,7 @@ pub struct BackendCapabilities {
 #[derive(Debug)]
 pub struct InferenceManager {
     /// Registered backends
-    backends: Arc<RwLock<HashMap<String, Box<dyn InferenceBackend>>>>,
+    backends: Arc<RwLock<HashMap<String, Arc<dyn InferenceBackend>>>>,
 
     /// Backend selection cache
     backend_cache: Arc<RwLock<HashMap<String, String>>>,
@@ -63,7 +63,7 @@ impl InferenceManager {
     }
 
     /// Register an inference backend
-    pub async fn register_backend(&self, backend: Box<dyn InferenceBackend>) -> Result<(), ModelManagementError> {
+    pub async fn register_backend(&self, backend: Arc<dyn InferenceBackend>) -> Result<(), ModelManagementError> {
         let backend_id = backend.id().to_string();
 
         let mut backends = self.backends.write().await;
@@ -85,7 +85,7 @@ impl InferenceManager {
             if let Some(backend_id) = cache.get(model_type) {
                 let backends = self.backends.read().await;
                 if let Some(backend) = backends.get(backend_id) {
-                    return Ok(Arc::from(backend.as_ref()));
+                    return Ok(backend.clone());
                 }
             }
         }
@@ -99,7 +99,7 @@ impl InferenceManager {
                 cache.insert(model_type.to_string(), backend_id.clone());
 
                 debug!("Selected backend {} for model type {}", backend_id, model_type);
-                return Ok(Arc::from(backend.as_ref()));
+                return Ok(backend.clone());
             }
         }
 
@@ -127,7 +127,7 @@ impl InferenceManager {
             }
             Err(e) => {
                 warn!("Inference failed for model {}: {}", request.model_id, e);
-                Err(e.clone())
+                Err(ModelManagementError::InferenceError(e.to_string()))
             }
         }
     }
@@ -242,7 +242,7 @@ mod tests {
         let manager = InferenceManager::new();
 
         // Register a backend
-        let backend = Box::new(CpuInferenceBackend::new(
+        let backend = Arc::new(CpuInferenceBackend::new(
             "cpu-1".to_string(),
             "CPU Backend".to_string(),
             vec!["bert".to_string(), "gpt".to_string()],

@@ -167,11 +167,12 @@ fn prepare_input(
     // TODO: Implement actual input preparation
     // This would include:
     // - Data type conversion (f32 -> f16 if needed)
-    // - Shape validation and reshaping
-    // - Normalization if required
-    // - Batch dimension handling
-    
-    // For now, just return a copy
+    // TODO: Implement comprehensive input preprocessing with acceptance criteria:
+    // - [ ] Validate tensor shapes and perform necessary reshaping
+    // - [ ] Apply normalization and standardization as required by model
+    // - [ ] Handle batch dimension requirements and padding
+    // - [ ] Implement data type conversion and quantization
+    // - [ ] Add input validation and error handling for malformed data
     Ok(input.to_vec())
 }
 
@@ -187,10 +188,12 @@ async fn execute_with_timeout(
         // TODO: Implement actual Core ML inference
         // This would use Core ML's MLModel.predictionFromFeatures:options:error:
         
-        // For now, simulate inference with a delay
-        tokio::time::sleep(Duration::from_millis(10)).await;
-        
-        // Return placeholder output
+        // TODO: Implement real inference execution with acceptance criteria:
+        // - [ ] Load and execute model on actual hardware (ANE/CoreML/CUDA)
+        // - [ ] Handle different tensor formats and data types
+        // - [ ] Implement proper error handling and recovery
+        // - [ ] Add performance monitoring and timing
+        // - [ ] Validate output tensor shapes and values
         let output_size = model.schema.outputs.iter()
             .map(|output| output.shape.iter().product::<usize>())
             .sum::<usize>()

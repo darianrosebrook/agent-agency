@@ -52,59 +52,41 @@ where
             return Err(PipelineError::Execution("No stages configured".to_string()));
         }
 
-        // Create futures for each stage
-        let stage_futures = stages.into_iter().enumerate().map(|(index, stage)| {
-            let input_clone = input.clone();
-            let stage_name = stage.name().to_string();
+        // TODO: Implement true parallel execution
+        // Current implementation executes sequentially due to trait object lifetime issues
+        // with tokio::spawn and Send requirements. This needs a major redesign.
 
-            tokio::spawn(async move {
-                let start_time = std::time::Instant::now();
-
-                let result = tokio::time::timeout(
-                    self.config.parallel_timeout,
-                    stage.process(input_clone)
-                ).await;
-
-                let duration = start_time.elapsed().as_millis() as u64;
-
-                (index, stage_name, result, duration)
-            })
-        });
-
-        // Execute all stages concurrently
-        let results = join_all(stage_futures).await;
-
-        // Process results
         let mut successful_results = Vec::new();
         let mut failures = Vec::new();
 
-        for result in results {
-            match result {
-                Ok((index, stage_name, stage_result, duration)) => {
-                    match stage_result {
-                        Ok(Ok(output)) => {
-                            self.metrics.record_stage_execution(&stage_name, duration, true).await;
-                            debug!("Stage {} (index {}) completed successfully in {}ms",
-                                   &stage_name, index, duration);
-                            successful_results.push(output);
-                        }
-                        Ok(Err(e)) => {
-                            self.metrics.record_stage_execution(&stage_name, duration, false).await;
-                            self.metrics.record_error(&format!("stage_{}", stage_name)).await;
-                            warn!("Stage {} (index {}) failed: {}", &stage_name, index, e);
-                            failures.push(e);
-                        }
-                        Err(_) => {
-                            self.metrics.record_stage_execution(&stage_name, duration, false).await;
-                            self.metrics.record_error("stage_timeout").await;
-                            warn!("Stage {} (index {}) timed out", &stage_name, index);
-                            failures.push(PipelineError::timeout(format!("Stage {} timed out", &stage_name)));
-                        }
-                    }
+        for (index, stage) in stages.iter().enumerate() {
+            let start_time = std::time::Instant::now();
+            let stage_name = stage.name();
+
+            match tokio::time::timeout(
+                self.config.parallel_timeout,
+                stage.process(input.clone())
+            ).await {
+                Ok(Ok(output)) => {
+                    let duration = start_time.elapsed().as_millis() as u64;
+                    self.metrics.record_stage_execution(stage_name, duration, true).await;
+                    debug!("Stage {} (index {}) completed successfully in {}ms",
+                           stage_name, index, duration);
+                    successful_results.push(output);
                 }
-                Err(e) => {
-                    warn!("Task join error: {}", e);
-                    failures.push(PipelineError::JoinError(e));
+                Ok(Err(e)) => {
+                    let duration = start_time.elapsed().as_millis() as u64;
+                    self.metrics.record_stage_execution(stage_name, duration, false).await;
+                    self.metrics.record_error(&format!("stage_{}", stage_name)).await;
+                    warn!("Stage {} (index {}) failed: {}", stage_name, index, e);
+                    failures.push(e);
+                }
+                Err(_) => {
+                    let duration = start_time.elapsed().as_millis() as u64;
+                    self.metrics.record_stage_execution(stage_name, duration, false).await;
+                    self.metrics.record_error("stage_timeout").await;
+                    warn!("Stage {} (index {}) timed out", stage_name, index);
+                    failures.push(PipelineError::timeout(format!("Stage {} timed out", stage_name)));
                 }
             }
         }
@@ -223,46 +205,10 @@ where
     }
 }
 
-impl<Input, Output> StagedPipeline<Input, Vec<Output>> for ParallelPipeline<Input, Output>
-where
-    Input: Clone + Send + Sync + 'static + std::fmt::Debug,
-    Output: Clone + Send + Sync + 'static + std::fmt::Debug,
-{
-    fn add_stage(&mut self, stage: Box<dyn PipelineStage<Input, Output>>) {
-        futures::executor::block_on(async {
-            ParallelPipeline::add_stage(self, stage).await
-        })
-    }
-
-    fn remove_stage(&mut self, name: &str) -> PipelineResult<()> {
-        futures::executor::block_on(async {
-            let mut stages = self.stages.write().await;
-            let initial_len = stages.len();
-
-            stages.retain(|stage| stage.name() != name);
-
-            if stages.len() == initial_len {
-                return Err(PipelineError::Execution(format!("Stage '{}' not found", name)));
-            }
-
-            debug!("Removed stage '{}', remaining stages: {}", name, stages.len());
-            Ok(())
-        })
-    }
-
-    fn stage_names(&self) -> Vec<String> {
-        futures::executor::block_on(async {
-            let stages = self.stages.read().await;
-            stages.iter().map(|stage| stage.name().to_string()).collect()
-        })
-    }
-
-    fn stage_count(&self) -> usize {
-        futures::executor::block_on(async {
-            self.stages.read().await.len()
-        })
-    }
-}
+// Note: ParallelPipeline does not implement StagedPipeline due to trait design limitations.
+// The trait expects stages to produce the same type as the pipeline output (Vec<Output>),
+// but parallel stages should produce individual Output items that get collected.
+// This may be addressed in a future trait redesign.
 
 #[cfg(test)]
 mod tests {
@@ -270,6 +216,7 @@ mod tests {
     use crate::config::PipelineConfig;
 
     // Mock stage for testing
+    #[derive(Debug)]
     struct MockStage {
         name: String,
         delay_ms: u64,

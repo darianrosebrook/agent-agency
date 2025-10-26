@@ -2,7 +2,8 @@
 
 use crate::types::*;
 use crate::ModelManagementError;
-use crate::deployment::{ModelRegistry, LoadBalancer};
+use crate::models::ModelRegistry;
+use crate::deployment::LoadBalancer;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -108,7 +109,7 @@ impl DeploymentOrchestrator {
 
     /// Register a model for deployment management
     pub async fn register_model(&self, model_id: &str, model_info: ModelInfo) -> Result<(), ModelManagementError> {
-        self.model_registry.register_model(model_id, model_info).await?;
+        self.model_registry.register_model(model_info).await?;
 
         // Initialize deployment tracking
         let deployment_info = DeploymentInfo {
@@ -198,7 +199,12 @@ impl DeploymentOrchestrator {
             return Err(ModelManagementError::ModelNotFound(model_id.to_string()));
         }
 
-        // Check if version exists (simplified - would check actual version registry)
+        // TODO: Implement proper version registry validation with acceptance criteria:
+        // - [ ] Check version against centralized version registry/database
+        // - [ ] Validate version format and semantic versioning compliance
+        // - [ ] Verify version doesn't already exist in deployment history
+        // - [ ] Check version compatibility with existing infrastructure
+        // - [ ] Ensure version metadata is properly recorded and auditable
         if new_version.is_empty() {
             return Err(ModelManagementError::InvalidConfiguration("New version cannot be empty".to_string()));
         }

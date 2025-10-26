@@ -1,4 +1,4 @@
-use crate::audit::SecurityAuditor;
+use crate::policy_audit::SecurityAuditor;
 use crate::command_execution::CommandExecutionController;
 use crate::file_access::FileAccessController;
 use crate::policies::SecurityPolicy;
@@ -534,7 +534,12 @@ impl SecurityPolicyEnforcer {
             return false;
         }
 
-        // Check for restricted system paths (basic protection)
+        // TODO: Implement comprehensive workspace security validation with acceptance criteria:
+        // - [ ] Define comprehensive allowlist/blocklist of safe/unsafe paths
+        // - [ ] Implement sandboxing and container isolation for workspace operations
+        // - [ ] Add file permission validation and access control checks
+        // - [ ] Implement workspace size limits and resource quotas
+        // - [ ] Add real-time monitoring and anomaly detection for workspace access
         let workspace_str = workspace_path.to_string_lossy();
 
         // Prevent workspace in system directories

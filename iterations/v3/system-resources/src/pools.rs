@@ -94,18 +94,46 @@ impl ResourcePool for MemoryPool {
 
     async fn utilization(&self) -> f64 {
         let allocated_memory = self.allocated_memory_mb.read().await;
-        (*allocated_memory as f64 / self.total_memory_mb as f64) * 100.0
+        if self.total_memory_mb == 0 {
+            0.0
+        } else {
+            (*allocated_memory as f64 / self.total_memory_mb as f64) * 100.0
+        }
     }
 
     async fn adapt(&mut self) -> Result<(), ResourceError> {
-        // Simple adaptation: could implement more sophisticated logic
-        // For now, just ensure we're not over-allocated
         let allocated_memory = self.allocated_memory_mb.read().await;
+        let utilization = if self.total_memory_mb > 0 {
+            *allocated_memory as f64 / self.total_memory_mb as f64
+        } else {
+            0.0
+        };
+
+        // Check for over-allocation
         if *allocated_memory > self.total_memory_mb {
             return Err(ResourceError::AllocationFailed {
                 message: "Pool over-allocated during adaptation".to_string(),
             });
         }
+
+        // Intelligent resource rebalancing based on usage patterns
+        if utilization > 0.9 {
+            // High utilization: implement memory compaction/defagmentation
+            tracing::info!("Memory pool '{}' at {:.1}% utilization, performing adaptation", self.name, utilization * 100.0);
+
+            // For now, log that adaptation would occur
+            // In a real implementation, this might:
+            // - Compact fragmented memory allocations
+            // - Rebalance allocations across different memory regions
+            // - Trigger garbage collection for managed allocations
+        } else if utilization > 0.7 {
+            // Moderate utilization: monitor and prepare for scaling
+            tracing::debug!("Memory pool '{}' at {:.1}% utilization, monitoring for scaling", self.name, utilization * 100.0);
+        }
+
+        // Predictive scaling based on allocation trends would go here
+        // This could track allocation rates and predict future needs
+
         Ok(())
     }
 
@@ -118,9 +146,16 @@ impl ResourcePool for MemoryPool {
     }
 
     fn active_count(&self) -> usize {
-        // This would need to be implemented with proper async access
-        // For now, return a mock value
-        5
+        // Track actual number of active allocations by counting entries in the allocations map
+        self.allocations.try_read().map(|allocs| allocs.len()).unwrap_or(0)
+    }
+
+    fn total_memory_mb(&self) -> u64 {
+        self.total_memory_mb
+    }
+
+    async fn allocated_memory_mb(&self) -> u64 {
+        *self.allocated_memory_mb.read().await
     }
 }
 
@@ -208,7 +243,11 @@ impl ResourcePool for CpuPool {
 
     async fn utilization(&self) -> f64 {
         let allocated_cores = self.allocated_cores.read().await;
-        ((*allocated_cores / self.total_cores) as f64) * 100.0
+        if self.total_cores == 0.0 {
+            0.0
+        } else {
+            (*allocated_cores as f64 / self.total_cores as f64) * 100.0
+        }
     }
 
     async fn adapt(&mut self) -> Result<(), ResourceError> {
@@ -225,8 +264,16 @@ impl ResourcePool for CpuPool {
     }
 
     fn active_count(&self) -> usize {
-        // Mock implementation
-        3
+        // Track actual number of active allocations by counting entries in the allocations map
+        self.allocations.try_read().map(|allocs| allocs.len()).unwrap_or(0)
+    }
+
+    fn total_cpu_cores(&self) -> f32 {
+        self.total_cores
+    }
+
+    async fn allocated_cpu_cores(&self) -> f32 {
+        *self.allocated_cores.read().await
     }
 }
 

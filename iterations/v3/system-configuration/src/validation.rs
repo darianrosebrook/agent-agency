@@ -148,7 +148,7 @@ impl ValidationResults {
         }
 
         summary.total = self.results.len();
-        self.overall_passed = summary.failed == 0 || summary.critical_count == 0;
+        self.overall_passed = summary.failed == 0 && summary.critical_count == 0;
         self.summary = summary;
     }
 }
@@ -287,7 +287,7 @@ impl ValidationPipeline {
                         // Check if we should stop
                         if results.should_stop(&self.config) {
                             debug!("Stopping validation due to failure policy");
-                            break;
+                            return Ok(results);
                         }
                     }
                 }
@@ -388,6 +388,7 @@ mod tests {
     use async_trait::async_trait;
 
     // Mock validation stage
+    #[derive(Debug)]
     struct MockValidationStage {
         name: String,
         results: Vec<ValidationResult>,

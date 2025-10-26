@@ -14,7 +14,7 @@ pub mod state_types;
 pub use state_manager::WorkspaceStateManager;
 pub use rollback::{RollbackManager, RollbackResult, ViewMetadata, WorkspaceViewManager};
 pub use storage::{DatabaseStorage, FileStorage, MemoryStorage};
-pub use state_state_types::*;
+pub use state_types::*;
 
 /// Create a new workspace state manager with file-based storage
 pub fn create_file_manager(

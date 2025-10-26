@@ -69,8 +69,12 @@ impl MetricsCollector {
     }
 
     /// Calculate overall disk usage percentage across all mounted filesystems
-    /// TODO: Implement real disk usage calculation using platform-specific APIs
-    /// For now, returns a placeholder value until sysinfo API is clarified
+    /// TODO: Implement real disk usage calculation with acceptance criteria:
+    /// - [ ] Use platform-specific APIs (statvfs, GetDiskFreeSpaceEx, etc.) for accurate disk usage
+    /// - [ ] Calculate weighted average across all mounted filesystems
+    /// - [ ] Handle different filesystem types and mount points correctly
+    /// - [ ] Provide real-time disk usage metrics for health monitoring
+    /// - [ ] Implement disk usage alerting thresholds and notifications
     fn calculate_disk_usage(&self, _system: &System) -> f64 {
         // Placeholder implementation - real disk monitoring needs platform-specific APIs
         50.0 // Placeholder percentage
@@ -84,7 +88,12 @@ impl MetricsCollector {
     }
 
     /// Calculate disk IO operations (simplified - total bytes read + written)
-    /// TODO: Implement real disk IO calculation using platform-specific APIs
+    /// TODO: Implement comprehensive disk IO monitoring with acceptance criteria:
+    /// - [ ] Use platform-specific APIs to track actual read/write operations per second
+    /// - [ ] Calculate IOPS (IO Operations Per Second) across all disk devices
+    /// - [ ] Monitor read vs write operation ratios and throughput
+    /// - [ ] Handle different storage types (SSD, HDD, NVMe) appropriately
+    /// - [ ] Provide real-time disk IO metrics for performance monitoring
     fn calculate_disk_io(&self, _system: &System) -> u64 {
         // Placeholder implementation - real disk IO monitoring needs platform-specific APIs
         0u64 // Placeholder IOPS

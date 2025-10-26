@@ -16,10 +16,10 @@ thiserror.workspace = true
 anyhow.workspace = true
 
 # Acceleration-specific dependencies
-candle-core = "0.6"
-candle-nn = "0.6"
-candle-transformers = "0.6"
-half = "2.2"
+candle-core = "0.9"
+candle-nn = "0.9"
+candle-transformers = "0.9"
+half.workspace = true
 memmap2 = "0.9"
 safetensors = "0.4"
 tokenizers = "0.19"
@@ -35,8 +35,24 @@ core-graphics = "0.22"
 
 # ANE/Core ML support (macOS only) - TODO: Add when dependency is available
 
+# Concurrent data structures
+parking_lot = "0.12"
+
+# Vector operations
+ndarray = { workspace = true }
+
+# Image processing
+image = { workspace = true }
+
+# Random number generation
+rand = { workspace = true }
+
+# Date/time handling
+chrono = { workspace = true }
+
 # Local crates
 agent-agency-contracts = { path = "../agent-agency-contracts" }
+system-configuration = { path = "../system-configuration" }
 
 [features]
 default = []

@@ -245,7 +245,7 @@ impl WhisperInferenceExecutor {
 
         #[cfg(not(target_os = "macos"))]
         {
-            Err(crate::ane::errors::ANEError::Internal("CoreML not available on this platform".to_string()))
+            Err(crate::ane::ane_errors::ANEError::Internal("CoreML not available on this platform".to_string()))
         }
     }
 

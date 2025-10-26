@@ -229,7 +229,12 @@ impl DatabaseClient {
         let pool_stats = self.pool.size() as u32;
         let idle_connections = self.pool.num_idle() as u32;
 
-        // Get table row counts (placeholder - would query actual tables)
+        // TODO: Implement real table statistics collection with acceptance criteria:
+        // - [ ] Query actual table row counts from database metadata
+        // - [ ] Calculate table size statistics and growth metrics
+        // - [ ] Monitor table fragmentation and optimization opportunities
+        // - [ ] Track index usage and performance statistics
+        // - [ ] Provide comprehensive database health and usage metrics
         let table_counts = HashMap::new();
 
         Ok(DatabaseStats {
@@ -297,7 +302,12 @@ impl DatabaseClient {
 
     /// Create audit trail entry (for backward compatibility)
     pub async fn create_audit_trail_entry(&self, entry: super::super::models::CreateAuditTrailEntry) -> Result<super::super::models::AuditTrailEntry> {
-        // This would need full implementation - placeholder for now
+        // TODO: Implement audit trail entry creation with acceptance criteria:
+        // - [ ] Create audit entry with proper timestamp and metadata
+        // - [ ] Validate audit entry data and required fields
+        // - [ ] Store audit entries with proper indexing for efficient querying
+        // - [ ] Implement audit trail retention and archival policies
+        // - [ ] Add audit entry verification and integrity checks
         unimplemented!("create_audit_trail_entry not yet implemented in modular structure")
     }
 
@@ -337,9 +347,14 @@ impl DatabaseClient {
     }
 }
 
-// Placeholder methods for DatabaseOperations trait
-// These would be implemented with actual database operations
-// Currently removed to avoid compilation errors - will be added back when implementing actual database operations
+// TODO: Implement DatabaseOperations trait methods with acceptance criteria:
+// - [ ] Implement all CRUD operations for judges (create, read, update, delete)
+// - [ ] Implement all CRUD operations for tasks (create, read, update, delete)
+// - [ ] Implement all CRUD operations for evidence (create, read, update, delete)
+// - [ ] Add proper error handling and database transaction management
+// - [ ] Implement database connection pooling and health checks
+// - [ ] Add database migration support and schema validation
+// - [ ] Implement database query optimization and indexing
 /*
 impl DatabaseClient {
     pub async fn create_judge(&self, _judge: CreateJudge) -> Result<Judge> {
@@ -386,7 +401,12 @@ impl DatabaseClient {
 
 impl Default for DatabaseClient {
     fn default() -> Self {
-        // This would need actual config - placeholder for now
+        // TODO: Implement proper DatabaseClient configuration with acceptance criteria:
+        // - [ ] Load database configuration from environment variables or config files
+        // - [ ] Validate database connection parameters and credentials
+        // - [ ] Initialize connection pool with appropriate settings
+        // - [ ] Set up database schema validation and migrations
+        // - [ ] Configure database client with proper error handling and logging
         panic!("DatabaseClient::default() requires configuration")
     }
 }
@@ -399,6 +419,11 @@ impl Clone for DatabaseClient {
     }
 }
 
-// Placeholder methods for DatabaseOperations trait
-// These would be implemented with actual database operations
-// Currently removed to avoid compilation errors - will be added back when implementing actual database operations
+// TODO: Implement DatabaseOperations trait methods with acceptance criteria:
+// - [ ] Implement all CRUD operations for judges (create, read, update, delete)
+// - [ ] Implement all CRUD operations for tasks (create, read, update, delete)
+// - [ ] Implement all CRUD operations for evidence (create, read, update, delete)
+// - [ ] Add proper error handling and database transaction management
+// - [ ] Implement database connection pooling and health checks
+// - [ ] Add database migration support and schema validation
+// - [ ] Implement database query optimization and indexing

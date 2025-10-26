@@ -1,6 +1,6 @@
 //! Quality gate rules
 
-use crate::config::{QualityViolation, Severity};
+use crate::gates_config::{QualityViolation, Severity};
 use regex::Regex;
 use std::collections::HashMap;
 
@@ -8,7 +8,7 @@ use std::collections::HashMap;
 pub trait QualityRule {
     fn name(&self) -> &str;
     fn description(&self) -> &str;
-    fn check_file(&self, file_path: &str, content: &str, config: &crate::config::QualityGateConfig) -> Vec<QualityViolation>;
+    fn check_file(&self, file_path: &str, content: &str, config: &crate::gates_config::QualityGateConfig) -> Vec<QualityViolation>;
 }
 
 /// God object detection rule

@@ -17,16 +17,15 @@ use tracing::{debug, info, warn};
 
 /// Sequential pipeline that executes stages in order
 #[derive(Debug)]
-pub struct SequentialPipeline<Input, Output> {
+pub struct SequentialPipeline<Input> {
     config: SequentialPipelineConfig,
-    stages: Arc<RwLock<Vec<Box<dyn PipelineStage<Input, Output>>>>>,
+    stages: Arc<RwLock<Vec<Box<dyn PipelineStage<Input, Input>>>>>,
     metrics: PipelineMetrics,
 }
 
-impl<Input, Output> SequentialPipeline<Input, Output>
+impl<Input> SequentialPipeline<Input>
 where
     Input: Clone + Send + Sync + 'static + std::fmt::Debug,
-    Output: Clone + Send + Sync + 'static + std::fmt::Debug,
 {
     /// Create a new sequential pipeline
     pub fn new(config: SequentialPipelineConfig) -> Self {
@@ -38,14 +37,14 @@ where
     }
 
     /// Add a stage to the pipeline
-    pub async fn add_stage(&mut self, stage: Box<dyn PipelineStage<Input, Output>>) {
+    pub async fn add_stage(&mut self, stage: Box<dyn PipelineStage<Input, Input>>) {
         let mut stages = self.stages.write().await;
         stages.push(stage);
         debug!("Added stage to sequential pipeline, total stages: {}", stages.len());
     }
 
     /// Execute the pipeline sequentially
-    async fn execute_internal(&self, input: Input) -> PipelineResult<Output> {
+    async fn execute_internal(&self, input: Input) -> PipelineResult<Input> {
         let stages = self.stages.read().await;
         let mut current_input = input;
         let mut final_output = None;
@@ -58,7 +57,7 @@ where
 
             match tokio::time::timeout(
                 self.config.stage_timeout,
-                stage.process(current_input)
+                stage.process(current_input.clone())
             ).await {
                 Ok(Ok(output)) => {
                     let duration = start_time.elapsed().as_millis() as u64;
@@ -97,21 +96,18 @@ where
     }
 
     /// Extract input for the next stage from current output
-    fn extract_next_input(&self, output: &Output) -> PipelineResult<Input> {
-        // Default implementation assumes Output can be converted to Input
-        // In practice, this might need custom logic for each pipeline type
-        // For now, we'll use a simple approach that works for basic cases
-        todo!("Implement extract_next_input for specific pipeline types")
+    fn extract_next_input(&self, output: &Input) -> PipelineResult<Input> {
+        // For sequential pipelines with Input = Output, just clone the output
+        Ok(output.clone())
     }
 }
 
 #[async_trait]
-impl<Input, Output> ExecutablePipeline<Input, Output> for SequentialPipeline<Input, Output>
+impl<Input> ExecutablePipeline<Input, Input> for SequentialPipeline<Input>
 where
     Input: Clone + Send + Sync + 'static + std::fmt::Debug,
-    Output: Clone + Send + Sync + 'static + std::fmt::Debug,
 {
-    async fn execute(&self, input: Input) -> PipelineResult<Output> {
+    async fn execute(&self, input: Input) -> PipelineResult<Input> {
         let start_time = std::time::Instant::now();
 
         info!("Starting sequential pipeline execution with {} stages",
@@ -137,7 +133,12 @@ where
     }
 
     fn metrics(&self) -> PipelineResult<serde_json::Value> {
-        // This is a simplified implementation - in practice you'd want async access
+        // TODO: Implement proper async metrics access with acceptance criteria:
+        // - [ ] Remove block_on usage and implement proper async trait methods
+        // - [ ] Add async bounds and proper async/await handling throughout pipeline
+        // - [ ] Implement concurrent metrics collection and aggregation
+        // - [ ] Add timeout handling for metrics collection operations
+        // - [ ] Ensure thread safety for concurrent metrics access
         futures::executor::block_on(async {
             self.metrics.to_json().await
         }).map_err(|e| PipelineError::Metrics(e.to_string()))
@@ -164,12 +165,11 @@ where
     }
 }
 
-impl<Input, Output> StagedPipeline<Input, Output> for SequentialPipeline<Input, Output>
+impl<Input> StagedPipeline<Input, Input> for SequentialPipeline<Input>
 where
     Input: Clone + Send + Sync + 'static + std::fmt::Debug,
-    Output: Clone + Send + Sync + 'static + std::fmt::Debug,
 {
-    fn add_stage(&mut self, stage: Box<dyn PipelineStage<Input, Output>>) {
+    fn add_stage(&mut self, stage: Box<dyn PipelineStage<Input, Input>>) {
         futures::executor::block_on(async {
             SequentialPipeline::add_stage(self, stage).await
         })
@@ -211,6 +211,7 @@ mod tests {
     use crate::config::PipelineConfig;
 
     // Mock stage for testing
+    #[derive(Debug)]
     struct MockStage {
         name: String,
         should_fail: bool,

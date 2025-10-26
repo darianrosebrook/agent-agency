@@ -34,6 +34,18 @@ pub trait ResourcePool: Send + Sync + std::fmt::Debug {
 
     /// Get active allocation count
     fn active_count(&self) -> usize;
+
+    /// Get total memory capacity in MB
+    fn total_memory_mb(&self) -> u64 { 0 }
+
+    /// Get total CPU cores capacity
+    fn total_cpu_cores(&self) -> f32 { 0.0 }
+
+    /// Get currently allocated memory in MB
+    async fn allocated_memory_mb(&self) -> u64 { 0 }
+
+    /// Get currently allocated CPU cores
+    async fn allocated_cpu_cores(&self) -> f32 { 0.0 }
 }
 
 /// Adaptive resource manager
@@ -80,10 +92,7 @@ impl AdaptiveResourceManager {
         let mut pool_utilizations = std::collections::HashMap::new();
 
         for (name, pool) in pools.iter() {
-            // Mock utilization calculation - would be implemented based on actual pool metrics
             let utilization = pool.utilization().await;
-            let capacity = pool.capacity() as f64;
-            let _used_capacity = (capacity * utilization / 100.0) as usize;
 
             pool_utilizations.insert(name.clone(), crate::PoolUtilization {
                 pool_name: name.clone(),
@@ -93,11 +102,12 @@ impl AdaptiveResourceManager {
             });
 
             active_allocations += pool.active_count();
-            // Mock memory/CPU tracking - would be implemented based on actual resource types
-            total_memory += 8192; // Mock 8GB per pool
-            used_memory += (8192.0 * utilization / 100.0) as u64;
-            total_cpu += 4.0; // Mock 4 cores per pool
-            used_cpu += 4.0 * utilization as f32 / 100.0;
+
+            // Aggregate memory and CPU metrics from all pools
+            total_memory += pool.total_memory_mb();
+            used_memory += pool.allocated_memory_mb().await;
+            total_cpu += pool.total_cpu_cores();
+            used_cpu += pool.allocated_cpu_cores().await;
         }
 
         ResourceUtilization {

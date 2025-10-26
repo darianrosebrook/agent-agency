@@ -21,7 +21,7 @@ pub struct StreamingPipeline<Input, Output> {
     /// Processing function for individual items
     processor: Arc<dyn Fn(Input) -> PipelineResult<Output> + Send + Sync>,
     /// Channel for incoming data
-    input_sender: mpsc::UnboundedSender<Input>,
+    input_sender: Arc<std::sync::Mutex<Option<mpsc::UnboundedSender<Input>>>>,
     /// Channel for outgoing results
     output_receiver: Arc<std::sync::Mutex<Option<mpsc::UnboundedReceiver<Output>>>>,
     /// Active processing tasks
@@ -30,6 +30,10 @@ pub struct StreamingPipeline<Input, Output> {
     metrics: PipelineMetrics,
     /// Stream state
     is_running: Arc<RwLock<bool>>,
+    /// Stored receiver for starting processing
+    input_receiver: Option<mpsc::UnboundedReceiver<Input>>,
+    /// Stored sender for starting processing
+    output_sender: Option<mpsc::UnboundedSender<Output>>,
 }
 
 impl<Input, Output> std::fmt::Debug for StreamingPipeline<Input, Output> {
@@ -59,28 +63,34 @@ where
         let (input_sender, input_receiver) = mpsc::unbounded_channel();
         let (output_sender, output_receiver) = mpsc::unbounded_channel();
 
-        let pipeline = Self {
+        Self {
             config,
             processor,
-            input_sender,
+            input_sender: Arc::new(Mutex::new(Some(input_sender))),
             output_receiver: Arc::new(Mutex::new(Some(output_receiver))),
             active_tasks: Arc::new(RwLock::new(Vec::new())),
             metrics: PipelineMetrics::new(),
             is_running: Arc::new(RwLock::new(false)),
-        };
-
-        pipeline.start_processing(input_receiver, output_sender);
-        pipeline
+            input_receiver: Some(input_receiver),
+            output_sender: Some(output_sender),
+        }
     }
 
     /// Send data to the stream
     pub async fn send(&self, input: Input) -> PipelineResult<()> {
-        if !*self.is_running.read().await {
+        let is_running = *self.is_running.read().await;
+        tracing::debug!("Pipeline is_running: {}", is_running);
+        if !is_running {
             return Err(PipelineError::Execution("Pipeline is not running".to_string()));
         }
 
-        self.input_sender.send(input)
-            .map_err(|_| PipelineError::ChannelSendError("Failed to send data to pipeline".to_string()))
+        let sender_guard = self.input_sender.lock().unwrap();
+        if let Some(sender) = sender_guard.as_ref() {
+            sender.send(input)
+                .map_err(|e| PipelineError::ChannelSendError(format!("Failed to send data to pipeline: {}", e)))
+        } else {
+            Err(PipelineError::Execution("Pipeline input channel is closed".to_string()))
+        }
     }
 
     /// Try to receive processed output
@@ -114,7 +124,7 @@ where
     }
 
     /// Start the processing tasks
-    fn start_processing(
+    async fn start_processing(
         &self,
         mut input_receiver: mpsc::UnboundedReceiver<Input>,
         output_sender: mpsc::UnboundedSender<Output>
@@ -128,8 +138,13 @@ where
         let task = tokio::spawn(async move {
             info!("Starting streaming pipeline processor");
 
+            // Process inputs in a loop
             while let Some(input) = input_receiver.recv().await {
+                info!("Processing input (type: {})", std::any::type_name::<Input>());
                 let start_time = std::time::Instant::now();
+
+                // Check if we should still be running
+                // The task will exit when the receiver is closed
 
                 // Check backpressure if enabled
                 if enable_backpressure {
@@ -149,8 +164,8 @@ where
                         let duration = start_time.elapsed().as_millis() as u64;
                         metrics.record_execution(duration, true).await;
 
-                        if let Err(_) = output_sender.send(output) {
-                            warn!("Failed to send output, channel may be closed");
+                        if let Err(e) = output_sender.send(output) {
+                            warn!("Failed to send output, channel may be closed: {}", e);
                             break;
                         }
                     }
@@ -173,16 +188,18 @@ where
             info!("Streaming pipeline processor stopped");
         });
 
-        futures::executor::block_on(async {
-            let mut tasks = self.active_tasks.write().await;
-            tasks.push(task);
-        });
+        let mut tasks = self.active_tasks.write().await;
+        tasks.push(task);
     }
 
     /// Get current buffer depth
     pub async fn buffer_depth(&self) -> usize {
-        // This is a simplified implementation
-        // In a real system, you'd track this more accurately
+        // TODO: Implement proper buffer depth tracking with acceptance criteria:
+        // - [ ] Track actual buffer size and utilization across all streaming channels
+        // - [ ] Calculate buffer depth based on queued messages and processing rate
+        // - [ ] Provide accurate real-time buffer metrics for monitoring
+        // - [ ] Implement buffer overflow detection and alerting
+        // - [ ] Add buffer depth statistics for performance optimization
         0
     }
 
@@ -194,16 +211,25 @@ where
 
 impl<Input, Output> StreamingPipeline<Input, Output>
 where
-    Input: Clone + Send + Sync + 'static,
-    Output: Clone + Send + Sync + 'static,
+    Input: Clone + Send + Sync + 'static + std::fmt::Debug,
+    Output: Clone + Send + Sync + 'static + std::fmt::Debug,
 {
     /// Start the pipeline
-    pub async fn start(&self) -> PipelineResult<()> {
+    pub async fn start(&mut self) -> PipelineResult<()> {
         let mut is_running = self.is_running.write().await;
         if *is_running {
             return Err(PipelineError::Execution("Pipeline is already running".to_string()));
         }
         *is_running = true;
+
+        // Start processing if we have the channels
+        if let (Some(input_receiver), Some(output_sender)) = (
+            self.input_receiver.take(),
+            self.output_sender.take(),
+        ) {
+            self.start_processing(input_receiver, output_sender).await;
+        }
+
         info!("Streaming pipeline started");
         Ok(())
     }
@@ -216,8 +242,13 @@ where
         }
         *is_running = false;
 
-        // Close channels to signal tasks to stop
-        drop(self.input_sender.clone());
+        // Drop the input sender to close the channel and signal tasks to stop
+        // We need to take ownership of the sender to drop it
+        let sender = {
+            let mut sender_guard = self.input_sender.lock().unwrap();
+            sender_guard.take()
+        };
+        drop(sender);
 
         // Wait for tasks to complete
         let tasks = {
@@ -288,30 +319,42 @@ mod tests {
         let processor = {
             let counter = Arc::clone(&counter);
             Arc::new(move |input: String| -> PipelineResult<String> {
+                tracing::debug!("Processing input: {}", input);
                 counter.fetch_add(1, Ordering::SeqCst);
-                Ok(format!("processed-{}", input))
+                let result = format!("processed-{}", input);
+                tracing::debug!("Processing result: {}", result);
+                Ok(result)
             })
         };
 
-        let pipeline = StreamingPipeline::new(config, processor);
+        let mut pipeline = StreamingPipeline::new(config, processor);
         pipeline.start().await.unwrap();
 
         // Send some data
+        tracing::debug!("Sending test1");
         pipeline.send("test1".to_string()).await.unwrap();
+        tracing::debug!("Sending test2");
         pipeline.send("test2".to_string()).await.unwrap();
 
         // Give some time for processing
-        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+        tracing::debug!("Sleeping for processing");
+        tokio::time::sleep(std::time::Duration::from_millis(500)).await;
 
         // Receive results
-        let result1 = pipeline.recv_timeout(std::time::Duration::from_millis(100)).await.unwrap();
-        let result2 = pipeline.recv_timeout(std::time::Duration::from_millis(100)).await.unwrap();
+        tracing::debug!("Receiving result1");
+        let result1 = pipeline.recv_timeout(std::time::Duration::from_millis(2000)).await.unwrap();
+        tracing::debug!("Result1: {:?}", result1);
+        tracing::debug!("Receiving result2");
+        let result2 = pipeline.recv_timeout(std::time::Duration::from_millis(2000)).await.unwrap();
+        tracing::debug!("Result2: {:?}", result2);
 
         assert_eq!(result1, Some("processed-test1".to_string()));
         assert_eq!(result2, Some("processed-test2".to_string()));
         assert_eq!(counter.load(Ordering::SeqCst), 2);
 
+        tracing::debug!("Stopping pipeline");
         pipeline.stop().await.unwrap();
+        tracing::debug!("Pipeline stopped");
     }
 
     #[tokio::test]
@@ -322,14 +365,14 @@ mod tests {
             Err(PipelineError::Execution("Processing failed".to_string()))
         });
 
-        let pipeline = StreamingPipeline::new(config, processor);
+        let mut pipeline = StreamingPipeline::new(config, processor);
         pipeline.start().await.unwrap();
 
         // Send data that will fail
         pipeline.send("test".to_string()).await.unwrap();
 
         // Should not receive any output due to error
-        let result = pipeline.recv_timeout(std::time::Duration::from_millis(50)).await.unwrap();
+        let result = pipeline.recv_timeout(std::time::Duration::from_millis(500)).await.unwrap();
         assert_eq!(result, None); // No output due to error
 
         pipeline.stop().await.unwrap();

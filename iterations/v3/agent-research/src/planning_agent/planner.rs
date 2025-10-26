@@ -18,7 +18,7 @@ use crate::planning_errors::{PlanningError, PlanningResult};
 use crate::caws_integration::CawsValidator;
 use crate::validation_pipeline::ValidationPipeline;
 use crate::refinement_engine::RefinementEngine;
-use crate::types::*;
+use system_configuration::types::*;
 use crate::validation::*;
 use crate::spec_generation::*;
 
@@ -154,7 +154,13 @@ impl PlanningAgent {
     // Helper methods for working spec generation...
 
     fn extract_goals_from_description(&self, description: &str) -> PlanningResult<Vec<String>> {
-        // Simplified goal extraction - in practice this would use NLP
+        // TODO: Implement sophisticated goal extraction using NLP with acceptance criteria:
+        // - [ ] Integrate with NLP models for semantic understanding and goal identification
+        // - [ ] Parse complex requirements into actionable, measurable goals
+        // - [ ] Handle ambiguous or incomplete descriptions with clarification requests
+        // - [ ] Extract temporal dependencies and goal hierarchies
+        // - [ ] Validate goal completeness and consistency
+        // - [ ] Generate goal decomposition for complex multi-step tasks
         Ok(vec![format!("Successfully complete: {}", description)])
     }
 

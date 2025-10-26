@@ -76,8 +76,12 @@ impl LinUCBPolicy {
 
     /// Check if tool satisfies constraints
     fn satisfies_constraints(&self, tool_id: &ToolId, constraints: &ToolConstraints) -> bool {
-        // This would check against tool metadata
-        // For now, assume all tools pass (would be implemented with real tool registry)
+        // TODO: Implement comprehensive tool constraint validation with acceptance criteria:
+        // - [ ] Query tool registry for actual tool metadata and capabilities
+        // - [ ] Validate tool constraints against required resource limits
+        // - [ ] Check tool compatibility with target execution environment
+        // - [ ] Verify tool dependencies and prerequisites are met
+        // - [ ] Implement constraint scoring and ranking for tool selection
         true
     }
 
@@ -212,7 +216,12 @@ impl ToolPolicy for ThompsonSamplingPolicy {
             for i in 0..self.feature_dim {
                 let alpha_val = alpha_t[i];
                 let beta_val = beta_t[i];
-                // Beta sample (simplified - would use proper Beta sampling)
+                // TODO: Implement proper Beta distribution sampling with acceptance criteria:
+                // - [ ] Use proper Beta distribution random sampling (not mean approximation)
+                // - [ ] Implement inverse CDF method or acceptance-rejection sampling
+                // - [ ] Add numerical stability checks for edge cases (alpha/beta near 0)
+                // - [ ] Optimize sampling performance for high-dimensional feature spaces
+                // - [ ] Validate statistical properties of sampled values
                 sample_score += (alpha_val / (alpha_val + beta_val)) * x[i];
             }
 

@@ -8,9 +8,6 @@
 
 pub mod integration;
 
-// Re-export main memory management types for convenience
-pub use self::*;
-
 use std::alloc::{GlobalAlloc, Layout, System};
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
@@ -335,6 +332,7 @@ pub struct ObjectPool<T> {
     max_size: usize,
     created_count: Arc<AtomicUsize>,
     borrowed_count: Arc<AtomicUsize>,
+    available_notify: Arc<tokio::sync::Notify>,
 }
 
 impl<T> ObjectPool<T>
@@ -352,41 +350,55 @@ where
             max_size,
             created_count: Arc::new(AtomicUsize::new(0)),
             borrowed_count: Arc::new(AtomicUsize::new(0)),
+            available_notify: Arc::new(tokio::sync::Notify::new()),
         }
     }
 
-    /// Borrow an object from the pool
+    /// Borrow an object from the pool with timeout
     pub async fn borrow(&self) -> PooledObject<T> {
-        let mut objects = self.objects.write().await;
+        self.borrow_with_timeout(Duration::from_secs(30)).await
+    }
 
-        let obj = if let Some(obj) = objects.pop() {
-            obj
-        } else {
-            // Create new object if pool is empty and under max size
-            let created = self.created_count.load(Ordering::Relaxed);
-            if created < self.max_size {
-                self.created_count.fetch_add(1, Ordering::Relaxed);
-                (self.factory)()
+    /// Borrow an object from the pool with specified timeout
+    pub async fn borrow_with_timeout(&self, timeout: Duration) -> PooledObject<T> {
+        let start_time = std::time::Instant::now();
+
+        loop {
+            let mut objects = self.objects.write().await;
+
+            let obj = if let Some(obj) = objects.pop() {
+                obj
             } else {
-                // TODO: Implement proper object pool waiting and synchronization
-                // - Use async channels or condition variables for proper waiting
-                // - Implement configurable timeout for object acquisition
-                // - Add fairness guarantees for waiting threads/tasks
-                // - Support priority-based object allocation
-                // - Implement pool expansion strategies when under pressure
-                // - Add deadlock detection and prevention mechanisms
-                // - Support asynchronous object pool operations
-                // - Implement pool statistics and monitoring
-                panic!("Object pool exhausted - increase max_size or implement proper waiting");
-            }
-        };
+                // Create new object if pool is empty and under max size
+                let created = self.created_count.load(Ordering::Relaxed);
+                if created < self.max_size {
+                    self.created_count.fetch_add(1, Ordering::Relaxed);
+                    (self.factory)()
+                } else {
+                    // Pool exhausted - wait for an object to be returned
+                    drop(objects); // Release the lock before waiting
 
-        self.borrowed_count.fetch_add(1, Ordering::Relaxed);
+                    // Check timeout
+                    if start_time.elapsed() >= timeout {
+                        panic!("Object pool timeout - no objects available within {:?}, pool exhausted", timeout);
+                    }
+
+                    // Wait for notification that an object might be available
+                    let notify = Arc::clone(&self.available_notify);
+                    tokio::time::timeout(timeout - start_time.elapsed(), notify.notified()).await
+                        .unwrap_or_else(|_| panic!("Object pool timeout - no objects available within {:?}", timeout));
+
+                    continue; // Try again after notification
+                }
+            };
+
+            self.borrowed_count.fetch_add(1, Ordering::Relaxed);
 
         PooledObject {
             object: Some(obj),
             pool: self.objects.clone(),
             borrowed_count: self.borrowed_count.clone(),
+            available_notify: self.available_notify.clone(),
         }
     }
 
@@ -411,6 +423,7 @@ pub struct PooledObject<T: Send + Sync + 'static> {
     object: Option<T>,
     pool: Arc<AsyncRwLock<Vec<T>>>,
     borrowed_count: Arc<AtomicUsize>,
+    available_notify: Arc<tokio::sync::Notify>,
 }
 
 impl<T: Send + Sync + 'static> PooledObject<T> {
@@ -428,23 +441,33 @@ impl<T: Send + Sync + 'static> PooledObject<T> {
 impl<T: Send + Sync + 'static> Drop for PooledObject<T> {
     fn drop(&mut self) {
         if let Some(obj) = self.object.take() {
-            // For simplicity in this example, we'll do synchronous return
-            // In a real implementation, you might want a different approach
-            // that doesn't block the drop
+            // TODO: Implement non-blocking object pool return in Drop with acceptance criteria:
+            // - [ ] Use background task scheduling instead of blocking drop operations
+            // - [ ] Implement proper async drop when available (AsyncDrop trait)
+            // - [ ] Add object pool return queue for deferred cleanup
+            // - [ ] Handle runtime unavailability without memory leaks
+            // - [ ] Implement graceful degradation for resource cleanup
             let rt = tokio::runtime::Handle::try_current();
             match rt {
                 Ok(handle) => {
                     let pool = self.pool.clone();
                     let borrowed_count = self.borrowed_count.clone();
+                    let notify = self.available_notify.clone();
                     handle.spawn(async move {
                         let mut objects = pool.write().await;
                         objects.push(obj);
                         borrowed_count.fetch_sub(1, Ordering::Relaxed);
+                        // Notify waiting tasks that an object is now available
+                        notify.notify_one();
                     });
                 }
                 Err(_) => {
-                    // If no runtime, we'll leak the object for this example
-                    // In production, you'd want a better strategy
+                    // TODO: Implement proper fallback object cleanup strategy with acceptance criteria:
+                    // - [ ] Implement global object cleanup registry for leaked objects
+                    // - [ ] Add periodic cleanup task for orphaned pool objects
+                    // - [ ] Implement object finalization with weak references
+                    // - [ ] Add memory leak detection and reporting
+                    // - [ ] Provide configuration options for cleanup behavior
                     warn!("No tokio runtime available, object not returned to pool");
                 }
             }
@@ -490,7 +513,12 @@ where
             self.evict_lru();
         }
 
-        // Check memory limit (simplified)
+        // TODO: Implement comprehensive memory limit management with acceptance criteria:
+        // - [ ] Track actual memory usage with platform-specific APIs (jemalloc stats, system calls)
+        // - [ ] Implement configurable memory thresholds and policies
+        // - [ ] Add memory pressure detection and proactive eviction
+        // - [ ] Support different eviction strategies (LRU, LFU, size-based)
+        // - [ ] Implement memory usage monitoring and alerting
         let current_memory_mb = self.estimate_memory_usage() / (1024 * 1024);
         if current_memory_mb >= self.max_memory_mb as u64 {
             self.evict_lru();
@@ -540,11 +568,39 @@ where
         }
     }
 
-    /// Estimate memory usage (simplified)
+    /// Estimate memory usage with more accurate accounting
     fn estimate_memory_usage(&self) -> u64 {
-        // Rough estimation: assume each entry uses ~1KB
-        // In production, you'd use more sophisticated memory tracking
-        (self.cache.len() as u64) * 1024
+        let mut total_bytes = 0u64;
+
+        // Account for HashMap overhead (capacity * entry size)
+        // HashMap typically has ~2x capacity for efficiency
+        let hashmap_capacity = self.cache.capacity();
+        let hashmap_overhead = hashmap_capacity as u64 * std::mem::size_of::<(K, (V, Instant))>() as u64;
+        total_bytes += hashmap_overhead;
+
+        // Account for actual cache entries
+        for (key, (value, timestamp)) in &self.cache {
+            // Key size (rough estimate using type size)
+            total_bytes += std::mem::size_of::<K>() as u64;
+
+            // Value size (rough estimate - in production would use deep_size_of)
+            total_bytes += std::mem::size_of::<V>() as u64;
+
+            // Timestamp size
+            total_bytes += std::mem::size_of::<Instant>() as u64;
+
+            // Additional overhead per entry (HashMap internal pointers, etc.)
+            total_bytes += 64; // Conservative estimate for HashMap internals
+        }
+
+        // Account for struct fields overhead
+        total_bytes += std::mem::size_of::<Self>() as u64;
+
+        // Memory fragmentation overhead (conservative 25% overhead)
+        let fragmentation_overhead = total_bytes / 4;
+        total_bytes += fragmentation_overhead;
+
+        total_bytes
     }
 
     /// Clean expired entries
@@ -727,8 +783,12 @@ impl MemoryManager {
     {
         let pools = self.pools.read().unwrap();
         if let Some(_pool_box) = pools.get(name) {
-            // Note: In a real implementation, you'd need proper downcasting
-            // This is simplified for the example
+            // TODO: Implement proper type-safe object pool retrieval with acceptance criteria:
+            // - [ ] Use trait objects or type erasure for type-safe pool operations
+            // - [ ] Implement proper downcasting with runtime type checking
+            // - [ ] Add compile-time type safety through generic constraints
+            // - [ ] Handle pool exhaustion and backpressure gracefully
+            // - [ ] Implement object lifecycle management and cleanup
             None
         } else {
             None
@@ -747,10 +807,19 @@ impl MemoryManager {
     /// Get pool stats for a specific pool
     pub async fn get_pool_stats(&self, name: &str) -> Option<PoolStats> {
         let pools = self.pools.read().unwrap();
-        if let Some(_pool_box) = pools.get(name) {
-            // Try to downcast to ObjectPool and get stats
-            // This is a simplified implementation - in practice you'd need proper type handling
-            None // Placeholder - would need proper implementation
+        if let Some(pool_box) = pools.get(name) {
+            // Try to downcast to ObjectPool<T> - since we can't know T at compile time,
+            // we need to handle this differently. For now, return basic stats.
+            // In a real implementation, this would use trait objects or type erasure.
+
+            // For the current implementation, we'll return None since we can't safely
+            // downcast without knowing the concrete type T. A better approach would be
+            // to use a trait that provides statistics methods.
+
+            // TODO: Refactor to use trait-based statistics collection
+            // This would allow different pool types to implement a common StatsProvider trait
+
+            None // Placeholder until trait-based approach is implemented
         } else {
             None
         }

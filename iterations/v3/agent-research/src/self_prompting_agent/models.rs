@@ -181,8 +181,12 @@ impl ExpertSelectionRouter {
     }
 
     pub async fn select_expert(&self, task_description: &str) -> Result<String, SelfPromptingAgentError> {
-        // Stub implementation - would analyze task and select best model
-        // For now, just return the first available provider
+        // TODO: Implement intelligent model selection with acceptance criteria:
+        // - [ ] Analyze task description for required capabilities (reasoning, creativity, analysis)
+        // - [ ] Evaluate model performance metrics and historical success rates
+        // - [ ] Consider model cost, latency, and resource requirements
+        // - [ ] Implement A/B testing framework for model selection optimization
+        // - [ ] Add fallback logic when preferred models are unavailable
         let providers = self.registry.list_providers();
         providers.into_iter().next()
             .ok_or_else(|| SelfPromptingAgentError::ModelProvider("No providers available".to_string()))

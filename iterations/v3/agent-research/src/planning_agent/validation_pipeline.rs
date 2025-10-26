@@ -9,7 +9,7 @@ use async_trait::async_trait;
 
 use crate::planning_errors::{PlanningError, PlanningResult};
 use crate::caws_integration::{CawsValidator, ValidationContext};
-use crate::types::{ValidationStatus, ValidationResults, ValidationIssue, IssueSeverity};
+use system_configuration::types::{ValidationStatus, ValidationResults, ValidationIssue, IssueSeverity};
 use agent_agency_contracts::ContractKind;
 use common_pipeline::{ValidationPipeline as CommonValidationPipeline, ValidationStage as CommonValidationStage, ValidationResult as CommonValidationResult, ValidationPipelineConfig as CommonValidationConfig, ValidationSeverity as CommonValidationSeverity};
 
@@ -58,11 +58,21 @@ impl CommonValidationStage for ValidationStageAdapter {
         // Run the appropriate validation based on stage type
         let results = match self.stage_type {
             ValidationStage::SchemaValidation => {
-                // This would be implemented with actual schema validation
+                // TODO: Implement comprehensive schema validation with acceptance criteria:
+                // - [ ] Validate working spec structure against JSON schema
+                // - [ ] Check required fields and data types
+                // - [ ] Validate enum values and constraints
+                // - [ ] Ensure cross-field consistency and business rules
+                // - [ ] Provide detailed error messages for schema violations
                 vec![CommonValidationResult::pass("schema_validation", "Schema validation passed")]
             }
             ValidationStage::ConstraintValidation => {
-                // This would be implemented with constraint validation
+                // TODO: Implement constraint validation logic with acceptance criteria:
+                // - [ ] Validate change budget constraints (max_files, max_loc)
+                // - [ ] Check scope boundaries (in/out directories)
+                // - [ ] Verify risk tier appropriateness for change impact
+                // - [ ] Validate operational rollback SLAs and requirements
+                // - [ ] Ensure acceptance criteria are measurable and testable
                 vec![CommonValidationResult::pass("constraint_validation", "Constraint validation passed")]
             }
             ValidationStage::CawsValidation => {
@@ -100,11 +110,21 @@ impl CommonValidationStage for ValidationStageAdapter {
                 }
             }
             ValidationStage::RiskAssessment => {
-                // This would be implemented with risk assessment
+                // TODO: Implement risk assessment analysis with acceptance criteria:
+                // - [ ] Evaluate change impact on system stability and performance
+                // - [ ] Assess operational risk and rollback complexity
+                // - [ ] Analyze blast radius and downstream dependencies
+                // - [ ] Calculate risk score based on multiple factors (complexity, scope, testing)
+                // - [ ] Provide risk mitigation recommendations and safeguards
                 vec![CommonValidationResult::pass("risk_assessment", "Risk assessment passed")]
             }
             ValidationStage::DependencyValidation => {
-                // This would be implemented with dependency validation
+                // TODO: Implement dependency validation with acceptance criteria:
+                // - [ ] Analyze code dependencies and import relationships
+                // - [ ] Validate external service and API dependencies
+                // - [ ] Check database schema and migration dependencies
+                // - [ ] Verify infrastructure and configuration dependencies
+                // - [ ] Ensure all required dependencies are available and compatible
                 vec![CommonValidationResult::pass("dependency_validation", "Dependency validation passed")]
             }
         };

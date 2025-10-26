@@ -2,6 +2,38 @@
 //!
 //! This module has been refactored into submodules for better organization.
 
+use serde::{Deserialize, Serialize};
+
+/// ANE capabilities information
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ANECapabilities {
+    /// Whether ANE is available on this system
+    pub is_available: bool,
+    /// Number of ANE compute units available
+    pub compute_units: u32,
+    /// Maximum memory available for ANE operations (in MB)
+    pub max_memory_mb: Option<u64>,
+    /// Supported precision formats
+    pub supported_precisions: Vec<String>,
+    /// Performance characteristics
+    pub performance_score: Option<f64>,
+}
+
+/// Tensor specification for model I/O
+#[derive(Debug, Clone)]
+pub struct TensorSpec {
+    /// Tensor name
+    pub name: String,
+    /// Data type
+    pub dtype: String,
+    /// Shape dimensions
+    pub shape: Vec<usize>,
+    /// Whether this tensor is required for input
+    pub required: bool,
+    /// Whether this tensor supports batching
+    pub batch_capable: bool,
+}
+
 // Re-export public types from submodules
 pub use self::ffi::*;
 pub use self::filesystem::*;

@@ -10,7 +10,7 @@
 import fs from "fs";
 import path from "path";
 
-const V3_PATH = path.join(process.cwd(), "iterations/v3");
+const V3_PATH = path.join(process.cwd(), "iterations", "v3");
 
 // Thresholds for blocking commits - Focus on functional duplication
 const DUPLICATE_STRUCT_THRESHOLD = 692; // Current count - block if it increases

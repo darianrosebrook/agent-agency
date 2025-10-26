@@ -12,12 +12,12 @@ use uuid::Uuid;
 use crate::{
     git_integration::{GitIntegration, GitTrailerManager},
     signer::{SignerFactory, SignerTrait, SigningAlgorithm},
-    types::{
-        BudgetAdherence, CawsComplianceProvenance, ExportFormat, ExportMetadata, FilterOperator,
-        FilterType, IntegrityCheckResult, IntegrityIssue, IntegrityIssueType, IntegritySeverity,
-        ProvenanceChain, ProvenanceExport, ProvenanceFilter, ProvenanceQuery, ProvenanceRecord,
-        ProvenanceStats, TimeRange, VerdictDecision,
-    },
+    // types::{  // TODO: Re-enable when types module is properly defined
+    //     BudgetAdherence, CawsComplianceProvenance, ExportFormat, ExportMetadata, FilterOperator,
+    //     FilterType, IntegrityCheckResult, IntegrityIssue, IntegrityIssueType, IntegritySeverity,
+    //     ProvenanceChain, ProvenanceExport, ProvenanceFilter, ProvenanceQuery, ProvenanceRecord,
+    //     ProvenanceStats, TimeRange, VerdictDecision,
+    // },
     ProvenanceConfig,
 };
 

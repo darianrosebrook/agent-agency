@@ -225,7 +225,7 @@ where
         (entries, memory_mb)
     }
 
-    pub fn get_memory_pressure(&self) -> crate::MemoryPressure {
+    pub fn get_memory_pressure(&self) -> super::MemoryPressure {
         self.memory_manager.get_memory_pressure()
     }
 }

@@ -21,7 +21,7 @@
 //! - fs_utils.rs             : Filesystem traversal & content helpers
 //!
 //! External/shared types (e.g., `AtomicClaim`, `VerificationResults`, etc.) are
-//! imported from `crate::types`.
+//! imported from `system_configuration::types`.
 
 #![allow(clippy::too_many_arguments)]
 #![allow(clippy::large_enum_variant)]
@@ -80,8 +80,8 @@ pub mod prelude {
 
 // --- External/shared types imported (but not re-exported here) ---
 // Keep shared domain types outside this module to avoid name clashes with our
-// internal `types` module. Downstream code can import from `crate::types` directly.
-use crate::types as shared_types;
+// internal `types` module. Downstream code can import from `system_configuration::types` directly.
+use system_configuration::types as shared_types;
 
 // --- Feature gates / optional DB integration sketch ---
 // If DB-specific pieces are behind a feature, surface them here as needed.

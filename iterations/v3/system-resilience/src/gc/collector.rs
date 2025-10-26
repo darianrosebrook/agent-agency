@@ -304,8 +304,12 @@ impl GarbageCollector {
 
     /// Get object references (to be implemented based on your object store)
     fn get_object_references(&self, _digest: &Digest) -> Result<Vec<Digest>> {
-        // TODO: Implement based on your object store
-        // This would traverse the object and find all references to other objects
+        // TODO: Implement object reference traversal with acceptance criteria:
+        // - [ ] Parse object content to identify all referenced object digests
+        // - [ ] Handle different object types and reference patterns
+        // - [ ] Implement efficient traversal without loading full objects into memory
+        // - [ ] Provide accurate reference lists for garbage collection marking
+        // - [ ] Handle circular references and reference cycles correctly
         Ok(Vec::new())
     }
 

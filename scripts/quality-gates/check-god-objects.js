@@ -10,7 +10,7 @@
 import fs from "fs";
 import path from "path";
 
-const V3_PATH = path.join(process.cwd(), "iterations/v3");
+const V3_PATH = path.join(process.cwd(), "iterations", "v3");
 
 // Size thresholds (lines of code)
 const GOD_OBJECT_THRESHOLDS = {

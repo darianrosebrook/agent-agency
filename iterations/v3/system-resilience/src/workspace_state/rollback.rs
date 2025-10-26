@@ -1,9 +1,9 @@
-use crate::manager::WorkspaceStateManager;
+use super::state_manager::WorkspaceStateManager;
 /**
  * @fileoverview Rollback and view management for workspace state
  * @author @darianrosebrook
  */
-use crate::state_types::*;
+use super::state_types::*;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};

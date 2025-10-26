@@ -21,17 +21,18 @@
 //!
 //! ## Usage
 //!
-//! ```rust
-//! use common_pipeline::{PipelineStage, SequentialPipeline, PipelineConfig};
+//! ```rust,ignore
+//! use system_configuration::{PipelineStage, SequentialPipeline, SequentialPipelineConfig};
 //!
 //! // Create a pipeline with stages
-//! let pipeline = SequentialPipeline::new(PipelineConfig::default());
+//! let config = SequentialPipelineConfig::default();
+//! let mut pipeline: SequentialPipeline<String> = SequentialPipeline::new(config);
 //!
-//! // Add processing stages
-//! pipeline.add_stage(Box::new(MyProcessingStage::new()));
+//! // Add processing stages (implement PipelineStage trait for your stages)
+//! // pipeline.add_stage(Box::new(MyProcessingStage::new())).await;
 //!
 //! // Execute pipeline
-//! let result = pipeline.execute(input_data).await?;
+//! // let result = pipeline.execute("input data".to_string()).await;
 //! ```
 //!
 //! @author @darianrosebrook
@@ -45,6 +46,9 @@ pub mod sequential;
 pub mod parallel;
 pub mod streaming;
 pub mod validation;
+pub mod geometry;
+pub mod types;
+pub mod pattern_types;
 
 // Re-export main types
 pub use traits::*;

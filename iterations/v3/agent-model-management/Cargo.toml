@@ -18,18 +18,25 @@ serde_json.workspace = true
 anyhow.workspace = true
 thiserror.workspace = true
 
+# Date/time handling
+chrono.workspace = true
+
 # Logging
 tracing.workspace = true
 
 # HTTP client for external model APIs
 reqwest.workspace = true
 
+# Database access
+sqlx.workspace = true
+
 # Vector operations and math
-ndarray.workspace = true
-rand.workspace = true
+ndarray = { workspace = true }
+rand = { workspace = true }
 
 # Model loading and inference
-tch.workspace = true
+# NOTE: torch/tch dependencies removed - not currently used
+# tch.workspace = true
 
 # Semver for version management
 semver = "1.0"

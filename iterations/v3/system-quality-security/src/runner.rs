@@ -1,7 +1,7 @@
 //! Quality gate runner
 
 use crate::checks::*;
-use crate::config::{QualityGateConfig, QualityGateResults, QualityViolation};
+use crate::gates_config::{QualityGateConfig, QualityGateResults, QualityViolation};
 use crate::rules::*;
 use std::collections::HashMap;
 use std::path::Path;

@@ -8,7 +8,7 @@ use chrono::{DateTime, Utc};
 use std::collections::HashMap;
 use uuid::Uuid;
 
-use agent_agency_database::DatabaseClient;
+use agent_agency_contracts::DatabaseClient;
 use crate::integrity_types::*;
 
 /// Storage trait for source integrity records

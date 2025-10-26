@@ -3,11 +3,16 @@
 //! @author @darianrosebrook
 
 use anyhow::Result;
-use crate::api::*;
+use crate::{FsckScope, FsckReport, FsckStatus};
 
 /// Filesystem checker implementation
 pub struct Fsck {
-    // Implementation details will be added in later phases
+    // TODO: Implement Fsck struct with proper fields and configuration with acceptance criteria:
+    // - [ ] Add configuration options for check scope and depth
+    // - [ ] Implement object store connection and access patterns
+    // - [ ] Add Merkle tree validation and integrity checking
+    // - [ ] Implement corruption detection and reporting mechanisms
+    // - [ ] Add performance monitoring and progress tracking
 }
 
 impl Default for Fsck {
@@ -24,7 +29,14 @@ impl Fsck {
 
     /// Run filesystem check
     pub async fn check(&self, scope: FsckScope) -> Result<FsckReport> {
-        // Implementation will be added in later phases
+        // TODO: Implement comprehensive filesystem integrity checking with acceptance criteria:
+        // - [ ] Validate all Merkle tree structures and hashes
+        // - [ ] Check object integrity and detect corruption
+        // - [ ] Verify all object references are valid and reachable
+        // - [ ] Detect and report dangling references and orphaned objects
+        // - [ ] Implement configurable check scopes (full, incremental, targeted)
+        // - [ ] Add progress reporting and cancellation support
+        // - [ ] Generate detailed reports with repair recommendations
         Ok(FsckReport {
             status: FsckStatus::Ok,
             issues: Vec::new(),
@@ -37,7 +49,13 @@ impl Fsck {
 
     /// Rebuild SQLite index from Merkle trees
     pub async fn reindex(&self) -> Result<()> {
-        // Implementation will be added in later phases
+        // TODO: Implement SQLite index rebuilding from Merkle trees with acceptance criteria:
+        // - [ ] Traverse all Merkle tree nodes and extract object metadata
+        // - [ ] Rebuild SQLite index tables with correct schema and constraints
+        // - [ ] Validate index integrity after rebuilding
+        // - [ ] Implement incremental reindexing for performance
+        // - [ ] Add transaction safety and rollback capabilities
+        // - [ ] Provide progress reporting and cancellation support
         Ok(())
     }
 }

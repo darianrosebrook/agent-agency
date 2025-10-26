@@ -2,9 +2,11 @@
 
 use crate::inference::manager::*;
 use crate::types::*;
+use crate::ModelManagementError;
 use async_trait::async_trait;
 
 /// Mock backend for testing
+#[derive(Debug)]
 pub struct MockInferenceBackend {
     id: String,
     name: String,
@@ -83,6 +85,7 @@ impl InferenceBackend for MockInferenceBackend {
 }
 
 /// HTTP-based inference backend for remote models
+#[derive(Debug)]
 pub struct HttpInferenceBackend {
     id: String,
     name: String,
@@ -133,7 +136,7 @@ impl InferenceBackend for HttpInferenceBackend {
 
         // Parse response
         let response_data: serde_json::Value = response.json().await
-            .map_err(|e| ModelManagementError::Serialization(e.into()))?;
+            .map_err(|e| ModelManagementError::Http(format!("Failed to parse JSON response: {}", e)))?;
 
         let execution_time = start_time.elapsed();
 

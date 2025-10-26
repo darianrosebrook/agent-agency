@@ -30,11 +30,23 @@ pub trait PipelineCache<K, V>: Send + Sync {
 }
 
 /// LRU cache implementation for pipelines
-#[derive(Debug)]
 pub struct LruPipelineCache<K, V> {
     cache: Arc<RwLock<lru::LruCache<K, CacheEntry<V>>>>,
     config: CacheConfig,
     stats: Arc<RwLock<CacheStats>>,
+}
+
+impl<K, V> std::fmt::Debug for LruPipelineCache<K, V>
+where
+    K: std::fmt::Debug,
+    V: std::fmt::Debug,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("LruPipelineCache")
+            .field("config", &self.config)
+            .field("stats", &self.stats)
+            .finish()
+    }
 }
 
 impl<K, V> LruPipelineCache<K, V>

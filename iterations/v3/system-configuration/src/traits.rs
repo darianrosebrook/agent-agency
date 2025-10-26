@@ -178,3 +178,39 @@ impl Default for CacheStats {
         }
     }
 }
+
+/// Trait for components that can report their status
+#[async_trait::async_trait]
+pub trait StatusReporter {
+    /// Get current component status
+    fn status(&self) -> crate::types::ComponentStatus;
+
+    /// Get detailed status information
+    fn status_details(&self) -> anyhow::Result<serde_json::Value> {
+        Ok(serde_json::json!({ "status": "ok" }))
+    }
+}
+
+/// Trait for components that can be validated
+#[async_trait::async_trait]
+pub trait Validatable {
+    /// Validate the component's state
+    fn validate(&self) -> anyhow::Result<crate::types::ValidationResult>;
+}
+
+/// Trait for components that provide metrics
+#[async_trait::async_trait]
+pub trait MetricsProvider {
+    /// Get current metrics
+    fn get_metrics(&self) -> anyhow::Result<serde_json::Value>;
+
+    /// Get a metrics snapshot
+    fn get_metrics_snapshot(&self) -> anyhow::Result<crate::pattern_types::MetricsSnapshot>;
+}
+
+/// Trait for components that can be health-checked
+#[async_trait::async_trait]
+pub trait HealthCheckable {
+    /// Perform a health check
+    async fn health_check(&self) -> anyhow::Result<crate::pattern_types::HealthStatus>;
+}

@@ -12,9 +12,7 @@ use uuid::Uuid;
 
 use crate::{
     hasher::ContentHasher,
-    storage::{PostgresSourceIntegrityStorage, SourceIntegrityStorage},
     tampering_detector::{TamperingDetectionResult, TamperingDetector},
-    types::*,
 };
 
 /// Main service for source integrity verification
