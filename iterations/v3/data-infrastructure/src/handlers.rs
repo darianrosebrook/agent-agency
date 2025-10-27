@@ -67,13 +67,37 @@ pub struct PersistedTask {
     pub metadata: String,
 }
 
+/// Stub health monitor trait
+pub trait HealthMonitor: Send + Sync {
+    fn is_healthy(&self) -> bool;
+}
+
+/// Stub health monitor implementation
+pub struct StubHealthMonitor {
+    healthy: bool,
+}
+
+impl StubHealthMonitor {
+    pub fn new() -> Self {
+        Self { healthy: true }
+    }
+}
+
+impl HealthMonitor for StubHealthMonitor {
+    fn is_healthy(&self) -> bool {
+        self.healthy
+    }
+}
+
 /// Shared application state
 #[derive(Clone)]
 pub struct AppState {
     pub task_store: Arc<dyn TaskStoreTrait + Send + Sync>,
-    pub health_monitor: Arc<agent_agency_system_health_monitor::SystemHealthMonitor>,
+    pub health_monitor: Arc<dyn HealthMonitor + Send + Sync>, // Stub trait
     pub alert_manager: Arc<crate::api_alerts::AlertManager>,
     pub rate_limiter: Arc<crate::rate_limiter::RateLimiter>,
+    pub keystore: Arc<dyn system_quality_security::Keystore>,
+    pub sandbox: Arc<dyn system_quality_security::Sandbox>,
 }
 
 #[async_trait::async_trait]
@@ -212,10 +236,8 @@ pub async fn submit_task(
     Json(request): Json<TaskSubmissionRequest>,
 ) -> Result<Json<TaskSubmissionResponse>, ApiError> {
     // Rate limiting check
-    let client_ip = addr.ip().to_string();
-    // Rate limiting check
     let client_ip_addr: IpAddr = addr.ip();
-    if let Err(_) = state.rate_limiter.check_rate_limit(client_ip_addr).await {
+    if !state.rate_limiter.check_rate_limit(&client_ip_addr.to_string()).await {
         return Err(ApiError::RateLimitExceeded);
     }
 
@@ -239,7 +261,7 @@ pub async fn submit_task(
         "context": context,
         "priority": request.priority,
         "created_at": now,
-        "client_ip": client_ip
+        "client_ip": client_ip_addr.to_string()
     });
 
     // Create persisted task
@@ -250,7 +272,7 @@ pub async fn submit_task(
         created_at: now.clone(),
         updated_at: now,
         created_by: Some("api-client".to_string()),
-        metadata: json!({"source": "api", "ip": client_ip}).to_string(),
+        metadata: json!({"source": "api", "ip": client_ip_addr.to_string()}).to_string(),
     };
 
     // Store task

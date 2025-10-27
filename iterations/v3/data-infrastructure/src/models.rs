@@ -187,7 +187,7 @@ pub struct AuditTrailEntry {
     pub action: String,
     pub details: serde_json::Value,
     pub user_id: Option<String>,
-    pub ip_address: Option<std::net::IpAddr>,
+    pub ip_address: Option<String>,
     pub created_at: DateTime<Utc>,
 }
 
@@ -396,16 +396,6 @@ pub struct CreateCawsCompliance {
     pub audit_details: Option<serde_json::Value>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CreateAuditTrailEntry {
-    pub entity_type: String,
-    pub entity_id: Uuid,
-    pub action: String,
-    pub details: serde_json::Value,
-    pub user_id: Option<String>,
-    pub ip_address: Option<std::net::IpAddr>,
-    pub timestamp: Option<DateTime<Utc>>,
-}
 
 /// Update types for modifying existing records
 #[derive(Debug, Clone, Serialize, Deserialize)]

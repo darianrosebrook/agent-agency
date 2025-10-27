@@ -89,6 +89,7 @@ pub mod worker_registry;
 pub mod refinement;
 pub mod tracking;
 pub mod multimodal_orchestration;
+pub mod coreml;
 pub mod enrichers;
 pub mod audit_trail;
 pub mod audited_orchestrator;

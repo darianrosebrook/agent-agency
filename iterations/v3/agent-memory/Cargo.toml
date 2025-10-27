@@ -5,6 +5,7 @@ edition = "2021"
 authors = ["Darian Rosebrook <darian@example.com>"]
 description = "Enterprise-grade agent memory system with knowledge graphs, vector embeddings, and temporal reasoning"
 license = "MIT"
+readme = "README.md"
 
 [dependencies]
 # Core async runtime

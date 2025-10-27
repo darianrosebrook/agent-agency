@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 use tracing::{info, warn};
 
-use crate::DatabaseClient;
+use crate::client::DatabaseClient;
 
 /// Transaction state
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]

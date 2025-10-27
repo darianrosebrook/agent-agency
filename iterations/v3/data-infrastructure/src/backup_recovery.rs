@@ -11,7 +11,7 @@ use tokio::sync::RwLock;
 use tokio::time;
 use tracing::{info, warn, error};
 
-use crate::DatabaseClient;
+use crate::client::DatabaseClient;
 
 /// Backup configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]

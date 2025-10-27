@@ -4,6 +4,9 @@
 //! See: iterations/v3/caws/runtime-validator/src/budget.rs
 //! TODO: Remove after migration complete (target: Phase 1.1)
 
+// Benchmark modules
+pub mod benchmarks;
+
 use std::fs;
 use std::path::Path;
 

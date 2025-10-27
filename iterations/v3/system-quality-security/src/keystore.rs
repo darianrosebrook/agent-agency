@@ -44,7 +44,7 @@ pub struct KeyMetadata {
 }
 
 /// Key permissions for access control
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum KeyPermission {
     Read,
     Write,

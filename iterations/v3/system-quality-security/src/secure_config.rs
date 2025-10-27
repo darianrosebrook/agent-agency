@@ -250,6 +250,58 @@ impl SecureConfigLoader {
     }
 }
 
+/// Load a required environment variable
+fn load_required_var(var_name: &str) -> Result<String, SecureConfigError> {
+    env::var(var_name).map_err(|_| SecureConfigError::VariableNotFound(var_name.to_string()))
+}
+
+/// Load an optional environment variable
+fn load_optional_var(var_name: &str) -> Option<String> {
+    env::var(var_name).ok()
+}
+
+/// Validate sensitive variables for security requirements
+fn validate_sensitive_vars(sensitive_vars: &HashMap<String, String>) -> Result<(), SecureConfigError> {
+    let mut errors = Vec::new();
+
+    for (name, value) in sensitive_vars {
+        // Check minimum length
+        if value.len() < 8 {
+            errors.push(format!("Sensitive variable {} must be at least 8 characters", name));
+            continue;
+        }
+
+        // Check for special characters in secrets/keys
+        if name.contains("SECRET") || name.contains("KEY") {
+            if !value.chars().any(|c| !c.is_alphanumeric() && !c.is_whitespace()) {
+                errors.push(format!("Variable {} must contain special characters for security", name));
+            }
+        }
+
+        // Check for common weak patterns
+        if value.to_lowercase().contains("password") ||
+           value.to_lowercase().contains("admin") ||
+           value.to_lowercase().contains("123456") {
+            errors.push(format!("Variable {} contains potentially weak patterns", name));
+        }
+    }
+
+    if errors.is_empty() {
+        Ok(())
+    } else {
+        Err(SecureConfigError::ValidationFailed(errors))
+    }
+}
+
+/// Mask sensitive values for logging and display
+fn mask_sensitive_value(value: &str) -> String {
+    if value.len() <= 4 {
+        "*".repeat(value.len())
+    } else {
+        format!("{}****{}", &value[0..2], &value[value.len()-2..])
+    }
+}
+
 /// Errors that can occur during secure configuration loading
 #[derive(Debug, thiserror::Error)]
 pub enum SecureConfigError {

@@ -25,7 +25,7 @@ pub fn get_filesystem_space<P: AsRef<Path>>(path: P) -> Result<FilesystemSpace> 
 
     // For now, return dummy values
     // In a real implementation, use platform-specific APIs or crates like fs2
-    let metadata = fs::metadata(path)?;
+    let _metadata = fs::metadata(path)?;
 
     Ok(FilesystemSpace {
         total_bytes: 1_000_000_000_000, // 1TB placeholder

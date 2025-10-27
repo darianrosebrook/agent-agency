@@ -174,9 +174,11 @@ impl AuthService {
         let is_valid = self.verify_password(password, &user.password_hash)?;
 
         if !is_valid {
+            let user_id = user.user_id.clone(); // Clone before dropping read lock
+            let failed_attempts = user.failed_attempts; // Clone before dropping read lock
             drop(users); // Release read lock
             let mut users_mut = self.users.write().await;
-            if let Some(user_mut) = users_mut.get_mut(&user.user_id) {
+            if let Some(user_mut) = users_mut.get_mut(&user_id) {
                 user_mut.failed_attempts += 1;
                 user_mut.updated_at = Utc::now();
 
@@ -188,25 +190,30 @@ impl AuthService {
                 }
             }
 
-            warn!("Failed login attempt for user: {} (attempt {})", username, user.failed_attempts + 1);
+            warn!("Failed login attempt for user: {} (attempt {})", username, failed_attempts + 1);
 
             return Err(anyhow::anyhow!("Invalid credentials"));
         }
 
+        // Clone user data before dropping read lock
+        let user_id = user.user_id.clone();
+        let user_roles = user.roles.clone();
+        let failed_attempts = user.failed_attempts;
+
         // Reset failed attempts on successful login
-        if user.failed_attempts > 0 {
+        if failed_attempts > 0 {
             drop(users);
             let mut users_mut = self.users.write().await;
-            if let Some(user_mut) = users_mut.get_mut(&user.user_id) {
+            if let Some(user_mut) = users_mut.get_mut(&user_id) {
                 user_mut.failed_attempts = 0;
                 user_mut.updated_at = Utc::now();
             }
         }
 
         // Generate JWT token
-        let token = self.generate_token(&user.user_id, &user.roles)?;
+        let token = self.generate_token(&user_id, &user_roles)?;
 
-        info!("Successful login for user: {} ({})", username, user.user_id);
+        info!("Successful login for user: {} ({})", username, user_id);
 
         Ok(token)
     }

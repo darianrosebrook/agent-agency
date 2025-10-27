@@ -8,45 +8,48 @@
 
 ## Executive Summary
 
-The V3 Constitutional AI System delivers a functional autonomous agent platform with an operational core execution loop and constitutional governance framework. The system implements a council of specialized AI judges that provide oversight of agent operations, with many advanced features remaining as TODO implementations.
-
-The system features multiple execution modes (Strict, Auto, Dry-Run) for different risk levels, basic monitoring and intervention capabilities, and foundational provenance tracking. Built in Rust for performance and safety, it provides both CLI and web interfaces for task execution and system management, though comprehensive enterprise features are still under development.
+The V3 Constitutional AI System provides a functional autonomous agent platform with an operational core execution loop and constitutional governance framework. The system implements council-based oversight of agent operations with execution modes for different risk levels and provenance tracking capabilities.
 
 ## System Architecture
 
-### High-Level Architecture
+### 17-Crate Modular Architecture
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                 V3 Constitutional AI System                     │
-├─────────────────────────────────────────────────────────────────┤
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────┐ │
-│  │   Council   │  │Orchestration│  │   Workers   │  │   CLI    │ │
-│  │   Judges    │  │   Engine    │  │   Pool      │  │Interface │ │
-│  └─────────────┘  └─────────────┘  └─────────────┘  └─────────┘ │
-│         │                 │                 │             │     │
-│         └─────────────────┼─────────────────┼─────────────┘     │
-│                           │                 │                   │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────┐ │
-│  │   API       │  │   Database  │  │Observability│  │ Web      │ │
-│  │   Server    │  │   Layer     │  │   System    │  │Dashboard │ │
-│  └─────────────┘  └─────────────┘  └─────────────┘  └─────────┘ │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐              │
-│  │ Provenance  │  │   CAWS      │  │   SLOs      │              │
-│  │  Tracking   │  │ Compliance  │  │ Monitoring │              │
-│  └─────────────┘  └─────────────┘  └─────────────┘              │
-└─────────────────────────────────────────────────────────────────┘
-```
+The system is organized into 17 specialized crates with clear responsibilities:
+
+#### Agent Systems (Core Functionality)
+- **agent-orchestration**: Task coordination and council-based decision making
+- **agent-workers**: Parallel task execution and MCP-based worker management
+- **agent-model-management**: Model lifecycle management, inference, and hot-swapping
+- **agent-data-processing**: Data ingestion, enrichment, indexing, and knowledge processing
+- **agent-memory**: Agent memory system with knowledge graphs and embeddings
+- **agent-research**: Advanced AI research capabilities and reflexive learning
+- **agent-mcp**: Model Context Protocol implementation and tool orchestration
+
+#### Infrastructure Services (Supporting Systems)
+- **data-infrastructure**: PostgreSQL persistence, API interfaces, and data transformation
+- **system-observability**: Monitoring, metrics collection, distributed tracing, and alerting
+- **system-quality-security**: Authentication, authorization, quality gates, and integrity verification
+- **system-resilience**: Fault tolerance, recovery, and content-addressable storage
+- **system-resources**: Resource management and production hardening
+- **system-configuration**: Configuration management and common utilities
+- **system-federated-ml**: Distributed ML and runtime optimization
+- **system-acceleration**: Hardware acceleration (Apple Silicon, quantization)
+
+#### Interface Layer (User Interaction)
+- **data-interfaces**: CLI, API, and web interface components
+- **agent-agency-contracts**: Type definitions and API contracts
+- **development-tools**: Development workflow and code analysis tools
 
 ### Core Components
 
-#### 1. Council System (`council`)
-**Status:** Core Framework Implemented
+#### Council System (Distributed)
+**Status:** Framework Implemented
 
-- **Four Specialized Judges**: Constitutional, Technical, Quality, and Integration validator framework
-- **Basic Consensus Coordination**: Multi-judge decision making structure (logic partially implemented)
-- **Evidence-Based Verdicts**: Constitutional compliance validation framework
-- **Audit Trail Generation**: Decision provenance tracking framework
+- **Multi-Crate Governance**: Council functionality distributed across specialized components
+- **agent-orchestration**: Council coordination and decision aggregation
+- **system-quality-security**: Quality gates and compliance validation
+- **agent-agency-contracts**: Structured contracts for governance decisions
+- **data-infrastructure**: Provenance tracking and audit storage
 
 **Key Features:**
 - Risk-tiered evaluation framework (T1: Sequential, T2: Checkpoint, T3: Parallel)
@@ -54,103 +57,103 @@ The system features multiple execution modes (Strict, Auto, Dry-Run) for differe
 - Configurable decision thresholds and consensus requirements
 - CAWS compliance validation integration (basic)
 
-#### 2. Orchestration Engine (`orchestration`)
+#### Orchestration (agent-orchestration)
 **Status:** Operational
 
-- **Task Router**: HTTP-based task distribution to worker pool
-- **Execution Manager**: Multi-mode execution control (Strict/Auto/Dry-Run)
-- **Progress Tracking**: Real-time task status and metrics
-- **Circuit Breaker Patterns**: Fault-tolerant worker communication
+- **Task Coordination**: Council-based decision making and task routing
+- **Execution Mode Enforcement**: Strict/Auto/Dry-Run mode validation
+- **Progress Tracking**: Real-time task status and intervention capabilities
+- **Provenance Integration**: Audit trail generation and tracking
 
 **Key Features:**
-- HTTP-based worker communication with timeout handling
-- Execution mode enforcement with manual approval workflows
-- Real-time progress streaming and intervention capabilities
-- Basic failover and retry logic
+- Multi-crate coordination across agent systems
+- Risk-appropriate governance intensity
+- Real-time intervention and control
+- Quality gate integration
 
-#### 3. Worker Pool (`workers`)
+#### Worker Management (agent-workers)
 **Status:** Operational
 
-- **HTTP Worker Protocol**: RESTful task execution interface
-- **Task Executor**: Circuit breaker protected worker communication
-- **Execution Modes**: Dry-run simulation and normal execution
-- **Basic Performance Monitoring**: Worker health and throughput tracking
+- **MCP-based Worker Management**: Model Context Protocol integration
+- **Parallel Task Execution**: Resource-aware worker allocation
+- **Circuit Breaker Patterns**: Fault-tolerant execution
+- **Result Aggregation**: Multi-worker result processing and reporting
 
 **Key Features:**
-- Configurable worker endpoints and connection pooling
-- Task cancellation and intervention support
-- Health checking and basic recovery
-- Resource utilization monitoring (basic)
+- Dynamic worker discovery and management
+- Load balancing and resource optimization
+- Fault isolation and recovery
+- Performance monitoring and optimization
 
-#### 4. API Server (`interfaces/api`)
+#### Data Infrastructure (data-infrastructure)
 **Status:** Operational
 
-- **RESTful Endpoints**: Task lifecycle management
-- **Intervention API**: Pause, resume, cancel, override operations
-- **Basic Monitoring Endpoints**: Task status and metrics
-- **Authentication**: API key-based security
+- **PostgreSQL Persistence**: ACID-compliant data storage
+- **RESTful API Interfaces**: OpenAPI-documented endpoints
+- **Multi-level Caching**: Memory, Redis, and database caching
+- **Vector Operations**: pgvector-based similarity search
 
 **Key Features:**
-- Task management (submit, monitor, control)
-- Waiver system for quality gate exceptions
-- Basic provenance tracking and verification
-- Saved query management for database operations
-
-#### 5. Database Layer (`database`)
+- High-performance data operations
+- Comprehensive API documentation
+- Intelligent caching strategies
+- Scalable data processing
+#### Security & Quality (system-quality-security)
 **Status:** Operational
 
-- **PostgreSQL Backend**: ACID-compliant persistence
-- **Task History**: Execution audit trails
-- **Waiver Management**: Quality gate exception tracking
-- **Basic Provenance Storage**: Git-backed audit trails
+- **Authentication & Authorization**: Multi-factor authentication and role-based access
+- **Input Validation**: Schema-based validation and sanitization
+- **Quality Gates**: Automated testing and compliance validation
+- **Provenance Tracking**: Audit trails and compliance reporting
 
 **Key Features:**
-- Transactional task state management
-- Configurable retention policies
-- Multi-tenant data isolation
-- Migration system
+- Comprehensive security controls
+- Automated quality assurance
+- Regulatory compliance support
+- Audit trail management
 
-#### 6. CLI Interface (`cli`)
+#### Interfaces (data-interfaces)
 **Status:** Operational
 
-- **Execution Modes**: Strict, Auto, and Dry-Run task execution
-- **Intervention Commands**: Real-time task control and modification
-- **Monitoring**: Live task progress with interactive approval
-- **Basic Provenance Management**: Git hook installation and provenance tracking
+- **CLI Tools**: Command-line task execution and monitoring
+- **REST APIs**: Programmatic task management and control
+- **Web Dashboard**: Real-time monitoring and intervention
+- **WebSocket Communication**: Live updates and notifications
 
 **Key Features:**
-- Multi-mode task submission with risk-appropriate controls
-- Real-time intervention during task execution
-- Progress monitoring with manual approval workflows
-- CAWS compliance validation and waiver management
+- Multi-interface task management
+- Real-time monitoring and control
+- Intervention capabilities
+- User-friendly dashboards
 
 ## Implementation Status
 
 ### Core System - Operational
 
 #### Task Execution Pipeline
-- **Task Submission**: REST API and CLI interfaces for task creation
-- **Worker Orchestration**: HTTP-based task distribution with circuit breakers
+- **Task Submission**: Multi-interface task creation (CLI, API, web)
+- **Worker Orchestration**: MCP-based worker management with fault tolerance
 - **Execution Modes**: Strict (manual approval), Auto (quality gates), Dry-Run (safe testing)
 - **Progress Tracking**: Real-time task status and intervention capabilities
 
 #### Governance & Compliance
-- **Council System**: Four-judge constitutional oversight framework (logic partially implemented)
+- **Distributed Council System**: Multi-crate governance across agent-orchestration, system-quality-security, and agent-agency-contracts
 - **CAWS Integration**: Runtime compliance validation with waiver system
-- **Basic Provenance Tracking**: Git-backed audit trails with cryptographic signing
-- **Quality Gates**: Automated testing and validation pipelines
+- **Provenance Tracking**: Comprehensive audit trails with cryptographic signing
+- **Quality Gates**: Automated testing and validation across all crates
 
 #### Monitoring & Control
-- **Basic Real-time Metrics**: Task throughput and system health
-- **SLO Framework**: Service level objectives with basic alerting
+- **System Observability**: Comprehensive metrics collection and alerting via system-observability
+- **SLO Framework**: Service level objectives with automated monitoring
+- **Real-time Intervention**: Pause, resume, cancel, and override capabilities
 - **Intervention API**: Pause, resume, cancel, and override running tasks
 - **Web Dashboard**: Basic monitoring with database exploration tools
 
 #### Infrastructure & Persistence
-- **Database Layer**: PostgreSQL with core task and provenance storage
-- **API Server**: RESTful endpoints with authentication
-- **CLI Tools**: Command-line interface with basic provenance management
-- **Basic Container Setup**: Docker deployment framework
+- **data-infrastructure**: PostgreSQL persistence, APIs, and caching
+- **data-interfaces**: CLI, REST APIs, and web interfaces
+- **system-configuration**: Environment-based configuration management
+- **system-resources**: Production deployment and containerization
 
 ### Advanced Features - Partially Implemented
 
@@ -170,19 +173,19 @@ The system features multiple execution modes (Strict, Auto, Dry-Run) for differe
 ### Infrastructure Components
 
 #### Core Services
-- **API Server**: RESTful task management and monitoring service
-- **Worker Pool**: Scalable task execution with circuit breaker protection
-- **PostgreSQL Database**: ACID-compliant task and provenance storage
-- **Web Dashboard**: Real-time monitoring and database exploration
+- **data-infrastructure**: PostgreSQL persistence, REST APIs, and caching
+- **agent-orchestration**: Task coordination and council-based governance
+- **agent-workers**: Parallel task execution with MCP-based management
+- **data-interfaces**: CLI tools, web dashboard, and WebSocket communication
 
 #### Monitoring & Observability
-- **SLO Monitoring**: Service level objective tracking and alerting
+- **system-observability**: SLO monitoring, metrics collection, and alerting
 - **Real-time Metrics**: Task throughput, system health, and performance
 - **Provenance Tracking**: Git-backed audit trails with JWS signing
 - **Alert Management**: Configurable alerts with acknowledgment workflows
 
 #### Security & Governance
-- **API Authentication**: Key-based authentication with rate limiting
+- **system-quality-security**: Authentication, authorization, and quality gates
 - **CAWS Compliance**: Runtime quality gate validation
 - **Waiver System**: Exception management for quality gate overrides
 - **Audit Logging**: Comprehensive operation and decision tracking

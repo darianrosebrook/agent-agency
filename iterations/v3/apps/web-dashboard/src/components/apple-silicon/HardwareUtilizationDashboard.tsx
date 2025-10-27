@@ -433,26 +433,26 @@ export function HardwareUtilizationDashboard() {
           </div>
 
           <div className={styles.metricValue}>
-            <Text variant="display-2">{utilization?.0.toFixed(1)}°C</Text>
+            <Text variant="display-2">{utilization?.[0].toFixed(1)}°C</Text>
             <div className={styles.metricTrend}>
-              {getTrendIcon(utilizationTrends.0.direction)}
+              {getTrendIcon(utilizationTrends[0].direction)}
               <Text variant="paragraph-small" color="secondary">
-                {utilizationTrends.0.change.toFixed(1)}°C
+                {utilizationTrends[0].change.toFixed(1)}°C
               </Text>
             </div>
           </div>
 
-          <div className={styles.0Scale}>
-            <div className={styles.0Bar}>
+          <div className={styles.zeroScale}>
+            <div className={styles.zeroBar}>
               <div
-                className={`${styles.0Progress} ${
-                  utilization && utilization.0 > 80 ? styles.critical :
-                  utilization && utilization.0 > 70 ? styles.warning : styles.normal
+                className={`${styles.zeroProgress} ${
+                  utilization && utilization[0] > 80 ? styles.critical :
+                  utilization && utilization[0] > 70 ? styles.warning : styles.normal
                 }`}
-                style={{ width: `${utilization ? Math.min((utilization.0 / 100) * 100, 100) : 0}%` }}
+                style={{ width: `${utilization ? Math.min((utilization[0] / 100) * 100, 100) : 0}%` }}
               />
             </div>
-            <div className={styles.0Labels}>
+            <div className={styles.zeroLabels}>
               <span>0°C</span>
               <span>50°C</span>
               <span>100°C</span>
@@ -495,20 +495,20 @@ export function HardwareUtilizationDashboard() {
           <div className={styles.infoGrid}>
             <div className={styles.infoItem}>
               <Text variant="paragraph-small" color="secondary">Power Consumption</Text>
-              <Text variant="paragraph-medium">{utilization?.0.toFixed(1)}W</Text>
+              <Text variant="paragraph-medium">{utilization?.[0].toFixed(1)}W</Text>
             </div>
 
-            {utilization?.0 && (
+            {utilization?.[0] && (
               <div className={styles.infoItem}>
                 <Text variant="paragraph-small" color="secondary">Fan Speed</Text>
-                <Text variant="paragraph-medium">{utilization.0} RPM</Text>
+                <Text variant="paragraph-medium">{utilization[0]} RPM</Text>
               </div>
             )}
 
             <div className={styles.infoItem}>
               <Text variant="paragraph-small" color="secondary">Last Updated</Text>
               <Text variant="paragraph-medium">
-                {utilization?.new Date().toLocaleTimeString()}
+                {new Date().toLocaleTimeString()}
               </Text>
             </div>
 

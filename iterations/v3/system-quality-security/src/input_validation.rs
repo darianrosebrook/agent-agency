@@ -652,7 +652,7 @@ pub fn validate_http_headers(headers: &[(String, String)]) -> ValidationResult {
 /// Count JSON nesting depth to prevent DoS attacks
 fn count_json_nesting(json_str: &str) -> usize {
     let mut max_depth = 0;
-    let mut current_depth = 0;
+    let mut current_depth: i32 = 0;
     let mut in_string = false;
     let mut escaped = false;
 
@@ -661,7 +661,7 @@ fn count_json_nesting(json_str: &str) -> usize {
             '"' if !escaped => in_string = !in_string,
             '{' | '[' if !in_string => {
                 current_depth += 1;
-                max_depth = max_depth.max(current_depth);
+                max_depth = max_depth.max(current_depth as usize);
             }
             '}' | ']' if !in_string => {
                 current_depth = current_depth.saturating_sub(1);
@@ -671,7 +671,7 @@ fn count_json_nesting(json_str: &str) -> usize {
         }
     }
 
-    max_depth
+    max_depth as usize
 }
 
 #[cfg(test)]

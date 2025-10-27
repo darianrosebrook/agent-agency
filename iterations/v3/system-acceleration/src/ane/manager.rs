@@ -374,19 +374,29 @@ impl ANEManager {
             schema: crate::ane::models::coreml_model::ModelSchema {
                 inputs: vec![crate::ane::models::coreml_model::IOTensorSpec {
                     name: "input".to_string(),
-                    shape: model.schema.inputs.first().map(|i| i.shape.clone()).unwrap_or_default(),
+                    shape: model.schema.inputs.first().map(|i| i.shape.iter().map(|&x| x as usize).collect()).unwrap_or_default(),
                     dtype: crate::ane::models::coreml_model::DType::F32,
                     optional: false,
+                    start_index: 0,
+                    post_processing: None,
                 }],
                 outputs: vec![crate::ane::models::coreml_model::IOTensorSpec {
                     name: "output".to_string(),
-                    shape: model.schema.outputs.first().map(|o| o.shape.clone()).unwrap_or_default(),
+                    shape: model.schema.outputs.first().map(|o| o.shape.iter().map(|&x| x as usize).collect()).unwrap_or_default(),
                     dtype: crate::ane::models::coreml_model::DType::F32,
                     optional: false,
+                    start_index: 0,
+                    post_processing: None,
                 }],
             },
             loaded_at: std::time::Instant::now(),
             last_accessed: std::time::Instant::now(),
+            model_ref: crate::ane::compat::coreml::coreml::load_model(&model.compiled_path.to_string_lossy())?,
+            input_name: "input".to_string(),
+            input_shape: model.schema.inputs.first().map(|i| i.shape.iter().map(|&x| x as usize).collect()).unwrap_or_default(),
+            requires_normalization: false,
+            normalization_mean: None,
+            normalization_std: None,
         };
         
         // Execute inference

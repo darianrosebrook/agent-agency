@@ -21,6 +21,7 @@ import {
   Brain
 } from 'lucide-react';
 import ConnectionStatus from './ConnectionStatus';
+import { NotificationBell } from '@/components/notifications/WebhookNotifications';
 import GlobalSearch from '@/components/ui/GlobalSearch';
 import DarkModeToggle from '@/components/ui/DarkModeToggle';
 import { useDashboardShortcuts } from '@/hooks/useKeyboardShortcuts';
@@ -102,9 +103,7 @@ export default function UnifiedHeader() {
             >
               <Search size={20} />
             </button>
-            <button className={styles.actionButton} title="Notifications" aria-label="Notifications">
-              <Bell size={20} />
-            </button>
+            <NotificationBell className={styles.notifications} />
             <button className={styles.actionButton} title="Help" aria-label="Help">
               <HelpCircle size={20} />
             </button>

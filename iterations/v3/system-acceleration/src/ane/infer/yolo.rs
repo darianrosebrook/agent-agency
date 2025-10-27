@@ -113,7 +113,7 @@ impl YOLOInferenceExecutor {
 
         // Create tensor with shape [1, 3, height, width]
         let shape = vec![1, channels, height, width];
-        let tensor = crate::ane::compat::coreml::coreml::Tensor::new(&tensor_data, &shape)?;
+        let tensor = crate::ane::compat::coreml::coreml::Tensor::new(&*tensor_data, &candle_core::Device::Cpu)?;
 
         Ok(tensor)
     }

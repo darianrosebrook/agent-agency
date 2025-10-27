@@ -247,4 +247,3 @@ struct OverallImpactMetrics {
     interfaces_affected: usize,
     impact_score: f64,
 }
-}

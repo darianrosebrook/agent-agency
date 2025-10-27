@@ -1,234 +1,255 @@
 import { NextRequest, NextResponse } from "next/server";
+import getApiClient from "@/lib/api-client";
 
 /**
- * Task listing API proxy
- * 
+ * Task listing API proxy with enhanced error handling and abort controllers
+ *
  * Proxies requests to V3 backend task management endpoints
- * Returns empty task list when backend is not configured
- * 
+ * Uses the new API client with connection management and rate limiting
+ *
  * @author @darianrosebrook
  */
 export async function GET(request: NextRequest) {
+  const apiClient = getApiClient();
+  const abortController = new AbortController();
+
+  // Set up request timeout
+  const timeoutId = setTimeout(() => {
+    abortController.abort();
+  }, 30000); // 30 seconds
+
   try {
     const { searchParams } = new URL(request.url);
-    const v3BackendHost = process.env.V3_BACKEND_HOST ?? null;
 
-    // Early return if backend is not configured
-    if (!v3BackendHost) {
-      return NextResponse.json({
-        tasks: [],
-        total: 0,
-        backend_status: "unconfigured",
-        message: "Backend not configured, no tasks available",
-        timestamp: new Date().toISOString(),
-      });
-    }
-
-    // Build query parameters for filtering
-    const params = new URLSearchParams();
+    // Build filter options for API client
+    const filters: Record<string, any> = {};
 
     // Status filter
     const status = searchParams.get("status");
-    if (status) params.append("status", status);
+    if (status) filters.status = status.split(',');
 
     // Phase filter
     const phase = searchParams.get("phase");
-    if (phase) params.append("phase", phase);
+    if (phase) filters.phase = phase.split(',');
 
     // Priority filter
     const priority = searchParams.get("priority");
-    if (priority) params.append("priority", priority);
+    if (priority) filters.priority = priority.split(',');
 
     // Working spec ID filter
     const workingSpecId = searchParams.get("working_spec_id");
-    if (workingSpecId) params.append("working_spec_id", workingSpecId);
+    if (workingSpecId) filters.working_spec_id = workingSpecId;
 
     // Date range filters
     const startDate = searchParams.get("start_date");
-    if (startDate) params.append("start_date", startDate);
-
     const endDate = searchParams.get("end_date");
-    if (endDate) params.append("end_date", endDate);
+    if (startDate && endDate) {
+      filters.date_range = { start: startDate, end: endDate };
+    }
 
     // Pagination
     const limit = searchParams.get("limit");
-    if (limit) params.append("limit", limit);
-
     const offset = searchParams.get("offset");
-    if (offset) params.append("offset", offset);
+    if (limit) filters.limit = parseInt(limit, 10);
+    if (offset) filters.offset = parseInt(offset, 10);
 
     // Sort options
     const sortBy = searchParams.get("sort_by");
-    if (sortBy) params.append("sort_by", sortBy);
-
     const sortOrder = searchParams.get("sort_order");
-    if (sortOrder) params.append("sort_order", sortOrder);
-
-    const tasksUrl = `${v3BackendHost}/api/v1/tasks${
-      params.toString() ? `?${params}` : ""
-    }`;
-
-    console.log(`Proxying task list request to: ${tasksUrl}`);
-
-    const response = await fetch(tasksUrl, {
-      method: "GET",
-      headers: {
-        Accept: "application/json",
-        "User-Agent": "web-dashboard-task-api",
-      },
-      // Reasonable timeout for task queries
-      signal: AbortSignal.timeout(30000), // 30 seconds
-    });
-
-    if (!response?.ok) {
-      const statusCode = response?.status ?? 0;
-      console.warn(
-        `V3 backend task list failed: ${statusCode} ${response?.statusText ?? "No response"}`
-      );
-      return NextResponse.json({
-        error: "backend_error",
-        message: `Backend unavailable: ${statusCode}`,
-        tasks: [],
-        total: 0,
-        backend_status: "unavailable",
-        timestamp: new Date().toISOString(),
-      });
+    if (sortBy && sortOrder) {
+      filters.sort = { by: sortBy, order: sortOrder };
     }
 
-    const backendResponse = (await response.json()) as Record<string, unknown>;
+    console.log(`Fetching tasks with filters:`, filters);
 
-    // Return standardized response format
+    // Use API client with abort controller
+    const response = await apiClient.getTasks({
+      signal: abortController.signal,
+      timeout: 25000, // Slightly less than route timeout
+    });
+
+    clearTimeout(timeoutId);
+
+    // Transform response to match expected format
+    const tasks = Array.isArray(response.data.tasks)
+      ? response.data.tasks.map(task => ({
+          ...task,
+          // Ensure consistent field mapping
+          id: task.task_id,
+          status: task.status,
+          progress: task.progress_percentage,
+          current_phase: task.current_phase,
+          started_at: task.started_at,
+          updated_at: task.updated_at,
+          quality_score: task.quality_score,
+        }))
+      : [];
+
     return NextResponse.json({
-      tasks: backendResponse.tasks ?? [],
-      total: backendResponse.total ?? 0,
+      tasks,
+      total: response.data.total || tasks.length,
       filters: {
-        status: status ?? null,
-        phase: phase ?? null,
-        priority: priority ?? null,
-        working_spec_id: workingSpecId ?? null,
-        date_range:
-          startDate && endDate ? { start: startDate, end: endDate } : null,
+        status: status || null,
+        phase: phase || null,
+        priority: priority || null,
+        working_spec_id: workingSpecId || null,
+        date_range: startDate && endDate ? { start: startDate, end: endDate } : null,
       },
       pagination: {
         limit: limit ? parseInt(limit, 10) : 20,
         offset: offset ? parseInt(offset, 10) : 0,
-        has_more: backendResponse.has_more ?? false,
+        has_more: response.data.has_more || false,
       },
       backend_status: "healthy",
-      timestamp: new Date().toISOString(),
+      timestamp: response.timestamp,
+      connection_info: {
+        active_connections: apiClient.getActiveConnections(),
+        response_time: Date.now() - new Date(response.timestamp).getTime(),
+      },
     });
-  } catch (error) {
-    const errorMessage =
-      error instanceof Error ? error.message : String(error ?? "Unknown error");
 
-    // Determine if this is a network error
-    const isNetworkError =
-      error instanceof TypeError ||
-      errorMessage.includes("fetch") ||
-      errorMessage.includes("ECONNREFUSED");
+  } catch (error) {
+    clearTimeout(timeoutId);
+
+    const errorMessage = error instanceof Error ? error.message : String(error ?? "Unknown error");
+
+    // Enhanced error classification
+    const isNetworkError = error instanceof TypeError ||
+                          errorMessage.includes("fetch") ||
+                          errorMessage.includes("ECONNREFUSED") ||
+                          errorMessage.includes("Network request failed");
+
+    const isTimeoutError = errorMessage.includes("aborted") ||
+                          errorMessage.includes("timeout");
+
+    const isRateLimited = errorMessage.includes("Rate limit exceeded");
 
     if (isNetworkError) {
-      console.warn(`Backend unreachable for tasks: ${errorMessage}`);
+      console.warn(`Backend network error for tasks: ${errorMessage}`);
+    } else if (isTimeoutError) {
+      console.warn(`Backend timeout for tasks: ${errorMessage}`);
+    } else if (isRateLimited) {
+      console.warn(`Rate limited for tasks: ${errorMessage}`);
     } else {
-      console.error("Task list proxy error:", error);
+      console.error("Task list API error:", error);
     }
 
     return NextResponse.json({
-      error: "proxy_error",
-      message: `Backend unreachable: ${errorMessage}`,
+      error: isRateLimited ? "rate_limited" : isTimeoutError ? "timeout" : "api_error",
+      message: errorMessage,
       tasks: [],
       total: 0,
-      backend_status: "unreachable",
+      backend_status: isNetworkError ? "unreachable" : "error",
       timestamp: new Date().toISOString(),
+      retry_after: isRateLimited ? 60 : undefined, // Suggest retry after 60 seconds for rate limits
+    }, {
+      status: isRateLimited ? 429 : 500
     });
   }
 }
 
 export async function POST(request: NextRequest) {
+  const apiClient = getApiClient();
+  const abortController = new AbortController();
+
+  // Set up request timeout
+  const timeoutId = setTimeout(() => {
+    abortController.abort();
+  }, 30000); // 30 seconds
+
   try {
-    const v3BackendHost = process.env.V3_BACKEND_HOST ?? null;
-
-    // Early return if backend is not configured
-    if (!v3BackendHost) {
-      return NextResponse.json(
-        {
-          error: "backend_error",
-          message: "Backend not configured, cannot create tasks",
-          backend_status: "unconfigured",
-          timestamp: new Date().toISOString(),
-        },
-        { status: 503 }
-      );
-    }
-
     const body = await request.json();
 
-    const createTaskUrl = `${v3BackendHost}/api/v1/tasks`;
-
-    console.log(`Proxying task creation request to: ${createTaskUrl}`);
-
-    const response = await fetch(createTaskUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-        "User-Agent": "web-dashboard-task-api",
-      },
-      body: JSON.stringify(body),
-      // Timeout for task creation
-      signal: AbortSignal.timeout(30000), // 30 seconds
-    });
-
-    if (!response?.ok) {
-      const statusCode = response?.status ?? 0;
-      console.warn(
-        `V3 backend task creation failed: ${statusCode} ${response?.statusText ?? "No response"}`
-      );
-      const errorData = await response.json().catch(() => ({}));
-      return NextResponse.json(
-        {
-          error: "backend_error",
-          message: `Backend unavailable: ${statusCode}`,
-          details: errorData,
-          backend_status: "unavailable",
-          timestamp: new Date().toISOString(),
-        },
-        { status: statusCode || 503 }
-      );
+    // Validate request body
+    if (!body || typeof body !== 'object') {
+      return NextResponse.json({
+        error: "invalid_request",
+        message: "Request body must be a valid JSON object",
+        backend_status: "error",
+        timestamp: new Date().toISOString(),
+      }, { status: 400 });
     }
 
-    const backendResponse = (await response.json()) as Record<string, unknown>;
+    // Ensure required fields are present
+    if (!body.description || typeof body.description !== 'string') {
+      return NextResponse.json({
+        error: "invalid_request",
+        message: "Task description is required and must be a string",
+        backend_status: "error",
+        timestamp: new Date().toISOString(),
+      }, { status: 400 });
+    }
+
+    console.log(`Creating task with description: ${body.description.substring(0, 100)}...`);
+
+    // Use API client with abort controller
+    const response = await apiClient.createTask(body, {
+      signal: abortController.signal,
+      timeout: 25000,
+    });
+
+    clearTimeout(timeoutId);
+
+    // Transform response for frontend compatibility
+    const taskData = response.data;
 
     return NextResponse.json({
-      ...backendResponse,
+      ...taskData,
+      // Ensure consistent field mapping
+      id: taskData.task_id,
+      status: taskData.status,
       created_via_proxy: true,
       backend_status: "healthy",
-      timestamp: new Date().toISOString(),
+      timestamp: response.timestamp,
+      connection_info: {
+        active_connections: apiClient.getActiveConnections(),
+        response_time: Date.now() - new Date(response.timestamp).getTime(),
+      },
     });
-  } catch (error) {
-    const errorMessage =
-      error instanceof Error ? error.message : String(error ?? "Unknown error");
 
-    // Determine if this is a network error
-    const isNetworkError =
-      error instanceof TypeError ||
-      errorMessage.includes("fetch") ||
-      errorMessage.includes("ECONNREFUSED");
+  } catch (error) {
+    clearTimeout(timeoutId);
+
+    const errorMessage = error instanceof Error ? error.message : String(error ?? "Unknown error");
+
+    // Enhanced error classification
+    const isNetworkError = error instanceof TypeError ||
+                          errorMessage.includes("fetch") ||
+                          errorMessage.includes("ECONNREFUSED") ||
+                          errorMessage.includes("Network request failed");
+
+    const isTimeoutError = errorMessage.includes("aborted") ||
+                          errorMessage.includes("timeout");
+
+    const isRateLimited = errorMessage.includes("Rate limit exceeded");
+
+    const isValidationError = errorMessage.includes("invalid") ||
+                             errorMessage.includes("required");
 
     if (isNetworkError) {
-      console.warn(`Backend unreachable for task creation: ${errorMessage}`);
+      console.warn(`Backend network error for task creation: ${errorMessage}`);
+    } else if (isTimeoutError) {
+      console.warn(`Backend timeout for task creation: ${errorMessage}`);
+    } else if (isRateLimited) {
+      console.warn(`Rate limited for task creation: ${errorMessage}`);
+    } else if (isValidationError) {
+      console.warn(`Validation error for task creation: ${errorMessage}`);
     } else {
-      console.error("Task creation proxy error:", error);
+      console.error("Task creation API error:", error);
     }
 
-    return NextResponse.json(
-      {
-        error: "proxy_error",
-        message: `Backend unreachable: ${errorMessage}`,
-        backend_status: "unreachable",
-        timestamp: new Date().toISOString(),
-      },
-      { status: 503 }
-    );
+    const statusCode = isRateLimited ? 429 :
+                      isValidationError ? 400 :
+                      isTimeoutError ? 408 : 500;
+
+    return NextResponse.json({
+      error: isRateLimited ? "rate_limited" :
+             isValidationError ? "validation_error" :
+             isTimeoutError ? "timeout" : "api_error",
+      message: errorMessage,
+      backend_status: isNetworkError ? "unreachable" : "error",
+      timestamp: new Date().toISOString(),
+      retry_after: isRateLimited ? 60 : undefined,
+    }, { status: statusCode });
   }
 }

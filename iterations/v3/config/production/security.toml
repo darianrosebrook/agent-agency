@@ -1,0 +1,38 @@
+# Agent Agency Security Configuration
+# Generated: Sun Oct 26 15:08:09 PDT 2025
+
+[authentication]
+enabled = true
+jwt_expiry_hours = 24
+refresh_token_expiry_days = 7
+
+[authorization]
+rbac_enabled = true
+default_role = "user"
+admin_role = "admin"
+
+[rate_limiting]
+enabled = true
+requests_per_minute = 60
+burst_limit = 100
+
+[input_validation]
+enabled = true
+max_file_size_mb = 100
+allowed_mime_types = ["application/pdf", "image/jpeg", "image/png", "text/plain"]
+
+[encryption]
+data_at_rest = true
+data_in_transit = true
+key_rotation_days = 90
+
+[audit]
+enabled = true
+log_retention_days = 365
+sensitive_data_masking = true
+
+[cors]
+allowed_origins = ["https://yourdomain.com"]
+allowed_methods = ["GET", "POST", "PUT", "DELETE"]
+allowed_headers = ["Content-Type", "Authorization"]
+max_age_seconds = 86400

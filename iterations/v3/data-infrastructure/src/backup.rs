@@ -3,7 +3,7 @@
 //! Provides automated backup capabilities with encryption, compression,
 //! and recovery testing for production database hardening.
 
-use crate::DatabaseConfig;
+use system_quality_security::DatabaseConfig;
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -233,7 +233,7 @@ impl BackupManager {
 
     /// Perform the actual backup using pg_dump
     async fn perform_backup(&self, file_path: &PathBuf) -> Result<BackupInternalResult> {
-        let database_url = self.config.database_url();
+        let database_url = &self.config.connection_url;
 
         // Build pg_dump command with compression
         let mut cmd = Command::new("pg_dump");
@@ -320,7 +320,7 @@ impl BackupManager {
 
     /// Perform actual restore operation
     async fn perform_restore(&self, file_path: &PathBuf) -> Result<()> {
-        let database_url = self.config.database_url();
+        let database_url = &self.config.connection_url;
 
         // Create pg_restore command
         let mut cmd = Command::new("pg_restore");

@@ -1,5 +1,5 @@
 // Task API client for the web dashboard
-import { ApiClient } from "./api-client";
+import { getApiClient } from "./api-client";
 import type {
   Task,
   TaskSubmissionRequest,
@@ -8,16 +8,15 @@ import type {
   TaskListFilters,
   TaskMetrics,
   AuditLogEntry,
-  // ApiError,
 } from "@/types/tasks";
 
 export class TaskApiClient {
-  private apiClient: ApiClient;
+  private apiClient: ReturnType<typeof getApiClient>;
 
   constructor(baseUrl?: string) {
-    this.apiClient = new ApiClient({
-      baseUrl: baseUrl ?? "/api/tasks",
-    });
+    this.apiClient = getApiClient();
+    // Note: baseUrl parameter is kept for compatibility but not used
+    // The new API client uses centralized configuration
   }
 
   /**
@@ -25,11 +24,8 @@ export class TaskApiClient {
    */
   async submitTask(taskData: TaskSubmissionRequest): Promise<TaskSubmissionResponse> {
     try {
-      const response = await this.apiClient.request<TaskSubmissionResponse>("/", {
-        method: "POST",
-        body: JSON.stringify(taskData),
-      });
-      return response;
+      const response = await this.apiClient.createTask(taskData);
+      return response.data;
     } catch (error) {
       console.error("Failed to submit task:", error);
       throw error;
@@ -41,34 +37,8 @@ export class TaskApiClient {
    */
   async getTasks(filters?: TaskListFilters): Promise<TaskListResponse> {
     try {
-      const queryParams = new URLSearchParams();
-      
-      if (filters) {
-        if (filters.status) {
-          filters.status.forEach(status => queryParams.append("status", status));
-        }
-        if (filters.phase) {
-          filters.phase.forEach(phase => queryParams.append("phase", phase));
-        }
-        if (filters.priority) {
-          filters.priority.forEach(priority => queryParams.append("priority", priority));
-        }
-        if (filters.created_after) {
-          queryParams.append("created_after", filters.created_after);
-        }
-        if (filters.created_before) {
-          queryParams.append("created_before", filters.created_before);
-        }
-        if (filters.search) {
-          queryParams.append("search", filters.search);
-        }
-      }
-
-      const url = queryParams.toString() ? `/?${queryParams.toString()}` : "/";
-      const response = await this.apiClient.request<TaskListResponse>(url, {
-        method: "GET",
-      });
-      return response;
+      const response = await this.apiClient.getTasks();
+      return response.data;
     } catch (error) {
       console.error("Failed to get tasks:", error);
       throw error;

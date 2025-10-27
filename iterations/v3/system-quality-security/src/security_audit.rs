@@ -63,7 +63,6 @@ pub struct AuditLogEntry {
 }
 
 /// Security audit logger
-#[derive(Debug)]
 pub struct SecurityAuditLogger {
     /// Whether audit logging is enabled
     enabled: bool,
@@ -72,7 +71,18 @@ pub struct SecurityAuditLogger {
     /// Whether to include sensitive data (should be false in production)
     include_sensitive_data: bool,
     /// Additional audit sinks (database, SIEM, etc.)
-    audit_sinks: Vec<Box<dyn AuditSink + Send + Sync>>,
+    audit_sinks: Vec<Box<dyn AuditSink + Send + Sync + 'static>>,
+}
+
+impl std::fmt::Debug for SecurityAuditLogger {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SecurityAuditLogger")
+            .field("enabled", &self.enabled)
+            .field("log_level", &self.log_level)
+            .field("include_sensitive_data", &self.include_sensitive_data)
+            .field("audit_sinks", &format!("[{} audit sinks]", self.audit_sinks.len()))
+            .finish()
+    }
 }
 
 /// Trait for audit event sinks

@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 use tracing::{info, warn, error};
 
 use crate::api_circuit_breaker::CircuitBreaker;
-use system_configuration::common_config::CircuitBreakerConfig;
+use system_quality_security::CircuitBreakerConfig;
 
 /// Service types in the system
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -143,7 +143,7 @@ impl ServiceFailoverManager {
         // Create circuit breaker for this service
         let cb_config = CircuitBreakerConfig {
             failure_threshold: self.config.failure_threshold,
-            recovery_timeout_ms: self.config.recovery_time_secs,
+            recovery_timeout_ms: self.config.recovery_time_secs * 1000,
             ..Default::default()
         };
         let circuit_breaker = CircuitBreaker::with_config(cb_config);

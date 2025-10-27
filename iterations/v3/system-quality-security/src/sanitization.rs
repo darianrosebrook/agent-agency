@@ -69,7 +69,7 @@ pub fn sanitize_json_string(input: &str) -> String {
         .replace("\r", "\\r")
         .replace("\t", "\\t")
         .chars()
-        .filter(|c| c.is_ascii() || c as u32 <= 0xFFFF) // Filter out non-BMP characters
+        .filter(|c| c.is_ascii() || (*c as u32) <= 0xFFFF) // Filter out non-BMP characters
         .collect()
 }
 
@@ -130,7 +130,7 @@ pub fn sanitize_api_input(input: &serde_json::Value) -> serde_json::Value {
             for (key, value) in obj {
                 // Sanitize keys (remove dangerous characters)
                 let safe_key = key.chars()
-                    .filter(|c| c.is_alphanumeric() || c == '_' || c == '-')
+                    .filter(|c| c.is_alphanumeric() || *c == '_' || *c == '-')
                     .collect::<String>();
                 sanitized_obj.insert(safe_key, sanitize_api_input(value));
             }

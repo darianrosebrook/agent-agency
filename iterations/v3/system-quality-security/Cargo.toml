@@ -4,6 +4,7 @@ version.workspace = true
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
+readme = "README.md"
 
 [dependencies]
 # Workspace dependencies
@@ -28,6 +29,7 @@ argon2 = { version = "0.5", features = ["std"] }
 password-hash = "0.5"
 bcrypt = "0.15"
 zxcvbn = "2.2"
+reqwest = { version = "0.11", features = ["json", "stream"] }
 
 # Secret management dependencies (from security)
 aws-config = "1.0"
@@ -70,6 +72,9 @@ sqlx = { workspace = true, features = ["postgres", "chrono", "uuid"] }
 # Local crates
 agent-agency-contracts = { path = "../agent-agency-contracts" }
 system-configuration = { path = "../system-configuration" }
+
+# Singleton patterns for global instances
+once_cell = "1.0"
 
 [features]
 default = []

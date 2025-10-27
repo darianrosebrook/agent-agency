@@ -8,10 +8,13 @@ pub mod audit;
 pub mod backup;
 pub mod backup_recovery;
 pub mod backup_validator;
+pub mod connection_manager;
 pub mod data_consistency;
 pub mod database_audit;
 pub mod database_circuit_breaker;
+pub mod database_config;
 pub mod database_metrics;
+pub mod database_operations;
 pub mod migrations;
 pub mod models;
 pub mod optimization;
@@ -36,21 +39,20 @@ pub mod rate_limiter;
 pub mod rto_rpo_monitor;
 pub mod sandbox_api;
 pub mod service_failover;
-pub mod websocket;
+pub mod system_observability;
 
 // Data infrastructure modules (from consolidated caching, embedding-service, file_ops crates)
 pub mod caching;
 pub mod embedding;
 pub mod file_operations;
 
-// Re-export database types (from consolidated database crate)
-pub use models::{DatabaseConfig, DatabaseClient, Row};
-pub use queries::QueryBuilder;
-pub use migrations::{Migration, MigrationRunner};
-pub use pooling::ConnectionPool;
-pub use vector_store::{VectorStore, VectorQuery, VectorResult};
-pub use backup_recovery::{BackupManager, RecoveryManager};
-pub use audit::{DatabaseAuditor, AuditEvent};
+// TODO: Add missing types when available
+// pub use models::{DatabaseConfig, DatabaseClient, Row};
+// pub use migrations::{Migration, MigrationRunner};
+// pub use pooling::ConnectionPool;
+// pub use vector_store::{VectorStore, VectorQuery, VectorResult};
+// pub use backup_recovery::{BackupManager, RecoveryManager};
+// pub use audit::{DatabaseAuditor, AuditEvent};
 
 // Re-export API and interface types (from consolidated interfaces and api-server crates)
 pub use handlers::{AppState, PersistedTask, TaskStoreTrait};

@@ -13,7 +13,7 @@ use sha2::Digest;
 use tokio::sync::RwLock;
 use tracing::info;
 
-use crate::DatabaseClient;
+use crate::client::DatabaseClient;
 
 /// Backup validation configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]

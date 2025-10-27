@@ -13,7 +13,7 @@ use uuid::Uuid;
 use chrono;
 use tracing;
 
-use crate::{DatabaseClient, DatabaseConfig, models::CreateAuditTrailEntry};
+use crate::{client::DatabaseClient, database_config::DatabaseConfig, database_operations::CreateAuditTrailEntry};
 use agent_agency_contracts::{ExecutionArtifacts, execution_artifacts::ArtifactMetadata};
 
 /// Unique identifier for artifacts

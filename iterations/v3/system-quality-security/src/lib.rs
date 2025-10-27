@@ -99,6 +99,16 @@ pub struct DatabaseConfig {
     pub connection_timeout_seconds: u64,
 }
 
+impl Default for DatabaseConfig {
+    fn default() -> Self {
+        Self {
+            connection_url: "postgresql://localhost:5432/agent_agency".to_string(),
+            max_connections: 10,
+            connection_timeout_seconds: 30,
+        }
+    }
+}
+
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct GitConfig {
     pub repository_path: String,

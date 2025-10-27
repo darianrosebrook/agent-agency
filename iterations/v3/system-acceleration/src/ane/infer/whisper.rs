@@ -221,7 +221,7 @@ impl WhisperInferenceExecutor {
             // Reshape mel spectrogram for CoreML input
             // Whisper encoder expects [1, 80, 3000] shape
             let mel_data = &input.mel_spectrogram;
-            let input_shape = [1i32, input.n_mels as i32, input.n_time_steps as i32];
+            let input_shape = [1usize, input.n_mels as usize, input.n_time_steps as usize];
 
             // Run inference on the encoder
             let _output_tensor = coreml::run_inference(

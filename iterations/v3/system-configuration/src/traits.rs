@@ -6,7 +6,7 @@
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
-use crate::{PipelineError, PipelineResult};
+use crate::PipelineResult;
 
 /// Core trait for pipeline stages that can process data
 #[async_trait]
@@ -18,7 +18,7 @@ pub trait PipelineStage<Input, Output>: Send + Sync + Debug {
     async fn process(&self, input: Input) -> PipelineResult<Output>;
 
     /// Check if this stage can handle the given input
-    fn can_handle(&self, input: &Input) -> bool {
+    fn can_handle(&self, _input: &Input) -> bool {
         // Default implementation accepts all inputs
         true
     }

@@ -11,8 +11,7 @@ use tokio::time::{sleep, Duration};
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
 
-use crate::orchestration::orchestrate::Orchestrator;
-use crate::orchestration::tracking::ProgressTracker;
+use crate::api::{Orchestrator, ProgressTracker};
 use crate::api::TaskSubmissionRequest;
 
 /// Execution modes with different safety guardrails
@@ -38,7 +37,7 @@ pub struct CliConfig {
     pub port: u16,
 
     /// API key for authentication
-    #[arg(long, env = "AGENT_AGENCY_API_KEY")]
+    #[arg(long)]
     pub api_key: Option<String>,
 
     /// Output format (json, yaml, table)
@@ -269,7 +268,7 @@ impl CliInterface {
     }
 
     /// Execute the CLI command
-    pub async fn execute(&self, cli: Cli) -> Result<(), CliError> {
+    pub async fn execute(&self, cli: Cli) -> Result<()> {
         match cli.command {
             Commands::Submit {
                 description,
@@ -328,7 +327,7 @@ impl CliInterface {
         priority: Option<String>,
         watch: bool,
         output: Option<PathBuf>,
-    ) -> Result<(), CliError> {
+    ) -> Result<()> {
         // Read context file if provided
         let context = if let Some(context_path) = context_file {
             Some(std::fs::read_to_string(context_path)
@@ -411,7 +410,7 @@ impl CliInterface {
         task_id_str: String,
         watch: bool,
         interval: u64,
-    ) -> Result<(), CliError> {
+    ) -> Result<()> {
         let task_id = Uuid::parse_str(&task_id_str)
             .map_err(|_| CliError::InvalidTaskId(task_id_str.clone()))?;
 
@@ -433,7 +432,7 @@ impl CliInterface {
     }
 
     /// Display task status in a formatted way
-    async fn display_task_status(&self, task_id: Uuid) -> Result<(), CliError> {
+    async fn display_task_status(&self, task_id: Uuid) -> Result<()> {
         // Implement real-time task status querying from progress tracker
         let client = reqwest::Client::builder()
             .timeout(std::time::Duration::from_secs(10))
@@ -476,9 +475,9 @@ impl CliInterface {
     }
 
     /// Display task status from real API response
-    fn display_real_task_status(&self, status_data: &serde_json::Value) -> Result<(), CliError> {
+    fn display_real_task_status(&self, status_data: &serde_json::Value) -> Result<()> {
         println!(" Task Status: {}", status_data.get("id").and_then(|v| v.as_str()).unwrap_or("unknown"));
-        println!("═".repeat(50));
+        println!("{}", "═".repeat(50));
 
         let status = status_data.get("status").and_then(|v| v.as_str()).unwrap_or("unknown");
         let progress = status_data.get("progress").and_then(|v| v.as_f64()).unwrap_or(0.0);
@@ -518,9 +517,9 @@ impl CliInterface {
     }
 
     /// Display cached/local task status as fallback
-    async fn display_cached_task_status(&self, task_id: Uuid) -> Result<(), CliError> {
+    async fn display_cached_task_status(&self, task_id: Uuid) -> Result<()> {
         println!(" Task Status (Cached): {}", task_id);
-        println!("═".repeat(50));
+        println!("{}", "═".repeat(50));
 
         // Simulate different status scenarios for demo purposes
         let statuses = vec![
@@ -556,22 +555,25 @@ impl CliInterface {
     }
 
     /// Watch task progress in real-time
-    async fn watch_task_progress(&self, task_id: Uuid) -> Result<(), CliError> {
+    async fn watch_task_progress(&self, task_id: Uuid) -> Result<()> {
         let mut last_progress = 0.0;
 
         loop {
             if let Some(tracker) = &self.progress_tracker {
-                if let Some(progress) = tracker.get_progress(task_id).await
-                    .map_err(|e| CliError::InternalError(format!("Progress tracking error: {:?}", e)))? {
+                match tracker.get_progress(task_id).await {
+                    Ok(progress) => {
+                        if progress.progress as f64 != last_progress {
+                            self.display_progress_bar(progress.progress as f32, &Some(progress.current_step.clone()));
+                            last_progress = progress.progress as f64;
 
-                    if progress.completion_percentage != last_progress {
-                        self.display_progress_bar(progress.completion_percentage, &progress.current_phase);
-                        last_progress = progress.completion_percentage;
-
-                        if progress.completion_percentage >= 100.0 {
-                            println!("\n Task completed!");
-                            break;
+                            if progress.progress >= 100 {
+                                println!("\n Task completed!");
+                                break;
+                            }
                         }
+                    }
+                    Err(e) => {
+                        return Err(CliError::InternalError(format!("Progress tracking error: {:?}", e)));
                     }
                 }
             }
@@ -596,10 +598,10 @@ impl CliInterface {
     }
 
     /// List tasks
-    async fn list_tasks(&self, status_filter: Option<String>, limit: usize) -> Result<(), CliError> {
+    async fn list_tasks(&self, status_filter: Option<String>, limit: usize) -> Result<()> {
         // Simulate task listing
         println!(" Recent Tasks");
-        println!("═".repeat(80));
+        println!("{}", "═".repeat(80));
 
         let sample_tasks = vec![
             ("550e8400-e29b-41d4-a716-446655440000", "completed", "95.2%", "User auth system", "2 min ago"),
@@ -651,13 +653,13 @@ impl CliInterface {
         &self,
         task_id_str: String,
         save_artifacts: Option<PathBuf>,
-    ) -> Result<(), CliError> {
+    ) -> Result<()> {
         let _task_id = Uuid::parse_str(&task_id_str)
             .map_err(|_| CliError::InvalidTaskId(task_id_str.clone()))?;
 
         // Simulate result retrieval
         println!(" Task Results: {}", task_id_str);
-        println!("═".repeat(50));
+        println!("{}", "═".repeat(50));
 
         println!(" Status: COMPLETED");
         println!(" Quality Score: 95.2%");
@@ -694,7 +696,7 @@ impl CliInterface {
     }
 
     /// Cancel a task
-    async fn cancel_task(&self, task_id_str: String) -> Result<(), CliError> {
+    async fn cancel_task(&self, task_id_str: String) -> Result<()> {
         let _task_id = Uuid::parse_str(&task_id_str)
             .map_err(|_| CliError::InvalidTaskId(task_id_str.clone()))?;
 
@@ -705,9 +707,9 @@ impl CliInterface {
     }
 
     /// Get system metrics
-    async fn get_metrics(&self) -> Result<(), CliError> {
+    async fn get_metrics(&self) -> Result<()> {
         println!(" System Metrics");
-        println!("═".repeat(40));
+        println!("{}", "═".repeat(40));
 
         println!("🖥️  Active Tasks: 3");
         println!(" Completed Today: 24");
@@ -726,7 +728,7 @@ impl CliInterface {
     }
 
     /// Handle self-prompting agent commands
-    async fn handle_self_prompt_command(&self, command: SelfPromptCommands) -> Result<(), CliError> {
+    async fn handle_self_prompt_command(&self, command: SelfPromptCommands) -> Result<()> {
         match command {
             SelfPromptCommands::Execute {
                 description,
@@ -776,21 +778,21 @@ impl CliInterface {
         max_iterations: usize,
         mode: ExecutionMode,
         dashboard: bool,
-    ) -> Result<(), CliError> {
+    ) -> Result<()> {
         println!(" Starting self-prompting execution with mode: {:?}", mode);
 
         match mode {
             ExecutionMode::Strict => {
                 println!(" Strict mode: Manual approval required for each changeset");
-                self.execute_strict_mode(description, files, model, watch, max_iterations).await?;
+                self.execute_strict_mode(description.clone(), files.clone(), model.clone(), watch, max_iterations).await?;
             }
             ExecutionMode::Auto => {
                 println!(" Auto mode: Automatic execution with quality gate validation");
-                self.execute_auto_mode(description, files, model, watch, max_iterations).await?;
+                self.execute_auto_mode(description.clone(), files.clone(), model.clone(), watch, max_iterations).await?;
             }
             ExecutionMode::DryRun => {
                 println!("👁️  Dry-run mode: Generating artifacts without filesystem changes");
-                self.execute_dry_run_mode(description, files, model, watch, max_iterations).await?;
+                self.execute_dry_run_mode(description.clone(), files.clone(), model.clone(), watch, max_iterations).await?;
             }
         }
 
@@ -821,18 +823,15 @@ impl CliInterface {
         model: Option<String>,
         watch: bool,
         max_iterations: usize,
-    ) -> Result<(), CliError> {
+    ) -> Result<()> {
         println!(" Submitting task for strict mode execution...");
 
         // Submit task with strict mode flag
         let task_request = TaskSubmissionRequest {
             description: description.clone(),
-            files,
-            model,
-            max_iterations,
+            context: Some("strict mode execution".to_string()),
+            priority: Some("high".to_string()),
             execution_mode: Some("strict".to_string()),
-            quality_gates: Some(vec!["manual_approval".to_string()]),
-            ..Default::default()
         };
 
         // In a real implementation, this would submit to the API
@@ -858,22 +857,15 @@ impl CliInterface {
         model: Option<String>,
         watch: bool,
         max_iterations: usize,
-    ) -> Result<(), CliError> {
+    ) -> Result<()> {
         println!(" Submitting task for auto mode execution...");
 
         // Submit task with auto mode flag
         let task_request = TaskSubmissionRequest {
             description: description.clone(),
-            files,
-            model,
-            max_iterations,
+            context: Some("auto mode execution".to_string()),
+            priority: Some("medium".to_string()),
             execution_mode: Some("auto".to_string()),
-            quality_gates: Some(vec![
-                "test_coverage".to_string(),
-                "mutation_testing".to_string(),
-                "linting".to_string(),
-            ]),
-            ..Default::default()
         };
 
         // In a real implementation, this would submit to the API
@@ -897,18 +889,15 @@ impl CliInterface {
         model: Option<String>,
         watch: bool,
         max_iterations: usize,
-    ) -> Result<(), CliError> {
+    ) -> Result<()> {
         println!("👁️  Submitting task for dry-run execution...");
 
         // Submit task with dry-run flag
         let task_request = TaskSubmissionRequest {
             description: description.clone(),
-            files,
-            model,
-            max_iterations,
+            context: Some("dry-run execution".to_string()),
+            priority: Some("low".to_string()),
             execution_mode: Some("dry_run".to_string()),
-            dry_run: true,
-            ..Default::default()
         };
 
         // In a real implementation, this would submit to the API
@@ -926,7 +915,7 @@ impl CliInterface {
     }
 
     /// List available models
-    async fn list_available_models(&self) -> Result<(), CliError> {
+    async fn list_available_models(&self) -> Result<()> {
         println!(" Available Models:");
         println!("  - gpt-4-turbo");
         println!("  - gpt-4");
@@ -937,14 +926,14 @@ impl CliInterface {
     }
 
     /// Swap active model
-    async fn swap_model(&self, old_model: String, new_model: String) -> Result<(), CliError> {
+    async fn swap_model(&self, old_model: String, new_model: String) -> Result<()> {
         println!(" Swapping model: {} → {}", old_model, new_model);
         println!(" Model swap completed");
         Ok(())
     }
 
     /// Run playground test
-    async fn run_playground_test(&self, test: Option<String>) -> Result<(), CliError> {
+    async fn run_playground_test(&self, test: Option<String>) -> Result<()> {
         match test.as_deref() {
             Some("typescript") => println!(" Running TypeScript playground test"),
             Some("rust") => println!(" Running Rust playground test"),
@@ -957,18 +946,18 @@ impl CliInterface {
     }
 
     /// Show execution history
-    async fn show_execution_history(&self, limit: usize) -> Result<(), CliError> {
+    async fn show_execution_history(&self, limit: usize) -> Result<()> {
         println!(" Execution History (last {}):", limit);
         println!("  No executions found (placeholder)");
         Ok(())
     }
 
     /// Handle quality management commands
-    async fn handle_quality_command(&self, command: QualityCommands) -> Result<(), CliError> {
+    async fn handle_quality_command(&self, command: QualityCommands) -> Result<()> {
         match command {
             QualityCommands::Status => {
                 println!("🛡️  Quality Gates Status");
-                println!("═".repeat(40));
+                println!("{}", "═".repeat(40));
 
                 println!(" CAWS Runtime Validator: Active");
                 println!(" Linting (ESLint): Configured");
@@ -997,7 +986,7 @@ impl CliInterface {
                 let tier = risk_tier.unwrap_or_else(|| "standard".to_string());
 
                 println!(" Running Quality Gates (Tier: {})", tier);
-                println!("═".repeat(50));
+                println!("{}", "═".repeat(50));
 
                 for gate in gates_list {
                     print!(" Checking {}... ", gate);
@@ -1022,7 +1011,7 @@ impl CliInterface {
 
             QualityCommands::Config => {
                 println!("⚙️  Quality Configuration");
-                println!("═".repeat(40));
+                println!("{}", "═".repeat(40));
 
                 println!(" Thresholds by Risk Tier:");
                 println!("  Critical:");
@@ -1079,4 +1068,10 @@ pub enum CliError {
 
     #[error("Invalid configuration: {0}")]
     ConfigError(String),
+
+    #[error("API error: {0}")]
+    ApiError(String),
+
+    #[error("Invalid argument: {0}")]
+    InvalidArgument(String),
 }

@@ -16,17 +16,17 @@
 
 ### **Working Components**
 
-- **Claim Extraction Pipeline**: 9/11 tests passing (comprehensive unit tests)
-- **Council System**: Contract roundtrip tests, schema conformance tests
-- **Orchestration**: Adapter tests, persistence integration tests
-- **Embedding Service**: Basic unit tests with dummy provider
+- **agent-research**: Claim extraction and verification tests
+- **agent-orchestration**: Task coordination and governance tests
+- **system-quality-security**: Quality gate and compliance tests
+- **data-infrastructure**: Vector storage and embedding tests
 
 ### **Compilation Issues (Blocking Tests)**
 
-- **Provenance**: 17 compilation errors (JWT signing, git integration thread safety)
-- **Workers**: 58 compilation errors (missing imports, type mismatches)
-- **Research**: 5 compilation errors (missing Hash trait, field mismatches)
-- **Workspace State Manager**: 44 compilation errors (dependency conflicts)
+- **system-quality-security**: Provenance tracking compilation issues
+- **agent-workers**: Worker management and MCP integration issues
+- **agent-research**: Research capabilities and claim extraction issues
+- **system-resilience**: Workspace state and fault tolerance issues
 
 ### **CAWS Tools**
 
@@ -34,7 +34,7 @@
 - **Issues**: CLI workflow integration tests failing due to stdio handling
 - **Schema Contracts**: AJV warnings about union types
 
-## 🏗️ **Testing Architecture**
+## Testing Architecture
 
 ### **Test Pyramid Structure**
 
@@ -159,7 +159,7 @@
   - Error handling and recovery
   - Metadata tracking validation
 
-**Research Agent**
+**agent-research crate**
 
 - [ ] **Knowledge Seeking Tests**
 

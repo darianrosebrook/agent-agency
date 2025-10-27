@@ -2,9 +2,9 @@
 
 ## Overview
 
-Agent Agency V3 implements a **functional constitutional AI system** with operational task execution pipelines, constitutional governance framework, and basic monitoring capabilities. The system provides three execution modes (Strict, Auto, Dry-Run) for different risk levels, with constitutional council oversight framework ensuring ethical compliance and quality standards.
+Agent Agency V3 implements a **modular constitutional AI system** with 17 specialized crates providing comprehensive autonomous agent capabilities. The system orchestrates multiple local AI models with governance controls, ensuring ethical compliance, technical quality, and system coherence through evidence-based decision making.
 
-The architecture consists of Rust-based services communicating via HTTP APIs, with PostgreSQL persistence, comprehensive provenance tracking, and a web dashboard for monitoring and control.
+The architecture consists of specialized Rust crates with clear responsibilities, communicating via well-defined contracts, with PostgreSQL persistence, comprehensive provenance tracking, and monitoring capabilities.
 
 ## Core Problems Solved
 

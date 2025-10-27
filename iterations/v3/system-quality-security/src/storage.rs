@@ -12,6 +12,7 @@ use tokio::sync::RwLock;
 use uuid::Uuid;
 
 use crate::provenance_types::*;
+use crate::provenance_service::ProvenanceStorage;
 
 /// Database-backed provenance storage
 pub struct DatabaseProvenanceStorage {
@@ -34,7 +35,7 @@ impl DatabaseProvenanceStorage {
 }
 
 #[async_trait]
-impl super::service::ProvenanceStorage for DatabaseProvenanceStorage {
+impl ProvenanceStorage for DatabaseProvenanceStorage {
     async fn store_record(&self, record: &ProvenanceRecord) -> Result<()> {
         let decision_type = record.decision.decision_type();
         let decision_data =
@@ -498,7 +499,7 @@ impl InMemoryProvenanceStorage {
 }
 
 #[async_trait]
-impl super::service::ProvenanceStorage for InMemoryProvenanceStorage {
+impl ProvenanceStorage for InMemoryProvenanceStorage {
     async fn store_record(&self, record: &ProvenanceRecord) -> Result<()> {
         let mut records = self.records.write().await;
         records.insert(record.id.to_string(), record.clone());

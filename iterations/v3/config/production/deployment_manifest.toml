@@ -1,0 +1,38 @@
+# Agent Agency Production Deployment Manifest
+# Generated: Sun Oct 26 15:08:09 PDT 2025
+
+[deployment]
+version = "3.0.0"
+environment = "production"
+timestamp = "2025-10-26T22:08:09Z"
+
+[components]
+agent_data_processing = "3.0.0"
+agent_orchestration = "3.0.0"
+system_acceleration = "3.0.0"
+agent_memory = "3.0.0"
+workspace_state_manager = "3.0.0"
+
+[models]
+fastvit = "T8-F16"
+mistral = "7B-Instruct-FP16"
+whisper = "Base-EN"
+yolo = "v3"
+
+[performance_targets]
+ane_speedup_min = 2.5
+concurrent_efficiency_min = 70
+memory_limit_mb = 2048
+response_time_p95_ms = 500
+
+[monitoring]
+health_checks = true
+metrics_collection = true
+log_aggregation = true
+alerting = true
+
+[scaling]
+min_instances = 1
+max_instances = 10
+cpu_threshold_percent = 70
+memory_threshold_percent = 80

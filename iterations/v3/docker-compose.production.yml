@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  agent-orchestration:
+    build:
+      context: .
+      dockerfile: Dockerfile.production
+    ports:
+      - "8080:8080"
+    environment:
+      - RUST_LOG=info
+      - COREML_MODELS_PATH=/app/models/coreml
+    volumes:
+      - ./models/coreml:/app/models/coreml:ro
+      - ./config/production:/app/config:ro
+    depends_on:
+      - postgres
+      - redis
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: agent_agency_prod
+      POSTGRES_USER: agent_agency
+      POSTGRES_PASSWORD: password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./deploy/docker-compose/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

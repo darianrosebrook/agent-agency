@@ -3,4 +3,5 @@
 //! Structured file operations with allow-list enforcement,
 //! budget controls, and atomic rollback capabilities.
 
-pub use super::file_operations::*;
+// TODO: Add file operations implementation when available
+// pub use super::file_operations::*;

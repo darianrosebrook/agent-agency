@@ -86,6 +86,33 @@ impl PipelineMetrics {
         let mut data = self.data.write().await;
         *data = MetricsData::default();
     }
+
+    /// Record buffer depth measurement
+    pub async fn record_buffer_depth(&self, depth: usize) {
+        let mut data = self.data.write().await;
+        data.buffer_depth_metrics.total_samples += 1;
+        data.buffer_depth_metrics.current_depth = depth;
+        data.buffer_depth_metrics.max_depth = data.buffer_depth_metrics.max_depth.max(depth);
+        data.buffer_depth_metrics.min_depth = data.buffer_depth_metrics.min_depth.min(depth);
+        
+        // Calculate moving average
+        let alpha = 0.1; // Smoothing factor
+        data.buffer_depth_metrics.average_depth = alpha * depth as f64 + (1.0 - alpha) * data.buffer_depth_metrics.average_depth;
+        
+        // Track depth distribution
+        let depth_bucket = (depth / 10) * 10; // 10-unit buckets
+        *data.buffer_depth_metrics.depth_distribution.entry(depth_bucket).or_insert(0) += 1;
+        
+        data.last_updated = chrono::Utc::now();
+    }
+
+    /// Record buffer overflow event
+    pub async fn record_buffer_overflow(&self) {
+        let mut data = self.data.write().await;
+        data.buffer_depth_metrics.overflow_count += 1;
+        data.buffer_depth_metrics.last_overflow = Some(chrono::Utc::now());
+        data.last_updated = chrono::Utc::now();
+    }
 }
 
 impl Default for PipelineMetrics {
@@ -111,6 +138,8 @@ pub struct MetricsData {
     pub stage_metrics: HashMap<String, StageMetrics>,
     /// Error counts by type
     pub error_counts: HashMap<String, u64>,
+    /// Buffer depth metrics
+    pub buffer_depth_metrics: BufferDepthMetrics,
     /// Last updated timestamp
     pub last_updated: chrono::DateTime<chrono::Utc>,
 }
@@ -125,6 +154,7 @@ impl Default for MetricsData {
             avg_execution_time_ms: 0.0,
             stage_metrics: HashMap::new(),
             error_counts: HashMap::new(),
+            buffer_depth_metrics: BufferDepthMetrics::default(),
             last_updated: chrono::Utc::now(),
         }
     }
@@ -249,6 +279,42 @@ impl std::fmt::Display for HealthStatus {
             HealthStatus::Degraded => write!(f, "degraded"),
             HealthStatus::Unhealthy => write!(f, "unhealthy"),
             HealthStatus::Down => write!(f, "down"),
+        }
+    }
+}
+
+/// Buffer depth metrics for streaming pipelines
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BufferDepthMetrics {
+    /// Total number of depth samples
+    pub total_samples: u64,
+    /// Current buffer depth
+    pub current_depth: usize,
+    /// Maximum observed depth
+    pub max_depth: usize,
+    /// Minimum observed depth
+    pub min_depth: usize,
+    /// Moving average depth
+    pub average_depth: f64,
+    /// Number of overflow events
+    pub overflow_count: u64,
+    /// Last overflow timestamp
+    pub last_overflow: Option<chrono::DateTime<chrono::Utc>>,
+    /// Depth distribution histogram (bucket -> count)
+    pub depth_distribution: HashMap<usize, u64>,
+}
+
+impl Default for BufferDepthMetrics {
+    fn default() -> Self {
+        Self {
+            total_samples: 0,
+            current_depth: 0,
+            max_depth: 0,
+            min_depth: usize::MAX,
+            average_depth: 0.0,
+            overflow_count: 0,
+            last_overflow: None,
+            depth_distribution: HashMap::new(),
         }
     }
 }

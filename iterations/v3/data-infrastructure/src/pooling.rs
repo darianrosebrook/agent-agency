@@ -3,7 +3,8 @@
 //! Deadpool-to-SQLx bridge for robust connection pooling with health checks,
 //! timeout handling, and comprehensive monitoring.
 
-use crate::{DatabaseConfig, DatabaseMetrics};
+use crate::database_config::DatabaseConfig;
+use crate::database_metrics::DatabaseMetrics;
 use anyhow::{Context, Result};
 use chrono::Utc;
 use deadpool_postgres::{Config, ManagerConfig, RecyclingMethod, Runtime, Pool as DeadpoolPool};

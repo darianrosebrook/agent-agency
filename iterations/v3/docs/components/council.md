@@ -1,16 +1,21 @@
-# Council of Judges
+# Council System (Distributed)
 
 ## Purpose
 
-The Council implements **constitutional concurrency** - a framework where specialized judge models work together to audit, evaluate, and accept worker outputs through consensus-driven coordination rather than traditional parallel execution.
+The Council system implements **constitutional governance** distributed across multiple specialized crates. Rather than a monolithic council component, governance is handled by coordinated functionality in agent-orchestration, system-quality-security, agent-agency-contracts, and data-infrastructure crates.
 
 ## Architecture
 
-### Constitutional Concurrency Model
+### Distributed Governance Model
 
-**Traditional Parallelism**: Execute operations in parallel, resolve conflicts later.
+**Traditional Approach**: Single monolithic council component handling all governance.
 
-**Constitutional Concurrency**: Establish consensus boundaries first, execute within agreed constraints.
+**Distributed Approach**: Governance responsibilities split across specialized crates:
+
+- **agent-orchestration**: Council coordination and decision aggregation
+- **system-quality-security**: Quality gates and compliance validation
+- **agent-agency-contracts**: Structured contracts for governance decisions
+- **data-infrastructure**: Provenance tracking and audit storage
 
 ### Risk-Tiered Execution
 
@@ -18,201 +23,189 @@ The Council implements **constitutional concurrency** - a framework where specia
 - **Tier 2 (Medium Risk)**: Limited parallel with consensus checkpoints
 - **Tier 3 (Low Risk)**: High parallel with minimal coordination
 
-## Subcomponents
+## Distributed Components
 
-### Constitutional Judge
-- **Purpose**: CAWS compliance, budget enforcement, waiver validation, provenance tracking
-- **Execution**: ANE-optimized (<100ms inference)
-- **Inputs**: Task specifications, CAWS requirements, budget constraints
-- **Outputs**: Compliance verdict with evidence citations
+### agent-orchestration (Council Coordination)
+- **Purpose**: Council coordination and decision aggregation
+- **Location**: `agent-orchestration` crate
+- **Responsibilities**: Risk-tiered execution, consensus coordination, verdict synthesis
 
-### Technical Auditor
-- **Purpose**: Code quality, security scanning, contract validation, migration analysis
-- **Execution**: GPU-accelerated (<500ms analysis)
-- **Inputs**: Code artifacts, security policies, technical contracts
-- **Outputs**: Technical quality assessment with specific findings
+### system-quality-security (Quality Gates)
+- **Purpose**: Quality gates and compliance validation
+- **Location**: `system-quality-security` crate
+- **Responsibilities**: CAWS compliance, security scanning, technical auditing
 
-### Quality Evaluator
-- **Purpose**: Requirements fit assessment, completeness verification, maintainability analysis
-- **Execution**: CPU-based (<200ms evaluation)
-- **Inputs**: Acceptance criteria, worker outputs, quality benchmarks
-- **Outputs**: Quality verdict with requirement mapping
+### agent-agency-contracts (Governance Contracts)
+- **Purpose**: Structured contracts for governance decisions
+- **Location**: `agent-agency-contracts` crate
+- **Responsibilities**: JSON Schema validation, contract definitions, type safety
 
-### Integration Validator
-- **Purpose**: Cross-system coherence, API compatibility, breaking change detection
-- **Execution**: CPU-based (<150ms validation)
-- **Inputs**: System interfaces, data contracts, integration points
-- **Outputs**: Integration verdict with compatibility analysis
-
-### Consensus Coordinator
-- **Purpose**: Weighted voting, debate protocol orchestration, verdict synthesis
-- **Execution**: Coordinates judge evaluation based on risk tier
-- **Inputs**: Individual judge verdicts, debate parameters, risk assessment
-- **Outputs**: Final consensus verdict with audit trail
+### data-infrastructure (Audit Storage)
+- **Purpose**: Provenance tracking and audit storage
+- **Location**: `data-infrastructure` crate
+- **Responsibilities**: Audit trails, provenance storage, compliance reporting
 
 ## Execution Flow
 
-### Task Evaluation Process
+### Distributed Task Evaluation Process
 
-1. **Risk Assessment**: Determine execution tier based on task scope and impact
-2. **Judge Coordination**: Execute judges according to risk tier parallelism rules
-3. **Evidence Enrichment**: Research agent provides contextual evidence
-4. **Debate Protocol**: Judges debate conflicting verdicts with evidence
-5. **Consensus Formation**: Weighted voting produces final verdict
-6. **Provenance Recording**: Complete audit trail stored in Git + JWS
+1. **Task Submission**: Task received via data-interfaces, routed to agent-orchestration
+2. **Quality Gate Check**: system-quality-security validates against CAWS compliance
+3. **Contract Validation**: agent-agency-contracts validates task structure and requirements
+4. **Risk Assessment**: agent-orchestration determines execution tier and coordination strategy
+5. **Council Coordination**: agent-orchestration coordinates evaluation across governance components
+6. **Provenance Recording**: data-infrastructure stores complete audit trail
 
-### Concurrency Implementation
+### Distributed Implementation
 
 ```rust
-// Example: Risk-tiered judge evaluation
-pub async fn evaluate_judges_constitutionally_parallel(
-    &self,
-    task_spec: &TaskSpec,
-    evidence: &EvidencePacket,
-    risk_tier: RiskTier
-) -> Result<HashMap<String, JudgeVerdict>, CoordinationError> {
-    match risk_tier {
-        RiskTier::Tier1 => {
-            // Sequential execution with maximum oversight
-            self.evaluate_judges_sequentially(task_spec, evidence).await
-        }
-        RiskTier::Tier2 => {
-            // Limited parallel with consensus checkpoints
-            self.evaluate_judges_with_checkpoints(task_spec, evidence).await
-        }
-        RiskTier::Tier3 => {
-            // High parallel with minimal coordination
-            self.evaluate_judges_highly_parallel(task_spec, evidence).await
-        }
-    }
+// Example: Cross-crate council coordination
+use agent_orchestration::CouncilCoordinator;
+use system_quality_security::QualityGate;
+use agent_agency_contracts::TaskContract;
+use data_infrastructure::AuditStore;
+
+pub async fn evaluate_task_distributed(
+    task: TaskContract,
+    quality_gate: &QualityGate,
+    audit_store: &AuditStore,
+) -> Result<TaskVerdict, CoordinationError> {
+    // 1. Quality gate validation
+    quality_gate.validate_compliance(&task).await?;
+
+    // 2. Risk assessment and coordination
+    let coordinator = CouncilCoordinator::new();
+    let verdict = coordinator.evaluate_task(task).await?;
+
+    // 3. Audit trail storage
+    audit_store.record_verdict(&verdict).await?;
+
+    Ok(verdict)
 }
 ```
 
 ## Key Interactions
 
 - **Input Sources**:
-  - Task specifications with scope and risk tier
-  - Worker structured outputs with rationale and self-assessment
-  - Research agent context bundles and evidence enrichment
+  - Task specifications via data-interfaces
+  - Worker outputs from agent-workers
+  - Research evidence from agent-research
+  - Contract validation from agent-agency-contracts
 
 - **Output Destinations**:
-  - Orchestration Core for task acceptance/rejection/modification
-  - Provenance store for constitutional audit trails
-  - Learning systems for continuous improvement
+  - Task verdicts to agent-orchestration for execution decisions
+  - Audit trails to data-infrastructure for provenance tracking
+  - Quality reports to system-quality-security for compliance monitoring
 
-- **Coordination Points**:
-  - Debate protocol with research agent for evidence gathering
-  - Circuit breaker integration for component health monitoring
-  - Learning signal generation for system improvement
+- **Cross-Crate Dependencies**:
+  - agent-orchestration coordinates the governance process
+  - system-quality-security provides quality gate validation
+  - agent-agency-contracts ensures type safety and contract compliance
+  - data-infrastructure handles audit trail persistence
 
 ## Performance Characteristics
 
-- **Constitutional Judge**: <100ms (ANE-optimized)
-- **Technical Auditor**: <500ms (GPU-accelerated)
-- **Quality Evaluator**: <200ms
-- **Integration Validator**: <150ms
-- **Full Council Consensus**:
-  - Tier 3: <1s (high parallel)
-  - Tier 2: <2s (checkpoint consensus)
-  - Tier 1: <3s (sequential with oversight)
+- **Quality Gate Validation**: <100ms (system-quality-security)
+- **Contract Validation**: <50ms (agent-agency-contracts)
+- **Council Coordination**: <200ms (agent-orchestration)
+- **Audit Trail Storage**: <150ms (data-infrastructure)
+- **Full Governance Cycle**:
+  - Tier 3: <500ms (distributed parallel)
+  - Tier 2: <1s (checkpoint coordination)
+  - Tier 1: <2s (sequential oversight)
 
 ## Implementation Details
 
-### Core Data Structures
+### Distributed Data Structures
 
 ```rust
-#[derive(Debug, Clone)]
-pub struct ConsensusCoordinator {
-    config: CouncilConfig,
-    evidence_enrichment: EvidenceEnrichmentCoordinator,
-    resilience_manager: Arc<ResilienceManager>,
-    metrics: Arc<RwLock<CoordinatorMetrics>>,
-}
-
-#[derive(Debug, Clone)]
-pub struct JudgeVerdict {
-    pub judge_id: String,
-    pub task_id: Uuid,
-    pub pass: bool,
+// agent-agency-contracts crate
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TaskVerdict {
+    pub task_id: String,
+    pub verdict_id: String,
+    pub approved: bool,
     pub reasoning: String,
     pub confidence: f32,
-    pub evidence: Vec<EvidencePacket>,
-    pub timestamp: DateTime<Utc>,
+    pub evidence: Vec<String>,
+    pub risk_tier: RiskTier,
+    pub timestamp: String,
 }
 
-#[derive(Debug)]
-pub struct ConsensusResult {
-    pub task_id: Uuid,
-    pub verdict_id: Uuid,
-    pub final_verdict: FinalVerdict,
-    pub individual_verdicts: HashMap<String, JudgeVerdict>,
-    pub consensus_score: f32,
-    pub debate_rounds: i32,
+// system-quality-security crate
+#[derive(Debug, Clone)]
+pub struct QualityGateResult {
+    pub task_id: String,
+    pub compliance_passed: bool,
+    pub violations: Vec<String>,
+    pub recommendations: Vec<String>,
     pub evaluation_time_ms: u64,
-    pub timestamp: DateTime<Utc>,
+}
+
+// data-infrastructure crate
+#[derive(Debug, Clone)]
+pub struct AuditRecord {
+    pub record_id: String,
+    pub task_id: String,
+    pub verdict: TaskVerdict,
+    pub quality_report: QualityGateResult,
+    pub timestamp: String,
+    pub provenance_hash: String,
 }
 ```
 
-### Execution Flow Implementation
+### Distributed Execution Flow
 
 ```rust
-impl ConsensusCoordinator {
-    pub async fn evaluate_task(&mut self, task_spec: TaskSpec) -> Result<ConsensusResult> {
-        // 1. Evidence enrichment with resilience
-        let evidence = self.resilience_manager
-            .execute_resilient("evidence_enrichment", || async {
-                self.evidence_enrichment.enrich_task_evidence(&task_spec).await
-            })
-            .await?;
+// agent-orchestration crate - Coordinator
+use agent_agency_contracts::TaskVerdict;
+use system_quality_security::QualityGate;
+use data_infrastructure::AuditStore;
 
-        // 2. Sequential judge evaluation (current implementation)
-        let mut individual_verdicts = HashMap::new();
-        self.evaluate_constitutional_judge(&task_spec, &evidence, &mut individual_verdicts).await?;
-        self.evaluate_technical_judge(&task_spec, &evidence, &mut individual_verdicts).await?;
-        self.evaluate_quality_judge(&task_spec, &evidence, &mut individual_verdicts).await?;
-        self.evaluate_integration_judge(&task_spec, &evidence, &mut individual_verdicts).await?;
+pub async fn coordinate_governance(
+    task_id: &str,
+    quality_gate: &QualityGate,
+    audit_store: &AuditStore,
+) -> Result<TaskVerdict, GovernanceError> {
+    // 1. Quality gate validation
+    let quality_result = quality_gate.evaluate_task(task_id).await?;
 
-        // 3. Consensus calculation
-        let consensus_score = self.calculate_consensus_score(&individual_verdicts);
-        let final_verdict = self.determine_final_verdict(&individual_verdicts, consensus_score, &evidence);
+    // 2. Council coordination (distributed across crates)
+    let verdict = if quality_result.compliance_passed {
+        self.coordinate_council_evaluation(task_id).await?
+    } else {
+        TaskVerdict::rejected(task_id, "Quality gate failure")
+    };
 
-        // 4. Debate protocol (if consensus low)
-        let debate_rounds = if consensus_score < self.config.debate_threshold {
-            self.orchestrate_debate(&individual_verdicts, &task_spec).await?
-        } else {
-            0
-        };
+    // 3. Audit trail storage
+    audit_store.record_governance(&verdict, &quality_result).await?;
 
-        // 5. Result construction with provenance
-        let result = ConsensusResult { /* ... */ };
-        self.record_provenance(&result).await?;
-
-        Ok(result)
-    }
+    Ok(verdict)
 }
 ```
 
 ### Risk-Tier Implementation
 
 ```rust
-#[derive(Debug, Clone, PartialEq)]
+// agent-agency-contracts crate
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum RiskTier {
+    #[serde(rename = "tier1")]
     Tier1, // High risk: Sequential, maximum oversight
-    Tier2, // Medium risk: Limited parallel, checkpoint consensus
-    Tier3, // Low risk: High parallel, minimal coordination
+    #[serde(rename = "tier2")]
+    Tier2, // Medium risk: Limited parallel, checkpoint coordination
+    #[serde(rename = "tier3")]
+    Tier3, // Low risk: Distributed parallel, minimal coordination
 }
 
 impl RiskTier {
-    pub fn max_parallelism(&self) -> usize {
+    pub fn governance_intensity(&self) -> GovernanceLevel {
         match self {
-            RiskTier::Tier1 => 1,
-            RiskTier::Tier2 => 2,
-            RiskTier::Tier3 => 4,
+            RiskTier::Tier1 => GovernanceLevel::Maximum,
+            RiskTier::Tier2 => GovernanceLevel::Standard,
+            RiskTier::Tier3 => GovernanceLevel::Minimal,
         }
-    }
-
-    pub fn requires_debate(&self) -> bool {
-        matches!(self, RiskTier::Tier1 | RiskTier::Tier2)
     }
 }
 ```
@@ -220,29 +213,27 @@ impl RiskTier {
 ### Current Development Status
 
 **Implemented:**
-- Sequential judge evaluation framework
-- Evidence enrichment integration
-- Basic consensus calculation
-- Debate protocol skeleton
-- Provenance recording infrastructure
-- Resilience patterns for judge evaluation
+- Distributed governance coordination across 4 crates
+- Quality gate validation in system-quality-security
+- Contract-based communication via agent-agency-contracts
+- Audit trail persistence in data-infrastructure
+- Risk-tiered execution framework
 
 **Active Development:**
-- Risk-tiered execution coordination
-- Parallel judge evaluation implementation
-- Advanced debate protocol completion
-- Learning signal processing
-- Performance optimization for Apple Silicon targets
+- Cross-crate integration testing
+- Performance optimization for distributed governance
+- Enhanced provenance tracking capabilities
+- Automated compliance reporting
 
 **Test Coverage:**
-- Unit tests for individual judge evaluation
-- Integration tests for consensus coordination
-- Evidence enrichment validation
-- Resilience pattern testing
+- Unit tests for individual crate components
+- Integration tests for cross-crate governance flows
+- Contract validation testing
+- Audit trail verification
 
 ## See Also
 
-- **[coordinating-concurrency.md](../coordinating-concurrency.md)** - Detailed constitutional concurrency framework
-- **[contracts/final-verdict.schema.json](../contracts/final-verdict.schema.json)** - Council verdict data contract
-- **[contracts/judge-verdict.schema.json](../contracts/judge-verdict.schema.json)** - Individual judge verdict format
+- **[../contracts/README.md](../contracts/README.md)** - Contract definitions and JSON schemas
+- **[../contracts/final-verdict.schema.json](../contracts/final-verdict.schema.json)** - Task verdict data contract
+- **[../system-overview.md](../system-overview.md)** - Complete system architecture overview
 

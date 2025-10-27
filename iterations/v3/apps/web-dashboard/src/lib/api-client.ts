@@ -1,518 +1,369 @@
-// API Client for V3 Backend Communication
-// Handles authentication, retries, error handling, and structured responses
+/**
+ * API Client for Rust Backend
+ * Provides connection management, abort controllers, and proper error handling
+ *
+ * @author @darianrosebrook
+ */
 
-export interface ApiConfig {
+import { Task, TaskSubmissionRequest, TaskSubmissionResponse, TaskListResponse } from '@/types/tasks';
+
+// Connection management types
+export interface ConnectionConfig {
   baseUrl: string;
   timeout: number;
-  maxRetries: number;
+  retryAttempts: number;
   retryDelay: number;
-  authToken?: string;
 }
 
-export class ApiError extends Error {
-  constructor(
-    public status: number,
-    message: string,
-    public response?: unknown,
-    public url?: string
-  ) {
-    super(message);
-    this.name = "ApiError";
+export interface RequestOptions {
+  signal?: AbortSignal;
+  timeout?: number;
+  retries?: number;
+}
+
+export interface ApiResponse<T> {
+  data: T;
+  status: number;
+  headers: Record<string, string>;
+  timestamp: string;
+}
+
+export interface ApiError {
+  message: string;
+  status?: number;
+  code?: string;
+  details?: any;
+  timestamp: string;
+}
+
+// Connection pool management
+class ConnectionPool {
+  private activeConnections = new Map<string, AbortController>();
+  private maxConnections = 10;
+  private connectionTimeouts = new Map<string, NodeJS.Timeout>();
+
+  createConnection(endpoint: string): AbortController {
+    // Clean up expired connections
+    this.cleanup();
+
+    if (this.activeConnections.size >= this.maxConnections) {
+      throw new Error('Maximum connections exceeded');
+    }
+
+    const controller = new AbortController();
+    const connectionId = `${endpoint}-${Date.now()}-${Math.random()}`;
+
+    this.activeConnections.set(connectionId, controller);
+
+    // Auto-cleanup after timeout
+    const timeout = setTimeout(() => {
+      this.cleanupConnection(connectionId);
+    }, 30000); // 30 second timeout
+
+    this.connectionTimeouts.set(connectionId, timeout);
+
+    return controller;
+  }
+
+  abortConnection(endpoint: string) {
+    // Find and abort connections for this endpoint
+    for (const [id, controller] of this.activeConnections.entries()) {
+      if (id.startsWith(endpoint)) {
+        controller.abort();
+        this.cleanupConnection(id);
+      }
+    }
+  }
+
+  cleanupConnection(connectionId: string) {
+    this.activeConnections.delete(connectionId);
+    const timeout = this.connectionTimeouts.get(connectionId);
+    if (timeout) {
+      clearTimeout(timeout);
+      this.connectionTimeouts.delete(connectionId);
+    }
+  }
+
+  cleanup() {
+    // Remove expired connections
+    const now = Date.now();
+    for (const [id, timeout] of this.connectionTimeouts.entries()) {
+      // Check if connection has been active too long
+      const connectionTime = parseInt(id.split('-')[1]);
+      if (now - connectionTime > 60000) { // 1 minute
+        this.cleanupConnection(id);
+      }
+    }
+  }
+
+  getActiveCount(): number {
+    this.cleanup();
+    return this.activeConnections.size;
   }
 }
 
-export class ApiClient {
-  private config: ApiConfig;
+// Rate limiting implementation
+class RateLimiter {
+  private requests = new Map<string, number[]>();
+  private limits: Record<string, { maxRequests: number; windowMs: number }> = {
+    tasks: { maxRequests: 30, windowMs: 60000 }, // 30 requests per minute
+    health: { maxRequests: 60, windowMs: 60000 }, // 60 requests per minute
+    metrics: { maxRequests: 120, windowMs: 60000 }, // 120 requests per minute
+  };
 
-  constructor(config: Partial<ApiConfig> = {}) {
+  canMakeRequest(endpoint: string): boolean {
+    const limit = this.getLimit(endpoint);
+    const now = Date.now();
+    const windowStart = now - limit.windowMs;
+
+    const requestTimes = this.requests.get(endpoint) || [];
+    const recentRequests = requestTimes.filter(time => time > windowStart);
+
+    return recentRequests.length < limit.maxRequests;
+  }
+
+  recordRequest(endpoint: string) {
+    const now = Date.now();
+    const requestTimes = this.requests.get(endpoint) || [];
+    requestTimes.push(now);
+
+    // Keep only recent requests
+    const limit = this.getLimit(endpoint);
+    const windowStart = now - limit.windowMs;
+    const recentRequests = requestTimes.filter(time => time > windowStart);
+
+    this.requests.set(endpoint, recentRequests);
+  }
+
+  private getLimit(endpoint: string) {
+    // Extract category from endpoint
+    if (endpoint.includes('/tasks')) return this.limits.tasks;
+    if (endpoint.includes('/health')) return this.limits.health;
+    if (endpoint.includes('/metrics')) return this.limits.metrics;
+    return { maxRequests: 30, windowMs: 60000 }; // Default
+  }
+}
+
+// Main API client
+export class ApiClient {
+  private config: ConnectionConfig;
+  private connectionPool = new ConnectionPool();
+  private rateLimiter = new RateLimiter();
+
+  constructor(config: Partial<ConnectionConfig> = {}) {
     this.config = {
-      baseUrl:
-        config.baseUrl ??
-        (typeof window !== "undefined"
-          ? "/api/proxy"
-          : "http://localhost:8080"),
-      timeout: config.timeout ?? 30000,
-      maxRetries: config.maxRetries ?? 3,
-      retryDelay: config.retryDelay ?? 1000,
-      authToken: config.authToken || "",
+      baseUrl: config.baseUrl || process.env.NEXT_PUBLIC_V3_BACKEND_URL || 'http://localhost:8080',
+      timeout: config.timeout || 30000,
+      retryAttempts: config.retryAttempts || 3,
+      retryDelay: config.retryDelay || 1000,
     };
   }
 
-  // Update configuration
-  updateConfig(updates: Partial<ApiConfig>) {
-    this.config = { ...this.config, ...updates };
-  }
-
-  // Generic request method with retry logic
+  // Core request method with abort controller support
   async request<T>(
-    path: string,
-    options: RequestInit = {},
-    retryCount = 0
-  ): Promise<T> {
-    const url = `${this.config.baseUrl}${path}`;
+    endpoint: string,
+    options: RequestInit & RequestOptions = {}
+  ): Promise<ApiResponse<T>> {
+    const {
+      signal,
+      timeout = this.config.timeout,
+      retries = this.config.retryAttempts,
+      ...fetchOptions
+    } = options;
 
-    // Prepare headers
-    const headers = new Headers(options.headers);
-
-    // Set default headers
-    headers.set("Accept", "application/json");
-    headers.set("Content-Type", "application/json");
-
-    // Add authorization if available
-    if (this.config.authToken) {
-      headers.set("Authorization", `Bearer ${this.config.authToken}`);
-    }
-
-    // Add user agent
-    headers.set("User-Agent", "web-dashboard/0.1.0");
-
-    // Create AbortController for timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), this.config.timeout);
-
-    try {
-      const response = await fetch(url, {
-        ...options,
-        headers,
-        signal: controller.signal,
+    // Check rate limits
+    if (!this.rateLimiter.canMakeRequest(endpoint)) {
+      throw new ApiError('Rate limit exceeded', 429, 'RATE_LIMIT_EXCEEDED', {
+        endpoint,
+        retryAfter: 60000
       });
+    }
 
-      clearTimeout(timeoutId);
+    // Create abort controller for this request
+    const controller = signal || new AbortController();
 
-      // Handle non-2xx responses
-      if (!response.ok) {
-        const errorText = await response.text();
-        let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-
-        try {
-          const errorData = JSON.parse(errorText);
-          errorMessage = errorData.error || errorData.message || errorMessage;
-        } catch {
-          // Use error text if not JSON
-          if (errorText) {
-            errorMessage = errorText;
-          }
-        }
-
-        // Check if we should retry
-        const shouldRetry = this.shouldRetry(response.status, retryCount);
-
-        if (shouldRetry) {
-          console.warn(
-            `Request failed (${response.status}), retrying in ${
-              this.config.retryDelay
-            }ms... (${retryCount + 1}/${this.config.maxRetries})`
-          );
-          await this.delay(this.config.retryDelay * Math.pow(2, retryCount)); // Exponential backoff
-          return this.request<T>(path, options, retryCount + 1);
-        }
-
-        throw new ApiError(response.status, errorMessage, errorText, url);
+    // Set up timeout
+    const timeoutId = setTimeout(() => {
+      if (controller && typeof controller.abort === 'function') {
+        controller.abort();
       }
+    }, timeout);
 
-      // Handle empty responses
-      const text = await response.text();
-      if (!text) {
-        return {} as T;
-      }
+    let lastError: Error | null = null;
 
-      // Parse JSON response
+    for (let attempt = 0; attempt <= retries; attempt++) {
       try {
-        return JSON.parse(text);
-      } catch (parseError) {
-        throw new ApiError(
-          response.status,
-          `Invalid JSON response: ${text.substring(0, 100)}...`,
-          text,
-          url
-        );
-      }
-    } catch (error) {
-      clearTimeout(timeoutId);
+        // Record the request for rate limiting
+        this.rateLimiter.recordRequest(endpoint);
 
-      // Handle timeout
-      if (error instanceof Error && error.name === "AbortError") {
-        const timeoutError = new ApiError(
-          408,
-          `Request timeout after ${this.config.timeout}ms`,
-          undefined,
-          url
-        );
+        const url = `${this.config.baseUrl}${endpoint}`;
+        const response = await fetch(url, {
+          ...fetchOptions,
+          signal: controller.signal,
+          headers: {
+            'Content-Type': 'application/json',
+            'User-Agent': 'web-dashboard-api-client',
+            ...fetchOptions.headers,
+          },
+        });
 
-        if (retryCount < this.config.maxRetries) {
-          console.warn(
-            `Request timeout, retrying in ${this.config.retryDelay}ms... (${
-              retryCount + 1
-            }/${this.config.maxRetries})`
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new ApiError(
+            errorData.message || `HTTP ${response.status}`,
+            response.status,
+            'HTTP_ERROR',
+            errorData
           );
-          await this.delay(this.config.retryDelay * Math.pow(2, retryCount));
-          return this.request<T>(path, options, retryCount + 1);
         }
 
-        throw timeoutError;
-      }
+        const data = await response.json();
+        const headers: Record<string, string> = {};
+        response.headers.forEach((value, key) => {
+          headers[key] = value;
+        });
 
-      // Handle network errors
-      if (error instanceof Error && error.name === "TypeError") {
-        const networkError = new ApiError(
-          0,
-          `Network error: ${error.message}`,
-          undefined,
-          url
-        );
+        return {
+          data,
+          status: response.status,
+          headers,
+          timestamp: new Date().toISOString(),
+        };
 
-        if (retryCount < this.config.maxRetries) {
-          console.warn(
-            `Network error, retrying in ${this.config.retryDelay}ms... (${
-              retryCount + 1
-            }/${this.config.maxRetries})`
-          );
-          await this.delay(this.config.retryDelay * Math.pow(2, retryCount));
-          return this.request<T>(path, options, retryCount + 1);
+      } catch (error) {
+        clearTimeout(timeoutId);
+        lastError = error as Error;
+
+        // Don't retry if aborted or if it's the last attempt
+        if (controller.signal.aborted || attempt === retries) {
+          break;
         }
 
-        throw networkError;
+        // Exponential backoff
+        const delay = this.config.retryDelay * Math.pow(2, attempt);
+        await new Promise(resolve => setTimeout(resolve, delay));
       }
-
-      // Re-throw ApiError instances
-      if (error instanceof ApiError) {
-        throw error;
-      }
-
-      // Wrap other errors
-      throw new ApiError(
-        0,
-        error instanceof Error ? error.message : "Unknown error occurred",
-        error,
-        url
-      );
-    }
-  }
-
-  // Determine if a request should be retried based on status code
-  private shouldRetry(status: number, retryCount: number): boolean {
-    if (retryCount >= this.config.maxRetries) {
-      return false;
     }
 
-    // Retry on server errors, timeouts, and network issues
-    const retryableStatuses = [408, 429, 500, 502, 503, 504];
-    return retryableStatuses.includes(status);
+    // All retries failed
+    if (lastError instanceof ApiError) {
+      throw lastError;
+    }
+
+    throw new ApiError(
+      lastError?.message || 'Network request failed',
+      undefined,
+      'NETWORK_ERROR',
+      { originalError: lastError?.message }
+    );
   }
 
-  // Utility delay function
-  private delay(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
+  // Task API methods
+  async getTasks(options?: RequestOptions): Promise<ApiResponse<TaskListResponse>> {
+    return this.request<TaskListResponse>('/api/v1/tasks', {
+      method: 'GET',
+      ...options,
+    });
+  }
+
+  async getTask(taskId: string, options?: RequestOptions): Promise<ApiResponse<Task>> {
+    return this.request<Task>(`/api/v1/tasks/${taskId}`, {
+      method: 'GET',
+      ...options,
+    });
+  }
+
+  async createTask(
+    taskData: TaskSubmissionRequest,
+    options?: RequestOptions
+  ): Promise<ApiResponse<TaskSubmissionResponse>> {
+    return this.request<TaskSubmissionResponse>('/api/v1/tasks', {
+      method: 'POST',
+      body: JSON.stringify(taskData),
+      ...options,
+    });
+  }
+
+  async cancelTask(taskId: string, options?: RequestOptions): Promise<ApiResponse<void>> {
+    return this.request<void>(`/api/v1/tasks/${taskId}/cancel`, {
+      method: 'POST',
+      ...options,
+    });
+  }
+
+  async pauseTask(taskId: string, options?: RequestOptions): Promise<ApiResponse<void>> {
+    return this.request<void>(`/api/v1/tasks/${taskId}/pause`, {
+      method: 'POST',
+      ...options,
+    });
+  }
+
+  async resumeTask(taskId: string, options?: RequestOptions): Promise<ApiResponse<void>> {
+    return this.request<void>(`/api/v1/tasks/${taskId}/resume`, {
+      method: 'POST',
+      ...options,
+    });
   }
 
   // Health check
-  async health(): Promise<{
-    status: string;
-    timestamp: string;
-    dashboard: {
-      status: string;
-      version: string;
-      uptime: number;
-      node_version: string;
-    };
-    backend: {
-      status: string;
-      url: string;
-      response_time_ms: number;
-      error?: string;
-    };
-  }> {
-    // Use direct API call for health check (not proxied)
-    const response = await fetch("/api/health", {
-      headers: { Accept: "application/json" },
-      signal: AbortSignal.timeout(5000),
+  async healthCheck(options?: RequestOptions): Promise<ApiResponse<{ status: string; version: string }>> {
+    return this.request<{ status: string; version: string }>('/health', {
+      method: 'GET',
+      ...options,
     });
-
-    if (!response.ok) {
-      throw new ApiError(
-        response.status,
-        `Health check failed: ${response.statusText}`
-      );
-    }
-
-    return response.json();
   }
 
-  // Placeholder methods for future V3 API endpoints
-  // These will be implemented as the backend endpoints become available
-  /* eslint-disable no-unused-vars */
-  async getTasks(filters?: Record<string, unknown>): Promise<{
-    tasks: Array<{
-      id: string;
-      title: string;
-      status: string;
-      priority: string;
-      createdAt: string;
-      updatedAt: string;
-    }>;
-    total: number;
-    page: number;
-    limit: number;
-  }> {
-    try {
-      const params = new URLSearchParams();
-      if (filters) {
-        Object.entries(filters).forEach(([key, value]) => {
-          if (value !== undefined && value !== null) {
-            params.append(key, String(value));
-          }
-        });
-      }
-
-      const response = await this.request<{
-        tasks: Array<{
-          id: string;
-          title: string;
-          status: string;
-          priority: string;
-          createdAt: string;
-          updatedAt: string;
-        }>;
-        total: number;
-        page: number;
-        limit: number;
-      }>(`/api/v1/tasks?${params}`);
-
-      return response;
-    } catch (error) {
-      console.error("Failed to get tasks:", error);
-      throw error;
-    }
+  // Metrics
+  async getMetrics(options?: RequestOptions): Promise<ApiResponse<Record<string, any>>> {
+    return this.request<Record<string, any>>('/metrics', {
+      method: 'GET',
+      ...options,
+    });
   }
 
-  async getTask(taskId: string): Promise<{
-    id: string;
-    title: string;
-    description: string;
-    status: string;
-    priority: string;
-    createdAt: string;
-    updatedAt: string;
-    workingSpec?: {
-      id: string;
-      title: string;
-      riskTier: number;
-      acceptance: Array<{
-        id: string;
-        given: string;
-        when: string;
-        then: string;
-      }>;
-    };
-    artifacts?: Array<{
-      id: string;
-      type: string;
-      size: number;
-      createdAt: string;
-    }>;
-    qualityReport?: {
-      coverage: number;
-      mutationScore: number;
-      lintErrors: number;
-      typeErrors: number;
-    };
-  }> {
-    try {
-      const response = await this.request<{
-        id: string;
-        title: string;
-        description: string;
-        status: string;
-        priority: string;
-        createdAt: string;
-        updatedAt: string;
-        workingSpec?: {
-          id: string;
-          title: string;
-          riskTier: number;
-          acceptance: Array<{
-            id: string;
-            given: string;
-            when: string;
-            then: string;
-          }>;
-        };
-        artifacts?: Array<{
-          id: string;
-          type: string;
-          size: number;
-          createdAt: string;
-        }>;
-        qualityReport?: {
-          coverage: number;
-          mutationScore: number;
-          lintErrors: number;
-          typeErrors: number;
-        };
-      }>(`/api/v1/tasks/${taskId}`);
-
-      return response;
-    } catch (error) {
-      console.error("Failed to get task:", error);
-      throw error;
-    }
+  // Connection management
+  getActiveConnections(): number {
+    return this.connectionPool.getActiveCount();
   }
 
-  async createChatSession(): Promise<{ sessionId: string; createdAt: string }> {
-    try {
-      const response = await this.request<{
-        sessionId: string;
-        createdAt: string;
-      }>("/api/v1/chat/session", {
-        method: "POST",
-        body: JSON.stringify({}),
-      });
-      return response;
-    } catch (error) {
-      console.error("Failed to create chat session:", error);
-      throw error;
-    }
+  abortEndpointConnections(endpoint: string) {
+    this.connectionPool.abortConnection(endpoint);
   }
 
-  async sendChatMessage(
-    sessionId: string,
-    message: string
-  ): Promise<{ messageId: string; response: string; timestamp: string }> {
-    try {
-      // For now, use HTTP POST instead of WebSocket for simplicity
-      // TODO: Upgrade to WebSocket when real-time messaging is needed
-      const response = await this.request<{
-        messageId: string;
-        response: string;
-        timestamp: string;
-      }>(`/api/v1/chat/ws/${sessionId}`, {
-        method: "POST",
-        body: JSON.stringify({ message }),
-      });
-      return response;
-    } catch (error) {
-      console.error("Failed to send chat message:", error);
-      throw error;
-    }
-  }
-
-  async getDatabaseTables(): Promise<{
-    tables: Array<{
-      name: string;
-      schema: string;
-      rowCount: number;
-      columns: Array<{
-        name: string;
-        type: string;
-        nullable: boolean;
-        primaryKey: boolean;
-      }>;
-    }>;
-  }> {
-    try {
-      const response = await this.request<{
-        tables: Array<{
-          name: string;
-          schema: string;
-          rowCount: number;
-          columns: Array<{
-            name: string;
-            type: string;
-            nullable: boolean;
-            primaryKey: boolean;
-          }>;
-        }>;
-      }>("/api/v1/database/tables");
-      return response;
-    } catch (error) {
-      console.error("Failed to get database tables:", error);
-      throw error;
-    }
-  }
-
-  async queryDatabase(
-    table: string,
-    filters: Record<string, unknown>
-  ): Promise<{
-    data: Array<Record<string, unknown>>;
-    total: number;
-    columns: Array<{
-      name: string;
-      type: string;
-    }>;
-  }> {
-    try {
-      const response = await this.request<{
-        data: Array<Record<string, unknown>>;
-        total: number;
-        columns: Array<{
-          name: string;
-          type: string;
-        }>;
-      }>(`/api/v1/database/tables/${table}/query`, {
-        method: "POST",
-        body: JSON.stringify({ filters }),
-      });
-      return response;
-    } catch (error) {
-      console.error("Failed to query database:", error);
-      throw error;
-    }
-  }
-  /* eslint-enable no-unused-vars */
-
-  async getMetrics(): Promise<{
-    agents: Array<{
-      id: string;
-      status: string;
-      activeTasks: number;
-      completedTasks: number;
-      errorRate: number;
-    }>;
-    coordination: {
-      totalTasks: number;
-      activeTasks: number;
-      completedTasks: number;
-      failedTasks: number;
-    };
-    business: {
-      totalUsers: number;
-      activeUsers: number;
-      systemHealth: number;
-      responseTime: number;
-    };
-  }> {
-    try {
-      const response = await this.request<{
-        agents: Array<{
-          id: string;
-          status: string;
-          activeTasks: number;
-          completedTasks: number;
-          errorRate: number;
-        }>;
-        coordination: {
-          totalTasks: number;
-          activeTasks: number;
-          completedTasks: number;
-          failedTasks: number;
-        };
-        business: {
-          totalUsers: number;
-          activeUsers: number;
-          systemHealth: number;
-          responseTime: number;
-        };
-      }>("/metrics/stream");
-      return response;
-    } catch (error) {
-      console.error("Failed to get metrics:", error);
-      throw error;
-    }
+  // Update configuration
+  updateConfig(config: Partial<ConnectionConfig>) {
+    this.config = { ...this.config, ...config };
   }
 }
 
-// Default client instance
-export const apiClient = new ApiClient();
+// Custom error class
+export class ApiError extends Error {
+  public status?: number;
+  public code?: string;
+  public details?: any;
+  public timestamp: string;
 
-// Types are exported inline with their declarations
+  constructor(message: string, status?: number, code?: string, details?: any) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.code = code;
+    this.details = details;
+    this.timestamp = new Date().toISOString();
+  }
+}
+
+// Singleton instance
+let apiClientInstance: ApiClient | null = null;
+
+export function getApiClient(): ApiClient {
+  if (!apiClientInstance) {
+    apiClientInstance = new ApiClient();
+  }
+  return apiClientInstance;
+}
+
+// Export default instance
+export default getApiClient();

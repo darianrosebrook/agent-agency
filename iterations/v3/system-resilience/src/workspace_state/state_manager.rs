@@ -5,7 +5,6 @@
 
 use super::state_types::*;
 use anyhow::Result;
-use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use std::collections::HashMap;
 #[cfg(unix)]
@@ -13,7 +12,7 @@ use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 use tracing::{debug, info, warn};
-use system_configuration::{HealthStatus, ValidationResult, HealthCheckable, MetricsProvider, Validatable, StatusReporter};
+use system_configuration::{HealthStatus};
 
 /// Main workspace state manager with standardized patterns
 pub struct WorkspaceStateManager {

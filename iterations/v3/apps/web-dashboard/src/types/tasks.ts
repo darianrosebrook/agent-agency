@@ -1,24 +1,78 @@
 // Task-related type definitions for the web dashboard
+// Synchronized with Rust backend API structures
 
 export interface Task {
+  task_id: string;
+  status: string;
+  progress_percentage: number;
+  current_phase?: string;
+  started_at?: string;
+  updated_at?: string;
+  quality_score?: number;
+  description?: string;
+  priority?: string;
+  working_spec?: WorkingSpec;
+  artifacts?: ExecutionArtifacts;
+  quality_report?: QualityReport;
+  completed_at?: string;
+  error_message?: string;
+}
+
+// Working spec type from Rust backend
+export interface WorkingSpec {
   id: string;
   title: string;
   description?: string;
-  status: "pending" | "running" | "completed" | "failed" | "paused" | "cancelled";
-  phase: "planning" | "analysis" | "execution" | "validation" | "refinement" | "qa" | "finalization";
-  priority: "low" | "medium" | "high" | "critical";
-  working_spec_id: string;
-  created_at: string;
-  updated_at: string;
-  started_at?: string;
-  completed_at?: string;
-  retry_count: number;
-  max_retries: number;
-  context?: TaskContext;
-  progress?: TaskProgress;
-  quality_report?: QualityReport;
-  error_message?: string;
-  artifacts: TaskArtifact[];
+  risk_tier?: string;
+  mode?: string;
+  change_budget?: ChangeBudget;
+  blast_radius?: BlastRadius;
+  operational_rollback_slo?: string;
+  scope?: TaskScope;
+  invariants?: string[];
+  acceptance?: AcceptanceCriterion[];
+  non_functional?: NonFunctionalRequirements;
+}
+
+export interface ChangeBudget {
+  max_files: number;
+  max_loc: number;
+}
+
+export interface BlastRadius {
+  modules: string[];
+  data_migration: boolean;
+}
+
+export interface TaskScope {
+  in: string[];
+  out: string[];
+}
+
+export interface AcceptanceCriterion {
+  id: string;
+  given: string;
+  when: string;
+  then: string;
+}
+
+export interface NonFunctionalRequirements {
+  a11y?: string[];
+  perf?: PerformanceRequirements;
+  security?: string[];
+}
+
+export interface PerformanceRequirements {
+  api_p95_ms?: number;
+  lcp_ms?: number;
+}
+
+export interface ExecutionArtifacts {
+  files_created?: string[];
+  files_modified?: string[];
+  files_deleted?: string[];
+  total_changes?: number;
+  git_commit_hash?: string;
 }
 
 export interface TaskContext {
@@ -66,27 +120,27 @@ export interface AuditLogEntry {
   resource_type?: string;
 }
 
+// API Request/Response types matching Rust backend
 export interface TaskSubmissionRequest {
-  title: string;
-  description?: string;
-  working_spec_id: string;
-  priority?: "low" | "medium" | "high" | "critical";
-  context?: TaskContext;
-  max_retries?: number;
+  description: string;
+  execution_mode?: string;
+  risk_tier?: string;
+  context?: string;
+  priority?: string;
+  deadline?: string;
 }
 
 export interface TaskSubmissionResponse {
   task_id: string;
   status: string;
   message: string;
+  estimated_completion?: string;
 }
 
 export interface TaskListResponse {
   tasks: Task[];
-  total: number;
-  page: number;
-  page_size: number;
-  has_more: boolean;
+  total?: number;
+  has_more?: boolean;
 }
 
 export interface TaskListFilters {
@@ -119,16 +173,16 @@ export interface ApiError {
 export interface TaskUpdateMessage {
   type: "task_update";
   task_id: string;
-  status: Task["status"];
-  phase: Task["phase"];
-  progress?: TaskProgress;
+  status: string;
+  progress_percentage: number;
+  current_phase?: string;
   timestamp: string;
 }
 
 export interface TaskCompletionMessage {
   type: "task_completion";
   task_id: string;
-  status: "completed" | "failed";
+  status: string;
   quality_report?: QualityReport;
   error_message?: string;
   timestamp: string;
@@ -137,15 +191,31 @@ export interface TaskCompletionMessage {
 export interface TaskProgressMessage {
   type: "task_progress";
   task_id: string;
-  progress: TaskProgress;
-  current_step: string;
+  progress_percentage: number;
+  current_phase?: string;
   timestamp: string;
 }
 
-export type WebSocketMessage = 
-  | TaskUpdateMessage 
-  | TaskCompletionMessage 
-  | TaskProgressMessage;
+// System health WebSocket messages
+export interface SystemHealthMessage {
+  type: "health_update" | "component_update" | "alert_created" | "alert_updated" | "metrics_update";
+  data: any;
+  timestamp: string;
+}
+
+// SSE message types
+export interface SSEMessage {
+  type: string;
+  data: any;
+  id?: string;
+  timestamp: string;
+}
+
+export type WebSocketMessage =
+  | TaskUpdateMessage
+  | TaskCompletionMessage
+  | TaskProgressMessage
+  | SystemHealthMessage;
 
 // Dashboard-specific types
 export interface TaskDashboardStats {

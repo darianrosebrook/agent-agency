@@ -43,7 +43,7 @@ pub enum ANEError {
     
     /// Internal system error
     #[error("Internal: {0}")]
-    Internal(&'static str),
+    Internal(String),
     
     /// Invalid model format or corrupted file
     #[error("Invalid model format: {0}")]
@@ -92,21 +92,21 @@ pub type Result<T> = std::result::Result<T, ANEError>;
 /// Convert from std::io::Error to ANEError
 impl From<std::io::Error> for ANEError {
     fn from(_err: std::io::Error) -> Self {
-        ANEError::Internal("IO error")
+        ANEError::Internal("IO error".to_string())
     }
 }
 
 /// Convert from anyhow::Error to ANEError
 impl From<anyhow::Error> for ANEError {
     fn from(_err: anyhow::Error) -> Self {
-        ANEError::Internal("Anyhow error")
+        ANEError::Internal("Anyhow error".to_string())
     }
 }
 
 /// Convert from serde_json::Error to ANEError
 impl From<serde_json::Error> for ANEError {
     fn from(_err: serde_json::Error) -> Self {
-        ANEError::Internal("JSON error")
+        ANEError::Internal("JSON error".to_string())
     }
 }
 
@@ -115,8 +115,15 @@ impl From<CircuitBreakerError> for ANEError {
     fn from(err: CircuitBreakerError) -> Self {
         match err {
             CircuitBreakerError::CircuitOpen => ANEError::ResourceLimit("Circuit breaker open".to_string()),
-            CircuitBreakerError::OperationFailed(e) => ANEError::Internal("Circuit breaker operation failed"),
+            CircuitBreakerError::OperationFailed(_e) => ANEError::Internal("Circuit breaker operation failed".to_string()),
         }
+    }
+}
+
+/// Convert from candle_core::Error to ANEError
+impl From<candle_core::Error> for ANEError {
+    fn from(err: candle_core::Error) -> Self {
+        ANEError::Internal(format!("Tensor operation failed: {}", err))
     }
 }
 
@@ -127,13 +134,13 @@ pub trait IntoANEError {
 
 impl IntoANEError for String {
     fn into_ane_error(self) -> ANEError {
-        ANEError::Internal("String error")
+        ANEError::Internal("String error".to_string())
     }
 }
 
 impl IntoANEError for &str {
     fn into_ane_error(self) -> ANEError {
-        ANEError::Internal("String error")
+        ANEError::Internal("String error".to_string())
     }
 }
 

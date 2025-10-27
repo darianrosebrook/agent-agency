@@ -82,6 +82,9 @@ target/
 
 # Temporal project management documentation
 docs-status/
+docs/archive/implementation-tracking/
+docs/archive/session-reports/
+docs/archive/summaries/
 
 # Analysis and report files (generated)
 *_analysis_report.md
@@ -89,6 +92,11 @@ final_analysis_*.md
 torch_dependency_graph.md
 fixed_todo_analysis_report.md
 v3_todo_priority_manifest.yaml
+
+# Project management files
+TODO.md
+*_TODO.md
+TODO_*.md
 
 # Corrupted/temporary files
 scripts/cargo.,toml
@@ -275,3 +283,4 @@ test-image*.png
 !*.zip.keep
 
 **/docs/internal/**
+ whisper.cpp/

@@ -11,7 +11,7 @@ use std::net::IpAddr;
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
 use serde_json::Value;
-use agent_agency_database::DatabaseClient;
+use crate::client::DatabaseClient;
 
 /// Audit event types for different operations
 #[derive(Debug, Clone)]
@@ -27,6 +27,7 @@ pub enum AuditEventType {
     AuthAttempt,
     SystemEvent,
     SecurityEvent,
+    ConfigurationChange,
 }
 
 /// Audit severity levels
@@ -78,20 +79,20 @@ impl AuditLogger {
         "#;
 
         let details_json = details.unwrap_or_else(|| Value::Object(serde_json::Map::new()));
-        let user_agent_str = context.user_agent.as_ref().map(|s| s.as_str());
+        let user_agent_str = context.user_agent.as_ref().map(|s| s.as_str()).unwrap_or("");
 
         self.db_client.execute(
             query,
             &[
                 &task_id,
-                &context.user_id,
+                &context.user_id.as_ref().map(|s| s.as_str()).unwrap_or(""),
                 &action,
-                &old_state,
-                &new_state,
-                &details_json,
-                &context.ip_address,
+                &old_state.unwrap_or(""),
+                &new_state.unwrap_or(""),
+                &details_json.to_string().as_str(),
+                &context.ip_address.as_ref().map(|ip| ip.to_string()).unwrap_or_else(|| "unknown".to_string()).as_str(),
                 &user_agent_str,
-                &context.session_id,
+                &context.session_id.as_ref().map(|s| s.as_str()).unwrap_or(""),
             ],
         ).await?;
 
@@ -129,25 +130,25 @@ impl AuditLogger {
         };
 
         let details_json = details.unwrap_or_else(|| Value::Object(serde_json::Map::new()));
-        let user_agent_str = context.user_agent.as_ref().map(|s| s.as_str());
+        let user_agent_str = context.user_agent.as_ref().map(|s| s.as_str()).unwrap_or("");
 
         self.db_client.execute(
             query,
             &[
                 &event_type,
                 &severity_str,
-                &context.source,
-                &context.user_id,
-                &context.session_id,
-                &resource_type,
-                &resource_id,
-                &action,
-                &details_json,
-                &context.ip_address,
+                &context.source.as_str(),
+                &context.user_id.as_ref().map(|s| s.as_str()).unwrap_or(""),
+                &context.session_id.as_ref().map(|s| s.as_str()).unwrap_or(""),
+                &resource_type.unwrap_or(""),
+                &resource_id.unwrap_or(""),
+                &action.unwrap_or(""),
+                &details_json.to_string().as_str(),
+                &context.ip_address.as_ref().map(|ip| ip.to_string()).unwrap_or_else(|| "unknown".to_string()).as_str(),
                 &user_agent_str,
-                &success,
-                &error_message,
-                &processing_time_ms,
+                &success.to_string().as_str(),
+                &error_message.unwrap_or(""),
+                &processing_time_ms.unwrap_or(0).to_string().as_str(),
             ],
         ).await?;
 
@@ -216,7 +217,7 @@ impl AuditLogger {
 
         let rows = self.db_client.query(
             query,
-            &[&task_id, &limit_val, &since_ts],
+            &[&task_id, &limit_val.to_string().as_str(), &since_ts.unwrap_or_default().to_string().as_str()],
         ).await?;
 
         let mut results = Vec::new();

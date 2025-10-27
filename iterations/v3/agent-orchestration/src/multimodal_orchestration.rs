@@ -5,16 +5,17 @@
 
 use anyhow::{Context, Result};
 use agent_data_processing::{
-    ingestion::{IngestionStage, FileIngestor, UrlIngestor, StreamIngestor, DatabaseIngestor, ApiIngestor},
-    enrichment::{EnrichmentStage, VisionEnricher, AsrEnricher, EntityEnricher, VisualCaptioningEnricher, CircuitBreaker},
-    indexing::{IndexingStage, Bm25Indexer, HnswIndexer, JobScheduler},
+    ingestion::{IngestionStage, UnifiedIngestor, CaptionsIngestor, DiagramsIngestor, VideoIngestor, SlidesIngestor, FileWatcher},
+    enrichment::{EnrichmentStage, UnifiedEnrichmentStage, VisionEnricher, AsrEnricher, EntityEnricher, VisualCaptioningEnricher, CircuitBreaker},
+    indexing::{IndexingStage, UnifiedIndexer, Bm25Indexer, HnswIndexer, JobScheduler},
     Block, EnrichedBlock, BlockData, EnrichedContent, ExtractedEntity, VisualElement, VisualElementType, ExtractedTopic,
-    DataInput,
+    DataInput, DataSource, ContentType,
 };
+use crate::coreml::{CoreMLManager, CoreMLModelType, InferenceResult};
 use agent_agency_research::{KnowledgeSeeker, ContentType};
 use agent_agency_council::coordinator::ConsensusCoordinator;
 use crate::audit_trail::AuditTrailManager;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tracing::{debug, error, info, warn};
 use uuid::Uuid;
@@ -23,25 +24,20 @@ use serde_json;
 /// Multimodal document processing orchestrator
 #[derive(Debug)]
 pub struct MultimodalOrchestrator {
+    /// Unified ingestor for all content types
+    unified_ingestor: UnifiedIngestor,
     /// File watcher for monitoring directories
     file_watcher: FileWatcher,
-    /// Ingestors for different content types
-    video_ingestor: VideoIngestor,
-    slides_ingestor: SlidesIngestor,
-    diagrams_ingestor: DiagramsIngestor,
-    captions_ingestor: CaptionsIngestor,
     /// Enrichers for content enhancement
-    vision_enricher: VisionEnricher,
-    asr_enricher: AsrEnricher,
-    entity_enricher: EntityEnricher,
-    visual_caption_enricher: VisualCaptionEnricher,
-    /// Indexers for search capabilities
-    bm25_indexer: Bm25Indexer,
-    hnsw_indexer: HnswIndexer,
+    unified_enricher: UnifiedEnrichmentStage,
+    /// Unified indexer for search capabilities
+    unified_indexer: UnifiedIndexer,
     /// Job scheduler for coordination
     job_scheduler: JobScheduler,
     /// Circuit breaker for resilience
     circuit_breaker: CircuitBreaker,
+    /// Core ML model manager for accelerated inference
+    coreml_manager: Option<Arc<CoreMLManager>>,
     /// Knowledge seeker for research integration
     knowledge_seeker: Option<Arc<KnowledgeSeeker>>,
     /// Council coordinator for decision-making
@@ -84,25 +80,42 @@ pub enum ProcessingStatus {
 
 impl MultimodalOrchestrator {
     /// Create new multimodal orchestrator
-    pub fn new() -> Self {
-        Self {
-            file_watcher: FileWatcher::new(),
-            video_ingestor: VideoIngestor::new(),
-            slides_ingestor: SlidesIngestor::new(),
-            diagrams_ingestor: DiagramsIngestor::new(),
-            captions_ingestor: CaptionsIngestor::new(),
-            vision_enricher: VisionEnricher::new(),
-            asr_enricher: AsrEnricher::new(),
-            entity_enricher: EntityEnricher::new(),
-            visual_caption_enricher: VisualCaptionEnricher::new(),
-            bm25_indexer: Bm25Indexer::new(),
-            hnsw_indexer: HnswIndexer::new(),
+    pub async fn new() -> Result<Self> {
+        // Initialize unified components
+        let unified_ingestor = UnifiedIngestor::new();
+        let unified_enricher = UnifiedEnrichmentStage::new().await?;
+        let unified_indexer = UnifiedIndexer::new(768, 32); // 768-dim embeddings, 32 neighbors
+
+        // Initialize Core ML manager
+        let coreml_manager = {
+            let manager = Arc::new(CoreMLManager::new(
+                std::env::var("COREML_MODELS_PATH")
+                    .map(|p| PathBuf::from(p))
+                    .unwrap_or_else(|_| PathBuf::from("/Users/darianrosebrook/Desktop/Projects/agent-agency/models/coreml"))
+            ));
+
+            // Try to load available models
+            if let Err(e) = manager.load_available_models().await {
+                warn!("Failed to load Core ML models: {}", e);
+            } else {
+                info!("Core ML models loaded successfully");
+            }
+
+            Some(manager)
+        };
+
+        Ok(Self {
+            unified_ingestor,
+            file_watcher: FileWatcher::new(vec![], vec![]),
+            unified_enricher,
+            unified_indexer,
             job_scheduler: JobScheduler::new(),
             circuit_breaker: CircuitBreaker::new(),
+            coreml_manager,
             knowledge_seeker: None,
             council_coordinator: None,
             audit_trail: None,
-        }
+        })
     }
 
     /// Set knowledge seeker for research integration

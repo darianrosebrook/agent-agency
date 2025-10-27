@@ -709,14 +709,7 @@ where
     }
 }
 
-impl<T: Send + Sync + 'static> Drop for PooledObject<T> {
-    fn drop(&mut self) {
-        if let Some(obj) = self.object.take() {
-            // Non-blocking object pool return with comprehensive error handling
-            self.return_to_pool_non_blocking(obj);
-        }
-    }
-
+impl<T: Send + Sync + 'static> PooledObject<T> {
     /// Return object to pool using non-blocking strategy with graceful degradation
     fn return_to_pool_non_blocking(&self, obj: T) {
         // Strategy 1: Try to spawn async task if tokio runtime is available
@@ -784,6 +777,15 @@ impl<T: Send + Sync + 'static> Drop for PooledObject<T> {
 
         // Update statistics for monitoring
         self.borrowed_count.fetch_sub(1, Ordering::Relaxed);
+    }
+}
+
+impl<T: Send + Sync + 'static> Drop for PooledObject<T> {
+    fn drop(&mut self) {
+        if let Some(obj) = self.object.take() {
+            // Non-blocking object pool return with comprehensive error handling
+            self.return_to_pool_non_blocking(obj);
+        }
     }
 }
 

@@ -23,7 +23,7 @@ impl QualityRule for GodObjectRule {
         "Detects files that are too large (god objects)"
     }
 
-    fn check_file(&self, file_path: &str, content: &str, config: &crate::config::QualityGateConfig) -> Vec<QualityViolation> {
+    fn check_file(&self, file_path: &str, content: &str, config: &crate::gates_config::QualityGateConfig) -> Vec<QualityViolation> {
         let mut violations = Vec::new();
         let line_count = content.lines().count();
 
@@ -61,7 +61,7 @@ impl QualityRule for DuplicateNameRule {
         "Detects excessive duplicate struct/enum names"
     }
 
-    fn check_file(&self, _file_path: &str, _content: &str, _config: &crate::config::QualityGateConfig) -> Vec<QualityViolation> {
+    fn check_file(&self, _file_path: &str, _content: &str, _config: &crate::gates_config::QualityGateConfig) -> Vec<QualityViolation> {
         // This rule needs global analysis across all files
         // Will be implemented in the runner
         Vec::new()
@@ -80,7 +80,7 @@ impl QualityRule for FunctionComplexityRule {
         "Detects functions that are too long"
     }
 
-    fn check_file(&self, file_path: &str, content: &str, config: &crate::config::QualityGateConfig) -> Vec<QualityViolation> {
+    fn check_file(&self, file_path: &str, content: &str, config: &crate::gates_config::QualityGateConfig) -> Vec<QualityViolation> {
         let mut violations = Vec::new();
         let function_regex = Regex::new(r"fn\s+\w+\s*\(").unwrap();
 
@@ -151,7 +151,7 @@ impl QualityRule for StructComplexityRule {
         "Detects structs with too many fields"
     }
 
-    fn check_file(&self, file_path: &str, content: &str, config: &crate::config::QualityGateConfig) -> Vec<QualityViolation> {
+    fn check_file(&self, file_path: &str, content: &str, config: &crate::gates_config::QualityGateConfig) -> Vec<QualityViolation> {
         let mut violations = Vec::new();
         let struct_regex = Regex::new(r"pub struct\s+(\w+)").unwrap();
 
@@ -230,7 +230,7 @@ impl QualityRule for PlaceholderRule {
         "Detects TODO, PLACEHOLDER, and MOCK comments"
     }
 
-    fn check_file(&self, file_path: &str, content: &str, _config: &crate::config::QualityGateConfig) -> Vec<QualityViolation> {
+    fn check_file(&self, file_path: &str, content: &str, _config: &crate::gates_config::QualityGateConfig) -> Vec<QualityViolation> {
         let mut violations = Vec::new();
 
         for (line_num, line) in content.lines().enumerate() {

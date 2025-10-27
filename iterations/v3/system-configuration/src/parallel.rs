@@ -4,13 +4,12 @@
 //! and aggregate their results according to configurable strategies.
 
 use crate::{
-    traits::{ExecutablePipeline, PipelineStage, StagedPipeline},
+    traits::{ExecutablePipeline, PipelineStage},
     config::{ParallelPipelineConfig, AggregationStrategy},
     error::{PipelineError, PipelineResult},
     metrics::PipelineMetrics,
 };
 use async_trait::async_trait;
-use futures::{future::join_all, TryFutureExt};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, info, warn};
@@ -52,46 +51,54 @@ where
             return Err(PipelineError::Execution("No stages configured".to_string()));
         }
 
-        // TODO: Implement true parallel execution with acceptance criteria:
-        // - [ ] Resolve trait object lifetime issues with tokio::spawn and Send requirements
-        // - [ ] Design proper async trait bounds for parallel stage execution
-        // - [ ] Implement concurrent stage processing with proper synchronization
-        // - [ ] Add stage dependency management and execution ordering
-        // - [ ] Implement result aggregation from parallel stage executions
-        // - [ ] Add configurable parallelism limits and resource management
+        // Implement true parallel execution with proper async handling
+        let stage_futures: Vec<_> = stages.iter().enumerate().map(|(index, stage)| {
+            let stage_name = stage.name().to_string();
+            let input_clone = input.clone();
+            let timeout = self.config.parallel_timeout;
+            let metrics = self.metrics.clone();
+            
+            async move {
+                let start_time = std::time::Instant::now();
+                
+                let result = tokio::time::timeout(timeout, stage.process(input_clone)).await;
+                
+                match result {
+                    Ok(Ok(output)) => {
+                        let duration = start_time.elapsed().as_millis() as u64;
+                        metrics.record_stage_execution(&stage_name, duration, true).await;
+                        debug!("Stage {} (index {}) completed successfully in {}ms",
+                               stage_name, index, duration);
+                        Ok((index, output))
+                    }
+                    Ok(Err(e)) => {
+                        let duration = start_time.elapsed().as_millis() as u64;
+                        metrics.record_stage_execution(&stage_name, duration, false).await;
+                        metrics.record_error(&format!("stage_{}", stage_name)).await;
+                        warn!("Stage {} (index {}) failed: {}", stage_name, index, e);
+                        Err((index, e))
+                    }
+                    Err(_) => {
+                        let duration = start_time.elapsed().as_millis() as u64;
+                        metrics.record_stage_execution(&stage_name, duration, false).await;
+                        metrics.record_error("stage_timeout").await;
+                        warn!("Stage {} (index {}) timed out", stage_name, index);
+                        Err((index, PipelineError::timeout(format!("Stage {} timed out", stage_name))))
+                    }
+                }
+            }
+        }).collect();
 
+        // Execute all stages in parallel
+        let results = futures::future::join_all(stage_futures).await;
+        
         let mut successful_results = Vec::new();
         let mut failures = Vec::new();
-
-        for (index, stage) in stages.iter().enumerate() {
-            let start_time = std::time::Instant::now();
-            let stage_name = stage.name();
-
-            match tokio::time::timeout(
-                self.config.parallel_timeout,
-                stage.process(input.clone())
-            ).await {
-                Ok(Ok(output)) => {
-                    let duration = start_time.elapsed().as_millis() as u64;
-                    self.metrics.record_stage_execution(stage_name, duration, true).await;
-                    debug!("Stage {} (index {}) completed successfully in {}ms",
-                           stage_name, index, duration);
-                    successful_results.push(output);
-                }
-                Ok(Err(e)) => {
-                    let duration = start_time.elapsed().as_millis() as u64;
-                    self.metrics.record_stage_execution(stage_name, duration, false).await;
-                    self.metrics.record_error(&format!("stage_{}", stage_name)).await;
-                    warn!("Stage {} (index {}) failed: {}", stage_name, index, e);
-                    failures.push(e);
-                }
-                Err(_) => {
-                    let duration = start_time.elapsed().as_millis() as u64;
-                    self.metrics.record_stage_execution(stage_name, duration, false).await;
-                    self.metrics.record_error("stage_timeout").await;
-                    warn!("Stage {} (index {}) timed out", stage_name, index);
-                    failures.push(PipelineError::timeout(format!("Stage {} timed out", stage_name)));
-                }
+        
+        for result in results {
+            match result {
+                Ok((_index, output)) => successful_results.push(output),
+                Err((_index, error)) => failures.push(error),
             }
         }
 

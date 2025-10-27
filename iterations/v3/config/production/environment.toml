@@ -1,0 +1,44 @@
+# Agent Agency Production Environment Configuration
+# Generated: Sun Oct 26 15:08:09 PDT 2025
+
+[core]
+log_level = "INFO"
+metrics_enabled = true
+tracing_enabled = true
+
+[coreml]
+models_path = "/app/models/coreml"
+ane_enabled = true
+fallback_to_cpu = true
+max_concurrent_inference = 4
+
+[database]
+url = "postgresql://agent_agency:password@localhost:5432/agent_agency_prod"
+max_connections = 20
+connection_timeout_ms = 30000
+
+[redis]
+url = "redis://localhost:6379"
+cache_ttl_seconds = 3600
+
+[api]
+host = "0.0.0.0"
+port = 8080
+workers = 4
+max_request_size_mb = 100
+
+[security]
+jwt_secret = "CHANGE_THIS_IN_PRODUCTION"
+api_keys_required = true
+rate_limit_requests_per_minute = 60
+
+[monitoring]
+prometheus_enabled = true
+metrics_endpoint = "/metrics"
+health_check_endpoint = "/health"
+
+[features]
+multimodal_processing = true
+real_time_processing = false
+batch_processing = true
+experimental_features = false

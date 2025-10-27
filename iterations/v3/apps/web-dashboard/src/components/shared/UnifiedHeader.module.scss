@@ -135,6 +135,28 @@
   flex-shrink: 0;
 }
 
+.notifications {
+  // Notification bell styling in header
+  position: relative;
+
+  // Adjust position for header context
+  .webhookNotifications {
+    position: static;
+
+    .notificationBell {
+      margin-bottom: 0;
+    }
+
+    .notificationsPanel {
+      position: absolute;
+      top: 100%;
+      right: 0;
+      margin-top: 8px;
+      transform: translateY(-10px);
+    }
+  }
+}
+
 .actionButton {
   display: flex;
   align-items: center;

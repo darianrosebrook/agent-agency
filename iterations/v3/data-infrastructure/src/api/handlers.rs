@@ -13,9 +13,9 @@ use axum::{
 use serde_json::Value;
 use uuid::Uuid;
 
-use super::types::*;
-use super::errors::ApiError;
+use super::{ApiError, Result, LinkProvenanceRequest, ProvenanceResponse, DashboardDiffSummary, WaiverRequest, WaiverResponse, WaiverApprovalRequest, TaskResultResponse, SavedQueryResponse, SaveQueryRequest, TaskStatusResponse, DashboardTaskSummary, TaskSubmissionRequest, TaskSubmissionResponse};
 use super::server::{ApiState, RestApi};
+use crate::system_observability::slo::create_default_slos;
 
 // Axum handlers
 
@@ -32,7 +32,7 @@ pub async fn health_check() -> Json<Value> {
 pub async fn submit_task(
     State(state): State<ApiState>,
     Json(request): Json<TaskSubmissionRequest>,
-) -> Result<Json<TaskSubmissionResponse>, ApiError> {
+) -> Result<Json<TaskSubmissionResponse>> {
     let response = state.api.submit_task(request).await?;
     Ok(Json(response))
 }
@@ -41,7 +41,7 @@ pub async fn submit_task(
 pub async fn get_task_status(
     State(state): State<ApiState>,
     Path(task_id): Path<Uuid>,
-) -> Result<Json<TaskStatusResponse>, ApiError> {
+) -> Result<Json<TaskStatusResponse>> {
     let response = state.api.get_task_status(task_id).await?;
     Ok(Json(response))
 }
@@ -50,7 +50,7 @@ pub async fn get_task_status(
 pub async fn get_task_result(
     State(state): State<ApiState>,
     Path(task_id): Path<Uuid>,
-) -> Result<Json<TaskResultResponse>, ApiError> {
+) -> Result<Json<TaskResultResponse>> {
     let response = state.api.get_task_result(task_id).await?;
     Ok(Json(response))
 }
@@ -59,7 +59,7 @@ pub async fn get_task_result(
 pub async fn pause_task(
     State(state): State<ApiState>,
     Path(task_id): Path<Uuid>,
-) -> Result<StatusCode, ApiError> {
+) -> Result<StatusCode> {
     state.api.pause_task(task_id).await?;
     Ok(StatusCode::OK)
 }
@@ -68,7 +68,7 @@ pub async fn pause_task(
 pub async fn resume_task(
     State(state): State<ApiState>,
     Path(task_id): Path<Uuid>,
-) -> Result<StatusCode, ApiError> {
+) -> Result<StatusCode> {
     state.api.resume_task(task_id).await?;
     Ok(StatusCode::OK)
 }
@@ -77,7 +77,7 @@ pub async fn resume_task(
 pub async fn cancel_task(
     State(state): State<ApiState>,
     Path(task_id): Path<Uuid>,
-) -> Result<StatusCode, ApiError> {
+) -> Result<StatusCode> {
     state.api.cancel_task(task_id).await?;
     Ok(StatusCode::OK)
 }
@@ -85,7 +85,7 @@ pub async fn cancel_task(
 /// List all saved queries
 pub async fn list_saved_queries(
     State(state): State<ApiState>,
-) -> Result<Json<Vec<SavedQueryResponse>>, ApiError> {
+) -> Result<Json<Vec<SavedQueryResponse>>> {
     let queries = state.api.list_saved_queries().await?;
     Ok(Json(queries))
 }
@@ -94,7 +94,7 @@ pub async fn list_saved_queries(
 pub async fn save_query(
     State(state): State<ApiState>,
     Json(request): Json<SaveQueryRequest>,
-) -> Result<Json<SavedQueryResponse>, ApiError> {
+) -> Result<Json<SavedQueryResponse>> {
     let response = state.api.save_query(request).await?;
     Ok(Json(response))
 }
@@ -103,7 +103,7 @@ pub async fn save_query(
 pub async fn delete_saved_query(
     State(state): State<ApiState>,
     Path(query_id): Path<Uuid>,
-) -> Result<StatusCode, ApiError> {
+) -> Result<StatusCode> {
     state.api.delete_saved_query(query_id).await?;
     Ok(StatusCode::NO_CONTENT)
 }
@@ -111,7 +111,7 @@ pub async fn delete_saved_query(
 /// List all tasks
 pub async fn list_tasks(
     State(state): State<ApiState>,
-) -> Result<Json<Vec<TaskStatusResponse>>, ApiError> {
+) -> Result<Json<Vec<TaskStatusResponse>>> {
     let tasks = state.api.list_tasks().await?;
     Ok(Json(tasks))
 }
@@ -119,7 +119,7 @@ pub async fn list_tasks(
 /// Get system metrics
 pub async fn get_metrics(
     State(state): State<ApiState>,
-) -> Result<Json<std::collections::HashMap<String, Value>>, ApiError> {
+) -> Result<Json<std::collections::HashMap<String, Value>>> {
     let metrics = state.api.get_metrics().await?;
     Ok(Json(metrics))
 }
@@ -128,7 +128,7 @@ pub async fn get_metrics(
 pub async fn get_dashboard_data(
     State(state): State<ApiState>,
     Path(task_id): Path<Uuid>,
-) -> Result<Json<DashboardTaskSummary>, ApiError> {
+) -> Result<Json<DashboardTaskSummary>> {
     let dashboard_data = state.api.get_dashboard_data(task_id).await?;
     Ok(Json(dashboard_data))
 }
@@ -137,7 +137,7 @@ pub async fn get_dashboard_data(
 pub async fn get_diff_summary(
     State(state): State<ApiState>,
     Path((task_id, iteration)): Path<(Uuid, usize)>,
-) -> Result<Json<Vec<DashboardDiffSummary>>, ApiError> {
+) -> Result<Json<Vec<DashboardDiffSummary>>> {
     let diff_summary = state.api.get_diff_summary(task_id, iteration).await?;
     Ok(Json(diff_summary))
 }
@@ -145,7 +145,7 @@ pub async fn get_diff_summary(
 /// List all waivers
 pub async fn list_waivers(
     State(state): State<ApiState>,
-) -> Result<Json<Vec<WaiverResponse>>, ApiError> {
+) -> Result<Json<Vec<WaiverResponse>>> {
     // Query waivers from database
     let query = r#"
         SELECT
@@ -167,6 +167,7 @@ pub async fn list_waivers(
 
         waivers.push(WaiverResponse {
             id: row.get("id"),
+            task_id: row.get("task_id"),
             title: row.get("title"),
             reason: row.get("reason"),
             description: row.get("description"),
@@ -189,7 +190,7 @@ pub async fn list_waivers(
 pub async fn create_waiver(
     State(state): State<ApiState>,
     Json(request): Json<WaiverRequest>,
-) -> Result<Json<WaiverResponse>, ApiError> {
+) -> Result<Json<WaiverResponse>> {
     // Insert waiver into database
     let insert_query = r#"
         INSERT INTO waivers (
@@ -200,14 +201,14 @@ pub async fn create_waiver(
         RETURNING id, created_at, updated_at
     "#;
 
-    let gates_array = request.gates.iter().map(|s| s.as_str()).collect::<Vec<&str>>();
+    let gates_array = request.gates.join(",");
     let metadata = serde_json::json!({
         "created": true,
         "mitigation_plan": request.mitigation_plan
     });
 
-    let row = state.api.db_client
-        .query_one(
+    let rows = state.api.db_client
+        .query(
             insert_query,
             &[
                 &request.title,
@@ -217,12 +218,16 @@ pub async fn create_waiver(
                 &request.approved_by,
                 &request.impact_level,
                 &request.mitigation_plan,
-                &request.expires_at,
-                &metadata,
+                &request.expires_at.to_rfc3339(),
+                &metadata.to_string(), // Fixed: Convert Value to String
+                &request.task_id.to_string(), // Fixed: Convert Uuid to String
             ],
         )
         .await
         .map_err(|e| ApiError::DatabaseError(format!("Failed to create waiver: {}", e)))?;
+
+    let row = rows.first()
+        .ok_or_else(|| ApiError::InternalError("Failed to get created waiver".to_string()))?;
 
     let id: Uuid = row.get("id");
     let created_at: chrono::DateTime<chrono::Utc> = row.get("created_at");
@@ -230,6 +235,7 @@ pub async fn create_waiver(
 
     let waiver = WaiverResponse {
         id,
+        task_id: request.task_id,
         title: request.title,
         reason: request.reason,
         description: request.description,
@@ -252,7 +258,7 @@ pub async fn approve_waiver(
     State(state): State<ApiState>,
     Path(waiver_id): Path<String>,
     Json(request): Json<WaiverApprovalRequest>,
-) -> Result<StatusCode, ApiError> {
+) -> Result<StatusCode> {
     // Update waiver status in database
     let update_query = r#"
         UPDATE waivers
@@ -265,25 +271,28 @@ pub async fn approve_waiver(
 
     let metadata = serde_json::json!({
         "approved_at": chrono::Utc::now(),
-        "approved_by": request.approver,
-        "justification": request.justification
+        "approved_by": request.approved_by,
+        "approval_notes": request.approval_notes
     });
 
     let waiver_uuid = Uuid::parse_str(&waiver_id)
         .map_err(|_| ApiError::InvalidRequest("Invalid waiver ID format".to_string()))?;
 
-    let row = state.api.db_client
-        .query_one(
+    let rows = state.api.db_client
+        .query(
             update_query,
-            &[&metadata, &waiver_uuid],
+            &[&metadata, &serde_json::to_value(&waiver_uuid).unwrap()],
         )
         .await
         .map_err(|e| ApiError::DatabaseError(format!("Failed to approve waiver: {}", e)))?;
 
+    let row = rows.first()
+        .ok_or_else(|| ApiError::InternalError("Failed to get updated waiver".to_string()))?;
+
     let title: String = row.get("title");
     let gates: Vec<String> = row.get("gates");
 
-    println!("Waiver '{}' approved by {} for gates: {:?}", title, request.approver, gates);
+    println!("Waiver '{}' approved by {} for gates: {:?}", title, request.approved_by, gates);
     Ok(StatusCode::OK)
 }
 
@@ -291,7 +300,7 @@ pub async fn approve_waiver(
 pub async fn get_task_provenance(
     State(state): State<ApiState>,
     Path(task_id): Path<String>,
-) -> Result<Json<ProvenanceResponse>, ApiError> {
+) -> Result<Json<ProvenanceResponse>> {
     // TODO: Implement comprehensive task provenance tracking and retrieval
     // - Integrate with provenance service for real-time data access
     // - Support provenance filtering by time range and event types
@@ -322,7 +331,7 @@ pub async fn get_task_provenance(
 }
 
 /// List provenance records
-pub async fn list_provenance_records(State(state): State<ApiState>) -> Result<Json<Vec<Value>>, ApiError> {
+pub async fn list_provenance_records(State(state): State<ApiState>) -> Result<Json<Vec<Value>>> {
     // Query provenance records from database
     let query = r#"
         SELECT
@@ -360,7 +369,7 @@ pub async fn list_provenance_records(State(state): State<ApiState>) -> Result<Js
 pub async fn link_provenance_to_commit(
     State(state): State<ApiState>,
     Json(request): Json<LinkProvenanceRequest>,
-) -> Result<StatusCode, ApiError> {
+) -> Result<StatusCode> {
     // Update provenance record with commit hash
     let update_query = r#"
         UPDATE provenance_records
@@ -369,7 +378,7 @@ pub async fn link_provenance_to_commit(
     "#;
 
     let rows_affected = state.api.db_client
-        .execute(update_query, &[&request.provenance_id, &request.commit_hash])
+        .execute(update_query, &[&request.provenance_id.to_string(), &request.commit_hash])
         .await
         .map_err(|e| ApiError::DatabaseError(format!("Failed to link provenance: {}", e)))?;
 
@@ -384,14 +393,16 @@ pub async fn link_provenance_to_commit(
 pub async fn verify_provenance_trailer(
     State(state): State<ApiState>,
     Path(commit_hash): Path<String>,
-) -> Result<Json<Value>, ApiError> {
+) -> Result<Json<Value>> {
     // Check if commit hash exists in provenance records
     let query = r#"SELECT git_trailer FROM provenance_records WHERE git_commit_hash = $1"#;
 
-    let row = state.api.db_client
-        .query_opt(query, &[&commit_hash])
+    let rows = state.api.db_client
+        .query(query, &[&commit_hash])
         .await
         .map_err(|e| ApiError::DatabaseError(format!("Failed to verify trailer: {}", e)))?;
+
+    let row = rows.first();
 
     let result = if let Some(row) = row {
         let trailer: String = row.get("git_trailer");
@@ -414,7 +425,7 @@ pub async fn verify_provenance_trailer(
 pub async fn get_provenance_by_commit(
     State(state): State<ApiState>,
     Path(commit_hash): Path<String>,
-) -> Result<Json<Value>, ApiError> {
+) -> Result<Json<Value>> {
     // Query full provenance record by commit hash
     let query = r#"
         SELECT
@@ -424,10 +435,12 @@ pub async fn get_provenance_by_commit(
         WHERE git_commit_hash = $1
     "#;
 
-    let row = state.api.db_client
-        .query_opt(query, &[&commit_hash])
+    let rows = state.api.db_client
+        .query(query, &[&commit_hash])
         .await
-        .map_err(|e| ApiError::DatabaseError(format!("Failed to get provenance: {}", e)))?
+        .map_err(|e| ApiError::DatabaseError(format!("Failed to get provenance: {}", e)))?;
+
+    let row = rows.first()
         .ok_or_else(|| ApiError::NotFound(format!("No provenance record found for commit {}", commit_hash)))?;
 
     let record = serde_json::json!({
@@ -448,7 +461,7 @@ pub async fn get_provenance_by_commit(
 }
 
 /// List all SLOs
-pub async fn list_slos(State(state): State<ApiState>) -> Result<Json<Vec<Value>>, ApiError> {
+pub async fn list_slos(State(state): State<ApiState>) -> Result<Json<Vec<Value>>> {
     // TODO: Implement comprehensive SLO management and tracking system
     // - Integrate with SLO tracker for real-time SLO status and compliance
     // - Support SLO creation, modification, and deletion through API
@@ -458,8 +471,8 @@ pub async fn list_slos(State(state): State<ApiState>) -> Result<Json<Vec<Value>>
     // - Implement SLO alerting and notification mechanisms
     // - Add SLO compliance reporting and dashboards
     // - Support SLO versioning and historical tracking
-    let default_slos = agent_agency_observability::slo::create_default_slos();
 
+    let default_slos = create_default_slos();
     let slos: Vec<Value> = default_slos.into_iter()
         .map(|slo| serde_json::json!({
             "name": slo.name,
@@ -479,7 +492,7 @@ pub async fn list_slos(State(state): State<ApiState>) -> Result<Json<Vec<Value>>
 pub async fn get_slo_status(
     State(state): State<ApiState>,
     Path(slo_name): Path<String>,
-) -> Result<Json<Value>, ApiError> {
+) -> Result<Json<Value>> {
     // TODO: Implement comprehensive SLO status monitoring and reporting
     // - Query real SLO tracker for current compliance and performance metrics
     // - Support SLO status aggregation across different time windows
@@ -508,7 +521,7 @@ pub async fn get_slo_status(
 pub async fn get_slo_measurements(
     State(state): State<ApiState>,
     Path(slo_name): Path<String>,
-) -> Result<Json<Vec<Value>>, ApiError> {
+) -> Result<Json<Vec<Value>>> {
     // TODO: Implement comprehensive SLO measurement collection and storage
     // - Query real measurement database for historical SLO performance data
     // - Support measurement aggregation and statistical analysis
@@ -541,7 +554,7 @@ pub async fn get_slo_measurements(
 }
 
 /// List SLO alerts
-pub async fn list_slo_alerts(State(state): State<ApiState>) -> Result<Json<Vec<Value>>, ApiError> {
+pub async fn list_slo_alerts(State(state): State<ApiState>) -> Result<Json<Vec<Value>>> {
     // TODO: Implement comprehensive SLO alerting and incident management
     // - Query real SLO alert system for active and historical alerts
     // - Support alert prioritization and escalation policies
@@ -576,7 +589,7 @@ pub async fn list_slo_alerts(State(state): State<ApiState>) -> Result<Json<Vec<V
 pub async fn acknowledge_slo_alert(
     State(state): State<ApiState>,
     Path(alert_id): Path<String>,
-) -> Result<StatusCode, ApiError> {
+) -> Result<StatusCode> {
     // TODO: Implement comprehensive alert acknowledgment and lifecycle management
     // - Update alert status in persistent storage with acknowledgment metadata
     // - Support alert assignment and ownership tracking

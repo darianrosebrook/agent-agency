@@ -10,9 +10,11 @@
 import { useState, useEffect, Suspense, useRef, lazy } from "react";
 import DashboardLayout from "@/components/shared/DashboardLayout";
 import { TaskApiClient } from "@/lib/task-api";
+import { useTaskWebSocket } from "@/hooks/useTaskWebSocket";
+import { useErrorHandler } from "@/lib/error-handling";
 import { Task, TaskListFilters, TaskMetrics as TaskMetricsType } from "@/types/tasks";
 import { Text } from "@/design-system/primitives";
-import { RefreshCw, Filter, X } from "lucide-react";
+import { RefreshCw, Filter, X, Wifi, WifiOff } from "lucide-react";
 import styles from "./page.module.scss";
 
 // Lazy load heavy components for better performance
@@ -84,9 +86,34 @@ export default function TasksPage() {
   const filtersRef = useRef<HTMLElement>(null);
   const taskListRef = useRef<HTMLElement>(null);
 
+  // Connection and error handling
+  const { handleError } = useErrorHandler();
+
+  // WebSocket connections for real-time updates
+  const taskWs = useTaskWebSocket(); // Listen to all tasks
+  const { isConnected: wsConnected, connectionStatus } = taskWs;
+
   // Enhanced animations will be applied via GSAP in useEffect
 
   const taskApi = new TaskApiClient();
+
+  // Handle real-time WebSocket updates
+  useEffect(() => {
+    if (taskWs.lastMessage) {
+      const message = taskWs.lastMessage;
+
+      if (message.type === 'task_update' || message.type === 'task_completion') {
+        // Update the specific task in the list
+        setTasks(prevTasks =>
+          prevTasks.map(task =>
+            task.task_id === message.task_id
+              ? { ...task, status: message.status, progress_percentage: message.progress_percentage || task.progress_percentage }
+              : task
+          )
+        );
+      }
+    }
+  }, [taskWs.lastMessage]);
 
   /**
    * Fetch tasks from API
@@ -210,6 +237,14 @@ export default function TasksPage() {
             </div>
             
             <div className={styles.headerActions}>
+              {/* Connection Status Indicator */}
+              <div className={`${styles.connectionStatus} ${wsConnected ? styles.connected : styles.disconnected}`}>
+                {wsConnected ? <Wifi size={16} /> : <WifiOff size={16} />}
+                <span className={styles.connectionText}>
+                  {wsConnected ? 'Live' : 'Offline'}
+                </span>
+              </div>
+
               <button
                 onClick={() => setShowFilters(!showFilters)}
                 className={styles.filterButton}
@@ -219,15 +254,15 @@ export default function TasksPage() {
                 {showFilters ? <X size={20} /> : <Filter size={20} />}
                 <span>Filters</span>
               </button>
-              
+
               <button
                 onClick={handleRefresh}
                 className={styles.refreshButton}
                 disabled={refreshing}
                 aria-label="Refresh tasks"
               >
-                <RefreshCw 
-                  size={20} 
+                <RefreshCw
+                  size={20}
                   className={refreshing ? styles.spinning : ''}
                   aria-hidden="true"
                 />

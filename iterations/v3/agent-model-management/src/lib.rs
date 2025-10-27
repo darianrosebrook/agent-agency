@@ -72,7 +72,7 @@ impl ModelManager {
     }
 
     /// Load and prepare a model for inference
-    pub async fn load_model(&self, model_id: &str, config: ModelConfig) -> Result<ModelHandle, ModelManagementError> {
+    pub async fn load_model(&self, model_id: &str, _config: ModelConfig) -> Result<ModelHandle, ModelManagementError> {
         // Load model metadata
         let model_info = self.model_registry.get_model(model_id).await?
             .ok_or_else(|| ModelManagementError::ModelNotFound(model_id.to_string()))?;

@@ -1,7 +1,6 @@
 //! Deployment registry for tracking model deployments
 
 use crate::deployment::orchestrator::DeploymentInfo;
-use crate::types::*;
 use crate::ModelManagementError;
 use std::collections::HashMap;
 use std::sync::Arc;

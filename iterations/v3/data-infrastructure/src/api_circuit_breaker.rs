@@ -9,7 +9,7 @@ use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
 
 // Use common types instead of local definitions
-use system_configuration::common_config::CircuitBreakerConfig;
+use system_quality_security::CircuitBreakerConfig;
 
 /// Circuit breaker states
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -112,7 +112,7 @@ impl CircuitBreaker {
             CircuitState::Open => {
                 // Check if recovery timeout has elapsed
                 if let Some(last_failure) = *self.last_failure_time.read().await {
-                    if last_failure.elapsed() >= Duration::from_millis(self.config.recovery_timeout_ms) {
+                    if last_failure.elapsed() >= self.config.timeout_duration {
                         // Transition to half-open
                         *self.state.write().await = CircuitState::HalfOpen;
                         self.successes.store(0, Ordering::SeqCst);
@@ -209,7 +209,7 @@ impl ResilientHttpClient {
 
     pub fn with_config(config: CircuitBreakerConfig) -> Self {
         let client = reqwest::Client::builder()
-            .timeout(Duration::from_millis(config.timeout_ms))
+            .timeout(config.request_timeout)
             .build()
             .expect("Failed to create HTTP client");
 

@@ -1,29 +1,121 @@
-# Orchestration Core
+# Agent Orchestration
 
-Purpose: Route tasks, coordinate execution and evaluation, enforce CAWS gates.
+**Location**: `agent-orchestration` crate
 
-Subcomponents:
-- Task Router: selects worker(s) based on specialty and risk tier.
-- Execution Manager: parallelization, retries, backoff.
-- Council Coordinator: runs judges, aggregates verdicts, triggers debate.
+## Purpose
 
-Inputs:
-- User task with working spec and risk tier.
+Coordinate task execution, manage council-based governance decisions, and enforce quality gates across the agent system.
 
-Outputs:
-- Accepted artifacts or actionable feedback.
-- Provenance updates and audit trail entries.
+## Core Responsibilities
 
-Policies:
-- Tier 1: unanimous or 80%+ supermajority with debate rounds.
-- Tier 2/3: simple majority; still record dissent.
+### Task Coordination
+- Receive tasks from data-interfaces
+- Route tasks to appropriate agent-workers based on requirements
+- Manage task lifecycle from submission to completion
+- Handle task cancellation and intervention requests
 
-Metrics Emitted:
-- council_eval_ms: p50/p95 council evaluation time
-- debate_rounds: rounds taken to resolve conflicts
-- consensus_score: weighted vote total per decision
-- dissent_rate: proportion of decisions with dissent notes
-- t2_e2e_ms_p95: end-to-end latency for Tier 2 tasks p95
-- throughput_tasks_min: tasks completed per minute
-- peak_mem_gb, max_thermal_c: resource peaks during runs
-- mutation_score, coverage_branch_pct: quality gates
+### Council Governance
+- Coordinate council evaluation across governance components
+- Aggregate verdicts from distributed quality gates
+- Implement risk-tiered execution strategies
+- Manage debate protocols for conflicting verdicts
+
+### Quality Assurance
+- Enforce CAWS compliance validation
+- Coordinate with system-quality-security for quality gates
+- Ensure contract compliance via agent-agency-contracts
+- Track provenance and audit trails
+
+## Key Components
+
+### Task Router
+- Analyzes task requirements and constraints
+- Selects optimal worker allocation strategy
+- Considers resource availability and specialization
+- Implements load balancing across worker pools
+
+### Council Coordinator
+- Orchestrates governance evaluation process
+- Coordinates with system-quality-security for compliance
+- Aggregates verdicts from multiple governance perspectives
+- Implements risk-appropriate decision strategies
+
+### Execution Manager
+- Manages task execution lifecycle
+- Handles retries, timeouts, and failure recovery
+- Coordinates with agent-workers for task processing
+- Monitors execution progress and intervenes as needed
+
+## Integration Points
+
+### Input Sources
+- **data-interfaces**: Task submissions and intervention requests
+- **agent-research**: Strategic planning and optimization inputs
+- **system-quality-security**: Quality gate results and compliance data
+
+### Output Destinations
+- **agent-workers**: Task assignments and execution coordination
+- **data-infrastructure**: Task results and provenance updates
+- **system-observability**: Metrics and monitoring data
+
+### Cross-Crate Dependencies
+- **agent-agency-contracts**: Type definitions and validation
+- **system-quality-security**: Quality gate enforcement
+- **data-infrastructure**: Persistence and audit trails
+- **system-observability**: Performance monitoring
+
+## Performance Characteristics
+
+- **Task Routing**: <50ms decision time
+- **Council Coordination**: <200ms governance cycle
+- **Quality Gate Integration**: <100ms validation
+- **Provenance Updates**: <150ms audit trail recording
+
+## Implementation Example
+
+```rust
+use agent_orchestration::*;
+use agent_agency_contracts::TaskContract;
+use system_quality_security::QualityGate;
+
+pub async fn orchestrate_task_execution(
+    task: TaskContract,
+    quality_gate: &QualityGate,
+) -> Result<TaskResult, OrchestrationError> {
+    // 1. Quality gate validation
+    let compliance_result = quality_gate.validate_task(&task).await?;
+
+    if !compliance_result.passed {
+        return Err(OrchestrationError::QualityGateFailure);
+    }
+
+    // 2. Council evaluation
+    let council_verdict = self.coordinate_council_evaluation(&task).await?;
+
+    if !council_verdict.approved {
+        return Err(OrchestrationError::CouncilRejection(council_verdict.reasoning));
+    }
+
+    // 3. Worker routing and execution
+    let execution_result = self.route_and_execute_task(task, council_verdict).await?;
+
+    // 4. Provenance recording
+    self.record_execution_provenance(&execution_result).await?;
+
+    Ok(execution_result)
+}
+```
+
+## Metrics and Monitoring
+
+- **council_eval_ms**: Council evaluation duration (p50/p95)
+- **task_routing_ms**: Task routing decision time
+- **execution_coordination_ms**: Cross-worker coordination time
+- **quality_gate_integration_ms**: Quality validation duration
+- **provenance_recording_ms**: Audit trail update time
+
+## See Also
+
+- **[../system-overview.md](../system-overview.md)** - Complete system architecture
+- **[../contracts/task-request.schema.json](../contracts/task-request.schema.json)** - Task contract specification
+- **[../contracts/final-verdict.schema.json](../contracts/final-verdict.schema.json)** - Verdict contract specification

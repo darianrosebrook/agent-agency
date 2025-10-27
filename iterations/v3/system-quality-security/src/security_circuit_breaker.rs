@@ -47,7 +47,7 @@ impl Default for CircuitBreakerConfig {
 }
 
 /// Circuit breaker instance
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct CircuitBreaker {
     config: CircuitBreakerConfig,
     state: CircuitState,

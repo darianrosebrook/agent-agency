@@ -14,9 +14,10 @@
   "author": "Agent Agency Team",
   "license": "MIT",
   "scripts": {
-    "dev": "next dev",
+    "dev": "PORT=3002 next dev",
+    "dev:config": "node -e \"console.log(JSON.stringify(require('./dev.config.js'), null, 2))\"",
     "build": "next build",
-    "start": "next start",
+    "start": "PORT=3002 next start",
     "lint": "next lint",
     "lint:fix": "next lint --fix",
     "type-check": "tsc --noEmit",
@@ -28,7 +29,11 @@
     "clean": "rm -rf .next out dist",
     "analyze": "cross-env ANALYZE=true next build",
     "export": "next export",
-    "serve": "npx serve out"
+    "serve": "npx serve out -p 3002",
+    "dev:bg": "PORT=3002 next dev > dashboard.log 2>&1 & echo $! > dashboard.pid && echo 'Dashboard started on http://localhost:3002 (PID: '$(cat dashboard.pid)')'",
+    "stop": "if [ -f dashboard.pid ]; then kill $(cat dashboard.pid) 2>/dev/null && rm dashboard.pid && echo 'Dashboard stopped'; else echo 'No dashboard PID found'; fi",
+    "status": "if [ -f dashboard.pid ] && kill -0 $(cat dashboard.pid) 2>/dev/null; then echo 'Dashboard running on http://localhost:3002 (PID: '$(cat dashboard.pid)')'; else echo 'Dashboard not running'; fi",
+    "restart": "npm run stop && sleep 2 && npm run dev:bg"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.6",

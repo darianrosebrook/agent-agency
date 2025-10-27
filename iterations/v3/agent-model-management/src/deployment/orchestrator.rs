@@ -7,7 +7,7 @@ use crate::deployment::LoadBalancer;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{debug, info, warn, error};
+use tracing::{debug, info};
 
 /// Deployment orchestrator for managing model deployments and hot-swaps
 #[derive(Debug)]
@@ -149,7 +149,7 @@ impl DeploymentOrchestrator {
     pub async fn perform_hot_swap(&self, model_id: &str, new_version: &str, strategy: HotSwapStrategy) -> Result<HotSwapResult, ModelManagementError> {
         info!("Performing hot-swap for model {} to version {} using {:?}", model_id, new_version, strategy);
 
-        let start_time = chrono::Utc::now();
+        let _start_time = chrono::Utc::now();
 
         // Validate the swap
         self.validate_hot_swap(model_id, new_version).await?;

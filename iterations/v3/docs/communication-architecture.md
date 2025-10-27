@@ -1,8 +1,8 @@
 # Agent Agency V3: Communication Architecture & Telemetry
 
-**Author:** @darianrosebrook  
-**Date:** January 2025  
-**Purpose:** Visual and architectural overview of inter-component communication patterns
+**Author:** @darianrosebrook
+**Date:** October 2025
+**Purpose:** Visual and architectural overview of inter-crate communication patterns in the 17-crate modular system
 
 ## Current Communication Architecture
 
@@ -10,18 +10,19 @@
 
 Our system implements a **constitutional concurrency** approach where agents coordinate within agreed-upon bounds rather than competing through traditional parallelism.
 
-#### Core Communication Patterns:
+#### Core Communication Patterns (17-Crate Architecture):
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Task Router   │───▶│  Orchestration  │───▶│ Council Coord.  │
-│                 │    │     Engine      │    │                 │
+│ agent-orchestration │───▶│ system-quality- │───▶│ agent-agency- │
+│  (coordination)   │    │ security         │    │ contracts      │
+│                   │    │ (governance)     │    │ (validation)   │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
          │                       │                       │
          ▼                       ▼                       ▼
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│ Research Agent  │    │  Worker Pool    │    │  4 AI Judges    │
-│                 │    │                 │    │                 │
+│ agent-research  │    │ agent-workers   │    │ data-infrastructure│
+│  (analysis)     │    │  (execution)    │    │  (persistence)    │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
 ```
 

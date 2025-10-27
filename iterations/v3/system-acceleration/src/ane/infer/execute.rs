@@ -4,6 +4,7 @@
 //! performance monitoring, and error recovery for Apple Neural Engine operations.
 
 use crate::ane::ane_errors::{ANEError, Result};
+use crate::ane::compat::coreml::coreml as coreml;
 use crate::ane::models::coreml_model::LoadedCoreMLModel;
 use crate::ane::metrics::ewma::Ewma;
 use std::time::{Duration, Instant};
@@ -160,19 +161,68 @@ fn validate_input(model: &LoadedCoreMLModel, _input: &[f32]) -> Result<()> {
 
 /// Prepare input tensor for inference
 fn prepare_input(
-    _model: &LoadedCoreMLModel,
-    _input: &[f32],
-    _options: &InferenceOptions,
+    model: &LoadedCoreMLModel,
+    input: &[f32],
+    options: &InferenceOptions,
 ) -> Result<Vec<f32>> {
-    // TODO: Implement actual input preparation
-    // This would include:
-    // - Data type conversion (f32 -> f16 if needed)
-    // - Shape validation and reshaping
-    // - Normalization if required
-    // - Batch dimension handling
-    
-    // For now, just return a copy
-    Ok(_input.to_vec())
+    // Validate input dimensions match model expectations
+    let expected_size = model.input_shape.iter().product::<usize>();
+    if input.len() != expected_size {
+        return Err(ANEError::InvalidInput(format!(
+            "Input size {} doesn't match expected size {}",
+            input.len(),
+            expected_size
+        )));
+    }
+
+    let mut prepared_input = input.to_vec();
+
+    // Apply precision conversion if needed
+    if let Some(precision) = &options.precision {
+        match precision.as_str() {
+            "fp16" => {
+                // Convert f32 to f16 for ANE optimization
+                prepared_input = prepared_input
+                    .iter()
+                    .map(|&x| half::f16::from_f32(x).to_f32())
+                    .collect();
+            }
+            "fp32" => {
+                // Keep as f32
+            }
+            _ => {
+                return Err(ANEError::InvalidInput(format!(
+                    "Unsupported precision: {}",
+                    precision
+                )));
+            }
+        }
+    }
+
+    // Apply normalization if model requires it
+    if model.requires_normalization {
+        let mean = model.normalization_mean.unwrap_or(0.0);
+        let std = model.normalization_std.unwrap_or(1.0);
+        prepared_input = prepared_input
+            .iter()
+            .map(|&x| (x - mean) / std)
+            .collect();
+    }
+
+    // Handle batch dimension if specified
+    if let Some(batch_size) = options.batch_size {
+        if batch_size > 1 {
+            // For now, we only support batch size 1
+            // In a full implementation, this would reshape the input
+            if batch_size != 1 {
+                return Err(ANEError::InvalidInput(
+                    "Batch size > 1 not yet supported".to_string()
+                ));
+            }
+        }
+    }
+
+    Ok(prepared_input)
 }
 
 /// Execute inference with timeout
@@ -184,19 +234,21 @@ async fn execute_with_timeout(
     let timeout_duration = Duration::from_millis(options.timeout_ms);
     
     let inference_future = async {
-        // TODO: Implement actual Core ML inference
-        // This would use Core ML's MLModel.predictionFromFeatures:options:error:
+        // Prepare input tensor
+        let prepared_input = prepare_input(model, input, options)?;
         
-        // For now, simulate inference with a delay
-        tokio::time::sleep(Duration::from_millis(10)).await;
+        // Execute Core ML inference
+        let output_tensor = coreml::run_inference(
+            model.model_ref,
+            &model.input_name,
+            &prepared_input,
+            &model.input_shape,
+        )?;
+
+        // Convert tensor output to Vec<f32>
+        let output_data = output_tensor.flatten_all()?.to_vec1::<f32>()?;
         
-        // Return placeholder output
-        let output_size = model.schema.outputs.iter()
-            .map(|output| output.shape.iter().product::<usize>())
-            .sum::<usize>()
-            .max(1);
-            
-        Ok::<_, ANEError>(vec![0.0f32; output_size])
+        Ok(output_data)
     };
     
     tokio::time::timeout(timeout_duration, inference_future)
@@ -206,18 +258,87 @@ async fn execute_with_timeout(
 
 /// Process output tensor
 fn process_output(
-    _model: &LoadedCoreMLModel,
+    model: &LoadedCoreMLModel,
     output: &[f32],
 ) -> Result<Vec<f32>> {
-    // TODO: Implement actual output processing
-    // This would include:
-    // - Data type conversion (f16 -> f32 if needed)
-    // - Shape validation
-    // - Post-processing (softmax, normalization, etc.)
-    // - Batch dimension handling
+    let mut processed_output = output.to_vec();
+
+    // Validate output dimensions match model expectations
+    let expected_size = model.schema.outputs.iter()
+        .map(|output_spec| output_spec.shape.iter().product::<usize>())
+        .sum::<usize>();
     
-    // For now, just return a copy
-    Ok(output.to_vec())
+    if output.len() != expected_size {
+        return Err(ANEError::InvalidInput(format!(
+            "Output size {} doesn't match expected size {}",
+            output.len(),
+            expected_size
+        )));
+    }
+
+    // Apply post-processing based on model requirements
+    for output_spec in &model.schema.outputs {
+        let start_idx = output_spec.start_index;
+        let end_idx = start_idx + output_spec.shape.iter().product::<usize>();
+        
+        if end_idx <= processed_output.len() {
+            let output_slice = &mut processed_output[start_idx..end_idx];
+            
+            match output_spec.post_processing.as_deref() {
+                Some("softmax") => {
+                    apply_softmax(output_slice);
+                }
+                Some("sigmoid") => {
+                    apply_sigmoid(output_slice);
+                }
+                Some("normalize") => {
+                    normalize_output(output_slice);
+                }
+                Some("clamp") => {
+                    clamp_output(output_slice, 0.0, 1.0);
+                }
+                _ => {
+                    // No post-processing needed
+                }
+            }
+        }
+    }
+
+    Ok(processed_output)
+}
+
+/// Apply softmax activation to output slice
+fn apply_softmax(output: &mut [f32]) {
+    let max_val = output.iter().fold(f32::NEG_INFINITY, |a, &b| a.max(b));
+    let exp_sum: f32 = output.iter().map(|&x| (x - max_val).exp()).sum();
+    
+    for val in output.iter_mut() {
+        *val = (*val - max_val).exp() / exp_sum;
+    }
+}
+
+/// Apply sigmoid activation to output slice
+fn apply_sigmoid(output: &mut [f32]) {
+    for val in output.iter_mut() {
+        *val = 1.0 / (1.0 + (-*val).exp());
+    }
+}
+
+/// Normalize output to unit length
+fn normalize_output(output: &mut [f32]) {
+    let norm: f32 = output.iter().map(|&x| x * x).sum::<f32>().sqrt();
+    if norm > 0.0 {
+        for val in output.iter_mut() {
+            *val /= norm;
+        }
+    }
+}
+
+/// Clamp output values to specified range
+fn clamp_output(output: &mut [f32], min: f32, max: f32) {
+    for val in output.iter_mut() {
+        *val = val.clamp(min, max);
+    }
 }
 
 /// Calculate performance metrics
