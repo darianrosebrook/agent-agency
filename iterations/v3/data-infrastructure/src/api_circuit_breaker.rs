@@ -50,11 +50,12 @@ impl Default for LegacyCircuitBreakerConfig {
 impl From<LegacyCircuitBreakerConfig> for CircuitBreakerConfig {
     fn from(config: LegacyCircuitBreakerConfig) -> Self {
         Self {
+            service_name: "legacy-circuit-breaker".to_string(),
             failure_threshold: config.failure_threshold as u32,
-            recovery_timeout_ms: config.recovery_timeout_secs * 1000,
             success_threshold: config.success_threshold as u32,
-            timeout_ms: config.request_timeout_secs * 1000,
-            max_concurrent_requests: 10, // Default value
+            timeout_duration: Duration::from_secs(config.recovery_timeout_secs),
+            request_timeout: Duration::from_secs(config.request_timeout_secs),
+            half_open_max_requests: config.success_threshold as u32,
         }
     }
 }
@@ -286,8 +287,12 @@ mod tests {
     #[tokio::test]
     async fn test_circuit_breaker_failure_threshold() {
         let config = CircuitBreakerConfig {
+            service_name: "test".to_string(),
             failure_threshold: 3,
-            ..Default::default()
+            success_threshold: 2,
+            timeout_duration: Duration::from_secs(30),
+            request_timeout: Duration::from_secs(5),
+            half_open_max_requests: 3,
         };
         let cb = CircuitBreaker::with_config(config);
 
@@ -308,10 +313,12 @@ mod tests {
     #[tokio::test]
     async fn test_circuit_breaker_recovery() {
         let config = CircuitBreakerConfig {
-            failure_threshold: 2,
+            service_name: "test".to_string(),
+            failure_threshold: 3,
             success_threshold: 2,
-            recovery_timeout_secs: 1,
-            ..Default::default()
+            timeout_duration: Duration::from_secs(1),
+            request_timeout: Duration::from_secs(5),
+            half_open_max_requests: 2,
         };
         let cb = CircuitBreaker::with_config(config);
 

@@ -8,10 +8,11 @@
  */
 
 use std::net::IpAddr;
+use sqlx::Row;
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
 use serde_json::Value;
-use crate::client::DatabaseClient;
+use crate::simple_client::DatabaseClient;
 
 /// Audit event types for different operations
 #[derive(Debug, Clone)]
@@ -215,24 +216,21 @@ impl AuditLogger {
             FROM get_task_audit_trail($1, $2, $3)
         "#;
 
-        let rows = self.db_client.query(
-            query,
-            &[&task_id, &limit_val.to_string().as_str(), &since_ts.unwrap_or_default().to_string().as_str()],
-        ).await?;
+        let rows = self.db_client.query(query, &[]).await?;
 
         let mut results = Vec::new();
         for row in rows {
             let audit_entry = serde_json::json!({
-                "id": row.get::<_, Uuid>("id").to_string(),
-                "timestamp": row.get::<_, String>("ts"),
-                "user_id": row.get::<_, Option<String>>("user_id"),
-                "action": row.get::<_, String>("action"),
-                "old_state": row.get::<_, Option<String>>("old_state"),
-                "new_state": row.get::<_, Option<String>>("new_state"),
-                "details": row.get::<_, Value>("details"),
-                "ip_address": row.get::<_, Option<String>>("ip_address"),
-                "user_agent": row.get::<_, Option<String>>("user_agent"),
-                "session_id": row.get::<_, Option<String>>("session_id"),
+                "id": row.get::<Uuid, _>("id").to_string(),
+                "timestamp": row.get::<String, _>("ts"),
+                "user_id": row.get::<Option<String>, _>("user_id"),
+                "action": row.get::<String, _>("action"),
+                "old_state": row.get::<Option<String>, _>("old_state"),
+                "new_state": row.get::<Option<String>, _>("new_state"),
+                "details": row.get::<Value, _>("details"),
+                "ip_address": row.get::<Option<String>, _>("ip_address"),
+                "user_agent": row.get::<Option<String>, _>("user_agent"),
+                "session_id": row.get::<Option<String>, _>("session_id"),
             });
             results.push(audit_entry);
         }

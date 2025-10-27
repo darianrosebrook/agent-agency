@@ -11,7 +11,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Instant;
 use tokio::sync::RwLock;
-use tracing::{debug, info};
+use tracing::{debug, info, warn, error};
 use uuid::Uuid;
 
 /// Minimal diff evaluator
@@ -20,11 +20,11 @@ pub struct MinimalDiffEvaluator {
     /// Evaluation configuration
     config: DiffEvaluationConfig,
     /// AST analyzer
-    ast_analyzer: Arc<ASTAnalyzer>,
+    ast_analyzer: Option<Arc<ASTAnalyzer>>,
     /// Change classifier
     change_classifier: Arc<ChangeClassifier>,
     /// Impact analyzer
-    impact_analyzer: Arc<ImpactAnalyzer>,
+    impact_analyzer: Option<Arc<ImpactAnalyzer>>,
     /// Language support
     language_support: Arc<LanguageSupport>,
     /// Evaluation statistics
@@ -36,9 +36,17 @@ impl MinimalDiffEvaluator {
     pub fn new(config: DiffEvaluationConfig) -> Result<Self> {
         info!("Initializing minimal diff evaluator");
 
-        let ast_analyzer = Arc::new(ASTAnalyzer::new(config.clone())?);
+        let ast_analyzer = if config.enable_ast_analysis {
+            Some(Arc::new(ASTAnalyzer::new(config.clone())?))
+        } else {
+            None
+        };
         let change_classifier = Arc::new(ChangeClassifier::new(config.clone())?);
-        let impact_analyzer = Arc::new(ImpactAnalyzer::new(config.clone())?);
+        let impact_analyzer = if config.enable_impact_analysis {
+            Some(Arc::new(ImpactAnalyzer::new(config.clone())?))
+        } else {
+            None
+        };
         let language_support = Arc::new(LanguageSupport::new(config.clone())?);
 
         let stats = Arc::new(RwLock::new(DiffEvaluationStats {
@@ -83,9 +91,13 @@ impl MinimalDiffEvaluator {
 
         // Perform AST-based analysis if enabled
         let language_analysis = if self.config.enable_ast_analysis {
-            self.ast_analyzer
-                .analyze_diff(diff_content, file_path, &language)
-                .await?
+            if let Some(ast_analyzer) = &self.ast_analyzer {
+                ast_analyzer
+                    .analyze_diff(diff_content, file_path, &language)
+                    .await?
+            } else {
+                LanguageAnalysisResult::default_for_language(language.clone())
+            }
         } else {
             LanguageAnalysisResult {
                 language: language.clone(),
@@ -117,9 +129,13 @@ impl MinimalDiffEvaluator {
 
         // Analyze impact if enabled
         let impact_analysis = if self.config.enable_impact_analysis {
-            self.impact_analyzer
-                .analyze_impact(diff_content, file_path, &language_analysis, context)
-                .await?
+            if let Some(impact_analyzer) = &self.impact_analyzer {
+                impact_analyzer
+                    .analyze_impact(diff_content, file_path, &language_analysis, context)
+                    .await?
+            } else {
+                ImpactAnalysis::default()
+            }
         } else {
             ImpactAnalysis {
                 files_affected: 1,
@@ -463,17 +479,17 @@ impl MinimalDiffEvaluator {
 
         // Validate language configurations
         for (language, lang_config) in &config.language_configs {
-            if lang_config.complexity_thresholds.cyclomatic_complexity == 0 {
+            if lang_config.complexity_thresholds.max_cyclomatic_complexity == 0 {
                 return Err(anyhow::anyhow!("Cyclomatic complexity threshold cannot be zero for {:?}", language));
             }
 
-            if lang_config.quality_thresholds.comment_density < 0.0 || lang_config.quality_thresholds.comment_density > 1.0 {
+            if lang_config.quality_thresholds.min_comment_density < 0.0 || lang_config.quality_thresholds.min_comment_density > 1.0 {
                 return Err(anyhow::anyhow!("Comment density must be between 0.0 and 1.0 for {:?}", language));
             }
         }
 
         // Validate quality thresholds
-        if config.quality_thresholds.comment_density < 0.0 || config.quality_thresholds.comment_density > 1.0 {
+        if config.quality_thresholds.min_comment_density < 0.0 || config.quality_thresholds.min_comment_density > 1.0 {
             return Err(anyhow::anyhow!("Global comment density must be between 0.0 and 1.0"));
         }
 
@@ -534,14 +550,14 @@ impl MinimalDiffEvaluator {
     async fn reinitialize_components(&mut self) -> Result<()> {
         // Reinitialize AST analyzer if configuration changed
         if self.config.enable_ast_analysis {
-            self.ast_analyzer = Some(crate::ast_analyzer::ASTAnalyzer::new(self.config.clone())?);
+            self.ast_analyzer = Some(Arc::new(crate::ast_analyzer::ASTAnalyzer::new(self.config.clone())?));
         } else {
             self.ast_analyzer = None;
         }
 
         // Reinitialize impact analyzer if configuration changed
         if self.config.enable_impact_analysis {
-            self.impact_analyzer = Some(crate::impact_analyzer::ImpactAnalyzer::new(self.config.clone())?);
+            self.impact_analyzer = Some(Arc::new(crate::impact_analyzer::ImpactAnalyzer::new(self.config.clone())?));
         } else {
             self.impact_analyzer = None;
         }

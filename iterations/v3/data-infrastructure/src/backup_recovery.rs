@@ -7,11 +7,12 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use sqlx::Row;
 use tokio::sync::RwLock;
 use tokio::time;
 use tracing::{info, warn, error};
 
-use crate::client::DatabaseClient;
+use crate::simple_client::DatabaseClient;
 
 /// Backup configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -242,7 +243,7 @@ impl DisasterRecoveryManager {
 
         let rows = self.db_client.query(query, &[]).await?;
         let tables = rows.iter()
-            .map(|row| row.get::<_, String>("table_name"))
+            .map(|row| row.get::<String, _>("table_name"))
             .collect();
 
         Ok(tables)

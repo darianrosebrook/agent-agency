@@ -45,7 +45,7 @@ impl ChangeClassifier {
             &context_signals,
             &score_entries,
             &primary_type,
-            risk_level,
+            risk_level.clone(),
         );
 
         Ok(ChangeClassification {
@@ -131,8 +131,8 @@ impl ChangeClassifier {
                 ViolationSeverity::Info => {}
             }
 
-            if let Some(current) = summary.max_violation {
-                if violation.severity > current {
+            if let Some(ref current) = summary.max_violation {
+                if violation.severity > *current {
                     summary.max_violation = Some(violation.severity.clone());
                 }
             } else {

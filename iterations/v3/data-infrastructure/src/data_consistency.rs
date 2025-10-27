@@ -8,10 +8,11 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use sqlx::Row;
 use tokio::sync::RwLock;
 use tracing::{info, warn};
 
-use crate::client::DatabaseClient;
+use crate::simple_client::DatabaseClient;
 
 /// Transaction state
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]

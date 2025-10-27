@@ -11,87 +11,91 @@ use std::marker::PhantomData;
 use std::ptr::NonNull;
 
 // Stub Core ML types for compilation - to be replaced with actual objc2 bindings
-#[cfg(target_os = "macos")]
-mod coreml_stubs {
-    use std::ptr::NonNull;
+// These are available on all platforms for compilation compatibility
 
-    // Stub types for Core ML - these will be replaced with actual objc2 types
-    pub struct MLModel(NonNull<u8>);
-    pub struct MLModelConfiguration;
-    pub struct MLComputeUnits;
-    pub struct MLMultiArray(NonNull<u8>);
-    pub struct MLFeatureValue(NonNull<u8>);
-    pub struct MLFeatureProvider(pub NonNull<u8>);
-    pub struct MLDictionaryFeatureProvider(NonNull<u8>);
-    pub struct MLMultiArrayDataType;
-    pub struct MLFeatureType;
+// Stub types for Core ML - these will be replaced with actual objc2 types
+#[derive(Debug)]
+pub struct MLModel(pub NonNull<u8>);
+#[derive(Debug, Clone)]
+pub struct MLModelConfiguration;
+#[derive(Debug, Clone)]
+pub struct MLComputeUnits;
+#[derive(Debug)]
+pub struct MLMultiArray(NonNull<u8>);
+#[derive(Debug)]
+pub struct MLFeatureValue(NonNull<u8>);
+#[derive(Debug)]
+pub struct MLFeatureProvider(pub NonNull<u8>);
+#[derive(Debug)]
+pub struct MLDictionaryFeatureProvider(NonNull<u8>);
+#[derive(Debug)]
+pub struct MLMultiArrayDataType;
+#[derive(Debug)]
+pub struct MLFeatureType;
 
-    impl MLModelConfiguration {
-        pub fn new() -> Self { Self }
-        pub fn set_compute_units(&mut self, _units: MLComputeUnits) {}
-        pub fn set_allow_low_precision_accumulation_on_gpu(&mut self, _allow: bool) {}
+impl MLModelConfiguration {
+    pub fn new() -> Self { Self }
+    pub fn set_compute_units(&mut self, _units: MLComputeUnits) {}
+    pub fn set_allow_low_precision_accumulation_on_gpu(&mut self, _allow: bool) {}
+}
+
+impl MLComputeUnits {
+    pub fn all() -> Self { Self }
+    pub fn cpu_only() -> Self { Self }
+    pub fn cpu_and_gpu() -> Self { Self }
+}
+
+impl MLMultiArrayDataType {
+    pub const FLOAT32: Self = Self;
+    pub const FLOAT16: Self = Self;
+}
+
+impl MLFeatureType {
+    pub const MULTI_ARRAY: Self = Self;
+    pub const IMAGE: Self = Self;
+}
+
+impl MLModel {
+    pub fn from_path(_path: &std::path::Path) -> std::result::Result<Self, String> {
+        // Stub implementation - always succeeds
+        Ok(Self(NonNull::new(1 as *mut u8).unwrap()))
     }
 
-    impl MLComputeUnits {
-        pub fn all() -> Self { Self }
-        pub fn cpu_only() -> Self { Self }
-        pub fn cpu_and_gpu() -> Self { Self }
+    pub fn compile_model_at_url(_url: &str, _error: &mut Option<String>) -> std::result::Result<Self, String> {
+        // Stub implementation
+        Ok(Self(NonNull::new(1 as *mut u8).unwrap()))
     }
 
-    impl MLMultiArrayDataType {
-        pub const FLOAT32: Self = Self;
-        pub const FLOAT16: Self = Self;
+    pub fn prediction_from_features(&self, _features: &MLFeatureProvider) -> std::result::Result<MLFeatureProvider, String> {
+        // Stub implementation - return dummy provider
+        Ok(MLFeatureProvider(NonNull::new(1 as *mut u8).unwrap()))
     }
 
-    impl MLFeatureType {
-        pub const MULTI_ARRAY: Self = Self;
-        pub const IMAGE: Self = Self;
-    }
-
-    impl MLModel {
-        pub fn from_path(_path: &std::path::Path) -> Result<Self, String> {
-            // Stub implementation - always succeeds
-            Ok(Self(NonNull::new(1 as *mut u8).unwrap()))
-        }
-
-        pub fn compile_model_at_url(_url: &str, _error: &mut Option<String>) -> Result<Self, String> {
-            // Stub implementation
-            Ok(Self(NonNull::new(1 as *mut u8).unwrap()))
-        }
-
-        pub fn prediction_from_features(&self, _features: &MLFeatureProvider) -> Result<MLFeatureProvider, String> {
-            // Stub implementation - return dummy provider
-            Ok(MLFeatureProvider(NonNull::new(1 as *mut u8).unwrap()))
-        }
-
-        pub fn save_to_path(&self, _path: &std::path::Path) -> Result<(), String> {
-            // Stub implementation - always succeeds
-            Ok(())
-        }
-    }
-
-    impl MLMultiArray {
-        pub fn from_slice(_data: &[f32], _shape: &[i32]) -> Result<Self, String> {
-            Ok(Self(NonNull::new(1 as *mut u8).unwrap()))
-        }
-    }
-
-    impl MLFeatureValue {
-        pub fn from_multi_array(_array: &MLMultiArray) -> Self {
-            Self(NonNull::new(1 as *mut u8).unwrap())
-        }
-    }
-
-    impl MLDictionaryFeatureProvider {
-        pub fn from_dictionary(_dict: &std::collections::HashMap<String, MLFeatureValue>) -> Result<Self, String> {
-            Ok(Self(NonNull::new(1 as *mut u8).unwrap()))
-        }
+    pub fn save_to_path(&self, _path: &std::path::Path) -> std::result::Result<(), String> {
+        // Stub implementation - always succeeds
+        Ok(())
     }
 }
 
-// Re-export stub types
-#[cfg(target_os = "macos")]
-use coreml_stubs::*;
+impl MLMultiArray {
+    pub fn from_slice(_data: &[f32], _shape: &[i32]) -> std::result::Result<Self, String> {
+        Ok(Self(NonNull::new(1 as *mut u8).unwrap()))
+    }
+}
+
+impl MLFeatureValue {
+    pub fn from_multi_array(_array: &MLMultiArray) -> Self {
+        Self(NonNull::new(1 as *mut u8).unwrap())
+    }
+}
+
+impl MLDictionaryFeatureProvider {
+    pub fn from_dictionary(_dict: &std::collections::HashMap<String, MLFeatureValue>) -> std::result::Result<Self, String> {
+        Ok(Self(NonNull::new(1 as *mut u8).unwrap()))
+    }
+}
+
+// Types are now defined at the module level
 
 /// Target platform detection
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
@@ -100,13 +104,162 @@ const TARGET_APPLE_SILICON: bool = true;
 #[cfg(not(all(target_os = "macos", target_arch = "aarch64")))]
 const TARGET_APPLE_SILICON: bool = false;
 
+/// Stub implementations for agentbridge functions (to be replaced with actual FFI calls)
+pub fn agentbridge_text_mistral_encode(
+    _text: *const std::ffi::c_char,
+    out_tokens: *mut *mut i32,
+    out_token_count: *mut i32,
+    _out_error: *mut *mut std::ffi::c_char,
+) -> i32 {
+    if !TARGET_APPLE_SILICON {
+        return -1; // Error
+    }
+    unsafe {
+        *out_tokens = Box::into_raw(Box::new([1i32, 2, 3])) as *mut i32;
+        *out_token_count = 3;
+    }
+    0 // Success
+}
+
+pub fn agentbridge_text_mistral_decode(
+    _tokens: *const i32,
+    _token_count: i32,
+    out_text: *mut *mut std::ffi::c_char,
+    _out_error: *mut *mut std::ffi::c_char,
+) -> i32 {
+    if !TARGET_APPLE_SILICON {
+        return -1; // Error
+    }
+    unsafe {
+        let text = std::ffi::CString::new("decoded text").unwrap();
+        *out_text = text.into_raw();
+    }
+    0 // Success
+}
+
+pub fn agentbridge_text_mistral_free_tokens(_tokens: *mut i32, _count: i32) {
+    // No-op for stub
+}
+
+pub fn agentbridge_free_string(ptr: *mut std::ffi::c_char) {
+    if !ptr.is_null() {
+        unsafe {
+            let _ = std::ffi::CString::from_raw(ptr);
+        }
+    }
+}
+
+/// Mistral tokenizer functions (wrappers around FFI)
+pub fn mistral_tokenizer_create() -> *mut std::ffi::c_void {
+    std::ptr::null_mut()
+}
+
+pub fn mistral_encode(_tokenizer: *mut std::ffi::c_void, _text: &str) -> Result<*mut i32> {
+    if !TARGET_APPLE_SILICON {
+        return Err(ANEError::Internal("Core ML not available on this platform".to_string()));
+    }
+    // Stub implementation - return dummy tokens
+    let tokens = Box::new([1i32, 2, 3]); // Dummy tokens
+    Ok(Box::into_raw(tokens) as *mut i32)
+}
+
+pub fn mistral_free_tokens(tokens: *mut i32) {
+    if !tokens.is_null() {
+        unsafe {
+            let _ = Box::from_raw(tokens);
+        }
+    }
+}
+
+pub fn mistral_decode(_tokenizer: *mut std::ffi::c_void, _tokens: &[i32]) -> Result<*mut std::ffi::c_char> {
+    if !TARGET_APPLE_SILICON {
+        return Err(ANEError::Internal("Core ML not available on this platform".to_string()));
+    }
+    // Stub implementation - return dummy text
+    let text = std::ffi::CString::new("decoded text").unwrap();
+    Ok(text.into_raw())
+}
+
+pub fn mistral_free_text(text: *mut std::ffi::c_char) {
+    if !text.is_null() {
+        unsafe {
+            let _ = std::ffi::CString::from_raw(text);
+        }
+    }
+}
+
+pub fn mistral_free_string(_text: *mut std::ffi::c_char) {
+    // No-op
+}
+
+pub fn mistral_get_vocab_size(_tokenizer: *mut std::ffi::c_void) -> usize {
+    0
+}
+
+pub fn mistral_tokenizer_destroy(_tokenizer: *mut std::ffi::c_void) {
+    // No-op
+}
+
+// Aliases for compatibility with existing code - FFI-style signatures
+pub fn mistral_tokenizer_encode(
+    tokenizer: *mut std::ffi::c_void,
+    text: *const std::ffi::c_char,
+    tokens_out: &mut *mut i32,
+    token_count_out: &mut i32,
+    error_out: &mut *mut std::ffi::c_char,
+) -> i32 {
+    // Simplified stub - always succeed
+    unsafe {
+        *tokens_out = Box::into_raw(Box::new([1i32, 2, 3])) as *mut i32;
+        *token_count_out = 3;
+        *error_out = std::ptr::null_mut();
+    }
+    0 // Success
+}
+
+pub fn mistral_tokenizer_free_tokens(tokens: *mut i32) {
+    if !tokens.is_null() {
+        unsafe {
+            let _ = Box::from_raw(tokens);
+        }
+    }
+}
+
+pub fn mistral_tokenizer_decode(
+    tokenizer: *mut std::ffi::c_void,
+    tokens: *const i32,
+    token_count: i32,
+    text_out: *mut *mut std::ffi::c_char,
+    error_out: *mut *mut std::ffi::c_char,
+) -> i32 {
+    // Simplified stub - return dummy text
+    unsafe {
+        let text = std::ffi::CString::new("decoded text").unwrap();
+        *text_out = text.into_raw();
+        *error_out = std::ptr::null_mut();
+    }
+    0 // Success
+}
+
+pub fn mistral_tokenizer_free_text(text: *mut std::ffi::c_char) {
+    if !text.is_null() {
+        unsafe {
+            let _ = std::ffi::CString::from_raw(text);
+        }
+    }
+}
+
 /// Core ML framework interface
 pub mod coreml {
     use super::*;
 
-    // Re-export types from stubs for external use
-    pub use super::coreml_stubs::MLModelConfiguration;
-    pub use super::coreml_stubs::MLComputeUnits;
+    // Re-export types for external use
+    pub use super::MLModelConfiguration;
+    pub use super::MLComputeUnits;
+
+    // ModelRef is defined later in this module
+
+    // The functions are already available at the module level
 
     /// Check if ANE is available on this system
     pub fn is_ane_available() -> bool {
@@ -121,7 +274,7 @@ pub mod coreml {
     /// Compile a .mlmodel file to .mlmodelc format
     pub fn compile_model(source_path: &Path) -> Result<std::path::PathBuf> {
         if !TARGET_APPLE_SILICON {
-            return Err(ANEError::Internal("Core ML not available on this platform"));
+            return Err(ANEError::Internal("Core ML not available on this platform".to_string()));
         }
         
         // TODO: Implement actual Core ML compilation with acceptance criteria:
@@ -138,7 +291,7 @@ pub mod coreml {
     /// The raw handle is stored in a thread-local registry for safety
     pub fn load_model(path: &str) -> Result<ModelRef> {
         if !TARGET_APPLE_SILICON {
-            return Err(ANEError::Internal("Core ML not available on this platform"));
+            return Err(ANEError::Internal("Core ML not available on this platform".to_string()));
         }
 
         #[cfg(target_os = "macos")]
@@ -155,7 +308,7 @@ pub mod coreml {
 
         #[cfg(not(target_os = "macos"))]
         {
-            Err(ANEError::Internal("Core ML not available on this platform"))
+            Err(ANEError::Internal("Core ML not available on this platform".to_string()))
         }
     }
 
@@ -333,27 +486,28 @@ pub mod coreml {
             }
 
             // Check shape compatibility
-            if tensor.shape().len() != expected_spec.shape.len() {
+            let tensor_dims = tensor.dims();
+            if tensor_dims.len() != expected_spec.shape.len() {
                 return Err(ANEError::InvalidInput(
                     format!("Shape dimension mismatch: got {}, expected {}",
-                           tensor.shape().len(), expected_spec.shape.len())
+                           tensor_dims.len(), expected_spec.shape.len())
                 ));
             }
 
             // For batch-capable tensors, allow variable batch size
-            if expected_spec.batch_capable && tensor.shape().len() > 0 {
+            if expected_spec.batch_capable && tensor_dims.len() > 0 {
                 // Check non-batch dimensions match
-                if &tensor.shape()[1..] != &expected_spec.shape[1..] {
+                if &tensor_dims[1..] != &expected_spec.shape[1..] {
                     return Err(ANEError::InvalidInput(
                         format!("Non-batch dimensions don't match: got {:?}, expected {:?}",
-                               &tensor.shape()[1..], &expected_spec.shape[1..])
+                               &tensor_dims[1..], &expected_spec.shape[1..])
                     ));
                 }
             } else {
                 // Exact shape match required
-                if tensor.shape() != expected_spec.shape {
+                if tensor_dims != expected_spec.shape {
                     return Err(ANEError::InvalidInput(
-                        format!("Shape mismatch: got {:?}, expected {:?}", tensor.shape(), expected_spec.shape)
+                        format!("Shape mismatch: got {:?}, expected {:?}", tensor_dims, expected_spec.shape)
                     ));
                 }
             }
@@ -438,7 +592,7 @@ pub mod coreml {
 
         #[cfg(not(target_os = "macos"))]
         {
-            Err(ANEError::Internal("Core ML not available on this platform"))
+            Err(ANEError::Internal("Core ML not available on this platform".to_string()))
         }
     }
 
@@ -452,7 +606,7 @@ pub mod coreml {
 
         #[cfg(not(target_os = "macos"))]
         {
-            Err(ANEError::Internal("Core ML not available on this platform"))
+            Err(ANEError::Internal("Core ML not available on this platform".to_string()))
         }
     }
 
@@ -464,7 +618,7 @@ pub mod coreml {
         _input_shape: &[usize],
     ) -> Result<Tensor> {
         if !TARGET_APPLE_SILICON {
-            return Err(ANEError::Internal("Core ML not available on this platform"));
+            return Err(ANEError::Internal("Core ML not available on this platform".to_string()));
         }
 
         #[cfg(target_os = "macos")]
@@ -475,7 +629,7 @@ pub mod coreml {
 
         #[cfg(not(target_os = "macos"))]
         {
-            Err(ANEError::Internal("Core ML not available on this platform"))
+            Err(ANEError::Internal("Core ML not available on this platform".to_string()))
         }
     }
 
@@ -497,7 +651,6 @@ pub mod coreml {
         pub fn agentbridge_init() -> i32;
         pub fn agentbridge_shutdown() -> i32;
         pub fn agentbridge_get_version(out_version: *mut *mut std::ffi::c_char) -> i32;
-        pub fn agentbridge_free_string(ptr: *mut std::ffi::c_char);
 
         // Model management
         pub fn agentbridge_model_download(
@@ -558,21 +711,6 @@ pub mod coreml {
             out_error: *mut *mut std::ffi::c_char
         ) -> i32;
 
-        pub fn agentbridge_text_mistral_encode(
-            text: *const std::ffi::c_char,
-            out_tokens: *mut *mut i32,
-            out_token_count: *mut i32,
-            out_error: *mut *mut std::ffi::c_char
-        ) -> i32;
-
-        pub fn agentbridge_text_mistral_decode(
-            tokens: *const i32,
-            token_count: i32,
-            out_text: *mut *mut std::ffi::c_char,
-            out_error: *mut *mut std::ffi::c_char
-        ) -> i32;
-
-        pub fn agentbridge_text_mistral_free_tokens(tokens: *mut i32, count: i32);
 
         // Audio processing - Whisper
         pub fn agentbridge_audio_whisper_create(
@@ -679,106 +817,6 @@ pub mod coreml {
             out_report: *mut *mut std::ffi::c_char,
             out_error: *mut *mut std::ffi::c_char
         ) -> i32;
-    }
-
-    /// Mistral tokenizer functions (wrappers around FFI)
-    pub fn mistral_tokenizer_create() -> *mut std::ffi::c_void {
-        std::ptr::null_mut()
-    }
-
-    pub fn mistral_encode(_tokenizer: *mut std::ffi::c_void, _text: &str) -> Result<*mut i32> {
-        if !TARGET_APPLE_SILICON {
-            return Err(ANEError::Internal("Core ML not available on this platform"));
-        }
-        // Stub implementation - return dummy tokens
-        let tokens = Box::new([1i32, 2, 3]); // Dummy tokens
-        Ok(Box::into_raw(tokens) as *mut i32)
-    }
-
-    pub fn mistral_free_tokens(tokens: *mut i32) {
-        if !tokens.is_null() {
-            unsafe {
-                let _ = Box::from_raw(tokens);
-            }
-        }
-    }
-
-    pub fn mistral_decode(_tokenizer: *mut std::ffi::c_void, _tokens: &[i32]) -> Result<*mut std::ffi::c_char> {
-        if !TARGET_APPLE_SILICON {
-            return Err(ANEError::Internal("Core ML not available on this platform"));
-        }
-        // Stub implementation - return dummy text
-        let text = std::ffi::CString::new("decoded text").unwrap();
-        Ok(text.into_raw())
-    }
-
-    pub fn mistral_free_text(text: *mut std::ffi::c_char) {
-        if !text.is_null() {
-            unsafe {
-                let _ = std::ffi::CString::from_raw(text);
-            }
-        }
-    }
-
-    pub fn mistral_free_string(_text: *mut std::ffi::c_char) {
-        // No-op
-    }
-
-    pub fn mistral_get_vocab_size(_tokenizer: *mut std::ffi::c_void) -> usize {
-        0
-    }
-
-    pub fn mistral_tokenizer_destroy(_tokenizer: *mut std::ffi::c_void) {
-        // No-op
-    }
-
-    // Aliases for compatibility with existing code - FFI-style signatures
-    pub fn mistral_tokenizer_encode(
-        tokenizer: *mut std::ffi::c_void,
-        text: *const std::ffi::c_char,
-        tokens_out: &mut *mut i32,
-        token_count_out: &mut i32,
-        error_out: &mut *mut std::ffi::c_char,
-    ) -> i32 {
-        // Simplified stub - always succeed
-        unsafe {
-            *tokens_out = Box::into_raw(Box::new([1i32, 2, 3])) as *mut i32;
-            *token_count_out = 3;
-            *error_out = std::ptr::null_mut();
-        }
-        0 // Success
-    }
-
-    pub fn mistral_tokenizer_free_tokens(tokens: *mut i32) {
-        if !tokens.is_null() {
-            unsafe {
-                let _ = Box::from_raw(tokens);
-            }
-        }
-    }
-
-    pub fn mistral_tokenizer_decode(
-        tokenizer: *mut std::ffi::c_void,
-        tokens: *const i32,
-        token_count: i32,
-        text_out: &mut *mut std::ffi::c_char,
-        error_out: &mut *mut std::ffi::c_char,
-    ) -> i32 {
-        // Simplified stub - return dummy text
-        unsafe {
-            let text = std::ffi::CString::new("decoded text").unwrap();
-            *text_out = text.into_raw();
-            *error_out = std::ptr::null_mut();
-        }
-        0 // Success
-    }
-
-    pub fn mistral_tokenizer_free_text(text: *mut std::ffi::c_char) {
-        if !text.is_null() {
-            unsafe {
-                let _ = std::ffi::CString::from_raw(text);
-            }
-        }
     }
 }
 

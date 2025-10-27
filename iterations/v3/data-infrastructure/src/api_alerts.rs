@@ -46,7 +46,7 @@ pub struct ComplianceViolation {
 }
 
 /// Violation types
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum ViolationType {
     RTOExceeded,
     RPOExceeded,
@@ -54,7 +54,7 @@ pub enum ViolationType {
 }
 
 /// Violation severity levels
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum ViolationSeverity {
     Low,
     Medium,
@@ -101,6 +101,9 @@ pub enum AlertType {
     RPOViolation,
     ServiceDegradation,
     SystemFailure,
+    ServiceUnavailable,
+    ComplianceThreshold,
+    RecoveryFailure,
 }
 
 /// Alert severity levels

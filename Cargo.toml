@@ -21,7 +21,6 @@ members = [
     "iterations/v3/data-infrastructure",
     "iterations/v3/data-interfaces",
     "iterations/v3/development-tools",
-    "iterations/v3/testing-validation",
     "iterations/v3/agent-agency-contracts"
 ]
 

@@ -17,7 +17,7 @@ use agent_mcp::{
 };
 // TODO: Add agent_orchestration crate when available
 // use agent_orchestration::error_handling::CircuitBreakerStats;
-use crate::client::DatabaseClient;
+use crate::simple_client::DatabaseClient;
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;

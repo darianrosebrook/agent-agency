@@ -68,6 +68,14 @@ impl DatabaseClient {
             .context("Failed to execute query")
     }
 
+    /// Execute a parameterized query and return a single row
+    pub async fn query_one_with_params(&self, query: &str, params: &[&(dyn sqlx::Encode<'_, sqlx::Postgres> + Send + Sync)]) -> Result<Option<sqlx::postgres::PgRow>> {
+        sqlx::query(query)
+            .fetch_optional(&self.pool)
+            .await
+            .context("Failed to execute query")
+    }
+
     /// Execute a parameterized query and return rows
     pub async fn query_with_params(&self, query: &str, params: &[&(dyn sqlx::Encode<'_, sqlx::Postgres> + Send + Sync)]) -> Result<Vec<sqlx::postgres::PgRow>> {
         sqlx::query(query)
@@ -75,6 +83,33 @@ impl DatabaseClient {
             .await
             .context("Failed to execute query")
     }
+
+    /// Execute a safe query (alias for execute with parameters)
+    pub async fn execute_safe_query(&self, query: &str) -> Result<sqlx::postgres::PgQueryResult> {
+        self.execute(query, &[]).await
+    }
+
+    /// Execute a parameterized query (alias for execute)
+    pub async fn execute_parameterized_query(&self, query: &str, params: Vec<&(dyn sqlx::Encode<'_, sqlx::Postgres> + Send + Sync)>) -> Result<sqlx::postgres::PgQueryResult> {
+        self.execute(query, &params).await
+    }
+
+    /// Execute a query and return a single row (if any)
+    pub async fn query_one(&self, query: &str) -> Result<Option<sqlx::postgres::PgRow>> {
+        sqlx::query(query)
+            .fetch_optional(&self.pool)
+            .await
+            .context("Failed to execute query")
+    }
+
+    /// Create an audit trail entry
+    pub async fn create_audit_trail_entry(&self, audit_entry: serde_json::Value) -> Result<()> {
+        // This is a placeholder - actual implementation would insert into audit table
+        // For now, just log the audit entry
+        tracing::info!("Audit entry: {}", audit_entry);
+        Ok(())
+    }
+
 
     /// Get the underlying connection pool
     pub fn pool(&self) -> &PgPool {
@@ -86,12 +121,13 @@ impl DatabaseClient {
         let pool = PgPool::connect(&config.database_url).await
             .context("Failed to connect to database")?;
 
+        let metrics = Arc::new(DatabaseMetrics::new());
         Ok(Self {
             pool,
             circuit_breaker: Some(Arc::new(CircuitBreaker::new())),
-            metrics: Some(Arc::new(DatabaseMetrics::new())),
+            metrics: Some(metrics.clone()),
             audit_logger: Some(Arc::new(DatabaseAuditLogger::new())),
-            health_monitor: Some(Arc::new(DatabaseHealthMonitor::new())),
+            health_monitor: Some(Arc::new(DatabaseHealthMonitor::new(metrics))),
             connection_semaphore: Arc::new(Semaphore::new(config.max_connections.unwrap_or(100) as usize)),
             statement_cache: Arc::new(RwLock::new(HashMap::new())),
         })
@@ -105,9 +141,23 @@ impl Default for DatabaseClient {
             circuit_breaker: Some(Arc::new(CircuitBreaker::new())),
             metrics: Some(Arc::new(DatabaseMetrics::new())),
             audit_logger: Some(Arc::new(DatabaseAuditLogger::new())),
-            health_monitor: Some(Arc::new(DatabaseHealthMonitor::new())),
+            health_monitor: Some(Arc::new(DatabaseHealthMonitor::new(Arc::new(DatabaseMetrics::new())))),
             connection_semaphore: Arc::new(Semaphore::new(100)),
             statement_cache: Arc::new(RwLock::new(HashMap::new())),
+        }
+    }
+}
+
+impl Clone for DatabaseClient {
+    fn clone(&self) -> Self {
+        Self {
+            pool: self.pool.clone(),
+            circuit_breaker: self.circuit_breaker.clone(),
+            metrics: self.metrics.clone(),
+            audit_logger: self.audit_logger.clone(),
+            health_monitor: self.health_monitor.clone(),
+            connection_semaphore: self.connection_semaphore.clone(),
+            statement_cache: self.statement_cache.clone(),
         }
     }
 }

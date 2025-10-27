@@ -13,6 +13,7 @@ use axum::{
     Router,
 };
 use chrono::{DateTime, Utc};
+use sqlx::Row;
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 use uuid::Uuid;
@@ -23,7 +24,7 @@ use uuid::Uuid;
 // use crate::orchestration::quality::QualityReport;
 // use crate::orchestration::tracking::{ProgressTracker, ExecutionProgress};
 // use crate::self_prompting_agent::loop_controller::{SelfPromptingLoop, SelfPromptingEvent, ExecutionMode};
-use crate::client::DatabaseClient;
+use crate::simple_client::DatabaseClient;
 
 use super::{ApiError, Result, ApiConfig, TaskSubmissionRequest, TaskSubmissionResponse, TaskStatusResponse, DashboardTaskSummary, DashboardDiffSummary, DashboardIterationSummary, TaskResultResponse, SavedQueryResponse, SaveQueryRequest, WorkingSpec, ExecutionArtifacts, QualityReport, ChangeBudget, BlastRadius, Scope, AcceptanceCriterion, NonFunctionalRequirements, PerformanceRequirements, Contract, ArtifactMetadata};
 use super::handlers::{get_metrics, get_dashboard_data, get_diff_summary, list_tasks, acknowledge_slo_alert, list_slos, get_slo_status, get_slo_measurements, list_slo_alerts, create_waiver, approve_waiver, get_task_provenance, list_provenance_records, link_provenance_to_commit, verify_provenance_trailer, get_provenance_by_commit, cancel_task, pause_task, resume_task, list_saved_queries, save_query, delete_saved_query, list_waivers, health_check, submit_task, get_task_status, get_task_result};
@@ -532,8 +533,8 @@ impl RestApi {
                 name,
                 query_text,
                 description: None, // TODO: Add description field to database
-                created_at: created_at.to_rfc3339(),
-                updated_at: updated_at.to_rfc3339(),
+                created_at,
+                updated_at,
             });
         }
 
@@ -550,12 +551,13 @@ impl RestApi {
         "#;
 
         let row = self.db_client
-            .query_one(
+            .query_one_with_params(
                 query,
                 &[&request.name, &request.query_text],
             )
             .await
-            .map_err(|e| ApiError::DatabaseError(format!("Failed to save query: {}", e)))?;
+            .map_err(|e| ApiError::DatabaseError(format!("Failed to save query: {}", e)))?
+            .ok_or_else(|| ApiError::DatabaseError("Query insertion failed".to_string()))?;
 
         let id: Uuid = row.get("id");
         let created_at: DateTime<Utc> = row.get("created_at");
@@ -566,8 +568,8 @@ impl RestApi {
             name: request.name,
             query_text: request.query_text,
             description: request.description,
-            created_at: created_at.to_rfc3339(),
-            updated_at: updated_at.to_rfc3339(),
+            created_at,
+            updated_at,
         })
     }
 
@@ -579,12 +581,12 @@ impl RestApi {
             WHERE id = $1
         "#;
 
-        let rows_affected = self.db_client
+        let result = self.db_client
             .execute(query, &[&query_id])
             .await
             .map_err(|e| ApiError::DatabaseError(format!("Failed to delete query: {}", e)))?;
 
-        if rows_affected == 0 {
+        if result.rows_affected() == 0 {
             return Err(ApiError::NotFound(format!("Query with ID {} not found", query_id)));
         }
 

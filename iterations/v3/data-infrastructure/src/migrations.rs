@@ -3,7 +3,7 @@
 //! Handles database schema migrations with rollback capabilities,
 //! migration tracking, and production-safe deployment strategies.
 
-use crate::client::DatabaseClient;
+use crate::simple_client::DatabaseClient;
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};

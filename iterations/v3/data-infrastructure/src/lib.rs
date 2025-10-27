@@ -29,7 +29,8 @@ pub mod api_circuit_breaker;
 pub mod artifact_store;
 pub mod cli_implementation;
 pub mod cli_interface;
-pub mod client;
+pub mod client; // client/mod.rs module
+pub mod simple_client; // simple_client.rs is automatically included as a module
 pub mod handlers;
 pub mod health;
 pub mod keystore_api;
@@ -59,4 +60,5 @@ pub use handlers::{AppState, PersistedTask, TaskStoreTrait};
 pub use handlers::{health_check, list_tasks, get_task, submit_task, get_api_metrics};
 pub use handlers::{create_chat_session, get_websocket_config, list_waivers, create_waiver};
 pub use handlers::{approve_waiver, get_task_provenance};
-pub use client::orchestrator::DatabaseClient as ApiDatabaseClient;
+pub use simple_client::DatabaseClient; // Simple DatabaseClient wrapper
+pub use client::orchestrator::DatabaseClient as ApiDatabaseClient; // Complex DatabaseClient

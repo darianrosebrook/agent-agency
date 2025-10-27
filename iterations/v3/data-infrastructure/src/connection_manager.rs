@@ -4,17 +4,14 @@
 //! ConnectionPoolManager implementation. This ensures consistent connection patterns
 //! across all database clients and modules.
 
-use crate::models::*;
 use anyhow::{Context, Result};
 use async_trait::async_trait;
-use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::{PgPool, postgres::PgConnectOptions};
-use std::sync::{Arc, LazyLock, OnceLock};
+use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 use tokio::sync::RwLock;
-use tracing::{debug, error, info, warn};
-use uuid::Uuid;
+use tracing::{error, info};
 
 /// Centralized database connection configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -131,12 +128,7 @@ impl ConnectionPoolManager {
         }
 
         // Create connection pool
-        let pool = PgPool::builder()
-            .min_connections(config.min_connections)
-            .max_connections(config.max_connections)
-            .idle_timeout(Duration::from_secs(config.idle_timeout_seconds))
-            .acquire_timeout(Duration::from_secs(config.connection_timeout_seconds))
-            .build_with(connect_options)
+        let pool = PgPool::connect_with(connect_options)
             .await
             .context("Failed to create database connection pool")?;
 
@@ -174,9 +166,9 @@ impl ConnectionPoolManager {
         let idle_count = self.pool.num_idle();
         
         PoolStats {
-            total_count: pool_stats,
-            idle_count,
-            active_count: pool_stats - idle_count,
+            total_count: pool_stats as u32,
+            idle_count: idle_count as u32,
+            active_count: (pool_stats as u32).saturating_sub(idle_count as u32),
             waiting_count: 0, // SQLx doesn't expose waiting count directly
             max_connections: self.config.max_connections,
             min_connections: self.config.min_connections,

@@ -60,6 +60,7 @@ pub enum ProgrammingLanguage {
     Haskell,
     OCaml,
     FSharp,
+    Shell,
     Clojure,
     Elixir,
     Erlang,
@@ -95,7 +96,7 @@ pub struct ASTChange {
 }
 
 /// AST change types
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum ASTChangeType {
     /// Function signature change
     FunctionSignature,
@@ -126,7 +127,7 @@ pub enum ASTChangeType {
 }
 
 /// Source location information
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct SourceLocation {
     /// File path
     pub file_path: String,
@@ -311,7 +312,7 @@ pub enum RiskLevel {
 }
 
 /// Impact analysis
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct ImpactAnalysis {
     /// Files affected
     pub files_affected: u32,

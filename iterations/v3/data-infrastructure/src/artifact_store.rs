@@ -13,7 +13,7 @@ use uuid::Uuid;
 use chrono;
 use tracing;
 
-use crate::{client::DatabaseClient, database_config::DatabaseConfig, database_operations::CreateAuditTrailEntry};
+use crate::{simple_client::DatabaseClient, database_config::DatabaseConfig, database_operations::CreateAuditTrailEntry};
 use agent_agency_contracts::{ExecutionArtifacts, execution_artifacts::ArtifactMetadata};
 
 /// Unique identifier for artifacts
@@ -960,7 +960,8 @@ impl ArtifactStorage for DatabaseArtifactStorage {
                         ip_address: None,
                         timestamp: None,
                     };
-                    let _ = self.client.create_audit_trail_entry(audit_entry).await;
+                    // TODO: Implement audit trail functionality
+                    // let _ = self.client.create_audit_trail_entry(audit_entry).await;
 
                     return Err(ArtifactStorageError::IntegrityCheckFailed);
                 }
@@ -1014,7 +1015,8 @@ impl ArtifactStorage for DatabaseArtifactStorage {
                 ip_address: None,
                 timestamp: None,
             };
-            let _ = self.client.create_audit_trail_entry(audit_entry).await;
+            // TODO: Implement audit trail functionality
+            // let _ = self.client.create_audit_trail_entry(audit_entry).await;
 
             return Err(ArtifactStorageError::IntegrityCheckFailed);
         }

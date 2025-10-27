@@ -24,6 +24,10 @@ pub enum ServiceType {
     Cache,
     FileStorage,
     ExternalApi,
+    API,
+    Worker,
+    Storage,
+    Network,
 }
 
 /// Service instance information
@@ -142,9 +146,12 @@ impl ServiceFailoverManager {
 
         // Create circuit breaker for this service
         let cb_config = CircuitBreakerConfig {
+            service_name: service_id.clone(),
             failure_threshold: self.config.failure_threshold,
-            recovery_timeout_ms: self.config.recovery_time_secs * 1000,
-            ..Default::default()
+            success_threshold: 2, // Default success threshold
+            timeout_duration: Duration::from_secs(self.config.recovery_time_secs),
+            request_timeout: Duration::from_secs(30), // Default request timeout
+            half_open_max_requests: 3, // Default
         };
         let circuit_breaker = CircuitBreaker::with_config(cb_config);
         let service_type = service.service_type;
@@ -245,6 +252,10 @@ impl ServiceFailoverManager {
             ServiceType::Cache => self.check_cache_health(&service).await,
             ServiceType::FileStorage => self.check_storage_health(&service).await,
             ServiceType::ExternalApi => self.check_external_api_health(&service).await,
+            ServiceType::API => self.check_api_health(&service).await,
+            ServiceType::Worker => self.check_worker_health(&service).await,
+            ServiceType::Storage => self.check_storage_health(&service).await,
+            ServiceType::Network => self.check_external_api_health(&service).await,
         };
 
         service.last_health_check = Instant::now();
@@ -484,6 +495,10 @@ impl ServiceFailoverManager {
             ServiceType::Cache => self.failover_cache(backup_service).await,
             ServiceType::FileStorage => self.failover_file_storage(backup_service).await,
             ServiceType::ExternalApi => self.failover_external_api(backup_service).await,
+            ServiceType::API => self.failover_api_server(backup_service).await,
+            ServiceType::Worker => self.failover_worker_pool(backup_service).await,
+            ServiceType::Storage => self.failover_file_storage(backup_service).await,
+            ServiceType::Network => self.failover_external_api(backup_service).await,
         }
     }
 

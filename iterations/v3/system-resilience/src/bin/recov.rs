@@ -1,14 +1,14 @@
 use clap::{Parser, Subcommand};
-use recovery::{
+use system_resilience::{
     index::RecoveryIndex,
     journal::WriteAheadLog,
-    policy::{
-        CawsPolicy, RetentionPolicy, 
+    policy::caws_policy::{
+        CawsPolicy, RetentionPolicy,
         CompressionPolicy, ChunkingPolicy, RedactionPolicy, RedactionRule,
         ProvenancePolicy, RecoveryPolicy, StoragePolicy, ChunkingMode,
         RedactionRuleType, CheckpointFrequency
     },
-    types::*,
+    recovery_types::Codec,
 };
 use std::path::PathBuf;
 use tracing::{info, warn};
@@ -292,12 +292,12 @@ async fn create_checkpoint(session: &str, label: Option<&str>) -> anyhow::Result
 async fn plan_restore(
     target: &str,
     output: &PathBuf,
-    include: &[String],
-    exclude: &[String],
+    _include: &[String],
+    _exclude: &[String],
 ) -> anyhow::Result<()> {
     info!("Planning restore from {} to {:?}", target, output);
-    info!("Include patterns: {:?}", include);
-    info!("Exclude patterns: {:?}", exclude);
+    info!("Include patterns: {:?}", _include);
+    info!("Exclude patterns: {:?}", _exclude);
 
     // TODO: Implement restore planning
     // This would involve:
@@ -313,8 +313,8 @@ async fn plan_restore(
 async fn execute_restore(
     target: &str,
     output: &PathBuf,
-    include: &[String],
-    exclude: &[String],
+    _include: &[String],
+    _exclude: &[String],
     dry_run: bool,
 ) -> anyhow::Result<()> {
     info!("Executing restore from {} to {:?}", target, output);

@@ -121,7 +121,7 @@ impl Pool {
         let permit = self.inner.clone()
             .acquire_owned()
             .await
-            .map_err(|_| ANEError::Internal("Semaphore closed"))?;
+            .map_err(|_| ANEError::Internal("Semaphore closed".to_string()))?;
 
         // Double-check memory availability after acquiring permit
         {

@@ -31,18 +31,18 @@ impl DeadpoolSqlxBridge {
         info!("Database configuration validated successfully");
 
         let mut pg_config = Config::new();
-        pg_config.host = Some(config.host.clone());
-        pg_config.port = Some(config.port);
-        pg_config.dbname = Some(config.database.clone());
-        pg_config.user = Some(config.username.clone());
-        pg_config.password = Some(config.password.clone());
+        pg_config.host = config.host.clone();
+        pg_config.port = config.port;
+        pg_config.dbname = config.database.clone();
+        pg_config.user = config.username.clone();
+        pg_config.password = config.password.clone();
         pg_config.manager = Some(ManagerConfig {
             recycling_method: RecyclingMethod::Fast,
         });
         pg_config.pool = Some(deadpool_postgres::PoolConfig {
-            max_size: config.pool_max as usize,
+            max_size: config.pool_max.unwrap_or(10) as usize,
             timeouts: deadpool_postgres::Timeouts {
-                wait: Some(StdDuration::from_secs(config.connection_timeout_seconds)),
+                wait: Some(StdDuration::from_secs(config.connection_timeout_seconds.unwrap_or(30))),
                 create: Some(StdDuration::from_secs(10)), // Connection creation timeout
                 recycle: Some(StdDuration::from_secs(5)), // Connection recycle timeout
             },
@@ -66,7 +66,7 @@ impl DeadpoolSqlxBridge {
 
         // Implement timeout and retry logic
         let connection = tokio::time::timeout(
-            StdDuration::from_secs(self.config.connection_timeout_seconds),
+            StdDuration::from_secs(self.config.connection_timeout_seconds.unwrap_or(30)),
             self.deadpool.get()
         )
         .await

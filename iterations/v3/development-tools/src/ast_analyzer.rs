@@ -2,6 +2,7 @@ use crate::evaluator_types::*;
 use anyhow::Result;
 use std::collections::HashSet;
 use tracing::debug;
+use uuid::Uuid;
 
 /// Internal structure for diff hunk representation
 #[derive(Debug, Clone)]
@@ -41,7 +42,7 @@ impl ASTAnalyzer {
         }
 
         // 2. AST change extraction: Extract AST changes from parsed content
-        let ast_changes = self.extract_ast_changes(&diff_hunks, language).await?;
+        let ast_changes = self.extract_ast_changes(&diff_hunks, file_path, language).await?;
 
         // 3. Quality and complexity metrics: Calculate metrics from changes
         let quality_metrics = self.calculate_quality_metrics(&diff_hunks, &ast_changes, language)?;
@@ -105,7 +106,7 @@ impl ASTAnalyzer {
     }
 
     /// Extract AST changes from diff hunks
-    async fn extract_ast_changes(&self, hunks: &[DiffHunk], language: &ProgrammingLanguage) -> Result<Vec<ASTChange>> {
+    async fn extract_ast_changes(&self, hunks: &[DiffHunk], file_path: &str, language: &ProgrammingLanguage) -> Result<Vec<ASTChange>> {
         let mut changes = Vec::new();
 
         for (hunk_idx, hunk) in hunks.iter().enumerate() {
@@ -144,16 +145,16 @@ impl ASTAnalyzer {
 
         // Language-specific analysis
         match language {
-            ProgrammingLanguage::Rust => self.analyze_rust_line(line, is_addition),
+            ProgrammingLanguage::Rust => self.analyze_rust_line(line, file_path, is_addition),
             ProgrammingLanguage::TypeScript | ProgrammingLanguage::JavaScript =>
-                self.analyze_typescript_line(line, is_addition),
-            ProgrammingLanguage::Python => self.analyze_python_line(line, is_addition),
-            _ => self.analyze_generic_line(line, is_addition),
+                self.analyze_typescript_line(line, file_path, is_addition),
+            ProgrammingLanguage::Python => self.analyze_python_line(line, file_path, is_addition),
+            _ => self.analyze_generic_line(line, file_path, is_addition),
         }
     }
 
     /// Analyze Rust code line
-    fn analyze_rust_line(&self, line: &str, is_addition: bool) -> Option<ASTChange> {
+    fn analyze_rust_line(&self, line: &str, file_path: &str, is_addition: bool) -> Option<ASTChange> {
         // Function definitions
         if line.contains("fn ") && line.contains('(') {
             return Some(ASTChange {
@@ -205,7 +206,7 @@ impl ASTAnalyzer {
     }
 
     /// Analyze TypeScript/JavaScript code line
-    fn analyze_typescript_line(&self, line: &str, is_addition: bool) -> Option<ASTChange> {
+    fn analyze_typescript_line(&self, line: &str, file_path: &str, is_addition: bool) -> Option<ASTChange> {
         // Function definitions
         if (line.contains("function ") || line.contains("=>") || line.contains("const ") && line.contains('=')) &&
            (line.contains('(') || line.contains("=>")) {
@@ -258,7 +259,7 @@ impl ASTAnalyzer {
     }
 
     /// Analyze Python code line
-    fn analyze_python_line(&self, line: &str, is_addition: bool) -> Option<ASTChange> {
+    fn analyze_python_line(&self, line: &str, file_path: &str, is_addition: bool) -> Option<ASTChange> {
         // Function definitions
         if line.starts_with("def ") {
             return Some(ASTChange {
@@ -310,7 +311,7 @@ impl ASTAnalyzer {
     }
 
     /// Generic analysis for unsupported languages
-    fn analyze_generic_line(&self, line: &str, is_addition: bool) -> Option<ASTChange> {
+    fn analyze_generic_line(&self, line: &str, file_path: &str, is_addition: bool) -> Option<ASTChange> {
         // Basic pattern matching for common constructs
         if line.contains("function") || line.contains("def ") || line.contains("fn ") {
             return Some(ASTChange {
@@ -492,10 +493,10 @@ impl ASTAnalyzer {
                     if change.description.contains("unsafe") {
                         violations.push(LanguageViolation {
                             id: Uuid::new_v4(),
-                            rule_name: "unsafe_code".to_string(),
-                            severity: ViolationSeverity::Medium,
-                            message: "Unsafe code usage detected".to_string(),
-                            location: change.location.clone(),
+                    rule: "unsafe_code".to_string(),
+                    severity: ViolationSeverity::Warning,
+                    description: "Unsafe code usage detected".to_string(),
+                            location: Some(change.location.clone()),
                             suggestion: Some("Review unsafe block necessity and safety guarantees".to_string()),
                         });
                     }
@@ -505,10 +506,10 @@ impl ASTAnalyzer {
                     if change.description.contains(": any") {
                         violations.push(LanguageViolation {
                             id: Uuid::new_v4(),
-                            rule_name: "any_type_usage".to_string(),
-                            severity: ViolationSeverity::Low,
-                            message: "Use of 'any' type detected".to_string(),
-                            location: change.location.clone(),
+                    rule: "any_type_usage".to_string(),
+                    severity: ViolationSeverity::Info,
+                    description: "Use of 'any' type detected".to_string(),
+                            location: Some(change.location.clone()),
                             suggestion: Some("Consider using more specific types".to_string()),
                         });
                     }
@@ -554,7 +555,7 @@ impl ASTAnalyzer {
 
 impl LanguageAnalysisResult {
     /// Create a default analysis result for a given language
-    fn default_for_language(language: ProgrammingLanguage) -> Self {
+    pub fn default_for_language(language: ProgrammingLanguage) -> Self {
         Self {
             language,
             ast_changes: Vec::new(),

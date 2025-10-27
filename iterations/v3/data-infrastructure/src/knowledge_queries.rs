@@ -2,7 +2,7 @@
 //!
 //! @author @darianrosebrook
 
-use crate::client::DatabaseClient;
+use crate::simple_client::DatabaseClient;
 use crate::models::*;
 use anyhow::{Context, Result};
 use sqlx::Row;

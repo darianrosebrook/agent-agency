@@ -11,6 +11,7 @@ use axum::{
     routing::delete,
 };
 use serde_json::Value;
+use sqlx::Row;
 use uuid::Uuid;
 
 use super::{ApiError, Result, LinkProvenanceRequest, ProvenanceResponse, DashboardDiffSummary, WaiverRequest, WaiverResponse, WaiverApprovalRequest, TaskResultResponse, SavedQueryResponse, SaveQueryRequest, TaskStatusResponse, DashboardTaskSummary, TaskSubmissionRequest, TaskSubmissionResponse};
@@ -208,7 +209,7 @@ pub async fn create_waiver(
     });
 
     let rows = state.api.db_client
-        .query(
+        .query_with_params(
             insert_query,
             &[
                 &request.title,
@@ -279,7 +280,7 @@ pub async fn approve_waiver(
         .map_err(|_| ApiError::InvalidRequest("Invalid waiver ID format".to_string()))?;
 
     let rows = state.api.db_client
-        .query(
+        .query_with_params(
             update_query,
             &[&metadata, &serde_json::to_value(&waiver_uuid).unwrap()],
         )
@@ -377,12 +378,12 @@ pub async fn link_provenance_to_commit(
         WHERE verdict_id::text = $1
     "#;
 
-    let rows_affected = state.api.db_client
+    let result = state.api.db_client
         .execute(update_query, &[&request.provenance_id.to_string(), &request.commit_hash])
         .await
         .map_err(|e| ApiError::DatabaseError(format!("Failed to link provenance: {}", e)))?;
 
-    if rows_affected == 0 {
+    if result.rows_affected() == 0 {
         return Err(ApiError::NotFound(format!("Provenance record {} not found", request.provenance_id)));
     }
 
@@ -398,7 +399,7 @@ pub async fn verify_provenance_trailer(
     let query = r#"SELECT git_trailer FROM provenance_records WHERE git_commit_hash = $1"#;
 
     let rows = state.api.db_client
-        .query(query, &[&commit_hash])
+        .query_with_params(query, &[&commit_hash])
         .await
         .map_err(|e| ApiError::DatabaseError(format!("Failed to verify trailer: {}", e)))?;
 
@@ -436,7 +437,7 @@ pub async fn get_provenance_by_commit(
     "#;
 
     let rows = state.api.db_client
-        .query(query, &[&commit_hash])
+        .query_with_params(query, &[&commit_hash])
         .await
         .map_err(|e| ApiError::DatabaseError(format!("Failed to get provenance: {}", e)))?;
 
@@ -480,8 +481,7 @@ pub async fn list_slos(State(state): State<ApiState>) -> Result<Json<Vec<Value>>
             "service": slo.service,
             "metric": slo.metric,
             "target": slo.target,
-            "window_days": slo.window_days,
-            "labels": slo.labels
+            "measurement_window": slo.measurement_window
         }))
         .collect();
 

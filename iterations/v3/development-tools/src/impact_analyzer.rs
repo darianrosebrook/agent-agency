@@ -49,10 +49,10 @@ impl ImpactAnalyzer {
 
         Ok(ImpactAnalysis {
             files_affected: file_type_impact.files_affected,
-            functions_affected: overall_metrics.functions_affected,
-            classes_affected: overall_metrics.classes_affected,
-            interfaces_affected: overall_metrics.interfaces_affected,
-            dependencies_affected: dependency_impact.dependencies_affected,
+            functions_affected: overall_metrics.functions_affected as u32,
+            classes_affected: overall_metrics.classes_affected as u32,
+            interfaces_affected: overall_metrics.interfaces_affected as u32,
+            dependencies_affected: dependency_impact.dependencies_affected as u32,
             test_files_affected: file_type_impact.test_files_affected,
             documentation_files_affected: file_type_impact.documentation_files_affected,
             configuration_files_affected: file_type_impact.configuration_files_affected,

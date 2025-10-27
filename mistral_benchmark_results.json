@@ -1,0 +1,27 @@
+[
+  {
+    "model_name": "Mistral-7B-Int4",
+    "model_type": "text",
+    "timestamp": "2025-10-26T18:06:50.216470",
+    "runs": 5,
+    "latencies_ms": [
+      0.3020763397216797,
+      0.28896331787109375,
+      0.28634071350097656,
+      0.2796649932861328,
+      0.2644062042236328
+    ],
+    "mean_latency_ms": 0.2842903137207031,
+    "std_latency_ms": 0.012321974091596388,
+    "min_latency_ms": 0.2644062042236328,
+    "max_latency_ms": 0.3020763397216797,
+    "p50_latency_ms": 0.28634071350097656,
+    "p95_latency_ms": 0.2994537353515625,
+    "p99_latency_ms": 0.30155181884765625,
+    "throughput_inferences_per_sec": 3517.531029855753,
+    "memory_usage_mb": 8521.296875,
+    "cpu_percent": 5.5,
+    "success": true,
+    "error_message": null
+  }
+]
