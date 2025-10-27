@@ -17,7 +17,7 @@ use futures::future::join_all;
 use system_federated_ml::claim_extraction::{ClaimExtractor, ExtractionPattern, PatternType};
 use system_federated_ml::fact_verification::{FactVerifier, VerificationMethod, VerificationPriority};
 use agent_research::evidence::collector::EvidenceCollector;
-use agent_research::learning_algorithms::reinforcement::QLearning;
+use agent_research::reinforcement::QLearning;
 
 /// Framework for asserting test outcomes
 pub struct AssertionFramework {

@@ -3,7 +3,7 @@
 //! Graph-based indexing for diagrams, knowledge graphs, and
 //! relational data with adjacency lists and property management.
 
-use super::super::types::*;
+use super::super::embedding_types::*;
 use anyhow::Result;
 use std::collections::{HashMap, HashSet};
 use uuid::Uuid;

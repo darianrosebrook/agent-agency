@@ -21,8 +21,8 @@ tracing.workspace = true
 # agent-orchestration = { path = "../agent-orchestration" }
 # data-infrastructure = { path = "../data-infrastructure" }
 
-# Memory system for memory MCP tools
-agent-memory = { path = "../agent-memory", optional = true }
+# Memory system for memory MCP tools - removed to avoid cyclic dependency
+# agent-memory = { path = "../agent-memory", optional = true }
 
 # Common types and abstractions
 system-configuration = { path = "../system-configuration" }
@@ -63,9 +63,9 @@ prometheus = "0.13"
 lazy_static = "1.4"
 
 [features]
-default = [] # Temporarily disabled memory to avoid cyclic dependency
+default = []
 test-utils = []
-memory = ["agent-memory/database"]
+# memory = ["agent-memory/database"]  # Removed to avoid cyclic dependency
 
 [dev-dependencies]
 tokio-test = "0.4"

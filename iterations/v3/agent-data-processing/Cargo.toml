@@ -34,6 +34,7 @@ reqwest.workspace = true
 walkdir = "2.4"
 ignore = "0.4"
 sha2 = "0.10"
+md5 = "0.7"
 flate2 = "1.0"
 
 # Image and video processing
@@ -86,7 +87,7 @@ parking_lot = "0.12"
 futures = "0.3"
 
 [features]
-default = ["workspace-integration"] # embeddings temporarily disabled
+default = ["workspace-integration"] 
 memory-integration = ["agent-memory"]
 workspace-integration = ["system-resilience"]
 embeddings = ["data-infrastructure"] # Re-enabled for conditional compilation

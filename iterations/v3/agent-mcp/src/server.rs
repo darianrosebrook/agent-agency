@@ -7,7 +7,6 @@ use crate::{CawsIntegration, ToolDiscovery, ToolRegistry};
 use crate::mcp_caws_integration::McpCawsIntegration;
 // use caws_runtime_validator::integration::McpCawsIntegration;
 #[cfg(feature = "memory")]
-#[cfg(feature = "memory")]
 use agent_memory::MemorySystem;
 use anyhow::{anyhow, bail, Result};
 use jsonrpc_core::{Error as JsonRpcError, IoHandler, Params, Value};

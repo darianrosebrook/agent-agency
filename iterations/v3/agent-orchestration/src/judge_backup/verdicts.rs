@@ -46,7 +46,7 @@ impl JudgeVerdict {
 }
 
 /// Required change for refinement
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct RequiredChange {
     pub category: ChangeCategory,
     pub description: String,
@@ -103,7 +103,7 @@ pub enum ComplexityLevel {
 }
 
 /// Critical issue for rejection
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct CriticalIssue {
     pub severity: IssueSeverity,
     pub category: String,

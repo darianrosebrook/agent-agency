@@ -57,8 +57,7 @@ sha2 = "0.10"
 config = { workspace = true }
 
 # Integration with existing services
-data-infrastructure = { path = "../data-infrastructure" }
-# Note: agent-data-processing dependency removed to avoid circular dependency
+data-infrastructure = { path = "../data-infrastructure", optional = true }
 
 [dev-dependencies]
 tokio-test = "0.4"
@@ -67,10 +66,9 @@ criterion = { version = "0.5", features = ["html_reports"] }
 
 [features]
 default = ["graph-reasoning"]
-# embeddings = ["data-infrastructure"] # Temporarily disabled to avoid circular dependency
+embeddings = ["data-infrastructure"]  
 graph-reasoning = []
 temporal-analysis = []
 context-offloading = []
 provenance-tracking = []
-database = []
-# database = ["data-infrastructure"] # Temporarily disabled to avoid circular dependency
+database = ["data-infrastructure"] 

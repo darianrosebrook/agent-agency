@@ -131,9 +131,54 @@ jobs:
         with:
           extra_args: "--only-verified"
 
+  hidden_todos_blocking:
+    name: Hidden TODOs Blocking Gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyyaml
+      - name: Run Hidden TODO Analysis (CI Mode)
+        run: |
+          python3 scripts/v3/analysis/todo_analyzer.py \
+            --v3-only \
+            --ci-mode \
+            --min-confidence 0.8 \
+            --output-json hidden-todos-report.json \
+            --output-md hidden-todos-report.md
+      - name: Upload Hidden TODO Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: hidden-todos-report
+          path: |
+            hidden-todos-report.json
+            hidden-todos-report.md
+      - name: Comment on PR (if applicable)
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            if (fs.existsSync('hidden-todos-report.md')) {
+              const report = fs.readFileSync('hidden-todos-report.md', 'utf8');
+              const summary = report.split('## Summary')[1]?.split('##')[0] || 'No summary available';
+              
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `## 🚫 Hidden TODOs Detected\n\n${summary}\n\n**Action Required:** Fix critical TODOs before merging. See full report in artifacts.`
+              });
+            }
+
   enforce_tier_thresholds:
     name: Enforce Tier Thresholds
-    needs: [test_rust, test_js]
+    needs: [test_rust, test_js, hidden_todos_blocking]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

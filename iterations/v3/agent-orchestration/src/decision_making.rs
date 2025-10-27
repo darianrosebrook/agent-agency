@@ -4,8 +4,9 @@
 //! decisions from aggregated judge verdicts.
 
 use async_trait::async_trait;
-use crate::error::CouncilResult;
+use crate::council_errors::CouncilResult;
 use crate::verdict_aggregation::AggregationResult;
+use crate::types::TaskPriority;
 
 /// Decision engine that applies algorithms to reach final decisions
 #[async_trait]
@@ -41,7 +42,7 @@ pub struct DecisionContext {
 #[derive(Debug, Clone)]
 pub struct OrganizationalConstraints {
     /// Maximum allowed risk for this tier
-    pub max_risk_level: crate::judge::RiskLevel,
+    pub max_risk_level: crate::judge_backup::risk::RiskLevel,
 
     /// Required consensus level for high-risk decisions
     pub required_consensus_high_risk: f64,
@@ -180,14 +181,6 @@ pub struct ExecutionPlan {
     pub risk_mitigations: Vec<String>,
 }
 
-/// Task priority levels
-#[derive(Debug, Clone, PartialEq)]
-pub enum TaskPriority {
-    Low,
-    Normal,
-    High,
-    Critical,
-}
 
 /// Resource requirements
 #[derive(Debug, Clone)]
@@ -210,7 +203,7 @@ pub struct QualityGate {
 #[derive(Debug, Clone)]
 pub struct RefinementDirective {
     pub required_changes: Vec<RefinementChange>,
-    pub change_priority: crate::judge::ChangePriority,
+    pub change_priority: crate::judge_backup::verdicts::ChangePriority,
     pub estimated_effort: crate::verdict_aggregation::AggregatedEffort,
     pub acceptance_criteria: Vec<String>,
     pub max_iterations: u32,
@@ -219,7 +212,7 @@ pub struct RefinementDirective {
 /// Required change specification
 #[derive(Debug, Clone)]
 pub struct RefinementChange {
-    pub category: crate::judge::ChangeCategory,
+    pub category: crate::judge_backup::verdicts::ChangeCategory,
     pub description: String,
     pub rationale: String,
     pub acceptance_criteria: String,
@@ -364,17 +357,9 @@ impl AlgorithmicDecisionEngine {
                 Ok(FinalDecision::Refine {
                     refinement_directive: RefinementDirective {
                         required_changes: required_changes.iter().map(|change| RefinementChange {
-                            category: match change.change_type {
-                                crate::judge::ChangeType::SecurityFix => crate::judge::ChangeCategory::Security,
-                                crate::judge::ChangeType::PerformanceOptimization => crate::judge::ChangeCategory::Performance,
-                                crate::judge::ChangeType::CodeQuality => crate::judge::ChangeCategory::Quality,
-                                crate::judge::ChangeType::Documentation => crate::judge::ChangeCategory::Documentation,
-                                crate::judge::ChangeType::Testing => crate::judge::ChangeCategory::Quality,
-                                crate::judge::ChangeType::Architecture => crate::judge::ChangeCategory::Architecture,
-                                crate::judge::ChangeType::Configuration => crate::judge::ChangeCategory::Quality,
-                            },
+                            category: change.category.clone(),
                             description: change.description.clone(),
-                            rationale: format!("Required change: {:?}", change.change_type),
+                            rationale: change.rationale.clone(),
                             acceptance_criteria: format!("Implement: {}", change.description),
                         }).collect(),
                             change_priority: priority.clone(),
@@ -425,7 +410,7 @@ impl AlgorithmicDecisionEngine {
 
         let approval_weight: f64 = aggregation_result.judge_contributions
             .iter()
-            .filter(|contrib| matches!(contrib.verdict, crate::judge::JudgeVerdict::Approve { .. }))
+            .filter(|contrib| matches!(contrib.verdict, crate::judge_backup::verdicts::JudgeVerdict::Approve { .. }))
             .map(|contrib| contrib.specialization_score * contrib.contribution_quality)
             .sum();
 
@@ -464,7 +449,7 @@ impl AlgorithmicDecisionEngine {
             crate::verdict_aggregation::CouncilDecision::Approve { risk_assessment, .. } => {
                 risk_assessment.overall_risk.clone()
             },
-            _ => crate::judge::RiskLevel::High, // Default to high risk for non-approval
+            _ => crate::judge_backup::risk::RiskLevel::High, // Default to high risk for non-approval
         };
 
         // Check against organizational risk limits
@@ -664,7 +649,7 @@ impl AlgorithmicDecisionEngine {
         let priority = match context.risk_tier {
             agent_agency_contracts::task_request::RiskTier::Tier1 => TaskPriority::Critical,
             agent_agency_contracts::task_request::RiskTier::Tier2 => TaskPriority::High,
-            agent_agency_contracts::task_request::RiskTier::Tier3 => TaskPriority::Normal,
+            agent_agency_contracts::task_request::RiskTier::Tier3 => TaskPriority::Medium,
         };
 
         let estimated_duration_hours = aggregation_result.aggregated_changes

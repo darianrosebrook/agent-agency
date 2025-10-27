@@ -5,12 +5,16 @@
 
 use agent_mcp::{
     tools::DocQualityValidator,
-    types::*,
     ToolRegistry,
+    ToolExecutionRequest,
+    ExecutionContext,
+    ExecutionPriority,
 };
 use anyhow::Result;
 use serde_json::json;
+use std::collections::HashMap;
 use uuid::Uuid;
+use chrono::Utc;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -49,16 +53,24 @@ This is a **revolutionary breakthrough** in AI technology! Our system is **produ
 
     let request = ToolExecutionRequest {
         id: Uuid::new_v4(),
-        tool_id: Uuid::new_v4(), // Will be set by the registry
+        tool_id: Uuid::new_v4(),
         parameters: json!({
             "content": test_content,
             "content_type": "markdown",
             "validation_level": "strict",
             "include_suggestions": true
+        }).as_object().unwrap().iter().map(|(k, v)| (k.clone(), v.clone())).collect(),
+        context: Some(ExecutionContext {
+            working_directory: Some("/tmp".to_string()),
+            environment_variables: std::collections::HashMap::new(),
+            input_files: vec![],
+            output_directory: Some("/tmp/output".to_string()),
+            metadata: std::collections::HashMap::new(),
         }),
-        timeout_seconds: Some(30),
         priority: ExecutionPriority::Normal,
-        metadata: std::collections::HashMap::new(),
+        timeout_seconds: Some(30),
+        created_at: chrono::Utc::now(),
+        requested_by: Some("user123".to_string()),
     };
 
     println!("\n📝 Testing Documentation Quality Validation");
@@ -149,10 +161,18 @@ The system uses a modular architecture with:
             "content_type": "markdown",
             "validation_level": "strict",
             "include_suggestions": true
+        }).as_object().unwrap().iter().map(|(k, v)| (k.clone(), v.clone())).collect::<HashMap<String, serde_json::Value>>(),
+        context: Some(ExecutionContext {
+            working_directory: Some("/tmp".to_string()),
+            environment_variables: std::collections::HashMap::new(),
+            input_files: vec![],
+            output_directory: Some("/tmp/output".to_string()),
+            metadata: std::collections::HashMap::new(),
         }),
-        timeout_seconds: Some(30),
         priority: ExecutionPriority::Normal,
-        metadata: std::collections::HashMap::new(),
+        timeout_seconds: Some(30),
+        created_at: chrono::Utc::now(),
+        requested_by: Some("user123".to_string()),
     };
 
     let improved_result = tool_registry.execute_tool(improved_request).await?;
@@ -220,10 +240,18 @@ We have **100% complete** implementation with **enterprise-grade** quality.
                     "content_type": "markdown",
                     "validation_level": "moderate",
                     "include_suggestions": true
+                }).as_object().unwrap().iter().map(|(k, v)| (k.clone(), v.clone())).collect::<HashMap<String, serde_json::Value>>(),
+                context: Some(ExecutionContext {
+                    working_directory: Some("/tmp".to_string()),
+                    environment_variables: std::collections::HashMap::new(),
+                    input_files: vec![],
+                    output_directory: Some("/tmp/output".to_string()),
+                    metadata: std::collections::HashMap::new(),
                 }),
-                timeout_seconds: Some(30),
                 priority: ExecutionPriority::Normal,
-                metadata: std::collections::HashMap::new(),
+                timeout_seconds: Some(30),
+                created_at: chrono::Utc::now(),
+                requested_by: Some("user123".to_string()),
             };
 
             let result = self.tool_registry.execute_tool(request).await?;

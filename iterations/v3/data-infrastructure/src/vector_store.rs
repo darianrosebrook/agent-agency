@@ -4,7 +4,6 @@
 //! with HNSW indices for efficient similarity search.
 
 use anyhow::{Context, Result};
-use sqlx::PgPool;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use tracing::{debug, error, info};
@@ -677,11 +676,12 @@ mod tests {
         }
 
         let pool = pool.unwrap();
-        let pool = Arc::new(pool);
+        let database_pool = DatabasePool::new(pool);
+        let pool = Arc::new(database_pool);
         let vector_store = DatabaseVectorStore::new(pool);
 
         // Test that we can access the pool
-        assert!(vector_store.pool().is_some());
+        assert!(vector_store.pool().reference_count() > 0);
     }
 
     #[tokio::test]
@@ -693,13 +693,14 @@ mod tests {
         let modality = "text";
 
         let record = BlockVectorRecord {
-            block_id,
+            block_id: block_id.to_string(),
             model_id: model_id.to_string(),
             vector: vec.clone(),
             modality: modality.to_string(),
+            created_at: chrono::Utc::now(),
         };
 
-        assert_eq!(record.block_id, block_id);
+        assert_eq!(record.block_id, block_id.to_string());
         assert_eq!(record.model_id, model_id);
         assert_eq!(record.vector, vec);
         assert_eq!(record.modality, modality);
@@ -725,14 +726,14 @@ mod tests {
         features.insert("feature2".to_string(), 0.6);
 
         let entry = SearchAuditEntry {
-            query_id: id,
+            query_id: id.to_string(),
             query_type: "semantic".to_string(),
             results_count: results.len(),
             search_time_ms: 150,
             timestamp: created_at,
         };
 
-        assert_eq!(entry.query_id, id);
+        assert_eq!(entry.query_id, id.to_string());
         assert_eq!(entry.query_type, "semantic");
         assert_eq!(entry.results_count, results.len());
         assert_eq!(entry.search_time_ms, 150);
@@ -804,6 +805,7 @@ mod tests {
             model_id: "e5-small-v2".to_string(),
             vector: vec![0.1, 0.2, 0.3, 0.4, 0.5],
             modality: "text".to_string(),
+            created_at: chrono::Utc::now(),
         };
 
         // Store vector

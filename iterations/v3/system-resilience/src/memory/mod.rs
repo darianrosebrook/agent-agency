@@ -936,9 +936,41 @@ impl SystemMetricsCollector {
         analysis
     }
 
+    // TODO: Platform-Specific CPU Metrics - Implement actual CPU monitoring
+    // 
+    // COMPLETION CHECKLIST:
+    // [ ] macOS CPU metrics implementation
+    // [ ] Linux CPU metrics implementation
+    // [ ] Windows CPU metrics implementation
+    // [ ] Cross-platform abstraction layer
+    // [ ] Unit tests written (80%+ coverage)
+    // [ ] Integration tests with system monitoring
+    // [ ] Documentation updated
+    // [ ] Performance benchmarks meet SLA (<10ms per collection)
+    // [ ] Security considerations addressed
+    // [ ] Configuration options defined
+    // [ ] Monitoring/metrics implemented
+    // [ ] Logging added for debugging
+    //
+    // ACCEPTANCE CRITERIA:
+    // - Real CPU usage percentage collection
+    // - Per-core utilization tracking
+    // - CPU frequency monitoring
+    // - Temperature monitoring (where available)
+    // - Cross-platform compatibility
+    //
+    // DEPENDENCIES:
+    // - System monitoring libraries: Required
+    // - Platform-specific APIs: Required
+    //
+    // ESTIMATED EFFORT: 16 hours
+    // PRIORITY: MEDIUM
+    // BLOCKING: No - Placeholder provides basic functionality
+    
     // Platform-specific implementations would go here
     // For brevity, using placeholder implementations above
     async fn collect_cpu_metrics_macos(&self) -> Result<CpuMetrics, Box<dyn std::error::Error>> {
+        // TODO: Implement actual macOS CPU monitoring
         Ok(CpuMetrics {
             usage_percent: 25.0,
             per_core_percent: vec![20.0, 30.0, 25.0, 22.0],
@@ -948,6 +980,7 @@ impl SystemMetricsCollector {
     }
 
     async fn collect_cpu_metrics_linux(&self) -> Result<CpuMetrics, Box<dyn std::error::Error>> {
+        // TODO: Implement actual Linux CPU monitoring
         Ok(CpuMetrics {
             usage_percent: 30.0,
             per_core_percent: vec![25.0, 35.0, 28.0, 32.0],
@@ -957,6 +990,7 @@ impl SystemMetricsCollector {
     }
 
     async fn collect_cpu_metrics_windows(&self) -> Result<CpuMetrics, Box<dyn std::error::Error>> {
+        // TODO: Implement actual Windows CPU monitoring
         Ok(CpuMetrics {
             usage_percent: 35.0,
             per_core_percent: vec![30.0, 40.0, 33.0, 37.0],
@@ -2042,8 +2076,36 @@ impl MemoryMonitor {
 
             if should_gc {
                 info!("Triggering garbage collection due to memory pressure");
-                // Note: force_gc is now async but called from sync context
-                // This is a temporary workaround - should be refactored
+                // TODO: Async GC Integration - Fix async/sync context mismatch
+                // 
+                // COMPLETION CHECKLIST:
+                // [ ] Async/sync context integration completed
+                // [ ] Proper async GC invocation
+                // [ ] Error handling for async operations
+                // [ ] Unit tests written (80%+ coverage)
+                // [ ] Integration tests with memory pressure
+                // [ ] Documentation updated
+                // [ ] Performance benchmarks meet SLA
+                // [ ] Security considerations addressed
+                // [ ] Configuration options defined
+                // [ ] Monitoring/metrics implemented
+                // [ ] Logging added for debugging
+                //
+                // ACCEPTANCE CRITERIA:
+                // - GC can be triggered from sync context
+                // - Proper error handling for async operations
+                // - Memory pressure detection works correctly
+                // - No blocking operations in sync context
+                //
+                // DEPENDENCIES:
+                // - MemoryManager: Available
+                // - Async runtime: Available
+                //
+                // ESTIMATED EFFORT: 8 hours
+                // PRIORITY: MEDIUM
+                // BLOCKING: No - Current workaround is functional
+                
+                // Temporary workaround - replace with proper async integration
                 // self.force_gc().await;
                 *self.last_gc_time.write().unwrap() = Some(Instant::now());
             }
@@ -2174,15 +2236,77 @@ impl MemoryMonitor {
 
     /// Mark reachable objects for garbage collection
     fn mark_reachable_objects(&self) -> usize {
-        // This is a placeholder - in a real implementation, this would be implemented
-        // The actual GC logic is in MemoryManager since it has access to pools and registry
+        // TODO: Mark Reachable Objects - Implement garbage collection mark phase
+        // 
+        // COMPLETION CHECKLIST:
+        // [ ] Mark phase implementation completed
+        // [ ] Object graph traversal implemented
+        // [ ] Reference counting integration
+        // [ ] Weak reference handling
+        // [ ] Unit tests written (90%+ coverage)
+        // [ ] Integration tests with GC system
+        // [ ] Documentation updated
+        // [ ] Performance benchmarks meet SLA (<100ms for 1M objects)
+        // [ ] Security considerations addressed
+        // [ ] Configuration options defined
+        // [ ] Monitoring/metrics implemented
+        // [ ] Logging added for debugging
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Traverses object graph starting from roots
+        // - Marks all reachable objects as live
+        // - Handles circular references correctly
+        // - Integrates with MemoryManager pools and registry
+        // - Returns count of marked objects
+        //
+        // DEPENDENCIES:
+        // - MemoryManager: Available
+        // - ObjectRef types: Available
+        // - GCRegistry: Available
+        //
+        // ESTIMATED EFFORT: 24 hours
+        // PRIORITY: HIGH
+        // BLOCKING: Yes - Required for garbage collection functionality
+        
+        // Placeholder implementation - replace with actual mark phase logic
         0
     }
 
     /// Sweep unreachable objects during garbage collection
     fn sweep_unreachable_objects(&self) -> usize {
-        // This is a placeholder - in a real implementation, this would be implemented
-        // The actual GC logic is in MemoryManager since it has access to pools and registry
+        // TODO: Sweep Unreachable Objects - Implement garbage collection sweep phase
+        // 
+        // COMPLETION CHECKLIST:
+        // [ ] Sweep phase implementation completed
+        // [ ] Unreachable object identification
+        // [ ] Memory deallocation logic
+        // [ ] Finalization handling
+        // [ ] Unit tests written (90%+ coverage)
+        // [ ] Integration tests with GC system
+        // [ ] Documentation updated
+        // [ ] Performance benchmarks meet SLA (<50ms for 1M objects)
+        // [ ] Security considerations addressed
+        // [ ] Configuration options defined
+        // [ ] Monitoring/metrics implemented
+        // [ ] Logging added for debugging
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Identifies objects not marked as reachable
+        // - Safely deallocates unreachable objects
+        // - Handles finalization requirements
+        // - Integrates with MemoryManager pools and registry
+        // - Returns count of swept objects
+        //
+        // DEPENDENCIES:
+        // - MemoryManager: Available
+        // - ObjectRef types: Available
+        // - GCRegistry: Available
+        //
+        // ESTIMATED EFFORT: 20 hours
+        // PRIORITY: HIGH
+        // BLOCKING: Yes - Required for garbage collection functionality
+        
+        // Placeholder implementation - replace with actual sweep phase logic
         0
     }
 

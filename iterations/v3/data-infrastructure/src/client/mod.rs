@@ -5,6 +5,7 @@
 
 pub mod orchestrator;
 
-// Note: DatabaseClient is exported from client.rs for simple interface
+// Re-export main client
+pub use orchestrator::DatabaseClient;
 
 

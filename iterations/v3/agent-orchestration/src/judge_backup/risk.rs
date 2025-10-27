@@ -290,7 +290,7 @@ pub enum InflectionType {
 /// Complexity assessment for technical risk
 #[derive(Debug, Clone)]
 pub struct ComplexityAssessment {
-    pub algorithmic_complexity: crate::risk_scorer::ComputationalComplexity,
+    // pub algorithmic_complexity: crate::risk_scorer::ComputationalComplexity, // TEMPORARILY DISABLED
     pub integration_points: u32,
     pub external_dependencies: u32,
     pub novelty_factor: f32, // 0.0-1.0, higher = more novel/untested

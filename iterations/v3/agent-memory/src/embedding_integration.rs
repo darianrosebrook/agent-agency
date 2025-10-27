@@ -3,7 +3,10 @@
 
 use crate::memory_types::*;
 use crate::MemoryResult;
-use embedding_service::{EmbeddingService, EmbeddingConfig as ESConfig, ContentType};
+use data_infrastructure::embedding::{
+    EmbeddingService, EmbeddingServiceImpl, EmbeddingConfig as ESConfig, ContentType,
+    EmbeddingProvider, OllamaEmbeddingProvider
+};
 use data_infrastructure::{DatabaseClient, DatabaseConfig, Row};
 use std::sync::Arc;
 use chrono::{DateTime, Utc, Duration};
@@ -44,8 +47,8 @@ impl EmbeddingIntegration {
 
         // For now, create a placeholder embedding provider
         // TODO: Get proper provider injection
-        let provider = embedding_service::OllamaEmbeddingProvider::new(&es_config);
-        let embedding_service = Arc::new(embedding_service::EmbeddingServiceImpl::new(Arc::new(provider), es_config));
+        let provider = OllamaEmbeddingProvider::new(&es_config);
+        let embedding_service = Arc::new(EmbeddingServiceImpl::new(Arc::new(provider), es_config));
         let db_config = data_infrastructure::DatabaseConfig::default();
         let db_client = Arc::new(DatabaseClient::new(db_config).await?);
 
@@ -74,16 +77,16 @@ impl EmbeddingIntegration {
             ContentType::Knowledge,
             "agent_memory_experience"
         ).await?;
-        Ok(stored_embedding.vector)
+        Ok(stored_embedding.vector.values)
     }
 
     /// Generate embedding for task context
     pub async fn generate_context_embedding(&self, context: &TaskContext) -> MemoryResult<Vec<f32>> {
         let text_representation = format!(
-            "Task '{}': {} in domain(s): {}. Entities: {}",
+            "Task '{}': {} with keywords: {}. Entities: {}",
             context.task_type,
             context.description,
-            context.domain.join(", "),
+            context.keywords.join(", "),
             context.entities.join(", ")
         );
 
@@ -92,7 +95,7 @@ impl EmbeddingIntegration {
             ContentType::TaskDescription,
             "agent_memory_context"
         ).await?;
-        Ok(stored_embedding.vector)
+        Ok(stored_embedding.vector.values)
     }
 
     /// Store embedding with metadata
@@ -191,7 +194,7 @@ impl EmbeddingIntegration {
             LIMIT $2
             "#,
         )
-        .bind(&query_embedding.vector)
+        .bind(&query_embedding.vector.values)
         .bind(limit as i32)
         .fetch_all(self.db_client.pool())
         .await?;

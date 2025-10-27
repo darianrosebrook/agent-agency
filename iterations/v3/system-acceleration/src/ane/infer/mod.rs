@@ -5,7 +5,8 @@
 
 pub mod execute;
 pub mod whisper;
-pub mod yolo;
+// TEMPORARILY DISABLED: yolo module due to candle-core dependency conflicts
+// pub mod yolo;
 pub mod mistral;
 
 // Re-export commonly used types
@@ -19,14 +20,14 @@ pub use whisper::{
     WhisperInferenceExecutor, create_whisper_executor,
 };
 
+// TEMPORARILY DISABLED: YOLO re-exports due to candle-core dependency conflicts
 // Re-export YOLO inference
-pub use yolo::{
-    YOLOInferenceExecutor, create_yolo_executor,
-};
+// pub use yolo::{
+//     YOLOInferenceExecutor, create_yolo_executor,
+// };
 
-// Re-export Mistral inference
+// Re-export Mistral inference (stub types only - functions disabled)
 pub use mistral::{
     MistralInferenceOptions, ConstitutionalVerdict, ComplianceLevel, RiskTier, Verdict,
-    DebateArgument, DebatePosition, ConfidenceLevel, deliberate_constitution,
-    generate_debate_argument, generate_text,
+    DebateArgument, DebatePosition, ConfidenceLevel,
 };

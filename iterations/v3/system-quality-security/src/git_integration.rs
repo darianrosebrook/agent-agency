@@ -75,7 +75,7 @@ impl GitTrailerManager {
     }
 
     /// Generate commit message from template
-    fn _generate_commit_message(&self, provenance_record: &ProvenanceRecord) -> String {
+    pub fn generate_commit_message(&self, provenance_record: &ProvenanceRecord) -> String {
         self._commit_message_template
             .replace("{verdict_id}", &provenance_record.verdict_id.to_string())
             .replace("{decision}", &provenance_record.decision.decision_type())

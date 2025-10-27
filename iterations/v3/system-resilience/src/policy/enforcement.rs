@@ -444,7 +444,7 @@ mod tests {
     #[test]
     fn test_session_creation_check() {
         let policy = CawsPolicy::new();
-        let enforcer = PolicyEnforcer::new(policy);
+        let enforcer = PolicyEnforcer::new(policy.clone());
         
         // Test allowed creation
         let result = enforcer.check_session_creation("session1").unwrap();

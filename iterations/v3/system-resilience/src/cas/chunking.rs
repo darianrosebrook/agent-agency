@@ -123,8 +123,38 @@ impl CdcChunker {
             chunks: chunks.into_iter().map(|chunk_ref| Chunk {
                 digest: chunk_ref.digest,
                 offset: chunk_ref.offset as usize,
-                length: chunk_ref.length as usize,
-                data: Vec::new(), // TODO: Store actual data if needed
+                length: chunk_ref.length() as usize,
+                // TODO: Chunk Data Storage - Implement optional chunk data storage
+                // 
+                // COMPLETION CHECKLIST:
+                // [ ] Add configuration option for chunk data storage
+                // [ ] Implement conditional data storage based on config
+                // [ ] Memory management for large chunks
+                // [ ] Data retrieval API from CAS store
+                // [ ] Unit tests written (80%+ coverage)
+                // [ ] Integration tests with CAS
+                // [ ] Documentation updated
+                // [ ] Performance benchmarks meet SLA
+                // [ ] Security considerations addressed
+                // [ ] Configuration options defined
+                // [ ] Monitoring/metrics implemented
+                // [ ] Logging added for debugging
+                //
+                // ACCEPTANCE CRITERIA:
+                // - Chunk data can be optionally stored in memory
+                // - Configuration controls data storage behavior
+                // - Data can be retrieved from CAS if not in memory
+                // - Memory usage is properly managed
+                // - Performance meets requirements
+                //
+                // DEPENDENCIES:
+                // - CAS store: Available
+                // - Configuration system: Available
+                //
+                // ESTIMATED EFFORT: 12 hours
+                // PRIORITY: MEDIUM
+                // BLOCKING: No - Current digest-only approach works
+                data: Vec::new(),
             }).collect(),
             total_length: content.len(),
             file_digest,
@@ -143,9 +173,9 @@ impl CdcChunker {
         let chunk_ref = ChunkRef {
             digest,
             offset: chunk_data.offset as u64,
-            length: chunk_data.length as u32,
+            length: chunk_data.length as u64,
+            size: length as u64,
         };
-
         Ok(chunk_ref)
     }
 

@@ -8,8 +8,12 @@ pub mod monitoring;
 pub mod metrics;
 pub mod tracing;
 
-// Re-export common types
-pub use system_configuration::*;
+// Re-export common types (avoiding conflicts with local types)
+pub use system_configuration::{
+    PipelineStage, PipelineMetrics, PipelineConfig, PipelineError,
+    SequentialPipeline, ParallelPipeline, StreamingPipeline, ValidationPipeline,
+    CacheConfig, CacheStats, PipelineHealth,
+};
 
 use serde::{Deserialize, Serialize};
 

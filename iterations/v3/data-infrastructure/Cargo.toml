@@ -51,10 +51,25 @@ tempfile = "3.8"
 # Futures utilities (from data-consistency)
 futures-util = "0.3"
 
+# Embedding-specific dependencies
+dashmap = "5.5"
+lru = "0.12"
+futures = "0.3"
+# Temporarily disable candle dependencies due to version conflicts
+# candle-core = "0.3"
+# candle-transformers = "0.3"
+tokenizers = "0.15"
+
+# SafeTensors and HuggingFace dependencies for model loading
+safetensors = "0.4"
+hf-hub = "0.3"
+half = "2.4"
+
 # Local crates
 agent-agency-contracts = { path = "../agent-agency-contracts" }
 system-configuration = { path = "../system-configuration" }
 system-quality-security = { path = "../system-quality-security" }
+agent-mcp = { path = "../agent-mcp" }
 
 [features]
 default = []

@@ -223,13 +223,18 @@ impl WhisperInferenceExecutor {
             let mel_data = &input.mel_spectrogram;
             let input_shape = [1usize, input.n_mels as usize, input.n_time_steps as usize];
 
-            // Run inference on the encoder
+            // Run inference on the encoder - TEMPORARILY DISABLED due to run_inference function being commented out
+            /*
             let _output_tensor = crate::ane::compat::coreml::coreml::run_inference(
                 self.coreml_model_handle,
                 "input", // CoreML input name for mel spectrogram
                 mel_data,
                 &input_shape,
             )?;
+            */
+            
+            // Placeholder implementation
+            let _output_tensor = crate::ane::compat::coreml::Tensor::new(&[0.0f32], &crate::ane::compat::coreml::Device::Cpu)?;
 
             // TODO: Implement proper Whisper decoder integration with acceptance criteria:
             // - [ ] Integrate Whisper decoder model for token generation from encoder output

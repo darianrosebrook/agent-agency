@@ -57,7 +57,8 @@ pub mod optimization;
 
 // Re-export Mistral functionality
 pub use models::mistral_model::{MistralModel, MistralCompilationOptions, load_mistral_model, estimate_memory_usage, validate_mistral_compatibility};
-pub use infer::mistral::{MistralInferenceOptions, ConstitutionalVerdict, ComplianceLevel, RiskTier, Verdict, DebateArgument, DebatePosition, ConfidenceLevel, deliberate_constitution, generate_debate_argument, generate_text};
+// Re-export Mistral types (functions disabled due to candle-core conflicts)
+pub use infer::mistral::{MistralInferenceOptions, ConstitutionalVerdict, ComplianceLevel, RiskTier, Verdict, DebateArgument, DebatePosition, ConfidenceLevel};
 
 // Re-export circuit breaker
 pub use crate::ane::ane_circuit_breaker::{CircuitBreaker, CircuitBreakerConfig, CircuitState, CircuitBreakerError};

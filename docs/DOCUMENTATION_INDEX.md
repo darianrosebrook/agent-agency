@@ -19,6 +19,7 @@
 - **[docs/runtime-optimization/](docs/runtime-optimization/)** - LLM Parameter Feedback Loop system
 
 ### Operations & Deployment
+- **[docs/libtorch-integration.md](libtorch-integration.md)** - PyTorch/LibTorch compilation setup guide
 - **[docs/deployment/](iterations/v2/docs/deployment/)** - Deployment guides (Docker, K8s, Cloud)
 - **[docs/database/](iterations/v2/docs/database/)** - Database setup and migration guides
 - **[docs/security/](iterations/v2/docs/security/)** - Security controls and hardening
@@ -115,6 +116,11 @@
 1. Read about thread-safe FFI in [README.md](../README.md)
 2. Check ModelClient implementation in `iterations/v3/council/src/model_client.rs`
 3. Review CoreML safety architecture
+
+### For PyTorch/LibTorch Issues
+1. Follow the [LibTorch Integration Guide](libtorch-integration.md) (REQUIRED for torch-sys compilation)
+2. Set environment variables before building: `export LIBTORCH=./libtorch-cpu LIBTORCH_CXX11_ABI=0 CMAKE_PREFIX_PATH=./libtorch-cpu`
+3. Test with: `cargo check -p agent-model-management --lib`
 
 ### For Architecture Questions
 1. Review constitutional governance in `iterations/v3/council/`
@@ -263,6 +269,7 @@ All documentation is version-controlled. Latest updates:
 | **QUICK_START.md** | 5 KB | 5 min | V3 setup and verification |
 | **docs/README.md** | 10 KB | 10 min | Documentation structure guide |
 | **iterations/v3/council/src/model_client.rs** | 5 KB | 15 min | CoreML safety implementation |
+| **docs/libtorch-integration.md** | 8 KB | 10 min | PyTorch compilation setup (REQUIRED) |
 | **docs/agents/full-guide.md** | 20 KB | 20 min | CAWS framework complete guide |
 
 ---

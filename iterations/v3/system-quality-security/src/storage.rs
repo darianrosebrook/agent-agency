@@ -689,7 +689,7 @@ impl ProvenanceStorage for InMemoryProvenanceStorage {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::service::ProvenanceStorage;
+    use crate::provenance_service::ProvenanceStorage;
     use std::collections::HashMap;
 
     #[tokio::test]
@@ -711,6 +711,13 @@ mod tests {
             compliance_status: None,
             limit: None,
             offset: None,
+            entity_types: None,
+            entity_ids: None,
+            activity_types: None,
+            activity_ids: None,
+            agent_types: None,
+            agent_ids: None,
+            custom_filters: None,
         };
 
         let results = storage.query_records(&query).await.unwrap();

@@ -494,6 +494,13 @@ impl WorkerRecovery {
                     };
                     actions.push(action);
                 },
+                crate::recovery_types::FileMode::Directory => {
+                    // Create directory action
+                    let action = RestoreAction::CreateDirectory {
+                        path: entry_path.clone(),
+                    };
+                    actions.push(action);
+                }
             }
         }
 
@@ -584,6 +591,7 @@ impl WorkerRecoveryBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::recovery_types::SessionMeta;
 
     #[test]
     fn test_worker_recovery_creation() {

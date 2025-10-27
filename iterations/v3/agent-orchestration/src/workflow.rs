@@ -6,7 +6,7 @@
 use std::collections::HashMap;
 use chrono::{DateTime, Utc};
 
-use crate::error::{CouncilError, CouncilResult};
+use crate::council_errors::{CouncilError, CouncilResult};
 use crate::council::{CouncilSession, SessionStatus};
 use crate::decision_making::FinalDecision;
 

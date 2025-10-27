@@ -104,7 +104,10 @@ impl TemporalReasoningEngine {
             trends: trend_directions,
             change_points: change_point_times,
             causality_links: causality_simple,
-            performance_summary: summary,
+            performance_summary: format!("Overall score: {:.2}, Best: {:.2}, Worst: {:.2}", 
+                summary.overall_score,
+                summary.metric_scores.get("best").unwrap_or(&0.0),
+                summary.metric_scores.get("worst").unwrap_or(&0.0)),
             patterns: vec![],
             performance_metrics: HashMap::new(),
             recommendations: vec![],
@@ -250,15 +253,25 @@ impl TemporalReasoningEngine {
     }
 
     /// Calculate performance summary statistics
-    fn calculate_performance_summary(&self, performance_data: &[(DateTime<Utc>, f32, f32)]) -> String {
+    fn calculate_performance_summary(&self, performance_data: &[(DateTime<Utc>, f32, f32)]) -> PerformanceSummary {
         if performance_data.is_empty() {
-            return "No performance data available".to_string();
+            return PerformanceSummary {
+                overall_score: 0.0,
+                metric_scores: HashMap::new(),
+                trends: vec![],
+                recommendations: vec![],
+                analyzed_at: Utc::now(),
+            };
         }
 
         let scores: Vec<f32> = performance_data.iter().map(|(_, score, _)| *score).collect();
         let avg_score = scores.iter().sum::<f32>() / scores.len() as f32;
-        let best_score = scores.iter().fold(f32::NEG_INFINITY, |a, &b| a.max(b));
-        let worst_score = scores.iter().fold(f32::INFINITY, |a, &b| a.min(b));
+        
+        // Create metric scores map
+        let mut metric_scores = HashMap::new();
+        metric_scores.insert("average".to_string(), avg_score);
+        metric_scores.insert("best".to_string(), scores.iter().fold(f32::NEG_INFINITY, |a, &b| a.max(b)));
+        metric_scores.insert("worst".to_string(), scores.iter().fold(f32::INFINITY, |a, &b| a.min(b)));
 
         // Calculate improvement rate (linear trend)
         let improvement_rate = if scores.len() > 1 {
@@ -279,10 +292,16 @@ impl TemporalReasoningEngine {
         let std_dev = variance.sqrt();
         let consistency_score = if avg_score > 0.0 { 1.0 - (std_dev / avg_score).min(1.0) } else { 0.0 };
 
-        format!(
-            "Performance Summary: Average={:.2}, Best={:.2}, Worst={:.2}, Improvement={:.1}%, Consistency={:.2}, Samples={}",
-            avg_score, best_score, worst_score, improvement_rate * 100.0, consistency_score, scores.len()
-        )
+        metric_scores.insert("improvement_rate".to_string(), improvement_rate);
+        metric_scores.insert("consistency".to_string(), consistency_score);
+
+        PerformanceSummary {
+            overall_score: avg_score,
+            metric_scores,
+            trends: vec![],
+            recommendations: vec![],
+            analyzed_at: Utc::now(),
+        }
     }
 
     /// Analyze capability evolution over time
@@ -337,25 +356,27 @@ impl TemporalReasoningEngine {
                 let avg_learning_rate = learning_rates.iter().sum::<f64>() / learning_rates.len() as f64;
                 let latest_performance = timeline.last().map(|(_, _, perf)| *perf as f32).unwrap_or(0.0);
 
-                // Build evolution timeline
-                let evolution_timeline: Vec<EvolutionPoint> = timeline.into_iter()
-                    .enumerate()
-                    .map(|(idx, (timestamp, events, performance))| EvolutionPoint {
-                        timestamp,
-                        level: (idx as f32 + 1.0) / timeline.len() as f32, // Simple progression
-                        context: format!("{} learning events", events),
-                        metrics: HashMap::from([
-                            ("learning_events".to_string(), events as f32),
-                            ("performance".to_string(), performance as f32),
-                        ]),
+                // Create evolution points from timeline
+                let evolution_points: Vec<EvolutionPoint> = timeline.iter()
+                    .map(|(timestamp, events, performance)| {
+                        let mut metrics = HashMap::new();
+                        metrics.insert("learning_events".to_string(), *events as f32);
+                        metrics.insert("performance".to_string(), *performance as f32);
+                        
+                        EvolutionPoint {
+                            timestamp: *timestamp,
+                            level: (*performance as f32).min(1.0).max(0.0),
+                            context: format!("{} learning events", events),
+                            metrics,
+                        }
                     })
                     .collect();
 
                 capability_evolution.push(CapabilityEvolution {
                     capability: capability,
-                    timeline: evolution_timeline,
-                    current_level: latest_performance,
-                    predicted_level: (latest_performance + avg_learning_rate as f32 * 0.1).min(1.0),
+                    timeline: evolution_points,
+                    current_level: latest_performance.min(1.0).max(0.0),
+                    predicted_level: (latest_performance + avg_learning_rate as f32).min(1.0).max(0.0),
                     learning_rate: avg_learning_rate as f32,
                 });
             }

@@ -6,9 +6,6 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 use axum::{
-    extract::{Path, Query, State},
-    http::StatusCode,
-    response::Json,
     routing::{get, post, delete},
     Router,
 };

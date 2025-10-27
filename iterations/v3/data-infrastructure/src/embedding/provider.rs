@@ -1,7 +1,7 @@
 //! Embedding provider trait and implementations
 
-use crate::embedding_types::*;
-use crate::model_loading::EmbeddingModel;
+use crate::embedding::embedding_types::*;
+use crate::embedding::model_loading::EmbeddingModel;
 use anyhow::Result;
 use async_trait::async_trait;
 use tracing::warn;
@@ -9,14 +9,24 @@ use std::hash::Hasher;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-// CLIP model imports
-use candle_core::Device;
-use candle_transformers::models::clip::ClipModel;
-use tokenizers::Tokenizer;
+// CLIP model imports - temporarily disabled due to version conflicts
+// use candle_core::Device;
+// use candle_transformers::models::clip::ClipModel;
+// use tokenizers::Tokenizer; // Commented out to avoid conflicts
+
+/// Placeholder types for disabled CLIP functionality
+#[derive(Debug, Clone)]
+pub struct ClipModelPlaceholder;
+
+#[derive(Debug, Clone)]
+pub enum DevicePlaceholder {
+    Cpu,
+    Cuda(usize),
+}
 
 /// Trait for embedding providers
 #[async_trait]
-pub trait ServiceEmbeddingProvider: Send + Sync {
+pub trait EmbeddingProvider: Send + Sync {
     /// Generate embeddings for a batch of texts
     async fn generate_embeddings(&self, texts: &[String]) -> Result<Vec<EmbeddingVector>>;
 
@@ -184,7 +194,7 @@ impl EmbeddingProvider for DummyEmbeddingProvider {
 /// ONNX embedding provider for local model inference
 pub struct OnnxEmbeddingProvider {
     session: Arc<Session>,
-    tokenizer: Arc<dyn crate::tokenization::Tokenizer>,
+    tokenizer: Arc<dyn crate::embedding::tokenization::Tokenizer>,
     dimension: usize,
     model_name: String,
     max_length: usize,
@@ -194,7 +204,7 @@ impl OnnxEmbeddingProvider {
     /// Create a new ONNX embedding provider
     pub async fn new(
         model_path: PathBuf,
-        tokenizer: Arc<dyn crate::tokenization::Tokenizer>,
+        tokenizer: Arc<dyn crate::embedding::tokenization::Tokenizer>,
         dimension: usize,
         model_name: String,
         max_length: usize,
@@ -220,8 +230,8 @@ impl OnnxEmbeddingProvider {
 
 /// SafeTensors embedding provider for local model inference
 pub struct SafeTensorsEmbeddingProvider {
-    model: Arc<crate::model_loading::SafeTensorsModel>,
-    tokenizer: Arc<dyn crate::tokenization::Tokenizer>,
+    model: Arc<crate::embedding::model_loading::SafeTensorsModel>,
+    tokenizer: Arc<dyn crate::embedding::tokenization::Tokenizer>,
     dimension: usize,
     model_name: String,
     max_length: usize,
@@ -229,7 +239,7 @@ pub struct SafeTensorsEmbeddingProvider {
 
 /// ONNX embedding provider (placeholder - ONNX integration disabled for compatibility)
 pub struct OnnxEmbeddingProvider {
-    tokenizer: Arc<dyn crate::tokenization::Tokenizer>,
+    tokenizer: Arc<dyn crate::embedding::tokenization::Tokenizer>,
     dimension: usize,
     max_length: usize,
 }
@@ -238,13 +248,13 @@ impl SafeTensorsEmbeddingProvider {
     /// Create a new SafeTensors embedding provider
     pub async fn new(
         model_path: std::path::PathBuf,
-        tokenizer: Arc<dyn crate::tokenization::Tokenizer>,
+        tokenizer: Arc<dyn crate::embedding::tokenization::Tokenizer>,
         dimension: usize,
         model_name: String,
         max_length: usize,
     ) -> Result<Self> {
         // Load SafeTensors model
-        let model = crate::model_loading::SafeTensorsModel::load_from_path(&model_path).await?;
+        let model = crate::embedding::model_loading::SafeTensorsModel::load_from_path(&model_path).await?;
 
         Ok(Self {
             model: Arc::new(model),
@@ -258,10 +268,10 @@ impl SafeTensorsEmbeddingProvider {
     /// Create a provider from HuggingFace model
     pub async fn from_pretrained(
         model_id: &str,
-        tokenizer: Arc<dyn crate::tokenization::Tokenizer>,
+        tokenizer: Arc<dyn crate::embedding::tokenization::Tokenizer>,
         max_length: usize,
     ) -> Result<Self> {
-        let model = crate::model_loading::SafeTensorsModel::from_pretrained(model_id).await?;
+        let model = crate::embedding::model_loading::SafeTensorsModel::from_pretrained(model_id).await?;
         let model_name = model_id.to_string();
 
         Ok(Self {
@@ -278,7 +288,7 @@ impl OnnxEmbeddingProvider {
     /// Create a new ONNX embedding provider (stub implementation)
     pub async fn new(
         _model_path: PathBuf,
-        tokenizer: Arc<dyn crate::tokenization::Tokenizer>,
+        tokenizer: Arc<dyn crate::embedding::tokenization::Tokenizer>,
         dimension: usize,
         _model_name: String,
         max_length: usize,
@@ -385,6 +395,8 @@ impl EmbeddingProvider for OnnxEmbeddingProvider {
     }
 }
 
+// Using existing placeholder types for CLIP functionality
+
 /// CLIP model variants
 #[derive(Debug, Clone, Copy)]
 pub enum ClipModelVariant {
@@ -400,9 +412,9 @@ pub enum ClipModelVariant {
 
 /// CLIP embedding provider for text and image embeddings
 pub struct ClipEmbeddingProvider {
-    model: Option<ClipModel>, // Placeholder - would be Some(model) when loaded
-    tokenizer: Tokenizer,
-    device: Device,
+    model: Option<ClipModelPlaceholder>, // Placeholder - would be Some(model) when loaded
+    tokenizer: tokenizers::Tokenizer,
+    device: DevicePlaceholder,
     variant: ClipModelVariant,
     model_name: String,
     dimension: usize,
@@ -421,7 +433,7 @@ impl ClipEmbeddingProvider {
         warn!("CLIP embedding provider using stub implementation - actual CLIP model loading disabled");
 
         // Placeholder device - would be GPU if available
-        let device = Device::Cpu;
+        let device = DevicePlaceholder::Cpu;
 
         // Get tokenizer name based on variant
         let _tokenizer_name = match variant {

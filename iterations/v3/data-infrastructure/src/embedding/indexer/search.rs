@@ -6,7 +6,7 @@
 use super::text::TextIndexer;
 use super::visual::VisualIndexer;
 use super::graph::GraphIndexer;
-use super::super::types::*;
+use super::super::embedding_types::*;
 use anyhow::Result;
 use std::collections::HashMap;
 use uuid::Uuid;

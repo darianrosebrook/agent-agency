@@ -2,6 +2,7 @@
 
 use anyhow::Result;
 use async_trait::async_trait;
+use hf_hub::api::sync::Api;
 use std::sync::Arc;
 
 /// Trait for text tokenizers
@@ -51,7 +52,7 @@ impl HfTokenizer {
     /// Create a new HuggingFace tokenizer from a model identifier
     pub async fn from_pretrained(model_id: &str) -> Result<Self> {
         // Download tokenizer files from HuggingFace Hub
-        let tokenizer_path = hf_hub::api::sync::Api::new()?
+        let tokenizer_path = Api::new()?
             .model(model_id.to_string())
             .get("tokenizer.json")?;
 

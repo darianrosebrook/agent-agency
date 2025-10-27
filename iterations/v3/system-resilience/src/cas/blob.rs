@@ -301,9 +301,12 @@ impl BlobBuilder {
             header: PayloadHeader {
                 version: 1,
                 kind: PayloadKind::Full,
-                codec: Codec::None,
-                eol: None,
                 content_len: 0,
+                content_length: 0,
+                created_at: 0,
+                compression: None,
+                codec: Codec::None,
+                eol: Eol::Lf,
             },
             data: Vec::new(),
         }
@@ -323,13 +326,14 @@ impl BlobBuilder {
 
     /// Set the end-of-line type
     pub fn eol(mut self, eol: Eol) -> Self {
-        self.header.eol = Some(eol);
+        self.header.eol = eol;
         self
     }
 
     /// Set the data
     pub fn data(mut self, data: Vec<u8>) -> Self {
         self.header.content_len = data.len() as u32;
+        self.header.content_length = data.len() as u64;
         self.data = data;
         self
     }
@@ -375,8 +379,14 @@ mod tests {
             version: 1,
             kind: PayloadKind::Full,
             codec: Codec::None,
-            eol: None,
+            eol: Eol::Lf,
             content_len: data.len() as u32,
+            content_length: data.len() as u64,
+            compression: None,
+            created_at: std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_secs(),
         };
         
         store.store_blob(digest, header, data).unwrap();
@@ -398,8 +408,14 @@ mod tests {
             version: 1,
             kind: PayloadKind::Full,
             codec: Codec::None,
-            eol: None,
+            eol: Eol::Lf,
             content_len: data.len() as u32,
+            content_length: data.len() as u64,
+            compression: None,
+            created_at: std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_secs(),
         };
         
         store.store_blob(digest, header, data).unwrap();

@@ -133,9 +133,9 @@ impl TextNormalizer {
             return Ok(NormalizationResult {
                 normalized_content: content.to_vec(),
                 original_eol: Some(original_eol),
-                target_eol: original_eol,
+                target_eol: original_eol.clone(),
                 was_normalized: false,
-                line_count: self.count_lines(content, original_eol),
+                line_count: self.count_lines(content, original_eol.clone()),
             });
         }
 
@@ -150,7 +150,7 @@ impl TextNormalizer {
             } else {
                 None
             },
-            target_eol: self.config.target_eol,
+            target_eol: self.config.target_eol.clone(),
             was_normalized,
             line_count: self.count_lines(&normalized_content, self.config.target_eol),
         })

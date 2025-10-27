@@ -3,7 +3,7 @@
 //! CLIP and SSIM-based visual embeddings with HNSW indexing
 //! for efficient visual similarity search.
 
-use super::super::types::*;
+use super::super::embedding_types::*;
 use anyhow::Result;
 use std::collections::HashMap;
 use uuid::Uuid;

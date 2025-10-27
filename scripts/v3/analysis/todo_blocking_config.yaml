@@ -1,0 +1,115 @@
+# Hidden TODO Blocking Configuration
+# This file defines thresholds for blocking commits with hidden TODOs
+
+# Confidence thresholds for different environments
+confidence_thresholds:
+  ci_mode: 0.8          # CI/CD pipeline - blocks on high-confidence TODOs
+  pre_commit: 0.8       # Pre-commit hook - same as CI
+  warning_mode: 0.6     # Warning only - lower threshold for alerts
+
+# Pattern-specific blocking rules
+blocking_patterns:
+  # Critical patterns that always block
+  critical:
+    - "stub implementation"
+    - "placeholder implementation" 
+    - "unimplemented!"
+    - "todo!"
+    - "not yet implemented"
+    - "missing implementation"
+    - "incomplete implementation"
+  
+  # High-confidence patterns that block in CI
+  high_confidence:
+    - "for now"
+    - "simplified"
+    - "in a real"
+    - "in practice"
+    - "would be"
+    - "should be"
+    - "will be"
+    - "temporary solution"
+    - "workaround"
+    - "hardcoded value"
+    - "magic number"
+
+# File-specific rules
+file_rules:
+  # Files that are allowed to have TODOs (documentation, examples)
+  allowed_files:
+    - "**/README.md"
+    - "**/docs/**"
+    - "**/examples/**"
+    - "**/tests/**"
+    - "**/*.md"
+  
+  # Files that are strictly checked (core business logic)
+  strict_files:
+    - "**/src/**"
+    - "**/lib/**"
+    - "**/core/**"
+    - "**/coordinator.rs"
+    - "**/orchestrator.rs"
+    - "**/executor.rs"
+
+# Language-specific rules
+language_rules:
+  rust:
+    # Rust-specific patterns
+    critical_patterns:
+      - "unimplemented!"
+      - "todo!"
+      - "panic!(\"not implemented\")"
+      - "unreachable!(\"not implemented\")"
+  
+  javascript:
+    # JS/TS-specific patterns
+    critical_patterns:
+      - "throw new Error(\"TODO\")"
+      - "throw new Error(\"Not implemented\")"
+      - "return null; // TODO"
+      - "return undefined; // TODO"
+  
+  python:
+    # Python-specific patterns
+    critical_patterns:
+      - "raise NotImplementedError"
+      - "pass  # TODO"
+      - "return None  # TODO"
+
+# Exemption rules
+exemptions:
+  # Patterns that are allowed even if they match blocking patterns
+  allowed_patterns:
+    - "TODO: Add documentation"
+    - "TODO: Add tests"
+    - "TODO: Consider optimization"
+    - "TODO: Review performance"
+    - "FIXME: Known issue"
+  
+  # Context that makes TODOs acceptable
+  acceptable_context:
+    - "documentation"
+    - "example"
+    - "test"
+    - "benchmark"
+    - "demo"
+
+# Reporting configuration
+reporting:
+  # What to include in reports
+  include_summary: true
+  include_patterns: true
+  include_files: true
+  include_confidence_scores: true
+  
+  # Report formats
+  formats:
+    - "json"
+    - "markdown"
+  
+  # Output locations
+  output:
+    ci_artifacts: true
+    pr_comments: true
+    console_output: true

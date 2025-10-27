@@ -15,18 +15,183 @@ use chrono::{DateTime, Utc};
 use agent_agency_contracts::task_executor::{TaskExecutionResult, TaskExecutor};
 use agent_agency_contracts::task_executor_provider::TaskExecutorProvider;
 
-use crate::orchestrate::{orchestrate_task, to_task_spec};
-use crate::caws_runtime::{CawsRuntimeValidator, TaskDescriptor, WorkingSpec};
-use crate::persistence::VerdictWriter;
-use crate::provenance::OrchestrationProvenanceEmitter;
-use crate::tracking::progress_tracker::{ExecutionProgress, ExecutionStatus, ProgressTracker};
-use crate::planning::types::ExecutionEvent;
+// TODO: These modules need to be implemented or moved from other crates
+// use crate::orchestrate::{orchestrate_task, to_task_spec};
+// use crate::caws_runtime::{CawsRuntimeValidator, TaskDescriptor, WorkingSpec};
+// use crate::persistence::VerdictWriter;
+// use crate::provenance::OrchestrationProvenanceEmitter;
+// use crate::tracking::progress_tracker::{ExecutionProgress, ExecutionStatus, ProgressTracker};
+// use crate::planning::types::ExecutionEvent;
 
-use agent_agency_council::coordinator::ConsensusCoordinator;
-use agent_agency_council::types::{ConsensusResult, FinalVerdict};
-use agent_agency_observability::cache::CacheBackend;
-use agent_agency_observability::metrics::MetricsBackend;
-use agent_memory::{MemorySystem, AgentExperience, MemoryType};
+// Use agent-agency-contracts instead of missing crates
+use agent_agency_contracts::refinement_decision::{CouncilDecision, CouncilVerdict};
+use agent_agency_contracts::final_verdict::FinalVerdictContract;
+
+// Define missing types that were referenced from non-existent crates
+pub type ConsensusResult = CouncilVerdict;
+pub type FinalVerdict = FinalVerdictContract;
+use agent_agency_contracts::execution_events::ExecutionEvent;
+use agent_agency_contracts::working_spec::WorkingSpec;
+use agent_agency_contracts::task_request::{TaskRequest, TaskPriority};
+// TODO: Implement these or find in other crates
+// use agent_agency_observability::cache::CacheBackend;
+// use agent_agency_observability::metrics::MetricsBackend;
+// TODO: Re-enable when agent_memory exports MemorySystem
+use agent_memory::{MemorySystem, memory_types::{AgentExperience, MemoryType}};
+
+// Placeholder types for missing modules
+pub type TaskDescriptor = TaskRequest;
+pub type ProgressTracker = String;
+pub type ConsensusCoordinator = String;
+
+// Trait definitions for missing modules
+pub trait CawsRuntimeValidator: Send + Sync + std::fmt::Debug {
+    fn validate(&self, spec: &WorkingSpec) -> Result<(), String>;
+}
+
+pub trait VerdictWriter: Send + Sync + std::fmt::Debug {
+    fn write_verdict(&self, verdict: &agent_agency_contracts::final_verdict::FinalVerdictContract) -> Result<(), String>;
+}
+
+#[derive(Debug)]
+pub struct OrchestrationProvenanceEmitter {
+    pub id: String,
+}
+
+pub trait CacheBackend: Send + Sync + std::fmt::Debug {
+    fn get(&self, key: &str) -> Result<Option<String>, String>;
+    fn set(&self, key: &str, value: &str) -> Result<(), String>;
+}
+
+pub trait MetricsBackend: Send + Sync + std::fmt::Debug {
+    fn record_metric(&self, name: &str, value: f64) -> Result<(), String>;
+}
+
+/// Execution progress tracking
+#[derive(Debug, Clone)]
+pub struct ExecutionProgress {
+    pub task_id: uuid::Uuid,
+    pub status: ExecutionStatus,
+    pub completion_percentage: f64,
+    pub current_step: String,
+    pub estimated_completion: Option<chrono::DateTime<chrono::Utc>>,
+    pub error_message: Option<String>,
+}
+
+/// Execution status for tasks
+#[derive(Debug, Clone, PartialEq)]
+pub enum ExecutionStatus {
+    Pending,
+    Starting,
+    Running,
+    AwaitingApproval,
+    Completed,
+    Failed,
+    Paused,
+    Cancelled,
+}
+
+/// Execution mode for tasks
+#[derive(Debug, Clone, PartialEq)]
+pub enum ExecutionMode {
+    Strict,
+    Auto,
+    DryRun,
+}
+
+/// Risk tier levels
+#[derive(Debug, Clone, PartialEq)]
+pub enum RiskTier {
+    Low,
+    Medium,
+    High,
+}
+
+// Placeholder functions for missing modules
+pub fn to_task_spec(_task_descriptor: &TaskDescriptor) -> WorkingSpec {
+    // TODO: Implement proper task spec conversion
+    WorkingSpec {
+        version: "1.0".to_string(),
+        id: "placeholder".to_string(),
+        title: "placeholder".to_string(),
+        description: "placeholder".to_string(),
+        goals: vec![],
+        risk_tier: 1,
+        constraints: agent_agency_contracts::working_spec::WorkingSpecConstraints {
+            max_duration_minutes: Some(60),
+            max_iterations: Some(5),
+            budget_limits: Some(agent_agency_contracts::working_spec::BudgetLimits {
+                max_files: Some(10),
+                max_loc: Some(1000),
+            }),
+            scope_restrictions: Some(agent_agency_contracts::working_spec::ScopeRestrictions {
+                allowed_paths: vec![],
+                blocked_paths: vec![],
+            }),
+        },
+        acceptance_criteria: vec![],
+        test_plan: agent_agency_contracts::working_spec::TestPlan {
+            unit_tests: vec![],
+            integration_tests: vec![],
+            e2e_scenarios: vec![],
+        coverage_targets: Some(agent_agency_contracts::working_spec::CoverageTargets {
+            line_coverage: Some(80.0),
+            branch_coverage: Some(90.0),
+            mutation_score: Some(70.0),
+        }),
+        },
+        rollback_plan: agent_agency_contracts::working_spec::RollbackPlan {
+            strategy: agent_agency_contracts::working_spec::RollbackStrategy::ManualRevert,
+            automated_steps: vec![],
+            manual_steps: vec![],
+            data_impact: agent_agency_contracts::working_spec::DataImpact::None,
+            downtime_required: Some(false),
+            rollback_window_minutes: Some(30),
+        },
+        context: agent_agency_contracts::working_spec::WorkingSpecContext {
+            workspace_root: ".".to_string(),
+            dependencies: std::collections::HashMap::new(),
+            environment: agent_agency_contracts::task_request::Environment::Development,
+        },
+        non_functional_requirements: Some(agent_agency_contracts::working_spec::NonFunctionalRequirements {
+            performance: Some(agent_agency_contracts::working_spec::PerformanceRequirements {
+                response_time_ms: Some(1000),
+                memory_limit_mb: Some(512),
+                cpu_limit_percent: Some(80),
+            }),
+            security: vec!["authentication_required".to_string()],
+            accessibility: vec![],
+            scalability: None,
+        }),
+        validation_results: None,
+        metadata: Some(agent_agency_contracts::working_spec::WorkingSpecMetadata {
+            version: Some(1),
+            created_at: chrono::Utc::now(),
+            created_by: Some("system".to_string()),
+            last_modified: Some(chrono::Utc::now()),
+            tags: vec![],
+        }),
+    }
+}
+
+pub fn orchestrate_task(
+    _working_spec: &WorkingSpec,
+    _task_descriptor: &TaskDescriptor,
+) -> Result<agent_agency_contracts::final_verdict::FinalVerdictContract, Box<dyn std::error::Error + Send + Sync>> {
+    // TODO: Implement proper orchestration
+    Ok(agent_agency_contracts::final_verdict::FinalVerdictContract {
+        decision: agent_agency_contracts::final_verdict::FinalDecision::Accept,
+        votes: vec![],
+        dissent: "".to_string(),
+        remediation: vec![],
+        constitutional_refs: vec![],
+        verification_summary: agent_agency_contracts::final_verdict::VerificationSummary {
+            claims_total: 0,
+            claims_verified: 0,
+            coverage_pct: 0.0,
+        },
+    })
+}
 
 /// Configuration for the autonomous executor
 #[derive(Debug, Clone)]
@@ -62,7 +227,6 @@ pub struct TaskExecutionState {
 }
 
 /// Autonomous executor that runs tasks end-to-end
-#[derive(Debug)]
 pub struct AutonomousExecutor {
     config: AutonomousExecutorConfig,
     progress_tracker: Arc<ProgressTracker>,
@@ -73,7 +237,7 @@ pub struct AutonomousExecutor {
     cache: Option<Arc<dyn CacheBackend>>,
     metrics: Option<Arc<dyn MetricsBackend>>,
     task_executor_provider: TaskExecutorProvider,
-    memory_system: Option<Arc<agent_memory::MemorySystem>>,
+    memory_system: Option<Arc<MemorySystem>>,
     active_tasks: Arc<RwLock<HashMap<Uuid, TaskExecutionState>>>,
     task_queue: mpsc::UnboundedSender<TaskDescriptor>,
     task_receiver: Arc<RwLock<mpsc::UnboundedReceiver<TaskDescriptor>>>,
@@ -91,7 +255,7 @@ impl AutonomousExecutor {
         cache: Option<Arc<dyn CacheBackend>>,
         metrics: Option<Arc<dyn MetricsBackend>>,
         task_executor_provider: TaskExecutorProvider,
-        memory_system: Option<Arc<agent_memory::MemorySystem>>,
+        memory_system: Option<Arc<MemorySystem>>,
     ) -> Self {
         let (task_sender, task_receiver) = mpsc::unbounded_channel();
 
@@ -215,34 +379,42 @@ impl AutonomousExecutor {
         let start_time = Instant::now();
 
         tracing::info!("Starting {} execution of task {}", match task_descriptor.execution_mode {
-            crate::caws_runtime::ExecutionMode::Strict => "strict",
-            crate::caws_runtime::ExecutionMode::Auto => "auto",
-            crate::caws_runtime::ExecutionMode::DryRun => "dry-run",
+            crate::ExecutionMode::Strict => "strict",
+            crate::ExecutionMode::Auto => "auto",
+            crate::ExecutionMode::DryRun => "dry-run",
         }, task_id);
 
         // Enforce execution mode behavior
         match task_descriptor.execution_mode {
-            crate::caws_runtime::ExecutionMode::DryRun => {
+            crate::ExecutionMode::DryRun => {
                 tracing::info!("Dry-run mode: Simulating execution without filesystem changes");
                 // For dry-run, we still validate and plan but skip actual execution
                 self.update_task_status(task_id.clone(), ExecutionStatus::Starting, Some("Initializing dry-run execution".to_string())).await?;
             }
-            crate::caws_runtime::ExecutionMode::Strict => {
+            crate::ExecutionMode::Strict => {
                 tracing::info!("Strict mode: Manual approval required for each phase");
                 self.update_task_status(task_id.clone(), ExecutionStatus::Starting, Some("Initializing strict mode execution".to_string())).await?;
             }
-            crate::caws_runtime::ExecutionMode::Auto => {
+            crate::ExecutionMode::Auto => {
                 tracing::info!("Auto mode: Automatic execution with quality gates");
                 self.update_task_status(task_id.clone(), ExecutionStatus::Starting, Some("Initializing auto execution".to_string())).await?;
             }
         }
 
         // Phase 1: Validate and prepare task
-        let working_spec = self.prepare_task(&task_descriptor).await?;
+        let task_request = TaskRequest {
+            version: "1.0".to_string(),
+            id: Uuid::new_v4(), // Generate new ID since TaskDescriptor.task_id is a String
+            description: task_descriptor.description.clone(),
+            context: None, // TODO: Convert from TaskDescriptor fields
+            constraints: None, // TODO: Convert from TaskDescriptor fields
+            metadata: None, // TODO: Convert from TaskDescriptor fields
+        };
+        let working_spec = self.prepare_task(&task_request).await?;
         self.update_task_progress(task_id.clone(), 10.0, Some("Task prepared".to_string())).await?;
 
         // Strict mode: Require approval before proceeding
-        if task_descriptor.execution_mode == crate::caws_runtime::ExecutionMode::Strict {
+        if task_descriptor.execution_mode == crate::ExecutionMode::Strict {
             self.update_task_status(task_id.clone(), ExecutionStatus::AwaitingApproval, Some("Awaiting approval for planning phase".to_string())).await?;
             // In a real implementation, this would wait for external approval
             tracing::info!("Strict mode: Awaiting user approval for planning phase");
@@ -253,7 +425,7 @@ impl AutonomousExecutor {
         self.update_task_progress(task_id.clone(), 25.0, Some("Planning and validation complete".to_string())).await?;
 
         // Strict mode: Require approval before consensus
-        if task_descriptor.execution_mode == crate::caws_runtime::ExecutionMode::Strict {
+        if task_descriptor.execution_mode == crate::ExecutionMode::Strict {
             self.update_task_status(task_id.clone(), ExecutionStatus::AwaitingApproval, Some("Awaiting approval for consensus phase".to_string())).await?;
             tracing::info!("Strict mode: Awaiting user approval for consensus phase");
         }
@@ -265,25 +437,25 @@ impl AutonomousExecutor {
         }
 
         // Strict mode: Require approval before execution
-        if task_descriptor.execution_mode == crate::caws_runtime::ExecutionMode::Strict {
+        if task_descriptor.execution_mode == crate::ExecutionMode::Strict {
             self.update_task_status(task_id.clone(), ExecutionStatus::AwaitingApproval, Some("Awaiting approval for execution phase".to_string())).await?;
             tracing::info!("Strict mode: Awaiting user approval for execution phase");
         }
 
         // Phase 4: Execute task orchestration (skip for dry-run)
-        let final_verdict = match task_descriptor.execution_mode {
-            crate::caws_runtime::ExecutionMode::DryRun => {
-                tracing::info!("Dry-run mode: Skipping actual orchestration, simulating results");
-                // Create a mock verdict for dry-run
-                agent_agency_council::types::FinalVerdict {
-                    decision: "Accept".to_string(),
-                    confidence: 0.95,
-                    summary: "Dry-run simulation - no actual changes made".to_string(),
-                    metadata: std::collections::HashMap::new(),
-                }
+        let final_verdict = if task_descriptor.execution_mode == crate::ExecutionMode::DryRun {
+            tracing::info!("Dry-run mode: Skipping actual orchestration, simulating results");
+            // Create a mock verdict for dry-run
+            crate::council_types::FinalVerdict {
+                decision: "Accept".to_string(),
+                confidence: 0.95,
+                summary: "Dry-run simulation - no actual changes made".to_string(),
+                metadata: std::collections::HashMap::new(),
             }
-            _ => {
-                self.execute_orchestration(&working_spec, &task_descriptor).await?
+        } else {
+            match self.execute_orchestration(&working_spec, &task_descriptor).await {
+                Ok(verdict) => verdict,
+                Err(e) => return Err(e),
             }
         };
         self.update_task_progress(task_id.clone(), 80.0, Some("Task orchestration complete".to_string())).await?;
@@ -308,28 +480,27 @@ impl AutonomousExecutor {
     }
 
     /// Prepare task specification
-    async fn prepare_task(&self, task_descriptor: &TaskDescriptor) -> Result<WorkingSpec, Box<dyn std::error::Error + Send + Sync>> {
+    async fn prepare_task(&self, task_request: &agent_agency_contracts::TaskRequest) -> Result<WorkingSpec, Box<dyn std::error::Error + Send + Sync>> {
         // Generate working spec from task descriptor
         // This would involve planning and specification generation
         let working_spec = WorkingSpec {
-            id: task_descriptor.task_id.to_string(),
-            title: format!("Autonomous Task {}", task_descriptor.task_id),
-            description: task_descriptor.description.clone(),
-            risk_tier: match task_descriptor.risk_tier {
-                1 => agent_agency_council::models::RiskTier::Low,
-                2 => agent_agency_council::models::RiskTier::Medium,
-                _ => agent_agency_council::models::RiskTier::High,
-            },
-            scope_in: task_descriptor.scope_in.clone(),
-            scope_out: task_descriptor.scope_out.clone(),
-            acceptance_criteria: task_descriptor.acceptance.clone().unwrap_or_default(),
-            invariants: vec![],
-            operational_rollback_slo: "5m".to_string(),
-            blast_radius: Default::default(),
+            id: task_request.id.to_string(),
+            title: task_request.description.clone(),
+            risk_tier: 2, // Default to tier 2
             mode: "feature".to_string(),
-            change_budget: Default::default(),
-            non_functional_requirements: Default::default(),
-            contracts: vec![],
+            change_budget: ChangeBudget {
+                max_files: 25,
+                max_loc: 1000,
+            },
+            blast_radius: BlastRadius {
+                modules: vec![],
+                data_migration: false,
+            },
+            scope: TaskScope {
+                in: vec![],
+                out: vec![],
+            },
+            acceptance_criteria: vec![],
         };
 
         Ok(working_spec)
@@ -370,7 +541,7 @@ impl AutonomousExecutor {
 
     /// Execute task orchestration
     async fn execute_orchestration(&self, working_spec: &WorkingSpec, task_descriptor: &TaskDescriptor) -> Result<FinalVerdict, Box<dyn std::error::Error + Send + Sync>> {
-        let diff_stats = crate::caws_runtime::DiffStats {
+        let diff_stats = crate::types::DiffStats {
             files_added: 0,
             files_modified: 0,
             files_deleted: 0,
@@ -418,7 +589,7 @@ impl AutonomousExecutor {
     /// Store execution experience in memory system
     async fn store_execution_experience(
         &self,
-        memory_system: &Arc<MemorySystem>,
+        _memory_system: &Arc<MemorySystem>,
         final_verdict: &FinalVerdict,
         task_descriptor: &TaskDescriptor,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
@@ -432,24 +603,27 @@ impl AutonomousExecutor {
             id: Uuid::new_v4(),
             agent_id: "orchestrator".to_string(), // System-level agent for orchestration
             task_id: Some(task_descriptor.task_id.to_string()),
-            context: {
-                let mut ctx = agent_memory::types::AgentExperienceContext::new();
-                ctx.insert("task_type".to_string(), serde_json::Value::String(task_descriptor.task_type.clone()));
-                ctx.insert("execution_mode".to_string(), serde_json::json!(task_descriptor.execution_mode));
-                ctx.insert("risk_tier".to_string(), serde_json::json!(task_descriptor.risk_tier));
-                ctx
+            context: memory_types::ExperienceContext {
+                description: format!("Task execution: {}", task_descriptor.description),
+                domain: vec!["orchestration".to_string()],
+                task_type: task_descriptor.task_type.clone(),
+                temporal_context: None,
             },
             input: task_descriptor.description.clone(),
             output: format!("Task completed with verdict: {}", final_verdict.decision),
-            outcome: serde_json::json!({
-                "success": success,
-                "confidence_score": final_verdict.confidence_score,
-                "execution_time_ms": execution_time_ms,
-                "performance_score": performance_score,
-                "verdict": final_verdict.decision.to_string(),
-                "judge_count": final_verdict.judge_evaluations.len(),
-                "execution_stats": final_verdict.execution_stats
-            }),
+            outcome: memory_types::ExperienceOutcome {
+                success,
+                quality_score: final_verdict.confidence_score,
+                error_message: if success { None } else { Some("Task execution failed".to_string()) },
+                metadata: serde_json::json!({
+                    "verdict": final_verdict.decision.to_string(),
+                    "judge_count": final_verdict.judge_evaluations.len(),
+                    "execution_stats": final_verdict.execution_stats
+                }).as_object().unwrap().iter().map(|(k, v)| (k.clone(), v.clone())).collect(),
+                performance_score: Some(performance_score),
+                execution_time_ms: Some(execution_time_ms),
+                learned_capabilities: vec![],
+            },
             memory_type: if success { MemoryType::Episodic } else { MemoryType::Procedural },
             timestamp: chrono::Utc::now(),
             metadata: serde_json::json!({
@@ -473,12 +647,10 @@ impl AutonomousExecutor {
         let mut progress = ExecutionProgress {
             task_id,
             status: ExecutionStatus::Running,
-            start_time: Utc::now(),
-            last_update: Utc::now(),
-            events: vec![],
-            current_phase: phase,
-            completion_percentage,
-            metadata: HashMap::new(),
+            completion_percentage: completion_percentage as f64,
+            current_step: phase.unwrap_or_else(|| "Processing".to_string()),
+            estimated_completion: None,
+            error_message: None,
         };
 
         self.progress_tracker.update_progress(task_id, progress).await?;

@@ -6,7 +6,6 @@
 #[cfg(feature = "mcp")]
 use agent_mcp::{
     MCPServer as InnerMCPServer,
-    types::*,
     server::DatabaseClient as McpDatabaseClient,
     ToolDiscovery,
     ToolRegistry,
@@ -14,6 +13,25 @@ use agent_mcp::{
     PerformanceConfig,
     CawsIntegration,
     AuthRateLimitStats,
+    // Import types from mcp_types module to avoid conflicts
+    mcp_types::{
+        ServerConfig,
+        ToolDiscoveryConfig,
+        CawsIntegrationConfig,
+        ValidationStrictness,
+        MCPTool,
+        ToolExecutionRequest,
+        ToolExecutionResult,
+        ToolRegistryStats,
+        CawsComplianceResult,
+        MCPConnection,
+        MCPServerStatus,
+        MCPConfig,
+    },
+    // Import ToolDiscoveryResult from tool_discovery module
+    tool_discovery::ToolDiscoveryResult,
+    // Import CircuitBreakerStats from server module
+    server::CircuitBreakerStats,
 };
 // TODO: Add agent_orchestration crate when available
 // use agent_orchestration::error_handling::CircuitBreakerStats;
@@ -116,7 +134,7 @@ impl McpServer {
     /// Create a new MCP server instance
     pub async fn new(config: McpConfig, db_client: Arc<DatabaseClient>) -> Result<Self> {
         // Convert interface config to MCP integration config
-        let inner_config = agent_mcp::types::MCPConfig {
+        let inner_config = MCPConfig {
             server: config.server.clone(),
             tool_discovery: config.tool_discovery.clone(),
             caws_integration: config.caws_integration.clone(),
@@ -223,10 +241,7 @@ impl McpServer {
         // For now, implement basic tool registration in local registry
 
         // Store tool in local registry for public API access
-        {
-            let mut registry = self.tool_registry.write().await;
-            registry.insert(tool.name.clone(), tool.clone());
-        }
+        self.tool_registry.register_tool(tool.clone()).await?;
 
         println!("✅ Tool '{}' registered successfully", tool.name);
         Ok(())
@@ -234,14 +249,14 @@ impl McpServer {
 
     /// Get all registered tools (public API)
     pub async fn get_registered_tools(&self) -> HashMap<String, MCPTool> {
-        let registry = self.tool_registry.read().await;
-        registry.clone()
+        let tools = self.tool_registry.get_all_tools().await;
+        tools.into_iter().map(|tool| (tool.name.clone(), tool)).collect()
     }
 
     /// Get a specific registered tool by name (public API)
     pub async fn get_tool(&self, name: &str) -> Option<MCPTool> {
-        let registry = self.tool_registry.read().await;
-        registry.get(name).cloned()
+        let tools = self.tool_registry.get_all_tools().await;
+        tools.into_iter().find(|tool| tool.name == name)
     }
 
     /// Discover tools from configured paths
@@ -303,17 +318,17 @@ impl McpServer {
         tracing::debug!("Notifying inner MCP server of shutdown");
 
         // Shutdown tool discovery service
-        if let Err(e) = self.tool_discovery.shutdown().await {
+        if let Err(e) = self.tool_discovery.stop().await {
             tracing::warn!("Error shutting down tool discovery: {}", e);
         }
 
         // Shutdown tool registry service
-        if let Err(e) = self.tool_registry.shutdown().await {
+        if let Err(e) = self.tool_registry.stop().await {
             tracing::warn!("Error shutting down tool registry: {}", e);
         }
 
         // Shutdown CAWS integration
-        if let Err(e) = self.caws_integration.shutdown().await {
+        if let Err(e) = self.caws_integration.stop().await {
             tracing::warn!("Error shutting down CAWS integration: {}", e);
         }
 

@@ -1,9 +1,9 @@
 //! Main embedding service implementation
 
-use crate::embedding_cache::*;
-use crate::provider::*;
-use crate::similarity::*;
-use crate::embedding_types::*;
+use super::embedding_cache::*;
+use super::provider::*;
+use super::similarity::*;
+use super::embedding_types::*;
 use anyhow::Result;
 use async_trait::async_trait;
 use std::sync::Arc;

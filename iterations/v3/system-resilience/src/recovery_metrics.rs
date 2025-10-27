@@ -22,6 +22,12 @@ impl RecoveryMetricsCollector {
             metrics_backend,
             session_stats: Arc::new(RwLock::new(std::collections::HashMap::new())),
             global_metrics: Arc::new(RwLock::new(RecoveryMetrics {
+                total_recoveries: 0,
+                successful_recoveries: 0,
+                failed_recoveries: 0,
+                total_bytes_recovered: 0,
+                avg_recovery_time_ms: 0,
+                last_recovery: None,
                 dedupe_ratio: 0.0,
                 diff_ratio: 0.0,
                 restore_latency_p50_ms: 0,
@@ -56,9 +62,12 @@ impl RecoveryMetricsCollector {
                 files_added: 0,
                 files_changed: 0,
                 files_deleted: 0,
+                lines_added: 0,
+                lines_removed: 0,
                 bytes_added: 0,
                 bytes_changed: 0,
                 dedupe_ratio: 0.0,
+                timestamp: None,
             });
             entry.dedupe_ratio = dedupe_ratio;
         }
@@ -545,9 +554,15 @@ mod tests {
             files_added: 2,
             files_changed: 3,
             files_deleted: 1,
+            lines_added: 20,
+            lines_removed: 5,
             bytes_added: 500,
             bytes_changed: 200,
             dedupe_ratio: 0.3,
+            timestamp: Some(std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_secs()),
         };
         collector.record_file_changes("session1", &stats).await.unwrap();
 

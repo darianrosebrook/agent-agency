@@ -9,7 +9,6 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use sqlx::{PgPool, postgres::PgConnectOptions};
 use std::sync::{Arc, OnceLock};
-use std::time::Duration;
 use tokio::sync::RwLock;
 use tracing::{error, info};
 

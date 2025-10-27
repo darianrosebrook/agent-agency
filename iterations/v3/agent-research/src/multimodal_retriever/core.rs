@@ -10,6 +10,9 @@ use super::search::SearchCoordinator;
 use super::fusion::FusionEngine;
 use super::query_processing::QueryProcessor;
 
+// Import the embedding service types that the context provider expects
+use data_infrastructure::embedding::embedding_types::{MultimodalSearchResult, SearchResultFeature, ContentType};
+
 /// Configuration for multimodal retrieval
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MultimodalRetrieverConfig {
@@ -162,11 +165,60 @@ impl MultimodalRetriever {
         Ok(fused_results)
     }
 
-    /// Search with a structured multimodal query
+    /// Simple multimodal search with string query (for MultimodalContextProvider compatibility)
+    /// This is the API that the context provider expects
     pub async fn search_multimodal(
         &self,
+        query: &str,
+        max_results: usize,
+        project_scope: Option<&str>,
+    ) -> Result<Vec<data_infrastructure::embedding::embedding_types::MultimodalSearchResult>> {
+        // Create a simple text query
+        let multimodal_query = MultimodalQuery {
+            text: Some(query.to_string()),
+            image_path: None,
+            query_type: QueryType::Text,
+            project_scope: project_scope.map(|s| s.to_string()),
+            max_results,
+            anchor_timestamp: None,
+            time_window_seconds: None,
+        };
+
+        // Process the structured query
+        let processed_query = self.query_processor.process_multimodal_query(multimodal_query)?;
+
+        // Execute search
+        let search_results = self.search_coordinator.execute_multimodal_search(&processed_query, processed_query.max_results).await?;
+
+        // Fuse results
+        let fused_results = self.fusion_engine.fuse_results(search_results, processed_query.max_results)?;
+
+        // Convert to the format expected by MultimodalContextProvider
+        let converted_results = fused_results.into_iter().map(|result| {
+            data_infrastructure::embedding::embedding_types::MultimodalSearchResult {
+                ref_id: result.id,
+                kind: ContentType::Text, // Default to text for now
+                snippet: result.content,
+                citation: None, // Could be populated from metadata if needed
+                feature: SearchResultFeature {
+                    score: result.combined_score,
+                    metadata: serde_json::json!({
+                        "modality_scores": result.modality_scores,
+                        "metadata": result.metadata
+                    }),
+                },
+                project_scope: project_scope.map(|s| s.to_string()),
+            }
+        }).collect();
+
+        Ok(converted_results)
+    }
+
+    /// Search with a structured multimodal query (advanced API)
+    pub async fn search_multimodal_structured(
+        &self,
         query: MultimodalQuery,
-    ) -> Result<Vec<MultimodalSearchResult>> {
+    ) -> Result<Vec<data_infrastructure::embedding::embedding_types::MultimodalSearchResult>> {
         // Process the structured query
         let processed_query = self.query_processor.process_multimodal_query(query)?;
 
@@ -176,7 +228,25 @@ impl MultimodalRetriever {
         // Fuse results
         let fused_results = self.fusion_engine.fuse_results(search_results, processed_query.max_results)?;
 
-        Ok(fused_results)
+        // Convert to the format expected by MultimodalContextProvider
+        let converted_results = fused_results.into_iter().map(|result| {
+            data_infrastructure::embedding::embedding_types::MultimodalSearchResult {
+                ref_id: result.id,
+                kind: ContentType::Text, // Default to text for now
+                snippet: result.content,
+                citation: None, // Could be populated from metadata if needed
+                feature: SearchResultFeature {
+                    score: result.combined_score,
+                    metadata: serde_json::json!({
+                        "modality_scores": result.modality_scores,
+                        "metadata": result.metadata
+                    }),
+                },
+                project_scope: query.project_scope,
+            }
+        }).collect();
+
+        Ok(converted_results)
     }
 
     /// Get retriever configuration

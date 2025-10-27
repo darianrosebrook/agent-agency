@@ -6,6 +6,63 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
 
+/// Memory type classification
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum MemoryType {
+    Episodic,  // Event-based memories
+    Semantic,  // Factual knowledge
+    Procedural, // Skill-based memories
+    Working,   // Short-term working memory
+}
+
+/// Temporal context for memory operations
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TemporalContext {
+    pub timestamp: chrono::DateTime<chrono::Utc>,
+    pub duration: Option<chrono::Duration>,
+    pub sequence_number: Option<u64>,
+    pub priority: TaskPriority,
+}
+
+/// Task priority levels
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum TaskPriority {
+    Low,
+    Normal,
+    High,
+    Critical,
+}
+
+/// Experience outcome classification
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExperienceOutcome {
+    pub success: bool,
+    pub quality_score: f64,
+    pub error_message: Option<String>,
+    pub metadata: HashMap<String, serde_json::Value>,
+    pub performance_score: Option<f32>,
+    pub execution_time_ms: Option<u64>,
+    pub learned_capabilities: Vec<String>,
+}
+
+/// Agent feedback for learning
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AgentFeedback {
+    pub feedback_type: String,
+    pub rating: f64,
+    pub comment: Option<String>,
+    pub timestamp: chrono::DateTime<chrono::Utc>,
+}
+
+/// Experience context for memory storage
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExperienceContext {
+    pub description: String,
+    pub domain: Vec<String>,
+    pub task_type: String,
+    pub temporal_context: Option<TemporalContext>,
+}
+
 /// Unique identifier for a memory
 pub type MemoryId = Uuid;
 
@@ -39,6 +96,19 @@ pub struct WorkspaceAccessConfig {
     pub default_access: WorkspaceAccess,
     pub default_workspaces: Vec<String>,
     pub blocked_workspaces: Vec<String>,
+}
+
+impl Default for WorkspaceAccessConfig {
+    fn default() -> Self {
+        Self {
+            max_workspaces: 10,
+            default_ttl_hours: 24,
+            discovery_paths: vec![],
+            default_access: WorkspaceAccess::Enabled,
+            default_workspaces: vec![],
+            blocked_workspaces: vec![],
+        }
+    }
 }
 
 /// Graph configuration
@@ -80,33 +150,10 @@ pub struct TemporalConfig {
 pub struct EmbeddingConfig {
     pub model_name: String,
     pub dimensions: usize,
-}
-
-/// Temporal context
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TemporalContext {
-    pub priority: f32,
-    pub urgency: f32,
-    pub deadline: Option<chrono::DateTime<chrono::Utc>>,
+    pub similarity_threshold: f32,
 }
 
 /// Experience context
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ExperienceContext {
-    pub description: String,
-    pub domain: Vec<String>,
-    pub task_type: String,
-    pub temporal_context: Option<TemporalContext>,
-}
-
-/// Experience outcome
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ExperienceOutcome {
-    pub performance_score: Option<f32>,
-    pub execution_time_ms: Option<u64>,
-    pub learned_capabilities: Vec<String>,
-}
-
 /// Agent experience for episodic memory
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AgentExperience {
@@ -304,14 +351,6 @@ pub struct WorkspaceAccessControl {
     pub expires_at: Option<chrono::DateTime<chrono::Utc>>,
 }
 
-/// Memory type classification
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub enum MemoryType {
-    Episodic,
-    Semantic,
-    Procedural,
-    Working,
-}
 
 impl TryFrom<i32> for MemoryType {
     type Error = ();
@@ -388,7 +427,7 @@ pub struct Memory {
 /// Contextual memory with context matching information
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ContextualMemory {
-    pub memory: Memory,
+    pub memory: AgentExperience,
     pub context_match: ContextMatch,
     pub relevance_score: f32,
     pub reasoning_path: Vec<String>,

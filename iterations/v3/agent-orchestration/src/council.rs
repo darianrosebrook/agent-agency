@@ -8,12 +8,16 @@ use tokio::time::{timeout, Duration};
 use uuid::Uuid;
 use rand::seq::SliceRandom;
 
-use crate::error::{CouncilError, CouncilResult};
-use crate::judge::{Judge, JudgeContribution, ReviewContext, PreviousReview, VerdictSummary};
+use crate::council_errors::{CouncilError, CouncilResult};
+use crate::judge_backup::{Judge, JudgeContribution, JudgeConfig, JudgeHealthMetrics, VerdictSummary};
+use crate::judge_backup::types::{ReviewContext, PreviousReview};
 use crate::verdict_aggregation::{VerdictAggregator, AggregationResult};
-use crate::decision_making::{DecisionEngine, FinalDecision, DecisionContext, OrganizationalConstraints, ResourceConstraints, HistoricalDecision, EmergencyFlags, ConsensusStrategy, RiskThresholds, TaskPriority, ImpactLevel};
-use crate::error_handling::{AgencyError, CircuitBreaker, CircuitBreakerConfig, RecoveryOrchestrator, DegradationManager, DegradationPolicy, DegradationLevel, error_factory};
-use crate::judge::judge_types::ComputationalComplexity;
+use crate::decision_making::{DecisionEngine, FinalDecision, DecisionContext, OrganizationalConstraints, ResourceConstraints, HistoricalDecision, EmergencyFlags, ConsensusStrategy, RiskThresholds, ImpactLevel};
+use crate::types::TaskPriority;
+use crate::error_handling::{AgencyError, CircuitBreaker, ErrorHandlingCircuitBreakerConfig, RecoveryOrchestrator, DegradationManager, DegradationPolicy, DegradationLevel, error_factory};
+// use crate::risk_scorer::ComputationalComplexity; // TEMPORARILY DISABLED
+
+use agent_memory::{memory_types, MemoryType};
 
 use tracing::{debug, info, instrument, warn};
 
@@ -174,7 +178,7 @@ impl Council {
             for service in services {
                 let breaker = Arc::new(CircuitBreaker::new(
                     service.to_string(),
-                    CircuitBreakerConfig {
+                    ErrorHandlingCircuitBreakerConfig {
                         failure_threshold: 5,
                         success_threshold: 3,
                         recovery_timeout: Duration::from_secs(60),
@@ -343,11 +347,14 @@ impl Council {
         session.final_decision = Some(final_decision.clone());
 
         // Store decision outcome in memory for future learning
+        let working_spec: crate::council_types::WorkingSpec = serde_json::from_str(&review_context.working_spec)
+            .map_err(|e| CouncilError::InvalidInput(format!("Failed to parse working spec: {}", e)))?;
+        
         self.store_decision_memory(
             session.session_id.clone(),
-            &convert_local_to_contract_spec(&review_context.working_spec),
+            &convert_local_to_contract_spec(&working_spec),
             &final_decision,
-            &convert_local_to_contract_risk_tier(&review_context.risk_tier),
+            &convert_local_to_contract_risk_tier(&working_spec.risk_tier),
         ).await;
 
         Ok(())
@@ -555,7 +562,7 @@ impl Council {
             return Err(AgencyError::new(
                 crate::error_handling::ErrorCategory::ResourceExhaustion,
                 "JUDGE_UNAVAILABLE",
-                &format!("Judge {} is not available", judge.config().judge_id),
+                &format!("Judge {} is not available", judge.config().name),
                 crate::error_handling::ErrorSeverity::Warning,
                 "council",
                 "conduct_single_judge_review_with_error_handling"
@@ -567,11 +574,14 @@ impl Council {
             // Use circuit breaker for LLM-based judges
             circuit_breaker.execute(|| async {
                 let spec_id = uuid::Uuid::new_v4(); // Generate a spec ID
+                let working_spec: crate::council_types::WorkingSpec = serde_json::from_str(&context.working_spec)
+                    .map_err(|e| CouncilError::InvalidInput(format!("Failed to parse working spec: {}", e)))?;
+                
                 judge.evaluate(
                     spec_id,
-                    &context.working_spec.title,
-                    &context.working_spec.title, // Use title as description for now
-                    &context.working_spec.acceptance_criteria.iter().map(|ac| ac.description.clone()).collect::<Vec<_>>(),
+                    &working_spec.title,
+                    &working_spec.title, // Use title as description for now
+                    &working_spec.acceptance_criteria.iter().map(|ac| ac.description.clone()).collect::<Vec<_>>(),
                 ).await.map_err(|e| {
                     AgencyError::new(
                         crate::error_handling::ErrorCategory::ExternalService,
@@ -586,14 +596,17 @@ impl Council {
         } else {
             // Direct execution for other judges
             {
-    let spec_id = uuid::Uuid::new_v4(); // Generate a spec ID
-    judge.evaluate(
-        spec_id,
-        &context.working_spec.title,
-        &context.working_spec.title, // Use title as description for now
-        &context.working_spec.acceptance_criteria.iter().map(|ac| ac.description.clone()).collect::<Vec<_>>(),
-    ).await
-}.map_err(|e| {
+                let spec_id = uuid::Uuid::new_v4(); // Generate a spec ID
+                let working_spec: crate::council_types::WorkingSpec = serde_json::from_str(&context.working_spec)
+                    .map_err(|e| CouncilError::InvalidInput(format!("Failed to parse working spec: {}", e)))?;
+                
+                judge.evaluate(
+                    spec_id,
+                    &working_spec.title,
+                    &working_spec.title, // Use title as description for now
+                    &working_spec.acceptance_criteria.iter().map(|ac| ac.description.clone()).collect::<Vec<_>>(),
+                ).await
+            }.map_err(|e| {
                 AgencyError::new(
                     crate::error_handling::ErrorCategory::ExternalService,
                     "JUDGE_REVIEW_FAILED",
@@ -686,9 +699,9 @@ impl Council {
     fn create_decision_context(&self, review_context: &ReviewContext) -> DecisionContext {
         // Create organizational constraints based on risk tier
         let max_risk_level = match review_context.risk_tier {
-            crate::council_types::RiskTier::Tier1 => crate::judge::RiskLevel::Medium,
-            crate::council_types::RiskTier::Tier2 => crate::judge::RiskLevel::High,
-            crate::council_types::RiskTier::Tier3 => crate::judge::RiskLevel::Critical,
+            crate::council_types::RiskTier::Tier1 => crate::judge_backup::risk::RiskLevel::Medium,
+            crate::council_types::RiskTier::Tier2 => crate::judge_backup::risk::RiskLevel::High,
+            crate::council_types::RiskTier::Tier3 => crate::judge_backup::risk::RiskLevel::Critical,
         };
 
         let organizational_constraints = OrganizationalConstraints {
@@ -809,7 +822,7 @@ impl Council {
     ) -> Vec<crate::decision_making::HistoricalDecision> {
         if let Some(ref memory_system) = self.memory_system {
             // Create context for memory retrieval
-            let task_context = agent_memory::TaskContext {
+            let task_context = memory_types::TaskContext {
                 task_id: format!("council_decision_{}", working_spec.id),
                 task_type: "council_decision_making".to_string(),
                 description: format!("Making council decision for spec: {}", working_spec.title),
@@ -846,7 +859,7 @@ impl Council {
     /// Convert a contextual memory to a historical decision
     fn convert_contextual_memory_to_historical_decision(
         &self,
-        contextual_memory: &agent_memory::ContextualMemory,
+        contextual_memory: &memory_types::ContextualMemory,
     ) -> Option<crate::decision_making::HistoricalDecision> {
         let experience = &contextual_memory.memory;
 
@@ -902,23 +915,16 @@ impl Council {
         risk_tier: &agent_agency_contracts::task_request::RiskTier,
     ) {
         if let Some(ref memory_system) = self.memory_system {
-            let task_context = agent_memory::TaskContext {
-                task_id: decision_id.clone(),
-                task_type: "council_decision_outcome".to_string(),
+            let experience_context = memory_types::ExperienceContext {
                 description: format!("Council decision outcome for: {}", working_spec.title),
                 domain: vec!["council".to_string(), "decision_making".to_string(), "learning".to_string()],
-                entities: vec!["constitutional_council".to_string()],
+                task_type: "council_decision_outcome".to_string(),
                 temporal_context: Some(agent_memory::TemporalContext {
                     start_time: chrono::Utc::now(),
                     deadline: None,
                     priority: agent_memory::TaskPriority::Medium,
                     recurrence_pattern: None,
                 }),
-                metadata: std::collections::HashMap::from([
-                    ("risk_tier".to_string(), serde_json::json!(risk_tier)),
-                    ("spec_goals".to_string(), serde_json::json!(working_spec.goals)),
-                    ("decision_outcome".to_string(), serde_json::json!(format!("{:?}", final_decision))),
-                ]),
             };
 
             // Determine success based on decision
@@ -946,20 +952,21 @@ impl Council {
                 }),
             };
 
-            let experience = agent_memory::AgentExperience {
+            let experience = memory_types::AgentExperience {
                 id: uuid::Uuid::new_v4(),
                 agent_id: "constitutional_council".to_string(),
                 task_id: decision_id,
-                context: task_context,
-                input: serde_json::json!({
+                content: format!("Council decision: {:?}", final_decision),
+                context: experience_context,
+                input: serde_json::to_string(&serde_json::json!({
                     "working_spec": working_spec,
                     "risk_tier": risk_tier
-                }),
-                output: serde_json::json!({
+                })).unwrap_or_else(|_| "{}".to_string()),
+                output: serde_json::to_string(&serde_json::json!({
                     "final_decision": format!("{:?}", final_decision)
-                }),
+                })).unwrap_or_else(|_| "{}".to_string()),
                 outcome,
-                memory_type: agent_memory::MemoryType::Episodic,
+                memory_type: MemoryType::Episodic,
                 timestamp: chrono::Utc::now(),
                 metadata: std::collections::HashMap::new(),
             };
@@ -982,7 +989,7 @@ pub struct CouncilHealthMetrics {
 
 /// Create a default council with mock judges
 pub fn create_default_council() -> CouncilResult<Council> {
-    use crate::judge::create_mock_judge_panel;
+    use crate::judge_backup::mock::create_mock_judge_panel;
     use crate::verdict_aggregation::create_verdict_aggregator;
     use crate::decision_making::create_decision_engine;
 

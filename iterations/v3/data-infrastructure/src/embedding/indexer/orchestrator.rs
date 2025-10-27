@@ -8,7 +8,7 @@ use super::visual::{VisualIndexer, VisualDocument};
 use super::graph::{GraphIndexer, NodeProperty, GraphEdge};
 use super::search::{MultimodalSearchEngine, MultimodalQuery, UnifiedSearchResult};
 use super::storage::EmbeddingStorage;
-use super::super::types::*;
+use super::super::embedding_types::*;
 use anyhow::Result;
 use std::sync::Arc;
 use tokio::sync::RwLock;

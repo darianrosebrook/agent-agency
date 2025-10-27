@@ -235,7 +235,37 @@ impl PipelineStage for DataProcessingCompositeStage {
             extracted_metadata: accumulated_metadata,
             processing_stats: ProcessingStats {
                 processing_time_ms: processing_time.as_millis() as u64,
-                bytes_processed: 0, // TODO: calculate actual size
+                // TODO: Bytes Processed Calculation - Implement accurate size calculation
+                // 
+                // COMPLETION CHECKLIST:
+                // [ ] Calculate size of text content
+                // [ ] Calculate size of binary data
+                // [ ] Calculate size of structured data
+                // [ ] Calculate size of file content
+                // [ ] Include metadata and overhead
+                // [ ] Unit tests written (80%+ coverage)
+                // [ ] Integration tests with pipeline
+                // [ ] Documentation updated
+                // [ ] Performance benchmarks meet SLA
+                // [ ] Security considerations addressed
+                // [ ] Configuration options defined
+                // [ ] Monitoring/metrics implemented
+                // [ ] Logging added for debugging
+                //
+                // ACCEPTANCE CRITERIA:
+                // - Accurately calculates total bytes processed
+                // - Includes all content types (text, binary, structured, file)
+                // - Accounts for metadata and processing overhead
+                // - Performance is acceptable (< 1ms overhead)
+                //
+                // DEPENDENCIES:
+                // - DataInput content access: Available
+                // - Size calculation utilities: Required
+                //
+                // ESTIMATED EFFORT: 8 hours
+                // PRIORITY: MEDIUM
+                // BLOCKING: No - Statistics are informational
+                bytes_processed: 0,
                 entities_extracted: entities_count,
                 relationships_found: relationships_count,
                 embeddings_generated: embeddings_count,
@@ -366,7 +396,39 @@ impl DataPipeline {
                     DataContent::Text(text) => ProcessedContentData::Text(text.clone()),
                     DataContent::Binary(data) => ProcessedContentData::Binary(data.clone()),
                     DataContent::Structured(value) => ProcessedContentData::Structured(value.clone()),
-                    DataContent::File(_) => ProcessedContentData::Text("File content".to_string()), // Placeholder
+                    // TODO: File Content Processing - Implement proper file content extraction
+                    // 
+                    // COMPLETION CHECKLIST:
+                    // [ ] File reading implementation
+                    // [ ] Content type detection
+                    // [ ] Binary/text file handling
+                    // [ ] Large file streaming support
+                    // [ ] Error handling for missing/corrupt files
+                    // [ ] Unit tests written (80%+ coverage)
+                    // [ ] Integration tests with file system
+                    // [ ] Documentation updated
+                    // [ ] Performance benchmarks meet SLA
+                    // [ ] Security considerations (path traversal, etc.)
+                    // [ ] Configuration options defined
+                    // [ ] Monitoring/metrics implemented
+                    // [ ] Logging added for debugging
+                    //
+                    // ACCEPTANCE CRITERIA:
+                    // - Reads file content from filesystem
+                    // - Detects and preserves content type
+                    // - Handles both binary and text files
+                    // - Streams large files efficiently
+                    // - Provides clear error messages for failures
+                    //
+                    // DEPENDENCIES:
+                    // - File system access: Available
+                    // - Content type detection: Required
+                    // - Streaming utilities: Required
+                    //
+                    // ESTIMATED EFFORT: 16 hours
+                    // PRIORITY: HIGH
+                    // BLOCKING: Yes - Required for file processing functionality
+                    DataContent::File(_) => ProcessedContentData::Text("File content".to_string()),
                 },
                 content_type: ContentType::Text, // Default content type
                 text_content: None,

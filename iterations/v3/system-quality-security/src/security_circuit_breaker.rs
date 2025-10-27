@@ -389,12 +389,12 @@ mod tests {
         };
 
         registry.register("api", config);
-        let breaker = registry.get_or_create("api");
+        let mut breaker = registry.get_or_create("api");
 
         assert!(breaker.allow_request());
 
         // Test getting unregistered service (should create default)
-        let default_breaker = registry.get_or_create("unknown");
+        let mut default_breaker = registry.get_or_create("unknown");
         assert!(default_breaker.allow_request());
     }
 

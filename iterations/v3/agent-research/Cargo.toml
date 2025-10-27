@@ -69,7 +69,7 @@ agent-memory = { path = "../agent-memory" }
 system-acceleration = { path = "../system-acceleration", optional = true }
 # embedding-service now consolidated into data-infrastructure
 data-infrastructure = { path = "../data-infrastructure" }
-# agent-data-processing = { path = "../agent-data-processing" } # TEMPORARILY DISABLED
+agent-data-processing = { path = "../agent-data-processing" } 
 agent-agency-contracts = { path = "../agent-agency-contracts" }
 system-configuration = { path = "../system-configuration" }
 

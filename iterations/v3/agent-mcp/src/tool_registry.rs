@@ -3,9 +3,10 @@
 //! Manages registration, execution, and lifecycle of MCP tools.
 
 use crate::mcp_types::*;
-use crate::tools::{DocQualityValidator, create_memory_tools};
-#[cfg(feature = "memory")]
-use agent_memory::MemorySystem;
+use crate::tools::DocQualityValidator;
+// Memory system disabled due to cyclic dependencies
+// #[cfg(feature = "memory")]
+// use agent_memory::MemorySystem;
 use anyhow::Result;
 use dashmap::DashMap;
 use std::process::Stdio;
@@ -23,8 +24,7 @@ pub struct ToolRegistry {
     execution_history: Arc<RwLock<Vec<ToolExecutionResult>>>,
     statistics: Arc<RwLock<ToolRegistryStats>>,
     doc_quality_validator: Arc<DocQualityValidator>,
-    #[cfg(feature = "memory")]
-    memory_system: Option<Arc<MemorySystem>>,
+    // memory_system: Option<Arc<MemorySystem>>, // Disabled due to cyclic dependencies
 }
 
 impl ToolRegistry {
@@ -45,14 +45,15 @@ impl ToolRegistry {
                 last_updated: chrono::Utc::now(),
             })),
             doc_quality_validator: Arc::new(DocQualityValidator::new()),
-            memory_system: None,
+            // memory_system: None, // Disabled due to cyclic dependencies
         }
     }
 
     /// Set the memory system for memory tools
-    pub fn set_memory_system(&mut self, memory_system: Arc<MemorySystem>) {
-        self.memory_system = Some(memory_system);
-    }
+    // Disabled due to cyclic dependencies
+    // pub fn set_memory_system(&mut self, memory_system: Arc<MemorySystem>) {
+    //     self.memory_system = Some(memory_system);
+    // }
 
     /// Initialize tool registry
     pub async fn initialize(&self) -> Result<()> {
@@ -84,12 +85,12 @@ impl ToolRegistry {
         let doc_quality_tool = self.doc_quality_validator.get_tool_definition();
         self.register_tool(doc_quality_tool).await?;
 
-        // Register memory tools
-        let memory_tools = create_memory_tools();
-        for tool in memory_tools {
-            self.register_tool(tool).await?;
-        }
-        info!("Registered memory tools");
+        // Memory tools disabled due to cyclic dependencies
+        // let memory_tools = create_memory_tools();
+        // for tool in memory_tools {
+        //     self.register_tool(tool).await?;
+        // }
+        // info!("Registered memory tools");
 
         Ok(())
     }
@@ -527,6 +528,11 @@ impl ToolRegistry {
         self.execution_queue.write().await.clear();
         self.execution_history.write().await.clear();
         Ok(())
+    }
+
+    /// Stop tool registry (alias for shutdown)
+    pub async fn stop(&self) -> Result<()> {
+        self.shutdown().await
     }
 
     /// Create sandbox configuration for command execution

@@ -22,9 +22,6 @@ pub mod decay;
 pub mod graph_engine;
 pub mod memory_manager;
 pub mod memory_types;
-
-// Re-export commonly used types
-pub use memory_types::{AgentExperience, MemoryType};
 pub mod temporal_reasoning;
 // pub mod prompting_types; // TODO: Create this module
 pub mod workspace_registry;
@@ -72,10 +69,8 @@ pub use decay::{MemoryDecayEngine, DecayStats};
 pub use graph_engine::{KnowledgeGraphEngine, Entity, Relationship, GraphQuery, GraphStats};
 pub use memory_manager::{MemoryManager, MemoryStats};
 pub use temporal_reasoning::{TemporalReasoningEngine};
+pub use memory_types::{MemoryType, TemporalContext, TaskPriority, ExperienceOutcome, AgentFeedback, ExperienceContext};
 // pub use prompting_types::*; // TODO: Uncomment when module is created
-
-// Export the main MemorySystem struct
-pub use MemorySystem;
 
 #[cfg(feature = "embeddings")]
 pub use embedding_integration::{EmbeddingIntegration, MemoryEmbedding};
@@ -298,22 +293,8 @@ impl MemorySystem {
         // Add graph matches
         for (memory_id, path) in graph_matches {
             if let Ok(experience) = self.manager.retrieve_memory(memory_id).await {
-                // Convert AgentExperience to Memory for ContextualMemory
-                let memory = Memory {
-                    id: experience.id,
-                    content: experience.output.clone(), // Use output as primary content
-                    metadata: experience.metadata.clone(),
-                    created_at: experience.timestamp,
-                    last_accessed: experience.timestamp, // Simplified
-                    access_count: 1, // Simplified
-                    importance_score: experience.outcome.performance_score.unwrap_or(0.5),
-                    importance: experience.outcome.performance_score.unwrap_or(0.5),
-                    tags: experience.context.domain.into_iter().map(|d| d).collect::<Vec<_>>().into(),
-                    memory_type: experience.memory_type,
-                };
-
                 all_memories.push(ContextualMemory {
-                    memory,
+                    memory: experience,
                     relevance_score: 0.8, // Graph matches get high base score
                     context_match: ContextMatch::Graph(path.len()),
                     reasoning_path: path,

@@ -284,3 +284,4 @@ test-image*.png
 
 **/docs/internal/**
  whisper.cpp/
+tmp/

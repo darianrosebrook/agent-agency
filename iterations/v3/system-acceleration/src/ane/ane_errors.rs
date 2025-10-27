@@ -120,12 +120,15 @@ impl From<CircuitBreakerError> for ANEError {
     }
 }
 
+// TEMPORARILY DISABLED: candle_core::Error conversion due to dependency conflicts
+/*
 /// Convert from candle_core::Error to ANEError
 impl From<candle_core::Error> for ANEError {
     fn from(err: candle_core::Error) -> Self {
         ANEError::Internal(format!("Tensor operation failed: {}", err))
     }
 }
+*/
 
 /// Helper trait for converting errors to ANEError
 pub trait IntoANEError {

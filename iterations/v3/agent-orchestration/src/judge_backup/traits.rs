@@ -4,8 +4,9 @@
 //! with standardized methods for review, health monitoring,
 //! and specialization scoring.
 
-use crate::error::CouncilResult;
-use crate::judge_backup::types::{JudgeConfig, JudgeHealthMetrics, ReviewContext};
+use crate::council_errors::CouncilResult;
+use crate::judge_backup::backup_types::JudgeHealthMetrics;
+use crate::judge_backup::types::{JudgeConfig, ReviewContext};
 use crate::judge_backup::verdicts::JudgeVerdict;
 
 /// Core judge trait for evaluating working specifications
@@ -18,6 +19,15 @@ pub trait Judge: Send + Sync + std::fmt::Debug {
     async fn review_spec(
         &self,
         context: &ReviewContext,
+    ) -> CouncilResult<JudgeVerdict>;
+
+    /// Evaluate a working specification with detailed parameters
+    async fn evaluate(
+        &self,
+        spec_id: uuid::Uuid,
+        title: &str,
+        description: &str,
+        acceptance_criteria: &[String],
     ) -> CouncilResult<JudgeVerdict>;
 
     /// Get the judge's specialization score for a given context

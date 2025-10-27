@@ -2,11 +2,10 @@ use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 use std::fs::{self, File};
 use std::io::{Read, Write};
-use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::recovery_types::{Digest, FileMode, FileRestoreAction, RestorePlan, RestoreResult, StreamingHasher};
+use crate::recovery_types::{Digest, FileMode, RestoreAction, RestorePlan, RestoreResult, StreamingHasher};
 
 /// Atomic restore manager for safely restoring files
 pub struct AtomicRestore {
@@ -142,7 +141,7 @@ impl AtomicRestore {
     }
 
     /// Restore a single file
-    fn restore_file(&self, action: &FileRestoreAction) -> Result<RestoredFile> {
+    fn restore_file(&self, action: &RestoreAction) -> Result<RestoredFile> {
         let path = action.path();
         let size = action.size();
 
@@ -167,25 +166,25 @@ impl AtomicRestore {
         }
 
         match action {
-            FileRestoreAction::WriteFile { path, mode, expected, source, size } => {
+            RestoreAction::WriteFile { path, mode, expected, source, size } => {
                 // TODO: Load content from source ObjectRef
                 let content = b"placeholder content"; // This would need to be loaded from the CAS
 
                 if self.config.atomic {
-                    self.atomic_restore_file(path, content, expected, *mode)?;
+                    self.atomic_restore_file(path, content, expected, mode.clone())?;
                 } else {
-                    self.simple_restore_file(path, content, expected, *mode)?;
+                    self.simple_restore_file(path, content, expected, mode.clone())?;
                 }
 
                 Ok(RestoredFile {
                     path: path.clone(),
                     size: *size as usize,
                     digest: *expected,
-                    mode: *mode,
+                    mode: mode.clone(),
                     restored_at: self.current_timestamp(),
                 })
             }
-            FileRestoreAction::WriteSymlink { path, target, size } => {
+            RestoreAction::WriteSymlink { path, target, size } => {
                 // Create symlink
                 std::os::unix::fs::symlink(target, path)?;
 
@@ -197,29 +196,31 @@ impl AtomicRestore {
                     restored_at: self.current_timestamp(),
                 })
             }
-            FileRestoreAction::DeleteFile { path, size } => {
+            RestoreAction::Remove { path } => {
                 if path.exists() {
-                    std::fs::remove_file(path)?;
+                    if path.is_dir() {
+                        std::fs::remove_dir_all(path)?;
+                    } else {
+                        std::fs::remove_file(path)?;
+                    }
                 }
 
                 Ok(RestoredFile {
                     path: path.clone(),
-                    size: *size as usize,
+                    size: 0,
                     digest: Digest::from_bytes([0; 32]), // Placeholder
                     mode: FileMode::Regular,
                     restored_at: self.current_timestamp(),
                 })
             }
-            FileRestoreAction::Chmod { path, mode, size } => {
-                if let Some(mode_bits) = mode.to_mode_bits() {
-                    std::fs::set_permissions(path, std::fs::Permissions::from_mode(mode_bits))?;
-                }
+            RestoreAction::CreateDirectory { path } => {
+                std::fs::create_dir_all(path)?;
 
                 Ok(RestoredFile {
                     path: path.clone(),
-                    size: *size as usize,
+                    size: 0,
                     digest: Digest::from_bytes([0; 32]), // Placeholder
-                    mode: *mode,
+                    mode: FileMode::Directory,
                     restored_at: self.current_timestamp(),
                 })
             }
@@ -490,6 +491,7 @@ impl RestoreProgress {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::recovery_types::ObjectRef;
     use crate::RestoreAction;
     use tempfile::TempDir;
 

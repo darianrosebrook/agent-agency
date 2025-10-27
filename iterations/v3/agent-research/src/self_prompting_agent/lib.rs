@@ -11,7 +11,6 @@
 //! - Sandbox file operations via `sandbox/`
 //! - Loop controller orchestrating generate → evaluate → refine cycles
 
-pub mod adapters;
 pub mod self_prompting_agent;
 pub mod agent_caws_integration;
 pub mod context;
@@ -28,7 +27,7 @@ pub mod sandbox;
 pub mod stubs; // TEMP: stubs for file_ops types
 pub mod prompting_types;
 
-pub use adapters::{create_research_task, SimpleTask};
+pub use crate::adapters::{create_research_task, SimpleTask};
 pub use self_prompting_agent::SelfPromptingAgent;
 pub use context::{HierarchicalContextManager, ContextBundle, ContextBudget, Allocation, ContextStats};
 pub use evaluation::{EvaluationOrchestrator, Evaluator, EvaluationResult};

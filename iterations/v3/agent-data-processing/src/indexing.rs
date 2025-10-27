@@ -1119,6 +1119,7 @@ pub enum JobStatus {
 }
 
 /// BM25 full-text search indexer
+#[derive(Debug)]
 pub struct Bm25Indexer {
     documents: Arc<RwLock<HashMap<Uuid, DocumentRecord>>>,
     inverted_index: Arc<RwLock<HashMap<String, HashMap<Uuid, u32>>>>,
@@ -1281,11 +1282,13 @@ impl Bm25Indexer {
 }
 
 /// HNSW indexer for vector search
+#[derive(Debug)]
 pub struct HnswIndexer {
     index: Arc<Mutex<SimpleHnswIndex>>,
     metadata: Arc<Mutex<HnswMetadata>>,
 }
 
+#[derive(Debug)]
 struct SimpleHnswIndex {
     vectors: Vec<Vec<f32>>,
     dimension: usize,
@@ -1399,6 +1402,7 @@ impl HnswIndexer {
 }
 
 /// Database connection pool for indexers
+#[derive(Debug)]
 pub struct DatabasePool {
     pool: sqlx::Pool<sqlx::Postgres>,
 }
@@ -1440,6 +1444,7 @@ impl DatabasePool {
 }
 
 /// Vector store for database persistence
+#[derive(Debug)]
 pub struct VectorStore {
     pool: DatabasePool,
 }
@@ -1489,6 +1494,7 @@ pub struct SearchAuditEntry {
 }
 
 /// Job scheduler for indexing operations
+#[derive(Debug)]
 pub struct JobScheduler {
     active_jobs: Arc<Mutex<HashMap<Uuid, IngestionJob>>>,
     job_queue: Arc<Mutex<Vec<IngestionJob>>>,
@@ -1630,6 +1636,11 @@ impl JobScheduler {
             failed_jobs: failed_count,
         }
     }
+
+    /// Get active job count - adapter method for multimodal orchestration
+    pub fn get_active_job_count(&self) -> usize {
+        self.get_stats().active_jobs
+    }
 }
 
 /// Job scheduler statistics
@@ -1642,6 +1653,7 @@ pub struct JobSchedulerStats {
 }
 
 /// Unified indexer combining BM25, HNSW, and database storage
+#[derive(Debug)]
 pub struct UnifiedIndexer {
     bm25_indexer: Bm25Indexer,
     hnsw_indexer: HnswIndexer,
@@ -1658,6 +1670,31 @@ impl UnifiedIndexer {
             vector_store: None,
             job_scheduler: JobScheduler::new(),
         }
+    }
+
+    /// Index blocks - adapter method for multimodal orchestration
+    pub async fn index_blocks(&self, blocks: Vec<EnrichedBlock>) -> Result<(), anyhow::Error> {
+        for block in blocks {
+            // Extract text content for indexing from the original block
+            let text_content = match &block.block.data {
+                BlockData::Text(text) => text.clone(),
+                _ => continue, // Skip non-text blocks
+            };
+
+            // Generate a simple vector (in practice this would come from embeddings)
+            let vector = vec![0.1; 384]; // Placeholder vector with fixed dimension
+
+            // Index the content
+            self.index_content(
+                block.block.id.0, // Access the inner Uuid
+                &text_content,
+                &vector,
+                &block.block.content_type.to_string(),
+                "placeholder_model",
+            ).await?;
+        }
+
+        Ok(())
     }
 
     /// Set vector store for persistence

@@ -34,8 +34,6 @@ pub struct MultimodalProcessingResult {
     pub metadata: std::collections::HashMap<String, serde_json::Value>,
 }
 
-/// Stub config structure
-pub struct OrchestratorConfig;
 
 /// Stub stats structure
 pub struct OrchestratorPerformanceStats;

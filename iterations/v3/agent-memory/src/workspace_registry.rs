@@ -284,7 +284,7 @@ impl WorkspaceRegistry {
 mod tests {
     use super::*;
     use tempfile::TempDir;
-    use crate::database::DatabaseConfig;
+    use data_infrastructure::DatabaseConfig;
 
     #[tokio::test]
     async fn test_workspace_registration() {

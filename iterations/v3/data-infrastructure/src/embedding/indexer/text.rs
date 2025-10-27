@@ -3,7 +3,7 @@
 //! BM25 sparse indexing, dense embeddings, and HNSW-based
 //! approximate nearest neighbor search for text documents.
 
-use super::super::types::*;
+use super::super::embedding_types::*;
 use anyhow::Result;
 use std::collections::HashMap;
 use uuid::Uuid;

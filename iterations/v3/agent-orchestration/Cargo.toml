@@ -69,13 +69,13 @@ console = "0.16"
 agent-agency-contracts = { path = "../agent-agency-contracts" }
 data-infrastructure = { path = "../data-infrastructure" }
 system-acceleration = { path = "../system-acceleration" }
-agent-memory = { path = "../agent-memory" }
+agent-memory = { path = "../agent-memory", features = ["database"] }
 system-resilience = { path = "../system-resilience" }
-# agent-data-processing = { path = "../agent-data-processing" } # TEMPORARILY DISABLED
+agent-data-processing = { path = "../agent-data-processing" }  
 development-tools = { path = "../development-tools", optional = true }
 
-# Optional observability dependency (may be disabled)
-# agent-agency-observability = { path = "../observability", optional = true }
+# Optional observability dependency  
+system-observability = { path = "../system-observability", optional = true }
 
 [features]
 default = []

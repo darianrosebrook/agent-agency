@@ -3,9 +3,9 @@
 //! Database operations for embedding storage, index persistence,
 //! and retrieval with connection pooling and health monitoring.
 
-use super::super::types::*;
+use super::super::embedding_types::*;
 use anyhow::Result;
-use sqlx::PgPool;
+use sqlx::{PgPool, Row};
 use std::collections::HashMap;
 use uuid::Uuid;
 
@@ -38,19 +38,19 @@ impl EmbeddingStorage {
 
     /// Store embedding record
     pub async fn store_embedding(&self, record: &EmbeddingRecord) -> Result<()> {
-        sqlx::query!(
+        sqlx::query(
             "INSERT INTO embeddings (id, content_id, embedding, model, dimensions, created_at)
              VALUES ($1, $2, $3, $4, $5, $6)
              ON CONFLICT (id) DO UPDATE SET
                embedding = EXCLUDED.embedding,
-               updated_at = NOW()",
-            record.id,
-            record.content_id,
-            &record.embedding.values,
-            record.embedding.model,
-            record.embedding.dimensions as i32,
-            record.created_at
+               updated_at = NOW()"
         )
+        .bind(&record.id)
+        .bind(&record.content_id)
+        .bind(&record.embedding.values)
+        .bind(&record.embedding.model)
+        .bind(record.embedding.dimensions as i32)
+        .bind(&record.created_at)
         .execute(&self.pool)
         .await?;
 
@@ -59,52 +59,52 @@ impl EmbeddingStorage {
 
     /// Retrieve embedding by ID
     pub async fn get_embedding(&self, id: Uuid) -> Result<Option<EmbeddingRecord>> {
-        let row = sqlx::query!(
+        let row = sqlx::query(
             "SELECT id, content_id, embedding, model, dimensions, created_at, updated_at
-             FROM embeddings WHERE id = $1",
-            id
+             FROM embeddings WHERE id = $1"
         )
+        .bind(id)
         .fetch_optional(&self.pool)
         .await?;
 
-        Ok(row.map(|r| EmbeddingRecord {
-            id: r.id,
-            content_id: r.content_id,
+        Ok(row.map(|r: sqlx::postgres::PgRow| EmbeddingRecord {
+            id: r.get("id"),
+            content_id: r.get("content_id"),
             embedding: EmbeddingVector {
-                values: r.embedding,
-                model: r.model,
-                dimensions: r.dimensions as usize,
+                values: r.get("embedding"),
+                model: r.get("model"),
+                dimensions: r.get::<i32, _>("dimensions") as usize,
             },
-            created_at: r.created_at,
-            updated_at: r.updated_at,
+            created_at: r.get("created_at"),
+            updated_at: r.get("updated_at"),
         }))
     }
 
     /// Find similar embeddings using vector similarity
     pub async fn find_similar(&self, embedding: &EmbeddingVector, limit: usize) -> Result<Vec<EmbeddingSimilarity>> {
         // Placeholder - would use pgvector or similar extension
-        let rows = sqlx::query!(
+        let rows = sqlx::query(
             "SELECT id, content_id, embedding, model, dimensions,
                     1 - (embedding <=> $1) as similarity
              FROM embeddings
              ORDER BY embedding <=> $1
-             LIMIT $2",
-            &embedding.values,
-            limit as i64
+             LIMIT $2"
         )
+        .bind(&embedding.values)
+        .bind(limit as i64)
         .fetch_all(&self.pool)
         .await?;
 
-        Ok(rows.into_iter().map(|row| EmbeddingSimilarity {
-            embedding_id: row.id,
-            content_id: row.content_id,
-            similarity: row.similarity.unwrap_or(0.0),
+        Ok(rows.into_iter().map(|row: sqlx::postgres::PgRow| EmbeddingSimilarity {
+            embedding_id: row.get("id"),
+            content_id: row.get("content_id"),
+            similarity: row.get::<Option<f64>, _>("similarity").unwrap_or(0.0),
         }).collect())
     }
 
     /// Store text document metadata
     pub async fn store_text_document(&self, doc: &super::text::TextDocument) -> Result<()> {
-        sqlx::query!(
+        sqlx::query(
             "INSERT INTO text_documents (id, title, content, metadata, term_frequencies, created_at)
              VALUES ($1, $2, $3, $4, $5, $6)
              ON CONFLICT (id) DO UPDATE SET
@@ -112,14 +112,14 @@ impl EmbeddingStorage {
                content = EXCLUDED.content,
                metadata = EXCLUDED.metadata,
                term_frequencies = EXCLUDED.term_frequencies,
-               updated_at = NOW()",
-            doc.id,
-            doc.title,
-            doc.content,
-            serde_json::to_value(&doc.metadata).unwrap(),
-            serde_json::to_value(&doc.term_frequencies).unwrap(),
-            chrono::Utc::now()
+               updated_at = NOW()"
         )
+        .bind(&doc.id)
+        .bind(&doc.title)
+        .bind(&doc.content)
+        .bind(serde_json::to_value(&doc.metadata).unwrap())
+        .bind(serde_json::to_value(&doc.term_frequencies).unwrap())
+        .bind(chrono::Utc::now())
         .execute(&self.pool)
         .await?;
 
@@ -129,23 +129,23 @@ impl EmbeddingStorage {
     /// Get text documents by BM25 search
     pub async fn search_text_documents(&self, query: &str, limit: usize) -> Result<Vec<super::text::TextDocument>> {
         // Placeholder - would use full-text search
-        let rows = sqlx::query!(
+        let rows = sqlx::query(
             "SELECT id, title, content, metadata, term_frequencies
              FROM text_documents
              WHERE content ILIKE $1
-             LIMIT $2",
-            format!("%{}%", query),
-            limit as i64
+             LIMIT $2"
         )
+        .bind(format!("%{}%", query))
+        .bind(limit as i64)
         .fetch_all(&self.pool)
         .await?;
 
-        Ok(rows.into_iter().map(|row| super::text::TextDocument {
-            id: row.id,
-            content: row.content,
-            title: row.title,
-            metadata: serde_json::from_value(row.metadata).unwrap_or_default(),
-            term_frequencies: serde_json::from_value(row.term_frequencies).unwrap_or_default(),
+        Ok(rows.into_iter().map(|row: sqlx::postgres::PgRow| super::text::TextDocument {
+            id: row.get("id"),
+            content: row.get("content"),
+            title: row.get("title"),
+            metadata: serde_json::from_value(row.get("metadata")).unwrap_or_default(),
+            term_frequencies: serde_json::from_value(row.get("term_frequencies")).unwrap_or_default(),
         }).collect())
     }
 
@@ -159,17 +159,17 @@ impl EmbeddingStorage {
 
     /// Get database statistics
     pub async fn get_stats(&self) -> Result<DatabaseStats> {
-        let embedding_count = sqlx::query_scalar!("SELECT COUNT(*) FROM embeddings")
+        let embedding_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM embeddings")
             .fetch_one(&self.pool)
             .await?;
 
-        let document_count = sqlx::query_scalar!("SELECT COUNT(*) FROM text_documents")
+        let document_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM text_documents")
             .fetch_one(&self.pool)
             .await?;
 
         Ok(DatabaseStats {
-            embedding_count: embedding_count.unwrap_or(0),
-            document_count: document_count.unwrap_or(0),
+            embedding_count: embedding_count,
+            document_count: document_count,
             pool_size: self.pool.size() as u32,
             idle_connections: self.pool.num_idle() as u32,
         })

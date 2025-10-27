@@ -225,7 +225,7 @@ pub struct CircuitBreaker {
     /// Current state of the circuit breaker
     state: Arc<RwLock<CircuitBreakerState>>,
     /// Configuration
-    config: CircuitBreakerConfig,
+    config: ErrorHandlingCircuitBreakerConfig,
     /// Statistics for monitoring
     stats: Arc<RwLock<CircuitBreakerStats>>,
 }
@@ -241,9 +241,9 @@ pub enum CircuitBreakerState {
     HalfOpen,
 }
 
-/// Circuit breaker configuration
+/// Circuit breaker configuration for error handling
 #[derive(Debug, Clone)]
-pub struct CircuitBreakerConfig {
+pub struct ErrorHandlingCircuitBreakerConfig {
     /// Failure threshold (number of failures before opening)
     pub failure_threshold: u32,
     /// Success threshold (number of successes needed to close from half-open)
@@ -286,7 +286,7 @@ pub struct StateChange {
 
 impl CircuitBreaker {
     /// Create a new circuit breaker
-    pub fn new(service_name: String, config: CircuitBreakerConfig) -> Self {
+    pub fn new(service_name: String, config: ErrorHandlingCircuitBreakerConfig) -> Self {
         Self {
             service_name,
             state: Arc::new(RwLock::new(CircuitBreakerState::Closed)),
@@ -502,9 +502,9 @@ impl CircuitBreaker {
     }
 }
 
-/// Retry mechanism with exponential backoff
+/// Retry mechanism with exponential backoff for error handling
 #[derive(Debug)]
-pub struct RetryConfig {
+pub struct ErrorHandlingRetryConfig {
     /// Maximum number of retry attempts
     pub max_attempts: u32,
     /// Initial delay between retries
@@ -519,7 +519,7 @@ pub struct RetryConfig {
 
 /// Execute operation with retry logic
 pub async fn with_retry<F, Fut, T>(
-    config: &RetryConfig,
+    config: &ErrorHandlingRetryConfig,
     operation: F,
 ) -> Result<T, AgencyError>
 where
@@ -692,7 +692,7 @@ pub struct RecoveryOrchestrator {
     /// Degradation manager
     degradation_manager: Arc<DegradationManager>,
     /// Retry configurations by error type
-    retry_configs: HashMap<ErrorCategory, RetryConfig>,
+    retry_configs: HashMap<ErrorCategory, ErrorHandlingRetryConfig>,
     /// Recovery strategies by error pattern
     recovery_strategies: HashMap<String, Vec<RecoveryStrategy>>,
 }
@@ -706,7 +706,7 @@ impl RecoveryOrchestrator {
         let mut retry_configs = HashMap::new();
 
         // Configure retry policies for different error types
-        retry_configs.insert(ErrorCategory::Network, RetryConfig {
+        retry_configs.insert(ErrorCategory::Network, ErrorHandlingRetryConfig {
             max_attempts: 3,
             initial_delay: Duration::from_millis(100),
             max_delay: Duration::from_secs(5),
@@ -714,7 +714,7 @@ impl RecoveryOrchestrator {
             jitter_factor: 0.1,
         });
 
-        retry_configs.insert(ErrorCategory::ExternalService, RetryConfig {
+        retry_configs.insert(ErrorCategory::ExternalService, ErrorHandlingRetryConfig {
             max_attempts: 2,
             initial_delay: Duration::from_millis(500),
             max_delay: Duration::from_secs(10),
@@ -722,7 +722,7 @@ impl RecoveryOrchestrator {
             jitter_factor: 0.2,
         });
 
-        retry_configs.insert(ErrorCategory::Timeout, RetryConfig {
+        retry_configs.insert(ErrorCategory::Timeout, ErrorHandlingRetryConfig {
             max_attempts: 1, // Don't retry timeouts
             initial_delay: Duration::from_millis(0),
             max_delay: Duration::from_millis(0),

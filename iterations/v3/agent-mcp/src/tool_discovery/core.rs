@@ -1,6 +1,7 @@
 //! Core tool discovery types and service
 
 use crate::mcp_types::*;
+use crate::tool_discovery::validation::ValidationResult;
 use anyhow::Result;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -301,6 +302,33 @@ impl ToolDiscoveryResult {
     /// Get the number of errors encountered
     pub fn error_count(&self) -> usize {
         self.errors.len()
+    }
+}
+
+impl ToolDiscovery {
+    /// Validate a tool using basic validation
+    pub async fn validate_tool(&self, tool: &MCPTool) -> Result<ValidationResult> {
+        use crate::tool_discovery::validation::{BasicToolValidator, ToolValidator};
+        
+        let validator = BasicToolValidator::new();
+        validator.validate_tool(tool).await
+    }
+
+    /// Shutdown the tool discovery service
+    pub async fn shutdown(&self) -> Result<()> {
+        tracing::info!("Shutting down tool discovery");
+        
+        // Cancel the cancellation token
+        self.cancellation_token.cancel();
+        
+        // Set discovery as inactive
+        {
+            let mut active = self.discovery_active.write().await;
+            *active = false;
+        }
+        
+        tracing::info!("Tool discovery shutdown complete");
+        Ok(())
     }
 }
 

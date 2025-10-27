@@ -1,14 +1,14 @@
 //! Semantic context generation for tasks and content
 
-use crate::similarity::*;
-use crate::embedding_types::*;
+use super::similarity::*;
+use super::embedding_types::*;
 use anyhow::Result;
 use std::collections::HashMap;
 
 /// Generate semantic context for a task description
 pub async fn generate_semantic_context(
     task_description: &str,
-    embedding_service: &dyn crate::service::EmbeddingService,
+    embedding_service: &dyn crate::embedding::embedding_service::EmbeddingService,
     context_embeddings: &[StoredEmbedding],
 ) -> Result<SemanticContext> {
     // Generate embedding for the task description
@@ -102,7 +102,7 @@ impl ContextBuilder {
     pub async fn build_context(
         &self,
         query: &str,
-        embedding_service: &dyn crate::service::EmbeddingService,
+        embedding_service: &dyn crate::embedding::embedding_service::EmbeddingService,
         _limit: usize,
         _threshold: f32,
     ) -> Result<SemanticContext> {
@@ -157,11 +157,11 @@ pub struct ContextStats {
 /// Context enrichment for council decisions
 pub struct CouncilContextEnricher {
     context_builder: ContextBuilder,
-    embedding_service: Box<dyn crate::service::EmbeddingService>,
+    embedding_service: Box<dyn crate::embedding::embedding_service::EmbeddingService>,
 }
 
 impl CouncilContextEnricher {
-    pub fn new(embedding_service: Box<dyn crate::service::EmbeddingService>) -> Self {
+    pub fn new(embedding_service: Box<dyn crate::embedding::embedding_service::EmbeddingService>) -> Self {
         Self {
             context_builder: ContextBuilder::new(),
             embedding_service,

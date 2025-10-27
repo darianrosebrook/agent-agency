@@ -1,6 +1,6 @@
 //! Similarity search and vector operations
 
-use crate::embedding_types::*;
+use super::embedding_types::*;
 use anyhow::Result;
 
 /// Calculate cosine similarity between two embedding vectors
@@ -166,9 +166,12 @@ mod tests {
 
     #[test]
     fn test_average_embedding() {
-        let embeddings = vec![vec![1.0, 2.0, 3.0], vec![3.0, 4.0, 5.0]];
+        let embeddings = vec![
+            EmbeddingVector::new(vec![1.0, 2.0, 3.0], "test".to_string()),
+            EmbeddingVector::new(vec![3.0, 4.0, 5.0], "test".to_string()),
+        ];
 
         let average = average_embedding(&embeddings).unwrap();
-        assert_eq!(average, vec![2.0, 3.0, 4.0]);
+        assert_eq!(average.values, vec![2.0, 3.0, 4.0]);
     }
 }

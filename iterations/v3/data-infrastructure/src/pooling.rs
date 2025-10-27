@@ -6,11 +6,10 @@
 use crate::database_config::DatabaseConfig;
 use crate::database_metrics::DatabaseMetrics;
 use anyhow::{Context, Result};
-use chrono::Utc;
 use deadpool_postgres::{Config, ManagerConfig, RecyclingMethod, Runtime, Pool as DeadpoolPool};
 use std::sync::Arc;
 use std::time::{Duration as StdDuration, Instant};
-use tracing::{debug, info};
+use tracing::info;
 
 /// Deadpool-to-SQLx bridge for connection pooling
 ///

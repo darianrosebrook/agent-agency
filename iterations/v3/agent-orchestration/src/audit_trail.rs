@@ -67,7 +67,7 @@ pub struct AuditTrailManager {
 }
 
 /// Configuration for audit trail system
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct AuditConfig {
     /// Enable file operations auditing
     pub enable_file_audit: bool,
@@ -119,6 +119,16 @@ pub enum AuditOutputFormat {
     Binary,
     /// Multiple formats simultaneously
     MultiFormat,
+    /// CSV format for spreadsheet analysis
+    Csv,
+    /// Plain text format
+    Text,
+}
+
+impl Default for AuditOutputFormat {
+    fn default() -> Self {
+        AuditOutputFormat::Json
+    }
 }
 
 /// Global audit statistics
@@ -136,8 +146,20 @@ pub struct GlobalAuditStats {
     pub error_counts: HashMap<String, u64>,
 }
 
+impl Default for GlobalAuditStats {
+    fn default() -> Self {
+        Self {
+            total_events: 0,
+            events_by_category: HashMap::new(),
+            collection_start: Utc::now(),
+            performance_metrics: AuditPerformanceMetrics::default(),
+            error_counts: HashMap::new(),
+        }
+    }
+}
+
 /// Performance metrics for audit system itself
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct AuditPerformanceMetrics {
     /// Average time to record an audit event (microseconds)
     pub avg_record_time_us: u64,
@@ -168,6 +190,10 @@ pub struct AuditEvent {
     pub actor: String,
     /// Operation or action performed
     pub operation: String,
+    /// Human-readable message
+    pub message: Option<String>,
+    /// Operation identifier for tracing
+    pub operation_id: Option<String>,
     /// Target of the operation (file path, command, etc.)
     pub target: Option<String>,
     /// Operation parameters
@@ -191,6 +217,8 @@ pub enum AuditCategory {
     AgentThinking,
     Performance,
     ErrorRecovery,
+    Error,
+    Waiver,
     Learning,
     SystemHealth,
 }
@@ -201,8 +229,17 @@ pub enum AuditSeverity {
     Debug,
     Info,
     Warning,
+    Low,
+    Medium,
+    High,
     Error,
     Critical,
+}
+
+impl Default for AuditSeverity {
+    fn default() -> Self {
+        AuditSeverity::Info
+    }
 }
 
 /// Audit operation result
@@ -218,6 +255,11 @@ pub enum AuditResult {
     },
     InProgress,
     Cancelled,
+    Partial {
+        completed_steps: Vec<String>,
+        remaining_steps: Vec<String>,
+        progress_percentage: f32,
+    },
 }
 
 /// Performance metrics for audit events
@@ -238,7 +280,31 @@ pub struct AuditPerformance {
 impl AuditTrailManager {
     /// Create a new audit trail manager
     pub fn new(config: AuditConfig) -> Self {
-        Self::with_db_pool(config, None)
+        let global_stats = Arc::new(RwLock::new(GlobalAuditStats {
+            total_events: 0,
+            events_by_category: HashMap::new(),
+            collection_start: Utc::now(),
+            performance_metrics: AuditPerformanceMetrics {
+                avg_record_time_us: 0,
+                peak_memory_bytes: 0,
+                total_log_size_bytes: 0,
+                events_per_second: 0.0,
+            },
+            error_counts: HashMap::new(),
+        }));
+
+        Self {
+            config: config.clone(),
+            db_pool: None,
+            file_auditor: Arc::new(FileOperationsAuditor::new(config.clone(), global_stats.clone())),
+            terminal_auditor: Arc::new(TerminalAuditor::new(config.clone(), global_stats.clone())),
+            council_auditor: Arc::new(CouncilAuditor::new(config.clone(), global_stats.clone())),
+            agent_thinking_auditor: Arc::new(AgentThinkingAuditor::new(config.clone(), global_stats.clone())),
+            performance_auditor: Arc::new(PerformanceAuditor::new(config.clone(), global_stats.clone())),
+            error_recovery_auditor: Arc::new(ErrorRecoveryAuditor::new(config.clone(), global_stats.clone())),
+            learning_auditor: Arc::new(LearningAuditor::new(config.clone(), global_stats.clone())),
+            global_stats,
+        }
     }
 
     /// Create a new audit trail manager with database persistence
@@ -354,6 +420,15 @@ impl AuditTrailManager {
                     serde_json::to_string_pretty(&events)
                         .map_err(|e| AuditError::StorageError(format!("Failed to serialize audit events: {}", e)))
                 }
+                AuditOutputFormat::StructuredText => {
+                    Ok(self.format_audit_events_as_text(&events))
+                }
+                AuditOutputFormat::Binary => {
+                    Err(AuditError::StorageError("Binary format not yet implemented".to_string()))
+                }
+                AuditOutputFormat::MultiFormat => {
+                    Err(AuditError::StorageError("Multi-format output not yet implemented".to_string()))
+                }
                 AuditOutputFormat::Csv => {
                     self.format_audit_events_as_csv(&events)
                 }
@@ -375,6 +450,8 @@ impl AuditTrailManager {
                 AuditResult::Success { .. } => "SUCCESS".to_string(),
                 AuditResult::Failure { .. } => "FAILURE".to_string(),
                 AuditResult::Partial { .. } => "PARTIAL".to_string(),
+                AuditResult::InProgress => "IN_PROGRESS".to_string(),
+                AuditResult::Cancelled => "CANCELLED".to_string(),
             };
 
             let tags_str = event.tags.join(";");
@@ -522,17 +599,21 @@ impl AuditTrailManager {
         sqlx::query(
             r#"
             INSERT INTO audit_events (
-                id, timestamp, category, severity, actor, operation, target,
+                id, timestamp, correlation_id, parent_event_id, category, severity, actor, operation, message, operation_id, target,
                 parameters, result, performance, context, tags
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
             "#
         )
-        .bind(event.id)
+        .bind(event.event_id)
         .bind(event.timestamp)
+        .bind(&event.correlation_id)
+        .bind(&event.parent_event_id)
         .bind(serde_json::to_value(&event.category)?)
         .bind(serde_json::to_value(&event.severity)?)
         .bind(&event.actor)
         .bind(&event.operation)
+        .bind(&event.message)
+        .bind(&event.operation_id)
         .bind(&event.target)
         .bind(serde_json::to_value(&event.parameters)?)
         .bind(serde_json::to_value(&event.result)?)
@@ -553,6 +634,8 @@ impl AuditTrailManager {
             CREATE TABLE IF NOT EXISTS audit_events (
                 id UUID PRIMARY KEY,
                 timestamp TIMESTAMPTZ NOT NULL,
+                correlation_id TEXT,
+                parent_event_id UUID,
                 category JSONB NOT NULL,
                 severity JSONB NOT NULL,
                 actor TEXT NOT NULL,
@@ -609,10 +692,14 @@ impl AuditTrailManager {
 struct AuditEventRow {
     id: uuid::Uuid,
     timestamp: chrono::DateTime<chrono::Utc>,
+    correlation_id: Option<String>,
+    parent_event_id: Option<uuid::Uuid>,
     category: serde_json::Value,
     severity: serde_json::Value,
     actor: String,
     operation: String,
+    message: Option<String>,
+    operation_id: Option<String>,
     target: Option<String>,
     parameters: serde_json::Value,
     result: serde_json::Value,
@@ -625,14 +712,18 @@ impl AuditEventRow {
     /// Convert database row back to AuditEvent
     fn into_audit_event(self) -> Result<AuditEvent, AuditError> {
         Ok(AuditEvent {
-            id: self.id,
+            event_id: self.id,
             timestamp: self.timestamp,
+            correlation_id: self.correlation_id,
+            parent_event_id: self.parent_event_id,
             category: serde_json::from_value(self.category)
                 .map_err(|e| AuditError::StorageError(format!("Failed to deserialize category: {}", e)))?,
             severity: serde_json::from_value(self.severity)
                 .map_err(|e| AuditError::StorageError(format!("Failed to deserialize severity: {}", e)))?,
             actor: self.actor,
             operation: self.operation,
+            message: self.message,
+            operation_id: self.operation_id,
             target: self.target,
             parameters: serde_json::from_value(self.parameters)
                 .map_err(|e| AuditError::StorageError(format!("Failed to deserialize parameters: {}", e)))?,
@@ -650,6 +741,7 @@ impl AuditEventRow {
 
 /// Audit query for searching events
 #[derive(Debug, Clone)]
+#[derive(Default)]
 pub struct AuditQuery {
     pub category: Option<AuditCategory>,
     pub severity: Option<AuditSeverity>,
@@ -675,6 +767,15 @@ pub enum AuditError {
 
     #[error("Query error: {0}")]
     Query(String),
+
+    #[error("Storage error: {0}")]
+    StorageError(String),
+
+    #[error("Circuit breaker error: {0}")]
+    CircuitBreaker(String),
+
+    #[error("Execution error: {0}")]
+    Execution(String),
 }
 
 impl From<String> for AuditError {
@@ -767,6 +868,8 @@ mod auditors {
                 correlation_id: None, // Would be set from context
                 parent_event_id: None,
                 category: AuditCategory::FileOperation,
+                message: None,
+                operation_id: None,
                 severity: AuditSeverity::Info,
                 actor: "agent".to_string(),
                 operation: operation.to_string(),
@@ -848,6 +951,8 @@ mod auditors {
                 severity: AuditSeverity::Info,
                 actor: "agent".to_string(),
                 operation: "command_start".to_string(),
+                message: Some(format!("Terminal command started: {}", command)),
+                operation_id: Some(command_id.to_string()),
                 target: Some(command.to_string()),
                 parameters: HashMap::new(),
                 result: AuditResult::InProgress,
@@ -904,6 +1009,8 @@ mod auditors {
                     severity: if success { AuditSeverity::Info } else { AuditSeverity::Warning },
                     actor: "agent".to_string(),
                     operation: "command_complete".to_string(),
+                    message: Some(format!("Terminal command completed: {} (success: {})", audit.command, success)),
+                    operation_id: Some(audit.command_id),
                     target: Some(audit.command),
                     parameters,
                     result,
@@ -937,6 +1044,7 @@ mod auditors {
                 let status = match &event.result {
                     AuditResult::Success { .. } => "",
                     AuditResult::Failure { .. } => "",
+                    AuditResult::Partial { .. } => "",
                     AuditResult::InProgress => "",
                     AuditResult::Cancelled => "",
                 };
@@ -990,6 +1098,8 @@ mod auditors {
                 severity: AuditSeverity::Info,
                 actor: judge_id.to_string(),
                 operation: "vote".to_string(),
+                message: Some(format!("Judge {} voted on session {}", judge_id, session_id)),
+                operation_id: Some(session_id.to_string()),
                 target: Some(session_id.to_string()),
                 parameters,
                 result: AuditResult::Success { data: None },
@@ -1032,6 +1142,8 @@ mod auditors {
                 severity: AuditSeverity::Info,
                 actor: "council".to_string(),
                 operation: "consensus".to_string(),
+                message: Some(format!("Council reached consensus on session {} with decision: {}", session_id, final_decision)),
+                operation_id: Some(session_id.to_string()),
                 target: Some(session_id.to_string()),
                 parameters,
                 result: AuditResult::Success { data: None },
@@ -1106,6 +1218,8 @@ mod auditors {
                 severity: AuditSeverity::Debug,
                 actor: "agent".to_string(),
                 operation: "reasoning_step".to_string(),
+                message: Some(format!("Agent completed reasoning step: {}", step_name)),
+                operation_id: Some(step_name.to_string()),
                 target: Some(step_name.to_string()),
                 parameters,
                 result: AuditResult::Success { data: None },
@@ -1201,7 +1315,7 @@ mod auditors {
         ) -> Result<(), AuditError> {
             let mut parameters = HashMap::new();
             parameters.insert("operation".to_string(), serde_json::Value::String(operation.to_string()));
-            parameters.insert("duration_ms".to_string(), serde_json::Value::Number(duration.as_millis().into()));
+            parameters.insert("duration_ms".to_string(), serde_json::Value::Number((duration.as_millis() as u64).into()));
             parameters.insert("success".to_string(), serde_json::Value::Bool(success));
 
             // Add metadata
@@ -1218,6 +1332,8 @@ mod auditors {
                 severity: if success { AuditSeverity::Info } else { AuditSeverity::Warning },
                 actor: "system".to_string(),
                 operation: "performance_metric".to_string(),
+                message: Some(format!("Performance metric recorded for operation: {} (success: {})", operation, success)),
+                operation_id: Some(operation.to_string()),
                 target: Some(operation.to_string()),
                 parameters,
                 result: if success { AuditResult::Success { data: None } } else { AuditResult::Failure {
@@ -1281,7 +1397,7 @@ mod auditors {
             parameters.insert("error_type".to_string(), serde_json::Value::String(error_type.to_string()));
             parameters.insert("recovery_strategy".to_string(), serde_json::Value::String(recovery_strategy.to_string()));
             parameters.insert("success".to_string(), serde_json::Value::Bool(success));
-            parameters.insert("duration_ms".to_string(), serde_json::Value::Number(duration.as_millis().into()));
+            parameters.insert("duration_ms".to_string(), serde_json::Value::Number((duration.as_millis() as u64).into()));
 
             let event = AuditEvent {
                 event_id: Uuid::new_v4(),
@@ -1292,6 +1408,8 @@ mod auditors {
                 severity: if success { AuditSeverity::Info } else { AuditSeverity::Warning },
                 actor: "recovery_system".to_string(),
                 operation: "error_recovery".to_string(),
+                message: Some(format!("Error recovery {} for error type: {} using strategy: {}", if success { "succeeded" } else { "failed" }, error_type, recovery_strategy)),
+                operation_id: Some(error_type.to_string()),
                 target: Some(error_type.to_string()),
                 parameters,
                 result: if success { AuditResult::Success { data: None } } else { AuditResult::Failure {
@@ -1329,12 +1447,16 @@ mod auditors {
             parameters.insert("slo_impact".to_string(), serde_json::Value::Number(serde_json::Number::from_f64(slo_impact).unwrap()));
 
             let event = AuditEvent {
-                id: Uuid::new_v4(),
+                event_id: Uuid::new_v4(),
                 timestamp: Utc::now(),
+                correlation_id: None,
+                parent_event_id: None,
                 category: AuditCategory::ErrorRecovery,
                 severity: if slo_impact > 0.5 { AuditSeverity::High } else { AuditSeverity::Medium },
                 actor: "slo_monitor".to_string(),
-                operation: "recovery_correlation".to_string(),
+                operation: "error_recovery_correlation".to_string(),
+                message: Some(format!("Error recovery correlation recorded - success: {}", recovery_success)),
+                operation_id: Some(operation_id.to_string()),
                 target: Some(operation_id.to_string()),
                 parameters,
                 result: AuditResult::Success { data: None },
@@ -1405,6 +1527,8 @@ mod auditors {
                 severity: AuditSeverity::Info,
                 actor: "learning_system".to_string(),
                 operation: "insight_gained".to_string(),
+                message: Some(format!("Learning system gained insight: {} with impact: {}", insight_type, impact)),
+                operation_id: Some(insight_type.to_string()),
                 target: Some(insight_type.to_string()),
                 parameters,
                 result: AuditResult::Success { data: None },
@@ -1440,6 +1564,8 @@ mod auditors {
                 severity: AuditSeverity::Info,
                 actor: "learning_system".to_string(),
                 operation: "optimization_applied".to_string(),
+                message: Some(format!("Optimization applied: {} with expected improvement: {}", optimization_type, expected_improvement)),
+                operation_id: Some(optimization_type.to_string()),
                 target: Some(optimization_type.to_string()),
                 parameters,
                 result: AuditResult::Success { data: None },

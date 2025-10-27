@@ -112,16 +112,15 @@ impl MemoryLifecycleManager {
     /// Apply reinforcement based on access patterns
     pub async fn apply_reinforcement_cycle(
         &self,
-        mut metadata_list: Vec<MemoryLifecycleMetadata>,
+        mut metadata_list: Vec<(crate::memory_types::MemoryId, MemoryLifecycleMetadata)>,
         access_patterns: std::collections::HashMap<crate::memory_types::MemoryId, AccessPattern>,
     ) -> crate::MemoryResult<ReinforcementApplicationResult> {
         let mut reinforced_count = 0;
         let mut total_importance_gain = 0.0;
 
-        for metadata in &mut metadata_list {
-            // Create a key based on importance score range for access patterns
-            let importance_key = format!("importance_{:.1}", metadata.importance_score);
-            if let Some(access_pattern) = access_patterns.get(&importance_key) {
+        for (memory_id, metadata) in &mut metadata_list {
+            // Use the memory ID directly as the key for access patterns
+            if let Some(access_pattern) = access_patterns.get(memory_id) {
                 let old_importance = metadata.importance_score;
                 self.manager.apply_reinforcement(metadata, access_pattern).await?;
 

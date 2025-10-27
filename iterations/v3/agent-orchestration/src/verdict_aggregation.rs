@@ -4,12 +4,48 @@
 //! council decision, handling conflicting opinions and consensus algorithms.
 
 use std::collections::HashMap;
-use crate::error::{CouncilError, CouncilResult};
-use crate::judge::{JudgeVerdict, JudgeContribution, RequiredChange, CriticalIssue, ChangePriority, IssueSeverity};
+use std::time::Duration;
+use crate::council_errors::{CouncilError, CouncilResult};
+use crate::judge_backup::{JudgeVerdict, JudgeContribution, RequiredChange, CriticalIssue, ChangePriority, IssueSeverity, ChangeImpact};
+use crate::judge_backup::types::ReviewContext;
+use crate::judge_backup::backup_types::{JudgeType};
+use crate::judge_backup::risk::RiskLevel;
+use crate::judge_backup::verdicts::ComplexityLevel;
+use crate::judge_backup::risk::{};
 use strsim::{jaro_winkler, levenshtein, normalized_damerau_levenshtein};
 use regex::Regex;
 use tracing::warn;
 use once_cell::sync::Lazy;
+
+// Missing enum definitions
+#[derive(Debug, Clone, PartialEq, PartialOrd)]
+pub enum RiskSeverity {
+    Low,
+    Medium,
+    High,
+    Critical,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct RiskFactor {
+    pub factor_type: String,
+    pub severity: RiskSeverity,
+    pub description: String,
+    pub impact: f64,
+}
+pub enum ConsensusStrength {
+    Weak = 1,
+    Moderate = 2,
+    Strong = 3,
+    Unanimous = 4,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum EffortComplexity {
+    Low,
+    Medium,
+    High,
+}
 
 /// Result of aggregating multiple judge verdicts
 #[derive(Debug, Clone)]
@@ -86,7 +122,7 @@ pub enum AgreementLevel {
 #[derive(Debug, Clone)]
 pub struct WeightedContribution {
     pub judge_id: String,
-    pub judge_type: crate::judge::JudgeType,
+    pub judge_type: JudgeType,
     pub verdict: JudgeVerdict,
     pub weight: f64,
     pub specialization_score: f64,
@@ -117,14 +153,14 @@ pub struct AggregatedEffort {
     pub min_person_hours: f64,
     pub max_person_hours: f64,
     pub average_person_hours: f64,
-    pub complexity_levels: HashMap<crate::judge::ComplexityLevel, usize>,
+    pub complexity_levels: HashMap<ComplexityLevel, usize>,
     pub dependencies: Vec<String>,
 }
 
 /// Aggregated risk assessment
 #[derive(Debug, Clone, PartialEq)]
 pub struct AggregatedRiskAssessment {
-    pub overall_risk: crate::judge::RiskLevel,
+    pub overall_risk: RiskLevel,
     pub risk_factors: Vec<String>,
     pub mitigation_suggestions: Vec<String>,
     pub confidence: f64,
@@ -134,7 +170,7 @@ pub struct AggregatedRiskAssessment {
 #[derive(Debug, Clone)]
 pub struct IssueSummary {
     pub category: String,
-    pub severity: crate::judge::IssueSeverity,
+    pub severity: IssueSeverity,
     pub frequency: usize,
     pub descriptions: Vec<String>,
 }
@@ -235,7 +271,7 @@ impl VerdictAggregator {
     pub async fn aggregate_verdicts(
         &self,
         contributions: Vec<JudgeContribution>,
-        review_context: &crate::judge::ReviewContext,
+        review_context: &ReviewContext,
     ) -> CouncilResult<AggregationResult> {
         let start_time = std::time::Instant::now();
 
@@ -245,7 +281,13 @@ impl VerdictAggregator {
         // Calculate weights and analyze verdicts
         let weighted_contributions = self.calculate_weights(contributions, review_context).await?;
         let verdict_distribution = self.analyze_verdict_distribution(&weighted_contributions);
-        let (consensus_strength, agreement_level) = self.calculate_consensus_metrics(&verdict_distribution);
+        let (consensus_strength_f64, agreement_level) = self.calculate_consensus_metrics(&verdict_distribution);
+        let consensus_strength = match consensus_strength_f64 {
+            s if s >= 0.9 => ConsensusStrength::Unanimous,
+            s if s >= 0.7 => ConsensusStrength::Strong,
+            s if s >= 0.5 => ConsensusStrength::Moderate,
+            _ => ConsensusStrength::Weak,
+        };
         let dissenting_opinions = self.identify_dissenting_opinions(&weighted_contributions, &verdict_distribution);
 
         // Make council decision
@@ -258,7 +300,7 @@ impl VerdictAggregator {
 
         // Aggregate additional data
         let (aggregated_changes, critical_issues_summary) =
-            self.aggregate_additional_data(&council_decision, &weighted_contributions);
+            self.aggregate_additional_data(&council_decision, &weighted_contributions).await;
 
         // Create aggregation metadata
         let aggregation_metadata = self.create_aggregation_metadata(
@@ -268,7 +310,7 @@ impl VerdictAggregator {
 
         Ok(AggregationResult {
             council_decision,
-            consensus_strength,
+            consensus_strength: consensus_strength_f64,
             agreement_level,
             judge_contributions: weighted_contributions,
             dissenting_opinions,
@@ -306,7 +348,7 @@ impl VerdictAggregator {
                 quality_score: 0.9,
                 risk_assessment,
             })
-        } else if consensus_strength >= ConsensusStrength::Moderate {
+        } else if consensus_strength as u8 >= ConsensusStrength::Moderate as u8 {
             // Moderate consensus - refine
             let required_changes = self.aggregate_changes(weighted_contributions)
                 .unwrap_or_else(|_| Vec::new());
@@ -319,7 +361,15 @@ impl VerdictAggregator {
             })
         } else {
             // Weak consensus or significant dissent - reject
-            let critical_issues = self.aggregate_critical_issues(weighted_contributions);
+            let critical_issues_strings = self.aggregate_critical_issues(weighted_contributions);
+            let critical_issues = critical_issues_strings.into_iter().map(|issue| {
+                crate::judge_backup::verdicts::CriticalIssue {
+                    severity: crate::judge_backup::verdicts::IssueSeverity::High,
+                    category: "Consensus".to_string(),
+                    description: issue,
+                    evidence: vec![],
+                }
+            }).collect();
             let alternative_approaches = vec!["Re-evaluate judge criteria".to_string(), "Consider human review".to_string()];
             Ok(CouncilDecision::Reject {
                 confidence: 0.2,
@@ -330,14 +380,14 @@ impl VerdictAggregator {
     }
 
     /// Aggregate additional data based on council decision
-    fn aggregate_additional_data(
+    async fn aggregate_additional_data(
         &self,
         council_decision: &CouncilDecision,
         weighted_contributions: &[WeightedContribution],
     ) -> (Option<AggregatedChanges>, Vec<String>) {
         match council_decision {
             CouncilDecision::Refine { .. } => {
-                match self.aggregate_changes(weighted_contributions) {
+                match self.aggregate_changes(weighted_contributions).await {
                     Ok(changes) => (Some(changes), Vec::new()),
                     Err(e) => {
                         warn!("Failed to aggregate changes: {}", e);
@@ -407,7 +457,7 @@ impl VerdictAggregator {
     async fn calculate_weights(
         &self,
         contributions: Vec<JudgeContribution>,
-        context: &crate::judge::ReviewContext,
+        context: &ReviewContext,
     ) -> CouncilResult<Vec<WeightedContribution>> {
         let mut weighted_contributions = Vec::new();
 
@@ -439,7 +489,7 @@ impl VerdictAggregator {
     fn calculate_specialization_score(
         &self,
         contribution: &JudgeContribution,
-        context: &crate::judge::ReviewContext,
+        context: &ReviewContext,
     ) -> f64 {
         // Calculate how well this judge's expertise matches the task
         let task_description = context.working_spec.description.to_lowercase();
@@ -448,7 +498,7 @@ impl VerdictAggregator {
         let mut score: f64 = 0.5; // Base score
 
         match contribution.judge_type {
-            crate::judge::JudgeType::Constitutional => {
+            JudgeType::Constitutional => {
                 // Constitutional judges handle CAWS compliance and governance
                 if task_description.contains("compliance") || task_description.contains("constitutional") ||
                    task_description.contains("caws") || task_description.contains("governance") ||
@@ -456,40 +506,40 @@ impl VerdictAggregator {
                     score += 0.4; // High priority for compliance and high-risk tasks
                 }
             },
-            crate::judge::JudgeType::QualityAssurance => {
+            JudgeType::QualityAssurance => {
                 if task_description.contains("quality") || task_description.contains("test") {
                     score += 0.3;
                 }
             },
-            crate::judge::JudgeType::Security => {
+            JudgeType::Security => {
                 if task_description.contains("security") || task_description.contains("auth") ||
                    task_description.contains("password") || task_description.contains("encrypt") {
                     score += 0.3;
                 }
             },
-            crate::judge::JudgeType::Performance => {
+            JudgeType::Performance => {
                 if task_description.contains("performance") || task_description.contains("speed") ||
                    task_description.contains("optimize") {
                     score += 0.3;
                 }
             },
-            crate::judge::JudgeType::Architecture => {
+            JudgeType::Architecture => {
                 if task_description.contains("architecture") || task_description.contains("design") ||
                    task_description.contains("structure") {
                     score += 0.3;
                 }
             },
-            crate::judge::JudgeType::Testing => {
+            JudgeType::Testing => {
                 if task_description.contains("test") || task_description.contains("coverage") {
                     score += 0.3;
                 }
             },
-            crate::judge::JudgeType::Compliance => {
+            JudgeType::Compliance => {
                 if matches!(context.risk_tier, crate::council_types::RiskTier::Tier1) {
                     score += 0.4; // High compliance needs for T1 tasks
                 }
             },
-            crate::judge::JudgeType::DomainExpert => {
+            JudgeType::DomainExpert => {
                 // Domain experts get higher scores for complex tasks
                 let risk_level = match context.working_spec.risk_tier {
                     crate::council_types::RiskTier::Tier1 => 1,
@@ -500,7 +550,7 @@ impl VerdictAggregator {
                     score += 0.2;
                 }
             },
-            crate::judge::JudgeType::Ethics => {
+            JudgeType::Ethics => {
                 // Ethics judges prioritize high-risk, sensitive tasks
                 if matches!(context.risk_tier, crate::council_types::RiskTier::Tier1) ||
                    task_description.contains("privacy") || task_description.contains("ethics") ||
@@ -508,14 +558,14 @@ impl VerdictAggregator {
                     score += 0.4;
                 }
             },
-            crate::judge::JudgeType::Technical => {
+            JudgeType::Technical => {
                 // Technical judges handle implementation and architecture
                 if task_description.contains("technical") || task_description.contains("implementation") ||
                    task_description.contains("architecture") {
                     score += 0.3;
                 }
             },
-            crate::judge::JudgeType::Quality => {
+            JudgeType::Quality => {
                 // Quality judges focus on code quality and standards
                 if task_description.contains("quality") || task_description.contains("standards") ||
                    task_description.contains("code") {
@@ -699,7 +749,7 @@ impl VerdictAggregator {
             })
         } else if distribution.refine_weight >= distribution.reject_weight {
             // Refine decision
-            match self.aggregate_changes(contributions) {
+            match self.aggregate_changes(contributions).await {
                 Ok(aggregated_changes) => {
                     let priority = self.calculate_highest_change_priority(&aggregated_changes);
                     let changes = aggregated_changes.changes;
@@ -765,7 +815,7 @@ impl VerdictAggregator {
 
         let overall_risk = match self.config.risk_aggregation {
             RiskAggregationStrategy::MostConservative => {
-                risk_levels.into_iter().max().unwrap_or(crate::judge::RiskLevel::Medium)
+                risk_levels.into_iter().max().unwrap_or(RiskLevel::Medium)
             },
             RiskAggregationStrategy::WeightedAverage => {
                 self.calculate_weighted_risk_average(contributions, &risk_levels, total_weight)
@@ -774,13 +824,13 @@ impl VerdictAggregator {
                 // Count risk factor frequency to determine level
                 let high_risk_count = risk_factors.len();
                 if high_risk_count > 5 {
-                    crate::judge::RiskLevel::Critical
+                    RiskLevel::Critical
                 } else if high_risk_count > 2 {
-                    crate::judge::RiskLevel::High
+                    RiskLevel::High
                 } else if high_risk_count > 0 {
-                    crate::judge::RiskLevel::Medium
+                    RiskLevel::Medium
                 } else {
-                    crate::judge::RiskLevel::Low
+                    RiskLevel::Low
                 }
             },
         };
@@ -789,12 +839,12 @@ impl VerdictAggregator {
         risk_factors.sort_by(|a, b| {
             // Sort by severity first (higher severity first)
             let severity_cmp = match (a.severity, b.severity) {
-                (crate::judge::RiskSeverity::Critical, _) => std::cmp::Ordering::Greater,
-                (_, crate::judge::RiskSeverity::Critical) => std::cmp::Ordering::Less,
-                (crate::judge::RiskSeverity::High, _) => std::cmp::Ordering::Greater,
-                (_, crate::judge::RiskSeverity::High) => std::cmp::Ordering::Less,
-                (crate::judge::RiskSeverity::Medium, _) => std::cmp::Ordering::Greater,
-                (_, crate::judge::RiskSeverity::Medium) => std::cmp::Ordering::Less,
+                (RiskSeverity::Critical, _) => std::cmp::Ordering::Greater,
+                (_, RiskSeverity::Critical) => std::cmp::Ordering::Less,
+                (RiskSeverity::High, _) => std::cmp::Ordering::Greater,
+                (_, RiskSeverity::High) => std::cmp::Ordering::Less,
+                (RiskSeverity::Medium, _) => std::cmp::Ordering::Greater,
+                (_, RiskSeverity::Medium) => std::cmp::Ordering::Less,
                 _ => std::cmp::Ordering::Equal,
             };
 
@@ -808,7 +858,7 @@ impl VerdictAggregator {
         // Remove duplicates by keeping unique combinations (compare non-f64 fields)
         let mut unique_factors = Vec::new();
         for factor in risk_factors {
-            if !unique_factors.iter().any(|f: &crate::judge::RiskFactor|
+            if !unique_factors.iter().any(|f: &RiskFactor|
                 f.factor_type == factor.factor_type &&
                 f.severity == factor.severity &&
                 f.description == factor.description) {
@@ -845,7 +895,7 @@ impl VerdictAggregator {
         }
     }
 
-    fn aggregate_changes(&self, contributions: &[WeightedContribution]) -> CouncilResult<AggregatedChanges> {
+    async fn aggregate_changes(&self, contributions: &[WeightedContribution]) -> CouncilResult<AggregatedChanges> {
         let mut all_changes = Vec::new();
         let mut change_categories = HashMap::new();
         let mut priority_distribution = HashMap::new();
@@ -907,10 +957,10 @@ impl VerdictAggregator {
         for change in &unique_changes {
             // Convert impact to priority for distribution
             let priority = match change.impact {
-                crate::judge::ChangeImpact::Breaking => ChangePriority::Critical,
-                crate::judge::ChangeImpact::Major => ChangePriority::High,
-                crate::judge::ChangeImpact::Moderate => ChangePriority::Medium,
-                crate::judge::ChangeImpact::Minor => ChangePriority::Low,
+                ChangeImpact::Breaking => ChangePriority::Critical,
+                ChangeImpact::Major => ChangePriority::High,
+                ChangeImpact::Moderate => ChangePriority::Medium,
+                ChangeImpact::Minor => ChangePriority::Low,
             };
             *priority_distribution.entry(priority).or_insert(0) += 1;
         }
@@ -965,20 +1015,20 @@ impl VerdictAggregator {
     fn calculate_weighted_risk_average(
         &self,
         contributions: &[WeightedContribution],
-        risk_levels: &[crate::judge::RiskLevel],
+        risk_levels: &[RiskLevel],
         total_weight: f64,
-    ) -> crate::judge::RiskLevel {
+    ) -> RiskLevel {
         if risk_levels.is_empty() {
-            return crate::judge::RiskLevel::Medium;
+            return RiskLevel::Medium;
         }
 
         // Convert risk levels to numerical scores for weighted calculation
         let risk_scores: Vec<f64> = risk_levels.iter().map(|risk| {
             match risk {
-                crate::judge::RiskLevel::Low => 0.25,
-                crate::judge::RiskLevel::Medium => 0.5,
-                crate::judge::RiskLevel::High => 0.75,
-                crate::judge::RiskLevel::Critical => 1.0,
+                RiskLevel::Low => 0.25,
+                RiskLevel::Medium => 0.5,
+                RiskLevel::High => 0.75,
+                RiskLevel::Critical => 1.0,
             }
         }).collect();
 
@@ -1011,17 +1061,17 @@ impl VerdictAggregator {
     }
 
     /// Convert numerical risk score to risk level with calibrated thresholds
-    fn score_to_risk_level(&self, score: f64) -> crate::judge::RiskLevel {
+    fn score_to_risk_level(&self, score: f64) -> RiskLevel {
         // Calibrated thresholds based on risk tolerance
         // These can be adjusted based on historical performance and validation
         if score >= 0.875 {
-            crate::judge::RiskLevel::Critical
+            RiskLevel::Critical
         } else if score >= 0.625 {
-            crate::judge::RiskLevel::High
+            RiskLevel::High
         } else if score >= 0.375 {
-            crate::judge::RiskLevel::Medium
+            RiskLevel::Medium
         } else {
-            crate::judge::RiskLevel::Low
+            RiskLevel::Low
         }
     }
 }
@@ -1193,7 +1243,7 @@ pub struct ChangeSemanticFeatures {
     /// Complexity indicators
     pub complexity_indicators: Vec<String>,
     /// Impact level
-    pub impact: crate::judge::ChangeImpact,
+    pub impact: ChangeImpact,
 }
 
 /// Classification of change intent
@@ -1538,8 +1588,8 @@ impl ChangeDeduplicationEngine {
     }
 
     /// Compute impact compatibility score
-    fn compute_impact_compatibility(&self, i1: crate::judge::ChangeImpact, i2: crate::judge::ChangeImpact) -> f64 {
-        use crate::judge::ChangeImpact::*;
+    fn compute_impact_compatibility(&self, i1: ChangeImpact, i2: ChangeImpact) -> f64 {
+        use ChangeImpact::*;
 
         match (i1, i2) {
             (Breaking, Breaking) => 1.0,
@@ -1713,19 +1763,16 @@ impl ChangeDeduplicationEngine {
         };
 
         Ok(RequiredChange {
-            change_type: crate::judge::ChangeType::CodeQuality, // Default for merged changes
-            description: merged_description,
-            affected_components: vec![],
-            breaking_change: false,
-            test_required: true,
             category: merged_category,
+            description: merged_description,
             impact: max_impact,
+            rationale: format!("Merged {} changes", indices.len()),
         })
     }
 
     /// Get numerical value for impact comparison
-    fn impact_value(&self, impact: crate::judge::ChangeImpact) -> u8 {
-        use crate::judge::ChangeImpact::*;
+    fn impact_value(&self, impact: ChangeImpact) -> u8 {
+        use ChangeImpact::*;
         match impact {
             Breaking => 4,
             Major => 3,

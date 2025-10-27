@@ -5,6 +5,7 @@ use std::collections::HashMap;
 use anyhow::Result;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use serde_json;
 
 use super::core::MultimodalSearchResult;
 use super::query_processing::ProcessedQuery;
@@ -209,10 +210,15 @@ impl TextSearchBridge {
                 let combined = self.reciprocal_rank_fusion(bm25_results, vector_results, k);
                 results = combined.into_iter().map(|(doc_id, score)| {
                     embedding_service::MultimodalSearchResult {
-                        id: doc_id,
-                        content: self.bm25_index.documents.get(&doc_id).unwrap_or(&String::new()).clone(),
-                        score,
-                        metadata: HashMap::new(),
+                        ref_id: doc_id,
+                        kind: data_infrastructure::embedding::embedding_types::ContentType::Text,
+                        snippet: self.bm25_index.documents.get(&doc_id).unwrap_or(&String::new()).clone(),
+                        citation: None,
+                        feature: data_infrastructure::embedding::embedding_types::SearchResultFeature {
+                            score,
+                            metadata: serde_json::json!({"search_type": "hybrid_bm25_vector"}),
+                        },
+                        project_scope: None,
                     }
                 }).collect();
             }
@@ -222,10 +228,15 @@ impl TextSearchBridge {
         if results.is_empty() {
             results = bm25_results.into_iter().map(|(doc_id, score)| {
                 embedding_service::MultimodalSearchResult {
-                    id: doc_id,
-                    content: self.bm25_index.documents.get(&doc_id).unwrap_or(&String::new()).clone(),
-                    score,
-                    metadata: HashMap::new(),
+                    ref_id: doc_id,
+                    kind: data_infrastructure::embedding::embedding_types::ContentType::Text,
+                    snippet: self.bm25_index.documents.get(&doc_id).unwrap_or(&String::new()).clone(),
+                    citation: None,
+                    feature: data_infrastructure::embedding::embedding_types::SearchResultFeature {
+                        score,
+                        metadata: serde_json::json!({"search_type": "bm25_only"}),
+                    },
+                    project_scope: None,
                 }
             }).collect();
         }

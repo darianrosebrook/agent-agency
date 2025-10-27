@@ -4,10 +4,11 @@
 //! ethical assessment, stakeholder analysis, and cultural
 //! considerations for working specification evaluation.
 
-use crate::error::CouncilResult;
-use crate::judge_backup::risk::{EthicalAssessment, EthicalConcern, StakeholderImpact, EthicalTradeoff, ConsequenceAssessment, CulturalConsideration, EthicalCategory, EthicalSeverity, ImpactType, ImpactDuration, TimeHorizon, ConsequenceSeverity, CulturalSensitivity};
+use crate::council_errors::CouncilResult;
+use crate::judge_backup::risk::{EthicalAssessment, EthicalConcern, StakeholderImpact, EthicalTradeoff, ConsequenceAssessment, CulturalConsideration, EthicalCategory, EthicalSeverity, TimeHorizon};
 use crate::judge_backup::traits::Judge;
-use crate::judge_backup::types::{JudgeConfig, JudgeHealthMetrics, ReviewContext};
+use crate::judge_backup::types::{JudgeConfig, ReviewContext};
+use crate::judge_backup::backup_types::JudgeHealthMetrics;
 use crate::judge_backup::verdicts::JudgeVerdict;
 use std::collections::HashMap;
 
@@ -246,12 +247,12 @@ impl Judge for EthicsJudge {
         // Convert assessment to verdict
         let verdict = if assessment.ethical_score >= 0.8 {
             JudgeVerdict::Approve {
-                confidence: assessment.ethical_score,
+                confidence: assessment.ethical_score as f64,
                 reasoning: format!(
                     "Ethical assessment passed with score {:.2}. No critical concerns identified.",
                     assessment.ethical_score
                 ),
-                quality_score: assessment.ethical_score,
+                quality_score: assessment.ethical_score as f64,
                 risk_assessment: crate::judge_backup::risk::RiskAssessment {
                     overall_risk: crate::judge_backup::risk::RiskLevel::Low,
                     risk_factors: vec![],
@@ -261,7 +262,7 @@ impl Judge for EthicsJudge {
             }
         } else if assessment.ethical_score >= 0.5 {
             JudgeVerdict::Refine {
-                confidence: assessment.ethical_score,
+                confidence: assessment.ethical_score as f64,
                 reasoning: format!(
                     "Ethical concerns identified. Score: {:.2}. Requires mitigation strategies.",
                     assessment.ethical_score
@@ -283,7 +284,7 @@ impl Judge for EthicsJudge {
             }
         } else {
             JudgeVerdict::Reject {
-                confidence: assessment.ethical_score,
+                confidence: assessment.ethical_score as f64,
                 reasoning: format!(
                     "Critical ethical violations identified. Score: {:.2}. Cannot proceed without fundamental changes.",
                     assessment.ethical_score
@@ -329,8 +330,26 @@ impl Judge for EthicsJudge {
         Ok(verdict)
     }
 
+    async fn evaluate(
+        &self,
+        _spec_id: uuid::Uuid,
+        _title: &str,
+        _description: &str,
+        _acceptance_criteria: &[String],
+    ) -> CouncilResult<JudgeVerdict> {
+        // For ethics judge, delegate to review_spec with a constructed context
+        let context = ReviewContext {
+            session_id: "ethics_session".to_string(),
+            working_spec: format!(r#"{{"title": "{}", "description": "{}", "acceptance_criteria": []}}"#, _title, _description),
+            previous_reviews: vec![],
+            constraints: std::collections::HashMap::new(),
+        };
+        
+        self.review_spec(&context).await
+    }
+
     fn specialization_score(&self, context: &ReviewContext) -> f64 {
-        let desc = context.working_spec.description.to_lowercase();
+        let desc = context.working_spec.to_lowercase();
 
         // Ethics judge is specialized for ethical considerations
         let ethical_keywords = [
@@ -354,12 +373,14 @@ impl Judge for EthicsJudge {
 
     fn health_metrics(&self) -> JudgeHealthMetrics {
         JudgeHealthMetrics {
-            judge_id: self.config.judge_id.clone(),
-            response_time_p95_ms: 5000, // 5 seconds P95
+            judge_id: self.config.name.clone(),
+            response_time_avg_ms: 5000, // 5 seconds average
             success_rate: 0.98,
             error_rate: 0.02,
             last_health_check: chrono::Utc::now(),
             consecutive_failures: 0,
+            total_evaluations: 1000, // Mock value
+            health_status: crate::judge_backup::backup_types::JudgeHealthStatus::Healthy,
         }
     }
 }

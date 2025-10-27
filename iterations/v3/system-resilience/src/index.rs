@@ -131,7 +131,7 @@ impl RecoveryIndex {
         .bind(timestamp)
         .bind(&commit.author.name)
         .bind(&commit.author.email)
-        .bind(&commit.author.agent_id)
+        .bind(commit.author.agent_id.as_deref())
         .execute(&self.pool)
         .await?;
 
@@ -274,11 +274,7 @@ impl RecoveryIndex {
                 message,
                 stats,
                 timestamp,
-                author: AuthorInfo {
-                    name: author_name,
-                    email: author_email,
-                    agent_id: author_agent_id,
-                },
+                author,
             }))
         } else {
             Ok(None)

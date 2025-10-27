@@ -375,6 +375,11 @@ impl CawsIntegration {
         self.clear_compliance_cache().await;
         Ok(())
     }
+
+    /// Stop CAWS integration (alias for shutdown)
+    pub async fn stop(&self) -> Result<()> {
+        self.shutdown().await
+    }
 }
 
 impl Default for CawsIntegrationConfig {

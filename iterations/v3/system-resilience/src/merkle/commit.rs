@@ -32,6 +32,16 @@ pub struct AuthorInfo {
     pub agent_id: Option<String>,
 }
 
+impl Default for AuthorInfo {
+    fn default() -> Self {
+        Self {
+            name: String::new(),
+            email: String::new(),
+            agent_id: None,
+        }
+    }
+}
+
 impl AuthorInfo {
     /// Create author info for an agent
     pub fn agent(name: String, email: String, agent_id: String) -> Self {
@@ -249,11 +259,13 @@ impl CommitBuilder {
             files_added: 0,
             files_changed: 0,
             files_deleted: 0,
+            lines_added: 0,
+            lines_removed: 0,
             bytes_added: 0,
             bytes_changed: 0,
             dedupe_ratio: 0.0,
+            timestamp: None,
         });
-
         Ok(Commit::new(parent, tree, session_id, author, message, stats))
     }
 }
@@ -356,9 +368,15 @@ mod tests {
             files_added: 1,
             files_changed: 0,
             files_deleted: 0,
+            lines_added: 10,
+            lines_removed: 0,
             bytes_added: 100,
             bytes_changed: 0,
             dedupe_ratio: 0.5,
+            timestamp: Some(std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_secs()),
         };
 
         let commit = Commit::new(
@@ -425,15 +443,3 @@ mod tests {
     }
 }
 
-impl Default for ChangeStats {
-    fn default() -> Self {
-        Self {
-            files_added: 0,
-            files_changed: 0,
-            files_deleted: 0,
-            bytes_added: 0,
-            bytes_changed: 0,
-            dedupe_ratio: 0.0,
-        }
-    }
-}

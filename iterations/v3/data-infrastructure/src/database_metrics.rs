@@ -4,8 +4,7 @@
 //! query execution tracking, connection pool usage, and health indicators.
 
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::time::{Duration as StdDuration, Instant};
-use tracing::debug;
+use std::time::Duration as StdDuration;
 
 /// Database execution metrics and monitoring
 #[derive(Debug)]

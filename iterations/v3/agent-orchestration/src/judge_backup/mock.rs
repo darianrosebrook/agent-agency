@@ -3,9 +3,11 @@
 //! Configurable mock judge that returns predetermined verdicts
 //! for testing council workflows and integration scenarios.
 
-use crate::error::CouncilResult;
+use crate::council_errors::CouncilResult;
 use crate::judge_backup::traits::Judge;
-use crate::judge_backup::types::{JudgeConfig, JudgeHealthMetrics, ReviewContext};
+use crate::judge_backup::backup_types::{JudgeHealthMetrics, JudgeHealthStatus};
+use crate::judge_backup::types::JudgeConfig;
+use crate::judge_backup::types::ReviewContext;
 use crate::judge_backup::verdicts::{JudgeVerdict, RequiredChange, ChangePriority, EffortEstimate, ComplexityLevel, ChangeCategory, ChangeImpact, CriticalIssue, IssueSeverity};
 use crate::judge_backup::risk::{RiskAssessment, RiskLevel};
 use rand::Rng;
@@ -22,6 +24,7 @@ pub enum VerdictStrategy {
 }
 
 /// Mock judge for testing and development
+#[derive(Debug)]
 pub struct MockJudge {
     config: JudgeConfig,
     verdict_strategy: VerdictStrategy,
@@ -36,10 +39,10 @@ impl MockJudge {
     }
 
     /// Assess quality of working specification for quality-focused strategy
-    fn assess_quality(&self, working_spec: &agent_agency_contracts::working_spec::WorkingSpec) -> f64 {
-        let mut score = 0.5; // Base score
+    fn assess_quality(&self, working_spec_desc: &str) -> f64 {
+        let mut score: f64 = 0.5; // Base score
 
-        let desc = working_spec.description.to_lowercase();
+        let desc = working_spec_desc.to_lowercase();
 
         // Quality indicators
         if desc.contains("test") || desc.contains("testing") {
@@ -70,10 +73,10 @@ impl MockJudge {
     }
 
     /// Assess security of working specification for security-focused strategy
-    fn assess_security(&self, working_spec: &agent_agency_contracts::working_spec::WorkingSpec) -> f64 {
-        let mut score = 0.5; // Base score
+    fn assess_security(&self, working_spec_desc: &str) -> f64 {
+        let mut score: f64 = 0.5; // Base score
 
-        let desc = working_spec.description.to_lowercase();
+        let desc = working_spec_desc.to_lowercase();
 
         // Security indicators
         if desc.contains("encrypt") || desc.contains("encryption") {
@@ -280,6 +283,25 @@ impl Judge for MockJudge {
         }
     }
 
+    async fn evaluate(
+        &self,
+        _spec_id: uuid::Uuid,
+        _title: &str,
+        _description: &str,
+        _acceptance_criteria: &[String],
+    ) -> CouncilResult<JudgeVerdict> {
+        // For mock judge, delegate to review_spec with a constructed context
+        // This is a simplified implementation - in practice, you'd construct a proper ReviewContext
+        let context = ReviewContext {
+            session_id: "mock_session".to_string(),
+            working_spec: format!(r#"{{"title": "{}", "description": "{}", "acceptance_criteria": []}}"#, _title, _description),
+            previous_reviews: vec![],
+            constraints: std::collections::HashMap::new(),
+        };
+        
+        self.review_spec(&context).await
+    }
+
     fn specialization_score(&self, _context: &ReviewContext) -> f64 {
         // Mock judge has moderate specialization for testing
         0.5
@@ -292,14 +314,49 @@ impl Judge for MockJudge {
 
     fn health_metrics(&self) -> JudgeHealthMetrics {
         JudgeHealthMetrics {
-            judge_id: self.config.judge_id.clone(),
-            response_time_p95_ms: 150, // Fast mock responses
+            judge_id: self.config.name.clone(), // Use name instead of judge_id
+            response_time_avg_ms: 150, // Fast mock responses
             success_rate: 1.0, // Mock judge never fails
             error_rate: 0.0,
             last_health_check: chrono::Utc::now(),
             consecutive_failures: 0,
+            total_evaluations: 0, // Mock judge hasn't evaluated anything yet
+            health_status: JudgeHealthStatus::Healthy,
         }
     }
+}
+
+/// Create a panel of mock judges for testing
+pub fn create_mock_judge_panel() -> Vec<MockJudge> {
+    vec![
+        MockJudge::new(
+            JudgeConfig {
+                name: "Quality Judge".to_string(),
+                specialization: "quality".to_string(),
+                max_response_time_ms: 5000,
+                health_check_interval_ms: 30000,
+            },
+            VerdictStrategy::QualityFocused,
+        ),
+        MockJudge::new(
+            JudgeConfig {
+                name: "Security Judge".to_string(),
+                specialization: "security".to_string(),
+                max_response_time_ms: 5000,
+                health_check_interval_ms: 30000,
+            },
+            VerdictStrategy::SecurityFocused,
+        ),
+        MockJudge::new(
+            JudgeConfig {
+                name: "General Judge".to_string(),
+                specialization: "general".to_string(),
+                max_response_time_ms: 5000,
+                health_check_interval_ms: 30000,
+            },
+            VerdictStrategy::Random,
+        ),
+    ]
 }
 
 

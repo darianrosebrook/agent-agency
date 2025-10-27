@@ -47,9 +47,9 @@ impl Default for CircuitBreakerStats {
 pub use tool_discovery::ToolDiscovery;
 pub use tool_registry::ToolRegistry;
 pub use tools::*;
+pub use mcp_types::*;
 pub use prompting_types::{
     MCPTool,
-    ToolExecutionRequest,
     ToolExecutionResult,
     ToolDiscoveryResult,
     ToolRegistryStats,

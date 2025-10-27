@@ -19,7 +19,8 @@ use crate::ane::models::mistral_model::{MistralModel, MistralCompilationOptions,
 use crate::ane::ane_circuit_breaker::{CircuitBreaker, CircuitBreakerConfig};
 use crate::telemetry::TelemetryCollector;
 use crate::ane::infer::execute::{execute_inference, InferenceOptions as ExecuteOptions, InferenceResult};
-use crate::ane::infer::mistral::{deliberate_constitution, generate_debate_argument, MistralInferenceOptions, ConstitutionalVerdict, DebateArgument};
+// TEMPORARILY DISABLED: mistral inference imports due to candle-core dependency conflicts
+// use crate::ane::infer::mistral::{deliberate_constitution, generate_debate_argument, MistralInferenceOptions, ConstitutionalVerdict, DebateArgument};
 use crate::ane::metrics::ewma::{Ewma, PerformanceTracker, PerformanceSummary};
 
 /// Apple Neural Engine manager for ANE-accelerated inference
@@ -754,6 +755,8 @@ impl ANEManager {
     /// # Returns
     /// * `Ok(ConstitutionalVerdict)` - Structured constitutional analysis
     /// * `Err(ANEError)` - If deliberation fails
+    // TEMPORARILY DISABLED: Function uses MistralInferenceOptions which is not available due to candle-core conflicts
+    /*
     pub async fn deliberate_constitution(
         &self,
         model_id: &str,
@@ -778,6 +781,7 @@ impl ANEManager {
 
         Ok(result)
     }
+    */
 
     /// Generate debate argument with a loaded Mistral model
     ///
@@ -790,6 +794,8 @@ impl ANEManager {
     /// # Returns
     /// * `Ok(DebateArgument)` - Structured debate argument
     /// * `Err(ANEError)` - If generation fails
+    // TEMPORARILY DISABLED: Function uses MistralInferenceOptions which is not available due to candle-core conflicts
+    /*
     pub async fn generate_debate_argument(
         &self,
         model_id: &str,
@@ -814,6 +820,7 @@ impl ANEManager {
 
         Ok(result)
     }
+    */
 
     /// Generate text with a loaded Mistral model
     ///
@@ -824,6 +831,8 @@ impl ANEManager {
     /// # Returns
     /// * `Ok(String)` - Generated text
     /// * `Err(ANEError)` - If generation fails
+    // TEMPORARILY DISABLED: Function uses MistralInferenceOptions which is not available due to candle-core conflicts
+    /*
     pub async fn generate_text(
         &self,
         model_id: &str,
@@ -840,6 +849,7 @@ impl ANEManager {
 
         Ok(result)
     }
+    */
 
     /// Unload a Mistral model
     ///

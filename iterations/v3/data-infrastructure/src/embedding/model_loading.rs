@@ -1,8 +1,9 @@
 //! Model loading utilities for embedding providers
 
-use crate::embedding_types::*;
+use super::embedding_types::*;
 use anyhow::Result;
 use async_trait::async_trait;
+use hf_hub::api::sync::Api;
 use std::path::Path;
 
 /// Trait for embedding models
@@ -26,7 +27,7 @@ impl SafeTensorsModel {
         let data = tokio::fs::read(model_path).await?;
 
         // Deserialize temporarily to get metadata
-        let tensors = safetensors::SafeTensors::deserialize(&data)?;
+        let tensors = safetensors::SafeTensors::deserialize(data.as_slice())?;
 
         // Infer dimension from embeddings tensor
         let embeddings_tensor = tensors.tensor("embeddings")
@@ -51,7 +52,7 @@ impl SafeTensorsModel {
     /// Load a model from HuggingFace Hub
     pub async fn from_pretrained(model_id: &str) -> Result<Self> {
         // Download model files from HuggingFace Hub
-        let api = hf_hub::api::sync::Api::new()?;
+        let api = Api::new()?;
         let model_path = api.model(model_id.to_string()).get("model.safetensors")?;
 
         Self::load_from_path(&model_path).await

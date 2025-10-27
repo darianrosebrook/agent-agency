@@ -149,6 +149,12 @@ impl Default for ProcessingId {
     }
 }
 
+impl From<ProcessingId> for Uuid {
+    fn from(processing_id: ProcessingId) -> Self {
+        processing_id.0
+    }
+}
+
 impl std::fmt::Display for ProcessingId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.0)

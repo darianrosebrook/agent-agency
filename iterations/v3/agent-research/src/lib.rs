@@ -20,6 +20,9 @@ pub mod qualification;
 pub mod extraction_types;
 pub mod verification;
 
+// Multimodal retriever modules
+pub mod multimodal_retriever;
+
 // Planning agent modules (consolidated from planning-agent crate)
 pub mod planning_agent;
 

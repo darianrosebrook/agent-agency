@@ -351,7 +351,7 @@ impl MemoryDecayEngine {
         let now = Utc::now();
 
         for memory in memories.iter_mut() {
-            let age_hours = (now - memory.memory.created_at).num_seconds() as f32 / 3600.0;
+            let age_hours = (now - memory.memory.timestamp).num_hours() as f32;
 
             // Recency boost: newer memories get higher weight
             let recency_boost = if age_hours < 24.0 {

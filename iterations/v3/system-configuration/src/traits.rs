@@ -7,6 +7,7 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 use crate::PipelineResult;
+use crate::cache::{CacheConfig, CacheStats};
 
 /// Core trait for pipeline stages that can process data
 #[async_trait]
@@ -122,62 +123,6 @@ impl std::fmt::Display for PipelineHealth {
     }
 }
 
-/// Cache configuration for cacheable pipelines
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CacheConfig {
-    /// Maximum cache size
-    pub max_size: usize,
-    /// Cache TTL in seconds
-    pub ttl_seconds: u64,
-    /// Enable cache compression
-    pub enable_compression: bool,
-    /// Cache key function (optional custom logic)
-    pub key_function: Option<String>,
-}
-
-impl Default for CacheConfig {
-    fn default() -> Self {
-        Self {
-            max_size: 1000,
-            ttl_seconds: 300, // 5 minutes
-            enable_compression: false,
-            key_function: None,
-        }
-    }
-}
-
-/// Cache statistics
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CacheStats {
-    /// Total cache entries
-    pub total_entries: usize,
-    /// Cache hit count
-    pub hits: u64,
-    /// Cache miss count
-    pub misses: u64,
-    /// Hit rate (0.0-1.0)
-    pub hit_rate: f64,
-    /// Memory usage in bytes
-    pub memory_usage_bytes: u64,
-    /// Eviction count
-    pub evictions: u64,
-    /// Last updated timestamp
-    pub last_updated: chrono::DateTime<chrono::Utc>,
-}
-
-impl Default for CacheStats {
-    fn default() -> Self {
-        Self {
-            total_entries: 0,
-            hits: 0,
-            misses: 0,
-            hit_rate: 0.0,
-            memory_usage_bytes: 0,
-            evictions: 0,
-            last_updated: chrono::Utc::now(),
-        }
-    }
-}
 
 /// Trait for components that can report their status
 #[async_trait::async_trait]

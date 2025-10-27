@@ -282,8 +282,23 @@ impl ConcurrencyManager {
                     ConflictClass::HumanVsSystem
                 }
             }
-            ChangeSource::SystemRecovery { .. } => ConflictClass::SystemVsSystem,
-            ChangeSource::CawsValidation { .. } => ConflictClass::ValidationVsSystem,
+            ChangeSource::SystemRecovery => ConflictClass::SystemVsSystem,
+            ChangeSource::CawsValidation => ConflictClass::ValidationVsSystem,
+            ChangeSource::User => {
+                if current_digest.is_some() {
+                    ConflictClass::UserVsUser
+                } else {
+                    ConflictClass::UserVsSystem
+                }
+            }
+            ChangeSource::Automated => {
+                if current_digest.is_some() {
+                    ConflictClass::UserVsUser
+                } else {
+                    ConflictClass::UserVsSystem
+                }
+            }
+            ChangeSource::System => ConflictClass::SystemVsSystem,
         }
     }
 

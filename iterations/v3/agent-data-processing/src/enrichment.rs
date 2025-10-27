@@ -17,6 +17,7 @@ use tracing::{debug, info, warn};
 use uuid::Uuid;
 use chrono::Utc;
 use std::sync::Mutex;
+use md5;
 
 /// Result from enrichment operations
 pub type EnrichmentResult = DataProcessingResult<ProcessingOutput>;
@@ -178,6 +179,7 @@ pub struct DetectedObject {
 }
 
 /// ASR Enricher - Consolidated from enrichers crate
+#[derive(Debug)]
 pub struct AsrEnricher {
     config: EnrichmentCircuitBreakerConfig,
     circuit_breaker: Mutex<CircuitBreaker>,
@@ -421,6 +423,7 @@ impl AsrEnricher {
 }
 
 /// Vision Enricher - Consolidated from enrichers crate
+#[derive(Debug)]
 pub struct VisionEnricher {
     config: EnrichmentCircuitBreakerConfig,
     circuit_breaker: Mutex<CircuitBreaker>,
@@ -735,6 +738,7 @@ impl VisionEnricher {
 }
 
 /// Entity Enricher - Consolidated from enrichers crate
+#[derive(Debug)]
 pub struct EntityEnricher {
     config: EnrichmentCircuitBreakerConfig,
     circuit_breaker: Mutex<CircuitBreaker>,
@@ -1010,6 +1014,7 @@ impl EntityEnricher {
 }
 
 /// Visual Captioning Enricher - Consolidated from enrichers crate
+#[derive(Debug)]
 pub struct VisualCaptioningEnricher {
     config: EnrichmentCircuitBreakerConfig,
     circuit_breaker: Mutex<CircuitBreaker>,
@@ -1462,6 +1467,7 @@ pub enum EnrichmentType {
 }
 
 /// Unified enrichment stage combining all enrichers
+#[derive(Debug)]
 pub struct UnifiedEnrichmentStage {
     asr_enricher: AsrEnricher,
     vision_enricher: VisionEnricher,
@@ -1479,6 +1485,131 @@ impl UnifiedEnrichmentStage {
             visual_captioning_enricher: VisualCaptioningEnricher::new(circuit_breaker_config.clone()),
             circuit_breaker_config,
         }
+    }
+
+    /// Enrich blocks - adapter method for multimodal orchestration
+    pub async fn enrich_blocks(&self, blocks: Vec<Block>) -> Result<Vec<EnrichedBlock>, anyhow::Error> {
+        let mut enriched_blocks = Vec::new();
+
+        for block in blocks {
+            // Convert block to DataInput
+            let data_input = DataInput {
+                id: block.id.clone(),
+                source: DataSource::Stream(StreamSource {
+                    stream_id: "multimodal_orchestration".to_string(),
+                    content_type: block.content_type.clone(),
+                }),
+                content: match &block.data {
+                    BlockData::Text(text) => DataContent::Text(text.clone()),
+                    BlockData::Binary(data) => DataContent::Binary(data.clone()),
+                    BlockData::Structured(data) => DataContent::Structured(data.clone()),
+                },
+                metadata: block.metadata.clone(),
+                processing_context: ProcessingContext {
+                    request_id: uuid::Uuid::new_v4().to_string(),
+                    user_id: None,
+                    project_scope: Some("multimodal_orchestration".to_string()),
+                    priority: ProcessingPriority::Normal,
+                    deadline: None,
+                    tags: vec!["multimodal_orchestration".to_string()],
+                },
+            };
+
+            // Convert block to ProcessedContent
+            let processed_content = ProcessedContent {
+                data: match &block.data {
+                    BlockData::Text(text) => ProcessedContentData::Text(text.clone()),
+                    BlockData::Binary(data) => ProcessedContentData::Binary(data.clone()),
+                    BlockData::Structured(data) => ProcessedContentData::Structured(data.clone()),
+                },
+                content_type: block.content_type.clone(),
+                text_content: match &block.data {
+                    BlockData::Text(text) => Some(text.clone()),
+                    _ => None,
+                },
+                structured_data: None,
+                entities: vec![],
+                relationships: vec![],
+                visual_elements: vec![],
+                audio_transcript: None,
+                embeddings: None,
+            };
+
+            // Enrich the content
+            match self.enrich(data_input.clone(), processed_content).await {
+                Ok(enriched_output) => {
+                    let enriched_block = EnrichedBlock {
+                        block: block.clone(),
+                        enriched_content: EnrichedContent {
+                            entities: enriched_output.extracted_metadata.get("entities")
+                                .and_then(|v| serde_json::from_value(v.clone()).ok())
+                                .unwrap_or_default(),
+                            visual_elements: enriched_output.extracted_metadata.get("visual_elements")
+                                .and_then(|v| serde_json::from_value(v.clone()).ok())
+                                .unwrap_or_default(),
+                            audio_transcript: enriched_output.extracted_metadata.get("audio_transcript")
+                                .and_then(|v| v.as_str().map(|s| s.to_string())),
+                            topics: enriched_output.extracted_metadata.get("topics")
+                                .and_then(|v| serde_json::from_value(v.clone()).ok())
+                                .unwrap_or_default(),
+                            embeddings: enriched_output.extracted_metadata.get("embeddings")
+                                .and_then(|v| serde_json::from_value(v.clone()).ok()),
+                        },
+                        processing_metadata: ProcessingMetadata {
+                            source_url: None,
+                            content_hash: format!("hash_{}", block.id.clone()),
+                            ingested_at: chrono::Utc::now(),
+                            processing_version: "1.0.0".to_string(),
+                            quality_score: 0.8,
+                            confidence_scores: {
+                                let mut scores = std::collections::HashMap::new();
+                                scores.insert("unified_enrichment".to_string(), 0.8);
+                                scores
+                            },
+                        },
+                    };
+                    enriched_blocks.push(enriched_block);
+                }
+                Err(e) => {
+                    // Return block with error metadata
+                    let mut error_metadata = block.metadata.clone();
+                    error_metadata.insert("enrichment_error".to_string(), serde_json::Value::String(e.to_string()));
+                    
+                    let error_block = Block {
+                        id: block.id.clone(),
+                        content_type: block.content_type.clone(),
+                        data: block.data.clone(),
+                        metadata: error_metadata,
+                    };
+                    
+                    let enriched_block = EnrichedBlock {
+                        block: error_block,
+                        enriched_content: EnrichedContent {
+                            entities: vec![],
+                            visual_elements: vec![],
+                            audio_transcript: None,
+                            topics: vec![],
+                            embeddings: None,
+                        },
+                        processing_metadata: ProcessingMetadata {
+                            source_url: None,
+                            content_hash: format!("hash_{}", block.id.clone()),
+                            ingested_at: chrono::Utc::now(),
+                            processing_version: "1.0.0".to_string(),
+                            quality_score: 0.0,
+                            confidence_scores: {
+                                let mut scores = std::collections::HashMap::new();
+                                scores.insert("unified_enrichment_error".to_string(), 0.0);
+                                scores
+                            },
+                        },
+                    };
+                    enriched_blocks.push(enriched_block);
+                }
+            }
+        }
+
+        Ok(enriched_blocks)
     }
 }
 

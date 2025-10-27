@@ -744,9 +744,10 @@ mod tests {
 
         // Test executable file detection
         let exec_content = b"\x7fELF\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x03\x00\x01\x00\x00\x00\x54\x80\x04\x08\x34\x00\x00\x00";
+        let exec_content_str = std::str::from_utf8(exec_content).unwrap_or("invalid_utf8");
         let result = detector
             .detect_tampering(
-                exec_content,
+                exec_content_str,
                 "some_hash",
                 None,
                 &SourceType::File,
