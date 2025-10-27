@@ -13,6 +13,7 @@ use uuid::Uuid;
 use chrono::{DateTime, Utc};
 
 use agent_agency_contracts::task_executor::{TaskExecutionResult, TaskExecutor};
+use crate::types::{TaskScope, ChangeBudget, BlastRadius};
 use agent_agency_contracts::task_executor_provider::TaskExecutorProvider;
 
 // TODO: These modules need to be implemented or moved from other crates
@@ -37,7 +38,8 @@ use agent_agency_contracts::task_request::{TaskRequest, TaskPriority};
 // use agent_agency_observability::cache::CacheBackend;
 // use agent_agency_observability::metrics::MetricsBackend;
 // TODO: Re-enable when agent_memory exports MemorySystem
-use agent_memory::{MemorySystem, memory_types::{AgentExperience, MemoryType}};
+use agent_memory::MemorySystem;
+use agent_memory::memory_types::{AgentExperience, MemoryType, ExperienceContext, ExperienceOutcome};
 
 // Placeholder types for missing modules
 pub type TaskDescriptor = TaskRequest;
@@ -603,7 +605,7 @@ impl AutonomousExecutor {
             id: Uuid::new_v4(),
             agent_id: "orchestrator".to_string(), // System-level agent for orchestration
             task_id: Some(task_descriptor.task_id.to_string()),
-            context: memory_types::ExperienceContext {
+            context: ExperienceContext {
                 description: format!("Task execution: {}", task_descriptor.description),
                 domain: vec!["orchestration".to_string()],
                 task_type: task_descriptor.task_type.clone(),
@@ -611,7 +613,7 @@ impl AutonomousExecutor {
             },
             input: task_descriptor.description.clone(),
             output: format!("Task completed with verdict: {}", final_verdict.decision),
-            outcome: memory_types::ExperienceOutcome {
+            outcome: ExperienceOutcome {
                 success,
                 quality_score: final_verdict.confidence_score,
                 error_message: if success { None } else { Some("Task execution failed".to_string()) },
@@ -634,8 +636,10 @@ impl AutonomousExecutor {
         };
 
         // Store in memory system
-        let _memory_id = memory_system.store_experience(experience).await
-            .map_err(|e| format!("Failed to store execution experience: {}", e))?;
+        if let Some(memory_system) = &self.memory_system {
+            let _memory_id = memory_system.store_experience(experience).await
+                .map_err(|e| format!("Failed to store execution experience: {}", e))?;
+        }
 
         tracing::debug!("Stored execution experience for task {}", task_descriptor.task_id);
 

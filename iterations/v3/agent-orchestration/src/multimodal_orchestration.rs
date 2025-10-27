@@ -4,7 +4,7 @@
 //! with proper error handling, concurrency control, and monitoring.
 
 use anyhow::{Context, Result};
-// Temporarily disabled until agent_data_processing dependency is added
+// TODO: Re-enable when agent_data_processing dependency is added
 // use agent_data_processing::{
 //     ingestion::{IngestionStage, UnifiedIngestor, CaptionsIngestor, DiagramsIngestor, VideoIngestor, SlidesIngestor, FileWatcher},
 //     enrichment::{EnrichmentStage, UnifiedEnrichmentStage, VisionEnricher, AsrEnricher, EntityEnricher, VisualCaptioningEnricher, CircuitBreaker},
@@ -12,6 +12,20 @@ use anyhow::{Context, Result};
 //     Block, EnrichedBlock, BlockData, EnrichedContent, ExtractedEntity, VisualElement, VisualElementType, ExtractedTopic,
 //     DataInput, DataSource, ContentType,
 // };
+
+// Temporary stub types until agent_data_processing is available
+#[derive(Debug)]
+pub struct UnifiedIngestor;
+#[derive(Debug)]
+pub struct FileWatcher;
+#[derive(Debug)]
+pub struct UnifiedEnrichmentStage;
+#[derive(Debug)]
+pub struct UnifiedIndexer;
+#[derive(Debug)]
+pub struct JobScheduler;
+#[derive(Debug)]
+pub struct CircuitBreaker;
 use crate::coreml::{CoreMLManager, CoreMLModelType, InferenceResult};
 // Stub types until agent_data_processing is available
 pub struct Block {
@@ -429,7 +443,7 @@ impl MultimodalOrchestrator {
 
         let mut results: Vec<ProcessingResult> = Vec::new();
         for task in tasks {
-            let result = task.await.context("Task execution failed")?;
+            let result = task.await.context("Task execution failed")??;
             results.push(result);
         }
 

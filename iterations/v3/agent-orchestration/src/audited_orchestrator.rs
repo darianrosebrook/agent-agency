@@ -23,6 +23,10 @@ use crate::audit_trail::{
 };
 // TODO: These modules need to be implemented or moved from other crates
 use crate::types::OrchestratorConfig;
+
+// Placeholder orchestrator type until main orchestrator is implemented
+#[derive(Debug)]
+pub struct Orchestrator;
 // use crate::planning::agent::PlanningAgent;
 // use crate::frontier::{Frontier, FrontierConfig, FrontierError};
 // use agent_data_processing::operations::{validate_changeset_with_waiver, WaiverRequest, apply_waiver};
@@ -30,6 +34,7 @@ use crate::types::OrchestratorConfig;
 
 use data_infrastructure::api::WaiverRequest;
 use data_infrastructure::DatabaseClient;
+use crate::error_handling::{CircuitBreaker, CircuitBreakerStats, CircuitBreakerState};
 
 // Real types now available from restored modules
 // Placeholder types removed
@@ -144,7 +149,7 @@ impl AuditedOrchestrator {
     /// Create a new audited orchestrator
     pub async fn new(config: AuditedOrchestratorConfig) -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
         let audit_manager = Arc::new(AuditTrailManager::new(config.audit_config));
-        let progress_tracker = Arc::new(crate::tracking::progress_tracker::ProgressTracker::new());
+        let progress_tracker = Arc::new(String::new()); // TODO: Replace with actual ProgressTracker when tracking module is implemented
         let db_client = config.db_client.clone();
         let orchestrator = Arc::new(Orchestrator::new_with_dependencies(
             config.orchestrator_config,
@@ -276,7 +281,7 @@ impl AuditedOrchestrator {
                         Some("Auto-approved low-risk budget exceedance".to_string())
                     ).map_err(|e| AuditError::InvalidInput(e))?;
 
-                    let approved_json = serde_json::to_string(&approved_waiver)
+                    let approved_json = serde_json::to_value(&approved_waiver)
                         .map_err(|e| AuditError::Audit(crate::audit_trail::AuditError::Serialization(e)))?;
 
                     let mut approval_params = std::collections::HashMap::new();

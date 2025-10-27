@@ -207,7 +207,7 @@ impl LegacyOrchestratorAdapter {
         //     description: desc.description.clone(),
         //     requirements: vec![], // Simplified for now
         //     priority: self.convert_priority(desc.priority),
-        };
+        // };
 
         // TODO: Execute with multimodal orchestrator
         // let result = self.orchestrator.process_task(multimodal_task).await?;
