@@ -819,15 +819,15 @@ impl CliInterface {
     async fn execute_strict_mode(
         &self,
         description: String,
-        files: Option<String>,
-        model: Option<String>,
+        _files: Option<String>,
+        _model: Option<String>,
         watch: bool,
         max_iterations: usize,
     ) -> Result<()> {
         println!(" Submitting task for strict mode execution...");
 
         // Submit task with strict mode flag
-        let task_request = TaskSubmissionRequest {
+        let _task_request = TaskSubmissionRequest {
             description: description.clone(),
             context: Some("strict mode execution".to_string()),
             priority: Some("high".to_string()),
@@ -853,15 +853,15 @@ impl CliInterface {
     async fn execute_auto_mode(
         &self,
         description: String,
-        files: Option<String>,
-        model: Option<String>,
+        _files: Option<String>,
+        _model: Option<String>,
         watch: bool,
-        max_iterations: usize,
+        _max_iterations: usize,
     ) -> Result<()> {
         println!(" Submitting task for auto mode execution...");
 
         // Submit task with auto mode flag
-        let task_request = TaskSubmissionRequest {
+        let _task_request = TaskSubmissionRequest {
             description: description.clone(),
             context: Some("auto mode execution".to_string()),
             priority: Some("medium".to_string()),
@@ -885,15 +885,15 @@ impl CliInterface {
     async fn execute_dry_run_mode(
         &self,
         description: String,
-        files: Option<String>,
-        model: Option<String>,
+        _files: Option<String>,
+        _model: Option<String>,
         watch: bool,
-        max_iterations: usize,
+        _max_iterations: usize,
     ) -> Result<()> {
         println!("👁️  Submitting task for dry-run execution...");
 
         // Submit task with dry-run flag
-        let task_request = TaskSubmissionRequest {
+        let _task_request = TaskSubmissionRequest {
             description: description.clone(),
             context: Some("dry-run execution".to_string()),
             priority: Some("low".to_string()),

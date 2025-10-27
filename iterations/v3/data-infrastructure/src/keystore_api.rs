@@ -14,6 +14,7 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
+use base64::{Engine as _, engine::general_purpose};
 
 use crate::AppState;
 use crate::audit::extract_audit_context;
@@ -67,7 +68,7 @@ pub async fn store_key(
     let audit_context = extract_audit_context(&headers, Some(addr));
 
     // Decode the base64 value
-    let key_bytes = match base64::decode(&request.value) {
+    let key_bytes = match general_purpose::STANDARD.decode(&request.value) {
         Ok(bytes) => bytes,
         Err(_) => {
             return Ok(Json(ApiResponse {
@@ -148,7 +149,7 @@ pub async fn get_key(
 
     match state.keystore.get_key(&uuid, &audit_context.user_id.unwrap_or_else(|| "anonymous".to_string())).await {
         Ok(key_bytes) => {
-            let encoded_value = base64::encode(&key_bytes);
+            let encoded_value = general_purpose::STANDARD.encode(&key_bytes);
             Ok(Json(ApiResponse {
                 success: true,
                 data: Some(serde_json::json!({
@@ -191,7 +192,7 @@ pub async fn update_key(
 
     // Decode value if provided
     let key_bytes = if let Some(ref value) = request.value {
-        match base64::decode(value) {
+        match general_purpose::STANDARD.decode(value) {
             Ok(bytes) => Some(bytes),
             Err(_) => {
                 return Ok(Json(ApiResponse {

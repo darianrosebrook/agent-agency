@@ -6,7 +6,6 @@
 use crate::telemetry::TelemetryCollector;
 use crate::ane::infer::execute::InferenceMetrics;
 use crate::ane::ane_errors::{ANEError, Result};
-use std::collections::HashMap;
 use std::time::{Duration, Instant};
 use tracing::{info, warn, error};
 

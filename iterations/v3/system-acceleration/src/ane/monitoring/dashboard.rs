@@ -6,7 +6,6 @@
 use crate::ane::monitoring::yolo_monitor::{YOLOPerformanceMonitor, YOLOPerformanceStats, YOLOPerformanceThresholds};
 use crate::ane::optimization::ane_optimizer::{ANEOptimizer, ANEOptimizationStrategy, ANEMemoryOptimizer, BatchOptimizer};
 use crate::telemetry::TelemetryCollector;
-use std::collections::HashMap;
 use std::time::{Duration, Instant};
 use tracing::{info, warn, debug};
 

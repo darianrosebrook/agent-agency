@@ -14,7 +14,6 @@ use std::convert::Infallible;
 use std::time::Duration;
 use tokio_stream::{wrappers::IntervalStream, Stream, StreamExt};
 use tokio::time;
-use uuid::Uuid;
 use tracing::{info, warn, error};
 
 use crate::{

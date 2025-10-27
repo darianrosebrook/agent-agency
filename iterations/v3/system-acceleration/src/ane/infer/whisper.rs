@@ -9,7 +9,6 @@ use crate::ane::models::whisper_model::{
     WordTimestamp, WhisperInferenceOptions, PreprocessedAudio,
     AudioPreprocessingConfig,
 };
-use crate::ane::compat::coreml::coreml;
 use std::time::Instant;
 
 /// Whisper inference executor

@@ -18,7 +18,6 @@ use regex::Regex;
 use std::io::Read;
 use sha2::{Sha256, Digest};
 use chrono::Utc;
-use uuid::Uuid;
 
 /// Result from ingestion operations
 pub type IngestionResult = DataProcessingResult<ProcessingOutput>;

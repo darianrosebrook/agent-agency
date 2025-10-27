@@ -843,7 +843,7 @@ impl DataConsistencyManager {
     }
 
     /// Execute an update operation
-    async fn execute_update_operation(&self, tx: &mut sqlx::Transaction<'_, sqlx::Postgres>, operation: &TransactionOperation, transaction_id: &str) -> Result<(), String> {
+    async fn execute_update_operation(&self, tx: &mut sqlx::Transaction<'_, sqlx::Postgres>, operation: &TransactionOperation, _transaction_id: &str) -> Result<(), String> {
         let table = &operation.table;
         let data = &operation.data;
 
@@ -891,7 +891,7 @@ impl DataConsistencyManager {
     }
 
     /// Execute a delete operation
-    async fn execute_delete_operation(&self, tx: &mut sqlx::Transaction<'_, sqlx::Postgres>, operation: &TransactionOperation, transaction_id: &str) -> Result<(), String> {
+    async fn execute_delete_operation(&self, tx: &mut sqlx::Transaction<'_, sqlx::Postgres>, operation: &TransactionOperation, _transaction_id: &str) -> Result<(), String> {
         let table = &operation.table;
         let data = &operation.data;
 

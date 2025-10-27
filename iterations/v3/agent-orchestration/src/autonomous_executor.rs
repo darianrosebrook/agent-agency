@@ -229,6 +229,7 @@ pub struct TaskExecutionState {
 }
 
 /// Autonomous executor that runs tasks end-to-end
+#[derive(Clone)]
 pub struct AutonomousExecutor {
     config: AutonomousExecutorConfig,
     progress_tracker: Arc<ProgressTracker>,
@@ -499,7 +500,7 @@ impl AutonomousExecutor {
                 data_migration: false,
             },
             scope: TaskScope {
-                in: vec![],
+                r#in: vec![],
                 out: vec![],
             },
             acceptance_criteria: vec![],

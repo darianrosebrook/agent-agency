@@ -53,7 +53,7 @@ pub struct DatabaseClient {
 
 impl DatabaseClient {
     /// Execute a parameterized query
-    pub async fn execute(&self, query: &str, params: &[&(dyn sqlx::Encode<'_, sqlx::Postgres> + Send + Sync)]) -> Result<sqlx::postgres::PgQueryResult> {
+    pub async fn execute(&self, query: &str, _params: &[&(dyn sqlx::Encode<'_, sqlx::Postgres> + Send + Sync)]) -> Result<sqlx::postgres::PgQueryResult> {
         sqlx::query(query)
             .execute(&self.pool)
         .await
@@ -69,7 +69,7 @@ impl DatabaseClient {
     }
 
     /// Execute a parameterized query and return a single row
-    pub async fn query_one_with_params(&self, query: &str, params: &[&(dyn sqlx::Encode<'_, sqlx::Postgres> + Send + Sync)]) -> Result<Option<sqlx::postgres::PgRow>> {
+    pub async fn query_one_with_params(&self, query: &str, _params: &[&(dyn sqlx::Encode<'_, sqlx::Postgres> + Send + Sync)]) -> Result<Option<sqlx::postgres::PgRow>> {
         sqlx::query(query)
             .fetch_optional(&self.pool)
             .await
@@ -77,7 +77,7 @@ impl DatabaseClient {
     }
 
     /// Execute a parameterized query and return rows
-    pub async fn query_with_params(&self, query: &str, params: &[&(dyn sqlx::Encode<'_, sqlx::Postgres> + Send + Sync)]) -> Result<Vec<sqlx::postgres::PgRow>> {
+    pub async fn query_with_params(&self, query: &str, _params: &[&(dyn sqlx::Encode<'_, sqlx::Postgres> + Send + Sync)]) -> Result<Vec<sqlx::postgres::PgRow>> {
         sqlx::query(query)
             .fetch_all(&self.pool)
             .await

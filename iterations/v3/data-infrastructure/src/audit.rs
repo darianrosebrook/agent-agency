@@ -203,12 +203,12 @@ impl AuditLogger {
     /// Get task audit trail
     pub async fn get_task_audit_trail(
         &self,
-        task_id: &str,
+        _task_id: &str,
         limit: Option<i64>,
         since: Option<DateTime<Utc>>,
     ) -> Result<Vec<Value>, Box<dyn std::error::Error>> {
-        let limit_val = limit.unwrap_or(100);
-        let since_ts = since.map(|dt| dt.to_rfc3339());
+        let _limit_val = limit.unwrap_or(100);
+        let _since_ts = since.map(|dt| dt.to_rfc3339());
 
         let query = r#"
             SELECT id, ts, user_id, action, old_state, new_state, details,

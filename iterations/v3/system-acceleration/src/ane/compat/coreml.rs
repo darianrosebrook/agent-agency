@@ -837,7 +837,7 @@ pub fn mistral_tokenizer_encode(
     }
 
     if text.is_null() {
-        unsafe { *error_out = std::ffi::CString::new("Null text pointer").unwrap().into_raw(); }
+        *error_out = std::ffi::CString::new("Null text pointer").unwrap().into_raw();
         return -1;
     }
 
@@ -845,7 +845,7 @@ pub fn mistral_tokenizer_encode(
     let text_str = match cstr.to_str() {
         Ok(s) => s,
         Err(_) => {
-            unsafe { *error_out = std::ffi::CString::new("Invalid UTF-8 text").unwrap().into_raw(); }
+            *error_out = std::ffi::CString::new("Invalid UTF-8 text").unwrap().into_raw();
             return -1;
         }
     };
@@ -1633,7 +1633,7 @@ fn extract_output_tensor(_prediction: &MLFeatureProvider) -> Result<Tensor> {
 }
 
 /// Query model for its actual input specifications
-pub fn query_model_inputs(model_ref: &coreml::ModelRef) -> Result<Vec<TensorSpec>> {
+pub fn query_model_inputs(_model_ref: &coreml::ModelRef) -> Result<Vec<TensorSpec>> {
     #[cfg(target_os = "macos")]
     {
         // For now, return expected Mistral inputs as the model would report them
@@ -1669,7 +1669,7 @@ pub fn query_model_inputs(model_ref: &coreml::ModelRef) -> Result<Vec<TensorSpec
 }
 
 /// Query model for its actual output specifications
-pub fn query_model_outputs(model_ref: &coreml::ModelRef) -> Result<Vec<TensorSpec>> {
+pub fn query_model_outputs(_model_ref: &coreml::ModelRef) -> Result<Vec<TensorSpec>> {
     #[cfg(target_os = "macos")]
     {
         // For now, return expected Mistral outputs as the model would report them
