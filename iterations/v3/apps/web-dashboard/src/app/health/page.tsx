@@ -67,11 +67,11 @@ export default function HealthDashboardPage() {
   const fetchHealthData = async () => {
     setRefreshing(true);
     try {
-      const response = await apiClient.get('/health');
+      const response = await apiClient.request<SystemHealth>('/health');
       setHealthData(response.data);
       setLastUpdate(new Date());
     } catch (error) {
-      handleError(error);
+      handleError(error as any);
     } finally {
       setRefreshing(false);
     }
@@ -95,7 +95,7 @@ export default function HealthDashboardPage() {
       { name: 'API Gateway', status: 'healthy', response_time: 45, last_check: new Date().toISOString(), uptime_percentage: 99.9 },
       { name: 'Database', status: 'healthy', response_time: 12, last_check: new Date().toISOString(), uptime_percentage: 99.95 },
       { name: 'Task Processor', status: 'healthy', response_time: 89, last_check: new Date().toISOString(), uptime_percentage: 99.7 },
-      { name: 'Cache Layer', status: 'warning', response_time: 234, last_check: new Date().toISOString(), uptime_percentage: 98.2 },
+      { name: 'Cache Layer', status: 'degraded', response_time: 234, last_check: new Date().toISOString(), uptime_percentage: 98.2 },
       { name: 'File Storage', status: 'healthy', response_time: 67, last_check: new Date().toISOString(), uptime_percentage: 99.8 },
     ]);
   }, []);

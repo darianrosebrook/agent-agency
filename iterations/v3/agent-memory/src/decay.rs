@@ -21,7 +21,7 @@ pub struct MemoryDecayEngine {
 impl MemoryDecayEngine {
     /// Create a new decay engine
     pub async fn new(config: &DecayConfig) -> MemoryResult<Self> {
-        let db_config = data_infrastructure::DatabaseConfig::default();
+        let db_config = DatabaseConfig::default();
         let db_client = Arc::new(DatabaseClient::new(db_config).await?);
 
         Ok(Self {
@@ -36,7 +36,7 @@ impl MemoryDecayEngine {
         config: &DecayConfig,
         workspace_registry: Arc<crate::workspace_registry::WorkspaceRegistry>
     ) -> MemoryResult<Self> {
-        let db_config = data_infrastructure::DatabaseConfig::default();
+        let db_config = DatabaseConfig::default();
         let db_client = Arc::new(DatabaseClient::new(db_config).await?);
 
         Ok(Self {
@@ -45,6 +45,7 @@ impl MemoryDecayEngine {
             workspace_registry: Some(workspace_registry),
         })
     }
+
 
     /// Run a full decay cycle on all memories
     pub async fn run_decay_cycle(&self) -> MemoryResult<usize> {
@@ -126,7 +127,7 @@ impl MemoryDecayEngine {
                 total_decayed += updated.rows_affected() as usize;
 
                 debug!("Applied workspace decay multiplier {:.2} to {} memories in workspace {}",
-                       workspace_decay_multiplier, updated.rows_affected(), workspace.name);
+                        workspace_decay_multiplier, updated.rows_affected(), workspace.name);
             }
         }
 
@@ -142,9 +143,9 @@ impl MemoryDecayEngine {
         // Base decay: more aggressive for workspaces not accessed recently
         let base_decay = if hours_since_access < 24.0 {
             1.0 // No extra decay for recently accessed workspaces
-        } else if hours_since_access < 168.0 { // Week
+        } else if hours_since_access < 168.0 {  // Week
             0.95 // Slight decay
-        } else if hours_since_access < 720.0 { // Month
+        } else if hours_since_access < 720.0 {  // Month
             0.85 // Moderate decay
         } else {
             0.7 // Heavy decay for workspaces not accessed in a month
@@ -350,7 +351,7 @@ impl MemoryDecayEngine {
         let now = Utc::now();
 
         for memory in memories.iter_mut() {
-            let age_hours = (now - memory.memory.timestamp).num_seconds() as f32 / 3600.0;
+            let age_hours = (now - memory.memory.created_at).num_seconds() as f32 / 3600.0;
 
             // Recency boost: newer memories get higher weight
             let recency_boost = if age_hours < 24.0 {
@@ -367,7 +368,7 @@ impl MemoryDecayEngine {
             // Add temporal reasoning to path
             if recency_boost > 1.0 {
                 memory.reasoning_path.push(format!("Temporal boost: {:.2}x ({}h ago)",
-                                                 recency_boost, age_hours));
+                                                  recency_boost, age_hours));
             }
         }
 
@@ -460,7 +461,7 @@ impl MemoryDecayEngine {
     }
 }
 
-/// Decay statistics
+// Decay statistics
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DecayStats {
     pub total_memories: usize,

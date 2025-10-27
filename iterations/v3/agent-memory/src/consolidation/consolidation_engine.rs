@@ -103,13 +103,14 @@ impl MemoryConsolidationEngine {
         }
 
         for (_window, window_memories) in time_groups {
-            if window_memories.len() >= config.summarization_threshold {
+            let window_size = window_memories.len();
+            if window_size >= config.summarization_threshold {
                 // Generate temporal summary
                 let summary = self.summarization.summarize_temporal_sequence(window_memories).await?;
                 result.generated_summaries += 1;
             }
 
-            result.consolidated_memories += window_memories.len();
+            result.consolidated_memories += window_size;
         }
 
         result.processing_time_ms = start_time.elapsed().as_millis() as u64;

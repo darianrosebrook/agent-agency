@@ -349,20 +349,16 @@ impl MemoryPressureManager {
     }
 
     pub async fn monitor_and_respond(&self) {
-        let manager = Arc::new(self.clone());
+        let mut interval = tokio::time::interval(std::time::Duration::from_secs(30));
 
-        tokio::spawn(async move {
-            let mut interval = tokio::time::interval(std::time::Duration::from_secs(30));
+        loop {
+            interval.tick().await;
 
-            loop {
-                interval.tick().await;
-
-                let pressure = manager.memory_manager.get_memory_pressure();
-                if pressure >= MemoryPressure::Moderate {
-                    manager.handle_pressure(pressure).await;
-                }
+            let pressure = self.memory_manager.get_memory_pressure();
+            if pressure >= MemoryPressure::Moderate {
+                self.handle_pressure(pressure).await;
             }
-        });
+        }
     }
 }
 

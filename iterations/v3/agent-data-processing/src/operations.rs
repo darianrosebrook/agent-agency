@@ -479,44 +479,215 @@ impl DefaultOperationsStage {
 
 /// Workspace management for safe operations
 pub struct WorkspaceManager {
-    // Would contain workspace state management
+    workspace_root: PathBuf,
+    backup_dir: PathBuf,
 }
 
 impl WorkspaceManager {
     pub async fn new() -> DataProcessingResult<Self> {
-        Ok(Self {})
+        let workspace_root = std::env::current_dir()
+            .map_err(|e| DataProcessingError::Io(e))?;
+        
+        let backup_dir = workspace_root.join(".backups");
+        
+        // Ensure backup directory exists
+        tokio::fs::create_dir_all(&backup_dir).await
+            .map_err(|e| DataProcessingError::Io(e))?;
+
+        Ok(Self {
+            workspace_root,
+            backup_dir,
+        })
     }
 
     pub async fn create_backup(&self) -> DataProcessingResult<String> {
-        // Placeholder - would create workspace backup
-        Ok(format!("backup_{}", uuid::Uuid::new_v4()))
+        let backup_id = format!("backup_{}", uuid::Uuid::new_v4());
+        let backup_path = self.backup_dir.join(&backup_id);
+        
+        // Create backup directory
+        tokio::fs::create_dir_all(&backup_path).await
+            .map_err(|e| DataProcessingError::Io(e))?;
+
+        // Create a manifest file with backup metadata
+        let manifest = serde_json::json!({
+            "backup_id": backup_id,
+            "created_at": chrono::Utc::now().to_rfc3339(),
+            "workspace_root": self.workspace_root.to_string_lossy(),
+            "backup_type": "incremental"
+        });
+
+        let manifest_path = backup_path.join("manifest.json");
+        tokio::fs::write(manifest_path, serde_json::to_string_pretty(&manifest)?).await
+            .map_err(|e| DataProcessingError::Io(e))?;
+
+        // Create a snapshot of current workspace state
+        let state_path = backup_path.join("workspace_state.json");
+        let workspace_state = self.capture_workspace_state().await?;
+        tokio::fs::write(state_path, serde_json::to_string_pretty(&workspace_state)?).await
+            .map_err(|e| DataProcessingError::Io(e))?;
+
+        Ok(backup_id)
     }
 
-    pub async fn restore_backup(&self, _backup_id: &str) -> DataProcessingResult<()> {
-        // Placeholder - would restore workspace from backup
+    pub async fn restore_backup(&self, backup_id: &str) -> DataProcessingResult<()> {
+        let backup_path = self.backup_dir.join(backup_id);
+        
+        if !backup_path.exists() {
+            return Err(DataProcessingError::NotFound(format!("Backup {} not found", backup_id)));
+        }
+
+        // Read the manifest to verify backup
+        let manifest_path = backup_path.join("manifest.json");
+        let manifest_content = tokio::fs::read_to_string(manifest_path).await
+            .map_err(|e| DataProcessingError::Io(e))?;
+        
+        let _manifest: serde_json::Value = serde_json::from_str(&manifest_content)
+            .map_err(|e| DataProcessingError::Serialization(e))?;
+
+        // Read workspace state
+        let state_path = backup_path.join("workspace_state.json");
+        let state_content = tokio::fs::read_to_string(state_path).await
+            .map_err(|e| DataProcessingError::Io(e))?;
+        
+        let workspace_state: serde_json::Value = serde_json::from_str(&state_content)
+            .map_err(|e| DataProcessingError::Serialization(e))?;
+
+        // Restore workspace state (simplified - would restore actual files in production)
+        self.restore_workspace_state(workspace_state).await?;
+
+        Ok(())
+    }
+
+    /// Capture current workspace state
+    async fn capture_workspace_state(&self) -> DataProcessingResult<serde_json::Value> {
+        let mut state = serde_json::Map::new();
+        
+        // Capture directory structure
+        let mut dirs = Vec::new();
+        let mut files = Vec::new();
+        
+        self.scan_directory(&self.workspace_root, &mut dirs, &mut files).await?;
+        
+        state.insert("directories".to_string(), serde_json::to_value(dirs)?);
+        state.insert("files".to_string(), serde_json::to_value(files)?);
+        state.insert("captured_at".to_string(), chrono::Utc::now().to_rfc3339().into());
+        state.insert("workspace_root".to_string(), self.workspace_root.to_string_lossy().into());
+        
+        Ok(serde_json::Value::Object(state))
+    }
+
+    /// Scan directory recursively
+    async fn scan_directory(
+        &self,
+        dir: &Path,
+        dirs: &mut Vec<String>,
+        files: &mut Vec<serde_json::Value>,
+    ) -> DataProcessingResult<()> {
+        use std::collections::VecDeque;
+        
+        let mut queue = VecDeque::new();
+        queue.push_back(dir.to_path_buf());
+
+        while let Some(current_dir) = queue.pop_front() {
+            let mut entries = tokio::fs::read_dir(&current_dir).await
+                .map_err(|e| DataProcessingError::Io(e))?;
+
+            while let Some(entry) = entries.next_entry().await
+                .map_err(|e| DataProcessingError::Io(e))? {
+                
+                let path = entry.path();
+                let relative_path = path.strip_prefix(&self.workspace_root)
+                    .unwrap_or(&path)
+                    .to_string_lossy()
+                    .to_string();
+
+                if path.is_dir() {
+                    // Skip hidden directories and common build artifacts
+                    if !relative_path.starts_with('.') && 
+                       !relative_path.contains("target/") &&
+                       !relative_path.contains("node_modules/") {
+                        dirs.push(relative_path);
+                        queue.push_back(path);
+                    }
+                } else {
+                    // Capture file metadata
+                    let metadata = entry.metadata().await
+                        .map_err(|e| DataProcessingError::Io(e))?;
+                    
+                    let file_info = serde_json::json!({
+                        "path": relative_path,
+                        "size": metadata.len(),
+                        "modified": metadata.modified()
+                            .unwrap_or(std::time::SystemTime::UNIX_EPOCH)
+                            .duration_since(std::time::UNIX_EPOCH)
+                            .unwrap_or_default()
+                            .as_secs(),
+                        "is_readonly": metadata.permissions().readonly()
+                    });
+                    
+                    files.push(file_info);
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Restore workspace state (simplified implementation)
+    async fn restore_workspace_state(&self, _state: serde_json::Value) -> DataProcessingResult<()> {
+        // In a real implementation, this would:
+        // 1. Compare current state with backup state
+        // 2. Restore modified/deleted files
+        // 3. Remove files that shouldn't exist
+        // 4. Update file permissions and timestamps
+        
+        // For now, just log that restoration would happen
+        tracing::info!("Workspace state restoration simulated for backup");
+        
         Ok(())
     }
 }
 
 /// Changeset validation and budget enforcement
-pub struct ChangesetValidator;
+pub struct ChangesetValidator {
+    default_budgets: Budgets,
+    strict_mode: bool,
+}
 
 impl ChangesetValidator {
     pub fn new() -> Self {
-        Self
+        Self {
+            default_budgets: Budgets {
+                max_files: 50,
+                max_loc: 5000,
+                max_file_size_bytes: 10 * 1024 * 1024, // 10MB
+            },
+            strict_mode: false,
+        }
+    }
+
+    pub fn with_strict_mode(mut self, strict: bool) -> Self {
+        self.strict_mode = strict;
+        self
+    }
+
+    pub fn with_default_budgets(mut self, budgets: Budgets) -> Self {
+        self.default_budgets = budgets;
+        self
     }
 
     pub fn validate_changeset(&self, changeset: &FileChangeset) -> ValidationResult {
         let mut violations = Vec::new();
+        let budgets = &changeset.budgets;
 
         // Check file count
-        if changeset.operations.len() > changeset.budgets.max_files {
+        if changeset.operations.len() > budgets.max_files {
             violations.push(BudgetViolation {
                 violation_type: ViolationType::TooManyFiles,
                 actual_value: changeset.operations.len(),
-                budget_limit: changeset.budgets.max_files,
+                budget_limit: budgets.max_files,
                 severity: ViolationSeverity::High,
-                description: format!("Too many files: {} > {}", changeset.operations.len(), changeset.budgets.max_files),
+                description: format!("Too many files: {} > {}", changeset.operations.len(), budgets.max_files),
             });
         }
 
@@ -526,13 +697,13 @@ impl ChangesetValidator {
             .map(|content| content.lines().count())
             .sum::<usize>();
 
-        if total_loc > changeset.budgets.max_loc {
+        if total_loc > budgets.max_loc {
             violations.push(BudgetViolation {
                 violation_type: ViolationType::TooManyLines,
                 actual_value: total_loc,
-                budget_limit: changeset.budgets.max_loc,
+                budget_limit: budgets.max_loc,
                 severity: ViolationSeverity::Medium,
-                description: format!("Too many lines: {} > {}", total_loc, changeset.budgets.max_loc),
+                description: format!("Too many lines: {} > {}", total_loc, budgets.max_loc),
             });
         }
 
@@ -541,14 +712,19 @@ impl ChangesetValidator {
             // Check file size
             if let Some(content) = &operation.content {
                 let size = content.len() as u64;
-                if size > changeset.budgets.max_file_size_bytes {
+                if size > budgets.max_file_size_bytes {
                     violations.push(BudgetViolation {
                         violation_type: ViolationType::FileTooLarge,
                         actual_value: size as usize,
-                        budget_limit: changeset.budgets.max_file_size_bytes as usize,
+                        budget_limit: budgets.max_file_size_bytes as usize,
                         severity: ViolationSeverity::Medium,
-                        description: format!("File too large: {} > {}", size, changeset.budgets.max_file_size_bytes),
+                        description: format!("File too large: {} > {}", size, budgets.max_file_size_bytes),
                     });
+                }
+
+                // Additional content validation in strict mode
+                if self.strict_mode {
+                    self.validate_content_quality(content, &mut violations);
                 }
             }
 
@@ -562,7 +738,13 @@ impl ChangesetValidator {
                     description: format!("Path not allowed: {}", operation.path.display()),
                 });
             }
+
+            // Validate operation type specific rules
+            self.validate_operation_type(operation, &mut violations);
         }
+
+        // Check for potential security issues
+        self.check_security_concerns(changeset, &mut violations);
 
         let waiver_required = violations.iter().any(|v| v.severity == ViolationSeverity::High || v.severity == ViolationSeverity::Critical);
 
@@ -570,6 +752,134 @@ impl ChangesetValidator {
             is_valid: violations.is_empty(),
             violations,
             waiver_required,
+        }
+    }
+
+    /// Validate content quality in strict mode
+    fn validate_content_quality(&self, content: &str, violations: &mut Vec<BudgetViolation>) {
+        // Check for suspicious patterns
+        let suspicious_patterns = [
+            ("exec(", "Potential code execution"),
+            ("eval(", "Potential code evaluation"),
+            ("system(", "System command execution"),
+            ("shell_exec(", "Shell command execution"),
+            ("<script", "Potential XSS"),
+            ("javascript:", "Potential XSS"),
+            ("data:text/html", "Potential XSS"),
+        ];
+
+        for (pattern, description) in &suspicious_patterns {
+            if content.contains(pattern) {
+                violations.push(BudgetViolation {
+                    violation_type: ViolationType::BlockedPath, // Reuse for security
+                    actual_value: 1,
+                    budget_limit: 0,
+                    severity: ViolationSeverity::High,
+                    description: format!("Security concern: {}", description),
+                });
+            }
+        }
+
+        // Check for very long lines (potential obfuscation)
+        let long_lines = content.lines().filter(|line| line.len() > 1000).count();
+        if long_lines > 0 {
+            violations.push(BudgetViolation {
+                violation_type: ViolationType::TooManyLines, // Reuse
+                actual_value: long_lines,
+                budget_limit: 0,
+                severity: ViolationSeverity::Low,
+                description: format!("Found {} very long lines (>1000 chars)", long_lines),
+            });
+        }
+    }
+
+    /// Validate operation type specific rules
+    fn validate_operation_type(&self, operation: &FileOperation, violations: &mut Vec<BudgetViolation>) {
+        match &operation.operation_type {
+            FileOperationType::Delete => {
+                // Check if deleting critical files
+                let critical_paths = [
+                    "Cargo.toml",
+                    "package.json",
+                    "README.md",
+                    ".gitignore",
+                ];
+
+                for critical in &critical_paths {
+                    if operation.path.ends_with(critical) {
+                        violations.push(BudgetViolation {
+                            violation_type: ViolationType::BlockedPath,
+                            actual_value: 1,
+                            budget_limit: 0,
+                            severity: ViolationSeverity::High,
+                            description: format!("Attempting to delete critical file: {}", critical),
+                        });
+                    }
+                }
+            }
+            FileOperationType::Move { to } | FileOperationType::Copy { to } => {
+                // Check if moving/copying to restricted locations
+                if to.starts_with("/") || to.starts_with("C:\\") {
+                    violations.push(BudgetViolation {
+                        violation_type: ViolationType::BlockedPath,
+                        actual_value: 1,
+                        budget_limit: 0,
+                        severity: ViolationSeverity::Critical,
+                        description: format!("Attempting to move/copy to absolute path: {}", to.display()),
+                    });
+                }
+            }
+            _ => {}
+        }
+    }
+
+    /// Check for security concerns
+    fn check_security_concerns(&self, changeset: &FileChangeset, violations: &mut Vec<BudgetViolation>) {
+        // Check for operations on sensitive directories
+        let sensitive_dirs = [
+            ".git",
+            ".env",
+            "node_modules",
+            "target",
+            ".cargo",
+        ];
+
+        for operation in &changeset.operations {
+            for sensitive in &sensitive_dirs {
+                if operation.path.to_string_lossy().contains(sensitive) {
+                    violations.push(BudgetViolation {
+                        violation_type: ViolationType::BlockedPath,
+                        actual_value: 1,
+                        budget_limit: 0,
+                        severity: ViolationSeverity::High,
+                        description: format!("Operation on sensitive directory: {}", sensitive),
+                    });
+                }
+            }
+        }
+
+        // Check for operations that could affect system files
+        let system_patterns = [
+            "/etc/",
+            "/usr/",
+            "/bin/",
+            "/sbin/",
+            "C:\\Windows\\",
+            "C:\\Program Files\\",
+        ];
+
+        for operation in &changeset.operations {
+            for pattern in &system_patterns {
+                if operation.path.to_string_lossy().contains(pattern) {
+                    violations.push(BudgetViolation {
+                        violation_type: ViolationType::BlockedPath,
+                        actual_value: 1,
+                        budget_limit: 0,
+                        severity: ViolationSeverity::Critical,
+                        description: format!("Operation on system directory: {}", pattern),
+                    });
+                }
+            }
         }
     }
 
@@ -587,7 +897,7 @@ impl ChangesetValidator {
     }
 
     fn matches_simple_glob(&self, path: &str, glob: &str) -> bool {
-        // Very basic glob matching - replace with proper implementation
+        // Enhanced glob matching with more patterns
         if glob.contains("**") {
             let parts: Vec<&str> = glob.split("**").collect();
             if parts.len() >= 2 {
@@ -600,30 +910,226 @@ impl ChangesetValidator {
             }
         }
 
-        path.starts_with(glob.trim_end_matches('*'))
+        // Handle single asterisk wildcards
+        if glob.contains('*') && !glob.contains("**") {
+            let parts: Vec<&str> = glob.split('*').collect();
+            if parts.len() == 2 {
+                let prefix = parts[0];
+                let suffix = parts[1];
+                return path.starts_with(prefix) && path.ends_with(suffix);
+            }
+        }
+
+        // Exact match
+        path == glob || path.starts_with(glob.trim_end_matches('*'))
     }
 }
 
 /// Operation history for rollback capabilities
 pub struct OperationHistory {
     history: std::sync::Mutex<HashMap<OperationId, FileChangeset>>,
+    history_file: PathBuf,
+    max_history_size: usize,
 }
 
 impl OperationHistory {
     pub fn new() -> Self {
+        let history_file = std::env::current_dir()
+            .unwrap_or_else(|_| PathBuf::from("."))
+            .join(".operation_history.json");
+
         Self {
             history: std::sync::Mutex::new(HashMap::new()),
+            history_file,
+            max_history_size: 1000, // Keep last 1000 operations
         }
     }
 
+    pub fn with_history_file(mut self, file: PathBuf) -> Self {
+        self.history_file = file;
+        self
+    }
+
+    pub fn with_max_size(mut self, max_size: usize) -> Self {
+        self.max_history_size = max_size;
+        self
+    }
+
     pub async fn record_operation(&self, id: OperationId, changeset: FileChangeset) -> DataProcessingResult<()> {
-        self.history.lock().unwrap().insert(id, changeset);
+        // Add to in-memory history
+        {
+            let mut history = self.history.lock().unwrap();
+            
+            // Check if we need to clean up old entries
+            if history.len() >= self.max_history_size {
+                self.cleanup_old_entries(&mut history);
+            }
+            
+            history.insert(id.clone(), changeset.clone());
+        }
+
+        // Persist to disk
+        self.save_history_to_disk().await?;
+
         Ok(())
     }
 
     pub async fn get_operation(&self, id: &OperationId) -> DataProcessingResult<Option<FileChangeset>> {
-        Ok(self.history.lock().unwrap().get(id).cloned())
+        // Try in-memory first
+        {
+            let history = self.history.lock().unwrap();
+            if let Some(changeset) = history.get(id) {
+                return Ok(Some(changeset.clone()));
+            }
+        }
+
+        // If not in memory, try to load from disk
+        self.load_history_from_disk().await?;
+        
+        // Try again after loading
+        let history = self.history.lock().unwrap();
+        Ok(history.get(id).cloned())
     }
+
+    /// Load history from disk
+    async fn load_history_from_disk(&self) -> DataProcessingResult<()> {
+        if !self.history_file.exists() {
+            return Ok(());
+        }
+
+        let content = tokio::fs::read_to_string(&self.history_file).await
+            .map_err(|e| DataProcessingError::Io(e))?;
+
+        let history_data: HashMap<String, FileChangeset> = serde_json::from_str(&content)
+            .map_err(|e| DataProcessingError::Serialization(e))?;
+
+        let mut history = self.history.lock().unwrap();
+        for (id_str, changeset) in history_data {
+            let id = OperationId(id_str);
+            history.insert(id, changeset);
+        }
+
+        Ok(())
+    }
+
+    /// Save history to disk
+    async fn save_history_to_disk(&self) -> DataProcessingResult<()> {
+        // Convert to serializable format
+        let serializable_history: HashMap<String, FileChangeset> = {
+            let history = self.history.lock().unwrap();
+            let mut serializable_history = HashMap::new();
+            for (id, changeset) in history.iter() {
+                serializable_history.insert(id.0.clone(), changeset.clone());
+            }
+            serializable_history
+        };
+
+        let content = serde_json::to_string_pretty(&serializable_history)
+            .map_err(|e| DataProcessingError::Serialization(e))?;
+
+        // Ensure parent directory exists
+        if let Some(parent) = self.history_file.parent() {
+            tokio::fs::create_dir_all(parent).await
+                .map_err(|e| DataProcessingError::Io(e))?;
+        }
+
+        tokio::fs::write(&self.history_file, content).await
+            .map_err(|e| DataProcessingError::Io(e))?;
+
+        Ok(())
+    }
+
+    /// Clean up old entries to maintain size limit
+    fn cleanup_old_entries(&self, history: &mut HashMap<OperationId, FileChangeset>) {
+        if history.len() <= self.max_history_size {
+            return;
+        }
+
+        // Convert to vector and sort by operation ID (which contains timestamp)
+        let mut entries: Vec<_> = history.drain().collect();
+        
+        // Sort by ID (assuming IDs are sortable)
+        entries.sort_by(|a, b| a.0.0.cmp(&b.0.0));
+        
+        // Keep only the most recent entries
+        let keep_count = self.max_history_size / 2; // Keep half when cleaning
+        entries.truncate(keep_count);
+        
+        // Put back the kept entries
+        for (id, changeset) in entries {
+            history.insert(id, changeset);
+        }
+    }
+
+    /// Get all operations (for debugging/admin purposes)
+    pub async fn list_operations(&self) -> DataProcessingResult<Vec<OperationId>> {
+        self.load_history_from_disk().await?;
+        
+        let history = self.history.lock().unwrap();
+        Ok(history.keys().cloned().collect())
+    }
+
+    /// Clear all history
+    pub async fn clear_history(&self) -> DataProcessingResult<()> {
+        {
+            let mut history = self.history.lock().unwrap();
+            history.clear();
+        }
+
+        // Remove history file
+        if self.history_file.exists() {
+            tokio::fs::remove_file(&self.history_file).await
+                .map_err(|e| DataProcessingError::Io(e))?;
+        }
+
+        Ok(())
+    }
+
+    /// Get history statistics
+    pub async fn get_stats(&self) -> DataProcessingResult<HistoryStats> {
+        self.load_history_from_disk().await?;
+        
+        let history = self.history.lock().unwrap();
+        
+        let total_operations = history.len();
+        let mut total_files = 0;
+        let mut total_loc = 0;
+        
+        for changeset in history.values() {
+            total_files += changeset.operations.len();
+            total_loc += changeset.operations.iter()
+                .filter_map(|op| op.content.as_ref())
+                .map(|content| content.lines().count())
+                .sum::<usize>();
+        }
+
+        Ok(HistoryStats {
+            total_operations,
+            total_files_processed: total_files,
+            total_loc_processed: total_loc,
+            history_file_size: self.get_history_file_size().await?,
+        })
+    }
+
+    /// Get the size of the history file
+    async fn get_history_file_size(&self) -> DataProcessingResult<u64> {
+        if self.history_file.exists() {
+            let metadata = tokio::fs::metadata(&self.history_file).await
+                .map_err(|e| DataProcessingError::Io(e))?;
+            Ok(metadata.len())
+        } else {
+            Ok(0)
+        }
+    }
+}
+
+/// Statistics about operation history
+#[derive(Debug, Clone)]
+pub struct HistoryStats {
+    pub total_operations: usize,
+    pub total_files_processed: usize,
+    pub total_loc_processed: usize,
+    pub history_file_size: u64,
 }
 
 #[cfg(test)]

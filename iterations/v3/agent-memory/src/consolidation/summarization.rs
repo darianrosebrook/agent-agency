@@ -92,13 +92,7 @@ impl MemorySummarizer {
 
         for memory in memories {
             // Extract meaningful content from memory (simplified)
-            let content = match &memory.content {
-                crate::memory_types::MemoryContent::Text(text) => text.clone(),
-                crate::memory_types::MemoryContent::Structured(data) => {
-                    serde_json::to_string_pretty(data).unwrap_or_default()
-                }
-                _ => "Complex memory content".to_string(),
-            };
+            let content = memory.content.clone();
             contents.push(content);
         }
 
@@ -142,7 +136,8 @@ impl MemorySummarizer {
         let window_duration = chrono::Duration::hours(self.config.temporal_grouping_hours as i64);
 
         for memory in memories {
-            let window_start = memory.created_at.timestamp() / (self.config.temporal_grouping_hours * 3600) * (self.config.temporal_grouping_hours * 3600);
+            let temporal_window_seconds = self.config.temporal_grouping_hours as i64 * 3600;
+            let window_start = memory.created_at.timestamp() / temporal_window_seconds * temporal_window_seconds;
             let window_time = chrono::DateTime::from_timestamp(window_start as i64, 0)
                 .unwrap_or(chrono::Utc::now());
 

@@ -7,27 +7,109 @@
 use crate::memory_types::*;
 use crate::MemoryResult;
 use crate::MemoryError;
-use agent_data_processing::{ContextManager as UnifiedContextManager, ContextConfig, ContextData, ContextMetadata, ContextPreservationRequest, ContextRetrievalRequest, PreservationOptions, RetrievalOptions};
+// Simple context manager implementation to avoid circular dependencies
+// TODO: Integrate with full context management system when circular dependency is resolved
+
+/// Simple context manager interface for memory operations
+#[derive(Debug)]
+pub struct SimpleContextManager {
+    // Placeholder for context management
+}
+
+impl SimpleContextManager {
+    pub async fn new(_config: &ContextConfig) -> MemoryResult<Self> {
+        Ok(Self {})
+    }
+
+    pub async fn manage_context_lifecycle(&self) -> MemoryResult<()> {
+        // Placeholder implementation
+        Ok(())
+    }
+
+    pub async fn get_stats(&self) -> MemoryResult<ContextStats> {
+        Ok(ContextStats {
+            total_contexts: 0,
+            total_storage_size: 0,
+            working_memory_contexts: 0,
+            folded_contexts: 0,
+            average_context_size: 0.0,
+            recent_accesses: 0,
+            oldest_context_age_hours: 0,
+            compression_ratio: 1.0,
+        })
+    }
+}
 use chrono::{DateTime, Utc, Duration};
 use serde_json;
 use std::sync::Arc;
 use tracing::{debug, info, warn};
 use uuid::Uuid;
 
-/// Context management for working memory and folding
+/// Simple context manager to avoid circular dependencies
+/// TODO: Replace with full ContextManager from agent-data-processing when available
 #[derive(Debug)]
-pub struct ContextManager {
-    /// Unified context manager from agent-data-processing
-    unified_manager: Arc<UnifiedContextManager>,
+struct ContextManager {
+    config: ContextConfig,
 }
 
 impl ContextManager {
+    async fn new(_config: ContextConfig) -> MemoryResult<Self> {
+        // TODO: Implement full context manager integration
+        Ok(Self { config: _config })
+    }
+
+    async fn manage_context_lifecycle(&self) -> MemoryResult<()> {
+        // TODO: Implement context lifecycle management
+        debug!("Context lifecycle management not yet implemented");
+        Ok(())
+    }
+
+    async fn fold_context(&self, _context_id: &Uuid) -> MemoryResult<()> {
+        // TODO: Implement context folding
+        debug!("Context folding not yet implemented");
+        Ok(())
+    }
+
+    async fn retrieve_context(&self, _request: &ContextRetrievalRequest) -> MemoryResult<ContextData> {
+        // TODO: Implement context retrieval
+        Err(MemoryError::NotFound("Context retrieval not implemented".to_string()))
+    }
+
+    async fn preserve_context(&self, _request: &ContextPreservationRequest) -> MemoryResult<()> {
+        // TODO: Implement context preservation
+        debug!("Context preservation not yet implemented");
+        Ok(())
+    }
+
+    async fn get_stats(&self) -> MemoryResult<ContextStats> {
+        // TODO: Implement stats retrieval
+        Ok(ContextStats {
+            total_contexts: 0,
+            total_storage_size: 0,
+            working_memory_contexts: 0,
+            folded_contexts: 0,
+            average_context_size: 0.0,
+            recent_accesses: 0,
+            oldest_context_age_hours: 0.0,
+            compression_ratio: 1.0,
+        })
+    }
+}
+
+/// Context management for working memory and folding
+#[derive(Debug)]
+pub struct MemoryContextManager {
+    /// Simple context manager implementation
+    context_manager: Arc<SimpleContextManager>,
+}
+
+impl MemoryContextManager {
     /// Create a new context manager
     pub async fn new(config: &ContextConfig) -> MemoryResult<Self> {
-        let unified_manager = Arc::new(UnifiedContextManager::new(config.clone()).await?);
+        let context_manager = Arc::new(SimpleContextManager::new(config).await?);
 
         Ok(Self {
-            unified_manager,
+            context_manager,
         })
     }
 
@@ -37,8 +119,8 @@ impl ContextManager {
         let context_uuid = Uuid::parse_str(context_id)
             .map_err(|e| MemoryError::Other(format!("Invalid context ID: {}", e)))?;
 
-        // Delegate to unified manager
-        self.unified_manager.manage_context_lifecycle().await
+        // Delegate to context manager
+        self.context_manager.manage_context_lifecycle().await
             .map_err(|e| MemoryError::Other(format!("Context lifecycle management failed: {}", e)))?;
 
         Ok(())
@@ -81,7 +163,7 @@ impl ContextManager {
 
         // Delegate to unified manager
         match self.unified_manager.fold_context(&context_uuid).await {
-            Ok(folded) => Ok(self.convert_folded_context(folded)),
+            Ok(folded) => Ok(self.fold_context(folded).await?),
             Err(e) => Err(MemoryError::Other(format!("Context folding failed: {}", e))),
         }
     }
@@ -140,8 +222,8 @@ impl ContextManager {
 
     /// Get context statistics
     pub async fn get_context_stats(&self) -> MemoryResult<ContextStats> {
-        match self.unified_manager.get_stats().await {
-            Ok(stats) => Ok(self.convert_context_stats(stats)),
+        match self.context_manager.get_stats().await {
+            Ok(stats) => Ok(stats),
             Err(e) => Err(MemoryError::Other(format!("Failed to get stats: {}", e))),
         }
     }
@@ -181,39 +263,40 @@ impl ContextManager {
 
     // Helper methods for type conversion
 
-    fn convert_folded_context(&self, folded: agent_data_processing::FoldedContext) -> FoldedContext {
-        match folded {
-            agent_data_processing::FoldedContext::Compressed(data) => {
-                FoldedContext::Compressed {
-                    data,
-                    original_size: 0, // TODO: track this
-                    compressed_size: data.len(),
-                    compression_ratio: 1.0, // TODO: calculate this
-                }
-            }
-            agent_data_processing::FoldedContext::Summarized(summary) => {
-                FoldedContext::Summarized(ContextSummary {
-                    task_type: "unknown".to_string(),
-                    description: summary,
-                    domain: vec![],
-                    entity_count: 0,
-                    temporal_range: None,
-                    key_entities: vec![],
-                    summary_created: Utc::now(),
-                })
-            }
-            agent_data_processing::FoldedContext::Archived(location) => {
-                FoldedContext::Archived(ArchivedContext {
-                    context: TaskContext::default(), // TODO: reconstruct properly
-                    archived_at: Utc::now(),
-                    access_count: 0,
-                    last_accessed: None,
-                    retention_policy: RetentionPolicy::LongTerm,
-                })
-            }
-            agent_data_processing::FoldedContext::Deleted => FoldedContext::Deleted,
-        }
-    }
+    // TODO: Re-enable when agent_data_processing crate is available
+    // fn convert_folded_context(&self, folded: agent_data_processing::FoldedContext) -> FoldedContext {
+    //     match folded {
+    //         agent_data_processing::FoldedContext::Compressed(data) => {
+    //             FoldedContext::Compressed {
+    //                 data,
+    //                 original_size: 0, // TODO: track this
+    //                 compressed_size: data.len(),
+    //                 compression_ratio: 1.0, // TODO: calculate this
+    //             }
+    //         }
+    //         agent_data_processing::FoldedContext::Summarized(summary) => {
+    //             FoldedContext::Summarized(ContextSummary {
+    //                 task_type: "unknown".to_string(),
+    //                 description: summary,
+    //                 domain: vec![],
+    //                 entity_count: 0,
+    //                 temporal_range: None,
+    //                 key_entities: vec![],
+    //                 summary_created: Utc::now(),
+    //             })
+    //         }
+    //         agent_data_processing::FoldedContext::Archived(location) => {
+    //             FoldedContext::Archived(ArchivedContext {
+    //                 context: TaskContext::default(), // TODO: reconstruct properly
+    //                 archived_at: Utc::now(),
+    //                 access_count: 0,
+    //                 last_accessed: None,
+    //                 retention_policy: RetentionPolicy::LongTerm,
+    //             })
+    //         }
+    //         agent_data_processing::FoldedContext::Deleted => FoldedContext::Deleted,
+    //     }
+    // }
 
     fn convert_to_task_context(&self, context_data: ContextData) -> MemoryResult<TaskContext> {
         // Extract task context from generic context data
@@ -248,16 +331,17 @@ impl ContextManager {
         })
     }
 
-    fn convert_context_stats(&self, stats: agent_data_processing::ContextStats) -> ContextStats {
-        ContextStats {
-            total_contexts: stats.total_contexts,
-            total_storage_size: stats.total_storage_size,
-            working_memory_contexts: stats.working_memory_contexts,
-            folded_contexts: stats.folded_contexts,
-            average_context_size: stats.average_context_size,
-            recent_accesses: stats.recent_accesses,
-            oldest_context_age_hours: stats.oldest_context_age_hours,
-            compression_ratio: stats.compression_ratio,
-        }
-    }
+    // TODO: Re-enable when agent_data_processing crate is available
+    // fn convert_context_stats(&self, stats: agent_data_processing::ContextStats) -> ContextStats {
+    //     ContextStats {
+    //         total_contexts: stats.total_contexts,
+    //         total_storage_size: stats.total_storage_size,
+    //         working_memory_contexts: stats.working_memory_contexts,
+    //         folded_contexts: stats.folded_contexts,
+    //         average_context_size: stats.average_context_size,
+    //         recent_accesses: stats.recent_accesses,
+    //         oldest_context_age_hours: stats.oldest_context_age_hours,
+    //         compression_ratio: stats.compression_ratio,
+    //     }
+    // }
 }

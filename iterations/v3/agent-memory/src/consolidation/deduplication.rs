@@ -107,7 +107,8 @@ impl MemoryDeduplicator {
         let mut time_groups = std::collections::HashMap::new();
 
         for memory in memories {
-            let window_start = memory.created_at.timestamp() / (self.config.time_window_hours * 3600) * (self.config.time_window_hours * 3600);
+            let time_window_seconds = self.config.time_window_hours as i64 * 3600;
+            let window_start = memory.created_at.timestamp() / time_window_seconds * time_window_seconds;
             time_groups.entry(window_start).or_insert_with(Vec::new).push(memory);
         }
 
@@ -159,15 +160,8 @@ impl MemoryDeduplicator {
 
     /// Calculate content-based similarity
     fn calculate_content_similarity(&self, a: &crate::memory_types::Memory, b: &crate::memory_types::Memory) -> crate::MemoryResult<f32> {
-        match (&a.content, &b.content) {
-            (crate::memory_types::MemoryContent::Text(text_a), crate::memory_types::MemoryContent::Text(text_b)) => {
-                Ok(self.text_similarity(text_a, text_b))
-            }
-            (crate::memory_types::MemoryContent::Structured(data_a), crate::memory_types::MemoryContent::Structured(data_b)) => {
-                Ok(self.structured_similarity(data_a, data_b))
-            }
-            _ => Ok(0.0), // Different content types are not similar
-        }
+        // Simple string similarity for now
+        Ok(self.text_similarity(&a.content, &b.content))
     }
 
     /// Calculate temporal similarity (closer in time = more similar)
@@ -196,8 +190,10 @@ impl MemoryDeduplicator {
 
         // Tag similarity (Jaccard coefficient)
         if let (Some(tags_a), Some(tags_b)) = (&a.tags, &b.tags) {
-            let intersection: std::collections::HashSet<_> = tags_a.intersection(tags_b).collect();
-            let union: std::collections::HashSet<_> = tags_a.union(tags_b).collect();
+            let set_a: std::collections::HashSet<_> = tags_a.iter().collect();
+            let set_b: std::collections::HashSet<_> = tags_b.iter().collect();
+            let intersection: std::collections::HashSet<_> = set_a.intersection(&set_b).collect();
+            let union: std::collections::HashSet<_> = set_a.union(&set_b).collect();
             if !union.is_empty() {
                 similarity += intersection.len() as f32 / union.len() as f32;
             }

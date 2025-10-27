@@ -61,6 +61,7 @@ impl WorkspaceRegistry {
                 .unwrap_or_else(|| "Unknown".to_string()),
             path: path.to_path_buf(),
             access,
+            created_at: Utc::now(),
             discovered_at: Utc::now(),
             last_accessed: Utc::now(),
             access_count: 0,
@@ -141,7 +142,8 @@ impl WorkspaceRegistry {
 
     /// Discover workspaces in configured paths
     async fn discover_workspaces(&self) -> MemoryResult<()> {
-        for base_path in &self.config.discovery_paths {
+        for base_path_str in &self.config.discovery_paths {
+            let base_path = std::path::Path::new(base_path_str);
             if !base_path.exists() {
                 continue;
             }

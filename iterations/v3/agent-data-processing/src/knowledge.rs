@@ -11,6 +11,7 @@ use crate::data_processing_types::*;
 use crate::{DataProcessingResult, DataProcessingError};
 use async_trait::async_trait;
 use std::collections::HashMap;
+#[cfg(feature = "memory-integration")]
 use agent_memory::graph_engine::RelationshipType;
 
 /// Result from knowledge operations
@@ -343,16 +344,19 @@ impl DefaultKnowledgeStage {
     }
 }
 
-/// Wikidata integration
+/// Wikidata integration with real API calls
 pub struct WikidataIntegrator {
-    // Would contain Wikidata API client and caching
     cache: std::sync::Mutex<HashMap<String, KnowledgeItem>>,
+    client: reqwest::Client,
+    base_url: String,
 }
 
 impl WikidataIntegrator {
     pub async fn new() -> DataProcessingResult<Self> {
         Ok(Self {
             cache: std::sync::Mutex::new(HashMap::new()),
+            client: reqwest::Client::new(),
+            base_url: "https://www.wikidata.org/w/api.php".to_string(),
         })
     }
 
@@ -362,45 +366,317 @@ impl WikidataIntegrator {
             return Ok(Some(cached.clone()));
         }
 
-        // Placeholder - would query Wikidata API
-        // For demo purposes, return mock data for known concepts
-        let item = match concept {
-            "Paris" => Some(KnowledgeItem {
-                id: "Q90".to_string(),
-                source: KnowledgeSource::Wikidata,
-                title: "Paris".to_string(),
-                description: Some("Capital and most populous city of France".to_string()),
-                content: "Paris is the capital and most populous city of France. It is located in northern France.".to_string(),
-                entity_type: "city".to_string(),
-                confidence_score: 0.95,
-                relationships: vec![
-                    KnowledgeRelationship {
-                        target_id: "Q142".to_string(), // France
-                        relationship_type: "located_in".to_string(),
-                        confidence: 0.99,
-                        evidence: vec!["Geographic fact".to_string()],
-                    }
-                ],
-                metadata: HashMap::from([
-                    ("wikidata_id".to_string(), "Q90".into()),
-                    ("population".to_string(), 2140526.into()),
-                ]),
-                last_updated: chrono::Utc::now(),
-            }),
-            _ => None,
-        };
-
-        // Cache the result
-        if let Some(ref item) = item {
-            self.cache.lock().unwrap().insert(concept.to_string(), item.clone());
+        // Search for entity by label
+        let search_result = self.search_entity_by_label(concept).await?;
+        
+        if let Some(entity_id) = search_result {
+            // Get detailed entity information
+            let item = self.get_entity_details(&entity_id, concept).await?;
+            
+            // Cache the result
+            if let Some(ref item) = item {
+                self.cache.lock().unwrap().insert(concept.to_string(), item.clone());
+            }
+            
+            Ok(item)
+        } else {
+            Ok(None)
         }
-
-        Ok(item)
     }
 
-    pub async fn search_concepts(&self, _query: &str, _limit: usize) -> DataProcessingResult<Vec<KnowledgeItem>> {
-        // Placeholder - would search Wikidata
-        Ok(vec![])
+    /// Search for entity by label using Wikidata API
+    async fn search_entity_by_label(&self, label: &str) -> DataProcessingResult<Option<String>> {
+        let params = [
+            ("action", "wbsearchentities"),
+            ("format", "json"),
+            ("language", "en"),
+            ("search", label),
+            ("limit", "1"),
+        ];
+
+        let response = self.client
+            .get(&self.base_url)
+            .query(&params)
+            .send()
+            .await
+            .map_err(|e| DataProcessingError::Http(format!("Wikidata search failed: {}", e)))?;
+
+        if !response.status().is_success() {
+            return Err(DataProcessingError::Http(format!("Wikidata API returned status: {}", response.status())));
+        }
+
+        let data: serde_json::Value = response.json().await
+            .map_err(|e| DataProcessingError::Http(format!("JSON parsing failed: {}", e)))?;
+
+        if let Some(search_results) = data["search"].as_array() {
+            if let Some(first_result) = search_results.first() {
+                if let Some(entity_id) = first_result["id"].as_str() {
+                    return Ok(Some(entity_id.to_string()));
+                }
+            }
+        }
+
+        Ok(None)
+    }
+
+    /// Get detailed entity information from Wikidata
+    async fn get_entity_details(&self, entity_id: &str, concept: &str) -> DataProcessingResult<Option<KnowledgeItem>> {
+        let params = [
+            ("action", "wbgetentities"),
+            ("format", "json"),
+            ("ids", entity_id),
+            ("props", "labels|descriptions|claims"),
+            ("languages", "en"),
+        ];
+
+        let response = self.client
+            .get(&self.base_url)
+            .query(&params)
+            .send()
+            .await
+            .map_err(|e| DataProcessingError::Http(format!("Wikidata entity fetch failed: {}", e)))?;
+
+        if !response.status().is_success() {
+            return Err(DataProcessingError::Http(format!("Wikidata API returned status: {}", response.status())));
+        }
+
+        let data: serde_json::Value = response.json().await
+            .map_err(|e| DataProcessingError::Http(format!("JSON parsing failed: {}", e)))?;
+
+        if let Some(entity_data) = data["entities"][entity_id].as_object() {
+            let title = entity_data["labels"]["en"]["value"]
+                .as_str()
+                .unwrap_or(concept)
+                .to_string();
+
+            let description = entity_data["descriptions"]["en"]["value"]
+                .as_str()
+                .map(|s| s.to_string());
+
+            let entity_type = self.determine_entity_type(entity_data);
+            let relationships = self.extract_relationships(entity_data);
+            let metadata = self.extract_metadata(entity_data);
+
+            let item = KnowledgeItem {
+                id: entity_id.to_string(),
+                source: KnowledgeSource::Wikidata,
+                title,
+                description: description.clone(),
+                content: description.clone().unwrap_or_else(|| "No description available".to_string()),
+                entity_type,
+                confidence_score: 0.9,
+                relationships,
+                metadata,
+                last_updated: chrono::Utc::now(),
+            };
+
+            Ok(Some(item))
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Determine entity type from Wikidata claims
+    fn determine_entity_type(&self, entity_data: &serde_json::Map<String, serde_json::Value>) -> String {
+        if let Some(claims) = entity_data.get("claims") {
+            // Check for instance of (P31)
+            if let Some(instance_of) = claims.get("P31") {
+                if let Some(values) = instance_of.as_array() {
+                    if let Some(first_value) = values.first() {
+                        if let Some(mainsnak) = first_value.get("mainsnak") {
+                            if let Some(datavalue) = mainsnak.get("datavalue") {
+                                if let Some(value) = datavalue.get("value") {
+                                    if let Some(id) = value.get("id").and_then(|v| v.as_str()) {
+                                        return self.map_wikidata_type_to_entity_type(id);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        "unknown".to_string()
+    }
+
+    /// Map Wikidata entity IDs to entity types
+    fn map_wikidata_type_to_entity_type(&self, wikidata_id: &str) -> String {
+        match wikidata_id {
+            "Q5" => "person".to_string(),           // human
+            "Q43229" => "organization".to_string(),  // organization
+            "Q515" => "city".to_string(),            // city
+            "Q6256" => "country".to_string(),       // country
+            "Q486972" => "human settlement".to_string(), // human settlement
+            "Q16521" => "taxon".to_string(),        // taxon
+            "Q7725634" => "literary work".to_string(), // literary work
+            "Q11424" => "film".to_string(),         // film
+            "Q3305213" => "painting".to_string(),   // painting
+            _ => "entity".to_string(),
+        }
+    }
+
+    /// Extract relationships from Wikidata claims
+    fn extract_relationships(&self, entity_data: &serde_json::Map<String, serde_json::Value>) -> Vec<KnowledgeRelationship> {
+        let mut relationships = Vec::new();
+
+        if let Some(claims) = entity_data.get("claims") {
+            for (property_id, claim_values) in claims.as_object().unwrap_or(&serde_json::Map::new()) {
+                if let Some(values) = claim_values.as_array() {
+                    for value in values {
+                        if let Some(mainsnak) = value.get("mainsnak") {
+                            if let Some(datavalue) = mainsnak.get("datavalue") {
+                                if let Some(value_data) = datavalue.get("value") {
+                                    if let Some(target_id) = value_data.get("id").and_then(|v| v.as_str()) {
+                                        let relationship_type = self.map_property_to_relationship_type(property_id);
+                                        let confidence = self.calculate_claim_confidence(value);
+                                        
+                                        relationships.push(KnowledgeRelationship {
+                                            target_id: target_id.to_string(),
+                                            relationship_type,
+                                            confidence,
+                                            evidence: vec![format!("Wikidata property {}", property_id)],
+                                        });
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        relationships
+    }
+
+    /// Map Wikidata property IDs to relationship types
+    fn map_property_to_relationship_type(&self, property_id: &str) -> String {
+        match property_id {
+            "P17" => "country".to_string(),           // country
+            "P131" => "located_in".to_string(),       // located in administrative territorial entity
+            "P19" => "place_of_birth".to_string(),   // place of birth
+            "P20" => "place_of_death".to_string(),   // place of death
+            "P27" => "citizen_of".to_string(),       // country of citizenship
+            "P106" => "occupation".to_string(),      // occupation
+            "P108" => "employer".to_string(),        // employer
+            "P39" => "position_held".to_string(),    // position held
+            "P569" => "date_of_birth".to_string(),   // date of birth
+            "P570" => "date_of_death".to_string(),   // date of death
+            _ => "related_to".to_string(),
+        }
+    }
+
+    /// Calculate confidence score for a claim
+    fn calculate_claim_confidence(&self, claim: &serde_json::Value) -> f64 {
+        // Base confidence
+        let mut confidence = 0.8;
+
+        // Check for qualifiers that might affect confidence
+        if let Some(qualifiers) = claim.get("qualifiers") {
+            if qualifiers.as_object().map_or(false, |q| !q.is_empty()) {
+                confidence += 0.1; // More qualifiers = higher confidence
+            }
+        }
+
+        // Check for references
+        if let Some(references) = claim.get("references") {
+            if let Some(ref_array) = references.as_array() {
+                confidence += (ref_array.len() as f64 * 0.05).min(0.2);
+            }
+        }
+
+        confidence.min(1.0)
+    }
+
+    /// Extract metadata from Wikidata entity
+    fn extract_metadata(&self, entity_data: &serde_json::Map<String, serde_json::Value>) -> HashMap<String, serde_json::Value> {
+        let mut metadata = HashMap::new();
+
+        // Add basic metadata
+        metadata.insert("wikidata_id".to_string(), entity_data.get("id").cloned().unwrap_or(serde_json::Value::Null));
+        
+        // Extract specific claims as metadata
+        if let Some(claims) = entity_data.get("claims") {
+            // Population (P1082)
+            if let Some(population) = claims.get("P1082") {
+                if let Some(first_value) = population.as_array().and_then(|a| a.first()) {
+                    if let Some(amount) = first_value.get("mainsnak")
+                        .and_then(|s| s.get("datavalue"))
+                        .and_then(|d| d.get("value"))
+                        .and_then(|v| v.get("amount"))
+                        .and_then(|a| a.as_str()) {
+                        metadata.insert("population".to_string(), amount.parse::<f64>().unwrap_or(0.0).into());
+                    }
+                }
+            }
+
+            // Coordinates (P625)
+            if let Some(coordinates) = claims.get("P625") {
+                if let Some(first_value) = coordinates.as_array().and_then(|a| a.first()) {
+                    if let Some(value) = first_value.get("mainsnak")
+                        .and_then(|s| s.get("datavalue"))
+                        .and_then(|d| d.get("value")) {
+                        metadata.insert("coordinates".to_string(), value.clone());
+                    }
+                }
+            }
+        }
+
+        metadata
+    }
+
+    pub async fn search_concepts(&self, query: &str, limit: usize) -> DataProcessingResult<Vec<KnowledgeItem>> {
+        let params = [
+            ("action", "wbsearchentities"),
+            ("format", "json"),
+            ("language", "en"),
+            ("search", query),
+            ("limit", &limit.to_string()),
+        ];
+
+        let response = self.client
+            .get(&self.base_url)
+            .query(&params)
+            .send()
+            .await
+            .map_err(|e| DataProcessingError::Http(format!("Wikidata search failed: {}", e)))?;
+
+        if !response.status().is_success() {
+            return Err(DataProcessingError::Http(format!("Wikidata API returned status: {}", response.status())));
+        }
+
+        let data: serde_json::Value = response.json().await
+            .map_err(|e| DataProcessingError::Http(format!("JSON parsing failed: {}", e)))?;
+
+        let mut results = Vec::new();
+
+        if let Some(search_results) = data["search"].as_array() {
+            for result in search_results {
+                if let Some(entity_id) = result["id"].as_str() {
+                    if let Some(title) = result["label"].as_str() {
+                        let description = result["description"].as_str().map(|s| s.to_string());
+                        
+                        let item = KnowledgeItem {
+                            id: entity_id.to_string(),
+                            source: KnowledgeSource::Wikidata,
+                            title: title.to_string(),
+                            description: description.clone(),
+                            content: description.clone().unwrap_or_else(|| "No description available".to_string()),
+                            entity_type: "unknown".to_string(),
+                            confidence_score: 0.8,
+                            relationships: vec![],
+                            metadata: HashMap::from([
+                                ("wikidata_id".to_string(), entity_id.into()),
+                            ]),
+                            last_updated: chrono::Utc::now(),
+                        };
+                        
+                        results.push(item);
+                    }
+                }
+            }
+        }
+
+        Ok(results)
     }
 
     pub async fn get_definition(&self, entity_id: &str) -> DataProcessingResult<Option<KnowledgeItem>> {

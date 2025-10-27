@@ -44,10 +44,9 @@ av-data = "0.2"
 lopdf = "0.32"
 pdf = "0.8"
 
-# Vector operations and HNSW
-ndarray = { workspace = true }
-rand = { workspace = true }
-priority-queue = "2.0"
+# Subtitle parsing
+# subtitle-parser = "0.1" # TODO: Add when crate becomes available
+regex = "1.10"
 
 # Compression and archiving
 tar = "0.4"
@@ -66,13 +65,13 @@ governor = "0.6"
 nonzero_ext = "0.3"
 
 # Integration with agent-memory (optional to avoid circular dependencies)
-# agent-memory = { path = "../agent-memory", optional = true, features = ["database"] } # Temporarily disabled to avoid circular dependency
+agent-memory = { path = "../agent-memory", optional = true, features = ["database"] }
 
 # Integration with system-resilience
 system-resilience = { path = "../system-resilience", optional = true }
 
 # Data infrastructure (includes embedding functionality)
-# data-infrastructure = { path = "../data-infrastructure", optional = true } # Temporarily disabled to avoid circular dependency
+data-infrastructure = { path = "../data-infrastructure", optional = true }
 
 
 # Database client (avoid circular dependency - database functionality stays in database crate)
@@ -88,9 +87,9 @@ futures = "0.3"
 
 [features]
 default = ["workspace-integration"] # embeddings temporarily disabled
-# memory-integration = ["agent-memory"] # Temporarily disabled to avoid circular dependency
+memory-integration = ["agent-memory"]
 workspace-integration = ["system-resilience"]
-# embeddings = ["data-infrastructure"] # Temporarily disabled to avoid circular dependency
+embeddings = ["data-infrastructure"] # Re-enabled for conditional compilation
 
 [dev-dependencies]
 tokio-test = "0.4"

@@ -23,6 +23,7 @@ pub struct ToolRegistry {
     execution_history: Arc<RwLock<Vec<ToolExecutionResult>>>,
     statistics: Arc<RwLock<ToolRegistryStats>>,
     doc_quality_validator: Arc<DocQualityValidator>,
+    #[cfg(feature = "memory")]
     memory_system: Option<Arc<MemorySystem>>,
 }
 

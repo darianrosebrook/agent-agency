@@ -47,13 +47,12 @@ pub mod caching;
 pub mod embedding;
 pub mod file_operations;
 
-// TODO: Add missing types when available
-// pub use models::{DatabaseConfig, DatabaseClient, Row};
-// pub use migrations::{Migration, MigrationRunner};
-// pub use pooling::ConnectionPool;
-// pub use vector_store::{VectorStore, VectorQuery, VectorResult};
-// pub use backup_recovery::{BackupManager, RecoveryManager};
-// pub use audit::{DatabaseAuditor, AuditEvent};
+// Export core database types
+pub use database_config::DatabaseConfig;
+pub use simple_client::DatabaseClient;
+
+// Re-export sqlx Row type for convenience
+pub use sqlx::Row;
 
 /// Worker pool health check trait
 #[async_trait::async_trait]
@@ -99,7 +98,6 @@ pub use handlers::{PersistedTask, TaskStoreTrait};
 pub use handlers::{list_tasks, get_task, submit_task, get_api_metrics};
 pub use handlers::{create_chat_session, get_websocket_config, list_waivers, create_waiver};
 pub use handlers::{approve_waiver, get_task_provenance};
-pub use simple_client::DatabaseClient; // Simple DatabaseClient wrapper
 pub use client::orchestrator::DatabaseClient as ApiDatabaseClient; // Complex DatabaseClient
 
 // Re-export health check from api module

@@ -9,5 +9,6 @@ pub mod manager;
 pub mod types;
 
 // Re-export main types and functionality
+#[cfg(feature = "embeddings")]
 pub use manager::ContextManager;
 pub use types::*;

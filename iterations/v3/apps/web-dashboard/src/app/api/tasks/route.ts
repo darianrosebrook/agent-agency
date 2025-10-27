@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getApiClient } from "@/lib/api-client";
-import { handleApiRouteError, getHttpStatusCode } from "@/lib/error-handling";
+import { handleApiRouteError } from "@/lib/error-handling";
 
 /**
  * Task listing API proxy with enhanced error handling and abort controllers
@@ -144,7 +144,7 @@ export async function GET(request: NextRequest) {
       total: 0,
       backend_status: "error",
     }, {
-      status: getHttpStatusCode(errorResponse.error.code)
+      status: 500 // Default to 500 for API errors
     });
   }
 }
@@ -228,7 +228,7 @@ export async function POST(request: NextRequest) {
       ...errorResponse,
       backend_status: "error",
     }, {
-      status: getHttpStatusCode(errorResponse.error.code)
+      status: 500 // Default to 500 for API errors
     });
   }
 }

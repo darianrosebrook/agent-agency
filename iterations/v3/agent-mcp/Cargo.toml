@@ -63,7 +63,7 @@ prometheus = "0.13"
 lazy_static = "1.4"
 
 [features]
-default = ["memory"]
+default = [] # Temporarily disabled memory to avoid cyclic dependency
 test-utils = []
 memory = ["agent-memory/database"]
 

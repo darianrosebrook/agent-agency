@@ -119,7 +119,9 @@ impl MemoryLifecycleManager {
         let mut total_importance_gain = 0.0;
 
         for metadata in &mut metadata_list {
-            if let Some(access_pattern) = access_patterns.get(&crate::memory_types::MemoryId(metadata.importance_score.to_string())) {
+            // Create a key based on importance score range for access patterns
+            let importance_key = format!("importance_{:.1}", metadata.importance_score);
+            if let Some(access_pattern) = access_patterns.get(&importance_key) {
                 let old_importance = metadata.importance_score;
                 self.manager.apply_reinforcement(metadata, access_pattern).await?;
 

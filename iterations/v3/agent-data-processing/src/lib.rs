@@ -121,6 +121,9 @@ pub enum DataProcessingError {
     #[error("Validation error: {0}")]
     Validation(String),
 
+    #[error("Not found: {0}")]
+    NotFound(String),
+
     #[error("Resource exhausted: {0}")]
     ResourceExhausted(String),
 

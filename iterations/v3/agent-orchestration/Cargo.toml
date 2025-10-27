@@ -71,7 +71,7 @@ data-infrastructure = { path = "../data-infrastructure" }
 system-acceleration = { path = "../system-acceleration" }
 agent-memory = { path = "../agent-memory" }
 system-resilience = { path = "../system-resilience" }
-agent-data-processing = { path = "../agent-data-processing" }
+# agent-data-processing = { path = "../agent-data-processing" } # TEMPORARILY DISABLED
 development-tools = { path = "../development-tools", optional = true }
 
 # Optional observability dependency (may be disabled)

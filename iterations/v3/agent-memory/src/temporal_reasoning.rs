@@ -5,6 +5,7 @@ use crate::memory_types::*;
 use crate::MemoryResult;
 use data_infrastructure::{DatabaseClient, DatabaseConfig, Row};
 use std::sync::Arc;
+use std::collections::HashMap;
 use chrono::{DateTime, Utc, Duration};
 use serde::{Deserialize, Serialize};
 use tracing::{info, debug};
@@ -79,7 +80,7 @@ impl TemporalReasoningEngine {
                 direction: trend,
                 magnitude: self.calculate_trend_magnitude(&recent_performance),
                 confidence: 0.8,
-                time_range: time_range.clone(),
+                time_range: (time_range.start, time_range.end),
             });
         }
 
@@ -92,12 +93,21 @@ impl TemporalReasoningEngine {
         // Calculate performance summary
         let summary = self.calculate_performance_summary(&performance_values);
 
+        // Convert complex structs to expected simple types
+        let trend_directions: Vec<TrendDirection> = trends.into_iter().map(|t| t.direction).collect();
+        let change_point_times: Vec<chrono::DateTime<chrono::Utc>> = change_points.into_iter().map(|cp| cp.timestamp).collect();
+        let causality_simple: Vec<(String, String, f32)> = causality_links.into_iter()
+            .map(|cl| (cl.cause, cl.effect, cl.confidence)).collect();
+
         Ok(TemporalAnalysis {
-            time_range: time_range.clone(),
-            trends,
-            change_points,
-            causality_links,
+            time_range: (time_range.start, time_range.end),
+            trends: trend_directions,
+            change_points: change_point_times,
+            causality_links: causality_simple,
             performance_summary: summary,
+            patterns: vec![],
+            performance_metrics: HashMap::new(),
+            recommendations: vec![],
         })
     }
 
@@ -158,10 +168,9 @@ impl TemporalReasoningEngine {
                 let (timestamp, performance, _) = performance_data[i];
                 change_points.push(ChangePoint {
                     timestamp,
-                    metric: "performance_score".to_string(),
-                    change_magnitude,
                     confidence: 0.7,
-                    description: format!("Performance changed by {:.1}% around {}", change_magnitude * 100.0, timestamp),
+                    change_type: if change_magnitude > 0.0 { ChangeType::Spike } else { ChangeType::Drop },
+                    magnitude: change_magnitude.abs(),
                 });
             }
         }
@@ -223,11 +232,11 @@ impl TemporalReasoningEngine {
                 if learned_count > 0 && avg_perf > 0.7 && stddev_val < 0.2 {
                     // Strong correlation between task type and consistent high performance with learning
                     causality_links.push(CausalityLink {
-                        cause_event: format!("performing_{}", task_type.to_lowercase().replace(" ", "_")),
-                        effect_event: "high_performance_with_learning".to_string(),
+                        cause: format!("performing_{}", task_type.to_lowercase().replace(" ", "_")),
+                        effect: "high_performance_with_learning".to_string(),
                         confidence: (avg_perf as f32).min(0.9),
-                        time_delay_ms: None,
-                        supporting_evidence: vec![
+                        time_lag_seconds: 3600, // 1 hour lag
+                        evidence: vec![
                             format!("{} experiences", count),
                             format!("{:.2} avg performance", avg_perf),
                             format!("{} learning events", learned_count),
@@ -241,16 +250,9 @@ impl TemporalReasoningEngine {
     }
 
     /// Calculate performance summary statistics
-    fn calculate_performance_summary(&self, performance_data: &[(DateTime<Utc>, f32, f32)]) -> PerformanceSummary {
+    fn calculate_performance_summary(&self, performance_data: &[(DateTime<Utc>, f32, f32)]) -> String {
         if performance_data.is_empty() {
-            return PerformanceSummary {
-                average_score: 0.0,
-                best_score: 0.0,
-                worst_score: 0.0,
-                improvement_rate: 0.0,
-                consistency_score: 0.0,
-                total_samples: 0,
-            };
+            return "No performance data available".to_string();
         }
 
         let scores: Vec<f32> = performance_data.iter().map(|(_, score, _)| *score).collect();
@@ -277,14 +279,10 @@ impl TemporalReasoningEngine {
         let std_dev = variance.sqrt();
         let consistency_score = if avg_score > 0.0 { 1.0 - (std_dev / avg_score).min(1.0) } else { 0.0 };
 
-        PerformanceSummary {
-            average_score: avg_score,
-            best_score,
-            worst_score,
-            improvement_rate,
-            consistency_score,
-            total_samples: scores.len(),
-        }
+        format!(
+            "Performance Summary: Average={:.2}, Best={:.2}, Worst={:.2}, Improvement={:.1}%, Consistency={:.2}, Samples={}",
+            avg_score, best_score, worst_score, improvement_rate * 100.0, consistency_score, scores.len()
+        )
     }
 
     /// Analyze capability evolution over time
@@ -339,12 +337,26 @@ impl TemporalReasoningEngine {
                 let avg_learning_rate = learning_rates.iter().sum::<f64>() / learning_rates.len() as f64;
                 let latest_performance = timeline.last().map(|(_, _, perf)| *perf as f32).unwrap_or(0.0);
 
+                // Build evolution timeline
+                let evolution_timeline: Vec<EvolutionPoint> = timeline.into_iter()
+                    .enumerate()
+                    .map(|(idx, (timestamp, events, performance))| EvolutionPoint {
+                        timestamp,
+                        level: (idx as f32 + 1.0) / timeline.len() as f32, // Simple progression
+                        context: format!("{} learning events", events),
+                        metrics: HashMap::from([
+                            ("learning_events".to_string(), events as f32),
+                            ("performance".to_string(), performance as f32),
+                        ]),
+                    })
+                    .collect();
+
                 capability_evolution.push(CapabilityEvolution {
                     capability: capability,
-                    week: timeline.first().map(|(time, _, _)| *time).unwrap_or_else(|| Utc::now()),
-                    learned_count: timeline.iter().map(|(_, events, _)| *events as usize).sum::<usize>() as i64,
-                    avg_performance: Some(latest_performance as f64),
-                    improvement_rate: avg_learning_rate,
+                    timeline: evolution_timeline,
+                    current_level: latest_performance,
+                    predicted_level: (latest_performance + avg_learning_rate as f32 * 0.1).min(1.0),
+                    learning_rate: avg_learning_rate as f32,
                 });
             }
         }

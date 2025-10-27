@@ -22,6 +22,9 @@ pub mod decay;
 pub mod graph_engine;
 pub mod memory_manager;
 pub mod memory_types;
+
+// Re-export commonly used types
+pub use memory_types::{AgentExperience, MemoryType};
 pub mod temporal_reasoning;
 // pub mod prompting_types; // TODO: Create this module
 pub mod workspace_registry;
@@ -50,6 +53,12 @@ pub mod provenance;
 
 use std::sync::Arc;
 
+// Import types from memory_types
+use crate::memory_types::{
+    MemoryConfig, AgentExperience, MemoryId, TaskContext, ContextualMemory, 
+    ContextMatch, ReasoningQuery, ReasoningResult, TimeRange, TemporalAnalysis
+};
+
 #[cfg(feature = "observability-integration")]
 pub mod observability;
 
@@ -57,7 +66,7 @@ pub mod observability;
 mod tests;
 
 // Re-exports for public API
-pub use context_management::{ContextManager};
+pub use context_management::{MemoryContextManager};
 // pub use context_management::{FoldedContext, ContextSummary, ArchivedContext}; // TODO: Implement these types
 pub use decay::{MemoryDecayEngine, DecayStats};
 pub use graph_engine::{KnowledgeGraphEngine, Entity, Relationship, GraphQuery, GraphStats};
@@ -66,7 +75,7 @@ pub use temporal_reasoning::{TemporalReasoningEngine};
 // pub use prompting_types::*; // TODO: Uncomment when module is created
 
 // Export the main MemorySystem struct
-// pub use MemorySystem; // Remove duplicate export
+pub use MemorySystem;
 
 #[cfg(feature = "embeddings")]
 pub use embedding_integration::{EmbeddingIntegration, MemoryEmbedding};
@@ -140,7 +149,7 @@ pub struct MemorySystem {
     embedding_integration: EmbeddingIntegration,
     temporal_engine: TemporalReasoningEngine,
     decay_engine: MemoryDecayEngine,
-    context_manager: ContextManager,
+    context_manager: MemoryContextManager,
     workspace_registry: Arc<workspace_registry::WorkspaceRegistry>,
 }
 
@@ -184,7 +193,7 @@ impl MemorySystem {
             &config.decay_config,
             Arc::clone(&workspace_registry)
         ).await?;
-        let context_manager = ContextManager::new(&config.context_config).await?;
+        let context_manager = MemoryContextManager::new(&config.context_config).await?;
 
         Ok(Self {
             manager,
@@ -225,7 +234,7 @@ impl MemorySystem {
     }
 
     /// Get the context manager
-    pub fn context_manager(&self) -> &ContextManager {
+    pub fn context_manager(&self) -> &MemoryContextManager {
         &self.context_manager
     }
 
@@ -288,7 +297,21 @@ impl MemorySystem {
 
         // Add graph matches
         for (memory_id, path) in graph_matches {
-            if let Ok(memory) = self.manager.retrieve_memory(memory_id).await {
+            if let Ok(experience) = self.manager.retrieve_memory(memory_id).await {
+                // Convert AgentExperience to Memory for ContextualMemory
+                let memory = Memory {
+                    id: experience.id,
+                    content: experience.output.clone(), // Use output as primary content
+                    metadata: experience.metadata.clone(),
+                    created_at: experience.timestamp,
+                    last_accessed: experience.timestamp, // Simplified
+                    access_count: 1, // Simplified
+                    importance_score: experience.outcome.performance_score.unwrap_or(0.5),
+                    importance: experience.outcome.performance_score.unwrap_or(0.5),
+                    tags: experience.context.domain.into_iter().map(|d| d).collect::<Vec<_>>().into(),
+                    memory_type: experience.memory_type,
+                };
+
                 all_memories.push(ContextualMemory {
                     memory,
                     relevance_score: 0.8, // Graph matches get high base score

@@ -3,6 +3,7 @@
 //! Intelligent retrieval strategies for long-term memory access.
 
 use crate::long_term_management::*;
+use uuid::Uuid;
 
 /// Retrieval configuration
 #[derive(Debug, Clone)]
@@ -48,6 +49,9 @@ impl LongTermRetrievalEngine {
             archival_memories = self.retrieve_from_archives(query).await?;
         }
 
+        let active_count = active_memories.len();
+        let archival_count = archival_memories.len();
+
         // Combine and rerank results
         let combined_results = self.combine_and_rerank_results(active_memories, archival_memories, query).await?;
 
@@ -58,12 +62,14 @@ impl LongTermRetrievalEngine {
             combined_results
         };
 
+        let total_retrieved = boosted_results.len();
+
         Ok(LongTermRetrievalResult {
             memories: boosted_results,
             retrieval_stats: RetrievalStats {
-                active_memory_hits: active_memories.len(),
-                archival_retrievals: archival_memories.len(),
-                total_retrieved: boosted_results.len(),
+                active_memory_hits: active_count,
+                archival_retrievals: archival_count,
+                total_retrieved,
                 retrieval_time_ms: 0, // Would be measured
                 cache_hit_rate: self.calculate_cache_hit_rate(),
             },
@@ -209,9 +215,13 @@ impl LongTermRetrievalEngine {
 
     /// Check retrieval cache
     fn check_retrieval_cache(&self, query_id: &str) -> Option<Vec<crate::memory_types::Memory>> {
-        self.retrieval_cache.get(query_id)
-            .filter(|entry| !entry.is_expired())
-            .map(|entry| entry.memories.clone())
+        if let Ok(uuid) = Uuid::parse_str(query_id) {
+            self.retrieval_cache.get(&uuid)
+                .filter(|entry| !entry.is_expired())
+                .map(|entry| entry.memories.clone())
+        } else {
+            None
+        }
     }
 
     /// Cache retrieval results
@@ -293,7 +303,7 @@ impl RetrievalOptimizationEngine {
 
     /// Optimize retrieval strategy based on performance history
     pub async fn optimize_strategy(&mut self, latest_performance: RetrievalPerformance) -> RetrievalOptimization {
-        self.performance_history.push(latest_performance);
+        self.performance_history.push(latest_performance.clone());
 
         // Keep only recent history
         if self.performance_history.len() > 100 {

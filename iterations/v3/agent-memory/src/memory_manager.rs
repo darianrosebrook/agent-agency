@@ -23,11 +23,12 @@ pub struct MemoryManager {
 impl MemoryManager {
     /// Get workspace filter for queries based on isolation level
     fn get_workspace_filter(&self) -> Option<uuid::Uuid> {
-        match self.config.workspace_config.isolation_level {
-            crate::memory_types::WorkspaceIsolationLevel::Strict => self.workspace_id,
-            crate::memory_types::WorkspaceIsolationLevel::WorkspaceFirst => self.workspace_id,
-            crate::memory_types::WorkspaceIsolationLevel::GlobalFirst => None, // Allow global access
-            crate::memory_types::WorkspaceIsolationLevel::Unrestricted => None, // Allow all workspaces
+        match self.config.workspace_config.isolation_level.as_str() {
+            "Strict" => self.workspace_id,
+            "WorkspaceFirst" => self.workspace_id,
+            "GlobalFirst" => None, // Allow global access
+            "Unrestricted" => None, // Allow all workspaces
+            _ => self.workspace_id, // Default to strict
         }
     }
 
@@ -44,7 +45,7 @@ impl MemoryManager {
         Ok(Self {
             db_client,
             config: config.clone(),
-            workspace_id: config.workspace_config.current_workspace_id,
+            workspace_id: config.workspace_config.current_workspace_id.parse().ok(),
             workspace_registry: None,
         })
     }
@@ -59,7 +60,7 @@ impl MemoryManager {
         Ok(Self {
             db_client,
             config: config.clone(),
-            workspace_id: config.workspace_config.current_workspace_id,
+            workspace_id: config.workspace_config.current_workspace_id.parse().ok(),
             workspace_registry: Some(workspace_registry),
         })
     }
@@ -120,6 +121,7 @@ impl MemoryManager {
             memory_type: MemoryType::try_from(row.try_get::<i32, _>("memory_type")?).unwrap_or_else(|_| MemoryType::Episodic),
             timestamp: row.try_get("timestamp")?,
             metadata: serde_json::from_value(row.try_get("metadata")?).unwrap_or_default(),
+            content: format!("{} -> {}", row.try_get::<String, _>("input")?, row.try_get::<String, _>("output")?),
         };
 
         Ok(experience)
@@ -170,6 +172,7 @@ impl MemoryManager {
                 memory_type: MemoryType::try_from(row.try_get::<i32, _>("memory_type")?).unwrap_or_else(|_| MemoryType::Episodic),
                 timestamp: row.try_get("timestamp")?,
                 metadata: serde_json::from_value(row.try_get("metadata")?).unwrap_or_default(),
+                content: format!("{} -> {}", row.try_get::<String, _>("input")?, row.try_get::<String, _>("output")?),
             };
             experiences.push(experience);
         }

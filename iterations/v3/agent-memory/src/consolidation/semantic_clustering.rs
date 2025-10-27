@@ -36,9 +36,11 @@ impl SemanticClustering {
         let mut centroids = self.initialize_centroids(&memory_embeddings, k);
         let mut clusters: Vec<MemoryCluster> = Vec::new();
 
+        let mut assignments = Vec::new();
+
         for iteration in 0..self.max_iterations {
             // Assign memories to nearest centroids
-            let assignments = self.assign_to_centroids(&memory_embeddings, &centroids);
+            assignments = self.assign_to_centroids(&memory_embeddings, &centroids);
 
             // Update centroids
             let new_centroids = self.update_centroids(&memory_embeddings, &assignments, k);
@@ -294,7 +296,7 @@ impl HierarchicalClustering {
         // Start with each memory as its own cluster
         for (memory_id, embedding) in &memory_embeddings {
             clusters.push(MemoryCluster {
-                cluster_id: format!("leaf_{}", memory_id.0),
+                cluster_id: format!("leaf_{}", memory_id.simple()),
                 centroid_embedding: embedding.clone(),
                 member_memories: vec![memory_id.clone()],
                 cluster_summary: None,

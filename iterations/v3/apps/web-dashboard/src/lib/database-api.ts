@@ -1,4 +1,4 @@
-import { apiClient } from "@/lib/api-client";
+import { getApiClient } from "@/lib/api-client";
 import {
   DatabaseConnection,
   GetDatabaseTablesResponse,
@@ -36,7 +36,7 @@ class _DatabaseApiClient {
    */
   async getConnections(): Promise<DatabaseConnection[]> {
     try {
-      const response = await apiClient.request<{
+      const response = await getApiClient().request<{
         connections: DatabaseConnection[];
       }>(`${this.baseUrl}/connections`);
 
@@ -67,7 +67,7 @@ class _DatabaseApiClient {
         );
       }
 
-      const response = await apiClient.request<GetDatabaseTablesResponse>(
+      const response = await getApiClient().request<GetDatabaseTablesResponse>(
         `${this.baseUrl}/tables?connection_id=${encodeURIComponent(
           connectionId
         )}`
@@ -102,7 +102,7 @@ class _DatabaseApiClient {
       params.append("connection_id", connectionId);
       if (schema) params.append("schema", schema);
 
-      const response = await apiClient.request<GetTableSchemaResponse>(
+      const response = await getApiClient().request<GetTableSchemaResponse>(
         `${this.baseUrl}/tables/${encodeURIComponent(
           tableName
         )}/schema?${params}`
@@ -127,7 +127,7 @@ class _DatabaseApiClient {
    */
   async executeQuery(query: QueryRequest): Promise<ExecuteQueryResponse> {
     try {
-      const response = await apiClient.request<ExecuteQueryResponse>(
+      const response = await getApiClient().request<ExecuteQueryResponse>(
         `${this.baseUrl}/query`,
         {
           method: "POST",
@@ -151,7 +151,7 @@ class _DatabaseApiClient {
     searchQuery: VectorSearchQuery
   ): Promise<VectorSearchResponse> {
     try {
-      const response = await apiClient.request<VectorSearchResponse>(
+      const response = await getApiClient().request<VectorSearchResponse>(
         `${this.baseUrl}/vector-search`,
         {
           method: "POST",

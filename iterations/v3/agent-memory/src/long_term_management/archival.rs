@@ -47,19 +47,22 @@ impl MemoryArchivalManager {
         let mut failed = Vec::new();
 
         for memory in memories {
+            let memory_id = memory.id.clone();
             match self.archive_single_memory(memory).await {
                 Ok(archived_memory) => {
                     self.archived_memories.insert(archived_memory.memory_id.clone(), archived_memory.clone());
                     archived.push(archived_memory);
                 }
-                Err(e) => failed.push((memory.id.clone(), e.to_string())),
+                Err(e) => failed.push((memory_id, e.to_string())),
             }
         }
+
+        let total_processed = archived.len() + failed.len();
 
         Ok(ArchivalResult {
             archived_memories: archived,
             failed_archivals: failed,
-            total_processed: archived.len() + failed.len(),
+            total_processed,
             archival_timestamp: chrono::Utc::now(),
         })
     }
@@ -171,7 +174,8 @@ impl MemoryArchivalManager {
         let memory = if self.config.compression_enabled {
             self.decompress_memory_data(&archived.compressed_data).await?
         } else {
-            serde_json::from_slice(&archived.compressed_data)?;
+            serde_json::from_slice(&archived.compressed_data)
+                .map_err(|e| crate::MemoryError::Other(format!("Failed to deserialize memory: {}", e)))?
         };
 
         Ok(memory)
@@ -179,14 +183,8 @@ impl MemoryArchivalManager {
 
     /// Extract searchable text from memory
     fn extract_search_text(&self, memory: &crate::memory_types::Memory) -> String {
-        match &memory.content {
-            crate::memory_types::MemoryContent::Text(text) => text.clone(),
-            crate::memory_types::MemoryContent::Structured(data) => {
-                // Extract text from structured data
-                serde_json::to_string(data).unwrap_or_default()
-            }
-            _ => String::new(),
-        }
+        // Extract text from memory content (simplified)
+        memory.content.clone()
     }
 
     /// Compress memory data
@@ -203,12 +201,12 @@ impl MemoryArchivalManager {
 
     /// Select appropriate storage tier
     async fn select_storage_tier(&self, memory: &crate::memory_types::Memory) -> String {
-        let age_days = (chrono::Utc::now() - memory.created_at).num_seconds() as f64 / (24.0 * 3600.0);
+        let age_days = (chrono::Utc::now() - memory.created_at).as_seconds_f32() as f64 / (24.0 * 3600.0);
 
         // Select tier based on age and importance
         for tier in &self.config.storage_tiers {
             if let Some(max_age) = tier.max_age_days {
-                if age_days <= max_age as i64 {
+                if age_days <= max_age as f64 {
                     return tier.name.clone();
                 }
             }

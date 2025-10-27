@@ -61,7 +61,6 @@ system-configuration = { path = "../system-configuration" }
 
 # Local crates
 agent-agency-contracts = { path = "../agent-agency-contracts" }
-system-configuration = { path = "../system-configuration" }
 
 [features]
 default = []

@@ -57,7 +57,8 @@ sha2 = "0.10"
 config = { workspace = true }
 
 # Integration with existing services
-# data-infrastructure = { path = "../data-infrastructure", optional = true, default-features = false } # Temporarily disabled to avoid circular dependency
+data-infrastructure = { path = "../data-infrastructure" }
+# Note: agent-data-processing dependency removed to avoid circular dependency
 
 [dev-dependencies]
 tokio-test = "0.4"

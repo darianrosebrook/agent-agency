@@ -9,7 +9,7 @@
 
 'use client';
 
-import { Suspense, useEffect, useRef, lazy } from 'react';
+import { Suspense, useEffect, useRef, lazy, useState } from 'react';
 import { gsap } from 'gsap';
 import DashboardLayout from '@/components/shared/DashboardLayout';
 import ConnectionBanner from '@/components/shared/ConnectionBanner';
@@ -17,6 +17,24 @@ import { OnlineOnly } from '@/components/providers/ConnectionProvider';
 import { Text } from '@/design-system/primitives';
 import { useStaggerAnimation } from '@/interactions';
 import styles from './page.module.scss';
+
+// Workspace Composer
+import {
+  ComposerProvider,
+  Composer,
+  EditableInput,
+  CommandPalette,
+  ContextTray,
+  ModeSelect,
+  SendButton,
+  SendTimingMenu,
+  QuickSettingsMenu,
+  AttachMenu,
+  useComposer,
+  type CommandDef,
+  type MessageToken,
+  type SendPayload,
+} from '@/components/workspace-composer';
 
 // Lazy load heavy components for better performance
 const MetricsSection = lazy(() => import('@/components/shared/MetricsSection'));
@@ -26,11 +44,114 @@ const RecentTasksCard = lazy(() => import('@/components/shared/RecentTasksCard')
 const SLODashboard = lazy(() => import('@/components/monitoring/SLODashboard'));
 const SLOAlertsDashboard = lazy(() => import('@/components/monitoring/SLOAlertsDashboard'));
 
+// Workspace Composer Commands
+const COMMANDS: CommandDef[] = [
+  { value: "/doc", label: "New Document", description: "Create a new document" },
+  { value: "/agent", label: "Agent Mode", description: "Start an agent task" },
+  { value: "/plan", label: "Planning", description: "Create a plan or roadmap" },
+  { value: "/code", label: "Code Block", description: "Insert a code snippet" },
+  { value: "/idea", label: "Brainstorm", description: "Generate ideas" },
+];
+
 // Development utilities (tree-shaken in production)
 if (process.env.NODE_ENV === 'development') {
   import('@/utils/responsive-test').then(() => {
     // Layout testing utilities available in dev mode
   });
+}
+
+/**
+ * Workspace Composer Shell - Handles prompt interface when no tasks are running
+ */
+function WorkspaceComposerShell() {
+  const { commands, contextItems, setContextItems, meta, onSend } = useComposer();
+
+  const [tokens, setTokens] = useState<MessageToken[]>([]);
+  const [canSend, setCanSend] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [paletteAnchor, setPaletteAnchor] = useState<{ top: number; left: number } | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  const handleChange = (next: MessageToken[], text: string) => {
+    setTokens(next);
+    setCanSend(text.trim().length > 0);
+  };
+
+  const handleSlashBoundary = (rect: DOMRect) => {
+    setPaletteOpen(true);
+    setPaletteAnchor({ top: rect.top - 250, left: rect.left + 20 });
+  };
+
+  const handleSelectCommand = (cmd: CommandDef) => {
+    setTokens((prev) => [...prev, { kind: "command", command: cmd.value }]);
+    setPaletteOpen(false);
+  };
+
+  const handleSend = () => {
+    const text = tokens
+      .map((t) => (t.kind === "text" ? t.text : `${t.command}${t.value ? " " + t.value : ""}`))
+      .join(" ")
+      .trim();
+
+    const payload: SendPayload = {
+      tokens,
+      text,
+      meta,
+      context: contextItems,
+    };
+
+    onSend?.(payload);
+    setTokens([]);
+  };
+
+  return (
+    <>
+      <div className="text-center space-y-2 my-6">
+        <Text variant="display-2" className={styles.title}>
+          Start Creating
+        </Text>
+        <Text variant="paragraph-large" color="secondary" align="center">
+          Ask me anything about your workspace…
+        </Text>
+      </div>
+
+      <Composer
+        ContextTray={
+          <ContextTray
+            items={contextItems}
+            expandedId={expandedId}
+            onToggleExpand={(id) => setExpandedId((x) => (x === id ? null : id))}
+            onRemove={(id) => setContextItems((xs) => xs.filter((i) => i.id !== id))}
+          />
+        }
+        InputArea={
+          <EditableInput
+            value={tokens}
+            onChange={handleChange}
+            onEnterSend={handleSend}
+            onSlashBoundary={(rect) => handleSlashBoundary(rect)}
+          />
+        }
+        FooterLeft={
+          <>
+            <AttachMenu onAdd={(item) => setContextItems((xs) => [...xs, item])} />
+            <QuickSettingsMenu />
+            <ModeSelect />
+            <SendTimingMenu />
+          </>
+        }
+        FooterRight={<SendButton disabled={!canSend} onClick={handleSend} />}
+      />
+
+      <CommandPalette
+        open={paletteOpen}
+        anchor={paletteAnchor}
+        commands={commands}
+        onSelect={handleSelectCommand}
+        onClose={() => setPaletteOpen(false)}
+      />
+    </>
+  );
 }
 
 /**
@@ -114,8 +235,10 @@ function SLOSkeleton() {
 /**
  * Main Dashboard Page Component
  * Uses Suspense boundaries and GSAP animations
+ * Includes workspace composer for when no tasks are running
  */
 export default function DashboardPage() {
+  const [showComposer, setShowComposer] = useState(false);
   const headerRef = useRef<HTMLElement>(null);
   
   // Immediate fade-in animation for header (always visible at top)
@@ -175,17 +298,40 @@ export default function DashboardPage() {
     type: 'slideUp',
   });
 
+  const handleComposerSend = (payload: SendPayload) => {
+    // For now, just log and switch back to dashboard
+    console.log('Composer send:', payload);
+    // In the future, this would route to a new workspace/document
+    setShowComposer(false);
+  };
+
+  // Determine if we should show composer (when no active tasks)
+  // For now, we'll add a toggle button to switch views
+  const toggleView = () => setShowComposer(!showComposer);
+
   return (
     <DashboardLayout>
       <main role="main" aria-label="Dashboard" className={styles.container}>
         {/* Page Header - Immediate fade in animation with bold typography */}
         <header ref={headerRef} className={styles.header}>
           <Text variant="display-2" align="center" className={styles.title} id="page-title">
-            Dashboard
+            {showComposer ? "Start Creating" : "Dashboard"}
           </Text>
           <Text variant="paragraph-large" color="secondary" align="center" className={styles.subtitle}>
-            Welcome to Agent Agency V3. Monitor task execution and system health.
+            {showComposer
+              ? "Ask me anything about your workspace…"
+              : "Welcome to Agent Agency V3. Monitor task execution and system health."
+            }
           </Text>
+          {/* Toggle between dashboard and composer */}
+          <div className="flex justify-center mt-4">
+            <button
+              onClick={toggleView}
+              className="px-4 py-2 text-sm bg-muted hover:bg-muted/80 rounded-md transition-colors"
+            >
+              {showComposer ? "← Back to Dashboard" : "Start Creating →"}
+            </button>
+          </div>
         </header> 
 
         {/* Connection Banner - only shown when offline */}
@@ -193,43 +339,52 @@ export default function DashboardPage() {
           <ConnectionBanner />
         </OnlineOnly>
 
-        {/* Metrics Section - Above the fold for immediate visibility */}
-        <section ref={metricsRef} className={styles.metricsSection} aria-labelledby="metrics-heading">
-          <Suspense fallback={<MetricsSkeleton />}>
-            <MetricsSection />
-          </Suspense>
-        </section>
+        {showComposer ? (
+          /* Workspace Composer - When no tasks are running */
+          <ComposerProvider commands={COMMANDS} onSend={handleComposerSend}>
+            <WorkspaceComposerShell />
+          </ComposerProvider>
+        ) : (
+          <>
+            {/* Metrics Section - Above the fold for immediate visibility */}
+            <section ref={metricsRef} className={styles.metricsSection} aria-labelledby="metrics-heading">
+              <Suspense fallback={<MetricsSkeleton />}>
+                <MetricsSection />
+              </Suspense>
+            </section>
 
-        {/* Service Level Objectives Dashboard */}
-        <section ref={sloRef} className={styles.sloSection} aria-labelledby="slo-heading">
-          <Suspense fallback={<SLOSkeleton />}>
-            <SLODashboard />
-          </Suspense>
-        </section>
+            {/* Service Level Objectives Dashboard */}
+            <section ref={sloRef} className={styles.sloSection} aria-labelledby="slo-heading">
+              <Suspense fallback={<SLOSkeleton />}>
+                <SLODashboard />
+              </Suspense>
+            </section>
 
-        {/* Card Grid - Staggered animation for engaging entry */}
-        <section
-          ref={cardsGridRef}
-          className={styles.cardsGrid}
-          aria-labelledby="cards-heading"
-          role="region"
-        >
-          <Suspense fallback={<CardSkeleton />}>
-            <QuickActions />
-          </Suspense>
+            {/* Card Grid - Staggered animation for engaging entry */}
+            <section
+              ref={cardsGridRef}
+              className={styles.cardsGrid}
+              aria-labelledby="cards-heading"
+              role="region"
+            >
+              <Suspense fallback={<CardSkeleton />}>
+                <QuickActions />
+              </Suspense>
 
-          <Suspense fallback={<CardSkeleton />}>
-            <SystemStatusCard />
-          </Suspense>
+              <Suspense fallback={<CardSkeleton />}>
+                <SystemStatusCard />
+              </Suspense>
 
-          <Suspense fallback={<CardSkeleton />}>
-            <RecentTasksCard />
-          </Suspense>
+              <Suspense fallback={<CardSkeleton />}>
+                <RecentTasksCard />
+              </Suspense>
 
-          <Suspense fallback={<CardSkeleton />}>
-            <SLOAlertsDashboard />
-          </Suspense>
-        </section>
+              <Suspense fallback={<CardSkeleton />}>
+                <SLOAlertsDashboard />
+              </Suspense>
+            </section>
+          </>
+        )}
       </main>
     </DashboardLayout>
   );

@@ -59,11 +59,6 @@ export default function EnhancedAnalyticsPage() {
   const businessMetricsStats = useBusinessMetricsStats();
   const modelPerformanceStats = useModelPerformanceStats();
 
-  // Fetch initial data
-  useEffect(() => {
-    fetchAnalyticsData();
-  }, [fetchAnalyticsData]);
-
   const fetchAnalyticsData = useCallback(async () => {
     try {
       setRefreshing(true);
@@ -100,6 +95,11 @@ export default function EnhancedAnalyticsPage() {
       setRefreshing(false);
     }
   }, [actions]);
+
+  // Fetch initial data
+  useEffect(() => {
+    fetchAnalyticsData();
+  }, [fetchAnalyticsData]);
 
   const handleRefresh = async () => {
     await fetchAnalyticsData();

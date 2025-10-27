@@ -3,6 +3,7 @@
 //! Adaptive importance adjustment based on usage patterns and outcomes.
 
 use crate::long_term_management::*;
+use serde::{Deserialize, Serialize};
 
 /// Memory reinforcement configuration
 #[derive(Debug, Clone)]
@@ -206,7 +207,7 @@ pub enum ReinforcementOutcome {
 }
 
 /// Reinforcement context
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReinforcementContext {
     pub task_importance: TaskImportance,
     pub user_feedback: UserFeedback,

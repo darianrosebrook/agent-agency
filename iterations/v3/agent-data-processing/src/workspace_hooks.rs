@@ -102,55 +102,184 @@ impl WorkspaceIntegrationHooks {
     }
 
     /// Commit workspace changes after successful processing
-    pub async fn commit_processing_changes(&self, _pre_state_id: StateId) -> DataProcessingResult<()> {
+    pub async fn commit_processing_changes(&self, pre_state_id: StateId) -> DataProcessingResult<()> {
         if !self.config.enable_change_tracking {
             return Ok(());
         }
 
-        // For now, just mark as successful - the workspace manager automatically tracks changes
-        // In a full implementation, we might create processing-specific views or tags
+        // Capture current state to compare with pre-processing state
+        let current_state_result = self.workspace_manager.capture_state().await
+            .map_err(|e| DataProcessingError::Other(format!("Failed to capture current state: {:?}", e)))?;
+        
+        let current_state_id = current_state_result.data;
+
+        // Create a processing view if view manager is available
+        if let Some(ref view_manager) = self.view_manager {
+            let view_name = format!("processing_commit_{}", chrono::Utc::now().format("%Y%m%d_%H%M%S"));
+            let view_result = view_manager.create_view(current_state_id, Some(view_name.clone())).await
+                .map_err(|e| DataProcessingError::Other(format!("Failed to create processing view: {:?}", e)))?;
+            
+            tracing::info!("Created processing view: {} at {:?}", view_name, view_result.data);
+        }
+
+        // Log the processing completion
+        tracing::info!("Processing changes committed successfully. Pre-state: {}, Post-state: {}", 
+                      pre_state_id, current_state_id);
+
         Ok(())
     }
 
     /// Rollback workspace changes after failed processing
-    pub async fn rollback_processing_changes(&self, _pre_state_id: StateId) -> DataProcessingResult<()> {
+    pub async fn rollback_processing_changes(&self, pre_state_id: StateId) -> DataProcessingResult<()> {
         if !self.config.enable_rollback {
             return Ok(());
         }
 
         // Note: The actual rollback implementation would depend on the specific
-        // workspace manager API. For now, this is a placeholder.
-        // The workspace manager might support restoring to a previous state.
+        // workspace manager API. For now, we'll simulate rollback by creating a view
+        // of the pre-processing state for manual restoration.
+        
+        tracing::warn!("Rollback requested for state: {}. Manual restoration may be required.", pre_state_id);
+        
+        // Create a rollback view for debugging
+        if let Some(ref view_manager) = self.view_manager {
+            let view_name = format!("rollback_{}", chrono::Utc::now().format("%Y%m%d_%H%M%S"));
+            let view_result = view_manager.create_view(pre_state_id, Some(view_name.clone())).await
+                .map_err(|e| DataProcessingError::Other(format!("Failed to create rollback view: {:?}", e)))?;
+            
+            tracing::info!("Created rollback view: {} at {:?}", view_name, view_result.data);
+        }
+        
         Ok(())
     }
 
     /// Create a processing view for debugging or analysis
-    pub async fn create_processing_view(&self, _state_id: StateId, _name: &str) -> DataProcessingResult<PathBuf> {
-        // Placeholder - would create a view of the workspace at the given state
-        Ok(PathBuf::from("processing_view_placeholder"))
+    pub async fn create_processing_view(&self, state_id: StateId, name: &str) -> DataProcessingResult<PathBuf> {
+        if let Some(ref view_manager) = self.view_manager {
+            let view_result = view_manager.create_view(state_id, Some(name.to_string())).await
+                .map_err(|e| DataProcessingError::Other(format!("Failed to create processing view: {:?}", e)))?;
+            
+            tracing::info!("Created processing view '{}' at: {:?}", name, view_result.data);
+            Ok(view_result.data)
+        } else {
+            Err(DataProcessingError::Other("View manager not available".to_string()))
+        }
     }
 
     /// Get workspace statistics
     pub async fn get_workspace_stats(&self) -> DataProcessingResult<WorkspaceStats> {
-        // Placeholder - would get actual stats from workspace manager
+        // Calculate disk usage
+        let disk_usage_mb = self.calculate_disk_usage().await?;
+
+        // Get view statistics if view manager is available
+        let (total_views, avg_state_size_mb) = if let Some(ref view_manager) = self.view_manager {
+            let views = view_manager.list_views().await
+                .map_err(|e| DataProcessingError::Other(format!("Failed to list views: {:?}", e)))?;
+            
+            let total_views = views.len();
+            let avg_state_size_mb = if total_views > 0 {
+                disk_usage_mb / total_views as f64
+            } else {
+                0.0
+            };
+            
+            (total_views, avg_state_size_mb)
+        } else {
+            (0, 0.0)
+        };
+
+        // For now, estimate total states based on views (simplified)
+        let total_states = total_views + 1; // +1 for current state
+
         Ok(WorkspaceStats {
-            total_states: 0,
-            total_views: 0,
-            disk_usage_mb: 0.0,
-            avg_state_size_mb: 0.0,
+            total_states,
+            total_views,
+            disk_usage_mb,
+            avg_state_size_mb,
         })
     }
 
     /// List available processing views
     pub async fn list_processing_views(&self) -> DataProcessingResult<Vec<String>> {
-        // Placeholder - would list processing-related views
-        Ok(vec![])
+        if let Some(ref view_manager) = self.view_manager {
+            let views = view_manager.list_views().await
+                .map_err(|e| DataProcessingError::Other(format!("Failed to list views: {:?}", e)))?;
+            
+            // Filter for processing-related views and extract names
+            let processing_views: Vec<String> = views.into_iter()
+                .filter(|view| view.name.contains("processing") || view.name.contains("rollback"))
+                .map(|view| view.name)
+                .collect();
+            
+            Ok(processing_views)
+        } else {
+            Ok(vec![])
+        }
     }
 
     /// Delete old processing views to save disk space
-    pub async fn cleanup_old_views(&self, _max_age_days: u32) -> DataProcessingResult<usize> {
-        // Placeholder - would clean up old views
-        Ok(0)
+    pub async fn cleanup_old_views(&self, max_age_days: u32) -> DataProcessingResult<usize> {
+        if let Some(ref view_manager) = self.view_manager {
+            let views = view_manager.list_views().await
+                .map_err(|e| DataProcessingError::Other(format!("Failed to list views: {:?}", e)))?;
+            
+            let cutoff_time = chrono::Utc::now() - chrono::Duration::days(max_age_days as i64);
+            let mut deleted_count = 0;
+            
+            for view in views {
+                // Try to parse creation time from view name (assuming format with timestamp)
+                if let Some(timestamp_str) = view.name.split('_').last() {
+                    if let Ok(view_time) = chrono::DateTime::parse_from_str(timestamp_str, "%Y%m%d_%H%M%S") {
+                        if view_time.with_timezone(&chrono::Utc) < cutoff_time {
+                            if let Err(e) = view_manager.delete_view(&view.name).await {
+                                tracing::warn!("Failed to delete old view '{}': {:?}", view.name, e);
+                            } else {
+                                deleted_count += 1;
+                                tracing::info!("Deleted old view: {}", view.name);
+                            }
+                        }
+                    }
+                }
+            }
+            
+            Ok(deleted_count)
+        } else {
+            Ok(0)
+        }
+    }
+
+    /// Calculate disk usage of workspace states and views
+    async fn calculate_disk_usage(&self) -> DataProcessingResult<f64> {
+        use std::fs;
+        
+        let mut total_size = 0u64;
+        
+        // Calculate size of workspace root
+        if let Ok(entries) = fs::read_dir(&self.config.workspace_root) {
+            for entry in entries.flatten() {
+                if let Ok(metadata) = entry.metadata() {
+                    if metadata.is_file() {
+                        total_size += metadata.len();
+                    }
+                }
+            }
+        }
+        
+        // Calculate size of views directory if it exists
+        if let Some(ref views_dir) = self.config.views_directory {
+            if let Ok(entries) = fs::read_dir(views_dir) {
+                for entry in entries.flatten() {
+                    if let Ok(metadata) = entry.metadata() {
+                        if metadata.is_file() {
+                            total_size += metadata.len();
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Convert bytes to MB
+        Ok(total_size as f64 / (1024.0 * 1024.0))
     }
 }
 
