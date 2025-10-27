@@ -31,6 +31,7 @@ pub trait EnrichmentStage: Send + Sync {
 
     /// Get supported enrichment types
     fn supported_enrichments(&self) -> &[EnrichmentType];
+}
 
 /// Circuit breaker configuration for enrichment reliability
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -513,7 +514,6 @@ impl CircuitBreaker {
         self.state
     }
 }
-}
 
 /// Types of enrichment operations available
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -558,10 +558,10 @@ impl EnrichmentStage for UnifiedEnrichmentStage {
 
     fn can_enrich(&self, content_type: &ContentType) -> bool {
         match content_type {
-            ContentType::Audio(_) => true,
-            ContentType::Image(_) => true,
-            ContentType::Video(_) => true,
-            ContentType::Document(_) => true,
+            ContentType::Audio => true,
+            ContentType::Image => true,
+            ContentType::Video => true,
+            ContentType::Document => true,
             ContentType::Text => true,
             _ => false,
         }
@@ -572,13 +572,13 @@ impl EnrichmentStage for UnifiedEnrichmentStage {
 
         // Enrich based on content type
         match &content.content_type {
-            ContentType::Audio(_) => {
+            ContentType::Audio => {
                 if let Some(audio_data) = self.extract_audio_data(&content) {
                     let asr_result = self.asr_enricher.enrich_audio(&audio_data, "audio/wav").await?;
                     enriched_results.push(asr_result);
                 }
             }
-            ContentType::Image(_) => {
+            ContentType::Image => {
                 if let Some(image_data) = self.extract_image_data(&content) {
                     let vision_result = self.vision_enricher.enrich_image(&image_data, "image/jpeg").await?;
                     enriched_results.push(vision_result);
@@ -677,5 +677,3 @@ impl EnrichmentStage for DefaultEnrichmentStage {
         self.unified_stage.supported_enrichments()
     }
 }
-// Export the consolidated enrichers for external use
-pub use crate::enrichment::{AsrEnricher, VisionEnricher, EntityEnricher, VisualCaptioningEnricher, CircuitBreaker, CircuitState};

@@ -18,7 +18,8 @@ members = [
     "data-infrastructure",  # NEW: Unified data layer & API services (database + interfaces + api-server + caching + embedding-service + file_ops)
     "data-interfaces",  # NEW: Unified interface layer & user experience (cli + web-app interfaces)
     "development-tools",  # NEW: Unified development workflow & quality assurance (caws/runtime-validator + apps/tools/caws + codemod + templates)
-    ]
+    "testing-validation",  # NEW: End-to-end autonomous flow tests with real service integrations
+]
 
 [workspace.package]
 version = "0.1.0"

@@ -13,6 +13,7 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use tracing::{debug, info, warn};
+use agent_memory::graph_engine::Relationship;
 use std::sync::Arc;
 use parking_lot::{Mutex, RwLock};
 
@@ -497,18 +498,6 @@ impl EntityIndexer {
     }
 }
 
-/// Job scheduler for indexing operations
-pub struct JobScheduler {
-    // Would contain job scheduling implementation
-}
-
-impl JobScheduler {
-    pub fn new() -> Self {
-        Self {}
-    }
-
-    // Would implement job scheduling methods
-}
 
 /// Calculate cosine similarity between two vectors
 fn cosine_similarity(a: &[f32], b: &[f32]) -> f64 {

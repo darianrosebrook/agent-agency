@@ -11,6 +11,7 @@ use crate::data_processing_types::*;
 use crate::{DataProcessingResult, DataProcessingError};
 use async_trait::async_trait;
 use std::collections::HashMap;
+use agent_memory::graph_engine::RelationshipType;
 
 /// Result from knowledge operations
 pub type KnowledgeResult = DataProcessingResult<ProcessingOutput>;

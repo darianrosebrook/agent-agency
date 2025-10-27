@@ -43,6 +43,7 @@ pub mod workspace_hooks;
 pub use pipeline::{DataPipeline, PipelineConfig, PipelineResult};
 pub use data_processing_types::ProcessingStats;
 pub use data_processing_types::*;
+#[cfg(feature = "embeddings")]
 pub use context::{ContextManager, ContextConfig, ContextData, ContextStats};
 
 // Re-export block and enrichment types for orchestration
@@ -101,6 +102,9 @@ pub enum DataProcessingError {
 
     #[error("Pipeline configuration error: {0}")]
     Config(String),
+
+    #[error("Unsupported content type: {0}")]
+    UnsupportedContentType(String),
 
     #[error("Database error: {0}")]
     Database(#[from] sqlx::Error),

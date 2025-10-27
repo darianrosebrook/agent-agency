@@ -10,6 +10,7 @@
 use crate::data_processing_types::*;
 use crate::{DataProcessingResult, DataProcessingError};
 use async_trait::async_trait;
+use std::collections::HashMap;
 use std::path::Path;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, info, warn};
@@ -165,7 +166,7 @@ impl FileIngestor {
                     id: input.id.clone(),
             original_input: input,
             processed_content,
-            extracted_metadata: metadata,
+            extracted_metadata: serde_json::to_value(&metadata).unwrap_or_default(),
             processing_stats: stats,
             created_at: chrono::Utc::now(),
         })
@@ -295,7 +296,7 @@ impl UrlIngestor {
                     id: input.id.clone(),
             original_input: input,
             processed_content,
-            extracted_metadata: metadata,
+            extracted_metadata: serde_json::to_value(&metadata).unwrap_or_default(),
             processing_stats: stats,
             created_at: chrono::Utc::now(),
         })
@@ -358,7 +359,7 @@ impl StreamIngestor {
                     id: input.id.clone(),
             original_input: input,
             processed_content,
-            extracted_metadata: metadata,
+            extracted_metadata: serde_json::to_value(&metadata).unwrap_or_default(),
             processing_stats: stats,
             created_at: chrono::Utc::now(),
         })
@@ -424,7 +425,7 @@ impl DatabaseIngestor {
                     id: input.id.clone(),
             original_input: input,
             processed_content,
-            extracted_metadata: metadata,
+            extracted_metadata: serde_json::to_value(&metadata).unwrap_or_default(),
             processing_stats: stats,
             created_at: chrono::Utc::now(),
         })
@@ -518,7 +519,7 @@ impl ApiIngestor {
                     id: input.id.clone(),
             original_input: input,
             processed_content,
-            extracted_metadata: metadata,
+            extracted_metadata: serde_json::to_value(&metadata).unwrap_or_default(),
             processing_stats: stats,
             created_at: chrono::Utc::now(),
         })
@@ -555,11 +556,12 @@ impl IngestionStage for CaptionsIngestor {
 
         // Placeholder implementation - would parse SRT/WebVTT files
         let processed_content = ProcessedContent {
-            id: ProcessingId::new(),
-            content_type: ContentType::Text,
             data: ProcessedContentData::Text("Consolidated captions ingestion functionality.".to_string()),
-            metadata: HashMap::new(),
-            extracted_entities: vec![],
+            content_type: ContentType::Text,
+            text_content: Some("Consolidated captions ingestion functionality.".to_string()),
+            structured_data: None,
+            embeddings: None,
+            entities: vec![],
             relationships: vec![],
             visual_elements: vec![],
             audio_transcript: None,
@@ -587,7 +589,7 @@ impl IngestionStage for CaptionsIngestor {
             id: input.id,
             original_input: input,
             processed_content,
-            extracted_metadata: metadata,
+            extracted_metadata: serde_json::to_value(&metadata).unwrap_or_default(),
             processing_stats: stats,
             created_at: chrono::Utc::now(),
         })
@@ -617,7 +619,7 @@ impl IngestionStage for DiagramsIngestor {
     fn can_ingest(&self, source: &DataSource) -> bool {
         matches!(source,
             DataSource::File(fs) if matches!(fs.content_type,
-                ContentType::Image(_) | ContentType::Document(_)
+                ContentType::Image | ContentType::Document
             )
         )
     }
@@ -628,7 +630,7 @@ impl IngestionStage for DiagramsIngestor {
         // Placeholder implementation - would analyze diagrams for structure
         let processed_content = ProcessedContent {
             id: ProcessingId::new(),
-            content_type: ContentType::Document("diagram".to_string()),
+            content_type: ContentType::Document,
             data: ProcessedContentData::Structured(serde_json::json!({
                 "diagram_type": "technical",
                 "elements": ["box", "arrow", "text"],
@@ -663,14 +665,14 @@ impl IngestionStage for DiagramsIngestor {
             id: input.id,
             original_input: input,
             processed_content,
-            extracted_metadata: metadata,
+            extracted_metadata: serde_json::to_value(&metadata).unwrap_or_default(),
             processing_stats: stats,
             created_at: chrono::Utc::now(),
         })
     }
 
     fn supported_content_types(&self) -> &[ContentType] {
-        &[ContentType::Image("png".to_string()), ContentType::Document("svg".to_string())]
+        &[ContentType::Image, ContentType::Document]
     }
 }
 
@@ -692,7 +694,7 @@ impl IngestionStage for VideoIngestor {
 
     fn can_ingest(&self, source: &DataSource) -> bool {
         matches!(source,
-            DataSource::File(fs) if matches!(fs.content_type, ContentType::Video(_))
+            DataSource::File(fs) if matches!(fs.content_type, ContentType::Video)
         )
     }
 
@@ -702,7 +704,7 @@ impl IngestionStage for VideoIngestor {
         // Placeholder implementation - would extract video metadata and frames
         let processed_content = ProcessedContent {
             id: ProcessingId::new(),
-            content_type: ContentType::Video("mp4".to_string()),
+            content_type: ContentType::Video,
             data: ProcessedContentData::Structured(serde_json::json!({
                 "duration": 120.5,
                 "resolution": "1920x1080",
@@ -738,14 +740,14 @@ impl IngestionStage for VideoIngestor {
             id: input.id,
             original_input: input,
             processed_content,
-            extracted_metadata: metadata,
+            extracted_metadata: serde_json::to_value(&metadata).unwrap_or_default(),
             processing_stats: stats,
             created_at: chrono::Utc::now(),
         })
     }
 
     fn supported_content_types(&self) -> &[ContentType] {
-        &[ContentType::Video("mp4".to_string()), ContentType::Video("avi".to_string())]
+        &[ContentType::Video, ContentType::Video]
     }
 }
 
@@ -779,7 +781,7 @@ impl IngestionStage for SlidesIngestor {
         // Placeholder implementation - would extract slide content and structure
         let processed_content = ProcessedContent {
             id: ProcessingId::new(),
-            content_type: ContentType::Document("slides".to_string()),
+            content_type: ContentType::Document,
             data: ProcessedContentData::Structured(serde_json::json!({
                 "slide_count": 10,
                 "title": "Consolidated Slides Processing",
@@ -815,14 +817,14 @@ impl IngestionStage for SlidesIngestor {
             id: input.id,
             original_input: input,
             processed_content,
-            extracted_metadata: metadata,
+            extracted_metadata: serde_json::to_value(&metadata).unwrap_or_default(),
             processing_stats: stats,
             created_at: chrono::Utc::now(),
         })
     }
 
     fn supported_content_types(&self) -> &[ContentType] {
-        &[ContentType::Document("pptx".to_string()), ContentType::Document("pdf".to_string())]
+        &[ContentType::Document, ContentType::Document]
     }
 }
 
@@ -930,12 +932,12 @@ impl IngestionStage for UnifiedIngestor {
     fn supported_content_types(&self) -> &[ContentType] {
         &[
             ContentType::Text,
-            ContentType::Image("png".to_string()),
-            ContentType::Image("jpg".to_string()),
-            ContentType::Video("mp4".to_string()),
-            ContentType::Document("pptx".to_string()),
-            ContentType::Document("pdf".to_string()),
-            ContentType::Document("svg".to_string()),
+            ContentType::Image,
+            ContentType::Image,
+            ContentType::Video,
+            ContentType::Document,
+            ContentType::Document,
+            ContentType::Document,
         ]
     }
 }

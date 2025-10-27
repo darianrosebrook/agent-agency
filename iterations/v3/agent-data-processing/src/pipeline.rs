@@ -6,10 +6,34 @@
 
 use crate::data_processing_types::*;
 use crate::{DataProcessingResult, DataProcessingError};
-use common_pipeline::{
-    SequentialPipeline, SequentialPipelineConfig, PipelineStage as CommonPipelineStage,
-    ExecutablePipeline, PipelineResult as CommonPipelineResult, PipelineHealth,
-};
+use system_configuration::{SequentialPipeline, SequentialPipelineConfig, PipelineStage as SystemPipelineStage};
+
+// Local pipeline stage trait for domain-specific stages
+#[async_trait]
+pub trait PipelineStage: Send + Sync {
+    /// Get the name of this stage
+    fn name(&self) -> &'static str;
+
+    /// Process data through this stage
+    async fn process(&self, input: DataInput) -> DataProcessingResult<ProcessingOutput>;
+
+    /// Query data from this stage (optional)
+    async fn query(&self, _query: &DataQuery) -> DataProcessingResult<Vec<RetrievedData>> {
+        Ok(vec![]) // Default implementation returns no results
+    }
+
+    /// Get statistics for this stage
+    async fn get_stats(&self) -> DataProcessingResult<ProcessingStats> {
+        Ok(ProcessingStats {
+            processing_time_ms: 0,
+            bytes_processed: 0,
+            entities_extracted: 0,
+            relationships_found: 0,
+            embeddings_generated: 0,
+            errors_encountered: vec![],
+        })
+    }
+}
 use std::collections::HashMap;
 use async_trait::async_trait;
 use std::sync::Arc;
@@ -57,12 +81,12 @@ pub struct DataProcessingCompositeStage {
 }
 
 #[async_trait]
-impl CommonPipelineStage<DataInput, ProcessingOutput> for DataProcessingCompositeStage {
+impl PipelineStage<DataInput, ProcessingOutput> for DataProcessingCompositeStage {
     fn name(&self) -> &str {
         "data_processing_pipeline"
     }
 
-    async fn process(&self, input: DataInput) -> common_pipeline::PipelineResult<ProcessingOutput> {
+    async fn process(&self, input: DataInput) -> DataProcessingResult<ProcessingOutput> {
         use crate::data_processing_types::*;
         use chrono::Utc;
 
@@ -111,17 +135,14 @@ impl CommonPipelineStage<DataInput, ProcessingOutput> for DataProcessingComposit
                             content_type: ContentType::Structured,
                         }),
                         content: DataContent::Structured(serde_json::to_value(&output.processed_content)
-                            .map_err(|e| common_pipeline::PipelineError::Serialization(e.to_string()))?),
+                            .map_err(|e| DataProcessingError::Operation(e.to_string()))?),
                         metadata: output.extracted_metadata.clone(),
                         priority: input.priority,
                         processing_options: input.processing_options.clone(),
                     };
                 }
                 Err(e) => {
-                    return Err(common_pipeline::PipelineError::StageError {
-                        stage: stage.name().to_string(),
-                        message: e.to_string(),
-                    });
+                    return Err(DataProcessingError::Operation(format!("Stage {} failed: {}", stage.name(), e)));
                 }
             }
         }
@@ -222,6 +243,7 @@ impl DataPipeline {
             Ok(output) => Ok(output),
             Err(e) => Err(crate::DataProcessingError::Other(format!("Pipeline execution failed: {}", e))),
         }
+    }
 
     /// Query processed data across all stages
     pub async fn query(&self, query: DataQuery) -> DataProcessingResult<Vec<RetrievedData>> {
@@ -268,32 +290,6 @@ impl DataPipeline {
     }
 }
 
-/// Trait for pipeline stages that can process data
-#[async_trait]
-pub trait PipelineStage: Send + Sync {
-    /// Get the name of this stage
-    fn name(&self) -> &'static str;
-
-    /// Process data through this stage
-    async fn process(&self, input: DataInput) -> DataProcessingResult<ProcessingOutput>;
-
-    /// Query data from this stage (optional)
-    async fn query(&self, _query: &DataQuery) -> DataProcessingResult<Vec<RetrievedData>> {
-        Ok(vec![]) // Default implementation returns no results
-    }
-
-    /// Get statistics for this stage
-    async fn get_stats(&self) -> DataProcessingResult<ProcessingStats> {
-        Ok(ProcessingStats {
-            processing_time_ms: 0,
-            bytes_processed: 0,
-            entities_extracted: 0,
-            relationships_found: 0,
-            embeddings_generated: 0,
-            errors_encountered: vec![],
-        })
-    }
-}
 
 /// Create a custom pipeline with specific stages
 pub fn create_custom_pipeline(

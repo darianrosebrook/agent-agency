@@ -9,6 +9,47 @@ use std::path::PathBuf;
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
 use system_configuration::geometry::BoundingBox;
+#[cfg(feature = "memory-integration")]
+use agent_memory::graph_engine::{Relationship, RelationshipType};
+
+// Stub definitions for when memory integration is not available
+#[cfg(not(feature = "memory-integration"))]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Relationship {
+    pub id: String,
+    pub source_entity: String,
+    pub target_entity: String,
+    pub relationship_type: RelationshipType,
+    pub confidence: f64,
+    pub evidence: Vec<String>,
+}
+
+#[cfg(not(feature = "memory-integration"))]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum RelationshipType {
+    WorksFor,
+    LocatedIn,
+    PartOf,
+    Created,
+    Owns,
+    RelatedTo,
+    Other(String),
+}
+
+#[cfg(not(feature = "memory-integration"))]
+impl std::fmt::Display for RelationshipType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            RelationshipType::WorksFor => write!(f, "works_for"),
+            RelationshipType::LocatedIn => write!(f, "located_in"),
+            RelationshipType::PartOf => write!(f, "part_of"),
+            RelationshipType::Created => write!(f, "created"),
+            RelationshipType::Owns => write!(f, "owns"),
+            RelationshipType::RelatedTo => write!(f, "related_to"),
+            RelationshipType::Other(s) => write!(f, "{}", s),
+        }
+    }
+}
 
 /// Basic data block for processing
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -189,6 +230,7 @@ pub enum ContentType {
     Markdown,
     Code,
     Structured,
+    Document,
     Unknown,
 }
 
@@ -277,9 +319,19 @@ pub struct ProcessingOutput {
     pub created_at: DateTime<Utc>,
 }
 
+/// Raw processed content data
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ProcessedContentData {
+    Text(String),
+    Binary(Vec<u8>),
+    Structured(serde_json::Value),
+}
+
 /// Processed content with multiple representations
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProcessedContent {
+    pub data: ProcessedContentData,
+    pub content_type: ContentType,
     pub text_content: Option<String>,
     pub structured_data: Option<serde_json::Value>,
     pub embeddings: Option<Vec<f32>>,
@@ -288,6 +340,7 @@ pub struct ProcessedContent {
     pub visual_elements: Vec<VisualElement>,
     pub audio_transcript: Option<String>,
 }
+
 
 /// Named entity extracted from content
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -315,71 +368,6 @@ pub enum EntityType {
     Other(String),
 }
 
-/// Position of text in the original content
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TextPosition {
-    pub start: usize,
-    pub end: usize,
-    pub page: Option<usize>, // For PDF documents
-}
-
-/// Relationship between entities
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Relationship {
-    pub id: String,
-    pub source_entity: String,
-    pub target_entity: String,
-    pub relationship_type: RelationshipType,
-    pub confidence: f64,
-    pub evidence: Vec<String>,
-}
-
-/// Types of relationships between entities
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub enum RelationshipType {
-    WorksFor,
-    LocatedIn,
-    PartOf,
-    Created,
-    Owns,
-    RelatedTo,
-    Other(String),
-}
-
-impl std::fmt::Display for RelationshipType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            RelationshipType::WorksFor => write!(f, "works_for"),
-            RelationshipType::LocatedIn => write!(f, "located_in"),
-            RelationshipType::PartOf => write!(f, "part_of"),
-            RelationshipType::Created => write!(f, "created"),
-            RelationshipType::Owns => write!(f, "owns"),
-            RelationshipType::RelatedTo => write!(f, "related_to"),
-            RelationshipType::Other(s) => write!(f, "{}", s),
-        }
-    }
-}
-
-/// Visual element extracted from content
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct VisualElement {
-    pub element_type: VisualElementType,
-    pub position: BoundingBox,
-    pub confidence: f64,
-    pub text_content: Option<String>,
-    pub description: Option<String>,
-}
-
-/// Types of visual elements
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub enum VisualElementType {
-    Text,
-    Image,
-    Table,
-    Chart,
-    Diagram,
-    Formula,
-}
 
 
 /// Query for retrieving processed data
@@ -447,6 +435,17 @@ impl RetrievedData {
             // Implementation details would depend on the specific memory integration
         }
     }
+}
+
+/// Processing metadata
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProcessingMetadata {
+    pub source_url: Option<String>,
+    pub content_hash: String,
+    pub ingested_at: chrono::DateTime<chrono::Utc>,
+    pub processing_version: String,
+    pub quality_score: f64,
+    pub confidence_scores: HashMap<String, f64>,
 }
 
 /// Processing statistics

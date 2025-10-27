@@ -8,7 +8,8 @@
 
 use crate::context::types::*;
 use crate::DataProcessingResult;
-use agent_agency_database::{DatabaseClient, DatabaseConfig};
+#[cfg(feature = "embeddings")]
+use data_infrastructure::{DatabaseClient, database_config::DatabaseConfig};
 use chrono::{DateTime, Utc, Duration};
 use flate2::{read::GzDecoder, write::GzEncoder, Compression};
 use serde_json;
@@ -20,6 +21,7 @@ use tracing::{debug, info, warn};
 use uuid::Uuid;
 
 /// Unified context manager for preservation and working memory
+#[cfg(feature = "embeddings")]
 #[derive(Debug)]
 pub struct ContextManager {
     /// Database client
@@ -32,6 +34,7 @@ pub struct ContextManager {
     stats: Arc<RwLock<ContextStats>>,
 }
 
+#[cfg(feature = "embeddings")]
 impl ContextManager {
     /// Create a new unified context manager
     pub async fn new(config: ContextConfig) -> DataProcessingResult<Self> {

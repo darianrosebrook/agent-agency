@@ -160,6 +160,34 @@ impl AlertManager {
     pub async fn get_alerts(&self) -> Vec<ComplianceAlert> {
         self.alerts.values().cloned().collect()
     }
+    
+    pub async fn get_active_alerts(&self) -> Result<Vec<ComplianceAlert>, Box<dyn std::error::Error>> {
+        Ok(self.alerts.values().cloned().collect())
+    }
+    
+    pub async fn get_alert_history(&self) -> Result<Vec<ComplianceAlert>, Box<dyn std::error::Error>> {
+        Ok(self.alerts.values().cloned().collect())
+    }
+    
+    pub async fn get_alert_statistics(&self) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
+        Ok(serde_json::json!({
+            "total": self.alerts.len(),
+            "by_severity": {
+                "critical": 0,
+                "high": 0,
+                "medium": 0,
+                "low": 0
+            }
+        }))
+    }
+    
+    pub async fn acknowledge_alert(&mut self, _alert_id: &str) -> Result<(), Box<dyn std::error::Error>> {
+        Ok(())
+    }
+    
+    pub async fn resolve_alert(&mut self, _alert_id: &str) -> Result<(), Box<dyn std::error::Error>> {
+        Ok(())
+    }
 }
 
 /// Reliability monitoring trait

@@ -74,6 +74,7 @@ system-resilience = { path = "../system-resilience", optional = true }
 # Data infrastructure (includes embedding functionality)
 data-infrastructure = { path = "../data-infrastructure", optional = true }
 
+
 # Database client (avoid circular dependency - database functionality stays in database crate)
 
 # Common types
