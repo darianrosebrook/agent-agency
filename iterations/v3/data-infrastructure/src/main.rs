@@ -31,6 +31,10 @@ use tower_http::cors::CorsLayer;
 use uuid::Uuid;
 use reqwest::Client;
 use tracing::{info, warn, error};
+
+// API modules
+mod api;
+
 // Stub implementations for database client (simplified for compilation)
 #[derive(Debug, Clone)]
 pub struct DatabaseConfig {
@@ -253,22 +257,6 @@ pub mod agent_integration {
 }
 
 pub use agent_integration::BusinessMetrics;
-// Stub implementations for agent_agency_interfaces
-pub async fn list_waivers() -> Json<serde_json::Value> {
-    Json(serde_json::json!({"waivers": [], "status": "stub"}))
-}
-
-pub async fn create_waiver(_waiver_data: Json<serde_json::Value>) -> Json<serde_json::Value> {
-    Json(serde_json::json!({"waiver_id": "stub", "status": "created"}))
-}
-
-pub async fn approve_waiver(Path(_waiver_id): Path<String>) -> Json<serde_json::Value> {
-    Json(serde_json::json!({"status": "approved"}))
-}
-
-pub async fn get_task_provenance(Path(_task_id): Path<String>) -> Json<serde_json::Value> {
-    Json(serde_json::json!({"provenance": [], "status": "stub"}))
-}
 use async_trait::async_trait;
 // WebSocket support is built into Axum - no axum-ws needed
 
@@ -623,85 +611,24 @@ pub struct AppState {
     http_client: Client,
 }
 
-pub async fn health_check() -> Json<serde_json::Value> {
-    Json(json!({
-        "status": "healthy",
-        "service": "agent-agency-v3-api",
-        "version": "1.0.0",
-        "timestamp": chrono::Utc::now().to_rfc3339(),
-        "components": {
-            "api": "healthy",
-            "database": match check_database_health().await {
-                Ok(_) => "healthy",
-                Err(e) => format!("unhealthy: {}", e)
-            },
-            "orchestrator": match check_orchestrator_health().await {
-                Ok(_) => "healthy",
-                Err(e) => format!("unhealthy: {}", e)
-            },
-            "workers": match check_workers_health().await {
-                Ok(_) => "healthy",
-                Err(e) => format!("unhealthy: {}", e)
-            }
-        }
-    }))
-}
 
-/// Check database health by attempting a simple connection
-async fn check_database_health() -> Result<(), String> {
-    // Try to get a database client and run a simple query
-    match crate::client::orchestrator::DatabaseOrchestrator::new().await {
-        Ok(orchestrator) => {
-            match orchestrator.health_check().await {
-                Ok(_) => Ok(()),
-                Err(e) => Err(format!("Database connection failed: {}", e))
-            }
-        }
-        Err(e) => Err(format!("Database orchestrator initialization failed: {}", e))
+/// Generate AI response using the model registry
+async fn generate_ai_response(ai_service: &ModelRegistry, prompt: &str) -> Result<String, String> {
+    use agent_research::self_prompting_agent::models::{GenerationOptions, ModelProvider};
+
+    let options = GenerationOptions {
+        model_name: Some("llama2:7b".to_string()),
+        temperature: Some(0.7),
+        max_tokens: Some(150),
+        stop_sequences: None,
+    };
+
+    match ai_service.generate(prompt, &options).await {
+        Ok(response) => Ok(response),
+        Err(e) => Err(format!("AI generation failed: {}", e)),
     }
 }
 
-/// Check orchestrator health by verifying CoreML models are loaded
-async fn check_orchestrator_health() -> Result<(), String> {
-    // Check if CoreML models are available (this would need agent-orchestration integration)
-    // For now, return healthy since this requires cross-crate integration
-    // TODO: Integrate with agent-orchestration CoreML manager
-    Ok(())
-}
-
-/// Check workers health by verifying worker pool status
-async fn check_workers_health() -> Result<(), String> {
-    // Check if worker processes are running and healthy
-    // For now, return healthy since worker pool integration is not yet implemented
-    // TODO: Implement real worker health checks
-    Ok(())
-}
-
-/// Generate AI response - placeholder implementation
-async fn generate_ai_response(_prompt: &str) -> Result<String, String> {
-    // TODO: Implement actual AI service integration
-    // Placeholder: Return a helpful response
-    Ok("I'm here to help! This is a placeholder response. AI integration coming soon.".to_string())
-}
-
-pub async fn proxy_handler(
-    State(state): State<AppState>,
-    Path(path): Path<String>,
-) -> Result<impl IntoResponse, axum::http::StatusCode> {
-    let backend_url = format!("{}/{}", state.backend_host.trim_end_matches('/'), path);
-
-    match state.http_client.get(&backend_url).send().await {
-        Ok(response) => {
-            let status_code = response.status().as_u16();
-            let body = response.text().await.unwrap_or_default();
-            Ok((axum::http::StatusCode::from_u16(status_code).unwrap_or(axum::http::StatusCode::INTERNAL_SERVER_ERROR), body))
-        }
-        Err(_) => {
-            // Return a stub response if backend is not available
-            Ok((axum::http::StatusCode::OK, r#"{"status": "stub", "message": "Backend not available"}"#.to_string()))
-        }
-    }
-}
 
 async fn get_task_audit_trail(
     State(state): State<AppState>,
@@ -731,49 +658,6 @@ async fn get_task_audit_trail(
     }
 }
 
-pub async fn list_tasks(
-    State(state): State<AppState>,
-) -> Json<serde_json::Value> {
-    match state.task_store.get_tasks().await {
-        Ok(tasks) => {
-            let task_summaries: Vec<serde_json::Value> = tasks
-                .into_iter()
-                .map(|task| {
-                    let spec: serde_json::Value = serde_json::from_str(&task.spec).unwrap_or(json!({}));
-                    let empty_map = serde_json::Map::new();
-                    let spec = spec.as_object().unwrap_or(&empty_map);
-                    let title = spec.get("description")
-                        .and_then(|d| d.as_str())
-                        .unwrap_or("Untitled Task");
-
-                    json!({
-                        "id": task.id,
-                        "title": title,
-                        "status": task.state,
-                        "priority": spec.get("priority").and_then(|p| p.as_str()).unwrap_or("medium"),
-                        "createdAt": task.created_at,
-                        "updatedAt": task.updated_at
-                    })
-                })
-                .collect();
-
-            Json(json!({
-                "tasks": task_summaries,
-                "total": task_summaries.len(),
-                "page": 1,
-                "limit": 50,
-                "status": "success"
-            }))
-        }
-        Err(e) => {
-            println!("⚠️  Failed to list tasks: {}", e);
-            Json(json!({
-                "error": "Failed to retrieve tasks",
-                "status": "error"
-            }))
-        }
-    }
-}
 
 #[axum::debug_handler]
 pub async fn get_task(
@@ -1382,122 +1266,6 @@ async fn handle_websocket_chat(mut socket: axum::extract::ws::WebSocket, session
     println!(" WebSocket chat handler ended for session: {}", session_id);
 }
 
-pub async fn get_api_metrics() -> Json<serde_json::Value> {
-    Json(json!({
-        "metrics": {
-            "active_tasks": 1,
-            "completed_tasks": 1,
-            "failed_tasks": 0,
-            "avg_response_time_ms": 250.0
-        },
-        "status": "simulated"
-    }))
-}
-
-async fn metrics_stream(
-    State(state): State<AppState>,
-) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
-    let stream = tokio_stream::wrappers::IntervalStream::new(time::interval(Duration::from_secs(2)))
-        .then(move |_| {
-            let state = state.clone();
-            async move {
-                // Collect real system metrics from health monitor
-                let timestamp = chrono::Utc::now().timestamp_millis();
-
-                // Get real system metrics
-                let system_metrics = match state.health_monitor.get_health_metrics().await {
-                    Ok(_health_metrics) => SystemMetrics {
-                        cpu_usage: 0.0,
-                        memory_usage: 0.0,
-                        disk_usage: 0.0,
-                        network_io: DiskIOMetrics {
-                            read_bytes: 0,
-                            write_bytes: 0,
-                            read_iops: 0.0,
-                            write_iops: 0.0,
-                            read_throughput: 0.0,
-                            write_throughput: 0.0,
-                            avg_read_latency_ms: 0.0,
-                            avg_write_latency_ms: 0.0,
-                            queue_depth: 0,
-                        },
-                    },
-                    Err(_) => {
-                        // Fallback to basic metrics if health monitor fails
-                        SystemMetrics {
-                            cpu_usage: 0.0,
-                            memory_usage: 0.0,
-                            disk_usage: 0.0,
-                            network_io: DiskIOMetrics {
-                                read_bytes: 0,
-                                write_bytes: 0,
-                                read_iops: 0.0,
-                                write_iops: 0.0,
-                                read_throughput: 0.0,
-                                write_throughput: 0.0,
-                                avg_read_latency_ms: 0.0,
-                                avg_write_latency_ms: 0.0,
-                                queue_depth: 0,
-                            },
-                        }
-                    }
-                };
-
-                // Get task metrics from task store
-                let task_metrics = match state.task_store.get_tasks().await {
-                    Ok(tasks) => {
-                        let active_tasks = tasks.iter().filter(|t| t.state == "running").count() as i32;
-                        let completed_tasks = tasks.iter().filter(|t| t.state == "completed").count() as i32;
-                        let failed_tasks = tasks.iter().filter(|t| t.state == "failed").count() as i32;
-                        (active_tasks, completed_tasks, failed_tasks)
-                    }
-                    Err(_) => (0, 0, 0)
-                };
-
-                // Use fallback business metrics for now
-                let business_metrics = BusinessMetrics {
-                    active_users: 0,
-                    requests_per_second: 0.0,
-                    throughput_tasks_per_hour: 0.0,
-                    system_availability: 100.0,
-                    average_task_completion_time_ms: 0.0,
-                    error_rate: 0.0,
-                };
-
-                Ok(Event::default().data(serde_json::to_string(&json!({
-                    "timestamp": timestamp,
-                    "metrics": {
-                        "cpu_usage_percent": system_metrics.cpu_usage,
-                        "memory_usage_percent": system_metrics.memory_usage,
-                        "disk_usage_percent": system_metrics.disk_usage,
-                        "network_rx_bytes": system_metrics.network_io.read_bytes,
-                        "network_tx_bytes": system_metrics.network_io.write_bytes,
-                        "active_tasks": task_metrics.0,
-                        "completed_tasks": task_metrics.1,
-                        "failed_tasks": task_metrics.2,
-                        "total_requests": business_metrics.throughput_tasks_per_hour as i32,
-                        "successful_requests": (business_metrics.throughput_tasks_per_hour * (1.0 - business_metrics.error_rate)) as i32,
-                        "failed_requests": (business_metrics.throughput_tasks_per_hour * business_metrics.error_rate) as i32,
-                        "avg_response_time_ms": business_metrics.average_task_completion_time_ms,
-                        "p95_response_time_ms": business_metrics.average_task_completion_time_ms * 1.5,
-                        "p99_response_time_ms": business_metrics.average_task_completion_time_ms * 2.0
-                    },
-                    "components": {
-                        "api": "healthy",
-                        "database": "healthy",
-                        "orchestrator": "healthy",
-                        "workers": "healthy"
-                    }
-                })).unwrap()))
-            }
-        });
-
-    Sse::new(stream).keep_alive(
-        axum::response::sse::KeepAlive::new()
-            .interval(Duration::from_secs(1))
-            .text("keep-alive-text"),
-    )
-}
 
 async fn pause_task(
     State(state): State<AppState>,
@@ -2062,6 +1830,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let keystore = system_quality_security::create_keystore();
     let sandbox = system_quality_security::create_sandbox();
 
+    // Initialize AI service
+    let mut model_registry = ModelRegistry::new();
+    let ollama_provider = OllamaProvider::new(
+        std::env::var("OLLAMA_BASE_URL").unwrap_or_else(|_| "http://localhost:11434".to_string()),
+        std::env::var("OLLAMA_MODEL").unwrap_or_else(|_| "llama2:7b".to_string()),
+    ).unwrap();
+    model_registry.register_provider(Box::new(ollama_provider)).await;
+    let ai_service = Arc::new(model_registry);
+    println!(" AI service initialized with Ollama provider");
+
     let app_state = AppState {
         task_store,
         db_client,
@@ -2082,7 +1860,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create API router with full task management
     let api_router = Router::new()
         .route("/tasks", post(submit_task))
-        .route("/tasks", get(list_tasks))
+        .route("/tasks", get(api::handlers::list_tasks))
         .route("/tasks/:task_id", get(get_task))
         .route("/tasks/:task_id/pause", post(pause_task))
         .route("/tasks/:task_id/resume", post(resume_task))
@@ -2091,19 +1869,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/tasks/:task_id/override", post(override_verdict))
         .route("/tasks/:task_id/parameters", post(modify_parameter))
         .route("/tasks/:task_id/guidance", post(inject_guidance))
-        .route("/waivers", get(list_waivers))
-        .route("/waivers", post(create_waiver))
-        .route("/waivers/:waiver_id/approve", post(approve_waiver))
-        .route("/tasks/:task_id/provenance", get(get_task_provenance))
+        .route("/waivers", get(api::handlers::list_waivers))
+        .route("/waivers", post(api::handlers::create_waiver))
+        .route("/waivers/:waiver_id/approve", post(api::handlers::approve_waiver))
+        .route("/tasks/:task_id/provenance", get(api::handlers::get_task_provenance))
         .route("/chat/session", post(create_chat_session))
         .route("/chat/messages/:session_id", get(get_chat_messages))
         .route("/chat/ws/:session_id", get(websocket_chat_handler))
         .route("/chat/config/:session_id", get(get_websocket_config))
         .route("/chat/message/:session_id", post(send_chat_message))
-    .route("/metrics", get(get_api_metrics))
-    .route("/metrics/stream", get(metrics_stream))
-    .route("/health", get(health_check))
-    .route("/proxy/*path", get(proxy_handler))
+    .route("/metrics", get(api::metrics::get_api_metrics))
+    .route("/metrics/stream", get(api::metrics::metrics_stream))
+    .route("/health", get(api::health::health_check))
+    .route("/proxy/*path", get(api::handlers::proxy_handler))
         .route("/alerts", get(|state: State<AppState>| async move {
             get_active_alerts(state).await
         }))
@@ -2125,8 +1903,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Create main router
     let app = Router::new()
-        .route("/health", get(health_check))
-        .route("/metrics", get(get_api_metrics)) // Alternative endpoint for dashboard
+        .route("/health", get(api::health::health_check))
+        .route("/metrics", get(api::metrics::get_api_metrics)) // Alternative endpoint for dashboard
         .nest("/api/v1", api_router);
 
     // Add CORS if enabled

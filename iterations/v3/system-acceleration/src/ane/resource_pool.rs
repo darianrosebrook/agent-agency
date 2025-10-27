@@ -281,7 +281,7 @@ impl Default for PoolBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tokio::time::timeout;
+    use tokio::time::{timeout, Duration};
 
     #[tokio::test]
     async fn test_pool_creation() {

@@ -489,7 +489,7 @@ mod tests {
     #[test]
     fn test_operation_enforcer() {
         let policy = CawsPolicy::new();
-        let enforcer = PolicyEnforcer::new(policy);
+        let enforcer = PolicyEnforcer::new(policy.clone());
         let config = OperationConfig::default();
         let mut operation_enforcer = OperationEnforcer::new(enforcer, config);
         

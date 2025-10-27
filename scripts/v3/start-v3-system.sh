@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Agent Agency V3 System Startup Script
-# Unified startup and shutdown for all v3 services
+# Agent Agency V3 System Startup Script - Real Service Integrations
+# Starts all real services: PostgreSQL (Docker), Ollama, CoreML models, and API server
 # @darianrosebrook
 
 set -euo pipefail
@@ -11,11 +11,13 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 V3_ROOT="$PROJECT_ROOT/iterations/v3"
 LOG_DIR="$V3_ROOT/logs"
 PID_DIR="$V3_ROOT/pids"
+MODELS_DIR="$PROJECT_ROOT/models/coreml"
 
-# Service Configuration (using arrays instead of associative arrays for compatibility)
-SERVICES=("api-server" "worker-system" "web-dashboard")
-SERVICE_PACKAGES=("data-infrastructure" "agent-workers" "apps/web-dashboard")
-SERVICE_PORTS=("8080" "8081" "3000")
+# Service Configuration
+POSTGRES_CONTAINER="agent-agency-v3-postgres"
+POSTGRES_PORT="5433"
+OLLAMA_PORT="11434"
+API_PORT="8080"
 
 declare -a PIDS=()
 
@@ -47,36 +49,6 @@ log_step() {
     echo -e "${BLUE}🔄 $1${NC}"
 }
 
-# Helper function to get service index
-get_service_index() {
-    local service="$1"
-    for i in "${!SERVICES[@]}"; do
-        if [[ "${SERVICES[$i]}" == "$service" ]]; then
-            echo $i
-            return
-        fi
-    done
-    echo -1
-}
-
-# Helper function to get service package
-get_service_package() {
-    local service="$1"
-    local index=$(get_service_index "$service")
-    if [[ $index -ge 0 ]]; then
-        echo "${SERVICE_PACKAGES[$index]}"
-    fi
-}
-
-# Helper function to get service port
-get_service_port() {
-    local service="$1"
-    local index=$(get_service_index "$service")
-    if [[ $index -ge 0 ]]; then
-        echo "${SERVICE_PORTS[$index]}"
-    fi
-}
-
 # Create necessary directories
 setup_directories() {
     log_step "Setting up directories..."
@@ -84,284 +56,384 @@ setup_directories() {
     log_success "Directories created"
 }
 
-# Check dependencies
+# Check system dependencies
 check_dependencies() {
     log_step "Checking system dependencies..."
-    
-    # Check PostgreSQL
-    if ! pg_isready -h localhost -p 5432 >/dev/null 2>&1; then
-        log_error "PostgreSQL is not running on localhost:5432"
-        log_info "Start PostgreSQL with: brew services start postgresql@14"
+
+    # Check Docker
+    if ! command -v docker &> /dev/null; then
+        log_error "Docker is required but not installed"
+        log_info "Install Docker from: https://docs.docker.com/get-docker/"
         exit 1
     fi
-    log_success "PostgreSQL is running"
-    
-    # Check Redis
-    if ! redis-cli ping >/dev/null 2>&1; then
-        log_error "Redis is not running on localhost:6379"
-        log_info "Start Redis with: brew services start redis"
+
+    # Check Docker is running
+    if ! docker info &> /dev/null; then
+        log_error "Docker daemon is not running"
+        log_info "Start Docker Desktop or run: sudo systemctl start docker"
         exit 1
     fi
-    log_success "Redis is running"
-    
-    # Check Rust
-    if ! command -v cargo >/dev/null 2>&1; then
+    log_success "Docker is available"
+
+    # Check Rust/Cargo
+    if ! command -v cargo &> /dev/null; then
         log_error "Rust/Cargo not found"
         log_info "Install Rust from: https://rustup.rs/"
         exit 1
     fi
     log_success "Rust/Cargo is available"
-    
-    # Check Node.js
-    if ! command -v node >/dev/null 2>&1; then
-        log_error "Node.js not found"
-        log_info "Install Node.js from: https://nodejs.org/"
+
+    # Check CoreML models directory
+    if [[ ! -d "$MODELS_DIR" ]]; then
+        log_error "CoreML models directory not found: $MODELS_DIR"
+        log_info "Run model download scripts from scripts/v3/models/"
         exit 1
     fi
-    log_success "Node.js is available"
+    log_success "CoreML models directory exists"
 }
 
-# Setup environment
-setup_environment() {
-    log_step "Setting up environment..."
-    
-    # Set required environment variables
-    export DATABASE_PASSWORD="${DATABASE_PASSWORD:-agent_agency_secure_password_123}"
-    export DATABASE_URL="postgresql://postgres:${DATABASE_PASSWORD}@localhost:5432/agent_agency"
-    export REDIS_URL="redis://localhost:6379"
-    export RUST_LOG="${RUST_LOG:-info}"
-    export RUST_BACKTRACE="${RUST_BACKTRACE:-1}"
-    
-    # Set build environment
-    export BUILD_NAMESPACE="v3-system"
-    export AGENT_PLATFORM="aarch64-apple-darwin"
-    export AGENT_TYPE="production"
-    
-    log_success "Environment configured"
+# Start PostgreSQL via Docker
+start_postgres() {
+    log_step "Starting PostgreSQL via Docker..."
+
+    # Stop any existing container
+    docker stop "$POSTGRES_CONTAINER" &> /dev/null || true
+    docker rm "$POSTGRES_CONTAINER" &> /dev/null || true
+
+    # Start PostgreSQL container
+    docker run -d \
+        --name "$POSTGRES_CONTAINER" \
+        --rm \
+        -e POSTGRES_DB=agent_agency \
+        -e POSTGRES_USER=postgres \
+        -e POSTGRES_PASSWORD=agent_agency_secure_password_123 \
+        -p "$POSTGRES_PORT:5432" \
+        postgres:15-alpine
+
+    if [[ $? -ne 0 ]]; then
+        log_error "Failed to start PostgreSQL container"
+        exit 1
+    fi
+
+    log_info "Waiting for PostgreSQL to be ready..."
+    local max_attempts=30
+    local attempt=1
+
+    while [[ $attempt -le $max_attempts ]]; do
+        if docker exec "$POSTGRES_CONTAINER" pg_isready -U postgres -d agent_agency &> /dev/null; then
+            log_success "PostgreSQL is ready (Port: $POSTGRES_PORT)"
+            return 0
+        fi
+
+        log_info "PostgreSQL not ready yet (attempt $attempt/$max_attempts)..."
+        sleep 2
+        ((attempt++))
+    done
+
+    log_error "PostgreSQL failed to start within timeout"
+    docker logs "$POSTGRES_CONTAINER"
+    exit 1
 }
 
-# Start Rust API Server
+# Start Ollama service
+start_ollama() {
+    log_step "Starting Ollama service..."
+
+    # Check if Ollama is already running
+    if curl -s "http://localhost:$OLLAMA_PORT/api/tags" &> /dev/null; then
+        log_success "Ollama is already running (Port: $OLLAMA_PORT)"
+        return 0
+    fi
+
+    # Start Ollama in background
+    nohup ollama serve > "$LOG_DIR/ollama.log" 2>&1 &
+
+    local pid=$!
+    PIDS+=("$pid")
+    echo $pid > "$PID_DIR/ollama.pid"
+
+    log_info "Waiting for Ollama to be ready..."
+    local max_attempts=30
+    local attempt=1
+
+    while [[ $attempt -le $max_attempts ]]; do
+        if curl -s "http://localhost:$OLLAMA_PORT/api/tags" &> /dev/null; then
+            log_success "Ollama is ready (Port: $OLLAMA_PORT)"
+            return 0
+        fi
+
+        log_info "Ollama not ready yet (attempt $attempt/$max_attempts)..."
+        sleep 2
+        ((attempt++))
+    done
+
+    log_error "Ollama failed to start within timeout"
+    cat "$LOG_DIR/ollama.log" || true
+    exit 1
+}
+
+# Ensure Ollama model is available
+ensure_ollama_model() {
+    local model_name="${1:-llama2:7b}"
+
+    log_step "Ensuring Ollama model '$model_name' is available..."
+
+    # Check if model is already available
+    if ollama list | grep -q "$model_name"; then
+        log_success "Model '$model_name' is already available"
+        return 0
+    fi
+
+    log_info "Pulling model '$model_name'..."
+    if ollama pull "$model_name"; then
+        log_success "Model '$model_name' pulled successfully"
+    else
+        log_error "Failed to pull model '$model_name'"
+        exit 1
+    fi
+}
+
+# Start API server
 start_api_server() {
-    log_step "Starting API Server..."
-    
+    log_step "Starting API server with real integrations..."
+
     cd "$V3_ROOT"
-    
+
     # Build if needed
     if [[ ! -f "target/debug/data-infrastructure" ]]; then
         log_info "Building API server..."
         cargo build --package data-infrastructure --bin data-infrastructure
     fi
-    
+
+    # Set environment variables for real integrations
+    export DATABASE_URL="postgresql://postgres:agent_agency_secure_password_123@localhost:$POSTGRES_PORT/agent_agency"
+    export COREML_MODELS_PATH="$MODELS_DIR"
+    export OLLAMA_BASE_URL="http://localhost:$OLLAMA_PORT"
+    export RUST_LOG="${RUST_LOG:-info}"
+    export RUST_BACKTRACE="${RUST_BACKTRACE:-1}"
+
     # Start API server
     nohup cargo run --package data-infrastructure --bin data-infrastructure \
-        -- --host 127.0.0.1 --port 8080 --enable-cors \
-        --db-host localhost --db-port 5432 --db-name agent_agency \
-        --db-user postgres --db-password "$DATABASE_PASSWORD" \
-        --enable-redis --redis-url "$REDIS_URL" \
-        --v3-backend-host "http://localhost:3001" \
+        -- --host 127.0.0.1 --port $API_PORT --enable-cors \
         > "$LOG_DIR/api-server.log" 2>&1 &
-    
+
     local pid=$!
     PIDS+=("$pid")
     echo $pid > "$PID_DIR/api-server.pid"
-    
+
     # Wait for service to be ready
-    sleep 3
-    if kill -0 $pid 2>/dev/null; then
-        log_success "API Server started (PID: $pid, Port: 8080)"
-    else
-        log_error "API Server failed to start"
-        return 1
-    fi
+    log_info "Waiting for API server to be ready..."
+    local max_attempts=30
+    local attempt=1
+
+    while [[ $attempt -le $max_attempts ]]; do
+        if curl -s "http://localhost:$API_PORT/health" &> /dev/null; then
+            log_success "API server is ready (Port: $API_PORT)"
+            return 0
+        fi
+
+        log_info "API server not ready yet (attempt $attempt/$max_attempts)..."
+        sleep 2
+        ((attempt++))
+    done
+
+    log_error "API server failed to start within timeout"
+    cat "$LOG_DIR/api-server.log" || true
+    exit 1
 }
 
-# Start Worker System
-start_worker_system() {
-    log_step "Starting Worker System..."
-    
-    cd "$V3_ROOT"
-    
-    # Build if needed
-    if [[ ! -f "target/debug/agent-workers" ]]; then
-        log_info "Building worker system..."
-        cargo build --package agent-workers --bin agent-workers
-    fi
-    
-    # Start worker system
-    nohup cargo run --package agent-workers --bin agent-workers \
-        > "$LOG_DIR/worker-system.log" 2>&1 &
-    
-    local pid=$!
-    PIDS+=("$pid")
-    echo $pid > "$PID_DIR/worker-system.pid"
-    
-    # Wait for service to be ready
-    sleep 3
-    if kill -0 $pid 2>/dev/null; then
-        log_success "Worker System started (PID: $pid, Port: 8081)"
-    else
-        log_error "Worker System failed to start"
-        return 1
-    fi
-}
-
-# Start Web Dashboard
-start_web_dashboard() {
-    log_step "Starting Web Dashboard..."
-    
-    cd "$V3_ROOT/apps/web-dashboard"
-    
-    # Install dependencies if needed
-    if [[ ! -d "node_modules" ]]; then
-        log_info "Installing dashboard dependencies..."
-        npm install
-    fi
-    
-    # Start Next.js development server
-    nohup npm run dev \
-        > "$LOG_DIR/web-dashboard.log" 2>&1 &
-    
-    local pid=$!
-    PIDS+=("$pid")
-    echo $pid > "$PID_DIR/web-dashboard.pid"
-    
-    # Wait for service to be ready
-    sleep 5
-    if kill -0 $pid 2>/dev/null; then
-        log_success "Web Dashboard started (PID: $pid, Port: 3000)"
-    else
-        log_error "Web Dashboard failed to start"
-        return 1
-    fi
-}
-
-# Health check all services
+# Perform comprehensive health checks
 health_check() {
-    log_step "Performing health checks..."
-    
+    log_step "Performing comprehensive health checks..."
+
+    local all_healthy=true
+
+    # Check PostgreSQL
+    if docker exec "$POSTGRES_CONTAINER" pg_isready -U postgres -d agent_agency &> /dev/null; then
+        log_success "PostgreSQL: Healthy"
+    else
+        log_error "PostgreSQL: Unhealthy"
+        all_healthy=false
+    fi
+
+    # Check Ollama
+    if curl -s "http://localhost:$OLLAMA_PORT/api/tags" &> /dev/null; then
+        log_success "Ollama: Healthy"
+    else
+        log_error "Ollama: Unhealthy"
+        all_healthy=false
+    fi
+
     # Check API server
-    if curl -s http://localhost:8080/health >/dev/null 2>&1; then
-        log_success "API Server health check passed"
+    if curl -s "http://localhost:$API_PORT/health" &> /dev/null; then
+        log_success "API Server: Healthy"
     else
-        log_warning "API Server health check failed"
+        log_error "API Server: Unhealthy"
+        all_healthy=false
     fi
-    
-    # Check web dashboard
-    if curl -s http://localhost:3000 >/dev/null 2>&1; then
-        log_success "Web Dashboard health check passed"
+
+    # Check CoreML models
+    if [[ -d "$MODELS_DIR/mistral" ]] && [[ -d "$MODELS_DIR/fastvit" ]]; then
+        log_success "CoreML Models: Available"
     else
-        log_warning "Web Dashboard health check failed"
+        log_error "CoreML Models: Missing"
+        all_healthy=false
     fi
-    
-    # Check worker system (if it has health endpoint)
-    if curl -s http://localhost:8081/health >/dev/null 2>&1; then
-        log_success "Worker System health check passed"
+
+    if [[ "$all_healthy" == "true" ]]; then
+        log_success "All services are healthy! 🎉"
+        return 0
     else
-        log_warning "Worker System health check failed (may not have health endpoint)"
+        log_error "Some services are unhealthy"
+        return 1
     fi
 }
 
 # Stop all services
 stop_services() {
     log_step "Stopping all services..."
-    
-    # Stop services by PID file
-    for service in "${SERVICES[@]}"; do
-        local pid_file="$PID_DIR/$service.pid"
-        if [[ -f "$pid_file" ]]; then
-            local pid=$(cat "$pid_file")
+
+    # Stop API server
+    if [[ -f "$PID_DIR/api-server.pid" ]]; then
+        local pid=$(cat "$PID_DIR/api-server.pid")
+        if kill -0 $pid 2>/dev/null; then
+            log_info "Stopping API server (PID: $pid)..."
+            kill $pid || true
+            sleep 2
             if kill -0 $pid 2>/dev/null; then
-                log_info "Stopping $service (PID: $pid)..."
-                kill $pid
-                sleep 2
-                if kill -0 $pid 2>/dev/null; then
-                    log_warning "Force killing $service..."
-                    kill -9 $pid
-                fi
-                log_success "$service stopped"
+                kill -9 $pid || true
             fi
-            rm -f "$pid_file"
         fi
-    done
-    
+        rm -f "$PID_DIR/api-server.pid"
+    fi
+
+    # Stop Ollama
+    if [[ -f "$PID_DIR/ollama.pid" ]]; then
+        local pid=$(cat "$PID_DIR/ollama.pid")
+        if kill -0 $pid 2>/dev/null; then
+            log_info "Stopping Ollama (PID: $pid)..."
+            kill $pid || true
+            sleep 2
+            if kill -0 $pid 2>/dev/null; then
+                kill -9 $pid || true
+            fi
+        fi
+        rm -f "$PID_DIR/ollama.pid"
+    fi
+
+    # Stop PostgreSQL container
+    if docker ps | grep -q "$POSTGRES_CONTAINER"; then
+        log_info "Stopping PostgreSQL container..."
+        docker stop "$POSTGRES_CONTAINER" || true
+    fi
+
     # Clean up any remaining processes
     pkill -f "data-infrastructure" 2>/dev/null || true
-    pkill -f "agent-workers" 2>/dev/null || true
-    pkill -f "next-server" 2>/dev/null || true
-    
+    pkill -f "ollama" 2>/dev/null || true
+
     log_success "All services stopped"
 }
 
 # Show service status
 show_status() {
     log_step "Service Status:"
-    
-    for i in "${!SERVICES[@]}"; do
-        local service="${SERVICES[$i]}"
-        local port="${SERVICE_PORTS[$i]}"
-        local pid_file="$PID_DIR/$service.pid"
-        
-        if [[ -f "$pid_file" ]]; then
-            local pid=$(cat "$pid_file")
-            if kill -0 $pid 2>/dev/null; then
-                log_success "$service: Running (PID: $pid, Port: $port)"
-            else
-                log_warning "$service: PID file exists but process not running"
-                rm -f "$pid_file"
-            fi
+
+    # PostgreSQL
+    if docker ps | grep -q "$POSTGRES_CONTAINER"; then
+        log_success "PostgreSQL: Running (Container: $POSTGRES_CONTAINER, Port: $POSTGRES_PORT)"
+    else
+        log_warning "PostgreSQL: Not running"
+    fi
+
+    # Ollama
+    if [[ -f "$PID_DIR/ollama.pid" ]]; then
+        local pid=$(cat "$PID_DIR/ollama.pid")
+        if kill -0 $pid 2>/dev/null; then
+            log_success "Ollama: Running (PID: $pid, Port: $OLLAMA_PORT)"
         else
-            log_warning "$service: Not running"
+            log_warning "Ollama: PID file exists but process not running"
+            rm -f "$PID_DIR/ollama.pid"
         fi
-    done
+    else
+        log_warning "Ollama: Not running"
+    fi
+
+    # API Server
+    if [[ -f "$PID_DIR/api-server.pid" ]]; then
+        local pid=$(cat "$PID_DIR/api-server.pid")
+        if kill -0 $pid 2>/dev/null; then
+            log_success "API Server: Running (PID: $pid, Port: $API_PORT)"
+        else
+            log_warning "API Server: PID file exists but process not running"
+            rm -f "$PID_DIR/api-server.pid"
+        fi
+    else
+        log_warning "API Server: Not running"
+    fi
+
+    # CoreML Models
+    if [[ -d "$MODELS_DIR" ]]; then
+        local model_count=$(find "$MODELS_DIR" -name "*.mlmodelc" | wc -l)
+        log_success "CoreML Models: Available ($model_count compiled models)"
+    else
+        log_warning "CoreML Models: Directory not found"
+    fi
 }
 
 # Show logs
 show_logs() {
     local service="${1:-all}"
-    
+
     if [[ "$service" == "all" ]]; then
         log_step "Recent logs from all services:"
-        for log_file in "$LOG_DIR"/*.log; do
-            if [[ -f "$log_file" ]]; then
-                echo -e "\n${BLUE}=== $(basename "$log_file") ===${NC}"
-                tail -n 20 "$log_file"
-            fi
-        done
+        echo -e "\n${BLUE}=== API Server ===${NC}"
+        tail -n 10 "$LOG_DIR/api-server.log" 2>/dev/null || echo "No API server logs"
+        echo -e "\n${BLUE}=== Ollama ===${NC}"
+        tail -n 10 "$LOG_DIR/ollama.log" 2>/dev/null || echo "No Ollama logs"
+    elif [[ "$service" == "api" ]] || [[ "$service" == "api-server" ]]; then
+        log_step "API Server logs:"
+        tail -f "$LOG_DIR/api-server.log" 2>/dev/null || echo "No API server logs"
+    elif [[ "$service" == "ollama" ]]; then
+        log_step "Ollama logs:"
+        tail -f "$LOG_DIR/ollama.log" 2>/dev/null || echo "No Ollama logs"
     else
-        local log_file="$LOG_DIR/$service.log"
-        if [[ -f "$log_file" ]]; then
-            log_step "Logs for $service:"
-            tail -f "$log_file"
-        else
-            log_error "No log file found for $service"
-        fi
+        log_error "Unknown service: $service"
+        echo "Available services: api-server, ollama"
     fi
 }
 
-# Main functions
+# Main start function
 start_all() {
-    log_info "Starting Agent Agency V3 System..."
-    
+    log_info "🚀 Starting Agent Agency V3 System with Real Service Integrations"
+    log_info "=========================================================="
+
     setup_directories
     check_dependencies
-    setup_environment
-    
+
+    start_postgres
+    start_ollama
+    ensure_ollama_model "llama2:7b"
     start_api_server
-    start_worker_system
-    start_web_dashboard
-    
+
     sleep 2
-    health_check
-    
-    log_success "V3 System started successfully!"
-    log_info "Services available at:"
-    log_info "  - API Server: http://localhost:8080"
-    log_info "  - Web Dashboard: http://localhost:3000"
-    log_info "  - Worker System: http://localhost:8081"
-    log_info ""
-    log_info "Use '$0 status' to check service status"
-    log_info "Use '$0 logs [service]' to view logs"
-    log_info "Use '$0 stop' to stop all services"
+    if health_check; then
+        log_success "🎉 V3 System started successfully!"
+        log_info ""
+        log_info "Services available at:"
+        log_info "  📊 API Server: http://localhost:$API_PORT"
+        log_info "  🤖 Ollama: http://localhost:$OLLAMA_PORT"
+        log_info "  🐘 PostgreSQL: localhost:$POSTGRES_PORT"
+        log_info "  🧠 CoreML Models: $MODELS_DIR"
+        log_info ""
+        log_info "Management commands:"
+        log_info "  📊 Status: $0 status"
+        log_info "  📝 Logs: $0 logs [service]"
+        log_info "  🛑 Stop: $0 stop"
+        log_info "  🔄 Restart: $0 restart"
+    else
+        log_error "❌ System startup failed - some services are unhealthy"
+        exit 1
+    fi
 }
 
 # Signal handlers for graceful shutdown
@@ -383,7 +455,7 @@ case "${1:-start}" in
         ;;
     "restart")
         stop_services
-        sleep 2
+        sleep 3
         start_all
         ;;
     "status")
@@ -399,17 +471,18 @@ case "${1:-start}" in
         echo "Usage: $0 {start|stop|restart|status|logs|health}"
         echo ""
         echo "Commands:"
-        echo "  start   - Start all V3 services"
+        echo "  start   - Start all V3 services with real integrations"
         echo "  stop    - Stop all V3 services"
         echo "  restart - Restart all V3 services"
         echo "  status  - Show service status"
-        echo "  logs    - Show logs (optionally specify service: api-server, worker-system, web-dashboard)"
-        echo "  health  - Perform health checks"
+        echo "  logs    - Show logs (optionally specify service: api-server, ollama)"
+        echo "  health  - Perform comprehensive health checks"
         echo ""
-        echo "Services:"
-        for i in "${!SERVICES[@]}"; do
-            echo "  - ${SERVICES[$i]} (${SERVICE_PACKAGES[$i]}) - Port ${SERVICE_PORTS[$i]}"
-        done
+        echo "Services Started:"
+        echo "  🐘 PostgreSQL - Docker container on port $POSTGRES_PORT"
+        echo "  🤖 Ollama - Local AI models on port $OLLAMA_PORT"
+        echo "  📊 API Server - Real integrations on port $API_PORT"
+        echo "  🧠 CoreML Models - Hardware acceleration ready"
         exit 1
         ;;
 esac

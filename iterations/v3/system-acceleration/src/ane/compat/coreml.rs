@@ -370,6 +370,12 @@ pub mod coreml {
         }
     }
 
+    impl Default for ModelRef {
+        fn default() -> Self {
+            Self::new()
+        }
+    }
+
     /// Thread-local registry mapping ModelRef to CoreMlHandle
     /// This should only be used on the thread that owns the CoreML handles.
     pub struct ModelRegistry {

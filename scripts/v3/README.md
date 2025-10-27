@@ -4,6 +4,7 @@ This directory contains automation scripts for the Agent Agency V3 system, organ
 
 ## Organization
 
+- **`start-v3-system.sh`** - **NEW**: Complete system startup with real service integrations
 - **`build/`** - Build automation and compilation scripts
 - **`test/`** - Testing, coverage, and quality assurance scripts
 - **`deploy/`** - Deployment and production management scripts
@@ -11,6 +12,44 @@ This directory contains automation scripts for the Agent Agency V3 system, organ
 - **`analysis/`** - Code analysis, reporting, and metrics scripts
 - **`ci/`** - Continuous integration and development workflow scripts
 - **`models/`** - ML model management and conversion scripts
+
+## 🚀 Quick Start - Real Service Integrations
+
+The V3 system now uses **real service integrations** instead of mocks:
+
+### Start Everything
+```bash
+# Start PostgreSQL (Docker), Ollama, CoreML models, and API server
+./start-v3-system.sh start
+```
+
+### Check Status
+```bash
+./start-v3-system.sh status
+```
+
+### View Logs
+```bash
+./start-v3-system.sh logs        # All services
+./start-v3-system.sh logs api    # API server only
+```
+
+### Stop Services
+```bash
+./start-v3-system.sh stop
+```
+
+### Real Services Started
+- 🐘 **PostgreSQL**: Docker container on port 5433
+- 🤖 **Ollama**: Local LLM service on port 11434
+- 📊 **API Server**: Real integrations on port 8080
+- 🧠 **CoreML Models**: Hardware acceleration ready
+
+### Run E2E Tests
+```bash
+cd ../iterations/v3/testing-validation
+./run_e2e_tests.sh  # Uses real services, not mocks
+```
 
 ## Usage
 

@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::recovery_types::{Digest, RestorePlan, RestoreAction, RestoreResult, RestoreFilters, SessionRef};
+use crate::recovery_types::{Digest, RestorePlan, RestoreAction, RestoreResult, RestoreFilters, SessionMeta, SessionRef};
 use crate::cas::{AtomicRestore, RestoredFile};
 use crate::merkle::{Commit as MerkleCommit, FileTree as MerkleTree};
 use crate::policy::{CawsPolicy, PolicyEnforcer};

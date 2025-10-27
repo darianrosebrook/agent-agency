@@ -47,7 +47,6 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 agent-agency-contracts = { path = "../agent-agency-contracts" }
 system-configuration = { path = "../system-configuration" }
 system-quality-security = { path = "../system-quality-security" }
-agent-research = { path = "../agent-research" }
 
 [features]
 default = []

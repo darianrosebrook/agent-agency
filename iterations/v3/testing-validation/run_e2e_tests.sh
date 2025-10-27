@@ -1,22 +1,21 @@
 #!/bin/bash
-# E2E Autonomous Tests Runner
+# E2E Autonomous Tests Runner - Real Service Integrations
 #
-# This script sets up the environment and runs comprehensive end-to-end
-# tests for Agent Agency V3's autonomous capabilities.
+# This script uses the comprehensive start script to launch all real services
+# and runs end-to-end tests for Agent Agency V3's autonomous capabilities.
 #
 # Prerequisites:
-# - Docker (for PostgreSQL)
+# - Docker (for PostgreSQL container)
 # - Ollama (for local model inference)
-# - CoreML Mistral model (for orchestrator)
+# - CoreML models in /models/coreml directory
 
 set -e
 
 # Configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
-DOCKER_COMPOSE_FILE="$SCRIPT_DIR/docker-compose.test.yml"
-OLLAMA_MODEL="llama2:7b"  # Can be overridden via OLLAMA_MODEL env var
-MISTRAL_MODEL_PATH="$PROJECT_ROOT/models/mistral"
+START_SCRIPT="$PROJECT_ROOT/scripts/v3/start-v3-system.sh"
+OLLAMA_MODEL="${OLLAMA_MODEL:-llama2:7b}"  # Can be overridden via OLLAMA_MODEL env var
 
 # Colors for output
 RED='\033[0;31m'
@@ -76,80 +75,26 @@ check_prerequisites() {
 
 # Setup test environment
 setup_environment() {
-    log_info "Setting up test environment..."
+    log_info "Setting up test environment with real service integrations..."
 
-    # Start Docker services
-    log_info "Starting Docker services..."
-    if [[ -f "$DOCKER_COMPOSE_FILE" ]]; then
-        docker-compose -f "$DOCKER_COMPOSE_FILE" up -d
-        if [[ $? -ne 0 ]]; then
-            log_error "Failed to start Docker services"
-            exit 1
-        fi
-    else
-        log_error "Docker Compose file not found: $DOCKER_COMPOSE_FILE"
+    # Use the comprehensive start script to launch all services
+    log_info "Starting all V3 services using start script..."
+    if [[ ! -f "$START_SCRIPT" ]]; then
+        log_error "Start script not found: $START_SCRIPT"
         exit 1
     fi
 
-    # Wait for services to be healthy
-    log_info "Waiting for services to be ready..."
-    wait_for_services
-
-    # Ensure Ollama model is available
-    log_info "Ensuring Ollama model $OLLAMA_MODEL is available..."
-    if ! ollama list | grep -q "$OLLAMA_MODEL"; then
-        log_info "Pulling Ollama model $OLLAMA_MODEL..."
-        ollama pull "$OLLAMA_MODEL"
-        if [[ $? -ne 0 ]]; then
-            log_error "Failed to pull Ollama model $OLLAMA_MODEL"
-            exit 1
-        fi
-    else
-        log_info "Ollama model $OLLAMA_MODEL already available"
+    # Start all services
+    if ! "$START_SCRIPT" start; then
+        log_error "Failed to start V3 services"
+        exit 1
     fi
 
-    log_success "Test environment setup complete"
+    log_success "Test environment setup complete - all real services running"
 }
 
-# Wait for services to be healthy
-wait_for_services() {
-    local max_attempts=30
-    local attempt=1
-
-    while [[ $attempt -le $max_attempts ]]; do
-        log_info "Checking service health (attempt $attempt/$max_attempts)..."
-
-        # Check PostgreSQL
-        if docker-compose -f "$DOCKER_COMPOSE_FILE" exec -T postgres pg_isready -U test_user -d test_db &> /dev/null; then
-            log_info "PostgreSQL is ready"
-            postgresql_ready=true
-        else
-            log_info "PostgreSQL not ready yet"
-            postgresql_ready=false
-        fi
-
-        # Check Ollama API
-        if curl -s http://localhost:11434/api/tags &> /dev/null; then
-            log_info "Ollama API is ready"
-            ollama_ready=true
-        else
-            log_info "Ollama API not ready yet"
-            ollama_ready=false
-        fi
-
-        # Check if all services are ready
-        if [[ "$postgresql_ready" == "true" && "$ollama_ready" == "true" ]]; then
-            log_success "All services are ready"
-            return 0
-        fi
-
-        attempt=$((attempt + 1))
-        sleep 2
-    done
-
-    log_error "Services failed to become ready within timeout"
-    exit 1
-}
+# Services are now started and health-checked by the comprehensive start script
+# No need for separate wait_for_services function
 
 # Run the E2E tests
 run_tests() {
@@ -161,8 +106,8 @@ run_tests() {
     # Set test environment variables
     export E2E_TEST_MODE=true
     export OLLAMA_MODEL=${OLLAMA_MODEL}
-    export MISTRAL_MODEL_PATH=${MISTRAL_MODEL_PATH}
-    export DATABASE_URL="postgresql://test_user:test_password@localhost:5433/test_db"
+    export COREML_MODELS_PATH="$PROJECT_ROOT/models/coreml"
+    export DATABASE_URL="postgresql://postgres:agent_agency_secure_password_123@localhost:5433/agent_agency"
 
     # Run the tests with e2e feature flag
     log_info "Executing test scenarios..."
@@ -179,13 +124,10 @@ run_tests() {
 cleanup_environment() {
     log_info "Cleaning up test environment..."
 
-    # Stop Docker services
-    if [[ -f "$DOCKER_COMPOSE_FILE" ]]; then
-        docker-compose -f "$DOCKER_COMPOSE_FILE" down
+    # Stop all services using the comprehensive stop script
+    if [[ -f "$START_SCRIPT" ]]; then
+        "$START_SCRIPT" stop
     fi
-
-    # Clean up any temporary files
-    # (Add cleanup logic as needed)
 
     log_success "Test environment cleanup complete"
 }

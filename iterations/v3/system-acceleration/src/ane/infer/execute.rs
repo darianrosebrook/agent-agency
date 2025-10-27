@@ -505,16 +505,26 @@ mod tests {
                     shape: vec![1, 3, 224, 224],
                     dtype: DType::F32,
                     optional: false,
+                    start_index: 0,
+                    post_processing: None,
                 }],
                 outputs: vec![IOTensorSpec {
                     name: "output".to_string(),
                     shape: vec![1, 1000],
                     dtype: DType::F32,
                     optional: false,
+                    start_index: 0,
+                    post_processing: None,
                 }],
             },
             loaded_at: Instant::now(),
             last_accessed: Instant::now(),
+            model_ref: crate::ane::compat::coreml::ModelRef::default(),
+            input_name: "input".to_string(),
+            input_shape: vec![1, 3, 224, 224],
+            requires_normalization: false,
+            normalization_mean: None,
+            normalization_std: None,
         }
     }
 
