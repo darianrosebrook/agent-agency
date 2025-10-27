@@ -18,8 +18,9 @@ use uuid::Uuid;
 use tracing::{info, warn, error};
 
 use crate::{
-    AppState, TaskStoreTrait, DatabaseClient,
+    TaskStoreTrait, DatabaseClient,
 };
+use crate::AppState;
 use crate::api::types::{TaskSubmissionRequest, TaskSubmissionResponse};
 
 // Re-export the health check function from health module

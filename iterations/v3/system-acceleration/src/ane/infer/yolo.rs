@@ -8,8 +8,8 @@ use crate::ane::models::yolo_model::{
     LoadedYOLOModel, YOLODetectionResult, Detection,
     YOLOInferenceOptions,
 };
+use crate::ane::compat::coreml::{coreml, coreml::ModelRef};
 use system_configuration::geometry::BoundingBox;
-use crate::ane::compat::coreml::coreml;
 use crate::ane::infer::execute::{execute_inference, InferenceOptions, InferenceResult};
 use image::{DynamicImage, ImageBuffer, Rgb};
 use std::time::Instant;
@@ -35,7 +35,7 @@ impl YOLOInferenceExecutor {
         let start_time = Instant::now();
 
         // Preprocess image for YOLO input
-        let _input_tensor = self.preprocess_image_for_yolo(image)?;
+        let input_tensor = self.preprocess_image_for_yolo(image)?;
 
         // Create inference options
         let _inference_options = InferenceOptions {
@@ -46,12 +46,39 @@ impl YOLOInferenceExecutor {
             enable_monitoring: true,
         };
 
-        // Run inference (placeholder - CoreML integration needed)
+        // Create input specification for YOLO model
+        let input_spec = crate::ane::TensorSpec {
+            name: "image".to_string(),
+            dtype: "F32".to_string(),
+            shape: vec![1, 3, self.model.config.input_size.1 as usize, self.model.config.input_size.0 as usize], // [batch, channels, height, width]
+            required: true,
+            batch_capable: false,
+        };
+
+        // Create output specification
+        let output_spec = crate::ane::TensorSpec {
+            name: "output".to_string(),
+            dtype: "F32".to_string(),
+            shape: vec![1, 255, 13, 13], // YOLOv3 output shape for 416x416 input
+            required: true,
+            batch_capable: false,
+        };
+
+        // Run CoreML inference
+        let outputs = coreml::run_inference(
+            ModelRef::new(),
+            "image",
+            &input_tensor.flatten_all().unwrap().to_vec1::<f32>().unwrap(),
+            &[1, 3, self.model.config.input_size.1 as usize, self.model.config.input_size.0 as usize]
+        ).map_err(|e| ANEError::InferenceFailed(format!("CoreML inference failed: {}", e)))?;
+
         let inference_time = start_time.elapsed();
 
-        // TODO: Implement actual CoreML inference for YOLO
-        // For now, return empty detections
-        let detections = Vec::new();
+        // Extract output tensor (run_inference returns a single tensor)
+        let output_tensor = outputs;
+
+        // Decode and filter detections from output
+        let detections = self.decode_detections_from_tensor(&output_tensor, image, options)?;
 
         // Record telemetry
         self.model.telemetry.record_inference(inference_time.as_millis() as u64, true);
@@ -69,7 +96,7 @@ impl YOLOInferenceExecutor {
     }
 
     /// Preprocess image for YOLO model input
-    fn preprocess_image_for_yolo(&self, image: &DynamicImage) -> Result<crate::ane::compat::coreml::coreml::Tensor> {
+    fn preprocess_image_for_yolo(&self, image: &DynamicImage) -> Result<candle_core::Tensor> {
         // Resize image to model input size (416x416 for YOLOv3)
         let resized = image.resize_exact(
             self.model.config.input_size.0,
@@ -113,29 +140,26 @@ impl YOLOInferenceExecutor {
 
         // Create tensor with shape [1, 3, height, width]
         let shape = vec![1, channels, height, width];
-        let tensor = crate::ane::compat::coreml::coreml::Tensor::new(&*tensor_data, &candle_core::Device::Cpu)?;
+        let tensor = candle_core::Tensor::new(&*tensor_data, &candle_core::Device::Cpu)?;
 
         Ok(tensor)
     }
 
-    /// Decode detections from model output tensor
-    fn decode_detections_from_output(
+    /// Decode detections from CoreML output tensor
+    fn decode_detections_from_tensor(
         &self,
-        inference_result: &InferenceResult,
+        output_tensor: &candle_core::Tensor,
         original_image: &DynamicImage,
         options: &YOLOInferenceOptions,
     ) -> Result<Vec<Detection>> {
-        // YOLOv3 outputs multiple tensors for different scales
-        // For simplicity, we'll assume the main output tensor contains all detections
-        if inference_result.output.is_empty() {
-            return Ok(vec![]);
-        }
+        // Get tensor data as slice
+        let output_data = output_tensor.to_vec1::<f32>()
+            .map_err(|e| ANEError::Internal(format!("Failed to extract tensor data: {}", e)))?;
 
-        let output_data = &inference_result.output;
 
         // YOLOv3 output format parsing
         let detections = self.parse_yolo_output(
-            output_data,
+            &output_data,
             original_image.width() as f32,
             original_image.height() as f32,
             options.confidence_threshold.unwrap_or(self.model.config.confidence_threshold),

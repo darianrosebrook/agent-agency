@@ -29,7 +29,7 @@ This crate now contains a **fully functional E2E test** that demonstrates:
    curl -fsSL https://ollama.ai/install.sh | sh
 
    # Pull a model and start service
-   ollama pull llama2:7b
+   ollama pull gemma3n:e2b
    ollama serve  # Runs on localhost:11434
    ```
 
@@ -147,7 +147,7 @@ Install and configure Ollama:
 brew install ollama
 
 # Pull required model
-ollama pull llama2:7b
+ollama pull gemma3n:e2b
 ```
 
 ## Running Tests
@@ -183,7 +183,7 @@ docker-compose -f docker-compose.test.yml down
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `OLLAMA_MODEL` | Model to use for worker inference | `llama2:7b` |
+| `OLLAMA_MODEL` | Model to use for worker inference | `gemma3n:e2b` |
 | `MISTRAL_MODEL_PATH` | Path to CoreML Mistral model | `iterations/v3/models/mistral` |
 | `DATABASE_URL` | PostgreSQL connection string | `postgresql://test_user:test_password@localhost:5433/test_db` |
 | `E2E_TEST_MODE` | Enable E2E test mode | `true` |
@@ -290,7 +290,7 @@ docker-compose -f docker-compose.test.yml restart
 ollama list
 
 # Pull missing model
-ollama pull llama2:7b
+ollama pull gemma3n:e2b
 
 # Verify CoreML model
 ls -la iterations/v3/models/mistral/
@@ -405,7 +405,7 @@ jobs:
         brew install ollama
         ollama serve &
         sleep 5
-        ollama pull llama2:7b
+        ollama pull gemma3n:e2b
 
     - name: Run E2E Tests
       run: |

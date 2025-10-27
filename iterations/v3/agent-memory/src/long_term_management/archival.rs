@@ -203,7 +203,7 @@ impl MemoryArchivalManager {
 
     /// Select appropriate storage tier
     async fn select_storage_tier(&self, memory: &crate::memory_types::Memory) -> String {
-        let age_days = (chrono::Utc::now() - memory.created_at).num_days();
+        let age_days = (chrono::Utc::now() - memory.created_at).num_seconds() as f64 / (24.0 * 3600.0);
 
         // Select tier based on age and importance
         for tier in &self.config.storage_tiers {

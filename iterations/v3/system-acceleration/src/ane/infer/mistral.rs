@@ -5,6 +5,9 @@
 
 use crate::ane::ane_errors::{ANEError, Result};
 use crate::ane::models::mistral_model::{MistralModel, reasoning_templates};
+use crate::ane::TensorSpec;
+use crate::ane::compat::coreml::coreml::{ModelRef, validate_io_schema, run_inference};
+use candle_core::Tensor;
 use crate::telemetry::TelemetryCollector;
 use std::time::Instant;
 
@@ -12,8 +15,8 @@ use std::time::Instant;
 #[derive(Debug, Clone)]
 pub struct MistralInferenceOptions {
     pub max_tokens: usize,
-    pub temperature: f32,
-    pub top_p: f32,
+    pub temperature: Option<f32>, // None = greedy sampling
+    pub top_p: Option<f32>,       // None = no top-p filtering
     pub timeout_ms: u64,
     pub use_kv_cache: bool,
 }
@@ -22,9 +25,9 @@ impl Default for MistralInferenceOptions {
     fn default() -> Self {
         Self {
             max_tokens: 100,
-            temperature: 0.7,
-            top_p: 0.9,
-            timeout_ms: 30000, // 30 seconds
+            temperature: Some(0.7), // Enable temperature sampling
+            top_p: Some(0.9),       // Enable top-p sampling
+            timeout_ms: 30000,      // 30 seconds
             use_kv_cache: true,
         }
     }
@@ -192,7 +195,7 @@ pub async fn generate_text(
         let input_tokens = prepare_model_input(&tokens, &model.schema)?;
 
         // Run inference (placeholder - needs actual CoreML integration)
-        let next_token = run_inference_step(model, &input_tokens).await?;
+        let next_token = run_inference_step(model, &input_tokens, options.temperature, options.top_p).await?;
 
         // Add to generated tokens
         generated_tokens.push(next_token);
@@ -240,19 +243,171 @@ fn prepare_model_input(tokens: &[i32], schema: &crate::ane::models::mistral_mode
     Ok(input_tokens)
 }
 
-/// Run single inference step (placeholder for actual CoreML integration)
-async fn run_inference_step(_model: &MistralModel, _input_tokens: &[i32]) -> Result<i32> {
-    // TODO: Implement actual CoreML inference
-    // This should call the CoreML bridge to run inference
+/// Run single inference step using CoreML
+async fn run_inference_step(
+    model: &MistralModel, 
+    input_tokens: &[i32],
+    temperature: Option<f32>,
+    top_p: Option<f32>
+) -> Result<i32> {
+    use crate::ane::compat::coreml;
+    use candle_core::{Tensor, Device};
 
-    // Placeholder: return a simple token
-    // In reality, this would:
-    // 1. Convert tokens to MLMultiArray
-    // 2. Create MLFeatureProvider
-    // 3. Call model.prediction()
-    // 4. Extract logits and sample next token
+    // Validate input
+    if input_tokens.is_empty() {
+        return Err(ANEError::InvalidInput("Input tokens cannot be empty".to_string()));
+    }
 
-    Err(ANEError::NotImplemented("Mistral inference not yet implemented".to_string()))
+    if input_tokens.len() > 2048 { // Use a reasonable default max sequence length
+        return Err(ANEError::InvalidInput(
+            format!("Input too long: {} tokens exceeds max sequence length 2048",
+                   input_tokens.len())
+        ));
+    }
+
+    // Get CoreML model handle using the safe handle
+    let model_ref = ModelRef::new();
+
+    // Convert tokens to tensor - need to convert i32 to f32 for candle
+    let input_data: Vec<f32> = input_tokens.iter().map(|&x| x as f32).collect();
+    let input_tensor = Tensor::new(&*input_data, &Device::Cpu)
+        .map_err(|e| ANEError::Internal(format!("Failed to create input tensor: {}", e)))?;
+
+    // Reshape to [batch_size=1, seq_len]
+    let input_tensor = input_tensor.unsqueeze(0)
+        .map_err(|e| ANEError::Internal(format!("Failed to reshape tensor: {}", e)))?;
+
+    // Create input specification for CoreML
+    let input_spec = TensorSpec {
+        name: "input_ids".to_string(),
+        dtype: "I32".to_string(),
+        shape: vec![1, input_tokens.len()], // [batch_size, seq_len]
+        required: true,
+        batch_capable: false,
+    };
+
+    // Validate tensor against model input requirements
+    coreml::coreml::validate_io_schema(&input_tensor, &input_spec)?;
+
+    // Prepare output specification
+    let output_spec = TensorSpec {
+        name: "logits".to_string(),
+        dtype: "F32".to_string(),
+        shape: vec![1, input_tokens.len(), 32000], // [batch, seq, vocab] - using default vocab size
+        required: true,
+        batch_capable: false,
+    };
+
+    // Run CoreML inference
+    let outputs = coreml::coreml::run_inference(
+        model_ref,
+        "input_ids",
+        &input_data,
+        &[1, input_tokens.len()]
+    ).map_err(|e| ANEError::Internal(format!("CoreML inference failed: {}", e)))?;
+
+    // Extract logits from output (run_inference returns a single tensor)
+    let logits = outputs;
+
+    // Get logits for the last token position [batch=0, position=-1, vocab]
+    let last_token_logits = logits.narrow(1, input_tokens.len() - 1, 1)?
+        .squeeze(1)?; // Remove sequence dimension
+
+    // Apply temperature scaling if enabled
+    let scaled_logits = if let Some(temperature) = temperature {
+        if temperature != 1.0 {
+            last_token_logits.div(&Tensor::new(&[temperature], &Device::Cpu)?)?
+        } else {
+            last_token_logits
+        }
+    } else {
+        last_token_logits
+    };
+
+    // Apply sampling strategy
+    let next_token = match (temperature, top_p) {
+        (None, _) => sample_greedy(&scaled_logits)?, // Greedy sampling
+        (Some(_), None) => sample_greedy(&scaled_logits)?, // Greedy if no top-p
+        (Some(_), Some(top_p)) if top_p >= 1.0 => sample_greedy(&scaled_logits)?, // Greedy if top-p disabled
+        (Some(_), Some(top_p)) => sample_top_p(&scaled_logits, top_p)?, // Top-p sampling
+    };
+
+    Ok(next_token)
+}
+
+/// Sample next token using greedy approach
+fn sample_greedy(logits: &Tensor) -> Result<i32> {
+    use candle_core::Tensor;
+
+    // Get the token with highest probability
+    let token_id = logits.argmax(0)?
+        .to_scalar::<i64>()
+        .map_err(|e| ANEError::Internal(format!("Failed to get argmax: {}", e)))?;
+
+    Ok(token_id as i32)
+}
+
+/// Sample next token using top-p (nucleus) sampling
+fn sample_top_p(logits: &Tensor, top_p: f32) -> Result<i32> {
+    use candle_core::{Tensor, Device};
+    use rand::prelude::*;
+
+    // Convert logits to probabilities
+    let probs = candle_nn::ops::softmax(logits, 0)?;
+
+    // Get probabilities as slice
+    let probs_data = probs.to_vec1::<f32>()
+        .map_err(|e| ANEError::Internal(format!("Failed to extract probabilities: {}", e)))?;
+
+    // Sort probabilities and indices in descending order
+    let mut prob_indices: Vec<(f32, usize)> = probs_data.iter().enumerate()
+        .map(|(i, &p)| (p, i))
+        .collect();
+    prob_indices.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap());
+
+    // Find cutoff point for top-p
+    let mut cumulative_prob = 0.0;
+    let mut cutoff_idx = 0;
+
+    for (i, (prob, _)) in prob_indices.iter().enumerate() {
+        cumulative_prob += prob;
+        if cumulative_prob >= top_p {
+            cutoff_idx = i + 1;
+            break;
+        }
+    }
+
+    // If we haven't reached top_p, include all tokens
+    if cutoff_idx == 0 {
+        cutoff_idx = prob_indices.len();
+    }
+
+    // Create filtered probabilities
+    let filtered_probs: Vec<f32> = prob_indices.iter()
+        .take(cutoff_idx)
+        .map(|(prob, _)| *prob)
+        .collect();
+
+    // Normalize probabilities
+    let sum: f32 = filtered_probs.iter().sum();
+    let normalized_probs: Vec<f32> = filtered_probs.iter()
+        .map(|p| p / sum)
+        .collect();
+
+    // Sample from filtered distribution
+    let mut rng = rand::thread_rng();
+    let random_val: f32 = rng.gen();
+    let mut cumulative = 0.0;
+
+    for (i, prob) in normalized_probs.iter().enumerate() {
+        cumulative += prob;
+        if random_val <= cumulative {
+            return Ok(prob_indices[i].1 as i32);
+        }
+    }
+
+    // Fallback (should not happen)
+    Ok(prob_indices[0].1 as i32)
 }
 
 /// Parse constitutional verdict from model response

@@ -4,7 +4,8 @@
 
 use crate::mcp_types::*;
 use crate::{CawsIntegration, ToolDiscovery, ToolRegistry};
-use caws_runtime_validator::integration::McpCawsIntegration;
+use crate::mcp_caws_integration::McpCawsIntegration;
+// use caws_runtime_validator::integration::McpCawsIntegration;
 #[cfg(feature = "memory")]
 use agent_memory::MemorySystem;
 use anyhow::{anyhow, bail, Result};
@@ -13,10 +14,136 @@ use jsonrpc_http_server::hyper::{Body, Response, StatusCode};
 use jsonrpc_http_server::{RequestMiddlewareAction, ServerBuilder};
 use jsonrpc_ws_server::ws;
 use jsonrpc_ws_server::ServerBuilder as WsServerBuilder;
-// Using council package for security functionality
-use agent_orchestration::error_handling::{CircuitBreaker, CircuitBreakerConfig, CircuitBreakerStats};
-// use agent_agency_observability as observability; // Not available as dependency
+use std::collections::HashMap;
 use std::sync::Arc;
+use std::time::{Duration, Instant, SystemTime};
+use tokio::sync::{Mutex, RwLock, oneshot};
+use tokio::time::timeout;
+// Using council package for security functionality
+// Local circuit breaker implementation to avoid cyclic dependencies
+#[derive(Debug, Clone, Default)]
+pub struct CircuitBreakerStats {
+    pub total_requests: u64,
+    pub successful_requests: u64,
+    pub failed_requests: u64,
+    pub circuit_open_count: u64,
+    pub last_failure_time: Option<std::time::SystemTime>,
+}
+
+#[derive(Debug)]
+pub struct CircuitBreaker {
+    pub stats: std::sync::Arc<std::sync::Mutex<CircuitBreakerStats>>,
+    pub config: CircuitBreakerConfig,
+}
+
+#[derive(Debug, Clone)]
+pub struct CircuitBreakerConfig {
+    pub failure_threshold: u32,
+    pub recovery_timeout_ms: u64,
+    pub success_threshold: u32,
+}
+
+impl CircuitBreaker {
+    pub fn new(config: CircuitBreakerConfig) -> Self {
+        Self {
+            stats: std::sync::Arc::new(std::sync::Mutex::new(CircuitBreakerStats::default())),
+            config,
+        }
+    }
+
+    pub async fn call<F, Fut, T>(&self, f: F) -> Result<T, Box<dyn std::error::Error + Send + Sync>>
+    where
+        F: FnOnce() -> Fut,
+        Fut: std::future::Future<Output = Result<T, Box<dyn std::error::Error + Send + Sync>>>,
+    {
+        let mut stats = self.stats.lock().unwrap();
+        
+        // Check if circuit is open
+        if let Some(last_failure) = stats.last_failure_time {
+            if last_failure.elapsed().unwrap_or_default() < Duration::from_millis(self.config.recovery_timeout_ms) {
+                stats.circuit_open_count += 1;
+                tracing::warn!(
+                    circuit_open_count = %stats.circuit_open_count,
+                    last_failure_ago_ms = %last_failure.elapsed().unwrap_or_default().as_millis(),
+                    "Circuit breaker is open, rejecting request"
+                );
+                return Err(Box::new(security::CircuitBreakerError::CircuitOpen(
+                    format!("Circuit is open, last failure {}ms ago", last_failure.elapsed().unwrap_or_default().as_millis())
+                )));
+            }
+        }
+        
+        // Drop the lock before executing the function
+        drop(stats);
+        
+        // Execute with timeout protection
+        let result = timeout(Duration::from_secs(30), f()).await;
+        
+        // Re-acquire lock to update stats
+        let mut stats = self.stats.lock().unwrap();
+        stats.total_requests += 1;
+        
+        match result {
+            Ok(Ok(value)) => {
+                stats.successful_requests += 1;
+                // Close circuit if we have enough consecutive successes
+                if stats.successful_requests >= self.config.success_threshold as u64 {
+                    stats.last_failure_time = None;
+                    tracing::info!(
+                        successful_requests = %stats.successful_requests,
+                        "Circuit breaker closed due to consecutive successes"
+                    );
+                }
+                Ok(value)
+            }
+            Ok(Err(e)) => {
+                stats.failed_requests += 1;
+                stats.last_failure_time = Some(SystemTime::now());
+                // Open circuit if we exceed failure threshold
+                if stats.failed_requests >= self.config.failure_threshold as u64 {
+                    stats.circuit_open_count += 1;
+                    tracing::error!(
+                        failed_requests = %stats.failed_requests,
+                        failure_threshold = %self.config.failure_threshold,
+                        "Circuit breaker opened due to failure threshold exceeded"
+                    );
+                }
+                Err(e)
+            }
+            Err(_timeout) => {
+                stats.failed_requests += 1;
+                stats.last_failure_time = Some(SystemTime::now());
+                // Timeout counts as failure
+                if stats.failed_requests >= self.config.failure_threshold as u64 {
+                    stats.circuit_open_count += 1;
+                    tracing::error!(
+                        failed_requests = %stats.failed_requests,
+                        "Circuit breaker opened due to timeout"
+                    );
+                }
+                Err(Box::new(security::CircuitBreakerError::Timeout(Duration::from_secs(30))))
+            }
+        }
+    }
+
+    pub fn get_all_stats(&self) -> std::collections::HashMap<String, CircuitBreakerStats> {
+        let mut result = std::collections::HashMap::new();
+        if let Ok(stats) = self.stats.lock() {
+            result.insert("default".to_string(), stats.clone());
+        }
+        result
+    }
+}
+
+fn get_circuit_breaker_registry() -> CircuitBreaker {
+    CircuitBreaker::new(CircuitBreakerConfig {
+        failure_threshold: 5,
+        recovery_timeout_ms: 30000,
+        success_threshold: 3,
+    })
+}
+
+// use agent_agency_observability as observability; // Not available as dependency
 
 // Simple stub implementations for security functions
 
@@ -83,6 +210,18 @@ pub mod security {
         Timeout(std::time::Duration),
     }
 
+    impl std::fmt::Display for CircuitBreakerError {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            match self {
+                CircuitBreakerError::CircuitOpen(msg) => write!(f, "Circuit breaker is open: {}", msg),
+                CircuitBreakerError::OperationFailed(msg) => write!(f, "Operation failed: {}", msg),
+                CircuitBreakerError::Timeout(duration) => write!(f, "Operation timed out after {:?}", duration),
+            }
+        }
+    }
+
+    impl std::error::Error for CircuitBreakerError {}
+
     #[derive(Debug, Clone)]
     pub struct CircuitBreakerStats {
         pub total_requests: u64,
@@ -107,6 +246,7 @@ pub mod security {
 pub struct RateLimitConfig {
     pub max_requests_per_minute: u32,
     pub burst_limit: u32,
+    pub endpoint_pattern: String,
 }
 
 impl Default for RateLimitConfig {
@@ -114,6 +254,7 @@ impl Default for RateLimitConfig {
         Self {
             max_requests_per_minute: 100,
             burst_limit: 10,
+            endpoint_pattern: "*".to_string(),
         }
     }
 }
@@ -121,27 +262,292 @@ impl Default for RateLimitConfig {
 #[derive(Clone, Debug)]
 pub struct RateLimitMiddleware {
     config: RateLimitConfig,
+    endpoint_configs: Vec<RateLimitConfig>,
+    ip_tracking: Arc<Mutex<HashMap<String, (Instant, u32)>>>,
+    burst_tracking: Arc<Mutex<HashMap<String, (Instant, u32)>>>,
 }
 
 impl RateLimitMiddleware {
-    pub fn new(_global_config: Option<RateLimitConfig>, _endpoint_configs: Vec<RateLimitConfig>) -> Self {
-        Self { config: RateLimitConfig::default() }
+    pub fn new(global_config: Option<RateLimitConfig>, endpoint_configs: Vec<RateLimitConfig>) -> Self {
+        Self { 
+            config: global_config.unwrap_or_else(RateLimitConfig::default),
+            endpoint_configs,
+            ip_tracking: Arc::new(Mutex::new(HashMap::new())),
+            burst_tracking: Arc::new(Mutex::new(HashMap::new())),
+        }
     }
 
-    pub fn should_allow(&self, _endpoint: &str, _ip: &str) -> bool {
-        true // Stub - always allow
+    pub async fn should_allow(&self, endpoint: &str, ip: &str) -> bool {
+        let now = Instant::now();
+        let window_duration = Duration::from_secs(60); // 1 minute window
+        
+        // Get endpoint-specific config or use global config
+        let endpoint_config = self.endpoint_configs.iter()
+            .find(|config| endpoint.contains(&config.endpoint_pattern))
+            .unwrap_or(&self.config);
+        
+        // Check burst limit first (short-term protection)
+        {
+            let mut burst_tracking = self.burst_tracking.lock().await;
+            let burst_key = format!("{}:{}", ip, endpoint);
+            let burst_entry = burst_tracking.entry(burst_key.clone()).or_insert((now, 0));
+            
+            // Reset burst window if expired (10 second burst window)
+            if now.duration_since(burst_entry.0) >= Duration::from_secs(10) {
+                burst_entry.0 = now;
+                burst_entry.1 = 0;
+            }
+            
+            // Check burst limit
+            if burst_entry.1 >= endpoint_config.burst_limit {
+                tracing::warn!(
+                    ip = %ip,
+                    endpoint = %endpoint,
+                    burst_count = %burst_entry.1,
+                    burst_limit = %endpoint_config.burst_limit,
+                    "Burst rate limit exceeded"
+                );
+                return false;
+            }
+            
+            burst_entry.1 += 1;
+        }
+        
+        // Check per-minute rate limit
+        {
+            let mut ip_tracking = self.ip_tracking.lock().await;
+            let ip_entry = ip_tracking.entry(format!("{}:{}", ip, endpoint)).or_insert((now, 0));
+            
+            // Reset window if expired
+            if now.duration_since(ip_entry.0) >= window_duration {
+                ip_entry.0 = now;
+                ip_entry.1 = 0;
+            }
+            
+            // Check rate limit
+            if ip_entry.1 >= endpoint_config.max_requests_per_minute {
+                tracing::warn!(
+                    ip = %ip,
+                    endpoint = %endpoint,
+                    request_count = %ip_entry.1,
+                    rate_limit = %endpoint_config.max_requests_per_minute,
+                    "Rate limit exceeded"
+                );
+                return false;
+            }
+            
+            ip_entry.1 += 1;
+        }
+        
+        true
     }
 
     pub fn get_stats(&self) -> HashMap<String, (u32, u32)> {
-        HashMap::new()
+        let mut stats = HashMap::new();
+        let now = Instant::now();
+        let window_duration = Duration::from_secs(60);
+        
+        // Clean up expired entries and collect stats
+        {
+            let rt = tokio::runtime::Handle::current();
+            let mut ip_tracking = rt.block_on(self.ip_tracking.lock());
+            ip_tracking.retain(|key, (window_start, count)| {
+                if now.duration_since(*window_start) < window_duration {
+                    stats.insert(key.clone(), (*count, self.config.max_requests_per_minute));
+                    true
+                } else {
+                    false
+                }
+            });
+        }
+        
+        stats
     }
 }
-fn validate_api_input(_input: &serde_json::Value, _field: &str) -> Result<(), String> {
-    Ok(()) // Stub - always pass validation
+fn validate_api_input(input: &serde_json::Value, field: &str) -> Result<(), String> {
+    match field {
+        "tool" => validate_tool_input(input),
+        "auth" => validate_auth_input(input),
+        "metrics" => validate_metrics_input(input),
+        _ => validate_generic_input(input),
+    }
+}
+
+fn validate_tool_input(input: &serde_json::Value) -> Result<(), String> {
+    let obj = input.as_object().ok_or("Input must be a JSON object")?;
+    
+    // Validate required fields
+    if !obj.contains_key("name") {
+        return Err("Tool name is required".to_string());
+    }
+    
+    if !obj.contains_key("id") {
+        return Err("Tool ID is required".to_string());
+    }
+    
+    // Validate name field
+    if let Some(name) = obj.get("name") {
+        let name_str = name.as_str().ok_or("Tool name must be a string")?;
+        if name_str.is_empty() {
+            return Err("Tool name cannot be empty".to_string());
+        }
+        if name_str.len() > 100 {
+            return Err("Tool name too long (max 100 characters)".to_string());
+        }
+        // Check for potentially malicious patterns
+        if name_str.contains("<script>") || name_str.contains("javascript:") {
+            return Err("Tool name contains potentially malicious content".to_string());
+        }
+    }
+    
+    // Validate ID field
+    if let Some(id) = obj.get("id") {
+        let id_str = id.as_str().ok_or("Tool ID must be a string")?;
+        if id_str.is_empty() {
+            return Err("Tool ID cannot be empty".to_string());
+        }
+        if id_str.len() > 50 {
+            return Err("Tool ID too long (max 50 characters)".to_string());
+        }
+        // Validate ID format (alphanumeric, hyphens, underscores only)
+        if !id_str.chars().all(|c| c.is_alphanumeric() || c == '-' || c == '_') {
+            return Err("Tool ID contains invalid characters".to_string());
+        }
+    }
+    
+    // Validate parameters if present
+    if let Some(params) = obj.get("parameters") {
+        validate_parameters(params)?;
+    }
+    
+    Ok(())
+}
+
+fn validate_auth_input(input: &serde_json::Value) -> Result<(), String> {
+    let obj = input.as_object().ok_or("Auth input must be a JSON object")?;
+    
+    if let Some(api_key) = obj.get("api_key") {
+        let key_str = api_key.as_str().ok_or("API key must be a string")?;
+        if key_str.is_empty() {
+            return Err("API key cannot be empty".to_string());
+        }
+        if key_str.len() < 16 {
+            return Err("API key too short (minimum 16 characters)".to_string());
+        }
+        if key_str.len() > 256 {
+            return Err("API key too long (maximum 256 characters)".to_string());
+        }
+    }
+    
+    Ok(())
+}
+
+fn validate_metrics_input(input: &serde_json::Value) -> Result<(), String> {
+    // Metrics input validation - typically just needs to be valid JSON
+    if input.is_null() {
+        return Ok(()); // Null is acceptable for metrics
+    }
+    
+    if !input.is_object() && !input.is_array() {
+        return Err("Metrics input must be an object or array".to_string());
+    }
+    
+    Ok(())
+}
+
+fn validate_generic_input(input: &serde_json::Value) -> Result<(), String> {
+    // Generic validation for unknown field types
+    match input {
+        serde_json::Value::String(s) => {
+            if s.len() > 10000 {
+                return Err("String input too long (max 10000 characters)".to_string());
+            }
+            // Check for common injection patterns
+            if s.contains("'; DROP TABLE") || s.contains("UNION SELECT") || s.contains("<script>") {
+                return Err("Input contains potentially malicious content".to_string());
+            }
+        }
+        serde_json::Value::Array(arr) => {
+            if arr.len() > 1000 {
+                return Err("Array too large (max 1000 elements)".to_string());
+            }
+            for (i, item) in arr.iter().enumerate() {
+                validate_generic_input(item)
+                    .map_err(|e| format!("Array element {}: {}", i, e))?;
+            }
+        }
+        serde_json::Value::Object(obj) => {
+            if obj.len() > 100 {
+                return Err("Object too large (max 100 properties)".to_string());
+            }
+            for (key, value) in obj.iter() {
+                if key.len() > 100 {
+                    return Err(format!("Object key too long: {}", key));
+                }
+                validate_generic_input(value)
+                    .map_err(|e| format!("Object property '{}': {}", key, e))?;
+            }
+        }
+        _ => {} // Numbers, booleans, null are generally safe
+    }
+    
+    Ok(())
+}
+
+fn validate_parameters(params: &serde_json::Value) -> Result<(), String> {
+    let param_obj = params.as_object().ok_or("Parameters must be an object")?;
+    
+    for (param_name, param_value) in param_obj.iter() {
+        if param_name.len() > 50 {
+            return Err(format!("Parameter name too long: {}", param_name));
+        }
+        
+        // Validate parameter value
+        validate_generic_input(param_value)
+            .map_err(|e| format!("Parameter '{}': {}", param_name, e))?;
+    }
+    
+    Ok(())
 }
 
 fn sanitize_api_input(input: &serde_json::Value) -> serde_json::Value {
-    input.clone() // Stub - return as-is
+    match input {
+        serde_json::Value::String(s) => {
+            // Remove potentially dangerous characters and patterns
+            let sanitized = s
+                .replace("<script>", "")
+                .replace("</script>", "")
+                .replace("javascript:", "")
+                .replace("data:", "")
+                .replace("vbscript:", "")
+                .replace("onload=", "")
+                .replace("onerror=", "")
+                .replace("onclick=", "")
+                .replace("onmouseover=", "")
+                .replace("'", "&#x27;")
+                .replace("\"", "&#x22;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("&", "&amp;");
+            
+            serde_json::Value::String(sanitized)
+        }
+        serde_json::Value::Array(arr) => {
+            let sanitized_arr: Vec<serde_json::Value> = arr
+                .iter()
+                .map(sanitize_api_input)
+                .collect();
+            serde_json::Value::Array(sanitized_arr)
+        }
+        serde_json::Value::Object(obj) => {
+            let sanitized_obj: serde_json::Map<String, serde_json::Value> = obj
+                .iter()
+                .map(|(k, v)| (k.clone(), sanitize_api_input(v)))
+                .collect();
+            serde_json::Value::Object(sanitized_obj)
+        }
+        other => other.clone(), // Numbers, booleans, null are safe as-is
+    }
 }
 
 struct CircuitBreakerRegistry;
@@ -160,42 +566,178 @@ fn init_circuit_breaker_registry() -> Arc<CircuitBreakerRegistry> {
     Arc::new(CircuitBreakerRegistry) // Stub
 }
 
-fn get_circuit_breaker_registry() -> Arc<CircuitBreakerRegistry> {
-    Arc::new(CircuitBreakerRegistry) // Stub
+#[derive(Clone)]
+struct StubAuditLogger {
+    enabled: bool,
+    log_level: String,
+    json_format: bool,
 }
 
-#[derive(Clone)]
-struct StubAuditLogger;
-
 impl StubAuditLogger {
+    fn new(enabled: bool, log_level: String, json_format: bool) -> Self {
+        Self {
+            enabled,
+            log_level,
+            json_format,
+        }
+    }
+
     async fn log_authentication(
         &self,
-        _user_id: String,
-        _success: bool,
-        _ip_address: Option<String>,
-        _user_agent: Option<String>,
-        _metadata: HashMap<String, serde_json::Value>,
+        user_id: String,
+        success: bool,
+        ip_address: Option<String>,
+        user_agent: Option<String>,
+        metadata: HashMap<String, serde_json::Value>,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        if !self.enabled {
+            return Ok(());
+        }
+
+        let timestamp = chrono::Utc::now().to_rfc3339();
+        let event_type = if success { "auth_success" } else { "auth_failure" };
+        
+        let log_entry = serde_json::json!({
+            "timestamp": timestamp,
+            "event_type": event_type,
+            "user_id": user_id,
+            "ip_address": ip_address,
+            "user_agent": user_agent,
+            "success": success,
+            "metadata": metadata,
+            "severity": if success { "info" } else { "warn" }
+        });
+
+        if self.json_format {
+            tracing::info!(audit_log = %log_entry, "Authentication event logged");
+        } else {
+            let message = format!(
+                "Authentication {} for user '{}' from IP '{}'",
+                if success { "succeeded" } else { "failed" },
+                user_id,
+                ip_address.unwrap_or_else(|| "unknown".to_string())
+            );
+            
+            if success {
+                tracing::info!("{}", message);
+            } else {
+                tracing::warn!("{}", message);
+            }
+        }
+
         Ok(())
+    }
+
+    async fn log_security_event(
+        &self,
+        event_type: String,
+        severity: String,
+        description: String,
+        ip_address: Option<String>,
+        metadata: HashMap<String, serde_json::Value>,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        if !self.enabled {
+            return Ok(());
+        }
+
+        let timestamp = chrono::Utc::now().to_rfc3339();
+        
+        let log_entry = serde_json::json!({
+            "timestamp": timestamp,
+            "event_type": event_type,
+            "severity": severity,
+            "description": description,
+            "ip_address": ip_address,
+            "metadata": metadata
+        });
+
+        if self.json_format {
+            match severity.as_str() {
+                "critical" => tracing::error!(security_log = %log_entry, "Critical security event"),
+                "high" => tracing::error!(security_log = %log_entry, "High severity security event"),
+                "medium" => tracing::warn!(security_log = %log_entry, "Medium severity security event"),
+                "low" => tracing::info!(security_log = %log_entry, "Low severity security event"),
+                _ => tracing::info!(security_log = %log_entry, "Security event"),
+            }
+        } else {
+            let message = format!("Security event [{}]: {} from IP '{}'", 
+                severity.to_uppercase(), 
+                description,
+                ip_address.unwrap_or_else(|| "unknown".to_string())
+            );
+            
+            match severity.as_str() {
+                "critical" | "high" => tracing::error!("{}", message),
+                "medium" => tracing::warn!("{}", message),
+                _ => tracing::info!("{}", message),
+            }
+        }
+
+        Ok(())
+    }
+
+    async fn log_rate_limit_hit(
+        &self,
+        ip_address: String,
+        endpoint: String,
+        limit_type: String,
+        attempts: u32,
+        limit: u32,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let mut metadata = HashMap::new();
+        metadata.insert("endpoint".to_string(), serde_json::Value::String(endpoint));
+        metadata.insert("limit_type".to_string(), serde_json::Value::String(limit_type));
+        metadata.insert("attempts".to_string(), serde_json::Value::Number(serde_json::Number::from(attempts)));
+        metadata.insert("limit".to_string(), serde_json::Value::Number(serde_json::Number::from(limit)));
+
+        self.log_security_event(
+            "rate_limit_exceeded".to_string(),
+            "medium".to_string(),
+            format!("Rate limit exceeded: {} attempts (limit: {})", attempts, limit),
+            Some(ip_address),
+            metadata,
+        ).await
+    }
+
+    async fn log_circuit_breaker_trip(
+        &self,
+        service_name: String,
+        failure_count: u32,
+        threshold: u32,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let mut metadata = HashMap::new();
+        metadata.insert("service_name".to_string(), serde_json::Value::String(service_name.clone()));
+        metadata.insert("failure_count".to_string(), serde_json::Value::Number(serde_json::Number::from(failure_count)));
+        metadata.insert("threshold".to_string(), serde_json::Value::Number(serde_json::Number::from(threshold)));
+
+        self.log_security_event(
+            "circuit_breaker_trip".to_string(),
+            "high".to_string(),
+            format!("Circuit breaker tripped for service '{}': {} failures (threshold: {})", 
+                service_name, failure_count, threshold),
+            None,
+            metadata,
+        ).await
     }
 }
 
-fn init_audit_logger(_enabled: bool, _level: String, _json: bool) -> Result<(), String> {
-    Ok(()) // Stub
+fn init_audit_logger(enabled: bool, level: String, json: bool) -> Result<(), String> {
+    tracing::info!(
+        audit_logging_enabled = %enabled,
+        log_level = %level,
+        json_format = %json,
+        "Audit logger initialized"
+    );
+    Ok(())
 }
 
 fn get_audit_logger() -> Result<StubAuditLogger, String> {
-    Ok(StubAuditLogger) // Stub
+    Ok(StubAuditLogger::new(true, "info".to_string(), true))
 }
 // use observability::slo::{SLOTracker, create_default_slos}; // observability crate not available
 // use data_infrastructure::DatabaseClient; // database crate not available
-use std::collections::HashMap;
 use std::net::SocketAddr;
-use std::sync::Mutex;
-use std::time::{Duration, Instant};
-use tokio::sync::{oneshot, RwLock};
 use tokio::task::JoinHandle;
-use tokio::time::timeout;
 use tracing::{info, warn};
 
 // Prometheus metrics
@@ -359,10 +901,14 @@ struct AuthRateLimiter {
     per_ip_limit: u32,
     /// Window duration in seconds
     window_duration: u64,
-    /// IP-based attempt tracking: IP -> (window_start, count, blocked_until)
-    ip_attempts: Arc<Mutex<HashMap<String, (Instant, u32, Option<Instant>)>>>,
+    /// IP-based attempt tracking: IP -> (window_start, count, blocked_until, risk_score)
+    ip_attempts: Arc<Mutex<HashMap<String, (Instant, u32, Option<Instant>, u32)>>>,
     /// Global attempt tracking
     global_attempts: Arc<Mutex<(Instant, u32)>>,
+    /// Database client for persistent storage
+    db_client: Option<Arc<DatabaseClient>>,
+    /// Suspicious IP tracking
+    suspicious_ips: Arc<Mutex<HashMap<String, (Instant, u32)>>>,
 }
 
 impl AuthRateLimiter {
@@ -373,17 +919,64 @@ impl AuthRateLimiter {
             window_duration,
             ip_attempts: Arc::new(Mutex::new(HashMap::new())),
             global_attempts: Arc::new(Mutex::new((Instant::now(), 0))),
+            db_client: None,
+            suspicious_ips: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 
+    /// Create with database client for persistent storage
+    fn new_with_db(global_limit: u32, per_ip_limit: u32, window_duration: u64, db_client: Arc<DatabaseClient>) -> Self {
+        Self {
+            global_limit,
+            per_ip_limit,
+            window_duration,
+            ip_attempts: Arc::new(Mutex::new(HashMap::new())),
+            global_attempts: Arc::new(Mutex::new((Instant::now(), 0))),
+            db_client: Some(db_client),
+            suspicious_ips: Arc::new(Mutex::new(HashMap::new())),
+        }
+    }
+
+    /// Load persistent data from database on startup
+    async fn load_persistent_data(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        if let Some(ref _db_client) = self.db_client {
+            // TODO: Implement database loading of persistent rate limit data
+            // This would load previously blocked IPs, risk scores, etc.
+            tracing::info!("Loading persistent authentication rate limit data from database");
+        }
+        Ok(())
+    }
+
+    /// Save persistent data to database
+    async fn save_persistent_data(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        if let Some(ref _db_client) = self.db_client {
+            // TODO: Implement database saving of persistent rate limit data
+            // This would save blocked IPs, risk scores, etc. for persistence across restarts
+            tracing::debug!("Saving persistent authentication rate limit data to database");
+        }
+        Ok(())
+    }
+
     /// Check if authentication attempt is allowed for the given IP
-    fn allow_auth_attempt(&self, ip: &str) -> AuthRateLimitResult {
+    async fn allow_auth_attempt(&self, ip: &str) -> AuthRateLimitResult {
         let now = Instant::now();
         let window_duration = Duration::from_secs(self.window_duration);
 
+        // Validate IP format
+        if !self.is_valid_ip_format(ip) {
+            tracing::warn!(ip = %ip, "Invalid IP format detected");
+            return AuthRateLimitResult::Blocked("Invalid IP format".to_string());
+        }
+
+        // Check if IP is in suspicious list
+        if self.is_suspicious_ip(ip).await {
+            tracing::warn!(ip = %ip, "Suspicious IP detected, blocking");
+            return AuthRateLimitResult::Blocked("Suspicious IP address".to_string());
+        }
+
         // Check global rate limit
         {
-            let mut global = self.global_attempts.lock().unwrap();
+            let mut global = self.global_attempts.lock().await;
             if now.duration_since(global.0) >= window_duration {
                 global.0 = now;
                 global.1 = 0;
@@ -396,10 +989,10 @@ impl AuthRateLimiter {
             global.1 += 1;
         }
 
-        // Check per-IP rate limit
+        // Check per-IP rate limit with enhanced risk scoring
         {
-            let mut ip_attempts = self.ip_attempts.lock().unwrap();
-            let entry = ip_attempts.entry(ip.to_string()).or_insert((now, 0, None));
+            let mut ip_attempts = self.ip_attempts.lock().await;
+            let entry = ip_attempts.entry(ip.to_string()).or_insert((now, 0, None, 0));
 
             // Check if IP is currently blocked
             if let Some(blocked_until) = entry.2 {
@@ -413,6 +1006,7 @@ impl AuthRateLimiter {
                     entry.2 = None;
                     entry.0 = now;
                     entry.1 = 0;
+                    entry.3 = entry.3.saturating_sub(1); // Reduce risk score slightly
                 }
             }
 
@@ -421,17 +1015,29 @@ impl AuthRateLimiter {
                 entry.0 = now;
                 entry.1 = 0;
                 entry.2 = None;
+                entry.3 = entry.3.saturating_sub(1); // Reduce risk score over time
             }
 
-            // Check rate limit
-            if entry.1 >= self.per_ip_limit {
-                // Implement progressive blocking: 5 minutes for first offense, 15 for second, etc.
-                let block_duration = Duration::from_secs((300u64 * (entry.1 as u64) / self.per_ip_limit as u64));
+            // Calculate dynamic rate limit based on risk score
+            let risk_adjusted_limit = self.calculate_risk_adjusted_limit(entry.3);
+
+            // Check rate limit with risk adjustment
+            if entry.1 >= risk_adjusted_limit {
+                // Implement progressive blocking with risk-based escalation
+                let block_duration = self.calculate_block_duration(entry.1, entry.3);
                 entry.2 = Some(now + block_duration);
+                entry.3 += 1; // Increase risk score
+
+                // Mark as suspicious if risk score is high
+                if entry.3 >= 3 {
+                    self.mark_suspicious_ip(ip);
+                }
 
                 tracing::warn!(
                     ip = %ip,
                     attempts = %entry.1,
+                    risk_score = %entry.3,
+                    risk_adjusted_limit = %risk_adjusted_limit,
                     block_duration_secs = %block_duration.as_secs(),
                     "IP authentication rate limit exceeded, blocking temporarily"
                 );
@@ -444,11 +1050,12 @@ impl AuthRateLimiter {
             entry.1 += 1;
 
             // Log suspicious activity if approaching limit
-            if entry.1 > self.per_ip_limit / 2 {
+            if entry.1 > risk_adjusted_limit / 2 {
                 tracing::info!(
                     ip = %ip,
                     attempts = %entry.1,
-                    limit = %self.per_ip_limit,
+                    risk_score = %entry.3,
+                    risk_adjusted_limit = %risk_adjusted_limit,
                     "High authentication attempt rate from IP"
                 );
             }
@@ -457,27 +1064,78 @@ impl AuthRateLimiter {
         AuthRateLimitResult::Allowed
     }
 
+    /// Validate IP format (basic validation)
+    fn is_valid_ip_format(&self, ip: &str) -> bool {
+        // Basic IP validation - check for common patterns
+        if ip.is_empty() || ip.len() > 45 {
+            return false;
+        }
+        
+        // Check for obviously invalid patterns
+        if ip.contains("..") || ip.starts_with('.') || ip.ends_with('.') {
+            return false;
+        }
+        
+        // Allow IPv4, IPv6, and localhost patterns
+        ip.parse::<std::net::IpAddr>().is_ok() || ip == "unknown"
+    }
+
+    /// Check if IP is marked as suspicious
+    async fn is_suspicious_ip(&self, ip: &str) -> bool {
+        let suspicious_ips = self.suspicious_ips.lock().await;
+        suspicious_ips.contains_key(ip)
+    }
+
+    /// Mark IP as suspicious
+    async fn mark_suspicious_ip(&self, ip: &str) {
+        let mut suspicious_ips = self.suspicious_ips.lock().await;
+        suspicious_ips.insert(ip.to_string(), (Instant::now(), 1));
+        tracing::warn!(ip = %ip, "IP marked as suspicious");
+    }
+
+    /// Calculate risk-adjusted rate limit
+    fn calculate_risk_adjusted_limit(&self, risk_score: u32) -> u32 {
+        match risk_score {
+            0 => self.per_ip_limit,
+            1 => self.per_ip_limit.saturating_sub(1),
+            2 => self.per_ip_limit.saturating_sub(2),
+            3 => self.per_ip_limit.saturating_sub(5),
+            _ => 1, // Very restrictive for high-risk IPs
+        }
+    }
+
+    /// Calculate block duration based on attempts and risk score
+    fn calculate_block_duration(&self, attempts: u32, risk_score: u32) -> Duration {
+        let base_duration = 300; // 5 minutes base
+        let risk_multiplier = 1 + risk_score as u64;
+        let attempt_multiplier = 1 + (attempts / self.per_ip_limit) as u64;
+        
+        Duration::from_secs(base_duration * risk_multiplier * attempt_multiplier)
+    }
+
     /// Record a failed authentication attempt
-    fn record_failed_attempt(&self, ip: &str) {
-        let mut ip_attempts = self.ip_attempts.lock().unwrap();
-        let entry = ip_attempts.entry(ip.to_string()).or_insert((Instant::now(), 0, None));
+    async fn record_failed_attempt(&self, ip: &str) {
+        let mut ip_attempts = self.ip_attempts.lock().await;
+        let entry = ip_attempts.entry(ip.to_string()).or_insert((Instant::now(), 0, None, 0));
         entry.1 += 1; // Extra penalty for failed attempts
+        entry.3 += 1; // Increase risk score for failed attempts
 
         tracing::warn!(
             ip = %ip,
             failed_attempts = %entry.1,
+            risk_score = %entry.3,
             "Failed authentication attempt recorded"
         );
     }
 
     /// Get current stats for monitoring
-    fn get_stats(&self) -> AuthRateLimitStats {
-        let ip_attempts = self.ip_attempts.lock().unwrap();
-        let global = self.global_attempts.lock().unwrap();
+    async fn get_stats(&self) -> AuthRateLimitStats {
+        let ip_attempts = self.ip_attempts.lock().await;
+        let global = self.global_attempts.lock().await;
 
         let now = Instant::now();
         let active_blocks = ip_attempts.values()
-            .filter(|(_, _, blocked_until)| {
+            .filter(|(_, _, blocked_until, _)| {
                 blocked_until.map_or(false, |until| now < until)
             })
             .count();
@@ -541,14 +1199,14 @@ impl MCPServer {
         let auth_rate_limiter = config
             .server
             .requests_per_minute
-            .map(|limit| Arc::new(AuthRateLimiter::new(limit)));
+            .map(|limit| Arc::new(AuthRateLimiter::new(limit, limit, 60000))); // limit, limit, 60 seconds
 
         let api_rate_limiter = config
             .server
             .requests_per_minute
-            .map(|limit| Arc::new(RateLimitMiddleware::new(limit)));
+            .map(|limit| Arc::new(RateLimitMiddleware::new(Some(RateLimitConfig::default()), vec![])));
 
-        let slo_tracker = Arc::new(SLOTracker::new());
+        let slo_tracker = SLOTracker::new(Arc::new(DatabaseClient::new()));
 
         // Create tool registry without memory system
         let tool_registry = ToolRegistry::new();
@@ -557,7 +1215,9 @@ impl MCPServer {
             config,
             tool_registry: Arc::new(tool_registry),
             tool_discovery: Arc::new(ToolDiscovery::new()),
-            status: Arc::new(RwLock::new(MCPServerStatus::Initializing)),
+            caws_integration: Arc::new(CawsIntegration::new()),
+            caws_runtime_validator: Arc::new(McpCawsIntegration::default()), // Placeholder
+            status: Arc::new(RwLock::new(MCPServerStatus::Starting)),
             connections: Arc::new(RwLock::new(Vec::new())),
             http_handle: Arc::new(RwLock::new(None)),
             ws_handle: Arc::new(RwLock::new(None)),
@@ -590,18 +1250,22 @@ impl MCPServer {
             RateLimitConfig {
                 max_requests_per_minute: 100,
                 burst_limit: 20,
+                endpoint_pattern: "/api/validate".to_string(),
             },
             RateLimitConfig {
                 max_requests_per_minute: 30,
                 burst_limit: 5,
+                endpoint_pattern: "/api/auth".to_string(),
             },
             RateLimitConfig {
                 max_requests_per_minute: 50,
                 burst_limit: 10,
+                endpoint_pattern: "/api/tools".to_string(),
             },
             RateLimitConfig {
                 max_requests_per_minute: 200,
                 burst_limit: 50,
+                endpoint_pattern: "/api/metrics".to_string(),
             },
         ];
         let api_rate_limiter = Some(Arc::new(RateLimitMiddleware::new(None, api_rate_configs)));
@@ -699,17 +1363,13 @@ impl MCPServer {
         registry.register("caws-integration", CircuitBreakerConfig {
             failure_threshold: 3,
             success_threshold: 2,
-            recovery_timeout: Duration::from_secs(30),
-            monitoring_window: Duration::from_secs(60),
-            request_timeout: Duration::from_secs(10),
+            recovery_timeout_ms: 30000, // 30 seconds in milliseconds
         });
 
         registry.register("tool-discovery", CircuitBreakerConfig {
             failure_threshold: 5,
             success_threshold: 3,
-            recovery_timeout: Duration::from_secs(60),
-            monitoring_window: Duration::from_secs(120),
-            request_timeout: Duration::from_secs(5),
+            recovery_timeout_ms: 60000, // 60 seconds in milliseconds
         });
 
         // Initialize audit logger
@@ -823,7 +1483,9 @@ impl MCPServer {
 
                     // Check authentication rate limit before processing auth
                     if let Some(ref auth_limiter) = auth_rate_limiter {
-                        match auth_limiter.allow_auth_attempt(client_ip) {
+                        // Use blocking await for synchronous middleware
+                        let rt = tokio::runtime::Handle::current();
+                        match rt.block_on(auth_limiter.allow_auth_attempt(client_ip)) {
                             AuthRateLimitResult::Blocked(reason) => {
                                 warn!(ip = %client_ip, reason = %reason, "Authentication rate limit exceeded");
                                 API_RATE_LIMIT_HITS.inc();
@@ -869,7 +1531,8 @@ impl MCPServer {
 
                     // Check API-specific rate limiting
                     if let Some(ref api_limiter) = api_rate_limiter {
-                        if !api_limiter.should_allow("/api/validate", client_ip) {
+                        let rt = tokio::runtime::Handle::current();
+                        if !rt.block_on(api_limiter.should_allow("/api/validate", client_ip)) {
                             warn!("API rate limit exceeded for {} on endpoint /api/validate", client_ip);
                             API_RATE_LIMIT_HITS.inc();
                             return RequestMiddlewareAction::from(rate_limited_http_response());
@@ -878,7 +1541,8 @@ impl MCPServer {
 
                     // Check general rate limiting
                     if let Some(ref limiter) = rate_limiter {
-                        let mut guard = limiter.lock().unwrap();
+                        let rt = tokio::runtime::Handle::current();
+                        let mut guard = rt.block_on(limiter.lock());
                         if !guard.allow() {
                             API_RATE_LIMIT_HITS.inc();
                             return RequestMiddlewareAction::from(rate_limited_http_response());
@@ -1079,7 +1743,8 @@ impl MCPServer {
 
                 // Check authentication rate limit before processing auth
                 if let Some(ref auth_limiter) = &auth_rate_limiter_clone {
-                    match auth_limiter.allow_auth_attempt(&client_ip) {
+                    let rt = tokio::runtime::Handle::current();
+                    match rt.block_on(auth_limiter.allow_auth_attempt(&client_ip)) {
                         AuthRateLimitResult::Blocked(reason) => {
                             warn!(ip = %client_ip, reason = %reason, "WebSocket authentication rate limit exceeded");
                             return Some(rate_limited_ws_response());
@@ -1148,7 +1813,8 @@ impl MCPServer {
 
                 // Check general rate limiting
                 if let Some(ref limiter) = &rate_limiter_clone {
-                    let mut guard = limiter.lock().unwrap();
+                    let rt = tokio::runtime::Handle::current();
+                    let mut guard = rt.block_on(limiter.lock());
                     if !guard.allow() {
                         return Some(rate_limited_ws_response());
                     }
@@ -1238,11 +1904,15 @@ impl MCPServer {
 
     /// Get authentication rate limiting statistics
     pub async fn get_auth_rate_limit_stats(&self) -> Option<AuthRateLimitStats> {
-        self.auth_rate_limiter.as_ref().map(|limiter| limiter.get_stats())
+        if let Some(limiter) = &self.auth_rate_limiter {
+            Some(limiter.get_stats().await)
+        } else {
+            None
+        }
     }
 
     /// Get circuit breaker statistics
-    pub async fn get_circuit_breaker_stats(&self) -> HashMap<String, agent_orchestration::error_handling::CircuitBreakerStats> {
+    pub async fn get_circuit_breaker_stats(&self) -> HashMap<String, CircuitBreakerStats> {
         get_circuit_breaker_registry().get_all_stats()
     }
 
@@ -1312,16 +1982,29 @@ impl MCPServer {
 
         let result = self.tool_discovery.discover_tools().await?;
 
+        // Convert from tool_discovery::core::ToolDiscoveryResult to mcp_types::ToolDiscoveryResult
+        let converted_result = crate::mcp_types::ToolDiscoveryResult {
+            discovered_tools: result.discovered_tools,
+            errors: result.errors.into_iter().map(|e| crate::mcp_types::DiscoveryError {
+                path: e.path,
+                error_type: crate::mcp_types::DiscoveryErrorType::ValidationError,
+                message: e.message.clone(),
+                details: Some(serde_json::Value::String(e.message)),
+            }).collect(),
+            discovery_time_ms: result.discovery_time_ms,
+            discovered_at: result.discovered_at,
+        };
+
         // Register discovered tools
-        for tool in &result.discovered_tools {
+        for tool in &converted_result.discovered_tools {
             self.tool_registry.register_tool(tool.clone()).await?;
         }
 
         info!(
             "Tool discovery completed: {} tools discovered",
-            result.discovered_tools.len()
+            converted_result.discovered_tools.len()
         );
-        Ok(result)
+        Ok(converted_result)
     }
 
     /// Get tool registry statistics

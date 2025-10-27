@@ -25,7 +25,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     // Create services with real integrations
     let ollama = OllamaService::new(
         "http://localhost:11434".to_string(),
-        "llama2:7b".to_string(),
+        "gemma3n:e2b".to_string(),
     );
 
     let postgres = PostgresService::new(
@@ -73,3 +73,5 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     Ok(())
 }
+
+

@@ -6,7 +6,7 @@ use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::recovery_types::{Digest, FileMode, FileRestoreAction, ObjectRef, RestoreAction, RestorePlan, RestoreResult, StreamingHasher};
+use crate::recovery_types::{Digest, FileMode, FileRestoreAction, RestorePlan, RestoreResult, StreamingHasher};
 
 /// Atomic restore manager for safely restoring files
 pub struct AtomicRestore {

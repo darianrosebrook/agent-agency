@@ -95,6 +95,13 @@ pub struct ToolParameters {
     pub constraints: Vec<ParameterConstraint>,
 }
 
+impl ToolParameters {
+    /// Check if the tool parameters are empty (no required, optional, or constraints)
+    pub fn is_empty(&self) -> bool {
+        self.required.is_empty() && self.optional.is_empty() && self.constraints.is_empty()
+    }
+}
+
 /// Parameter definition
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ParameterDefinition {
@@ -287,23 +294,73 @@ pub struct AgentMcpResourceMetrics {
     pub queue_time_ms: u64,
 }
 
-impl From<AgentMcpResourceMetrics> for system_configuration::common_metrics::CommonResourceUsage {
-    fn from(metrics: AgentMcpResourceMetrics) -> Self {
+// impl From<AgentMcpResourceMetrics> for system_configuration::common_metrics::CommonResourceUsage {
+//     fn from(metrics: AgentMcpResourceMetrics) -> Self {
+//         Self {
+//             cpu_usage_percent: Some(metrics.cpu_usage_percent as f64),
+//             memory_usage_mb: Some(metrics.memory_usage_mb),
+//             disk_usage_mb: None, // disk_io_bytes is different from disk_usage_mb
+//             network_usage_mb: None, // network_io_bytes is different from network_usage_mb
+//             active_connections: None,
+//             queue_depth: Some(metrics.queue_time_ms as u64), // approximate mapping
+//             timestamp: chrono::Utc::now(),
+//             metadata: {
+//                 let mut map = std::collections::HashMap::new();
+//                 map.insert("disk_io_bytes".to_string(), serde_json::Value::Number(metrics.disk_io_bytes.into()));
+//                 map.insert("network_io_bytes".to_string(), serde_json::Value::Number(metrics.network_io_bytes.into()));
+//                 map.insert("execution_time_ms".to_string(), serde_json::Value::Number(metrics.execution_time_ms.into()));
+//                 map
+//             },
+//         }
+//     }
+// }
+
+/// Tool schema definition
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ToolSchema {
+    pub input_schema: serde_json::Value,
+    pub output_schema: serde_json::Value,
+}
+
+/// Performance metrics for tools
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PerformanceMetrics {
+    pub average_execution_time_ms: u64,
+    pub success_rate: f64,
+    pub total_executions: u64,
+    pub last_execution: Option<chrono::DateTime<chrono::Utc>>,
+}
+
+impl Default for ToolSchema {
+    fn default() -> Self {
         Self {
-            cpu_usage_percent: Some(metrics.cpu_usage_percent as f64),
-            memory_usage_mb: Some(metrics.memory_usage_mb),
-            disk_usage_mb: None, // disk_io_bytes is different from disk_usage_mb
-            network_usage_mb: None, // network_io_bytes is different from network_usage_mb
-            active_connections: None,
-            queue_depth: Some(metrics.queue_time_ms as u64), // approximate mapping
-            timestamp: chrono::Utc::now(),
-            metadata: {
-                let mut map = std::collections::HashMap::new();
-                map.insert("disk_io_bytes".to_string(), serde_json::Value::Number(metrics.disk_io_bytes.into()));
-                map.insert("network_io_bytes".to_string(), serde_json::Value::Number(metrics.network_io_bytes.into()));
-                map.insert("execution_time_ms".to_string(), serde_json::Value::Number(metrics.execution_time_ms.into()));
-                map
-            },
+            input_schema: serde_json::Value::Object(serde_json::Map::new()),
+            output_schema: serde_json::Value::Object(serde_json::Map::new()),
+        }
+    }
+}
+
+impl Default for ToolParameters {
+    fn default() -> Self {
+        Self {
+            required: Vec::new(),
+            optional: Vec::new(),
+            constraints: Vec::new(),
+        }
+    }
+}
+
+impl ToolCapability {
+    pub fn from_str(s: &str) -> Self {
+        match s.to_lowercase().as_str() {
+            "fileread" | "file_read" => ToolCapability::FileRead,
+            "filewrite" | "file_write" => ToolCapability::FileWrite,
+            "filesystem" | "filesystem_access" => ToolCapability::FileSystemAccess,
+            "command" | "command_execution" => ToolCapability::CommandExecution,
+            "network" | "network_access" => ToolCapability::NetworkAccess,
+            "database" | "database_access" => ToolCapability::DatabaseAccess,
+            "image" | "image_processing" => ToolCapability::ImageProcessing,
+            _ => ToolCapability::FileRead, // Default to FileRead
         }
     }
 }

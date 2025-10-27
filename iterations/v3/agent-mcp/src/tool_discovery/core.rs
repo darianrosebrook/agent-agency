@@ -8,6 +8,7 @@ use std::time::Instant;
 use tokio::sync::RwLock;
 use tokio_util::sync::CancellationToken;
 use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 
 /// Tool discovery service - core functionality
 #[derive(Debug)]
@@ -101,6 +102,124 @@ impl ToolDiscovery {
     /// Get the number of currently discovered tools
     pub async fn tool_count(&self) -> usize {
         self.discovered_tools.read().await.len()
+    }
+
+    /// Start automatic tool discovery
+    pub async fn start_auto_discovery(&self) -> Result<()> {
+        tracing::info!("Starting automatic tool discovery");
+        
+        // Set discovery as active
+        {
+            let mut active = self.discovery_active.write().await;
+            *active = true;
+        }
+        
+        // Start discovery loop
+        let config = self.config.clone();
+        let tools = self.discovered_tools.clone();
+        let active = self.discovery_active.clone();
+        let token = self.cancellation_token.clone();
+        
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(
+                std::time::Duration::from_secs(config.cache_duration_seconds)
+            );
+            
+            loop {
+                if token.is_cancelled() {
+                    break;
+                }
+                
+                interval.tick().await;
+                
+                // Check if discovery is still active
+                {
+                    let is_active = active.read().await;
+                    if !*is_active {
+                        break;
+                    }
+                }
+                
+                // Perform discovery
+                match Self::perform_discovery(&config).await {
+                    Ok(new_tools) => {
+                        let mut tools_guard = tools.write().await;
+                        *tools_guard = new_tools;
+                        tracing::debug!("Discovered {} tools", tools_guard.len());
+                    }
+                    Err(e) => {
+                        tracing::error!("Tool discovery failed: {}", e);
+                    }
+                }
+            }
+        });
+        
+        Ok(())
+    }
+    
+    /// Discover tools from configured paths
+    pub async fn discover_tools(&self) -> Result<ToolDiscoveryResult> {
+        let start_time = Instant::now();
+        let mut errors = Vec::new();
+        
+        match Self::perform_discovery(&self.config).await {
+            Ok(tools) => {
+                let execution_time_ms = start_time.elapsed().as_millis() as u64;
+                
+                // Update the cache
+                {
+                    let mut tools_guard = self.discovered_tools.write().await;
+                    *tools_guard = tools.clone();
+                }
+                
+                Ok(ToolDiscoveryResult {
+                    discovered_tools: tools,
+                    discovery_time_ms: execution_time_ms,
+                    discovered_at: Utc::now(),
+                    errors,
+                })
+            }
+            Err(e) => {
+                errors.push(DiscoveryError {
+                    path: "unknown".to_string(),
+                    error_type: DiscoveryErrorType::Unknown,
+                    message: e.to_string(),
+                    details: None,
+                });
+                let execution_time_ms = start_time.elapsed().as_millis() as u64;
+                
+                Ok(ToolDiscoveryResult {
+                    discovered_tools: Vec::new(),
+                    discovery_time_ms: execution_time_ms,
+                    discovered_at: Utc::now(),
+                    errors,
+                })
+            }
+        }
+    }
+    
+    /// Perform the actual discovery process
+    async fn perform_discovery(config: &ToolDiscoveryConfig) -> Result<Vec<MCPTool>> {
+        let mut tools = Vec::new();
+        
+        for path in &config.discovery_paths {
+            if let Ok(path_tools) = Self::discover_tools_in_path(path, config).await {
+                tools.extend(path_tools);
+            }
+        }
+        
+        Ok(tools)
+    }
+    
+    /// Discover tools in a specific path
+    async fn discover_tools_in_path(path: &str, config: &ToolDiscoveryConfig) -> Result<Vec<MCPTool>> {
+        let mut tools = Vec::new();
+        
+        // For now, return empty vector as placeholder
+        // TODO: Implement actual tool discovery logic
+        tracing::debug!("Discovering tools in path: {}", path);
+        
+        Ok(tools)
     }
 }
 
@@ -250,6 +369,7 @@ pub struct DiscoveryStats {
     pub collected_at: DateTime<Utc>,
 }
 
+
 impl Default for DiscoveryStats {
     fn default() -> Self {
         Self {
@@ -260,6 +380,35 @@ impl Default for DiscoveryStats {
             validation_errors: 0,
             network_errors: 0,
             collected_at: Utc::now(),
+        }
+    }
+}
+
+/// Health status enumeration
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum HealthStatus {
+    Healthy,
+    Degraded,
+    Unhealthy,
+    Unknown,
+}
+
+/// Health check result
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HealthCheckResult {
+    pub status: HealthStatus,
+    pub message: String,
+    pub timestamp: DateTime<Utc>,
+    pub details: HashMap<String, serde_json::Value>,
+}
+
+impl Default for HealthCheckResult {
+    fn default() -> Self {
+        Self {
+            status: HealthStatus::Unknown,
+            message: "Health check not performed".to_string(),
+            timestamp: Utc::now(),
+            details: HashMap::new(),
         }
     }
 }

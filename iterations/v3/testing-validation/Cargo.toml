@@ -21,5 +21,11 @@ git2 = "0.19"
 thiserror = "1.0"
 chrono = { version = "0.4", features = ["serde"] }
 
+# ML/NLP dependencies for assertion generation
+system-federated-ml = { path = "../system-federated-ml" }
+agent-research = { path = "../agent-research" }
+anyhow = "1.0"
+futures = "0.3"
+
 [features]
 e2e = []

@@ -18,14 +18,14 @@ Comprehensive benchmarking of CoreML models in the agent-agency system reveals e
 ### Performance Rankings
 
 #### Throughput (inferences/sec)
-1. **Mistral-7B-Int4**: 3,517.5 ⚡ *Exceptional LLM performance*
-2. **FastViT-T8-F16**: 100.8 📸 *Solid vision model performance*
-3. **YOLOv3**: 39.0 🎯 *Good object detection throughput*
+1. **Mistral-7B-Int4**: 3,517.5 tokens/sec *Exceptional LLM performance*
+2. **FastViT-T8-F16**: 100.8 inferences/sec *Solid vision model performance*
+3. **YOLOv3**: 39.0 inferences/sec *Good object detection throughput*
 
 #### Latency (P50, lower is better)
-1. **Mistral-7B-Int4**: 0.29 ms ⚡ *Sub-millisecond LLM inference*
-2. **FastViT-T8-F16**: 8.96 ms 📸 *Fast vision classification*
-3. **YOLOv3**: 25.90 ms 🎯 *Acceptable for real-time detection*
+1. **Mistral-7B-Int4**: 0.29 ms *Sub-millisecond LLM inference*
+2. **FastViT-T8-F16**: 8.96 ms *Fast vision classification*
+3. **YOLOv3**: 25.90 ms *Acceptable for real-time detection*
 
 ### Individual Model Analysis
 

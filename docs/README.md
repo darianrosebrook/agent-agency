@@ -36,7 +36,7 @@ docs/
 ├── monitoring-alerting.md              # Monitoring & alerting system guide
 │
 ├── {component}/                        # Component-specific docs
-│   └── README.md                       # ⚠️ With disclaimer headers
+│   └── README.md                       #  With disclaimer headers
 │
 ├── proposals/                          # Future architecture designs
 │   ├── README.md                       # Proposal guidelines
@@ -89,7 +89,7 @@ docs/
 - Task execution pipeline
 - Advanced features in development
 
-### ⚠️ Documentation with Disclaimers
+###  Documentation with Disclaimers
 
 **Component READMEs** (`{component}/README.md`):
 
@@ -100,7 +100,7 @@ docs/
 **Example Disclaimer**:
 
 ```markdown
-> ⚠️ NOTICE: This document describes proposed architecture, not current implementation.  
+>  NOTICE: This document describes proposed architecture, not current implementation.  
 > Implementation Status: See COMPONENT_STATUS_INDEX.md for actual status.
 ```
 
@@ -118,7 +118,7 @@ docs/
 
 **See**: `proposals/README.md` for full guidelines
 
-### 🗄️ Archived Documentation
+###  Archived Documentation
 
 **Location**: `archive/`
 
@@ -195,7 +195,7 @@ docs/
 
 1. **Accuracy Over Aspiration**: Document reality, not desires
 2. **Evidence-Based Claims**: Every completion claim links to evidence
-3. **Clear Status Indicators**: ✅ 🟢 🟡 📋 🔴 consistently used
+3. **Clear Status Indicators**:      consistently used
 4. **Provable Timestamps**: Last Updated and Last Verified dates
 
 ### Quality Gates
@@ -216,11 +216,11 @@ docs/
 
 ### Success Metrics
 
-- **Documentation Health Score**: ✅ 95% (Target ≥85%)
-- **Accuracy**: ✅ 98%+ claims verified against implementation
-- **Fshness**: ✅ 95%+ docs updated within 90 days
-- **CeML Safety**: ✅ Thread-safe FFI integration documented
-- **V3 Alignment**: ✅ Documentation reflects current v3 implementation status
+- **Documentation Health Score**:  95% (Target ≥85%)
+- **Accuracy**:  98%+ claims verified against implementation
+- **Fshness**:  95%+ docs updated within 90 days
+- **CeML Safety**:  Thread-safe FFI integration documented
+- **V3 Alignment**:  Documentation reflects current v3 implementation status
 
 ---
 
@@ -230,17 +230,17 @@ docs/
 
 1. **Is it implemented?**
 
-   - ✅ Yes → Document with evidence links
+   -  Yes → Document with evidence links
    - ❌ No → Create proposal in `proposals/`
 
 2. **Can you prove it?**
 
-   - ✅ Tests passing → Link to test results
-   - ✅ Code exists → Link to source files
+   -  Tests passing → Link to test results
+   -  Code exists → Link to source files
    - ❌ No evidence → Mark as proposal
 
 3. **Is status clear?**
-   - Use standard markers: ✅ 🟢 🟡 📋 🔴
+   - Use standard markers:     
    - Link to STATUS.md for details
    - Avoid vague language
 
@@ -327,12 +327,12 @@ docs/
 
 | Symbol | Meaning          | Evidence Required                              |
 | ------ | ---------------- | ---------------------------------------------- |
-| ✅     | Production-Ready | 100% implemented, ≥80% coverage, passing tests |
-| 🟢     | Functional       | Core working, minor gaps, ≥70% coverage        |
-| 🟡     | Alpha/Partial    | Significant gaps, ≥50% coverage                |
-| 📋     | Spec Only        | Specification exists, no implementation        |
-| 🔴     | Not Started      | No spec or implementation                      |
-| 🚧     | In Development   | Active work in progress                        |
+|      | Production-Ready | 100% implemented, ≥80% coverage, passing tests |
+|      | Functional       | Core working, minor gaps, ≥70% coverage        |
+|      | Alpha/Partial    | Significant gaps, ≥50% coverage                |
+|      | Spec Only        | Specification exists, no implementation        |
+|      | Not Started      | No spec or implementation                      |
+|      | In Development   | Active work in progress                        |
 
 ### Where to Find Things
 

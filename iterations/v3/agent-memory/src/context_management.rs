@@ -146,6 +146,39 @@ impl ContextManager {
         }
     }
 
+    /// Get context age
+    async fn get_context_age(&self, context_id: &str) -> MemoryResult<Duration> {
+        // Parse context ID
+        let context_uuid = Uuid::parse_str(context_id)
+            .map_err(|e| MemoryError::Other(format!("Invalid context ID: {}", e)))?;
+
+        // TODO: Implement actual age calculation
+        // For now, return a default age
+        Ok(Duration::hours(1))
+    }
+
+    /// Get access frequency for a context
+    async fn get_access_frequency(&self, context_id: &str) -> MemoryResult<f32> {
+        // Parse context ID
+        let context_uuid = Uuid::parse_str(context_id)
+            .map_err(|e| MemoryError::Other(format!("Invalid context ID: {}", e)))?;
+
+        // TODO: Implement actual frequency calculation
+        // For now, return a default frequency
+        Ok(0.5)
+    }
+
+    /// Get context importance score
+    async fn get_context_importance(&self, context_id: &str) -> MemoryResult<f32> {
+        // Parse context ID
+        let context_uuid = Uuid::parse_str(context_id)
+            .map_err(|e| MemoryError::Other(format!("Invalid context ID: {}", e)))?;
+
+        // TODO: Implement actual importance calculation
+        // For now, return a default importance
+        Ok(0.7)
+    }
+
     // Helper methods for type conversion
 
     fn convert_folded_context(&self, folded: agent_data_processing::FoldedContext) -> FoldedContext {

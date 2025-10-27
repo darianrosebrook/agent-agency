@@ -426,3 +426,72 @@ export function createErrorNotification(error: AppError, showTechnicalDetails = 
     technicalDetails: showTechnicalDetails ? JSON.stringify(error, null, 2) : undefined,
   };
 }
+
+/**
+ * Standardized API route error handler
+ * Provides consistent error responses across all API endpoints
+ */
+export function handleApiRouteError(error: any, context?: string) {
+  const appError = createAppError(error, { context });
+
+  // Log the error
+  console.error(`[${appError.category}] API Route Error:`, {
+    message: appError.message,
+    context,
+    timestamp: appError.timestamp,
+    id: appError.id,
+  });
+
+  // Determine HTTP status code
+  const statusCode = getHttpStatusCode(appError.category);
+
+  return {
+    success: false,
+    error: {
+      code: appError.category.toLowerCase(),
+      message: appError.userMessage,
+      timestamp: appError.timestamp,
+      retryable: appError.isRecoverable,
+      id: appError.id,
+      details: process.env.NODE_ENV === 'development' ? {
+        technicalMessage: appError.message,
+        originalError: appError.originalError?.message,
+        context,
+      } : undefined,
+    },
+  } as const;
+}
+
+/**
+ * Map error categories to HTTP status codes for API routes
+ */
+export function getHttpStatusCode(category: ErrorCategory): number {
+  switch (category) {
+    case ErrorCategory.NETWORK:
+    case ErrorCategory.TIMEOUT:
+    case ErrorCategory.ABORTED:
+      return 503; // Service Unavailable
+
+    case ErrorCategory.RATE_LIMIT:
+      return 429; // Too Many Requests
+
+    case ErrorCategory.AUTHENTICATION:
+      return 401; // Unauthorized
+
+    case ErrorCategory.AUTHORIZATION:
+      return 403; // Forbidden
+
+    case ErrorCategory.VALIDATION:
+      return 400; // Bad Request
+
+    case ErrorCategory.SERVER:
+      return 500; // Internal Server Error
+
+    case ErrorCategory.CLIENT:
+      return 400; // Bad Request
+
+    case ErrorCategory.UNKNOWN:
+    default:
+      return 500; // Internal Server Error
+  }
+}

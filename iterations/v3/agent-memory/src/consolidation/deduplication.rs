@@ -61,7 +61,7 @@ impl MemoryDeduplicator {
             }
 
             let mut duplicates = Vec::new();
-            let mut max_similarity = 0.0;
+            let mut max_similarity: f32 = 0.0;
 
             // Find duplicates for this memory
             for j in (i + 1)..memories.len() {

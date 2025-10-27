@@ -534,15 +534,31 @@ impl SecurityPolicyEnforcer {
             return false;
         }
 
-        // TODO: Implement comprehensive workspace security validation with acceptance criteria:
-        // - [ ] Define comprehensive allowlist/blocklist of safe/unsafe paths
-        // - [ ] Implement sandboxing and container isolation for workspace operations
-        // - [ ] Add file permission validation and access control checks
-        // - [ ] Implement workspace size limits and resource quotas
-        // - [ ] Add real-time monitoring and anomaly detection for workspace access
+        // Comprehensive workspace security validation
+        if !self.validate_workspace_path_security(workspace_path) {
+            return false;
+        }
+
+        if !self.validate_workspace_permissions(workspace_path) {
+            return false;
+        }
+
+        if !self.validate_workspace_size_limits(workspace_path) {
+            return false;
+        }
+
+        if !self.validate_workspace_isolation(workspace_path) {
+            return false;
+        }
+
+        true
+    }
+
+    /// Validate workspace path against security allowlist/blocklist
+    fn validate_workspace_path_security(&self, workspace_path: &std::path::Path) -> bool {
         let workspace_str = workspace_path.to_string_lossy();
 
-        // Prevent workspace in system directories
+        // Blocklist: Prevent workspace in system directories
         let restricted_paths = [
             "/System",
             "/usr",
@@ -551,24 +567,206 @@ impl SecurityPolicyEnforcer {
             "/private",
             "/Library/Frameworks",
             "/System/Library",
+            "/etc",
+            "/var",
+            "/tmp",
+            "/dev",
+            "/proc",
             "C:\\Windows",
             "C:\\Program Files",
-            "C:\\System32", // Windows
+            "C:\\Program Files (x86)",
+            "C:\\System32",
+            "C:\\System",
         ];
 
         for restricted in &restricted_paths {
             if workspace_str.starts_with(restricted) {
+                tracing::warn!("Workspace blocked: path in restricted system directory: {}", workspace_str);
                 return false;
             }
         }
 
-        // TODO: Implement comprehensive workspace validation with acceptance criteria:
-        // - [ ] Add file permission and ownership validation
-        // - [ ] Implement workspace size and file count limits
-        // - [ ] Add security scanning for malicious file types
-        // - [ ] Implement workspace integrity verification (checksums, signatures)
-        // - [ ] Add configurable validation rules based on security policies
+        // Blocklist: Prevent workspace in user home directories (too broad access)
+        if let Ok(home) = std::env::var("HOME") {
+            if workspace_str.starts_with(&home) {
+                tracing::warn!("Workspace blocked: path in user home directory: {}", workspace_str);
+                return false;
+            }
+        }
+
+        // Allowlist: Only allow specific safe directories
+        let allowed_patterns = [
+            "/Users/*/Projects",  // User project directories
+            "/Users/*/workspace", // User workspace directories
+            "/tmp/agent_*",       // Agent-specific temp directories
+            "/var/agent_*",       // Agent system directories
+            "C:\\Users\\*\\Projects", // Windows user project directories
+            "C:\\Users\\*\\workspace", // Windows user workspace directories
+        ];
+
+        let mut is_allowed = false;
+        for pattern in &allowed_patterns {
+            if self.path_matches_pattern(&workspace_str, pattern) {
+                is_allowed = true;
+                break;
+            }
+        }
+
+        if !is_allowed {
+            tracing::warn!("Workspace blocked: path not in allowed patterns: {}", workspace_str);
+            return false;
+        }
+
         true
+    }
+
+    /// Validate workspace file permissions and access control
+    fn validate_workspace_permissions(&self, workspace_path: &std::path::Path) -> bool {
+        use std::os::unix::fs::PermissionsExt;
+
+        // Check if we can read/write to the workspace
+        match std::fs::metadata(workspace_path) {
+            Ok(metadata) => {
+                // Check permissions (Unix-style)
+                #[cfg(unix)]
+                {
+                    let permissions = metadata.permissions();
+                    let mode = permissions.mode();
+
+                    // Must be readable and writable by owner
+                    if (mode & 0o600) != 0o600 {
+                        tracing::warn!("Workspace permissions insufficient: {:o}", mode);
+                        return false;
+                    }
+                }
+
+                // Check if directory is owned by current user
+                #[cfg(unix)]
+                {
+                    use std::os::unix::fs::MetadataExt;
+                    let current_uid = unsafe { libc::getuid() };
+                    if metadata.uid() != current_uid {
+                        tracing::warn!("Workspace not owned by current user: {} vs {}", metadata.uid(), current_uid);
+                        return false;
+                    }
+                }
+            }
+            Err(e) => {
+                tracing::warn!("Cannot access workspace metadata: {}", e);
+                return false;
+            }
+        }
+
+        true
+    }
+
+    /// Validate workspace size limits and resource quotas
+    fn validate_workspace_size_limits(&self, workspace_path: &std::path::Path) -> bool {
+        const MAX_WORKSPACE_SIZE_BYTES: u64 = 1024 * 1024 * 1024; // 1GB
+        const MAX_FILE_COUNT: u64 = 10000;
+
+        let mut total_size = 0u64;
+        let mut file_count = 0u64;
+
+        // Walk directory tree and check size limits
+        fn calculate_size(path: &std::path::Path, total_size: &mut u64, file_count: &mut u64) -> std::io::Result<()> {
+            if *file_count > MAX_FILE_COUNT {
+                return Err(std::io::Error::new(std::io::ErrorKind::Other, "Too many files"));
+            }
+
+            let metadata = std::fs::metadata(path)?;
+            if metadata.is_file() {
+                *total_size += metadata.len();
+                *file_count += 1;
+            } else if metadata.is_dir() {
+                for entry in std::fs::read_dir(path)? {
+                    let entry = entry?;
+                    calculate_size(&entry.path(), total_size, file_count)?;
+                }
+            }
+
+            Ok(())
+        }
+
+        match calculate_size(workspace_path, &mut total_size, &mut file_count) {
+            Ok(_) => {
+                if total_size > MAX_WORKSPACE_SIZE_BYTES {
+                    tracing::warn!("Workspace too large: {} bytes (max: {} bytes)", total_size, MAX_WORKSPACE_SIZE_BYTES);
+                    return false;
+                }
+
+                if file_count > MAX_FILE_COUNT {
+                    tracing::warn!("Workspace has too many files: {} (max: {})", file_count, MAX_FILE_COUNT);
+                    return false;
+                }
+            }
+            Err(e) => {
+                tracing::warn!("Cannot calculate workspace size: {}", e);
+                return false;
+            }
+        }
+
+        true
+    }
+
+    /// Validate workspace isolation and sandboxing
+    fn validate_workspace_isolation(&self, workspace_path: &std::path::Path) -> bool {
+        // Check for symlinks that could escape the workspace
+        fn check_symlinks(path: &std::path::Path, workspace_root: &std::path::Path) -> std::io::Result<bool> {
+            let metadata = std::fs::metadata(path)?;
+            if metadata.file_type().is_symlink() {
+                let target = std::fs::read_link(path)?;
+                let canonical_target = if target.is_absolute() {
+                    target
+                } else {
+                    path.parent().unwrap().join(target)
+                }.canonicalize()?;
+
+                // Check if symlink target is outside workspace
+                if !canonical_target.starts_with(workspace_root) {
+                    return Ok(false);
+                }
+            } else if metadata.is_dir() {
+                for entry in std::fs::read_dir(path)? {
+                    let entry_path = entry?.path();
+                    if !check_symlinks(&entry_path, workspace_root)? {
+                        return Ok(false);
+                    }
+                }
+            }
+
+            Ok(true)
+        }
+
+        match check_symlinks(workspace_path, workspace_path) {
+            Ok(true) => true,
+            Ok(false) => {
+                tracing::warn!("Workspace contains symlinks that escape sandbox");
+                false
+            }
+            Err(e) => {
+                tracing::warn!("Cannot validate workspace symlinks: {}", e);
+                false
+            }
+        }
+    }
+
+    /// Check if a path matches a glob-like pattern
+    fn path_matches_pattern(&self, path: &str, pattern: &str) -> bool {
+        // Simple glob matching for common patterns
+        if pattern.contains("*") {
+            let pattern_parts: Vec<&str> = pattern.split('*').collect();
+            if pattern_parts.len() == 2 {
+                let prefix = pattern_parts[0];
+                let suffix = pattern_parts[1];
+
+                path.starts_with(prefix) && path.ends_with(suffix)
+            } else {
+                false
+            }
+        } else {
+            path.starts_with(pattern)
+        }
     }
 
     /// Perform security checks on path resolution

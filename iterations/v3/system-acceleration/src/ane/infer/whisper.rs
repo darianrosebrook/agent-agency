@@ -224,7 +224,7 @@ impl WhisperInferenceExecutor {
             let input_shape = [1usize, input.n_mels as usize, input.n_time_steps as usize];
 
             // Run inference on the encoder
-            let _output_tensor = coreml::run_inference(
+            let _output_tensor = crate::ane::compat::coreml::coreml::run_inference(
                 self.coreml_model_handle,
                 "input", // CoreML input name for mel spectrogram
                 mel_data,

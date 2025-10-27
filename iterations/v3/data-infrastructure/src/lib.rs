@@ -55,10 +55,52 @@ pub mod file_operations;
 // pub use backup_recovery::{BackupManager, RecoveryManager};
 // pub use audit::{DatabaseAuditor, AuditEvent};
 
+/// Worker pool health check trait
+#[async_trait::async_trait]
+pub trait WorkerPoolHealth: Send + Sync {
+    async fn health_check(&self) -> Result<(), String>;
+}
+
+/// Simple worker pool implementation for health checking
+pub struct SimpleWorkerPool;
+
+impl SimpleWorkerPool {
+    pub fn new() -> Self {
+        Self
+    }
+}
+
+#[async_trait::async_trait]
+impl WorkerPoolHealth for SimpleWorkerPool {
+    async fn health_check(&self) -> Result<(), String> {
+        // For now, return healthy - will integrate with real worker pool later
+        Ok(())
+    }
+}
+
+// Shared application state
+#[derive(Clone)]
+pub struct AppState {
+    pub task_store: std::sync::Arc<dyn TaskStoreTrait + Send + Sync>,
+    pub db_client: DatabaseClient,
+    pub audit_logger: std::sync::Arc<audit::AuditLogger>,
+    pub keystore: std::sync::Arc<dyn system_quality_security::Keystore>,
+    pub sandbox: std::sync::Arc<dyn system_quality_security::Sandbox>,
+    pub health_monitor: std::sync::Arc<dyn std::fmt::Debug + Send + Sync>, // Placeholder for health monitor
+    pub alert_manager: std::sync::Arc<api_alerts::AlertManager>,
+    pub rate_limiter: std::sync::Arc<rate_limiter::RateLimiter>,
+    pub backend_host: String,
+    pub http_client: reqwest::Client,
+    pub worker_pool: std::sync::Arc<dyn WorkerPoolHealth>,
+}
+
 // Re-export API and interface types (from consolidated interfaces and api-server crates)
-pub use handlers::{AppState, PersistedTask, TaskStoreTrait};
-pub use handlers::{health_check, list_tasks, get_task, submit_task, get_api_metrics};
+pub use handlers::{PersistedTask, TaskStoreTrait};
+pub use handlers::{list_tasks, get_task, submit_task, get_api_metrics};
 pub use handlers::{create_chat_session, get_websocket_config, list_waivers, create_waiver};
 pub use handlers::{approve_waiver, get_task_provenance};
 pub use simple_client::DatabaseClient; // Simple DatabaseClient wrapper
 pub use client::orchestrator::DatabaseClient as ApiDatabaseClient; // Complex DatabaseClient
+
+// Re-export health check from api module
+pub use api::health::health_check;

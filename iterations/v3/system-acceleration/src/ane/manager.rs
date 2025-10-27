@@ -13,6 +13,7 @@ use crate::ane::ane_errors::{ANEError, Result};
 use crate::ane::compat::iokit;
 use crate::ane::resource_pool::{Pool, PoolBuilder, PoolStats};
 use crate::ane::models::coreml_model::{LoadedCoreMLModel, CompilationOptions, estimate_memory_usage as estimate_coreml_memory_usage};
+use crate::ane::compat::coreml::coreml::{compile_model, load_model};
 use crate::ane::models::mistral_model::{estimate_memory_usage as estimate_mistral_memory_usage};
 use crate::ane::models::mistral_model::{MistralModel, MistralCompilationOptions, SafeModelHandle, SafeMistralTokenizer, KVCache};
 use crate::ane::ane_circuit_breaker::{CircuitBreaker, CircuitBreakerConfig};
@@ -269,7 +270,7 @@ impl ANEManager {
             is_available: true,
             compute_units: 16, // Heuristic for Apple Silicon
             max_memory_mb: Some(8192), // Conservative estimate
-            supported_precisions: coreml_caps.supported_precisions,
+            supported_precisions: coreml_caps.map(|c| c.supported_precisions.clone()).unwrap_or_default(),
             ..Default::default()
         }
     }
@@ -508,6 +509,138 @@ impl ANEManager {
     /// # Returns
     /// * `Ok(String)` - Model ID for tracking
     /// * `Err(ANEError)` - If loading fails
+    /// Validate that a loaded CoreML model is compatible with Mistral architecture
+    fn validate_mistral_model_compatibility(
+        model_ref: &crate::ane::compat::coreml::coreml::ModelRef,
+        options: &MistralCompilationOptions,
+    ) -> Result<()> {
+        // Validate model inputs - Mistral expects specific input schema
+        let expected_inputs = vec![
+            ("input_ids", "I32", vec![-1, -1]), // [batch_size, seq_len]
+            ("attention_mask", "I32", vec![-1, -1]), // Optional attention mask
+        ];
+
+        let expected_outputs = vec![
+            ("logits", "F32", vec![-1, -1, -1]), // [batch_size, seq_len, vocab_size]
+        ];
+
+        // Query the actual model for its input specifications
+        let actual_inputs = crate::ane::compat::coreml::query_model_inputs(model_ref)?;
+
+        // Validate input specifications against expectations
+        for (expected_name, expected_dtype, expected_shape) in expected_inputs {
+            // Find the actual input spec for this expected input
+            let actual_spec = actual_inputs.iter().find(|spec| spec.name == expected_name);
+
+            match actual_spec {
+                Some(spec) => {
+                    // Validate data type
+                    if spec.dtype != expected_dtype {
+                        return Err(ANEError::InvalidModelFormat(
+                            format!("Input '{}' has wrong dtype: expected {}, got {}",
+                                expected_name, expected_dtype, spec.dtype)
+                        ));
+                    }
+
+                    // Validate shape compatibility
+                    if !Self::validate_shape_compatibility(&spec.shape, &expected_shape) {
+                        return Err(ANEError::InvalidModelFormat(
+                            format!("Input '{}' has incompatible shape: expected {:?}, got {:?}",
+                                expected_name, expected_shape, spec.shape)
+                        ));
+                    }
+
+                    // Validate batch capability
+                    if !spec.batch_capable {
+                        return Err(ANEError::InvalidModelFormat(
+                            format!("Input '{}' is not batch-capable", expected_name)
+                        ));
+                    }
+                }
+                None => {
+                    return Err(ANEError::InvalidModelFormat(
+                        format!("Missing required input '{}'", expected_name)
+                    ));
+                }
+            }
+        }
+
+        // Query the actual model for its output specifications
+        let actual_outputs = crate::ane::compat::coreml::query_model_outputs(model_ref)?;
+
+        // Validate output specifications against expectations
+        for (expected_name, expected_dtype, expected_shape) in expected_outputs {
+            // Find the actual output spec for this expected output
+            let actual_spec = actual_outputs.iter().find(|spec| spec.name == expected_name);
+
+            match actual_spec {
+                Some(spec) => {
+                    // Validate data type
+                    if spec.dtype != expected_dtype {
+                        return Err(ANEError::InvalidModelFormat(
+                            format!("Output '{}' has wrong dtype: expected {}, got {}",
+                                expected_name, expected_dtype, spec.dtype)
+                        ));
+                    }
+
+                    // Validate shape compatibility
+                    if !Self::validate_shape_compatibility(&spec.shape, &expected_shape) {
+                        return Err(ANEError::InvalidModelFormat(
+                            format!("Output '{}' has incompatible shape: expected {:?}, got {:?}",
+                                expected_name, expected_shape, spec.shape)
+                        ));
+                    }
+                }
+                None => {
+                    return Err(ANEError::InvalidModelFormat(
+                        format!("Missing required output '{}'", expected_name)
+                    ));
+                }
+            }
+        }
+
+        // Validate compilation options compatibility
+        if let Some(ref precision) = options.precision {
+            match precision.as_str() {
+                "fp16" | "fp32" | "int4" | "int8" => {
+                    // Valid precision options
+                }
+                _ => return Err(ANEError::UnsupportedPrecision(
+                    format!("Unsupported precision: {}", precision)
+                )),
+            }
+        }
+
+        if let Some(ref compute_units) = options.compute_units {
+            match compute_units.as_str() {
+                "cpu_only" | "cpu_and_gpu" | "cpu_and_neural_engine" | "all" => {
+                    // Valid compute unit options
+                }
+                _ => return Err(ANEError::CapabilityMismatch(
+                    format!("Unsupported compute units: {}", compute_units)
+                )),
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Validate shape compatibility between actual and expected shapes
+    fn validate_shape_compatibility(actual_shape: &[usize], expected_shape: &[i32]) -> bool {
+        if actual_shape.len() != expected_shape.len() {
+            return false;
+        }
+
+        for (actual, expected) in actual_shape.iter().zip(expected_shape.iter()) {
+            // Expected shape can have -1 for variable dimensions
+            if *expected != -1 && (*expected as usize) != *actual {
+                return false;
+            }
+        }
+
+        true
+    }
+
     pub async fn load_mistral_model(
         &self,
         model_path: &str,
@@ -553,11 +686,34 @@ impl ANEManager {
 
         // Load and compile Mistral model
         let model_path = Path::new(model_path);
-        // TODO: Implement Mistral-specific compilation
-        let _compiled_path = model_path.to_path_buf(); // Placeholder
 
-        // Load model through CoreML bridge (placeholder)
-        let model_ref = crate::ane::compat::coreml::coreml::ModelRef::new(); // TODO: Implement actual CoreML loading
+        // Compile model for CoreML with Mistral-specific optimizations
+        let compiled_path = if model_path.extension().and_then(|s| s.to_str()) == Some("mlmodel") {
+            // Compile .mlmodel to .mlmodelc
+            compile_model(model_path)?
+        } else if model_path.extension().and_then(|s| s.to_str()) == Some("mlmodelc") {
+            // Already compiled, use as-is
+            model_path.to_path_buf()
+        } else {
+            return Err(ANEError::InvalidInput(
+                format!("Unsupported model format: {}. Expected .mlmodel or .mlmodelc", model_path.display())
+            ));
+        };
+
+        // Validate compiled model exists and is readable
+        if !compiled_path.exists() {
+            return Err(ANEError::ModelLoadFailed(
+                format!("Compiled model not found at: {}", compiled_path.display())
+            ));
+        }
+
+        // Load compiled model through CoreML bridge
+        let model_ref = load_model(
+            compiled_path.to_string_lossy().as_ref()
+        )?;
+
+        // Validate model compatibility with Mistral architecture
+        Self::validate_mistral_model_compatibility(&model_ref, &options)?;
 
         // Create Mistral model
         let model = MistralModel {

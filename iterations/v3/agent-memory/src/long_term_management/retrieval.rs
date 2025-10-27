@@ -124,18 +124,17 @@ impl LongTermRetrievalEngine {
         }
 
         // Sort by long-term relevance
-        filtered.sort_by(|a, b| {
-            let score_a = self.calculate_long_term_relevance(a, query);
-            let score_b = self.calculate_long_term_relevance(b, query);
+        let mut scored_memories: Vec<(f32, crate::memory_types::Memory)> = Vec::new();
+        for memory in filtered {
+            let score = self.calculate_long_term_relevance(&memory, query).await.unwrap_or(0.0);
+            scored_memories.push((score, memory));
+        }
+        
+        scored_memories.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap_or(std::cmp::Ordering::Equal));
+        
+        let sorted_memories: Vec<crate::memory_types::Memory> = scored_memories.into_iter().map(|(_, memory)| memory).collect();
 
-            // Reverse comparison for descending order
-            match (score_a, score_b) {
-                (Ok(sa), Ok(sb)) => sb.partial_cmp(&sa).unwrap_or(std::cmp::Ordering::Equal),
-                _ => std::cmp::Ordering::Equal,
-            }
-        });
-
-        Ok(filtered)
+        Ok(sorted_memories)
     }
 
     /// Calculate long-term relevance score
@@ -306,7 +305,7 @@ impl RetrievalOptimizationEngine {
             .map(|p| p.retrieval_time_ms)
             .sum::<u64>() as f64 / self.performance_history.len() as f64;
 
-        let optimization = if avg_retrieval_time > 1000 {
+        let optimization = if avg_retrieval_time > 1000.0 {
             RetrievalOptimization::EnableArchivalRetrieval
         } else if latest_performance.cache_hit_rate < 0.5 {
             RetrievalOptimization::IncreaseCacheSize

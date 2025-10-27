@@ -2,6 +2,8 @@
 //!
 //! Automatic memory consolidation through semantic clustering, summarization, and deduplication.
 
+use serde::{Deserialize, Serialize};
+
 pub mod semantic_clustering;
 pub mod summarization;
 pub mod deduplication;

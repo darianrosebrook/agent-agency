@@ -40,18 +40,16 @@ impl ToolDiscoveryHealthMonitor {
             if timestamp.signed_duration_since(last) < chrono::Duration::from_std(self.check_interval).unwrap() {
                 // Return cached result
                 return HealthCheckResult {
-                    component,
                     status: HealthStatus::Healthy,
+                    message: "Service is healthy".to_string(),
                     timestamp,
-                    error_message: None,
-                    metadata: HashMap::new(),
-                    duration_ms: start_time.elapsed().as_millis() as u64,
+                    details: HashMap::new(),
                 };
             }
         }
 
         // Perform actual health checks
-        let mut errors = Vec::new();
+        let mut errors: Vec<String> = Vec::new();
         let mut metadata = HashMap::new();
 
         // Check basic functionality
@@ -73,12 +71,10 @@ impl ToolDiscoveryHealthMonitor {
         };
 
         HealthCheckResult {
-            component,
             status,
+            message: error_message.unwrap_or_else(|| "Health check completed".to_string()),
             timestamp,
-            error_message,
-            metadata,
-            duration_ms: start_time.elapsed().as_millis() as u64,
+            details: metadata,
         }
     }
 }

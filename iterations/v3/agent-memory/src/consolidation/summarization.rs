@@ -117,7 +117,7 @@ impl MemorySummarizer {
         let target_words = (self.config.max_summary_length / 8).min(words.len() / 2); // Rough word count estimate
 
         let first_part = words.iter().take(target_words).cloned().collect::<Vec<_>>().join(" ");
-        let last_part = words.iter().rev().take(target_words).cloned().collect::<Vec<_>>().rev().collect::<Vec<_>>().join(" ");
+        let last_part = words.iter().rev().take(target_words).cloned().collect::<Vec<_>>().into_iter().rev().collect::<Vec<_>>().join(" ");
 
         let summary = format!("{} ... {}", first_part, last_part);
         self.compress_summary(&summary)

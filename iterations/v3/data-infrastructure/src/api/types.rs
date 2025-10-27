@@ -7,8 +7,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
 
-use crate::orchestration::planning::types::{WorkingSpec, ExecutionArtifacts};
-use crate::orchestration::quality::QualityReport;
+use agent_agency_contracts::{WorkingSpec, ExecutionArtifacts, QualityReport};
 
 /// API configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -72,6 +71,7 @@ pub struct TaskStatusResponse {
 pub struct TaskResultResponse {
     pub task_id: Uuid,
     pub status: String,
+    pub result: Option<serde_json::Value>, // Task execution result summary
     pub working_spec: Option<WorkingSpec>,
     pub artifacts: Option<ExecutionArtifacts>,
     pub quality_report: Option<QualityReport>,

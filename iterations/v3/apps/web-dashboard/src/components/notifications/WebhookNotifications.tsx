@@ -93,12 +93,15 @@ export function WebhookNotifications({
   }, [handleError]);
 
   const createNotificationFromWebhook = (webhookData: any): WebhookNotification => {
-    const { type, payload, timestamp } = webhookData;
+    const { type, payload, timestamp, id: webhookId } = webhookData;
+
+    // Generate unique ID using webhook ID and timestamp for better uniqueness
+    const uniqueId = webhookId || `notification-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
     switch (type) {
       case 'task_completed':
         return {
-          id: `notification-${Date.now()}`,
+          id: uniqueId,
           type: 'task_completed',
           title: 'Task Completed',
           message: `${payload.title} has been completed`,
@@ -111,7 +114,7 @@ export function WebhookNotifications({
 
       case 'task_failed':
         return {
-          id: `notification-${Date.now()}`,
+          id: uniqueId,
           type: 'task_failed',
           title: 'Task Failed',
           message: `${payload.title} failed to complete`,
@@ -124,7 +127,7 @@ export function WebhookNotifications({
 
       case 'task_started':
         return {
-          id: `notification-${Date.now()}`,
+          id: uniqueId,
           type: 'task_started',
           title: 'Task Started',
           message: `${payload.title} has begun execution`,
@@ -137,7 +140,7 @@ export function WebhookNotifications({
 
       case 'system_alert':
         return {
-          id: `notification-${Date.now()}`,
+          id: uniqueId,
           type: 'system_alert',
           title: payload.title,
           message: payload.message,
@@ -148,7 +151,7 @@ export function WebhookNotifications({
 
       default:
         return {
-          id: `notification-${Date.now()}`,
+          id: uniqueId,
           type: 'info',
           title: 'Notification',
           message: payload.message || 'New notification received',

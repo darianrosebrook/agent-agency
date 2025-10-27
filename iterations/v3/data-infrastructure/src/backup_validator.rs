@@ -11,7 +11,8 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sha2::Digest;
 use tokio::sync::RwLock;
-use tracing::info;
+use tracing::{info, warn};
+use tempfile;
 
 use crate::simple_client::DatabaseClient;
 
@@ -78,9 +79,17 @@ pub struct RestoreTestResults {
     pub data_integrity_ok: bool,
     pub performance_acceptable: bool,
     pub restore_duration_ms: u64,
-    pub records_restored: HashMap<String, i64>,
+    pub records_restored: HashMap<String, u64>,
     pub data_consistency_score: f64, // 0.0 to 1.0
     pub errors_encountered: Vec<String>,
+}
+
+/// Internal struct for restored data validation results
+#[derive(Debug)]
+struct RestoredDataValidation {
+    integrity_ok: bool,
+    records_restored: HashMap<String, u64>,
+    consistency_score: f64,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -416,29 +425,83 @@ impl BackupValidator {
     /// Perform restore testing
     async fn perform_restore_testing(
         &self,
-        _backup_path: &Path,
+        backup_path: &Path,
         metadata: &crate::backup_recovery::BackupMetadata,
     ) -> Result<RestoreTestResults, Box<dyn std::error::Error + Send + Sync>> {
         let restore_start = Instant::now();
 
-        // Create test database if configured
-        let _test_db_url = self.config.test_database_url.as_ref()
+        // Get test database URL
+        let test_db_url = self.config.test_database_url.as_ref()
             .ok_or("Test database URL not configured for restore testing")?;
 
-        // In a real implementation, this would:
-        // 1. Create a temporary test database
-        // 2. Restore the backup to it
-        // 3. Run integrity checks
-        // 4. Compare with original metadata
+        // Create temporary test database
+        let temp_db_name = format!("test_restore_{}_{}",
+            metadata.id,
+            chrono::Utc::now().timestamp());
 
-        // For now, simulate restore testing
-        let restore_successful = true;
-        let data_integrity_ok = true;
+        info!("Creating temporary test database: {}", temp_db_name);
+
+        // Connect to postgres to create temp database
+        let admin_conn = sqlx::PgPool::connect(test_db_url).await
+            .map_err(|e| format!("Failed to connect to test database: {}", e))?;
+
+        // Create temporary database
+        sqlx::query(&format!("CREATE DATABASE {} TEMPLATE template0", temp_db_name))
+            .execute(&admin_conn)
+            .await
+            .map_err(|e| format!("Failed to create test database {}: {}", temp_db_name, e))?;
+
+        admin_conn.close().await;
+
+        // Modify connection string to use temp database
+        let temp_db_url = if let Some(pos) = test_db_url.rfind('/') {
+            format!("{}{}", &test_db_url[..pos+1], temp_db_name)
+        } else {
+            return Err("Invalid database URL format".into());
+        };
+
+        // Connect to temporary database
+        let temp_conn = sqlx::PgPool::connect(&temp_db_url).await
+            .map_err(|e| format!("Failed to connect to temp database: {}", e))?;
+
+        // Restore the backup
+        info!("Restoring backup to test database");
+        let restore_result = self.restore_backup_to_database(backup_path, &temp_conn).await;
+
+        let mut restore_successful = restore_result.is_ok();
+        let mut errors_encountered = Vec::new();
+
+        if let Err(e) = restore_result {
+            restore_successful = false;
+            errors_encountered.push(format!("Restore failed: {}", e));
+        }
+
+        // Run integrity checks if restore succeeded
+        let (data_integrity_ok, records_restored, data_consistency_score) = if restore_successful {
+            match self.validate_restored_data(&temp_conn, metadata).await {
+                Ok(validation) => (
+                    validation.integrity_ok,
+                    validation.records_restored,
+                    validation.consistency_score,
+                ),
+                Err(e) => {
+                    errors_encountered.push(format!("Validation failed: {}", e));
+                    (false, HashMap::new(), 0.0)
+                }
+            }
+        } else {
+            (false, HashMap::new(), 0.0)
+        };
+
         let performance_acceptable = restore_start.elapsed() < Duration::from_secs(self.config.max_validation_time_secs);
 
-        let records_restored = metadata.row_counts.clone();
-        let data_consistency_score = 0.99; // Simulate high consistency
-        let errors_encountered = Vec::new();
+        // Clean up temporary database
+        info!("Cleaning up temporary test database: {}", temp_db_name);
+        if let Err(e) = self.cleanup_test_database(test_db_url, &temp_db_name).await {
+            warn!("Failed to cleanup test database {}: {}", temp_db_name, e);
+        }
+
+        temp_conn.close().await;
 
         Ok(RestoreTestResults {
             restore_successful,
@@ -449,6 +512,170 @@ impl BackupValidator {
             data_consistency_score,
             errors_encountered,
         })
+    }
+
+    /// Restore backup to a test database
+    async fn restore_backup_to_database(
+        &self,
+        backup_path: &Path,
+        conn: &sqlx::PgPool,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        // Determine backup format and restore accordingly
+        let backup_str = backup_path.to_string_lossy();
+
+        if backup_str.ends_with(".sql") || backup_str.ends_with(".dump") {
+            // SQL dump format - execute SQL directly
+            self.restore_from_sql_dump(backup_path, conn).await
+        } else if backup_str.ends_with(".tar.gz") || backup_str.ends_with(".tgz") {
+            // Compressed directory format
+            self.restore_from_directory_backup(backup_path, conn).await
+        } else {
+            Err(format!("Unsupported backup format: {}", backup_str).into())
+        }
+    }
+
+    /// Restore from SQL dump file
+    async fn restore_from_sql_dump(
+        &self,
+        backup_path: &Path,
+        conn: &sqlx::PgPool,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        // Read the SQL file
+        let sql_content = tokio::fs::read_to_string(backup_path).await
+            .map_err(|e| format!("Failed to read SQL dump: {}", e))?;
+
+        // Execute SQL commands
+        for statement in sql_content.split(';').filter(|s| !s.trim().is_empty()) {
+            if !statement.trim().is_empty() {
+                sqlx::query(statement)
+                    .execute(conn)
+                    .await
+                    .map_err(|e| format!("Failed to execute SQL statement: {} - {}", statement.trim(), e))?;
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Restore from directory backup
+    async fn restore_from_directory_backup(
+        &self,
+        backup_path: &Path,
+        conn: &sqlx::PgPool,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        use std::fs;
+        use flate2::read::GzDecoder;
+        use tar::Archive;
+
+        // Decompress and extract
+        let tar_gz = fs::File::open(backup_path)?;
+        let tar = GzDecoder::new(tar_gz);
+        let mut archive = Archive::new(tar);
+
+        // Extract to temporary directory
+        let temp_dir = tempfile::tempdir()?;
+        archive.unpack(temp_dir.path())?;
+
+        // Process extracted files (schema.sql, data.sql, etc.)
+        let schema_file = temp_dir.path().join("schema.sql");
+        if schema_file.exists() {
+            let schema_sql = tokio::fs::read_to_string(&schema_file).await?;
+            for statement in schema_sql.split(';').filter(|s| !s.trim().is_empty()) {
+                let statement = statement.trim();
+                if !statement.is_empty() {
+                    sqlx::query(statement).execute(conn).await?;
+                }
+            }
+        }
+
+        let data_file = temp_dir.path().join("data.sql");
+        if data_file.exists() {
+            let data_sql = tokio::fs::read_to_string(&data_file).await?;
+            for statement in data_sql.split(';').filter(|s| !s.trim().is_empty()) {
+                let statement = statement.trim();
+                if !statement.is_empty() {
+                    sqlx::query(statement).execute(conn).await?;
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Validate restored data integrity
+    async fn validate_restored_data(
+        &self,
+        conn: &sqlx::PgPool,
+        original_metadata: &crate::backup_recovery::BackupMetadata,
+    ) -> Result<RestoredDataValidation, Box<dyn std::error::Error + Send + Sync>> {
+        let mut records_restored = HashMap::new();
+        let mut total_original_records = 0;
+        let mut total_restored_records = 0;
+        let mut integrity_ok = true;
+
+        // Check each table mentioned in metadata
+        for (table_name, original_count) in &original_metadata.row_counts {
+            let count_query = format!("SELECT COUNT(*) as count FROM {}", table_name);
+            match sqlx::query_scalar::<_, i64>(&count_query).fetch_one(conn).await {
+                Ok(restored_count) => {
+                    records_restored.insert(table_name.clone(), restored_count as u64);
+                    total_original_records += original_count;
+                    total_restored_records += restored_count as u64;
+
+                    if (restored_count as u64) != (*original_count as u64) {
+                        warn!("Record count mismatch for table {}: expected {}, got {}",
+                              table_name, original_count, restored_count);
+                        integrity_ok = false;
+                    }
+                }
+                Err(e) => {
+                    warn!("Failed to count records in table {}: {}", table_name, e);
+                    integrity_ok = false;
+                    records_restored.insert(table_name.clone(), 0);
+                }
+            }
+        }
+
+        // Calculate consistency score
+        let data_consistency_score = if total_original_records > 0 {
+            (total_restored_records as f64) / (total_original_records as f64)
+        } else {
+            1.0 // No records to compare
+        };
+
+        Ok(RestoredDataValidation {
+            integrity_ok,
+            records_restored,
+            consistency_score: data_consistency_score,
+        })
+    }
+
+    /// Clean up temporary test database
+    async fn cleanup_test_database(
+        &self,
+        admin_db_url: &str,
+        temp_db_name: &str,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        // Connect to admin database to drop temp database
+        let admin_conn = sqlx::PgPool::connect(admin_db_url).await
+            .map_err(|e| format!("Failed to connect to admin database for cleanup: {}", e))?;
+
+        // Force disconnect all connections to the temp database
+        sqlx::query(&format!(
+            "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '{}'",
+            temp_db_name
+        ))
+        .execute(&admin_conn)
+        .await?;
+
+        // Drop the database
+        sqlx::query(&format!("DROP DATABASE IF EXISTS {}", temp_db_name))
+            .execute(&admin_conn)
+            .await
+            .map_err(|e| format!("Failed to drop test database {}: {}", temp_db_name, e))?;
+
+        admin_conn.close().await;
+        Ok(())
     }
 
     /// Assess backup risk level
@@ -648,6 +875,7 @@ pub struct BackupHealthMetrics {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::database_config::DatabaseConfig;
     use std::sync::Arc;
 
     #[tokio::test]

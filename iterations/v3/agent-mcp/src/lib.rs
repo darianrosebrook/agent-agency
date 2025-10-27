@@ -12,14 +12,42 @@ pub mod tool_discovery;
 pub mod tool_registry;
 pub mod tools;
 pub mod prompting_types;
+pub mod mcp_types;
 
 pub use mcp_caws_integration::CawsIntegration;
 pub use server::{MCPServer, AuthRateLimitStats};
-pub use agent_orchestration::error_handling::CircuitBreakerStats;
+// Local circuit breaker implementation to avoid cyclic dependencies
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct CircuitBreakerStats {
+    pub total_requests: u64,
+    pub successful_requests: u64,
+    pub failed_requests: u64,
+    pub current_state: CircuitBreakerState,
+    pub last_failure_time: Option<chrono::DateTime<chrono::Utc>>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize)]
+pub enum CircuitBreakerState {
+    Closed,
+    Open,
+    HalfOpen,
+}
+
+impl Default for CircuitBreakerStats {
+    fn default() -> Self {
+        Self {
+            total_requests: 0,
+            successful_requests: 0,
+            failed_requests: 0,
+            current_state: CircuitBreakerState::Closed,
+            last_failure_time: None,
+        }
+    }
+}
 pub use tool_discovery::ToolDiscovery;
 pub use tool_registry::ToolRegistry;
 pub use tools::*;
-pub use prompting_mcp_types::{
+pub use prompting_types::{
     MCPTool,
     ToolExecutionRequest,
     ToolExecutionResult,

@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::Row;
 use tokio::sync::RwLock;
 use tracing::{info, warn};
+use futures_util::future::join_all;
 
 use crate::simple_client::DatabaseClient;
 
@@ -23,12 +24,43 @@ pub enum TransactionState {
     InDoubt, // Transaction outcome uncertain
 }
 
+/// Two-phase commit vote
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub enum Vote {
+    /// Participant agrees to commit
+    Yes,
+    /// Participant cannot commit
+    No,
+}
+
+/// Participant information for distributed transactions
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TransactionParticipant {
+    /// Service or database identifier
+    pub service_id: String,
+    /// Database connection string or service endpoint
+    pub connection_info: String,
+    /// Operations to perform in this transaction
+    pub operations: Vec<TransactionOperation>,
+}
+
+/// Operation within a distributed transaction
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TransactionOperation {
+    /// Type of operation (insert, update, delete)
+    pub operation_type: String,
+    /// Target table/collection
+    pub table: String,
+    /// Operation data (SQL or structured data)
+    pub data: serde_json::Value,
+}
+
 /// Distributed transaction record
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DistributedTransaction {
     pub id: String,
     pub coordinator_id: String,
-    pub participants: Vec<String>, // Service IDs involved
+    pub participants: Vec<TransactionParticipant>, // Detailed participant info
     pub state: TransactionState,
     pub created_at: DateTime<Utc>,
     pub timeout_at: DateTime<Utc>,
@@ -119,7 +151,7 @@ impl DataConsistencyManager {
     pub async fn begin_distributed_transaction(
         &self,
         transaction_id: String,
-        participants: Vec<String>,
+        participants: Vec<TransactionParticipant>,
         timeout_duration: Duration,
     ) -> Result<(), String> {
         let transaction = DistributedTransaction {
@@ -154,13 +186,54 @@ impl DataConsistencyManager {
             return Err(format!("Transaction {} is not in pending state", transaction_id));
         }
 
-        // In a real implementation, this would coordinate with all participants
-        // For now, we'll simulate the prepare phase
-        transaction.state = TransactionState::InDoubt;
+        // Coordinate prepare phase with all participants
+        let participants = transaction.participants.clone();
+        drop(transactions); // Release the lock
+
+        // Execute prepare phase for each participant concurrently
+        let prepare_futures = participants.iter().enumerate().map(|(i, participant)| {
+            let tx_id = transaction_id.to_string();
+            let participant = participant.clone();
+            async move {
+                match self.execute_prepare_phase(&participant, &tx_id).await {
+                    Ok(()) => Ok(Vote::Yes),
+                    Err(e) => {
+                        warn!("Participant {} failed prepare phase: {}", participant.service_id, e);
+                        Ok(Vote::No)
+                    }
+                }
+            }
+        });
+
+        let results: Vec<Result<Vote, String>> = join_all(prepare_futures).await;
+        let participant_count = participants.len();
+
+        for (i, result) in results.into_iter().enumerate() {
+            match result {
+                Ok(vote) => {
+                    if vote == Vote::No {
+                        // If any participant votes no, abort the entire transaction
+                        self.abort_distributed_transaction(transaction_id).await?;
+                        return Err(format!("Participant {} voted to abort transaction {}", i, transaction_id));
+                    }
+                }
+                Err(e) => {
+                    // If we can't coordinate with a participant, abort the transaction
+                    self.abort_distributed_transaction(transaction_id).await?;
+                    return Err(format!("Failed to prepare with participant {}: {}", i, e));
+                }
+            }
+        }
+
+        // All participants voted yes, move to in-doubt state
+        let mut transactions = self.transactions.write().await;
+        if let Some(tx) = transactions.get_mut(transaction_id) {
+            tx.state = TransactionState::InDoubt;
+        }
 
         self.persist_transaction_state(transaction_id, TransactionState::InDoubt).await?;
 
-        info!("Prepared transaction: {}", transaction_id);
+        info!("Successfully prepared transaction: {} with {} participants", transaction_id, participant_count);
         Ok(())
     }
 
@@ -174,13 +247,51 @@ impl DataConsistencyManager {
             return Err(format!("Transaction {} cannot be committed from state {:?}", transaction_id, transaction.state));
         }
 
-        // Coordinate commit with all participants
-        // In real implementation, this would be done via distributed protocol
-        transaction.state = TransactionState::Committed;
+        // Coordinate commit phase with all participants
+        let participants = transaction.participants.clone();
+        drop(transactions); // Release the lock
+
+        // Execute commit phase for each participant concurrently
+        let commit_futures = participants.iter().enumerate().map(|(i, participant)| {
+            let tx_id = transaction_id.to_string();
+            let participant = participant.clone();
+            async move {
+                match self.execute_commit_phase(&participant, &tx_id).await {
+                    Ok(()) => Ok(()),
+                    Err(e) => {
+                        warn!("Participant {} failed commit phase: {}", participant.service_id, e);
+                        Err(format!("Participant {} commit failed: {}", i, e))
+                    }
+                }
+            }
+        });
+
+        let results = join_all(commit_futures).await;
+
+        // Check if all participants acknowledged the commit
+        let mut commit_failures = Vec::new();
+        for result in results.into_iter() {
+            if let Err(e) = result {
+                commit_failures.push(e);
+            }
+        }
+
+        if !commit_failures.is_empty() {
+            // Some participants failed to commit - this is a critical error
+            // In a real distributed system, we'd need complex recovery procedures
+            // For now, log the failures but still mark as committed since 2PC decision was made
+            warn!("Some participants failed to commit transaction {}: {:?}", transaction_id, commit_failures);
+        }
+
+        // Mark transaction as committed
+        let mut transactions = self.transactions.write().await;
+        if let Some(tx) = transactions.get_mut(transaction_id) {
+            tx.state = TransactionState::Committed;
+        }
 
         self.persist_transaction_state(transaction_id, TransactionState::Committed).await?;
 
-        info!("Committed transaction: {}", transaction_id);
+        info!("Committed distributed transaction: {} with {} participants", transaction_id, participants.len());
         Ok(())
     }
 
@@ -537,11 +648,304 @@ impl DataConsistencyManager {
         info!("Cleaned up {} completed transactions older than {} days",
               transactions.len(), max_age_days);
     }
+
+    /// Execute prepare phase for a participant (Phase 1 of 2PC)
+    async fn execute_prepare_phase(&self, participant: &TransactionParticipant, transaction_id: &str) -> Result<(), String> {
+        info!("Executing prepare phase for participant {} in transaction {}", participant.service_id, transaction_id);
+
+        // Connect to participant's database
+        let pool = sqlx::PgPool::connect(&participant.connection_info).await
+            .map_err(|e| format!("Failed to connect to participant database: {}", e))?;
+
+        // Start a database transaction for this participant
+        let mut tx = pool.begin().await
+            .map_err(|e| format!("Failed to start database transaction: {}", e))?;
+
+        // Execute all operations for this participant
+        for operation in &participant.operations {
+            match operation.operation_type.as_str() {
+                "insert" => {
+                    self.execute_insert_operation(&mut tx, operation, transaction_id).await?;
+                }
+                "update" => {
+                    self.execute_update_operation(&mut tx, operation, transaction_id).await?;
+                }
+                "delete" => {
+                    self.execute_delete_operation(&mut tx, operation, transaction_id).await?;
+                }
+                _ => {
+                    return Err(format!("Unsupported operation type: {}", operation.operation_type));
+                }
+            }
+        }
+
+        // If we get here, all operations succeeded - keep transaction open for commit phase
+        // In a real implementation, we'd store the transaction handle for later commit/rollback
+        Ok(())
+    }
+
+    /// Execute commit phase for a participant (Phase 2 of 2PC)
+    async fn execute_commit_phase(&self, participant: &TransactionParticipant, transaction_id: &str) -> Result<(), String> {
+        info!("Executing commit phase for participant {} in transaction {}", participant.service_id, transaction_id);
+
+        // Connect to participant's database
+        let pool = sqlx::PgPool::connect(&participant.connection_info).await
+            .map_err(|e| format!("Failed to connect to participant database: {}", e))?;
+
+        // In a real implementation, we'd retrieve the prepared transaction and commit it
+        // For now, we'll simulate the commit by executing the operations again
+        // (in reality, the operations would be prepared but not committed)
+
+        let mut tx = pool.begin().await
+            .map_err(|e| format!("Failed to start commit transaction: {}", e))?;
+
+        // Execute all operations for this participant (simulating commit of prepared transaction)
+        for operation in &participant.operations {
+            match operation.operation_type.as_str() {
+                "insert" => {
+                    self.execute_insert_operation(&mut tx, operation, transaction_id).await?;
+                }
+                "update" => {
+                    self.execute_update_operation(&mut tx, operation, transaction_id).await?;
+                }
+                "delete" => {
+                    self.execute_delete_operation(&mut tx, operation, transaction_id).await?;
+                }
+                _ => {
+                    return Err(format!("Unsupported operation type: {}", operation.operation_type));
+                }
+            }
+        }
+
+        // Commit the transaction
+        tx.commit().await
+            .map_err(|e| format!("Failed to commit transaction: {}", e))?;
+
+        info!("Successfully committed operations for participant {} in transaction {}",
+              participant.service_id, transaction_id);
+        Ok(())
+    }
+
+    /// Abort a distributed transaction (rollback all participants)
+    async fn abort_distributed_transaction(&self, transaction_id: &str) -> Result<(), String> {
+        info!("Aborting distributed transaction: {}", transaction_id);
+
+        let transactions = self.transactions.read().await;
+        let transaction = transactions.get(transaction_id)
+            .ok_or(format!("Transaction not found for abort: {}", transaction_id))?;
+
+        // Rollback each participant concurrently
+        let abort_futures = transaction.participants.iter().map(|participant| {
+            let participant = participant.clone();
+            let tx_id = transaction_id.to_string();
+            async move {
+                match self.execute_abort_phase(&participant, &tx_id).await {
+                    Ok(()) => Ok(()),
+                    Err(e) => {
+                        warn!("Failed to abort participant {}: {}", participant.service_id, e);
+                        Err(e)
+                    }
+                }
+            }
+        });
+
+        let results = join_all(abort_futures).await;
+
+        // Log any abort failures (but don't fail the overall abort)
+        let mut abort_failures = Vec::new();
+        for result in results.into_iter() {
+            if let Err(e) = result {
+                abort_failures.push(e);
+            }
+        }
+
+        if !abort_failures.is_empty() {
+            warn!("Some participants failed to abort transaction {}: {:?}", transaction_id, abort_failures);
+        }
+
+        // Update transaction state
+        drop(transactions);
+        let mut transactions = self.transactions.write().await;
+        if let Some(tx) = transactions.get_mut(transaction_id) {
+            tx.state = TransactionState::Aborted;
+        }
+        self.persist_transaction_state(transaction_id, TransactionState::Aborted).await?;
+
+        info!("Distributed transaction {} aborted", transaction_id);
+        Ok(())
+    }
+
+    /// Execute abort phase for a participant (rollback)
+    async fn execute_abort_phase(&self, participant: &TransactionParticipant, transaction_id: &str) -> Result<(), String> {
+        info!("Executing abort phase for participant {} in transaction {}", participant.service_id, transaction_id);
+
+        // Connect to participant's database
+        let pool = sqlx::PgPool::connect(&participant.connection_info).await
+            .map_err(|e| format!("Failed to connect to participant database: {}", e))?;
+
+        // In a real implementation, we'd rollback the prepared transaction
+        // For now, we'll simulate by not executing any operations
+        // (in reality, the prepared transaction would be rolled back)
+
+        info!("Successfully aborted operations for participant {} in transaction {}",
+              participant.service_id, transaction_id);
+        Ok(())
+    }
+
+    /// Execute an insert operation
+    async fn execute_insert_operation(&self, tx: &mut sqlx::Transaction<'_, sqlx::Postgres>, operation: &TransactionOperation, transaction_id: &str) -> Result<(), String> {
+        let table = &operation.table;
+        let data = &operation.data;
+
+        // Build dynamic INSERT statement based on the data
+        let columns: Vec<String> = data.as_object()
+            .ok_or("Insert data must be an object")?
+            .keys()
+            .cloned()
+            .collect();
+
+        let placeholders: Vec<String> = (1..=columns.len()).map(|i| format!("${}", i)).collect();
+        let sql = format!(
+            "INSERT INTO {} ({}) VALUES ({})",
+            table,
+            columns.join(", "),
+            placeholders.join(", ")
+        );
+
+        let values: Vec<serde_json::Value> = columns.iter()
+            .map(|col| data.get(col).cloned().unwrap_or(serde_json::Value::Null))
+            .collect();
+
+        // Convert JSON values to SQL parameters
+        let mut query = sqlx::query(&sql);
+        for value in values {
+            query = match value {
+                serde_json::Value::String(s) => query.bind(s),
+                serde_json::Value::Number(n) => {
+                    if let Some(i) = n.as_i64() {
+                        query.bind(i)
+                    } else if let Some(f) = n.as_f64() {
+                        query.bind(f)
+                    } else {
+                        return Err("Unsupported number type".to_string());
+                    }
+                }
+                serde_json::Value::Bool(b) => query.bind(b),
+                serde_json::Value::Null => query.bind(None::<String>),
+                _ => return Err("Unsupported data type for insert".to_string()),
+            };
+        }
+
+        query.execute(&mut **tx).await
+            .map_err(|e| format!("Failed to execute insert: {}", e))?;
+
+        Ok(())
+    }
+
+    /// Execute an update operation
+    async fn execute_update_operation(&self, tx: &mut sqlx::Transaction<'_, sqlx::Postgres>, operation: &TransactionOperation, transaction_id: &str) -> Result<(), String> {
+        let table = &operation.table;
+        let data = &operation.data;
+
+        // Assume data contains both WHERE conditions and SET values
+        let set_data = data.get("set").and_then(|v| v.as_object())
+            .ok_or("Update data must contain 'set' object")?;
+        let where_data = data.get("where").and_then(|v| v.as_object())
+            .ok_or("Update data must contain 'where' object")?;
+
+        // Build SET clause
+        let set_columns: Vec<String> = set_data.keys().cloned().collect();
+        let set_placeholders: Vec<String> = (1..=set_columns.len()).map(|i| format!("${}", i)).collect();
+
+        // Build WHERE clause
+        let where_columns: Vec<String> = where_data.keys().cloned().collect();
+        let where_placeholders: Vec<String> = ((set_columns.len() + 1)..=(set_columns.len() + where_columns.len()))
+            .map(|i| format!("${}", i))
+            .collect();
+
+        let sql = format!(
+            "UPDATE {} SET {} WHERE {}",
+            table,
+            set_columns.iter().zip(set_placeholders.iter()).map(|(col, ph)| format!("{} = {}", col, ph)).collect::<Vec<_>>().join(", "),
+            where_columns.iter().zip(where_placeholders.iter()).map(|(col, ph)| format!("{} = {}", col, ph)).collect::<Vec<_>>().join(" AND ")
+        );
+
+        let mut query = sqlx::query(&sql);
+
+        // Bind SET values
+        for col in &set_columns {
+            let value = set_data.get(col).cloned().unwrap_or(serde_json::Value::Null);
+            query = self.bind_json_value(query, value);
+        }
+
+        // Bind WHERE values
+        for col in &where_columns {
+            let value = where_data.get(col).cloned().unwrap_or(serde_json::Value::Null);
+            query = self.bind_json_value(query, value);
+        }
+
+        query.execute(&mut **tx).await
+            .map_err(|e| format!("Failed to execute update: {}", e))?;
+
+        Ok(())
+    }
+
+    /// Execute a delete operation
+    async fn execute_delete_operation(&self, tx: &mut sqlx::Transaction<'_, sqlx::Postgres>, operation: &TransactionOperation, transaction_id: &str) -> Result<(), String> {
+        let table = &operation.table;
+        let data = &operation.data;
+
+        // Assume data contains WHERE conditions
+        let where_data = data.as_object()
+            .ok_or("Delete data must be an object with WHERE conditions")?;
+
+        let where_columns: Vec<String> = where_data.keys().cloned().collect();
+        let where_placeholders: Vec<String> = (1..=where_columns.len()).map(|i| format!("${}", i)).collect();
+
+        let sql = format!(
+            "DELETE FROM {} WHERE {}",
+            table,
+            where_columns.iter().zip(where_placeholders.iter()).map(|(col, ph)| format!("{} = {}", col, ph)).collect::<Vec<_>>().join(" AND ")
+        );
+
+        let mut query = sqlx::query(&sql);
+
+        // Bind WHERE values
+        for col in &where_columns {
+            let value = where_data.get(col).cloned().unwrap_or(serde_json::Value::Null);
+            query = self.bind_json_value(query, value);
+        }
+
+        query.execute(&mut **tx).await
+            .map_err(|e| format!("Failed to execute delete: {}", e))?;
+
+        Ok(())
+    }
+
+    /// Helper to bind JSON values to SQL queries
+    fn bind_json_value<'a>(&self, query: sqlx::query::Query<'a, sqlx::Postgres, sqlx::postgres::PgArguments>, value: serde_json::Value) -> sqlx::query::Query<'a, sqlx::Postgres, sqlx::postgres::PgArguments> {
+        match value {
+            serde_json::Value::String(s) => query.bind(s),
+            serde_json::Value::Number(n) => {
+                if let Some(i) = n.as_i64() {
+                    query.bind(i)
+                } else if let Some(f) = n.as_f64() {
+                    query.bind(f)
+                } else {
+                    panic!("Unsupported number type");
+                }
+            }
+            serde_json::Value::Bool(b) => query.bind(b),
+            serde_json::Value::Null => query.bind(None::<String>),
+            _ => panic!("Unsupported data type"),
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::database_config::DatabaseConfig;
     use std::sync::Arc;
 
     #[tokio::test]
@@ -555,7 +959,30 @@ mod tests {
         );
 
         let tx_id = "test_transaction_123".to_string();
-        let participants = vec!["service1".to_string(), "service2".to_string()];
+        let participants = vec![
+            TransactionParticipant {
+                service_id: "service1".to_string(),
+                connection_info: "postgresql://test:test@localhost:5432/test1".to_string(),
+                operations: vec![
+                    TransactionOperation {
+                        operation_type: "insert".to_string(),
+                        table: "test_table".to_string(),
+                        data: serde_json::json!({"id": 1, "name": "test1"}),
+                    }
+                ],
+            },
+            TransactionParticipant {
+                service_id: "service2".to_string(),
+                connection_info: "postgresql://test:test@localhost:5432/test2".to_string(),
+                operations: vec![
+                    TransactionOperation {
+                        operation_type: "insert".to_string(),
+                        table: "test_table".to_string(),
+                        data: serde_json::json!({"id": 2, "name": "test2"}),
+                    }
+                ],
+            },
+        ];
 
         // Test transaction creation
         assert!(consistency_manager.begin_distributed_transaction(

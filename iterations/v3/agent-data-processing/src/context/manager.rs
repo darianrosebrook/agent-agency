@@ -9,7 +9,7 @@
 use crate::context::types::*;
 use crate::DataProcessingResult;
 #[cfg(feature = "embeddings")]
-use data_infrastructure::{DatabaseClient, database_config::DatabaseConfig};
+use data_infrastructure::{DatabaseClient, database_config::DatabaseConfig, ModelRegistry};
 use chrono::{DateTime, Utc, Duration};
 use flate2::{read::GzDecoder, write::GzEncoder, Compression};
 use serde_json;
@@ -26,6 +26,8 @@ use uuid::Uuid;
 pub struct ContextManager {
     /// Database client
     db_client: Arc<DatabaseClient>,
+    /// AI service for summarization
+    ai_service: Arc<ModelRegistry>,
     /// Configuration
     config: ContextConfig,
     /// Working memory cache
@@ -37,7 +39,7 @@ pub struct ContextManager {
 #[cfg(feature = "embeddings")]
 impl ContextManager {
     /// Create a new unified context manager
-    pub async fn new(config: ContextConfig) -> DataProcessingResult<Self> {
+    pub async fn new(config: ContextConfig, ai_service: Arc<ModelRegistry>) -> DataProcessingResult<Self> {
         let db_config = DatabaseConfig::default();
         let db_client = Arc::new(DatabaseClient::new(db_config).await?);
 
@@ -54,6 +56,7 @@ impl ContextManager {
 
         let manager = Self {
             db_client,
+            ai_service,
             config,
             working_memory: Arc::new(RwLock::new(HashMap::new())),
             stats,
@@ -240,33 +243,173 @@ impl ContextManager {
     }
 
     async fn store_context_in_db(&self, context: &ContextData) -> DataProcessingResult<()> {
-        // TODO: Implement database storage
-        // This would use the database client to store the context
-        debug!("Storing context {} in database", context.id);
+        // Serialize context data
+        let content_json = serde_json::to_string(&context.content)
+            .map_err(|e| DataProcessingError::SerializationError(e.to_string()))?;
+        let metadata_json = serde_json::to_string(&context.metadata)
+            .map_err(|e| DataProcessingError::SerializationError(e.to_string()))?;
+
+        // Compress content if enabled
+        let (content_data, content_size) = if self.config.storage.enable_compression {
+            let mut encoder = GzEncoder::new(Vec::new(), Compression::new(self.config.storage.compression_level));
+            use std::io::Write;
+            encoder.write_all(content_json.as_bytes())?;
+            let compressed = encoder.finish()?;
+            (compressed, compressed.len() as u64)
+        } else {
+            (content_json.into_bytes(), content_json.len() as u64)
+        };
+
+        // Create database record
+        let query = r#"
+            INSERT INTO agent_contexts (
+                id, context_type, content, metadata,
+                created_at, last_accessed_at, access_count, size_bytes
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            ON CONFLICT (id) DO UPDATE SET
+                content = EXCLUDED.content,
+                metadata = EXCLUDED.metadata,
+                last_accessed_at = EXCLUDED.last_accessed_at,
+                access_count = EXCLUDED.access_count,
+                size_bytes = EXCLUDED.size_bytes
+        "#;
+
+        let params: Vec<&(dyn sqlx::Encode<'_, sqlx::Postgres> + Send + Sync)> = vec![
+            &context.id,
+            &context.context_type,
+            &content_data,
+            &metadata_json,
+            &context.created_at,
+            &context.last_accessed_at,
+            &context.access_count,
+            &content_size,
+        ];
+
+        self.db_client.execute(query, &params).await?;
+        debug!("Stored context {} in database", context.id);
         Ok(())
     }
 
     async fn retrieve_context_from_db(&self, context_id: &Uuid) -> DataProcessingResult<Option<ContextData>> {
-        // TODO: Implement database retrieval
-        debug!("Retrieving context {} from database", context_id);
-        Ok(None)
+        let query = r#"
+            SELECT context_type, content, metadata, created_at, last_accessed_at, access_count, size_bytes
+            FROM agent_contexts
+            WHERE id = $1
+        "#;
+
+        let params: Vec<&(dyn sqlx::Encode<'_, sqlx::Postgres> + Send + Sync)> = vec![context_id];
+
+        let rows = self.db_client.query(query, &params).await?;
+        if rows.is_empty() {
+            debug!("Context {} not found in database", context_id);
+            return Ok(None);
+        }
+
+        let row = &rows[0];
+
+        // Deserialize data
+        let content_data: Vec<u8> = row.get("content");
+        let content_json = if self.config.storage.enable_compression {
+            let mut decoder = GzDecoder::new(&content_data[..]);
+            use std::io::Read;
+            let mut decompressed = String::new();
+            decoder.read_to_string(&mut decompressed)?;
+            decompressed
+        } else {
+            String::from_utf8(content_data)
+                .map_err(|e| DataProcessingError::SerializationError(e.to_string()))?
+        };
+
+        let content: serde_json::Value = serde_json::from_str(&content_json)
+            .map_err(|e| DataProcessingError::SerializationError(e.to_string()))?;
+        let metadata: ContextMetadata = serde_json::from_str(row.get("metadata"))
+            .map_err(|e| DataProcessingError::SerializationError(e.to_string()))?;
+
+        let context = ContextData {
+            id: *context_id,
+            context_type: row.get("context_type"),
+            content,
+            metadata,
+            created_at: row.get("created_at"),
+            last_accessed_at: row.get("last_accessed_at"),
+            access_count: row.get("access_count"),
+            size_bytes: row.get("size_bytes"),
+        };
+
+        debug!("Retrieved context {} from database", context_id);
+        Ok(Some(context))
     }
 
     async fn update_context_in_db(&self, context: &ContextData) -> DataProcessingResult<()> {
-        // TODO: Implement database update
-        debug!("Updating context {} in database", context.id);
+        let metadata_json = serde_json::to_string(&context.metadata)
+            .map_err(|e| DataProcessingError::SerializationError(e.to_string()))?;
+
+        let query = r#"
+            UPDATE agent_contexts
+            SET context_type = $1, metadata = $2, last_accessed_at = $3,
+                access_count = $4, size_bytes = $5
+            WHERE id = $6
+        "#;
+
+        let params: Vec<&(dyn sqlx::Encode<'_, sqlx::Postgres> + Send + Sync)> = vec![
+            &context.context_type,
+            &metadata_json,
+            &context.last_accessed_at,
+            &context.access_count,
+            &context.size_bytes,
+            &context.id,
+        ];
+
+        self.db_client.execute(query, &params).await?;
+        debug!("Updated context {} in database", context.id);
         Ok(())
     }
 
     async fn update_context_access(&self, context_id: &Uuid) -> DataProcessingResult<()> {
-        // TODO: Update access statistics
-        debug!("Updating access stats for context {}", context_id);
+        let query = r#"
+            UPDATE agent_contexts
+            SET access_count = access_count + 1, last_accessed_at = $1
+            WHERE id = $2
+        "#;
+
+        let now = Utc::now();
+        let params: Vec<&(dyn sqlx::Encode<'_, sqlx::Postgres> + Send + Sync)> = vec![
+            &now,
+            context_id,
+        ];
+
+        self.db_client.execute(query, &params).await?;
+        debug!("Updated access statistics for context {}", context_id);
         Ok(())
     }
 
     async fn store_folded_context(&self, context_id: &Uuid, folded: &FoldedContext) -> DataProcessingResult<()> {
-        // TODO: Store folded context
-        debug!("Storing folded context {}", context_id);
+        let (fold_type, fold_data) = match folded {
+            FoldedContext::Compressed(data) => ("compressed", serde_json::to_string(data)?),
+            FoldedContext::Summarized(summary) => ("summarized", summary.clone()),
+            FoldedContext::Archived(path) => ("archived", path.clone()),
+            FoldedContext::Deleted => ("deleted", String::new()),
+        };
+
+        let query = r#"
+            INSERT INTO folded_contexts (context_id, fold_type, fold_data, folded_at)
+            VALUES ($1, $2, $3, $4)
+            ON CONFLICT (context_id) DO UPDATE SET
+                fold_type = EXCLUDED.fold_type,
+                fold_data = EXCLUDED.fold_data,
+                folded_at = EXCLUDED.folded_at
+        "#;
+
+        let now = Utc::now();
+        let params: Vec<&(dyn sqlx::Encode<'_, sqlx::Postgres> + Send + Sync)> = vec![
+            context_id,
+            &fold_type,
+            &fold_data,
+            &now,
+        ];
+
+        self.db_client.execute(query, &params).await?;
+        debug!("Stored folded context {} with type {}", context_id, fold_type);
         Ok(())
     }
 
@@ -359,15 +502,348 @@ impl ContextManager {
         Ok(FoldedContext::Compressed(compressed))
     }
 
-    async fn summarize_context(&self, _context: ContextData) -> DataProcessingResult<FoldedContext> {
-        // TODO: Implement AI-powered summarization
-        // For now, return a simple summary
-        Ok(FoldedContext::Summarized("Context summarized".to_string()))
+    async fn summarize_context(&self, context: ContextData) -> DataProcessingResult<FoldedContext> {
+        // Extract text content from context
+        let content_text = self.extract_text_from_context(&context)?;
+
+        // Create summarization prompt
+        let prompt = format!(
+            "Please provide a concise but comprehensive summary of the following content. \
+             Focus on the key information, decisions, and outcomes. Keep the summary under 500 words.\n\n\
+             Content type: {}\n\
+             Title: {}\n\
+             Description: {}\n\n\
+             Content:\n{}",
+            context.context_type,
+            context.metadata.title.as_deref().unwrap_or("Untitled"),
+            context.metadata.description.as_deref().unwrap_or("No description"),
+            content_text
+        );
+
+        // Generate summary using AI service
+        let options = data_infrastructure::GenerationOptions {
+            max_tokens: Some(300),
+            temperature: Some(0.3), // Lower temperature for more consistent summaries
+            top_p: Some(0.9),
+            stop_sequences: None,
+        };
+
+        match self.ai_service.generate(&prompt, &options).await {
+            Ok(summary) => {
+                // Clean up the summary (remove extra whitespace, etc.)
+                let cleaned_summary = summary.trim().to_string();
+
+                // Validate summary isn't too short or too long
+                if cleaned_summary.len() < 50 {
+                    return Err(DataProcessingError::Operation(
+                        "Generated summary too short".to_string()
+                    ));
+                }
+
+                if cleaned_summary.len() > 2000 {
+                    return Err(DataProcessingError::Operation(
+                        "Generated summary too long".to_string()
+                    ));
+                }
+
+                debug!("AI-generated summary for context {}: {} chars", context.id, cleaned_summary.len());
+                Ok(FoldedContext::Summarized(cleaned_summary))
+            }
+            Err(e) => {
+                warn!("AI summarization failed for context {}: {}", context.id, e);
+                // Fallback to a basic extractive summary
+                let fallback_summary = self.create_fallback_summary(&context)?;
+                Ok(FoldedContext::Summarized(fallback_summary))
+            }
+        }
     }
 
-    async fn archive_context(&self, _context: ContextData) -> DataProcessingResult<FoldedContext> {
-        // TODO: Implement archiving to cold storage
-        Ok(FoldedContext::Archived("archived_location".to_string()))
+    /// Extract text content from context for summarization
+    fn extract_text_from_context(&self, context: &ContextData) -> DataProcessingResult<String> {
+        match &context.content {
+            serde_json::Value::String(text) => Ok(text.clone()),
+            serde_json::Value::Object(obj) => {
+                // Try to extract text from common fields
+                if let Some(text) = obj.get("text").and_then(|v| v.as_str()) {
+                    Ok(text.to_string())
+                } else if let Some(content) = obj.get("content").and_then(|v| v.as_str()) {
+                    Ok(content.to_string())
+                } else if let Some(body) = obj.get("body").and_then(|v| v.as_str()) {
+                    Ok(body.to_string())
+                } else {
+                    // Convert entire object to formatted string
+                    serde_json::to_string_pretty(obj)
+                        .map_err(|e| DataProcessingError::SerializationError(e.to_string()))
+                }
+            },
+            _ => {
+                // Convert to string representation
+                serde_json::to_string_pretty(&context.content)
+                    .map_err(|e| DataProcessingError::SerializationError(e.to_string()))
+            }
+        }
+    }
+
+    /// Create a fallback summary when AI summarization fails
+    fn create_fallback_summary(&self, context: &ContextData) -> DataProcessingResult<String> {
+        let title = context.metadata.title.as_deref().unwrap_or("Untitled context");
+        let desc = context.metadata.description.as_deref().unwrap_or("");
+        let tags = context.metadata.tags.join(", ");
+
+        let summary = format!(
+            "Context: {}\nType: {}\nDescription: {}\nTags: {}\nSize: {} bytes\nCreated: {}",
+            title,
+            context.context_type,
+            desc,
+            if tags.is_empty() { "none" } else { &tags },
+            context.size_bytes,
+            context.created_at.format("%Y-%m-%d %H:%M UTC")
+        );
+
+        Ok(summary)
+    }
+
+    async fn archive_context(&self, context: ContextData) -> DataProcessingResult<FoldedContext> {
+        use std::fs;
+        use std::path::PathBuf;
+
+        // Create archive path based on context ID
+        let archive_base = self.config.storage.archive_path
+            .as_ref()
+            .cloned()
+            .unwrap_or_else(|| "archive".to_string());
+
+        let archive_dir = PathBuf::from(archive_base)
+            .join(context.id.to_string()[..2].to_string()) // First 2 chars as subdirectory
+            .join(context.id.to_string()[2..4].to_string()); // Next 2 chars as subdirectory
+
+        fs::create_dir_all(&archive_dir)?;
+
+        let archive_path = archive_dir.join(format!("{}.ctx", context.id));
+
+        // Serialize context data
+        let context_json = serde_json::to_string(&context)?;
+        let compressed_data = if self.config.storage.enable_compression {
+            let mut encoder = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::new(self.config.storage.compression_level));
+            use std::io::Write;
+            encoder.write_all(context_json.as_bytes())?;
+            encoder.finish()?
+        } else {
+            context_json.into_bytes()
+        };
+
+        // Write to cold storage
+        fs::write(&archive_path, &compressed_data)?;
+
+        // Generate archive location identifier
+        let archive_location = format!("{}/{}", context.id.to_string()[..2].to_string(), context.id.to_string()[2..4].to_string());
+
+        // Update database to mark as archived
+        let query = r#"
+            UPDATE agent_contexts
+            SET archived_at = $1, archive_location = $2
+            WHERE id = $3
+        "#;
+
+        let now = Utc::now();
+        let params: Vec<&(dyn sqlx::Encode<'_, sqlx::Postgres> + Send + Sync)> = vec![
+            &now,
+            &archive_location,
+            &context.id,
+        ];
+
+        self.db_client.execute(query, &params).await?;
+
+        debug!("Archived context {} to cold storage at {}", context.id, archive_path.display());
+
+        Ok(FoldedContext::Archived(archive_location))
+    }
+
+    /// Retrieve a context from cold storage archive
+    pub async fn retrieve_archived_context(&self, context_id: &Uuid) -> DataProcessingResult<Option<ContextData>> {
+        use std::fs;
+        use std::path::PathBuf;
+
+        // First check if context is archived in database
+        let query = r#"
+            SELECT archive_location FROM agent_contexts
+            WHERE id = $1 AND archived_at IS NOT NULL
+        "#;
+
+        let params: Vec<&(dyn sqlx::Encode<'_, sqlx::Postgres> + Send + Sync)> = vec![context_id];
+        let rows = self.db_client.query(query, &params).await?;
+
+        if rows.is_empty() {
+            return Ok(None);
+        }
+
+        let archive_location: String = rows[0].get("archive_location");
+
+        // Reconstruct archive path
+        let archive_base = self.config.storage.archive_path
+            .as_ref()
+            .cloned()
+            .unwrap_or_else(|| "archive".to_string());
+
+        let archive_path = PathBuf::from(archive_base)
+            .join(&archive_location)
+            .join(format!("{}.ctx", context_id));
+
+        // Read archived data
+        let compressed_data = fs::read(&archive_path)?;
+
+        // Decompress if needed
+        let context_json = if self.config.storage.enable_compression {
+            let mut decoder = flate2::read::GzDecoder::new(&compressed_data[..]);
+            let mut decompressed = String::new();
+            use std::io::Read;
+            decoder.read_to_string(&mut decompressed)?;
+            decompressed
+        } else {
+            String::from_utf8(compressed_data)?
+        };
+
+        // Deserialize context
+        let mut context: ContextData = serde_json::from_str(&context_json)?;
+
+        // Update access time
+        context.last_accessed_at = Utc::now();
+        context.access_count += 1;
+
+        // Update database with new access time
+        let update_query = r#"
+            UPDATE agent_contexts
+            SET last_accessed_at = $1, access_count = $2
+            WHERE id = $3
+        "#;
+
+        let update_params: Vec<&(dyn sqlx::Encode<'_, sqlx::Postgres> + Send + Sync)> = vec![
+            &context.last_accessed_at,
+            &context.access_count,
+            &context_id,
+        ];
+
+        self.db_client.execute(update_query, &update_params).await?;
+
+        debug!("Retrieved archived context {} from {}", context_id, archive_path.display());
+
+        Ok(Some(context))
+    }
+
+    /// Get archive statistics
+    pub async fn get_archive_stats(&self) -> DataProcessingResult<ArchiveStats> {
+        let query = r#"
+            SELECT
+                COUNT(*) as total_archived,
+                COUNT(CASE WHEN archived_at > $1 THEN 1 END) as archived_this_week,
+                AVG(EXTRACT(EPOCH FROM (NOW() - archived_at))) as avg_archive_age_seconds
+            FROM agent_contexts
+            WHERE archived_at IS NOT NULL
+        "#;
+
+        let one_week_ago = Utc::now() - Duration::days(7);
+        let params: Vec<&(dyn sqlx::Encode<'_, sqlx::Postgres> + Send + Sync)> = vec![&one_week_ago];
+
+        let rows = self.db_client.query(query, &params).await?;
+        if rows.is_empty() {
+            return Ok(ArchiveStats::default());
+        }
+
+        let row = &rows[0];
+        let total_archived: i64 = row.get("total_archived");
+        let archived_this_week: i64 = row.get("archived_this_week");
+        let avg_archive_age_seconds: Option<f64> = row.get("avg_archive_age_seconds");
+
+        // Calculate archive storage size
+        let archive_base = self.config.storage.archive_path
+            .as_ref()
+            .cloned()
+            .unwrap_or_else(|| "archive".to_string());
+
+        let mut total_archive_size = 0u64;
+        if let Ok(entries) = std::fs::read_dir(&archive_base) {
+            for entry in entries.flatten() {
+                if let Ok(metadata) = entry.metadata() {
+                    if metadata.is_file() {
+                        total_archive_size += metadata.len();
+                    } else if metadata.is_dir() {
+                        // Recursively calculate size of subdirectories
+                        fn calculate_dir_size(path: &std::path::Path) -> std::io::Result<u64> {
+                            let mut size = 0u64;
+                            for entry in std::fs::read_dir(path)? {
+                                let entry = entry?;
+                                let metadata = entry.metadata()?;
+                                if metadata.is_file() {
+                                    size += metadata.len();
+                                } else if metadata.is_dir() {
+                                    size += calculate_dir_size(&entry.path())?;
+                                }
+                            }
+                            Ok(size)
+                        }
+                        if let Ok(dir_size) = calculate_dir_size(&entry.path()) {
+                            total_archive_size += dir_size;
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(ArchiveStats {
+            total_archived: total_archived as u64,
+            archived_this_week: archived_this_week as u64,
+            total_archive_size,
+            avg_archive_age_seconds,
+        })
+    }
+
+    /// Clean up old archived contexts based on retention policy
+    pub async fn cleanup_archive(&self, retention_days: u32) -> DataProcessingResult<u64> {
+        let cutoff_date = Utc::now() - Duration::days(retention_days as i64);
+
+        // Find contexts to delete
+        let query = r#"
+            SELECT id, archive_location
+            FROM agent_contexts
+            WHERE archived_at < $1 AND archived_at IS NOT NULL
+        "#;
+
+        let params: Vec<&(dyn sqlx::Encode<'_, sqlx::Postgres> + Send + Sync)> = vec![&cutoff_date];
+        let rows = self.db_client.query(query, &params).await?;
+
+        let mut deleted_count = 0u64;
+        let archive_base = self.config.storage.archive_path
+            .as_ref()
+            .cloned()
+            .unwrap_or_else(|| "archive".to_string());
+
+        for row in rows {
+            let context_id: Uuid = row.get("id");
+            let archive_location: String = row.get("archive_location");
+
+            // Delete archive file
+            let archive_path = std::path::Path::new(&archive_base)
+                .join(&archive_location)
+                .join(format!("{}.ctx", context_id));
+
+            if archive_path.exists() {
+                if let Err(e) = std::fs::remove_file(&archive_path) {
+                    warn!("Failed to delete archived context {}: {}", context_id, e);
+                    continue;
+                }
+            }
+
+            // Delete from database
+            let delete_query = "DELETE FROM agent_contexts WHERE id = $1";
+            let delete_params: Vec<&(dyn sqlx::Encode<'_, sqlx::Postgres> + Send + Sync)> = vec![&context_id];
+
+            if let Ok(_) = self.db_client.execute(delete_query, &delete_params).await {
+                deleted_count += 1;
+            }
+        }
+
+        info!("Cleaned up {} archived contexts older than {} days", deleted_count, retention_days);
+        Ok(deleted_count)
     }
 
     fn calculate_context_size(&self, context: &ContextData) -> u64 {

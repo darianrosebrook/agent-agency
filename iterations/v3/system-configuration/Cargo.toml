@@ -47,11 +47,19 @@ lru = "0.12"
 # Pattern-specific dependencies (from common-patterns)
 paste = "1.0"
 
+# File locking dependencies
+[target.'cfg(windows)'.dependencies]
+winapi = { version = "0.3", features = ["fileapi", "minwinbase"] }
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
 # Optional dependencies for agent-memory are handled at the application level
 
 [features]
 default = []
 memory = []
+prometheus = []
 
 [dev-dependencies]
 tokio-test = "0.4"

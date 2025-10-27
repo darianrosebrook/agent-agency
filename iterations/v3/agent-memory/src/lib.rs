@@ -21,8 +21,9 @@ pub mod context_management;
 pub mod decay;
 pub mod graph_engine;
 pub mod memory_manager;
+pub mod memory_types;
 pub mod temporal_reasoning;
-pub mod prompting_types;
+// pub mod prompting_types; // TODO: Create this module
 pub mod workspace_registry;
 
 // New feature modules for enhanced memory capabilities
@@ -56,12 +57,16 @@ pub mod observability;
 mod tests;
 
 // Re-exports for public API
-pub use context_management::{ContextManager, FoldedContext, ContextSummary, ArchivedContext};
+pub use context_management::{ContextManager};
+// pub use context_management::{FoldedContext, ContextSummary, ArchivedContext}; // TODO: Implement these types
 pub use decay::{MemoryDecayEngine, DecayStats};
 pub use graph_engine::{KnowledgeGraphEngine, Entity, Relationship, GraphQuery, GraphStats};
 pub use memory_manager::{MemoryManager, MemoryStats};
 pub use temporal_reasoning::{TemporalReasoningEngine};
-pub use prompting_prompting_memory_types::*;
+// pub use prompting_types::*; // TODO: Uncomment when module is created
+
+// Export the main MemorySystem struct
+// pub use MemorySystem; // Remove duplicate export
 
 #[cfg(feature = "embeddings")]
 pub use embedding_integration::{EmbeddingIntegration, MemoryEmbedding};

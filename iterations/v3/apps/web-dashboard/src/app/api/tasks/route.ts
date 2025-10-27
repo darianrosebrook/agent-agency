@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import getApiClient from "@/lib/api-client";
+import { getApiClient } from "@/lib/api-client";
+import { handleApiRouteError, getHttpStatusCode } from "@/lib/error-handling";
 
 /**
  * Task listing API proxy with enhanced error handling and abort controllers
@@ -12,6 +13,30 @@ import getApiClient from "@/lib/api-client";
 export async function GET(request: NextRequest) {
   const apiClient = getApiClient();
   const abortController = new AbortController();
+
+  // Check if backend is available before proceeding
+  const backendHost = process.env.NEXT_PUBLIC_V3_BACKEND_URL || process.env.V3_BACKEND_HOST;
+  if (!backendHost) {
+    console.warn('Backend not configured - returning offline mode data');
+    return NextResponse.json({
+      tasks: [
+        {
+          id: 'sample-task-1',
+          task_id: 'sample-task-1',
+          status: 'pending',
+          progress_percentage: 0,
+          current_phase: 'planning',
+          started_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          quality_score: null,
+        }
+      ],
+      total: 1,
+      backend_status: "unconfigured",
+      message: "Backend not configured - showing sample data",
+      timestamp: new Date().toISOString(),
+    });
+  }
 
   // Set up request timeout
   const timeoutId = setTimeout(() => {
@@ -111,39 +136,15 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     clearTimeout(timeoutId);
 
-    const errorMessage = error instanceof Error ? error.message : String(error ?? "Unknown error");
-
-    // Enhanced error classification
-    const isNetworkError = error instanceof TypeError ||
-                          errorMessage.includes("fetch") ||
-                          errorMessage.includes("ECONNREFUSED") ||
-                          errorMessage.includes("Network request failed");
-
-    const isTimeoutError = errorMessage.includes("aborted") ||
-                          errorMessage.includes("timeout");
-
-    const isRateLimited = errorMessage.includes("Rate limit exceeded");
-
-    if (isNetworkError) {
-      console.warn(`Backend network error for tasks: ${errorMessage}`);
-    } else if (isTimeoutError) {
-      console.warn(`Backend timeout for tasks: ${errorMessage}`);
-    } else if (isRateLimited) {
-      console.warn(`Rate limited for tasks: ${errorMessage}`);
-    } else {
-      console.error("Task list API error:", error);
-    }
+    const errorResponse = handleApiRouteError(error, 'tasks.list');
 
     return NextResponse.json({
-      error: isRateLimited ? "rate_limited" : isTimeoutError ? "timeout" : "api_error",
-      message: errorMessage,
+      ...errorResponse,
       tasks: [],
       total: 0,
-      backend_status: isNetworkError ? "unreachable" : "error",
-      timestamp: new Date().toISOString(),
-      retry_after: isRateLimited ? 60 : undefined, // Suggest retry after 60 seconds for rate limits
+      backend_status: "error",
     }, {
-      status: isRateLimited ? 429 : 500
+      status: getHttpStatusCode(errorResponse.error.code)
     });
   }
 }
@@ -151,6 +152,17 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const apiClient = getApiClient();
   const abortController = new AbortController();
+
+  // Check if backend is available before proceeding
+  const backendHost = process.env.NEXT_PUBLIC_V3_BACKEND_URL || process.env.V3_BACKEND_HOST;
+  if (!backendHost) {
+    return NextResponse.json({
+      error: "backend_unavailable",
+      message: "Backend not configured - cannot create tasks",
+      backend_status: "unconfigured",
+      timestamp: new Date().toISOString(),
+    }, { status: 503 });
+  }
 
   // Set up request timeout
   const timeoutId = setTimeout(() => {
@@ -210,46 +222,13 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     clearTimeout(timeoutId);
 
-    const errorMessage = error instanceof Error ? error.message : String(error ?? "Unknown error");
-
-    // Enhanced error classification
-    const isNetworkError = error instanceof TypeError ||
-                          errorMessage.includes("fetch") ||
-                          errorMessage.includes("ECONNREFUSED") ||
-                          errorMessage.includes("Network request failed");
-
-    const isTimeoutError = errorMessage.includes("aborted") ||
-                          errorMessage.includes("timeout");
-
-    const isRateLimited = errorMessage.includes("Rate limit exceeded");
-
-    const isValidationError = errorMessage.includes("invalid") ||
-                             errorMessage.includes("required");
-
-    if (isNetworkError) {
-      console.warn(`Backend network error for task creation: ${errorMessage}`);
-    } else if (isTimeoutError) {
-      console.warn(`Backend timeout for task creation: ${errorMessage}`);
-    } else if (isRateLimited) {
-      console.warn(`Rate limited for task creation: ${errorMessage}`);
-    } else if (isValidationError) {
-      console.warn(`Validation error for task creation: ${errorMessage}`);
-    } else {
-      console.error("Task creation API error:", error);
-    }
-
-    const statusCode = isRateLimited ? 429 :
-                      isValidationError ? 400 :
-                      isTimeoutError ? 408 : 500;
+    const errorResponse = handleApiRouteError(error, 'tasks.create');
 
     return NextResponse.json({
-      error: isRateLimited ? "rate_limited" :
-             isValidationError ? "validation_error" :
-             isTimeoutError ? "timeout" : "api_error",
-      message: errorMessage,
-      backend_status: isNetworkError ? "unreachable" : "error",
-      timestamp: new Date().toISOString(),
-      retry_after: isRateLimited ? 60 : undefined,
-    }, { status: statusCode });
+      ...errorResponse,
+      backend_status: "error",
+    }, {
+      status: getHttpStatusCode(errorResponse.error.code)
+    });
   }
 }

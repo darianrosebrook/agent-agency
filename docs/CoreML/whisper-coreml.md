@@ -3,7 +3,7 @@
 **Model**: OpenAI Whisper Large-v3 (CoreML-optimized)  
 **Primary Use Case**: Multilingual speech-to-text transcription with timestamps  
 **Target Performance**: 2.8-3.5x ANE speedup vs CPU inference  
-**Integration Priority**: 🔴 HIGH (Critical for multimodal RAG and video analysis)
+**Integration Priority**: HIGH (Critical for multimodal RAG and video analysis)
 
 ## Executive Summary
 
@@ -12,10 +12,10 @@ Whisper-CoreML will replace the placeholder speech processing in our ASR enriche
 ## Current State Assessment
 
 ### Existing Infrastructure
-- ✅ **ASR Enricher**: `enrichers/src/asr_enricher.rs` with FFI bindings
-- ✅ **Speech Bridge**: `apple-silicon/src/speech_bridge.rs` (placeholder)
-- ✅ **Video Ingestor**: `ingestors/src/video_ingestor.rs` with AVAssetReader
-- ✅ **Circuit Breaker**: Protection against failures
+-  **ASR Enricher**: `enrichers/src/asr_enricher.rs` with FFI bindings
+-  **Speech Bridge**: `apple-silicon/src/speech_bridge.rs` (placeholder)
+-  **Video Ingestor**: `ingestors/src/video_ingestor.rs` with AVAssetReader
+-  **Circuit Breaker**: Protection against failures
 - ❌ **CoreML Integration**: No Whisper model loaded
 
 ### Performance Baseline
@@ -431,17 +431,17 @@ fn test_throughput_under_load() {
 ## Success Metrics
 
 ### Technical Metrics
-- ✅ **ANE Speedup**: ≥2.8x vs CPU-only Whisper
-- ✅ **Accuracy**: ≥95% WER on technical content
-- ✅ **Latency**: <500ms for 30-second segments
-- ✅ **Memory**: <2.5GB peak usage
-- ✅ **Reliability**: 99.9% transcription success rate
+-  **ANE Speedup**: ≥2.8x vs CPU-only Whisper
+-  **Accuracy**: ≥95% WER on technical content
+-  **Latency**: <500ms for 30-second segments
+-  **Memory**: <2.5GB peak usage
+-  **Reliability**: 99.9% transcription success rate
 
 ### Business Impact Metrics
-- ✅ **Video Processing**: 3x faster evidence extraction from videos
-- ✅ **Research Quality**: 40% more comprehensive context gathering
-- ✅ **Judge Efficiency**: 25% faster deliberation with better transcripts
-- ✅ **User Experience**: Seamless multimodal content analysis
+-  **Video Processing**: 3x faster evidence extraction from videos
+-  **Research Quality**: 40% more comprehensive context gathering
+-  **Judge Efficiency**: 25% faster deliberation with better transcripts
+-  **User Experience**: Seamless multimodal content analysis
 
 ---
 

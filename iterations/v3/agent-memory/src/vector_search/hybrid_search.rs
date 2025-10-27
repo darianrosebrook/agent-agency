@@ -129,10 +129,11 @@ impl HybridSearchEngine {
 
         let search_time = start_time.elapsed().as_millis() as u64;
 
+        let results_len = results.len();
         Ok(SearchResponse {
             query: query.clone(),
             results,
-            total_found: results.len(),
+            total_found: results_len,
             search_time_ms: search_time,
             strategy_used: SearchStrategy::HybridReranking,
         })

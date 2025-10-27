@@ -16,6 +16,8 @@ pub mod api_errors;
 pub mod middleware;
 pub mod server;
 pub mod handlers;
+pub mod types;
+pub mod health;
 
 // Re-export public types and functions for backward compatibility
 pub use api_types::*;

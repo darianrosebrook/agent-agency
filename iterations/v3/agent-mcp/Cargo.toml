@@ -17,11 +17,9 @@ anyhow.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
 
-# Orchestration package provides security functionality
-agent-orchestration = { path = "../agent-orchestration" }
-
-# Data infrastructure for database functionality
-data-infrastructure = { path = "../data-infrastructure" }
+# Circuit breaker functionality moved to local implementation to avoid cyclic dependencies
+# agent-orchestration = { path = "../agent-orchestration" }
+# data-infrastructure = { path = "../data-infrastructure" }
 
 # Memory system for memory MCP tools
 agent-memory = { path = "../agent-memory", optional = true }
@@ -52,6 +50,9 @@ toml = "0.8"
 serde_yaml = "0.9"
 tempfile = "3.10"
 
+# CAWS runtime validator (placeholder dependency)
+# caws_runtime_validator = { path = "../caws_runtime_validator" }
+
 # Documentation quality validator
 
 # HTTP client for health checks
@@ -64,7 +65,7 @@ lazy_static = "1.4"
 [features]
 default = ["memory"]
 test-utils = []
-memory = ["agent-memory"]
+memory = ["agent-memory/database"]
 
 [dev-dependencies]
 tokio-test = "0.4"

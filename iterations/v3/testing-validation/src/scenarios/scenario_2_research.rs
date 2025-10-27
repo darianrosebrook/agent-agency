@@ -131,12 +131,27 @@ pub async fn run_test(
     );
 
     // Check hallucination detection
-    let fact_checker = crate::harness::FactChecker::new(get_known_facts());
+    let fact_checker = match crate::harness::FactChecker::new(get_known_facts()).await {
+        Ok(checker) => checker,
+        Err(e) => {
+            error!("Failed to initialize fact checker: {}", e);
+            return TestResult {
+                scenario: Scenario::Research,
+                passed: false,
+                metrics: TestMetrics {
+                    duration_ms: start_time.elapsed().as_millis() as f64,
+                    ..Default::default()
+                },
+                error_message: Some(format!("Fact checker initialization failed: {}", e)),
+                ..Default::default()
+            };
+        }
+    };
     assertions.assert_no_hallucination(
         &summary,
         &fact_checker,
         "Summary should not contain hallucinations"
-    );
+    ).await;
 
     // Validate minimum citations
     assertions.assert_citation_integrity(

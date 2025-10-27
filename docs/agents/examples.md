@@ -39,7 +39,7 @@ Agent Agency V3 - Autonomous Execution
 Task: Create a simple greeting function...
 Task ID: 550e8400-e29b-41d4-a716-446655440000
 Mode: AUTO (Quality Gates Enabled)
-🎚️  Risk Tier: 3
+  Risk Tier: 3
 
 Phase: Planning and validation
    Council review passed
@@ -52,12 +52,12 @@ Phase: Worker execution
    Tests written and passing
 
 Task completed successfully!
-⏱️  Total time: 15s
+  Total time: 15s
 ```
 
 ---
 
-## 🛡️ Strict Mode with Manual Approval
+##  Strict Mode with Manual Approval
 
 **Example**: Implement user authentication (high-risk feature)
 
@@ -94,7 +94,7 @@ Task completed successfully!
 
 ---
 
-## 👁️ Dry-Run Mode for Safe Testing
+##  Dry-Run Mode for Safe Testing
 
 **Example**: Test deployment preparation without making changes
 
@@ -107,7 +107,7 @@ cargo run --bin agent-agency-cli execute \
 
 **Expected Output**:
 ```
-👁️ DRY-RUN MODE: All artifacts generated, no filesystem changes
+ DRY-RUN MODE: All artifacts generated, no filesystem changes
 
 Phase: Planning and validation
    Analysis completed
@@ -125,7 +125,7 @@ Dry-run completed successfully!
 
 ---
 
-## 🎛️ Real-time Intervention
+##  Real-time Intervention
 
 **Example**: Monitor and control a running task
 
@@ -159,7 +159,7 @@ curl -X POST http://localhost:8080/api/v1/tasks/$TASK_ID/cancel
 
 ---
 
-## 🛠️ CLI Intervention Commands
+##  CLI Intervention Commands
 
 **Example**: Override council decisions
 
@@ -219,7 +219,7 @@ curl -X POST http://localhost:8080/api/v1/slo-alerts/$ALERT_ID/acknowledge \
 
 ---
 
-## 🛡️ Waiver Management
+##  Waiver Management
 
 **Example**: Handle quality gate exceptions
 
@@ -878,7 +878,7 @@ ai_assessment:
 
 ---
 
-## 🏗️ Monorepo - Add Shared Component
+##  Monorepo - Add Shared Component
 
 **Project**: Add shared Button component to monorepo  
 **Risk Tier**: 1 (cross-package compatibility)  

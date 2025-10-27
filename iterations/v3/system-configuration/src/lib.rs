@@ -49,6 +49,7 @@ pub mod validation;
 pub mod geometry;
 pub mod types;
 pub mod pattern_types;
+pub mod file_locking;
 
 // Re-export main types
 pub use traits::*;

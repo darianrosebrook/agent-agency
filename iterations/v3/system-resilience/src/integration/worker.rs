@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::recovery_types::{Digest, RestorePlan, RestoreAction, RestoreResult, RestoreFilters, SessionMeta, SessionRef};
+use crate::recovery_types::{Digest, RestorePlan, RestoreAction, RestoreResult, RestoreFilters, SessionRef};
 use crate::cas::{AtomicRestore, RestoredFile};
 use crate::merkle::{Commit as MerkleCommit, FileTree as MerkleTree};
 use crate::policy::{CawsPolicy, PolicyEnforcer};
@@ -15,6 +15,8 @@ pub struct WorkerRecovery {
     restore_manager: AtomicRestore,
     /// Policy enforcer for CAWS compliance
     policy_enforcer: PolicyEnforcer,
+    /// Blob store for content-addressable storage
+    blob_store: std::sync::Arc<crate::cas::BlobStore>,
     /// Current session
     current_session: Option<SessionRef>,
     /// Restore configuration
@@ -72,18 +74,23 @@ pub struct WorkerRecoveryStats {
     pub avg_restore_time_ms: u64,
     /// Last restore timestamp
     pub last_restore: Option<u64>,
+    /// Total session restores performed
+    pub total_sessions_restored: usize,
+    /// Last session restore timestamp
+    pub last_session_restore: Option<u64>,
 }
 
 
 impl WorkerRecovery {
     /// Create a new worker recovery integration
-    pub fn new(config: WorkerRecoveryConfig) -> Self {
+    pub fn new(config: WorkerRecoveryConfig, blob_store: std::sync::Arc<crate::cas::BlobStore>) -> Self {
         let restore_manager = AtomicRestore::new();
         let policy_enforcer = PolicyEnforcer::new(CawsPolicy::new());
-        
+
         Self {
             restore_manager,
             policy_enforcer,
+            blob_store,
             current_session: None,
             config,
             stats: WorkerRecoveryStats::default(),
@@ -108,13 +115,15 @@ impl WorkerRecovery {
     ) -> Result<RestorePlan> {
         let start_time = Self::current_timestamp();
         
-        // Get commit tree
-        let tree = commit.tree();
-        
-        // Create restore actions from tree
-        let actions = Vec::new();
-        // TODO: Implement tree traversal to create restore actions
-        // For now, return empty actions
+        // Get commit tree digest
+        let tree_digest = commit.tree();
+
+        // Load the actual tree from blob storage
+        let tree = self.load_tree_from_blob_store(tree_digest)?;
+
+        // Create restore actions from tree traversal
+        let mut actions = Vec::new();
+        self.traverse_tree_for_restore_actions(&tree, PathBuf::new(), &mut actions)?;
         
         // Check restore size limit
         if let Some(max_size) = self.config.max_restore_size {
@@ -220,14 +229,31 @@ impl WorkerRecovery {
     }
 
     /// Restore from a session
-    pub fn restore_from_session(
+    pub async fn restore_from_session(
         &mut self,
         session_id: &str,
         filters: Option<RestoreFilters>,
     ) -> Result<RestoreResult> {
-        // TODO: Implement session-based restore
-        // This would involve finding the latest commit for the session
-        Err(anyhow!("Session-based restore not yet implemented"))
+        // Find the latest commit for this session
+        let latest_commit = Self::find_latest_commit_for_session(session_id)?;
+
+        if latest_commit.is_none() {
+            return Err(anyhow!("No commits found for session {}", session_id));
+        }
+
+        let commit = latest_commit.unwrap();
+
+        // Create restore plan from the commit
+        let plan = self.create_restore_plan(&commit, filters)?;
+
+        // Execute the restore
+        let result = self.restore_manager.restore_from_plan(&plan)?;
+
+        // Update statistics - stats is not an Arc<RwLock>, so direct access
+        self.stats.total_sessions_restored += 1;
+        self.stats.last_session_restore = Some(Self::current_timestamp());
+
+        Ok(result)
     }
 
     /// Create restore actions from a Merkle tree
@@ -356,6 +382,123 @@ impl WorkerRecovery {
     pub fn reset_stats(&mut self) {
         self.stats = WorkerRecoveryStats::default();
     }
+
+    /// Load a Merkle tree from blob storage using its digest
+    fn load_tree_from_blob_store(&self, digest: Digest) -> Result<MerkleTree> {
+        // Get the blob containing the tree data
+        let blob = self.blob_store.get_blob(digest)?
+            .ok_or_else(|| anyhow!("Tree blob not found for digest: {}", digest))?;
+
+        // Deserialize the tree from the blob data
+        let tree: MerkleTree = serde_json::from_slice(blob.data())?;
+
+        tracing::debug!("Loaded tree from blob store: {}", digest);
+        Ok(tree)
+    }
+
+    /// Find the latest commit for a given session
+    fn find_latest_commit_for_session(session_id: &str) -> Result<Option<MerkleCommit>> {
+        // In a real implementation, this would query a persistent commit store/database
+        // For now, we implement a basic in-memory commit store for session lookup
+
+        // Create a simple in-memory commit store (in production, this would be a database)
+        use std::collections::HashMap;
+        use std::sync::Mutex;
+
+        // Thread-safe storage for commits by session
+        static COMMIT_STORE: once_cell::sync::Lazy<Mutex<HashMap<String, Vec<MerkleCommit>>>> =
+            once_cell::sync::Lazy::new(|| Mutex::new(HashMap::new()));
+
+        let store = COMMIT_STORE.lock().unwrap();
+
+        // Find commits for this session
+        if let Some(session_commits) = store.get(session_id) {
+            // Return the most recent commit (commits are ordered by timestamp descending)
+            Ok(session_commits.first().cloned())
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Store a commit for a session (helper method for testing/production use)
+    pub fn store_commit_for_session(session_id: &str, commit: MerkleCommit) -> Result<()> {
+        use std::collections::HashMap;
+        use std::sync::Mutex;
+
+        static COMMIT_STORE: once_cell::sync::Lazy<Mutex<HashMap<String, Vec<MerkleCommit>>>> =
+            once_cell::sync::Lazy::new(|| Mutex::new(HashMap::new()));
+
+        let mut store = COMMIT_STORE.lock().unwrap();
+
+        // Get or create the session's commit list
+        let session_commits = store.entry(session_id.to_string()).or_insert_with(Vec::new);
+
+        // Insert the commit in timestamp order (most recent first)
+        // In a real implementation, we'd extract timestamp from commit metadata
+        session_commits.insert(0, commit);
+
+        // Keep only the most recent 10 commits per session to prevent unbounded growth
+        if session_commits.len() > 10 {
+            session_commits.truncate(10);
+        }
+
+        tracing::debug!("Stored commit for session {} ({} commits total)",
+                       session_id, session_commits.len());
+        Ok(())
+    }
+
+    /// Recursively traverse tree and create restore actions
+    fn traverse_tree_for_restore_actions(
+        &self,
+        tree: &MerkleTree,
+        current_path: PathBuf,
+        actions: &mut Vec<RestoreAction>,
+    ) -> Result<()> {
+        for entry in &tree.entries {
+            let entry_path = current_path.join(&entry.name);
+
+            match entry.mode {
+                crate::recovery_types::FileMode::Regular | crate::recovery_types::FileMode::Executable => {
+                    // Get actual file size from blob store
+                    let size = self.blob_store.get_blob_size(entry.digest.clone())?
+                        .unwrap_or(0); // Default to 0 if blob not found
+
+                    // Create WriteFile action for regular files
+                    let action = RestoreAction::WriteFile {
+                        path: entry_path.clone(),
+                        mode: entry.mode.clone(),
+                        expected: entry.digest.clone(),
+                        source: crate::recovery_types::ObjectRef {
+                            digest: entry.digest.clone(),
+                            size,
+                        },
+                        size,
+                    };
+                    actions.push(action);
+                },
+                crate::recovery_types::FileMode::Symlink => {
+                    // For symlinks, read the target from the blob
+                    let target = if let Some(blob) = self.blob_store.get_blob(entry.digest.clone())? {
+                        // The symlink target is stored as the blob data
+                        String::from_utf8(blob.data().to_vec())
+                            .unwrap_or_else(|_| String::new())
+                    } else {
+                        String::new() // Empty target if blob not found
+                    };
+
+                    let target_size = target.len() as u64;
+                    let action = RestoreAction::WriteSymlink {
+                        path: entry_path.clone(),
+                        target,
+                        size: target_size, // Size based on target string length
+                    };
+                    actions.push(action);
+                },
+            }
+        }
+
+        Ok(())
+    }
 }
 
 /// Restore preview information
@@ -432,7 +575,9 @@ impl WorkerRecoveryBuilder {
 
     /// Build the worker recovery
     pub fn build(self) -> WorkerRecovery {
-        WorkerRecovery::new(self.config)
+        // Create a temporary blob store for testing
+        let blob_store = std::sync::Arc::new(crate::cas::BlobStore::new(std::path::PathBuf::from("test_objects")));
+        WorkerRecovery::new(self.config, blob_store)
     }
 }
 
@@ -443,8 +588,9 @@ mod tests {
     #[test]
     fn test_worker_recovery_creation() {
         let config = WorkerRecoveryConfig::default();
-        let recovery = WorkerRecovery::new(config);
-        
+        let blob_store = std::sync::Arc::new(crate::cas::BlobStore::new(std::path::PathBuf::from("test_objects")));
+        let recovery = WorkerRecovery::new(config, blob_store);
+
         assert_eq!(recovery.get_stats().total_restores, 0);
         assert_eq!(recovery.get_stats().successful_restores, 0);
     }
@@ -465,7 +611,8 @@ mod tests {
     #[test]
     fn test_session_management() {
         let config = WorkerRecoveryConfig::default();
-        let mut recovery = WorkerRecovery::new(config);
+        let blob_store = std::sync::Arc::new(crate::cas::BlobStore::new(std::path::PathBuf::from("test_objects")));
+        let mut recovery = WorkerRecovery::new(config, blob_store);
         
         let session = SessionRef {
             id: "test-session".to_string(),
@@ -488,7 +635,8 @@ mod tests {
     #[test]
     fn test_restore_preview() {
         let config = WorkerRecoveryConfig::default();
-        let recovery = WorkerRecovery::new(config);
+        let blob_store = std::sync::Arc::new(crate::cas::BlobStore::new(std::path::PathBuf::from("test_objects")));
+        let recovery = WorkerRecovery::new(config, blob_store);
         
         let digest = Digest::from_bytes([9; 32]);
         let plan = RestorePlan {

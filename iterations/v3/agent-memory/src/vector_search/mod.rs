@@ -2,6 +2,8 @@
 //!
 //! Advanced vector search with hybrid strategies, reranking, and efficient retrieval.
 
+use serde::{Deserialize, Serialize};
+
 pub mod hybrid_search;
 pub mod reranking;
 pub mod search_engine;

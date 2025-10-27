@@ -174,7 +174,7 @@ start_ollama() {
 
 # Ensure Ollama model is available
 ensure_ollama_model() {
-    local model_name="${1:-llama2:7b}"
+    local model_name="${1:-gemma3n:e2b}"
 
     log_step "Ensuring Ollama model '$model_name' is available..."
 
@@ -412,7 +412,7 @@ start_all() {
 
     start_postgres
     start_ollama
-    ensure_ollama_model "llama2:7b"
+    ensure_ollama_model "gemma3n:e2b"
     start_api_server
 
     sleep 2

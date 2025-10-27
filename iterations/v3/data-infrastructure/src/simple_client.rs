@@ -29,6 +29,11 @@ impl DatabaseClient {
         self.inner.pool()
     }
 
+    /// Get a reference to the health monitor (if available)
+    pub fn health_monitor(&self) -> Option<&crate::health::DatabaseHealthMonitor> {
+        self.inner.health_monitor.as_ref().map(|arc| arc.as_ref())
+    }
+
     /// Execute a parameterized query
     pub async fn execute(
         &self,

@@ -15,7 +15,7 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 START_SCRIPT="$PROJECT_ROOT/scripts/v3/start-v3-system.sh"
-OLLAMA_MODEL="${OLLAMA_MODEL:-llama2:7b}"  # Can be overridden via OLLAMA_MODEL env var
+OLLAMA_MODEL="${OLLAMA_MODEL:-gemma3n:e2b}"  # Can be overridden via OLLAMA_MODEL env var
 
 # Colors for output
 RED='\033[0;31m'

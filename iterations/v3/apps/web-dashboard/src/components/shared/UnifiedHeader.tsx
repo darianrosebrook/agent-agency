@@ -42,7 +42,6 @@ export default function UnifiedHeader() {
 
   const navItems = [
     { href: "/", label: "Dashboard", icon: <Home size={16} /> },
-    { href: "/demo", label: "Demo", icon: <BarChart3 size={16} /> },
     { href: "/analytics", label: "Analytics", icon: <BarChart3 size={16} /> },
     { href: "/council", label: "Council", icon: <Users size={16} /> },
     { href: "/apple-silicon", label: "Apple Silicon", icon: <Cpu size={16} /> },

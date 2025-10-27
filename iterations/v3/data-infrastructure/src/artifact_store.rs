@@ -1248,7 +1248,7 @@ impl ArtifactStorage for DatabaseArtifactStorage {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::DatabaseConfig;
+    use crate::database_config::DatabaseConfig;
 
     #[tokio::test]
     async fn test_database_artifact_storage_creation() {

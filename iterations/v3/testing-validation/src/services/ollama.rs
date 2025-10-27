@@ -17,7 +17,7 @@ impl OllamaService {
     pub async fn new() -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
         Ok(Self {
             base_url: "http://localhost:11434".to_string(),
-            model_name: "llama2:7b".to_string(),
+            model_name: "gemma3n:e2b".to_string(),
             process_handle: None,
         })
     }

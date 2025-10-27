@@ -238,7 +238,7 @@ async fn execute_with_timeout(
         let prepared_input = prepare_input(model, input, options)?;
         
         // Execute Core ML inference
-        let output_tensor = coreml::run_inference(
+        let output_tensor = crate::ane::compat::coreml::coreml::run_inference(
             model.model_ref,
             &model.input_name,
             &prepared_input,
@@ -519,7 +519,7 @@ mod tests {
             },
             loaded_at: Instant::now(),
             last_accessed: Instant::now(),
-            model_ref: crate::ane::compat::coreml::ModelRef::default(),
+            model_ref: crate::ane::compat::coreml::coreml::ModelRef::default(),
             input_name: "input".to_string(),
             input_shape: vec![1, 3, 224, 224],
             requires_normalization: false,

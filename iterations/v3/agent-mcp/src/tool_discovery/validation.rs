@@ -57,7 +57,7 @@ impl ToolValidator for BasicToolValidator {
             warnings.push("Tool description is empty".to_string());
         }
 
-        if tool.schema.input_schema.is_empty() && tool.schema.output_schema.is_empty() {
+        if tool.parameters.is_empty() && tool.output_schema.is_null() {
             warnings.push("Tool has no input or output schema".to_string());
         }
 

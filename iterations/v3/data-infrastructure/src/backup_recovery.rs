@@ -303,13 +303,32 @@ impl DisasterRecoveryManager {
         let to_remove = history.len() - self.backup_config.max_backups;
         let removed_backups: Vec<_> = history.drain(0..to_remove).collect();
 
-        // Delete backup files
+        // Delete backup files using pattern matching
         for backup in &removed_backups {
-            let _backup_pattern = format!("{}_*.sql", backup.id);
-            let _manifest_pattern = format!("{}.manifest.json", backup.id);
+            let backup_pattern = format!("{}_*.sql", backup.id);
+            let manifest_pattern = format!("{}.manifest.json", backup.id);
 
-            // In a real implementation, you'd list and delete files matching these patterns
-            info!("Would delete backup: {} ({})", backup.id, backup.size_bytes);
+            // Delete SQL backup files matching the pattern
+            match self.delete_files_by_pattern(&backup_pattern).await {
+                Ok(count) => {
+                    info!("Deleted {} SQL backup files for backup: {}", count, backup.id);
+                }
+                Err(e) => {
+                    warn!("Failed to delete SQL backup files for {}: {}", backup.id, e);
+                }
+            }
+
+            // Delete manifest file
+            match self.delete_files_by_pattern(&manifest_pattern).await {
+                Ok(count) => {
+                    info!("Deleted {} manifest files for backup: {}", count, backup.id);
+                }
+                Err(e) => {
+                    warn!("Failed to delete manifest files for {}: {}", backup.id, e);
+                }
+            }
+
+            info!("Cleaned up backup: {} ({} bytes)", backup.id, backup.size_bytes);
         }
 
         info!("Cleaned up {} old backups", removed_backups.len());
@@ -551,6 +570,86 @@ impl DisasterRecoveryManager {
             300 // Default 5 minutes if no backup available
         }
     }
+
+    /// Delete files matching a pattern from the backup directory
+    async fn delete_files_by_pattern(&self, pattern: &str) -> Result<usize, Box<dyn std::error::Error + Send + Sync>> {
+        let backup_dir = Path::new(&self.backup_config.backup_dir);
+        let mut deleted_count = 0;
+
+        // Read directory contents
+        let mut entries = tokio::fs::read_dir(backup_dir).await
+            .map_err(|e| format!("Failed to read backup directory: {}", e))?;
+
+        // Collect files to delete first to avoid modifying directory while iterating
+        let mut files_to_delete = Vec::new();
+
+        while let Some(entry) = entries.next_entry().await
+            .map_err(|e| format!("Failed to read directory entry: {}", e))? {
+
+            let file_name = entry.file_name();
+            let file_name_str = file_name.to_str()
+                .ok_or("Invalid UTF-8 in filename")?;
+
+            // Check if filename matches the pattern
+            if self.matches_pattern(file_name_str, pattern) {
+                files_to_delete.push(entry.path());
+            }
+        }
+
+        // Delete the matched files
+        for file_path in files_to_delete {
+            match tokio::fs::remove_file(&file_path).await {
+                Ok(()) => {
+                    deleted_count += 1;
+                    info!("Deleted backup file: {}", file_path.display());
+                }
+                Err(e) => {
+                    warn!("Failed to delete file {}: {}", file_path.display(), e);
+                    // Continue with other files even if one fails
+                }
+            }
+        }
+
+        Ok(deleted_count)
+    }
+
+    /// Check if a filename matches a pattern (supports * wildcard)
+    fn matches_pattern(&self, filename: &str, pattern: &str) -> bool {
+        // Simple wildcard matching implementation
+        // For more complex patterns, could use regex crate
+
+        if pattern.contains('*') {
+            // Split pattern by * and match each part
+            let parts: Vec<&str> = pattern.split('*').collect();
+            let mut remaining = filename;
+
+            for (i, part) in parts.iter().enumerate() {
+                if i == 0 {
+                    // First part must match from the beginning
+                    if !remaining.starts_with(part) {
+                        return false;
+                    }
+                    remaining = &remaining[part.len()..];
+                } else if i == parts.len() - 1 {
+                    // Last part must match at the end
+                    if !remaining.ends_with(part) {
+                        return false;
+                    }
+                } else {
+                    // Middle parts can be anywhere
+                    if let Some(pos) = remaining.find(part) {
+                        remaining = &remaining[pos + part.len()..];
+                    } else {
+                        return false;
+                    }
+                }
+            }
+            true
+        } else {
+            // Exact match
+            filename == pattern
+        }
+    }
 }
 
 /// RTO/RPO status information
@@ -563,6 +662,7 @@ pub struct RtoRpoStatus {
     pub estimated_rto_seconds: u64,
     pub rto_violation: bool,
 }
+
 
 #[cfg(test)]
 mod tests {

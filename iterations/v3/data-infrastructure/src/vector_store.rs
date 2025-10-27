@@ -6,29 +6,130 @@
 use anyhow::{Context, Result};
 use sqlx::PgPool;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use tracing::{debug, error, info};
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-/// Simple database pool wrapper
+/// Shared database pool with proper reference counting
 pub struct DatabasePool {
+    /// Reference-counted pool data
+    inner: Arc<PoolInner>,
+}
+
+/// Inner pool data that is reference counted
+struct PoolInner {
+    /// The actual database pool
     pool: sqlx::Pool<sqlx::Postgres>,
+    /// Active reference counter
+    active_refs: AtomicUsize,
+    /// Pool identifier for tracking
+    pool_id: String,
+    /// Creation timestamp
+    created_at: DateTime<Utc>,
 }
 
 impl DatabasePool {
+    /// Create new database pool with reference counting
     pub fn new(pool: sqlx::Pool<sqlx::Postgres>) -> Self {
-        Self { pool }
+        let pool_id = format!("pool_{}", Uuid::new_v4().simple());
+        let created_at = Utc::now();
+
+        let inner = Arc::new(PoolInner {
+            pool,
+            active_refs: AtomicUsize::new(1),
+            pool_id: pool_id.clone(),
+            created_at,
+        });
+
+        info!("Created database pool {} with reference counting", pool_id);
+
+        Self { inner }
+    }
+
+    /// Get the current reference count
+    pub fn reference_count(&self) -> usize {
+        self.inner.active_refs.load(Ordering::SeqCst)
+    }
+
+    /// Get pool statistics
+    pub fn stats(&self) -> PoolStats {
+        PoolStats {
+            pool_id: self.inner.pool_id.clone(),
+            active_refs: self.reference_count(),
+            created_at: self.inner.created_at,
+            pool_size: self.inner.pool.size() as usize,
+            idle_connections: self.inner.pool.num_idle(),
+        }
+    }
+
+    /// Create a new reference-counted handle to this pool
+    pub fn clone_ref(&self) -> Self {
+        // Increment reference count
+        let old_count = self.inner.active_refs.fetch_add(1, Ordering::SeqCst);
+        debug!("Incremented reference count for pool {}: {} -> {}",
+               self.inner.pool_id, old_count, old_count + 1);
+
+        Self {
+            inner: Arc::clone(&self.inner),
+        }
+    }
+
+    /// Force cleanup of this reference (decrements count)
+    pub fn cleanup_ref(&self) {
+        let old_count = self.inner.active_refs.fetch_sub(1, Ordering::SeqCst);
+        let new_count = old_count - 1;
+
+        debug!("Decremented reference count for pool {}: {} -> {}",
+               self.inner.pool_id, old_count, new_count);
+
+        // If this was the last reference, perform cleanup
+        if new_count == 0 {
+            info!("Last reference to pool {} dropped, performing cleanup", self.inner.pool_id);
+            self.perform_cleanup();
+        }
     }
 }
 
 impl Clone for DatabasePool {
     fn clone(&self) -> Self {
-        // Note: This creates a new reference to the same pool
-        // In a real implementation, you'd want proper reference counting
-        Self {
-            pool: self.pool.clone(),
+        self.clone_ref()
+    }
+}
+
+impl Drop for DatabasePool {
+    fn drop(&mut self) {
+        // Decrement reference count when dropped
+        let old_count = self.inner.active_refs.fetch_sub(1, Ordering::SeqCst);
+        let new_count = old_count - 1;
+
+        debug!("Dropped reference to pool {}: {} -> {}",
+               self.inner.pool_id, old_count, new_count);
+
+        // If this was the last reference, perform cleanup
+        if new_count == 0 {
+            info!("Last reference to pool {} dropped, performing cleanup", self.inner.pool_id);
+            self.perform_cleanup();
         }
+    }
+}
+
+impl DatabasePool {
+    /// Perform cleanup when reference count reaches zero
+    fn perform_cleanup(&self) {
+        // Close idle connections and prepare for shutdown
+        // Note: In a real implementation, you might want to gracefully close
+        // the pool or return it to a connection pool manager
+
+        info!("Performing cleanup for pool {} - closing idle connections", self.inner.pool_id);
+
+        // The sqlx pool will handle connection cleanup when dropped
+        // Here we could add custom cleanup logic like:
+        // - Flush any pending operations
+        // - Close prepared statements
+        // - Update monitoring metrics
+        // - Log final statistics
     }
 }
 
@@ -37,8 +138,18 @@ impl std::ops::Deref for DatabasePool {
     type Target = sqlx::Pool<sqlx::Postgres>;
 
     fn deref(&self) -> &Self::Target {
-        &self.pool
+        &self.inner.pool
     }
+}
+
+/// Statistics for a database pool
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PoolStats {
+    pub pool_id: String,
+    pub active_refs: usize,
+    pub created_at: DateTime<Utc>,
+    pub pool_size: usize,
+    pub idle_connections: usize,
 }
 
 /// Vector record for database storage
@@ -99,31 +210,104 @@ pub struct VectorStore {
 
 impl VectorStore {
     pub fn new(pool: DatabasePool) -> Self {
+        info!("Created vector store with pool reference count: {}", pool.reference_count());
         Self { pool }
     }
 
     /// Store a vector record
-    pub async fn store_vector(&self, _record: BlockVectorRecord) -> Result<(), anyhow::Error> {
-        // Placeholder implementation
+    pub async fn store_vector(&self, record: BlockVectorRecord) -> Result<(), anyhow::Error> {
+        // Validate reference count is healthy
+        if self.pool.reference_count() == 0 {
+            return Err(anyhow::anyhow!("Vector store pool has no active references"));
+        }
+
+        debug!("Storing vector record {} in pool {}", record.block_id, self.pool.stats().pool_id);
+
+        // In a real implementation, this would execute SQL to store the vector
+        // For now, just validate the pool is accessible
+        let stats = self.pool.stats();
+        if stats.pool_size == 0 {
+            return Err(anyhow::anyhow!("Database pool has no connections"));
+        }
+
         Ok(())
     }
 
     /// Search vectors
-    pub async fn search_vectors(&self, _query: &VectorQuery) -> Result<Vec<VectorSearchResult>, anyhow::Error> {
-        // Placeholder implementation
+    pub async fn search_vectors(&self, query: &VectorQuery) -> Result<Vec<VectorSearchResult>, anyhow::Error> {
+        // Validate reference count is healthy
+        if self.pool.reference_count() == 0 {
+            return Err(anyhow::anyhow!("Vector store pool has no active references"));
+        }
+
+        debug!("Searching vectors with query for model {} in pool {}", query.model_id, self.pool.stats().pool_id);
+
+        // In a real implementation, this would execute vector similarity search
+        // For now, return empty results but validate pool health
+        let stats = self.pool.stats();
+        if stats.idle_connections == 0 {
+            debug!("Pool {} has no idle connections, search may be slower", stats.pool_id);
+        }
+
         Ok(Vec::new())
     }
 
     /// Search similar vectors
-    pub async fn search_similar(&self, _query_vector: &[f32], _model_id: &str, _k: usize, _project_scope: Option<&str>) -> Result<Vec<VectorSearchResult>, anyhow::Error> {
-        // Placeholder implementation
+    pub async fn search_similar(&self, query_vector: &[f32], model_id: &str, k: usize, project_scope: Option<&str>) -> Result<Vec<VectorSearchResult>, anyhow::Error> {
+        // Validate reference count is healthy
+        if self.pool.reference_count() == 0 {
+            return Err(anyhow::anyhow!("Vector store pool has no active references"));
+        }
+
+        debug!("Searching similar vectors for model {} with k={} in pool {}", model_id, k, self.pool.stats().pool_id);
+
+        // In a real implementation, this would execute vector similarity search
+        // For now, validate vector dimensions and pool health
+        if query_vector.is_empty() {
+            return Err(anyhow::anyhow!("Query vector cannot be empty"));
+        }
+
+        let stats = self.pool.stats();
+        if k > 1000 {
+            debug!("Large k={} requested for pool {}, may impact performance", k, stats.pool_id);
+        }
+
         Ok(Vec::new())
     }
 
     /// Log search operation
-    pub async fn log_search(&self, _entry: SearchAuditEntry) -> Result<(), anyhow::Error> {
-        // Placeholder implementation
+    pub async fn log_search(&self, entry: SearchAuditEntry) -> Result<(), anyhow::Error> {
+        // Validate reference count is healthy
+        if self.pool.reference_count() == 0 {
+            return Err(anyhow::anyhow!("Vector store pool has no active references"));
+        }
+
+        debug!("Logging search operation in pool {}", self.pool.stats().pool_id);
+
+        // In a real implementation, this would insert audit logs into database
+        // For now, just validate pool is accessible
+        let stats = self.pool.stats();
+        if stats.active_refs > 10 {
+            debug!("High reference count ({}) for pool {}, consider connection pooling optimization", stats.active_refs, stats.pool_id);
+        }
+
         Ok(())
+    }
+
+    /// Get current pool statistics
+    pub fn pool_stats(&self) -> PoolStats {
+        self.pool.stats()
+    }
+
+    /// Check if the vector store is healthy
+    pub fn is_healthy(&self) -> bool {
+        let stats = self.pool.stats();
+        stats.active_refs > 0 && stats.pool_size > 0
+    }
+
+    /// Force cleanup of pool reference
+    pub fn cleanup(&self) {
+        self.pool.cleanup_ref();
     }
 }
 
@@ -136,9 +320,16 @@ pub struct DatabaseVectorStore {
 }
 
 impl DatabaseVectorStore {
-    /// Create new database vector store
+    /// Create new database vector store with reference counting
     pub fn new(pool: Arc<DatabasePool>) -> Self {
-        let vector_store = VectorStore::new((*pool).clone());
+        info!("Creating database vector store with reference count: {}", pool.reference_count());
+
+        // Clone the pool reference (increments reference count)
+        let pool_clone = Arc::clone(&pool);
+        let vector_store = VectorStore::new((*pool_clone).clone_ref());
+
+        info!("Database vector store created, total references: {}", pool.reference_count());
+
         Self {
             pool,
             vector_store,
@@ -338,6 +529,28 @@ impl DatabaseVectorStore {
     /// Get connection pool reference
     pub fn pool(&self) -> &Arc<DatabasePool> {
         &self.pool
+    }
+
+    /// Get current pool reference count
+    pub fn reference_count(&self) -> usize {
+        self.pool.reference_count()
+    }
+
+    /// Get pool statistics
+    pub fn pool_stats(&self) -> PoolStats {
+        self.pool.stats()
+    }
+
+    /// Check if the database vector store is healthy
+    pub fn is_healthy(&self) -> bool {
+        self.pool.reference_count() > 0 && self.vector_store.is_healthy()
+    }
+
+    /// Force cleanup of pool references
+    pub fn cleanup(&self) {
+        info!("Cleaning up database vector store references");
+        self.vector_store.cleanup();
+        // Note: Arc<DatabasePool> will automatically decrement when dropped
     }
 }
 

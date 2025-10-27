@@ -44,6 +44,8 @@ pub struct ContextStorageConfig {
     pub compression_level: u32,
     /// Enable checksum validation
     pub checksum_validation: bool,
+    /// Archive path for cold storage
+    pub archive_path: Option<String>,
 }
 
 impl Default for ContextStorageConfig {
@@ -58,6 +60,7 @@ impl Default for ContextStorageConfig {
             enable_compression: true,
             compression_level: 6,
             checksum_validation: true,
+            archive_path: Some("archive".to_string()),
         }
     }
 }
@@ -279,6 +282,30 @@ pub enum FoldedContext {
     Archived(String),
     /// Context was deleted
     Deleted,
+}
+
+/// Archive statistics
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ArchiveStats {
+    /// Total number of archived contexts
+    pub total_archived: u64,
+    /// Number of contexts archived this week
+    pub archived_this_week: u64,
+    /// Total size of archive storage (bytes)
+    pub total_archive_size: u64,
+    /// Average age of archived contexts (seconds)
+    pub avg_archive_age_seconds: Option<f64>,
+}
+
+impl Default for ArchiveStats {
+    fn default() -> Self {
+        Self {
+            total_archived: 0,
+            archived_this_week: 0,
+            total_archive_size: 0,
+            avg_archive_age_seconds: None,
+        }
+    }
 }
 
 /// Context folding request

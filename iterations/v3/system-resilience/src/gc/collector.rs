@@ -303,21 +303,172 @@ impl GarbageCollector {
     }
 
     /// Get object references (to be implemented based on your object store)
-    fn get_object_references(&self, _digest: &Digest) -> Result<Vec<Digest>> {
-        // TODO: Implement object reference traversal with acceptance criteria:
-        // - [ ] Parse object content to identify all referenced object digests
-        // - [ ] Handle different object types and reference patterns
-        // - [ ] Implement efficient traversal without loading full objects into memory
-        // - [ ] Provide accurate reference lists for garbage collection marking
-        // - [ ] Handle circular references and reference cycles correctly
+    fn get_object_references(&self, digest: &Digest) -> Result<Vec<Digest>> {
+        use crate::cas::BlobStore;
+        use crate::merkle::{Commit, FileTree};
+
+        // Create a blob store instance to read objects
+        // In a real implementation, this would be injected or accessed from the collector
+        let objects_dir = std::path::PathBuf::from("./.recovery/objects");
+        let blob_store = BlobStore::new(objects_dir);
+
+        // Try to read the object as a blob first
+        if let Ok(Some(blob)) = blob_store.get_blob(*digest) {
+            // Parse blob content based on payload kind to find references
+            return self.parse_blob_references(&blob);
+        }
+
+        // Try to read as a commit object (stored as JSON in blob store)
+        if let Ok(Some(blob)) = blob_store.get_blob(*digest) {
+            if let Ok(commit_str) = std::str::from_utf8(&blob.data) {
+                if let Ok(commit) = serde_json::from_str::<Commit>(commit_str) {
+                    return self.parse_commit_references(&commit);
+                }
+            }
+        }
+
+        // Try to read as a tree object (stored as JSON in blob store)
+        if let Ok(Some(blob)) = blob_store.get_blob(*digest) {
+            if let Ok(tree_str) = std::str::from_utf8(&blob.data) {
+                if let Ok(tree) = serde_json::from_str::<FileTree>(tree_str) {
+                    return self.parse_tree_references(&tree);
+                }
+            }
+        }
+
+        // Object not found or unrecognized type
+        if self.config.verbose {
+            println!("Warning: Could not parse references for object {:?}", digest);
+        }
         Ok(Vec::new())
+    }
+
+    /// Parse references from a blob object
+    fn parse_blob_references(&self, blob: &crate::cas::Blob) -> Result<Vec<Digest>> {
+        use crate::recovery_types::PayloadKind;
+
+        let mut references = Vec::new();
+
+        match blob.header.kind {
+            PayloadKind::Full => {
+                // Full blobs typically don't reference other objects directly
+                // But they might contain references in their data (e.g., chunk references)
+                // For now, we don't parse internal blob references to avoid loading large objects
+                // This is an optimization - we could scan blob content for digest patterns if needed
+            }
+            PayloadKind::UnifiedDiff => {
+                // Diff blobs might reference the base object they're diffing against
+                // Parse the diff header to find referenced objects
+                self.parse_diff_references(blob)?;
+            }
+            PayloadKind::ChunkMap => {
+                // Chunk maps reference multiple chunks
+                // Parse the chunk map to extract all chunk digests
+                if let Ok(chunks) = self.parse_chunk_map(blob) {
+                    references.extend(chunks);
+                }
+            }
+        }
+
+        Ok(references)
+    }
+
+    /// Parse references from a commit object
+    fn parse_commit_references(&self, commit: &crate::merkle::Commit) -> Result<Vec<Digest>> {
+        let mut references = Vec::new();
+
+        // Commits always reference their tree
+        references.push(commit.tree);
+
+        // Commits may reference a parent commit
+        if let Some(parent) = commit.parent {
+            references.push(parent);
+        }
+
+        Ok(references)
+    }
+
+    /// Parse references from a tree object
+    fn parse_tree_references(&self, tree: &crate::merkle::FileTree) -> Result<Vec<Digest>> {
+        let mut references = Vec::new();
+
+        // Trees reference all their entries (files, directories, symlinks)
+        for entry in &tree.entries {
+            references.push(entry.digest);
+
+            // If this is a directory (tree), it will be handled when we process that tree object
+            // The graph traversal will find it naturally
+        }
+
+        // Trees also reference their parent if they have one (for directory hierarchies)
+        // This is implicit in the Merkle tree structure
+
+        Ok(references)
+    }
+
+    /// Parse references from a unified diff
+    fn parse_diff_references(&self, blob: &crate::cas::Blob) -> Result<Vec<Digest>> {
+        // Unified diffs might reference the base object in their header
+        // For now, we don't parse diff internals to avoid complexity
+        // This could be enhanced to extract referenced objects from diff headers
+        Ok(Vec::new())
+    }
+
+    /// Parse chunk references from a chunk map
+    fn parse_chunk_map(&self, blob: &crate::cas::Blob) -> Result<Vec<Digest>> {
+        use crate::recovery_types::ChunkRef;
+
+        let mut chunks = Vec::new();
+
+        // Try to deserialize the blob data as chunk references
+        // The exact format depends on how chunk maps are serialized
+        if let Ok(chunk_refs) = serde_json::from_slice::<Vec<ChunkRef>>(&blob.data) {
+            for chunk_ref in chunk_refs {
+                chunks.push(chunk_ref.digest);
+            }
+        } else if let Ok(chunk_refs) = bincode::deserialize::<Vec<ChunkRef>>(&blob.data) {
+            for chunk_ref in chunk_refs {
+                chunks.push(chunk_ref.digest);
+            }
+        }
+
+        Ok(chunks)
     }
 
     /// Get all objects in the system
     fn get_all_objects(&self) -> Result<Vec<Digest>> {
-        // TODO: Implement based on your object store
-        // This would return all object digests in the system
-        Ok(Vec::new())
+        use crate::cas::BlobStore;
+        use walkdir::WalkDir;
+
+        let mut all_objects = Vec::new();
+
+        // Create a blob store instance to scan the objects directory
+        let objects_dir = std::path::PathBuf::from("./.recovery/objects");
+        let blob_store = BlobStore::new(objects_dir.clone());
+
+        // Walk the objects directory to find all stored objects
+        // Objects are stored in a sharded directory structure: xx/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+        if objects_dir.exists() {
+            for entry in WalkDir::new(&objects_dir).into_iter().filter_map(|e| e.ok()) {
+                if entry.file_type().is_file() {
+                    // Extract digest from file path
+                    // Expected path format: .recovery/objects/xx/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+                    if let Some(file_name) = entry.file_name().to_str() {
+                        if file_name.len() == 64 { // BLAKE3 hex is 64 characters
+                            if let Ok(digest) = Digest::from_hex(file_name) {
+                                all_objects.push(digest);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if self.config.verbose {
+            println!("Found {} objects in the system", all_objects.len());
+        }
+
+        Ok(all_objects)
     }
 
     /// Get object age in seconds

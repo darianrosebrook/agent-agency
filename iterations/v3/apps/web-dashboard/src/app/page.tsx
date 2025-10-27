@@ -186,61 +186,49 @@ export default function DashboardPage() {
           <Text variant="paragraph-large" color="secondary" align="center" className={styles.subtitle}>
             Welcome to Agent Agency V3. Monitor task execution and system health.
           </Text>
-        </header>
+        </header> 
 
-        {/* Connection Status - Client-only */}
-        <section aria-label="Connection status" role="status">
+        {/* Connection Banner - only shown when offline */}
+        <OnlineOnly>
           <ConnectionBanner />
-        </section>
+        </OnlineOnly>
 
-        {/* Metrics Section with Suspense and animation */}
-        <section ref={metricsRef} aria-labelledby="metrics-heading" role="region">
-          <h2 id="metrics-heading" className="sr-only">Task Metrics</h2>
+        {/* Metrics Section - Above the fold for immediate visibility */}
+        <section ref={metricsRef} className={styles.metricsSection} aria-labelledby="metrics-heading">
           <Suspense fallback={<MetricsSkeleton />}>
             <MetricsSection />
           </Suspense>
         </section>
 
-        {/* SLO Dashboard with Suspense and animation */}
-        <section ref={sloRef} aria-labelledby="slo-heading" role="region">
-          <h2 id="slo-heading" className="sr-only">Service Level Objectives</h2>
+        {/* Service Level Objectives Dashboard */}
+        <section ref={sloRef} className={styles.sloSection} aria-labelledby="slo-heading">
           <Suspense fallback={<SLOSkeleton />}>
-            <div className={styles.sloSection}>
-              <OnlineOnly fallback={<SLODashboard />}>
-                <SLODashboard />
-              </OnlineOnly>
-            </div>
+            <SLODashboard />
           </Suspense>
         </section>
 
-        {/* Alerts Dashboard with Suspense */}
-        <section aria-labelledby="alerts-heading" role="region">
-          <h2 id="alerts-heading" className="sr-only">Active Alerts</h2>
-          <Suspense fallback={<SLOSkeleton />}>
-            <div className={styles.alertsSection}>
-              <OnlineOnly fallback={<SLOAlertsDashboard />}>
-                <SLOAlertsDashboard />
-              </OnlineOnly>
-            </div>
+        {/* Card Grid - Staggered animation for engaging entry */}
+        <section
+          ref={cardsGridRef}
+          className={styles.cardsGrid}
+          aria-labelledby="cards-heading"
+          role="region"
+        >
+          <Suspense fallback={<CardSkeleton />}>
+            <QuickActions />
           </Suspense>
-        </section>
 
-        {/* Dashboard Cards Grid with stagger animation */}
-        <section aria-labelledby="overview-heading" role="region">
-          <h2 id="overview-heading" className="sr-only">Dashboard Overview</h2>
-          <div ref={cardsGridRef} className={styles.content}>
-            <Suspense fallback={<CardSkeleton />}>
-              <RecentTasksCard />
-            </Suspense>
+          <Suspense fallback={<CardSkeleton />}>
+            <SystemStatusCard />
+          </Suspense>
 
-            <Suspense fallback={<CardSkeleton />}>
-              <QuickActions />
-            </Suspense>
+          <Suspense fallback={<CardSkeleton />}>
+            <RecentTasksCard />
+          </Suspense>
 
-            <Suspense fallback={<CardSkeleton />}>
-              <SystemStatusCard />
-            </Suspense>
-          </div>
+          <Suspense fallback={<CardSkeleton />}>
+            <SLOAlertsDashboard />
+          </Suspense>
         </section>
       </main>
     </DashboardLayout>

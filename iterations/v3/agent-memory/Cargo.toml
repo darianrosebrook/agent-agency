@@ -57,7 +57,7 @@ sha2 = "0.10"
 config = { workspace = true }
 
 # Integration with existing services
-data-infrastructure = { path = "../data-infrastructure", optional = true, default-features = false }
+# data-infrastructure = { path = "../data-infrastructure", optional = true, default-features = false } # Temporarily disabled to avoid circular dependency
 
 [dev-dependencies]
 tokio-test = "0.4"
@@ -65,10 +65,11 @@ tempfile = "3.8"
 criterion = { version = "0.5", features = ["html_reports"] }
 
 [features]
-default = ["embeddings", "graph-reasoning"]
-embeddings = ["data-infrastructure"]
+default = ["graph-reasoning"]
+# embeddings = ["data-infrastructure"] # Temporarily disabled to avoid circular dependency
 graph-reasoning = []
 temporal-analysis = []
 context-offloading = []
 provenance-tracking = []
-database = ["data-infrastructure"]
+database = []
+# database = ["data-infrastructure"] # Temporarily disabled to avoid circular dependency

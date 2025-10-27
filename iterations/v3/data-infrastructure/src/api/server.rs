@@ -159,7 +159,9 @@ pub struct RestApi {
 
 #[derive(Debug, Clone)]
 struct TaskState {
+    description: String,
     status: TaskStatus,
+    result: Option<serde_json::Value>,
     working_spec: Option<WorkingSpec>,
     artifacts: Option<ExecutionArtifacts>,
     quality_report: Option<QualityReport>,
@@ -199,40 +201,16 @@ impl RestApi {
     }
 
     /// Create the Axum router with all endpoints
-    pub fn create_router(&self) -> Router {
+    pub fn create_router(&self) -> Router<()> {
+        // Note: This router is not currently used in main.rs
+        // The routes are created directly there with AppState
         let state = ApiState {
             api: Arc::new(self.clone()),
         };
 
-        let mut router = Router::new()
-            .route("/health", get(health_check))
-            .route("/tasks", post(submit_task))
-            .route("/tasks/:task_id", get(get_task_status))
-            .route("/tasks/:task_id/result", get(get_task_result))
-            .route("/tasks/:task_id/cancel", post(cancel_task))
-            .route("/tasks/:task_id/pause", post(pause_task))
-            .route("/tasks/:task_id/resume", post(resume_task))
-            .route("/queries", get(list_saved_queries))
-            .route("/queries", post(save_query))
-            .route("/queries/:query_id", delete(delete_saved_query))
-            .route("/waivers", get(list_waivers))
-            .route("/waivers", post(create_waiver))
-            .route("/waivers/:waiver_id/approve", post(approve_waiver))
-            .route("/tasks/:task_id/provenance", get(get_task_provenance))
-            .route("/provenance", get(list_provenance_records))
-            .route("/provenance/link", post(link_provenance_to_commit))
-            .route("/provenance/verify/:commit_hash", get(verify_provenance_trailer))
-            .route("/provenance/commit/:commit_hash", get(get_provenance_by_commit))
-            .route("/slos", get(list_slos))
-            .route("/slos/:slo_name/status", get(get_slo_status))
-            .route("/slos/:slo_name/measurements", get(get_slo_measurements))
-            .route("/slo-alerts", get(list_slo_alerts))
-            .route("/slo-alerts/:alert_id/acknowledge", post(acknowledge_slo_alert))
-            .route("/tasks", get(list_tasks))
-            .route("/metrics", get(get_metrics))
-            .route("/dashboard/tasks/:task_id", get(get_dashboard_data))
-            .route("/dashboard/tasks/:task_id/diffs/:iteration", get(get_diff_summary))
-            .with_state(state);
+        // This router is not used in main.rs - routes are created directly there
+        let router = Router::new()
+            .route("/health", get(|| async { "OK" }));
 
         // TODO: Add API key authentication middleware when needed
         // if self.config.require_api_key {
@@ -254,7 +232,9 @@ impl RestApi {
 
         // Initialize task state
         let task_state = TaskState {
+            description: request.description.clone(),
             status: TaskStatus::Pending,
+            result: None,
             working_spec: None,
             artifacts: None,
             quality_report: None,
@@ -381,59 +361,10 @@ impl RestApi {
         Ok(TaskResultResponse {
             task_id,
             status: format!("{:?}", task_state.status).to_lowercase(),
-            result: None, // TODO: Add actual result data
-            working_spec: task_state.working_spec.as_ref().map(|ws| WorkingSpec {
-                id: ws.id.clone(),
-                title: ws.title.clone(),
-                description: ws.description.clone(),
-                risk_tier: ws.risk_tier,
-                mode: ws.mode.clone(),
-                change_budget: ws.change_budget.clone(),
-                blast_radius: ws.blast_radius.clone(),
-                operational_rollback_slo: ws.operational_rollback_slo.clone(),
-                scope: ws.scope.clone(),
-                invariants: ws.invariants.clone(),
-                acceptance: ws.acceptance.clone(),
-                non_functional: ws.non_functional.clone(),
-                contracts: ws.contracts.clone(),
-                created_at: ws.created_at,
-            }),
-            artifacts: task_state.artifacts.as_ref().map(|ea| ExecutionArtifacts {
-                task_id: ea.task_id,
-                working_spec: ea.working_spec.as_ref().map(|ws| WorkingSpec {
-                    id: ws.id.clone(),
-                    title: ws.title.clone(),
-                    description: ws.description.clone(),
-                    risk_tier: ws.risk_tier,
-                    mode: ws.mode.clone(),
-                    change_budget: ws.change_budget.clone(),
-                    blast_radius: ws.blast_radius.clone(),
-                    operational_rollback_slo: ws.operational_rollback_slo.clone(),
-                    scope: ws.scope.clone(),
-                    invariants: ws.invariants.clone(),
-                    acceptance: ws.acceptance.clone(),
-                    non_functional: ws.non_functional.clone(),
-                    contracts: ws.contracts.clone(),
-                    created_at: ws.created_at,
-                }),
-                quality_report: ea.quality_report.as_ref().map(|qr| QualityReport {
-                    task_id: qr.task_id,
-                    score: qr.score,
-                    details: qr.details.clone(),
-                    overall_score: qr.overall_score,
-                    checks_passed: qr.checks_passed,
-                    checks_failed: qr.checks_failed,
-                }),
-                artifacts: ea.artifacts.clone(),
-            }),
-            quality_report: task_state.quality_report.as_ref().map(|qr| QualityReport {
-                task_id: qr.task_id,
-                score: qr.score,
-                details: qr.details.clone(),
-                overall_score: qr.overall_score,
-                checks_passed: qr.checks_passed,
-                checks_failed: qr.checks_failed,
-            }),
+            result: task_state.result.clone(),
+            working_spec: task_state.working_spec.clone(),
+            artifacts: task_state.artifacts.clone(),
+            quality_report: task_state.quality_report.clone(),
             completed_at: task_state.completed_at,
             error_message: task_state.error_message.clone(),
         })
@@ -682,7 +613,7 @@ impl RestApi {
             success_rate: 1.0,
             average_completion_time: None,
             task_id,
-            description: "Task description".to_string(), // TODO: Add task description to TaskState
+            description: task_state.description.clone(),
             status: format!("{:?}", task_state.status).to_lowercase(),
             current_iteration: 1, // Placeholder - would come from actual iteration tracking
             total_iterations: 5, // Placeholder - would come from actual iteration tracking

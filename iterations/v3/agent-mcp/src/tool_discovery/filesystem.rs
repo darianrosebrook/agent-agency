@@ -6,6 +6,7 @@ use anyhow::Result;
 use glob;
 use std::collections::HashSet;
 use std::path::Path;
+use uuid::Uuid;
 
 /// Filesystem scanner for tool manifests
 pub struct FilesystemScanner {
@@ -24,7 +25,7 @@ impl FilesystemScanner {
         let mut seen_paths = HashSet::new();
 
         for base_path in &self.config.discovery_paths {
-            if !Path::new(base_path).exists() {
+            if !Path::new(base_path as &str).exists() {
                 continue;
             }
 
@@ -45,11 +46,6 @@ impl FilesystemScanner {
 
                                     match self.load_tool_from_manifest(&path).await {
                                         Ok(tool) => {
-                                            if let Some(max) = self.config.max_tools {
-                                                if tools.len() >= max {
-                                                    break;
-                                                }
-                                            }
                                             tools.push(tool);
                                         }
                                         Err(e) => {
@@ -96,7 +92,7 @@ impl FilesystemScanner {
         // Parse the manifest into an MCPTool
         // This is a simplified implementation - real implementation would be more complex
         let tool = MCPTool {
-            id: format!("tool_{}", path.file_stem().unwrap_or_default().to_string_lossy()),
+            id: Uuid::new_v4(),
             name: manifest.get("name")
                 .and_then(|v| v.as_str())
                 .unwrap_or("unknown")
@@ -109,23 +105,76 @@ impl FilesystemScanner {
                 .and_then(|v| v.as_str())
                 .unwrap_or("1.0.0")
                 .to_string(),
-            schema: ToolSchema {
-                input_schema: manifest.get("input_schema")
-                    .unwrap_or(&serde_json::json!({}))
-                    .clone(),
-                output_schema: manifest.get("output_schema")
-                    .unwrap_or(&serde_json::json!({}))
-                    .clone(),
-            },
+            author: manifest.get("author")
+                .and_then(|v| v.as_str())
+                .unwrap_or("Unknown")
+                .to_string(),
+            tool_type: ToolType::Custom("filesystem".to_string()),
             capabilities: manifest.get("capabilities")
                 .and_then(|v| v.as_array())
                 .unwrap_or(&vec![])
                 .iter()
-                .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                .filter_map(|v| v.as_str().map(|s| ToolCapability::from_str(s)))
                 .collect(),
-            metadata: manifest.get("metadata")
+            parameters: ToolParameters::default(),
+            output_schema: manifest.get("output_schema")
                 .unwrap_or(&serde_json::json!({}))
                 .clone(),
+            endpoint: manifest.get("endpoint")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string(),
+            manifest: ToolManifest {
+                name: manifest.get("name")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("Unknown")
+                    .to_string(),
+                version: manifest.get("version")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("1.0.0")
+                    .to_string(),
+                description: manifest.get("description")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string(),
+                author: manifest.get("author")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("Unknown")
+                    .to_string(),
+                tool_type: ToolType::Custom("filesystem".to_string()),
+                entry_point: manifest.get("entry_point")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string(),
+                dependencies: Vec::new(),
+                capabilities: manifest.get("capabilities")
+                    .and_then(|v| v.as_array())
+                    .unwrap_or(&vec![])
+                    .iter()
+                    .filter_map(|v| v.as_str().map(|s| ToolCapability::from_str(s)))
+                    .collect(),
+                parameters: ToolParameters::default(),
+                output_schema: manifest.get("output_schema")
+                    .unwrap_or(&serde_json::json!({}))
+                    .clone(),
+                endpoint: manifest.get("endpoint")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string()),
+                caws_compliance: None,
+                metadata: manifest.get("metadata")
+                    .and_then(|v| v.as_object())
+                    .map(|obj| obj.iter().map(|(k, v)| (k.clone(), v.clone())).collect())
+                    .unwrap_or_default(),
+                configuration_schema: serde_json::json!({}),
+            },
+            caws_compliance: CawsComplianceStatus::Unknown,
+            registration_time: chrono::Utc::now(),
+            last_updated: chrono::Utc::now(),
+            usage_count: 0,
+            metadata: manifest.get("metadata")
+                .and_then(|v| v.as_object())
+                .map(|obj| obj.iter().map(|(k, v)| (k.clone(), v.clone())).collect())
+                .unwrap_or_default(),
         };
 
         Ok(tool)
@@ -145,10 +194,7 @@ impl ManifestLoader {
         let manifest: serde_json::Value = serde_json::from_str(content)?;
 
         let tool = MCPTool {
-            id: manifest.get("id")
-                .and_then(|v| v.as_str())
-                .unwrap_or("unknown")
-                .to_string(),
+            id: Uuid::new_v4(),
             name: manifest.get("name")
                 .and_then(|v| v.as_str())
                 .unwrap_or("unknown")
@@ -161,25 +207,77 @@ impl ManifestLoader {
                 .and_then(|v| v.as_str())
                 .unwrap_or("1.0.0")
                 .to_string(),
-            schema: ToolSchema {
-                input_schema: manifest.get("schema")
-                    .and_then(|s| s.get("input"))
-                    .unwrap_or(&serde_json::json!({}))
-                    .clone(),
-                output_schema: manifest.get("schema")
-                    .and_then(|s| s.get("output"))
-                    .unwrap_or(&serde_json::json!({}))
-                    .clone(),
-            },
+            author: manifest.get("author")
+                .and_then(|v| v.as_str())
+                .unwrap_or("Unknown")
+                .to_string(),
+            tool_type: ToolType::Custom("filesystem".to_string()),
             capabilities: manifest.get("capabilities")
                 .and_then(|v| v.as_array())
                 .unwrap_or(&vec![])
                 .iter()
-                .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                .filter_map(|v| v.as_str().map(|s| ToolCapability::from_str(s)))
                 .collect(),
-            metadata: manifest.get("metadata")
+            parameters: ToolParameters::default(),
+            output_schema: manifest.get("schema")
+                .and_then(|s| s.get("output"))
                 .unwrap_or(&serde_json::json!({}))
                 .clone(),
+            endpoint: manifest.get("endpoint")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string(),
+            manifest: ToolManifest {
+                name: manifest.get("name")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("Unknown")
+                    .to_string(),
+                version: manifest.get("version")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("1.0.0")
+                    .to_string(),
+                description: manifest.get("description")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string(),
+                author: manifest.get("author")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("Unknown")
+                    .to_string(),
+                tool_type: ToolType::Custom("filesystem".to_string()),
+                entry_point: manifest.get("entry_point")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string(),
+                dependencies: Vec::new(),
+                capabilities: manifest.get("capabilities")
+                    .and_then(|v| v.as_array())
+                    .unwrap_or(&vec![])
+                    .iter()
+                    .filter_map(|v| v.as_str().map(|s| ToolCapability::from_str(s)))
+                    .collect(),
+                parameters: ToolParameters::default(),
+                output_schema: manifest.get("output_schema")
+                    .unwrap_or(&serde_json::json!({}))
+                    .clone(),
+                endpoint: manifest.get("endpoint")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string()),
+                caws_compliance: None,
+                metadata: manifest.get("metadata")
+                    .and_then(|v| v.as_object())
+                    .map(|obj| obj.iter().map(|(k, v)| (k.clone(), v.clone())).collect())
+                    .unwrap_or_default(),
+                configuration_schema: serde_json::json!({}),
+            },
+            caws_compliance: CawsComplianceStatus::Unknown,
+            registration_time: chrono::Utc::now(),
+            last_updated: chrono::Utc::now(),
+            usage_count: 0,
+            metadata: manifest.get("metadata")
+                .and_then(|v| v.as_object())
+                .map(|obj| obj.iter().map(|(k, v)| (k.clone(), v.clone())).collect())
+                .unwrap_or_default(),
         };
 
         Ok(tool)
