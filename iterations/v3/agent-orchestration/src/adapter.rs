@@ -304,6 +304,7 @@ impl LegacyOrchestratorAdapter {
             crate::multimodal_orchestration::ProcessingStatus::Failed => ExecutionStatus::Failed,
         }
     }
+}
 
 /// Validation result for orchestration tasks
 #[derive(Debug, Clone)]
