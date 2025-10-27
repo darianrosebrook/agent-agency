@@ -48,6 +48,7 @@ use tokio::sync::RwLock;
 use serde::{Serialize, Deserialize};
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
+use crate::CouncilDecision;
 use sqlx::{PgPool, postgres::PgPoolOptions};
 use tracing::info;
 
@@ -97,10 +98,12 @@ pub struct AuditConfig {
 
 /// Audit log verbosity levels
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Default)]
 pub enum AuditLogLevel {
     /// Minimal logging - only critical operations
     Minimal,
     /// Standard logging - key operations and decisions
+    #[default]
     Standard,
     /// Detailed logging - comprehensive operation tracking
     Detailed,
@@ -685,6 +688,43 @@ impl AuditTrailManager {
             Err(AuditError::StorageError("Database not configured for audit queries".to_string()))
         }
     }
+
+    /// Record execution result for audit trail
+    pub async fn record_execution(&self, result: &crate::types::TaskExecutionResult) -> Result<(), AuditError> {
+        let event = AuditEventRow {
+            id: uuid::Uuid::new_v4(),
+            timestamp: chrono::Utc::now(),
+            correlation_id: Some(result.task_id.clone()),
+            parent_event_id: None,
+            category: serde_json::json!(AuditCategory::Execution),
+            severity: serde_json::json!(AuditSeverity::Info),
+            actor: "orchestrator".to_string(),
+            operation: "task_execution".to_string(),
+            message: Some(format!("Task {} executed with status {:?}", result.task_id, result.status)),
+            operation_id: Some(result.task_id.clone()),
+            target: Some(result.task_id.clone()),
+            parameters: serde_json::json!({
+                "execution_status": result.status,
+                "duration_ms": result.execution_time_ms,
+                "artifacts_count": result.artifacts.len(),
+            }),
+            result: serde_json::json!(match result.status {
+                crate::types::ExecutionStatus::Completed => "success",
+                crate::types::ExecutionStatus::Failed => "failed",
+                _ => "unknown",
+            }),
+            performance: Some(serde_json::json!({
+                "duration_ms": result.execution_time_ms,
+            })),
+            context: serde_json::json!({
+                "task_id": result.task_id,
+                "execution_status": result.status,
+            }),
+            tags: vec!["orchestration".to_string(), "execution".to_string()],
+        };
+
+        self.write_event(event).await
+    }
 }
 
 /// Database row representation of audit event
@@ -706,7 +746,7 @@ struct AuditEventRow {
     performance: Option<serde_json::Value>,
     context: serde_json::Value,
     tags: Vec<String>,
-}
+    }
 
 impl AuditEventRow {
     /// Convert database row back to AuditEvent
@@ -890,12 +930,7 @@ mod auditors {
             stats.total_events += 1;
             *stats.events_by_category.entry(event.category.clone()).or_insert(0) += 1;
 
-            // Persist audit event to database if available
-            if let Some(ref pool) = self.db_pool {
-                if let Err(e) = self.persist_audit_event(pool, &event).await {
-                    eprintln!("Failed to persist audit event: {}", e);
-                }
-            }
+            // File auditor doesn't persist to database - events are logged to console/files
 
             if self.config.log_level != AuditLogLevel::Minimal {
                 println!(" FILE AUDIT: {} {} {:?}", event.operation, event.target.as_deref().unwrap_or(""), event.result);
@@ -981,11 +1016,12 @@ mod auditors {
 
             if let Some(audit) = audit {
                 let success = exit_code == 0;
+                let error_message = stderr.clone().unwrap_or_else(|| "Command failed".to_string());
                 let result = if success {
                     AuditResult::Success { data: None }
                 } else {
                     AuditResult::Failure {
-                        error_message: stderr.unwrap_or_else(|| "Command failed".to_string()),
+                        error_message,
                         error_code: Some(exit_code.to_string()),
                         recoverable: exit_code != 130, // SIGINT is not recoverable
                     }
@@ -993,10 +1029,10 @@ mod auditors {
 
                 let mut parameters = HashMap::new();
                 parameters.insert("exit_code".to_string(), serde_json::Value::Number(exit_code.into()));
-                if let Some(stdout) = stdout {
+                if let Some(ref stdout) = stdout {
                     parameters.insert("stdout_length".to_string(), serde_json::Value::Number(stdout.len().into()));
                 }
-                if let Some(stderr) = stderr {
+                if let Some(ref stderr) = stderr {
                     parameters.insert("stderr_length".to_string(), serde_json::Value::Number(stderr.len().into()));
                 }
 
@@ -1266,6 +1302,8 @@ mod auditors {
                 severity: AuditSeverity::Info,
                 actor: "agent".to_string(),
                 operation: "decision_point".to_string(),
+                message: Some(format!("Agent made {} decision", decision_type)),
+                operation_id: Some(Uuid::new_v4().to_string()),
                 target: Some(decision_type.to_string()),
                 parameters,
                 result: AuditResult::Success { data: None },

@@ -14,6 +14,17 @@
 //! @author @darianrosebrook
 
 // ============================================================================
+// TYPE DEFINITIONS
+// ============================================================================
+
+use std::sync::Arc;
+use serde::{Deserialize, Serialize};
+
+// Re-export types for convenience
+pub use crate::council_types::TaskPriority;
+pub use crate::types::{TaskDescriptor, WorkingSpec, AcceptanceCriterion};
+
+// ============================================================================
 // COUNCIL MODULES (Decision Making & Arbitration)
 // ============================================================================
 
@@ -105,7 +116,7 @@ pub mod multimodal_orchestration;
 pub mod coreml;
 // pub mod enrichers;
 pub mod audit_trail;
-pub mod audited_orchestrator;
+// audited_orchestrator module removed - functionality integrated into multimodal_orchestration
 // pub mod enhanced_executor;
 pub mod multimodal_orchestrator;
 
@@ -125,8 +136,8 @@ pub use judge_backup::{
     MockJudge,
 };
 pub use council::{Council, CouncilConfig, CouncilSession};
-pub use decision_making::{DecisionEngine, ConsensusStrategy};
-pub use verdict_aggregation::{VerdictAggregator, AggregationResult};
+pub use decision_making::{DecisionEngine, ConsensusStrategy, RiskThresholds};
+pub use verdict_aggregation::{VerdictAggregator, AggregationResult, CouncilDecision};
 pub use workflow::{CouncilWorkflow, WorkflowState};
 // pub use risk_scorer::{RiskScorer, TechnicalRiskWeights, EthicalRiskWeights, OperationalRiskWeights, BusinessRiskWeights, DimensionWeights}; // TEMPORARILY DISABLED
 pub use error_handling::{
@@ -170,10 +181,7 @@ pub use audit_trail::{
     AuditQuery, AuditError,
 };
 
-// Audited orchestrator exports
-pub use audited_orchestrator::{
-    AuditedOrchestrator,
-};
+// Audited orchestrator functionality integrated into MultimodalOrchestrator
 
 // Restored frontier exports (now available)
 pub use frontier::{
@@ -195,7 +203,9 @@ pub use multimodal_orchestrator::{
 pub use multimodal_orchestration::OrchestratorConfig;
 
 // Council types
-pub use council_types::{FinalVerdict, Task, ChangeBudget, BlastRadius, ExecutionMode, DiffStats};
+pub use council_types::{FinalVerdict, Task, ChangeBudget, BlastRadius};
+pub use autonomous_executor::ExecutionMode;
+pub use types::DiffStats;
 
 // ============================================================================
 // CONDITIONAL EXPORTS - API Server
@@ -236,55 +246,56 @@ pub struct AgentOrchestrationService {
     pub audit_trail: audit_trail::AuditTrailManager,
 }
 
-impl AgentOrchestrationService {
-    /// Create a new Agent Orchestration Service
-    pub async fn new(config: OrchestrationConfig) -> Result<Self, OrchestrationError> {
-        let council = council::Council::new(config.council_config).await?;
-        let orchestrator = multimodal_orchestration::MultimodalOrchestrator::new(config.orchestrator_config)?;
-        let autonomous_executor = autonomous_executor::AutonomousExecutor::new(config.executor_config);
-        let audit_trail = audit_trail::AuditTrailManager::new(config.audit_config);
-
-        Ok(Self {
-            council,
-            orchestrator,
-            autonomous_executor,
-            audit_trail,
-        })
-    }
-
-    /// Execute a task with full orchestration and governance
-    ///
-    /// This method coordinates the complete lifecycle:
-    /// 1. Council review and approval
-    /// 2. Task orchestration and execution
-    /// 3. Audit trail recording
-    /// 4. Quality assurance and monitoring
-    pub async fn execute_orchestrated_task(
-        &self,
-        task: OrchestratedTask,
-    ) -> Result<OrchestrationResult, OrchestrationError> {
-        // 1. Council review
-        let council_session = self.council.start_session().await?;
-        let decision = council_session.review_task(&task).await?;
-
-        if !decision.approved {
-            return Err(OrchestrationError::CouncilRejection(decision.reason));
-        }
-
-        // 2. Execute task
-        let execution_result = self.orchestrator.process_task(task).await?;
-
-        // 3. Record audit trail
-        self.audit_trail.record_execution(&execution_result).await?;
-
-        // 4. Return comprehensive result
-        Ok(OrchestrationResult {
-            council_decision: decision,
-            execution_result,
-            audit_id: self.audit_trail.last_audit_id(),
-        })
-    }
-}
+// TODO: Implement AgentOrchestrationService when dependencies are available
+// impl AgentOrchestrationService {
+//     /// Create a new Agent Orchestration Service
+//     pub async fn new(config: OrchestrationConfig) -> Result<Self, OrchestrationError> {
+//         let council = council::Council::new(config.council_config).await?;
+//         let orchestrator = multimodal_orchestration::MultimodalOrchestrator::new(config.orchestrator_config)?;
+//         let autonomous_executor = autonomous_executor::AutonomousExecutor::new(config.executor_config);
+//         let audit_trail = audit_trail::AuditTrailManager::new(config.audit_config);
+//
+//         Ok(Self {
+//             council,
+//             orchestrator,
+//             autonomous_executor,
+//             audit_trail,
+//         })
+//     }
+//
+//     /// Execute a task with full orchestration and governance
+//     ///
+//     /// This method coordinates the complete lifecycle:
+//     /// 1. Council review and approval
+//     /// 2. Task orchestration and execution
+//     /// 3. Audit trail recording
+//     /// 4. Quality assurance and monitoring
+//     pub async fn execute_orchestrated_task(
+//         &self,
+//         task: OrchestratedTask,
+//     ) -> Result<OrchestrationResult, OrchestrationError> {
+//         // 1. Council review
+//         let council_session = self.council.start_session().await?;
+//         let decision = council_session.review_task(&task).await?;
+//
+//         if !decision.approved {
+//             return Err(OrchestrationError::CouncilRejection(decision.reason));
+//         }
+//
+//         // 2. Execute task
+//         let execution_result = self.orchestrator.process_task(task).await?;
+//
+//         // 3. Record audit trail
+//         self.audit_trail.record_execution(&execution_result).await?;
+//
+//         // 4. Return comprehensive result
+//         Ok(OrchestrationResult {
+//             council_decision: decision,
+//             execution_result,
+//             audit_id: self.audit_trail.last_audit_id(),
+//         })
+//     }
+// }
 
 /// Configuration for the Agent Orchestration Service
 #[derive(Debug, Clone)]
@@ -308,7 +319,7 @@ pub struct OrchestratedTask {
 /// Orchestration execution result
 #[derive(Debug, Clone)]
 pub struct OrchestrationResult {
-    pub council_decision: council::CouncilDecision,
+    pub council_decision: verdict_aggregation::CouncilDecision,
     pub execution_result: multimodal_orchestration::ProcessingResult,
     pub audit_id: Option<String>,
 }
@@ -324,6 +335,9 @@ pub enum OrchestrationError {
 
     #[error("Council error: {0}")]
     CouncilError(#[from] council_errors::CouncilError),
+
+    #[error("Circuit breaker error: {0}")]
+    CircuitBreakerError(String),
 
     #[error("Audit error: {0}")]
     AuditError(String),
